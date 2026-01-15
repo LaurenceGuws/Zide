@@ -30,9 +30,9 @@ Make mouse hit-testing correct on Wayland fractional scaling by pulling the comp
    - Test on KDE (once available).
 
 **Status**
-- [ ] Detection layer
-- [ ] Hyprland scale (hyprctl)
+- [x] Detection layer
+- [x] Hyprland scale (hyprctl)
 - [ ] KDE scale (kscreen-doctor)
-- [ ] Integration + fallback
+- [x] Integration + fallback
 - [ ] Validation on Hyprland
 - [ ] Validation on KDE

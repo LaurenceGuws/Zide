@@ -16,7 +16,7 @@ pub const FontFamily = enum {
 };
 
 /// Change this to switch fonts at compile time
-pub const FONT_FAMILY: FontFamily = .iosevka;
+pub const FONT_FAMILY: FontFamily = .jetbrains_mono;
 
 pub const FONT_PATH: [*:0]const u8 = switch (FONT_FAMILY) {
     .iosevka => "assets/fonts/IosevkaTermNerdFont-Regular.ttf",
@@ -164,8 +164,8 @@ pub const Renderer = struct {
             renderer.icon_char_height = renderer.char_height;
         }
         renderer.terminal_font = try TerminalFont.init(allocator, FONT_PATH, font_size);
-        renderer.terminal_cell_width = renderer.terminal_font.cell_width;
-        renderer.terminal_cell_height = renderer.terminal_font.line_height;
+        renderer.terminal_cell_width = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(renderer.terminal_font.cell_width)))));
+        renderer.terminal_cell_height = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(renderer.terminal_font.line_height)))));
 
         return renderer;
     }
@@ -452,10 +452,13 @@ pub const Renderer = struct {
         codepoint: u32,
         x: f32,
         y: f32,
+        cell_width: f32,
+        cell_height: f32,
         fg: Color,
         bg: Color,
         bold: bool,
         is_cursor: bool,
+        followed_by_space: bool,
     ) void {
         // Draw background
         self.drawRect(
@@ -470,12 +473,117 @@ pub const Renderer = struct {
         if (codepoint != 0) {
             const text_color = if (is_cursor) bg else fg;
             _ = bold; // TODO: handle bold with different font weight
-            self.terminal_font.drawGlyph(codepoint, x, y, .{
-                .r = text_color.r,
-                .g = text_color.g,
-                .b = text_color.b,
-                .a = text_color.a,
-            });
+            if (!self.drawTerminalBoxGlyph(codepoint, x, y, cell_width, cell_height, text_color)) {
+                self.terminal_font.drawGlyph(codepoint, x, y, cell_width, cell_height, followed_by_space, .{
+                    .r = text_color.r,
+                    .g = text_color.g,
+                    .b = text_color.b,
+                    .a = text_color.a,
+                });
+            }
+        }
+    }
+
+    fn drawTerminalBoxGlyph(
+        self: *Renderer,
+        codepoint: u32,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        color: Color,
+    ) bool {
+        _ = self;
+
+        const ix = @as(c_int, @intFromFloat(x));
+        const iy = @as(c_int, @intFromFloat(y));
+        const iw = @as(c_int, @intFromFloat(w));
+        const ih = @as(c_int, @intFromFloat(h));
+        const mid_x = ix + @divTrunc(iw, 2);
+        const mid_y = iy + @divTrunc(ih, 2);
+        const thin: c_int = 1;
+        const thick: c_int = @max(2, @divTrunc(ih, 6));
+
+        // For continuous vertical lines, extend 1 pixel beyond cell to ensure connection.
+        // This fixes gaps between rows caused by rounding.
+        const extend: c_int = 1;
+
+        switch (codepoint) {
+            0x2500 => { // ─
+                c.DrawRectangle(ix, mid_y, iw, thin, color.toRaylib());
+                return true;
+            },
+            0x2501 => { // ━
+                c.DrawRectangle(ix, mid_y - @divTrunc(thick, 2), iw, thick, color.toRaylib());
+                return true;
+            },
+            0x2502 => { // │ - full height vertical, extend both ends
+                c.DrawRectangle(mid_x, iy - extend, thin, ih + extend * 2, color.toRaylib());
+                return true;
+            },
+            0x2503 => { // ┃
+                c.DrawRectangle(mid_x - @divTrunc(thick, 2), iy - extend, thick, ih + extend * 2, color.toRaylib());
+                return true;
+            },
+            0x250c => { // ┌ - corner down-right, extend down
+                c.DrawRectangle(mid_x, mid_y, iw - (mid_x - ix), thin, color.toRaylib());
+                c.DrawRectangle(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color.toRaylib());
+                return true;
+            },
+            0x2510 => { // ┐ - corner down-left, extend down
+                c.DrawRectangle(ix, mid_y, mid_x - ix + thin, thin, color.toRaylib());
+                c.DrawRectangle(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color.toRaylib());
+                return true;
+            },
+            0x2514 => { // └ - corner up-right, extend up
+                c.DrawRectangle(mid_x, mid_y, iw - (mid_x - ix), thin, color.toRaylib());
+                c.DrawRectangle(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color.toRaylib());
+                return true;
+            },
+            0x2518 => { // ┘ - corner up-left, extend up
+                c.DrawRectangle(ix, mid_y, mid_x - ix + thin, thin, color.toRaylib());
+                c.DrawRectangle(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color.toRaylib());
+                return true;
+            },
+            0x251c => { // ├ - T right, extend both ends
+                c.DrawRectangle(mid_x, iy - extend, thin, ih + extend * 2, color.toRaylib());
+                c.DrawRectangle(mid_x, mid_y, iw - (mid_x - ix), thin, color.toRaylib());
+                return true;
+            },
+            0x2524 => { // ┤ - T left, extend both ends
+                c.DrawRectangle(mid_x, iy - extend, thin, ih + extend * 2, color.toRaylib());
+                c.DrawRectangle(ix, mid_y, mid_x - ix + thin, thin, color.toRaylib());
+                return true;
+            },
+            0x252c => { // ┬ - T down, extend down
+                c.DrawRectangle(ix, mid_y, iw, thin, color.toRaylib());
+                c.DrawRectangle(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color.toRaylib());
+                return true;
+            },
+            0x2534 => { // ┴ - T up, extend up
+                c.DrawRectangle(ix, mid_y, iw, thin, color.toRaylib());
+                c.DrawRectangle(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color.toRaylib());
+                return true;
+            },
+            0x253c => { // ┼ - cross, extend both ends
+                c.DrawRectangle(ix, mid_y, iw, thin, color.toRaylib());
+                c.DrawRectangle(mid_x, iy - extend, thin, ih + extend * 2, color.toRaylib());
+                return true;
+            },
+            0x2580 => { // ▀ upper half block
+                c.DrawRectangle(ix, iy, iw, @divTrunc(ih, 2), color.toRaylib());
+                return true;
+            },
+            0x2584 => { // ▄ lower half block
+                const half = @divTrunc(ih, 2);
+                c.DrawRectangle(ix, iy + half, iw, ih - half, color.toRaylib());
+                return true;
+            },
+            0x2588 => { // █ full block
+                c.DrawRectangle(ix, iy, iw, ih, color.toRaylib());
+                return true;
+            },
+            else => return false,
         }
     }
 

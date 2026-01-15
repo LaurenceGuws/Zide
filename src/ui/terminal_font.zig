@@ -9,6 +9,12 @@ const c = @cImport({
     @cInclude("harfbuzz/hb-ft.h");
 });
 
+pub const AllowSquareGlyphOverflow = enum {
+    never,
+    always,
+    when_followed_by_space,
+};
+
 pub const Glyph = struct {
     rect: c.Rectangle,
     bearing_x: i32,
@@ -44,6 +50,8 @@ pub const TerminalFont = struct {
     descent: f32,
     line_height: f32,
     cell_width: f32,
+    use_lcd: bool,
+    overflow_policy: AllowSquareGlyphOverflow,
 
     pub fn init(allocator: std.mem.Allocator, path: [*:0]const u8, size: f32) !TerminalFont {
         var ft_library: c.FT_Library = null;
@@ -59,12 +67,16 @@ pub const TerminalFont = struct {
         errdefer c.hb_font_destroy(hb_font);
 
         const metrics = ft_face.*.size.*.metrics;
-        const ascent = @as(f32, @floatFromInt(metrics.ascender >> 6));
-        const descent = @as(f32, @floatFromInt(@abs(metrics.descender >> 6)));
-        const line_height = @as(f32, @floatFromInt(metrics.height >> 6));
+        const ascent_raw = @as(f32, @floatFromInt(metrics.ascender >> 6));
+        const descent_raw = @as(f32, @floatFromInt(@abs(metrics.descender >> 6)));
+        const line_height_raw = @as(f32, @floatFromInt(metrics.height >> 6));
 
         // Use typical ASCII glyphs to avoid oversized cell widths.
         var cell_width: f32 = 0;
+        const max_advance = @as(f32, @floatFromInt(metrics.max_advance >> 6));
+        if (max_advance > 0) {
+            cell_width = max_advance;
+        }
         const samples = [_]u32{ 'M', 'W', 'd' };
         for (samples) |cp| {
             // HarfBuzz advance
@@ -93,12 +105,16 @@ pub const TerminalFont = struct {
         }
 
         if (cell_width <= 0) {
-            cell_width = @as(f32, @floatFromInt(metrics.max_advance >> 6));
+            cell_width = max_advance;
         }
         if (cell_width <= 0) {
             cell_width = size * 0.6;
         }
-        cell_width += 1.0; // small right-side safety pad
+        const cell_width_px = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(cell_width)))));
+
+        const ascent_px = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(ascent_raw)))));
+        const descent_px = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(descent_raw)))));
+        const line_height_px = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(line_height_raw)))));
 
         const atlas_width: i32 = 2048;
         const atlas_height: i32 = 2048;
@@ -107,6 +123,7 @@ pub const TerminalFont = struct {
         const image = c.GenImageColor(atlas_width, atlas_height, .{ .r = 0, .g = 0, .b = 0, .a = 0 });
         const texture = c.LoadTextureFromImage(image);
         c.UnloadImage(image);
+        c.SetTextureFilter(texture, c.TEXTURE_FILTER_POINT);
 
         return .{
             .allocator = allocator,
@@ -123,10 +140,19 @@ pub const TerminalFont = struct {
             .glyphs = std.AutoHashMap(u32, Glyph).init(allocator),
             .glyph_order = .empty,
             .max_glyphs = 2048,
-            .ascent = ascent,
-            .descent = descent,
-            .line_height = if (line_height > 0) line_height else ascent + descent,
-            .cell_width = if (cell_width > 0) cell_width else size * 0.6,
+            .ascent = ascent_px,
+            .descent = descent_px,
+            .line_height = if (line_height_px > 0) line_height_px else ascent_px + descent_px,
+            .cell_width = if (cell_width_px > 0) cell_width_px else size * 0.6,
+            .use_lcd = std.c.getenv("ZIDE_FONT_LCD") != null,
+            .overflow_policy = blk: {
+                if (std.c.getenv("ZIDE_GLYPH_OVERFLOW")) |raw| {
+                    const s = std.mem.sliceTo(raw, 0);
+                    if (std.mem.eql(u8, s, "never")) break :blk .never;
+                    if (std.mem.eql(u8, s, "always")) break :blk .always;
+                }
+                break :blk .when_followed_by_space;
+            },
         };
     }
 
@@ -139,18 +165,53 @@ pub const TerminalFont = struct {
         _ = c.FT_Done_FreeType(self.ft_library);
     }
 
-    pub fn drawGlyph(self: *TerminalFont, codepoint: u32, x: f32, y: f32, color: Rgba) void {
+    pub fn drawGlyph(self: *TerminalFont, codepoint: u32, x: f32, y: f32, cell_width: f32, cell_height: f32, followed_by_space: bool, color: Rgba) void {
         if (codepoint == 0) return;
         const glyph = self.getGlyph(codepoint) catch return;
         const baseline = y + self.ascent;
 
-        // Left-align all glyphs at cell start - wide icons overflow right only
-        // Use bearing_x for normal glyphs, but clamp to never go left of x
-        const bearing = @as(f32, @floatFromInt(glyph.bearing_x));
-        const draw_x = @max(x, x + bearing);
+        const glyph_w = @as(f32, @floatFromInt(glyph.width));
+        const glyph_h = @as(f32, @floatFromInt(glyph.height));
 
+        // Check if codepoint is in Private Use Area (PUA) or symbol ranges.
+        // These are typically icons that should be allowed to overflow.
+        const is_symbol_glyph = (codepoint >= 0xE000 and codepoint <= 0xF8FF) or // BMP PUA (Nerd Font)
+            (codepoint >= 0xF0000 and codepoint <= 0xFFFFD) or // Supplementary PUA-A
+            (codepoint >= 0x100000 and codepoint <= 0x10FFFD) or // Supplementary PUA-B
+            (codepoint >= 0x2700 and codepoint <= 0x27BF) or // Dingbats (❯, etc.)
+            (codepoint >= 0x2600 and codepoint <= 0x26FF); // Misc Symbols
+
+        _ = cell_height;
+        _ = followed_by_space;
+        _ = glyph_w;
+        _ = glyph_h;
+
+        const bearing = @as(f32, @floatFromInt(glyph.bearing_x));
+
+        // For symbol/icon glyphs: center in cell with left bias to prevent right clipping.
+        if (is_symbol_glyph) {
+            const glyph_width = @as(f32, @floatFromInt(glyph.width));
+            // Higher ratio = more left shift = less right overflow.
+            // 0.5 = centered, 0.7 = biased left, 1.0 = right-aligned
+            const draw_x = x + (cell_width - glyph_width) * 0.7;
+            const draw_y = baseline - @as(f32, @floatFromInt(glyph.bearing_y));
+            const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
+            const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y)))));
+            c.DrawTextureRec(self.texture, glyph.rect, .{ .x = snapped_x, .y = snapped_y }, .{
+                .r = color.r,
+                .g = color.g,
+                .b = color.b,
+                .a = color.a,
+            });
+            return;
+        }
+
+        // Normal glyph: draw at bearing position, clamped to not go left of cell.
+        const draw_x = @max(x, x + bearing);
         const draw_y = baseline - @as(f32, @floatFromInt(glyph.bearing_y));
-        c.DrawTextureRec(self.texture, glyph.rect, .{ .x = draw_x, .y = draw_y }, .{
+        const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
+        const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y)))));
+        c.DrawTextureRec(self.texture, glyph.rect, .{ .x = snapped_x, .y = snapped_y }, .{
             .r = color.r,
             .g = color.g,
             .b = color.b,
@@ -173,12 +234,20 @@ pub const TerminalFont = struct {
         if (length == 0) return error.HbShapeFailed;
 
         const glyph_id = infos[0].codepoint;
-        if (c.FT_Load_Glyph(self.ft_face, glyph_id, c.FT_LOAD_DEFAULT) != 0) return error.FtLoadFailed;
-        if (c.FT_Render_Glyph(self.ft_face.*.glyph, c.FT_RENDER_MODE_NORMAL) != 0) return error.FtRenderFailed;
+        const load_flags: c_int = if (self.use_lcd) c.FT_LOAD_DEFAULT | c.FT_LOAD_TARGET_LCD else c.FT_LOAD_DEFAULT;
+        if (c.FT_Load_Glyph(self.ft_face, glyph_id, load_flags) != 0) return error.FtLoadFailed;
+        const render_mode: c.FT_Render_Mode = if (self.use_lcd) c.FT_RENDER_MODE_LCD else c.FT_RENDER_MODE_NORMAL;
+        if (c.FT_Render_Glyph(self.ft_face.*.glyph, render_mode) != 0) {
+            if (self.use_lcd and c.FT_Render_Glyph(self.ft_face.*.glyph, c.FT_RENDER_MODE_NORMAL) == 0) {
+                // fall back to grayscale
+            } else {
+                return error.FtRenderFailed;
+            }
+        }
 
         const slot = self.ft_face.*.glyph;
         const bitmap = slot.*.bitmap;
-        const width: i32 = @intCast(bitmap.width);
+        const width: i32 = if (bitmap.pixel_mode == c.FT_PIXEL_MODE_LCD) @intCast(bitmap.width / 3) else @intCast(bitmap.width);
         const height: i32 = @intCast(bitmap.rows);
 
         if (width > 0 and height > 0) {
@@ -195,17 +264,38 @@ pub const TerminalFont = struct {
             const rgba = try self.allocator.alloc(u8, pixel_count * 4);
             defer self.allocator.free(rgba);
 
+            const gamma = 1.0 / 2.2;
+
             var y: i32 = 0;
             while (y < height) : (y += 1) {
                 var x: i32 = 0;
                 while (x < width) : (x += 1) {
-                    const src_idx = @as(usize, @intCast(y * @as(i32, @intCast(bitmap.pitch)) + x));
-                    const alpha = bitmap.buffer[src_idx];
+                    var r: u8 = 0;
+                    var g: u8 = 0;
+                    var b: u8 = 0;
+                    var a: u8 = 0;
+                    if (bitmap.pixel_mode == c.FT_PIXEL_MODE_LCD) {
+                        const base = @as(usize, @intCast(y * @as(i32, @intCast(bitmap.pitch)) + x * 3));
+                        r = bitmap.buffer[base + 0];
+                        g = bitmap.buffer[base + 1];
+                        b = bitmap.buffer[base + 2];
+                        a = @max(r, @max(g, b));
+                    } else {
+                        const src_idx = @as(usize, @intCast(y * @as(i32, @intCast(bitmap.pitch)) + x));
+                        a = bitmap.buffer[src_idx];
+                        r = a;
+                        g = a;
+                        b = a;
+                    }
+                    const rf = std.math.pow(f32, @as(f32, @floatFromInt(r)) / 255.0, gamma);
+                    const gf = std.math.pow(f32, @as(f32, @floatFromInt(g)) / 255.0, gamma);
+                    const bf = std.math.pow(f32, @as(f32, @floatFromInt(b)) / 255.0, gamma);
+                    const af = std.math.pow(f32, @as(f32, @floatFromInt(a)) / 255.0, gamma);
                     const dst_idx = @as(usize, @intCast((y * width + x) * 4));
-                    rgba[dst_idx] = 255;
-                    rgba[dst_idx + 1] = 255;
-                    rgba[dst_idx + 2] = 255;
-                    rgba[dst_idx + 3] = alpha;
+                    rgba[dst_idx] = @intFromFloat(@min(255.0, rf * 255.0));
+                    rgba[dst_idx + 1] = @intFromFloat(@min(255.0, gf * 255.0));
+                    rgba[dst_idx + 2] = @intFromFloat(@min(255.0, bf * 255.0));
+                    rgba[dst_idx + 3] = @intFromFloat(@min(255.0, af * 255.0));
                 }
             }
 
