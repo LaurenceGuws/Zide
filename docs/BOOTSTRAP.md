@@ -7,43 +7,16 @@ A modern, cross-platform IDE for Zig development, built entirely in Zig.
 - **Text Editor**: Piece-table based text buffer with undo/redo
 - **Syntax Highlighting**: Tree-sitter based, with Zig language support
 - **Integrated Terminal**: libvterm-based terminal emulator with full color support
-- **Native Wayland**: First-class support for Wayland compositors (Hyprland, Sway, etc.)
+- **Native Wayland**: Wayland support in progress (Hyprland first; KDE planned)
 - **Low CPU Usage**: Adaptive frame rate with intelligent idle detection
 - **Cross-platform**: Linux (Wayland), macOS, and Windows support
 
-## Architecture
+## Layout (brief)
 
-```
-zide/
-├── src/
-│   ├── main.zig              # Application entry point & main loop
-│   ├── editor/               # Text editing engine
-│   │   ├── buffer.zig        # Piece-table text buffer
-│   │   ├── editor.zig        # High-level editor API
-│   │   ├── syntax.zig        # Tree-sitter syntax highlighting
-│   │   └── types.zig         # Data structures
-│   ├── terminal/             # Terminal emulator
-│   │   ├── terminal.zig      # Terminal session management
-│   │   ├── vterm.zig         # libvterm wrapper
-│   │   ├── vterm_shim.c      # C helper for libvterm callbacks
-│   │   ├── pty_unix.zig      # Unix PTY backend
-│   │   └── pty_windows.zig   # Windows ConPTY backend
-│   └── ui/                   # User interface
-│       ├── renderer.zig      # raylib rendering abstraction
-│       ├── terminal_font.zig # FreeType/HarfBuzz font rendering
-│       └── widgets.zig       # UI components (tabs, status bar, etc.)
-├── vendor/                   # External dependencies (fetched by bootstrap)
-│   ├── libvterm/             # Terminal emulation library
-│   ├── raylib/               # Graphics/input library
-│   └── wayland-protocols/    # Generated Wayland protocol headers (Linux)
-├── assets/
-│   └── fonts/                # Bundled fonts (Iosevka Nerd Font)
-├── build.zig                 # Zig build configuration
-├── build.zig.zon             # Package dependencies
-├── Makefile                  # Convenience targets
-└── scripts/
-    └── bootstrap.sh          # Dependency fetcher
-```
+- `src/` core app code (editor, terminal, UI)
+- `vendor/` third-party sources fetched by bootstrap
+- `assets/` fonts and other resources
+- `docs/` documentation
 
 ## System Dependencies
 
@@ -138,12 +111,11 @@ Idle CPU usage should be under 1%.
 
 ## Wayland Notes
 
-Zide uses native Wayland on Linux (not XWayland). This provides:
+Zide targets native Wayland on Linux (not XWayland). Current state:
 
-- Proper window tiling on Hyprland, Sway, etc.
-- Correct HiDPI/fractional scaling
-- Smooth window resizing
-- Lower latency input
+- Compositor-aware mouse scaling is implemented for Hyprland via `hyprctl`.
+- KDE scaling is planned but not implemented yet.
+- Validation on Hyprland/KDE is still pending.
 
 The app sets its window title to "Zide - Zig IDE", which can be used for window rules:
 
@@ -152,13 +124,18 @@ The app sets its window title to "Zide - Zig IDE", which can be used for window 
 windowrulev2 = tile, title:^(Zide)
 ```
 
-## Roadmap
+## Fonts
 
-- [ ] File tree sidebar
-- [ ] Multiple split panes
-- [ ] LSP integration (ZLS)
-- [ ] Git integration
-- [ ] Search/replace
-- [ ] Command palette
-- [ ] Configuration file
-- [ ] Plugin system
+- Bundled fonts live in `assets/fonts/` (currently JetBrains Mono Nerd Font).
+
+## Current Focus / Known Issues
+
+If you only read one thing, read this.
+
+- **Current focus:** terminal text rendering quality (Nerd icons clipping, box drawing striping).
+- **Symptoms:** Nerd icons clip on the right; box drawing shows stripes in some apps (btop/nvim).
+- **What we tried:** LCD rendering, pixel snapping, box drawing fallback, glyph scaling; improvements but not fully fixed.
+- **Docs to read next:**
+  - `docs/TERMINAL_TEXT_RESEARCH.md` (kitty/alacritty/wezterm analysis)
+  - `docs/TERMINAL_TEXT_STEPS.md` (planned upgrade phases)
+  - `docs/AGENT_HANDOFF.md` (latest status and next steps)

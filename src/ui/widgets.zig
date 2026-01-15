@@ -567,6 +567,9 @@ pub const TerminalWidget = struct {
         _ = width;
         _ = height;
 
+        const base_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(x)))));
+        const base_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(y)))));
+
         // Pass 1: draw backgrounds so glyphs aren't overwritten by neighbor cells.
         var row: usize = 0;
         while (row < self.session.rows) : (row += 1) {
@@ -574,8 +577,8 @@ pub const TerminalWidget = struct {
             while (col < self.session.cols) : (col += 1) {
                 const cell = self.session.getCell(row, col);
 
-                const cell_x = x + @as(f32, @floatFromInt(col)) * r.terminal_cell_width;
-                const cell_y = y + @as(f32, @floatFromInt(row)) * r.terminal_cell_height;
+                const cell_x = base_x + @as(f32, @floatFromInt(col)) * r.terminal_cell_width;
+                const cell_y = base_y + @as(f32, @floatFromInt(row)) * r.terminal_cell_height;
                 const cell_w = r.terminal_cell_width * @as(f32, @floatFromInt(@max(1, cell.width)));
 
                 const is_cursor = row == cursor.row and col == cursor.col;
@@ -612,8 +615,8 @@ pub const TerminalWidget = struct {
             while (col < self.session.cols) : (col += 1) {
                 const cell = self.session.getCell(glyph_row, col);
 
-                const cell_x = x + @as(f32, @floatFromInt(col)) * r.terminal_cell_width;
-                const cell_y = y + @as(f32, @floatFromInt(glyph_row)) * r.terminal_cell_height;
+                const cell_x = base_x + @as(f32, @floatFromInt(col)) * r.terminal_cell_width;
+                const cell_y = base_y + @as(f32, @floatFromInt(glyph_row)) * r.terminal_cell_height;
 
                 const is_cursor = glyph_row == cursor.row and col == cursor.col;
 
@@ -628,14 +631,27 @@ pub const TerminalWidget = struct {
                     .b = cell.attrs.bg.b,
                 };
 
+                // Check if next cell is a space (for overflow policy).
+                const followed_by_space = blk: {
+                    const next_col = col + @max(1, cell.width);
+                    if (next_col < self.session.cols) {
+                        const next_cell = self.session.getCell(glyph_row, next_col);
+                        break :blk next_cell.codepoint == ' ' or next_cell.codepoint == 0;
+                    }
+                    break :blk true; // End of line counts as "followed by space"
+                };
+
                 r.drawTerminalCell(
                     cell.codepoint,
                     cell_x,
                     cell_y,
+                    r.terminal_cell_width * @as(f32, @floatFromInt(@max(1, cell.width))),
+                    r.terminal_cell_height,
                     if (cell.attrs.reverse) bg else fg,
                     if (cell.attrs.reverse) fg else bg,
                     cell.attrs.bold,
                     is_cursor,
+                    followed_by_space,
                 );
 
                 // Skip wide characters

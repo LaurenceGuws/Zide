@@ -16,3 +16,15 @@ Use this compositor-provided scale as the default mouse scale on Wayland. Keep `
 - Accurate mouse hit-testing on fractional scaling without hardcoding a global scale.
 - Requires optional external tools (`hyprctl`, `kscreen-doctor`) when running on those compositors.
 - Adds a small platform detection layer with clear fallbacks.
+
+## 2026-01-15 — Terminal text rendering quality upgrade path
+
+**Context**
+Terminal text rendering currently uses a custom FreeType/HarfBuzz glyph cache but lacks pixel snapping, LCD/gamma-aware rendering, cluster shaping, and font fallback. This shows up as striping in box drawing and clipping in icon glyphs.
+
+**Decision**
+Pursue a terminal-first text pipeline upgrade (UI/editor later). The goal is best-in-class terminal font rendering (Kitty/Alacritty/WezTerm quality). Allow separate fonts for terminal, editor, app text, and icons. Implement improvements incrementally, starting with grid snapping and rasterization quality before adding shaping and fallback.
+
+**Consequences**
+- Terminal rendering will become more complex but closer to Kitty/Alacritty quality.
+- Rendering config will include multiple font paths and per-layer settings.
