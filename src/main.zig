@@ -44,6 +44,9 @@ const AppState = struct {
     show_terminal: bool,
     terminal_height: f32,
 
+    // Dirty tracking for efficient rendering
+    needs_redraw: bool,
+
     pub fn init(allocator: std.mem.Allocator) !*AppState {
         const renderer = try Renderer.init(allocator, 1280, 720, "Zide - Zig IDE");
         errdefer renderer.deinit();
@@ -63,6 +66,7 @@ const AppState = struct {
             .mode = "NORMAL",
             .show_terminal = false,
             .terminal_height = 200,
+            .needs_redraw = true,
         };
 
         return state;
@@ -151,12 +155,39 @@ const AppState = struct {
         // Main loop
         while (!self.renderer.shouldClose()) {
             try self.update();
-            self.draw();
+
+            // Only redraw when something changed
+            if (self.needs_redraw) {
+                self.draw();
+                self.needs_redraw = false;
+            } else {
+                // Still need to poll events when not drawing
+                renderer_mod.pollEvents();
+            }
         }
     }
 
     fn update(self: *AppState) !void {
         const r = self.renderer;
+
+        // Check for window resize (event-based, works with Wayland)
+        if (renderer_mod.isWindowResized()) {
+            r.width = renderer_mod.getScreenWidth();
+            r.height = renderer_mod.getScreenHeight();
+            self.needs_redraw = true;
+        }
+
+        // Check for any input activity
+        const has_key = r.hasAnyKeyPressed();
+        const has_char = r.hasCharPressed();
+        const has_mouse = r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT) or
+            r.isMouseButtonPressed(renderer_mod.MOUSE_RIGHT) or
+            r.getMouseWheelMove() != 0;
+
+        if (has_key or has_char or has_mouse) {
+            self.needs_redraw = true;
+        }
+
         const ctrl = r.isKeyDown(renderer_mod.KEY_LEFT_CONTROL) or r.isKeyDown(renderer_mod.KEY_RIGHT_CONTROL);
 
         // Global shortcuts
@@ -167,6 +198,7 @@ const AppState = struct {
 
         if (ctrl and r.isKeyPressed(renderer_mod.KEY_N)) {
             try self.newEditor();
+            self.needs_redraw = true;
             return;
         }
 
@@ -180,6 +212,7 @@ const AppState = struct {
                 }
                 self.show_terminal = true;
             }
+            self.needs_redraw = true;
             return;
         }
 
@@ -190,6 +223,7 @@ const AppState = struct {
             if (self.tab_bar.handleClick(mouse.x, mouse.y, self.side_nav.width, tab_bar_y)) {
                 // Tab was clicked
                 self.active_tab = self.tab_bar.active_index;
+                self.needs_redraw = true;
             }
         }
 
@@ -200,10 +234,15 @@ const AppState = struct {
             try widget.handleInput(r);
         }
 
-        // Update terminal if shown
+        // Update terminal if shown - use poll() to check for data efficiently
         if (self.show_terminal and self.terminals.items.len > 0) {
             const term = self.terminals.items[0];
-            try term.poll();
+
+            // Only poll PTY if there's data available (non-blocking check)
+            if (term.pty.hasData()) {
+                try term.poll();
+                self.needs_redraw = true;
+            }
 
             // Handle terminal input if focused at bottom
             if (mouse.y > @as(f32, @floatFromInt(r.height)) - self.terminal_height) {

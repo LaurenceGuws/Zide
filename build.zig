@@ -92,6 +92,9 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
+    // Platform detection (needed for Wayland vs X11 decision)
+    const target_os = target.result.os.tag;
+
     const raylib_src_path = "vendor/raylib/src/";
     const raylib_sources: []const []const u8 = &.{
         raylib_src_path ++ "rcore.c",
@@ -102,7 +105,15 @@ pub fn build(b: *std.Build) void {
         raylib_src_path ++ "raudio.c",
     };
 
-    const raylib_flags: []const []const u8 = &.{
+    // Wayland-native on Linux (for proper Hyprland/Sway integration)
+    const use_wayland = target_os == .linux;
+
+    const raylib_flags: []const []const u8 = if (use_wayland) &.{
+        "-std=c99",
+        "-DPLATFORM_DESKTOP_GLFW",
+        "-DGRAPHICS_API_OPENGL_33",
+        "-D_GLFW_WAYLAND",
+    } else &.{
         "-std=c99",
         "-DPLATFORM_DESKTOP_GLFW",
         "-DGRAPHICS_API_OPENGL_33",
@@ -115,7 +126,6 @@ pub fn build(b: *std.Build) void {
     });
 
     // Platform-specific raylib source
-    const target_os = target.result.os.tag;
     if (target_os == .windows) {
         raylib.addCSourceFile(.{
             .file = b.path(raylib_src_path ++ "rglfw.c"),
@@ -141,8 +151,21 @@ pub fn build(b: *std.Build) void {
             .file = b.path(raylib_src_path ++ "rglfw.c"),
             .flags = raylib_flags,
         });
-        raylib.linkSystemLibrary("GL");
-        raylib.linkSystemLibrary("X11");
+
+        if (use_wayland) {
+            // Native Wayland support - generated protocol headers are in vendor/wayland-protocols
+            raylib.addIncludePath(b.path("vendor/wayland-protocols"));
+            raylib.linkSystemLibrary("wayland-client");
+            raylib.linkSystemLibrary("wayland-cursor");
+            raylib.linkSystemLibrary("wayland-egl");
+            raylib.linkSystemLibrary("xkbcommon");
+            raylib.linkSystemLibrary("EGL");
+            raylib.linkSystemLibrary("GL");
+        } else {
+            // X11 fallback
+            raylib.linkSystemLibrary("GL");
+            raylib.linkSystemLibrary("X11");
+        }
         raylib.linkSystemLibrary("m");
         raylib.linkSystemLibrary("pthread");
         raylib.linkSystemLibrary("dl");
@@ -199,8 +222,18 @@ pub fn build(b: *std.Build) void {
         exe.linkFramework("IOKit");
         exe.linkFramework("CoreVideo");
     } else {
-        exe.linkSystemLibrary("GL");
-        exe.linkSystemLibrary("X11");
+        if (use_wayland) {
+            // Native Wayland support
+            exe.linkSystemLibrary("wayland-client");
+            exe.linkSystemLibrary("wayland-cursor");
+            exe.linkSystemLibrary("wayland-egl");
+            exe.linkSystemLibrary("xkbcommon");
+            exe.linkSystemLibrary("EGL");
+            exe.linkSystemLibrary("GL");
+        } else {
+            exe.linkSystemLibrary("GL");
+            exe.linkSystemLibrary("X11");
+        }
         exe.linkSystemLibrary("m");
         exe.linkSystemLibrary("pthread");
         exe.linkSystemLibrary("dl");

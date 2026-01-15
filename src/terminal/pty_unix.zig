@@ -39,6 +39,11 @@ pub const Pty = struct {
             return Error.OpenPtyFailed;
         }
 
+        // Set master_fd to non-blocking once at init, not on every read
+        const O_NONBLOCK: u32 = 0o4000;
+        const flags = posix.fcntl(master_fd, posix.F.GETFL, 0) catch 0;
+        _ = posix.fcntl(master_fd, posix.F.SETFL, @as(u32, @intCast(flags)) | O_NONBLOCK) catch {};
+
         return Pty{
             .master_fd = master_fd,
             .slave_fd = slave_fd,
@@ -117,16 +122,8 @@ pub const Pty = struct {
         posix.exit(127);
     }
 
-    /// Read data from the PTY (non-blocking)
+    /// Read data from the PTY (non-blocking, fd was set non-blocking at init)
     pub fn read(self: *Pty, buffer: []u8) !usize {
-        // Set non-blocking
-        const O_NONBLOCK: u32 = 0o4000; // Linux O_NONBLOCK constant
-        const flags = try posix.fcntl(self.master_fd, posix.F.GETFL, 0);
-        _ = try posix.fcntl(self.master_fd, posix.F.SETFL, @as(u32, @intCast(flags)) | O_NONBLOCK);
-        defer {
-            _ = posix.fcntl(self.master_fd, posix.F.SETFL, @as(u32, @intCast(flags))) catch {};
-        }
-
         return posix.read(self.master_fd, buffer) catch |err| {
             if (err == error.WouldBlock) return 0;
             return err;
@@ -173,6 +170,21 @@ pub const Pty = struct {
     /// Get the file descriptor for polling
     pub fn getFd(self: *Pty) posix.fd_t {
         return self.master_fd;
+    }
+
+    /// Check if data is available to read (non-blocking)
+    pub fn hasData(self: *Pty) bool {
+        var fds = [1]std.posix.pollfd{
+            .{
+                .fd = self.master_fd,
+                .events = std.posix.POLL.IN,
+                .revents = 0,
+            },
+        };
+
+        // Poll with 0 timeout (instant check)
+        const result = std.posix.poll(&fds, 0) catch return false;
+        return result > 0 and (fds[0].revents & std.posix.POLL.IN) != 0;
     }
 };
 
