@@ -138,6 +138,9 @@ pub const Renderer = struct {
     }
 
     pub fn deinit(self: *Renderer) void {
+        if (self.font.texture.id != c.GetFontDefault().texture.id) {
+            c.UnloadFont(self.font);
+        }
         c.CloseWindow();
         self.terminal_font.deinit();
         self.allocator.destroy(self);
@@ -229,6 +232,16 @@ pub const Renderer = struct {
             self.char_width = measure.x;
             self.char_height = measure.y;
             // Terminal metrics are managed by TerminalFont
+        } else {
+            const temp_font = c.Font{
+                .baseSize = @intFromFloat(size),
+                .glyphCount = glyph_count,
+                .glyphPadding = padding,
+                .texture = texture,
+                .recs = recs,
+                .glyphs = font_data,
+            };
+            c.UnloadFont(temp_font);
         }
     }
 

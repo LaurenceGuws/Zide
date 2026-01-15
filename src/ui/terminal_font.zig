@@ -38,6 +38,8 @@ pub const TerminalFont = struct {
     row_h: i32,
     padding: i32,
     glyphs: std.AutoHashMap(u32, Glyph),
+    glyph_order: std.ArrayList(u32),
+    max_glyphs: usize,
     ascent: f32,
     descent: f32,
     line_height: f32,
@@ -46,12 +48,15 @@ pub const TerminalFont = struct {
     pub fn init(allocator: std.mem.Allocator, path: [*:0]const u8, size: f32) !TerminalFont {
         var ft_library: c.FT_Library = null;
         if (c.FT_Init_FreeType(&ft_library) != 0) return error.FtInitFailed;
+        errdefer _ = c.FT_Done_FreeType(ft_library);
 
         var ft_face: c.FT_Face = null;
         if (c.FT_New_Face(ft_library, path, 0, &ft_face) != 0) return error.FtFaceFailed;
+        errdefer _ = c.FT_Done_Face(ft_face);
         if (c.FT_Set_Pixel_Sizes(ft_face, 0, @intFromFloat(size)) != 0) return error.FtSizeFailed;
 
         const hb_font = c.hb_ft_font_create(ft_face, null) orelse return error.HbInitFailed;
+        errdefer c.hb_font_destroy(hb_font);
 
         const metrics = ft_face.*.size.*.metrics;
         const ascent = @as(f32, @floatFromInt(metrics.ascender >> 6));
@@ -116,6 +121,8 @@ pub const TerminalFont = struct {
             .row_h = 0,
             .padding = padding,
             .glyphs = std.AutoHashMap(u32, Glyph).init(allocator),
+            .glyph_order = .empty,
+            .max_glyphs = 2048,
             .ascent = ascent,
             .descent = descent,
             .line_height = if (line_height > 0) line_height else ascent + descent,
@@ -125,6 +132,7 @@ pub const TerminalFont = struct {
 
     pub fn deinit(self: *TerminalFont) void {
         self.glyphs.deinit();
+        self.glyph_order.deinit(self.allocator);
         c.UnloadTexture(self.texture);
         c.hb_font_destroy(self.hb_font);
         _ = c.FT_Done_Face(self.ft_face);
@@ -219,7 +227,14 @@ pub const TerminalFont = struct {
                 .width = width,
                 .height = height,
             };
+            if (self.max_glyphs > 0 and self.glyphs.count() >= self.max_glyphs) {
+                if (self.glyph_order.items.len > 0) {
+                    const evict = self.glyph_order.orderedRemove(0);
+                    _ = self.glyphs.remove(evict);
+                }
+            }
             try self.glyphs.put(codepoint, glyph);
+            try self.glyph_order.append(self.allocator, codepoint);
             self.pen_x += width + self.padding;
             return self.glyphs.getPtr(codepoint).?;
         }
@@ -232,7 +247,14 @@ pub const TerminalFont = struct {
             .width = 0,
             .height = 0,
         };
+        if (self.max_glyphs > 0 and self.glyphs.count() >= self.max_glyphs) {
+            if (self.glyph_order.items.len > 0) {
+                const evict = self.glyph_order.orderedRemove(0);
+                _ = self.glyphs.remove(evict);
+            }
+        }
         try self.glyphs.put(codepoint, glyph);
+        try self.glyph_order.append(self.allocator, codepoint);
         return self.glyphs.getPtr(codepoint).?;
     }
 };

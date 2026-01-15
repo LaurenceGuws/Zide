@@ -258,6 +258,12 @@ const AppState = struct {
         // Update terminal if shown
         if (self.show_terminal and self.terminals.items.len > 0) {
             const term = self.terminals.items[0];
+            const height = @as(f32, @floatFromInt(r.height));
+            const options_bar_height = self.options_bar.height;
+            const tab_bar_height = self.tab_bar.height;
+            const status_bar_height = self.status_bar.height;
+            const max_terminal_h = @max(0, height - options_bar_height - tab_bar_height - status_bar_height);
+            const terminal_h = @min(self.terminal_height, max_terminal_h);
 
             // Only poll PTY if there's data available (non-blocking check)
             // Skip polling when in deep idle to save CPU
@@ -267,7 +273,7 @@ const AppState = struct {
             }
 
             // Handle terminal input if focused at bottom
-            if (mouse.y > @as(f32, @floatFromInt(r.height)) - self.terminal_height) {
+            if (terminal_h > 0 and mouse.y > height - terminal_h) {
                 var term_widget = TerminalWidget.init(term);
                 if (try term_widget.handleInput(r)) {
                     self.needs_redraw = true;
@@ -289,9 +295,10 @@ const AppState = struct {
         const tab_bar_height = self.tab_bar.height;
         const side_nav_width = self.side_nav.width;
         const status_bar_height = self.status_bar.height;
-        const terminal_h = if (self.show_terminal) self.terminal_height else 0;
-        const editor_height = height - options_bar_height - tab_bar_height - status_bar_height - terminal_h;
-        const editor_width = width - side_nav_width;
+        const max_terminal_h = @max(0, height - options_bar_height - tab_bar_height - status_bar_height);
+        const terminal_h = if (self.show_terminal) @min(self.terminal_height, max_terminal_h) else 0;
+        const editor_height = @max(0, height - options_bar_height - tab_bar_height - status_bar_height - terminal_h);
+        const editor_width = @max(0, width - side_nav_width);
 
         // Draw options bar
         self.options_bar.draw(r, width);
@@ -303,7 +310,18 @@ const AppState = struct {
         if (self.editors.items.len > 0) {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             var widget = EditorWidget.init(self.editors.items[editor_idx]);
+            if (editor_width > 0 and editor_height > 0) {
+                r.beginClip(
+                    @intFromFloat(side_nav_width),
+                    @intFromFloat(options_bar_height + tab_bar_height),
+                    @intFromFloat(editor_width),
+                    @intFromFloat(editor_height),
+                );
+            }
             widget.draw(r, side_nav_width, options_bar_height + tab_bar_height, editor_width, editor_height);
+            if (editor_width > 0 and editor_height > 0) {
+                r.endClip();
+            }
         }
 
         // Draw terminal if shown
@@ -314,7 +332,19 @@ const AppState = struct {
             r.drawRect(@intFromFloat(side_nav_width), @intFromFloat(term_y), @intFromFloat(editor_width), 2, renderer_mod.Color.light_gray);
 
             var term_widget = TerminalWidget.init(self.terminals.items[0]);
-            term_widget.draw(r, side_nav_width, term_y + 2, editor_width, terminal_h - 2);
+            const term_draw_height = @max(0, terminal_h - 2);
+            if (editor_width > 0 and term_draw_height > 0) {
+                r.beginClip(
+                    @intFromFloat(side_nav_width),
+                    @intFromFloat(term_y + 2),
+                    @intFromFloat(editor_width),
+                    @intFromFloat(term_draw_height),
+                );
+            }
+            term_widget.draw(r, side_nav_width, term_y + 2, editor_width, term_draw_height);
+            if (editor_width > 0 and term_draw_height > 0) {
+                r.endClip();
+            }
         }
 
         // Draw side navigation bar (covers terminal icon overflow)
