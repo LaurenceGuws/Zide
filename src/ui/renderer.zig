@@ -82,6 +82,16 @@ pub const Renderer = struct {
         // Note: Don't use SetTargetFPS() - it busy-waits and causes 100% CPU usage.
         // VSync (FLAG_VSYNC_HINT) properly blocks in SwapBuffers instead.
 
+        // Do a dummy frame to let the compositor configure the window (Wayland/tiling WMs)
+        // Without this, the first real frame may use wrong dimensions
+        c.BeginDrawing();
+        c.ClearBackground(c.Color{ .r = 40, .g = 42, .b = 54, .a = 255 }); // Match theme bg
+        c.EndDrawing();
+
+        // Now get the actual window size after compositor has configured it
+        const actual_width = c.GetScreenWidth();
+        const actual_height = c.GetScreenHeight();
+
         const renderer = try allocator.create(Renderer);
 
         // Load default monospace font
@@ -90,8 +100,8 @@ pub const Renderer = struct {
 
         renderer.* = .{
             .allocator = allocator,
-            .width = width,
-            .height = height,
+            .width = actual_width,
+            .height = actual_height,
             .font = font,
             .font_size = font_size,
             .char_width = font_size * 0.6, // Approximate monospace width
@@ -212,11 +222,12 @@ pub const Renderer = struct {
     }
 
     pub fn beginFrame(self: *Renderer) void {
-        // Update dimensions if window resized
+        c.BeginDrawing();
+
+        // Update dimensions AFTER BeginDrawing (which polls events and updates state)
         self.width = c.GetScreenWidth();
         self.height = c.GetScreenHeight();
 
-        c.BeginDrawing();
         c.ClearBackground(self.theme.background.toRaylib());
     }
 
@@ -408,24 +419,21 @@ pub const Renderer = struct {
         return c.GetMouseWheelMove();
     }
 
-    /// Check if any key was pressed this frame (for dirty tracking)
-    pub fn hasAnyKeyPressed(self: *Renderer) bool {
-        _ = self;
-        return c.GetKeyPressed() != 0;
-    }
-
-    /// Check if any character was pressed this frame (for dirty tracking)
-    pub fn hasCharPressed(self: *Renderer) bool {
-        _ = self;
-        return c.GetCharPressed() != 0;
-    }
 };
 
-/// Poll input events without drawing (for idle frames)
-pub fn pollEvents() void {
+/// Poll input events (updates raylib's internal input state)
+pub fn pollInputEvents() void {
     c.PollInputEvents();
-    // When not drawing, sleep to reduce CPU usage
-    c.WaitTime(0.016); // ~60fps equivalent
+}
+
+/// Sleep for specified duration (in seconds)
+pub fn waitTime(seconds: f64) void {
+    c.WaitTime(seconds);
+}
+
+/// Get time since window was initialized (seconds)
+pub fn getTime() f64 {
+    return c.GetTime();
 }
 
 /// Check if window was resized (event-based, works with X11/Wayland)

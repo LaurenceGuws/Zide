@@ -46,6 +46,7 @@ const AppState = struct {
 
     // Dirty tracking for efficient rendering
     needs_redraw: bool,
+    idle_frames: u32, // Count frames without activity for adaptive sleep
 
     pub fn init(allocator: std.mem.Allocator) !*AppState {
         const renderer = try Renderer.init(allocator, 1280, 720, "Zide - Zig IDE");
@@ -67,6 +68,7 @@ const AppState = struct {
             .show_terminal = false,
             .terminal_height = 200,
             .needs_redraw = true,
+            .idle_frames = 0,
         };
 
         return state;
@@ -154,15 +156,34 @@ const AppState = struct {
 
         // Main loop
         while (!self.renderer.shouldClose()) {
+            // Poll events first (this updates raylib's input state)
+            renderer_mod.pollInputEvents();
+
             try self.update();
 
             // Only redraw when something changed
             if (self.needs_redraw) {
                 self.draw();
                 self.needs_redraw = false;
+                self.idle_frames = 0;
             } else {
-                // Still need to poll events when not drawing
-                renderer_mod.pollEvents();
+                self.idle_frames +|= 1; // Saturating add
+
+                // Adaptive sleep: longer sleep when idle longer
+                // - Startup grace period: stay responsive for first 3 seconds
+                // - Active: 16ms (~60fps responsiveness)
+                // - Idle: up to 100ms (~10fps, saves CPU)
+                const uptime = renderer_mod.getTime();
+                const sleep_ms: f64 = if (uptime < 3.0)
+                    0.016 // Startup: stay fully responsive
+                else if (self.idle_frames < 10)
+                    0.016 // First 10 idle frames: stay responsive
+                else if (self.idle_frames < 60)
+                    0.033 // ~30fps check rate
+                else
+                    0.100; // Deep idle: 10fps check rate
+
+                renderer_mod.waitTime(sleep_ms);
             }
         }
     }
@@ -177,14 +198,12 @@ const AppState = struct {
             self.needs_redraw = true;
         }
 
-        // Check for any input activity
-        const has_key = r.hasAnyKeyPressed();
-        const has_char = r.hasCharPressed();
+        // Check for mouse activity (doesn't consume input)
         const has_mouse = r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT) or
             r.isMouseButtonPressed(renderer_mod.MOUSE_RIGHT) or
             r.getMouseWheelMove() != 0;
 
-        if (has_key or has_char or has_mouse) {
+        if (has_mouse) {
             self.needs_redraw = true;
         }
 
@@ -231,15 +250,18 @@ const AppState = struct {
         if (self.active_kind == .editor and self.editors.items.len > 0) {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             var widget = EditorWidget.init(self.editors.items[editor_idx]);
-            try widget.handleInput(r);
+            if (try widget.handleInput(r)) {
+                self.needs_redraw = true;
+            }
         }
 
-        // Update terminal if shown - use poll() to check for data efficiently
+        // Update terminal if shown
         if (self.show_terminal and self.terminals.items.len > 0) {
             const term = self.terminals.items[0];
 
             // Only poll PTY if there's data available (non-blocking check)
-            if (term.pty.hasData()) {
+            // Skip polling when in deep idle to save CPU
+            if (self.idle_frames < 60 and term.pty.hasData()) {
                 try term.poll();
                 self.needs_redraw = true;
             }
@@ -247,7 +269,9 @@ const AppState = struct {
             // Handle terminal input if focused at bottom
             if (mouse.y > @as(f32, @floatFromInt(r.height)) - self.terminal_height) {
                 var term_widget = TerminalWidget.init(term);
-                try term_widget.handleInput(r);
+                if (try term_widget.handleInput(r)) {
+                    self.needs_redraw = true;
+                }
             }
         }
     }
