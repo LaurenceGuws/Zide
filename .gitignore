@@ -11,5 +11,8 @@ zig-out/
 vendor/raylib/
 vendor/libvterm/
 
+# Generated Wayland protocols (regenerate with: make wayland-protocols)
+vendor/wayland-protocols/
+
 # Build artifacts
 build/

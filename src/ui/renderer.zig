@@ -79,7 +79,8 @@ pub const Renderer = struct {
     pub fn init(allocator: std.mem.Allocator, width: c_int, height: c_int, title: [*:0]const u8) !*Renderer {
         c.SetConfigFlags(c.FLAG_WINDOW_RESIZABLE | c.FLAG_VSYNC_HINT);
         c.InitWindow(width, height, title);
-        c.SetTargetFPS(60);
+        // Note: Don't use SetTargetFPS() - it busy-waits and causes 100% CPU usage.
+        // VSync (FLAG_VSYNC_HINT) properly blocks in SwapBuffers instead.
 
         const renderer = try allocator.create(Renderer);
 
@@ -406,7 +407,41 @@ pub const Renderer = struct {
         _ = self;
         return c.GetMouseWheelMove();
     }
+
+    /// Check if any key was pressed this frame (for dirty tracking)
+    pub fn hasAnyKeyPressed(self: *Renderer) bool {
+        _ = self;
+        return c.GetKeyPressed() != 0;
+    }
+
+    /// Check if any character was pressed this frame (for dirty tracking)
+    pub fn hasCharPressed(self: *Renderer) bool {
+        _ = self;
+        return c.GetCharPressed() != 0;
+    }
 };
+
+/// Poll input events without drawing (for idle frames)
+pub fn pollEvents() void {
+    c.PollInputEvents();
+    // When not drawing, sleep to reduce CPU usage
+    c.WaitTime(0.016); // ~60fps equivalent
+}
+
+/// Check if window was resized (event-based, works with X11/Wayland)
+pub fn isWindowResized() bool {
+    return c.IsWindowResized();
+}
+
+/// Get current screen width
+pub fn getScreenWidth() c_int {
+    return c.GetScreenWidth();
+}
+
+/// Get current screen height
+pub fn getScreenHeight() c_int {
+    return c.GetScreenHeight();
+}
 
 // Raylib key constants
 pub const KEY_ENTER = c.KEY_ENTER;
