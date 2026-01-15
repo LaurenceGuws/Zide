@@ -241,11 +241,15 @@ pub const EditorWidget = struct {
 
     }
 
-    pub fn handleInput(self: *EditorWidget, r: *Renderer) !void {
+    /// Handle input, returns true if any input was processed
+    pub fn handleInput(self: *EditorWidget, r: *Renderer) !bool {
+        var handled = false;
+
         // Character input
         while (r.getCharPressed()) |char| {
             if (char >= 32 and char < 127) {
                 try self.editor.insertChar(@intCast(char));
+                handled = true;
             }
         }
 
@@ -254,28 +258,40 @@ pub const EditorWidget = struct {
 
         if (r.isKeyPressed(renderer_mod.KEY_ENTER)) {
             try self.editor.insertNewline();
+            handled = true;
         } else if (r.isKeyPressed(renderer_mod.KEY_BACKSPACE)) {
             try self.editor.deleteCharBackward();
+            handled = true;
         } else if (r.isKeyPressed(renderer_mod.KEY_DELETE)) {
             try self.editor.deleteCharForward();
+            handled = true;
         } else if (r.isKeyPressed(renderer_mod.KEY_UP)) {
             self.editor.moveCursorUp();
+            handled = true;
         } else if (r.isKeyPressed(renderer_mod.KEY_DOWN)) {
             self.editor.moveCursorDown();
+            handled = true;
         } else if (r.isKeyPressed(renderer_mod.KEY_LEFT)) {
             self.editor.moveCursorLeft();
+            handled = true;
         } else if (r.isKeyPressed(renderer_mod.KEY_RIGHT)) {
             self.editor.moveCursorRight();
+            handled = true;
         } else if (r.isKeyPressed(renderer_mod.KEY_HOME)) {
             self.editor.moveCursorToLineStart();
+            handled = true;
         } else if (r.isKeyPressed(renderer_mod.KEY_END)) {
             self.editor.moveCursorToLineEnd();
+            handled = true;
         } else if (ctrl and r.isKeyPressed(renderer_mod.KEY_S)) {
             try self.editor.save();
+            handled = true;
         } else if (ctrl and r.isKeyPressed(renderer_mod.KEY_Z)) {
             _ = try self.editor.undo();
+            handled = true;
         } else if (ctrl and r.isKeyPressed(renderer_mod.KEY_Y)) {
             _ = try self.editor.redo();
+            handled = true;
         }
 
         // Scroll handling
@@ -284,7 +300,10 @@ pub const EditorWidget = struct {
             const delta = @as(i32, @intFromFloat(-wheel * 3));
             const new_scroll = @as(i64, @intCast(self.editor.scroll_line)) + delta;
             self.editor.scroll_line = @intCast(@max(0, @min(new_scroll, @as(i64, @intCast(self.editor.lineCount())))));
+            handled = true;
         }
+
+        return handled;
     }
 };
 
@@ -387,29 +406,43 @@ pub const TerminalWidget = struct {
         }
     }
 
-    pub fn handleInput(self: *TerminalWidget, r: *Renderer) !void {
+    /// Handle input, returns true if any input was processed
+    pub fn handleInput(self: *TerminalWidget, r: *Renderer) !bool {
+        var handled = false;
+
         // Character input
         while (r.getCharPressed()) |char| {
             try self.session.sendChar(char, terminal_mod.VTERM_MOD_NONE);
+            handled = true;
         }
 
         // Special keys
         if (r.isKeyPressed(renderer_mod.KEY_ENTER)) {
             try self.session.sendKey(terminal_mod.VTERM_KEY_ENTER, terminal_mod.VTERM_MOD_NONE);
+            handled = true;
         } else if (r.isKeyPressed(renderer_mod.KEY_BACKSPACE)) {
             try self.session.sendKey(terminal_mod.VTERM_KEY_BACKSPACE, terminal_mod.VTERM_MOD_NONE);
+            handled = true;
         } else if (r.isKeyPressed(renderer_mod.KEY_TAB)) {
             try self.session.sendKey(terminal_mod.VTERM_KEY_TAB, terminal_mod.VTERM_MOD_NONE);
+            handled = true;
         } else if (r.isKeyPressed(renderer_mod.KEY_ESCAPE)) {
             try self.session.sendKey(terminal_mod.VTERM_KEY_ESCAPE, terminal_mod.VTERM_MOD_NONE);
+            handled = true;
         } else if (r.isKeyPressed(renderer_mod.KEY_UP)) {
             try self.session.sendKey(terminal_mod.VTERM_KEY_UP, terminal_mod.VTERM_MOD_NONE);
+            handled = true;
         } else if (r.isKeyPressed(renderer_mod.KEY_DOWN)) {
             try self.session.sendKey(terminal_mod.VTERM_KEY_DOWN, terminal_mod.VTERM_MOD_NONE);
+            handled = true;
         } else if (r.isKeyPressed(renderer_mod.KEY_LEFT)) {
             try self.session.sendKey(terminal_mod.VTERM_KEY_LEFT, terminal_mod.VTERM_MOD_NONE);
+            handled = true;
         } else if (r.isKeyPressed(renderer_mod.KEY_RIGHT)) {
             try self.session.sendKey(terminal_mod.VTERM_KEY_RIGHT, terminal_mod.VTERM_MOD_NONE);
+            handled = true;
         }
+
+        return handled;
     }
 };
