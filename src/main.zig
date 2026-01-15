@@ -47,6 +47,11 @@ const AppState = struct {
     // Dirty tracking for efficient rendering
     needs_redraw: bool,
     idle_frames: u32, // Count frames without activity for adaptive sleep
+    last_mouse_pos: renderer_mod.MousePos,
+    resizing_terminal: bool,
+    resize_start_y: f32,
+    resize_start_height: f32,
+    mouse_debug: bool,
 
     pub fn init(allocator: std.mem.Allocator) !*AppState {
         const renderer = try Renderer.init(allocator, 1280, 720, "Zide - Zig IDE");
@@ -69,6 +74,11 @@ const AppState = struct {
             .terminal_height = 200,
             .needs_redraw = true,
             .idle_frames = 0,
+            .last_mouse_pos = .{ .x = -1, .y = -1 },
+            .resizing_terminal = false,
+            .resize_start_y = 0,
+            .resize_start_height = 0,
+            .mouse_debug = std.c.getenv("ZIDE_MOUSE_DEBUG") != null,
         };
 
         return state;
@@ -198,13 +208,55 @@ const AppState = struct {
             self.needs_redraw = true;
         }
 
+        const width = @as(f32, @floatFromInt(r.width));
+        const height = @as(f32, @floatFromInt(r.height));
+        const options_bar_height = self.options_bar.height;
+        const tab_bar_height = self.tab_bar.height;
+        const side_nav_width = self.side_nav.width;
+        const status_bar_height = self.status_bar.height;
+        const max_terminal_h = @max(0, height - options_bar_height - tab_bar_height - status_bar_height);
+        const terminal_h = if (self.show_terminal) @min(self.terminal_height, max_terminal_h) else 0;
+        const editor_height = @max(0, height - options_bar_height - tab_bar_height - status_bar_height - terminal_h);
+        const editor_width = @max(0, width - side_nav_width);
+
         // Check for mouse activity (doesn't consume input)
+        const mouse = r.getMousePos();
+        const mouse_down = r.isMouseButtonDown(renderer_mod.MOUSE_LEFT);
+        const mouse_moved = mouse.x != self.last_mouse_pos.x or mouse.y != self.last_mouse_pos.y;
         const has_mouse = r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT) or
             r.isMouseButtonPressed(renderer_mod.MOUSE_RIGHT) or
-            r.getMouseWheelMove() != 0;
+            r.getMouseWheelMove() != 0 or
+            mouse_moved;
 
         if (has_mouse) {
             self.needs_redraw = true;
+        }
+        if (mouse_moved) {
+            self.last_mouse_pos = mouse;
+        }
+
+        // Terminal resize by dragging separator
+        if (self.show_terminal) {
+            const separator_y = height - status_bar_height - terminal_h;
+            const hit_zone: f32 = 6;
+            const over_separator = mouse.y >= separator_y - hit_zone and mouse.y <= separator_y + hit_zone;
+
+            if (!self.resizing_terminal and mouse_down and over_separator) {
+                self.resizing_terminal = true;
+                self.resize_start_y = mouse.y;
+                self.resize_start_height = terminal_h;
+                self.needs_redraw = true;
+            } else if (self.resizing_terminal and mouse_down) {
+                const delta = mouse.y - self.resize_start_y;
+                const min_terminal_h: f32 = 80;
+                const new_height = @max(min_terminal_h, @min(self.resize_start_height - delta, max_terminal_h));
+                if (new_height != self.terminal_height) {
+                    self.terminal_height = new_height;
+                    self.needs_redraw = true;
+                }
+            } else if (self.resizing_terminal and !mouse_down) {
+                self.resizing_terminal = false;
+            }
         }
 
         const ctrl = r.isKeyDown(renderer_mod.KEY_LEFT_CONTROL) or r.isKeyDown(renderer_mod.KEY_RIGHT_CONTROL);
@@ -236,13 +288,64 @@ const AppState = struct {
         }
 
         // Tab bar click handling
-        const mouse = r.getMousePos();
         if (r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT)) {
             const tab_bar_y = self.options_bar.height;
             if (self.tab_bar.handleClick(mouse.x, mouse.y, self.side_nav.width, tab_bar_y)) {
                 // Tab was clicked
                 self.active_tab = self.tab_bar.active_index;
                 self.needs_redraw = true;
+            }
+
+            const editor_x = side_nav_width;
+            const editor_y = options_bar_height + tab_bar_height;
+            const in_editor = mouse.x >= editor_x and mouse.x <= editor_x + editor_width and
+                mouse.y >= editor_y and mouse.y <= editor_y + editor_height;
+
+            const term_y = height - status_bar_height - terminal_h;
+            const in_terminal = terminal_h > 0 and mouse.y >= term_y and mouse.y <= term_y + terminal_h;
+
+            if (in_terminal and self.show_terminal) {
+                self.active_kind = .terminal;
+                self.needs_redraw = true;
+            } else if (in_editor) {
+                self.active_kind = .editor;
+                self.needs_redraw = true;
+            }
+
+            if (self.mouse_debug) {
+                const raw = r.getMousePosRaw();
+                const scaled = r.getMousePos();
+                const dpi = r.getDpiScale();
+                const screen = r.getScreenSize();
+                const render = r.getRenderSize();
+                const monitor = r.getMonitorSize();
+                const scale_screen = if (render.x > 0) screen.x / render.x else 1.0;
+                const scale_render = if (screen.x > 0) render.x / screen.x else 1.0;
+                const via_screen = r.getMousePosScaled(scale_screen);
+                const via_render = r.getMousePosScaled(scale_render);
+
+                std.debug.print(
+                    "mouse click raw({d:.1},{d:.1}) scaled({d:.1},{d:.1}) dpi({d:.2},{d:.2}) scr({d:.0}x{d:.0}) ren({d:.0}x{d:.0}) mon({d:.0}x{d:.0}) via_screen({d:.1},{d:.1}) via_render({d:.1},{d:.1}) scale({d:.2})\n",
+                    .{
+                        raw.x,
+                        raw.y,
+                        scaled.x,
+                        scaled.y,
+                        dpi.x,
+                        dpi.y,
+                        screen.x,
+                        screen.y,
+                        render.x,
+                        render.y,
+                        monitor.x,
+                        monitor.y,
+                        via_screen.x,
+                        via_screen.y,
+                        via_render.x,
+                        via_render.y,
+                        r.mouse_scale.x,
+                    },
+                );
             }
         }
 
@@ -253,17 +356,18 @@ const AppState = struct {
             if (try widget.handleInput(r)) {
                 self.needs_redraw = true;
             }
+            if (r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT)) {
+                const editor_x = side_nav_width;
+                const editor_y = options_bar_height + tab_bar_height;
+                if (widget.handleMouseClick(r, editor_x, editor_y, editor_width, editor_height, mouse.x, mouse.y)) {
+                    self.needs_redraw = true;
+                }
+            }
         }
 
         // Update terminal if shown
         if (self.show_terminal and self.terminals.items.len > 0) {
             const term = self.terminals.items[0];
-            const height = @as(f32, @floatFromInt(r.height));
-            const options_bar_height = self.options_bar.height;
-            const tab_bar_height = self.tab_bar.height;
-            const status_bar_height = self.status_bar.height;
-            const max_terminal_h = @max(0, height - options_bar_height - tab_bar_height - status_bar_height);
-            const terminal_h = @min(self.terminal_height, max_terminal_h);
 
             // Only poll PTY if there's data available (non-blocking check)
             // Skip polling when in deep idle to save CPU
@@ -273,7 +377,7 @@ const AppState = struct {
             }
 
             // Handle terminal input if focused at bottom
-            if (terminal_h > 0 and mouse.y > height - terminal_h) {
+            if (self.active_kind == .terminal) {
                 var term_widget = TerminalWidget.init(term);
                 if (try term_widget.handleInput(r)) {
                     self.needs_redraw = true;
@@ -348,7 +452,7 @@ const AppState = struct {
         }
 
         // Draw side navigation bar (covers terminal icon overflow)
-        const side_nav_height = height - status_bar_height;
+        const side_nav_height = height - status_bar_height - options_bar_height;
         self.side_nav.draw(r, side_nav_height, options_bar_height);
 
         // Draw status bar LAST so it spans full width over everything

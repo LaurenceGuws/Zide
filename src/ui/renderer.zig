@@ -52,6 +52,11 @@ pub const Color = struct {
     pub const yellow = Color{ .r = 241, .g = 250, .b = 140 };
 };
 
+pub const MousePos = struct {
+    x: f32,
+    y: f32,
+};
+
 pub const Theme = struct {
     background: Color = Color.bg,
     foreground: Color = Color.fg,
@@ -87,10 +92,15 @@ pub const Renderer = struct {
     font_size: f32,
     char_width: f32,
     char_height: f32,
+    icon_font: c.Font,
+    icon_font_size: f32,
+    icon_char_width: f32,
+    icon_char_height: f32,
     terminal_cell_width: f32,
     terminal_cell_height: f32,
     terminal_font: TerminalFont,
     theme: Theme,
+    mouse_scale: MousePos,
 
     pub fn init(allocator: std.mem.Allocator, width: c_int, height: c_int, title: [*:0]const u8) !*Renderer {
         c.SetConfigFlags(c.FLAG_WINDOW_RESIZABLE | c.FLAG_VSYNC_HINT);
@@ -122,14 +132,32 @@ pub const Renderer = struct {
             .font_size = font_size,
             .char_width = font_size * 0.6, // Approximate monospace width
             .char_height = font_size * 1.2,
+            .icon_font = font,
+            .icon_font_size = font_size,
+            .icon_char_width = font_size * 0.6,
+            .icon_char_height = font_size * 1.2,
             .terminal_cell_width = font_size * 0.6,
             .terminal_cell_height = font_size * 1.2,
             .terminal_font = undefined,
             .theme = .{},
+            .mouse_scale = .{ .x = 1.0, .y = 1.0 },
         };
 
         // Load app font with Nerd Font glyphs if available
         renderer.loadFontWithGlyphs(allocator, FONT_PATH, font_size);
+        if (loadFontWithGlyphsAtSize(allocator, FONT_PATH, font_size * 2.0)) |icon_font| {
+            renderer.icon_font = icon_font;
+            renderer.icon_font_size = font_size * 2.0;
+            const measure = c.MeasureTextEx(renderer.icon_font, "M", renderer.icon_font_size, 0);
+            renderer.icon_char_width = measure.x;
+            renderer.icon_char_height = measure.y;
+            c.SetTextureFilter(renderer.icon_font.texture, c.TEXTURE_FILTER_BILINEAR);
+        } else {
+            renderer.icon_font = renderer.font;
+            renderer.icon_font_size = renderer.font_size;
+            renderer.icon_char_width = renderer.char_width;
+            renderer.icon_char_height = renderer.char_height;
+        }
         renderer.terminal_font = try TerminalFont.init(allocator, FONT_PATH, font_size);
         renderer.terminal_cell_width = renderer.terminal_font.cell_width;
         renderer.terminal_cell_height = renderer.terminal_font.line_height;
@@ -140,6 +168,9 @@ pub const Renderer = struct {
     pub fn deinit(self: *Renderer) void {
         if (self.font.texture.id != c.GetFontDefault().texture.id) {
             c.UnloadFont(self.font);
+        }
+        if (self.icon_font.texture.id != c.GetFontDefault().texture.id and self.icon_font.texture.id != self.font.texture.id) {
+            c.UnloadFont(self.icon_font);
         }
         c.CloseWindow();
         self.terminal_font.deinit();
@@ -163,6 +194,20 @@ pub const Renderer = struct {
     }
 
     pub fn loadFontWithGlyphs(self: *Renderer, allocator: std.mem.Allocator, path: [*:0]const u8, size: f32) void {
+        if (loadFontWithGlyphsAtSize(allocator, path, size)) |font| {
+            if (self.font.texture.id != c.GetFontDefault().texture.id) {
+                c.UnloadFont(self.font);
+            }
+            self.font = font;
+            self.font_size = size;
+            const measure = c.MeasureTextEx(self.font, "M", size, 0);
+            self.char_width = measure.x;
+            self.char_height = measure.y;
+            // Terminal metrics are managed by TerminalFont
+        }
+    }
+
+    fn loadFontWithGlyphsAtSize(allocator: std.mem.Allocator, path: [*:0]const u8, size: f32) ?c.Font {
         const ranges = [_]struct { start: u32, end: u32 }{
             .{ .start = 0x20, .end = 0x7E },   // Basic Latin
             .{ .start = 0xA0, .end = 0xFF },   // Latin-1 Supplement
@@ -179,7 +224,7 @@ pub const Renderer = struct {
             total += @as(usize, @intCast(range.end - range.start + 1));
         }
 
-        const glyphs = allocator.alloc(c_int, total) catch return;
+        const glyphs = allocator.alloc(c_int, total) catch return null;
         defer allocator.free(glyphs);
 
         var idx: usize = 0;
@@ -194,7 +239,7 @@ pub const Renderer = struct {
         // Load font with extra padding to avoid glyph clipping
         var data_size: c_int = 0;
         const file_data = c.LoadFileData(path, &data_size);
-        if (file_data == null or data_size == 0) return;
+        if (file_data == null or data_size == 0) return null;
         defer c.UnloadFileData(file_data);
 
         var glyph_count: c_int = 0;
@@ -207,7 +252,7 @@ pub const Renderer = struct {
             0,
             &glyph_count,
         );
-        if (font_data == null or glyph_count == 0) return;
+        if (font_data == null or glyph_count == 0) return null;
 
         var recs: [*c]c.Rectangle = null;
         const padding: c_int = 2;
@@ -216,10 +261,7 @@ pub const Renderer = struct {
         c.UnloadImage(image);
 
         if (texture.id != 0) {
-            if (self.font.texture.id != c.GetFontDefault().texture.id) {
-                c.UnloadFont(self.font);
-            }
-            self.font = .{
+            return .{
                 .baseSize = @intFromFloat(size),
                 .glyphCount = glyph_count,
                 .glyphPadding = padding,
@@ -227,11 +269,6 @@ pub const Renderer = struct {
                 .recs = recs,
                 .glyphs = font_data,
             };
-            self.font_size = size;
-            const measure = c.MeasureTextEx(self.font, "M", size, 0);
-            self.char_width = measure.x;
-            self.char_height = measure.y;
-            // Terminal metrics are managed by TerminalFont
         } else {
             const temp_font = c.Font{
                 .baseSize = @intFromFloat(size),
@@ -242,6 +279,7 @@ pub const Renderer = struct {
                 .glyphs = font_data,
             };
             c.UnloadFont(temp_font);
+            return null;
         }
     }
 
@@ -257,6 +295,7 @@ pub const Renderer = struct {
         self.width = c.GetScreenWidth();
         self.height = c.GetScreenHeight();
 
+        self.updateMouseScale();
         c.ClearBackground(self.theme.background.toRaylib());
     }
 
@@ -288,6 +327,39 @@ pub const Renderer = struct {
         buf[len] = 0;
 
         c.DrawTextEx(self.font, &buf, .{ .x = x, .y = y }, self.font_size, 0, color.toRaylib());
+    }
+
+    pub fn drawTextSized(self: *Renderer, text: []const u8, x: f32, y: f32, size: f32, color: Color) void {
+        if (text.len == 0) return;
+
+        // Need null-terminated string for raylib
+        var buf: [1024]u8 = undefined;
+        const len = @min(text.len, buf.len - 1);
+        @memcpy(buf[0..len], text[0..len]);
+        buf[len] = 0;
+
+        c.DrawTextEx(self.font, &buf, .{ .x = x, .y = y }, size, 0, color.toRaylib());
+    }
+
+    pub fn drawIconText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
+        if (text.len == 0) return;
+
+        var buf: [1024]u8 = undefined;
+        const len = @min(text.len, buf.len - 1);
+        @memcpy(buf[0..len], text[0..len]);
+        buf[len] = 0;
+
+        c.DrawTextEx(self.icon_font, &buf, .{ .x = x, .y = y }, self.icon_font_size, 0, color.toRaylib());
+    }
+
+    pub fn measureIconTextWidth(self: *Renderer, text: []const u8) f32 {
+        if (text.len == 0) return 0;
+        var buf: [1024]u8 = undefined;
+        const len = @min(text.len, buf.len - 1);
+        @memcpy(buf[0..len], text[0..len]);
+        buf[len] = 0;
+        const measure = c.MeasureTextEx(self.icon_font, &buf, self.icon_font_size, 0);
+        return measure.x;
     }
 
     pub fn drawChar(self: *Renderer, char: u8, x: f32, y: f32, color: Color) void {
@@ -430,15 +502,81 @@ pub const Renderer = struct {
         return c.IsKeyPressed(key);
     }
 
-    pub fn getMousePos(self: *Renderer) struct { x: f32, y: f32 } {
+    pub fn getMousePos(self: *Renderer) MousePos {
         _ = self;
         const pos = c.GetMousePosition();
         return .{ .x = pos.x, .y = pos.y };
     }
 
+    pub fn getMousePosScaled(_: *Renderer, scale: f32) MousePos {
+        const pos = c.GetMousePosition();
+        return .{ .x = pos.x * scale, .y = pos.y * scale };
+    }
+
+    pub fn getMousePosRaw(self: *Renderer) MousePos {
+        _ = self;
+        const pos = c.GetMousePosition();
+        return .{ .x = pos.x, .y = pos.y };
+    }
+
+    pub fn getDpiScale(self: *Renderer) MousePos {
+        _ = self;
+        const scale = c.GetWindowScaleDPI();
+        return .{ .x = scale.x, .y = scale.y };
+    }
+
+    pub fn getScreenSize(self: *Renderer) MousePos {
+        _ = self;
+        return .{
+            .x = @as(f32, @floatFromInt(c.GetScreenWidth())),
+            .y = @as(f32, @floatFromInt(c.GetScreenHeight())),
+        };
+    }
+
+    pub fn getMonitorSize(self: *Renderer) MousePos {
+        _ = self;
+        const monitor = c.GetCurrentMonitor();
+        return .{
+            .x = @as(f32, @floatFromInt(c.GetMonitorWidth(monitor))),
+            .y = @as(f32, @floatFromInt(c.GetMonitorHeight(monitor))),
+        };
+    }
+
+    fn updateMouseScale(self: *Renderer) void {
+        const screen_w = @as(f32, @floatFromInt(c.GetScreenWidth()));
+        const screen_h = @as(f32, @floatFromInt(c.GetScreenHeight()));
+        const render_w = @as(f32, @floatFromInt(c.GetRenderWidth()));
+        const render_h = @as(f32, @floatFromInt(c.GetRenderHeight()));
+        var sx: f32 = if (screen_w > 0) render_w / screen_w else 1.0;
+        var sy: f32 = if (screen_h > 0) render_h / screen_h else 1.0;
+
+        if (std.c.getenv("ZIDE_MOUSE_SCALE")) |raw| {
+            const s = std.mem.sliceTo(raw, 0);
+            const env_scale = std.fmt.parseFloat(f32, s) catch 1.0;
+            sx *= env_scale;
+            sy *= env_scale;
+        }
+
+        self.mouse_scale = .{ .x = sx, .y = sy };
+        c.SetMouseScale(sx, sy);
+    }
+
+    pub fn getRenderSize(self: *Renderer) MousePos {
+        _ = self;
+        return .{
+            .x = @as(f32, @floatFromInt(c.GetRenderWidth())),
+            .y = @as(f32, @floatFromInt(c.GetRenderHeight())),
+        };
+    }
+
     pub fn isMouseButtonPressed(self: *Renderer, button: c_int) bool {
         _ = self;
         return c.IsMouseButtonPressed(button);
+    }
+
+    pub fn isMouseButtonDown(self: *Renderer, button: c_int) bool {
+        _ = self;
+        return c.IsMouseButtonDown(button);
     }
 
     pub fn getMouseWheelMove(self: *Renderer) f32 {

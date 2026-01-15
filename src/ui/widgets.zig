@@ -9,6 +9,76 @@ const Color = renderer_mod.Color;
 const Editor = editor_mod.Editor;
 const TerminalSession = terminal_mod.TerminalSession;
 
+const TruncResult = struct {
+    drawn_width: f32,
+    truncated: bool,
+    drawn_len: usize,
+};
+
+fn drawTruncatedText(r: *Renderer, text: []const u8, x: f32, y: f32, color: Color, max_width: f32) TruncResult {
+    if (max_width <= 0 or text.len == 0) {
+        return .{ .drawn_width = 0, .truncated = text.len > 0, .drawn_len = 0 };
+    }
+    const max_chars: usize = @intCast(@max(0, @as(i32, @intFromFloat(max_width / r.char_width))));
+    if (max_chars == 0) {
+        return .{ .drawn_width = 0, .truncated = text.len > 0, .drawn_len = 0 };
+    }
+
+    var buf: [256]u8 = undefined;
+    var out_len: usize = 0;
+    const truncated = text.len > max_chars;
+    if (text.len <= max_chars) {
+        out_len = @min(text.len, buf.len);
+        @memcpy(buf[0..out_len], text[0..out_len]);
+    } else if (max_chars <= 3) {
+        out_len = @min(max_chars, buf.len);
+        @memcpy(buf[0..out_len], text[0..out_len]);
+    } else {
+        const prefix_len = @min(max_chars - 3, buf.len - 3);
+        @memcpy(buf[0..prefix_len], text[0..prefix_len]);
+        buf[prefix_len + 0] = '.';
+        buf[prefix_len + 1] = '.';
+        buf[prefix_len + 2] = '.';
+        out_len = prefix_len + 3;
+    }
+
+    r.drawText(buf[0..out_len], x, y, color);
+    return .{
+        .drawn_width = @as(f32, @floatFromInt(out_len)) * r.char_width,
+        .truncated = truncated,
+        .drawn_len = out_len,
+    };
+}
+
+const Tooltip = struct {
+    text: []const u8,
+    x: f32,
+    y: f32,
+};
+
+fn drawTooltip(r: *Renderer, text: []const u8, x: f32, y: f32) void {
+    if (text.len == 0) return;
+    const padding: f32 = 6;
+    const text_w = @as(f32, @floatFromInt(text.len)) * r.char_width;
+    const text_h = r.char_height;
+    const w = text_w + padding * 2;
+    const h = text_h + padding * 2;
+
+    const max_w = @as(f32, @floatFromInt(r.width));
+    const max_h = @as(f32, @floatFromInt(r.height));
+    var draw_x = x + 12;
+    var draw_y = y + 12;
+    if (draw_x + w > max_w) draw_x = max_w - w - 4;
+    if (draw_y + h > max_h) draw_y = max_h - h - 4;
+    if (draw_x < 4) draw_x = 4;
+    if (draw_y < 4) draw_y = 4;
+
+    const bg = Color{ .r = 24, .g = 25, .b = 33, .a = 235 };
+    r.drawRect(@intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(w), @intFromFloat(h), bg);
+    r.drawRectOutline(@intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(w), @intFromFloat(h), Color.light_gray);
+    r.drawText(text, draw_x + padding, draw_y + padding, Color.fg);
+}
+
 /// Tab bar for multiple open files/terminals
 pub const TabBar = struct {
     allocator: std.mem.Allocator,
@@ -49,6 +119,13 @@ pub const TabBar = struct {
         // Draw tab bar background
         r.drawRect(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height), Color{ .r = 30, .g = 31, .b = 41 });
 
+        if (width <= 0 or self.height <= 0) return;
+
+        r.beginClip(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height));
+
+        var tooltip: ?Tooltip = null;
+        const mouse = r.getMousePos();
+
         var cursor_x: f32 = x;
         for (self.tabs.items, 0..) |tab, i| {
             const tab_width: f32 = 150;
@@ -76,9 +153,28 @@ pub const TabBar = struct {
             }
 
             const prefix_width: f32 = if (tab.modified) r.char_width * 2 else 0;
-            r.drawText(tab.title, title_x + prefix_width, title_y, if (is_active) Color.fg else Color.comment);
+            const title_max = tab_width - 16 - prefix_width;
+            const result = drawTruncatedText(
+                r,
+                tab.title,
+                title_x + prefix_width,
+                title_y,
+                if (is_active) Color.fg else Color.comment,
+                title_max,
+            );
+            const in_tab = mouse.x >= cursor_x and mouse.x <= cursor_x + tab_width and
+                mouse.y >= y and mouse.y <= y + self.height;
+            if (result.truncated and in_tab) {
+                tooltip = .{ .text = tab.title, .x = mouse.x, .y = mouse.y };
+            }
 
             cursor_x += tab_width + 1;
+        }
+
+        r.endClip();
+
+        if (tooltip) |tip| {
+            drawTooltip(r, tip.text, tip.x, tip.y);
         }
     }
 
@@ -109,9 +205,23 @@ pub const OptionsBar = struct {
         const labels = [_][]const u8{ "File", "Edit", "Selection", "View", "Go", "Run", "Terminal", "Help" };
         var x: f32 = 10;
         const y: f32 = (self.height - r.char_height) / 2;
+        const mouse = r.getMousePos();
+        const pressed = r.isMouseButtonDown(renderer_mod.MOUSE_LEFT);
         for (labels) |label| {
-            r.drawText(label, x, y, Color.comment);
-            x += @as(f32, @floatFromInt(label.len)) * r.char_width + 16;
+            const text_w = @as(f32, @floatFromInt(label.len)) * r.char_width;
+            const pad_x: f32 = 6;
+            const pad_y: f32 = 4;
+            const bx = x - pad_x;
+            const by = y - pad_y;
+            const bw = text_w + pad_x * 2;
+            const bh = r.char_height + pad_y * 2;
+            const hovered = mouse.x >= bx and mouse.x <= bx + bw and mouse.y >= by and mouse.y <= by + bh;
+            if (hovered) {
+                const bg = if (pressed) Color{ .r = 58, .g = 60, .b = 78 } else Color.selection;
+                r.drawRect(@intFromFloat(bx), @intFromFloat(by), @intFromFloat(bw), @intFromFloat(bh), bg);
+            }
+            r.drawText(label, x, y, if (hovered) Color.fg else Color.comment);
+            x += text_w + 16;
         }
 
     }
@@ -125,16 +235,94 @@ pub const SideNav = struct {
         // Background
         r.drawRect(0, @intFromFloat(y), @intFromFloat(self.width), @intFromFloat(height), Color{ .r = 30, .g = 31, .b = 41 });
 
-        // Simple icon placeholders
-        const icon_size: f32 = 20;
-        const spacing: f32 = 16;
-        var icon_y: f32 = y + 12;
-        var i: usize = 0;
-        while (i < 5) : (i += 1) {
-            const icon_x: f32 = (self.width - icon_size) / 2;
-            const icon_color = if (i == 0) Color.purple else Color.comment;
-            r.drawRect(@intFromFloat(icon_x), @intFromFloat(icon_y), @intFromFloat(icon_size), @intFromFloat(icon_size), icon_color);
+        const Item = struct {
+            icon: []const u8,
+            badge: ?u8,
+            active: bool,
+        };
+        const top_items = [_]Item{
+            .{ .icon = "", .badge = 1, .active = true }, // Workspace 1
+            .{ .icon = "", .badge = 2, .active = false }, // Workspace 2
+            .{ .icon = "", .badge = 3, .active = false }, // Workspace 3
+        };
+        const bottom_items = [_]Item{
+            .{ .icon = "", .badge = null, .active = false }, // Search
+            .{ .icon = "", .badge = null, .active = false }, // Source Control
+            .{ .icon = "", .badge = null, .active = false }, // Run/Debug
+            .{ .icon = "", .badge = null, .active = false }, // Extensions
+            .{ .icon = "", .badge = null, .active = false }, // Settings
+            .{ .icon = "󰏗", .badge = null, .active = false }, // Accounts
+        };
+
+        const icon_size: f32 = 32;
+        const icon_h_unit: f32 = r.icon_char_height;
+        const badge_size: f32 = r.font_size * 1.0;
+        const badge_h_unit: f32 = r.char_height * (badge_size / r.font_size);
+        const spacing: f32 = 12;
+        const mouse = r.getMousePos();
+        const pressed = r.isMouseButtonDown(renderer_mod.MOUSE_LEFT);
+
+        const icon_x_pad: f32 = self.width * 0.30;
+        const icon_text_offset: f32 = 1;
+        var icon_y: f32 = y + 10;
+        for (top_items) |item| {
+            const icon_x: f32 = icon_x_pad;
+            const bx = icon_x - 8;
+            const by = icon_y - 6;
+            const bw = icon_size + 16;
+            const bh = icon_size + 12;
+            const hovered = mouse.x >= bx and mouse.x <= bx + bw and mouse.y >= by and mouse.y <= by + bh;
+
+            if (hovered or item.active) {
+                const bg = if (pressed and hovered) Color{ .r = 58, .g = 60, .b = 78 } else Color.selection;
+                r.drawRect(@intFromFloat(bx), @intFromFloat(by), @intFromFloat(bw), @intFromFloat(bh), bg);
+            }
+            if (item.active) {
+                r.drawRect(0, @intFromFloat(by), 2, @intFromFloat(bh), Color.purple);
+            }
+
+            const icon_color = if (item.active or hovered) Color.fg else Color.comment;
+            const icon_text_x = icon_x + icon_text_offset;
+            const icon_text_y = icon_y + (icon_size - icon_h_unit) / 2;
+            r.drawIconText(item.icon, icon_text_x, icon_text_y, icon_color);
+
+            if (item.badge) |count| {
+                var buf: [4]u8 = undefined;
+                const text = std.fmt.bufPrint(&buf, "{d}", .{count}) catch "";
+                const text_h = badge_h_unit;
+                const badge_x = icon_x + icon_text_offset + 2;
+                const badge_y = icon_y + (icon_size - text_h) / 2 + 1;
+                r.drawTextSized(text, badge_x, badge_y, badge_size, Color.fg);
+            }
+
             icon_y += icon_size + spacing;
+        }
+
+        var bottom_y: f32 = y + height - 10 - icon_size;
+        var i: usize = 0;
+        while (i < bottom_items.len) : (i += 1) {
+            const item = bottom_items[bottom_items.len - 1 - i];
+            const icon_x: f32 = icon_x_pad;
+            const bx = icon_x - 8;
+            const by = bottom_y - 6;
+            const bw = icon_size + 16;
+            const bh = icon_size + 12;
+            const hovered = mouse.x >= bx and mouse.x <= bx + bw and mouse.y >= by and mouse.y <= by + bh;
+
+            if (hovered or item.active) {
+                const bg = if (pressed and hovered) Color{ .r = 58, .g = 60, .b = 78 } else Color.selection;
+                r.drawRect(@intFromFloat(bx), @intFromFloat(by), @intFromFloat(bw), @intFromFloat(bh), bg);
+            }
+            if (item.active) {
+                r.drawRect(0, @intFromFloat(by), 2, @intFromFloat(bh), Color.purple);
+            }
+
+            const icon_color = if (item.active or hovered) Color.fg else Color.comment;
+            const icon_text_x = icon_x + icon_text_offset;
+            const icon_text_y = bottom_y + (icon_size - icon_h_unit) / 2;
+            r.drawIconText(item.icon, icon_text_x, icon_text_y, icon_color);
+
+            bottom_y -= icon_size + spacing;
         }
 
     }
@@ -158,6 +346,12 @@ pub const StatusBar = struct {
         // Background
         r.drawRect(0, @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height), Color{ .r = 30, .g = 31, .b = 41 });
 
+        // Line/column (reserve space on right)
+        var pos_buf: [32]u8 = undefined;
+        const pos_str = std.fmt.bufPrint(&pos_buf, "Ln {d}, Col {d}", .{ line + 1, col + 1 }) catch return;
+        const pos_width = @as(f32, @floatFromInt(pos_str.len)) * r.char_width;
+        const pos_start = width - pos_width - 16;
+
         // Mode indicator
         const mode_bg = if (std.mem.eql(u8, mode, "INSERT"))
             Color.green
@@ -166,26 +360,42 @@ pub const StatusBar = struct {
         else
             Color.cyan;
 
-        r.drawRect(0, @intFromFloat(y), 80, @intFromFloat(self.height), mode_bg);
-        r.drawText(mode, 8, y + 4, Color.black);
+        const mouse = r.getMousePos();
+        const pressed = r.isMouseButtonDown(renderer_mod.MOUSE_LEFT);
+        const mode_hover = mouse.x >= 0 and mouse.x <= 80 and mouse.y >= y and mouse.y <= y + self.height;
+        const mode_bg_final = if (mode_hover and pressed) Color{ .r = 58, .g = 60, .b = 78 } else if (mode_hover) Color.selection else mode_bg;
+        r.drawRect(0, @intFromFloat(y), 80, @intFromFloat(self.height), mode_bg_final);
+        r.drawText(mode, 8, y + 4, if (mode_hover) Color.fg else Color.black);
 
         // File path
         var x: f32 = 88;
         if (file_path) |path| {
-            r.drawText(path, x, y + 4, Color.fg);
-            x += @as(f32, @floatFromInt(path.len)) * r.char_width + 16;
+            const available = pos_start - 16 - x;
+            const result = drawTruncatedText(r, path, x, y + 4, Color.fg, available);
+            const mouse_path = r.getMousePos();
+            const in_path = mouse_path.x >= x and mouse_path.x <= x + result.drawn_width and
+                mouse_path.y >= y and mouse_path.y <= y + self.height;
+            if (result.truncated and in_path) {
+                drawTooltip(r, path, mouse_path.x, mouse_path.y);
+            }
+            x += result.drawn_width + 16;
         }
 
         // Modified indicator
         if (modified) {
-            r.drawText("[+]", x, y + 4, Color.orange);
+            const indicator = "[+]";
+            const indicator_width = @as(f32, @floatFromInt(indicator.len)) * r.char_width;
+            if (x + indicator_width <= pos_start - 8) {
+                r.drawText(indicator, x, y + 4, Color.orange);
+            }
         }
 
-        // Line/column
-        var pos_buf: [32]u8 = undefined;
-        const pos_str = std.fmt.bufPrint(&pos_buf, "Ln {d}, Col {d}", .{ line + 1, col + 1 }) catch return;
-        const pos_width = @as(f32, @floatFromInt(pos_str.len)) * r.char_width;
-        r.drawText(pos_str, width - pos_width - 16, y + 4, Color.comment);
+        const pos_hover = mouse.x >= pos_start and mouse.x <= pos_start + pos_width and mouse.y >= y and mouse.y <= y + self.height;
+        if (pos_hover) {
+            const bg = if (pressed) Color{ .r = 58, .g = 60, .b = 78 } else Color.selection;
+            r.drawRect(@intFromFloat(pos_start - 4), @intFromFloat(y + 2), @intFromFloat(pos_width + 8), @intFromFloat(self.height - 4), bg);
+        }
+        r.drawText(pos_str, pos_start, y + 4, if (pos_hover) Color.fg else Color.comment);
     }
 };
 
@@ -239,6 +449,36 @@ pub const EditorWidget = struct {
             r.drawCursor(cursor_x, cursor_y, .line);
         }
 
+    }
+
+    pub fn handleMouseClick(
+        self: *EditorWidget,
+        r: *Renderer,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        mouse_x: f32,
+        mouse_y: f32,
+    ) bool {
+        if (width <= 0 or height <= 0) return false;
+        if (mouse_x < x or mouse_x > x + width) return false;
+        if (mouse_y < y or mouse_y > y + height) return false;
+        if (self.editor.lineCount() == 0) return false;
+
+        const line_offset = @as(usize, @intFromFloat((mouse_y - y) / r.char_height));
+        const max_line = self.editor.lineCount() - 1;
+        const line = @min(self.editor.scroll_line + line_offset, max_line);
+
+        const text_start_x = x + self.gutter_width + 8;
+        var col: usize = 0;
+        if (mouse_x > text_start_x) {
+            col = @as(usize, @intFromFloat((mouse_x - text_start_x) / r.char_width));
+        }
+        const line_len = self.editor.lineLen(line);
+        const clamped_col = @min(col, line_len);
+        self.editor.setCursor(line, clamped_col);
+        return true;
     }
 
     /// Handle input, returns true if any input was processed
