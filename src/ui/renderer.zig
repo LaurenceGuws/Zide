@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const compositor = @import("../platform/compositor.zig");
 
 const c = @cImport({
     @cInclude("raylib.h");
@@ -101,6 +102,8 @@ pub const Renderer = struct {
     terminal_font: TerminalFont,
     theme: Theme,
     mouse_scale: MousePos,
+    wayland_scale_cache: ?f32,
+    wayland_scale_last_update: f64,
 
     pub fn init(allocator: std.mem.Allocator, width: c_int, height: c_int, title: [*:0]const u8) !*Renderer {
         c.SetConfigFlags(c.FLAG_WINDOW_RESIZABLE | c.FLAG_VSYNC_HINT);
@@ -141,6 +144,8 @@ pub const Renderer = struct {
             .terminal_font = undefined,
             .theme = .{},
             .mouse_scale = .{ .x = 1.0, .y = 1.0 },
+            .wayland_scale_cache = null,
+            .wayland_scale_last_update = -1000.0,
         };
 
         // Load app font with Nerd Font glyphs if available
@@ -549,6 +554,20 @@ pub const Renderer = struct {
         const render_h = @as(f32, @floatFromInt(c.GetRenderHeight()));
         var sx: f32 = if (screen_w > 0) render_w / screen_w else 1.0;
         var sy: f32 = if (screen_h > 0) render_h / screen_h else 1.0;
+
+        if (compositor.isWayland()) {
+            const now = c.GetTime();
+            if (now - self.wayland_scale_last_update > 1.0) {
+                self.wayland_scale_cache = compositor.getWaylandScale(self.allocator);
+                self.wayland_scale_last_update = now;
+            }
+            if (self.wayland_scale_cache) |scale| {
+                if (scale > 0.0) {
+                    sx *= scale;
+                    sy *= scale;
+                }
+            }
+        }
 
         if (std.c.getenv("ZIDE_MOUSE_SCALE")) |raw| {
             const s = std.mem.sliceTo(raw, 0);
