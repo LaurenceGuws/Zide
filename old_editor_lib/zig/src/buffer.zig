@@ -6,7 +6,6 @@ const Piece = types.Piece;
 const UndoOp = types.UndoOp;
 const UndoKind = types.UndoKind;
 const max_undo_bytes: usize = 8 * 1024 * 1024;
-const max_undo_ops: usize = 1000;
 
 pub fn createBuffer(allocator: std.mem.Allocator, initial: []const u8) !*TextBuffer {
     var buffer = try allocator.create(TextBuffer);
@@ -261,7 +260,6 @@ pub fn insertBytes(buffer: *TextBuffer, pos: usize, data: []const u8) !void {
     try insertBytesNoHistory(buffer, pos, data);
     try clearRedoStack(buffer);
     try buffer.undo_stack.append(buffer.allocator, op);
-    trimUndoStack(buffer);
 }
 
 fn deleteRangeNoHistory(buffer: *TextBuffer, start: usize, len: usize) !void {
@@ -347,7 +345,6 @@ pub fn deleteRange(buffer: *TextBuffer, start: usize, len: usize) !void {
     try deleteRangeNoHistory(buffer, start, len);
     try clearRedoStack(buffer);
     try buffer.undo_stack.append(buffer.allocator, op);
-    trimUndoStack(buffer);
 }
 
 pub fn readRange(buffer: *TextBuffer, start: usize, out: []u8) usize {
@@ -397,7 +394,7 @@ pub fn readRange(buffer: *TextBuffer, start: usize, out: []u8) usize {
     return out_index;
 }
 
-pub fn readRangeAlloc(buffer: *TextBuffer, start: usize, len: usize) ![]u8 {
+fn readRangeAlloc(buffer: *TextBuffer, start: usize, len: usize) ![]u8 {
     const total = totalLen(buffer);
     if (start >= total or len == 0) return try buffer.allocator.alloc(u8, 0);
     const readable = if (start + len > total) total - start else len;
@@ -431,13 +428,6 @@ fn freeUndoStack(buffer: *TextBuffer, stack: *std.ArrayList(UndoOp)) void {
 fn clearRedoStack(buffer: *TextBuffer) !void {
     if (buffer.redo_stack.items.len == 0) return;
     freeUndoStack(buffer, &buffer.redo_stack);
-}
-
-fn trimUndoStack(buffer: *TextBuffer) void {
-    while (buffer.undo_stack.items.len > max_undo_ops) {
-        const op = buffer.undo_stack.orderedRemove(0);
-        freeUndoOp(buffer.allocator, op);
-    }
 }
 
 fn clearHistory(buffer: *TextBuffer) void {
@@ -788,22 +778,4 @@ pub fn readLine(buffer: *TextBuffer, line_index: usize, out: []u8) usize {
         return readRange(buffer, start, out[0..cap]);
     }
     return 0;
-}
-
-/// Save buffer contents to a file
-pub fn saveToFile(buffer: *TextBuffer, path: []const u8) !void {
-    const file = try std.fs.cwd().createFile(path, .{});
-    defer file.close();
-
-    var temp: [64 * 1024]u8 = undefined;
-    var offset: usize = 0;
-    const total = totalLen(buffer);
-
-    while (offset < total) {
-        const to_read = @min(temp.len, total - offset);
-        const read_count = readRange(buffer, offset, temp[0..to_read]);
-        if (read_count == 0) break;
-        try file.writeAll(temp[0..read_count]);
-        offset += read_count;
-    }
 }
