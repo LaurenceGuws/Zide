@@ -6,6 +6,22 @@ const c = @cImport({
 });
 const TerminalFont = @import("terminal_font.zig").TerminalFont;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Font Selection (change this to test different fonts)
+// ─────────────────────────────────────────────────────────────────────────────
+pub const FontFamily = enum {
+    iosevka,
+    jetbrains_mono,
+};
+
+/// Change this to switch fonts at compile time
+pub const FONT_FAMILY: FontFamily = .iosevka;
+
+pub const FONT_PATH: [*:0]const u8 = switch (FONT_FAMILY) {
+    .iosevka => "assets/fonts/IosevkaTermNerdFont-Regular.ttf",
+    .jetbrains_mono => "assets/fonts/JetBrainsMonoNerdFont-Regular.ttf",
+};
+
 pub const Color = struct {
     r: u8,
     g: u8,
@@ -113,8 +129,8 @@ pub const Renderer = struct {
         };
 
         // Load app font with Nerd Font glyphs if available
-        renderer.loadFontWithGlyphs(allocator, "assets/fonts/IosevkaTermNerdFont-Regular.ttf", font_size);
-        renderer.terminal_font = try TerminalFont.init(allocator, "assets/fonts/IosevkaTermNerdFont-Regular.ttf", font_size);
+        renderer.loadFontWithGlyphs(allocator, FONT_PATH, font_size);
+        renderer.terminal_font = try TerminalFont.init(allocator, FONT_PATH, font_size);
         renderer.terminal_cell_width = renderer.terminal_font.cell_width;
         renderer.terminal_cell_height = renderer.terminal_font.line_height;
 
@@ -259,13 +275,11 @@ pub const Renderer = struct {
         buf[len] = 0;
 
         c.DrawTextEx(self.font, &buf, .{ .x = x, .y = y }, self.font_size, 0, color.toRaylib());
-        c.DrawTextEx(self.font, &buf, .{ .x = x + 0.3, .y = y }, self.font_size, 0, color.toRaylib());
     }
 
     pub fn drawChar(self: *Renderer, char: u8, x: f32, y: f32, color: Color) void {
         var buf = [2]u8{ char, 0 };
         c.DrawTextEx(self.font, &buf, .{ .x = x, .y = y }, self.font_size, 0, color.toRaylib());
-        c.DrawTextEx(self.font, &buf, .{ .x = x + 0.3, .y = y }, self.font_size, 0, color.toRaylib());
     }
 
     pub fn drawLine(self: *Renderer, x1: c_int, y1: c_int, x2: c_int, y2: c_int, color: Color) void {
