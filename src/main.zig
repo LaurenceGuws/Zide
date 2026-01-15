@@ -304,19 +304,6 @@ const AppState = struct {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             var widget = EditorWidget.init(self.editors.items[editor_idx]);
             widget.draw(r, side_nav_width, options_bar_height + tab_bar_height, editor_width, editor_height);
-
-            // Update status bar info
-            const editor = self.editors.items[editor_idx];
-            self.status_bar.draw(
-                r,
-                width,
-                height - status_bar_height,
-                self.mode,
-                editor.file_path,
-                editor.cursor.line,
-                editor.cursor.col,
-                editor.modified,
-            );
         }
 
         // Draw terminal if shown
@@ -330,9 +317,25 @@ const AppState = struct {
             term_widget.draw(r, side_nav_width, term_y + 2, editor_width, terminal_h - 2);
         }
 
-        // Draw side navigation bar LAST so it covers any terminal icon overflow
+        // Draw side navigation bar (covers terminal icon overflow)
         const side_nav_height = height - status_bar_height;
         self.side_nav.draw(r, side_nav_height, options_bar_height);
+
+        // Draw status bar LAST so it spans full width over everything
+        if (self.editors.items.len > 0) {
+            const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
+            const editor = self.editors.items[editor_idx];
+            self.status_bar.draw(
+                r,
+                width,
+                height - status_bar_height,
+                self.mode,
+                editor.file_path,
+                editor.cursor.line,
+                editor.cursor.col,
+                editor.modified,
+            );
+        }
 
         r.endFrame();
     }
