@@ -147,6 +147,13 @@ pub const Editor = struct {
         self.selection = null;
     }
 
+    pub fn setCursor(self: *Editor, line: usize, col: usize) void {
+        self.cursor.line = line;
+        self.cursor.col = col;
+        self.updateCursorOffset();
+        self.selection = null;
+    }
+
     fn updateCursorPosition(self: *Editor) void {
         self.cursor.line = buffer_mod.lineIndexForOffset(self.buffer, self.cursor.offset);
         const line_start = buffer_mod.lineStart(self.buffer, self.cursor.line);
@@ -274,6 +281,10 @@ pub const Editor = struct {
 
     pub fn getLine(self: *Editor, line_index: usize, out: []u8) usize {
         return buffer_mod.readLine(self.buffer, line_index, out);
+    }
+
+    pub fn lineLen(self: *Editor, line_index: usize) usize {
+        return buffer_mod.lineLen(self.buffer, line_index);
     }
 
     pub fn getLineAlloc(self: *Editor, line_index: usize) ![]u8 {
