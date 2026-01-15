@@ -1,3 +1,15 @@
 .zig-cache/
 zig-out/
 *.o
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+
+# Vendor dependencies (fetched by bootstrap)
+vendor/raylib/
+vendor/libvterm/
+
+# Build artifacts
+build/

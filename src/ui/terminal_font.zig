@@ -1,0 +1,238 @@
+const std = @import("std");
+
+const c = @cImport({
+    @cInclude("raylib.h");
+    @cInclude("ft2build.h");
+    @cInclude("freetype/freetype.h");
+    @cInclude("freetype/ftglyph.h");
+    @cInclude("harfbuzz/hb.h");
+    @cInclude("harfbuzz/hb-ft.h");
+});
+
+pub const Glyph = struct {
+    rect: c.Rectangle,
+    bearing_x: i32,
+    bearing_y: i32,
+    advance: f32,
+    width: i32,
+    height: i32,
+};
+
+pub const Rgba = extern struct {
+    r: u8,
+    g: u8,
+    b: u8,
+    a: u8,
+};
+
+pub const TerminalFont = struct {
+    allocator: std.mem.Allocator,
+    ft_library: c.FT_Library,
+    ft_face: c.FT_Face,
+    hb_font: *c.hb_font_t,
+    texture: c.Texture2D,
+    atlas_width: i32,
+    atlas_height: i32,
+    pen_x: i32,
+    pen_y: i32,
+    row_h: i32,
+    padding: i32,
+    glyphs: std.AutoHashMap(u32, Glyph),
+    ascent: f32,
+    descent: f32,
+    line_height: f32,
+    cell_width: f32,
+
+    pub fn init(allocator: std.mem.Allocator, path: [*:0]const u8, size: f32) !TerminalFont {
+        var ft_library: c.FT_Library = null;
+        if (c.FT_Init_FreeType(&ft_library) != 0) return error.FtInitFailed;
+
+        var ft_face: c.FT_Face = null;
+        if (c.FT_New_Face(ft_library, path, 0, &ft_face) != 0) return error.FtFaceFailed;
+        if (c.FT_Set_Pixel_Sizes(ft_face, 0, @intFromFloat(size)) != 0) return error.FtSizeFailed;
+
+        const hb_font = c.hb_ft_font_create(ft_face, null) orelse return error.HbInitFailed;
+
+        const metrics = ft_face.*.size.*.metrics;
+        const ascent = @as(f32, @floatFromInt(metrics.ascender >> 6));
+        const descent = @as(f32, @floatFromInt(@abs(metrics.descender >> 6)));
+        const line_height = @as(f32, @floatFromInt(metrics.height >> 6));
+
+        // Use typical ASCII glyphs to avoid oversized cell widths.
+        var cell_width: f32 = 0;
+        const samples = [_]u32{ 'M', 'W', 'd' };
+        for (samples) |cp| {
+            // HarfBuzz advance
+            const buffer = c.hb_buffer_create();
+            defer c.hb_buffer_destroy(buffer);
+            c.hb_buffer_add_utf32(buffer, &cp, 1, 0, 1);
+            c.hb_buffer_guess_segment_properties(buffer);
+            c.hb_shape(hb_font, buffer, null, 0);
+            var sample_len: c_uint = 0;
+            const sample_pos = c.hb_buffer_get_glyph_positions(buffer, &sample_len);
+            if (sample_len > 0) {
+                const adv = @as(f32, @floatFromInt(sample_pos[0].x_advance)) / 64.0;
+                if (adv > cell_width) cell_width = adv;
+            }
+
+            // FreeType metrics for visual width (bitmap + bearing)
+            if (c.FT_Load_Char(ft_face, cp, c.FT_LOAD_DEFAULT) == 0) {
+                const slot = ft_face.*.glyph;
+                const metric_w = @as(f32, @floatFromInt(slot.*.metrics.width >> 6));
+                const bearing = @as(f32, @floatFromInt(@max(0, slot.*.bitmap_left)));
+                const visual = metric_w + bearing;
+                if (visual > cell_width) cell_width = visual;
+                const adv_ft = @as(f32, @floatFromInt(slot.*.advance.x >> 6));
+                if (adv_ft > cell_width) cell_width = adv_ft;
+            }
+        }
+
+        if (cell_width <= 0) {
+            cell_width = @as(f32, @floatFromInt(metrics.max_advance >> 6));
+        }
+        if (cell_width <= 0) {
+            cell_width = size * 0.6;
+        }
+        cell_width += 1.0; // small right-side safety pad
+
+        const atlas_width: i32 = 2048;
+        const atlas_height: i32 = 2048;
+        const padding: i32 = 1;
+
+        const image = c.GenImageColor(atlas_width, atlas_height, .{ .r = 0, .g = 0, .b = 0, .a = 0 });
+        const texture = c.LoadTextureFromImage(image);
+        c.UnloadImage(image);
+
+        return .{
+            .allocator = allocator,
+            .ft_library = ft_library,
+            .ft_face = ft_face,
+            .hb_font = hb_font,
+            .texture = texture,
+            .atlas_width = atlas_width,
+            .atlas_height = atlas_height,
+            .pen_x = padding,
+            .pen_y = padding,
+            .row_h = 0,
+            .padding = padding,
+            .glyphs = std.AutoHashMap(u32, Glyph).init(allocator),
+            .ascent = ascent,
+            .descent = descent,
+            .line_height = if (line_height > 0) line_height else ascent + descent,
+            .cell_width = if (cell_width > 0) cell_width else size * 0.6,
+        };
+    }
+
+    pub fn deinit(self: *TerminalFont) void {
+        self.glyphs.deinit();
+        c.UnloadTexture(self.texture);
+        c.hb_font_destroy(self.hb_font);
+        _ = c.FT_Done_Face(self.ft_face);
+        _ = c.FT_Done_FreeType(self.ft_library);
+    }
+
+    pub fn drawGlyph(self: *TerminalFont, codepoint: u32, x: f32, y: f32, color: Rgba) void {
+        if (codepoint == 0) return;
+        const glyph = self.getGlyph(codepoint) catch return;
+        const baseline = y + self.ascent;
+
+        // Left-align all glyphs at cell start - wide icons overflow right only
+        // Use bearing_x for normal glyphs, but clamp to never go left of x
+        const bearing = @as(f32, @floatFromInt(glyph.bearing_x));
+        const draw_x = @max(x, x + bearing);
+
+        const draw_y = baseline - @as(f32, @floatFromInt(glyph.bearing_y));
+        c.DrawTextureRec(self.texture, glyph.rect, .{ .x = draw_x, .y = draw_y }, .{
+            .r = color.r,
+            .g = color.g,
+            .b = color.b,
+            .a = color.a,
+        });
+    }
+
+    fn getGlyph(self: *TerminalFont, codepoint: u32) !*Glyph {
+        if (self.glyphs.getPtr(codepoint)) |glyph| return glyph;
+
+        const buffer = c.hb_buffer_create();
+        defer c.hb_buffer_destroy(buffer);
+        c.hb_buffer_add_utf32(buffer, &codepoint, 1, 0, 1);
+        c.hb_buffer_guess_segment_properties(buffer);
+        c.hb_shape(self.hb_font, buffer, null, 0);
+
+        var length: c_uint = 0;
+        const infos = c.hb_buffer_get_glyph_infos(buffer, &length);
+        const positions = c.hb_buffer_get_glyph_positions(buffer, &length);
+        if (length == 0) return error.HbShapeFailed;
+
+        const glyph_id = infos[0].codepoint;
+        if (c.FT_Load_Glyph(self.ft_face, glyph_id, c.FT_LOAD_DEFAULT) != 0) return error.FtLoadFailed;
+        if (c.FT_Render_Glyph(self.ft_face.*.glyph, c.FT_RENDER_MODE_NORMAL) != 0) return error.FtRenderFailed;
+
+        const slot = self.ft_face.*.glyph;
+        const bitmap = slot.*.bitmap;
+        const width: i32 = @intCast(bitmap.width);
+        const height: i32 = @intCast(bitmap.rows);
+
+        if (width > 0 and height > 0) {
+            if (self.pen_x + width + self.padding > self.atlas_width) {
+                self.pen_x = self.padding;
+                self.pen_y += self.row_h + self.padding;
+                self.row_h = 0;
+            }
+            if (self.pen_y + height + self.padding > self.atlas_height) {
+                return error.AtlasFull;
+            }
+
+            const pixel_count = @as(usize, @intCast(width * height));
+            const rgba = try self.allocator.alloc(u8, pixel_count * 4);
+            defer self.allocator.free(rgba);
+
+            var y: i32 = 0;
+            while (y < height) : (y += 1) {
+                var x: i32 = 0;
+                while (x < width) : (x += 1) {
+                    const src_idx = @as(usize, @intCast(y * @as(i32, @intCast(bitmap.pitch)) + x));
+                    const alpha = bitmap.buffer[src_idx];
+                    const dst_idx = @as(usize, @intCast((y * width + x) * 4));
+                    rgba[dst_idx] = 255;
+                    rgba[dst_idx + 1] = 255;
+                    rgba[dst_idx + 2] = 255;
+                    rgba[dst_idx + 3] = alpha;
+                }
+            }
+
+            const rec = c.Rectangle{
+                .x = @floatFromInt(self.pen_x),
+                .y = @floatFromInt(self.pen_y),
+                .width = @floatFromInt(width),
+                .height = @floatFromInt(height),
+            };
+            c.UpdateTextureRec(self.texture, rec, rgba.ptr);
+
+            if (height > self.row_h) self.row_h = height;
+            const advance = @as(f32, @floatFromInt(positions[0].x_advance)) / 64.0;
+            const glyph = Glyph{
+                .rect = rec,
+                .bearing_x = slot.*.bitmap_left,
+                .bearing_y = slot.*.bitmap_top,
+                .advance = if (advance > 0) advance else @as(f32, @floatFromInt(slot.*.advance.x)) / 64.0,
+                .width = width,
+                .height = height,
+            };
+            try self.glyphs.put(codepoint, glyph);
+            self.pen_x += width + self.padding;
+            return self.glyphs.getPtr(codepoint).?;
+        }
+
+        const glyph = Glyph{
+            .rect = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+            .bearing_x = 0,
+            .bearing_y = 0,
+            .advance = @as(f32, @floatFromInt(slot.*.advance.x)) / 64.0,
+            .width = 0,
+            .height = 0,
+        };
+        try self.glyphs.put(codepoint, glyph);
+        return self.glyphs.getPtr(codepoint).?;
+    }
+};
