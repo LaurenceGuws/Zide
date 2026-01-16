@@ -19,7 +19,7 @@ zig build run
 ## Features
 
 - Native Wayland support (Hyprland, Sway, etc.)
-- Integrated terminal emulator
+- Integrated terminal panel (backend in progress)
 - Tree-sitter syntax highlighting
 - Piece-table text buffer with undo/redo
 - Low CPU usage when idle (<1%)

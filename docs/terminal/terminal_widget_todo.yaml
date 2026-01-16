@@ -185,7 +185,7 @@ terminal_widget_todo:
         - id: P0-03
           title: "Define performance budgets (frame time, parse throughput, input latency)"
           files_to_edit:
-            - docs/terminal_widget_todo.yaml
+            - docs/terminal/terminal_widget_todo.yaml
 
     - name: "Phase 1 - PTY + IO"
       tasks:

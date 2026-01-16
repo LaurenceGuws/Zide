@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const PtySize = @import("pty.zig").PtySize;
 
 /// Windows ConPTY (Pseudo Console) implementation
 pub const Pty = struct {
@@ -168,7 +169,7 @@ pub const Pty = struct {
         ) callconv(.winapi) BOOL;
     };
 
-    pub fn init(rows: u16, cols: u16) !Pty {
+    pub fn init(_: std.mem.Allocator, size: PtySize, shell: ?[:0]const u8) !Pty {
         var pty = Pty{
             .hpc = null,
             .input_read = null,
@@ -176,8 +177,8 @@ pub const Pty = struct {
             .output_read = null,
             .output_write = null,
             .process_info = std.mem.zeroes(ProcessInfo),
-            .rows = rows,
-            .cols = cols,
+            .rows = size.rows,
+            .cols = size.cols,
         };
 
         // Create pipes for ConPTY
@@ -200,13 +201,13 @@ pub const Pty = struct {
         }
 
         // Create the Pseudo Console
-        const size = win32.COORD{
-            .X = @intCast(cols),
-            .Y = @intCast(rows),
+        const coord = win32.COORD{
+            .X = @intCast(size.cols),
+            .Y = @intCast(size.rows),
         };
 
         const hr = win32.CreatePseudoConsole(
-            size,
+            coord,
             pty.input_read.?,
             pty.output_write.?,
             0,
@@ -218,6 +219,7 @@ pub const Pty = struct {
             return Error.CreatePseudoConsoleFailed;
         }
 
+        try pty.spawn(shell);
         return pty;
     }
 
@@ -247,7 +249,7 @@ pub const Pty = struct {
     }
 
     /// Spawn a shell process (cmd.exe or PowerShell)
-    pub fn spawn(self: *Pty, shell: ?[]const u8) !void {
+    pub fn spawn(self: *Pty, shell: ?[:0]const u8) !void {
         _ = shell;
 
         // Prepare startup info with ConPTY
@@ -307,23 +309,24 @@ pub const Pty = struct {
     }
 
     /// Read data from the PTY (non-blocking)
-    pub fn read(self: *Pty, buffer: []u8) !usize {
-        const handle = self.output_read orelse return 0;
+    pub fn read(self: *Pty, buffer: []u8) !?usize {
+        const handle = self.output_read orelse return null;
 
         // Check if data is available
         var available: win32.DWORD = 0;
         if (win32.PeekNamedPipe(handle, null, 0, null, &available, null) == 0) {
-            return 0;
+            return null;
         }
-        if (available == 0) return 0;
+        if (available == 0) return null;
 
         var bytes_read: win32.DWORD = 0;
         const to_read: win32.DWORD = @min(@as(win32.DWORD, @intCast(buffer.len)), available);
 
         if (win32.ReadFile(handle, buffer.ptr, to_read, &bytes_read, null) == 0) {
-            return 0;
+            return null;
         }
 
+        if (bytes_read == 0) return null;
         return bytes_read;
     }
 
@@ -340,18 +343,18 @@ pub const Pty = struct {
     }
 
     /// Resize the PTY
-    pub fn resize(self: *Pty, rows: u16, cols: u16) !void {
+    pub fn resize(self: *Pty, size: PtySize) !void {
         if (self.hpc) |hpc| {
-            const size = win32.COORD{
-                .X = @intCast(cols),
-                .Y = @intCast(rows),
+            const coord = win32.COORD{
+                .X = @intCast(size.cols),
+                .Y = @intCast(size.rows),
             };
-            const hr = win32.ResizePseudoConsole(hpc, size);
+            const hr = win32.ResizePseudoConsole(hpc, coord);
             if (hr < 0) {
                 return Error.ResizeFailed;
             }
-            self.rows = rows;
-            self.cols = cols;
+            self.rows = size.rows;
+            self.cols = size.cols;
         }
     }
 
@@ -362,6 +365,15 @@ pub const Pty = struct {
             return result == 258; // WAIT_TIMEOUT
         }
         return false;
+    }
+
+    pub fn hasData(self: *Pty) bool {
+        const handle = self.output_read orelse return false;
+        var available: win32.DWORD = 0;
+        if (win32.PeekNamedPipe(handle, null, 0, null, &available, null) == 0) {
+            return false;
+        }
+        return available > 0;
     }
 
     /// Get the file handle for polling (not directly usable like Unix fd)
