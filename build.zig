@@ -5,42 +5,6 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Libvterm (built from source in vendor/)
-    // ─────────────────────────────────────────────────────────────────────────
-    const libvterm = b.addLibrary(.{
-        .name = "vterm",
-        .linkage = .static,
-        .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-
-    const vterm_src_path = "vendor/libvterm/src/";
-    const vterm_sources: []const []const u8 = &.{
-        vterm_src_path ++ "encoding.c",
-        vterm_src_path ++ "keyboard.c",
-        vterm_src_path ++ "mouse.c",
-        vterm_src_path ++ "parser.c",
-        vterm_src_path ++ "pen.c",
-        vterm_src_path ++ "screen.c",
-        vterm_src_path ++ "state.c",
-        vterm_src_path ++ "unicode.c",
-        vterm_src_path ++ "vterm.c",
-    };
-
-    libvterm.addCSourceFiles(.{
-        .files = vterm_sources,
-        .flags = &.{
-            "-std=c99",
-            "-D_POSIX_C_SOURCE=200809L",
-        },
-    });
-    libvterm.addIncludePath(b.path("vendor/libvterm/include"));
-    libvterm.addIncludePath(b.path("vendor/libvterm/src"));
-
-    // ─────────────────────────────────────────────────────────────────────────
     // Tree-sitter (for syntax highlighting)
     // ─────────────────────────────────────────────────────────────────────────
     const treesitter = b.addLibrary(.{
@@ -190,7 +154,6 @@ pub fn build(b: *std.Build) void {
 
     // Link C libraries
     exe.linkLibrary(raylib);
-    exe.linkLibrary(libvterm);
     exe.linkLibrary(treesitter);
     exe.linkLibrary(ts_zig);
     exe.linkSystemLibrary("freetype");
@@ -198,16 +161,9 @@ pub fn build(b: *std.Build) void {
 
     // Include paths for @cImport
     exe.addIncludePath(b.path("vendor/raylib/src"));
-    exe.addIncludePath(b.path("vendor/libvterm/include"));
     exe.addIncludePath(b.path("old_editor_lib/zig/third_party/tree-sitter/lib/include"));
     exe.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
     exe.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
-
-    // Local C shims
-    exe.addCSourceFile(.{
-        .file = b.path("src/terminal/vterm_shim.c"),
-        .flags = &.{"-std=c99"},
-    });
 
     // Platform-specific linking for the exe
     if (target_os == .windows) {
@@ -265,9 +221,7 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
-    unit_tests.linkLibrary(libvterm);
     unit_tests.linkLibrary(treesitter);
-    unit_tests.addIncludePath(b.path("vendor/libvterm/include"));
     unit_tests.addIncludePath(b.path("old_editor_lib/zig/third_party/tree-sitter/lib/include"));
 
     const run_tests = b.addRunArtifact(unit_tests);
