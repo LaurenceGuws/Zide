@@ -2,54 +2,83 @@
 
 Date: 2026-01-16
 
-## Summary of active work
+## Summary of this session
 
-- Goal: improve terminal font rendering (Nerd icons + box drawing) to match Kitty/Alacritty/WezTerm quality.
-- Current state: implemented WezTerm-like overflow policy. Box drawing still shows striping in some cases.
+- Implemented a cross‑platform PTY abstraction and wired it into the terminal session (Linux `openpty`, macOS login shell handling, Windows ConPTY stub).
+- Added a UTF‑8 byte stream + minimal VT parser (ESC/CSI) and basic screen model updates so shell output renders.
+- Implemented core CSI operations and basic SGR (bold/reverse + 16‑color palette).
+- Stabilized terminal resizing and bounds handling.
 
-## Key code changes made in this session
+## Key changes
 
-### WezTerm-like overflow policy (2026-01-16)
-- `src/ui/terminal_font.zig`
-  - Added `AllowSquareGlyphOverflow` enum with three policies: `never`, `always`, `when_followed_by_space` (default).
-  - `drawGlyph` now accepts `cell_height` and `followed_by_space` parameters.
-  - Determines "square or wide" glyphs by aspect ratio (>= 0.7 threshold, typical monospace is ~0.5).
-  - If overflow not allowed and glyph oversized: scales glyph down using `DrawTexturePro`.
-  - If overflow allowed and glyph oversized: centers glyph in cell (allows overflow into adjacent space).
-  - Configurable via `ZIDE_GLYPH_OVERFLOW` env var (`never`, `always`, or default `when_followed_by_space`).
-- `src/ui/renderer.zig`
-  - `drawTerminalCell` now accepts `followed_by_space` parameter.
-- `src/ui/widgets.zig`
-  - Terminal rendering now looks ahead to detect if next cell is space/empty.
+### PTY abstraction
+- `src/terminal/pty.zig` selects platform PTY implementation.
+- `src/terminal/pty_unix.zig` uses `openpty` + fork/exec; non‑blocking master; macOS login shell path.
+- `src/terminal/pty_windows.zig` ConPTY stub matches common API.
+- `src/terminal/pty_stub.zig` fallback for unsupported OS.
+- `TerminalSession` now owns a PTY and pipes input/output through it.
 
-### Prior changes (2026-01-15)
-- Added `src/platform/compositor.zig` for Wayland compositor scale detection (Hyprland via `hyprctl -j monitors`).
-- LCD subpixel rendering support via `ZIDE_FONT_LCD=1`.
-- Gamma correction on glyph data.
-- Box drawing fallback renderer in `drawTerminalBoxGlyph`.
+### UTF‑8 + stream + CSI
+- Added `src/terminal/utf8.zig` and `src/terminal/stream.zig` to decode bytes into codepoints/control bytes.
+- Added `src/terminal/csi.zig` and CSI dispatch in `src/terminal/terminal.zig`.
+- Implemented ESC + CSI parsing to prevent raw escape text in output.
 
-## Known issues / current behavior
+### CSI operations (current)
+- Cursor: `A/B/C/D` (move), `H/f` (CUP), `G` (CHA), `d` (VPA), `E/F` (CNL/CPL)
+- Erase: `J` (ED), `K` (EL)
+- Insert/Delete: `@` (ICH), `P` (DCH), `L` (IL), `M` (DL)
+- Scroll: `S` (SU), `T` (SD), `r` (DECSTBM)
+- Reset: `ESC c`
 
-- Box drawing fallback did not fully resolve striping.
-- Overflow policy needs user testing to validate icon appearance.
+### SGR (basic)
+- Implemented `0`, `1`, `22`, `7`, `27`, `39`, `49`
+- 16‑color palette: `30–37`, `40–47`, `90–97`, `100–107`
 
-## Environment variables
+### Stability fixes
+- Cursor clamping on resize.
+- Bounds checks in erase/line handling and write path.
+- Newline now resets column.
 
-- `ZIDE_GLYPH_OVERFLOW`: Set to `never` (always scale to fit), `always` (always allow overflow), or leave unset for default `when_followed_by_space`.
-- `ZIDE_FONT_LCD`: Set to `1` to enable LCD subpixel rendering.
-- `ZIDE_MOUSE_SCALE`: Override mouse scaling factor.
+## Current terminal state
 
-## Suggested next steps
+- Terminal output now renders from a real PTY with minimal VT parsing.
+- Colors and basic cursor/erase operations work.
+- Truecolor/256‑color, full SGR, and advanced CSI not yet supported.
+- Dirty‑row tracking and scrollback not implemented.
 
-1) ~~Implement WezTerm-like overflow policy~~ **DONE**
-2) Add optional Nerd font fallback (Symbols Nerd Font Mono) for PUA glyphs.
-3) Consider treating PUA as double-width (span 2 cells) when configured.
-4) Improve box drawing fallback to cover more glyphs or use a dedicated box-drawing font atlas.
+## Design docs
+
+- `docs/terminal/DESIGN.md` contains current decisions and progress.
+- Roadmap lives at `docs/terminal/terminal_widget_todo.yaml`.
+
+## Next suggested steps (in order)
+
+1) Add SGR 256‑color + truecolor (`38/48;5` and `38/48;2`).
+2) Implement grid dirty‑row tracking to reduce redraw work.
+3) Start scrollback buffer (Phase 3), then integrate with parser.
+4) Expand CSI for modes and attributes, then refine performance.
+
+## Workflow (Docs + Research)
+
+This workflow should be followed when advancing terminal layers:
+
+1) Identify the next layer or task from `docs/terminal/terminal_widget_todo.yaml`.
+2) Read the relevant references listed in the YAML for that layer.
+3) Summarize findings in `docs/terminal/DESIGN.md` under the layer section:
+   - What the reference implementations do.
+   - The decision we choose and why.
+   - Any tradeoffs or caveats.
+4) Implement the smallest coherent slice that matches the decision.
+5) Update `docs/terminal/DESIGN.md` progress for that layer.
+6) Run `zig build` (and `zig build run` if behavior changed) to validate.
+7) Update `docs/AGENT_HANDOFF.md` with:
+   - What changed.
+   - Current state.
+   - Exact next steps.
 
 ## Files to review first
 
-- `src/ui/terminal_font.zig`
-- `src/ui/renderer.zig`
-- `src/ui/widgets.zig`
-- `docs/TERMINAL_TEXT_RESEARCH.md`
-- `docs/TERMINAL_TEXT_STEPS.md`
+- `src/terminal/terminal.zig`
+- `src/terminal/pty_unix.zig`
+- `src/terminal/csi.zig`
+- `docs/terminal/DESIGN.md`

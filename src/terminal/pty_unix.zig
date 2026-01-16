@@ -1,198 +1,153 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const posix = std.posix;
+const PtySize = @import("pty.zig").PtySize;
 
-/// Unix PTY (pseudo-terminal) implementation
+const c = @cImport({
+    @cInclude("unistd.h");
+    @cInclude("fcntl.h");
+    @cInclude("sys/ioctl.h");
+    @cInclude("termios.h");
+    @cInclude("pty.h");
+});
+
 pub const Pty = struct {
     master_fd: posix.fd_t,
-    slave_fd: posix.fd_t,
     child_pid: ?posix.pid_t,
-    rows: u16,
-    cols: u16,
 
-    pub const Error = error{
-        OpenPtyFailed,
-        ForkFailed,
-        ExecFailed,
-        CloseFailed,
-    };
-
-    pub fn init(rows: u16, cols: u16) !Pty {
-        // Open a new PTY pair
-        var master_fd: posix.fd_t = undefined;
-        var slave_fd: posix.fd_t = undefined;
-
-        // Use openpty via libc
-        const c = @cImport({
-            @cInclude("pty.h");
-            @cInclude("utmp.h");
-        });
-
+    pub fn init(_: std.mem.Allocator, size: PtySize, shell: ?[:0]const u8) !Pty {
+        var master_fd: c_int = -1;
+        var slave_fd: c_int = -1;
         var winsize = c.struct_winsize{
-            .ws_row = rows,
-            .ws_col = cols,
-            .ws_xpixel = 0,
-            .ws_ypixel = 0,
+            .ws_row = size.rows,
+            .ws_col = size.cols,
+            .ws_xpixel = size.cell_width * size.cols,
+            .ws_ypixel = size.cell_height * size.rows,
         };
 
         if (c.openpty(&master_fd, &slave_fd, null, null, &winsize) != 0) {
-            return Error.OpenPtyFailed;
+            return error.OpenPtyFailed;
         }
 
-        // Set master_fd to non-blocking once at init, not on every read
-        const O_NONBLOCK: u32 = 0o4000;
-        const flags = posix.fcntl(master_fd, posix.F.GETFL, 0) catch 0;
-        _ = posix.fcntl(master_fd, posix.F.SETFL, @as(u32, @intCast(flags)) | O_NONBLOCK) catch {};
+        try setNonBlocking(@intCast(master_fd));
+
+        const pid = try posix.fork();
+        if (pid == 0) {
+            childProcess(@intCast(slave_fd), shell) catch {
+                posix.exit(1);
+            };
+            unreachable;
+        }
+
+        // Parent owns master only.
+        posix.close(@intCast(slave_fd));
 
         return Pty{
-            .master_fd = master_fd,
-            .slave_fd = slave_fd,
-            .child_pid = null,
-            .rows = rows,
-            .cols = cols,
+            .master_fd = @intCast(master_fd),
+            .child_pid = pid,
         };
     }
 
     pub fn deinit(self: *Pty) void {
-        // Kill child process if running
         if (self.child_pid) |pid| {
             _ = posix.kill(pid, posix.SIG.TERM) catch {};
             _ = posix.waitpid(pid, 0);
+            self.child_pid = null;
         }
-
-        posix.close(self.slave_fd);
         posix.close(self.master_fd);
     }
 
-    /// Spawn a shell process
-    pub fn spawn(self: *Pty, shell: ?[:0]const u8) !void {
-        const shell_path = shell orelse getDefaultShell();
-
-        const pid = try posix.fork();
-
-        if (pid == 0) {
-            // Child process
-            childProcess(self.slave_fd, shell_path) catch {
-                posix.exit(1);
-            };
-            unreachable;
-        } else {
-            // Parent process
-            self.child_pid = pid;
-            // Close slave fd in parent - child owns it now
-            posix.close(self.slave_fd);
-            self.slave_fd = -1;
-        }
-    }
-
-    fn childProcess(slave_fd: posix.fd_t, shell_path: [:0]const u8) !void {
-        // Create new session
-        _ = posix.setsid() catch {};
-
-        // Set controlling terminal
-        _ = std.c.ioctl(slave_fd, std.os.linux.T.IOCSCTTY, @as(c_ulong, 0));
-
-        // Duplicate slave fd to stdin, stdout, stderr
-        _ = posix.dup2(slave_fd, 0) catch {};
-        _ = posix.dup2(slave_fd, 1) catch {};
-        _ = posix.dup2(slave_fd, 2) catch {};
-
-        if (slave_fd > 2) {
-            posix.close(slave_fd);
-        }
-
-        // Set up environment
-        const env = [_:null]?[*:0]const u8{
-            "TERM=xterm-256color",
-            "COLORTERM=truecolor",
-            "LANG=en_US.UTF-8",
-            "LC_ALL=en_US.UTF-8",
-            "LC_CTYPE=en_US.UTF-8",
-            std.c.getenv("HOME"),
-            std.c.getenv("USER"),
-            std.c.getenv("SHELL"),
-            std.c.getenv("PATH"),
-            std.c.getenv("TERMINFO"),
+    pub fn resize(self: *Pty, size: PtySize) !void {
+        var winsize = c.struct_winsize{
+            .ws_row = size.rows,
+            .ws_col = size.cols,
+            .ws_xpixel = size.cell_width * size.cols,
+            .ws_ypixel = size.cell_height * size.rows,
         };
-
-        // Execute shell
-        const argv = [_:null]?[*:0]const u8{shell_path.ptr};
-
-        _ = posix.execvpeZ(shell_path.ptr, &argv, &env) catch {};
-        posix.exit(127);
+        _ = c.ioctl(@intCast(self.master_fd), c.TIOCSWINSZ, &winsize);
     }
 
-    /// Read data from the PTY (non-blocking, fd was set non-blocking at init)
-    pub fn read(self: *Pty, buffer: []u8) !usize {
-        return posix.read(self.master_fd, buffer) catch |err| {
-            if (err == error.WouldBlock) return 0;
-            return err;
-        };
-    }
-
-    /// Write data to the PTY
     pub fn write(self: *Pty, data: []const u8) !usize {
         return posix.write(self.master_fd, data);
     }
 
-    /// Resize the PTY
-    pub fn resize(self: *Pty, rows: u16, cols: u16) !void {
-        const c = @cImport({
-            @cInclude("sys/ioctl.h");
-        });
-
-        var winsize = c.struct_winsize{
-            .ws_row = rows,
-            .ws_col = cols,
-            .ws_xpixel = 0,
-            .ws_ypixel = 0,
+    pub fn read(self: *Pty, buffer: []u8) !?usize {
+        const n = posix.read(self.master_fd, buffer) catch |err| {
+            if (err == error.WouldBlock) return null;
+            return err;
         };
-
-        _ = std.c.ioctl(self.master_fd, c.TIOCSWINSZ, &winsize);
-        self.rows = rows;
-        self.cols = cols;
+        if (n == 0) return null;
+        return n;
     }
 
-    /// Check if child process is still running
-    pub fn isAlive(self: *Pty) bool {
+    pub fn pollExit(self: *Pty) !?i32 {
         if (self.child_pid) |pid| {
-            const result = posix.waitpid(pid, posix.W.NOHANG);
-            if (result.pid != 0) {
-                // Child has exited
+            const res = posix.waitpid(pid, posix.W.NOHANG);
+            if (res.pid != 0) {
                 self.child_pid = null;
-                return false;
+                if (res.status.exited()) {
+                    return @intCast(res.status.exitCode());
+                }
+                return -1;
             }
-            return true;
         }
-        return false;
+        return null;
     }
 
-    /// Get the file descriptor for polling
-    pub fn getFd(self: *Pty) posix.fd_t {
-        return self.master_fd;
-    }
-
-    /// Check if data is available to read (non-blocking)
     pub fn hasData(self: *Pty) bool {
-        var fds = [1]std.posix.pollfd{
+        var fds = [1]posix.pollfd{
             .{
                 .fd = self.master_fd,
-                .events = std.posix.POLL.IN,
+                .events = posix.POLL.IN,
                 .revents = 0,
             },
         };
-
-        // Poll with 0 timeout (instant check)
-        const result = std.posix.poll(&fds, 0) catch return false;
-        return result > 0 and (fds[0].revents & std.posix.POLL.IN) != 0;
+        const rc = posix.poll(&fds, 0) catch return false;
+        return rc > 0 and (fds[0].revents & posix.POLL.IN) != 0;
     }
 };
 
-fn getDefaultShell() [:0]const u8 {
-    // Try to get shell from environment
+fn setNonBlocking(fd: posix.fd_t) !void {
+    const flags = posix.fcntl(fd, posix.F.GETFL, 0) catch 0;
+    _ = posix.fcntl(fd, posix.F.SETFL, @as(u32, @intCast(flags)) | c.O_NONBLOCK) catch return error.OpenPtyFailed;
+}
+
+fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
+    _ = posix.setsid() catch {};
+    _ = c.ioctl(@intCast(slave_fd), c.TIOCSCTTY, @as(c_ulong, 0));
+
+    var termios: c.struct_termios = undefined;
+    if (c.tcgetattr(@intCast(slave_fd), &termios) == 0) {
+        termios.c_iflag |= c.IUTF8;
+        _ = c.tcsetattr(@intCast(slave_fd), c.TCSANOW, &termios);
+    }
+
+    _ = posix.dup2(slave_fd, 0) catch {};
+    _ = posix.dup2(slave_fd, 1) catch {};
+    _ = posix.dup2(slave_fd, 2) catch {};
+    if (slave_fd > 2) posix.close(slave_fd);
+
+    const shell_path = shell orelse defaultShell();
+    const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
+
+    if (builtin.os.tag == .macos and shell == null) {
+        const argv = [_:null]?[*:0]const u8{
+            "/usr/bin/login",
+            "-pfl",
+            shell_path.ptr,
+        };
+        _ = posix.execvpeZ(argv[0].?, &argv, envp) catch {};
+        posix.exit(127);
+    }
+
+    const argv = [_:null]?[*:0]const u8{ shell_path.ptr };
+    _ = posix.execvpeZ(shell_path.ptr, &argv, envp) catch {};
+    posix.exit(127);
+}
+
+fn defaultShell() [:0]const u8 {
     if (std.c.getenv("SHELL")) |shell| {
         return std.mem.sliceTo(shell, 0);
     }
-    // Fallback
     return "/bin/sh";
 }

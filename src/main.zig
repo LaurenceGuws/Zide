@@ -126,6 +126,10 @@ const AppState = struct {
         const rows: u16 = @intCast(@max(24, @divFloor(@as(i32, @intFromFloat(self.terminal_height)), @as(i32, @intFromFloat(self.renderer.terminal_cell_height)))));
 
         const term = try TerminalSession.init(self.allocator, rows, cols);
+        term.setCellSize(
+            @intFromFloat(self.renderer.terminal_cell_width),
+            @intFromFloat(self.renderer.terminal_cell_height),
+        );
         try term.start(null);
         try self.terminals.append(self.allocator, term);
 
@@ -205,6 +209,23 @@ const AppState = struct {
         if (renderer_mod.isWindowResized()) {
             r.width = renderer_mod.getScreenWidth();
             r.height = renderer_mod.getScreenHeight();
+            if (self.terminals.items.len > 0) {
+                const term = self.terminals.items[0];
+                const width = @as(f32, @floatFromInt(r.width));
+                const height = @as(f32, @floatFromInt(r.height));
+                const options_bar_height = self.options_bar.height;
+                const tab_bar_height = self.tab_bar.height;
+                const status_bar_height = self.status_bar.height;
+                const max_terminal_h = @max(0, height - options_bar_height - tab_bar_height - status_bar_height);
+                const terminal_h = if (self.show_terminal) @min(self.terminal_height, max_terminal_h) else 0;
+                const cols: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(width)), @as(i32, @intFromFloat(r.terminal_cell_width)))));
+                const rows: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(terminal_h)), @as(i32, @intFromFloat(r.terminal_cell_height)))));
+                term.setCellSize(
+                    @intFromFloat(r.terminal_cell_width),
+                    @intFromFloat(r.terminal_cell_height),
+                );
+                try term.resize(rows, cols);
+            }
             self.needs_redraw = true;
         }
 
@@ -252,6 +273,16 @@ const AppState = struct {
                 const new_height = @max(min_terminal_h, @min(self.resize_start_height - delta, max_terminal_h));
                 if (new_height != self.terminal_height) {
                     self.terminal_height = new_height;
+                    if (self.terminals.items.len > 0) {
+                        const term = self.terminals.items[0];
+                        const cols: u16 = @intCast(@max(1, @divFloor(self.renderer.width, @as(i32, @intFromFloat(self.renderer.terminal_cell_width)))));
+                        const rows: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(self.terminal_height)), @as(i32, @intFromFloat(self.renderer.terminal_cell_height)))));
+                        term.setCellSize(
+                            @intFromFloat(self.renderer.terminal_cell_width),
+                            @intFromFloat(self.renderer.terminal_cell_height),
+                        );
+                        try term.resize(rows, cols);
+                    }
                     self.needs_redraw = true;
                 }
             } else if (self.resizing_terminal and !mouse_down) {
@@ -371,7 +402,7 @@ const AppState = struct {
 
             // Only poll PTY if there's data available (non-blocking check)
             // Skip polling when in deep idle to save CPU
-            if (self.idle_frames < 60 and term.pty.hasData()) {
+            if (self.idle_frames < 60 and term.hasData()) {
                 try term.poll();
                 self.needs_redraw = true;
             }

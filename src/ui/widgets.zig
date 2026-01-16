@@ -560,7 +560,11 @@ pub const TerminalWidget = struct {
     }
 
     pub fn draw(self: *TerminalWidget, r: *Renderer, x: f32, y: f32, width: f32, height: f32) void {
-        const cursor = self.session.getCursorPos();
+        const snapshot = self.session.snapshot();
+        const cursor = snapshot.cursor;
+        const rows = snapshot.rows;
+        const cols = snapshot.cols;
+        const cells = snapshot.cells;
 
         // No clipping - let icons overflow freely
         // (sidebar draws last to cover any left overflow, right overflow goes into empty space)
@@ -572,14 +576,16 @@ pub const TerminalWidget = struct {
 
         // Pass 1: draw backgrounds so glyphs aren't overwritten by neighbor cells.
         var row: usize = 0;
-        while (row < self.session.rows) : (row += 1) {
+        while (row < rows) : (row += 1) {
+            const row_start = row * cols;
             var col: usize = 0;
-            while (col < self.session.cols) : (col += 1) {
-                const cell = self.session.getCell(row, col);
+            while (col < cols) : (col += 1) {
+                const cell = cells[row_start + col];
 
+                const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
                 const cell_x = base_x + @as(f32, @floatFromInt(col)) * r.terminal_cell_width;
                 const cell_y = base_y + @as(f32, @floatFromInt(row)) * r.terminal_cell_height;
-                const cell_w = r.terminal_cell_width * @as(f32, @floatFromInt(@max(1, cell.width)));
+                const cell_w = r.terminal_cell_width * @as(f32, @floatFromInt(cell_width_units));
 
                 const is_cursor = row == cursor.row and col == cursor.col;
 
@@ -603,18 +609,20 @@ pub const TerminalWidget = struct {
                 );
 
                 if (cell.width > 1) {
-                    col += cell.width - 1;
+                    col += cell_width_units - 1;
                 }
             }
         }
 
         // Pass 2: draw glyphs
         var glyph_row: usize = 0;
-        while (glyph_row < self.session.rows) : (glyph_row += 1) {
+        while (glyph_row < rows) : (glyph_row += 1) {
+            const row_start = glyph_row * cols;
             var col: usize = 0;
-            while (col < self.session.cols) : (col += 1) {
-                const cell = self.session.getCell(glyph_row, col);
+            while (col < cols) : (col += 1) {
+                const cell = cells[row_start + col];
 
+                const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
                 const cell_x = base_x + @as(f32, @floatFromInt(col)) * r.terminal_cell_width;
                 const cell_y = base_y + @as(f32, @floatFromInt(glyph_row)) * r.terminal_cell_height;
 
@@ -633,9 +641,9 @@ pub const TerminalWidget = struct {
 
                 // Check if next cell is a space (for overflow policy).
                 const followed_by_space = blk: {
-                    const next_col = col + @max(1, cell.width);
-                    if (next_col < self.session.cols) {
-                        const next_cell = self.session.getCell(glyph_row, next_col);
+                    const next_col = col + cell_width_units;
+                    if (next_col < cols) {
+                        const next_cell = cells[row_start + next_col];
                         break :blk next_cell.codepoint == ' ' or next_cell.codepoint == 0;
                     }
                     break :blk true; // End of line counts as "followed by space"
@@ -645,7 +653,7 @@ pub const TerminalWidget = struct {
                     cell.codepoint,
                     cell_x,
                     cell_y,
-                    r.terminal_cell_width * @as(f32, @floatFromInt(@max(1, cell.width))),
+                    r.terminal_cell_width * @as(f32, @floatFromInt(cell_width_units)),
                     r.terminal_cell_height,
                     if (cell.attrs.reverse) bg else fg,
                     if (cell.attrs.reverse) fg else bg,
@@ -656,7 +664,7 @@ pub const TerminalWidget = struct {
 
                 // Skip wide characters
                 if (cell.width > 1) {
-                    col += cell.width - 1;
+                    col += cell_width_units - 1;
                 }
             }
         }

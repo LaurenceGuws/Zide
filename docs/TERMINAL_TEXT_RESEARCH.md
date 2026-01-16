@@ -19,8 +19,8 @@ Date: 2026-01-15
 - Takeaway: Kitty is willing to rescale glyphs to avoid overflow, and it relies on a known Nerd font fallback.
 
 Relevant locations:
-- `/home/home/personal/kitty/kitty/fonts/render.py` (builtin Nerd font setup + symbol map swap)
-- `/home/home/personal/kitty/kitty/core_text.m` (`do_render`: resizes glyphs when width exceeds cell width)
+- `reference_repos/terminals/kitty/kitty/fonts/render.py` (builtin Nerd font setup + symbol map swap)
+- `reference_repos/terminals/kitty/kitty/core_text.m` (`do_render`: resizes glyphs when width exceeds cell width)
 
 ### Alacritty
 
@@ -29,8 +29,8 @@ Relevant locations:
 - Provides a built-in font only for box drawing/powerline, not for Nerd icons.
 
 Relevant locations:
-- `/home/home/personal/alacritty/alacritty/src/renderer/text/builtin_font.rs` (built-in box/powerline glyphs)
-- `/home/home/personal/alacritty/alacritty/src/renderer/text/gles2.rs` (wide glyphs span 2 cells)
+- `reference_repos/terminals/alacritty/alacritty/src/renderer/text/builtin_font.rs` (built-in box/powerline glyphs)
+- `reference_repos/terminals/alacritty/alacritty/src/renderer/text/gles2.rs` (wide glyphs span 2 cells)
 
 ### WezTerm
 
@@ -40,9 +40,9 @@ Relevant locations:
 - Vendors Symbols Nerd Font Mono as an optional built-in font so icons are consistent out of the box.
 
 Relevant locations:
-- `/home/home/personal/wezterm-src/wezterm-gui/src/glyphcache.rs` (overflow policy + scaling)
-- `/home/home/personal/wezterm-src/config/src/font.rs` (AllowSquareGlyphOverflow enum)
-- `/home/home/personal/wezterm-src/README-DISTRO-MAINTAINER.md` (vendored Nerd font)
+- `reference_repos/terminals/wezterm/wezterm-gui/src/glyphcache.rs` (overflow policy + scaling)
+- `reference_repos/terminals/wezterm/config/src/font.rs` (AllowSquareGlyphOverflow enum)
+- `reference_repos/terminals/wezterm/README-DISTRO-MAINTAINER.md` (vendored Nerd font)
 
 ## Key takeaways for Zide
 
@@ -51,4 +51,3 @@ Relevant locations:
   - Use a known Nerd font fallback for PUA glyphs (Symbols Nerd Font Mono).
   - Apply an overflow policy (allow overflow or scale-to-fit) based on glyph aspect ratio and context.
 - Kitty/WezTerm both change glyph rendering size for overflow control; Alacritty does not.
-
