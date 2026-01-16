@@ -16,3 +16,4 @@ vendor/wayland-protocols/
 
 # Build artifacts
 build/
+reference_repos

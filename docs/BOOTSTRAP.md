@@ -6,7 +6,7 @@ A modern, cross-platform IDE for Zig development, built entirely in Zig.
 
 - **Text Editor**: Piece-table based text buffer with undo/redo
 - **Syntax Highlighting**: Tree-sitter based, with Zig language support
-- **Integrated Terminal**: libvterm-based terminal emulator with full color support
+- **Integrated Terminal**: terminal panel stub (backend pending)
 - **Native Wayland**: Wayland support in progress (Hyprland first; KDE planned)
 - **Low CPU Usage**: Adaptive frame rate with intelligent idle detection
 - **Cross-platform**: Linux (Wayland), macOS, and Windows support
@@ -46,7 +46,7 @@ brew install zig freetype harfbuzz
 
 ## Bootstrap
 
-Fetch vendor dependencies (libvterm, raylib):
+Fetch vendor dependencies (raylib):
 
 ```bash
 make bootstrap
@@ -57,7 +57,6 @@ make bootstrap
 On Linux, this also generates Wayland protocol headers via `make wayland-protocols`.
 
 Options:
-- `LIBVTERM_REF=v0.3.3` - Override libvterm version
 - `RAYLIB_REF=5.5` - Override raylib version
 - `FORCE=1` - Force re-download
 

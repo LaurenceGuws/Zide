@@ -10,7 +10,6 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 VENDOR_DIR="$PROJECT_ROOT/vendor"
 
 # Versions (can be overridden via environment)
-LIBVTERM_REF="${LIBVTERM_REF:-v0.3.3}"
 RAYLIB_REF="${RAYLIB_REF:-5.5}"
 FORCE="${FORCE:-}"
 
@@ -19,44 +18,6 @@ echo "    Project root: $PROJECT_ROOT"
 echo "    Vendor dir: $VENDOR_DIR"
 
 mkdir -p "$VENDOR_DIR"
-
-# ─────────────────────────────────────────────────────────────────────────────
-# libvterm
-# ─────────────────────────────────────────────────────────────────────────────
-LIBVTERM_DIR="$VENDOR_DIR/libvterm"
-
-if [[ -d "$LIBVTERM_DIR" && -z "$FORCE" ]]; then
-    echo "==> libvterm already exists, skipping (use FORCE=1 to overwrite)"
-else
-    echo "==> Fetching libvterm ($LIBVTERM_REF)..."
-    rm -rf "$LIBVTERM_DIR"
-    
-    git clone --depth 1 --branch "$LIBVTERM_REF" \
-        https://github.com/neovim/libvterm.git \
-        "$LIBVTERM_DIR" 2>/dev/null || \
-    git clone --depth 1 \
-        https://github.com/neovim/libvterm.git \
-        "$LIBVTERM_DIR"
-    
-    rm -rf "$LIBVTERM_DIR/.git"
-    
-    # Generate .inc files from .tbl files
-    echo "==> Generating libvterm encoding tables..."
-    cd "$LIBVTERM_DIR"
-    if [[ -f "tbl2inc_c.pl" ]]; then
-        mkdir -p src/encoding
-        for tbl in src/encoding/*.tbl; do
-            if [[ -f "$tbl" ]]; then
-                inc="${tbl%.tbl}.inc"
-                perl tbl2inc_c.pl "$tbl" > "$inc"
-                echo "    Generated: $inc"
-            fi
-        done
-    fi
-    cd "$PROJECT_ROOT"
-    
-    echo "==> libvterm ready"
-fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # raylib
@@ -85,7 +46,6 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 echo "==> Bootstrap complete!"
-echo "    - libvterm: $LIBVTERM_DIR"
 echo "    - raylib: $RAYLIB_DIR"
 echo ""
 echo "    To build: zig build"

@@ -1,0 +1,510 @@
+terminal_widget_todo:
+  scope:
+    description: "Build a best-in-class terminal widget embedded in Zide (Linux first, Win/mac later)."
+    priorities:
+      - "fast path for ASCII monospace"
+      - "excellent font rendering + shaping"
+      - "correctness for TUI apps (btop/nvim/tmux)"
+      - "low-latency input + smooth scroll"
+      - "GPU-first rendering with minimal per-frame CPU"
+  zide_integration:
+    entry_points:
+      - src/main.zig
+      - src/ui/widgets.zig
+      - src/ui/renderer.zig
+      - src/ui/terminal_font.zig
+      - src/terminal/terminal.zig
+  reference_maps:
+    terminals:
+      ghostty:
+        - reference_repos/terminals/ghostty/src/terminal/Terminal.zig
+        - reference_repos/terminals/ghostty/src/terminal/Parser.zig
+        - reference_repos/terminals/ghostty/src/terminal/Screen.zig
+        - reference_repos/terminals/ghostty/src/terminal/csi.zig
+        - reference_repos/terminals/ghostty/src/terminal/sgr.zig
+        - reference_repos/terminals/ghostty/src/terminal/osc/parsers.zig
+        - reference_repos/terminals/ghostty/src/terminal/osc/encoding.zig
+        - reference_repos/terminals/ghostty/src/terminal/kitty/graphics.zig
+        - reference_repos/terminals/ghostty/src/terminal/Selection.zig
+        - reference_repos/terminals/ghostty/src/terminal/PageList.zig
+        - reference_repos/terminals/ghostty/src/terminal/render.zig
+        - reference_repos/terminals/ghostty/src/terminal/UTF8Decoder.zig
+        - reference_repos/terminals/ghostty/src/font/Atlas.zig
+        - reference_repos/terminals/ghostty/src/font/shaper/harfbuzz.zig
+        - reference_repos/terminals/ghostty/src/font/shape.zig
+        - reference_repos/terminals/ghostty/src/font/discovery.zig
+        - reference_repos/terminals/ghostty/src/font/Metrics.zig
+      alacritty:
+        - reference_repos/terminals/alacritty/alacritty_terminal/src/term/mod.rs
+        - reference_repos/terminals/alacritty/alacritty_terminal/src/term/cell.rs
+        - reference_repos/terminals/alacritty/alacritty_terminal/src/grid/mod.rs
+        - reference_repos/terminals/alacritty/alacritty_terminal/src/grid/storage.rs
+        - reference_repos/terminals/alacritty/alacritty_terminal/src/tty/unix.rs
+        - reference_repos/terminals/alacritty/alacritty_terminal/src/tty/windows/conpty.rs
+        - reference_repos/terminals/alacritty/alacritty/src/renderer/text/atlas.rs
+        - reference_repos/terminals/alacritty/alacritty/src/renderer/text/glyph_cache.rs
+        - reference_repos/terminals/alacritty/alacritty/src/renderer/text/mod.rs
+        - reference_repos/terminals/alacritty/alacritty/src/renderer/rects.rs
+        - reference_repos/terminals/alacritty/alacritty/src/display/damage.rs
+        - reference_repos/terminals/alacritty/alacritty/src/input/keyboard.rs
+        - reference_repos/terminals/alacritty/alacritty_terminal/tests/ref/
+      kitty:
+        - reference_repos/terminals/kitty/kitty/vt-parser.h
+        - reference_repos/terminals/kitty/kitty/line-buf.h
+        - reference_repos/terminals/kitty/kitty/cell_vertex.glsl
+        - reference_repos/terminals/kitty/kitty/cell_fragment.glsl
+        - reference_repos/terminals/kitty/kitty/fontconfig.c
+        - reference_repos/terminals/kitty/kitty/keys.py
+        - reference_repos/terminals/kitty/kitty/wcswidth.c
+        - reference_repos/terminals/kitty/kitty/text-cache.h
+        - reference_repos/terminals/kitty/kitty_tests/parser.py
+      foot:
+        - reference_repos/terminals/foot/terminal.c
+        - reference_repos/terminals/foot/vt.c
+        - reference_repos/terminals/foot/csi.c
+        - reference_repos/terminals/foot/osc.c
+        - reference_repos/terminals/foot/grid.c
+        - reference_repos/terminals/foot/render.c
+        - reference_repos/terminals/foot/slave.c
+        - reference_repos/terminals/foot/input.c
+        - reference_repos/terminals/foot/box-drawing.c
+      wezterm:
+        - reference_repos/terminals/wezterm/term/src/terminal.rs
+        - reference_repos/terminals/wezterm/term/src/screen.rs
+        - reference_repos/terminals/wezterm/term/src/terminalstate/performer.rs
+        - reference_repos/terminals/wezterm/term/src/terminalstate/mouse.rs
+        - reference_repos/terminals/wezterm/term/src/terminalstate/kitty.rs
+        - reference_repos/terminals/wezterm/termwiz/src/terminal/unix.rs
+        - reference_repos/terminals/wezterm/termwiz/src/terminal/windows.rs
+        - reference_repos/terminals/wezterm/wezterm-char-props/src/widechar_width.rs
+      rio:
+        - reference_repos/terminals/rio/rio-backend/src/batched_parser.rs
+        - reference_repos/terminals/rio/rio-backend/src/performer/mod.rs
+        - reference_repos/terminals/rio/rio-backend/src/performer/handler.rs
+        - reference_repos/terminals/rio/rio-backend/src/ansi/mod.rs
+        - reference_repos/terminals/rio/rio-backend/src/ansi/charset.rs
+        - reference_repos/terminals/rio/rio-backend/src/ansi/control.rs
+        - reference_repos/terminals/rio/rio-backend/src/selection.rs
+        - reference_repos/terminals/rio/teletypewriter/src/unix/mod.rs
+        - reference_repos/terminals/rio/teletypewriter/src/windows/conpty.rs
+        - reference_repos/terminals/rio/frontends/rioterm/src/renderer/char_cache.rs
+      contour:
+        - reference_repos/terminals/contour/src/vtparser/Parser.h
+        - reference_repos/terminals/contour/src/vtparser/Parser.cpp
+        - reference_repos/terminals/contour/src/vtbackend/Grid.h
+        - reference_repos/terminals/contour/src/vtpty/Pty.h
+        - reference_repos/terminals/contour/src/vtpty/UnixUtils.cpp
+        - reference_repos/terminals/contour/src/vtpty/ConPty.cpp
+      xterm:
+        - reference_repos/terminals/xterm_snapshots/VTparse.h
+        - reference_repos/terminals/xterm_snapshots/charproc.c
+        - reference_repos/terminals/xterm_snapshots/scrollback.c
+        - reference_repos/terminals/xterm_snapshots/ctlseqs.txt
+        - reference_repos/terminals/xterm_snapshots/wcwidth.c
+      st:
+        - reference_repos/terminals/st/st.c
+        - reference_repos/terminals/st/x.c
+    backends:
+      libtsm:
+        - reference_repos/backends/libtsm/src/tsm/tsm-vte.c
+        - reference_repos/backends/libtsm/src/tsm/tsm-screen.c
+        - reference_repos/backends/libtsm/src/tsm/tsm-selection.c
+        - reference_repos/backends/libtsm/src/tsm/tsm-render.c
+        - reference_repos/backends/libtsm/src/shared/shl-pty.c
+        - reference_repos/backends/libtsm/src/shared/shl-ring.c
+        - reference_repos/backends/libtsm/external/wcwidth/wcwidth.c
+      libvterm:
+        - reference_repos/backends/libvterm/src/parser.c
+        - reference_repos/backends/libvterm/src/state.c
+        - reference_repos/backends/libvterm/src/screen.c
+        - reference_repos/backends/libvterm/src/encoding.c
+        - reference_repos/backends/libvterm/include/vterm.h
+        - reference_repos/backends/libvterm/t/
+      gnome_vte:
+        - reference_repos/backends/gnome_vte/src/vte.cc
+        - reference_repos/backends/gnome_vte/src/ring.cc
+        - reference_repos/backends/gnome_vte/src/unicode-width.hh
+        - reference_repos/backends/gnome_vte/doc/scrolling-region.txt
+        - reference_repos/backends/gnome_vte/perf/
+    fonts:
+      harfbuzz:
+        - reference_repos/fonts/harfbuzz/src/hb-buffer.cc
+        - reference_repos/fonts/harfbuzz/src/hb-shape.cc
+        - reference_repos/fonts/harfbuzz/util/hb-shape.cc
+        - reference_repos/fonts/harfbuzz/perf/benchmark-shape.cc
+      freetype:
+        - reference_repos/fonts/freetype/src/truetype/ttgload.c
+        - reference_repos/fonts/freetype/src/smooth/ftsmooth.c
+        - reference_repos/fonts/freetype/src/cff/cffgload.c
+      crossfont:
+        - reference_repos/fonts/crossfont/src/ft/mod.rs
+        - reference_repos/fonts/crossfont/src/ft/fc/mod.rs
+        - reference_repos/fonts/crossfont/src/darwin/mod.rs
+        - reference_repos/fonts/crossfont/src/directwrite/mod.rs
+      unicode_width:
+        - reference_repos/fonts/unicode_width/src/lib.rs
+        - reference_repos/fonts/unicode_width/src/tables.rs
+    rendering:
+      pixman:
+        - reference_repos/rendering/pixman/pixman/pixman.h
+        - reference_repos/rendering/pixman/pixman/pixman-image.c
+        - reference_repos/rendering/pixman/pixman/pixman-combine32.c
+      skia:
+        - reference_repos/rendering/skia/src/text/gpu/TextBlob.h
+        - reference_repos/rendering/skia/src/text/gpu/SubRunControl.h
+        - reference_repos/rendering/skia/src/text/gpu/SubRunAllocator.h
+      wgpu:
+        - reference_repos/rendering/wgpu/wgpu/src/api/render_pipeline.rs
+        - reference_repos/rendering/wgpu/wgpu/src/api/buffer.rs
+        - reference_repos/rendering/wgpu/wgpu/src/api/texture.rs
+
+  phases:
+    - name: "Phase 0 - Architecture + Bench Harness"
+      tasks:
+        - id: P0-01
+          title: "Define terminal snapshot API (renderer consumes immutable grid state)"
+          files_to_edit:
+            - src/terminal/terminal.zig
+            - src/ui/widgets.zig
+          refs:
+            - reference_repos/terminals/ghostty/src/terminal/Screen.zig
+            - reference_repos/terminals/ghostty/src/terminal/Terminal.zig
+            - reference_repos/terminals/alacritty/alacritty_terminal/src/term/mod.rs
+            - reference_repos/terminals/alacritty/alacritty_terminal/src/grid/mod.rs
+            - reference_repos/terminals/wezterm/term/src/screen.rs
+            - reference_repos/terminals/contour/src/vtbackend/Grid.h
+        - id: P0-02
+          title: "Add micro-benchmarks for parse + render pipeline"
+          files_to_add:
+            - src/terminal/bench.zig
+          refs:
+            - reference_repos/terminals/ghostty/src/main_bench.zig
+            - reference_repos/terminals/kitty/benchmark.py
+            - reference_repos/terminals/rio/copa/benches/parser_benchmark.rs
+            - reference_repos/terminals/rio/rio-backend/examples/parser_comparison_benchmark.rs
+        - id: P0-03
+          title: "Define performance budgets (frame time, parse throughput, input latency)"
+          files_to_edit:
+            - docs/terminal_widget_todo.yaml
+
+    - name: "Phase 1 - PTY + IO"
+      tasks:
+        - id: P1-01
+          title: "Linux PTY abstraction with non-blocking reads"
+          files_to_add:
+            - src/terminal/pty_unix.zig
+          refs:
+            - reference_repos/terminals/alacritty/alacritty_terminal/src/tty/unix.rs
+            - reference_repos/terminals/foot/slave.c
+            - reference_repos/terminals/wezterm/termwiz/src/terminal/unix.rs
+            - reference_repos/terminals/contour/src/vtpty/UnixUtils.cpp
+            - reference_repos/backends/libtsm/src/shared/shl-pty.c
+        - id: P1-02
+          title: "Windows ConPTY + macOS PTY stubs (compile-time switches)"
+          files_to_add:
+            - src/terminal/pty_windows.zig
+            - src/terminal/pty_macos.zig
+          refs:
+            - reference_repos/terminals/alacritty/alacritty_terminal/src/tty/windows/conpty.rs
+            - reference_repos/terminals/wezterm/termwiz/src/terminal/windows.rs
+            - reference_repos/terminals/contour/src/vtpty/ConPty.cpp
+            - reference_repos/terminals/rio/teletypewriter/src/windows/conpty.rs
+        - id: P1-03
+          title: "Event loop integration (poll PTY without busy-wait)"
+          files_to_edit:
+            - src/main.zig
+          refs:
+            - reference_repos/terminals/alacritty/alacritty_terminal/src/event_loop.rs
+            - reference_repos/terminals/foot/fdm.c
+            - reference_repos/terminals/rio/frontends/rioterm/src/scheduler.rs
+
+    - name: "Phase 2 - VT Parser"
+      tasks:
+        - id: P2-01
+          title: "UTF-8 decoder + control byte stream"
+          files_to_add:
+            - src/terminal/utf8.zig
+            - src/terminal/stream.zig
+          refs:
+            - reference_repos/terminals/ghostty/src/terminal/UTF8Decoder.zig
+            - reference_repos/terminals/rio/rio-backend/src/simd_utf8.rs
+            - reference_repos/terminals/foot/char32.c
+            - reference_repos/backends/libvterm/src/utf8.h
+        - id: P2-02
+          title: "CSI parser (cursor move, erase, scroll, insert/delete)"
+          files_to_add:
+            - src/terminal/csi.zig
+          refs:
+            - reference_repos/terminals/ghostty/src/terminal/csi.zig
+            - reference_repos/terminals/foot/csi.c
+            - reference_repos/terminals/contour/src/vtparser/Parser.cpp
+            - reference_repos/terminals/kitty/kitty/vt-parser.h
+            - reference_repos/backends/libvterm/src/parser.c
+        - id: P2-03
+          title: "SGR (colors, bold, underline, reverse)"
+          files_to_add:
+            - src/terminal/sgr.zig
+          refs:
+            - reference_repos/terminals/ghostty/src/terminal/sgr.zig
+            - reference_repos/terminals/wezterm/term/src/terminalstate/performer.rs
+            - reference_repos/terminals/rio/rio-backend/src/ansi/graphics.rs
+            - reference_repos/backends/libvterm/src/pen.c
+        - id: P2-04
+          title: "OSC basics (title, clipboard, hyperlinks)"
+          files_to_add:
+            - src/terminal/osc.zig
+          refs:
+            - reference_repos/terminals/ghostty/src/terminal/osc/parsers.zig
+            - reference_repos/terminals/ghostty/src/terminal/osc/encoding.zig
+            - reference_repos/terminals/wezterm/term/src/terminalstate/iterm.rs
+            - reference_repos/terminals/contour/docs/vt-extensions/osc-133-shell-integration.md
+        - id: P2-05
+          title: "VT conformance tests using recorded sessions"
+          files_to_add:
+            - tests/terminal/ref/
+          refs:
+            - reference_repos/terminals/alacritty/alacritty_terminal/tests/ref/
+            - reference_repos/backends/libvterm/t/
+            - reference_repos/terminals/xterm_snapshots/vttests/
+
+    - name: "Phase 3 - Screen Model"
+      tasks:
+        - id: P3-01
+          title: "Grid storage (cells, attrs, dirty tracking)"
+          files_to_add:
+            - src/terminal/grid.zig
+            - src/terminal/cell.zig
+          refs:
+            - reference_repos/terminals/alacritty/alacritty_terminal/src/term/cell.rs
+            - reference_repos/terminals/alacritty/alacritty_terminal/src/grid/mod.rs
+            - reference_repos/terminals/ghostty/src/terminal/Screen.zig
+            - reference_repos/terminals/contour/src/vtbackend/Grid.h
+            - reference_repos/backends/libtsm/src/tsm/tsm-screen.c
+        - id: P3-02
+          title: "Scrollback ring buffer"
+          files_to_add:
+            - src/terminal/scrollback.zig
+          refs:
+            - reference_repos/terminals/alacritty/alacritty_terminal/src/grid/storage.rs
+            - reference_repos/terminals/ghostty/src/terminal/PageList.zig
+            - reference_repos/backends/libtsm/src/shared/shl-ring.c
+            - reference_repos/backends/gnome_vte/src/ring.cc
+            - reference_repos/terminals/xterm_snapshots/scrollback.c
+        - id: P3-03
+          title: "Selection + search hooks"
+          files_to_add:
+            - src/terminal/selection.zig
+          refs:
+            - reference_repos/terminals/ghostty/src/terminal/Selection.zig
+            - reference_repos/terminals/ghostty/src/terminal/search/
+            - reference_repos/terminals/foot/selection.c
+            - reference_repos/terminals/rio/rio-backend/src/selection.rs
+            - reference_repos/backends/libtsm/src/tsm/tsm-selection.c
+
+    - name: "Phase 4 - Renderer Core"
+      tasks:
+        - id: P4-01
+          title: "Background pass (solid rects per cell)"
+          files_to_edit:
+            - src/ui/renderer.zig
+          refs:
+            - reference_repos/terminals/alacritty/alacritty/src/renderer/rects.rs
+            - reference_repos/terminals/foot/render.c
+            - reference_repos/terminals/kitty/kitty/cell_fragment.glsl
+            - reference_repos/rendering/pixman/pixman/pixman-combine32.c
+        - id: P4-02
+          title: "Glyph atlas (GPU texture + LRU eviction)"
+          files_to_add:
+            - src/ui/glyph_atlas.zig
+          refs:
+            - reference_repos/terminals/alacritty/alacritty/src/renderer/text/atlas.rs
+            - reference_repos/terminals/ghostty/src/font/Atlas.zig
+            - reference_repos/terminals/kitty/kitty/text-cache.h
+            - reference_repos/terminals/rio/frontends/rioterm/src/renderer/char_cache.rs
+        - id: P4-03
+          title: "Glyph cache / instance buffer"
+          files_to_add:
+            - src/ui/glyph_cache.zig
+          refs:
+            - reference_repos/terminals/alacritty/alacritty/src/renderer/text/glyph_cache.rs
+            - reference_repos/terminals/ghostty/src/font/sprite.zig
+            - reference_repos/terminals/rio/frontends/rioterm/src/renderer/font_cache.rs
+            - reference_repos/rendering/skia/src/text/gpu/TextBlob.h
+        - id: P4-04
+          title: "Box drawing + special glyph fast path"
+          files_to_edit:
+            - src/ui/renderer.zig
+          refs:
+            - reference_repos/terminals/foot/box-drawing.c
+            - reference_repos/terminals/ghostty/src/font/sprite/draw/box.zig
+            - reference_repos/terminals/xterm_snapshots/box*.c
+
+    - name: "Phase 5 - Font + Shaping"
+      tasks:
+        - id: P5-01
+          title: "Font discovery + fallback chain"
+          files_to_add:
+            - src/ui/font_discovery.zig
+          refs:
+            - reference_repos/terminals/ghostty/src/font/discovery.zig
+            - reference_repos/terminals/kitty/kitty/fontconfig.c
+            - reference_repos/fonts/crossfont/src/ft/fc/mod.rs
+        - id: P5-02
+          title: "HarfBuzz shaping pipeline"
+          files_to_add:
+            - src/ui/font_shaper.zig
+          refs:
+            - reference_repos/terminals/ghostty/src/font/shaper/harfbuzz.zig
+            - reference_repos/fonts/harfbuzz/src/hb-buffer.cc
+            - reference_repos/fonts/harfbuzz/src/hb-shape.cc
+            - reference_repos/fonts/harfbuzz/util/hb-shape.cc
+            - reference_repos/terminals/wezterm/bidi/examples/shaping.rs
+        - id: P5-03
+          title: "Unicode width + grapheme segmentation"
+          files_to_add:
+            - src/terminal/unicode_width.zig
+          refs:
+            - reference_repos/terminals/wezterm/wezterm-char-props/src/widechar_width.rs
+            - reference_repos/terminals/kitty/kitty/wcswidth.c
+            - reference_repos/fonts/unicode_width/src/lib.rs
+            - reference_repos/fonts/unicode_width/src/tables.rs
+            - reference_repos/terminals/xterm_snapshots/wcwidth.c
+        - id: P5-04
+          title: "Emoji + color font support (baseline)"
+          files_to_add:
+            - src/ui/emoji.zig
+          refs:
+            - reference_repos/terminals/ghostty/src/font/CodepointResolver.zig
+            - reference_repos/terminals/wezterm/wezterm-char-props/src/emoji_presentation.rs
+            - reference_repos/fonts/harfbuzz/src/gen-emoji-table.py
+        - id: P5-05
+          title: "FreeType rasterization quality settings"
+          files_to_add:
+            - src/ui/font_raster.zig
+          refs:
+            - reference_repos/fonts/freetype/src/truetype/ttgload.c
+            - reference_repos/fonts/freetype/src/smooth/ftsmooth.c
+
+    - name: "Phase 6 - Input + UX"
+      tasks:
+        - id: P6-01
+          title: "Key encoding (xterm + kitty keyboard protocol later)"
+          files_to_add:
+            - src/terminal/input_keys.zig
+          refs:
+            - reference_repos/terminals/kitty/kitty/keys.py
+            - reference_repos/terminals/alacritty/alacritty/src/input/keyboard.rs
+            - reference_repos/terminals/wezterm/term/src/input.rs
+            - reference_repos/terminals/rio/frontends/rioterm/src/bindings/kitty_keyboard.rs
+        - id: P6-02
+          title: "Mouse reporting (X10/VT200/SGR)"
+          files_to_add:
+            - src/terminal/input_mouse.zig
+          refs:
+            - reference_repos/terminals/wezterm/term/src/terminalstate/mouse.rs
+            - reference_repos/terminals/foot/input.c
+            - reference_repos/terminals/xterm_snapshots/xcharmouse.h
+        - id: P6-03
+          title: "Selection + copy/paste integration"
+          files_to_edit:
+            - src/ui/widgets.zig
+          refs:
+            - reference_repos/terminals/foot/selection.c
+            - reference_repos/terminals/ghostty/src/terminal/Selection.zig
+            - reference_repos/terminals/rio/rio-backend/src/selection.rs
+
+    - name: "Phase 7 - Correctness + Compatibility"
+      tasks:
+        - id: P7-01
+          title: "Alternate screen, cursor save/restore, scroll regions"
+          files_to_edit:
+            - src/terminal/screen.zig
+          refs:
+            - reference_repos/terminals/alacritty/alacritty_terminal/tests/ref/saved_cursor/
+            - reference_repos/terminals/alacritty/alacritty_terminal/tests/ref/scroll_in_region_up_preserves_history/
+            - reference_repos/backends/gnome_vte/doc/scrolling-region.txt
+            - reference_repos/terminals/xterm_snapshots/ctlseqs.txt
+        - id: P7-02
+          title: "Hyperlinks + OSC 8"
+          files_to_edit:
+            - src/terminal/osc.zig
+          refs:
+            - reference_repos/terminals/ghostty/src/terminal/osc/parsers/hyperlink.zig
+            - reference_repos/terminals/alacritty/alacritty_terminal/tests/ref/hyperlinks/
+            - reference_repos/terminals/contour/docs/vt-extensions/clickable-links.md
+        - id: P7-03
+          title: "Truecolor + 256-color palette"
+          files_to_edit:
+            - src/terminal/color.zig
+          refs:
+            - reference_repos/terminals/ghostty/src/terminal/color.zig
+            - reference_repos/terminals/wezterm/color-types/src/lib.rs
+            - reference_repos/terminals/rio/rio-backend/src/config/colors/term.rs
+        - id: P7-04
+          title: "Keyboard protocol extensions (CSI u, kitty)
+"
+          files_to_edit:
+            - src/terminal/input_keys.zig
+          refs:
+            - reference_repos/terminals/contour/docs/vt-extensions/csi-u-extended-keyboard-protocol.md
+            - reference_repos/terminals/kitty/key_encoding.json
+
+    - name: "Phase 8 - Performance + Polish"
+      tasks:
+        - id: P8-01
+          title: "Dirty-line tracking + partial redraw"
+          files_to_edit:
+            - src/terminal/grid.zig
+            - src/ui/renderer.zig
+          refs:
+            - reference_repos/terminals/alacritty/alacritty/src/display/damage.rs
+            - reference_repos/terminals/ghostty/src/terminal/render.zig
+            - reference_repos/backends/libvterm/t/62screen_damage.test
+        - id: P8-02
+          title: "Texture upload batching + atlas compaction"
+          files_to_edit:
+            - src/ui/glyph_atlas.zig
+          refs:
+            - reference_repos/terminals/alacritty/alacritty/src/renderer/text/atlas.rs
+            - reference_repos/terminals/ghostty/src/font/Atlas.zig
+            - reference_repos/terminals/rio/frontends/rioterm/src/renderer/char_cache.rs
+        - id: P8-03
+          title: "Frame pacing + latency tracking"
+          files_to_add:
+            - src/terminal/metrics.zig
+          refs:
+            - reference_repos/terminals/alacritty/alacritty/src/display/meter.rs
+            - reference_repos/terminals/rio/frontends/rioterm/benches/renderer_bench.rs
+        - id: P8-04
+          title: "SIMD UTF-8 + batch parsing"
+          files_to_add:
+            - src/terminal/batch_parser.zig
+          refs:
+            - reference_repos/terminals/rio/rio-backend/src/batched_parser.rs
+            - reference_repos/terminals/rio/rio-backend/src/batch_utf8.rs
+            - reference_repos/terminals/rio/rio-backend/src/simd_utf8.rs
+
+    - name: "Phase 9 - Tests + Fixtures"
+      tasks:
+        - id: P9-01
+          title: "Port vttest-like recordings into tests"
+          files_to_add:
+            - tests/terminal/vt/
+          refs:
+            - reference_repos/terminals/alacritty/alacritty_terminal/tests/ref/
+            - reference_repos/backends/libvterm/t/
+            - reference_repos/terminals/xterm_snapshots/vttests/
+        - id: P9-02
+          title: "Synthetic stream generator for fuzzing"
+          files_to_add:
+            - tests/terminal/fuzz/
+          refs:
+            - reference_repos/terminals/ghostty/src/synthetic/
+        - id: P9-03
+          title: "Correctness corpus for widths/combining chars"
+          files_to_add:
+            - tests/terminal/unicode/
+          refs:
+            - reference_repos/terminals/kitty/kitty_tests/GraphemeBreakTest.json
+            - reference_repos/terminals/contour/test/emoji/
+            - reference_repos/terminals/wezterm/wezterm-char-props/data/emoji-variation-sequences.txt
