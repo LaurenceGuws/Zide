@@ -583,10 +583,41 @@ pub const TerminalSession = struct {
 
     fn applySgr(self: *TerminalSession, action: csi_mod.CsiAction) void {
         const params = action.params;
-        const n_params: u8 = if (action.count == 0 and params[0] == 0) 1 else action.count + 1;
-        var i: u8 = 0;
-        while (i < n_params) : (i += 1) {
+        const n_params: usize = if (action.count == 0 and params[0] == 0) 1 else @as(usize, action.count + 1);
+        var i: usize = 0;
+        while (i < n_params) {
             const p = params[i];
+            if (p == 38 or p == 48) {
+                if (i + 1 < n_params) {
+                    const mode = params[i + 1];
+                    if (mode == 5 and i + 2 < n_params) {
+                        const idx = clampColorIndex(params[i + 2]);
+                        const color = indexToRgb(idx);
+                        if (p == 38) {
+                            self.current_attrs.fg = color;
+                        } else {
+                            self.current_attrs.bg = color;
+                        }
+                        i += 3;
+                        continue;
+                    }
+                    if (mode == 2 and i + 4 < n_params) {
+                        const r = clampColorIndex(params[i + 2]);
+                        const g = clampColorIndex(params[i + 3]);
+                        const b = clampColorIndex(params[i + 4]);
+                        const color = Color{ .r = r, .g = g, .b = b };
+                        if (p == 38) {
+                            self.current_attrs.fg = color;
+                        } else {
+                            self.current_attrs.bg = color;
+                        }
+                        i += 5;
+                        continue;
+                    }
+                }
+                i += 1;
+                continue;
+            }
             switch (p) {
                 0 => { // reset
                     self.current_attrs = defaultCell().attrs;
@@ -623,6 +654,7 @@ pub const TerminalSession = struct {
                 },
                 else => {},
             }
+            i += 1;
         }
     }
 
@@ -828,3 +860,29 @@ const ansiBrightColors = [_]Color{
     .{ .r = 41, .g = 184, .b = 219 },  // bright cyan
     .{ .r = 255, .g = 255, .b = 255 }, // bright white
 };
+
+fn clampColorIndex(value: i32) u8 {
+    if (value <= 0) return 0;
+    if (value >= 255) return 255;
+    return @intCast(value);
+}
+
+fn indexToRgb(idx: u8) Color {
+    if (idx < 8) return ansiColors[idx];
+    if (idx < 16) return ansiBrightColors[idx - 8];
+
+    if (idx < 232) {
+        const color_idx = idx - 16;
+        const r_idx = color_idx / 36;
+        const g_idx = (color_idx % 36) / 6;
+        const b_idx = color_idx % 6;
+        return .{
+            .r = if (r_idx == 0) 0 else @as(u8, @intCast(55 + r_idx * 40)),
+            .g = if (g_idx == 0) 0 else @as(u8, @intCast(55 + g_idx * 40)),
+            .b = if (b_idx == 0) 0 else @as(u8, @intCast(55 + b_idx * 40)),
+        };
+    }
+
+    const gray = @as(u8, @intCast(8 + (idx - 232) * 10));
+    return .{ .r = gray, .g = gray, .b = gray };
+}

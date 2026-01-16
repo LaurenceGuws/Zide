@@ -4,10 +4,7 @@ Date: 2026-01-16
 
 ## Summary of this session
 
-- Implemented a cross‑platform PTY abstraction and wired it into the terminal session (Linux `openpty`, macOS login shell handling, Windows ConPTY stub).
-- Added a UTF‑8 byte stream + minimal VT parser (ESC/CSI) and basic screen model updates so shell output renders.
-- Implemented core CSI operations and basic SGR (bold/reverse + 16‑color palette).
-- Stabilized terminal resizing and bounds handling.
+- Added SGR 256‑color and truecolor support (`38/48;5` and `38/48;2`) to the terminal attribute pipeline.
 
 ## Key changes
 
@@ -30,9 +27,10 @@ Date: 2026-01-16
 - Scroll: `S` (SU), `T` (SD), `r` (DECSTBM)
 - Reset: `ESC c`
 
-### SGR (basic)
+### SGR
 - Implemented `0`, `1`, `22`, `7`, `27`, `39`, `49`
 - 16‑color palette: `30–37`, `40–47`, `90–97`, `100–107`
+- 256‑color + truecolor: `38/48;5;<idx>` and `38/48;2;<r>;<g>;<b>`
 
 ### Stability fixes
 - Cursor clamping on resize.
@@ -41,9 +39,9 @@ Date: 2026-01-16
 
 ## Current terminal state
 
-- Terminal output now renders from a real PTY with minimal VT parsing.
-- Colors and basic cursor/erase operations work.
-- Truecolor/256‑color, full SGR, and advanced CSI not yet supported.
+- Terminal output renders from a real PTY with minimal VT parsing.
+- Colors (16/256/truecolor) and basic cursor/erase operations work.
+- Full SGR coverage and advanced CSI not yet supported.
 - Dirty‑row tracking and scrollback not implemented.
 
 ## Design docs
@@ -53,10 +51,9 @@ Date: 2026-01-16
 
 ## Next suggested steps (in order)
 
-1) Add SGR 256‑color + truecolor (`38/48;5` and `38/48;2`).
-2) Implement grid dirty‑row tracking to reduce redraw work.
-3) Start scrollback buffer (Phase 3), then integrate with parser.
-4) Expand CSI for modes and attributes, then refine performance.
+1) Implement grid dirty‑row tracking to reduce redraw work.
+2) Start scrollback buffer (Phase 3), then integrate with parser.
+3) Expand CSI for modes and attributes, then refine performance.
 
 ## Workflow (Docs + Research)
 

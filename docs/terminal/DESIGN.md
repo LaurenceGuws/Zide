@@ -7,8 +7,8 @@ Purpose: this document tracks terminal architecture decisions and implementation
 ## Status Summary
 
 - Terminal backend stub replaced by a working PTY + minimal VT pipeline.
-- Shell output renders with basic cursor movement, erase ops, and SGR (16 colors).
-- Still missing: 256/truecolor SGR, dirty‑row tracking, scrollback, and full VT coverage.
+- Shell output renders with basic cursor movement, erase ops, and SGR (16/256/truecolor).
+- Still missing: dirty‑row tracking, scrollback, and full VT coverage.
 
 ## Decisions & Progress by Layer
 
@@ -80,7 +80,7 @@ Current coverage:
 - Insert/delete: `@`, `P`, `L`, `M`
 - Scroll region: `r`, `S`, `T`
 - Reset: `ESC c`
-- SGR: 16‑color palette + bold/reverse
+- SGR: 16‑color + 256‑color + truecolor, bold/reverse
 
 ### Layer 4: Screen Model (Grid + Scrollback)
 
@@ -162,6 +162,5 @@ Why:
 
 ## Immediate next steps
 
-1) Implement SGR 256‑color + truecolor (`38/48;5` and `38/48;2`).
-2) Add dirty‑row tracking to the grid + renderer.
-3) Start scrollback buffer design (Phase 3).
+1) Add dirty‑row tracking to the grid + renderer.
+2) Start scrollback buffer design (Phase 3).
