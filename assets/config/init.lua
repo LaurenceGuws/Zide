@@ -4,14 +4,18 @@
 return {
   -- Logging configuration.
   -- Options:
-  --   "all" / "none" / "app,terminal,metrics" (comma-separated)
-  --   or log = { enable = { "app", "terminal" } }
+  --   log = "all" / "none" / "app.core,terminal.core,terminal.metrics" (comma-separated)
+  --   log = { enable = { "app.core", "terminal.core", "terminal.metrics" } }
+  --   log = { file = { ... }, console = { ... } }
+  -- If file/console are not set, enable is used for both.
   log = {
-    enable = { "app", "terminal" },
+    enable = { "app.core", "terminal.core" },
+    -- file = { "terminal.metrics" },
+    -- console = { "app.core" },
   },
 
   -- Raylib logging configuration.
-  -- log_level options: "none", "error", "warning"/"warn", "info", "debug", "trace"
+  -- log_level options: "none", "error", "warning", "warn", "info", "debug", "trace"
   raylib = {
     log_level = "info",
   },

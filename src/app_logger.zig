@@ -2,7 +2,8 @@ const std = @import("std");
 
 var log_file: ?std.fs.File = null;
 var log_mutex: std.Thread.Mutex = .{};
-var log_filter: ?[]u8 = null;
+var log_filter_file: ?[]u8 = null;
+var log_filter_console: ?[]u8 = null;
 
 pub fn init() !void {
     if (log_file != null) return;
@@ -16,56 +17,92 @@ pub fn deinit() void {
         file.close();
     }
     log_file = null;
-    if (log_filter) |filter| {
+    if (log_filter_file) |filter| {
         std.heap.c_allocator.free(filter);
     }
-    log_filter = null;
+    log_filter_file = null;
+    if (log_filter_console) |filter| {
+        std.heap.c_allocator.free(filter);
+    }
+    log_filter_console = null;
 }
 
 pub const Logger = struct {
     name: []const u8,
-    enabled: bool,
+    enabled_file: bool,
+    enabled_console: bool,
 
     pub fn logf(self: Logger, comptime fmt: []const u8, args: anytype) void {
-        if (!self.enabled or log_file == null) return;
-        log_mutex.lock();
-        defer log_mutex.unlock();
-
         var buf: [1024]u8 = undefined;
         const msg = std.fmt.bufPrint(&buf, fmt, args) catch return;
-        if (log_file) |file| {
-            _ = file.writeAll("[") catch {};
-            _ = file.writeAll(self.name) catch {};
-            _ = file.writeAll("] ") catch {};
-            _ = file.writeAll(msg) catch {};
-            _ = file.writeAll("\n") catch {};
+
+        if (self.enabled_file and log_file != null) {
+            log_mutex.lock();
+            defer log_mutex.unlock();
+            if (log_file) |file| {
+                _ = file.writeAll("[") catch {};
+                _ = file.writeAll(self.name) catch {};
+                _ = file.writeAll("] ") catch {};
+                _ = file.writeAll(msg) catch {};
+                _ = file.writeAll("\n") catch {};
+            }
+        }
+
+        if (self.enabled_console) {
+            std.debug.print("[{s}] ", .{self.name});
+            std.debug.print("{s}\n", .{msg});
         }
     }
 
     pub fn logStdout(self: Logger, comptime fmt: []const u8, args: anytype) void {
-        if (!self.enabled) return;
-        std.debug.print("[{s}] ", .{self.name});
-        std.debug.print(fmt ++ "\n", args);
+        var buf: [1024]u8 = undefined;
+        const msg = std.fmt.bufPrint(&buf, fmt, args) catch return;
+        if (self.enabled_console) {
+            std.debug.print("[{s}] ", .{self.name});
+            std.debug.print("{s}\n", .{msg});
+        }
+        if (self.enabled_file and log_file != null) {
+            log_mutex.lock();
+            defer log_mutex.unlock();
+            if (log_file) |file| {
+                _ = file.writeAll("[") catch {};
+                _ = file.writeAll(self.name) catch {};
+                _ = file.writeAll("] ") catch {};
+                _ = file.writeAll(msg) catch {};
+                _ = file.writeAll("\n") catch {};
+            }
+        }
     }
 };
 
 pub fn logger(name: []const u8) Logger {
     return .{
         .name = name,
-        .enabled = isEnabled(name),
+        .enabled_file = isEnabled(name, log_filter_file, "ZIDE_LOG_FILE\x00"),
+        .enabled_console = isEnabled(name, log_filter_console, "ZIDE_LOG_CONSOLE\x00"),
     };
 }
 
-pub fn setFilterString(value: []const u8) !void {
-    if (log_filter) |filter| {
+pub fn setFileFilterString(value: []const u8) !void {
+    if (log_filter_file) |filter| {
         std.heap.c_allocator.free(filter);
     }
-    log_filter = try std.heap.c_allocator.dupe(u8, value);
+    log_filter_file = try std.heap.c_allocator.dupe(u8, value);
 }
 
-fn isEnabled(name: []const u8) bool {
-    const raw = if (log_filter) |filter| filter else blk: {
-        const env = std.c.getenv("ZIDE_LOG") orelse return true;
+pub fn setConsoleFilterString(value: []const u8) !void {
+    if (log_filter_console) |filter| {
+        std.heap.c_allocator.free(filter);
+    }
+    log_filter_console = try std.heap.c_allocator.dupe(u8, value);
+}
+
+fn isEnabled(name: []const u8, filter_override: ?[]const u8, env_key: [:0]const u8) bool {
+    const raw = if (filter_override) |filter| filter else blk: {
+        if (std.c.getenv("ZIDE_LOG")) |env_all| {
+            break :blk std.mem.sliceTo(env_all, 0);
+        }
+        const env = std.c.getenv(env_key) orelse return true;
         break :blk std.mem.sliceTo(env, 0);
     };
     if (raw.len == 0) return false;

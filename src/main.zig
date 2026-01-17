@@ -69,7 +69,8 @@ const AppState = struct {
         var config = config_mod.loadConfig(allocator) catch |err| blk: {
             std.debug.print("config load error: {any}\n", .{err});
             break :blk config_mod.Config{
-                .log_filter = null,
+                .log_file_filter = null,
+                .log_console_filter = null,
                 .raylib_log_level = null,
             };
         };
@@ -82,12 +83,15 @@ const AppState = struct {
         const renderer = try Renderer.init(allocator, 1280, 720, "Zide - Zig IDE");
         errdefer renderer.deinit();
         try app_logger.init();
-        if (config.log_filter) |filter| {
-            app_logger.setFilterString(filter) catch {};
+        if (config.log_file_filter) |filter| {
+            app_logger.setFileFilterString(filter) catch {};
         }
-        const app_log = app_logger.logger("app");
+        if (config.log_console_filter) |filter| {
+            app_logger.setConsoleFilterString(filter) catch {};
+        }
+        const app_log = app_logger.logger("app.core");
         app_log.logStdout("logger initialized", .{});
-        const metrics_log = app_logger.logger("metrics");
+        const metrics_log = app_logger.logger("terminal.metrics");
 
         const state = try allocator.create(AppState);
         state.* = .{
@@ -251,7 +255,7 @@ const AppState = struct {
     }
 
     fn maybeLogMetrics(self: *AppState, now: f64) void {
-        if (!self.metrics_logger.enabled) return;
+        if (!self.metrics_logger.enabled_file) return;
         if (now - self.last_metrics_log_time < 1.0) return;
         self.last_metrics_log_time = now;
         self.metrics_logger.logf(
