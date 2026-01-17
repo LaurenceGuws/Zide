@@ -1,6 +1,6 @@
 # Terminal Design & Decision Log
 
-Date: 2026-01-16
+Date: 2026-01-17
 
 Purpose: this document tracks terminal architecture decisions and implementation progress. It is not a fixed plan. Each layer will be researched in the reference repos before implementation, and this file will be updated with concrete decisions as they are made.
 
@@ -154,12 +154,18 @@ Why:
 
 Progress:
 - Snapshot + flat grid in place; still full redraw each frame.
+- Added per-row dirty tracking in the grid with bounding damage ranges.
 
 Decision:
-- Next: dirty‑row tracking in grid + renderer.
+- Track per-row dirty flags plus a bounding damage rectangle; upgrade to row-level renderer invalidation later.
 
 Why:
-- Essential for low‑latency redraw and CPU savings.
+- Per-row dirties are cheap to update on write/scroll and align with common terminal render pipelines.
+
+Research notes:
+- Alacritty tracks per-line damage bounds per frame and merges them into renderer rectangles.
+- Ghostty marks per-row dirty flags, promoting to full redraw when global state changes.
+- libvterm damage tests emphasize scroll/move damage vs. cell damage merging.
 
 ### Layer 10: Tests + Fixtures
 
