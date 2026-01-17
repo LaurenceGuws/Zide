@@ -43,22 +43,29 @@ const TerminalGrid = struct {
     rows: u16,
     cols: u16,
     cells: std.ArrayList(Cell),
+    dirty_rows: std.ArrayList(bool),
     dirty: Dirty,
     damage: Damage,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !TerminalGrid {
         var cells = std.ArrayList(Cell).empty;
+        var dirty_rows = std.ArrayList(bool).empty;
         const count = @as(usize, rows) * @as(usize, cols);
         try cells.resize(allocator, count);
+        try dirty_rows.resize(allocator, rows);
         const default_cell = defaultCell();
         for (cells.items) |*cell| {
             cell.* = default_cell;
+        }
+        for (dirty_rows.items) |*row_dirty| {
+            row_dirty.* = true;
         }
         return .{
             .allocator = allocator,
             .rows = rows,
             .cols = cols,
             .cells = cells,
+            .dirty_rows = dirty_rows,
             .dirty = .full,
             .damage = .{
                 .start_row = 0,
@@ -71,6 +78,7 @@ const TerminalGrid = struct {
 
     pub fn deinit(self: *TerminalGrid) void {
         self.cells.deinit(self.allocator);
+        self.dirty_rows.deinit(self.allocator);
     }
 
     pub fn resize(self: *TerminalGrid, rows: u16, cols: u16) !void {
@@ -79,11 +87,53 @@ const TerminalGrid = struct {
         self.cols = cols;
         const count = @as(usize, rows) * @as(usize, cols);
         try self.cells.resize(self.allocator, count);
+        try self.dirty_rows.resize(self.allocator, rows);
         const default_cell = defaultCell();
         for (self.cells.items) |*cell| {
             cell.* = default_cell;
         }
+        for (self.dirty_rows.items) |*row_dirty| {
+            row_dirty.* = true;
+        }
         self.markDirtyAll();
+    }
+
+    fn setAllDirtyRows(self: *TerminalGrid, value: bool) void {
+        for (self.dirty_rows.items) |*row_dirty| {
+            row_dirty.* = value;
+        }
+    }
+
+    pub fn markDirtyRange(self: *TerminalGrid, start_row: usize, end_row: usize, start_col: usize, end_col: usize) void {
+        if (self.rows == 0 or self.cols == 0) return;
+        const max_row = @as(usize, self.rows - 1);
+        const max_col = @as(usize, self.cols - 1);
+        const row_start = @min(start_row, max_row);
+        const row_end = @min(end_row, max_row);
+        const col_start = @min(start_col, max_col);
+        const col_end = @min(end_col, max_col);
+        if (row_start > row_end or col_start > col_end) return;
+
+        if (self.dirty != .full) {
+            if (self.dirty == .none) {
+                self.dirty = .partial;
+                self.damage = .{
+                    .start_row = row_start,
+                    .end_row = row_end,
+                    .start_col = col_start,
+                    .end_col = col_end,
+                };
+            } else {
+                self.damage.start_row = @min(self.damage.start_row, row_start);
+                self.damage.end_row = @max(self.damage.end_row, row_end);
+                self.damage.start_col = @min(self.damage.start_col, col_start);
+                self.damage.end_col = @max(self.damage.end_col, col_end);
+            }
+        }
+
+        for (row_start..row_end + 1) |row| {
+            self.dirty_rows.items[row] = true;
+        }
     }
 
     pub fn markDirtyAll(self: *TerminalGrid) void {
@@ -94,10 +144,18 @@ const TerminalGrid = struct {
             .start_col = 0,
             .end_col = if (self.cols > 0) @as(usize, self.cols - 1) else 0,
         };
+        self.setAllDirtyRows(true);
     }
 
     pub fn clearDirty(self: *TerminalGrid) void {
         self.dirty = .none;
+        self.setAllDirtyRows(false);
+        self.damage = .{
+            .start_row = 0,
+            .end_row = 0,
+            .start_col = 0,
+            .end_col = 0,
+        };
     }
 };
 
@@ -468,17 +526,19 @@ pub const TerminalSession = struct {
             0 => { // cursor to end
                 const start_idx = row * cols + col;
                 for (self.grid.cells.items[start_idx..]) |*cell| cell.* = default_cell;
+                self.grid.markDirtyRange(row, rows - 1, 0, cols - 1);
             },
             1 => { // start to cursor
                 const end = row * cols + col + 1;
                 for (self.grid.cells.items[0..end]) |*cell| cell.* = default_cell;
+                self.grid.markDirtyRange(0, row, 0, cols - 1);
             },
             2 => { // all
                 for (self.grid.cells.items) |*cell| cell.* = default_cell;
+                self.grid.markDirtyAll();
             },
             else => {},
         }
-        self.grid.markDirtyAll();
     }
 
     fn eraseLine(self: *TerminalSession, mode: i32) void {
@@ -492,16 +552,18 @@ pub const TerminalSession = struct {
         switch (mode) {
             0 => { // cursor to end of line
                 for (self.grid.cells.items[row_start + col .. row_start + cols]) |*cell| cell.* = default_cell;
+                self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, cols - 1);
             },
             1 => { // start to cursor
                 for (self.grid.cells.items[row_start .. row_start + col + 1]) |*cell| cell.* = default_cell;
+                self.grid.markDirtyRange(self.cursor.row, self.cursor.row, 0, col);
             },
             2 => { // entire line
                 for (self.grid.cells.items[row_start .. row_start + cols]) |*cell| cell.* = default_cell;
+                self.grid.markDirtyRange(self.cursor.row, self.cursor.row, 0, cols - 1);
             },
             else => {},
         }
-        self.grid.markDirtyAll();
     }
 
     fn insertChars(self: *TerminalSession, count: usize) void {
@@ -518,7 +580,7 @@ pub const TerminalSession = struct {
         }
         const default_cell = defaultCell();
         for (line[col .. col + n]) |*cell| cell.* = default_cell;
-        self.grid.markDirtyAll();
+        self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, cols - 1);
     }
 
     fn deleteChars(self: *TerminalSession, count: usize) void {
@@ -535,7 +597,7 @@ pub const TerminalSession = struct {
         }
         const default_cell = defaultCell();
         for (line[cols - n .. cols]) |*cell| cell.* = default_cell;
-        self.grid.markDirtyAll();
+        self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, cols - 1);
     }
 
     fn insertLines(self: *TerminalSession, count: usize) void {
@@ -552,7 +614,7 @@ pub const TerminalSession = struct {
             std.mem.copyBackwards(Cell, self.grid.cells.items[insert_at + n * cols .. region_end], self.grid.cells.items[insert_at .. insert_at + move_len]);
         }
         for (self.grid.cells.items[insert_at .. insert_at + n * cols]) |*cell| cell.* = default_cell;
-        self.grid.markDirtyAll();
+        self.grid.markDirtyRange(self.cursor.row, self.scroll_bottom, 0, cols - 1);
     }
 
     fn deleteLines(self: *TerminalSession, count: usize) void {
@@ -569,7 +631,7 @@ pub const TerminalSession = struct {
             std.mem.copyForwards(Cell, self.grid.cells.items[delete_at .. delete_at + move_len], self.grid.cells.items[delete_at + n * cols .. region_end]);
         }
         for (self.grid.cells.items[region_end - n * cols .. region_end]) |*cell| cell.* = default_cell;
-        self.grid.markDirtyAll();
+        self.grid.markDirtyRange(self.cursor.row, self.scroll_bottom, 0, cols - 1);
     }
 
     fn isFullScrollRegion(self: *TerminalSession) bool {
@@ -609,7 +671,7 @@ pub const TerminalSession = struct {
             std.mem.copyForwards(Cell, self.grid.cells.items[region_start .. region_start + move_len], self.grid.cells.items[region_start + n * cols .. region_end]);
         }
         for (self.grid.cells.items[region_end - n * cols .. region_end]) |*cell| cell.* = default_cell;
-        self.grid.markDirtyAll();
+        self.grid.markDirtyRange(self.scroll_top, self.scroll_bottom, 0, cols - 1);
     }
 
     fn scrollRegionDown(self: *TerminalSession, count: usize) void {
@@ -625,7 +687,7 @@ pub const TerminalSession = struct {
             std.mem.copyBackwards(Cell, self.grid.cells.items[region_start + n * cols .. region_end], self.grid.cells.items[region_start .. region_start + move_len]);
         }
         for (self.grid.cells.items[region_start .. region_start + n * cols]) |*cell| cell.* = default_cell;
-        self.grid.markDirtyAll();
+        self.grid.markDirtyRange(self.scroll_top, self.scroll_bottom, 0, cols - 1);
     }
 
     fn applySgr(self: *TerminalSession, action: csi_mod.CsiAction) void {
@@ -732,7 +794,7 @@ pub const TerminalSession = struct {
         if (self.cursor.col >= cols) {
             self.newline();
         }
-        self.grid.markDirtyAll();
+        self.grid.markDirtyRange(row, row, col, col);
     }
 
     fn newline(self: *TerminalSession) void {
@@ -804,6 +866,7 @@ pub const TerminalSession = struct {
     pub fn setScrollOffset(self: *TerminalSession, offset: usize) void {
         const max_offset = self.maxScrollOffset();
         self.scrollback_offset = @min(offset, max_offset);
+        self.grid.markDirtyAll();
         app_logger.logf("set scroll offset={d} max={d}", .{ self.scrollback_offset, max_offset });
         app_logger.logStdout("set scroll offset={d} max={d}", .{ self.scrollback_offset, max_offset });
     }
@@ -817,6 +880,7 @@ pub const TerminalSession = struct {
         const max_i: isize = @intCast(max_offset);
         if (offset > max_i) offset = max_i;
         self.scrollback_offset = @intCast(offset);
+        self.grid.markDirtyAll();
         app_logger.logf("scroll by delta={d} offset={d} max={d}", .{ delta, self.scrollback_offset, max_offset });
         app_logger.logStdout("scroll by delta={d} offset={d} max={d}", .{ delta, self.scrollback_offset, max_offset });
     }
@@ -828,7 +892,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn snapshot(self: *TerminalSession) TerminalSnapshot {
-        const snap = TerminalSnapshot{
+        return TerminalSnapshot{
             .rows = @as(usize, self.grid.rows),
             .cols = @as(usize, self.grid.cols),
             .cells = self.grid.cells.items,
@@ -836,8 +900,10 @@ pub const TerminalSession = struct {
             .dirty = self.grid.dirty,
             .damage = self.grid.damage,
         };
+    }
+
+    pub fn clearDirty(self: *TerminalSession) void {
         self.grid.clearDirty();
-        return snap;
     }
 
     pub fn isAlive(self: *TerminalSession) bool {

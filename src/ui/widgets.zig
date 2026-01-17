@@ -749,6 +749,8 @@ pub const TerminalWidget = struct {
                 r.theme.foreground,
             );
         }
+
+        self.session.clearDirty();
     }
 
     /// Handle input, returns true if any input was processed
