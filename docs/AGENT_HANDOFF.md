@@ -12,6 +12,7 @@ Date: 2026-01-17
 - Added `assets/config/init.lua` as the defaults reference and documented log config and raylib log levels.
 - Added frame pacing metrics (frame/draw/input latency) for tuning and profiling.
 - Logging now supports separate file vs console filters; call sites don’t decide destinations.
+- Refined ED (erase display) damage to use per-row column bounds for the cursor row.
 
 ## Key changes
 
@@ -74,9 +75,8 @@ Date: 2026-01-17
 
 ## Next suggested steps (in order)
 
-1) Refine dirty tracking to include column damage to reduce work within a dirty row.
-2) Add scrollback viewport polish (selection/copy, scrollback indicators, preserve on resize).
-3) Expand CSI for modes and attributes, then refine performance.
+1) Add scrollback viewport polish (selection/copy, scrollback indicators, preserve on resize).
+2) Expand CSI for modes and attributes, then refine performance.
 
 ## Workflow (Docs + Research)
 

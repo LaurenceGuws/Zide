@@ -610,12 +610,18 @@ pub const TerminalSession = struct {
             0 => { // cursor to end
                 const start_idx = row * cols + col;
                 for (self.grid.cells.items[start_idx..]) |*cell| cell.* = default_cell;
-                self.grid.markDirtyRange(row, rows - 1, 0, cols - 1);
+                self.grid.markDirtyRange(row, row, col, cols - 1);
+                if (row + 1 < rows) {
+                    self.grid.markDirtyRange(row + 1, rows - 1, 0, cols - 1);
+                }
             },
             1 => { // start to cursor
                 const end = row * cols + col + 1;
                 for (self.grid.cells.items[0..end]) |*cell| cell.* = default_cell;
-                self.grid.markDirtyRange(0, row, 0, cols - 1);
+                if (row > 0) {
+                    self.grid.markDirtyRange(0, row - 1, 0, cols - 1);
+                }
+                self.grid.markDirtyRange(row, row, 0, col);
             },
             2 => { // all
                 for (self.grid.cells.items) |*cell| cell.* = default_cell;

@@ -158,16 +158,19 @@ Progress:
 - Terminal rendering now caches the grid into a render texture and only re-renders dirty rows.
 - Terminal glyph atlas now reuses a staging buffer and supports compaction when full.
 - Added lightweight frame/draw/input-latency metrics to track pacing.
+- Refined ED (erase display) damage to track the cursor row column range separately from full-row damage below/above.
 
 Decision:
 - Cache terminal grid in a render texture and update only dirty rows; draw cursor as an overlay on the main frame.
 - Use atlas compaction to keep the glyph cache effective without per-glyph allocations.
 - Track frame/draw/input latency with EMA metrics for future tuning.
+- Track per-row column bounds; multi-row ops issue separate dirty ranges so partial rows don’t force full-row redraw.
 
 Why:
 - Render texture keeps frame cost stable while preserving per-row invalidation for partial updates.
 - Reusing a staging buffer reduces per-glyph churn; compaction avoids hard failures when atlas fills.
 - Metrics make pacing regressions visible without heavy profiling.
+- Column bounds reduce overdraw for row-local edits while keeping row-level dirtiness simple.
 
 Research notes:
 - Alacritty tracks per-line damage bounds per frame and merges them into renderer rectangles.
