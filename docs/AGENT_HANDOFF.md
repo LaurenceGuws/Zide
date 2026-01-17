@@ -66,6 +66,7 @@ Date: 2026-01-17
 - Basic mouse selection highlights and Ctrl+Shift+C copy are supported (selection clears on resize/output).
 - Clipboard paste supports Ctrl+Shift+V and middle-click.
 - Bracketed paste mode (?2004) is honored when enabled by the shell.
+- Basic OSC parsing now consumes OSC 0/2 sequences to avoid printing prompt metadata.
 
 ## Terminal planning notes
 
