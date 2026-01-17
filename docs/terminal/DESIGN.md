@@ -156,12 +156,15 @@ Progress:
 - Snapshot + flat grid in place; still full redraw each frame.
 - Added per-row dirty tracking in the grid with bounding damage ranges.
 - Terminal rendering now caches the grid into a render texture and only re-renders dirty rows.
+- Terminal glyph atlas now reuses a staging buffer and supports compaction when full.
 
 Decision:
 - Cache terminal grid in a render texture and update only dirty rows; draw cursor as an overlay on the main frame.
+- Use atlas compaction to keep the glyph cache effective without per-glyph allocations.
 
 Why:
 - Render texture keeps frame cost stable while preserving per-row invalidation for partial updates.
+- Reusing a staging buffer reduces per-glyph churn; compaction avoids hard failures when atlas fills.
 
 Research notes:
 - Alacritty tracks per-line damage bounds per frame and merges them into renderer rectangles.

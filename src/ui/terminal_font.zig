@@ -31,6 +31,14 @@ pub const Rgba = extern struct {
     a: u8,
 };
 
+const GlyphError = error{
+    HbShapeFailed,
+    FtLoadFailed,
+    FtRenderFailed,
+    AtlasFull,
+    OutOfMemory,
+};
+
 pub const TerminalFont = struct {
     allocator: std.mem.Allocator,
     ft_library: c.FT_Library,
@@ -46,6 +54,8 @@ pub const TerminalFont = struct {
     glyphs: std.AutoHashMap(u32, Glyph),
     glyph_order: std.ArrayList(u32),
     max_glyphs: usize,
+    upload_buffer: []u8,
+    upload_buffer_capacity: usize,
     ascent: f32,
     descent: f32,
     line_height: f32,
@@ -140,6 +150,8 @@ pub const TerminalFont = struct {
             .glyphs = std.AutoHashMap(u32, Glyph).init(allocator),
             .glyph_order = .empty,
             .max_glyphs = 2048,
+            .upload_buffer = &[_]u8{},
+            .upload_buffer_capacity = 0,
             .ascent = ascent_px,
             .descent = descent_px,
             .line_height = if (line_height_px > 0) line_height_px else ascent_px + descent_px,
@@ -159,6 +171,9 @@ pub const TerminalFont = struct {
     pub fn deinit(self: *TerminalFont) void {
         self.glyphs.deinit();
         self.glyph_order.deinit(self.allocator);
+        if (self.upload_buffer_capacity > 0) {
+            self.allocator.free(self.upload_buffer);
+        }
         c.UnloadTexture(self.texture);
         c.hb_font_destroy(self.hb_font);
         _ = c.FT_Done_Face(self.ft_face);
@@ -219,9 +234,14 @@ pub const TerminalFont = struct {
         });
     }
 
-    fn getGlyph(self: *TerminalFont, codepoint: u32) !*Glyph {
+    fn getGlyph(self: *TerminalFont, codepoint: u32) GlyphError!*Glyph {
         if (self.glyphs.getPtr(codepoint)) |glyph| return glyph;
 
+        try self.rasterizeGlyph(codepoint, true);
+        return self.glyphs.getPtr(codepoint).?;
+    }
+
+    fn rasterizeGlyph(self: *TerminalFont, codepoint: u32, allow_compact: bool) GlyphError!void {
         const buffer = c.hb_buffer_create();
         defer c.hb_buffer_destroy(buffer);
         c.hb_buffer_add_utf32(buffer, &codepoint, 1, 0, 1);
@@ -257,12 +277,25 @@ pub const TerminalFont = struct {
                 self.row_h = 0;
             }
             if (self.pen_y + height + self.padding > self.atlas_height) {
+                if (allow_compact) {
+                    // Try to compact and retry once.
+                    try self.compactAtlas();
+                    try self.rasterizeGlyph(codepoint, false);
+                    return;
+                }
                 return error.AtlasFull;
             }
 
             const pixel_count = @as(usize, @intCast(width * height));
-            const rgba = try self.allocator.alloc(u8, pixel_count * 4);
-            defer self.allocator.free(rgba);
+            const needed = pixel_count * 4;
+            if (needed > self.upload_buffer_capacity) {
+                if (self.upload_buffer_capacity > 0) {
+                    self.allocator.free(self.upload_buffer);
+                }
+                self.upload_buffer = try self.allocator.alloc(u8, needed);
+                self.upload_buffer_capacity = needed;
+            }
+            const rgba = self.upload_buffer[0..needed];
 
             const gamma = 1.0 / 2.2;
 
@@ -326,7 +359,7 @@ pub const TerminalFont = struct {
             try self.glyphs.put(codepoint, glyph);
             try self.glyph_order.append(self.allocator, codepoint);
             self.pen_x += width + self.padding;
-            return self.glyphs.getPtr(codepoint).?;
+            return;
         }
 
         const glyph = Glyph{
@@ -345,6 +378,34 @@ pub const TerminalFont = struct {
         }
         try self.glyphs.put(codepoint, glyph);
         try self.glyph_order.append(self.allocator, codepoint);
-        return self.glyphs.getPtr(codepoint).?;
+        return;
+    }
+
+    fn compactAtlas(self: *TerminalFont) GlyphError!void {
+        var old_order = try self.glyph_order.clone(self.allocator);
+        defer old_order.deinit(self.allocator);
+
+        self.glyphs.clearRetainingCapacity();
+        self.glyph_order.clearRetainingCapacity();
+
+        self.pen_x = self.padding;
+        self.pen_y = self.padding;
+        self.row_h = 0;
+
+        const image = c.GenImageColor(self.atlas_width, self.atlas_height, .{ .r = 0, .g = 0, .b = 0, .a = 0 });
+        c.UnloadTexture(self.texture);
+        self.texture = c.LoadTextureFromImage(image);
+        c.UnloadImage(image);
+        c.SetTextureFilter(self.texture, c.TEXTURE_FILTER_POINT);
+
+        const count = old_order.items.len;
+        var kept: usize = 0;
+        var idx: usize = 0;
+        while (idx < count and kept < self.max_glyphs) : (idx += 1) {
+            const codepoint = old_order.items[count - 1 - idx];
+            if (self.glyphs.contains(codepoint)) continue;
+            try self.rasterizeGlyph(codepoint, false);
+            kept += 1;
+        }
     }
 };

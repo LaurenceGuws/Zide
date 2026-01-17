@@ -7,6 +7,7 @@ Date: 2026-01-17
 - Cached terminal rendering into a render texture and only re-rendered dirty rows into it.
 - Cursor is now drawn as a per-frame overlay so cursor moves don't require texture updates.
 - Kept dirty tracking ownership in the terminal widget (clear after draw).
+- Added glyph atlas compaction and a reusable upload buffer to reduce per-glyph allocations.
 
 ## Key changes
 
@@ -38,6 +39,8 @@ Date: 2026-01-17
 - Added `dirty_rows` to the grid with `markDirtyRange` and `markDirtyAll`.
 - Updated write/erase/insert/delete/scroll paths to mark partial damage ranges instead of full.
 - Terminal widget now uses dirty rows to update a render texture instead of redrawing the full grid each frame.
+### Glyph atlas
+- `TerminalFont` now reuses a staging buffer for texture uploads and compacts the atlas when full.
 
 ## Current terminal state
 
@@ -46,6 +49,7 @@ Date: 2026-01-17
 - Scrollback captures lines when the full screen scrolls; UI shows a scrollbar and supports drag/wheel.
 - Full SGR coverage and advanced CSI not yet supported.
 - Dirty-row tracking is implemented; renderer caches the terminal in a texture and only updates dirty rows.
+- Glyph atlas compacts instead of failing when full.
 
 ## Terminal planning notes
 
