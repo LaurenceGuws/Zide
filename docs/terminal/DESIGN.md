@@ -155,12 +155,13 @@ Why:
 Progress:
 - Snapshot + flat grid in place; still full redraw each frame.
 - Added per-row dirty tracking in the grid with bounding damage ranges.
+- Terminal rendering now caches the grid into a render texture and only re-renders dirty rows.
 
 Decision:
-- Track per-row dirty flags plus a bounding damage rectangle; upgrade to row-level renderer invalidation later.
+- Cache terminal grid in a render texture and update only dirty rows; draw cursor as an overlay on the main frame.
 
 Why:
-- Per-row dirties are cheap to update on write/scroll and align with common terminal render pipelines.
+- Render texture keeps frame cost stable while preserving per-row invalidation for partial updates.
 
 Research notes:
 - Alacritty tracks per-line damage bounds per frame and merges them into renderer rectangles.
