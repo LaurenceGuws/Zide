@@ -55,6 +55,7 @@ const AppState = struct {
     mouse_debug: bool,
     terminal_scroll_dragging: bool,
     terminal_scroll_grab_offset: f32,
+    last_mouse_redraw_time: f64,
 
     pub fn init(allocator: std.mem.Allocator) !*AppState {
         const renderer = try Renderer.init(allocator, 1280, 720, "Zide - Zig IDE");
@@ -86,6 +87,7 @@ const AppState = struct {
             .mouse_debug = std.c.getenv("ZIDE_MOUSE_DEBUG") != null,
             .terminal_scroll_dragging = false,
             .terminal_scroll_grab_offset = 0,
+            .last_mouse_redraw_time = 0,
         };
 
         return state;
@@ -252,13 +254,26 @@ const AppState = struct {
         const mouse = r.getMousePos();
         const mouse_down = r.isMouseButtonDown(renderer_mod.MOUSE_LEFT);
         const mouse_moved = mouse.x != self.last_mouse_pos.x or mouse.y != self.last_mouse_pos.y;
-        const has_mouse = r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT) or
-            r.isMouseButtonPressed(renderer_mod.MOUSE_RIGHT) or
-            r.getMouseWheelMove() != 0 or
-            mouse_moved;
+        const wheel = r.getMouseWheelMove();
+        const mouse_pressed = r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT) or
+            r.isMouseButtonPressed(renderer_mod.MOUSE_RIGHT);
+        const has_mouse_action = mouse_pressed or wheel != 0 or mouse_down;
 
-        if (has_mouse) {
+        const terminal_visible = self.show_terminal and terminal_h > 0;
+        const term_y = height - status_bar_height - terminal_h;
+        const in_terminal_area = terminal_visible and mouse.y >= term_y;
+
+        if (has_mouse_action) {
             self.needs_redraw = true;
+        } else if (mouse_moved) {
+            if (!in_terminal_area) {
+                const now = renderer_mod.getTime();
+                const interval: f64 = 1.0 / 60.0;
+                if (now - self.last_mouse_redraw_time >= interval) {
+                    self.needs_redraw = true;
+                    self.last_mouse_redraw_time = now;
+                }
+            }
         }
         if (mouse_moved) {
             self.last_mouse_pos = mouse;
@@ -340,7 +355,6 @@ const AppState = struct {
             const in_editor = mouse.x >= editor_x and mouse.x <= editor_x + editor_width and
                 mouse.y >= editor_y and mouse.y <= editor_y + editor_height;
 
-            const term_y = height - status_bar_height - terminal_h;
             const in_terminal = terminal_h > 0 and mouse.y >= term_y and mouse.y <= term_y + terminal_h;
 
             if (in_terminal and self.show_terminal) {
@@ -416,7 +430,7 @@ const AppState = struct {
             }
 
             // Handle terminal input if focused at bottom
-            const term_y = height - status_bar_height - terminal_h + 2;
+            const term_y_draw = height - status_bar_height - terminal_h + 2;
             const term_x = side_nav_width;
             const term_draw_height = @max(0, terminal_h - 2);
             if (self.active_kind == .terminal) {
@@ -424,7 +438,7 @@ const AppState = struct {
                 if (try term_widget.handleInput(
                     r,
                     term_x,
-                    term_y,
+                    term_y_draw,
                     editor_width,
                     term_draw_height,
                     true,
@@ -438,7 +452,7 @@ const AppState = struct {
                 if (try term_widget.handleInput(
                     r,
                     term_x,
-                    term_y,
+                    term_y_draw,
                     editor_width,
                     term_draw_height,
                     false,
