@@ -6,6 +6,7 @@ Date: 2026-01-16
 
 - Added scrollback UI controls (scrollbar + drag) and fixed scroll region resize so scrollback captures lines.
 - Added a simple app logger to emit terminal scrollback debug logs to `zide.log` (and stderr).
+- Reduced redraw churn by ignoring hover-only mouse movement over the terminal region (terminal has no hover UX), aligning with terminal performance plan.
 
 ## Key changes
 
@@ -44,7 +45,12 @@ Date: 2026-01-16
 - Colors (16/256/truecolor) and basic cursor/erase operations work.
 - Scrollback captures lines when the full screen scrolls; UI shows a scrollbar and supports drag/wheel.
 - Full SGR coverage and advanced CSI not yet supported.
-- Dirty‑row tracking not implemented.
+- Dirty-row tracking not implemented.
+
+## Terminal planning notes
+
+- We started applying the performance strategy by cutting hover-driven redraws over the terminal (no hover UX), reducing CPU while keeping responsiveness elsewhere.
+- Next performance steps remain dirty-row tracking and/or render-to-texture caching for the terminal grid.
 
 ## Design docs
 
@@ -54,7 +60,7 @@ Date: 2026-01-16
 ## Next suggested steps (in order)
 
 1) Implement grid dirty‑row tracking to reduce redraw work.
-2) Add scrollback viewport polish (selection/copy, scrollback indicators).
+2) Add scrollback viewport polish (selection/copy, scrollback indicators, preserve on resize).
 3) Expand CSI for modes and attributes, then refine performance.
 
 ## Workflow (Docs + Research)

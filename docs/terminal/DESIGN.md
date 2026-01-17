@@ -91,6 +91,10 @@ Progress:
 - Scrollback ring buffer stores rows on full‑screen scroll; cleared on column resize.
 - Terminal UI can render scrollback with a right-side scrollbar and scroll offset.
 
+Notes:
+- Scrollback is currently appended only on full-screen scroll (scroll region must be full height).
+- Scrollback view supports wheel + drag via the terminal widget; no selection/copy yet.
+
 Decision:
 - Current grid is a minimal stepping stone; will be replaced by a proper model with dirty‑row tracking and scrollback.
 
