@@ -132,12 +132,27 @@ Why:
 
 Progress:
 - Key and character input forwarded to PTY.
+- Basic mouse selection + clipboard copy added for the terminal widget.
+- Clipboard paste supports Ctrl+Shift+V and middle-click.
+- Bracketed paste mode (?2004) is honored when enabled by the shell.
 
 Decision:
-- TBD for extended keyboard and mouse protocols.
+- Implement a simple linear (non-rect) selection stored as global scrollback row/col coordinates.
+- Draw selection highlight as a translucent overlay each frame, independent of the cached terminal texture.
+- Copy selection with Ctrl+Shift+C, trimming trailing spaces per line and joining with newlines.
 
 Why:
-- TBD.
+- Matches minimal terminal expectations while avoiding deep model changes.
+- Overlay rendering keeps selection updates cheap and does not invalidate cached rows.
+- Simple per-line trimming approximates common terminal clipboard behavior.
+
+Notes:
+- Selection is cleared on terminal resize and when new PTY output arrives to avoid stale indices.
+
+Research notes:
+- Ghostty tracks selections with pins into the screen/page list for durability across mutations.
+- foot keeps selection coordinates in absolute (scrollback) row space and extracts selection text via an extraction pipeline.
+- rio (Alacritty-derived) models multiple selection types (simple/block/semantic/lines) with anchors and side tracking.
 
 ### Layer 8: Correctness + Compatibility
 

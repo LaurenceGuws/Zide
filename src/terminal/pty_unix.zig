@@ -9,6 +9,7 @@ const c = @cImport({
     @cInclude("sys/ioctl.h");
     @cInclude("termios.h");
     @cInclude("pty.h");
+    @cInclude("stdlib.h");
 });
 
 pub const Pty = struct {
@@ -129,6 +130,18 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
 
     const shell_path = shell orelse defaultShell();
     const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
+
+    _ = c.setenv("TERM", "xterm-256color", 1);
+    if (std.c.getenv("INPUTRC") == null) {
+        const pid = c.getpid();
+        var path_buf: [128]u8 = undefined;
+        const path = try std.fmt.bufPrint(&path_buf, "/tmp/zide-inputrc-{d}", .{pid});
+        if (std.fs.cwd().createFile(path, .{ .truncate = true, .read = false })) |file| {
+            defer file.close();
+            try file.writeAll("$include ~/.inputrc\nset enable-bracketed-paste on\n");
+            _ = c.setenv("INPUTRC", path.ptr, 1);
+        } else |_| {}
+    }
 
     if (builtin.os.tag == .macos and shell == null) {
         const argv = [_:null]?[*:0]const u8{

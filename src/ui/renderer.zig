@@ -379,6 +379,21 @@ pub const Renderer = struct {
         c.DrawRectangleLines(x, y, w, h, color.toRaylib());
     }
 
+    pub fn setClipboardText(self: *Renderer, text: [*:0]const u8) void {
+        _ = self;
+        c.SetClipboardText(text);
+    }
+
+    pub fn getClipboardText(self: *Renderer) ?[]const u8 {
+        _ = self;
+        const ptr = c.GetClipboardText();
+        if (ptr == null) return null;
+        const cstr: [*:0]const u8 = @ptrCast(ptr);
+        const slice = std.mem.span(cstr);
+        if (slice.len == 0) return null;
+        return slice;
+    }
+
     pub fn drawText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
         if (text.len == 0) return;
 

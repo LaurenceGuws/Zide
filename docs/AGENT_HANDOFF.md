@@ -13,6 +13,7 @@ Date: 2026-01-17
 - Added frame pacing metrics (frame/draw/input latency) for tuning and profiling.
 - Logging now supports separate file vs console filters; call sites don’t decide destinations.
 - Refined ED (erase display) damage to use per-row column bounds for the cursor row.
+- Added basic terminal selection with translucent highlight and Ctrl+Shift+C clipboard copy.
 
 ## Key changes
 
@@ -62,6 +63,9 @@ Date: 2026-01-17
 - Dirty-row tracking is implemented; renderer caches the terminal in a texture and only updates dirty rows.
 - Glyph atlas compacts instead of failing when full.
 - Frame pacing metrics are collected in `terminal/metrics.zig`.
+- Basic mouse selection highlights and Ctrl+Shift+C copy are supported (selection clears on resize/output).
+- Clipboard paste supports Ctrl+Shift+V and middle-click.
+- Bracketed paste mode (?2004) is honored when enabled by the shell.
 
 ## Terminal planning notes
 
@@ -75,7 +79,7 @@ Date: 2026-01-17
 
 ## Next suggested steps (in order)
 
-1) Add scrollback viewport polish (selection/copy, scrollback indicators, preserve on resize).
+1) Add scrollback viewport polish (scrollback indicators, preserve on resize, auto-scroll on selection drag).
 2) Expand CSI for modes and attributes, then refine performance.
 
 ## Workflow (Docs + Research)
