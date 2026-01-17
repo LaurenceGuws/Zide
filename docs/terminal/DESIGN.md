@@ -82,6 +82,7 @@ Current coverage:
 - Scroll region: `r`, `S`, `T`
 - Reset: `ESC c`
 - SGR: 16‑color + 256‑color + truecolor, bold/reverse
+- OSC: basic parsing for `OSC 0/2` title updates (consumed, no UI binding yet)
 
 ### Layer 4: Screen Model (Grid + Scrollback)
 

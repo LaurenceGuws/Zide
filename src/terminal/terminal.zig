@@ -245,6 +245,7 @@ const TerminalGrid = struct {
 pub const TerminalSession = struct {
     allocator: std.mem.Allocator,
     title: []const u8,
+    title_buffer: std.ArrayList(u8),
     pty: ?Pty,
     grid: TerminalGrid,
     scrollback: Scrollback,
@@ -257,6 +258,8 @@ pub const TerminalSession = struct {
     stream: stream_mod.Stream,
     esc_state: EscState,
     csi: csi_mod.CsiParser,
+    osc_state: OscState,
+    osc_buffer: std.ArrayList(u8),
     current_attrs: CellAttrs,
     scroll_top: usize,
     scroll_bottom: usize,
@@ -271,6 +274,7 @@ pub const TerminalSession = struct {
         session.* = .{
             .allocator = allocator,
             .title = "Terminal",
+            .title_buffer = .empty,
             .pty = null,
             .grid = grid,
             .scrollback = scrollback,
@@ -288,6 +292,8 @@ pub const TerminalSession = struct {
             .stream = .{},
             .esc_state = .ground,
             .csi = .{},
+            .osc_state = .idle,
+            .osc_buffer = .empty,
             .current_attrs = defaultCell().attrs,
             .scroll_top = 0,
             .scroll_bottom = if (rows > 0) @as(usize, rows - 1) else 0,
@@ -301,6 +307,8 @@ pub const TerminalSession = struct {
         }
         self.scrollback.deinit();
         self.grid.deinit();
+        self.osc_buffer.deinit(self.allocator);
+        self.title_buffer.deinit(self.allocator);
         self.allocator.destroy(self);
     }
 
@@ -450,18 +458,24 @@ pub const TerminalSession = struct {
                 self.esc_state = .esc;
                 self.stream.reset();
                 self.csi.reset();
+                self.osc_state = .idle;
             },
             else => {},
         }
     }
 
     fn handleByte(self: *TerminalSession, byte: u8) void {
+        if (self.osc_state != .idle) {
+            self.handleOscByte(byte);
+            return;
+        }
         switch (self.esc_state) {
             .ground => {
                 if (byte == 0x1B) {
                     self.esc_state = .esc;
                     self.stream.reset();
                     self.csi.reset();
+                    self.osc_state = .idle;
                     return;
                 }
                 if (self.stream.feed(byte)) |event| {
@@ -476,6 +490,11 @@ pub const TerminalSession = struct {
                 if (byte == '[') {
                     self.esc_state = .csi;
                     self.csi.reset();
+                } else if (byte == ']') {
+                    self.esc_state = .ground;
+                    self.osc_state = .osc;
+                    self.osc_buffer.clearRetainingCapacity();
+                    return;
                 } else if (byte == 'c') {
                     self.resetState();
                     self.esc_state = .ground;
@@ -490,6 +509,77 @@ pub const TerminalSession = struct {
                 }
             },
         }
+    }
+
+    fn handleOscByte(self: *TerminalSession, byte: u8) void {
+        switch (self.osc_state) {
+            .idle => return,
+            .osc => {
+                if (byte == 0x07) { // BEL
+                    self.finishOsc();
+                    return;
+                }
+                if (byte == 0x1B) { // ESC
+                    self.osc_state = .osc_esc;
+                    return;
+                }
+                if (self.osc_buffer.items.len < 4096) {
+                    _ = self.osc_buffer.append(self.allocator, byte) catch {};
+                }
+            },
+            .osc_esc => {
+                if (byte == '\\') { // ST
+                    self.finishOsc();
+                    return;
+                }
+                // Treat stray ESC as ignored and continue.
+                self.osc_state = .osc;
+                if (self.osc_buffer.items.len < 4096) {
+                    _ = self.osc_buffer.append(self.allocator, byte) catch {};
+                }
+            },
+        }
+    }
+
+    fn finishOsc(self: *TerminalSession) void {
+        self.parseOsc(self.osc_buffer.items);
+        self.osc_buffer.clearRetainingCapacity();
+        self.osc_state = .idle;
+    }
+
+    fn parseOsc(self: *TerminalSession, payload: []const u8) void {
+        var i: usize = 0;
+        var code: usize = 0;
+        var has_code = false;
+        while (i < payload.len) : (i += 1) {
+            const b = payload[i];
+            if (b == ';') {
+                has_code = true;
+                i += 1;
+                break;
+            }
+            if (b < '0' or b > '9') {
+                return;
+            }
+            code = code * 10 + @as(usize, b - '0');
+            has_code = true;
+        }
+        if (!has_code or i > payload.len) return;
+        const text = payload[i..];
+        switch (code) {
+            0, 2 => {
+                self.setTitle(text);
+            },
+            else => {},
+        }
+    }
+
+    fn setTitle(self: *TerminalSession, text: []const u8) void {
+        self.title_buffer.clearRetainingCapacity();
+        const max_len: usize = 256;
+        const slice = if (text.len > max_len) text[0..max_len] else text;
+        _ = self.title_buffer.appendSlice(self.allocator, slice) catch return;
+        self.title = self.title_buffer.items;
     }
 
     fn handleCsi(self: *TerminalSession, action: csi_mod.CsiAction) void {
@@ -607,8 +697,6 @@ pub const TerminalSession = struct {
                     const mode = p[0];
                     if (mode == 2004) {
                         self.bracketed_paste = true;
-                        const log = app_logger.logger("terminal.core");
-                        log.logStdout("bracketed paste enabled", .{});
                         return;
                     }
                 }
@@ -619,8 +707,6 @@ pub const TerminalSession = struct {
                     const mode = p[0];
                     if (mode == 2004) {
                         self.bracketed_paste = false;
-                        const log = app_logger.logger("terminal.core");
-                        log.logStdout("bracketed paste disabled", .{});
                         return;
                     }
                 }
@@ -1173,6 +1259,12 @@ const EscState = enum {
     ground,
     esc,
     csi,
+};
+
+const OscState = enum {
+    idle,
+    osc,
+    osc_esc,
 };
 
 fn defaultCell() Cell {
