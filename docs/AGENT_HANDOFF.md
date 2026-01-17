@@ -10,6 +10,7 @@ Date: 2026-01-17
 - Added glyph atlas compaction and a reusable upload buffer to reduce per-glyph allocations.
 - Added a Lua config POC for logging and per-component logger filtering.
 - Added `assets/config/init.lua` as the defaults reference and documented log config and raylib log levels.
+- Added frame pacing metrics (frame/draw/input latency) for tuning and profiling.
 
 ## Key changes
 
@@ -45,7 +46,9 @@ Date: 2026-01-17
 - `TerminalFont` now reuses a staging buffer for texture uploads and compacts the atlas when full.
 ### Logging config (POC)
 - Logging is now component-scoped (`app_logger.logger("name")`) and supports config-driven filtering.
-- Lua config loader reads `.zide.lua` or `~/.config/zide/init.lua` for `log.enable`.
+- Lua config loader reads `assets/config/init.lua`, then user config, then `.zide.lua` for overrides.
+### Metrics
+- Added lightweight EMA metrics for frame time, draw time, and input-to-draw latency.
 
 ## Current terminal state
 
@@ -55,6 +58,7 @@ Date: 2026-01-17
 - Full SGR coverage and advanced CSI not yet supported.
 - Dirty-row tracking is implemented; renderer caches the terminal in a texture and only updates dirty rows.
 - Glyph atlas compacts instead of failing when full.
+- Frame pacing metrics are collected in `terminal/metrics.zig`.
 
 ## Terminal planning notes
 
