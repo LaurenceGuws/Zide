@@ -8,8 +8,8 @@ Purpose: this document tracks terminal architecture decisions and implementation
 
 - Terminal backend stub replaced by a working PTY + minimal VT pipeline.
 - Shell output renders with basic cursor movement, erase ops, and SGR (16/256/truecolor).
-- Scrollback ring buffer captures full‑screen scrolls and is exposed via a scrollbar + offset.
-- Still missing: dirty‑row tracking and full VT coverage.
+- Scrollback ring buffer captures full‑screen scrolls and is exposed via a scrollbar + offset, plus a scrollback indicator.
+- Dirty-row tracking and render-texture caching are live; full VT coverage still missing.
 
 ## Decisions & Progress by Layer
 
@@ -136,6 +136,7 @@ Progress:
 - Basic mouse selection + clipboard copy added for the terminal widget.
 - Clipboard paste supports Ctrl+Shift+V and middle-click.
 - Bracketed paste mode (?2004) is honored when enabled by the shell.
+- Selection auto-scrolls when dragging beyond the viewport; scrollback indicator shows when scrolled.
 
 Decision:
 - Implement a simple linear (non-rect) selection stored as global scrollback row/col coordinates.
@@ -148,7 +149,7 @@ Why:
 - Simple per-line trimming approximates common terminal clipboard behavior.
 
 Notes:
-- Selection is cleared on terminal resize and when new PTY output arrives to avoid stale indices.
+- Selection is cleared on terminal resize and when input resumes the live view to avoid stale indices.
 
 Research notes:
 - Ghostty tracks selections with pins into the screen/page list for durability across mutations.
@@ -206,5 +207,5 @@ Why:
 
 ## Immediate next steps
 
-1) Add dirty‑row tracking to the grid + renderer.
-2) Add scrollback viewport polish (selection, copy, and mouse wheel modes).
+1) Expand correctness: alternate screen, cursor save/restore, and scroll region compatibility.
+2) Flesh out VT coverage (modes/attributes/OSC) and input protocol extensions.

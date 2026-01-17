@@ -964,6 +964,40 @@ pub const TerminalWidget = struct {
             // Scrollbar only; no debug chip.
         }
 
+        if (scroll_offset > 0 and width > 0 and height > 0) {
+            var label_buf: [48]u8 = undefined;
+            const label = std.fmt.bufPrint(&label_buf, "SCROLLBACK {d}", .{scroll_offset}) catch "SCROLLBACK";
+            const padding_x: f32 = 6;
+            const padding_y: f32 = 3;
+            const text_w = @as(f32, @floatFromInt(label.len)) * r.char_width;
+            const box_w = text_w + padding_x * 2;
+            const box_h = r.char_height + padding_y * 2;
+            const desired_x = x + width - scrollbar_w - box_w - 6;
+            const box_x = @max(x + 4, desired_x);
+            const box_y = y + 6;
+
+            const bg = Color{
+                .r = r.theme.line_number_bg.r,
+                .g = r.theme.line_number_bg.g,
+                .b = r.theme.line_number_bg.b,
+                .a = 220,
+            };
+
+            r.drawRect(
+                @intFromFloat(box_x),
+                @intFromFloat(box_y),
+                @intFromFloat(box_w),
+                @intFromFloat(box_h),
+                bg,
+            );
+            r.drawText(
+                label,
+                box_x + padding_x,
+                box_y + padding_y,
+                r.theme.foreground,
+            );
+        }
+
         if (updated or snapshot.dirty == .none) {
             self.session.clearDirty();
         }
@@ -1330,13 +1364,41 @@ pub const TerminalWidget = struct {
                     if (selection.selecting) {
                         const total_lines_select = history_len + rows;
                         if (total_lines_select > 0) {
+                            var scroll_delta: isize = 0;
+                            if (mouse.y < y) {
+                                const dist = y - mouse.y;
+                                var lines = @as(isize, @intFromFloat(@ceil(dist / r.terminal_cell_height)));
+                                if (lines < 1) lines = 1;
+                                const max_lines = @as(isize, @intCast(rows));
+                                if (lines > max_lines) lines = max_lines;
+                                scroll_delta = lines;
+                            } else if (mouse.y > y + height) {
+                                const dist = mouse.y - (y + height);
+                                var lines = @as(isize, @intFromFloat(@ceil(dist / r.terminal_cell_height)));
+                                if (lines < 1) lines = 1;
+                                const max_lines = @as(isize, @intCast(rows));
+                                if (lines > max_lines) lines = max_lines;
+                                scroll_delta = -lines;
+                            }
+                            if (scroll_delta != 0) {
+                                self.session.scrollBy(scroll_delta);
+                                handled = true;
+                            }
+
+                            var clamped_x = mouse.x;
+                            var clamped_y = mouse.y;
+                            if (clamped_x < x) clamped_x = x;
+                            if (clamped_x > x + width - 1) clamped_x = x + width - 1;
+                            if (clamped_y < y) clamped_y = y;
+                            if (clamped_y > y + height - 1) clamped_y = y + height - 1;
+
                             var col: usize = 0;
-                            if (mouse.x > x) {
-                                col = @as(usize, @intFromFloat((mouse.x - x) / r.terminal_cell_width));
+                            if (clamped_x > x) {
+                                col = @as(usize, @intFromFloat((clamped_x - x) / r.terminal_cell_width));
                             }
                             var row: usize = 0;
-                            if (mouse.y > y) {
-                                row = @as(usize, @intFromFloat((mouse.y - y) / r.terminal_cell_height));
+                            if (clamped_y > y) {
+                                row = @as(usize, @intFromFloat((clamped_y - y) / r.terminal_cell_height));
                             }
                             row = @min(row, rows - 1);
                             col = @min(col, cols - 1);
