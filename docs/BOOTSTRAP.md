@@ -54,6 +54,9 @@ make bootstrap
 ./scripts/bootstrap.sh
 ```
 
+Tree-sitter (runtime + Zig parser) is vendored under `vendor/tree-sitter/` and
+`vendor/tree-sitter-zig/`, so no extra bootstrap step is required.
+
 On Linux, this also generates Wayland protocol headers via `make wayland-protocols`.
 
 Options:

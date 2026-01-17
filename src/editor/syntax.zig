@@ -9,6 +9,8 @@ const c = @cImport({
 
 pub const TSLanguage = c.TSLanguage;
 
+extern "c" fn tree_sitter_zig() *const c.TSLanguage;
+
 pub const TokenKind = enum(u8) {
     plain = 0,
     comment = 1,
@@ -82,18 +84,18 @@ pub const SyntaxHighlighter = struct {
         allocator: std.mem.Allocator,
     ) ![]HighlightToken {
         if (self.tree == null) {
-            if (!self.reparse()) return &[_]HighlightToken{};
+            if (!self.reparse()) return emptyTokens(allocator);
         }
-        if (self.tree == null) return &[_]HighlightToken{};
+        if (self.tree == null) return emptyTokens(allocator);
 
         const max_u32 = std.math.maxInt(u32);
         if (start >= max_u32) {
-            return &[_]HighlightToken{};
+            return emptyTokens(allocator);
         }
         const range_start = @as(u32, @intCast(start));
         const range_end = if (end > max_u32) max_u32 else @as(u32, @intCast(end));
         if (range_end <= range_start) {
-            return &[_]HighlightToken{};
+            return emptyTokens(allocator);
         }
 
         const tree = self.tree.?;
@@ -101,8 +103,8 @@ pub const SyntaxHighlighter = struct {
         _ = c.ts_query_cursor_set_byte_range(self.cursor, range_start, range_end);
         c.ts_query_cursor_exec(self.cursor, self.query, root);
 
-        var tokens = std.ArrayList(HighlightToken).init(allocator);
-        errdefer tokens.deinit();
+        var tokens = std.ArrayList(HighlightToken).empty;
+        errdefer tokens.deinit(allocator);
 
         var match: c.TSQueryMatch = undefined;
         while (c.ts_query_cursor_next_match(self.cursor, &match)) {
@@ -114,7 +116,7 @@ pub const SyntaxHighlighter = struct {
                 const end_b = c.ts_node_end_byte(node);
                 if (end_b <= range_start or start_b >= range_end) continue;
                 const token_kind = self.capture_kinds[capture.index];
-                try tokens.append(.{
+                try tokens.append(allocator, .{
                     .start = start_b,
                     .end = end_b,
                     .kind = token_kind,
@@ -122,9 +124,16 @@ pub const SyntaxHighlighter = struct {
             }
         }
 
-        return tokens.toOwnedSlice();
+        return tokens.toOwnedSlice(allocator);
     }
 };
+
+pub fn createZigHighlighter(
+    allocator: std.mem.Allocator,
+    text_buffer: *TextBuffer,
+) !*SyntaxHighlighter {
+    return createHighlighter(allocator, text_buffer, tree_sitter_zig(), zig_highlights_query);
+}
 
 pub fn createHighlighter(
     allocator: std.mem.Allocator,
@@ -211,6 +220,10 @@ fn tsRead(
     const written = buffer_mod.readRange(self.text_buffer, byte_offset, self.read_buffer[0..to_read]);
     bytes_read[0] = @as(u32, @intCast(written));
     return self.read_buffer.ptr;
+}
+
+fn emptyTokens(allocator: std.mem.Allocator) ![]HighlightToken {
+    return allocator.alloc(HighlightToken, 0);
 }
 
 fn mapCaptureKind(name: []const u8) TokenKind {

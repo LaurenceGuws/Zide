@@ -32,6 +32,11 @@ See [docs/BOOTSTRAP.md](docs/BOOTSTRAP.md) for:
 - Keyboard shortcuts
 - Configuration options
 
+## Dependencies
+
+- Vendored: raylib, tree-sitter (runtime + Zig parser).
+- System deps: see `docs/BOOTSTRAP.md` for platform packages (freetype, harfbuzz, lua, Wayland/X11, etc.).
+
 ## License
 
 MIT
