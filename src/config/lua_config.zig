@@ -16,12 +16,17 @@ pub const LuaConfigError = error{
 };
 
 pub const Config = struct {
-    log_filter: ?[]u8,
+    log_file_filter: ?[]u8,
+    log_console_filter: ?[]u8,
     raylib_log_level: ?c_int,
 };
 
 pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
-    var config: Config = .{ .log_filter = null, .raylib_log_level = null };
+    var config: Config = .{
+        .log_file_filter = null,
+        .log_console_filter = null,
+        .raylib_log_level = null,
+    };
     if (fileExists("assets/config/init.lua")) {
         config = try loadConfigFromFile(allocator, "assets/config/init.lua");
     }
@@ -41,15 +46,22 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
 }
 
 pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
-    if (config.log_filter) |filter| {
+    if (config.log_file_filter) |filter| {
         allocator.free(filter);
-        config.log_filter = null;
+        config.log_file_filter = null;
+    }
+    if (config.log_console_filter) |filter| {
+        allocator.free(filter);
+        config.log_console_filter = null;
     }
 }
 
 fn mergeConfig(base: *Config, overlay: Config) void {
-    if (overlay.log_filter) |filter| {
-        base.log_filter = filter;
+    if (overlay.log_file_filter) |filter| {
+        base.log_file_filter = filter;
+    }
+    if (overlay.log_console_filter) |filter| {
+        base.log_console_filter = filter;
     }
     if (overlay.raylib_log_level) |level| {
         base.raylib_log_level = level;
@@ -73,26 +85,27 @@ fn loadConfigFromFile(allocator: std.mem.Allocator, path: []const u8) LuaConfigE
 
 fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfigError!Config {
     if (c.lua_isnil(L, -1)) {
-        return .{ .log_filter = null, .raylib_log_level = null };
+        return .{
+            .log_file_filter = null,
+            .log_console_filter = null,
+            .raylib_log_level = null,
+        };
     }
     if (!c.lua_istable(L, -1)) {
         return LuaConfigError.InvalidConfig;
     }
 
-    var log_filter: ?[]u8 = null;
+    var log_file_filter: ?[]u8 = null;
+    var log_console_filter: ?[]u8 = null;
     var raylib_log_level: ?c_int = null;
 
     _ = c.lua_getfield(L, -1, "log");
     if (c.lua_isstring(L, -1) != 0) {
-        log_filter = try luaStringToOwned(allocator, L, -1);
+        const value = try luaStringToOwned(allocator, L, -1);
+        log_file_filter = value;
+        log_console_filter = try allocator.dupe(u8, value);
     } else if (c.lua_istable(L, -1)) {
-        _ = c.lua_getfield(L, -1, "enable");
-        if (c.lua_isstring(L, -1) != 0) {
-            log_filter = try luaStringToOwned(allocator, L, -1);
-        } else if (c.lua_istable(L, -1)) {
-            log_filter = try luaStringListToOwned(allocator, L, -1);
-        }
-        c.lua_pop(L, 1);
+        if (parseLogFiltersFromTable(allocator, L, -1, &log_file_filter, &log_console_filter)) |_| {} else |_| {}
     }
     c.lua_pop(L, 1);
 
@@ -109,7 +122,8 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     c.lua_pop(L, 1);
 
     return .{
-        .log_filter = log_filter,
+        .log_file_filter = log_file_filter,
+        .log_console_filter = log_console_filter,
         .raylib_log_level = raylib_log_level,
     };
 }
@@ -198,6 +212,44 @@ fn luaStringListToOwned(allocator: std.mem.Allocator, L: *c.lua_State, idx: c_in
     }
 
     return out.toOwnedSlice(allocator);
+}
+
+fn parseLogFiltersFromTable(
+    allocator: std.mem.Allocator,
+    L: *c.lua_State,
+    idx: c_int,
+    file_out: *?[]u8,
+    console_out: *?[]u8,
+) LuaConfigError!void {
+    _ = c.lua_getfield(L, idx, "file");
+    if (c.lua_isstring(L, -1) != 0) {
+        file_out.* = try luaStringToOwned(allocator, L, -1);
+    } else if (c.lua_istable(L, -1)) {
+        file_out.* = try luaStringListToOwned(allocator, L, -1);
+    }
+    c.lua_pop(L, 1);
+
+    _ = c.lua_getfield(L, idx, "console");
+    if (c.lua_isstring(L, -1) != 0) {
+        console_out.* = try luaStringToOwned(allocator, L, -1);
+    } else if (c.lua_istable(L, -1)) {
+        console_out.* = try luaStringListToOwned(allocator, L, -1);
+    }
+    c.lua_pop(L, 1);
+
+    if (file_out.* == null or console_out.* == null) {
+        _ = c.lua_getfield(L, idx, "enable");
+        if (c.lua_isstring(L, -1) != 0) {
+            const value = try luaStringToOwned(allocator, L, -1);
+            if (file_out.* == null) file_out.* = value else allocator.free(value);
+            if (console_out.* == null) console_out.* = try allocator.dupe(u8, value);
+        } else if (c.lua_istable(L, -1)) {
+            const value = try luaStringListToOwned(allocator, L, -1);
+            if (file_out.* == null) file_out.* = value else allocator.free(value);
+            if (console_out.* == null) console_out.* = try allocator.dupe(u8, value);
+        }
+        c.lua_pop(L, 1);
+    }
 }
 
 fn parseRaylibLogLevel(L: *c.lua_State, idx: c_int) ?c_int {

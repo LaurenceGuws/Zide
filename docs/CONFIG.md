@@ -20,7 +20,9 @@ Config should return a table:
 ```lua
 return {
   log = {
-    enable = { "terminal", "metrics", "app" }
+    enable = { "terminal.core", "terminal.metrics", "app.core" },
+    -- file = { "terminal.metrics" },
+    -- console = { "app.core" },
   }
 }
 ```
@@ -37,6 +39,7 @@ Supported values:
 - `all` — enable all loggers
 - `none` — disable all loggers
 - comma-separated list (via `enable` array)
+- `file` / `console` arrays for per-destination control
 
 ## Raylib logging
 
@@ -50,7 +53,9 @@ Accepted `log_level` values: `none`, `error`, `warning`/`warn`, `info`, `debug`,
 
 ## Env fallback
 
-`ZIDE_LOG` still works as a fallback when no config file is found.
+Env fallbacks:
+- `ZIDE_LOG` applies to both file and console if no config is present.
+- `ZIDE_LOG_FILE` / `ZIDE_LOG_CONSOLE` override per destination.
 
 ## Defaults reference policy
 
