@@ -10,6 +10,7 @@ const config_mod = @import("config/lua_config.zig");
 
 // Terminal modules
 const terminal_mod = @import("terminal/terminal.zig");
+const metrics_mod = @import("terminal/metrics.zig");
 
 // UI modules
 const renderer_mod = @import("ui/renderer.zig");
@@ -17,6 +18,8 @@ const widgets = @import("ui/widgets.zig");
 
 const Editor = editor_mod.Editor;
 const TerminalSession = terminal_mod.TerminalSession;
+const Metrics = metrics_mod.Metrics;
+const Logger = app_logger.Logger;
 const Renderer = renderer_mod.Renderer;
 const TabBar = widgets.TabBar;
 const OptionsBar = widgets.OptionsBar;
@@ -57,6 +60,10 @@ const AppState = struct {
     terminal_scroll_dragging: bool,
     terminal_scroll_grab_offset: f32,
     last_mouse_redraw_time: f64,
+    metrics: Metrics,
+    metrics_logger: Logger,
+    app_logger: Logger,
+    last_metrics_log_time: f64,
 
     pub fn init(allocator: std.mem.Allocator) !*AppState {
         var config = config_mod.loadConfig(allocator) catch |err| blk: {
@@ -80,6 +87,7 @@ const AppState = struct {
         }
         const app_log = app_logger.logger("app");
         app_log.logStdout("logger initialized", .{});
+        const metrics_log = app_logger.logger("metrics");
 
         const state = try allocator.create(AppState);
         state.* = .{
@@ -106,6 +114,10 @@ const AppState = struct {
             .terminal_scroll_dragging = false,
             .terminal_scroll_grab_offset = 0,
             .last_mouse_redraw_time = 0,
+            .metrics = Metrics.init(),
+            .metrics_logger = metrics_log,
+            .app_logger = app_log,
+            .last_metrics_log_time = 0,
         };
 
         return state;
@@ -201,11 +213,18 @@ const AppState = struct {
             // Poll events first (this updates raylib's input state)
             renderer_mod.pollInputEvents();
 
+            const frame_time = renderer_mod.getTime();
+            self.metrics.beginFrame(frame_time);
+
             try self.update();
 
             // Only redraw when something changed
             if (self.needs_redraw) {
+                const draw_start = renderer_mod.getTime();
                 self.draw();
+                const draw_end = renderer_mod.getTime();
+                self.metrics.recordDraw(draw_start, draw_end);
+                self.maybeLogMetrics(draw_end);
                 self.needs_redraw = false;
                 self.idle_frames = 0;
             } else {
@@ -226,12 +245,31 @@ const AppState = struct {
                     0.100; // Deep idle: 10fps check rate
 
                 renderer_mod.waitTime(sleep_ms);
+                self.maybeLogMetrics(renderer_mod.getTime());
             }
         }
     }
 
+    fn maybeLogMetrics(self: *AppState, now: f64) void {
+        if (!self.metrics_logger.enabled) return;
+        if (now - self.last_metrics_log_time < 1.0) return;
+        self.last_metrics_log_time = now;
+        self.metrics_logger.logf(
+            "frame_avg_ms={d:.2} draw_avg_ms={d:.2} input_avg_ms={d:.2} input_max_ms={d:.2} frames={d} redraws={d}",
+            .{
+                self.metrics.frame_ms_avg,
+                self.metrics.draw_ms_avg,
+                self.metrics.input_latency_ms_avg,
+                self.metrics.input_latency_ms_max,
+                self.metrics.frames,
+                self.metrics.redraws,
+            },
+        );
+    }
+
     fn update(self: *AppState) !void {
         const r = self.renderer;
+        const now = renderer_mod.getTime();
 
         // Check for window resize (event-based, works with Wayland)
         if (renderer_mod.isWindowResized()) {
@@ -283,9 +321,9 @@ const AppState = struct {
 
         if (has_mouse_action) {
             self.needs_redraw = true;
+            self.metrics.noteInput(now);
         } else if (mouse_moved) {
             if (!in_terminal_area) {
-                const now = renderer_mod.getTime();
                 const interval: f64 = 1.0 / 60.0;
                 if (now - self.last_mouse_redraw_time >= interval) {
                     self.needs_redraw = true;
@@ -308,6 +346,7 @@ const AppState = struct {
                 self.resize_start_y = mouse.y;
                 self.resize_start_height = terminal_h;
                 self.needs_redraw = true;
+                self.metrics.noteInput(now);
             } else if (self.resizing_terminal and mouse_down) {
                 const delta = mouse.y - self.resize_start_y;
                 const min_terminal_h: f32 = 80;
@@ -325,6 +364,7 @@ const AppState = struct {
                         try term.resize(rows, cols);
                     }
                     self.needs_redraw = true;
+                    self.metrics.noteInput(now);
                 }
             } else if (self.resizing_terminal and !mouse_down) {
                 self.resizing_terminal = false;
@@ -342,6 +382,7 @@ const AppState = struct {
         if (ctrl and r.isKeyPressed(renderer_mod.KEY_N)) {
             try self.newEditor();
             self.needs_redraw = true;
+            self.metrics.noteInput(now);
             return;
         }
 
@@ -356,6 +397,7 @@ const AppState = struct {
                 self.show_terminal = true;
             }
             self.needs_redraw = true;
+            self.metrics.noteInput(now);
             return;
         }
 
@@ -366,6 +408,7 @@ const AppState = struct {
                 // Tab was clicked
                 self.active_tab = self.tab_bar.active_index;
                 self.needs_redraw = true;
+                self.metrics.noteInput(now);
             }
 
             const editor_x = side_nav_width;
@@ -378,9 +421,11 @@ const AppState = struct {
             if (in_terminal and self.show_terminal) {
                 self.active_kind = .terminal;
                 self.needs_redraw = true;
+                self.metrics.noteInput(now);
             } else if (in_editor) {
                 self.active_kind = .editor;
                 self.needs_redraw = true;
+                self.metrics.noteInput(now);
             }
 
             if (self.mouse_debug) {
@@ -426,12 +471,14 @@ const AppState = struct {
             var widget = EditorWidget.init(self.editors.items[editor_idx]);
             if (try widget.handleInput(r)) {
                 self.needs_redraw = true;
+                self.metrics.noteInput(now);
             }
             if (r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT)) {
                 const editor_x = side_nav_width;
                 const editor_y = options_bar_height + tab_bar_height;
                 if (widget.handleMouseClick(r, editor_x, editor_y, editor_width, editor_height, mouse.x, mouse.y)) {
                     self.needs_redraw = true;
+                    self.metrics.noteInput(now);
                 }
             }
         }
@@ -464,6 +511,7 @@ const AppState = struct {
                     &self.terminal_scroll_grab_offset,
                 )) {
                     self.needs_redraw = true;
+                    self.metrics.noteInput(now);
                 }
             } else {
                 var term_widget = TerminalWidget.init(term);
@@ -478,6 +526,7 @@ const AppState = struct {
                     &self.terminal_scroll_grab_offset,
                 )) {
                     self.needs_redraw = true;
+                    self.metrics.noteInput(now);
                 }
             }
         }
