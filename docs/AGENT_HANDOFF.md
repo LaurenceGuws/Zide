@@ -11,6 +11,7 @@ Date: 2026-01-17
 - Added a Lua config POC for logging and per-component logger filtering.
 - Added `assets/config/init.lua` as the defaults reference and documented log config and raylib log levels.
 - Added frame pacing metrics (frame/draw/input latency) for tuning and profiling.
+- Logging now supports separate file vs console filters; call sites don’t decide destinations.
 
 ## Key changes
 
@@ -47,6 +48,7 @@ Date: 2026-01-17
 ### Logging config (POC)
 - Logging is now component-scoped (`app_logger.logger("name")`) and supports config-driven filtering.
 - Lua config loader reads `assets/config/init.lua`, then user config, then `.zide.lua` for overrides.
+- Log filters can be set per destination (`log.file` and `log.console`).
 ### Metrics
 - Added lightweight EMA metrics for frame time, draw time, and input-to-draw latency.
 

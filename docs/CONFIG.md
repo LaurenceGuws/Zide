@@ -4,14 +4,14 @@ Zide supports a minimal Lua config for logging only (POC).
 
 ## File locations
 
-Zide looks for a config file in this order:
+Zide loads config in this order:
 
-1) `.zide.lua` in the current working directory
-2) `~/.config/zide/init.lua` (or `$XDG_CONFIG_HOME/zide/init.lua`)
-
-Reference defaults live in `assets/config/init.lua` (loaded as system defaults).
-
-If neither exists, logging falls back to `ZIDE_LOG` or defaults.
+1) `assets/config/init.lua` (system defaults)
+2) User config:
+   - Linux: `$XDG_CONFIG_HOME/zide/init.lua` (fallback `~/.config/zide/init.lua`)
+   - macOS: `~/Library/Application Support/Zide/init.lua`
+   - Windows: `%APPDATA%\\Zide\\init.lua`
+3) `.zide.lua` in the current working directory (project override)
 
 ## Logging config
 
