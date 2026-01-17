@@ -35,7 +35,7 @@ Pursue a terminal-first text pipeline upgrade (UI/editor later). The goal is bes
 We want a simple, extensible configuration mechanism like Neovim’s Lua config, but without committing to a full API surface yet. Logging needs a per-component toggle to keep debug output manageable.
 
 **Decision**
-Introduce a minimal Lua config loader that only reads logging configuration. The config file should return a table, and `log.enable` can be a list (or `log` can be a string like `all`/`none`). The loader searches for `$XDG_CONFIG_HOME/zide/init.lua` and `.zide.lua` for overrides, with `assets/config/init.lua` as the system defaults reference.
+Introduce a minimal Lua config loader that only reads logging configuration. The config file should return a table, and `log.enable` can be a list (or `log` can be a string like `all`/`none`). Support per-destination filters (`log.file` and `log.console`). Load order: `assets/config/init.lua` defaults, then user config, then `.zide.lua` overrides.
 
 **Consequences**
 - Keeps risk low while establishing the Lua embedding path.
