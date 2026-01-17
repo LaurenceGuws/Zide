@@ -842,6 +842,55 @@ pub const TerminalWidget = struct {
             r.drawTerminalTexture(base_x, base_y);
         }
 
+        if (rows > 0 and cols > 0) {
+            if (self.session.selectionState()) |selection| {
+                const total_lines_sel = history_len + rows;
+                if (total_lines_sel > 0) {
+                    var start_sel = selection.start;
+                    var end_sel = selection.end;
+                    if (start_sel.row > end_sel.row or (start_sel.row == end_sel.row and start_sel.col > end_sel.col)) {
+                        const tmp = start_sel;
+                        start_sel = end_sel;
+                        end_sel = tmp;
+                    }
+                    start_sel.row = @min(start_sel.row, total_lines_sel - 1);
+                    end_sel.row = @min(end_sel.row, total_lines_sel - 1);
+                    start_sel.col = @min(start_sel.col, cols - 1);
+                    end_sel.col = @min(end_sel.col, cols - 1);
+
+                    const selection_color = Color{
+                        .r = r.theme.selection.r,
+                        .g = r.theme.selection.g,
+                        .b = r.theme.selection.b,
+                        .a = 140,
+                    };
+
+                    var row_idx: usize = 0;
+                    while (row_idx < rows) : (row_idx += 1) {
+                        const global_row = start_line + row_idx;
+                        if (global_row < start_sel.row or global_row > end_sel.row) continue;
+
+                        const col_start = if (global_row == start_sel.row) start_sel.col else 0;
+                        const col_end = if (global_row == end_sel.row) end_sel.col else cols - 1;
+                        if (col_end < col_start) continue;
+
+                        const rect_x = base_x + @as(f32, @floatFromInt(col_start)) * r.terminal_cell_width;
+                        const rect_y = base_y + @as(f32, @floatFromInt(row_idx)) * r.terminal_cell_height;
+                        const rect_w = r.terminal_cell_width * @as(f32, @floatFromInt(col_end - col_start + 1));
+                        const rect_h = r.terminal_cell_height;
+
+                        r.drawRect(
+                            @intFromFloat(rect_x),
+                            @intFromFloat(rect_y),
+                            @intFromFloat(rect_w),
+                            @intFromFloat(rect_h),
+                            selection_color,
+                        );
+                    }
+                }
+            }
+        }
+
         if (draw_cursor and rows > 0 and cols > 0 and cursor.row < rows and cursor.col < cols) {
             const row_cells = rowSlice(self, snapshot.cells, history_len, cols, start_line, cursor.row);
             const cell = row_cells[cursor.col];
@@ -942,63 +991,211 @@ pub const TerminalWidget = struct {
 
         const history_len = self.session.scrollbackCount();
         const rows = self.session.gridRows();
+        const cols = self.session.gridCols();
         const total_lines = history_len + rows;
         const max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
 
         if (allow_input) {
-            // Character input
-            while (r.getCharPressed()) |char| {
-                if (self.session.scrollOffset() > 0) {
-                    self.session.setScrollOffset(0);
+            const ctrl = r.isKeyDown(renderer_mod.KEY_LEFT_CONTROL) or r.isKeyDown(renderer_mod.KEY_RIGHT_CONTROL);
+            const shift = r.isKeyDown(renderer_mod.KEY_LEFT_SHIFT) or r.isKeyDown(renderer_mod.KEY_RIGHT_SHIFT);
+            var skip_chars = false;
+
+            if (ctrl and shift and r.isKeyPressed(renderer_mod.KEY_C)) {
+                if (self.session.selectionState()) |selection| {
+                    const snapshot = self.session.snapshot();
+                    const rows_snapshot = snapshot.rows;
+                    const cols_snapshot = snapshot.cols;
+                    const history = self.session.scrollbackCount();
+                    const total_lines_copy = history + rows_snapshot;
+                    if (rows_snapshot > 0 and cols_snapshot > 0 and total_lines_copy > 0) {
+                        var start_sel = selection.start;
+                        var end_sel = selection.end;
+                        if (start_sel.row > end_sel.row or (start_sel.row == end_sel.row and start_sel.col > end_sel.col)) {
+                            const tmp = start_sel;
+                            start_sel = end_sel;
+                            end_sel = tmp;
+                        }
+                        start_sel.row = @min(start_sel.row, total_lines_copy - 1);
+                        end_sel.row = @min(end_sel.row, total_lines_copy - 1);
+                        start_sel.col = @min(start_sel.col, cols_snapshot - 1);
+                        end_sel.col = @min(end_sel.col, cols_snapshot - 1);
+
+                        var buffer = std.ArrayList(u8).empty;
+                        defer buffer.deinit(self.session.allocator);
+
+                        const appendCodepoint = struct {
+                            fn write(list: *std.ArrayList(u8), allocator: std.mem.Allocator, cp: u32) !void {
+                                var buf: [4]u8 = undefined;
+                                if (cp == 0) {
+                                    try list.append(allocator, ' ');
+                                    return;
+                                }
+                                const len = std.unicode.utf8Encode(@intCast(cp), &buf) catch {
+                                    try list.append(allocator, ' ');
+                                    return;
+                                };
+                                try list.appendSlice(allocator, buf[0..len]);
+                            }
+                        }.write;
+
+                        const rowSliceSelection = struct {
+                            fn get(parent: *TerminalWidget, cells: []const Cell, history_count: usize, cols_count: usize, global_row: usize) []const Cell {
+                                if (global_row < history_count) {
+                                    if (parent.session.scrollbackRow(global_row)) |history_row| {
+                                        return history_row;
+                                    }
+                                    return cells[0..cols_count];
+                                }
+                                const grid_row = global_row - history_count;
+                                const row_start = grid_row * cols_count;
+                                return cells[row_start .. row_start + cols_count];
+                            }
+                        }.get;
+
+                        var row_idx: usize = start_sel.row;
+                        while (row_idx <= end_sel.row and row_idx < total_lines_copy) : (row_idx += 1) {
+                            const col_start = if (row_idx == start_sel.row) start_sel.col else 0;
+                            const col_end = if (row_idx == end_sel.row) end_sel.col else cols_snapshot - 1;
+                            if (col_end < col_start) continue;
+
+                            const row_cells = rowSliceSelection(self, snapshot.cells, history, cols_snapshot, row_idx);
+                            const line_start = buffer.items.len;
+
+                            var col: usize = col_start;
+                            while (col <= col_end and col < cols_snapshot) : (col += 1) {
+                                try appendCodepoint(&buffer, self.session.allocator, row_cells[col].codepoint);
+                            }
+
+                            while (buffer.items.len > line_start and buffer.items[buffer.items.len - 1] == ' ') {
+                                _ = buffer.pop();
+                            }
+
+                            if (row_idx < end_sel.row) {
+                                try buffer.append(self.session.allocator, '\n');
+                            }
+                        }
+
+                        if (buffer.items.len > 0) {
+                            try buffer.append(self.session.allocator, 0);
+                            const cstr: [*:0]const u8 = @ptrCast(buffer.items.ptr);
+                            r.setClipboardText(cstr);
+                            handled = true;
+                            skip_chars = true;
+                        }
+                    }
                 }
-                try self.session.sendChar(char, terminal_mod.VTERM_MOD_NONE);
-                handled = true;
+            }
+
+            if (!skip_chars and ctrl and shift and r.isKeyPressed(renderer_mod.KEY_V)) {
+                if (r.getClipboardText()) |clip| {
+                    if (self.session.selectionState() != null) {
+                        self.session.clearSelection();
+                    }
+                    if (self.session.scrollOffset() > 0) {
+                        self.session.setScrollOffset(0);
+                    }
+                    if (self.session.bracketedPasteEnabled()) {
+                        try self.session.sendText("\x1b[200~");
+                        var filtered = std.ArrayList(u8).empty;
+                        defer filtered.deinit(self.session.allocator);
+                        for (clip) |b| {
+                            if (b == 0x1b or b == 0x03) continue;
+                            try filtered.append(self.session.allocator, b);
+                        }
+                        if (filtered.items.len > 0) {
+                            try self.session.sendText(filtered.items);
+                        }
+                        try self.session.sendText("\x1b[201~");
+                    } else {
+                        try self.session.sendText(clip);
+                    }
+                    handled = true;
+                    skip_chars = true;
+                }
+            }
+
+            // Character input
+            if (!skip_chars) {
+                while (r.getCharPressed()) |char| {
+                    if (self.session.selectionState() != null) {
+                        self.session.clearSelection();
+                    }
+                    if (self.session.scrollOffset() > 0) {
+                        self.session.setScrollOffset(0);
+                    }
+                    try self.session.sendChar(char, terminal_mod.VTERM_MOD_NONE);
+                    handled = true;
+                }
             }
 
             // Special keys
             if (r.isKeyPressed(renderer_mod.KEY_ENTER)) {
+                if (self.session.selectionState() != null) {
+                    self.session.clearSelection();
+                }
                 if (self.session.scrollOffset() > 0) {
                     self.session.setScrollOffset(0);
                 }
                 try self.session.sendKey(terminal_mod.VTERM_KEY_ENTER, terminal_mod.VTERM_MOD_NONE);
                 handled = true;
             } else if (r.isKeyPressed(renderer_mod.KEY_BACKSPACE)) {
+                if (self.session.selectionState() != null) {
+                    self.session.clearSelection();
+                }
                 if (self.session.scrollOffset() > 0) {
                     self.session.setScrollOffset(0);
                 }
                 try self.session.sendKey(terminal_mod.VTERM_KEY_BACKSPACE, terminal_mod.VTERM_MOD_NONE);
                 handled = true;
             } else if (r.isKeyPressed(renderer_mod.KEY_TAB)) {
+                if (self.session.selectionState() != null) {
+                    self.session.clearSelection();
+                }
                 if (self.session.scrollOffset() > 0) {
                     self.session.setScrollOffset(0);
                 }
                 try self.session.sendKey(terminal_mod.VTERM_KEY_TAB, terminal_mod.VTERM_MOD_NONE);
                 handled = true;
             } else if (r.isKeyPressed(renderer_mod.KEY_ESCAPE)) {
+                if (self.session.selectionState() != null) {
+                    self.session.clearSelection();
+                }
                 if (self.session.scrollOffset() > 0) {
                     self.session.setScrollOffset(0);
                 }
                 try self.session.sendKey(terminal_mod.VTERM_KEY_ESCAPE, terminal_mod.VTERM_MOD_NONE);
                 handled = true;
             } else if (r.isKeyPressed(renderer_mod.KEY_UP)) {
+                if (self.session.selectionState() != null) {
+                    self.session.clearSelection();
+                }
                 if (self.session.scrollOffset() > 0) {
                     self.session.setScrollOffset(0);
                 }
                 try self.session.sendKey(terminal_mod.VTERM_KEY_UP, terminal_mod.VTERM_MOD_NONE);
                 handled = true;
             } else if (r.isKeyPressed(renderer_mod.KEY_DOWN)) {
+                if (self.session.selectionState() != null) {
+                    self.session.clearSelection();
+                }
                 if (self.session.scrollOffset() > 0) {
                     self.session.setScrollOffset(0);
                 }
                 try self.session.sendKey(terminal_mod.VTERM_KEY_DOWN, terminal_mod.VTERM_MOD_NONE);
                 handled = true;
             } else if (r.isKeyPressed(renderer_mod.KEY_LEFT)) {
+                if (self.session.selectionState() != null) {
+                    self.session.clearSelection();
+                }
                 if (self.session.scrollOffset() > 0) {
                     self.session.setScrollOffset(0);
                 }
                 try self.session.sendKey(terminal_mod.VTERM_KEY_LEFT, terminal_mod.VTERM_MOD_NONE);
                 handled = true;
             } else if (r.isKeyPressed(renderer_mod.KEY_RIGHT)) {
+                if (self.session.selectionState() != null) {
+                    self.session.clearSelection();
+                }
                 if (self.session.scrollOffset() > 0) {
                     self.session.setScrollOffset(0);
                 }
@@ -1063,6 +1260,106 @@ pub const TerminalWidget = struct {
             }
         } else {
             scroll_dragging.* = false;
+        }
+
+        if (rows > 0 and cols > 0) {
+            const mouse_pressed = r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT);
+            const middle_pressed = r.isMouseButtonPressed(renderer_mod.MOUSE_MIDDLE);
+            const mouse_down = r.isMouseButtonDown(renderer_mod.MOUSE_LEFT);
+            const over_scrollbar = mouse.x >= scrollbar_x and mouse.x <= scrollbar_x + scrollbar_w and mouse.y >= scrollbar_y and mouse.y <= scrollbar_y + scrollbar_h;
+
+            if (mouse_pressed and !in_terminal) {
+                if (self.session.selectionState() != null) {
+                    self.session.clearSelection();
+                    handled = true;
+                }
+            }
+
+            if (mouse_pressed and in_terminal and !over_scrollbar) {
+                const total_lines_select = history_len + rows;
+                if (total_lines_select > 0) {
+                    var col: usize = 0;
+                    if (mouse.x > x) {
+                        col = @as(usize, @intFromFloat((mouse.x - x) / r.terminal_cell_width));
+                    }
+                    var row: usize = 0;
+                    if (mouse.y > y) {
+                        row = @as(usize, @intFromFloat((mouse.y - y) / r.terminal_cell_height));
+                    }
+                    row = @min(row, rows - 1);
+                    col = @min(col, cols - 1);
+
+                    const end_line = total_lines_select - self.session.scrollOffset();
+                    const start_line = if (end_line > rows) end_line - rows else 0;
+                    const global_row = @min(start_line + row, total_lines_select - 1);
+
+                    self.session.startSelection(global_row, col);
+                    handled = true;
+                }
+            }
+
+            if (allow_input and middle_pressed and in_terminal and !over_scrollbar) {
+                if (r.getClipboardText()) |clip| {
+                    if (self.session.selectionState() != null) {
+                        self.session.clearSelection();
+                    }
+                    if (self.session.scrollOffset() > 0) {
+                        self.session.setScrollOffset(0);
+                    }
+                    if (self.session.bracketedPasteEnabled()) {
+                        try self.session.sendText("\x1b[200~");
+                        var filtered = std.ArrayList(u8).empty;
+                        defer filtered.deinit(self.session.allocator);
+                        for (clip) |b| {
+                            if (b == 0x1b or b == 0x03) continue;
+                            try filtered.append(self.session.allocator, b);
+                        }
+                        if (filtered.items.len > 0) {
+                            try self.session.sendText(filtered.items);
+                        }
+                        try self.session.sendText("\x1b[201~");
+                    } else {
+                        try self.session.sendText(clip);
+                    }
+                    handled = true;
+                }
+            }
+
+            if (mouse_down and !scroll_dragging.*) {
+                if (self.session.selectionState()) |selection| {
+                    if (selection.selecting) {
+                        const total_lines_select = history_len + rows;
+                        if (total_lines_select > 0) {
+                            var col: usize = 0;
+                            if (mouse.x > x) {
+                                col = @as(usize, @intFromFloat((mouse.x - x) / r.terminal_cell_width));
+                            }
+                            var row: usize = 0;
+                            if (mouse.y > y) {
+                                row = @as(usize, @intFromFloat((mouse.y - y) / r.terminal_cell_height));
+                            }
+                            row = @min(row, rows - 1);
+                            col = @min(col, cols - 1);
+
+                            const end_line = total_lines_select - self.session.scrollOffset();
+                            const start_line = if (end_line > rows) end_line - rows else 0;
+                            const global_row = @min(start_line + row, total_lines_select - 1);
+
+                            self.session.updateSelection(global_row, col);
+                            handled = true;
+                        }
+                    }
+                }
+            }
+
+            if (!mouse_down) {
+                if (self.session.selectionState()) |selection| {
+                    if (selection.selecting) {
+                        self.session.finishSelection();
+                        handled = true;
+                    }
+                }
+            }
         }
 
         return handled;

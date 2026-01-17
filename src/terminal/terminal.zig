@@ -250,6 +250,8 @@ pub const TerminalSession = struct {
     scrollback: Scrollback,
     cursor: CursorPos,
     scrollback_offset: usize,
+    selection: TerminalSelection,
+    bracketed_paste: bool,
     cell_width: u16,
     cell_height: u16,
     stream: stream_mod.Stream,
@@ -274,6 +276,13 @@ pub const TerminalSession = struct {
             .scrollback = scrollback,
             .cursor = .{ .row = 0, .col = 0 },
             .scrollback_offset = 0,
+            .selection = .{
+                .active = false,
+                .selecting = false,
+                .start = .{ .row = 0, .col = 0 },
+                .end = .{ .row = 0, .col = 0 },
+            },
+            .bracketed_paste = false,
             .cell_width = 0,
             .cell_height = 0,
             .stream = .{},
@@ -309,12 +318,17 @@ pub const TerminalSession = struct {
     pub fn poll(self: *TerminalSession) !void {
         if (self.pty) |*pty| {
             var buf: [4096]u8 = undefined;
+            var had_data = false;
             while (true) {
                 const n = try pty.read(&buf);
                 if (n == null or n.? == 0) break;
+                had_data = true;
                 for (buf[0..n.?]) |b| {
                     self.handleByte(b);
                 }
+            }
+            if (had_data) {
+                self.clearSelection();
             }
         }
     }
@@ -362,6 +376,13 @@ pub const TerminalSession = struct {
         }
     }
 
+    pub fn sendText(self: *TerminalSession, text: []const u8) !void {
+        if (text.len == 0) return;
+        if (self.pty) |*pty| {
+            _ = try pty.write(text);
+        }
+    }
+
     pub fn resize(self: *TerminalSession, rows: u16, cols: u16) !void {
         const old_rows = self.grid.rows;
         const old_cols = self.grid.cols;
@@ -393,6 +414,7 @@ pub const TerminalSession = struct {
         const max_col = if (cols > 0) @as(usize, cols - 1) else 0;
         if (self.cursor.row > max_row) self.cursor.row = max_row;
         if (self.cursor.col > max_col) self.cursor.col = max_col;
+        self.clearSelection();
         if (self.pty) |*pty| {
             const size = PtySize{
                 .rows = rows,
@@ -471,7 +493,6 @@ pub const TerminalSession = struct {
     }
 
     fn handleCsi(self: *TerminalSession, action: csi_mod.CsiAction) void {
-        if (action.private) return;
         const p = action.params;
         const count = action.count;
         const get = struct {
@@ -580,6 +601,30 @@ pub const TerminalSession = struct {
             },
             'm' => { // SGR
                 self.applySgr(action);
+            },
+            'h' => { // SM
+                if (action.private) {
+                    const mode = p[0];
+                    if (mode == 2004) {
+                        self.bracketed_paste = true;
+                        const log = app_logger.logger("terminal.core");
+                        log.logStdout("bracketed paste enabled", .{});
+                        return;
+                    }
+                }
+                if (action.private) return;
+            },
+            'l' => { // RM
+                if (action.private) {
+                    const mode = p[0];
+                    if (mode == 2004) {
+                        self.bracketed_paste = false;
+                        const log = app_logger.logger("terminal.core");
+                        log.logStdout("bracketed paste disabled", .{});
+                        return;
+                    }
+                }
+                if (action.private) return;
             },
             else => {},
         }
@@ -1004,6 +1049,37 @@ pub const TerminalSession = struct {
         self.grid.clearDirty();
     }
 
+    pub fn clearSelection(self: *TerminalSession) void {
+        self.selection.active = false;
+        self.selection.selecting = false;
+    }
+
+    pub fn startSelection(self: *TerminalSession, row: usize, col: usize) void {
+        self.selection.active = true;
+        self.selection.selecting = true;
+        self.selection.start = .{ .row = row, .col = col };
+        self.selection.end = .{ .row = row, .col = col };
+    }
+
+    pub fn updateSelection(self: *TerminalSession, row: usize, col: usize) void {
+        if (!self.selection.active) return;
+        self.selection.end = .{ .row = row, .col = col };
+    }
+
+    pub fn finishSelection(self: *TerminalSession) void {
+        if (!self.selection.active) return;
+        self.selection.selecting = false;
+    }
+
+    pub fn selectionState(self: *TerminalSession) ?TerminalSelection {
+        if (!self.selection.active) return null;
+        return self.selection;
+    }
+
+    pub fn bracketedPasteEnabled(self: *TerminalSession) bool {
+        return self.bracketed_paste;
+    }
+
     pub fn isAlive(self: *TerminalSession) bool {
         _ = self;
         return false;
@@ -1034,6 +1110,18 @@ pub const TerminalSession = struct {
 pub const CursorPos = struct {
     row: usize,
     col: usize,
+};
+
+pub const SelectionPos = struct {
+    row: usize,
+    col: usize,
+};
+
+pub const TerminalSelection = struct {
+    active: bool,
+    selecting: bool,
+    start: SelectionPos,
+    end: SelectionPos,
 };
 
 pub const Cell = struct {
