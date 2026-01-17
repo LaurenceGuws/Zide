@@ -700,6 +700,9 @@ pub const TerminalWidget = struct {
             const needs_partial = snapshot.dirty == .partial and !needs_full and scroll_offset == 0;
 
             if ((needs_full or needs_partial) and r.beginTerminalTexture()) {
+                // Disable scissor while updating the offscreen texture.
+                // The main draw pass will restore the clip for on-screen drawing.
+                r.endClip();
                 const base_x_local: f32 = 0;
                 const base_y_local: f32 = 0;
 
@@ -717,6 +720,12 @@ pub const TerminalWidget = struct {
                     }
                 }
                 r.endTerminalTexture();
+                r.beginClip(
+                    @intFromFloat(x),
+                    @intFromFloat(y),
+                    @intFromFloat(width),
+                    @intFromFloat(height),
+                );
                 updated = true;
             }
 
