@@ -821,32 +821,7 @@ pub const TerminalWidget = struct {
                 r.theme.selection,
             );
 
-            const chip_text = "SB";
-            const chip_w: f32 = 28;
-            const chip_h: f32 = 18;
-            const chip_x = scrollbar_x - chip_w - 6;
-            const chip_y = scrollbar_y + 6;
-            r.drawRect(
-                @intFromFloat(chip_x),
-                @intFromFloat(chip_y),
-                @intFromFloat(chip_w),
-                @intFromFloat(chip_h),
-                r.theme.selection,
-            );
-            r.drawRectOutline(
-                @intFromFloat(chip_x),
-                @intFromFloat(chip_y),
-                @intFromFloat(chip_w),
-                @intFromFloat(chip_h),
-                r.theme.foreground,
-            );
-            r.drawTextSized(
-                chip_text,
-                chip_x + 6,
-                chip_y + 2,
-                @max(10, r.font_size * 0.7),
-                r.theme.foreground,
-            );
+            // Scrollbar only; no debug chip.
         }
 
         if (updated or snapshot.dirty == .none) {
