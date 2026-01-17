@@ -100,6 +100,9 @@ pub const Renderer = struct {
     terminal_cell_width: f32,
     terminal_cell_height: f32,
     terminal_font: TerminalFont,
+    terminal_texture: ?c.RenderTexture2D,
+    terminal_texture_w: c_int,
+    terminal_texture_h: c_int,
     theme: Theme,
     mouse_scale: MousePos,
     wayland_scale_cache: ?f32,
@@ -142,6 +145,9 @@ pub const Renderer = struct {
             .terminal_cell_width = font_size * 0.6,
             .terminal_cell_height = font_size * 1.2,
             .terminal_font = undefined,
+            .terminal_texture = null,
+            .terminal_texture_w = 0,
+            .terminal_texture_h = 0,
             .theme = .{},
             .mouse_scale = .{ .x = 1.0, .y = 1.0 },
             .wayland_scale_cache = null,
@@ -176,6 +182,10 @@ pub const Renderer = struct {
         }
         if (self.icon_font.texture.id != c.GetFontDefault().texture.id and self.icon_font.texture.id != self.font.texture.id) {
             c.UnloadFont(self.icon_font);
+        }
+        if (self.terminal_texture) |rt| {
+            c.UnloadRenderTexture(rt);
+            self.terminal_texture = null;
         }
         c.CloseWindow();
         self.terminal_font.deinit();
@@ -306,6 +316,53 @@ pub const Renderer = struct {
 
     pub fn endFrame(_: *Renderer) void {
         c.EndDrawing();
+    }
+
+    pub fn ensureTerminalTexture(self: *Renderer, width: c_int, height: c_int) bool {
+        if (width <= 0 or height <= 0) return false;
+        if (self.terminal_texture != null and self.terminal_texture_w == width and self.terminal_texture_h == height) {
+            return false;
+        }
+        if (self.terminal_texture) |rt| {
+            c.UnloadRenderTexture(rt);
+            self.terminal_texture = null;
+        }
+        const rt = c.LoadRenderTexture(width, height);
+        if (rt.texture.id == 0) {
+            self.terminal_texture_w = 0;
+            self.terminal_texture_h = 0;
+            return false;
+        }
+        c.SetTextureFilter(rt.texture, c.TEXTURE_FILTER_POINT);
+        self.terminal_texture = rt;
+        self.terminal_texture_w = width;
+        self.terminal_texture_h = height;
+        return true;
+    }
+
+    pub fn beginTerminalTexture(self: *Renderer) bool {
+        if (self.terminal_texture) |rt| {
+            c.BeginTextureMode(rt);
+            return true;
+        }
+        return false;
+    }
+
+    pub fn endTerminalTexture(_: *Renderer) void {
+        c.EndTextureMode();
+    }
+
+    pub fn drawTerminalTexture(self: *Renderer, x: f32, y: f32) void {
+        if (self.terminal_texture) |rt| {
+            const rect = c.Rectangle{
+                .x = 0,
+                .y = 0,
+                .width = @as(f32, @floatFromInt(rt.texture.width)),
+                .height = -@as(f32, @floatFromInt(rt.texture.height)),
+            };
+            const pos = c.Vector2{ .x = x, .y = y };
+            c.DrawTextureRec(rt.texture, rect, pos, c.WHITE);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

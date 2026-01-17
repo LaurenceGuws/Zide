@@ -598,99 +598,170 @@ pub const TerminalWidget = struct {
             }
         }.get;
 
-        // Pass 1: draw backgrounds so glyphs aren't overwritten by neighbor cells.
-        var row: usize = 0;
-        while (row < rows) : (row += 1) {
-            const row_cells = rowSlice(self, snapshot.cells, history_len, cols, start_line, row);
-            var col: usize = 0;
-            while (col < cols) : (col += 1) {
-                const cell = row_cells[col];
+        const drawRowRange = struct {
+            fn render(
+                parent: *TerminalWidget,
+                renderer: *Renderer,
+                snapshot_cells: []const Cell,
+                history: usize,
+                cols_count: usize,
+                start: usize,
+                row_idx: usize,
+                base_x_local: f32,
+                base_y_local: f32,
+            ) void {
+                const row_cells = rowSlice(parent, snapshot_cells, history, cols_count, start, row_idx);
 
-                const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
-                const cell_x = base_x + @as(f32, @floatFromInt(col)) * r.terminal_cell_width;
-                const cell_y = base_y + @as(f32, @floatFromInt(row)) * r.terminal_cell_height;
-                const cell_w = r.terminal_cell_width * @as(f32, @floatFromInt(cell_width_units));
+                var col: usize = 0;
+                while (col < cols_count) : (col += 1) {
+                    const cell = row_cells[col];
+                    const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
+                    const cell_x = base_x_local + @as(f32, @floatFromInt(col)) * renderer.terminal_cell_width;
+                    const cell_y = base_y_local + @as(f32, @floatFromInt(row_idx)) * renderer.terminal_cell_height;
+                    const cell_w = renderer.terminal_cell_width * @as(f32, @floatFromInt(cell_width_units));
 
-                const is_cursor = row == cursor.row and col == cursor.col;
+                    const fg = Color{
+                        .r = cell.attrs.fg.r,
+                        .g = cell.attrs.fg.g,
+                        .b = cell.attrs.fg.b,
+                    };
+                    const bg = Color{
+                        .r = cell.attrs.bg.r,
+                        .g = cell.attrs.bg.g,
+                        .b = cell.attrs.bg.b,
+                    };
 
-                const fg = Color{
-                    .r = cell.attrs.fg.r,
-                    .g = cell.attrs.fg.g,
-                    .b = cell.attrs.fg.b,
-                };
-                const bg = Color{
-                    .r = cell.attrs.bg.r,
-                    .g = cell.attrs.bg.g,
-                    .b = cell.attrs.bg.b,
-                };
+                    renderer.drawRect(
+                        @intFromFloat(cell_x),
+                        @intFromFloat(cell_y),
+                        @intFromFloat(cell_w),
+                        @intFromFloat(renderer.terminal_cell_height),
+                        if (cell.attrs.reverse) fg else bg,
+                    );
 
-                r.drawRect(
-                    @intFromFloat(cell_x),
-                    @intFromFloat(cell_y),
-                    @intFromFloat(cell_w),
-                    @intFromFloat(r.terminal_cell_height),
-                    if (is_cursor) fg else if (cell.attrs.reverse) fg else bg,
-                );
+                    if (cell.width > 1) {
+                        col += cell_width_units - 1;
+                    }
+                }
 
-                if (cell.width > 1) {
-                    col += cell_width_units - 1;
+                col = 0;
+                while (col < cols_count) : (col += 1) {
+                    const cell = row_cells[col];
+                    const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
+                    const cell_x = base_x_local + @as(f32, @floatFromInt(col)) * renderer.terminal_cell_width;
+                    const cell_y = base_y_local + @as(f32, @floatFromInt(row_idx)) * renderer.terminal_cell_height;
+
+                    const fg = Color{
+                        .r = cell.attrs.fg.r,
+                        .g = cell.attrs.fg.g,
+                        .b = cell.attrs.fg.b,
+                    };
+                    const bg = Color{
+                        .r = cell.attrs.bg.r,
+                        .g = cell.attrs.bg.g,
+                        .b = cell.attrs.bg.b,
+                    };
+
+                    const followed_by_space = blk: {
+                        const next_col = col + cell_width_units;
+                        if (next_col < cols_count) {
+                            const next_cell = row_cells[next_col];
+                            break :blk next_cell.codepoint == ' ' or next_cell.codepoint == 0;
+                        }
+                        break :blk true;
+                    };
+
+                    renderer.drawTerminalCell(
+                        cell.codepoint,
+                        cell_x,
+                        cell_y,
+                        renderer.terminal_cell_width * @as(f32, @floatFromInt(cell_width_units)),
+                        renderer.terminal_cell_height,
+                        if (cell.attrs.reverse) bg else fg,
+                        if (cell.attrs.reverse) fg else bg,
+                        cell.attrs.bold,
+                        false,
+                        followed_by_space,
+                    );
+
+                    if (cell.width > 1) {
+                        col += cell_width_units - 1;
+                    }
                 }
             }
+        }.render;
+
+        var updated = false;
+        if (rows > 0 and cols > 0) {
+            const texture_w = @as(i32, @intFromFloat(@round(r.terminal_cell_width * @as(f32, @floatFromInt(cols)))));
+            const texture_h = @as(i32, @intFromFloat(@round(r.terminal_cell_height * @as(f32, @floatFromInt(rows)))));
+            const recreated = r.ensureTerminalTexture(texture_w, texture_h);
+            const needs_full = recreated or snapshot.dirty == .full or (snapshot.dirty != .none and scroll_offset > 0);
+            const needs_partial = snapshot.dirty == .partial and !needs_full and scroll_offset == 0;
+
+            if ((needs_full or needs_partial) and r.beginTerminalTexture()) {
+                const base_x_local: f32 = 0;
+                const base_y_local: f32 = 0;
+
+                if (needs_full) {
+                    var row: usize = 0;
+                    while (row < rows) : (row += 1) {
+                        drawRowRange(self, r, snapshot.cells, history_len, cols, start_line, row, base_x_local, base_y_local);
+                    }
+                } else if (needs_partial) {
+                    var row: usize = 0;
+                    while (row < rows) : (row += 1) {
+                        if (row < snapshot.dirty_rows.len and snapshot.dirty_rows[row]) {
+                            drawRowRange(self, r, snapshot.cells, history_len, cols, start_line, row, base_x_local, base_y_local);
+                        }
+                    }
+                }
+                r.endTerminalTexture();
+                updated = true;
+            }
+
+            r.drawTerminalTexture(base_x, base_y);
         }
 
-        // Pass 2: draw glyphs
-        var glyph_row: usize = 0;
-        while (glyph_row < rows) : (glyph_row += 1) {
-            const row_cells = rowSlice(self, snapshot.cells, history_len, cols, start_line, glyph_row);
-            var col: usize = 0;
-            while (col < cols) : (col += 1) {
-                const cell = row_cells[col];
+        if (draw_cursor and rows > 0 and cols > 0 and cursor.row < rows and cursor.col < cols) {
+            const row_cells = rowSlice(self, snapshot.cells, history_len, cols, start_line, cursor.row);
+            const cell = row_cells[cursor.col];
+            const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
+            const cell_x = base_x + @as(f32, @floatFromInt(cursor.col)) * r.terminal_cell_width;
+            const cell_y = base_y + @as(f32, @floatFromInt(cursor.row)) * r.terminal_cell_height;
 
-                const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
-                const cell_x = base_x + @as(f32, @floatFromInt(col)) * r.terminal_cell_width;
-                const cell_y = base_y + @as(f32, @floatFromInt(glyph_row)) * r.terminal_cell_height;
+            const fg = Color{
+                .r = cell.attrs.fg.r,
+                .g = cell.attrs.fg.g,
+                .b = cell.attrs.fg.b,
+            };
+            const bg = Color{
+                .r = cell.attrs.bg.r,
+                .g = cell.attrs.bg.g,
+                .b = cell.attrs.bg.b,
+            };
 
-                const is_cursor = glyph_row == cursor.row and col == cursor.col;
-
-                const fg = Color{
-                    .r = cell.attrs.fg.r,
-                    .g = cell.attrs.fg.g,
-                    .b = cell.attrs.fg.b,
-                };
-                const bg = Color{
-                    .r = cell.attrs.bg.r,
-                    .g = cell.attrs.bg.g,
-                    .b = cell.attrs.bg.b,
-                };
-
-                // Check if next cell is a space (for overflow policy).
-                const followed_by_space = blk: {
-                    const next_col = col + cell_width_units;
-                    if (next_col < cols) {
-                        const next_cell = row_cells[next_col];
-                        break :blk next_cell.codepoint == ' ' or next_cell.codepoint == 0;
-                    }
-                    break :blk true; // End of line counts as "followed by space"
-                };
-
-                r.drawTerminalCell(
-                    cell.codepoint,
-                    cell_x,
-                    cell_y,
-                    r.terminal_cell_width * @as(f32, @floatFromInt(cell_width_units)),
-                    r.terminal_cell_height,
-                    if (cell.attrs.reverse) bg else fg,
-                    if (cell.attrs.reverse) fg else bg,
-                    cell.attrs.bold,
-                    is_cursor,
-                    followed_by_space,
-                );
-
-                // Skip wide characters
-                if (cell.width > 1) {
-                    col += cell_width_units - 1;
+            const followed_by_space = blk: {
+                const next_col = cursor.col + cell_width_units;
+                if (next_col < cols) {
+                    const next_cell = row_cells[next_col];
+                    break :blk next_cell.codepoint == ' ' or next_cell.codepoint == 0;
                 }
-            }
+                break :blk true;
+            };
+
+            r.drawTerminalCell(
+                cell.codepoint,
+                cell_x,
+                cell_y,
+                r.terminal_cell_width * @as(f32, @floatFromInt(cell_width_units)),
+                r.terminal_cell_height,
+                if (cell.attrs.reverse) bg else fg,
+                if (cell.attrs.reverse) fg else bg,
+                cell.attrs.bold,
+                true,
+                followed_by_space,
+            );
         }
 
         if (height > 0 and width > 0) {
@@ -750,7 +821,9 @@ pub const TerminalWidget = struct {
             );
         }
 
-        self.session.clearDirty();
+        if (updated or snapshot.dirty == .none) {
+            self.session.clearDirty();
+        }
     }
 
     /// Handle input, returns true if any input was processed

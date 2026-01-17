@@ -4,9 +4,9 @@ Date: 2026-01-17
 
 ## Summary of this session
 
-- Implemented per-row dirty tracking in the terminal grid and switched damage to partial ranges instead of full-screen invalidation for most ops.
-- Terminal snapshot no longer clears dirty state; the terminal widget clears it after drawing to preserve dirty data for the frame.
-- Scrollback viewport changes now mark the terminal as dirty to keep redraw intent explicit.
+- Cached terminal rendering into a render texture and only re-rendered dirty rows into it.
+- Cursor is now drawn as a per-frame overlay so cursor moves don't require texture updates.
+- Kept dirty tracking ownership in the terminal widget (clear after draw).
 
 ## Key changes
 
@@ -37,6 +37,7 @@ Date: 2026-01-17
 ### Dirty tracking
 - Added `dirty_rows` to the grid with `markDirtyRange` and `markDirtyAll`.
 - Updated write/erase/insert/delete/scroll paths to mark partial damage ranges instead of full.
+- Terminal widget now uses dirty rows to update a render texture instead of redrawing the full grid each frame.
 
 ## Current terminal state
 
@@ -44,12 +45,12 @@ Date: 2026-01-17
 - Colors (16/256/truecolor) and basic cursor/erase operations work.
 - Scrollback captures lines when the full screen scrolls; UI shows a scrollbar and supports drag/wheel.
 - Full SGR coverage and advanced CSI not yet supported.
-- Dirty-row tracking is implemented; renderer still redraws the full terminal each frame.
+- Dirty-row tracking is implemented; renderer caches the terminal in a texture and only updates dirty rows.
 
 ## Terminal planning notes
 
 - We started applying the performance strategy by cutting hover-driven redraws over the terminal (no hover UX), reducing CPU while keeping responsiveness elsewhere.
-- Next performance steps remain render-to-texture caching or true partial redraws for the terminal grid using dirty rows.
+- Next performance steps remain refinement of partial redraw (column damage) and selection/copy polish.
 
 ## Design docs
 
@@ -58,7 +59,7 @@ Date: 2026-01-17
 
 ## Next suggested steps (in order)
 
-1) Implement terminal render caching or partial redraw using dirty rows.
+1) Refine dirty tracking to include column damage to reduce work within a dirty row.
 2) Add scrollback viewport polish (selection/copy, scrollback indicators, preserve on resize).
 3) Expand CSI for modes and attributes, then refine performance.
 
