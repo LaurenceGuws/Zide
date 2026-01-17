@@ -458,8 +458,20 @@ pub const Renderer = struct {
         content_width: f32,
         is_current: bool,
     ) void {
+        self.drawEditorLineBase(line_num, y, x, gutter_width, content_width, is_current);
+        self.drawText(text, x + gutter_width + 8, y, self.theme.foreground);
+    }
+
+    pub fn drawEditorLineBase(
+        self: *Renderer,
+        line_num: usize,
+        y: f32,
+        x: f32,
+        gutter_width: f32,
+        content_width: f32,
+        is_current: bool,
+    ) void {
         const line_y = y;
-        const text_x = x + gutter_width + 8;
 
         // Draw current line highlight
         if (is_current) {
@@ -476,9 +488,6 @@ pub const Renderer = struct {
         var num_buf: [16]u8 = undefined;
         const num_str = std.fmt.bufPrint(&num_buf, "{d: >4}", .{line_num + 1}) catch return;
         self.drawText(num_str, x + 4, line_y, self.theme.line_number);
-
-        // Draw text
-        self.drawText(text, text_x, line_y, self.theme.foreground);
     }
 
     pub fn drawCursor(self: *Renderer, x: f32, y: f32, mode: enum { block, line, underline }) void {

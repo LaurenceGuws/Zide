@@ -10,6 +10,8 @@ const Editor = editor_mod.Editor;
 const TerminalSession = terminal_mod.TerminalSession;
 const CursorPos = terminal_mod.CursorPos;
 const Cell = terminal_mod.Cell;
+const HighlightToken = syntax_mod.HighlightToken;
+const TokenKind = syntax_mod.TokenKind;
 
 const TruncResult = struct {
     drawn_width: f32,
@@ -438,8 +440,33 @@ pub const EditorWidget = struct {
 
             const len = self.editor.getLine(line_idx, &line_buf);
             const line_text = line_buf[0..len];
+            const line_start = self.editor.lineStart(line_idx);
+            const line_end = line_start + len;
 
-            r.drawEditorLine(line_idx, line_text, line_y, x, self.gutter_width, width, is_current);
+            if (self.editor.highlighter) |highlighter| {
+                const tokens = highlighter.highlightRange(line_start, line_end, self.editor.allocator) catch {
+                    r.drawEditorLine(line_idx, line_text, line_y, x, self.gutter_width, width, is_current);
+                    continue;
+                };
+                defer self.editor.allocator.free(tokens);
+
+                if (tokens.len == 0) {
+                    r.drawEditorLine(line_idx, line_text, line_y, x, self.gutter_width, width, is_current);
+                } else {
+                    r.drawEditorLineBase(line_idx, line_y, x, self.gutter_width, width, is_current);
+                    drawHighlightedLineText(
+                        r,
+                        line_text,
+                        line_y,
+                        x + self.gutter_width + 8,
+                        line_start,
+                        line_end,
+                        tokens,
+                    );
+                }
+            } else {
+                r.drawEditorLine(line_idx, line_text, line_y, x, self.gutter_width, width, is_current);
+            }
         }
 
         // Draw cursor
@@ -545,6 +572,70 @@ pub const EditorWidget = struct {
         return handled;
     }
 };
+
+fn drawHighlightedLineText(
+    r: *Renderer,
+    line_text: []const u8,
+    y: f32,
+    text_x: f32,
+    line_start: usize,
+    line_end: usize,
+    tokens: []HighlightToken,
+) void {
+    if (line_text.len == 0) return;
+
+    std.sort.heap(HighlightToken, tokens, {}, highlightTokenLessThan);
+
+    var cursor = line_start;
+    for (tokens) |token| {
+        if (token.end <= line_start or token.start >= line_end) continue;
+        const start = @max(token.start, line_start);
+        const end = @min(token.end, line_end);
+        if (start > cursor) {
+            const slice_start = cursor - line_start;
+            const slice_end = start - line_start;
+            const x = text_x + @as(f32, @floatFromInt(slice_start)) * r.char_width;
+            r.drawText(line_text[slice_start..slice_end], x, y, r.theme.foreground);
+        }
+        const slice_start = start - line_start;
+        const slice_end = end - line_start;
+        const x = text_x + @as(f32, @floatFromInt(slice_start)) * r.char_width;
+        r.drawText(line_text[slice_start..slice_end], x, y, colorForToken(r, token.kind));
+        cursor = end;
+    }
+
+    if (cursor < line_end) {
+        const slice_start = cursor - line_start;
+        const x = text_x + @as(f32, @floatFromInt(slice_start)) * r.char_width;
+        r.drawText(line_text[slice_start..], x, y, r.theme.foreground);
+    }
+}
+
+fn highlightTokenLessThan(_: void, a: HighlightToken, b: HighlightToken) bool {
+    if (a.start == b.start) return a.end < b.end;
+    return a.start < b.start;
+}
+
+fn colorForToken(r: *Renderer, kind: TokenKind) Color {
+    return switch (kind) {
+        .comment => r.theme.comment_color,
+        .string => r.theme.string,
+        .keyword => r.theme.keyword,
+        .number => r.theme.number,
+        .function => r.theme.function,
+        .variable => r.theme.variable,
+        .type_name => r.theme.type_name,
+        .operator => r.theme.operator,
+        .builtin => r.theme.builtin_color,
+        .punctuation => r.theme.punctuation,
+        .constant => r.theme.constant,
+        .attribute => r.theme.attribute,
+        .namespace => r.theme.namespace,
+        .label => r.theme.label,
+        .error_token => r.theme.error_token,
+        else => r.theme.foreground,
+    };
+}
 
 /// Terminal widget for drawing a terminal view
 pub const TerminalWidget = struct {

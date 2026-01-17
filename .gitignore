@@ -9,7 +9,6 @@ zig-out/
 
 # Vendor dependencies (fetched by bootstrap)
 vendor/raylib/
-vendor/libvterm/
 
 # Generated Wayland protocols (regenerate with: make wayland-protocols)
 vendor/wayland-protocols/
@@ -18,3 +17,7 @@ vendor/wayland-protocols/
 build/
 reference_repos
 zide.log
+
+# Tree-sitter grammar pack tooling
+tools/grammar_packs/work/
+tools/grammar_packs/dist/

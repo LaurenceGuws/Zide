@@ -17,15 +17,15 @@ pub fn build(b: *std.Build) void {
         }),
     });
     treesitter.addCSourceFile(.{
-        .file = b.path("old_editor_lib/zig/third_party/tree-sitter/lib/src/lib.c"),
+        .file = b.path("vendor/tree-sitter/lib/src/lib.c"),
         .flags = &.{
             "-std=c99",
             "-D_POSIX_C_SOURCE=200809L",
             "-D_DEFAULT_SOURCE",
         },
     });
-    treesitter.addIncludePath(b.path("old_editor_lib/zig/third_party/tree-sitter/lib/include"));
-    treesitter.addIncludePath(b.path("old_editor_lib/zig/third_party/tree-sitter/lib/src"));
+    treesitter.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
+    treesitter.addIncludePath(b.path("vendor/tree-sitter/lib/src"));
 
     // Tree-sitter Zig parser
     const ts_zig = b.addLibrary(.{
@@ -38,10 +38,11 @@ pub fn build(b: *std.Build) void {
         }),
     });
     ts_zig.addCSourceFile(.{
-        .file = b.path("old_editor_lib/zig/third_party/tree-sitter-zig/src/parser.c"),
+        .file = b.path("vendor/tree-sitter-zig/src/parser.c"),
         .flags = &.{"-std=c99"},
     });
-    ts_zig.addIncludePath(b.path("old_editor_lib/zig/third_party/tree-sitter/lib/include"));
+    ts_zig.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
+    ts_zig.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
 
     // ─────────────────────────────────────────────────────────────────────────
     // Raylib (built from source)
@@ -162,7 +163,7 @@ pub fn build(b: *std.Build) void {
 
     // Include paths for @cImport
     exe.addIncludePath(b.path("vendor/raylib/src"));
-    exe.addIncludePath(b.path("old_editor_lib/zig/third_party/tree-sitter/lib/include"));
+    exe.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
     exe.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
     exe.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
     exe.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
@@ -224,7 +225,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     unit_tests.linkLibrary(treesitter);
-    unit_tests.addIncludePath(b.path("old_editor_lib/zig/third_party/tree-sitter/lib/include"));
+    unit_tests.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
 
     const run_tests = b.addRunArtifact(unit_tests);
     const test_step = b.step("test", "Run unit tests");

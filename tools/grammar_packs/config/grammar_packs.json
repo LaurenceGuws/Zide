@@ -1,0 +1,14 @@
+{
+  "version": "0.1.1",
+  "release_tag": "v0.1.1",
+  "release_title": "Grammar packs v0.1.1",
+  "release_notes": "Prebuilt Tree-sitter grammar packs + queries.",
+  "targets": [
+    {"os": "linux", "arch": "x86_64"},
+    {"os": "linux", "arch": "aarch64"},
+    {"os": "android", "arch": "aarch64"},
+    {"os": "android", "arch": "armv7"},
+    {"os": "android", "arch": "x86_64"}
+  ],
+  "exclude_languages": []
+}

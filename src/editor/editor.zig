@@ -39,6 +39,7 @@ pub const Editor = struct {
             .modified = false,
             .tab_width = 4,
         };
+        editor.tryInitHighlighter(null) catch {};
         return editor;
     }
 
@@ -76,6 +77,8 @@ pub const Editor = struct {
         self.scroll_line = 0;
         self.scroll_col = 0;
         self.modified = false;
+
+        try self.tryInitHighlighter(path);
     }
 
     pub fn save(self: *Editor) !void {
@@ -92,6 +95,7 @@ pub const Editor = struct {
         }
         self.file_path = try self.allocator.dupe(u8, path);
         self.modified = false;
+        try self.tryInitHighlighter(path);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -287,6 +291,10 @@ pub const Editor = struct {
         return buffer_mod.lineLen(self.buffer, line_index);
     }
 
+    pub fn lineStart(self: *Editor, line_index: usize) usize {
+        return buffer_mod.lineStart(self.buffer, line_index);
+    }
+
     pub fn getLineAlloc(self: *Editor, line_index: usize) ![]u8 {
         const len = buffer_mod.lineLen(self.buffer, line_index);
         if (len == 0) return try self.allocator.alloc(u8, 0);
@@ -296,5 +304,23 @@ pub const Editor = struct {
             return self.allocator.realloc(out, read);
         }
         return out;
+    }
+
+    fn shouldEnableZigHighlight(path: ?[]const u8) bool {
+        if (path == null) return true;
+        return std.mem.endsWith(u8, path.?, ".zig");
+    }
+
+    fn tryInitHighlighter(self: *Editor, path: ?[]const u8) !void {
+        if (!shouldEnableZigHighlight(path)) {
+            if (self.highlighter) |h| {
+                h.destroy();
+                self.highlighter = null;
+            }
+            return;
+        }
+        if (self.highlighter == null) {
+            self.highlighter = try syntax_mod.createZigHighlighter(self.allocator, self.buffer);
+        }
     }
 };
