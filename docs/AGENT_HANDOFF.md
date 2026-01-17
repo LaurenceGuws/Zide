@@ -8,6 +8,8 @@ Date: 2026-01-17
 - Cursor is now drawn as a per-frame overlay so cursor moves don't require texture updates.
 - Kept dirty tracking ownership in the terminal widget (clear after draw).
 - Added glyph atlas compaction and a reusable upload buffer to reduce per-glyph allocations.
+- Added a Lua config POC for logging and per-component logger filtering.
+- Added `assets/config/init.lua` as the defaults reference and documented log config and raylib log levels.
 
 ## Key changes
 
@@ -41,6 +43,9 @@ Date: 2026-01-17
 - Terminal widget now uses dirty rows to update a render texture instead of redrawing the full grid each frame.
 ### Glyph atlas
 - `TerminalFont` now reuses a staging buffer for texture uploads and compacts the atlas when full.
+### Logging config (POC)
+- Logging is now component-scoped (`app_logger.logger("name")`) and supports config-driven filtering.
+- Lua config loader reads `.zide.lua` or `~/.config/zide/init.lua` for `log.enable`.
 
 ## Current terminal state
 

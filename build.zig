@@ -158,12 +158,14 @@ pub fn build(b: *std.Build) void {
     exe.linkLibrary(ts_zig);
     exe.linkSystemLibrary("freetype");
     exe.linkSystemLibrary("harfbuzz");
+    exe.linkSystemLibrary("lua");
 
     // Include paths for @cImport
     exe.addIncludePath(b.path("vendor/raylib/src"));
     exe.addIncludePath(b.path("old_editor_lib/zig/third_party/tree-sitter/lib/include"));
     exe.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
     exe.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
+    exe.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
 
     // Platform-specific linking for the exe
     if (target_os == .windows) {
