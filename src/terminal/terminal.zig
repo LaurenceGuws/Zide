@@ -84,18 +84,46 @@ const TerminalGrid = struct {
 
     pub fn resize(self: *TerminalGrid, rows: u16, cols: u16) !void {
         if (self.rows == rows and self.cols == cols) return;
-        self.rows = rows;
-        self.cols = cols;
+        const old_rows = self.rows;
+        const old_cols = self.cols;
+        const old_cells = self.cells;
+
+        var new_cells = std.ArrayList(Cell).empty;
+        var new_dirty_rows = std.ArrayList(bool).empty;
         const count = @as(usize, rows) * @as(usize, cols);
-        try self.cells.resize(self.allocator, count);
-        try self.dirty_rows.resize(self.allocator, rows);
+        try new_cells.resize(self.allocator, count);
+        try new_dirty_rows.resize(self.allocator, rows);
+
         const default_cell = defaultCell();
-        for (self.cells.items) |*cell| {
+        for (new_cells.items) |*cell| {
             cell.* = default_cell;
         }
-        for (self.dirty_rows.items) |*row_dirty| {
+
+        const copy_rows = @min(@as(usize, old_rows), @as(usize, rows));
+        const copy_cols = @min(@as(usize, old_cols), @as(usize, cols));
+        if (copy_rows > 0 and copy_cols > 0 and old_cells.items.len > 0) {
+            var row: usize = 0;
+            while (row < copy_rows) : (row += 1) {
+                const old_start = row * @as(usize, old_cols);
+                const new_start = row * @as(usize, cols);
+                std.mem.copyForwards(
+                    Cell,
+                    new_cells.items[new_start .. new_start + copy_cols],
+                    old_cells.items[old_start .. old_start + copy_cols],
+                );
+            }
+        }
+
+        for (new_dirty_rows.items) |*row_dirty| {
             row_dirty.* = true;
         }
+
+        self.cells.deinit(self.allocator);
+        self.dirty_rows.deinit(self.allocator);
+        self.cells = new_cells;
+        self.dirty_rows = new_dirty_rows;
+        self.rows = rows;
+        self.cols = cols;
         self.markDirtyAll();
     }
 
@@ -285,7 +313,7 @@ pub const TerminalSession = struct {
         const old_cols = self.grid.cols;
         try self.grid.resize(rows, cols);
         if (cols != old_cols) {
-            try self.scrollback.resize(cols);
+            try self.scrollback.resizePreserve(cols, defaultCell());
         }
         const was_full_region = old_rows > 0 and self.scroll_top == 0 and self.scroll_bottom + 1 == @as(usize, old_rows);
         app_logger.logf("terminal resize rows={d} cols={d} scrollback_cols={d}", .{ rows, cols, self.grid.cols });
