@@ -12,6 +12,8 @@ pub const TerminalSnapshot = struct {
     cols: usize,
     cells: []const Cell,
     dirty_rows: []const bool,
+    dirty_cols_start: []const u16,
+    dirty_cols_end: []const u16,
     cursor: CursorPos,
     dirty: Dirty,
     damage: Damage,
@@ -45,15 +47,21 @@ const TerminalGrid = struct {
     cols: u16,
     cells: std.ArrayList(Cell),
     dirty_rows: std.ArrayList(bool),
+    dirty_cols_start: std.ArrayList(u16),
+    dirty_cols_end: std.ArrayList(u16),
     dirty: Dirty,
     damage: Damage,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !TerminalGrid {
         var cells = std.ArrayList(Cell).empty;
         var dirty_rows = std.ArrayList(bool).empty;
+        var dirty_cols_start = std.ArrayList(u16).empty;
+        var dirty_cols_end = std.ArrayList(u16).empty;
         const count = @as(usize, rows) * @as(usize, cols);
         try cells.resize(allocator, count);
         try dirty_rows.resize(allocator, rows);
+        try dirty_cols_start.resize(allocator, rows);
+        try dirty_cols_end.resize(allocator, rows);
         const default_cell = defaultCell();
         for (cells.items) |*cell| {
             cell.* = default_cell;
@@ -61,12 +69,18 @@ const TerminalGrid = struct {
         for (dirty_rows.items) |*row_dirty| {
             row_dirty.* = true;
         }
+        for (dirty_cols_start.items, dirty_cols_end.items) |*col_start, *col_end| {
+            col_start.* = 0;
+            col_end.* = if (cols > 0) cols - 1 else 0;
+        }
         return .{
             .allocator = allocator,
             .rows = rows,
             .cols = cols,
             .cells = cells,
             .dirty_rows = dirty_rows,
+            .dirty_cols_start = dirty_cols_start,
+            .dirty_cols_end = dirty_cols_end,
             .dirty = .full,
             .damage = .{
                 .start_row = 0,
@@ -80,6 +94,8 @@ const TerminalGrid = struct {
     pub fn deinit(self: *TerminalGrid) void {
         self.cells.deinit(self.allocator);
         self.dirty_rows.deinit(self.allocator);
+        self.dirty_cols_start.deinit(self.allocator);
+        self.dirty_cols_end.deinit(self.allocator);
     }
 
     pub fn resize(self: *TerminalGrid, rows: u16, cols: u16) !void {
@@ -90,9 +106,13 @@ const TerminalGrid = struct {
 
         var new_cells = std.ArrayList(Cell).empty;
         var new_dirty_rows = std.ArrayList(bool).empty;
+        var new_dirty_cols_start = std.ArrayList(u16).empty;
+        var new_dirty_cols_end = std.ArrayList(u16).empty;
         const count = @as(usize, rows) * @as(usize, cols);
         try new_cells.resize(self.allocator, count);
         try new_dirty_rows.resize(self.allocator, rows);
+        try new_dirty_cols_start.resize(self.allocator, rows);
+        try new_dirty_cols_end.resize(self.allocator, rows);
 
         const default_cell = defaultCell();
         for (new_cells.items) |*cell| {
@@ -117,11 +137,19 @@ const TerminalGrid = struct {
         for (new_dirty_rows.items) |*row_dirty| {
             row_dirty.* = true;
         }
+        for (new_dirty_cols_start.items, new_dirty_cols_end.items) |*col_start, *col_end| {
+            col_start.* = 0;
+            col_end.* = if (cols > 0) cols - 1 else 0;
+        }
 
         self.cells.deinit(self.allocator);
         self.dirty_rows.deinit(self.allocator);
+        self.dirty_cols_start.deinit(self.allocator);
+        self.dirty_cols_end.deinit(self.allocator);
         self.cells = new_cells;
         self.dirty_rows = new_dirty_rows;
+        self.dirty_cols_start = new_dirty_cols_start;
+        self.dirty_cols_end = new_dirty_cols_end;
         self.rows = rows;
         self.cols = cols;
         self.markDirtyAll();
@@ -130,6 +158,13 @@ const TerminalGrid = struct {
     fn setAllDirtyRows(self: *TerminalGrid, value: bool) void {
         for (self.dirty_rows.items) |*row_dirty| {
             row_dirty.* = value;
+        }
+    }
+
+    fn setAllDirtyCols(self: *TerminalGrid, start: u16, end: u16) void {
+        for (self.dirty_cols_start.items, self.dirty_cols_end.items) |*col_start, *col_end| {
+            col_start.* = start;
+            col_end.* = end;
         }
     }
 
@@ -162,6 +197,14 @@ const TerminalGrid = struct {
 
         for (row_start..row_end + 1) |row| {
             self.dirty_rows.items[row] = true;
+            const col_start_u16: u16 = @intCast(col_start);
+            const col_end_u16: u16 = @intCast(col_end);
+            if (self.dirty_cols_start.items[row] > col_start_u16) {
+                self.dirty_cols_start.items[row] = col_start_u16;
+            }
+            if (self.dirty_cols_end.items[row] < col_end_u16) {
+                self.dirty_cols_end.items[row] = col_end_u16;
+            }
         }
     }
 
@@ -174,11 +217,21 @@ const TerminalGrid = struct {
             .end_col = if (self.cols > 0) @as(usize, self.cols - 1) else 0,
         };
         self.setAllDirtyRows(true);
+        if (self.cols > 0) {
+            self.setAllDirtyCols(0, self.cols - 1);
+        } else {
+            self.setAllDirtyCols(0, 0);
+        }
     }
 
     pub fn clearDirty(self: *TerminalGrid) void {
         self.dirty = .none;
         self.setAllDirtyRows(false);
+        const invalid_start = self.cols;
+        for (self.dirty_cols_start.items, self.dirty_cols_end.items) |*col_start, *col_end| {
+            col_start.* = invalid_start;
+            col_end.* = 0;
+        }
         self.damage = .{
             .start_row = 0,
             .end_row = 0,
@@ -926,6 +979,8 @@ pub const TerminalSession = struct {
             .cols = @as(usize, self.grid.cols),
             .cells = self.grid.cells.items,
             .dirty_rows = self.grid.dirty_rows.items,
+            .dirty_cols_start = self.grid.dirty_cols_start.items,
+            .dirty_cols_end = self.grid.dirty_cols_end.items,
             .cursor = self.cursor,
             .dirty = self.grid.dirty,
             .damage = self.grid.damage,
