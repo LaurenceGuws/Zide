@@ -263,8 +263,9 @@ pub const TerminalSession = struct {
         const session = try allocator.create(TerminalSession);
         const grid = try TerminalGrid.init(allocator, rows, cols);
         const scrollback = try Scrollback.init(allocator, default_scrollback_rows, cols);
-        app_logger.logf("terminal init rows={d} cols={d} scrollback_max={d}", .{ rows, cols, default_scrollback_rows });
-        app_logger.logStdout("terminal init rows={d} cols={d}", .{ rows, cols });
+        const log = app_logger.logger("terminal");
+        log.logf("terminal init rows={d} cols={d} scrollback_max={d}", .{ rows, cols, default_scrollback_rows });
+        log.logStdout("terminal init rows={d} cols={d}", .{ rows, cols });
         session.* = .{
             .allocator = allocator,
             .title = "Terminal",
@@ -369,8 +370,9 @@ pub const TerminalSession = struct {
             try self.scrollback.resizePreserve(cols, defaultCell());
         }
         const was_full_region = old_rows > 0 and self.scroll_top == 0 and self.scroll_bottom + 1 == @as(usize, old_rows);
-        app_logger.logf("terminal resize rows={d} cols={d} scrollback_cols={d}", .{ rows, cols, self.grid.cols });
-        app_logger.logStdout("terminal resize rows={d} cols={d}", .{ rows, cols });
+        const log = app_logger.logger("terminal");
+        log.logf("terminal resize rows={d} cols={d} scrollback_cols={d}", .{ rows, cols, self.grid.cols });
+        log.logStdout("terminal resize rows={d} cols={d}", .{ rows, cols });
         self.setScrollOffset(self.scrollback_offset);
         if (rows > 0) {
             if (self.scroll_top >= @as(usize, rows)) self.scroll_top = 0;
@@ -728,13 +730,15 @@ pub const TerminalSession = struct {
         if (row >= @as(usize, self.grid.rows)) return;
         const row_start = row * cols;
         self.scrollback.pushRow(self.grid.cells.items[row_start .. row_start + cols]);
-        app_logger.logf("scrollback push row={d} total={d}", .{ row, self.scrollback.count() });
-        app_logger.logStdout("scrollback push total={d}", .{self.scrollback.count()});
+        const log = app_logger.logger("terminal");
+        log.logf("scrollback push row={d} total={d}", .{ row, self.scrollback.count() });
+        log.logStdout("scrollback push total={d}", .{self.scrollback.count()});
     }
 
     fn scrollRegionUp(self: *TerminalSession, count: usize) void {
-        app_logger.logf("scroll region up count={d} top={d} bottom={d}", .{ count, self.scroll_top, self.scroll_bottom });
-        app_logger.logStdout("scroll region up count={d}", .{count});
+        const log = app_logger.logger("terminal");
+        log.logf("scroll region up count={d} top={d} bottom={d}", .{ count, self.scroll_top, self.scroll_bottom });
+        log.logStdout("scroll region up count={d}", .{count});
         const cols = @as(usize, self.grid.cols);
         if (cols == 0 or self.grid.rows == 0) return;
         const n = @min(count, self.scroll_bottom - self.scroll_top + 1);
@@ -889,8 +893,9 @@ pub const TerminalSession = struct {
     }
 
     fn scrollUp(self: *TerminalSession) void {
-        app_logger.logf("scroll up rows={d} cols={d}", .{ self.grid.rows, self.grid.cols });
-        app_logger.logStdout("scroll up rows={d} cols={d}", .{ self.grid.rows, self.grid.cols });
+        const log = app_logger.logger("terminal");
+        log.logf("scroll up rows={d} cols={d}", .{ self.grid.rows, self.grid.cols });
+        log.logStdout("scroll up rows={d} cols={d}", .{ self.grid.rows, self.grid.cols });
         const cols = @as(usize, self.grid.cols);
         const rows = @as(usize, self.grid.rows);
         if (rows == 0 or cols == 0) return;
@@ -949,8 +954,9 @@ pub const TerminalSession = struct {
         const max_offset = self.maxScrollOffset();
         self.scrollback_offset = @min(offset, max_offset);
         self.grid.markDirtyAll();
-        app_logger.logf("set scroll offset={d} max={d}", .{ self.scrollback_offset, max_offset });
-        app_logger.logStdout("set scroll offset={d} max={d}", .{ self.scrollback_offset, max_offset });
+        const log = app_logger.logger("terminal");
+        log.logf("set scroll offset={d} max={d}", .{ self.scrollback_offset, max_offset });
+        log.logStdout("set scroll offset={d} max={d}", .{ self.scrollback_offset, max_offset });
     }
 
     pub fn scrollBy(self: *TerminalSession, delta: isize) void {
@@ -963,8 +969,9 @@ pub const TerminalSession = struct {
         if (offset > max_i) offset = max_i;
         self.scrollback_offset = @intCast(offset);
         self.grid.markDirtyAll();
-        app_logger.logf("scroll by delta={d} offset={d} max={d}", .{ delta, self.scrollback_offset, max_offset });
-        app_logger.logStdout("scroll by delta={d} offset={d} max={d}", .{ delta, self.scrollback_offset, max_offset });
+        const log = app_logger.logger("terminal");
+        log.logf("scroll by delta={d} offset={d} max={d}", .{ delta, self.scrollback_offset, max_offset });
+        log.logStdout("scroll by delta={d} offset={d} max={d}", .{ delta, self.scrollback_offset, max_offset });
     }
 
     fn maxScrollOffset(self: *TerminalSession) usize {

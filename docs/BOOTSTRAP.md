@@ -24,13 +24,13 @@ A modern, cross-platform IDE for Zig development, built entirely in Zig.
 
 ```bash
 # Arch Linux
-sudo pacman -S zig freetype2 harfbuzz wayland wayland-protocols libxkbcommon mesa
+sudo pacman -S zig freetype2 harfbuzz wayland wayland-protocols libxkbcommon mesa lua
 
 # Ubuntu/Debian
-sudo apt install zig libfreetype-dev libharfbuzz-dev libwayland-dev wayland-protocols libxkbcommon-dev libgl-dev libegl-dev
+sudo apt install zig libfreetype-dev libharfbuzz-dev libwayland-dev wayland-protocols libxkbcommon-dev libgl-dev libegl-dev liblua5.4-dev
 
 # Fedora
-sudo dnf install zig freetype-devel harfbuzz-devel wayland-devel wayland-protocols-devel libxkbcommon-devel mesa-libGL-devel mesa-libEGL-devel
+sudo dnf install zig freetype-devel harfbuzz-devel wayland-devel wayland-protocols-devel libxkbcommon-devel mesa-libGL-devel mesa-libEGL-devel lua-devel
 ```
 
 ### macOS

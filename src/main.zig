@@ -6,6 +6,7 @@ const editor_mod = @import("editor/editor.zig");
 const buffer_mod = @import("editor/buffer.zig");
 const types = @import("editor/types.zig");
 const app_logger = @import("app_logger.zig");
+const config_mod = @import("config/lua_config.zig");
 
 // Terminal modules
 const terminal_mod = @import("terminal/terminal.zig");
@@ -58,10 +59,27 @@ const AppState = struct {
     last_mouse_redraw_time: f64,
 
     pub fn init(allocator: std.mem.Allocator) !*AppState {
+        var config = config_mod.loadConfig(allocator) catch |err| blk: {
+            std.debug.print("config load error: {any}\n", .{err});
+            break :blk config_mod.Config{
+                .log_filter = null,
+                .raylib_log_level = null,
+            };
+        };
+        defer config_mod.freeConfig(allocator, &config);
+
+        if (config.raylib_log_level) |level| {
+            renderer_mod.setRaylibLogLevel(level);
+        }
+
         const renderer = try Renderer.init(allocator, 1280, 720, "Zide - Zig IDE");
         errdefer renderer.deinit();
         try app_logger.init();
-        app_logger.logStdout("logger initialized", .{});
+        if (config.log_filter) |filter| {
+            app_logger.setFilterString(filter) catch {};
+        }
+        const app_log = app_logger.logger("app");
+        app_log.logStdout("logger initialized", .{});
 
         const state = try allocator.create(AppState);
         state.* = .{

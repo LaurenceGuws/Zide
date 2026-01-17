@@ -785,6 +785,11 @@ pub fn getTime() f64 {
     return c.GetTime();
 }
 
+/// Configure raylib trace log level before window init.
+pub fn setRaylibLogLevel(level: c_int) void {
+    c.SetTraceLogLevel(level);
+}
+
 /// Check if window was resized (event-based, works with X11/Wayland)
 pub fn isWindowResized() bool {
     return c.IsWindowResized();
