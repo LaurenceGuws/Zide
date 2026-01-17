@@ -607,13 +607,18 @@ pub const TerminalWidget = struct {
                 cols_count: usize,
                 start: usize,
                 row_idx: usize,
+                col_start_in: usize,
+                col_end_in: usize,
                 base_x_local: f32,
                 base_y_local: f32,
             ) void {
                 const row_cells = rowSlice(parent, snapshot_cells, history, cols_count, start, row_idx);
+                const col_start = @min(col_start_in, cols_count - 1);
+                const col_end = @min(col_end_in, cols_count - 1);
+                if (col_start > col_end) return;
 
-                var col: usize = 0;
-                while (col < cols_count) : (col += 1) {
+                var col: usize = col_start;
+                while (col <= col_end and col < cols_count) : (col += 1) {
                     const cell = row_cells[col];
                     const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
                     const cell_x = base_x_local + @as(f32, @floatFromInt(col)) * renderer.terminal_cell_width;
@@ -644,8 +649,8 @@ pub const TerminalWidget = struct {
                     }
                 }
 
-                col = 0;
-                while (col < cols_count) : (col += 1) {
+                col = col_start;
+                while (col <= col_end and col < cols_count) : (col += 1) {
                     const cell = row_cells[col];
                     const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
                     const cell_x = base_x_local + @as(f32, @floatFromInt(col)) * renderer.terminal_cell_width;
@@ -709,13 +714,27 @@ pub const TerminalWidget = struct {
                 if (needs_full) {
                     var row: usize = 0;
                     while (row < rows) : (row += 1) {
-                        drawRowRange(self, r, snapshot.cells, history_len, cols, start_line, row, base_x_local, base_y_local);
+                        drawRowRange(self, r, snapshot.cells, history_len, cols, start_line, row, 0, cols - 1, base_x_local, base_y_local);
                     }
                 } else if (needs_partial) {
                     var row: usize = 0;
                     while (row < rows) : (row += 1) {
                         if (row < snapshot.dirty_rows.len and snapshot.dirty_rows[row]) {
-                            drawRowRange(self, r, snapshot.cells, history_len, cols, start_line, row, base_x_local, base_y_local);
+                            var col_start: usize = 0;
+                            var col_end: usize = cols - 1;
+                            if (row < snapshot.dirty_cols_start.len and row < snapshot.dirty_cols_end.len) {
+                                col_start = @intCast(snapshot.dirty_cols_start[row]);
+                                col_end = @intCast(snapshot.dirty_cols_end[row]);
+                                if (col_start >= cols) col_start = 0;
+                                if (col_end >= cols) col_end = cols - 1;
+                                if (col_end < col_start) {
+                                    col_start = 0;
+                                    col_end = cols - 1;
+                                }
+                            }
+                            const draw_start = if (col_start > 0) col_start - 1 else 0;
+                            const draw_end = @min(cols - 1, col_end + 1);
+                            drawRowRange(self, r, snapshot.cells, history_len, cols, start_line, row, draw_start, draw_end, base_x_local, base_y_local);
                         }
                     }
                 }
