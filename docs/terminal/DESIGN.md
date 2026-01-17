@@ -8,7 +8,8 @@ Purpose: this document tracks terminal architecture decisions and implementation
 
 - Terminal backend stub replaced by a working PTY + minimal VT pipeline.
 - Shell output renders with basic cursor movement, erase ops, and SGR (16/256/truecolor).
-- Still missing: dirty‑row tracking, scrollback, and full VT coverage.
+- Scrollback ring buffer captures full‑screen scrolls and is exposed via a scrollbar + offset.
+- Still missing: dirty‑row tracking and full VT coverage.
 
 ## Decisions & Progress by Layer
 
@@ -87,12 +88,19 @@ Current coverage:
 Progress:
 - Flat grid exists with basic scrolling and line erase.
 - Scroll region support added.
+- Scrollback ring buffer stores rows on full‑screen scroll; cleared on column resize.
+- Terminal UI can render scrollback with a right-side scrollbar and scroll offset.
 
 Decision:
 - Current grid is a minimal stepping stone; will be replaced by a proper model with dirty‑row tracking and scrollback.
 
 Why:
 - Necessary for performance and correctness with real TUI apps.
+
+Research notes:
+- Alacritty stores rows in a ring buffer with a movable zero index to make rotations O(1).
+- xterm keeps a fixed-size FIFO of saved lines and overwrites oldest entries as the buffer fills.
+- libtsm uses a power-of-two ring buffer and wraps with a start/used cursor.
 
 ### Layer 5: Renderer Core
 
@@ -163,4 +171,4 @@ Why:
 ## Immediate next steps
 
 1) Add dirty‑row tracking to the grid + renderer.
-2) Start scrollback buffer design (Phase 3).
+2) Add scrollback viewport polish (selection, copy, and mouse wheel modes).

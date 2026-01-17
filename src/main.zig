@@ -5,6 +5,7 @@ const builtin = @import("builtin");
 const editor_mod = @import("editor/editor.zig");
 const buffer_mod = @import("editor/buffer.zig");
 const types = @import("editor/types.zig");
+const app_logger = @import("app_logger.zig");
 
 // Terminal modules
 const terminal_mod = @import("terminal/terminal.zig");
@@ -52,10 +53,14 @@ const AppState = struct {
     resize_start_y: f32,
     resize_start_height: f32,
     mouse_debug: bool,
+    terminal_scroll_dragging: bool,
+    terminal_scroll_grab_offset: f32,
 
     pub fn init(allocator: std.mem.Allocator) !*AppState {
         const renderer = try Renderer.init(allocator, 1280, 720, "Zide - Zig IDE");
         errdefer renderer.deinit();
+        try app_logger.init();
+        app_logger.logStdout("logger initialized", .{});
 
         const state = try allocator.create(AppState);
         state.* = .{
@@ -79,6 +84,8 @@ const AppState = struct {
             .resize_start_y = 0,
             .resize_start_height = 0,
             .mouse_debug = std.c.getenv("ZIDE_MOUSE_DEBUG") != null,
+            .terminal_scroll_dragging = false,
+            .terminal_scroll_grab_offset = 0,
         };
 
         return state;
@@ -97,6 +104,7 @@ const AppState = struct {
 
         self.tab_bar.deinit();
         self.renderer.deinit();
+        app_logger.deinit();
         self.allocator.destroy(self);
     }
 
@@ -408,9 +416,35 @@ const AppState = struct {
             }
 
             // Handle terminal input if focused at bottom
+            const term_y = height - status_bar_height - terminal_h + 2;
+            const term_x = side_nav_width;
+            const term_draw_height = @max(0, terminal_h - 2);
             if (self.active_kind == .terminal) {
                 var term_widget = TerminalWidget.init(term);
-                if (try term_widget.handleInput(r)) {
+                if (try term_widget.handleInput(
+                    r,
+                    term_x,
+                    term_y,
+                    editor_width,
+                    term_draw_height,
+                    true,
+                    &self.terminal_scroll_dragging,
+                    &self.terminal_scroll_grab_offset,
+                )) {
+                    self.needs_redraw = true;
+                }
+            } else {
+                var term_widget = TerminalWidget.init(term);
+                if (try term_widget.handleInput(
+                    r,
+                    term_x,
+                    term_y,
+                    editor_width,
+                    term_draw_height,
+                    false,
+                    &self.terminal_scroll_dragging,
+                    &self.terminal_scroll_grab_offset,
+                )) {
                     self.needs_redraw = true;
                 }
             }

@@ -2,6 +2,8 @@ const std = @import("std");
 const pty_mod = @import("pty.zig");
 const stream_mod = @import("stream.zig");
 const csi_mod = @import("csi.zig");
+const scrollback_mod = @import("scrollback.zig");
+const app_logger = @import("../app_logger.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
 
@@ -105,7 +107,9 @@ pub const TerminalSession = struct {
     title: []const u8,
     pty: ?Pty,
     grid: TerminalGrid,
+    scrollback: Scrollback,
     cursor: CursorPos,
+    scrollback_offset: usize,
     cell_width: u16,
     cell_height: u16,
     stream: stream_mod.Stream,
@@ -118,12 +122,17 @@ pub const TerminalSession = struct {
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !*TerminalSession {
         const session = try allocator.create(TerminalSession);
         const grid = try TerminalGrid.init(allocator, rows, cols);
+        const scrollback = try Scrollback.init(allocator, default_scrollback_rows, cols);
+        app_logger.logf("terminal init rows={d} cols={d} scrollback_max={d}", .{ rows, cols, default_scrollback_rows });
+        app_logger.logStdout("terminal init rows={d} cols={d}", .{ rows, cols });
         session.* = .{
             .allocator = allocator,
             .title = "Terminal",
             .pty = null,
             .grid = grid,
+            .scrollback = scrollback,
             .cursor = .{ .row = 0, .col = 0 },
+            .scrollback_offset = 0,
             .cell_width = 0,
             .cell_height = 0,
             .stream = .{},
@@ -140,6 +149,7 @@ pub const TerminalSession = struct {
         if (self.pty) |*pty| {
             pty.deinit();
         }
+        self.scrollback.deinit();
         self.grid.deinit();
         self.allocator.destroy(self);
     }
@@ -212,11 +222,24 @@ pub const TerminalSession = struct {
     }
 
     pub fn resize(self: *TerminalSession, rows: u16, cols: u16) !void {
+        const old_rows = self.grid.rows;
+        const old_cols = self.grid.cols;
         try self.grid.resize(rows, cols);
+        if (cols != old_cols) {
+            try self.scrollback.resize(cols);
+        }
+        const was_full_region = old_rows > 0 and self.scroll_top == 0 and self.scroll_bottom + 1 == @as(usize, old_rows);
+        app_logger.logf("terminal resize rows={d} cols={d} scrollback_cols={d}", .{ rows, cols, self.grid.cols });
+        app_logger.logStdout("terminal resize rows={d} cols={d}", .{ rows, cols });
+        self.setScrollOffset(self.scrollback_offset);
         if (rows > 0) {
             if (self.scroll_top >= @as(usize, rows)) self.scroll_top = 0;
             if (self.scroll_bottom >= @as(usize, rows)) self.scroll_bottom = @as(usize, rows - 1);
             if (self.scroll_top > self.scroll_bottom) {
+                self.scroll_top = 0;
+                self.scroll_bottom = @as(usize, rows - 1);
+            }
+            if (was_full_region) {
                 self.scroll_top = 0;
                 self.scroll_bottom = @as(usize, rows - 1);
             }
@@ -549,7 +572,25 @@ pub const TerminalSession = struct {
         self.grid.markDirtyAll();
     }
 
+    fn isFullScrollRegion(self: *TerminalSession) bool {
+        const rows = @as(usize, self.grid.rows);
+        if (rows == 0) return false;
+        return self.scroll_top == 0 and self.scroll_bottom + 1 == rows;
+    }
+
+    fn pushScrollbackRow(self: *TerminalSession, row: usize) void {
+        const cols = @as(usize, self.grid.cols);
+        if (cols == 0 or self.grid.rows == 0) return;
+        if (row >= @as(usize, self.grid.rows)) return;
+        const row_start = row * cols;
+        self.scrollback.pushRow(self.grid.cells.items[row_start .. row_start + cols]);
+        app_logger.logf("scrollback push row={d} total={d}", .{ row, self.scrollback.count() });
+        app_logger.logStdout("scrollback push total={d}", .{self.scrollback.count()});
+    }
+
     fn scrollRegionUp(self: *TerminalSession, count: usize) void {
+        app_logger.logf("scroll region up count={d} top={d} bottom={d}", .{ count, self.scroll_top, self.scroll_bottom });
+        app_logger.logStdout("scroll region up count={d}", .{count});
         const cols = @as(usize, self.grid.cols);
         if (cols == 0 or self.grid.rows == 0) return;
         const n = @min(count, self.scroll_bottom - self.scroll_top + 1);
@@ -557,6 +598,12 @@ pub const TerminalSession = struct {
         const default_cell = defaultCell();
         const region_start = self.scroll_top * cols;
         const region_end = (self.scroll_bottom + 1) * cols;
+        if (self.isFullScrollRegion()) {
+            var row: usize = 0;
+            while (row < n) : (row += 1) {
+                self.pushScrollbackRow(self.scroll_top + row);
+            }
+        }
         const move_len = region_end - region_start - n * cols;
         if (move_len > 0) {
             std.mem.copyForwards(Cell, self.grid.cells.items[region_start .. region_start + move_len], self.grid.cells.items[region_start + n * cols .. region_end]);
@@ -698,10 +745,15 @@ pub const TerminalSession = struct {
     }
 
     fn scrollUp(self: *TerminalSession) void {
+        app_logger.logf("scroll up rows={d} cols={d}", .{ self.grid.rows, self.grid.cols });
+        app_logger.logStdout("scroll up rows={d} cols={d}", .{ self.grid.rows, self.grid.cols });
         const cols = @as(usize, self.grid.cols);
         const rows = @as(usize, self.grid.rows);
         if (rows == 0 or cols == 0) return;
 
+        if (self.isFullScrollRegion()) {
+            self.pushScrollbackRow(0);
+        }
         const total = rows * cols;
         const row_bytes = cols * @sizeOf(Cell);
         const src = @as([*]u8, @ptrCast(self.grid.cells.items.ptr));
@@ -727,6 +779,52 @@ pub const TerminalSession = struct {
 
     pub fn getCursorPos(self: *TerminalSession) CursorPos {
         return self.cursor;
+    }
+
+    pub fn gridRows(self: *TerminalSession) usize {
+        return @as(usize, self.grid.rows);
+    }
+
+    pub fn gridCols(self: *TerminalSession) usize {
+        return @as(usize, self.grid.cols);
+    }
+
+    pub fn scrollbackCount(self: *TerminalSession) usize {
+        return self.scrollback.count();
+    }
+
+    pub fn scrollbackRow(self: *TerminalSession, index: usize) ?[]const Cell {
+        return self.scrollback.rowSlice(index);
+    }
+
+    pub fn scrollOffset(self: *TerminalSession) usize {
+        return self.scrollback_offset;
+    }
+
+    pub fn setScrollOffset(self: *TerminalSession, offset: usize) void {
+        const max_offset = self.maxScrollOffset();
+        self.scrollback_offset = @min(offset, max_offset);
+        app_logger.logf("set scroll offset={d} max={d}", .{ self.scrollback_offset, max_offset });
+        app_logger.logStdout("set scroll offset={d} max={d}", .{ self.scrollback_offset, max_offset });
+    }
+
+    pub fn scrollBy(self: *TerminalSession, delta: isize) void {
+        if (delta == 0) return;
+        const max_offset = self.maxScrollOffset();
+        var offset: isize = @intCast(self.scrollback_offset);
+        offset += delta;
+        if (offset < 0) offset = 0;
+        const max_i: isize = @intCast(max_offset);
+        if (offset > max_i) offset = max_i;
+        self.scrollback_offset = @intCast(offset);
+        app_logger.logf("scroll by delta={d} offset={d} max={d}", .{ delta, self.scrollback_offset, max_offset });
+        app_logger.logStdout("scroll by delta={d} offset={d} max={d}", .{ delta, self.scrollback_offset, max_offset });
+    }
+
+    fn maxScrollOffset(self: *TerminalSession) usize {
+        const rows = @as(usize, self.grid.rows);
+        const total = self.scrollback.count() + rows;
+        return if (total > rows) total - rows else 0;
     }
 
     pub fn snapshot(self: *TerminalSession) TerminalSnapshot {
@@ -779,6 +877,8 @@ pub const Cell = struct {
     width: u8,
     attrs: CellAttrs,
 };
+
+const Scrollback = scrollback_mod.Scrollback(Cell);
 
 pub const CellAttrs = struct {
     fg: Color,
@@ -838,26 +938,27 @@ fn defaultCell() Cell {
 
 const default_fg = Color{ .r = 220, .g = 220, .b = 220 };
 const default_bg = Color{ .r = 24, .g = 25, .b = 33 };
+const default_scrollback_rows: usize = 1000;
 
 const ansiColors = [_]Color{
-    .{ .r = 0, .g = 0, .b = 0 },       // black
-    .{ .r = 205, .g = 49, .b = 49 },   // red
-    .{ .r = 13, .g = 188, .b = 121 },  // green
-    .{ .r = 229, .g = 229, .b = 16 },  // yellow
-    .{ .r = 36, .g = 114, .b = 200 },  // blue
-    .{ .r = 188, .g = 63, .b = 188 },  // magenta
-    .{ .r = 17, .g = 168, .b = 205 },  // cyan
+    .{ .r = 0, .g = 0, .b = 0 }, // black
+    .{ .r = 205, .g = 49, .b = 49 }, // red
+    .{ .r = 13, .g = 188, .b = 121 }, // green
+    .{ .r = 229, .g = 229, .b = 16 }, // yellow
+    .{ .r = 36, .g = 114, .b = 200 }, // blue
+    .{ .r = 188, .g = 63, .b = 188 }, // magenta
+    .{ .r = 17, .g = 168, .b = 205 }, // cyan
     .{ .r = 229, .g = 229, .b = 229 }, // white
 };
 
 const ansiBrightColors = [_]Color{
     .{ .r = 102, .g = 102, .b = 102 }, // bright black
-    .{ .r = 241, .g = 76, .b = 76 },   // bright red
-    .{ .r = 35, .g = 209, .b = 139 },  // bright green
-    .{ .r = 245, .g = 245, .b = 67 },  // bright yellow
-    .{ .r = 59, .g = 142, .b = 234 },  // bright blue
+    .{ .r = 241, .g = 76, .b = 76 }, // bright red
+    .{ .r = 35, .g = 209, .b = 139 }, // bright green
+    .{ .r = 245, .g = 245, .b = 67 }, // bright yellow
+    .{ .r = 59, .g = 142, .b = 234 }, // bright blue
     .{ .r = 214, .g = 112, .b = 214 }, // bright magenta
-    .{ .r = 41, .g = 184, .b = 219 },  // bright cyan
+    .{ .r = 41, .g = 184, .b = 219 }, // bright cyan
     .{ .r = 255, .g = 255, .b = 255 }, // bright white
 };
 
