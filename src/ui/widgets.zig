@@ -8,6 +8,8 @@ const Renderer = renderer_mod.Renderer;
 const Color = renderer_mod.Color;
 const Editor = editor_mod.Editor;
 const TerminalSession = terminal_mod.TerminalSession;
+const CursorPos = terminal_mod.CursorPos;
+const Cell = terminal_mod.Cell;
 
 const TruncResult = struct {
     drawn_width: f32,
@@ -223,7 +225,6 @@ pub const OptionsBar = struct {
             r.drawText(label, x, y, if (hovered) Color.fg else Color.comment);
             x += text_w + 16;
         }
-
     }
 };
 
@@ -324,7 +325,6 @@ pub const SideNav = struct {
 
             bottom_y -= icon_size + spacing;
         }
-
     }
 };
 
@@ -443,12 +443,11 @@ pub const EditorWidget = struct {
         }
 
         // Draw cursor
-        const cursor_x = x + self.gutter_width + 8 + @as(f32, @floatFromInt(self.editor.cursor.col)) * r.char_width;
-        const cursor_y = y + @as(f32, @floatFromInt(self.editor.cursor.line - start_line)) * r.char_height;
         if (self.editor.cursor.line >= start_line and self.editor.cursor.line < end_line) {
+            const cursor_x = x + self.gutter_width + 8 + @as(f32, @floatFromInt(self.editor.cursor.col)) * r.char_width;
+            const cursor_y = y + @as(f32, @floatFromInt(self.editor.cursor.line - start_line)) * r.char_height;
             r.drawCursor(cursor_x, cursor_y, .line);
         }
-
     }
 
     pub fn handleMouseClick(
@@ -550,37 +549,62 @@ pub const EditorWidget = struct {
 /// Terminal widget for drawing a terminal view
 pub const TerminalWidget = struct {
     session: *TerminalSession,
-    scroll_offset: usize,
 
     pub fn init(session: *TerminalSession) TerminalWidget {
         return .{
             .session = session,
-            .scroll_offset = 0,
         };
     }
 
     pub fn draw(self: *TerminalWidget, r: *Renderer, x: f32, y: f32, width: f32, height: f32) void {
         const snapshot = self.session.snapshot();
-        const cursor = snapshot.cursor;
         const rows = snapshot.rows;
         const cols = snapshot.cols;
-        const cells = snapshot.cells;
+        const history_len = self.session.scrollbackCount();
+        const total_lines = history_len + rows;
+        var scroll_offset = self.session.scrollOffset();
+        const max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
+        if (scroll_offset > max_scroll_offset) {
+            self.session.setScrollOffset(max_scroll_offset);
+            scroll_offset = max_scroll_offset;
+        }
+        const end_line = total_lines - scroll_offset;
+        const start_line = if (end_line > rows) end_line - rows else 0;
+        const draw_cursor = scroll_offset == 0;
+        const cursor = if (draw_cursor) snapshot.cursor else CursorPos{ .row = rows + 1, .col = cols + 1 };
 
         // No clipping - let icons overflow freely
         // (sidebar draws last to cover any left overflow, right overflow goes into empty space)
-        _ = width;
-        _ = height;
 
         const base_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(x)))));
         const base_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(y)))));
 
+        const scrollbar_w: f32 = 10;
+        const scrollbar_x = x + width - scrollbar_w;
+        const scrollbar_y = y;
+        const scrollbar_h = height;
+
+        const rowSlice = struct {
+            fn get(parent: *TerminalWidget, snapshot_cells: []const Cell, history: usize, cols_count: usize, start: usize, row: usize) []const Cell {
+                const global_row = start + row;
+                if (global_row < history) {
+                    if (parent.session.scrollbackRow(global_row)) |history_row| {
+                        return history_row;
+                    }
+                }
+                const grid_row = global_row - history;
+                const row_start = grid_row * cols_count;
+                return snapshot_cells[row_start .. row_start + cols_count];
+            }
+        }.get;
+
         // Pass 1: draw backgrounds so glyphs aren't overwritten by neighbor cells.
         var row: usize = 0;
         while (row < rows) : (row += 1) {
-            const row_start = row * cols;
+            const row_cells = rowSlice(self, snapshot.cells, history_len, cols, start_line, row);
             var col: usize = 0;
             while (col < cols) : (col += 1) {
-                const cell = cells[row_start + col];
+                const cell = row_cells[col];
 
                 const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
                 const cell_x = base_x + @as(f32, @floatFromInt(col)) * r.terminal_cell_width;
@@ -617,10 +641,10 @@ pub const TerminalWidget = struct {
         // Pass 2: draw glyphs
         var glyph_row: usize = 0;
         while (glyph_row < rows) : (glyph_row += 1) {
-            const row_start = glyph_row * cols;
+            const row_cells = rowSlice(self, snapshot.cells, history_len, cols, start_line, glyph_row);
             var col: usize = 0;
             while (col < cols) : (col += 1) {
-                const cell = cells[row_start + col];
+                const cell = row_cells[col];
 
                 const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
                 const cell_x = base_x + @as(f32, @floatFromInt(col)) * r.terminal_cell_width;
@@ -643,7 +667,7 @@ pub const TerminalWidget = struct {
                 const followed_by_space = blk: {
                     const next_col = col + cell_width_units;
                     if (next_col < cols) {
-                        const next_cell = cells[row_start + next_col];
+                        const next_cell = row_cells[next_col];
                         break :blk next_cell.codepoint == ' ' or next_cell.codepoint == 0;
                     }
                     break :blk true; // End of line counts as "followed by space"
@@ -668,43 +692,208 @@ pub const TerminalWidget = struct {
                 }
             }
         }
+
+        if (height > 0 and width > 0) {
+            const track_h = scrollbar_h;
+            const min_thumb_h: f32 = 18;
+            const thumb_h = if (total_lines > rows)
+                @max(min_thumb_h, track_h * (@as(f32, @floatFromInt(rows)) / @as(f32, @floatFromInt(total_lines))))
+            else
+                track_h;
+            const available = @max(@as(f32, 1), track_h - thumb_h);
+            const ratio = if (max_scroll_offset > 0)
+                @as(f32, @floatFromInt(max_scroll_offset - scroll_offset)) / @as(f32, @floatFromInt(max_scroll_offset))
+            else
+                1.0;
+            const thumb_y = scrollbar_y + available * ratio;
+
+            r.drawRect(
+                @intFromFloat(scrollbar_x),
+                @intFromFloat(scrollbar_y),
+                @intFromFloat(scrollbar_w),
+                @intFromFloat(scrollbar_h),
+                r.theme.line_number_bg,
+            );
+            r.drawRect(
+                @intFromFloat(scrollbar_x + 2),
+                @intFromFloat(thumb_y),
+                @intFromFloat(scrollbar_w - 4),
+                @intFromFloat(thumb_h),
+                r.theme.selection,
+            );
+
+            const chip_text = "SB";
+            const chip_w: f32 = 28;
+            const chip_h: f32 = 18;
+            const chip_x = scrollbar_x - chip_w - 6;
+            const chip_y = scrollbar_y + 6;
+            r.drawRect(
+                @intFromFloat(chip_x),
+                @intFromFloat(chip_y),
+                @intFromFloat(chip_w),
+                @intFromFloat(chip_h),
+                r.theme.selection,
+            );
+            r.drawRectOutline(
+                @intFromFloat(chip_x),
+                @intFromFloat(chip_y),
+                @intFromFloat(chip_w),
+                @intFromFloat(chip_h),
+                r.theme.foreground,
+            );
+            r.drawTextSized(
+                chip_text,
+                chip_x + 6,
+                chip_y + 2,
+                @max(10, r.font_size * 0.7),
+                r.theme.foreground,
+            );
+        }
     }
 
     /// Handle input, returns true if any input was processed
-    pub fn handleInput(self: *TerminalWidget, r: *Renderer) !bool {
+    pub fn handleInput(
+        self: *TerminalWidget,
+        r: *Renderer,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        allow_input: bool,
+        scroll_dragging: *bool,
+        scroll_grab_offset: *f32,
+    ) !bool {
         var handled = false;
+        const mouse = r.getMousePos();
+        const in_terminal = mouse.x >= x and mouse.x <= x + width and mouse.y >= y and mouse.y <= y + height;
+        const scrollbar_w: f32 = 10;
+        const scrollbar_x = x + width - scrollbar_w;
+        const scrollbar_y = y;
+        const scrollbar_h = height;
 
-        // Character input
-        while (r.getCharPressed()) |char| {
-            try self.session.sendChar(char, terminal_mod.VTERM_MOD_NONE);
+        const history_len = self.session.scrollbackCount();
+        const rows = self.session.gridRows();
+        const total_lines = history_len + rows;
+        const max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
+
+        if (allow_input) {
+            // Character input
+            while (r.getCharPressed()) |char| {
+                if (self.session.scrollOffset() > 0) {
+                    self.session.setScrollOffset(0);
+                }
+                try self.session.sendChar(char, terminal_mod.VTERM_MOD_NONE);
+                handled = true;
+            }
+
+            // Special keys
+            if (r.isKeyPressed(renderer_mod.KEY_ENTER)) {
+                if (self.session.scrollOffset() > 0) {
+                    self.session.setScrollOffset(0);
+                }
+                try self.session.sendKey(terminal_mod.VTERM_KEY_ENTER, terminal_mod.VTERM_MOD_NONE);
+                handled = true;
+            } else if (r.isKeyPressed(renderer_mod.KEY_BACKSPACE)) {
+                if (self.session.scrollOffset() > 0) {
+                    self.session.setScrollOffset(0);
+                }
+                try self.session.sendKey(terminal_mod.VTERM_KEY_BACKSPACE, terminal_mod.VTERM_MOD_NONE);
+                handled = true;
+            } else if (r.isKeyPressed(renderer_mod.KEY_TAB)) {
+                if (self.session.scrollOffset() > 0) {
+                    self.session.setScrollOffset(0);
+                }
+                try self.session.sendKey(terminal_mod.VTERM_KEY_TAB, terminal_mod.VTERM_MOD_NONE);
+                handled = true;
+            } else if (r.isKeyPressed(renderer_mod.KEY_ESCAPE)) {
+                if (self.session.scrollOffset() > 0) {
+                    self.session.setScrollOffset(0);
+                }
+                try self.session.sendKey(terminal_mod.VTERM_KEY_ESCAPE, terminal_mod.VTERM_MOD_NONE);
+                handled = true;
+            } else if (r.isKeyPressed(renderer_mod.KEY_UP)) {
+                if (self.session.scrollOffset() > 0) {
+                    self.session.setScrollOffset(0);
+                }
+                try self.session.sendKey(terminal_mod.VTERM_KEY_UP, terminal_mod.VTERM_MOD_NONE);
+                handled = true;
+            } else if (r.isKeyPressed(renderer_mod.KEY_DOWN)) {
+                if (self.session.scrollOffset() > 0) {
+                    self.session.setScrollOffset(0);
+                }
+                try self.session.sendKey(terminal_mod.VTERM_KEY_DOWN, terminal_mod.VTERM_MOD_NONE);
+                handled = true;
+            } else if (r.isKeyPressed(renderer_mod.KEY_LEFT)) {
+                if (self.session.scrollOffset() > 0) {
+                    self.session.setScrollOffset(0);
+                }
+                try self.session.sendKey(terminal_mod.VTERM_KEY_LEFT, terminal_mod.VTERM_MOD_NONE);
+                handled = true;
+            } else if (r.isKeyPressed(renderer_mod.KEY_RIGHT)) {
+                if (self.session.scrollOffset() > 0) {
+                    self.session.setScrollOffset(0);
+                }
+                try self.session.sendKey(terminal_mod.VTERM_KEY_RIGHT, terminal_mod.VTERM_MOD_NONE);
+                handled = true;
+            }
+        }
+
+        if (allow_input and r.isKeyPressed(renderer_mod.KEY_PAGE_UP)) {
+            self.session.scrollBy(@as(isize, @intCast(self.session.gridRows() / 2 + 1)));
+            handled = true;
+        } else if (allow_input and r.isKeyPressed(renderer_mod.KEY_PAGE_DOWN)) {
+            self.session.scrollBy(-@as(isize, @intCast(self.session.gridRows() / 2 + 1)));
+            handled = true;
+        } else if (allow_input and r.isKeyPressed(renderer_mod.KEY_HOME)) {
+            self.session.setScrollOffset(self.session.scrollbackCount());
+            handled = true;
+        } else if (allow_input and r.isKeyPressed(renderer_mod.KEY_END)) {
+            self.session.setScrollOffset(0);
             handled = true;
         }
 
-        // Special keys
-        if (r.isKeyPressed(renderer_mod.KEY_ENTER)) {
-            try self.session.sendKey(terminal_mod.VTERM_KEY_ENTER, terminal_mod.VTERM_MOD_NONE);
+        const wheel = r.getMouseWheelMove();
+        if (wheel != 0 and in_terminal) {
+            var lines: isize = @intFromFloat(wheel * 3);
+            if (lines == 0) {
+                lines = if (wheel > 0) 1 else -1;
+            }
+            self.session.scrollBy(lines);
             handled = true;
-        } else if (r.isKeyPressed(renderer_mod.KEY_BACKSPACE)) {
-            try self.session.sendKey(terminal_mod.VTERM_KEY_BACKSPACE, terminal_mod.VTERM_MOD_NONE);
-            handled = true;
-        } else if (r.isKeyPressed(renderer_mod.KEY_TAB)) {
-            try self.session.sendKey(terminal_mod.VTERM_KEY_TAB, terminal_mod.VTERM_MOD_NONE);
-            handled = true;
-        } else if (r.isKeyPressed(renderer_mod.KEY_ESCAPE)) {
-            try self.session.sendKey(terminal_mod.VTERM_KEY_ESCAPE, terminal_mod.VTERM_MOD_NONE);
-            handled = true;
-        } else if (r.isKeyPressed(renderer_mod.KEY_UP)) {
-            try self.session.sendKey(terminal_mod.VTERM_KEY_UP, terminal_mod.VTERM_MOD_NONE);
-            handled = true;
-        } else if (r.isKeyPressed(renderer_mod.KEY_DOWN)) {
-            try self.session.sendKey(terminal_mod.VTERM_KEY_DOWN, terminal_mod.VTERM_MOD_NONE);
-            handled = true;
-        } else if (r.isKeyPressed(renderer_mod.KEY_LEFT)) {
-            try self.session.sendKey(terminal_mod.VTERM_KEY_LEFT, terminal_mod.VTERM_MOD_NONE);
-            handled = true;
-        } else if (r.isKeyPressed(renderer_mod.KEY_RIGHT)) {
-            try self.session.sendKey(terminal_mod.VTERM_KEY_RIGHT, terminal_mod.VTERM_MOD_NONE);
-            handled = true;
+        }
+
+        if (scrollbar_h > 0 and width > 0 and height > 0 and max_scroll_offset > 0) {
+            const track_h = scrollbar_h;
+            const min_thumb_h: f32 = 18;
+            const thumb_h = @max(min_thumb_h, track_h * (@as(f32, @floatFromInt(rows)) / @as(f32, @floatFromInt(total_lines))));
+            const available = @max(@as(f32, 1), track_h - thumb_h);
+            const ratio = @as(f32, @floatFromInt(max_scroll_offset - self.session.scrollOffset())) / @as(f32, @floatFromInt(max_scroll_offset));
+            const thumb_y = scrollbar_y + available * ratio;
+            const thumb_x = scrollbar_x + 2;
+            const thumb_w = scrollbar_w - 4;
+
+            const over_thumb = mouse.x >= thumb_x and mouse.x <= thumb_x + thumb_w and mouse.y >= thumb_y and mouse.y <= thumb_y + thumb_h;
+            const over_track = mouse.x >= scrollbar_x and mouse.x <= scrollbar_x + scrollbar_w and mouse.y >= scrollbar_y and mouse.y <= scrollbar_y + scrollbar_h;
+
+            if (r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT) and (over_thumb or over_track)) {
+                scroll_dragging.* = true;
+                scroll_grab_offset.* = if (over_thumb) mouse.y - thumb_y else thumb_h / 2;
+                handled = true;
+            }
+
+            if (!r.isMouseButtonDown(renderer_mod.MOUSE_LEFT)) {
+                scroll_dragging.* = false;
+            }
+
+            if (scroll_dragging.*) {
+                const new_thumb_y = @min(@max(mouse.y - scroll_grab_offset.*, scrollbar_y), scrollbar_y + available);
+                const pos_ratio = (new_thumb_y - scrollbar_y) / available;
+                const new_offset = @as(usize, @intFromFloat(@round((1.0 - pos_ratio) * @as(f32, @floatFromInt(max_scroll_offset)))));
+                self.session.setScrollOffset(new_offset);
+                handled = true;
+            }
+        } else {
+            scroll_dragging.* = false;
         }
 
         return handled;

@@ -4,7 +4,8 @@ Date: 2026-01-16
 
 ## Summary of this session
 
-- Added SGR 256‑color and truecolor support (`38/48;5` and `38/48;2`) to the terminal attribute pipeline.
+- Added scrollback UI controls (scrollbar + drag) and fixed scroll region resize so scrollback captures lines.
+- Added a simple app logger to emit terminal scrollback debug logs to `zide.log` (and stderr).
 
 ## Key changes
 
@@ -41,8 +42,9 @@ Date: 2026-01-16
 
 - Terminal output renders from a real PTY with minimal VT parsing.
 - Colors (16/256/truecolor) and basic cursor/erase operations work.
+- Scrollback captures lines when the full screen scrolls; UI shows a scrollbar and supports drag/wheel.
 - Full SGR coverage and advanced CSI not yet supported.
-- Dirty‑row tracking and scrollback not implemented.
+- Dirty‑row tracking not implemented.
 
 ## Design docs
 
@@ -52,7 +54,7 @@ Date: 2026-01-16
 ## Next suggested steps (in order)
 
 1) Implement grid dirty‑row tracking to reduce redraw work.
-2) Start scrollback buffer (Phase 3), then integrate with parser.
+2) Add scrollback viewport polish (selection/copy, scrollback indicators).
 3) Expand CSI for modes and attributes, then refine performance.
 
 ## Workflow (Docs + Research)
