@@ -787,6 +787,11 @@ pub const Renderer = struct {
         return c.IsMouseButtonDown(button);
     }
 
+    pub fn isMouseButtonReleased(self: *Renderer, button: c_int) bool {
+        _ = self;
+        return c.IsMouseButtonReleased(button);
+    }
+
     pub fn getMouseWheelMove(self: *Renderer) f32 {
         _ = self;
         return c.GetMouseWheelMove();

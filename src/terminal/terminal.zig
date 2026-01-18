@@ -255,6 +255,13 @@ pub const TerminalSession = struct {
     saved_scrollback_offset: usize,
     selection: TerminalSelection,
     bracketed_paste: bool,
+    mouse_mode_x10: bool,
+    mouse_mode_button: bool,
+    mouse_mode_any: bool,
+    mouse_mode_sgr: bool,
+    mouse_last_row: usize,
+    mouse_last_col: usize,
+    mouse_last_buttons: u8,
     cell_width: u16,
     cell_height: u16,
     stream: stream_mod.Stream,
@@ -303,6 +310,13 @@ pub const TerminalSession = struct {
                 .end = .{ .row = 0, .col = 0 },
             },
             .bracketed_paste = false,
+            .mouse_mode_x10 = false,
+            .mouse_mode_button = false,
+            .mouse_mode_any = false,
+            .mouse_mode_sgr = false,
+            .mouse_last_row = 0,
+            .mouse_last_col = 0,
+            .mouse_last_buttons = 0,
             .cell_width = 0,
             .cell_height = 0,
             .stream = .{},
@@ -427,6 +441,106 @@ pub const TerminalSession = struct {
             const len = std.unicode.utf8Encode(@intCast(char), &buf) catch return;
             _ = try pty.write(buf[0..len]);
         }
+    }
+
+    fn mouseTrackingActive(self: *TerminalSession) bool {
+        return self.mouse_mode_x10 or self.mouse_mode_button or self.mouse_mode_any;
+    }
+
+    fn mouseMotionActive(self: *TerminalSession, buttons_down: bool) bool {
+        return self.mouse_mode_any or (self.mouse_mode_button and buttons_down);
+    }
+
+    fn mouseModBits(mod: Modifier) u8 {
+        var value: u8 = 0;
+        if ((mod & VTERM_MOD_SHIFT) != 0) value += 4;
+        if ((mod & VTERM_MOD_ALT) != 0) value += 8;
+        if ((mod & VTERM_MOD_CTRL) != 0) value += 16;
+        return value;
+    }
+
+    fn mouseButtonFromMask(mask: u8) MouseButton {
+        if ((mask & mouse_button_left_mask) != 0) return .left;
+        if ((mask & mouse_button_middle_mask) != 0) return .middle;
+        if ((mask & mouse_button_right_mask) != 0) return .right;
+        return .none;
+    }
+
+    fn mouseButtonCode(button: MouseButton) u8 {
+        return switch (button) {
+            .left => 0,
+            .middle => 1,
+            .right => 2,
+            .wheel_up => 64,
+            .wheel_down => 65,
+            .none => 3,
+        };
+    }
+
+    fn mouseEncodeCoordX10(value: usize) u8 {
+        const v = value + 1 + 32;
+        if (v > 255) return 0;
+        return @intCast(v);
+    }
+
+    pub fn reportMouseEvent(self: *TerminalSession, event: MouseEvent) !bool {
+        if (self.pty == null) return false;
+        if (!self.mouseTrackingActive()) return false;
+        if (self.grid.rows == 0 or self.grid.cols == 0) return false;
+
+        const row = @min(event.row, @as(usize, self.grid.rows - 1));
+        const col = @min(event.col, @as(usize, self.grid.cols - 1));
+        const buttons_down = event.buttons_down;
+        const buttons_active = buttons_down != 0;
+        const mod_bits = mouseModBits(event.mod);
+
+        if (event.kind == .move) {
+            if (!self.mouseMotionActive(buttons_active)) return false;
+            if (row == self.mouse_last_row and col == self.mouse_last_col and buttons_down == self.mouse_last_buttons) {
+                return false;
+            }
+        }
+
+        var button = event.button;
+        if (event.kind == .move) {
+            button = mouseButtonFromMask(buttons_down);
+        }
+        if (event.kind == .release and !self.mouse_mode_sgr) {
+            button = .none;
+        }
+
+        const base_code = mouseButtonCode(button);
+        const motion_code: u8 = if (event.kind == .move) 32 else 0;
+        const code = base_code + motion_code + mod_bits;
+
+        if (self.mouse_mode_sgr) {
+            var buf: [64]u8 = undefined;
+            const terminator: u8 = if (event.kind == .release) 'm' else 'M';
+            const seq = std.fmt.bufPrint(
+                &buf,
+                "\x1b[<{d};{d};{d}{c}",
+                .{ code, col + 1, row + 1, terminator },
+            ) catch return false;
+            if (self.pty) |*pty| {
+                _ = try pty.write(seq);
+            }
+        } else {
+            var buf: [6]u8 = undefined;
+            buf[0] = 0x1b;
+            buf[1] = '[';
+            buf[2] = 'M';
+            buf[3] = @intCast(32 + code);
+            buf[4] = mouseEncodeCoordX10(col);
+            buf[5] = mouseEncodeCoordX10(row);
+            if (self.pty) |*pty| {
+                _ = try pty.write(buf[0..6]);
+            }
+        }
+
+        self.mouse_last_row = row;
+        self.mouse_last_col = col;
+        self.mouse_last_buttons = buttons_down;
+        return true;
     }
 
     fn ctrlChar(char: u32) ?u8 {
@@ -907,6 +1021,10 @@ pub const TerminalSession = struct {
                             1048 => self.saveCursor(),
                             1049 => self.enterAltScreen(true, true),
                             2004 => self.bracketed_paste = true,
+                            1000 => self.mouse_mode_x10 = true,
+                            1002 => self.mouse_mode_button = true,
+                            1003 => self.mouse_mode_any = true,
+                            1006 => self.mouse_mode_sgr = true,
                             else => {},
                         }
                     }
@@ -925,6 +1043,10 @@ pub const TerminalSession = struct {
                             1048 => self.restoreCursor(),
                             1049 => self.exitAltScreen(true),
                             2004 => self.bracketed_paste = false,
+                            1000 => self.mouse_mode_x10 = false,
+                            1002 => self.mouse_mode_button = false,
+                            1003 => self.mouse_mode_any = false,
+                            1006 => self.mouse_mode_sgr = false,
                             else => {},
                         }
                     }
@@ -944,6 +1066,13 @@ pub const TerminalSession = struct {
         self.alt_scroll_bottom = if (self.grid.rows > 0) @as(usize, self.grid.rows - 1) else 0;
         self.key_mode_main = KeyModeStack.init();
         self.key_mode_alt = KeyModeStack.init();
+        self.mouse_mode_x10 = false;
+        self.mouse_mode_button = false;
+        self.mouse_mode_any = false;
+        self.mouse_mode_sgr = false;
+        self.mouse_last_row = 0;
+        self.mouse_last_col = 0;
+        self.mouse_last_buttons = 0;
         const default_cell = defaultCell();
         for (self.grid.cells.items) |*cell| {
             cell.* = default_cell;
@@ -1508,6 +1637,10 @@ pub const TerminalSession = struct {
         return self.bracketed_paste;
     }
 
+    pub fn mouseReportingEnabled(self: *TerminalSession) bool {
+        return self.mouseTrackingActive();
+    }
+
     pub fn isAlive(self: *TerminalSession) bool {
         _ = self;
         return false;
@@ -1621,6 +1754,31 @@ pub const Color = struct {
 pub const Key = u32;
 pub const Modifier = u8;
 
+pub const MouseButton = enum(u8) {
+    none = 0,
+    left = 1,
+    middle = 2,
+    right = 3,
+    wheel_up = 4,
+    wheel_down = 5,
+};
+
+pub const MouseEventKind = enum(u8) {
+    press,
+    release,
+    move,
+    wheel,
+};
+
+pub const MouseEvent = struct {
+    kind: MouseEventKind,
+    button: MouseButton,
+    row: usize,
+    col: usize,
+    mod: Modifier,
+    buttons_down: u8,
+};
+
 pub const VTERM_KEY_NONE: Key = 0;
 pub const VTERM_KEY_ENTER: Key = 1;
 pub const VTERM_KEY_TAB: Key = 2;
@@ -1673,6 +1831,9 @@ const default_scrollback_rows: usize = 1000;
 const key_mode_stack_max: usize = 32;
 const key_mode_disambiguate: u32 = 1;
 const key_mode_report_all_keys: u32 = 8;
+const mouse_button_left_mask: u8 = 1;
+const mouse_button_middle_mask: u8 = 2;
+const mouse_button_right_mask: u8 = 4;
 
 const ansiColors = [_]Color{
     .{ .r = 0, .g = 0, .b = 0 }, // black
