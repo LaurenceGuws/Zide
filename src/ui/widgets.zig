@@ -717,7 +717,7 @@ pub const TerminalWidget = struct {
                     const cell_y = base_y_local + @as(f32, @floatFromInt(row_idx)) * renderer.terminal_cell_height;
                     const cell_w = renderer.terminal_cell_width * @as(f32, @floatFromInt(cell_width_units));
 
-                    const fg = Color{
+                    var fg = Color{
                         .r = cell.attrs.fg.r,
                         .g = cell.attrs.fg.g,
                         .b = cell.attrs.fg.b,
@@ -727,6 +727,9 @@ pub const TerminalWidget = struct {
                         .g = cell.attrs.bg.g,
                         .b = cell.attrs.bg.b,
                     };
+                    if (cell.attrs.link_id != 0) {
+                        fg = renderer.theme.link;
+                    }
 
                     renderer.drawRect(
                         @intFromFloat(cell_x),
@@ -777,6 +780,7 @@ pub const TerminalWidget = struct {
                         if (cell.attrs.reverse) bg else fg,
                         if (cell.attrs.reverse) fg else bg,
                         cell.attrs.bold,
+                        cell.attrs.underline,
                         false,
                         followed_by_space,
                     );
@@ -899,7 +903,7 @@ pub const TerminalWidget = struct {
             const cell_x = base_x + @as(f32, @floatFromInt(cursor.col)) * r.terminal_cell_width;
             const cell_y = base_y + @as(f32, @floatFromInt(cursor.row)) * r.terminal_cell_height;
 
-            const fg = Color{
+            var fg = Color{
                 .r = cell.attrs.fg.r,
                 .g = cell.attrs.fg.g,
                 .b = cell.attrs.fg.b,
@@ -909,6 +913,9 @@ pub const TerminalWidget = struct {
                 .g = cell.attrs.bg.g,
                 .b = cell.attrs.bg.b,
             };
+            if (cell.attrs.link_id != 0) {
+                fg = r.theme.link;
+            }
 
             const followed_by_space = blk: {
                 const next_col = cursor.col + cell_width_units;
@@ -928,6 +935,7 @@ pub const TerminalWidget = struct {
                 if (cell.attrs.reverse) bg else fg,
                 if (cell.attrs.reverse) fg else bg,
                 cell.attrs.bold,
+                cell.attrs.underline,
                 true,
                 followed_by_space,
             );

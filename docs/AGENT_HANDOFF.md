@@ -31,6 +31,7 @@ Suggested next steps:
 - Added basic terminal selection with translucent highlight and Ctrl+Shift+C clipboard copy.
 - Selection auto-scrolls when dragging beyond the terminal viewport.
 - Added mouse reporting (X10/VT200/SGR) using CSI ?1000/?1002/?1003 and ?1006.
+- Added OSC 8 hyperlink rendering via link-colored, underlined cells tagged with hyperlink IDs.
 
 ## Key changes
 

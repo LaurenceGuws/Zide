@@ -273,6 +273,8 @@ pub const TerminalSession = struct {
     osc_clipboard_pending: bool,
     osc_hyperlink: std.ArrayList(u8),
     osc_hyperlink_active: bool,
+    hyperlink_table: std.ArrayList(Hyperlink),
+    current_hyperlink_id: u32,
     current_attrs: CellAttrs,
     scroll_top: usize,
     scroll_bottom: usize,
@@ -328,6 +330,8 @@ pub const TerminalSession = struct {
             .osc_clipboard_pending = false,
             .osc_hyperlink = .empty,
             .osc_hyperlink_active = false,
+            .hyperlink_table = .empty,
+            .current_hyperlink_id = 0,
             .current_attrs = defaultCell().attrs,
             .scroll_top = 0,
             .scroll_bottom = if (rows > 0) @as(usize, rows - 1) else 0,
@@ -355,6 +359,10 @@ pub const TerminalSession = struct {
         self.osc_buffer.deinit(self.allocator);
         self.osc_clipboard.deinit(self.allocator);
         self.osc_hyperlink.deinit(self.allocator);
+        for (self.hyperlink_table.items) |link| {
+            self.allocator.free(link.uri);
+        }
+        self.hyperlink_table.deinit(self.allocator);
         self.title_buffer.deinit(self.allocator);
         self.allocator.destroy(self);
     }
@@ -846,10 +854,28 @@ pub const TerminalSession = struct {
         self.osc_hyperlink.clearRetainingCapacity();
         if (uri.len == 0) {
             self.osc_hyperlink_active = false;
+            self.current_hyperlink_id = 0;
             return;
         }
         _ = self.osc_hyperlink.appendSlice(self.allocator, uri) catch return;
         self.osc_hyperlink_active = true;
+        self.current_hyperlink_id = self.appendHyperlink(uri) orelse 0;
+    }
+
+    fn appendHyperlink(self: *TerminalSession, uri: []const u8) ?u32 {
+        if (uri.len == 0) return 0;
+        if (self.hyperlink_table.items.len >= max_hyperlinks) {
+            for (self.hyperlink_table.items) |link| {
+                self.allocator.free(link.uri);
+            }
+            self.hyperlink_table.clearRetainingCapacity();
+        }
+        const duped = self.allocator.dupe(u8, uri) catch return null;
+        _ = self.hyperlink_table.append(self.allocator, .{ .uri = duped }) catch {
+            self.allocator.free(duped);
+            return null;
+        };
+        return @intCast(self.hyperlink_table.items.len);
     }
 
     fn parseOscClipboard(self: *TerminalSession, text: []const u8) void {
@@ -1073,6 +1099,7 @@ pub const TerminalSession = struct {
         self.mouse_last_row = 0;
         self.mouse_last_col = 0;
         self.mouse_last_buttons = 0;
+        self.current_hyperlink_id = 0;
         const default_cell = defaultCell();
         for (self.grid.cells.items) |*cell| {
             cell.* = default_cell;
@@ -1360,10 +1387,17 @@ pub const TerminalSession = struct {
         const col = self.cursor.col;
         const idx = row * cols + col;
         if (idx >= self.grid.cells.items.len) return;
+        var attrs = self.current_attrs;
+        if (self.osc_hyperlink_active and self.current_hyperlink_id > 0) {
+            attrs.link_id = self.current_hyperlink_id;
+            attrs.underline = true;
+        } else {
+            attrs.link_id = 0;
+        }
         self.grid.cells.items[idx] = Cell{
             .codepoint = codepoint,
             .width = 1,
-            .attrs = self.current_attrs,
+            .attrs = attrs,
         };
 
         self.cursor.col += 1;
@@ -1691,6 +1725,10 @@ const SavedCursor = struct {
     attrs: CellAttrs,
 };
 
+const Hyperlink = struct {
+    uri: []u8,
+};
+
 const KeyModeStack = struct {
     len: usize,
     items: [key_mode_stack_max]u32,
@@ -1743,6 +1781,8 @@ pub const CellAttrs = struct {
     bg: Color,
     bold: bool,
     reverse: bool,
+    underline: bool,
+    link_id: u32,
 };
 
 pub const Color = struct {
@@ -1821,6 +1861,8 @@ fn defaultCell() Cell {
             .bg = default_bg,
             .bold = false,
             .reverse = false,
+            .underline = false,
+            .link_id = 0,
         },
     };
 }
@@ -1834,6 +1876,7 @@ const key_mode_report_all_keys: u32 = 8;
 const mouse_button_left_mask: u8 = 1;
 const mouse_button_middle_mask: u8 = 2;
 const mouse_button_right_mask: u8 = 4;
+const max_hyperlinks: usize = 2048;
 
 const ansiColors = [_]Color{
     .{ .r = 0, .g = 0, .b = 0 }, // black

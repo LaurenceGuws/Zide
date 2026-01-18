@@ -63,6 +63,7 @@ pub const Theme = struct {
     foreground: Color = Color.fg,
     selection: Color = Color.selection,
     cursor: Color = Color.fg,
+    link: Color = Color.cyan,
     line_number: Color = Color.comment,
     line_number_bg: Color = Color{ .r = 33, .g = 34, .b = 44 },
     current_line: Color = Color{ .r = 50, .g = 52, .b = 66 },
@@ -538,6 +539,7 @@ pub const Renderer = struct {
         fg: Color,
         bg: Color,
         bold: bool,
+        underline: bool,
         is_cursor: bool,
         followed_by_space: bool,
     ) void {
@@ -561,6 +563,16 @@ pub const Renderer = struct {
                     .b = text_color.b,
                     .a = text_color.a,
                 });
+            }
+            if (underline) {
+                const underline_y = @intFromFloat(y + self.terminal_cell_height - 2);
+                self.drawRect(
+                    @intFromFloat(x),
+                    underline_y,
+                    @intFromFloat(self.terminal_cell_width),
+                    2,
+                    text_color,
+                );
             }
         }
     }
