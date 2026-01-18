@@ -2,6 +2,17 @@
 
 Date: 2026-01-17
 
+## Quick start for next agent
+
+- Repo: `/home/home/personal/zide`
+- Recent commits: `8e735fd` (keyboard input/kitty protocol), `b484b6b` (OSC 52/8), `e932292` (alt screen + cursor save).
+- Current focus: terminal input correctness + mouse reporting + OSC 8 rendering.
+
+Suggested next steps:
+1) Add mouse reporting (X10/VT200/SGR).
+2) Decide how to render OSC 8 hyperlinks in cell attrs/renderer.
+3) Add minimal manual tests for CSI‑u keyboard behavior.
+
 ## Summary of this session
 
 - Cached terminal rendering into a render texture and only re-rendered dirty rows into it.
