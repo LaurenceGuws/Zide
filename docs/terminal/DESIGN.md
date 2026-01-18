@@ -10,6 +10,7 @@ Purpose: this document tracks terminal architecture decisions and implementation
 - Shell output renders with basic cursor movement, erase ops, and SGR (16/256/truecolor).
 - Scrollback ring buffer captures full‑screen scrolls and is exposed via a scrollbar + offset, plus a scrollback indicator.
 - Alternate screen switching and cursor save/restore are supported; alt screen disables scrollback.
+- OSC parsing now handles clipboard (OSC 52) and hyperlinks (OSC 8) as internal state.
 - Dirty-row tracking and render-texture caching are live; full VT coverage still missing.
 
 ## Decisions & Progress by Layer
@@ -163,16 +164,22 @@ Progress:
 - Added alternate screen support (DECSET ?47/?1047/?1049) with per-screen cursor state.
 - Save/restore cursor via ESC 7/8 and CSI s/u, plus DECSET ?1048.
 - Newline now scrolls within the active scroll region when the cursor hits its bottom edge.
+- OSC 52 clipboard payloads decode into a pending clipboard buffer for the UI.
+- OSC 8 hyperlinks are parsed and stored as active/inactive state (no rendering yet).
 
 Decision:
 - Track an alternate grid and per-screen cursor/scroll region state; swap on DECSET/DECRST.
 - Treat alt screen as no-scrollback and clear on ?1047/?1049 per xterm/VTE behavior.
 - Keep save/restore cursor per screen, including attributes.
+- Decode OSC 52 payloads (base64) with size caps and defer clipboard integration to the UI layer.
+- Track OSC 8 hyperlink state without rendering until cell attributes support links.
 
 Why:
 - Matches common terminal behavior without forcing a full screen model rewrite.
 - Keeps scrollback semantics clean and prevents history pollution while in alt screen.
 - Aligns cursor save/restore with recorded reference behavior (ESC 7/8 + ?1049 flows).
+- Avoids emitting OSC 52 text while keeping clipboard ownership in the UI.
+- Keeps hyperlink parsing in place for later rendering without blocking VT progress.
 
 Research notes:
 - Alacritty saved-cursor fixtures exercise ESC 7/8 and ?1049 enter/exit behavior.

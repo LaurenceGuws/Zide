@@ -1,0 +1,14 @@
+# Copy this file in the Zide terminal with: cat osc_test.txt
+# It will emit OSC 52 clipboard and OSC 8 hyperlink sequences.
+
+# OSC 52: set clipboard to "hello from osc52"
+printf '\033]52;c;%s\007' "$(printf 'hello from osc52' | base64)"
+
+# OSC 52: set clipboard to two lines
+printf '\033]52;c;%s\007' "$(printf 'line1\nline2' | base64)"
+
+# OSC 52: ignored target (should do nothing)
+printf '\033]52;z;%s\007' "$(printf 'ignored' | base64)"
+
+# OSC 8 hyperlink (parsing only, no rendering yet)
+printf '\033]8;;https://example.com\007click me\033]8;;\007\n'

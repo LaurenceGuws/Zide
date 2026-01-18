@@ -1029,6 +1029,12 @@ pub const TerminalWidget = struct {
         const total_lines = history_len + rows;
         const max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
 
+        if (self.session.takeOscClipboard()) |clip| {
+            const cstr: [*:0]const u8 = @ptrCast(clip.ptr);
+            r.setClipboardText(cstr);
+            handled = true;
+        }
+
         if (allow_input) {
             const ctrl = r.isKeyDown(renderer_mod.KEY_LEFT_CONTROL) or r.isKeyDown(renderer_mod.KEY_RIGHT_CONTROL);
             const shift = r.isKeyDown(renderer_mod.KEY_LEFT_SHIFT) or r.isKeyDown(renderer_mod.KEY_RIGHT_SHIFT);
