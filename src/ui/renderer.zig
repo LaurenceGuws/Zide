@@ -179,6 +179,7 @@ pub const Renderer = struct {
             renderer.icon_char_height = renderer.char_height;
         }
         renderer.terminal_font = try TerminalFont.init(allocator, FONT_PATH, font_size);
+        renderer.terminal_font.setAtlasFilterPoint();
         renderer.terminal_cell_width = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(renderer.terminal_font.cell_width)))));
         renderer.terminal_cell_height = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(renderer.terminal_font.line_height)))));
 

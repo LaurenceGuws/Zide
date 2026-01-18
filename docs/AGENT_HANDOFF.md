@@ -35,6 +35,7 @@ Suggested next steps:
 - Added OSC 8 hyperlink rendering via link-colored, underlined cells tagged with hyperlink IDs.
 - Added `docs/terminal/rendering_todo.yaml` to track text rendering quality upgrades.
 - Snapped terminal cell metrics and per-cell draw positions to integer pixels to reduce box drawing striping.
+- Set terminal glyph atlas sampling to point filtering to preserve pixel edges.
 
 ## Key changes
 

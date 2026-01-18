@@ -116,11 +116,12 @@ Research notes:
 Progress:
 - Terminal rendering uses dedicated font cache and box‑drawing fast path.
 - R1: snapped terminal cell metrics and draw positions to integer pixels.
+- R2: terminal glyph atlas uses point filtering to avoid blur.
 
 Decision:
 - Keep terminal cell width/height as integer pixel metrics and snap cell origins and glyph draws to integer pixels.
 - Maintain integer math for per-cell positioning (base + col/row * cell size) to avoid float drift.
-- Continue using point filtering for terminal glyph atlases.
+- Use point filtering for terminal glyph atlases to preserve pixel edges.
 
 Why:
 - Integer cell metrics prevent box drawing striping/gaps and keep glyph baselines consistent across DPI/scales.

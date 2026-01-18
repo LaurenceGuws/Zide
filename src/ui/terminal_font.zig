@@ -180,6 +180,10 @@ pub const TerminalFont = struct {
         _ = c.FT_Done_FreeType(self.ft_library);
     }
 
+    pub fn setAtlasFilterPoint(self: *TerminalFont) void {
+        c.SetTextureFilter(self.texture, c.TEXTURE_FILTER_POINT);
+    }
+
     pub fn drawGlyph(self: *TerminalFont, codepoint: u32, x: f32, y: f32, cell_width: f32, cell_height: f32, followed_by_space: bool, color: Rgba) void {
         if (codepoint == 0) return;
         const glyph = self.getGlyph(codepoint) catch return;
