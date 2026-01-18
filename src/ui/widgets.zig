@@ -826,7 +826,7 @@ pub const TerminalWidget = struct {
             const texture_w = cell_w_i * @as(i32, @intCast(cols)) + padding_x_i;
             const texture_h = @as(i32, @intFromFloat(@round(r.terminal_cell_height * @as(f32, @floatFromInt(rows)))));
             const recreated = r.ensureTerminalTexture(texture_w, texture_h);
-            const needs_full = recreated or snapshot.dirty == .full or (snapshot.dirty != .none and scroll_offset > 0);
+            const needs_full = recreated or snapshot.alt_active or snapshot.dirty == .full or (snapshot.dirty != .none and scroll_offset > 0);
             const needs_partial = snapshot.dirty == .partial and !needs_full and scroll_offset == 0;
 
             if ((needs_full or needs_partial) and r.beginTerminalTexture()) {
@@ -845,21 +845,15 @@ pub const TerminalWidget = struct {
                     var row: usize = 0;
                     while (row < rows) : (row += 1) {
                         if (row < snapshot.dirty_rows.len and snapshot.dirty_rows[row]) {
-                            var col_start: usize = 0;
-                            var col_end: usize = cols - 1;
-                            if (row < snapshot.dirty_cols_start.len and row < snapshot.dirty_cols_end.len) {
-                                col_start = @intCast(snapshot.dirty_cols_start[row]);
-                                col_end = @intCast(snapshot.dirty_cols_end[row]);
-                                if (col_start >= cols) col_start = 0;
-                                if (col_end >= cols) col_end = cols - 1;
-                                if (col_end < col_start) {
-                                    col_start = 0;
-                                    col_end = cols - 1;
-                                }
-                            }
-                            const draw_start = if (col_start > 0) col_start - 1 else 0;
-                            const draw_end = @min(cols - 1, col_end + 1);
+                            const draw_start: usize = 0;
+                            const draw_end: usize = cols - 1;
                             drawRowRange(self, r, snapshot.cells, history_len, cols, start_line, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                            if (row > 0) {
+                                drawRowRange(self, r, snapshot.cells, history_len, cols, start_line, row - 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                            }
+                            if (row + 1 < rows) {
+                                drawRowRange(self, r, snapshot.cells, history_len, cols, start_line, row + 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                            }
                         }
                     }
                 }
