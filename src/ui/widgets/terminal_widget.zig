@@ -555,6 +555,39 @@ pub const TerminalWidget = struct {
         if (allow_input) {
             var skip_chars = false;
             const allow_terminal_key = !(builtin.target.os.tag == .macos and super);
+            const clearLiveState = struct {
+                fn apply(widget: *TerminalWidget) void {
+                    if (widget.session.selectionState() != null) {
+                        widget.session.clearSelection();
+                    }
+                    if (widget.session.scrollOffset() > 0) {
+                        widget.session.setScrollOffset(0);
+                    }
+                }
+            }.apply;
+
+            if (ctrl and shift and r.isKeyPressed(renderer_mod.KEY_V) and in_terminal) {
+                if (r.getClipboardText()) |clip| {
+                    clearLiveState(self);
+                    if (self.session.bracketedPasteEnabled()) {
+                        try self.session.sendText("\x1b[200~");
+                        var filtered = std.ArrayList(u8).empty;
+                        defer filtered.deinit(self.session.allocator);
+                        for (clip) |b| {
+                            if (b == 0x1b or b == 0x03) continue;
+                            try filtered.append(self.session.allocator, b);
+                        }
+                        if (filtered.items.len > 0) {
+                            try self.session.sendText(filtered.items);
+                        }
+                        try self.session.sendText("\x1b[201~");
+                    } else {
+                        try self.session.sendText(clip);
+                    }
+                    handled = true;
+                    skip_chars = true;
+                }
+            }
 
             if (ctrl and shift and r.isKeyPressed(renderer_mod.KEY_C)) {
                 if (self.session.selectionState()) |selection| {
@@ -625,55 +658,142 @@ pub const TerminalWidget = struct {
                 }
             }
 
-            if (allow_terminal_key) {
-                if (r.isKeyPressed(renderer_mod.KEY_ENTER)) {
-                    try self.session.sendKey(terminal_mod.VTERM_KEY_ENTER, mod);
-                    handled = true;
-                } else if (r.isKeyRepeated(renderer_mod.KEY_BACKSPACE)) {
-                    try self.session.sendKey(terminal_mod.VTERM_KEY_BACKSPACE, mod);
-                    handled = true;
-                } else if (r.isKeyPressed(renderer_mod.KEY_TAB)) {
-                    try self.session.sendKey(terminal_mod.VTERM_KEY_TAB, mod);
-                    handled = true;
-                } else if (r.isKeyPressed(renderer_mod.KEY_ESCAPE)) {
-                    try self.session.sendKey(terminal_mod.VTERM_KEY_ESCAPE, mod);
-                    handled = true;
-                } else if (r.isKeyRepeated(renderer_mod.KEY_UP)) {
-                    try self.session.sendKey(terminal_mod.VTERM_KEY_UP, mod);
-                    handled = true;
-                } else if (r.isKeyRepeated(renderer_mod.KEY_DOWN)) {
-                    try self.session.sendKey(terminal_mod.VTERM_KEY_DOWN, mod);
-                    handled = true;
-                } else if (r.isKeyRepeated(renderer_mod.KEY_LEFT)) {
-                    try self.session.sendKey(terminal_mod.VTERM_KEY_LEFT, mod);
-                    handled = true;
-                } else if (r.isKeyRepeated(renderer_mod.KEY_RIGHT)) {
-                    try self.session.sendKey(terminal_mod.VTERM_KEY_RIGHT, mod);
-                    handled = true;
-                } else if (r.isKeyRepeated(renderer_mod.KEY_HOME)) {
-                    try self.session.sendKey(terminal_mod.VTERM_KEY_HOME, mod);
-                    handled = true;
-                } else if (r.isKeyRepeated(renderer_mod.KEY_END)) {
-                    try self.session.sendKey(terminal_mod.VTERM_KEY_END, mod);
-                    handled = true;
-                } else if (r.isKeyRepeated(renderer_mod.KEY_PAGE_UP)) {
-                    try self.session.sendKey(terminal_mod.VTERM_KEY_PAGEUP, mod);
-                    handled = true;
-                } else if (r.isKeyRepeated(renderer_mod.KEY_PAGE_DOWN)) {
-                    try self.session.sendKey(terminal_mod.VTERM_KEY_PAGEDOWN, mod);
-                    handled = true;
-                } else if (r.isKeyPressed(renderer_mod.KEY_INSERT)) {
-                    try self.session.sendKey(terminal_mod.VTERM_KEY_INS, mod);
-                    handled = true;
-                } else if (r.isKeyRepeated(renderer_mod.KEY_DELETE)) {
-                    try self.session.sendKey(terminal_mod.VTERM_KEY_DEL, mod);
-                    handled = true;
+            if (!skip_chars and allow_terminal_key) {
+                while (r.getKeyPressed()) |key| {
+                    const handled_key = blk: {
+                        switch (key) {
+                            renderer_mod.KEY_ENTER => {
+                                try self.session.sendKey(terminal_mod.VTERM_KEY_ENTER, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_BACKSPACE => {
+                                try self.session.sendKey(terminal_mod.VTERM_KEY_BACKSPACE, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_TAB => {
+                                try self.session.sendKey(terminal_mod.VTERM_KEY_TAB, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_ESCAPE => {
+                                try self.session.sendKey(terminal_mod.VTERM_KEY_ESCAPE, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_UP => {
+                                try self.session.sendKey(terminal_mod.VTERM_KEY_UP, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_DOWN => {
+                                try self.session.sendKey(terminal_mod.VTERM_KEY_DOWN, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_LEFT => {
+                                try self.session.sendKey(terminal_mod.VTERM_KEY_LEFT, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_RIGHT => {
+                                try self.session.sendKey(terminal_mod.VTERM_KEY_RIGHT, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_HOME => {
+                                try self.session.sendKey(terminal_mod.VTERM_KEY_HOME, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_END => {
+                                try self.session.sendKey(terminal_mod.VTERM_KEY_END, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_PAGE_UP => {
+                                try self.session.sendKey(terminal_mod.VTERM_KEY_PAGEUP, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_PAGE_DOWN => {
+                                try self.session.sendKey(terminal_mod.VTERM_KEY_PAGEDOWN, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_INSERT => {
+                                try self.session.sendKey(terminal_mod.VTERM_KEY_INS, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_DELETE => {
+                                try self.session.sendKey(terminal_mod.VTERM_KEY_DEL, mod);
+                                break :blk true;
+                            },
+                            else => break :blk false,
+                        }
+                    };
+
+                    if (handled_key) {
+                        clearLiveState(self);
+                        handled = true;
+                        continue;
+                    }
+
+                    if (ctrl or alt or shift) {
+                        var maybe_char: u32 = 0;
+                        switch (key) {
+                            renderer_mod.KEY_A => maybe_char = if (shift) 'A' else 'a',
+                            renderer_mod.KEY_B => maybe_char = if (shift) 'B' else 'b',
+                            renderer_mod.KEY_C => maybe_char = if (shift) 'C' else 'c',
+                            renderer_mod.KEY_D => maybe_char = if (shift) 'D' else 'd',
+                            renderer_mod.KEY_E => maybe_char = if (shift) 'E' else 'e',
+                            renderer_mod.KEY_F => maybe_char = if (shift) 'F' else 'f',
+                            renderer_mod.KEY_G => maybe_char = if (shift) 'G' else 'g',
+                            renderer_mod.KEY_H => maybe_char = if (shift) 'H' else 'h',
+                            renderer_mod.KEY_I => maybe_char = if (shift) 'I' else 'i',
+                            renderer_mod.KEY_J => maybe_char = if (shift) 'J' else 'j',
+                            renderer_mod.KEY_K => maybe_char = if (shift) 'K' else 'k',
+                            renderer_mod.KEY_L => maybe_char = if (shift) 'L' else 'l',
+                            renderer_mod.KEY_M => maybe_char = if (shift) 'M' else 'm',
+                            renderer_mod.KEY_N => maybe_char = if (shift) 'N' else 'n',
+                            renderer_mod.KEY_O => maybe_char = if (shift) 'O' else 'o',
+                            renderer_mod.KEY_P => maybe_char = if (shift) 'P' else 'p',
+                            renderer_mod.KEY_Q => maybe_char = if (shift) 'Q' else 'q',
+                            renderer_mod.KEY_R => maybe_char = if (shift) 'R' else 'r',
+                            renderer_mod.KEY_S => maybe_char = if (shift) 'S' else 's',
+                            renderer_mod.KEY_T => maybe_char = if (shift) 'T' else 't',
+                            renderer_mod.KEY_U => maybe_char = if (shift) 'U' else 'u',
+                            renderer_mod.KEY_V => maybe_char = if (shift) 'V' else 'v',
+                            renderer_mod.KEY_W => maybe_char = if (shift) 'W' else 'w',
+                            renderer_mod.KEY_X => maybe_char = if (shift) 'X' else 'x',
+                            renderer_mod.KEY_Y => maybe_char = if (shift) 'Y' else 'y',
+                            renderer_mod.KEY_Z => maybe_char = if (shift) 'Z' else 'z',
+                            renderer_mod.KEY_ZERO => maybe_char = if (shift) ')' else '0',
+                            renderer_mod.KEY_ONE => maybe_char = if (shift) '!' else '1',
+                            renderer_mod.KEY_TWO => maybe_char = if (shift) '@' else '2',
+                            renderer_mod.KEY_THREE => maybe_char = if (shift) '#' else '3',
+                            renderer_mod.KEY_FOUR => maybe_char = if (shift) '$' else '4',
+                            renderer_mod.KEY_FIVE => maybe_char = if (shift) '%' else '5',
+                            renderer_mod.KEY_SIX => maybe_char = if (shift) '^' else '6',
+                            renderer_mod.KEY_SEVEN => maybe_char = if (shift) '&' else '7',
+                            renderer_mod.KEY_EIGHT => maybe_char = if (shift) '*' else '8',
+                            renderer_mod.KEY_NINE => maybe_char = if (shift) '(' else '9',
+                            renderer_mod.KEY_SPACE => maybe_char = ' ',
+                            renderer_mod.KEY_MINUS => maybe_char = if (shift) '_' else '-',
+                            renderer_mod.KEY_EQUAL => maybe_char = if (shift) '+' else '=',
+                            renderer_mod.KEY_LEFT_BRACKET => maybe_char = if (shift) '{' else '[',
+                            renderer_mod.KEY_RIGHT_BRACKET => maybe_char = if (shift) '}' else ']',
+                            renderer_mod.KEY_BACKSLASH => maybe_char = if (shift) '|' else '\\',
+                            renderer_mod.KEY_SEMICOLON => maybe_char = if (shift) ':' else ';',
+                            renderer_mod.KEY_APOSTROPHE => maybe_char = if (shift) '"' else '\'',
+                            renderer_mod.KEY_GRAVE => maybe_char = if (shift) '~' else '`',
+                            renderer_mod.KEY_COMMA => maybe_char = if (shift) '<' else ',',
+                            renderer_mod.KEY_PERIOD => maybe_char = if (shift) '>' else '.',
+                            renderer_mod.KEY_SLASH => maybe_char = if (shift) '?' else '/',
+                            else => {},
+                        }
+                        if (maybe_char != 0) {
+                            clearLiveState(self);
+                            try self.session.sendChar(maybe_char, mod);
+                            handled = true;
+                        }
+                    }
                 }
             }
 
             if (!skip_chars) {
                 while (r.getCharPressed()) |char| {
                     if (char >= 32) {
+                        clearLiveState(self);
                         try self.session.sendChar(char, mod);
                         handled = true;
                     }
@@ -733,6 +853,18 @@ pub const TerminalWidget = struct {
             }
 
             if (!mouse_reporting and in_terminal) {
+                if (r.isMouseButtonPressed(renderer_mod.MOUSE_MIDDLE)) {
+                    if (r.getClipboardText()) |clip| {
+                        if (self.session.bracketedPasteEnabled()) {
+                            try self.session.sendText("\x1b[200~");
+                            try self.session.sendText(clip);
+                            try self.session.sendText("\x1b[201~");
+                        } else {
+                            try self.session.sendText(clip);
+                        }
+                        handled = true;
+                    }
+                }
                 if (wheel != 0) {
                     const delta: isize = if (wheel > 0) 3 else -3;
                     self.session.scrollBy(delta);
