@@ -119,6 +119,33 @@ pub const Parser = struct {
         }
     }
 
+    pub fn handleSlice(self: *Parser, session: anytype, bytes: []const u8) void {
+        var i: usize = 0;
+        while (i < bytes.len) {
+            if (self.osc_state != .idle) {
+                self.handleOscByte(session, bytes[i]);
+                i += 1;
+                continue;
+            }
+
+            if (self.esc_state == .ground and self.stream.decoder.needed == 0) {
+                const start = i;
+                while (i < bytes.len) {
+                    const b = bytes[i];
+                    if (b < 0x20 or b == 0x7f or b == 0x1b or b >= 0x80) break;
+                    i += 1;
+                }
+                if (i > start) {
+                    session.handleAsciiSlice(bytes[start..i]);
+                    continue;
+                }
+            }
+
+            self.handleByte(session, bytes[i]);
+            i += 1;
+        }
+    }
+
     fn handleOscByte(self: *Parser, session: anytype, byte: u8) void {
         switch (self.osc_state) {
             .idle => return,
@@ -178,4 +205,3 @@ pub const CharsetTarget = enum {
     g0,
     g1,
 };
-

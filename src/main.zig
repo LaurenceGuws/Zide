@@ -506,7 +506,7 @@ const AppState = struct {
 
             // Only poll PTY if there's data available (non-blocking check)
             // Skip polling when in deep idle to save CPU
-            if (self.idle_frames < 60 and term.hasData()) {
+            if (term.hasData()) {
                 try term.poll();
                 self.needs_redraw = true;
             }

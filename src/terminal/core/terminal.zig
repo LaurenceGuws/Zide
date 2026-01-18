@@ -17,6 +17,7 @@ const Screen = screen_mod.Screen;
 const Dirty = screen_mod.Dirty;
 const Damage = screen_mod.Damage;
 const KeyModeStack = screen_mod.KeyModeStack;
+const builtin = @import("builtin");
 
 pub const TerminalSnapshot = struct {
     rows: usize,
@@ -29,6 +30,7 @@ pub const TerminalSnapshot = struct {
     dirty: Dirty,
     damage: Damage,
     alt_active: bool,
+    generation: u64,
 
     pub fn rowSlice(self: *const TerminalSnapshot, row: usize) []const Cell {
         const start = row * self.cols;
@@ -66,6 +68,15 @@ pub const TerminalSession = struct {
     osc_hyperlink_active: bool,
     hyperlink_table: std.ArrayList(Hyperlink),
     current_hyperlink_id: u32,
+    read_thread: ?std.Thread,
+    read_thread_running: std.atomic.Value(bool),
+    state_mutex: std.Thread.Mutex,
+    output_pending: std.atomic.Value(bool),
+    output_generation: std.atomic.Value(u64),
+    view_cells: std.ArrayList(Cell),
+    view_dirty_rows: std.ArrayList(bool),
+    view_dirty_cols_start: std.ArrayList(u16),
+    view_dirty_cols_end: std.ArrayList(u16),
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !*TerminalSession {
         const session = try allocator.create(TerminalSession);
@@ -96,6 +107,15 @@ pub const TerminalSession = struct {
             .osc_hyperlink_active = false,
             .hyperlink_table = .empty,
             .current_hyperlink_id = 0,
+            .read_thread = null,
+            .read_thread_running = std.atomic.Value(bool).init(false),
+            .state_mutex = .{},
+            .output_pending = std.atomic.Value(bool).init(false),
+            .output_generation = std.atomic.Value(u64).init(0),
+            .view_cells = .empty,
+            .view_dirty_rows = .empty,
+            .view_dirty_cols_start = .empty,
+            .view_dirty_cols_end = .empty,
         };
         return session;
     }
@@ -145,9 +165,18 @@ pub const TerminalSession = struct {
     }
 
     pub fn deinit(self: *TerminalSession) void {
+        if (self.read_thread) |thread| {
+            self.read_thread_running.store(false, .release);
+            thread.join();
+            self.read_thread = null;
+        }
         if (self.pty) |*pty| {
             pty.deinit();
         }
+        self.view_cells.deinit(self.allocator);
+        self.view_dirty_rows.deinit(self.allocator);
+        self.view_dirty_cols_start.deinit(self.allocator);
+        self.view_dirty_cols_end.deinit(self.allocator);
         self.history.deinit();
         self.primary.deinit();
         self.alt.deinit();
@@ -171,19 +200,35 @@ pub const TerminalSession = struct {
         };
         const pty = try Pty.init(self.allocator, size, shell);
         self.pty = pty;
+        if (builtin.os.tag == .linux or builtin.os.tag == .macos) {
+            self.read_thread_running.store(true, .release);
+            self.read_thread = try std.Thread.spawn(.{}, readThreadMain, .{self});
+        }
     }
 
     pub fn poll(self: *TerminalSession) !void {
+        if (self.read_thread != null) {
+            if (self.output_pending.swap(false, .acq_rel)) {
+                self.state_mutex.lock();
+                self.clearSelection();
+                self.state_mutex.unlock();
+            }
+            return;
+        }
+
         if (self.pty) |*pty| {
-            var buf: [4096]u8 = undefined;
+            var buf: [262144]u8 = undefined;
             var had_data = false;
+            var processed: usize = 0;
+            const max_bytes_per_poll: usize = 256 * 1024;
             while (true) {
                 const n = try pty.read(&buf);
                 if (n == null or n.? == 0) break;
                 had_data = true;
-                for (buf[0..n.?]) |b| {
-                    self.parser.handleByte(self, b);
-                }
+                processed += n.?;
+                self.parser.handleSlice(self, buf[0..n.?]);
+                _ = self.output_generation.fetchAdd(1, .acq_rel);
+                if (processed >= max_bytes_per_poll) break;
             }
             if (had_data) {
                 self.clearSelection();
@@ -192,10 +237,25 @@ pub const TerminalSession = struct {
     }
 
     pub fn hasData(self: *TerminalSession) bool {
+        if (self.read_thread != null) {
+            return self.output_pending.load(.acquire);
+        }
         if (self.pty) |*pty| {
             return pty.hasData();
         }
         return false;
+    }
+
+    pub fn lock(self: *TerminalSession) void {
+        self.state_mutex.lock();
+    }
+
+    pub fn unlock(self: *TerminalSession) void {
+        self.state_mutex.unlock();
+    }
+
+    pub fn currentGeneration(self: *TerminalSession) u64 {
+        return self.output_generation.load(.acquire);
     }
 
     pub fn sendKey(self: *TerminalSession, key: Key, mod: Modifier) !void {
@@ -935,6 +995,92 @@ pub const TerminalSession = struct {
         screen.grid.markDirtyRange(row, row, col, col);
     }
 
+    pub fn handleAsciiSlice(self: *TerminalSession, bytes: []const u8) void {
+        if (bytes.len == 0) return;
+        const screen = self.activeScreen();
+        const rows = @as(usize, screen.grid.rows);
+        const cols = @as(usize, screen.grid.cols);
+        if (rows == 0 or cols == 0) return;
+        if (screen.cursor.row >= rows) return;
+
+        var attrs = screen.current_attrs;
+        if (self.osc_hyperlink_active and self.current_hyperlink_id > 0) {
+            attrs.link_id = self.current_hyperlink_id;
+            attrs.underline = true;
+        } else {
+            attrs.link_id = 0;
+        }
+        const use_dec_special = self.parser.gl_charset == .dec_special;
+
+        var i: usize = 0;
+        while (i < bytes.len) {
+            if (screen.wrap_next) {
+                self.newline();
+                screen.wrap_next = false;
+                if (screen.cursor.row >= rows) break;
+            }
+            if (screen.cursor.col >= cols or screen.cursor.row >= rows) break;
+
+            const row = screen.cursor.row;
+            const col = screen.cursor.col;
+            const remaining_cols = cols - col;
+            const run_len = @min(remaining_cols, bytes.len - i);
+            const row_start = row * cols + col;
+            if (use_dec_special) {
+                var j: usize = 0;
+                while (j < run_len) {
+                    const b = bytes[i + j];
+                    var same_len: usize = 1;
+                    while (j + same_len < run_len and bytes[i + j + same_len] == b) : (same_len += 1) {}
+                    const cp = mapDecSpecial(b);
+                    const cell = Cell{
+                        .codepoint = cp,
+                        .width = 1,
+                        .attrs = attrs,
+                    };
+                    if (same_len >= 8) {
+                        @memset(screen.grid.cells.items[row_start + j .. row_start + j + same_len], cell);
+                    } else {
+                        var k: usize = 0;
+                        while (k < same_len) : (k += 1) {
+                            screen.grid.cells.items[row_start + j + k] = cell;
+                        }
+                    }
+                    j += same_len;
+                }
+            } else {
+                var j: usize = 0;
+                while (j < run_len) {
+                    const b = bytes[i + j];
+                    var same_len: usize = 1;
+                    while (j + same_len < run_len and bytes[i + j + same_len] == b) : (same_len += 1) {}
+                    const cell = Cell{
+                        .codepoint = b,
+                        .width = 1,
+                        .attrs = attrs,
+                    };
+                    if (same_len >= 8) {
+                        @memset(screen.grid.cells.items[row_start + j .. row_start + j + same_len], cell);
+                    } else {
+                        var k: usize = 0;
+                        while (k < same_len) : (k += 1) {
+                            screen.grid.cells.items[row_start + j + k] = cell;
+                        }
+                    }
+                    j += same_len;
+                }
+            }
+            screen.grid.markDirtyRange(row, row, col, col + run_len - 1);
+
+            if (run_len == remaining_cols) {
+                screen.wrap_next = true;
+            } else {
+                screen.cursor.col += run_len;
+            }
+            i += run_len;
+        }
+    }
+
     fn mapDecSpecial(codepoint: u32) u32 {
         return switch (codepoint) {
             0x60 => 0x25C6, // ◆
@@ -1172,6 +1318,7 @@ pub const TerminalSession = struct {
             .dirty = screen.grid.dirty,
             .damage = screen.grid.damage,
             .alt_active = self.isAltActive(),
+            .generation = self.output_generation.load(.acquire),
         };
     }
 
@@ -1244,6 +1391,30 @@ pub const TerminalSession = struct {
         self.activeScreen().grid.markDirtyAll();
     }
 };
+
+fn readThreadMain(session: *TerminalSession) void {
+    const max_read: usize = 64 * 1024;
+    var buf: [max_read]u8 = undefined;
+
+    while (session.read_thread_running.load(.acquire)) {
+        if (session.pty) |*pty| {
+            if (!pty.waitForData(50)) {
+                continue;
+            }
+            while (session.read_thread_running.load(.acquire)) {
+                const n = pty.read(&buf) catch break;
+                if (n == null or n.? == 0) break;
+                session.state_mutex.lock();
+                session.parser.handleSlice(session, buf[0..n.?]);
+                session.state_mutex.unlock();
+                session.output_pending.store(true, .release);
+                _ = session.output_generation.fetchAdd(1, .acq_rel);
+            }
+        } else {
+            break;
+        }
+    }
+}
 
 const Hyperlink = struct {
     uri: []u8,

@@ -25,4 +25,8 @@ pub const Pty = struct {
     pub fn hasData(_: *Pty) bool {
         return false;
     }
+
+    pub fn waitForData(_: *Pty, _: i32) bool {
+        return false;
+    }
 };

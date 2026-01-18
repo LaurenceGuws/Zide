@@ -106,6 +106,18 @@ pub const Pty = struct {
         const rc = posix.poll(&fds, 0) catch return false;
         return rc > 0 and (fds[0].revents & posix.POLL.IN) != 0;
     }
+
+    pub fn waitForData(self: *Pty, timeout_ms: i32) bool {
+        var fds = [1]posix.pollfd{
+            .{
+                .fd = self.master_fd,
+                .events = posix.POLL.IN,
+                .revents = 0,
+            },
+        };
+        const rc = posix.poll(&fds, timeout_ms) catch return false;
+        return rc > 0 and (fds[0].revents & posix.POLL.IN) != 0;
+    }
 };
 
 fn setNonBlocking(fd: posix.fd_t) !void {

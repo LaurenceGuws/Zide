@@ -22,21 +22,10 @@ pub const TerminalWidget = struct {
     }
 
     pub fn draw(self: *TerminalWidget, r: *Renderer, x: f32, y: f32, width: f32, height: f32) void {
+        self.session.lock();
         const snapshot = self.session.snapshot();
         const rows = snapshot.rows;
         const cols = snapshot.cols;
-        const bg_color = if (snapshot.cells.len > 0) Color{
-            .r = snapshot.cells[0].attrs.bg.r,
-            .g = snapshot.cells[0].attrs.bg.g,
-            .b = snapshot.cells[0].attrs.bg.b,
-        } else r.theme.background;
-        r.drawRect(
-            @intFromFloat(x),
-            @intFromFloat(y),
-            @intFromFloat(width),
-            @intFromFloat(height),
-            bg_color,
-        );
         const history_len = self.session.scrollbackCount();
         const total_lines = history_len + rows;
         var scroll_offset = self.session.scrollOffset();
@@ -51,6 +40,71 @@ pub const TerminalWidget = struct {
         const start_line = if (end_line > rows) end_line - rows else 0;
         const draw_cursor = scroll_offset == 0;
         const cursor = if (draw_cursor) snapshot.cursor else CursorPos{ .row = rows + 1, .col = cols + 1 };
+        const selection = self.session.selectionState();
+
+        if (rows > 0 and cols > 0) {
+            const view_count = rows * cols;
+            _ = self.session.view_cells.resize(self.session.allocator, view_count) catch {};
+            _ = self.session.view_dirty_rows.resize(self.session.allocator, rows) catch {};
+            _ = self.session.view_dirty_cols_start.resize(self.session.allocator, rows) catch {};
+            _ = self.session.view_dirty_cols_end.resize(self.session.allocator, rows) catch {};
+
+            if (snapshot.dirty_rows.len == rows) {
+                std.mem.copyForwards(bool, self.session.view_dirty_rows.items, snapshot.dirty_rows);
+            } else {
+                for (self.session.view_dirty_rows.items) |*row_dirty| {
+                    row_dirty.* = true;
+                }
+            }
+            if (snapshot.dirty_cols_start.len == rows and snapshot.dirty_cols_end.len == rows) {
+                std.mem.copyForwards(u16, self.session.view_dirty_cols_start.items, snapshot.dirty_cols_start);
+                std.mem.copyForwards(u16, self.session.view_dirty_cols_end.items, snapshot.dirty_cols_end);
+            } else {
+                for (self.session.view_dirty_cols_start.items, self.session.view_dirty_cols_end.items) |*col_start, *col_end| {
+                    col_start.* = 0;
+                    col_end.* = if (cols > 0) @intCast(cols - 1) else 0;
+                }
+            }
+
+            var row: usize = 0;
+            while (row < rows) : (row += 1) {
+                const global_row = start_line + row;
+                const row_start = row * cols;
+                const row_dest = self.session.view_cells.items[row_start .. row_start + cols];
+                if (global_row < history_len) {
+                    if (self.session.scrollbackRow(global_row)) |history_row| {
+                        std.mem.copyForwards(Cell, row_dest, history_row[0..cols]);
+                    } else {
+                        std.mem.copyForwards(Cell, row_dest, snapshot.cells[0..cols]);
+                    }
+                } else {
+                    const grid_row = global_row - history_len;
+                    const src_start = grid_row * cols;
+                    std.mem.copyForwards(Cell, row_dest, snapshot.cells[src_start .. src_start + cols]);
+                }
+            }
+        } else {
+            self.session.view_cells.clearRetainingCapacity();
+            self.session.view_dirty_rows.clearRetainingCapacity();
+            self.session.view_dirty_cols_start.clearRetainingCapacity();
+            self.session.view_dirty_cols_end.clearRetainingCapacity();
+        }
+        self.session.unlock();
+
+        const view_cells = self.session.view_cells.items;
+        const view_dirty_rows = self.session.view_dirty_rows.items;
+        const bg_color = if (view_cells.len > 0) Color{
+            .r = view_cells[0].attrs.bg.r,
+            .g = view_cells[0].attrs.bg.g,
+            .b = view_cells[0].attrs.bg.b,
+        } else r.theme.background;
+        r.drawRect(
+            @intFromFloat(x),
+            @intFromFloat(y),
+            @intFromFloat(width),
+            @intFromFloat(height),
+            bg_color,
+        );
 
         // No clipping - let icons overflow freely
         // (sidebar draws last to cover any left overflow, right overflow goes into empty space)
@@ -64,27 +118,17 @@ pub const TerminalWidget = struct {
         const scrollbar_h = height;
 
         const rowSlice = struct {
-            fn get(parent: *TerminalWidget, snapshot_cells: []const Cell, history: usize, cols_count: usize, start: usize, row: usize) []const Cell {
-                const global_row = start + row;
-                if (global_row < history) {
-                    if (parent.session.scrollbackRow(global_row)) |history_row| {
-                        return history_row;
-                    }
-                }
-                const grid_row = global_row - history;
-                const row_start = grid_row * cols_count;
-                return snapshot_cells[row_start .. row_start + cols_count];
+            fn get(cells: []const Cell, cols_count: usize, row: usize) []const Cell {
+                const row_start = row * cols_count;
+                return cells[row_start .. row_start + cols_count];
             }
         }.get;
 
         const drawRowRange = struct {
             fn render(
-                parent: *TerminalWidget,
                 renderer: *Renderer,
                 snapshot_cells: []const Cell,
-                history: usize,
                 cols_count: usize,
-                start: usize,
                 row_idx: usize,
                 col_start_in: usize,
                 col_end_in: usize,
@@ -97,7 +141,7 @@ pub const TerminalWidget = struct {
                 const base_x_i: i32 = @intFromFloat(std.math.round(base_x_local));
                 const base_y_i: i32 = @intFromFloat(std.math.round(base_y_local));
 
-                const row_cells = rowSlice(parent, snapshot_cells, history, cols_count, start, row_idx);
+                const row_cells = rowSlice(snapshot_cells, cols_count, row_idx);
                 const col_start = @min(col_start_in, cols_count - 1);
                 const col_end = @min(col_end_in, cols_count - 1);
                 if (col_start > col_end) return;
@@ -224,28 +268,28 @@ pub const TerminalWidget = struct {
                 const base_y_local: f32 = 0;
 
                 if (needs_full) {
-                    const bg = if (snapshot.cells.len > 0) Color{
-                        .r = snapshot.cells[0].attrs.bg.r,
-                        .g = snapshot.cells[0].attrs.bg.g,
-                        .b = snapshot.cells[0].attrs.bg.b,
+                    const bg = if (view_cells.len > 0) Color{
+                        .r = view_cells[0].attrs.bg.r,
+                        .g = view_cells[0].attrs.bg.g,
+                        .b = view_cells[0].attrs.bg.b,
                     } else r.theme.background;
                     r.drawRect(0, 0, texture_w, texture_h, bg);
                     var row: usize = 0;
                     while (row < rows) : (row += 1) {
-                        drawRowRange(self, r, snapshot.cells, history_len, cols, start_line, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i);
+                        drawRowRange(r, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i);
                     }
                 } else if (needs_partial) {
                     var row: usize = 0;
                     while (row < rows) : (row += 1) {
-                        if (row < snapshot.dirty_rows.len and snapshot.dirty_rows[row]) {
+                        if (row < view_dirty_rows.len and view_dirty_rows[row]) {
                             const draw_start: usize = 0;
                             const draw_end: usize = cols - 1;
-                            drawRowRange(self, r, snapshot.cells, history_len, cols, start_line, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                            drawRowRange(r, view_cells, cols, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
                             if (row > 0) {
-                                drawRowRange(self, r, snapshot.cells, history_len, cols, start_line, row - 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                                drawRowRange(r, view_cells, cols, row - 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
                             }
                             if (row + 1 < rows) {
-                                drawRowRange(self, r, snapshot.cells, history_len, cols, start_line, row + 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                                drawRowRange(r, view_cells, cols, row + 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
                             }
                         }
                     }
@@ -268,11 +312,11 @@ pub const TerminalWidget = struct {
         }
 
         if (rows > 0 and cols > 0) {
-            if (self.session.selectionState()) |selection| {
+            if (selection) |selection_state| {
                 const total_lines_sel = history_len + rows;
                 if (total_lines_sel > 0) {
-                    var start_sel = selection.start;
-                    var end_sel = selection.end;
+                    var start_sel = selection_state.start;
+                    var end_sel = selection_state.end;
                     if (start_sel.row > end_sel.row or (start_sel.row == end_sel.row and start_sel.col > end_sel.col)) {
                         const tmp = start_sel;
                         start_sel = end_sel;
@@ -321,7 +365,7 @@ pub const TerminalWidget = struct {
         }
 
         if (draw_cursor and rows > 0 and cols > 0 and cursor.row < rows and cursor.col < cols) {
-            const row_cells = rowSlice(self, snapshot.cells, history_len, cols, start_line, cursor.row);
+            const row_cells = rowSlice(view_cells, cols, cursor.row);
             const cell = row_cells[cursor.col];
             const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
             const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
@@ -437,7 +481,12 @@ pub const TerminalWidget = struct {
         }
 
         if (updated or snapshot.dirty == .none) {
-            self.session.clearDirty();
+            self.session.lock();
+            const current_gen = self.session.currentGeneration();
+            if (current_gen == snapshot.generation) {
+                self.session.clearDirty();
+            }
+            self.session.unlock();
         }
     }
 
@@ -453,6 +502,8 @@ pub const TerminalWidget = struct {
         scroll_dragging: *bool,
         scroll_grab_offset: *f32,
     ) !bool {
+        self.session.lock();
+        defer self.session.unlock();
         var handled = false;
         const mouse = r.getMousePos();
         const in_terminal = mouse.x >= x and mouse.x <= x + width and mouse.y >= y and mouse.y <= y + height;
