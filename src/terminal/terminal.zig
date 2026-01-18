@@ -242,16 +242,153 @@ const TerminalGrid = struct {
     }
 };
 
+const TabStops = struct {
+    allocator: std.mem.Allocator,
+    stops: std.ArrayList(bool),
+
+    pub fn init(allocator: std.mem.Allocator, cols: u16) !TabStops {
+        var stops = std.ArrayList(bool).empty;
+        try stops.resize(allocator, cols);
+        var tabstops = TabStops{
+            .allocator = allocator,
+            .stops = stops,
+        };
+        tabstops.reset();
+        return tabstops;
+    }
+
+    pub fn deinit(self: *TabStops) void {
+        self.stops.deinit(self.allocator);
+    }
+
+    pub fn resize(self: *TabStops, cols: u16) !void {
+        const old_len = self.stops.items.len;
+        try self.stops.resize(self.allocator, cols);
+        if (cols > old_len) {
+            var idx: usize = old_len;
+            while (idx < cols) : (idx += 1) {
+                self.stops.items[idx] = TabStops.defaultStop(idx);
+            }
+        }
+    }
+
+    pub fn reset(self: *TabStops) void {
+        for (self.stops.items, 0..) |*stop, idx| {
+            stop.* = TabStops.defaultStop(idx);
+        }
+    }
+
+    pub fn next(self: *const TabStops, col: usize, max_col: usize) usize {
+        if (self.stops.items.len == 0) return col;
+        var idx = col + 1;
+        const limit = @min(max_col, self.stops.items.len - 1);
+        while (idx <= limit) : (idx += 1) {
+            if (self.stops.items[idx]) return idx;
+        }
+        return max_col;
+    }
+
+    fn defaultStop(col: usize) bool {
+        return (col % 8) == 0;
+    }
+};
+
+const Screen = struct {
+    grid: TerminalGrid,
+    cursor: CursorPos,
+    saved_cursor: SavedCursor,
+    scroll_top: usize,
+    scroll_bottom: usize,
+    tabstops: TabStops,
+    key_mode: KeyModeStack,
+    current_attrs: CellAttrs,
+    wrap_next: bool,
+
+    pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !Screen {
+        const grid = try TerminalGrid.init(allocator, rows, cols);
+        const tabstops = try TabStops.init(allocator, cols);
+        return .{
+            .grid = grid,
+            .cursor = .{ .row = 0, .col = 0 },
+            .saved_cursor = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = defaultCell().attrs },
+            .scroll_top = 0,
+            .scroll_bottom = if (rows > 0) @as(usize, rows - 1) else 0,
+            .tabstops = tabstops,
+            .key_mode = KeyModeStack.init(),
+            .current_attrs = defaultCell().attrs,
+            .wrap_next = false,
+        };
+    }
+
+    pub fn deinit(self: *Screen) void {
+        self.grid.deinit();
+        self.tabstops.deinit();
+    }
+
+    pub fn resize(self: *Screen, rows: u16, cols: u16) !void {
+        const old_rows = self.grid.rows;
+        const old_cols = self.grid.cols;
+        const was_full_region = old_rows > 0 and self.scroll_top == 0 and self.scroll_bottom + 1 == @as(usize, old_rows);
+        try self.grid.resize(rows, cols);
+        if (cols != old_cols) {
+            try self.tabstops.resize(cols);
+        }
+        if (rows > 0) {
+            if (self.scroll_top >= @as(usize, rows)) self.scroll_top = 0;
+            if (self.scroll_bottom >= @as(usize, rows)) self.scroll_bottom = @as(usize, rows - 1);
+            if (self.scroll_top > self.scroll_bottom) {
+                self.scroll_top = 0;
+                self.scroll_bottom = @as(usize, rows - 1);
+            }
+            if (was_full_region) {
+                self.scroll_top = 0;
+                self.scroll_bottom = @as(usize, rows - 1);
+            }
+        } else {
+            self.scroll_top = 0;
+            self.scroll_bottom = 0;
+        }
+        const max_row = if (rows > 0) @as(usize, rows - 1) else 0;
+        const max_col = if (cols > 0) @as(usize, cols - 1) else 0;
+        if (self.cursor.row > max_row) self.cursor.row = max_row;
+        if (self.cursor.col > max_col) self.cursor.col = max_col;
+    }
+
+    pub fn resetState(self: *Screen) void {
+        self.cursor = .{ .row = 0, .col = 0 };
+        self.saved_cursor = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = defaultCell().attrs };
+        self.scroll_top = 0;
+        self.scroll_bottom = if (self.grid.rows > 0) @as(usize, self.grid.rows - 1) else 0;
+        self.key_mode = KeyModeStack.init();
+        self.current_attrs = defaultCell().attrs;
+        self.wrap_next = false;
+        self.tabstops.reset();
+    }
+
+    pub fn clear(self: *Screen) void {
+        const default_cell = defaultCell();
+        for (self.grid.cells.items) |*cell| {
+            cell.* = default_cell;
+        }
+        self.grid.markDirtyAll();
+    }
+};
+
+const ActiveScreen = enum {
+    primary,
+    alt,
+};
+
 /// Minimal terminal stub so the UI panel stays wired while backend is removed.
 pub const TerminalSession = struct {
     allocator: std.mem.Allocator,
     title: []const u8,
     title_buffer: std.ArrayList(u8),
     pty: ?Pty,
-    grid: TerminalGrid,
+    primary: Screen,
+    alt: Screen,
+    active: ActiveScreen,
     scrollback: Scrollback,
-    cursor: CursorPos,
-    alt_cursor: CursorPos,
     scrollback_offset: usize,
     saved_scrollback_offset: usize,
     selection: TerminalSelection,
@@ -276,25 +413,15 @@ pub const TerminalSession = struct {
     osc_hyperlink_active: bool,
     hyperlink_table: std.ArrayList(Hyperlink),
     current_hyperlink_id: u32,
-    current_attrs: CellAttrs,
     g0_charset: Charset,
     g1_charset: Charset,
     gl_charset: Charset,
     charset_target: CharsetTarget,
-    scroll_top: usize,
-    scroll_bottom: usize,
-    alt_scroll_top: usize,
-    alt_scroll_bottom: usize,
-    alt_grid: ?TerminalGrid,
-    alt_active: bool,
-    key_mode_main: KeyModeStack,
-    key_mode_alt: KeyModeStack,
-    saved_cursor_main: SavedCursor,
-    saved_cursor_alt: SavedCursor,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !*TerminalSession {
         const session = try allocator.create(TerminalSession);
-        const grid = try TerminalGrid.init(allocator, rows, cols);
+        const primary = try Screen.init(allocator, rows, cols);
+        const alt = try Screen.init(allocator, rows, cols);
         const scrollback = try Scrollback.init(allocator, default_scrollback_rows, cols);
         const log = app_logger.logger("terminal.core");
         log.logf("terminal init rows={d} cols={d} scrollback_max={d}", .{ rows, cols, default_scrollback_rows });
@@ -304,10 +431,10 @@ pub const TerminalSession = struct {
             .title = "Terminal",
             .title_buffer = .empty,
             .pty = null,
-            .grid = grid,
+            .primary = primary,
+            .alt = alt,
+            .active = .primary,
             .scrollback = scrollback,
-            .cursor = .{ .row = 0, .col = 0 },
-            .alt_cursor = .{ .row = 0, .col = 0 },
             .scrollback_offset = 0,
             .saved_scrollback_offset = 0,
             .selection = .{
@@ -337,23 +464,28 @@ pub const TerminalSession = struct {
             .osc_hyperlink_active = false,
             .hyperlink_table = .empty,
             .current_hyperlink_id = 0,
-            .current_attrs = defaultCell().attrs,
             .g0_charset = .ascii,
             .g1_charset = .ascii,
             .gl_charset = .ascii,
             .charset_target = .g0,
-            .scroll_top = 0,
-            .scroll_bottom = if (rows > 0) @as(usize, rows - 1) else 0,
-            .alt_scroll_top = 0,
-            .alt_scroll_bottom = if (rows > 0) @as(usize, rows - 1) else 0,
-            .alt_grid = null,
-            .alt_active = false,
-            .key_mode_main = KeyModeStack.init(),
-            .key_mode_alt = KeyModeStack.init(),
-            .saved_cursor_main = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = defaultCell().attrs },
-            .saved_cursor_alt = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = defaultCell().attrs },
         };
         return session;
+    }
+
+    fn activeScreen(self: *TerminalSession) *Screen {
+        return if (self.active == .alt) &self.alt else &self.primary;
+    }
+
+    fn activeScreenConst(self: *const TerminalSession) *const Screen {
+        return if (self.active == .alt) &self.alt else &self.primary;
+    }
+
+    fn inactiveScreen(self: *TerminalSession) *Screen {
+        return if (self.active == .alt) &self.primary else &self.alt;
+    }
+
+    fn isAltActive(self: *const TerminalSession) bool {
+        return self.active == .alt;
     }
 
     pub fn deinit(self: *TerminalSession) void {
@@ -361,10 +493,8 @@ pub const TerminalSession = struct {
             pty.deinit();
         }
         self.scrollback.deinit();
-        self.grid.deinit();
-        if (self.alt_grid) |*grid| {
-            grid.deinit();
-        }
+        self.primary.deinit();
+        self.alt.deinit();
         self.osc_buffer.deinit(self.allocator);
         self.osc_clipboard.deinit(self.allocator);
         self.osc_hyperlink.deinit(self.allocator);
@@ -378,8 +508,8 @@ pub const TerminalSession = struct {
 
     pub fn start(self: *TerminalSession, shell: ?[:0]const u8) !void {
         const size = PtySize{
-            .rows = self.grid.rows,
-            .cols = self.grid.cols,
+            .rows = self.primary.grid.rows,
+            .cols = self.primary.grid.cols,
             .cell_width = self.cell_width,
             .cell_height = self.cell_height,
         };
@@ -503,10 +633,11 @@ pub const TerminalSession = struct {
     pub fn reportMouseEvent(self: *TerminalSession, event: MouseEvent) !bool {
         if (self.pty == null) return false;
         if (!self.mouseTrackingActive()) return false;
-        if (self.grid.rows == 0 or self.grid.cols == 0) return false;
+        const screen = self.activeScreen();
+        if (screen.grid.rows == 0 or screen.grid.cols == 0) return false;
 
-        const row = @min(event.row, @as(usize, self.grid.rows - 1));
-        const col = @min(event.col, @as(usize, self.grid.cols - 1));
+        const row = @min(event.row, @as(usize, screen.grid.rows - 1));
+        const col = @min(event.col, @as(usize, screen.grid.cols - 1));
         const buttons_down = event.buttons_down;
         const buttons_active = buttons_down != 0;
         const mod_bits = mouseModBits(event.mod);
@@ -644,47 +775,24 @@ pub const TerminalSession = struct {
     }
 
     pub fn resize(self: *TerminalSession, rows: u16, cols: u16) !void {
-        const old_rows = self.grid.rows;
-        const old_cols = self.grid.cols;
-        try self.grid.resize(rows, cols);
+        const old_cols = self.primary.grid.cols;
+        try self.primary.resize(rows, cols);
+        try self.alt.resize(rows, cols);
         if (cols != old_cols) {
             try self.scrollback.resizePreserve(cols, defaultCell());
         }
-        if (self.alt_grid) |*grid| {
-            try grid.resize(rows, cols);
-        }
-        const was_full_region = old_rows > 0 and self.scroll_top == 0 and self.scroll_bottom + 1 == @as(usize, old_rows);
         const log = app_logger.logger("terminal.core");
-        log.logf("terminal resize rows={d} cols={d} scrollback_cols={d}", .{ rows, cols, self.grid.cols });
+        log.logf("terminal resize rows={d} cols={d} scrollback_cols={d}", .{ rows, cols, self.primary.grid.cols });
         log.logStdout("terminal resize rows={d} cols={d}", .{ rows, cols });
-        self.setScrollOffset(self.scrollback_offset);
-        if (rows > 0) {
-            if (self.scroll_top >= @as(usize, rows)) self.scroll_top = 0;
-            if (self.scroll_bottom >= @as(usize, rows)) self.scroll_bottom = @as(usize, rows - 1);
-            if (self.scroll_top > self.scroll_bottom) {
-                self.scroll_top = 0;
-                self.scroll_bottom = @as(usize, rows - 1);
+        if (self.isAltActive()) {
+            const max_offset = self.maxScrollOffset();
+            if (self.saved_scrollback_offset > max_offset) {
+                self.saved_scrollback_offset = max_offset;
             }
-            if (was_full_region) {
-                self.scroll_top = 0;
-                self.scroll_bottom = @as(usize, rows - 1);
-            }
-            if (self.alt_scroll_top >= @as(usize, rows)) self.alt_scroll_top = 0;
-            if (self.alt_scroll_bottom >= @as(usize, rows)) self.alt_scroll_bottom = @as(usize, rows - 1);
-            if (self.alt_scroll_top > self.alt_scroll_bottom) {
-                self.alt_scroll_top = 0;
-                self.alt_scroll_bottom = @as(usize, rows - 1);
-            }
+            self.scrollback_offset = 0;
         } else {
-            self.scroll_top = 0;
-            self.scroll_bottom = 0;
-            self.alt_scroll_top = 0;
-            self.alt_scroll_bottom = 0;
+            self.setScrollOffset(self.scrollback_offset);
         }
-        const max_row = if (rows > 0) @as(usize, rows - 1) else 0;
-        const max_col = if (cols > 0) @as(usize, cols - 1) else 0;
-        if (self.cursor.row > max_row) self.cursor.row = max_row;
-        if (self.cursor.col > max_col) self.cursor.col = max_col;
         self.clearSelection();
         if (self.pty) |*pty| {
             const size = PtySize{
@@ -703,19 +811,25 @@ pub const TerminalSession = struct {
     }
 
     fn handleControl(self: *TerminalSession, byte: u8) void {
+        const screen = self.activeScreen();
         switch (byte) {
             0x08 => { // BS
-                if (self.cursor.col > 0) self.cursor.col -= 1;
+                if (screen.cursor.col > 0) screen.cursor.col -= 1;
+                screen.wrap_next = false;
             },
             0x09 => { // TAB (every 8 columns)
-                const next = (self.cursor.col + 8) & ~@as(usize, 7);
-                self.cursor.col = @min(next, @as(usize, self.grid.cols - 1));
+                if (screen.grid.cols == 0) return;
+                const max_col = @as(usize, screen.grid.cols - 1);
+                const next = screen.tabstops.next(screen.cursor.col, max_col);
+                screen.cursor.col = @min(next, max_col);
+                screen.wrap_next = false;
             },
             0x0A => { // LF
                 self.newline();
             },
             0x0D => { // CR
-                self.cursor.col = 0;
+                screen.cursor.col = 0;
+                screen.wrap_next = false;
             },
             0x0E => { // SO (Shift Out) -> G1
                 self.gl_charset = self.g1_charset;
@@ -948,60 +1062,70 @@ pub const TerminalSession = struct {
                 return if (idx < 8) params[idx] else default;
             }
         }.at;
+        const screen = self.activeScreen();
 
         switch (action.final) {
             'A' => { // CUU
                 const n = @max(1, get(p, 0, 1));
                 const delta: usize = @intCast(n);
-                self.cursor.row = if (self.cursor.row > delta) self.cursor.row - delta else 0;
+                screen.cursor.row = if (screen.cursor.row > delta) screen.cursor.row - delta else 0;
+                screen.wrap_next = false;
             },
             'B' => { // CUD
                 const n = @max(1, get(p, 0, 1));
                 const delta: usize = @intCast(n);
-                const max_row = @as(usize, self.grid.rows - 1);
-                self.cursor.row = @min(max_row, self.cursor.row + delta);
+                const max_row = @as(usize, screen.grid.rows - 1);
+                screen.cursor.row = @min(max_row, screen.cursor.row + delta);
+                screen.wrap_next = false;
             },
             'C' => { // CUF
                 const n = @max(1, get(p, 0, 1));
                 const delta: usize = @intCast(n);
-                const max_col = @as(usize, self.grid.cols - 1);
-                self.cursor.col = @min(max_col, self.cursor.col + delta);
+                const max_col = @as(usize, screen.grid.cols - 1);
+                screen.cursor.col = @min(max_col, screen.cursor.col + delta);
+                screen.wrap_next = false;
             },
             'D' => { // CUB
                 const n = @max(1, get(p, 0, 1));
                 const delta: usize = @intCast(n);
-                self.cursor.col = if (self.cursor.col > delta) self.cursor.col - delta else 0;
+                screen.cursor.col = if (screen.cursor.col > delta) screen.cursor.col - delta else 0;
+                screen.wrap_next = false;
             },
             'E' => { // CNL
                 const n = @max(1, get(p, 0, 1));
                 const delta: usize = @intCast(n);
-                const max_row = @as(usize, self.grid.rows - 1);
-                self.cursor.row = @min(max_row, self.cursor.row + delta);
-                self.cursor.col = 0;
+                const max_row = @as(usize, screen.grid.rows - 1);
+                screen.cursor.row = @min(max_row, screen.cursor.row + delta);
+                screen.cursor.col = 0;
+                screen.wrap_next = false;
             },
             'F' => { // CPL
                 const n = @max(1, get(p, 0, 1));
                 const delta: usize = @intCast(n);
-                self.cursor.row = if (self.cursor.row > delta) self.cursor.row - delta else 0;
-                self.cursor.col = 0;
+                screen.cursor.row = if (screen.cursor.row > delta) screen.cursor.row - delta else 0;
+                screen.cursor.col = 0;
+                screen.wrap_next = false;
             },
             'G' => { // CHA
                 const col_1 = @max(1, get(p, 0, 1));
-                const col = @min(@as(usize, self.grid.cols - 1), @as(usize, @intCast(col_1 - 1)));
-                self.cursor.col = col;
+                const col = @min(@as(usize, screen.grid.cols - 1), @as(usize, @intCast(col_1 - 1)));
+                screen.cursor.col = col;
+                screen.wrap_next = false;
             },
             'H', 'f' => { // CUP
                 const row_1 = @max(1, get(p, 0, 1));
                 const col_1 = @max(1, get(p, 1, 1));
-                const row = @min(@as(usize, self.grid.rows - 1), @as(usize, @intCast(row_1 - 1)));
-                const col = @min(@as(usize, self.grid.cols - 1), @as(usize, @intCast(col_1 - 1)));
-                self.cursor.row = row;
-                self.cursor.col = col;
+                const row = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(row_1 - 1)));
+                const col = @min(@as(usize, screen.grid.cols - 1), @as(usize, @intCast(col_1 - 1)));
+                screen.cursor.row = row;
+                screen.cursor.col = col;
+                screen.wrap_next = false;
             },
             'd' => { // VPA
                 const row_1 = @max(1, get(p, 0, 1));
-                const row = @min(@as(usize, self.grid.rows - 1), @as(usize, @intCast(row_1 - 1)));
-                self.cursor.row = row;
+                const row = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(row_1 - 1)));
+                screen.cursor.row = row;
+                screen.wrap_next = false;
             },
             'J' => { // ED
                 const mode = if (count > 0) p[0] else 0;
@@ -1037,14 +1161,15 @@ pub const TerminalSession = struct {
             },
             'r' => { // DECSTBM
                 const top_1 = if (count > 0 and p[0] > 0) p[0] else 1;
-                const bot_1 = if (count > 1 and p[1] > 0) p[1] else @as(i32, @intCast(self.grid.rows));
-                const top = @min(@as(usize, self.grid.rows - 1), @as(usize, @intCast(@max(1, top_1) - 1)));
-                const bot = @min(@as(usize, self.grid.rows - 1), @as(usize, @intCast(@max(1, bot_1) - 1)));
+                const bot_1 = if (count > 1 and p[1] > 0) p[1] else @as(i32, @intCast(screen.grid.rows));
+                const top = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(@max(1, top_1) - 1)));
+                const bot = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(@max(1, bot_1) - 1)));
                 if (top <= bot) {
-                    self.scroll_top = top;
-                    self.scroll_bottom = bot;
-                    self.cursor.row = top;
-                    self.cursor.col = 0;
+                    screen.scroll_top = top;
+                    screen.scroll_bottom = bot;
+                    screen.cursor.row = top;
+                    screen.cursor.col = 0;
+                    screen.wrap_next = false;
                 }
             },
             's' => { // SCP
@@ -1120,17 +1245,11 @@ pub const TerminalSession = struct {
     }
 
     fn resetState(self: *TerminalSession) void {
-        self.cursor = .{ .row = 0, .col = 0 };
-        self.current_attrs = defaultCell().attrs;
         self.g0_charset = .ascii;
         self.g1_charset = .ascii;
         self.gl_charset = .ascii;
-        self.scroll_top = 0;
-        self.scroll_bottom = if (self.grid.rows > 0) @as(usize, self.grid.rows - 1) else 0;
-        self.alt_scroll_top = 0;
-        self.alt_scroll_bottom = if (self.grid.rows > 0) @as(usize, self.grid.rows - 1) else 0;
-        self.key_mode_main = KeyModeStack.init();
-        self.key_mode_alt = KeyModeStack.init();
+        self.primary.resetState();
+        self.alt.resetState();
         self.mouse_mode_x10 = false;
         self.mouse_mode_button = false;
         self.mouse_mode_any = false;
@@ -1139,153 +1258,158 @@ pub const TerminalSession = struct {
         self.mouse_last_col = 0;
         self.mouse_last_buttons = 0;
         self.current_hyperlink_id = 0;
-        const default_cell = defaultCell();
-        for (self.grid.cells.items) |*cell| {
-            cell.* = default_cell;
-        }
-        self.grid.markDirtyAll();
+        self.primary.clear();
+        self.alt.clear();
     }
 
     fn eraseDisplay(self: *TerminalSession, mode: i32) void {
-        const rows = @as(usize, self.grid.rows);
-        const cols = @as(usize, self.grid.cols);
+        const screen = self.activeScreen();
+        const rows = @as(usize, screen.grid.rows);
+        const cols = @as(usize, screen.grid.cols);
         if (rows == 0 or cols == 0) return;
         const default_cell = defaultCell();
-        const row = self.cursor.row;
-        const col = self.cursor.col;
+        const row = screen.cursor.row;
+        const col = screen.cursor.col;
         if (row >= rows or col >= cols) return;
 
         switch (mode) {
             0 => { // cursor to end
                 const start_idx = row * cols + col;
-                for (self.grid.cells.items[start_idx..]) |*cell| cell.* = default_cell;
-                self.grid.markDirtyRange(row, row, col, cols - 1);
+                for (screen.grid.cells.items[start_idx..]) |*cell| cell.* = default_cell;
+                screen.grid.markDirtyRange(row, row, col, cols - 1);
                 if (row + 1 < rows) {
-                    self.grid.markDirtyRange(row + 1, rows - 1, 0, cols - 1);
+                    screen.grid.markDirtyRange(row + 1, rows - 1, 0, cols - 1);
                 }
             },
             1 => { // start to cursor
                 const end = row * cols + col + 1;
-                for (self.grid.cells.items[0..end]) |*cell| cell.* = default_cell;
+                for (screen.grid.cells.items[0..end]) |*cell| cell.* = default_cell;
                 if (row > 0) {
-                    self.grid.markDirtyRange(0, row - 1, 0, cols - 1);
+                    screen.grid.markDirtyRange(0, row - 1, 0, cols - 1);
                 }
-                self.grid.markDirtyRange(row, row, 0, col);
+                screen.grid.markDirtyRange(row, row, 0, col);
             },
             2 => { // all
-                for (self.grid.cells.items) |*cell| cell.* = default_cell;
-                self.grid.markDirtyAll();
+                for (screen.grid.cells.items) |*cell| cell.* = default_cell;
+                screen.grid.markDirtyAll();
             },
             else => {},
         }
     }
 
     fn eraseLine(self: *TerminalSession, mode: i32) void {
-        const cols = @as(usize, self.grid.cols);
-        if (cols == 0 or self.grid.rows == 0) return;
+        const screen = self.activeScreen();
+        const cols = @as(usize, screen.grid.cols);
+        if (cols == 0 or screen.grid.rows == 0) return;
         const default_cell = defaultCell();
-        if (self.cursor.row >= @as(usize, self.grid.rows)) return;
-        const row_start = self.cursor.row * cols;
-        const col = self.cursor.col;
+        if (screen.cursor.row >= @as(usize, screen.grid.rows)) return;
+        const row_start = screen.cursor.row * cols;
+        const col = screen.cursor.col;
         if (col >= cols) return;
         switch (mode) {
             0 => { // cursor to end of line
-                for (self.grid.cells.items[row_start + col .. row_start + cols]) |*cell| cell.* = default_cell;
-                self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, cols - 1);
+                for (screen.grid.cells.items[row_start + col .. row_start + cols]) |*cell| cell.* = default_cell;
+                screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, col, cols - 1);
             },
             1 => { // start to cursor
-                for (self.grid.cells.items[row_start .. row_start + col + 1]) |*cell| cell.* = default_cell;
-                self.grid.markDirtyRange(self.cursor.row, self.cursor.row, 0, col);
+                for (screen.grid.cells.items[row_start .. row_start + col + 1]) |*cell| cell.* = default_cell;
+                screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, 0, col);
             },
             2 => { // entire line
-                for (self.grid.cells.items[row_start .. row_start + cols]) |*cell| cell.* = default_cell;
-                self.grid.markDirtyRange(self.cursor.row, self.cursor.row, 0, cols - 1);
+                for (screen.grid.cells.items[row_start .. row_start + cols]) |*cell| cell.* = default_cell;
+                screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, 0, cols - 1);
             },
             else => {},
         }
     }
 
     fn insertChars(self: *TerminalSession, count: usize) void {
-        const cols = @as(usize, self.grid.cols);
+        const screen = self.activeScreen();
+        const cols = @as(usize, screen.grid.cols);
         if (cols == 0) return;
-        if (self.cursor.row >= @as(usize, self.grid.rows)) return;
-        const col = self.cursor.col;
+        if (screen.cursor.row >= @as(usize, screen.grid.rows)) return;
+        const col = screen.cursor.col;
         if (col >= cols) return;
         const n = @min(count, cols - col);
-        const row_start = self.cursor.row * cols;
-        const line = self.grid.cells.items[row_start .. row_start + cols];
+        const row_start = screen.cursor.row * cols;
+        const line = screen.grid.cells.items[row_start .. row_start + cols];
         if (cols - col > n) {
             std.mem.copyBackwards(Cell, line[col + n ..], line[col .. cols - n]);
         }
         const default_cell = defaultCell();
         for (line[col .. col + n]) |*cell| cell.* = default_cell;
-        self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, cols - 1);
+        screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, col, cols - 1);
     }
 
     fn deleteChars(self: *TerminalSession, count: usize) void {
-        const cols = @as(usize, self.grid.cols);
+        const screen = self.activeScreen();
+        const cols = @as(usize, screen.grid.cols);
         if (cols == 0) return;
-        if (self.cursor.row >= @as(usize, self.grid.rows)) return;
-        const col = self.cursor.col;
+        if (screen.cursor.row >= @as(usize, screen.grid.rows)) return;
+        const col = screen.cursor.col;
         if (col >= cols) return;
         const n = @min(count, cols - col);
-        const row_start = self.cursor.row * cols;
-        const line = self.grid.cells.items[row_start .. row_start + cols];
+        const row_start = screen.cursor.row * cols;
+        const line = screen.grid.cells.items[row_start .. row_start + cols];
         if (cols - col > n) {
             std.mem.copyForwards(Cell, line[col .. cols - n], line[col + n ..]);
         }
         const default_cell = defaultCell();
         for (line[cols - n .. cols]) |*cell| cell.* = default_cell;
-        self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, cols - 1);
+        screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, col, cols - 1);
     }
 
     fn insertLines(self: *TerminalSession, count: usize) void {
-        const cols = @as(usize, self.grid.cols);
-        const rows = @as(usize, self.grid.rows);
+        const screen = self.activeScreen();
+        const cols = @as(usize, screen.grid.cols);
+        const rows = @as(usize, screen.grid.rows);
         if (rows == 0 or cols == 0) return;
-        if (self.cursor.row < self.scroll_top or self.cursor.row > self.scroll_bottom) return;
-        const n = @min(count, self.scroll_bottom - self.cursor.row + 1);
+        if (screen.cursor.row < screen.scroll_top or screen.cursor.row > screen.scroll_bottom) return;
+        const n = @min(count, screen.scroll_bottom - screen.cursor.row + 1);
         const default_cell = defaultCell();
-        const region_end = (self.scroll_bottom + 1) * cols;
-        const insert_at = self.cursor.row * cols;
+        const region_end = (screen.scroll_bottom + 1) * cols;
+        const insert_at = screen.cursor.row * cols;
         const move_len = region_end - insert_at - n * cols;
         if (move_len > 0) {
-            std.mem.copyBackwards(Cell, self.grid.cells.items[insert_at + n * cols .. region_end], self.grid.cells.items[insert_at .. insert_at + move_len]);
+            std.mem.copyBackwards(Cell, screen.grid.cells.items[insert_at + n * cols .. region_end], screen.grid.cells.items[insert_at .. insert_at + move_len]);
         }
-        for (self.grid.cells.items[insert_at .. insert_at + n * cols]) |*cell| cell.* = default_cell;
-        self.grid.markDirtyRange(self.cursor.row, self.scroll_bottom, 0, cols - 1);
+        for (screen.grid.cells.items[insert_at .. insert_at + n * cols]) |*cell| cell.* = default_cell;
+        screen.grid.markDirtyRange(screen.cursor.row, screen.scroll_bottom, 0, cols - 1);
     }
 
     fn deleteLines(self: *TerminalSession, count: usize) void {
-        const cols = @as(usize, self.grid.cols);
-        const rows = @as(usize, self.grid.rows);
+        const screen = self.activeScreen();
+        const cols = @as(usize, screen.grid.cols);
+        const rows = @as(usize, screen.grid.rows);
         if (rows == 0 or cols == 0) return;
-        if (self.cursor.row < self.scroll_top or self.cursor.row > self.scroll_bottom) return;
-        const n = @min(count, self.scroll_bottom - self.cursor.row + 1);
+        if (screen.cursor.row < screen.scroll_top or screen.cursor.row > screen.scroll_bottom) return;
+        const n = @min(count, screen.scroll_bottom - screen.cursor.row + 1);
         const default_cell = defaultCell();
-        const region_end = (self.scroll_bottom + 1) * cols;
-        const delete_at = self.cursor.row * cols;
+        const region_end = (screen.scroll_bottom + 1) * cols;
+        const delete_at = screen.cursor.row * cols;
         const move_len = region_end - delete_at - n * cols;
         if (move_len > 0) {
-            std.mem.copyForwards(Cell, self.grid.cells.items[delete_at .. delete_at + move_len], self.grid.cells.items[delete_at + n * cols .. region_end]);
+            std.mem.copyForwards(Cell, screen.grid.cells.items[delete_at .. delete_at + move_len], screen.grid.cells.items[delete_at + n * cols .. region_end]);
         }
-        for (self.grid.cells.items[region_end - n * cols .. region_end]) |*cell| cell.* = default_cell;
-        self.grid.markDirtyRange(self.cursor.row, self.scroll_bottom, 0, cols - 1);
+        for (screen.grid.cells.items[region_end - n * cols .. region_end]) |*cell| cell.* = default_cell;
+        screen.grid.markDirtyRange(screen.cursor.row, screen.scroll_bottom, 0, cols - 1);
     }
 
     fn isFullScrollRegion(self: *TerminalSession) bool {
-        const rows = @as(usize, self.grid.rows);
+        const screen = self.activeScreenConst();
+        const rows = @as(usize, screen.grid.rows);
         if (rows == 0) return false;
-        return self.scroll_top == 0 and self.scroll_bottom + 1 == rows;
+        return screen.scroll_top == 0 and screen.scroll_bottom + 1 == rows;
     }
 
     fn pushScrollbackRow(self: *TerminalSession, row: usize) void {
-        const cols = @as(usize, self.grid.cols);
-        if (cols == 0 or self.grid.rows == 0) return;
-        if (row >= @as(usize, self.grid.rows)) return;
-        if (self.alt_active) return;
+        if (self.isAltActive()) return;
+        const screen = &self.primary;
+        const cols = @as(usize, screen.grid.cols);
+        if (cols == 0 or screen.grid.rows == 0) return;
+        if (row >= @as(usize, screen.grid.rows)) return;
         const row_start = row * cols;
-        self.scrollback.pushRow(self.grid.cells.items[row_start .. row_start + cols]);
+        self.scrollback.pushRow(screen.grid.cells.items[row_start .. row_start + cols]);
         const log = app_logger.logger("terminal.core");
         log.logf("scrollback push row={d} total={d}", .{ row, self.scrollback.count() });
         log.logStdout("scrollback push total={d}", .{self.scrollback.count()});
@@ -1293,46 +1417,49 @@ pub const TerminalSession = struct {
 
     fn scrollRegionUp(self: *TerminalSession, count: usize) void {
         const log = app_logger.logger("terminal.core");
-        log.logf("scroll region up count={d} top={d} bottom={d}", .{ count, self.scroll_top, self.scroll_bottom });
+        const screen = self.activeScreen();
+        log.logf("scroll region up count={d} top={d} bottom={d}", .{ count, screen.scroll_top, screen.scroll_bottom });
         log.logStdout("scroll region up count={d}", .{count});
-        const cols = @as(usize, self.grid.cols);
-        if (cols == 0 or self.grid.rows == 0) return;
-        const n = @min(count, self.scroll_bottom - self.scroll_top + 1);
+        const cols = @as(usize, screen.grid.cols);
+        if (cols == 0 or screen.grid.rows == 0) return;
+        const n = @min(count, screen.scroll_bottom - screen.scroll_top + 1);
         if (n == 0) return;
         const default_cell = defaultCell();
-        const region_start = self.scroll_top * cols;
-        const region_end = (self.scroll_bottom + 1) * cols;
+        const region_start = screen.scroll_top * cols;
+        const region_end = (screen.scroll_bottom + 1) * cols;
         if (self.isFullScrollRegion()) {
             var row: usize = 0;
             while (row < n) : (row += 1) {
-                self.pushScrollbackRow(self.scroll_top + row);
+                self.pushScrollbackRow(screen.scroll_top + row);
             }
         }
         const move_len = region_end - region_start - n * cols;
         if (move_len > 0) {
-            std.mem.copyForwards(Cell, self.grid.cells.items[region_start .. region_start + move_len], self.grid.cells.items[region_start + n * cols .. region_end]);
+            std.mem.copyForwards(Cell, screen.grid.cells.items[region_start .. region_start + move_len], screen.grid.cells.items[region_start + n * cols .. region_end]);
         }
-        for (self.grid.cells.items[region_end - n * cols .. region_end]) |*cell| cell.* = default_cell;
-        self.grid.markDirtyRange(self.scroll_top, self.scroll_bottom, 0, cols - 1);
+        for (screen.grid.cells.items[region_end - n * cols .. region_end]) |*cell| cell.* = default_cell;
+        screen.grid.markDirtyRange(screen.scroll_top, screen.scroll_bottom, 0, cols - 1);
     }
 
     fn scrollRegionDown(self: *TerminalSession, count: usize) void {
-        const cols = @as(usize, self.grid.cols);
-        if (cols == 0 or self.grid.rows == 0) return;
-        const n = @min(count, self.scroll_bottom - self.scroll_top + 1);
+        const screen = self.activeScreen();
+        const cols = @as(usize, screen.grid.cols);
+        if (cols == 0 or screen.grid.rows == 0) return;
+        const n = @min(count, screen.scroll_bottom - screen.scroll_top + 1);
         if (n == 0) return;
         const default_cell = defaultCell();
-        const region_start = self.scroll_top * cols;
-        const region_end = (self.scroll_bottom + 1) * cols;
+        const region_start = screen.scroll_top * cols;
+        const region_end = (screen.scroll_bottom + 1) * cols;
         const move_len = region_end - region_start - n * cols;
         if (move_len > 0) {
-            std.mem.copyBackwards(Cell, self.grid.cells.items[region_start + n * cols .. region_end], self.grid.cells.items[region_start .. region_start + move_len]);
+            std.mem.copyBackwards(Cell, screen.grid.cells.items[region_start + n * cols .. region_end], screen.grid.cells.items[region_start .. region_start + move_len]);
         }
-        for (self.grid.cells.items[region_start .. region_start + n * cols]) |*cell| cell.* = default_cell;
-        self.grid.markDirtyRange(self.scroll_top, self.scroll_bottom, 0, cols - 1);
+        for (screen.grid.cells.items[region_start .. region_start + n * cols]) |*cell| cell.* = default_cell;
+        screen.grid.markDirtyRange(screen.scroll_top, screen.scroll_bottom, 0, cols - 1);
     }
 
     fn applySgr(self: *TerminalSession, action: csi_mod.CsiAction) void {
+        const screen = self.activeScreen();
         const params = action.params;
         const total = params.len;
         const n_params: usize = if (action.count == 0 and params[0] == 0) 1 else @min(@as(usize, action.count + 1), total);
@@ -1346,9 +1473,9 @@ pub const TerminalSession = struct {
                         const idx = clampColorIndex(params[i + 2]);
                         const color = indexToRgb(idx);
                         if (p == 38) {
-                            self.current_attrs.fg = color;
+                            screen.current_attrs.fg = color;
                         } else {
-                            self.current_attrs.bg = color;
+                            screen.current_attrs.bg = color;
                         }
                         i += 3;
                         continue;
@@ -1359,9 +1486,9 @@ pub const TerminalSession = struct {
                         const b = clampColorIndex(params[i + 4]);
                         const color = Color{ .r = r, .g = g, .b = b };
                         if (p == 38) {
-                            self.current_attrs.fg = color;
+                            screen.current_attrs.fg = color;
                         } else {
-                            self.current_attrs.bg = color;
+                            screen.current_attrs.bg = color;
                         }
                         i += 5;
                         continue;
@@ -1372,37 +1499,37 @@ pub const TerminalSession = struct {
             }
             switch (p) {
                 0 => { // reset
-                    self.current_attrs = defaultCell().attrs;
+                    screen.current_attrs = defaultCell().attrs;
                 },
                 1 => { // bold
-                    self.current_attrs.bold = true;
+                    screen.current_attrs.bold = true;
                 },
                 22 => { // normal intensity
-                    self.current_attrs.bold = false;
+                    screen.current_attrs.bold = false;
                 },
                 7 => { // reverse
-                    self.current_attrs.reverse = true;
+                    screen.current_attrs.reverse = true;
                 },
                 27 => { // reverse off
-                    self.current_attrs.reverse = false;
+                    screen.current_attrs.reverse = false;
                 },
                 39 => { // default fg
-                    self.current_attrs.fg = defaultCell().attrs.fg;
+                    screen.current_attrs.fg = defaultCell().attrs.fg;
                 },
                 49 => { // default bg
-                    self.current_attrs.bg = defaultCell().attrs.bg;
+                    screen.current_attrs.bg = defaultCell().attrs.bg;
                 },
                 30...37 => {
-                    self.current_attrs.fg = ansiColors[@intCast(p - 30)];
+                    screen.current_attrs.fg = ansiColors[@intCast(p - 30)];
                 },
                 40...47 => {
-                    self.current_attrs.bg = ansiColors[@intCast(p - 40)];
+                    screen.current_attrs.bg = ansiColors[@intCast(p - 40)];
                 },
                 90...97 => {
-                    self.current_attrs.fg = ansiBrightColors[@intCast(p - 90)];
+                    screen.current_attrs.fg = ansiBrightColors[@intCast(p - 90)];
                 },
                 100...107 => {
-                    self.current_attrs.bg = ansiBrightColors[@intCast(p - 100)];
+                    screen.current_attrs.bg = ansiBrightColors[@intCast(p - 100)];
                 },
                 else => {},
             }
@@ -1419,37 +1546,40 @@ pub const TerminalSession = struct {
             cp = mapDecSpecial(codepoint);
         }
 
-        const rows = @as(usize, self.grid.rows);
-        const cols = @as(usize, self.grid.cols);
+        const screen = self.activeScreen();
+        const rows = @as(usize, screen.grid.rows);
+        const cols = @as(usize, screen.grid.cols);
         if (rows == 0 or cols == 0) return;
-        if (self.cursor.row >= rows) return;
-        if (self.cursor.col >= cols) {
+        if (screen.cursor.row >= rows) return;
+        if (screen.wrap_next) {
             self.newline();
-            if (self.cursor.col >= cols or self.cursor.row >= rows) return;
+            screen.wrap_next = false;
         }
+        if (screen.cursor.col >= cols or screen.cursor.row >= rows) return;
 
-        const row = self.cursor.row;
-        const col = self.cursor.col;
+        const row = screen.cursor.row;
+        const col = screen.cursor.col;
         const idx = row * cols + col;
-        if (idx >= self.grid.cells.items.len) return;
-        var attrs = self.current_attrs;
+        if (idx >= screen.grid.cells.items.len) return;
+        var attrs = screen.current_attrs;
         if (self.osc_hyperlink_active and self.current_hyperlink_id > 0) {
             attrs.link_id = self.current_hyperlink_id;
             attrs.underline = true;
         } else {
             attrs.link_id = 0;
         }
-        self.grid.cells.items[idx] = Cell{
+        screen.grid.cells.items[idx] = Cell{
             .codepoint = cp,
             .width = 1,
             .attrs = attrs,
         };
 
-        self.cursor.col += 1;
-        if (self.cursor.col >= cols) {
-            self.newline();
+        if (screen.cursor.col + 1 >= cols) {
+            screen.wrap_next = true;
+        } else {
+            screen.cursor.col += 1;
         }
-        self.grid.markDirtyRange(row, row, col, col);
+        screen.grid.markDirtyRange(row, row, col, col);
     }
 
     fn mapDecSpecial(codepoint: u32) u32 {
@@ -1490,24 +1620,29 @@ pub const TerminalSession = struct {
     }
 
     fn newline(self: *TerminalSession) void {
-        if (self.cursor.row + 1 < @as(usize, self.grid.rows) and self.cursor.row != self.scroll_bottom) {
-            self.cursor.row += 1;
-            self.cursor.col = 0;
+        const screen = self.activeScreen();
+        if (screen.cursor.row + 1 < @as(usize, screen.grid.rows) and screen.cursor.row != screen.scroll_bottom) {
+            screen.cursor.row += 1;
+            screen.cursor.col = 0;
+            screen.wrap_next = false;
             return;
         }
-        if (self.cursor.row == self.scroll_bottom) {
+        if (screen.cursor.row == screen.scroll_bottom) {
             self.scrollRegionUp(1);
+            screen.wrap_next = false;
             return;
         }
         self.scrollUp();
+        screen.wrap_next = false;
     }
 
     fn scrollUp(self: *TerminalSession) void {
         const log = app_logger.logger("terminal.core");
-        log.logf("scroll up rows={d} cols={d}", .{ self.grid.rows, self.grid.cols });
-        log.logStdout("scroll up rows={d} cols={d}", .{ self.grid.rows, self.grid.cols });
-        const cols = @as(usize, self.grid.cols);
-        const rows = @as(usize, self.grid.rows);
+        const screen = self.activeScreen();
+        log.logf("scroll up rows={d} cols={d}", .{ screen.grid.rows, screen.grid.cols });
+        log.logStdout("scroll up rows={d} cols={d}", .{ screen.grid.rows, screen.grid.cols });
+        const cols = @as(usize, screen.grid.cols);
+        const rows = @as(usize, screen.grid.rows);
         if (rows == 0 or cols == 0) return;
 
         if (self.isFullScrollRegion()) {
@@ -1515,69 +1650,70 @@ pub const TerminalSession = struct {
         }
         const total = rows * cols;
         const row_bytes = cols * @sizeOf(Cell);
-        const src = @as([*]u8, @ptrCast(self.grid.cells.items.ptr));
+        const src = @as([*]u8, @ptrCast(screen.grid.cells.items.ptr));
         std.mem.copyForwards(u8, src[0 .. total * @sizeOf(Cell) - row_bytes], src[row_bytes .. total * @sizeOf(Cell)]);
 
         const row_start = (rows - 1) * cols;
         const default_cell = defaultCell();
-        for (self.grid.cells.items[row_start .. row_start + cols]) |*cell| {
+        for (screen.grid.cells.items[row_start .. row_start + cols]) |*cell| {
             cell.* = default_cell;
         }
-        self.cursor.row = rows - 1;
-        self.cursor.col = 0;
-        self.grid.markDirtyAll();
+        screen.cursor.row = rows - 1;
+        screen.cursor.col = 0;
+        screen.grid.markDirtyAll();
     }
 
     pub fn getCell(self: *TerminalSession, row: usize, col: usize) Cell {
-        if (row >= @as(usize, self.grid.rows) or col >= @as(usize, self.grid.cols)) {
+        const screen = self.activeScreenConst();
+        if (row >= @as(usize, screen.grid.rows) or col >= @as(usize, screen.grid.cols)) {
             return defaultCell();
         }
-        const idx = row * @as(usize, self.grid.cols) + col;
-        return self.grid.cells.items[idx];
+        const idx = row * @as(usize, screen.grid.cols) + col;
+        return screen.grid.cells.items[idx];
     }
 
     pub fn getCursorPos(self: *TerminalSession) CursorPos {
-        return self.cursor;
+        return self.activeScreenConst().cursor;
     }
 
     pub fn gridRows(self: *TerminalSession) usize {
-        return @as(usize, self.grid.rows);
+        return @as(usize, self.activeScreenConst().grid.rows);
     }
 
     pub fn gridCols(self: *TerminalSession) usize {
-        return @as(usize, self.grid.cols);
+        return @as(usize, self.activeScreenConst().grid.cols);
     }
 
     pub fn scrollbackCount(self: *TerminalSession) usize {
-        if (self.alt_active) return 0;
+        if (self.isAltActive()) return 0;
         return self.scrollback.count();
     }
 
     pub fn scrollbackRow(self: *TerminalSession, index: usize) ?[]const Cell {
-        if (self.alt_active) return null;
+        if (self.isAltActive()) return null;
         return self.scrollback.rowSlice(index);
     }
 
     pub fn scrollOffset(self: *TerminalSession) usize {
-        if (self.alt_active) return 0;
+        if (self.isAltActive()) return 0;
         return self.scrollback_offset;
     }
 
     pub fn setScrollOffset(self: *TerminalSession, offset: usize) void {
-        if (self.alt_active) {
+        if (self.isAltActive()) {
             self.scrollback_offset = 0;
             return;
         }
         const max_offset = self.maxScrollOffset();
         self.scrollback_offset = @min(offset, max_offset);
-        self.grid.markDirtyAll();
+        self.primary.grid.markDirtyAll();
         const log = app_logger.logger("terminal.core");
         log.logf("set scroll offset={d} max={d}", .{ self.scrollback_offset, max_offset });
         log.logStdout("set scroll offset={d} max={d}", .{ self.scrollback_offset, max_offset });
     }
 
     pub fn scrollBy(self: *TerminalSession, delta: isize) void {
-        if (self.alt_active) return;
+        if (self.isAltActive()) return;
         if (delta == 0) return;
         const max_offset = self.maxScrollOffset();
         var offset: isize = @intCast(self.scrollback_offset);
@@ -1586,21 +1722,20 @@ pub const TerminalSession = struct {
         const max_i: isize = @intCast(max_offset);
         if (offset > max_i) offset = max_i;
         self.scrollback_offset = @intCast(offset);
-        self.grid.markDirtyAll();
+        self.primary.grid.markDirtyAll();
         const log = app_logger.logger("terminal.core");
         log.logf("scroll by delta={d} offset={d} max={d}", .{ delta, self.scrollback_offset, max_offset });
         log.logStdout("scroll by delta={d} offset={d} max={d}", .{ delta, self.scrollback_offset, max_offset });
     }
 
     fn maxScrollOffset(self: *TerminalSession) usize {
-        if (self.alt_active) return 0;
-        const rows = @as(usize, self.grid.rows);
+        const rows = @as(usize, self.primary.grid.rows);
         const total = self.scrollback.count() + rows;
         return if (total > rows) total - rows else 0;
     }
 
     fn keyModeStack(self: *TerminalSession) *KeyModeStack {
-        return if (self.alt_active) &self.key_mode_alt else &self.key_mode_main;
+        return &self.activeScreen().key_mode;
     }
 
     fn keyModeFlags(self: *TerminalSession) u32 {
@@ -1636,80 +1771,66 @@ pub const TerminalSession = struct {
     }
 
     fn saveCursor(self: *TerminalSession) void {
-        const slot = if (self.alt_active) &self.saved_cursor_alt else &self.saved_cursor_main;
+        const screen = self.activeScreen();
+        const slot = &screen.saved_cursor;
         slot.active = true;
-        slot.cursor = self.cursor;
-        slot.attrs = self.current_attrs;
+        slot.cursor = screen.cursor;
+        slot.attrs = screen.current_attrs;
     }
 
     fn restoreCursor(self: *TerminalSession) void {
-        const slot = if (self.alt_active) &self.saved_cursor_alt else &self.saved_cursor_main;
+        const screen = self.activeScreen();
+        const slot = &screen.saved_cursor;
         if (!slot.active) return;
-        self.cursor = slot.cursor;
-        self.current_attrs = slot.attrs;
+        screen.cursor = slot.cursor;
+        screen.current_attrs = slot.attrs;
     }
 
     fn clearGrid(self: *TerminalSession) void {
-        const default_cell = defaultCell();
-        for (self.grid.cells.items) |*cell| {
-            cell.* = default_cell;
-        }
-        self.grid.markDirtyAll();
+        const screen = self.activeScreen();
+        screen.clear();
     }
 
     fn enterAltScreen(self: *TerminalSession, clear: bool, save_cursor: bool) void {
-        if (self.alt_active) return;
+        if (self.isAltActive()) return;
         if (save_cursor) {
             self.saveCursor();
         }
-        if (self.alt_grid == null) {
-            self.alt_grid = TerminalGrid.init(self.allocator, self.grid.rows, self.grid.cols) catch return;
-        }
-        if (self.alt_grid) |*grid| {
-            std.mem.swap(TerminalGrid, &self.grid, grid);
-        }
-        std.mem.swap(CursorPos, &self.cursor, &self.alt_cursor);
-        std.mem.swap(usize, &self.scroll_top, &self.alt_scroll_top);
-        std.mem.swap(usize, &self.scroll_bottom, &self.alt_scroll_bottom);
-        self.alt_active = true;
         self.saved_scrollback_offset = self.scrollback_offset;
         self.scrollback_offset = 0;
         self.clearSelection();
+        self.active = .alt;
         if (clear) {
             self.clearGrid();
-            self.cursor = .{ .row = 0, .col = 0 };
+            self.activeScreen().cursor = .{ .row = 0, .col = 0 };
         }
+        self.activeScreen().grid.markDirtyAll();
     }
 
     fn exitAltScreen(self: *TerminalSession, restore_cursor: bool) void {
-        if (!self.alt_active) return;
-        if (self.alt_grid) |*grid| {
-            std.mem.swap(TerminalGrid, &self.grid, grid);
-        }
-        std.mem.swap(CursorPos, &self.cursor, &self.alt_cursor);
-        std.mem.swap(usize, &self.scroll_top, &self.alt_scroll_top);
-        std.mem.swap(usize, &self.scroll_bottom, &self.alt_scroll_bottom);
-        self.alt_active = false;
+        if (!self.isAltActive()) return;
+        self.active = .primary;
         self.scrollback_offset = self.saved_scrollback_offset;
         self.clearSelection();
         if (restore_cursor) {
             self.restoreCursor();
         }
-        self.grid.markDirtyAll();
+        self.activeScreen().grid.markDirtyAll();
     }
 
     pub fn snapshot(self: *TerminalSession) TerminalSnapshot {
+        const screen = self.activeScreenConst();
         return TerminalSnapshot{
-            .rows = @as(usize, self.grid.rows),
-            .cols = @as(usize, self.grid.cols),
-            .cells = self.grid.cells.items,
-            .dirty_rows = self.grid.dirty_rows.items,
-            .dirty_cols_start = self.grid.dirty_cols_start.items,
-            .dirty_cols_end = self.grid.dirty_cols_end.items,
-            .cursor = self.cursor,
-            .dirty = self.grid.dirty,
-            .damage = self.grid.damage,
-            .alt_active = self.alt_active,
+            .rows = @as(usize, screen.grid.rows),
+            .cols = @as(usize, screen.grid.cols),
+            .cells = screen.grid.cells.items,
+            .dirty_rows = screen.grid.dirty_rows.items,
+            .dirty_cols_start = screen.grid.dirty_cols_start.items,
+            .dirty_cols_end = screen.grid.dirty_cols_end.items,
+            .cursor = screen.cursor,
+            .dirty = screen.grid.dirty,
+            .damage = screen.grid.damage,
+            .alt_active = self.isAltActive(),
         };
     }
 
@@ -1720,7 +1841,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn clearDirty(self: *TerminalSession) void {
-        self.grid.clearDirty();
+        self.activeScreen().grid.clearDirty();
     }
 
     pub fn clearSelection(self: *TerminalSession) void {
@@ -1729,6 +1850,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn startSelection(self: *TerminalSession, row: usize, col: usize) void {
+        if (self.isAltActive()) return;
         self.selection.active = true;
         self.selection.selecting = true;
         self.selection.start = .{ .row = row, .col = col };
@@ -1736,16 +1858,19 @@ pub const TerminalSession = struct {
     }
 
     pub fn updateSelection(self: *TerminalSession, row: usize, col: usize) void {
+        if (self.isAltActive()) return;
         if (!self.selection.active) return;
         self.selection.end = .{ .row = row, .col = col };
     }
 
     pub fn finishSelection(self: *TerminalSession) void {
+        if (self.isAltActive()) return;
         if (!self.selection.active) return;
         self.selection.selecting = false;
     }
 
     pub fn selectionState(self: *TerminalSession) ?TerminalSelection {
+        if (self.isAltActive()) return null;
         if (!self.selection.active) return null;
         return self.selection;
     }
@@ -1769,19 +1894,20 @@ pub const TerminalSession = struct {
         start_col: usize,
         end_col: usize,
     } {
-        return switch (self.grid.dirty) {
+        const screen = self.activeScreenConst();
+        return switch (screen.grid.dirty) {
             .none => null,
             else => .{
-                .start_row = self.grid.damage.start_row,
-                .end_row = self.grid.damage.end_row,
-                .start_col = self.grid.damage.start_col,
-                .end_col = self.grid.damage.end_col,
+                .start_row = screen.grid.damage.start_row,
+                .end_row = screen.grid.damage.end_row,
+                .start_col = screen.grid.damage.start_col,
+                .end_col = screen.grid.damage.end_col,
             },
         };
     }
 
     pub fn markDirty(self: *TerminalSession) void {
-        self.grid.markDirtyAll();
+        self.activeScreen().grid.markDirtyAll();
     }
 };
 
