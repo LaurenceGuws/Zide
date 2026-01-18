@@ -262,6 +262,10 @@ pub const TerminalSession = struct {
     csi: csi_mod.CsiParser,
     osc_state: OscState,
     osc_buffer: std.ArrayList(u8),
+    osc_clipboard: std.ArrayList(u8),
+    osc_clipboard_pending: bool,
+    osc_hyperlink: std.ArrayList(u8),
+    osc_hyperlink_active: bool,
     current_attrs: CellAttrs,
     scroll_top: usize,
     scroll_bottom: usize,
@@ -304,6 +308,10 @@ pub const TerminalSession = struct {
             .csi = .{},
             .osc_state = .idle,
             .osc_buffer = .empty,
+            .osc_clipboard = .empty,
+            .osc_clipboard_pending = false,
+            .osc_hyperlink = .empty,
+            .osc_hyperlink_active = false,
             .current_attrs = defaultCell().attrs,
             .scroll_top = 0,
             .scroll_bottom = if (rows > 0) @as(usize, rows - 1) else 0,
@@ -327,6 +335,8 @@ pub const TerminalSession = struct {
             grid.deinit();
         }
         self.osc_buffer.deinit(self.allocator);
+        self.osc_clipboard.deinit(self.allocator);
+        self.osc_hyperlink.deinit(self.allocator);
         self.title_buffer.deinit(self.allocator);
         self.allocator.destroy(self);
     }
@@ -606,6 +616,12 @@ pub const TerminalSession = struct {
             0, 2 => {
                 self.setTitle(text);
             },
+            8 => {
+                self.parseOscHyperlink(text);
+            },
+            52 => {
+                self.parseOscClipboard(text);
+            },
             else => {},
         }
     }
@@ -616,6 +632,44 @@ pub const TerminalSession = struct {
         const slice = if (text.len > max_len) text[0..max_len] else text;
         _ = self.title_buffer.appendSlice(self.allocator, slice) catch return;
         self.title = self.title_buffer.items;
+    }
+
+    fn parseOscHyperlink(self: *TerminalSession, text: []const u8) void {
+        const split = std.mem.indexOfScalar(u8, text, ';') orelse return;
+        const uri = text[split + 1 ..];
+        self.osc_hyperlink.clearRetainingCapacity();
+        if (uri.len == 0) {
+            self.osc_hyperlink_active = false;
+            return;
+        }
+        _ = self.osc_hyperlink.appendSlice(self.allocator, uri) catch return;
+        self.osc_hyperlink_active = true;
+    }
+
+    fn parseOscClipboard(self: *TerminalSession, text: []const u8) void {
+        const split = std.mem.indexOfScalar(u8, text, ';') orelse return;
+        const selection = text[0..split];
+        const payload = text[split + 1 ..];
+        if (payload.len == 0 or std.mem.eql(u8, payload, "?")) return;
+        if (!std.mem.containsAtLeast(u8, selection, 1, "c") and !std.mem.containsAtLeast(u8, selection, 1, "0")) {
+            return;
+        }
+
+        const max_bytes: usize = 1024 * 1024;
+        if (payload.len > max_bytes * 2) return;
+
+        var decoded = std.ArrayList(u8).empty;
+        defer decoded.deinit(self.allocator);
+
+        const decoded_len = std.base64.standard.Decoder.calcSizeForSlice(payload) catch return;
+        if (decoded_len > max_bytes) return;
+        decoded.resize(self.allocator, decoded_len) catch return;
+        _ = std.base64.standard.Decoder.decode(decoded.items, payload) catch return;
+
+        self.osc_clipboard.clearRetainingCapacity();
+        _ = self.osc_clipboard.appendSlice(self.allocator, decoded.items) catch return;
+        _ = self.osc_clipboard.append(self.allocator, 0) catch return;
+        self.osc_clipboard_pending = true;
     }
 
     fn handleCsi(self: *TerminalSession, action: csi_mod.CsiAction) void {
@@ -1272,6 +1326,12 @@ pub const TerminalSession = struct {
             .dirty = self.grid.dirty,
             .damage = self.grid.damage,
         };
+    }
+
+    pub fn takeOscClipboard(self: *TerminalSession) ?[]const u8 {
+        if (!self.osc_clipboard_pending) return null;
+        self.osc_clipboard_pending = false;
+        return self.osc_clipboard.items;
     }
 
     pub fn clearDirty(self: *TerminalSession) void {
