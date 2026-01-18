@@ -115,12 +115,20 @@ Research notes:
 
 Progress:
 - Terminal rendering uses dedicated font cache and box‑drawing fast path.
+- R1: snapped terminal cell metrics and draw positions to integer pixels.
 
 Decision:
-- TBD for glyph atlas + cache LRU specifics.
+- Keep terminal cell width/height as integer pixel metrics and snap cell origins and glyph draws to integer pixels.
+- Maintain integer math for per-cell positioning (base + col/row * cell size) to avoid float drift.
+- Continue using point filtering for terminal glyph atlases.
 
 Why:
-- TBD (will be updated after reference review).
+- Integer cell metrics prevent box drawing striping/gaps and keep glyph baselines consistent across DPI/scales.
+- Integer math avoids cumulative float rounding error in long rows.
+
+Research notes:
+- kitty rounds ascent/baseline and cell metrics to integer pixels and computes cell height with ceil/floor to avoid subpixel jitter.
+- wezterm stores cell pixel sizes as integers in its glyph cache metrics and uses pixel dimensions for rendering decisions.
 
 ### Layer 6: Font + Shaping
 

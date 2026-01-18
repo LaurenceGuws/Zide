@@ -34,6 +34,7 @@ Suggested next steps:
 - Added mouse reporting (X10/VT200/SGR) using CSI ?1000/?1002/?1003 and ?1006.
 - Added OSC 8 hyperlink rendering via link-colored, underlined cells tagged with hyperlink IDs.
 - Added `docs/terminal/rendering_todo.yaml` to track text rendering quality upgrades.
+- Snapped terminal cell metrics and per-cell draw positions to integer pixels to reduce box drawing striping.
 
 ## Key changes
 
