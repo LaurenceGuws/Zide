@@ -6,11 +6,12 @@ Date: 2026-01-18
 
 - Repo: `/home/home/personal/zide`
 - Recent commits: `8e735fd` (keyboard input/kitty protocol), `b484b6b` (OSC 52/8), `e932292` (alt screen + cursor save).
-- Current focus: terminal input correctness + mouse reporting + OSC 8 rendering.
+- Current focus: terminal text rendering quality (overflow policy + font fallback + rasterization).
 
 Suggested next steps:
-1) Decide how to render OSC 8 hyperlinks in cell attrs/renderer.
-2) Add minimal manual tests for CSI‑u keyboard behavior.
+1) Implement overflow policy for square/wide glyphs (scale-to-fit vs allow overflow when followed by space).
+2) Add Symbols Nerd Font Mono fallback for PUA glyph coverage.
+3) Improve rasterization quality (LCD + grayscale fallback).
 
 ## Summary of this session
 
@@ -32,6 +33,7 @@ Suggested next steps:
 - Selection auto-scrolls when dragging beyond the terminal viewport.
 - Added mouse reporting (X10/VT200/SGR) using CSI ?1000/?1002/?1003 and ?1006.
 - Added OSC 8 hyperlink rendering via link-colored, underlined cells tagged with hyperlink IDs.
+- Added `docs/terminal/rendering_todo.yaml` to track text rendering quality upgrades.
 
 ## Key changes
 
@@ -85,7 +87,7 @@ Suggested next steps:
 - Selection auto-scrolls when dragging beyond the viewport; scrollback indicator shows when scrolled.
 - Alternate screen buffer supported via DECSET ?47/?1047/?1049; alt screen disables scrollback.
 - Save/restore cursor supported via ESC 7/8, CSI s/u, and DECSET ?1048.
-- OSC 52 clipboard payloads are decoded and forwarded to the UI clipboard; OSC 8 hyperlinks stored as state (no rendering yet).
+- OSC 52 clipboard payloads are decoded and forwarded to the UI clipboard; OSC 8 hyperlinks are rendered with link styling.
 - Keyboard protocol stacks (CSI >/< /=/? u) supported per screen; modifier-aware key encoding for CSI u sequences.
 - Clipboard paste supports Ctrl+Shift+V and middle-click.
 - Bracketed paste mode (?2004) is honored when enabled by the shell.
@@ -103,8 +105,9 @@ Suggested next steps:
 
 ## Next suggested steps (in order)
 
-1) Add mouse reporting (X10/VT200/SGR) to support TUI mouse interaction.
-2) Decide how to surface OSC 8 hyperlink state in the renderer/cell attrs.
+1) Implement overflow policy for square/wide glyphs (scale-to-fit vs allow overflow when followed by space).
+2) Add Symbols Nerd Font Mono fallback for PUA glyphs.
+3) Improve rasterization quality (LCD + grayscale fallback).
 
 ## Workflow (Docs + Research)
 

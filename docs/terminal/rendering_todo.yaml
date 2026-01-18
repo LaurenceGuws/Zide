@@ -1,0 +1,101 @@
+terminal_rendering_todo:
+  scope:
+    description: "Terminal text rendering quality upgrades (box drawing, nerd icons, shaping)."
+    priorities:
+      - "pixel-correct box drawing (no striping)"
+      - "nerd icons do not clip or shrink unexpectedly"
+      - "consistent glyph metrics across DPI + scaling"
+      - "low-GPU/CPU overhead (cache friendly)"
+
+  references:
+    kitty:
+      - reference_repos/terminals/kitty/kitty/core_text.m
+      - reference_repos/terminals/kitty/kitty/fonts.c
+      - reference_repos/terminals/kitty/kitty/fonts/render.py
+    wezterm:
+      - reference_repos/terminals/wezterm/wezterm-gui/src/glyphcache.rs
+      - reference_repos/terminals/wezterm/config/src/font.rs
+    alacritty:
+      - reference_repos/terminals/alacritty/alacritty/src/renderer/text/glyph_cache.rs
+      - reference_repos/terminals/alacritty/alacritty/src/renderer/text/atlas.rs
+
+  phases:
+    - name: "Phase A - Pixel correctness"
+      tasks:
+        - id: R1
+          title: "Force integer cell metrics + snap draw positions"
+          files_to_edit:
+            - src/ui/renderer.zig
+            - src/ui/terminal_font.zig
+          notes:
+            - "Ensure terminal_cell_width/height are integer pixels."
+            - "Snap glyph draw positions to integer pixels."
+        - id: R2
+          title: "Glyph atlas sampling settings"
+          files_to_edit:
+            - src/ui/renderer.zig
+          notes:
+            - "Prefer nearest or point filtering for glyph atlas."
+
+    - name: "Phase B - Overflow policy"
+      tasks:
+        - id: R3
+          title: "Square/wide glyph overflow policy (scale-to-fit vs allow overflow)"
+          files_to_edit:
+            - src/ui/terminal_font.zig
+            - src/ui/renderer.zig
+          notes:
+            - "Adopt aspect-ratio heuristic (wezterm-style)."
+            - "Allow overflow only when followed by space (configurable)."
+
+    - name: "Phase C - Font fallback"
+      tasks:
+        - id: R4
+          title: "Symbols Nerd Font Mono fallback"
+          files_to_add:
+            - assets/fonts/SymbolsNerdFontMono-Regular.ttf
+          files_to_edit:
+            - src/ui/terminal_font.zig
+            - src/ui/renderer.zig
+          notes:
+            - "Use fallback for PUA glyphs."
+            - "Keep fallback sized to terminal cell metrics."
+
+    - name: "Phase D - Rasterization quality"
+      tasks:
+        - id: R5
+          title: "LCD subpixel rendering with grayscale fallback"
+          files_to_edit:
+            - src/ui/terminal_font.zig
+          notes:
+            - "FT_LOAD_TARGET_LCD + FT_RENDER_MODE_LCD."
+            - "Gamma/contrast adjustments if needed."
+
+    - name: "Phase E - Shaping + clusters"
+      tasks:
+        - id: R6
+          title: "HarfBuzz shaping for grapheme clusters"
+          files_to_edit:
+            - src/ui/terminal_font.zig
+          notes:
+            - "Cache shaped clusters."
+            - "Handle combining marks and ligatures."
+
+    - name: "Phase F - Metrics-driven alignment"
+      tasks:
+        - id: R7
+          title: "Underline/strike alignment from font metrics"
+          files_to_edit:
+            - src/ui/renderer.zig
+            - src/ui/terminal_font.zig
+          notes:
+            - "Use font-provided underline position/thickness."
+
+    - name: "Phase G - Validation"
+      tasks:
+        - id: R8
+          title: "Render tests: btop + nvim box drawing"
+          files_to_edit:
+            - docs/terminal/DESIGN.md
+          notes:
+            - "Record screenshots or notes for regression tracking."
