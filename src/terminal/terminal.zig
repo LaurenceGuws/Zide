@@ -273,6 +273,8 @@ pub const TerminalSession = struct {
     alt_scroll_bottom: usize,
     alt_grid: ?TerminalGrid,
     alt_active: bool,
+    key_mode_main: KeyModeStack,
+    key_mode_alt: KeyModeStack,
     saved_cursor_main: SavedCursor,
     saved_cursor_alt: SavedCursor,
 
@@ -319,6 +321,8 @@ pub const TerminalSession = struct {
             .alt_scroll_bottom = if (rows > 0) @as(usize, rows - 1) else 0,
             .alt_grid = null,
             .alt_active = false,
+            .key_mode_main = KeyModeStack.init(),
+            .key_mode_alt = KeyModeStack.init(),
             .saved_cursor_main = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = defaultCell().attrs },
             .saved_cursor_alt = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = defaultCell().attrs },
         };
@@ -378,8 +382,8 @@ pub const TerminalSession = struct {
     }
 
     pub fn sendKey(self: *TerminalSession, key: Key, mod: Modifier) !void {
-        _ = mod;
         if (self.pty) |*pty| {
+            if (self.sendKeyWithProtocol(pty, key, mod)) return;
             const seq = switch (key) {
                 VTERM_KEY_ENTER => "\r",
                 VTERM_KEY_TAB => "\t",
@@ -404,13 +408,101 @@ pub const TerminalSession = struct {
     }
 
     pub fn sendChar(self: *TerminalSession, char: u32, mod: Modifier) !void {
-        _ = mod;
         if (self.pty) |*pty| {
             if (char > 0x10FFFF or (char >= 0xD800 and char <= 0xDFFF)) return;
+            if (self.keyModeFlags() == 0 and (mod & VTERM_MOD_CTRL) != 0) {
+                if (ctrlChar(char)) |mapped| {
+                    if ((mod & VTERM_MOD_ALT) != 0) {
+                        _ = try pty.write(&[_]u8{0x1b});
+                    }
+                    _ = try pty.write(&[_]u8{mapped});
+                    return;
+                }
+            }
+            if (self.keyModeFlags() == 0 and (mod & VTERM_MOD_ALT) != 0) {
+                _ = try pty.write(&[_]u8{0x1b});
+            }
+            if (self.sendCharWithProtocol(pty, char, mod)) return;
             var buf: [4]u8 = undefined;
             const len = std.unicode.utf8Encode(@intCast(char), &buf) catch return;
             _ = try pty.write(buf[0..len]);
         }
+    }
+
+    fn ctrlChar(char: u32) ?u8 {
+        return switch (char) {
+            'a'...'z' => @intCast(char - 'a' + 1),
+            'A'...'Z' => @intCast(char - 'A' + 1),
+            '@', ' ' => 0,
+            '[' => 27,
+            '\\' => 28,
+            ']' => 29,
+            '^' => 30,
+            '_' => 31,
+            '?' => 127,
+            else => null,
+        };
+    }
+
+    fn encodeModifier(mod: Modifier) u8 {
+        var value: u8 = 1;
+        if ((mod & VTERM_MOD_SHIFT) != 0) value += 1;
+        if ((mod & VTERM_MOD_ALT) != 0) value += 2;
+        if ((mod & VTERM_MOD_CTRL) != 0) value += 4;
+        return value;
+    }
+
+    fn sendCsiWithMod(pty: *Pty, prefix: []const u8, mod_code: u8, suffix: []const u8) bool {
+        var buf: [32]u8 = undefined;
+        const seq = if (mod_code > 1)
+            std.fmt.bufPrint(&buf, "\x1b[{s};{d}{s}", .{ prefix, mod_code, suffix }) catch return false
+        else
+            std.fmt.bufPrint(&buf, "\x1b[{s}{s}", .{ prefix, suffix }) catch return false;
+        _ = pty.write(seq) catch return false;
+        return true;
+    }
+
+    fn sendKeyWithProtocol(self: *TerminalSession, pty: *Pty, key: Key, mod: Modifier) bool {
+        const flags = self.keyModeFlags();
+        if (flags == 0) return false;
+
+        const mod_code = encodeModifier(mod);
+        if ((flags & key_mode_report_all_keys) == 0) {
+            if (key == VTERM_KEY_ENTER or key == VTERM_KEY_TAB or key == VTERM_KEY_BACKSPACE) {
+                return false;
+            }
+        }
+
+        switch (key) {
+            VTERM_KEY_UP => return sendCsiWithMod(pty, "1", mod_code, "A"),
+            VTERM_KEY_DOWN => return sendCsiWithMod(pty, "1", mod_code, "B"),
+            VTERM_KEY_RIGHT => return sendCsiWithMod(pty, "1", mod_code, "C"),
+            VTERM_KEY_LEFT => return sendCsiWithMod(pty, "1", mod_code, "D"),
+            VTERM_KEY_HOME => return sendCsiWithMod(pty, "1", mod_code, "H"),
+            VTERM_KEY_END => return sendCsiWithMod(pty, "1", mod_code, "F"),
+            VTERM_KEY_PAGEUP => return sendCsiWithMod(pty, "5", mod_code, "~"),
+            VTERM_KEY_PAGEDOWN => return sendCsiWithMod(pty, "6", mod_code, "~"),
+            VTERM_KEY_INS => return sendCsiWithMod(pty, "2", mod_code, "~"),
+            VTERM_KEY_DEL => return sendCsiWithMod(pty, "3", mod_code, "~"),
+            VTERM_KEY_ESCAPE => {
+                var buf: [32]u8 = undefined;
+                const seq = std.fmt.bufPrint(&buf, "\x1b[{d};{d}u", .{ 27, mod_code }) catch return false;
+                _ = pty.write(seq) catch return false;
+                return true;
+            },
+            else => return false,
+        }
+    }
+
+    fn sendCharWithProtocol(self: *TerminalSession, pty: *Pty, char: u32, mod: Modifier) bool {
+        const flags = self.keyModeFlags();
+        if (flags == 0) return false;
+        if (mod == VTERM_MOD_NONE and (flags & key_mode_report_all_keys) == 0) return false;
+        const mod_code = encodeModifier(mod);
+        var buf: [48]u8 = undefined;
+        const seq = std.fmt.bufPrint(&buf, "\x1b[{d};{d}u", .{ char, mod_code }) catch return false;
+        _ = pty.write(seq) catch return false;
+        return true;
     }
 
     pub fn sendText(self: *TerminalSession, text: []const u8) !void {
@@ -785,15 +877,26 @@ pub const TerminalSession = struct {
                 }
             },
             'u' => { // RCP
-                if (!action.private) {
+                if (action.leader == 0 and !action.private) {
                     self.restoreCursor();
+                    return;
+                }
+                const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
+                const flags: u32 = if (param_len > 0) @intCast(@max(0, p[0])) else 0;
+                const mode: u32 = if (param_len > 1) @intCast(@max(0, p[1])) else 1;
+                switch (action.leader) {
+                    '>' => self.keyModePush(flags),
+                    '<' => self.keyModePop(if (param_len > 0) @intCast(@max(1, p[0])) else 1),
+                    '=' => self.keyModeModify(flags, mode),
+                    '?' => self.keyModeQuery(),
+                    else => {},
                 }
             },
             'm' => { // SGR
                 self.applySgr(action);
             },
             'h' => { // SM
-                if (action.private) {
+                if (action.leader == '?') {
                     const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
                     var idx: u8 = 0;
                     while (idx < param_len and idx < p.len) : (idx += 1) {
@@ -809,10 +912,9 @@ pub const TerminalSession = struct {
                     }
                     return;
                 }
-                if (action.private) return;
             },
             'l' => { // RM
-                if (action.private) {
+                if (action.leader == '?') {
                     const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
                     var idx: u8 = 0;
                     while (idx < param_len and idx < p.len) : (idx += 1) {
@@ -828,7 +930,6 @@ pub const TerminalSession = struct {
                     }
                     return;
                 }
-                if (action.private) return;
             },
             else => {},
         }
@@ -841,6 +942,8 @@ pub const TerminalSession = struct {
         self.scroll_bottom = if (self.grid.rows > 0) @as(usize, self.grid.rows - 1) else 0;
         self.alt_scroll_top = 0;
         self.alt_scroll_bottom = if (self.grid.rows > 0) @as(usize, self.grid.rows - 1) else 0;
+        self.key_mode_main = KeyModeStack.init();
+        self.key_mode_alt = KeyModeStack.init();
         const default_cell = defaultCell();
         for (self.grid.cells.items) |*cell| {
             cell.* = default_cell;
@@ -1251,6 +1354,42 @@ pub const TerminalSession = struct {
         return if (total > rows) total - rows else 0;
     }
 
+    fn keyModeStack(self: *TerminalSession) *KeyModeStack {
+        return if (self.alt_active) &self.key_mode_alt else &self.key_mode_main;
+    }
+
+    fn keyModeFlags(self: *TerminalSession) u32 {
+        return self.keyModeStack().current();
+    }
+
+    fn keyModePush(self: *TerminalSession, flags: u32) void {
+        self.keyModeStack().push(flags);
+    }
+
+    fn keyModePop(self: *TerminalSession, count: usize) void {
+        self.keyModeStack().pop(count);
+    }
+
+    fn keyModeModify(self: *TerminalSession, flags: u32, mode: u32) void {
+        const stack = self.keyModeStack();
+        const current = stack.current();
+        const updated = switch (mode) {
+            2 => current | flags,
+            3 => current & ~flags,
+            else => flags,
+        };
+        stack.setCurrent(updated);
+    }
+
+    fn keyModeQuery(self: *TerminalSession) void {
+        const flags = self.keyModeFlags();
+        if (self.pty) |*pty| {
+            var buf: [32]u8 = undefined;
+            const seq = std.fmt.bufPrint(&buf, "\x1b[?{d}u", .{flags}) catch return;
+            _ = pty.write(seq) catch {};
+        }
+    }
+
     fn saveCursor(self: *TerminalSession) void {
         const slot = if (self.alt_active) &self.saved_cursor_alt else &self.saved_cursor_main;
         slot.active = true;
@@ -1419,6 +1558,45 @@ const SavedCursor = struct {
     attrs: CellAttrs,
 };
 
+const KeyModeStack = struct {
+    len: usize,
+    items: [key_mode_stack_max]u32,
+
+    fn init() KeyModeStack {
+        return .{
+            .len = 1,
+            .items = [_]u32{0} ** key_mode_stack_max,
+        };
+    }
+
+    fn current(self: *const KeyModeStack) u32 {
+        return self.items[self.len - 1];
+    }
+
+    fn push(self: *KeyModeStack, flags: u32) void {
+        if (self.len >= key_mode_stack_max) {
+            var idx: usize = 1;
+            while (idx < key_mode_stack_max) : (idx += 1) {
+                self.items[idx - 1] = self.items[idx];
+            }
+            self.len = key_mode_stack_max - 1;
+        }
+        self.items[self.len] = flags;
+        self.len += 1;
+    }
+
+    fn pop(self: *KeyModeStack, count: usize) void {
+        if (self.len <= 1) return;
+        const max_pop = self.len - 1;
+        const actual = @min(count, max_pop);
+        self.len -= actual;
+    }
+
+    fn setCurrent(self: *KeyModeStack, flags: u32) void {
+        self.items[self.len - 1] = flags;
+    }
+};
+
 pub const Cell = struct {
     codepoint: u32,
     width: u8,
@@ -1492,6 +1670,9 @@ fn defaultCell() Cell {
 const default_fg = Color{ .r = 220, .g = 220, .b = 220 };
 const default_bg = Color{ .r = 24, .g = 25, .b = 33 };
 const default_scrollback_rows: usize = 1000;
+const key_mode_stack_max: usize = 32;
+const key_mode_disambiguate: u32 = 1;
+const key_mode_report_all_keys: u32 = 8;
 
 const ansiColors = [_]Color{
     .{ .r = 0, .g = 0, .b = 0 }, // black

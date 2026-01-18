@@ -2,18 +2,21 @@ pub const CsiAction = struct {
     final: u8,
     params: [8]i32,
     count: u8,
+    leader: u8,
     private: bool,
 };
 
 pub const CsiParser = struct {
     params: [8]i32 = [_]i32{0} ** 8,
     count: u8 = 0,
+    leader: u8 = 0,
     private: bool = false,
     in_param: bool = false,
 
     pub fn reset(self: *CsiParser) void {
         self.params = [_]i32{0} ** 8;
         self.count = 0;
+        self.leader = 0;
         self.private = false;
         self.in_param = false;
     }
@@ -25,14 +28,20 @@ pub const CsiParser = struct {
                 .final = byte,
                 .params = self.params,
                 .count = self.count,
+                .leader = self.leader,
                 .private = self.private,
             };
             self.reset();
             return action;
         }
 
-        if (byte == '?') {
-            self.private = true;
+        if (byte == '<' or byte == '>' or byte == '=' or byte == '?') {
+            if (self.leader == 0) {
+                self.leader = byte;
+            }
+            if (byte == '?') {
+                self.private = true;
+            }
             return null;
         }
 
