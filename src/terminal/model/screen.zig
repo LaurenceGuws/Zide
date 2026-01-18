@@ -1,0 +1,394 @@
+const std = @import("std");
+const types = @import("types.zig");
+
+pub const Dirty = enum {
+    none,
+    partial,
+    full,
+};
+
+pub const Damage = struct {
+    start_row: usize,
+    end_row: usize,
+    start_col: usize,
+    end_col: usize,
+};
+
+pub const TerminalGrid = struct {
+    allocator: std.mem.Allocator,
+    rows: u16,
+    cols: u16,
+    cells: std.ArrayList(types.Cell),
+    dirty_rows: std.ArrayList(bool),
+    dirty_cols_start: std.ArrayList(u16),
+    dirty_cols_end: std.ArrayList(u16),
+    dirty: Dirty,
+    damage: Damage,
+
+    pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !TerminalGrid {
+        var cells = std.ArrayList(types.Cell).empty;
+        var dirty_rows = std.ArrayList(bool).empty;
+        var dirty_cols_start = std.ArrayList(u16).empty;
+        var dirty_cols_end = std.ArrayList(u16).empty;
+        const count = @as(usize, rows) * @as(usize, cols);
+        try cells.resize(allocator, count);
+        try dirty_rows.resize(allocator, rows);
+        try dirty_cols_start.resize(allocator, rows);
+        try dirty_cols_end.resize(allocator, rows);
+        const default_cell = types.defaultCell();
+        for (cells.items) |*cell| {
+            cell.* = default_cell;
+        }
+        for (dirty_rows.items) |*row_dirty| {
+            row_dirty.* = true;
+        }
+        for (dirty_cols_start.items, dirty_cols_end.items) |*col_start, *col_end| {
+            col_start.* = 0;
+            col_end.* = if (cols > 0) cols - 1 else 0;
+        }
+        return .{
+            .allocator = allocator,
+            .rows = rows,
+            .cols = cols,
+            .cells = cells,
+            .dirty_rows = dirty_rows,
+            .dirty_cols_start = dirty_cols_start,
+            .dirty_cols_end = dirty_cols_end,
+            .dirty = .full,
+            .damage = .{
+                .start_row = 0,
+                .end_row = if (rows > 0) @as(usize, rows - 1) else 0,
+                .start_col = 0,
+                .end_col = if (cols > 0) @as(usize, cols - 1) else 0,
+            },
+        };
+    }
+
+    pub fn deinit(self: *TerminalGrid) void {
+        self.cells.deinit(self.allocator);
+        self.dirty_rows.deinit(self.allocator);
+        self.dirty_cols_start.deinit(self.allocator);
+        self.dirty_cols_end.deinit(self.allocator);
+    }
+
+    pub fn resize(self: *TerminalGrid, rows: u16, cols: u16) !void {
+        if (self.rows == rows and self.cols == cols) return;
+        const old_rows = self.rows;
+        const old_cols = self.cols;
+        const old_cells = self.cells;
+
+        var new_cells = std.ArrayList(types.Cell).empty;
+        var new_dirty_rows = std.ArrayList(bool).empty;
+        var new_dirty_cols_start = std.ArrayList(u16).empty;
+        var new_dirty_cols_end = std.ArrayList(u16).empty;
+        const count = @as(usize, rows) * @as(usize, cols);
+        try new_cells.resize(self.allocator, count);
+        try new_dirty_rows.resize(self.allocator, rows);
+        try new_dirty_cols_start.resize(self.allocator, rows);
+        try new_dirty_cols_end.resize(self.allocator, rows);
+
+        const default_cell = types.defaultCell();
+        for (new_cells.items) |*cell| {
+            cell.* = default_cell;
+        }
+
+        const copy_rows = @min(@as(usize, old_rows), @as(usize, rows));
+        const copy_cols = @min(@as(usize, old_cols), @as(usize, cols));
+        if (copy_rows > 0 and copy_cols > 0 and old_cells.items.len > 0) {
+            var row: usize = 0;
+            while (row < copy_rows) : (row += 1) {
+                const old_start = row * @as(usize, old_cols);
+                const new_start = row * @as(usize, cols);
+                std.mem.copyForwards(
+                    types.Cell,
+                    new_cells.items[new_start .. new_start + copy_cols],
+                    old_cells.items[old_start .. old_start + copy_cols],
+                );
+            }
+        }
+
+        for (new_dirty_rows.items) |*row_dirty| {
+            row_dirty.* = true;
+        }
+        for (new_dirty_cols_start.items, new_dirty_cols_end.items) |*col_start, *col_end| {
+            col_start.* = 0;
+            col_end.* = if (cols > 0) cols - 1 else 0;
+        }
+
+        self.cells.deinit(self.allocator);
+        self.dirty_rows.deinit(self.allocator);
+        self.dirty_cols_start.deinit(self.allocator);
+        self.dirty_cols_end.deinit(self.allocator);
+        self.cells = new_cells;
+        self.dirty_rows = new_dirty_rows;
+        self.dirty_cols_start = new_dirty_cols_start;
+        self.dirty_cols_end = new_dirty_cols_end;
+        self.rows = rows;
+        self.cols = cols;
+        self.markDirtyAll();
+    }
+
+    fn setAllDirtyRows(self: *TerminalGrid, value: bool) void {
+        for (self.dirty_rows.items) |*row_dirty| {
+            row_dirty.* = value;
+        }
+    }
+
+    fn setAllDirtyCols(self: *TerminalGrid, start: u16, end: u16) void {
+        for (self.dirty_cols_start.items, self.dirty_cols_end.items) |*col_start, *col_end| {
+            col_start.* = start;
+            col_end.* = end;
+        }
+    }
+
+    pub fn markDirtyRange(self: *TerminalGrid, start_row: usize, end_row: usize, start_col: usize, end_col: usize) void {
+        if (self.rows == 0 or self.cols == 0) return;
+        const max_row = @as(usize, self.rows - 1);
+        const max_col = @as(usize, self.cols - 1);
+        const row_start = @min(start_row, max_row);
+        const row_end = @min(end_row, max_row);
+        const col_start = @min(start_col, max_col);
+        const col_end = @min(end_col, max_col);
+        if (row_start > row_end or col_start > col_end) return;
+
+        if (self.dirty != .full) {
+            if (self.dirty == .none) {
+                self.dirty = .partial;
+                self.damage = .{
+                    .start_row = row_start,
+                    .end_row = row_end,
+                    .start_col = col_start,
+                    .end_col = col_end,
+                };
+            } else {
+                self.damage.start_row = @min(self.damage.start_row, row_start);
+                self.damage.end_row = @max(self.damage.end_row, row_end);
+                self.damage.start_col = @min(self.damage.start_col, col_start);
+                self.damage.end_col = @max(self.damage.end_col, col_end);
+            }
+        }
+
+        for (row_start..row_end + 1) |row| {
+            self.dirty_rows.items[row] = true;
+            const col_start_u16: u16 = @intCast(col_start);
+            const col_end_u16: u16 = @intCast(col_end);
+            if (self.dirty_cols_start.items[row] > col_start_u16) {
+                self.dirty_cols_start.items[row] = col_start_u16;
+            }
+            if (self.dirty_cols_end.items[row] < col_end_u16) {
+                self.dirty_cols_end.items[row] = col_end_u16;
+            }
+        }
+    }
+
+    pub fn markDirtyAll(self: *TerminalGrid) void {
+        self.dirty = .full;
+        self.damage = .{
+            .start_row = 0,
+            .end_row = if (self.rows > 0) @as(usize, self.rows - 1) else 0,
+            .start_col = 0,
+            .end_col = if (self.cols > 0) @as(usize, self.cols - 1) else 0,
+        };
+        self.setAllDirtyRows(true);
+        if (self.cols > 0) {
+            self.setAllDirtyCols(0, self.cols - 1);
+        } else {
+            self.setAllDirtyCols(0, 0);
+        }
+    }
+
+    pub fn clearDirty(self: *TerminalGrid) void {
+        self.dirty = .none;
+        self.setAllDirtyRows(false);
+        const invalid_start = self.cols;
+        for (self.dirty_cols_start.items, self.dirty_cols_end.items) |*col_start, *col_end| {
+            col_start.* = invalid_start;
+            col_end.* = 0;
+        }
+        self.damage = .{
+            .start_row = 0,
+            .end_row = 0,
+            .start_col = 0,
+            .end_col = 0,
+        };
+    }
+};
+
+pub const TabStops = struct {
+    allocator: std.mem.Allocator,
+    stops: std.ArrayList(bool),
+
+    pub fn init(allocator: std.mem.Allocator, cols: u16) !TabStops {
+        var stops = std.ArrayList(bool).empty;
+        try stops.resize(allocator, cols);
+        var tabstops = TabStops{
+            .allocator = allocator,
+            .stops = stops,
+        };
+        tabstops.reset();
+        return tabstops;
+    }
+
+    pub fn deinit(self: *TabStops) void {
+        self.stops.deinit(self.allocator);
+    }
+
+    pub fn resize(self: *TabStops, cols: u16) !void {
+        const old_len = self.stops.items.len;
+        try self.stops.resize(self.allocator, cols);
+        if (cols > old_len) {
+            var idx: usize = old_len;
+            while (idx < cols) : (idx += 1) {
+                self.stops.items[idx] = TabStops.defaultStop(idx);
+            }
+        }
+    }
+
+    pub fn reset(self: *TabStops) void {
+        for (self.stops.items, 0..) |*stop, idx| {
+            stop.* = TabStops.defaultStop(idx);
+        }
+    }
+
+    pub fn next(self: *const TabStops, col: usize, max_col: usize) usize {
+        if (self.stops.items.len == 0) return col;
+        var idx = col + 1;
+        const limit = @min(max_col, self.stops.items.len - 1);
+        while (idx <= limit) : (idx += 1) {
+            if (self.stops.items[idx]) return idx;
+        }
+        return max_col;
+    }
+
+    fn defaultStop(col: usize) bool {
+        return (col % 8) == 0;
+    }
+};
+
+pub const Screen = struct {
+    grid: TerminalGrid,
+    cursor: types.CursorPos,
+    saved_cursor: SavedCursor,
+    scroll_top: usize,
+    scroll_bottom: usize,
+    tabstops: TabStops,
+    key_mode: KeyModeStack,
+    current_attrs: types.CellAttrs,
+    wrap_next: bool,
+
+    pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !Screen {
+        const grid = try TerminalGrid.init(allocator, rows, cols);
+        const tabstops = try TabStops.init(allocator, cols);
+        return .{
+            .grid = grid,
+            .cursor = .{ .row = 0, .col = 0 },
+            .saved_cursor = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = types.defaultCell().attrs },
+            .scroll_top = 0,
+            .scroll_bottom = if (rows > 0) @as(usize, rows - 1) else 0,
+            .tabstops = tabstops,
+            .key_mode = KeyModeStack.init(),
+            .current_attrs = types.defaultCell().attrs,
+            .wrap_next = false,
+        };
+    }
+
+    pub fn deinit(self: *Screen) void {
+        self.grid.deinit();
+        self.tabstops.deinit();
+    }
+
+    pub fn resize(self: *Screen, rows: u16, cols: u16) !void {
+        const old_rows = self.grid.rows;
+        const old_cols = self.grid.cols;
+        const was_full_region = old_rows > 0 and self.scroll_top == 0 and self.scroll_bottom + 1 == @as(usize, old_rows);
+        try self.grid.resize(rows, cols);
+        if (cols != old_cols) {
+            try self.tabstops.resize(cols);
+        }
+        if (rows > 0) {
+            if (self.scroll_top >= @as(usize, rows)) self.scroll_top = 0;
+            if (self.scroll_bottom >= @as(usize, rows)) self.scroll_bottom = @as(usize, rows - 1);
+            if (self.scroll_top > self.scroll_bottom) {
+                self.scroll_top = 0;
+                self.scroll_bottom = @as(usize, rows - 1);
+            }
+            if (was_full_region) {
+                self.scroll_top = 0;
+                self.scroll_bottom = @as(usize, rows - 1);
+            }
+        } else {
+            self.scroll_top = 0;
+            self.scroll_bottom = 0;
+        }
+        const max_row = if (rows > 0) @as(usize, rows - 1) else 0;
+        const max_col = if (cols > 0) @as(usize, cols - 1) else 0;
+        if (self.cursor.row > max_row) self.cursor.row = max_row;
+        if (self.cursor.col > max_col) self.cursor.col = max_col;
+    }
+
+    pub fn resetState(self: *Screen) void {
+        self.cursor = .{ .row = 0, .col = 0 };
+        self.saved_cursor = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = types.defaultCell().attrs };
+        self.scroll_top = 0;
+        self.scroll_bottom = if (self.grid.rows > 0) @as(usize, self.grid.rows - 1) else 0;
+        self.key_mode = KeyModeStack.init();
+        self.current_attrs = types.defaultCell().attrs;
+        self.wrap_next = false;
+        self.tabstops.reset();
+    }
+
+    pub fn clear(self: *Screen) void {
+        const default_cell = types.defaultCell();
+        for (self.grid.cells.items) |*cell| {
+            cell.* = default_cell;
+        }
+        self.grid.markDirtyAll();
+    }
+};
+
+const SavedCursor = struct {
+    active: bool,
+    cursor: types.CursorPos,
+    attrs: types.CellAttrs,
+};
+
+pub const KeyModeStack = struct {
+    len: usize,
+    items: [key_mode_stack_max]u32,
+
+    pub fn init() KeyModeStack {
+        return .{
+            .len = 1,
+            .items = [_]u32{0} ** key_mode_stack_max,
+        };
+    }
+
+    pub fn current(self: *const KeyModeStack) u32 {
+        return self.items[self.len - 1];
+    }
+
+    pub fn push(self: *KeyModeStack, flags: u32) void {
+        if (self.len >= key_mode_stack_max) {
+            var idx: usize = 1;
+            while (idx < key_mode_stack_max) : (idx += 1) {
+                self.items[idx - 1] = self.items[idx];
+            }
+            self.len = key_mode_stack_max - 1;
+        }
+        self.items[self.len] = flags;
+        self.len += 1;
+    }
+
+    pub fn pop(self: *KeyModeStack, count: usize) void {
+        if (self.len <= 1) return;
+        const max_pop = self.len - 1;
+        const actual = @min(count, max_pop);
+        self.len -= actual;
+    }
+
+    pub fn setCurrent(self: *KeyModeStack, flags: u32) void {
+        self.items[self.len - 1] = flags;
+    }
+};
+
+const key_mode_stack_max: usize = 32;

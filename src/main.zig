@@ -9,8 +9,8 @@ const app_logger = @import("app_logger.zig");
 const config_mod = @import("config/lua_config.zig");
 
 // Terminal modules
-const terminal_mod = @import("terminal/terminal.zig");
-const metrics_mod = @import("terminal/metrics.zig");
+const terminal_mod = @import("terminal/core/terminal.zig");
+const metrics_mod = @import("terminal/model/metrics.zig");
 
 // UI modules
 const renderer_mod = @import("ui/renderer.zig");
