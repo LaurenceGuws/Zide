@@ -9,7 +9,7 @@ Purpose: this document tracks terminal architecture decisions and implementation
 - Terminal backend stub replaced by a working PTY + minimal VT pipeline.
 - Shell output renders with basic cursor movement, erase ops, and SGR (16/256/truecolor).
 - Scrollback ring buffer captures full‑screen scrolls and is exposed via a scrollbar + offset, plus a scrollback indicator.
-- Alternate screen switching and cursor save/restore are supported; alt screen disables scrollback.
+- Alternate screen uses per-screen state (grid, cursor, scroll region, key mode stack, attrs); alt disables scrollback/selection and fully dirties on switch.
 - OSC parsing now handles clipboard (OSC 52) and hyperlinks (OSC 8) as internal state.
 - Keyboard input supports CSI u/kitty protocol flags with per-screen stacks and modifier-aware encoding.
 - Legacy modifier combos now include full letter/number/punctuation mapping; macOS Command is reserved for app shortcuts.
@@ -193,6 +193,7 @@ Progress:
 - Newline now scrolls within the active scroll region when the cursor hits its bottom edge.
 - OSC 52 clipboard payloads decode into a pending clipboard buffer for the UI.
 - OSC 8 hyperlinks are parsed and stored as active/inactive state (no rendering yet).
+- Fixed autowrap with wrap-next semantics to avoid duplicate lines in full-screen apps (btop/lazygit).
 
 Decision:
 - Track an alternate grid and per-screen cursor/scroll region state; swap on DECSET/DECRST.
@@ -255,3 +256,7 @@ Why:
 1) Add overflow policy for square/wide glyphs (scale-to-fit vs allow overflow when followed by space).
 2) Add Symbols Nerd Font Mono fallback for PUA glyphs.
 3) Improve rasterization quality (LCD + grayscale fallback).
+
+## Related docs
+
+- Alt screen redesign proposal: `docs/terminal/ALT_SCREEN_REDESIGN.md`.
