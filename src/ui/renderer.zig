@@ -565,7 +565,7 @@ pub const Renderer = struct {
                 });
             }
             if (underline) {
-                const underline_y = @intFromFloat(y + self.terminal_cell_height - 2);
+                const underline_y: c_int = @intFromFloat(y + self.terminal_cell_height - 2);
                 self.drawRect(
                     @intFromFloat(x),
                     underline_y,
