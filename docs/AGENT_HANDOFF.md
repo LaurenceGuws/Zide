@@ -37,6 +37,8 @@ Suggested next steps:
 - Snapped terminal cell metrics and per-cell draw positions to integer pixels to reduce box drawing striping.
 - Set terminal glyph atlas sampling to point filtering to preserve pixel edges.
 - Added square/wide glyph overflow policy: scale to fit unless followed by space (aspect threshold 0.7).
+- Always allow PUA/symbol glyphs to overflow to avoid shrinking icon glyphs.
+- Clamp symbol glyphs so they never draw left of the cell origin (prevents left-edge clipping).
 
 ## Key changes
 

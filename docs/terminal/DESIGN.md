@@ -125,12 +125,16 @@ Decision:
 - Use point filtering for terminal glyph atlases to preserve pixel edges.
 - For square/wide glyphs, allow width overflow only when followed by space (default), otherwise scale to fit the cell.
 - Use a wezterm-style aspect heuristic: treat glyphs with width >= 0.7 * cell height as square/wide.
+- Always allow PUA/symbol glyphs to overflow (no scaling) to match common terminal behavior for icons.
+- Clamp symbol glyphs to never render left of the cell origin to avoid left-edge clipping.
 
 Why:
 - Integer cell metrics prevent box drawing striping/gaps and keep glyph baselines consistent across DPI/scales.
 - Integer math avoids cumulative float rounding error in long rows.
- - Overflow-only-when-space matches common terminal behavior while avoiding constant clipping.
- - The 0.7 threshold matches wezterm’s heuristic for identifying square-ish glyphs.
+- Overflow-only-when-space matches common terminal behavior while avoiding constant clipping.
+- The 0.7 threshold matches wezterm’s heuristic for identifying square-ish glyphs.
+- Always-overflow PUA/symbols avoids shrinking icon glyphs; aligns with wezterm when configured to allow overflow and with alacritty’s non-scaling render path.
+- Left clamp prevents negative bearings/centering from pushing icons off the viewport edge.
 
 Research notes:
 - kitty rounds ascent/baseline and cell metrics to integer pixels and computes cell height with ceil/floor to avoid subpixel jitter.
