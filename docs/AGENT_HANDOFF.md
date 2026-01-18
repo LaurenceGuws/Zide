@@ -36,6 +36,7 @@ Suggested next steps:
 - Added `docs/terminal/rendering_todo.yaml` to track text rendering quality upgrades.
 - Snapped terminal cell metrics and per-cell draw positions to integer pixels to reduce box drawing striping.
 - Set terminal glyph atlas sampling to point filtering to preserve pixel edges.
+- Added square/wide glyph overflow policy: scale to fit unless followed by space (aspect threshold 0.7).
 
 ## Key changes
 

@@ -200,42 +200,68 @@ pub const TerminalFont = struct {
             (codepoint >= 0x2700 and codepoint <= 0x27BF) or // Dingbats (❯, etc.)
             (codepoint >= 0x2600 and codepoint <= 0x26FF); // Misc Symbols
 
-        _ = cell_height;
-        _ = followed_by_space;
-        _ = glyph_w;
-        _ = glyph_h;
+        const aspect = if (cell_height > 0) glyph_w / cell_height else 0.0;
+        const is_square_or_wide = aspect >= 0.7;
+        const allow_width_overflow = if (is_square_or_wide) switch (self.overflow_policy) {
+            .never => false,
+            .always => true,
+            .when_followed_by_space => followed_by_space,
+        } else false;
+
+        const scale = if (!allow_width_overflow and glyph_w > cell_width and glyph_w > 0) cell_width / glyph_w else 1.0;
+        const scaled_w = glyph_w * scale;
+        const scaled_h = glyph_h * scale;
 
         const bearing = @as(f32, @floatFromInt(glyph.bearing_x));
 
         // For symbol/icon glyphs: center in cell with left bias to prevent right clipping.
         if (is_symbol_glyph) {
-            const glyph_width = @as(f32, @floatFromInt(glyph.width));
             // Higher ratio = more left shift = less right overflow.
             // 0.5 = centered, 0.7 = biased left, 1.0 = right-aligned
-            const draw_x = x + (cell_width - glyph_width) * 0.7;
-            const draw_y = baseline - @as(f32, @floatFromInt(glyph.bearing_y));
+            const draw_x = x + (cell_width - scaled_w) * 0.7;
+            const draw_y = baseline - @as(f32, @floatFromInt(glyph.bearing_y)) * scale;
             const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
             const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y)))));
+            if (scale == 1.0) {
+                c.DrawTextureRec(self.texture, glyph.rect, .{ .x = snapped_x, .y = snapped_y }, .{
+                    .r = color.r,
+                    .g = color.g,
+                    .b = color.b,
+                    .a = color.a,
+                });
+            } else {
+                const dest = c.Rectangle{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
+                c.DrawTexturePro(self.texture, glyph.rect, dest, .{ .x = 0, .y = 0 }, 0, .{
+                    .r = color.r,
+                    .g = color.g,
+                    .b = color.b,
+                    .a = color.a,
+                });
+            }
+            return;
+        }
+
+        // Normal glyph: draw at bearing position, clamped to not go left of cell.
+        const draw_x = if (allow_width_overflow) x + bearing * scale else @max(x, x + bearing * scale);
+        const draw_y = baseline - @as(f32, @floatFromInt(glyph.bearing_y)) * scale;
+        const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
+        const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y)))));
+        if (scale == 1.0) {
             c.DrawTextureRec(self.texture, glyph.rect, .{ .x = snapped_x, .y = snapped_y }, .{
                 .r = color.r,
                 .g = color.g,
                 .b = color.b,
                 .a = color.a,
             });
-            return;
+        } else {
+            const dest = c.Rectangle{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
+            c.DrawTexturePro(self.texture, glyph.rect, dest, .{ .x = 0, .y = 0 }, 0, .{
+                .r = color.r,
+                .g = color.g,
+                .b = color.b,
+                .a = color.a,
+            });
         }
-
-        // Normal glyph: draw at bearing position, clamped to not go left of cell.
-        const draw_x = @max(x, x + bearing);
-        const draw_y = baseline - @as(f32, @floatFromInt(glyph.bearing_y));
-        const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
-        const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y)))));
-        c.DrawTextureRec(self.texture, glyph.rect, .{ .x = snapped_x, .y = snapped_y }, .{
-            .r = color.r,
-            .g = color.g,
-            .b = color.b,
-            .a = color.a,
-        });
     }
 
     fn getGlyph(self: *TerminalFont, codepoint: u32) GlyphError!*Glyph {
