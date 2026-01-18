@@ -9,6 +9,7 @@ Date: 2026-01-17
 - Kept dirty tracking ownership in the terminal widget (clear after draw).
 - Added a scrollback indicator overlay when the viewport is scrolled.
 - Added glyph atlas compaction and a reusable upload buffer to reduce per-glyph allocations.
+- Added alternate screen switching and per-screen cursor save/restore, including ESC 7/8 and CSI s/u.
 - Added a Lua config POC for logging and per-component logger filtering.
 - Added `assets/config/init.lua` as the defaults reference and documented log config and raylib log levels.
 - Added frame pacing metrics (frame/draw/input latency) for tuning and profiling.
@@ -67,6 +68,8 @@ Date: 2026-01-17
 - Frame pacing metrics are collected in `terminal/metrics.zig`.
 - Basic mouse selection highlights and Ctrl+Shift+C copy are supported (selection clears on resize and on input that resumes live view).
 - Selection auto-scrolls when dragging beyond the viewport; scrollback indicator shows when scrolled.
+- Alternate screen buffer supported via DECSET ?47/?1047/?1049; alt screen disables scrollback.
+- Save/restore cursor supported via ESC 7/8, CSI s/u, and DECSET ?1048.
 - Clipboard paste supports Ctrl+Shift+V and middle-click.
 - Bracketed paste mode (?2004) is honored when enabled by the shell.
 - Basic OSC parsing now consumes OSC 0/2 sequences to avoid printing prompt metadata.
@@ -83,8 +86,8 @@ Date: 2026-01-17
 
 ## Next suggested steps (in order)
 
-1) Expand CSI for modes and attributes (alternate screen, saved cursor, scroll-region quirks).
-2) Extend OSC handling (clipboard, hyperlinks) and input protocol support.
+1) Extend OSC handling (clipboard, hyperlinks) and input protocol support.
+2) Add CSI key/mouse protocol extensions (CSI u, kitty keyboard, mouse reporting).
 
 ## Workflow (Docs + Research)
 

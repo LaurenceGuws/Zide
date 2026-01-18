@@ -250,7 +250,9 @@ pub const TerminalSession = struct {
     grid: TerminalGrid,
     scrollback: Scrollback,
     cursor: CursorPos,
+    alt_cursor: CursorPos,
     scrollback_offset: usize,
+    saved_scrollback_offset: usize,
     selection: TerminalSelection,
     bracketed_paste: bool,
     cell_width: u16,
@@ -263,6 +265,12 @@ pub const TerminalSession = struct {
     current_attrs: CellAttrs,
     scroll_top: usize,
     scroll_bottom: usize,
+    alt_scroll_top: usize,
+    alt_scroll_bottom: usize,
+    alt_grid: ?TerminalGrid,
+    alt_active: bool,
+    saved_cursor_main: SavedCursor,
+    saved_cursor_alt: SavedCursor,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !*TerminalSession {
         const session = try allocator.create(TerminalSession);
@@ -279,7 +287,9 @@ pub const TerminalSession = struct {
             .grid = grid,
             .scrollback = scrollback,
             .cursor = .{ .row = 0, .col = 0 },
+            .alt_cursor = .{ .row = 0, .col = 0 },
             .scrollback_offset = 0,
+            .saved_scrollback_offset = 0,
             .selection = .{
                 .active = false,
                 .selecting = false,
@@ -297,6 +307,12 @@ pub const TerminalSession = struct {
             .current_attrs = defaultCell().attrs,
             .scroll_top = 0,
             .scroll_bottom = if (rows > 0) @as(usize, rows - 1) else 0,
+            .alt_scroll_top = 0,
+            .alt_scroll_bottom = if (rows > 0) @as(usize, rows - 1) else 0,
+            .alt_grid = null,
+            .alt_active = false,
+            .saved_cursor_main = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = defaultCell().attrs },
+            .saved_cursor_alt = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = defaultCell().attrs },
         };
         return session;
     }
@@ -307,6 +323,9 @@ pub const TerminalSession = struct {
         }
         self.scrollback.deinit();
         self.grid.deinit();
+        if (self.alt_grid) |*grid| {
+            grid.deinit();
+        }
         self.osc_buffer.deinit(self.allocator);
         self.title_buffer.deinit(self.allocator);
         self.allocator.destroy(self);
@@ -398,6 +417,9 @@ pub const TerminalSession = struct {
         if (cols != old_cols) {
             try self.scrollback.resizePreserve(cols, defaultCell());
         }
+        if (self.alt_grid) |*grid| {
+            try grid.resize(rows, cols);
+        }
         const was_full_region = old_rows > 0 and self.scroll_top == 0 and self.scroll_bottom + 1 == @as(usize, old_rows);
         const log = app_logger.logger("terminal.core");
         log.logf("terminal resize rows={d} cols={d} scrollback_cols={d}", .{ rows, cols, self.grid.cols });
@@ -414,9 +436,17 @@ pub const TerminalSession = struct {
                 self.scroll_top = 0;
                 self.scroll_bottom = @as(usize, rows - 1);
             }
+            if (self.alt_scroll_top >= @as(usize, rows)) self.alt_scroll_top = 0;
+            if (self.alt_scroll_bottom >= @as(usize, rows)) self.alt_scroll_bottom = @as(usize, rows - 1);
+            if (self.alt_scroll_top > self.alt_scroll_bottom) {
+                self.alt_scroll_top = 0;
+                self.alt_scroll_bottom = @as(usize, rows - 1);
+            }
         } else {
             self.scroll_top = 0;
             self.scroll_bottom = 0;
+            self.alt_scroll_top = 0;
+            self.alt_scroll_bottom = 0;
         }
         const max_row = if (rows > 0) @as(usize, rows - 1) else 0;
         const max_col = if (cols > 0) @as(usize, cols - 1) else 0;
@@ -497,6 +527,12 @@ pub const TerminalSession = struct {
                     return;
                 } else if (byte == 'c') {
                     self.resetState();
+                    self.esc_state = .ground;
+                } else if (byte == '7') {
+                    self.saveCursor();
+                    self.esc_state = .ground;
+                } else if (byte == '8') {
+                    self.restoreCursor();
                     self.esc_state = .ground;
                 } else {
                     self.esc_state = .ground;
@@ -689,26 +725,54 @@ pub const TerminalSession = struct {
                     self.cursor.col = 0;
                 }
             },
+            's' => { // SCP
+                if (!action.private) {
+                    self.saveCursor();
+                }
+            },
+            'u' => { // RCP
+                if (!action.private) {
+                    self.restoreCursor();
+                }
+            },
             'm' => { // SGR
                 self.applySgr(action);
             },
             'h' => { // SM
                 if (action.private) {
-                    const mode = p[0];
-                    if (mode == 2004) {
-                        self.bracketed_paste = true;
-                        return;
+                    const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
+                    var idx: u8 = 0;
+                    while (idx < param_len and idx < p.len) : (idx += 1) {
+                        const mode = p[idx];
+                        switch (mode) {
+                            47 => self.enterAltScreen(false, false),
+                            1047 => self.enterAltScreen(true, false),
+                            1048 => self.saveCursor(),
+                            1049 => self.enterAltScreen(true, true),
+                            2004 => self.bracketed_paste = true,
+                            else => {},
+                        }
                     }
+                    return;
                 }
                 if (action.private) return;
             },
             'l' => { // RM
                 if (action.private) {
-                    const mode = p[0];
-                    if (mode == 2004) {
-                        self.bracketed_paste = false;
-                        return;
+                    const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
+                    var idx: u8 = 0;
+                    while (idx < param_len and idx < p.len) : (idx += 1) {
+                        const mode = p[idx];
+                        switch (mode) {
+                            47 => self.exitAltScreen(false),
+                            1047 => self.exitAltScreen(false),
+                            1048 => self.restoreCursor(),
+                            1049 => self.exitAltScreen(true),
+                            2004 => self.bracketed_paste = false,
+                            else => {},
+                        }
                     }
+                    return;
                 }
                 if (action.private) return;
             },
@@ -721,6 +785,8 @@ pub const TerminalSession = struct {
         self.current_attrs = defaultCell().attrs;
         self.scroll_top = 0;
         self.scroll_bottom = if (self.grid.rows > 0) @as(usize, self.grid.rows - 1) else 0;
+        self.alt_scroll_top = 0;
+        self.alt_scroll_bottom = if (self.grid.rows > 0) @as(usize, self.grid.rows - 1) else 0;
         const default_cell = defaultCell();
         for (self.grid.cells.items) |*cell| {
             cell.* = default_cell;
@@ -865,6 +931,7 @@ pub const TerminalSession = struct {
         const cols = @as(usize, self.grid.cols);
         if (cols == 0 or self.grid.rows == 0) return;
         if (row >= @as(usize, self.grid.rows)) return;
+        if (self.alt_active) return;
         const row_start = row * cols;
         self.scrollback.pushRow(self.grid.cells.items[row_start .. row_start + cols]);
         const log = app_logger.logger("terminal.core");
@@ -1021,9 +1088,13 @@ pub const TerminalSession = struct {
     }
 
     fn newline(self: *TerminalSession) void {
-        if (self.cursor.row + 1 < @as(usize, self.grid.rows)) {
+        if (self.cursor.row + 1 < @as(usize, self.grid.rows) and self.cursor.row != self.scroll_bottom) {
             self.cursor.row += 1;
             self.cursor.col = 0;
+            return;
+        }
+        if (self.cursor.row == self.scroll_bottom) {
+            self.scrollRegionUp(1);
             return;
         }
         self.scrollUp();
@@ -1076,18 +1147,25 @@ pub const TerminalSession = struct {
     }
 
     pub fn scrollbackCount(self: *TerminalSession) usize {
+        if (self.alt_active) return 0;
         return self.scrollback.count();
     }
 
     pub fn scrollbackRow(self: *TerminalSession, index: usize) ?[]const Cell {
+        if (self.alt_active) return null;
         return self.scrollback.rowSlice(index);
     }
 
     pub fn scrollOffset(self: *TerminalSession) usize {
+        if (self.alt_active) return 0;
         return self.scrollback_offset;
     }
 
     pub fn setScrollOffset(self: *TerminalSession, offset: usize) void {
+        if (self.alt_active) {
+            self.scrollback_offset = 0;
+            return;
+        }
         const max_offset = self.maxScrollOffset();
         self.scrollback_offset = @min(offset, max_offset);
         self.grid.markDirtyAll();
@@ -1097,6 +1175,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn scrollBy(self: *TerminalSession, delta: isize) void {
+        if (self.alt_active) return;
         if (delta == 0) return;
         const max_offset = self.maxScrollOffset();
         var offset: isize = @intCast(self.scrollback_offset);
@@ -1112,9 +1191,73 @@ pub const TerminalSession = struct {
     }
 
     fn maxScrollOffset(self: *TerminalSession) usize {
+        if (self.alt_active) return 0;
         const rows = @as(usize, self.grid.rows);
         const total = self.scrollback.count() + rows;
         return if (total > rows) total - rows else 0;
+    }
+
+    fn saveCursor(self: *TerminalSession) void {
+        const slot = if (self.alt_active) &self.saved_cursor_alt else &self.saved_cursor_main;
+        slot.active = true;
+        slot.cursor = self.cursor;
+        slot.attrs = self.current_attrs;
+    }
+
+    fn restoreCursor(self: *TerminalSession) void {
+        const slot = if (self.alt_active) &self.saved_cursor_alt else &self.saved_cursor_main;
+        if (!slot.active) return;
+        self.cursor = slot.cursor;
+        self.current_attrs = slot.attrs;
+    }
+
+    fn clearGrid(self: *TerminalSession) void {
+        const default_cell = defaultCell();
+        for (self.grid.cells.items) |*cell| {
+            cell.* = default_cell;
+        }
+        self.grid.markDirtyAll();
+    }
+
+    fn enterAltScreen(self: *TerminalSession, clear: bool, save_cursor: bool) void {
+        if (self.alt_active) return;
+        if (save_cursor) {
+            self.saveCursor();
+        }
+        if (self.alt_grid == null) {
+            self.alt_grid = TerminalGrid.init(self.allocator, self.grid.rows, self.grid.cols) catch return;
+        }
+        if (self.alt_grid) |*grid| {
+            std.mem.swap(TerminalGrid, &self.grid, grid);
+        }
+        std.mem.swap(CursorPos, &self.cursor, &self.alt_cursor);
+        std.mem.swap(usize, &self.scroll_top, &self.alt_scroll_top);
+        std.mem.swap(usize, &self.scroll_bottom, &self.alt_scroll_bottom);
+        self.alt_active = true;
+        self.saved_scrollback_offset = self.scrollback_offset;
+        self.scrollback_offset = 0;
+        self.clearSelection();
+        if (clear) {
+            self.clearGrid();
+            self.cursor = .{ .row = 0, .col = 0 };
+        }
+    }
+
+    fn exitAltScreen(self: *TerminalSession, restore_cursor: bool) void {
+        if (!self.alt_active) return;
+        if (self.alt_grid) |*grid| {
+            std.mem.swap(TerminalGrid, &self.grid, grid);
+        }
+        std.mem.swap(CursorPos, &self.cursor, &self.alt_cursor);
+        std.mem.swap(usize, &self.scroll_top, &self.alt_scroll_top);
+        std.mem.swap(usize, &self.scroll_bottom, &self.alt_scroll_bottom);
+        self.alt_active = false;
+        self.scrollback_offset = self.saved_scrollback_offset;
+        self.clearSelection();
+        if (restore_cursor) {
+            self.restoreCursor();
+        }
+        self.grid.markDirtyAll();
     }
 
     pub fn snapshot(self: *TerminalSession) TerminalSnapshot {
@@ -1208,6 +1351,12 @@ pub const TerminalSelection = struct {
     selecting: bool,
     start: SelectionPos,
     end: SelectionPos,
+};
+
+const SavedCursor = struct {
+    active: bool,
+    cursor: CursorPos,
+    attrs: CellAttrs,
 };
 
 pub const Cell = struct {
