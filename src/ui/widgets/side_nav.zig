@@ -38,16 +38,18 @@ pub const SideNav = struct {
         const spacing: f32 = 12;
         const mouse = r.getMousePos();
         const pressed = r.isMouseButtonDown(renderer_mod.MOUSE_LEFT);
+        const hover_pad_x: f32 = 8;
+        const hover_pad_y: f32 = 8;
 
         const icon_x_pad: f32 = self.width * 0.30;
         const icon_text_offset: f32 = 1;
         var icon_y: f32 = y + 10;
         for (top_items) |item| {
             const icon_x: f32 = icon_x_pad;
-            const bx = icon_x - 8;
-            const by = icon_y - 6;
-            const bw = icon_size + 16;
-            const bh = icon_size + 12;
+            const bx = icon_x - hover_pad_x;
+            const by = icon_y - hover_pad_y;
+            const bw = icon_size + hover_pad_x * 2;
+            const bh = icon_size + hover_pad_y * 2;
             const hovered = mouse.x >= bx and mouse.x <= bx + bw and mouse.y >= by and mouse.y <= by + bh;
 
             if (hovered or item.active) {
@@ -80,10 +82,10 @@ pub const SideNav = struct {
         while (i < bottom_items.len) : (i += 1) {
             const item = bottom_items[bottom_items.len - 1 - i];
             const icon_x: f32 = icon_x_pad;
-            const bx = icon_x - 8;
-            const by = bottom_y - 6;
-            const bw = icon_size + 16;
-            const bh = icon_size + 12;
+            const bx = icon_x - hover_pad_x;
+            const by = bottom_y - hover_pad_y;
+            const bw = icon_size + hover_pad_x * 2;
+            const bh = icon_size + hover_pad_y * 2;
             const hovered = mouse.x >= bx and mouse.x <= bx + bw and mouse.y >= by and mouse.y <= by + bh;
 
             if (hovered or item.active) {
