@@ -117,15 +117,20 @@ Progress:
 - Terminal rendering uses dedicated font cache and box‑drawing fast path.
 - R1: snapped terminal cell metrics and draw positions to integer pixels.
 - R2: terminal glyph atlas uses point filtering to avoid blur.
+- R3: square/wide glyph overflow policy (scale-to-fit vs allow overflow when followed by space).
 
 Decision:
 - Keep terminal cell width/height as integer pixel metrics and snap cell origins and glyph draws to integer pixels.
 - Maintain integer math for per-cell positioning (base + col/row * cell size) to avoid float drift.
 - Use point filtering for terminal glyph atlases to preserve pixel edges.
+- For square/wide glyphs, allow width overflow only when followed by space (default), otherwise scale to fit the cell.
+- Use a wezterm-style aspect heuristic: treat glyphs with width >= 0.7 * cell height as square/wide.
 
 Why:
 - Integer cell metrics prevent box drawing striping/gaps and keep glyph baselines consistent across DPI/scales.
 - Integer math avoids cumulative float rounding error in long rows.
+ - Overflow-only-when-space matches common terminal behavior while avoiding constant clipping.
+ - The 0.7 threshold matches wezterm’s heuristic for identifying square-ish glyphs.
 
 Research notes:
 - kitty rounds ascent/baseline and cell metrics to integer pixels and computes cell height with ceil/floor to avoid subpixel jitter.
