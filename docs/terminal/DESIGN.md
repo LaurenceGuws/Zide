@@ -11,6 +11,8 @@ Purpose: this document tracks terminal architecture decisions and implementation
 - Scrollback ring buffer captures full‑screen scrolls and is exposed via a scrollbar + offset, plus a scrollback indicator.
 - Alternate screen switching and cursor save/restore are supported; alt screen disables scrollback.
 - OSC parsing now handles clipboard (OSC 52) and hyperlinks (OSC 8) as internal state.
+- Keyboard input supports CSI u/kitty protocol flags with per-screen stacks and modifier-aware encoding.
+- Legacy modifier combos now include full letter/number/punctuation mapping; macOS Command is reserved for app shortcuts.
 - Dirty-row tracking and render-texture caching are live; full VT coverage still missing.
 
 ## Decisions & Progress by Layer
@@ -139,16 +141,19 @@ Progress:
 - Clipboard paste supports Ctrl+Shift+V and middle-click.
 - Bracketed paste mode (?2004) is honored when enabled by the shell.
 - Selection auto-scrolls when dragging beyond the viewport; scrollback indicator shows when scrolled.
+- CSI u/kitty keyboard protocol support added (push/pop/query flags + modifier-aware encoding).
 
 Decision:
 - Implement a simple linear (non-rect) selection stored as global scrollback row/col coordinates.
 - Draw selection highlight as a translucent overlay each frame, independent of the cached terminal texture.
 - Copy selection with Ctrl+Shift+C, trimming trailing spaces per line and joining with newlines.
+- Maintain per-screen keyboard protocol flag stacks and emit CSI u sequences when enabled.
 
 Why:
 - Matches minimal terminal expectations while avoiding deep model changes.
 - Overlay rendering keeps selection updates cheap and does not invalidate cached rows.
 - Simple per-line trimming approximates common terminal clipboard behavior.
+- Aligns with kitty/CSI-u progressive enhancement without breaking legacy input flows.
 
 Notes:
 - Selection is cleared on terminal resize and when input resumes the live view to avoid stale indices.

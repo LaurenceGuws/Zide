@@ -11,6 +11,8 @@ Date: 2026-01-17
 - Added glyph atlas compaction and a reusable upload buffer to reduce per-glyph allocations.
 - Added alternate screen switching and per-screen cursor save/restore, including ESC 7/8 and CSI s/u.
 - OSC clipboard (52) now decodes into a pending clipboard buffer; OSC 8 hyperlinks are parsed and tracked.
+- CSI u / kitty keyboard protocol now supported with per-screen flag stacks and modifier-aware encoding.
+- Legacy modifier handling now covers letters, numbers, and punctuation; macOS Command is reserved for app shortcuts.
 - Added a Lua config POC for logging and per-component logger filtering.
 - Added `assets/config/init.lua` as the defaults reference and documented log config and raylib log levels.
 - Added frame pacing metrics (frame/draw/input latency) for tuning and profiling.
@@ -72,6 +74,7 @@ Date: 2026-01-17
 - Alternate screen buffer supported via DECSET ?47/?1047/?1049; alt screen disables scrollback.
 - Save/restore cursor supported via ESC 7/8, CSI s/u, and DECSET ?1048.
 - OSC 52 clipboard payloads are decoded and forwarded to the UI clipboard; OSC 8 hyperlinks stored as state (no rendering yet).
+- Keyboard protocol stacks (CSI >/< /=/? u) supported per screen; modifier-aware key encoding for CSI u sequences.
 - Clipboard paste supports Ctrl+Shift+V and middle-click.
 - Bracketed paste mode (?2004) is honored when enabled by the shell.
 - Basic OSC parsing now consumes OSC 0/2 sequences to avoid printing prompt metadata.
@@ -88,7 +91,7 @@ Date: 2026-01-17
 
 ## Next suggested steps (in order)
 
-1) Add CSI key/mouse protocol extensions (CSI u, kitty keyboard, mouse reporting).
+1) Add mouse reporting (X10/VT200/SGR) to support TUI mouse interaction.
 2) Decide how to surface OSC 8 hyperlink state in the renderer/cell attrs.
 
 ## Workflow (Docs + Research)
