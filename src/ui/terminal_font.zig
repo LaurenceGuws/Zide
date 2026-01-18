@@ -216,9 +216,7 @@ pub const TerminalFont = struct {
 
         // For symbol/icon glyphs: center in cell with left bias to prevent right clipping.
         if (is_symbol_glyph) {
-            // Higher ratio = more left shift = less right overflow.
-            // 0.5 = centered, 0.7 = biased left, 1.0 = right-aligned
-            const draw_x = @max(x, x + (cell_width - scaled_w) * 0.7);
+            const draw_x = @max(x, x + bearing * scale);
             const draw_y = baseline - @as(f32, @floatFromInt(glyph.bearing_y)) * scale;
             const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
             const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y)))));
