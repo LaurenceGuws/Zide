@@ -232,5 +232,6 @@ Why:
 
 ## Immediate next steps
 
-1) Flesh out VT coverage (OSC clipboard/hyperlinks, modes/attributes).
-2) Add input protocol extensions (CSI u / kitty keyboard, mouse reporting).
+1) Add overflow policy for square/wide glyphs (scale-to-fit vs allow overflow when followed by space).
+2) Add Symbols Nerd Font Mono fallback for PUA glyphs.
+3) Improve rasterization quality (LCD + grayscale fallback).
