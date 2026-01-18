@@ -1030,21 +1030,89 @@ pub const TerminalWidget = struct {
         const total_lines = history_len + rows;
         const max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
 
+        const ctrl = r.isKeyDown(renderer_mod.KEY_LEFT_CONTROL) or r.isKeyDown(renderer_mod.KEY_RIGHT_CONTROL);
+        const shift = r.isKeyDown(renderer_mod.KEY_LEFT_SHIFT) or r.isKeyDown(renderer_mod.KEY_RIGHT_SHIFT);
+        const alt = r.isKeyDown(renderer_mod.KEY_LEFT_ALT) or r.isKeyDown(renderer_mod.KEY_RIGHT_ALT);
+        const super = r.isKeyDown(renderer_mod.KEY_LEFT_SUPER) or r.isKeyDown(renderer_mod.KEY_RIGHT_SUPER);
+        var mod: terminal_mod.Modifier = terminal_mod.VTERM_MOD_NONE;
+        if (shift) mod |= terminal_mod.VTERM_MOD_SHIFT;
+        if (alt) mod |= terminal_mod.VTERM_MOD_ALT;
+        if (ctrl) mod |= terminal_mod.VTERM_MOD_CTRL;
+
+        const wheel = r.getMouseWheelMove();
+        const mouse_reporting = allow_input and in_terminal and self.session.mouseReportingEnabled();
+
         if (self.session.takeOscClipboard()) |clip| {
             const cstr: [*:0]const u8 = @ptrCast(clip.ptr);
             r.setClipboardText(cstr);
             handled = true;
         }
 
+        if (mouse_reporting and rows > 0 and cols > 0) {
+            const mouse_left_down = r.isMouseButtonDown(renderer_mod.MOUSE_LEFT);
+            const mouse_middle_down = r.isMouseButtonDown(renderer_mod.MOUSE_MIDDLE);
+            const mouse_right_down = r.isMouseButtonDown(renderer_mod.MOUSE_RIGHT);
+            var buttons_down: u8 = 0;
+            if (mouse_left_down) buttons_down |= 1;
+            if (mouse_middle_down) buttons_down |= 2;
+            if (mouse_right_down) buttons_down |= 4;
+
+            var col: usize = 0;
+            if (mouse.x > x) {
+                col = @as(usize, @intFromFloat((mouse.x - x) / r.terminal_cell_width));
+            }
+            var row: usize = 0;
+            if (mouse.y > y) {
+                row = @as(usize, @intFromFloat((mouse.y - y) / r.terminal_cell_height));
+            }
+            row = @min(row, rows - 1);
+            col = @min(col, cols - 1);
+
+            if (wheel != 0) {
+                const button: terminal_mod.MouseButton = if (wheel > 0) .wheel_up else .wheel_down;
+                if (try self.session.reportMouseEvent(.{ .kind = .wheel, .button = button, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
+                    handled = true;
+                }
+            }
+
+            if (r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT)) {
+                if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .left, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
+                    handled = true;
+                }
+            }
+            if (r.isMouseButtonPressed(renderer_mod.MOUSE_MIDDLE)) {
+                if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .middle, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
+                    handled = true;
+                }
+            }
+            if (r.isMouseButtonPressed(renderer_mod.MOUSE_RIGHT)) {
+                if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .right, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
+                    handled = true;
+                }
+            }
+
+            if (r.isMouseButtonReleased(renderer_mod.MOUSE_LEFT)) {
+                if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .left, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
+                    handled = true;
+                }
+            }
+            if (r.isMouseButtonReleased(renderer_mod.MOUSE_MIDDLE)) {
+                if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .middle, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
+                    handled = true;
+                }
+            }
+            if (r.isMouseButtonReleased(renderer_mod.MOUSE_RIGHT)) {
+                if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .right, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
+                    handled = true;
+                }
+            }
+
+            if (try self.session.reportMouseEvent(.{ .kind = .move, .button = .none, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
+                handled = true;
+            }
+        }
+
         if (allow_input) {
-            const ctrl = r.isKeyDown(renderer_mod.KEY_LEFT_CONTROL) or r.isKeyDown(renderer_mod.KEY_RIGHT_CONTROL);
-            const shift = r.isKeyDown(renderer_mod.KEY_LEFT_SHIFT) or r.isKeyDown(renderer_mod.KEY_RIGHT_SHIFT);
-            const alt = r.isKeyDown(renderer_mod.KEY_LEFT_ALT) or r.isKeyDown(renderer_mod.KEY_RIGHT_ALT);
-            const super = r.isKeyDown(renderer_mod.KEY_LEFT_SUPER) or r.isKeyDown(renderer_mod.KEY_RIGHT_SUPER);
-            var mod: terminal_mod.Modifier = terminal_mod.VTERM_MOD_NONE;
-            if (shift) mod |= terminal_mod.VTERM_MOD_SHIFT;
-            if (alt) mod |= terminal_mod.VTERM_MOD_ALT;
-            if (ctrl) mod |= terminal_mod.VTERM_MOD_CTRL;
             var skip_chars = false;
             const allow_terminal_key = !(builtin.target.os.tag == .macos and super);
 
@@ -1333,8 +1401,7 @@ pub const TerminalWidget = struct {
             handled = true;
         }
 
-        const wheel = r.getMouseWheelMove();
-        if (wheel != 0 and in_terminal) {
+        if (!mouse_reporting and wheel != 0 and in_terminal) {
             var lines: isize = @intFromFloat(wheel * 3);
             if (lines == 0) {
                 lines = if (wheel > 0) 1 else -1;
@@ -1343,7 +1410,7 @@ pub const TerminalWidget = struct {
             handled = true;
         }
 
-        if (scrollbar_h > 0 and width > 0 and height > 0 and max_scroll_offset > 0) {
+        if (!mouse_reporting and scrollbar_h > 0 and width > 0 and height > 0 and max_scroll_offset > 0) {
             const track_h = scrollbar_h;
             const min_thumb_h: f32 = 18;
             const thumb_h = @max(min_thumb_h, track_h * (@as(f32, @floatFromInt(rows)) / @as(f32, @floatFromInt(total_lines))));
@@ -1377,7 +1444,7 @@ pub const TerminalWidget = struct {
             scroll_dragging.* = false;
         }
 
-        if (rows > 0 and cols > 0) {
+        if (!mouse_reporting and rows > 0 and cols > 0) {
             const mouse_pressed = r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT);
             const middle_pressed = r.isMouseButtonPressed(renderer_mod.MOUSE_MIDDLE);
             const mouse_down = r.isMouseButtonDown(renderer_mod.MOUSE_LEFT);

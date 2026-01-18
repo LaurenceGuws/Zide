@@ -142,6 +142,7 @@ Progress:
 - Bracketed paste mode (?2004) is honored when enabled by the shell.
 - Selection auto-scrolls when dragging beyond the viewport; scrollback indicator shows when scrolled.
 - CSI u/kitty keyboard protocol support added (push/pop/query flags + modifier-aware encoding).
+- Mouse reporting (X10/VT200/SGR) enabled via CSI ?1000/?1002/?1003 and ?1006.
 
 Decision:
 - Implement a simple linear (non-rect) selection stored as global scrollback row/col coordinates.

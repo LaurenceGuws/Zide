@@ -1,6 +1,6 @@
 # Agent Handoff (Zide)
 
-Date: 2026-01-17
+Date: 2026-01-18
 
 ## Quick start for next agent
 
@@ -9,9 +9,8 @@ Date: 2026-01-17
 - Current focus: terminal input correctness + mouse reporting + OSC 8 rendering.
 
 Suggested next steps:
-1) Add mouse reporting (X10/VT200/SGR).
-2) Decide how to render OSC 8 hyperlinks in cell attrs/renderer.
-3) Add minimal manual tests for CSI‑u keyboard behavior.
+1) Decide how to render OSC 8 hyperlinks in cell attrs/renderer.
+2) Add minimal manual tests for CSI‑u keyboard behavior.
 
 ## Summary of this session
 
@@ -31,6 +30,7 @@ Suggested next steps:
 - Refined ED (erase display) damage to use per-row column bounds for the cursor row.
 - Added basic terminal selection with translucent highlight and Ctrl+Shift+C clipboard copy.
 - Selection auto-scrolls when dragging beyond the terminal viewport.
+- Added mouse reporting (X10/VT200/SGR) using CSI ?1000/?1002/?1003 and ?1006.
 
 ## Key changes
 
