@@ -109,6 +109,14 @@ pub const Renderer = struct {
     wayland_scale_cache: ?f32,
     wayland_scale_last_update: f64,
 
+    fn snapInt(value: f32) c_int {
+        return @intFromFloat(std.math.round(value));
+    }
+
+    fn snapFloat(value: f32) f32 {
+        return @as(f32, @floatFromInt(snapInt(value)));
+    }
+
     pub fn init(allocator: std.mem.Allocator, width: c_int, height: c_int, title: [*:0]const u8) !*Renderer {
         c.SetConfigFlags(c.FLAG_WINDOW_RESIZABLE | c.FLAG_VSYNC_HINT);
         c.InitWindow(width, height, title);
@@ -543,12 +551,19 @@ pub const Renderer = struct {
         is_cursor: bool,
         followed_by_space: bool,
     ) void {
+        const snapped_x = snapFloat(x);
+        const snapped_y = snapFloat(y);
+        const snapped_cell_width = snapFloat(cell_width);
+        const snapped_cell_height = snapFloat(cell_height);
+        const snapped_cell_w_i = snapInt(self.terminal_cell_width);
+        const snapped_cell_h_i = snapInt(self.terminal_cell_height);
+
         // Draw background
         self.drawRect(
-            @intFromFloat(x),
-            @intFromFloat(y),
-            @intFromFloat(self.terminal_cell_width),
-            @intFromFloat(self.terminal_cell_height),
+            snapInt(snapped_x),
+            snapInt(snapped_y),
+            snapped_cell_w_i,
+            snapped_cell_h_i,
             if (is_cursor) fg else bg,
         );
 
@@ -556,8 +571,8 @@ pub const Renderer = struct {
         if (codepoint != 0) {
             const text_color = if (is_cursor) bg else fg;
             _ = bold; // TODO: handle bold with different font weight
-            if (!self.drawTerminalBoxGlyph(codepoint, x, y, cell_width, cell_height, text_color)) {
-                self.terminal_font.drawGlyph(codepoint, x, y, cell_width, cell_height, followed_by_space, .{
+            if (!self.drawTerminalBoxGlyph(codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color)) {
+                self.terminal_font.drawGlyph(codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, followed_by_space, .{
                     .r = text_color.r,
                     .g = text_color.g,
                     .b = text_color.b,
@@ -565,11 +580,11 @@ pub const Renderer = struct {
                 });
             }
             if (underline) {
-                const underline_y: c_int = @intFromFloat(y + self.terminal_cell_height - 2);
+                const underline_y: c_int = snapInt(snapped_y + self.terminal_cell_height - 2);
                 self.drawRect(
-                    @intFromFloat(x),
+                    snapInt(snapped_x),
                     underline_y,
-                    @intFromFloat(self.terminal_cell_width),
+                    snapped_cell_w_i,
                     2,
                     text_color,
                 );

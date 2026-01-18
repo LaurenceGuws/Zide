@@ -704,6 +704,11 @@ pub const TerminalWidget = struct {
                 base_x_local: f32,
                 base_y_local: f32,
             ) void {
+                const cell_w_i: i32 = @intFromFloat(std.math.round(renderer.terminal_cell_width));
+                const cell_h_i: i32 = @intFromFloat(std.math.round(renderer.terminal_cell_height));
+                const base_x_i: i32 = @intFromFloat(std.math.round(base_x_local));
+                const base_y_i: i32 = @intFromFloat(std.math.round(base_y_local));
+
                 const row_cells = rowSlice(parent, snapshot_cells, history, cols_count, start, row_idx);
                 const col_start = @min(col_start_in, cols_count - 1);
                 const col_end = @min(col_end_in, cols_count - 1);
@@ -713,9 +718,9 @@ pub const TerminalWidget = struct {
                 while (col <= col_end and col < cols_count) : (col += 1) {
                     const cell = row_cells[col];
                     const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
-                    const cell_x = base_x_local + @as(f32, @floatFromInt(col)) * renderer.terminal_cell_width;
-                    const cell_y = base_y_local + @as(f32, @floatFromInt(row_idx)) * renderer.terminal_cell_height;
-                    const cell_w = renderer.terminal_cell_width * @as(f32, @floatFromInt(cell_width_units));
+                    const cell_x_i = base_x_i + @as(i32, @intCast(col)) * cell_w_i;
+                    const cell_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
+                    const cell_w_i_scaled = cell_w_i * @as(i32, @intCast(cell_width_units));
 
                     var fg = Color{
                         .r = cell.attrs.fg.r,
@@ -732,10 +737,10 @@ pub const TerminalWidget = struct {
                     }
 
                     renderer.drawRect(
-                        @intFromFloat(cell_x),
-                        @intFromFloat(cell_y),
-                        @intFromFloat(cell_w),
-                        @intFromFloat(renderer.terminal_cell_height),
+                        cell_x_i,
+                        cell_y_i,
+                        cell_w_i_scaled,
+                        cell_h_i,
                         if (cell.attrs.reverse) fg else bg,
                     );
 
@@ -748,8 +753,8 @@ pub const TerminalWidget = struct {
                 while (col <= col_end and col < cols_count) : (col += 1) {
                     const cell = row_cells[col];
                     const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
-                    const cell_x = base_x_local + @as(f32, @floatFromInt(col)) * renderer.terminal_cell_width;
-                    const cell_y = base_y_local + @as(f32, @floatFromInt(row_idx)) * renderer.terminal_cell_height;
+                    const cell_x_i = base_x_i + @as(i32, @intCast(col)) * cell_w_i;
+                    const cell_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
 
                     const fg = Color{
                         .r = cell.attrs.fg.r,
@@ -773,10 +778,10 @@ pub const TerminalWidget = struct {
 
                     renderer.drawTerminalCell(
                         cell.codepoint,
-                        cell_x,
-                        cell_y,
-                        renderer.terminal_cell_width * @as(f32, @floatFromInt(cell_width_units)),
-                        renderer.terminal_cell_height,
+                        @as(f32, @floatFromInt(cell_x_i)),
+                        @as(f32, @floatFromInt(cell_y_i)),
+                        @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cell_width_units)))),
+                        @as(f32, @floatFromInt(cell_h_i)),
                         if (cell.attrs.reverse) bg else fg,
                         if (cell.attrs.reverse) fg else bg,
                         cell.attrs.bold,
@@ -879,16 +884,20 @@ pub const TerminalWidget = struct {
                         const col_end = if (global_row == end_sel.row) end_sel.col else cols - 1;
                         if (col_end < col_start) continue;
 
-                        const rect_x = base_x + @as(f32, @floatFromInt(col_start)) * r.terminal_cell_width;
-                        const rect_y = base_y + @as(f32, @floatFromInt(row_idx)) * r.terminal_cell_height;
-                        const rect_w = r.terminal_cell_width * @as(f32, @floatFromInt(col_end - col_start + 1));
-                        const rect_h = r.terminal_cell_height;
+                        const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
+                        const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_height));
+                        const base_x_i: i32 = @intFromFloat(std.math.round(base_x));
+                        const base_y_i: i32 = @intFromFloat(std.math.round(base_y));
+                        const rect_x = base_x_i + @as(i32, @intCast(col_start)) * cell_w_i;
+                        const rect_y = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
+                        const rect_w = cell_w_i * @as(i32, @intCast(col_end - col_start + 1));
+                        const rect_h = cell_h_i;
 
                         r.drawRect(
-                            @intFromFloat(rect_x),
-                            @intFromFloat(rect_y),
-                            @intFromFloat(rect_w),
-                            @intFromFloat(rect_h),
+                            rect_x,
+                            rect_y,
+                            rect_w,
+                            rect_h,
                             selection_color,
                         );
                     }
@@ -900,8 +909,12 @@ pub const TerminalWidget = struct {
             const row_cells = rowSlice(self, snapshot.cells, history_len, cols, start_line, cursor.row);
             const cell = row_cells[cursor.col];
             const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
-            const cell_x = base_x + @as(f32, @floatFromInt(cursor.col)) * r.terminal_cell_width;
-            const cell_y = base_y + @as(f32, @floatFromInt(cursor.row)) * r.terminal_cell_height;
+            const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
+            const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_height));
+            const base_x_i: i32 = @intFromFloat(std.math.round(base_x));
+            const base_y_i: i32 = @intFromFloat(std.math.round(base_y));
+            const cell_x = @as(f32, @floatFromInt(base_x_i + @as(i32, @intCast(cursor.col)) * cell_w_i));
+            const cell_y = @as(f32, @floatFromInt(base_y_i + @as(i32, @intCast(cursor.row)) * cell_h_i));
 
             var fg = Color{
                 .r = cell.attrs.fg.r,
@@ -930,8 +943,8 @@ pub const TerminalWidget = struct {
                 cell.codepoint,
                 cell_x,
                 cell_y,
-                r.terminal_cell_width * @as(f32, @floatFromInt(cell_width_units)),
-                r.terminal_cell_height,
+                @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cell_width_units)))),
+                @as(f32, @floatFromInt(cell_h_i)),
                 if (cell.attrs.reverse) bg else fg,
                 if (cell.attrs.reverse) fg else bg,
                 cell.attrs.bold,
