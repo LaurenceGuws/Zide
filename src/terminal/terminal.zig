@@ -17,6 +17,7 @@ pub const TerminalSnapshot = struct {
     cursor: CursorPos,
     dirty: Dirty,
     damage: Damage,
+    alt_active: bool,
 
     pub fn rowSlice(self: *const TerminalSnapshot, row: usize) []const Cell {
         const start = row * self.cols;
@@ -276,6 +277,10 @@ pub const TerminalSession = struct {
     hyperlink_table: std.ArrayList(Hyperlink),
     current_hyperlink_id: u32,
     current_attrs: CellAttrs,
+    g0_charset: Charset,
+    g1_charset: Charset,
+    gl_charset: Charset,
+    charset_target: CharsetTarget,
     scroll_top: usize,
     scroll_bottom: usize,
     alt_scroll_top: usize,
@@ -333,6 +338,10 @@ pub const TerminalSession = struct {
             .hyperlink_table = .empty,
             .current_hyperlink_id = 0,
             .current_attrs = defaultCell().attrs,
+            .g0_charset = .ascii,
+            .g1_charset = .ascii,
+            .gl_charset = .ascii,
+            .charset_target = .g0,
             .scroll_top = 0,
             .scroll_bottom = if (rows > 0) @as(usize, rows - 1) else 0,
             .alt_scroll_top = 0,
@@ -708,6 +717,12 @@ pub const TerminalSession = struct {
             0x0D => { // CR
                 self.cursor.col = 0;
             },
+            0x0E => { // SO (Shift Out) -> G1
+                self.gl_charset = self.g1_charset;
+            },
+            0x0F => { // SI (Shift In) -> G0
+                self.gl_charset = self.g0_charset;
+            },
             0x1B => { // ESC
                 self.esc_state = .esc;
                 self.stream.reset();
@@ -749,6 +764,12 @@ pub const TerminalSession = struct {
                     self.osc_state = .osc;
                     self.osc_buffer.clearRetainingCapacity();
                     return;
+                } else if (byte == '(') {
+                    self.charset_target = .g0;
+                    self.esc_state = .charset;
+                } else if (byte == ')') {
+                    self.charset_target = .g1;
+                    self.esc_state = .charset;
                 } else if (byte == 'c') {
                     self.resetState();
                     self.esc_state = .ground;
@@ -761,6 +782,21 @@ pub const TerminalSession = struct {
                 } else {
                     self.esc_state = .ground;
                 }
+            },
+            .charset => {
+                const charset: Charset = switch (byte) {
+                    '0' => .dec_special,
+                    'B' => .ascii,
+                    else => .ascii,
+                };
+                switch (self.charset_target) {
+                    .g0 => self.g0_charset = charset,
+                    .g1 => self.g1_charset = charset,
+                }
+                if (self.charset_target == .g0) {
+                    self.gl_charset = self.g0_charset;
+                }
+                self.esc_state = .ground;
             },
             .csi => {
                 if (self.csi.feed(byte)) |action| {
@@ -1086,6 +1122,9 @@ pub const TerminalSession = struct {
     fn resetState(self: *TerminalSession) void {
         self.cursor = .{ .row = 0, .col = 0 };
         self.current_attrs = defaultCell().attrs;
+        self.g0_charset = .ascii;
+        self.g1_charset = .ascii;
+        self.gl_charset = .ascii;
         self.scroll_top = 0;
         self.scroll_bottom = if (self.grid.rows > 0) @as(usize, self.grid.rows - 1) else 0;
         self.alt_scroll_top = 0;
@@ -1295,7 +1334,8 @@ pub const TerminalSession = struct {
 
     fn applySgr(self: *TerminalSession, action: csi_mod.CsiAction) void {
         const params = action.params;
-        const n_params: usize = if (action.count == 0 and params[0] == 0) 1 else @as(usize, action.count + 1);
+        const total = params.len;
+        const n_params: usize = if (action.count == 0 and params[0] == 0) 1 else @min(@as(usize, action.count + 1), total);
         var i: usize = 0;
         while (i < n_params) {
             const p = params[i];
@@ -1374,6 +1414,11 @@ pub const TerminalSession = struct {
         if (codepoint == 0) return;
         if (codepoint > 0x10FFFF or (codepoint >= 0xD800 and codepoint <= 0xDFFF)) return;
 
+        var cp = codepoint;
+        if (self.gl_charset == .dec_special) {
+            cp = mapDecSpecial(codepoint);
+        }
+
         const rows = @as(usize, self.grid.rows);
         const cols = @as(usize, self.grid.cols);
         if (rows == 0 or cols == 0) return;
@@ -1395,7 +1440,7 @@ pub const TerminalSession = struct {
             attrs.link_id = 0;
         }
         self.grid.cells.items[idx] = Cell{
-            .codepoint = codepoint,
+            .codepoint = cp,
             .width = 1,
             .attrs = attrs,
         };
@@ -1405,6 +1450,43 @@ pub const TerminalSession = struct {
             self.newline();
         }
         self.grid.markDirtyRange(row, row, col, col);
+    }
+
+    fn mapDecSpecial(codepoint: u32) u32 {
+        return switch (codepoint) {
+            0x60 => 0x25C6, // ◆
+            0x61 => 0x2592, // ▒
+            0x62 => 0x2409, // ␉
+            0x63 => 0x240C, // ␌
+            0x64 => 0x240D, // ␍
+            0x65 => 0x240A, // ␊
+            0x66 => 0x00B0, // °
+            0x67 => 0x00B1, // ±
+            0x68 => 0x2424, // ␤
+            0x69 => 0x240B, // ␋
+            0x6A => 0x2518, // ┘
+            0x6B => 0x2510, // ┐
+            0x6C => 0x250C, // ┌
+            0x6D => 0x2514, // └
+            0x6E => 0x253C, // ┼
+            0x6F => 0x23BA, // ⎺
+            0x70 => 0x23BB, // ⎻
+            0x71 => 0x2500, // ─
+            0x72 => 0x23BC, // ⎼
+            0x73 => 0x23BD, // ⎽
+            0x74 => 0x251C, // ├
+            0x75 => 0x2524, // ┤
+            0x76 => 0x2534, // ┴
+            0x77 => 0x252C, // ┬
+            0x78 => 0x2502, // │
+            0x79 => 0x2264, // ≤
+            0x7A => 0x2265, // ≥
+            0x7B => 0x03C0, // π
+            0x7C => 0x2260, // ≠
+            0x7D => 0x00A3, // £
+            0x7E => 0x00B7, // ·
+            else => codepoint,
+        };
     }
 
     fn newline(self: *TerminalSession) void {
@@ -1627,6 +1709,7 @@ pub const TerminalSession = struct {
             .cursor = self.cursor,
             .dirty = self.grid.dirty,
             .damage = self.grid.damage,
+            .alt_active = self.alt_active,
         };
     }
 
@@ -1844,12 +1927,23 @@ const EscState = enum {
     ground,
     esc,
     csi,
+    charset,
 };
 
 const OscState = enum {
     idle,
     osc,
     osc_esc,
+};
+
+const Charset = enum {
+    ascii,
+    dec_special,
+};
+
+const CharsetTarget = enum {
+    g0,
+    g1,
 };
 
 fn defaultCell() Cell {

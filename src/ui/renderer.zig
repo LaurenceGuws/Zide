@@ -637,6 +637,26 @@ pub const Renderer = struct {
                 c.DrawRectangle(mid_x - @divTrunc(thick, 2), iy - extend, thick, ih + extend * 2, color.toRaylib());
                 return true;
             },
+            0x256d => { // ╭ - rounded corner (treat as light ┌)
+                c.DrawRectangle(mid_x, mid_y, iw - (mid_x - ix), thin, color.toRaylib());
+                c.DrawRectangle(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color.toRaylib());
+                return true;
+            },
+            0x256e => { // ╮ - rounded corner (treat as light ┐)
+                c.DrawRectangle(ix, mid_y, mid_x - ix + thin, thin, color.toRaylib());
+                c.DrawRectangle(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color.toRaylib());
+                return true;
+            },
+            0x256f => { // ╯ - rounded corner (treat as light ┘)
+                c.DrawRectangle(ix, mid_y, mid_x - ix + thin, thin, color.toRaylib());
+                c.DrawRectangle(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color.toRaylib());
+                return true;
+            },
+            0x2570 => { // ╰ - rounded corner (treat as light └)
+                c.DrawRectangle(mid_x, mid_y, iw - (mid_x - ix), thin, color.toRaylib());
+                c.DrawRectangle(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color.toRaylib());
+                return true;
+            },
             0x250c => { // ┌ - corner down-right, extend down
                 c.DrawRectangle(mid_x, mid_y, iw - (mid_x - ix), thin, color.toRaylib());
                 c.DrawRectangle(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color.toRaylib());
@@ -655,6 +675,22 @@ pub const Renderer = struct {
             0x2518 => { // ┘ - corner up-left, extend up
                 c.DrawRectangle(ix, mid_y, mid_x - ix + thin, thin, color.toRaylib());
                 c.DrawRectangle(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color.toRaylib());
+                return true;
+            },
+            0x2574 => { // ╴ - light left
+                c.DrawRectangle(ix, mid_y, mid_x - ix + thin, thin, color.toRaylib());
+                return true;
+            },
+            0x2575 => { // ╵ - light up
+                c.DrawRectangle(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color.toRaylib());
+                return true;
+            },
+            0x2576 => { // ╶ - light right
+                c.DrawRectangle(mid_x, mid_y, iw - (mid_x - ix), thin, color.toRaylib());
+                return true;
+            },
+            0x2577 => { // ╷ - light down
+                c.DrawRectangle(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color.toRaylib());
                 return true;
             },
             0x251c => { // ├ - T right, extend both ends
