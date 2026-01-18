@@ -5,41 +5,19 @@ Date: 2026-01-18
 ## Quick start for next agent
 
 - Repo: `/home/home/personal/zide`
-- Recent commits: `8e735fd` (keyboard input/kitty protocol), `b484b6b` (OSC 52/8), `e932292` (alt screen + cursor save).
-- Current focus: terminal text rendering quality (overflow policy + font fallback + rasterization).
+- Recent commits: `a4309a0` (wrap-next autowrap fix), `8e735fd` (keyboard input/kitty protocol), `b484b6b` (OSC 52/8).
+- Current focus: resume terminal work via `docs/terminal/terminal_widget_todo.yaml` (pick the next open task and follow the workflow).
 
 Suggested next steps:
-1) Implement overflow policy for square/wide glyphs (scale-to-fit vs allow overflow when followed by space).
-2) Add Symbols Nerd Font Mono fallback for PUA glyph coverage.
-3) Improve rasterization quality (LCD + grayscale fallback).
+1) Open `docs/terminal/terminal_widget_todo.yaml` and pick the next task in order (start Phase 0 remaining items, then Phase 1+).
+2) For the chosen task, read the listed references and summarize in `docs/terminal/DESIGN.md`.
+3) Implement the smallest coherent slice and update `docs/AGENT_HANDOFF.md` with progress.
 
 ## Summary of this session
 
-- Cached terminal rendering into a render texture and only re-rendered dirty rows into it.
-- Cursor is now drawn as a per-frame overlay so cursor moves don't require texture updates.
-- Kept dirty tracking ownership in the terminal widget (clear after draw).
-- Added a scrollback indicator overlay when the viewport is scrolled.
-- Added glyph atlas compaction and a reusable upload buffer to reduce per-glyph allocations.
-- Added alternate screen switching and per-screen cursor save/restore, including ESC 7/8 and CSI s/u.
-- OSC clipboard (52) now decodes into a pending clipboard buffer; OSC 8 hyperlinks are parsed and tracked.
-- CSI u / kitty keyboard protocol now supported with per-screen flag stacks and modifier-aware encoding.
-- Legacy modifier handling now covers letters, numbers, and punctuation; macOS Command is reserved for app shortcuts.
-- Added a Lua config POC for logging and per-component logger filtering.
-- Added `assets/config/init.lua` as the defaults reference and documented log config and raylib log levels.
-- Added frame pacing metrics (frame/draw/input latency) for tuning and profiling.
-- Logging now supports separate file vs console filters; call sites don’t decide destinations.
-- Refined ED (erase display) damage to use per-row column bounds for the cursor row.
-- Added basic terminal selection with translucent highlight and Ctrl+Shift+C clipboard copy.
-- Selection auto-scrolls when dragging beyond the terminal viewport.
-- Added mouse reporting (X10/VT200/SGR) using CSI ?1000/?1002/?1003 and ?1006.
-- Added OSC 8 hyperlink rendering via link-colored, underlined cells tagged with hyperlink IDs.
-- Added `docs/terminal/rendering_todo.yaml` to track text rendering quality upgrades.
-- Snapped terminal cell metrics and per-cell draw positions to integer pixels to reduce box drawing striping.
-- Set terminal glyph atlas sampling to point filtering to preserve pixel edges.
-- Added square/wide glyph overflow policy: scale to fit unless followed by space (aspect threshold 0.7).
-- Always allow PUA/symbol glyphs to overflow to avoid shrinking icon glyphs.
-- Render symbol glyphs using bearings and clamp to the cell origin to avoid left-edge clipping without centering bias.
-- Avoid drawing per-cell backgrounds during glyph pass so overflowed icons aren't overdrawn.
+- Implemented per-screen terminal state (primary/alt), including per-screen cursor, saved cursor, scroll region, key mode stack, attrs, and tabstops.
+- Fixed autowrap with a per-screen wrap-next flag (prevents double-line redraws in btop/lazygit).
+- Alt screen switches now fully dirty the active screen; selection and scrollback are disabled in alt.
 
 ## Key changes
 
@@ -91,7 +69,7 @@ Suggested next steps:
 - Frame pacing metrics are collected in `terminal/metrics.zig`.
 - Basic mouse selection highlights and Ctrl+Shift+C copy are supported (selection clears on resize and on input that resumes live view).
 - Selection auto-scrolls when dragging beyond the viewport; scrollback indicator shows when scrolled.
-- Alternate screen buffer supported via DECSET ?47/?1047/?1049; alt screen disables scrollback.
+- Alternate screen buffer uses per-screen state; full damage on switch; no scrollback/selection in alt.
 - Save/restore cursor supported via ESC 7/8, CSI s/u, and DECSET ?1048.
 - OSC 52 clipboard payloads are decoded and forwarded to the UI clipboard; OSC 8 hyperlinks are rendered with link styling.
 - Keyboard protocol stacks (CSI >/< /=/? u) supported per screen; modifier-aware key encoding for CSI u sequences.
@@ -108,12 +86,13 @@ Suggested next steps:
 
 - `docs/terminal/DESIGN.md` contains current decisions and progress.
 - Roadmap lives at `docs/terminal/terminal_widget_todo.yaml`.
+- Alt screen redesign proposal: `docs/terminal/ALT_SCREEN_REDESIGN.md`.
 
 ## Next suggested steps (in order)
 
-1) Implement overflow policy for square/wide glyphs (scale-to-fit vs allow overflow when followed by space).
-2) Add Symbols Nerd Font Mono fallback for PUA glyphs.
-3) Improve rasterization quality (LCD + grayscale fallback).
+1) Resume the roadmap in `docs/terminal/terminal_widget_todo.yaml` (Phase 0 tasks first).
+2) Validate alt-screen behavior in btop/lazygit/nvim (no line duplication or ghosting).
+3) Continue rendering-quality tasks from `docs/terminal/rendering_todo.yaml`.
 
 ## Workflow (Docs + Research)
 
