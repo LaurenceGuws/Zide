@@ -1,11 +1,23 @@
 const std = @import("std");
-const pty_mod = @import("pty.zig");
-const stream_mod = @import("stream.zig");
-const csi_mod = @import("csi.zig");
-const scrollback_mod = @import("scrollback.zig");
-const app_logger = @import("../app_logger.zig");
+const pty_mod = @import("../io/pty.zig");
+const input_mod = @import("../input/input.zig");
+const history_mod = @import("../model/history.zig");
+const csi_mod = @import("../parser/csi.zig");
+const parser_mod = @import("../parser/parser.zig");
+const screen_mod = @import("../model/screen.zig");
+const types = @import("../model/types.zig");
+const app_logger = @import("../../app_logger.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
+const defaultCell = types.defaultCell;
+const clampColorIndex = types.clampColorIndex;
+const indexToRgb = types.indexToRgb;
+const ansiColors = types.ansiColors;
+const ansiBrightColors = types.ansiBrightColors;
+const Screen = screen_mod.Screen;
+const Dirty = screen_mod.Dirty;
+const Damage = screen_mod.Damage;
+const KeyModeStack = screen_mod.KeyModeStack;
 
 pub const TerminalSnapshot = struct {
     rows: usize,
@@ -29,351 +41,6 @@ pub const TerminalSnapshot = struct {
     }
 };
 
-pub const Damage = struct {
-    start_row: usize,
-    end_row: usize,
-    start_col: usize,
-    end_col: usize,
-};
-
-pub const Dirty = enum {
-    none,
-    partial,
-    full,
-};
-
-const TerminalGrid = struct {
-    allocator: std.mem.Allocator,
-    rows: u16,
-    cols: u16,
-    cells: std.ArrayList(Cell),
-    dirty_rows: std.ArrayList(bool),
-    dirty_cols_start: std.ArrayList(u16),
-    dirty_cols_end: std.ArrayList(u16),
-    dirty: Dirty,
-    damage: Damage,
-
-    pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !TerminalGrid {
-        var cells = std.ArrayList(Cell).empty;
-        var dirty_rows = std.ArrayList(bool).empty;
-        var dirty_cols_start = std.ArrayList(u16).empty;
-        var dirty_cols_end = std.ArrayList(u16).empty;
-        const count = @as(usize, rows) * @as(usize, cols);
-        try cells.resize(allocator, count);
-        try dirty_rows.resize(allocator, rows);
-        try dirty_cols_start.resize(allocator, rows);
-        try dirty_cols_end.resize(allocator, rows);
-        const default_cell = defaultCell();
-        for (cells.items) |*cell| {
-            cell.* = default_cell;
-        }
-        for (dirty_rows.items) |*row_dirty| {
-            row_dirty.* = true;
-        }
-        for (dirty_cols_start.items, dirty_cols_end.items) |*col_start, *col_end| {
-            col_start.* = 0;
-            col_end.* = if (cols > 0) cols - 1 else 0;
-        }
-        return .{
-            .allocator = allocator,
-            .rows = rows,
-            .cols = cols,
-            .cells = cells,
-            .dirty_rows = dirty_rows,
-            .dirty_cols_start = dirty_cols_start,
-            .dirty_cols_end = dirty_cols_end,
-            .dirty = .full,
-            .damage = .{
-                .start_row = 0,
-                .end_row = if (rows > 0) @as(usize, rows - 1) else 0,
-                .start_col = 0,
-                .end_col = if (cols > 0) @as(usize, cols - 1) else 0,
-            },
-        };
-    }
-
-    pub fn deinit(self: *TerminalGrid) void {
-        self.cells.deinit(self.allocator);
-        self.dirty_rows.deinit(self.allocator);
-        self.dirty_cols_start.deinit(self.allocator);
-        self.dirty_cols_end.deinit(self.allocator);
-    }
-
-    pub fn resize(self: *TerminalGrid, rows: u16, cols: u16) !void {
-        if (self.rows == rows and self.cols == cols) return;
-        const old_rows = self.rows;
-        const old_cols = self.cols;
-        const old_cells = self.cells;
-
-        var new_cells = std.ArrayList(Cell).empty;
-        var new_dirty_rows = std.ArrayList(bool).empty;
-        var new_dirty_cols_start = std.ArrayList(u16).empty;
-        var new_dirty_cols_end = std.ArrayList(u16).empty;
-        const count = @as(usize, rows) * @as(usize, cols);
-        try new_cells.resize(self.allocator, count);
-        try new_dirty_rows.resize(self.allocator, rows);
-        try new_dirty_cols_start.resize(self.allocator, rows);
-        try new_dirty_cols_end.resize(self.allocator, rows);
-
-        const default_cell = defaultCell();
-        for (new_cells.items) |*cell| {
-            cell.* = default_cell;
-        }
-
-        const copy_rows = @min(@as(usize, old_rows), @as(usize, rows));
-        const copy_cols = @min(@as(usize, old_cols), @as(usize, cols));
-        if (copy_rows > 0 and copy_cols > 0 and old_cells.items.len > 0) {
-            var row: usize = 0;
-            while (row < copy_rows) : (row += 1) {
-                const old_start = row * @as(usize, old_cols);
-                const new_start = row * @as(usize, cols);
-                std.mem.copyForwards(
-                    Cell,
-                    new_cells.items[new_start .. new_start + copy_cols],
-                    old_cells.items[old_start .. old_start + copy_cols],
-                );
-            }
-        }
-
-        for (new_dirty_rows.items) |*row_dirty| {
-            row_dirty.* = true;
-        }
-        for (new_dirty_cols_start.items, new_dirty_cols_end.items) |*col_start, *col_end| {
-            col_start.* = 0;
-            col_end.* = if (cols > 0) cols - 1 else 0;
-        }
-
-        self.cells.deinit(self.allocator);
-        self.dirty_rows.deinit(self.allocator);
-        self.dirty_cols_start.deinit(self.allocator);
-        self.dirty_cols_end.deinit(self.allocator);
-        self.cells = new_cells;
-        self.dirty_rows = new_dirty_rows;
-        self.dirty_cols_start = new_dirty_cols_start;
-        self.dirty_cols_end = new_dirty_cols_end;
-        self.rows = rows;
-        self.cols = cols;
-        self.markDirtyAll();
-    }
-
-    fn setAllDirtyRows(self: *TerminalGrid, value: bool) void {
-        for (self.dirty_rows.items) |*row_dirty| {
-            row_dirty.* = value;
-        }
-    }
-
-    fn setAllDirtyCols(self: *TerminalGrid, start: u16, end: u16) void {
-        for (self.dirty_cols_start.items, self.dirty_cols_end.items) |*col_start, *col_end| {
-            col_start.* = start;
-            col_end.* = end;
-        }
-    }
-
-    pub fn markDirtyRange(self: *TerminalGrid, start_row: usize, end_row: usize, start_col: usize, end_col: usize) void {
-        if (self.rows == 0 or self.cols == 0) return;
-        const max_row = @as(usize, self.rows - 1);
-        const max_col = @as(usize, self.cols - 1);
-        const row_start = @min(start_row, max_row);
-        const row_end = @min(end_row, max_row);
-        const col_start = @min(start_col, max_col);
-        const col_end = @min(end_col, max_col);
-        if (row_start > row_end or col_start > col_end) return;
-
-        if (self.dirty != .full) {
-            if (self.dirty == .none) {
-                self.dirty = .partial;
-                self.damage = .{
-                    .start_row = row_start,
-                    .end_row = row_end,
-                    .start_col = col_start,
-                    .end_col = col_end,
-                };
-            } else {
-                self.damage.start_row = @min(self.damage.start_row, row_start);
-                self.damage.end_row = @max(self.damage.end_row, row_end);
-                self.damage.start_col = @min(self.damage.start_col, col_start);
-                self.damage.end_col = @max(self.damage.end_col, col_end);
-            }
-        }
-
-        for (row_start..row_end + 1) |row| {
-            self.dirty_rows.items[row] = true;
-            const col_start_u16: u16 = @intCast(col_start);
-            const col_end_u16: u16 = @intCast(col_end);
-            if (self.dirty_cols_start.items[row] > col_start_u16) {
-                self.dirty_cols_start.items[row] = col_start_u16;
-            }
-            if (self.dirty_cols_end.items[row] < col_end_u16) {
-                self.dirty_cols_end.items[row] = col_end_u16;
-            }
-        }
-    }
-
-    pub fn markDirtyAll(self: *TerminalGrid) void {
-        self.dirty = .full;
-        self.damage = .{
-            .start_row = 0,
-            .end_row = if (self.rows > 0) @as(usize, self.rows - 1) else 0,
-            .start_col = 0,
-            .end_col = if (self.cols > 0) @as(usize, self.cols - 1) else 0,
-        };
-        self.setAllDirtyRows(true);
-        if (self.cols > 0) {
-            self.setAllDirtyCols(0, self.cols - 1);
-        } else {
-            self.setAllDirtyCols(0, 0);
-        }
-    }
-
-    pub fn clearDirty(self: *TerminalGrid) void {
-        self.dirty = .none;
-        self.setAllDirtyRows(false);
-        const invalid_start = self.cols;
-        for (self.dirty_cols_start.items, self.dirty_cols_end.items) |*col_start, *col_end| {
-            col_start.* = invalid_start;
-            col_end.* = 0;
-        }
-        self.damage = .{
-            .start_row = 0,
-            .end_row = 0,
-            .start_col = 0,
-            .end_col = 0,
-        };
-    }
-};
-
-const TabStops = struct {
-    allocator: std.mem.Allocator,
-    stops: std.ArrayList(bool),
-
-    pub fn init(allocator: std.mem.Allocator, cols: u16) !TabStops {
-        var stops = std.ArrayList(bool).empty;
-        try stops.resize(allocator, cols);
-        var tabstops = TabStops{
-            .allocator = allocator,
-            .stops = stops,
-        };
-        tabstops.reset();
-        return tabstops;
-    }
-
-    pub fn deinit(self: *TabStops) void {
-        self.stops.deinit(self.allocator);
-    }
-
-    pub fn resize(self: *TabStops, cols: u16) !void {
-        const old_len = self.stops.items.len;
-        try self.stops.resize(self.allocator, cols);
-        if (cols > old_len) {
-            var idx: usize = old_len;
-            while (idx < cols) : (idx += 1) {
-                self.stops.items[idx] = TabStops.defaultStop(idx);
-            }
-        }
-    }
-
-    pub fn reset(self: *TabStops) void {
-        for (self.stops.items, 0..) |*stop, idx| {
-            stop.* = TabStops.defaultStop(idx);
-        }
-    }
-
-    pub fn next(self: *const TabStops, col: usize, max_col: usize) usize {
-        if (self.stops.items.len == 0) return col;
-        var idx = col + 1;
-        const limit = @min(max_col, self.stops.items.len - 1);
-        while (idx <= limit) : (idx += 1) {
-            if (self.stops.items[idx]) return idx;
-        }
-        return max_col;
-    }
-
-    fn defaultStop(col: usize) bool {
-        return (col % 8) == 0;
-    }
-};
-
-const Screen = struct {
-    grid: TerminalGrid,
-    cursor: CursorPos,
-    saved_cursor: SavedCursor,
-    scroll_top: usize,
-    scroll_bottom: usize,
-    tabstops: TabStops,
-    key_mode: KeyModeStack,
-    current_attrs: CellAttrs,
-    wrap_next: bool,
-
-    pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !Screen {
-        const grid = try TerminalGrid.init(allocator, rows, cols);
-        const tabstops = try TabStops.init(allocator, cols);
-        return .{
-            .grid = grid,
-            .cursor = .{ .row = 0, .col = 0 },
-            .saved_cursor = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = defaultCell().attrs },
-            .scroll_top = 0,
-            .scroll_bottom = if (rows > 0) @as(usize, rows - 1) else 0,
-            .tabstops = tabstops,
-            .key_mode = KeyModeStack.init(),
-            .current_attrs = defaultCell().attrs,
-            .wrap_next = false,
-        };
-    }
-
-    pub fn deinit(self: *Screen) void {
-        self.grid.deinit();
-        self.tabstops.deinit();
-    }
-
-    pub fn resize(self: *Screen, rows: u16, cols: u16) !void {
-        const old_rows = self.grid.rows;
-        const old_cols = self.grid.cols;
-        const was_full_region = old_rows > 0 and self.scroll_top == 0 and self.scroll_bottom + 1 == @as(usize, old_rows);
-        try self.grid.resize(rows, cols);
-        if (cols != old_cols) {
-            try self.tabstops.resize(cols);
-        }
-        if (rows > 0) {
-            if (self.scroll_top >= @as(usize, rows)) self.scroll_top = 0;
-            if (self.scroll_bottom >= @as(usize, rows)) self.scroll_bottom = @as(usize, rows - 1);
-            if (self.scroll_top > self.scroll_bottom) {
-                self.scroll_top = 0;
-                self.scroll_bottom = @as(usize, rows - 1);
-            }
-            if (was_full_region) {
-                self.scroll_top = 0;
-                self.scroll_bottom = @as(usize, rows - 1);
-            }
-        } else {
-            self.scroll_top = 0;
-            self.scroll_bottom = 0;
-        }
-        const max_row = if (rows > 0) @as(usize, rows - 1) else 0;
-        const max_col = if (cols > 0) @as(usize, cols - 1) else 0;
-        if (self.cursor.row > max_row) self.cursor.row = max_row;
-        if (self.cursor.col > max_col) self.cursor.col = max_col;
-    }
-
-    pub fn resetState(self: *Screen) void {
-        self.cursor = .{ .row = 0, .col = 0 };
-        self.saved_cursor = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = defaultCell().attrs };
-        self.scroll_top = 0;
-        self.scroll_bottom = if (self.grid.rows > 0) @as(usize, self.grid.rows - 1) else 0;
-        self.key_mode = KeyModeStack.init();
-        self.current_attrs = defaultCell().attrs;
-        self.wrap_next = false;
-        self.tabstops.reset();
-    }
-
-    pub fn clear(self: *Screen) void {
-        const default_cell = defaultCell();
-        for (self.grid.cells.items) |*cell| {
-            cell.* = default_cell;
-        }
-        self.grid.markDirtyAll();
-    }
-};
-
 const ActiveScreen = enum {
     primary,
     alt,
@@ -388,41 +55,24 @@ pub const TerminalSession = struct {
     primary: Screen,
     alt: Screen,
     active: ActiveScreen,
-    scrollback: Scrollback,
-    scrollback_offset: usize,
-    saved_scrollback_offset: usize,
-    selection: TerminalSelection,
+    history: history_mod.TerminalHistory,
     bracketed_paste: bool,
-    mouse_mode_x10: bool,
-    mouse_mode_button: bool,
-    mouse_mode_any: bool,
-    mouse_mode_sgr: bool,
-    mouse_last_row: usize,
-    mouse_last_col: usize,
-    mouse_last_buttons: u8,
+    input: input_mod.InputState,
     cell_width: u16,
     cell_height: u16,
-    stream: stream_mod.Stream,
-    esc_state: EscState,
-    csi: csi_mod.CsiParser,
-    osc_state: OscState,
-    osc_buffer: std.ArrayList(u8),
+    parser: parser_mod.Parser,
     osc_clipboard: std.ArrayList(u8),
     osc_clipboard_pending: bool,
     osc_hyperlink: std.ArrayList(u8),
     osc_hyperlink_active: bool,
     hyperlink_table: std.ArrayList(Hyperlink),
     current_hyperlink_id: u32,
-    g0_charset: Charset,
-    g1_charset: Charset,
-    gl_charset: Charset,
-    charset_target: CharsetTarget,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !*TerminalSession {
         const session = try allocator.create(TerminalSession);
         const primary = try Screen.init(allocator, rows, cols);
         const alt = try Screen.init(allocator, rows, cols);
-        const scrollback = try Scrollback.init(allocator, default_scrollback_rows, cols);
+        const history = try history_mod.TerminalHistory.init(allocator, default_scrollback_rows, cols);
         const log = app_logger.logger("terminal.core");
         log.logf("terminal init rows={d} cols={d} scrollback_max={d}", .{ rows, cols, default_scrollback_rows });
         log.logStdout("terminal init rows={d} cols={d}", .{ rows, cols });
@@ -434,40 +84,18 @@ pub const TerminalSession = struct {
             .primary = primary,
             .alt = alt,
             .active = .primary,
-            .scrollback = scrollback,
-            .scrollback_offset = 0,
-            .saved_scrollback_offset = 0,
-            .selection = .{
-                .active = false,
-                .selecting = false,
-                .start = .{ .row = 0, .col = 0 },
-                .end = .{ .row = 0, .col = 0 },
-            },
+            .history = history,
             .bracketed_paste = false,
-            .mouse_mode_x10 = false,
-            .mouse_mode_button = false,
-            .mouse_mode_any = false,
-            .mouse_mode_sgr = false,
-            .mouse_last_row = 0,
-            .mouse_last_col = 0,
-            .mouse_last_buttons = 0,
+            .input = input_mod.InputState.init(),
             .cell_width = 0,
             .cell_height = 0,
-            .stream = .{},
-            .esc_state = .ground,
-            .csi = .{},
-            .osc_state = .idle,
-            .osc_buffer = .empty,
+            .parser = parser_mod.Parser.init(allocator),
             .osc_clipboard = .empty,
             .osc_clipboard_pending = false,
             .osc_hyperlink = .empty,
             .osc_hyperlink_active = false,
             .hyperlink_table = .empty,
             .current_hyperlink_id = 0,
-            .g0_charset = .ascii,
-            .g1_charset = .ascii,
-            .gl_charset = .ascii,
-            .charset_target = .g0,
         };
         return session;
     }
@@ -492,10 +120,10 @@ pub const TerminalSession = struct {
         if (self.pty) |*pty| {
             pty.deinit();
         }
-        self.scrollback.deinit();
+        self.history.deinit();
         self.primary.deinit();
         self.alt.deinit();
-        self.osc_buffer.deinit(self.allocator);
+        self.parser.deinit();
         self.osc_clipboard.deinit(self.allocator);
         self.osc_hyperlink.deinit(self.allocator);
         for (self.hyperlink_table.items) |link| {
@@ -526,7 +154,7 @@ pub const TerminalSession = struct {
                 if (n == null or n.? == 0) break;
                 had_data = true;
                 for (buf[0..n.?]) |b| {
-                    self.handleByte(b);
+                    self.parser.handleByte(self, b);
                 }
             }
             if (had_data) {
@@ -544,233 +172,29 @@ pub const TerminalSession = struct {
 
     pub fn sendKey(self: *TerminalSession, key: Key, mod: Modifier) !void {
         if (self.pty) |*pty| {
-            if (self.sendKeyWithProtocol(pty, key, mod)) return;
-            const seq = switch (key) {
-                VTERM_KEY_ENTER => "\r",
-                VTERM_KEY_TAB => "\t",
-                VTERM_KEY_BACKSPACE => "\x7f",
-                VTERM_KEY_ESCAPE => "\x1b",
-                VTERM_KEY_UP => "\x1b[A",
-                VTERM_KEY_DOWN => "\x1b[B",
-                VTERM_KEY_RIGHT => "\x1b[C",
-                VTERM_KEY_LEFT => "\x1b[D",
-                VTERM_KEY_HOME => "\x1b[H",
-                VTERM_KEY_END => "\x1b[F",
-                VTERM_KEY_PAGEUP => "\x1b[5~",
-                VTERM_KEY_PAGEDOWN => "\x1b[6~",
-                VTERM_KEY_INS => "\x1b[2~",
-                VTERM_KEY_DEL => "\x1b[3~",
-                else => "",
-            };
-            if (seq.len > 0) {
-                _ = try pty.write(seq);
-            }
+            _ = try input_mod.sendKey(pty, key, mod, self.keyModeFlags());
         }
     }
 
     pub fn sendChar(self: *TerminalSession, char: u32, mod: Modifier) !void {
         if (self.pty) |*pty| {
-            if (char > 0x10FFFF or (char >= 0xD800 and char <= 0xDFFF)) return;
-            if (self.keyModeFlags() == 0 and (mod & VTERM_MOD_CTRL) != 0) {
-                if (ctrlChar(char)) |mapped| {
-                    if ((mod & VTERM_MOD_ALT) != 0) {
-                        _ = try pty.write(&[_]u8{0x1b});
-                    }
-                    _ = try pty.write(&[_]u8{mapped});
-                    return;
-                }
-            }
-            if (self.keyModeFlags() == 0 and (mod & VTERM_MOD_ALT) != 0) {
-                _ = try pty.write(&[_]u8{0x1b});
-            }
-            if (self.sendCharWithProtocol(pty, char, mod)) return;
-            var buf: [4]u8 = undefined;
-            const len = std.unicode.utf8Encode(@intCast(char), &buf) catch return;
-            _ = try pty.write(buf[0..len]);
+            _ = try input_mod.sendChar(pty, char, mod, self.keyModeFlags());
         }
-    }
-
-    fn mouseTrackingActive(self: *TerminalSession) bool {
-        return self.mouse_mode_x10 or self.mouse_mode_button or self.mouse_mode_any;
-    }
-
-    fn mouseMotionActive(self: *TerminalSession, buttons_down: bool) bool {
-        return self.mouse_mode_any or (self.mouse_mode_button and buttons_down);
-    }
-
-    fn mouseModBits(mod: Modifier) u8 {
-        var value: u8 = 0;
-        if ((mod & VTERM_MOD_SHIFT) != 0) value += 4;
-        if ((mod & VTERM_MOD_ALT) != 0) value += 8;
-        if ((mod & VTERM_MOD_CTRL) != 0) value += 16;
-        return value;
-    }
-
-    fn mouseButtonFromMask(mask: u8) MouseButton {
-        if ((mask & mouse_button_left_mask) != 0) return .left;
-        if ((mask & mouse_button_middle_mask) != 0) return .middle;
-        if ((mask & mouse_button_right_mask) != 0) return .right;
-        return .none;
-    }
-
-    fn mouseButtonCode(button: MouseButton) u8 {
-        return switch (button) {
-            .left => 0,
-            .middle => 1,
-            .right => 2,
-            .wheel_up => 64,
-            .wheel_down => 65,
-            .none => 3,
-        };
-    }
-
-    fn mouseEncodeCoordX10(value: usize) u8 {
-        const v = value + 1 + 32;
-        if (v > 255) return 0;
-        return @intCast(v);
     }
 
     pub fn reportMouseEvent(self: *TerminalSession, event: MouseEvent) !bool {
         if (self.pty == null) return false;
-        if (!self.mouseTrackingActive()) return false;
         const screen = self.activeScreen();
-        if (screen.grid.rows == 0 or screen.grid.cols == 0) return false;
-
-        const row = @min(event.row, @as(usize, screen.grid.rows - 1));
-        const col = @min(event.col, @as(usize, screen.grid.cols - 1));
-        const buttons_down = event.buttons_down;
-        const buttons_active = buttons_down != 0;
-        const mod_bits = mouseModBits(event.mod);
-
-        if (event.kind == .move) {
-            if (!self.mouseMotionActive(buttons_active)) return false;
-            if (row == self.mouse_last_row and col == self.mouse_last_col and buttons_down == self.mouse_last_buttons) {
-                return false;
-            }
+        if (self.pty) |*pty| {
+            return self.input.reportMouseEvent(pty, event, screen.grid.rows, screen.grid.cols);
         }
-
-        var button = event.button;
-        if (event.kind == .move) {
-            button = mouseButtonFromMask(buttons_down);
-        }
-        if (event.kind == .release and !self.mouse_mode_sgr) {
-            button = .none;
-        }
-
-        const base_code = mouseButtonCode(button);
-        const motion_code: u8 = if (event.kind == .move) 32 else 0;
-        const code = base_code + motion_code + mod_bits;
-
-        if (self.mouse_mode_sgr) {
-            var buf: [64]u8 = undefined;
-            const terminator: u8 = if (event.kind == .release) 'm' else 'M';
-            const seq = std.fmt.bufPrint(
-                &buf,
-                "\x1b[<{d};{d};{d}{c}",
-                .{ code, col + 1, row + 1, terminator },
-            ) catch return false;
-            if (self.pty) |*pty| {
-                _ = try pty.write(seq);
-            }
-        } else {
-            var buf: [6]u8 = undefined;
-            buf[0] = 0x1b;
-            buf[1] = '[';
-            buf[2] = 'M';
-            buf[3] = @intCast(32 + code);
-            buf[4] = mouseEncodeCoordX10(col);
-            buf[5] = mouseEncodeCoordX10(row);
-            if (self.pty) |*pty| {
-                _ = try pty.write(buf[0..6]);
-            }
-        }
-
-        self.mouse_last_row = row;
-        self.mouse_last_col = col;
-        self.mouse_last_buttons = buttons_down;
-        return true;
-    }
-
-    fn ctrlChar(char: u32) ?u8 {
-        return switch (char) {
-            'a'...'z' => @intCast(char - 'a' + 1),
-            'A'...'Z' => @intCast(char - 'A' + 1),
-            '@', ' ' => 0,
-            '[' => 27,
-            '\\' => 28,
-            ']' => 29,
-            '^' => 30,
-            '_' => 31,
-            '?' => 127,
-            else => null,
-        };
-    }
-
-    fn encodeModifier(mod: Modifier) u8 {
-        var value: u8 = 1;
-        if ((mod & VTERM_MOD_SHIFT) != 0) value += 1;
-        if ((mod & VTERM_MOD_ALT) != 0) value += 2;
-        if ((mod & VTERM_MOD_CTRL) != 0) value += 4;
-        return value;
-    }
-
-    fn sendCsiWithMod(pty: *Pty, prefix: []const u8, mod_code: u8, suffix: []const u8) bool {
-        var buf: [32]u8 = undefined;
-        const seq = if (mod_code > 1)
-            std.fmt.bufPrint(&buf, "\x1b[{s};{d}{s}", .{ prefix, mod_code, suffix }) catch return false
-        else
-            std.fmt.bufPrint(&buf, "\x1b[{s}{s}", .{ prefix, suffix }) catch return false;
-        _ = pty.write(seq) catch return false;
-        return true;
-    }
-
-    fn sendKeyWithProtocol(self: *TerminalSession, pty: *Pty, key: Key, mod: Modifier) bool {
-        const flags = self.keyModeFlags();
-        if (flags == 0) return false;
-
-        const mod_code = encodeModifier(mod);
-        if ((flags & key_mode_report_all_keys) == 0) {
-            if (key == VTERM_KEY_ENTER or key == VTERM_KEY_TAB or key == VTERM_KEY_BACKSPACE) {
-                return false;
-            }
-        }
-
-        switch (key) {
-            VTERM_KEY_UP => return sendCsiWithMod(pty, "1", mod_code, "A"),
-            VTERM_KEY_DOWN => return sendCsiWithMod(pty, "1", mod_code, "B"),
-            VTERM_KEY_RIGHT => return sendCsiWithMod(pty, "1", mod_code, "C"),
-            VTERM_KEY_LEFT => return sendCsiWithMod(pty, "1", mod_code, "D"),
-            VTERM_KEY_HOME => return sendCsiWithMod(pty, "1", mod_code, "H"),
-            VTERM_KEY_END => return sendCsiWithMod(pty, "1", mod_code, "F"),
-            VTERM_KEY_PAGEUP => return sendCsiWithMod(pty, "5", mod_code, "~"),
-            VTERM_KEY_PAGEDOWN => return sendCsiWithMod(pty, "6", mod_code, "~"),
-            VTERM_KEY_INS => return sendCsiWithMod(pty, "2", mod_code, "~"),
-            VTERM_KEY_DEL => return sendCsiWithMod(pty, "3", mod_code, "~"),
-            VTERM_KEY_ESCAPE => {
-                var buf: [32]u8 = undefined;
-                const seq = std.fmt.bufPrint(&buf, "\x1b[{d};{d}u", .{ 27, mod_code }) catch return false;
-                _ = pty.write(seq) catch return false;
-                return true;
-            },
-            else => return false,
-        }
-    }
-
-    fn sendCharWithProtocol(self: *TerminalSession, pty: *Pty, char: u32, mod: Modifier) bool {
-        const flags = self.keyModeFlags();
-        if (flags == 0) return false;
-        if (mod == VTERM_MOD_NONE and (flags & key_mode_report_all_keys) == 0) return false;
-        const mod_code = encodeModifier(mod);
-        var buf: [48]u8 = undefined;
-        const seq = std.fmt.bufPrint(&buf, "\x1b[{d};{d}u", .{ char, mod_code }) catch return false;
-        _ = pty.write(seq) catch return false;
-        return true;
+        return false;
     }
 
     pub fn sendText(self: *TerminalSession, text: []const u8) !void {
         if (text.len == 0) return;
         if (self.pty) |*pty| {
-            _ = try pty.write(text);
+            try input_mod.sendText(pty, text);
         }
     }
 
@@ -779,19 +203,19 @@ pub const TerminalSession = struct {
         try self.primary.resize(rows, cols);
         try self.alt.resize(rows, cols);
         if (cols != old_cols) {
-            try self.scrollback.resizePreserve(cols, defaultCell());
+            try self.history.resizePreserve(cols, defaultCell());
         }
         const log = app_logger.logger("terminal.core");
         log.logf("terminal resize rows={d} cols={d} scrollback_cols={d}", .{ rows, cols, self.primary.grid.cols });
         log.logStdout("terminal resize rows={d} cols={d}", .{ rows, cols });
         if (self.isAltActive()) {
-            const max_offset = self.maxScrollOffset();
-            if (self.saved_scrollback_offset > max_offset) {
-                self.saved_scrollback_offset = max_offset;
+            const max_offset = self.history.maxScrollOffset(self.primary.grid.rows);
+            if (self.history.saved_scrollback_offset > max_offset) {
+                self.history.saved_scrollback_offset = max_offset;
             }
-            self.scrollback_offset = 0;
+            self.history.scrollback_offset = 0;
         } else {
-            self.setScrollOffset(self.scrollback_offset);
+            self.setScrollOffset(self.history.scrollback_offset);
         }
         self.clearSelection();
         if (self.pty) |*pty| {
@@ -810,7 +234,7 @@ pub const TerminalSession = struct {
         self.cell_height = cell_height;
     }
 
-    fn handleControl(self: *TerminalSession, byte: u8) void {
+    pub fn handleControl(self: *TerminalSession, byte: u8) void {
         const screen = self.activeScreen();
         switch (byte) {
             0x08 => { // BS
@@ -832,132 +256,22 @@ pub const TerminalSession = struct {
                 screen.wrap_next = false;
             },
             0x0E => { // SO (Shift Out) -> G1
-                self.gl_charset = self.g1_charset;
+                self.parser.gl_charset = self.parser.g1_charset;
             },
             0x0F => { // SI (Shift In) -> G0
-                self.gl_charset = self.g0_charset;
+                self.parser.gl_charset = self.parser.g0_charset;
             },
             0x1B => { // ESC
-                self.esc_state = .esc;
-                self.stream.reset();
-                self.csi.reset();
-                self.osc_state = .idle;
+                self.parser.esc_state = .esc;
+                self.parser.stream.reset();
+                self.parser.csi.reset();
+                self.parser.osc_state = .idle;
             },
             else => {},
         }
     }
 
-    fn handleByte(self: *TerminalSession, byte: u8) void {
-        if (self.osc_state != .idle) {
-            self.handleOscByte(byte);
-            return;
-        }
-        switch (self.esc_state) {
-            .ground => {
-                if (byte == 0x1B) {
-                    self.esc_state = .esc;
-                    self.stream.reset();
-                    self.csi.reset();
-                    self.osc_state = .idle;
-                    return;
-                }
-                if (self.stream.feed(byte)) |event| {
-                    switch (event) {
-                        .codepoint => |cp| self.handleCodepoint(@intCast(cp)),
-                        .control => |c| self.handleControl(c),
-                        .invalid => self.handleCodepoint(0xFFFD),
-                    }
-                }
-            },
-            .esc => {
-                if (byte == '[') {
-                    self.esc_state = .csi;
-                    self.csi.reset();
-                } else if (byte == ']') {
-                    self.esc_state = .ground;
-                    self.osc_state = .osc;
-                    self.osc_buffer.clearRetainingCapacity();
-                    return;
-                } else if (byte == '(') {
-                    self.charset_target = .g0;
-                    self.esc_state = .charset;
-                } else if (byte == ')') {
-                    self.charset_target = .g1;
-                    self.esc_state = .charset;
-                } else if (byte == 'c') {
-                    self.resetState();
-                    self.esc_state = .ground;
-                } else if (byte == '7') {
-                    self.saveCursor();
-                    self.esc_state = .ground;
-                } else if (byte == '8') {
-                    self.restoreCursor();
-                    self.esc_state = .ground;
-                } else {
-                    self.esc_state = .ground;
-                }
-            },
-            .charset => {
-                const charset: Charset = switch (byte) {
-                    '0' => .dec_special,
-                    'B' => .ascii,
-                    else => .ascii,
-                };
-                switch (self.charset_target) {
-                    .g0 => self.g0_charset = charset,
-                    .g1 => self.g1_charset = charset,
-                }
-                if (self.charset_target == .g0) {
-                    self.gl_charset = self.g0_charset;
-                }
-                self.esc_state = .ground;
-            },
-            .csi => {
-                if (self.csi.feed(byte)) |action| {
-                    self.handleCsi(action);
-                    self.esc_state = .ground;
-                }
-            },
-        }
-    }
-
-    fn handleOscByte(self: *TerminalSession, byte: u8) void {
-        switch (self.osc_state) {
-            .idle => return,
-            .osc => {
-                if (byte == 0x07) { // BEL
-                    self.finishOsc();
-                    return;
-                }
-                if (byte == 0x1B) { // ESC
-                    self.osc_state = .osc_esc;
-                    return;
-                }
-                if (self.osc_buffer.items.len < 4096) {
-                    _ = self.osc_buffer.append(self.allocator, byte) catch {};
-                }
-            },
-            .osc_esc => {
-                if (byte == '\\') { // ST
-                    self.finishOsc();
-                    return;
-                }
-                // Treat stray ESC as ignored and continue.
-                self.osc_state = .osc;
-                if (self.osc_buffer.items.len < 4096) {
-                    _ = self.osc_buffer.append(self.allocator, byte) catch {};
-                }
-            },
-        }
-    }
-
-    fn finishOsc(self: *TerminalSession) void {
-        self.parseOsc(self.osc_buffer.items);
-        self.osc_buffer.clearRetainingCapacity();
-        self.osc_state = .idle;
-    }
-
-    fn parseOsc(self: *TerminalSession, payload: []const u8) void {
+    pub fn parseOsc(self: *TerminalSession, payload: []const u8) void {
         var i: usize = 0;
         var code: usize = 0;
         var has_code = false;
@@ -1054,7 +368,7 @@ pub const TerminalSession = struct {
         self.osc_clipboard_pending = true;
     }
 
-    fn handleCsi(self: *TerminalSession, action: csi_mod.CsiAction) void {
+    pub fn handleCsi(self: *TerminalSession, action: csi_mod.CsiAction) void {
         const p = action.params;
         const count = action.count;
         const get = struct {
@@ -1208,10 +522,10 @@ pub const TerminalSession = struct {
                             1048 => self.saveCursor(),
                             1049 => self.enterAltScreen(true, true),
                             2004 => self.bracketed_paste = true,
-                            1000 => self.mouse_mode_x10 = true,
-                            1002 => self.mouse_mode_button = true,
-                            1003 => self.mouse_mode_any = true,
-                            1006 => self.mouse_mode_sgr = true,
+                            1000 => self.input.mouse_mode_x10 = true,
+                            1002 => self.input.mouse_mode_button = true,
+                            1003 => self.input.mouse_mode_any = true,
+                            1006 => self.input.mouse_mode_sgr = true,
                             else => {},
                         }
                     }
@@ -1230,10 +544,10 @@ pub const TerminalSession = struct {
                             1048 => self.restoreCursor(),
                             1049 => self.exitAltScreen(true),
                             2004 => self.bracketed_paste = false,
-                            1000 => self.mouse_mode_x10 = false,
-                            1002 => self.mouse_mode_button = false,
-                            1003 => self.mouse_mode_any = false,
-                            1006 => self.mouse_mode_sgr = false,
+                            1000 => self.input.mouse_mode_x10 = false,
+                            1002 => self.input.mouse_mode_button = false,
+                            1003 => self.input.mouse_mode_any = false,
+                            1006 => self.input.mouse_mode_sgr = false,
                             else => {},
                         }
                     }
@@ -1244,19 +558,11 @@ pub const TerminalSession = struct {
         }
     }
 
-    fn resetState(self: *TerminalSession) void {
-        self.g0_charset = .ascii;
-        self.g1_charset = .ascii;
-        self.gl_charset = .ascii;
+    pub fn resetState(self: *TerminalSession) void {
+        self.parser.reset();
         self.primary.resetState();
         self.alt.resetState();
-        self.mouse_mode_x10 = false;
-        self.mouse_mode_button = false;
-        self.mouse_mode_any = false;
-        self.mouse_mode_sgr = false;
-        self.mouse_last_row = 0;
-        self.mouse_last_col = 0;
-        self.mouse_last_buttons = 0;
+        self.input.resetMouse();
         self.current_hyperlink_id = 0;
         self.primary.clear();
         self.alt.clear();
@@ -1409,10 +715,10 @@ pub const TerminalSession = struct {
         if (cols == 0 or screen.grid.rows == 0) return;
         if (row >= @as(usize, screen.grid.rows)) return;
         const row_start = row * cols;
-        self.scrollback.pushRow(screen.grid.cells.items[row_start .. row_start + cols]);
+        self.history.pushRow(screen.grid.cells.items[row_start .. row_start + cols]);
         const log = app_logger.logger("terminal.core");
-        log.logf("scrollback push row={d} total={d}", .{ row, self.scrollback.count() });
-        log.logStdout("scrollback push total={d}", .{self.scrollback.count()});
+        log.logf("scrollback push row={d} total={d}", .{ row, self.history.scrollbackCount() });
+        log.logStdout("scrollback push total={d}", .{self.history.scrollbackCount()});
     }
 
     fn scrollRegionUp(self: *TerminalSession, count: usize) void {
@@ -1537,12 +843,12 @@ pub const TerminalSession = struct {
         }
     }
 
-    fn handleCodepoint(self: *TerminalSession, codepoint: u32) void {
+    pub fn handleCodepoint(self: *TerminalSession, codepoint: u32) void {
         if (codepoint == 0) return;
         if (codepoint > 0x10FFFF or (codepoint >= 0xD800 and codepoint <= 0xDFFF)) return;
 
         var cp = codepoint;
-        if (self.gl_charset == .dec_special) {
+        if (self.parser.gl_charset == .dec_special) {
             cp = mapDecSpecial(codepoint);
         }
 
@@ -1686,52 +992,41 @@ pub const TerminalSession = struct {
 
     pub fn scrollbackCount(self: *TerminalSession) usize {
         if (self.isAltActive()) return 0;
-        return self.scrollback.count();
+        return self.history.scrollbackCount();
     }
 
     pub fn scrollbackRow(self: *TerminalSession, index: usize) ?[]const Cell {
         if (self.isAltActive()) return null;
-        return self.scrollback.rowSlice(index);
+        return self.history.scrollbackRow(index);
     }
 
     pub fn scrollOffset(self: *TerminalSession) usize {
         if (self.isAltActive()) return 0;
-        return self.scrollback_offset;
+        return self.history.scrollOffset();
     }
 
     pub fn setScrollOffset(self: *TerminalSession, offset: usize) void {
         if (self.isAltActive()) {
-            self.scrollback_offset = 0;
+            self.history.scrollback_offset = 0;
             return;
         }
-        const max_offset = self.maxScrollOffset();
-        self.scrollback_offset = @min(offset, max_offset);
+        self.history.setScrollOffset(self.primary.grid.rows, offset);
         self.primary.grid.markDirtyAll();
         const log = app_logger.logger("terminal.core");
-        log.logf("set scroll offset={d} max={d}", .{ self.scrollback_offset, max_offset });
-        log.logStdout("set scroll offset={d} max={d}", .{ self.scrollback_offset, max_offset });
+        const max_offset = self.history.maxScrollOffset(self.primary.grid.rows);
+        log.logf("set scroll offset={d} max={d}", .{ self.history.scrollOffset(), max_offset });
+        log.logStdout("set scroll offset={d} max={d}", .{ self.history.scrollOffset(), max_offset });
     }
 
     pub fn scrollBy(self: *TerminalSession, delta: isize) void {
         if (self.isAltActive()) return;
         if (delta == 0) return;
-        const max_offset = self.maxScrollOffset();
-        var offset: isize = @intCast(self.scrollback_offset);
-        offset += delta;
-        if (offset < 0) offset = 0;
-        const max_i: isize = @intCast(max_offset);
-        if (offset > max_i) offset = max_i;
-        self.scrollback_offset = @intCast(offset);
+        self.history.scrollBy(self.primary.grid.rows, delta);
         self.primary.grid.markDirtyAll();
         const log = app_logger.logger("terminal.core");
-        log.logf("scroll by delta={d} offset={d} max={d}", .{ delta, self.scrollback_offset, max_offset });
-        log.logStdout("scroll by delta={d} offset={d} max={d}", .{ delta, self.scrollback_offset, max_offset });
-    }
-
-    fn maxScrollOffset(self: *TerminalSession) usize {
-        const rows = @as(usize, self.primary.grid.rows);
-        const total = self.scrollback.count() + rows;
-        return if (total > rows) total - rows else 0;
+        const max_offset = self.history.maxScrollOffset(self.primary.grid.rows);
+        log.logf("scroll by delta={d} offset={d} max={d}", .{ delta, self.history.scrollOffset(), max_offset });
+        log.logStdout("scroll by delta={d} offset={d} max={d}", .{ delta, self.history.scrollOffset(), max_offset });
     }
 
     fn keyModeStack(self: *TerminalSession) *KeyModeStack {
@@ -1770,7 +1065,7 @@ pub const TerminalSession = struct {
         }
     }
 
-    fn saveCursor(self: *TerminalSession) void {
+    pub fn saveCursor(self: *TerminalSession) void {
         const screen = self.activeScreen();
         const slot = &screen.saved_cursor;
         slot.active = true;
@@ -1778,7 +1073,7 @@ pub const TerminalSession = struct {
         slot.attrs = screen.current_attrs;
     }
 
-    fn restoreCursor(self: *TerminalSession) void {
+    pub fn restoreCursor(self: *TerminalSession) void {
         const screen = self.activeScreen();
         const slot = &screen.saved_cursor;
         if (!slot.active) return;
@@ -1796,8 +1091,7 @@ pub const TerminalSession = struct {
         if (save_cursor) {
             self.saveCursor();
         }
-        self.saved_scrollback_offset = self.scrollback_offset;
-        self.scrollback_offset = 0;
+        self.history.saveScrollOffset();
         self.clearSelection();
         self.active = .alt;
         if (clear) {
@@ -1810,7 +1104,7 @@ pub const TerminalSession = struct {
     fn exitAltScreen(self: *TerminalSession, restore_cursor: bool) void {
         if (!self.isAltActive()) return;
         self.active = .primary;
-        self.scrollback_offset = self.saved_scrollback_offset;
+        self.history.restoreScrollOffset(self.primary.grid.rows);
         self.clearSelection();
         if (restore_cursor) {
             self.restoreCursor();
@@ -1845,34 +1139,27 @@ pub const TerminalSession = struct {
     }
 
     pub fn clearSelection(self: *TerminalSession) void {
-        self.selection.active = false;
-        self.selection.selecting = false;
+        self.history.clearSelection();
     }
 
     pub fn startSelection(self: *TerminalSession, row: usize, col: usize) void {
         if (self.isAltActive()) return;
-        self.selection.active = true;
-        self.selection.selecting = true;
-        self.selection.start = .{ .row = row, .col = col };
-        self.selection.end = .{ .row = row, .col = col };
+        self.history.startSelection(row, col);
     }
 
     pub fn updateSelection(self: *TerminalSession, row: usize, col: usize) void {
         if (self.isAltActive()) return;
-        if (!self.selection.active) return;
-        self.selection.end = .{ .row = row, .col = col };
+        self.history.updateSelection(row, col);
     }
 
     pub fn finishSelection(self: *TerminalSession) void {
         if (self.isAltActive()) return;
-        if (!self.selection.active) return;
-        self.selection.selecting = false;
+        self.history.finishSelection();
     }
 
     pub fn selectionState(self: *TerminalSession) ?TerminalSelection {
         if (self.isAltActive()) return null;
-        if (!self.selection.active) return null;
-        return self.selection;
+        return self.history.selectionState();
     }
 
     pub fn bracketedPasteEnabled(self: *TerminalSession) bool {
@@ -1880,7 +1167,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn mouseReportingEnabled(self: *TerminalSession) bool {
-        return self.mouseTrackingActive();
+        return self.input.mouseTrackingActive();
     }
 
     pub fn isAlive(self: *TerminalSession) bool {
@@ -1911,186 +1198,32 @@ pub const TerminalSession = struct {
     }
 };
 
-pub const CursorPos = struct {
-    row: usize,
-    col: usize,
-};
-
-pub const SelectionPos = struct {
-    row: usize,
-    col: usize,
-};
-
-pub const TerminalSelection = struct {
-    active: bool,
-    selecting: bool,
-    start: SelectionPos,
-    end: SelectionPos,
-};
-
-const SavedCursor = struct {
-    active: bool,
-    cursor: CursorPos,
-    attrs: CellAttrs,
-};
-
 const Hyperlink = struct {
     uri: []u8,
 };
 
-const KeyModeStack = struct {
-    len: usize,
-    items: [key_mode_stack_max]u32,
+pub const VTERM_KEY_NONE = types.VTERM_KEY_NONE;
+pub const VTERM_KEY_ENTER = types.VTERM_KEY_ENTER;
+pub const VTERM_KEY_TAB = types.VTERM_KEY_TAB;
+pub const VTERM_KEY_BACKSPACE = types.VTERM_KEY_BACKSPACE;
+pub const VTERM_KEY_ESCAPE = types.VTERM_KEY_ESCAPE;
+pub const VTERM_KEY_UP = types.VTERM_KEY_UP;
+pub const VTERM_KEY_DOWN = types.VTERM_KEY_DOWN;
+pub const VTERM_KEY_LEFT = types.VTERM_KEY_LEFT;
+pub const VTERM_KEY_RIGHT = types.VTERM_KEY_RIGHT;
+pub const VTERM_KEY_INS = types.VTERM_KEY_INS;
+pub const VTERM_KEY_DEL = types.VTERM_KEY_DEL;
+pub const VTERM_KEY_HOME = types.VTERM_KEY_HOME;
+pub const VTERM_KEY_END = types.VTERM_KEY_END;
+pub const VTERM_KEY_PAGEUP = types.VTERM_KEY_PAGEUP;
+pub const VTERM_KEY_PAGEDOWN = types.VTERM_KEY_PAGEDOWN;
 
-    fn init() KeyModeStack {
-        return .{
-            .len = 1,
-            .items = [_]u32{0} ** key_mode_stack_max,
-        };
-    }
+pub const VTERM_MOD_NONE = types.VTERM_MOD_NONE;
+pub const VTERM_MOD_SHIFT = types.VTERM_MOD_SHIFT;
+pub const VTERM_MOD_ALT = types.VTERM_MOD_ALT;
+pub const VTERM_MOD_CTRL = types.VTERM_MOD_CTRL;
 
-    fn current(self: *const KeyModeStack) u32 {
-        return self.items[self.len - 1];
-    }
-
-    fn push(self: *KeyModeStack, flags: u32) void {
-        if (self.len >= key_mode_stack_max) {
-            var idx: usize = 1;
-            while (idx < key_mode_stack_max) : (idx += 1) {
-                self.items[idx - 1] = self.items[idx];
-            }
-            self.len = key_mode_stack_max - 1;
-        }
-        self.items[self.len] = flags;
-        self.len += 1;
-    }
-
-    fn pop(self: *KeyModeStack, count: usize) void {
-        if (self.len <= 1) return;
-        const max_pop = self.len - 1;
-        const actual = @min(count, max_pop);
-        self.len -= actual;
-    }
-
-    fn setCurrent(self: *KeyModeStack, flags: u32) void {
-        self.items[self.len - 1] = flags;
-    }
-};
-
-pub const Cell = struct {
-    codepoint: u32,
-    width: u8,
-    attrs: CellAttrs,
-};
-
-const Scrollback = scrollback_mod.Scrollback(Cell);
-
-pub const CellAttrs = struct {
-    fg: Color,
-    bg: Color,
-    bold: bool,
-    reverse: bool,
-    underline: bool,
-    link_id: u32,
-};
-
-pub const Color = struct {
-    r: u8,
-    g: u8,
-    b: u8,
-};
-
-pub const Key = u32;
-pub const Modifier = u8;
-
-pub const MouseButton = enum(u8) {
-    none = 0,
-    left = 1,
-    middle = 2,
-    right = 3,
-    wheel_up = 4,
-    wheel_down = 5,
-};
-
-pub const MouseEventKind = enum(u8) {
-    press,
-    release,
-    move,
-    wheel,
-};
-
-pub const MouseEvent = struct {
-    kind: MouseEventKind,
-    button: MouseButton,
-    row: usize,
-    col: usize,
-    mod: Modifier,
-    buttons_down: u8,
-};
-
-pub const VTERM_KEY_NONE: Key = 0;
-pub const VTERM_KEY_ENTER: Key = 1;
-pub const VTERM_KEY_TAB: Key = 2;
-pub const VTERM_KEY_BACKSPACE: Key = 3;
-pub const VTERM_KEY_ESCAPE: Key = 4;
-pub const VTERM_KEY_UP: Key = 5;
-pub const VTERM_KEY_DOWN: Key = 6;
-pub const VTERM_KEY_LEFT: Key = 7;
-pub const VTERM_KEY_RIGHT: Key = 8;
-pub const VTERM_KEY_INS: Key = 9;
-pub const VTERM_KEY_DEL: Key = 10;
-pub const VTERM_KEY_HOME: Key = 11;
-pub const VTERM_KEY_END: Key = 12;
-pub const VTERM_KEY_PAGEUP: Key = 13;
-pub const VTERM_KEY_PAGEDOWN: Key = 14;
-
-pub const VTERM_MOD_NONE: Modifier = 0;
-pub const VTERM_MOD_SHIFT: Modifier = 1;
-pub const VTERM_MOD_ALT: Modifier = 2;
-pub const VTERM_MOD_CTRL: Modifier = 4;
-
-const EscState = enum {
-    ground,
-    esc,
-    csi,
-    charset,
-};
-
-const OscState = enum {
-    idle,
-    osc,
-    osc_esc,
-};
-
-const Charset = enum {
-    ascii,
-    dec_special,
-};
-
-const CharsetTarget = enum {
-    g0,
-    g1,
-};
-
-fn defaultCell() Cell {
-    return Cell{
-        .codepoint = 0,
-        .width = 1,
-        .attrs = CellAttrs{
-            .fg = default_fg,
-            .bg = default_bg,
-            .bold = false,
-            .reverse = false,
-            .underline = false,
-            .link_id = 0,
-        },
-    };
-}
-
-const default_fg = Color{ .r = 220, .g = 220, .b = 220 };
-const default_bg = Color{ .r = 24, .g = 25, .b = 33 };
 const default_scrollback_rows: usize = 1000;
-const key_mode_stack_max: usize = 32;
 const key_mode_disambiguate: u32 = 1;
 const key_mode_report_all_keys: u32 = 8;
 const mouse_button_left_mask: u8 = 1;
@@ -2098,50 +1231,14 @@ const mouse_button_middle_mask: u8 = 2;
 const mouse_button_right_mask: u8 = 4;
 const max_hyperlinks: usize = 2048;
 
-const ansiColors = [_]Color{
-    .{ .r = 0, .g = 0, .b = 0 }, // black
-    .{ .r = 205, .g = 49, .b = 49 }, // red
-    .{ .r = 13, .g = 188, .b = 121 }, // green
-    .{ .r = 229, .g = 229, .b = 16 }, // yellow
-    .{ .r = 36, .g = 114, .b = 200 }, // blue
-    .{ .r = 188, .g = 63, .b = 188 }, // magenta
-    .{ .r = 17, .g = 168, .b = 205 }, // cyan
-    .{ .r = 229, .g = 229, .b = 229 }, // white
-};
-
-const ansiBrightColors = [_]Color{
-    .{ .r = 102, .g = 102, .b = 102 }, // bright black
-    .{ .r = 241, .g = 76, .b = 76 }, // bright red
-    .{ .r = 35, .g = 209, .b = 139 }, // bright green
-    .{ .r = 245, .g = 245, .b = 67 }, // bright yellow
-    .{ .r = 59, .g = 142, .b = 234 }, // bright blue
-    .{ .r = 214, .g = 112, .b = 214 }, // bright magenta
-    .{ .r = 41, .g = 184, .b = 219 }, // bright cyan
-    .{ .r = 255, .g = 255, .b = 255 }, // bright white
-};
-
-fn clampColorIndex(value: i32) u8 {
-    if (value <= 0) return 0;
-    if (value >= 255) return 255;
-    return @intCast(value);
-}
-
-fn indexToRgb(idx: u8) Color {
-    if (idx < 8) return ansiColors[idx];
-    if (idx < 16) return ansiBrightColors[idx - 8];
-
-    if (idx < 232) {
-        const color_idx = idx - 16;
-        const r_idx = color_idx / 36;
-        const g_idx = (color_idx % 36) / 6;
-        const b_idx = color_idx % 6;
-        return .{
-            .r = if (r_idx == 0) 0 else @as(u8, @intCast(55 + r_idx * 40)),
-            .g = if (g_idx == 0) 0 else @as(u8, @intCast(55 + g_idx * 40)),
-            .b = if (b_idx == 0) 0 else @as(u8, @intCast(55 + b_idx * 40)),
-        };
-    }
-
-    const gray = @as(u8, @intCast(8 + (idx - 232) * 10));
-    return .{ .r = gray, .g = gray, .b = gray };
-}
+pub const CursorPos = types.CursorPos;
+pub const SelectionPos = types.SelectionPos;
+pub const TerminalSelection = types.TerminalSelection;
+pub const Cell = types.Cell;
+pub const CellAttrs = types.CellAttrs;
+pub const Color = types.Color;
+pub const Key = types.Key;
+pub const Modifier = types.Modifier;
+pub const MouseButton = types.MouseButton;
+pub const MouseEventKind = types.MouseEventKind;
+pub const MouseEvent = types.MouseEvent;
