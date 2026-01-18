@@ -39,6 +39,7 @@ Suggested next steps:
 - Added square/wide glyph overflow policy: scale to fit unless followed by space (aspect threshold 0.7).
 - Always allow PUA/symbol glyphs to overflow to avoid shrinking icon glyphs.
 - Render symbol glyphs using bearings and clamp to the cell origin to avoid left-edge clipping without centering bias.
+- Avoid drawing per-cell backgrounds during glyph pass so overflowed icons aren't overdrawn.
 
 ## Key changes
 

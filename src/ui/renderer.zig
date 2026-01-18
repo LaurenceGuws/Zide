@@ -551,6 +551,7 @@ pub const Renderer = struct {
         underline: bool,
         is_cursor: bool,
         followed_by_space: bool,
+        draw_bg: bool,
     ) void {
         const snapped_x = snapFloat(x);
         const snapped_y = snapFloat(y);
@@ -560,13 +561,15 @@ pub const Renderer = struct {
         const snapped_cell_h_i = snapInt(self.terminal_cell_height);
 
         // Draw background
-        self.drawRect(
-            snapInt(snapped_x),
-            snapInt(snapped_y),
-            snapped_cell_w_i,
-            snapped_cell_h_i,
-            if (is_cursor) fg else bg,
-        );
+        if (draw_bg) {
+            self.drawRect(
+                snapInt(snapped_x),
+                snapInt(snapped_y),
+                snapped_cell_w_i,
+                snapped_cell_h_i,
+                if (is_cursor) fg else bg,
+            );
+        }
 
         // Draw character
         if (codepoint != 0) {

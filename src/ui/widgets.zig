@@ -703,6 +703,7 @@ pub const TerminalWidget = struct {
                 col_end_in: usize,
                 base_x_local: f32,
                 base_y_local: f32,
+                padding_x_i: i32,
             ) void {
                 const cell_w_i: i32 = @intFromFloat(std.math.round(renderer.terminal_cell_width));
                 const cell_h_i: i32 = @intFromFloat(std.math.round(renderer.terminal_cell_height));
@@ -749,6 +750,26 @@ pub const TerminalWidget = struct {
                     }
                 }
 
+                if (padding_x_i > 0 and cols_count > 0) {
+                    const last_cell = row_cells[cols_count - 1];
+                    const padding_bg = Color{
+                        .r = last_cell.attrs.bg.r,
+                        .g = last_cell.attrs.bg.g,
+                        .b = last_cell.attrs.bg.b,
+                    };
+                    renderer.drawRect(
+                        base_x_i + @as(i32, @intCast(cols_count)) * cell_w_i,
+                        base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i,
+                        padding_x_i,
+                        cell_h_i,
+                        if (last_cell.attrs.reverse) Color{
+                            .r = last_cell.attrs.fg.r,
+                            .g = last_cell.attrs.fg.g,
+                            .b = last_cell.attrs.fg.b,
+                        } else padding_bg,
+                    );
+                }
+
                 col = col_start;
                 while (col <= col_end and col < cols_count) : (col += 1) {
                     const cell = row_cells[col];
@@ -788,6 +809,7 @@ pub const TerminalWidget = struct {
                         cell.attrs.underline,
                         false,
                         followed_by_space,
+                        false,
                     );
 
                     if (cell.width > 1) {
@@ -799,7 +821,9 @@ pub const TerminalWidget = struct {
 
         var updated = false;
         if (rows > 0 and cols > 0) {
-            const texture_w = @as(i32, @intFromFloat(@round(r.terminal_cell_width * @as(f32, @floatFromInt(cols)))));
+            const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
+            const padding_x_i: i32 = @max(2, @divTrunc(cell_w_i, 2));
+            const texture_w = cell_w_i * @as(i32, @intCast(cols)) + padding_x_i;
             const texture_h = @as(i32, @intFromFloat(@round(r.terminal_cell_height * @as(f32, @floatFromInt(rows)))));
             const recreated = r.ensureTerminalTexture(texture_w, texture_h);
             const needs_full = recreated or snapshot.dirty == .full or (snapshot.dirty != .none and scroll_offset > 0);
@@ -815,7 +839,7 @@ pub const TerminalWidget = struct {
                 if (needs_full) {
                     var row: usize = 0;
                     while (row < rows) : (row += 1) {
-                        drawRowRange(self, r, snapshot.cells, history_len, cols, start_line, row, 0, cols - 1, base_x_local, base_y_local);
+                        drawRowRange(self, r, snapshot.cells, history_len, cols, start_line, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i);
                     }
                 } else if (needs_partial) {
                     var row: usize = 0;
@@ -835,7 +859,7 @@ pub const TerminalWidget = struct {
                             }
                             const draw_start = if (col_start > 0) col_start - 1 else 0;
                             const draw_end = @min(cols - 1, col_end + 1);
-                            drawRowRange(self, r, snapshot.cells, history_len, cols, start_line, row, draw_start, draw_end, base_x_local, base_y_local);
+                            drawRowRange(self, r, snapshot.cells, history_len, cols, start_line, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
                         }
                     }
                 }
@@ -951,6 +975,7 @@ pub const TerminalWidget = struct {
                 cell.attrs.underline,
                 true,
                 followed_by_space,
+                true,
             );
         }
 
