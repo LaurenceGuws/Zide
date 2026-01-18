@@ -11,6 +11,7 @@ const config_mod = @import("config/lua_config.zig");
 // Terminal modules
 const terminal_mod = @import("terminal/core/terminal.zig");
 const metrics_mod = @import("terminal/model/metrics.zig");
+const term_types = @import("terminal/model/types.zig");
 
 // UI modules
 const renderer_mod = @import("ui/renderer.zig");
@@ -170,6 +171,18 @@ const AppState = struct {
         const rows: u16 = @intCast(@max(24, @divFloor(@as(i32, @intFromFloat(self.terminal_height)), @as(i32, @intFromFloat(self.renderer.terminal_cell_height)))));
 
         const term = try TerminalSession.init(self.allocator, rows, cols);
+        term.setDefaultColors(
+            term_types.Color{
+                .r = self.renderer.theme.foreground.r,
+                .g = self.renderer.theme.foreground.g,
+                .b = self.renderer.theme.foreground.b,
+            },
+            term_types.Color{
+                .r = self.renderer.theme.background.r,
+                .g = self.renderer.theme.background.g,
+                .b = self.renderer.theme.background.b,
+            },
+        );
         term.setCellSize(
             @intFromFloat(self.renderer.terminal_cell_width),
             @intFromFloat(self.renderer.terminal_cell_height),

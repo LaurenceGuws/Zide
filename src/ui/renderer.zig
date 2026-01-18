@@ -86,6 +86,10 @@ pub const Theme = struct {
     error_token: Color = Color.red,
 };
 
+const key_repeat_key_count: usize = 512;
+const key_repeat_initial_delay: f64 = 0.45;
+const key_repeat_rate: f64 = 30.0;
+
 pub const Renderer = struct {
     allocator: std.mem.Allocator,
     width: c_int,
@@ -108,6 +112,7 @@ pub const Renderer = struct {
     mouse_scale: MousePos,
     wayland_scale_cache: ?f32,
     wayland_scale_last_update: f64,
+    key_repeat_next: [key_repeat_key_count]f64,
 
     fn snapInt(value: f32) c_int {
         return @intFromFloat(std.math.round(value));
@@ -161,6 +166,7 @@ pub const Renderer = struct {
             .mouse_scale = .{ .x = 1.0, .y = 1.0 },
             .wayland_scale_cache = null,
             .wayland_scale_last_update = -1000.0,
+            .key_repeat_next = [_]f64{0} ** key_repeat_key_count,
         };
 
         // Load app font with Nerd Font glyphs if available
@@ -616,9 +622,8 @@ pub const Renderer = struct {
         const thin: c_int = 1;
         const thick: c_int = @max(2, @divTrunc(ih, 6));
 
-        // For continuous vertical lines, extend 1 pixel beyond cell to ensure connection.
-        // This fixes gaps between rows caused by rounding.
-        const extend: c_int = 1;
+        // With integer-snapped cell metrics we avoid gaps, so no extra extension needed.
+        const extend: c_int = 0;
 
         switch (codepoint) {
             0x2500 => { // ─
@@ -761,6 +766,36 @@ pub const Renderer = struct {
     pub fn isKeyPressed(self: *Renderer, key: c_int) bool {
         _ = self;
         return c.IsKeyPressed(key);
+    }
+
+    pub fn isKeyRepeated(self: *Renderer, key: c_int) bool {
+        if (key < 0) return false;
+        const idx: usize = @intCast(key);
+        if (idx >= key_repeat_key_count) {
+            return c.IsKeyPressed(key);
+        }
+
+        const now = c.GetTime();
+        const down = c.IsKeyDown(key);
+        if (!down) {
+            self.key_repeat_next[idx] = 0;
+            return false;
+        }
+
+        if (c.IsKeyPressed(key)) {
+            self.key_repeat_next[idx] = now + key_repeat_initial_delay;
+            return true;
+        }
+
+        if (self.key_repeat_next[idx] > 0 and now >= self.key_repeat_next[idx]) {
+            const interval: f64 = if (key_repeat_rate > 0.0) 1.0 / key_repeat_rate else 0.05;
+            while (self.key_repeat_next[idx] <= now) {
+                self.key_repeat_next[idx] += interval;
+            }
+            return true;
+        }
+
+        return false;
     }
 
     pub fn getMousePos(self: *Renderer) MousePos {

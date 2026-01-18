@@ -35,7 +35,7 @@ Suggested next steps:
 
 ### CSI operations (current)
 - Cursor: `A/B/C/D` (move), `H/f` (CUP), `G` (CHA), `d` (VPA), `E/F` (CNL/CPL)
-- Erase: `J` (ED), `K` (EL)
+- Erase: `J` (ED), `K` (EL), `X` (ECH)
 - Insert/Delete: `@` (ICH), `P` (DCH), `L` (IL), `M` (DL)
 - Scroll: `S` (SU), `T` (SD), `r` (DECSTBM)
 - Reset: `ESC c`
@@ -62,6 +62,7 @@ Suggested next steps:
 
 - Terminal output renders from a real PTY with minimal VT parsing.
 - Colors (16/256/truecolor) and basic cursor/erase operations work.
+- Default colors are configurable per session; erase/blank fills use current attributes so TUI background colors persist.
 - Scrollback captures lines when the full screen scrolls; UI shows a scrollbar and supports drag/wheel.
 - Full SGR coverage and advanced CSI not yet supported.
 - Dirty-row tracking is implemented; renderer caches the terminal in a texture and only updates dirty rows.

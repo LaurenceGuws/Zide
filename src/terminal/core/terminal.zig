@@ -9,7 +9,6 @@ const types = @import("../model/types.zig");
 const app_logger = @import("../../app_logger.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
-const defaultCell = types.defaultCell;
 const clampColorIndex = types.clampColorIndex;
 const indexToRgb = types.indexToRgb;
 const ansiColors = types.ansiColors;
@@ -70,8 +69,9 @@ pub const TerminalSession = struct {
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !*TerminalSession {
         const session = try allocator.create(TerminalSession);
-        const primary = try Screen.init(allocator, rows, cols);
-        const alt = try Screen.init(allocator, rows, cols);
+        const default_attrs = types.defaultCell().attrs;
+        const primary = try Screen.init(allocator, rows, cols, default_attrs);
+        const alt = try Screen.init(allocator, rows, cols, default_attrs);
         const history = try history_mod.TerminalHistory.init(allocator, default_scrollback_rows, cols);
         const log = app_logger.logger("terminal.core");
         log.logf("terminal init rows={d} cols={d} scrollback_max={d}", .{ rows, cols, default_scrollback_rows });
@@ -114,6 +114,34 @@ pub const TerminalSession = struct {
 
     fn isAltActive(self: *const TerminalSession) bool {
         return self.active == .alt;
+    }
+
+    fn defaultCell(self: *const TerminalSession) Cell {
+        return .{
+            .codepoint = 0,
+            .width = 1,
+            .attrs = self.primary.default_attrs,
+        };
+    }
+
+    fn blankCellForScreen(self: *const TerminalSession, screen: *const Screen) Cell {
+        _ = self;
+        return .{
+            .codepoint = 0,
+            .width = 1,
+            .attrs = screen.current_attrs,
+        };
+    }
+
+    pub fn setDefaultColors(self: *TerminalSession, fg: types.Color, bg: types.Color) void {
+        const old_attrs = self.primary.default_attrs;
+        var new_attrs = types.defaultCell().attrs;
+        new_attrs.fg = fg;
+        new_attrs.bg = bg;
+
+        self.primary.updateDefaultColors(old_attrs, new_attrs);
+        self.alt.updateDefaultColors(old_attrs, new_attrs);
+        self.history.updateDefaultColors(old_attrs.fg, old_attrs.bg, new_attrs.fg, new_attrs.bg);
     }
 
     pub fn deinit(self: *TerminalSession) void {
@@ -203,7 +231,7 @@ pub const TerminalSession = struct {
         try self.primary.resize(rows, cols);
         try self.alt.resize(rows, cols);
         if (cols != old_cols) {
-            try self.history.resizePreserve(cols, defaultCell());
+            try self.history.resizePreserve(cols, self.defaultCell());
         }
         const log = app_logger.logger("terminal.core");
         log.logf("terminal resize rows={d} cols={d} scrollback_cols={d}", .{ rows, cols, self.primary.grid.cols });
@@ -457,6 +485,10 @@ pub const TerminalSession = struct {
                 const n = @max(1, get(p, 0, 1));
                 self.deleteChars(@intCast(n));
             },
+            'X' => { // ECH
+                const n = @max(1, get(p, 0, 1));
+                self.eraseChars(@intCast(n));
+            },
             'L' => { // IL
                 const n = @max(1, get(p, 0, 1));
                 self.insertLines(@intCast(n));
@@ -573,7 +605,7 @@ pub const TerminalSession = struct {
         const rows = @as(usize, screen.grid.rows);
         const cols = @as(usize, screen.grid.cols);
         if (rows == 0 or cols == 0) return;
-        const default_cell = defaultCell();
+        const blank_cell = self.blankCellForScreen(screen);
         const row = screen.cursor.row;
         const col = screen.cursor.col;
         if (row >= rows or col >= cols) return;
@@ -581,7 +613,7 @@ pub const TerminalSession = struct {
         switch (mode) {
             0 => { // cursor to end
                 const start_idx = row * cols + col;
-                for (screen.grid.cells.items[start_idx..]) |*cell| cell.* = default_cell;
+                for (screen.grid.cells.items[start_idx..]) |*cell| cell.* = blank_cell;
                 screen.grid.markDirtyRange(row, row, col, cols - 1);
                 if (row + 1 < rows) {
                     screen.grid.markDirtyRange(row + 1, rows - 1, 0, cols - 1);
@@ -589,14 +621,14 @@ pub const TerminalSession = struct {
             },
             1 => { // start to cursor
                 const end = row * cols + col + 1;
-                for (screen.grid.cells.items[0..end]) |*cell| cell.* = default_cell;
+                for (screen.grid.cells.items[0..end]) |*cell| cell.* = blank_cell;
                 if (row > 0) {
                     screen.grid.markDirtyRange(0, row - 1, 0, cols - 1);
                 }
                 screen.grid.markDirtyRange(row, row, 0, col);
             },
             2 => { // all
-                for (screen.grid.cells.items) |*cell| cell.* = default_cell;
+                for (screen.grid.cells.items) |*cell| cell.* = blank_cell;
                 screen.grid.markDirtyAll();
             },
             else => {},
@@ -607,22 +639,22 @@ pub const TerminalSession = struct {
         const screen = self.activeScreen();
         const cols = @as(usize, screen.grid.cols);
         if (cols == 0 or screen.grid.rows == 0) return;
-        const default_cell = defaultCell();
+        const blank_cell = self.blankCellForScreen(screen);
         if (screen.cursor.row >= @as(usize, screen.grid.rows)) return;
         const row_start = screen.cursor.row * cols;
         const col = screen.cursor.col;
         if (col >= cols) return;
         switch (mode) {
             0 => { // cursor to end of line
-                for (screen.grid.cells.items[row_start + col .. row_start + cols]) |*cell| cell.* = default_cell;
+                for (screen.grid.cells.items[row_start + col .. row_start + cols]) |*cell| cell.* = blank_cell;
                 screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, col, cols - 1);
             },
             1 => { // start to cursor
-                for (screen.grid.cells.items[row_start .. row_start + col + 1]) |*cell| cell.* = default_cell;
+                for (screen.grid.cells.items[row_start .. row_start + col + 1]) |*cell| cell.* = blank_cell;
                 screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, 0, col);
             },
             2 => { // entire line
-                for (screen.grid.cells.items[row_start .. row_start + cols]) |*cell| cell.* = default_cell;
+                for (screen.grid.cells.items[row_start .. row_start + cols]) |*cell| cell.* = blank_cell;
                 screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, 0, cols - 1);
             },
             else => {},
@@ -642,8 +674,8 @@ pub const TerminalSession = struct {
         if (cols - col > n) {
             std.mem.copyBackwards(Cell, line[col + n ..], line[col .. cols - n]);
         }
-        const default_cell = defaultCell();
-        for (line[col .. col + n]) |*cell| cell.* = default_cell;
+        const blank_cell = self.blankCellForScreen(screen);
+        for (line[col .. col + n]) |*cell| cell.* = blank_cell;
         screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, col, cols - 1);
     }
 
@@ -660,9 +692,24 @@ pub const TerminalSession = struct {
         if (cols - col > n) {
             std.mem.copyForwards(Cell, line[col .. cols - n], line[col + n ..]);
         }
-        const default_cell = defaultCell();
-        for (line[cols - n .. cols]) |*cell| cell.* = default_cell;
+        const blank_cell = self.blankCellForScreen(screen);
+        for (line[cols - n .. cols]) |*cell| cell.* = blank_cell;
         screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, col, cols - 1);
+    }
+
+    fn eraseChars(self: *TerminalSession, count: usize) void {
+        const screen = self.activeScreen();
+        const cols = @as(usize, screen.grid.cols);
+        if (cols == 0) return;
+        if (screen.cursor.row >= @as(usize, screen.grid.rows)) return;
+        const col = screen.cursor.col;
+        if (col >= cols) return;
+        const n = @min(count, cols - col);
+        const row_start = screen.cursor.row * cols;
+        const line = screen.grid.cells.items[row_start .. row_start + cols];
+        const blank_cell = self.blankCellForScreen(screen);
+        for (line[col .. col + n]) |*cell| cell.* = blank_cell;
+        screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, col, col + n - 1);
     }
 
     fn insertLines(self: *TerminalSession, count: usize) void {
@@ -672,14 +719,14 @@ pub const TerminalSession = struct {
         if (rows == 0 or cols == 0) return;
         if (screen.cursor.row < screen.scroll_top or screen.cursor.row > screen.scroll_bottom) return;
         const n = @min(count, screen.scroll_bottom - screen.cursor.row + 1);
-        const default_cell = defaultCell();
+        const blank_cell = self.blankCellForScreen(screen);
         const region_end = (screen.scroll_bottom + 1) * cols;
         const insert_at = screen.cursor.row * cols;
         const move_len = region_end - insert_at - n * cols;
         if (move_len > 0) {
             std.mem.copyBackwards(Cell, screen.grid.cells.items[insert_at + n * cols .. region_end], screen.grid.cells.items[insert_at .. insert_at + move_len]);
         }
-        for (screen.grid.cells.items[insert_at .. insert_at + n * cols]) |*cell| cell.* = default_cell;
+        for (screen.grid.cells.items[insert_at .. insert_at + n * cols]) |*cell| cell.* = blank_cell;
         screen.grid.markDirtyRange(screen.cursor.row, screen.scroll_bottom, 0, cols - 1);
     }
 
@@ -690,14 +737,14 @@ pub const TerminalSession = struct {
         if (rows == 0 or cols == 0) return;
         if (screen.cursor.row < screen.scroll_top or screen.cursor.row > screen.scroll_bottom) return;
         const n = @min(count, screen.scroll_bottom - screen.cursor.row + 1);
-        const default_cell = defaultCell();
+        const blank_cell = self.blankCellForScreen(screen);
         const region_end = (screen.scroll_bottom + 1) * cols;
         const delete_at = screen.cursor.row * cols;
         const move_len = region_end - delete_at - n * cols;
         if (move_len > 0) {
             std.mem.copyForwards(Cell, screen.grid.cells.items[delete_at .. delete_at + move_len], screen.grid.cells.items[delete_at + n * cols .. region_end]);
         }
-        for (screen.grid.cells.items[region_end - n * cols .. region_end]) |*cell| cell.* = default_cell;
+        for (screen.grid.cells.items[region_end - n * cols .. region_end]) |*cell| cell.* = blank_cell;
         screen.grid.markDirtyRange(screen.cursor.row, screen.scroll_bottom, 0, cols - 1);
     }
 
@@ -730,7 +777,7 @@ pub const TerminalSession = struct {
         if (cols == 0 or screen.grid.rows == 0) return;
         const n = @min(count, screen.scroll_bottom - screen.scroll_top + 1);
         if (n == 0) return;
-        const default_cell = defaultCell();
+        const blank_cell = self.blankCellForScreen(screen);
         const region_start = screen.scroll_top * cols;
         const region_end = (screen.scroll_bottom + 1) * cols;
         if (self.isFullScrollRegion()) {
@@ -743,7 +790,7 @@ pub const TerminalSession = struct {
         if (move_len > 0) {
             std.mem.copyForwards(Cell, screen.grid.cells.items[region_start .. region_start + move_len], screen.grid.cells.items[region_start + n * cols .. region_end]);
         }
-        for (screen.grid.cells.items[region_end - n * cols .. region_end]) |*cell| cell.* = default_cell;
+        for (screen.grid.cells.items[region_end - n * cols .. region_end]) |*cell| cell.* = blank_cell;
         screen.grid.markDirtyRange(screen.scroll_top, screen.scroll_bottom, 0, cols - 1);
     }
 
@@ -753,14 +800,14 @@ pub const TerminalSession = struct {
         if (cols == 0 or screen.grid.rows == 0) return;
         const n = @min(count, screen.scroll_bottom - screen.scroll_top + 1);
         if (n == 0) return;
-        const default_cell = defaultCell();
+        const blank_cell = self.blankCellForScreen(screen);
         const region_start = screen.scroll_top * cols;
         const region_end = (screen.scroll_bottom + 1) * cols;
         const move_len = region_end - region_start - n * cols;
         if (move_len > 0) {
             std.mem.copyBackwards(Cell, screen.grid.cells.items[region_start + n * cols .. region_end], screen.grid.cells.items[region_start .. region_start + move_len]);
         }
-        for (screen.grid.cells.items[region_start .. region_start + n * cols]) |*cell| cell.* = default_cell;
+        for (screen.grid.cells.items[region_start .. region_start + n * cols]) |*cell| cell.* = blank_cell;
         screen.grid.markDirtyRange(screen.scroll_top, screen.scroll_bottom, 0, cols - 1);
     }
 
@@ -805,7 +852,7 @@ pub const TerminalSession = struct {
             }
             switch (p) {
                 0 => { // reset
-                    screen.current_attrs = defaultCell().attrs;
+                    screen.current_attrs = screen.default_attrs;
                 },
                 1 => { // bold
                     screen.current_attrs.bold = true;
@@ -820,10 +867,10 @@ pub const TerminalSession = struct {
                     screen.current_attrs.reverse = false;
                 },
                 39 => { // default fg
-                    screen.current_attrs.fg = defaultCell().attrs.fg;
+                    screen.current_attrs.fg = screen.default_attrs.fg;
                 },
                 49 => { // default bg
-                    screen.current_attrs.bg = defaultCell().attrs.bg;
+                    screen.current_attrs.bg = screen.default_attrs.bg;
                 },
                 30...37 => {
                     screen.current_attrs.fg = ansiColors[@intCast(p - 30)];
@@ -960,9 +1007,9 @@ pub const TerminalSession = struct {
         std.mem.copyForwards(u8, src[0 .. total * @sizeOf(Cell) - row_bytes], src[row_bytes .. total * @sizeOf(Cell)]);
 
         const row_start = (rows - 1) * cols;
-        const default_cell = defaultCell();
+        const blank_cell = self.blankCellForScreen(screen);
         for (screen.grid.cells.items[row_start .. row_start + cols]) |*cell| {
-            cell.* = default_cell;
+            cell.* = blank_cell;
         }
         screen.cursor.row = rows - 1;
         screen.cursor.col = 0;
@@ -972,7 +1019,7 @@ pub const TerminalSession = struct {
     pub fn getCell(self: *TerminalSession, row: usize, col: usize) Cell {
         const screen = self.activeScreenConst();
         if (row >= @as(usize, screen.grid.rows) or col >= @as(usize, screen.grid.cols)) {
-            return defaultCell();
+            return self.defaultCell();
         }
         const idx = row * @as(usize, screen.grid.cols) + col;
         return screen.grid.cells.items[idx];

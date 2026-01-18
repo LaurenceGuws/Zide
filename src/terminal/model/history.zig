@@ -35,6 +35,27 @@ pub const TerminalHistory = struct {
         try self.scrollback.resizePreserve(cols, default_cell);
     }
 
+    pub fn updateDefaultColors(
+        self: *TerminalHistory,
+        old_fg: types.Color,
+        old_bg: types.Color,
+        new_fg: types.Color,
+        new_bg: types.Color,
+    ) void {
+        for (self.scrollback.rows.items) |*cell| {
+            if (cell.attrs.fg.r == old_fg.r and
+                cell.attrs.fg.g == old_fg.g and
+                cell.attrs.fg.b == old_fg.b and
+                cell.attrs.bg.r == old_bg.r and
+                cell.attrs.bg.g == old_bg.g and
+                cell.attrs.bg.b == old_bg.b)
+            {
+                cell.attrs.fg = new_fg;
+                cell.attrs.bg = new_bg;
+            }
+        }
+    }
+
     pub fn pushRow(self: *TerminalHistory, row: []const types.Cell) void {
         self.scrollback.pushRow(row);
     }
