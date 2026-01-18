@@ -25,7 +25,7 @@ pub const TerminalGrid = struct {
     dirty: Dirty,
     damage: Damage,
 
-    pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !TerminalGrid {
+    pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16, default_cell: types.Cell) !TerminalGrid {
         var cells = std.ArrayList(types.Cell).empty;
         var dirty_rows = std.ArrayList(bool).empty;
         var dirty_cols_start = std.ArrayList(u16).empty;
@@ -35,7 +35,6 @@ pub const TerminalGrid = struct {
         try dirty_rows.resize(allocator, rows);
         try dirty_cols_start.resize(allocator, rows);
         try dirty_cols_end.resize(allocator, rows);
-        const default_cell = types.defaultCell();
         for (cells.items) |*cell| {
             cell.* = default_cell;
         }
@@ -71,7 +70,7 @@ pub const TerminalGrid = struct {
         self.dirty_cols_end.deinit(self.allocator);
     }
 
-    pub fn resize(self: *TerminalGrid, rows: u16, cols: u16) !void {
+    pub fn resize(self: *TerminalGrid, rows: u16, cols: u16, default_cell: types.Cell) !void {
         if (self.rows == rows and self.cols == cols) return;
         const old_rows = self.rows;
         const old_cols = self.cols;
@@ -87,7 +86,6 @@ pub const TerminalGrid = struct {
         try new_dirty_cols_start.resize(self.allocator, rows);
         try new_dirty_cols_end.resize(self.allocator, rows);
 
-        const default_cell = types.defaultCell();
         for (new_cells.items) |*cell| {
             cell.* = default_cell;
         }
@@ -274,20 +272,26 @@ pub const Screen = struct {
     tabstops: TabStops,
     key_mode: KeyModeStack,
     current_attrs: types.CellAttrs,
+    default_attrs: types.CellAttrs,
     wrap_next: bool,
 
-    pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !Screen {
-        const grid = try TerminalGrid.init(allocator, rows, cols);
+    pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16, default_attrs: types.CellAttrs) !Screen {
+        const grid = try TerminalGrid.init(allocator, rows, cols, .{
+            .codepoint = 0,
+            .width = 1,
+            .attrs = default_attrs,
+        });
         const tabstops = try TabStops.init(allocator, cols);
         return .{
             .grid = grid,
             .cursor = .{ .row = 0, .col = 0 },
-            .saved_cursor = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = types.defaultCell().attrs },
+            .saved_cursor = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = default_attrs },
             .scroll_top = 0,
             .scroll_bottom = if (rows > 0) @as(usize, rows - 1) else 0,
             .tabstops = tabstops,
             .key_mode = KeyModeStack.init(),
-            .current_attrs = types.defaultCell().attrs,
+            .current_attrs = default_attrs,
+            .default_attrs = default_attrs,
             .wrap_next = false,
         };
     }
@@ -301,7 +305,11 @@ pub const Screen = struct {
         const old_rows = self.grid.rows;
         const old_cols = self.grid.cols;
         const was_full_region = old_rows > 0 and self.scroll_top == 0 and self.scroll_bottom + 1 == @as(usize, old_rows);
-        try self.grid.resize(rows, cols);
+        try self.grid.resize(rows, cols, .{
+            .codepoint = 0,
+            .width = 1,
+            .attrs = self.default_attrs,
+        });
         if (cols != old_cols) {
             try self.tabstops.resize(cols);
         }
@@ -328,19 +336,63 @@ pub const Screen = struct {
 
     pub fn resetState(self: *Screen) void {
         self.cursor = .{ .row = 0, .col = 0 };
-        self.saved_cursor = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = types.defaultCell().attrs };
+        self.saved_cursor = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = self.default_attrs };
         self.scroll_top = 0;
         self.scroll_bottom = if (self.grid.rows > 0) @as(usize, self.grid.rows - 1) else 0;
         self.key_mode = KeyModeStack.init();
-        self.current_attrs = types.defaultCell().attrs;
+        self.current_attrs = self.default_attrs;
         self.wrap_next = false;
         self.tabstops.reset();
     }
 
     pub fn clear(self: *Screen) void {
-        const default_cell = types.defaultCell();
+        const default_cell = types.Cell{
+            .codepoint = 0,
+            .width = 1,
+            .attrs = self.default_attrs,
+        };
         for (self.grid.cells.items) |*cell| {
             cell.* = default_cell;
+        }
+        self.grid.markDirtyAll();
+    }
+
+    pub fn updateDefaultColors(self: *Screen, old_attrs: types.CellAttrs, new_attrs: types.CellAttrs) void {
+        self.default_attrs = new_attrs;
+
+        if (self.current_attrs.fg.r == old_attrs.fg.r and
+            self.current_attrs.fg.g == old_attrs.fg.g and
+            self.current_attrs.fg.b == old_attrs.fg.b and
+            self.current_attrs.bg.r == old_attrs.bg.r and
+            self.current_attrs.bg.g == old_attrs.bg.g and
+            self.current_attrs.bg.b == old_attrs.bg.b)
+        {
+            self.current_attrs.fg = new_attrs.fg;
+            self.current_attrs.bg = new_attrs.bg;
+        }
+
+        if (self.saved_cursor.attrs.fg.r == old_attrs.fg.r and
+            self.saved_cursor.attrs.fg.g == old_attrs.fg.g and
+            self.saved_cursor.attrs.fg.b == old_attrs.fg.b and
+            self.saved_cursor.attrs.bg.r == old_attrs.bg.r and
+            self.saved_cursor.attrs.bg.g == old_attrs.bg.g and
+            self.saved_cursor.attrs.bg.b == old_attrs.bg.b)
+        {
+            self.saved_cursor.attrs.fg = new_attrs.fg;
+            self.saved_cursor.attrs.bg = new_attrs.bg;
+        }
+
+        for (self.grid.cells.items) |*cell| {
+            if (cell.attrs.fg.r == old_attrs.fg.r and
+                cell.attrs.fg.g == old_attrs.fg.g and
+                cell.attrs.fg.b == old_attrs.fg.b and
+                cell.attrs.bg.r == old_attrs.bg.r and
+                cell.attrs.bg.g == old_attrs.bg.g and
+                cell.attrs.bg.b == old_attrs.bg.b)
+            {
+                cell.attrs.fg = new_attrs.fg;
+                cell.attrs.bg = new_attrs.bg;
+            }
         }
         self.grid.markDirtyAll();
     }

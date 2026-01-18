@@ -14,6 +14,7 @@ Purpose: this document tracks terminal architecture decisions and implementation
 - Keyboard input supports CSI u/kitty protocol flags with per-screen stacks and modifier-aware encoding.
 - Legacy modifier combos now include full letter/number/punctuation mapping; macOS Command is reserved for app shortcuts.
 - Dirty-row tracking and render-texture caching are live; full VT coverage still missing.
+- Default colors are configurable per session; erase/blank fills use current attributes so TUI background colors persist.
 
 ## Decisions & Progress by Layer
 
@@ -81,7 +82,7 @@ Why:
 
 Current coverage:
 - Cursor moves: `A/B/C/D`, `E/F`, `G`, `H/f`, `d`
-- Erase: `J`, `K`
+- Erase: `J`, `K`, `X`
 - Insert/delete: `@`, `P`, `L`, `M`
 - Scroll region: `r`, `S`, `T`
 - Reset: `ESC c`

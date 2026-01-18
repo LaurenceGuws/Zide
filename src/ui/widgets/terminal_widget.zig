@@ -12,10 +12,12 @@ const Cell = terminal_mod.Cell;
 /// Terminal widget for drawing a terminal view
 pub const TerminalWidget = struct {
     session: *TerminalSession,
+    last_scroll_offset: usize = 0,
 
     pub fn init(session: *TerminalSession) TerminalWidget {
         return .{
             .session = session,
+            .last_scroll_offset = 0,
         };
     }
 
@@ -23,6 +25,18 @@ pub const TerminalWidget = struct {
         const snapshot = self.session.snapshot();
         const rows = snapshot.rows;
         const cols = snapshot.cols;
+        const bg_color = if (snapshot.cells.len > 0) Color{
+            .r = snapshot.cells[0].attrs.bg.r,
+            .g = snapshot.cells[0].attrs.bg.g,
+            .b = snapshot.cells[0].attrs.bg.b,
+        } else r.theme.background;
+        r.drawRect(
+            @intFromFloat(x),
+            @intFromFloat(y),
+            @intFromFloat(width),
+            @intFromFloat(height),
+            bg_color,
+        );
         const history_len = self.session.scrollbackCount();
         const total_lines = history_len + rows;
         var scroll_offset = self.session.scrollOffset();
@@ -31,6 +45,8 @@ pub const TerminalWidget = struct {
             self.session.setScrollOffset(max_scroll_offset);
             scroll_offset = max_scroll_offset;
         }
+        const scroll_changed = scroll_offset != self.last_scroll_offset;
+        self.last_scroll_offset = scroll_offset;
         const end_line = total_lines - scroll_offset;
         const start_line = if (end_line > rows) end_line - rows else 0;
         const draw_cursor = scroll_offset == 0;
@@ -197,7 +213,7 @@ pub const TerminalWidget = struct {
             const texture_w = cell_w_i * @as(i32, @intCast(cols)) + padding_x_i;
             const texture_h = @as(i32, @intFromFloat(@round(r.terminal_cell_height * @as(f32, @floatFromInt(rows)))));
             const recreated = r.ensureTerminalTexture(texture_w, texture_h);
-            const needs_full = recreated or snapshot.alt_active or snapshot.dirty == .full or (snapshot.dirty != .none and scroll_offset > 0);
+            const needs_full = recreated or snapshot.alt_active or snapshot.dirty == .full or scroll_changed or (snapshot.dirty != .none and scroll_offset > 0);
             const needs_partial = snapshot.dirty == .partial and !needs_full and scroll_offset == 0;
 
             if ((needs_full or needs_partial) and r.beginTerminalTexture()) {
@@ -208,6 +224,12 @@ pub const TerminalWidget = struct {
                 const base_y_local: f32 = 0;
 
                 if (needs_full) {
+                    const bg = if (snapshot.cells.len > 0) Color{
+                        .r = snapshot.cells[0].attrs.bg.r,
+                        .g = snapshot.cells[0].attrs.bg.g,
+                        .b = snapshot.cells[0].attrs.bg.b,
+                    } else r.theme.background;
+                    r.drawRect(0, 0, texture_w, texture_h, bg);
                     var row: usize = 0;
                     while (row < rows) : (row += 1) {
                         drawRowRange(self, r, snapshot.cells, history_len, cols, start_line, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i);
@@ -607,7 +629,7 @@ pub const TerminalWidget = struct {
                 if (r.isKeyPressed(renderer_mod.KEY_ENTER)) {
                     try self.session.sendKey(terminal_mod.VTERM_KEY_ENTER, mod);
                     handled = true;
-                } else if (r.isKeyPressed(renderer_mod.KEY_BACKSPACE)) {
+                } else if (r.isKeyRepeated(renderer_mod.KEY_BACKSPACE)) {
                     try self.session.sendKey(terminal_mod.VTERM_KEY_BACKSPACE, mod);
                     handled = true;
                 } else if (r.isKeyPressed(renderer_mod.KEY_TAB)) {
@@ -616,34 +638,34 @@ pub const TerminalWidget = struct {
                 } else if (r.isKeyPressed(renderer_mod.KEY_ESCAPE)) {
                     try self.session.sendKey(terminal_mod.VTERM_KEY_ESCAPE, mod);
                     handled = true;
-                } else if (r.isKeyPressed(renderer_mod.KEY_UP)) {
+                } else if (r.isKeyRepeated(renderer_mod.KEY_UP)) {
                     try self.session.sendKey(terminal_mod.VTERM_KEY_UP, mod);
                     handled = true;
-                } else if (r.isKeyPressed(renderer_mod.KEY_DOWN)) {
+                } else if (r.isKeyRepeated(renderer_mod.KEY_DOWN)) {
                     try self.session.sendKey(terminal_mod.VTERM_KEY_DOWN, mod);
                     handled = true;
-                } else if (r.isKeyPressed(renderer_mod.KEY_LEFT)) {
+                } else if (r.isKeyRepeated(renderer_mod.KEY_LEFT)) {
                     try self.session.sendKey(terminal_mod.VTERM_KEY_LEFT, mod);
                     handled = true;
-                } else if (r.isKeyPressed(renderer_mod.KEY_RIGHT)) {
+                } else if (r.isKeyRepeated(renderer_mod.KEY_RIGHT)) {
                     try self.session.sendKey(terminal_mod.VTERM_KEY_RIGHT, mod);
                     handled = true;
-                } else if (r.isKeyPressed(renderer_mod.KEY_HOME)) {
+                } else if (r.isKeyRepeated(renderer_mod.KEY_HOME)) {
                     try self.session.sendKey(terminal_mod.VTERM_KEY_HOME, mod);
                     handled = true;
-                } else if (r.isKeyPressed(renderer_mod.KEY_END)) {
+                } else if (r.isKeyRepeated(renderer_mod.KEY_END)) {
                     try self.session.sendKey(terminal_mod.VTERM_KEY_END, mod);
                     handled = true;
-                } else if (r.isKeyPressed(renderer_mod.KEY_PAGE_UP)) {
+                } else if (r.isKeyRepeated(renderer_mod.KEY_PAGE_UP)) {
                     try self.session.sendKey(terminal_mod.VTERM_KEY_PAGEUP, mod);
                     handled = true;
-                } else if (r.isKeyPressed(renderer_mod.KEY_PAGE_DOWN)) {
+                } else if (r.isKeyRepeated(renderer_mod.KEY_PAGE_DOWN)) {
                     try self.session.sendKey(terminal_mod.VTERM_KEY_PAGEDOWN, mod);
                     handled = true;
                 } else if (r.isKeyPressed(renderer_mod.KEY_INSERT)) {
                     try self.session.sendKey(terminal_mod.VTERM_KEY_INS, mod);
                     handled = true;
-                } else if (r.isKeyPressed(renderer_mod.KEY_DELETE)) {
+                } else if (r.isKeyRepeated(renderer_mod.KEY_DELETE)) {
                     try self.session.sendKey(terminal_mod.VTERM_KEY_DEL, mod);
                     handled = true;
                 }

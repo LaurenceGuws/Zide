@@ -133,28 +133,28 @@ pub const EditorWidget = struct {
         if (r.isKeyPressed(renderer_mod.KEY_ENTER)) {
             try self.editor.insertNewline();
             handled = true;
-        } else if (r.isKeyPressed(renderer_mod.KEY_BACKSPACE)) {
+        } else if (r.isKeyRepeated(renderer_mod.KEY_BACKSPACE)) {
             try self.editor.deleteCharBackward();
             handled = true;
-        } else if (r.isKeyPressed(renderer_mod.KEY_DELETE)) {
+        } else if (r.isKeyRepeated(renderer_mod.KEY_DELETE)) {
             try self.editor.deleteCharForward();
             handled = true;
-        } else if (r.isKeyPressed(renderer_mod.KEY_UP)) {
+        } else if (r.isKeyRepeated(renderer_mod.KEY_UP)) {
             self.editor.moveCursorUp();
             handled = true;
-        } else if (r.isKeyPressed(renderer_mod.KEY_DOWN)) {
+        } else if (r.isKeyRepeated(renderer_mod.KEY_DOWN)) {
             self.editor.moveCursorDown();
             handled = true;
-        } else if (r.isKeyPressed(renderer_mod.KEY_LEFT)) {
+        } else if (r.isKeyRepeated(renderer_mod.KEY_LEFT)) {
             self.editor.moveCursorLeft();
             handled = true;
-        } else if (r.isKeyPressed(renderer_mod.KEY_RIGHT)) {
+        } else if (r.isKeyRepeated(renderer_mod.KEY_RIGHT)) {
             self.editor.moveCursorRight();
             handled = true;
-        } else if (r.isKeyPressed(renderer_mod.KEY_HOME)) {
+        } else if (r.isKeyRepeated(renderer_mod.KEY_HOME)) {
             self.editor.moveCursorToLineStart();
             handled = true;
-        } else if (r.isKeyPressed(renderer_mod.KEY_END)) {
+        } else if (r.isKeyRepeated(renderer_mod.KEY_END)) {
             self.editor.moveCursorToLineEnd();
             handled = true;
         } else if (ctrl and r.isKeyPressed(renderer_mod.KEY_S)) {
