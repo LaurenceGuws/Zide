@@ -9,6 +9,7 @@ Purpose: this document tracks terminal architecture decisions and implementation
 - Terminal backend stub replaced by a working PTY + minimal VT pipeline.
 - Shell output renders with basic cursor movement, erase ops, and SGR (16/256/truecolor).
 - Scrollback ring buffer captures full‑screen scrolls and is exposed via a scrollbar + offset, plus a scrollback indicator.
+- Alternate screen switching and cursor save/restore are supported; alt screen disables scrollback.
 - Dirty-row tracking and render-texture caching are live; full VT coverage still missing.
 
 ## Decisions & Progress by Layer
@@ -159,13 +160,23 @@ Research notes:
 ### Layer 8: Correctness + Compatibility
 
 Progress:
-- Not implemented beyond basic CSI/SGR.
+- Added alternate screen support (DECSET ?47/?1047/?1049) with per-screen cursor state.
+- Save/restore cursor via ESC 7/8 and CSI s/u, plus DECSET ?1048.
+- Newline now scrolls within the active scroll region when the cursor hits its bottom edge.
 
 Decision:
-- TBD.
+- Track an alternate grid and per-screen cursor/scroll region state; swap on DECSET/DECRST.
+- Treat alt screen as no-scrollback and clear on ?1047/?1049 per xterm/VTE behavior.
+- Keep save/restore cursor per screen, including attributes.
 
 Why:
-- TBD.
+- Matches common terminal behavior without forcing a full screen model rewrite.
+- Keeps scrollback semantics clean and prevents history pollution while in alt screen.
+- Aligns cursor save/restore with recorded reference behavior (ESC 7/8 + ?1049 flows).
+
+Research notes:
+- Alacritty saved-cursor fixtures exercise ESC 7/8 and ?1049 enter/exit behavior.
+- VTE scrolling-region notes show cursor movement/scrolling within margins.
 
 ### Layer 9: Performance + Polish
 
@@ -207,5 +218,5 @@ Why:
 
 ## Immediate next steps
 
-1) Expand correctness: alternate screen, cursor save/restore, and scroll region compatibility.
-2) Flesh out VT coverage (modes/attributes/OSC) and input protocol extensions.
+1) Flesh out VT coverage (OSC clipboard/hyperlinks, modes/attributes).
+2) Add input protocol extensions (CSI u / kitty keyboard, mouse reporting).
