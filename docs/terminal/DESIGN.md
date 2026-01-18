@@ -127,6 +127,7 @@ Decision:
 - Use a wezterm-style aspect heuristic: treat glyphs with width >= 0.7 * cell height as square/wide.
 - Always allow PUA/symbol glyphs to overflow (no scaling) to match common terminal behavior for icons.
 - Render symbol glyphs using their bearing (no custom centering), clamped so they never start left of the cell origin.
+- Render backgrounds in a separate pass so glyphs can overflow into adjacent cells without being overdrawn.
 
 Why:
 - Integer cell metrics prevent box drawing striping/gaps and keep glyph baselines consistent across DPI/scales.
@@ -135,6 +136,7 @@ Why:
 - The 0.7 threshold matches wezterm’s heuristic for identifying square-ish glyphs.
 - Always-overflow PUA/symbols avoids shrinking icon glyphs; aligns with wezterm when configured to allow overflow and with alacritty’s non-scaling render path.
 - Left clamp prevents negative bearings from pushing icons off the viewport edge while still honoring font bearings.
+- Separating background and glyph passes avoids clipping overflowed icons inside the grid.
 
 Research notes:
 - kitty rounds ascent/baseline and cell metrics to integer pixels and computes cell height with ceil/floor to avoid subpixel jitter.
