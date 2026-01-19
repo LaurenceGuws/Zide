@@ -825,6 +825,74 @@ pub const TerminalWidget = struct {
                                 try self.session.sendKey(terminal_mod.VTERM_KEY_DEL, mod);
                                 break :blk true;
                             },
+                            renderer_mod.KEY_KP_0 => {
+                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp0, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_KP_1 => {
+                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp1, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_KP_2 => {
+                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp2, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_KP_3 => {
+                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp3, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_KP_4 => {
+                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp4, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_KP_5 => {
+                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp5, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_KP_6 => {
+                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp6, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_KP_7 => {
+                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp7, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_KP_8 => {
+                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp8, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_KP_9 => {
+                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp9, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_KP_DECIMAL => {
+                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp_decimal, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_KP_DIVIDE => {
+                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp_divide, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_KP_MULTIPLY => {
+                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp_multiply, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_KP_SUBTRACT => {
+                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp_subtract, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_KP_ADD => {
+                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp_add, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_KP_ENTER => {
+                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp_enter, mod);
+                                break :blk true;
+                            },
+                            renderer_mod.KEY_KP_EQUAL => {
+                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp_equal, mod);
+                                break :blk true;
+                            },
                             else => break :blk false,
                         }
                     };
@@ -832,10 +900,11 @@ pub const TerminalWidget = struct {
                     if (handled_key) {
                         clearLiveState(self);
                         handled = true;
+                        skip_chars = true;
                         continue;
                     }
 
-                    if (ctrl or alt or shift) {
+                    if (ctrl or alt) {
                         var maybe_char: u32 = 0;
                         switch (key) {
                             renderer_mod.KEY_A => maybe_char = if (shift) 'A' else 'a',
@@ -892,6 +961,7 @@ pub const TerminalWidget = struct {
                             clearLiveState(self);
                             try self.session.sendChar(maybe_char, mod);
                             handled = true;
+                            skip_chars = true;
                         }
                     }
                 }
