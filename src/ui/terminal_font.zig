@@ -14,6 +14,8 @@ const c = @cImport({
 const fc = if (builtin.target.os.tag == .linux) @cImport({
     @cInclude("fontconfig/fontconfig.h");
 }) else struct {};
+// TODO(macOS): Add CoreText-based fallback resolution for missing glyphs.
+// TODO(Windows): Add DirectWrite-based fallback resolution for missing glyphs.
 
 pub const AllowSquareGlyphOverflow = enum {
     never,
