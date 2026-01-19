@@ -1322,9 +1322,40 @@ pub const TerminalSession = struct {
             'n' => { // DSR
                 const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
                 const mode = if (param_len > 0) p[0] else 0;
-                if (action.leader == 0 or action.leader == '?') {
-                    if (self.pty) |*pty| {
-                        var buf: [32]u8 = undefined;
+                if (self.pty) |*pty| {
+                    var buf: [32]u8 = undefined;
+                    if (action.leader == '?') {
+                        switch (mode) {
+                            6 => { // DECXCPR
+                                const row_1 = screen.cursor.row + 1;
+                                const col_1 = screen.cursor.col + 1;
+                                const seq = std.fmt.bufPrint(&buf, "\x1b[?{d};{d}R", .{ row_1, col_1 }) catch return;
+                                _ = pty.write(seq) catch {};
+                            },
+                            15 => { // Printer status
+                                _ = pty.write("\x1b[?10n") catch {};
+                            },
+                            25 => { // UDK status
+                                _ = pty.write("\x1b[?20n") catch {};
+                            },
+                            26 => { // Keyboard status
+                                _ = pty.write("\x1b[?27;1;0;0n") catch {};
+                            },
+                            55 => { // Locator status
+                                _ = pty.write("\x1b[?50n") catch {};
+                            },
+                            56 => { // Locator type
+                                _ = pty.write("\x1b[?57;0n") catch {};
+                            },
+                            75 => { // Data integrity
+                                _ = pty.write("\x1b[?70n") catch {};
+                            },
+                            85 => { // Multi-session config
+                                _ = pty.write("\x1b[?83n") catch {};
+                            },
+                            else => {},
+                        }
+                    } else if (action.leader == 0) {
                         switch (mode) {
                             5 => { // Device status report
                                 _ = pty.write("\x1b[0n") catch {};
