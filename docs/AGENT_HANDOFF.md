@@ -1,6 +1,6 @@
 # Agent Handoff (Zide)
 
-Date: 2026-01-19
+Date: 2026-01-20
 
 ## Quick start for next agent
 
@@ -12,40 +12,38 @@ Date: 2026-01-19
   - `docs/terminal/protocol_todo.yaml`
 
 Suggested next steps:
-1) Reproduce Codex input background issue (compare against Ghostty).
-2) Use `terminal.osc` + `terminal.sgr` logs to confirm which sequences are sent.
-3) Close gaps in `docs/terminal/protocol_todo.yaml` in priority order.
+1) Read `docs/terminal/protocol_todo.yaml` and follow the reference repo links listed in each task before coding.
+2) Check off tasks in `docs/terminal/protocol_todo.yaml` as they are completed (keep notes concise).
+3) Reproduce Codex input background issue (compare against Ghostty).
+4) Use `terminal.osc` + `terminal.sgr` + `terminal.io` logs to confirm which sequences are sent.
+5) Close remaining gaps in `docs/terminal/protocol_todo.yaml` in priority order.
 
 ## Summary of this session
 
-- Implemented DSR/DA replies needed by Codex (`CSI 5/6 n` + `CSI c`).
-- Added DECCKM app cursor keys and SS3 arrow output.
-- Increased CSI parameter capacity to 16 and accept `:` in SGR sequences.
-- Added OSC default color set/query handling (OSC 10/11), plus query replies for 12/19.
-- Added debug logging tags for terminal protocol tracing (`terminal.csi`, `terminal.sgr`, `terminal.osc`, `terminal.io`, `terminal.alt`).
-- Added protocol gap checklist in `docs/terminal/protocol_todo.yaml`.
+- OSC: added palette (OSC 4/104), dynamic colors (OSC 10–19 + 110–119), and OSC 52 clipboard read replies.
+- OSC 7 CWD parsing implemented (file:// URI, host validation, percent‑decode, path normalization).
+- SGR: underline on/off (4/24), underline color (58/59), and RGBA (38/48/58:6) support.
+- Added OSC reply logging + raw CSI logging for debugging.
+- Docs updated: `docs/terminal/protocol_todo.yaml` task statuses kept in sync.
 
 ## Current issues
 
-- Codex input field background does not render. Codex sends `OSC 10;?` and `OSC 11;?` queries only; no `OSC 10/11` set observed. Likely missing:
-  - Dynamic color reset handling (OSC 110–119)
-  - Palette ops (OSC 4/104) and/or dynamic color updates applied to existing cells
-  - Proper OSC query reply semantics/terminator tracking
+- Codex input field background still does not render. Codex sends `OSC 10;?` and `OSC 11;?` queries only; no `48` background SGR observed. Raw CSI logging shows only `CSI 0/39/49 m`.
 - Lazygit arrow navigation fixed via DECCKM, but re-validate after further input changes.
 
 ## Key changes (recent)
 
 - `src/terminal/core/terminal.zig`
-  - DSR/DA replies
-  - DECCKM app cursor keys
-  - OSC 10/11 set + query
-  - OSC 12/19 query replies
-  - OSC debug logging
+  - OSC palette + dynamic colors
+  - OSC 7 CWD parsing
+  - OSC 52 clipboard read replies
+  - SGR underline + underline color + RGBA
+  - OSC/CSI debug logging
 - `src/terminal/parser/csi.zig`
   - max CSI params = 16
   - `:` treated as a separator in SGR
 - `docs/terminal/protocol_todo.yaml`
-  - Detailed protocol gap list with references
+  - Checklist updated for completed tasks
 
 ## Files to review first
 
