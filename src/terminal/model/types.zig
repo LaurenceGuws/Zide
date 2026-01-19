@@ -35,6 +35,7 @@ pub const Color = struct {
     r: u8,
     g: u8,
     b: u8,
+    a: u8 = 255,
 };
 
 pub const Key = u32;

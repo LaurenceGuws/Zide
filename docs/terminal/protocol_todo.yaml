@@ -103,7 +103,7 @@ terminal_protocol_todo:
 
     - id: CSI-02
       title: "SGR 38/48/58:6 RGBA support"
-      status: todo
+      status: done
       refs:
         - reference_repos/terminals/wezterm/docs/changelog.md
 
