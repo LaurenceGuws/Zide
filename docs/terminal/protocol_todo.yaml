@@ -35,13 +35,17 @@ terminal_protocol_todo:
     kitty:
       - reference_repos/terminals/kitty/kitty/vt-parser.c
       - reference_repos/terminals/kitty/kitty/terminfo.py
+      - reference_repos/terminals/kitty/kitty_tests/icat.py
     rio:
       - reference_repos/terminals/rio/docs/docs/escape-sequence-support.md
+    ghostty_images:
+      - reference_repos/terminals/ghostty/src/terminal/kitty/graphics.zig
+      - reference_repos/terminals/ghostty/src/terminal/osc.zig
 
   tasks:
     - id: OSC-01
       title: "Implement OSC 4 palette set/query + OSC 104 reset"
-      status: todo
+      status: done
       refs:
         - reference_repos/terminals/foot/osc.c
         - reference_repos/terminals/xterm_snapshots/ctlseqs.txt
@@ -49,10 +53,11 @@ terminal_protocol_todo:
         - "Support multiple <index;color> pairs in one OSC 4."
         - "Support query `OSC 4;<idx>;?` with rgb reply."
         - "Track terminator (BEL vs ST) for replies."
+        - "Implemented palette storage + query replies with matching terminator."
 
     - id: OSC-02
       title: "Implement OSC 10–19 dynamic colors (set/query) + 110–119 reset"
-      status: todo
+      status: done
       refs:
         - reference_repos/terminals/foot/README.md
         - reference_repos/terminals/xterm_snapshots/ctlseqs.txt
@@ -60,24 +65,27 @@ terminal_protocol_todo:
       notes:
         - "Apply updates to existing cells when defaults change."
         - "Handle OSC 12/17/19 set + reset."
+        - "Set/query/reset wired for 10–19; defaults applied on 10/11; 12/17/19 stored."
 
     - id: OSC-03
       title: "OSC 52 clipboard read support"
-      status: todo
+      status: done
       refs:
         - reference_repos/terminals/ghostty/src/terminal/osc.zig
         - reference_repos/terminals/alacritty/alacritty_terminal/src/term/mod.rs
       notes:
         - "Respond to `OSC 52;?` with base64 data."
+        - "Reply implemented using last stored clipboard contents."
 
     - id: OSC-04
       title: "OSC 7 CWD parsing + validation"
-      status: todo
+      status: done
       refs:
         - reference_repos/terminals/ghostty/src/terminal/osc.zig
         - reference_repos/terminals/wezterm/docs/shell-integration.md
       notes:
         - "Parse file:// URIs and normalize paths."
+        - "Host validation + percent-decode + path normalization implemented."
 
     - id: OSC-05
       title: "OSC 133/1337 semantic prompt + user vars"
@@ -88,7 +96,7 @@ terminal_protocol_todo:
 
     - id: CSI-01
       title: "SGR 58 underline color + 59 reset"
-      status: todo
+      status: done
       refs:
         - reference_repos/terminals/wezterm/docs/changelog.md
         - reference_repos/terminals/xterm_snapshots/ctlseqs.txt
@@ -125,6 +133,17 @@ terminal_protocol_todo:
       refs:
         - reference_repos/terminals/foot/README.md
         - reference_repos/terminals/rio/docs/docs/escape-sequence-support.md
+
+    - id: IMG-01
+      title: "Kitty graphics protocol (kitty-icat)"
+      status: todo
+      refs:
+        - reference_repos/terminals/kitty/kitty_tests/icat.py
+        - reference_repos/terminals/kitty/kitty/vt-parser.c
+        - reference_repos/terminals/ghostty/src/terminal/kitty/graphics.zig
+      notes:
+        - "Support basic image transmission and placement."
+        - "Respect kitty graphics control sequences in DCS."
 
     - id: TERM-01
       title: "Terminfo feature parity sweep"

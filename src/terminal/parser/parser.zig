@@ -8,6 +8,7 @@ pub const Parser = struct {
     esc_state: EscState,
     csi: csi_mod.CsiParser,
     osc_state: OscState,
+    osc_terminator: OscTerminator,
     osc_buffer: std.ArrayList(u8),
     g0_charset: Charset,
     g1_charset: Charset,
@@ -21,6 +22,7 @@ pub const Parser = struct {
             .esc_state = .ground,
             .csi = .{},
             .osc_state = .idle,
+            .osc_terminator = .st,
             .osc_buffer = .empty,
             .g0_charset = .ascii,
             .g1_charset = .ascii,
@@ -38,6 +40,7 @@ pub const Parser = struct {
         self.csi.reset();
         self.esc_state = .ground;
         self.osc_state = .idle;
+        self.osc_terminator = .st;
         self.g0_charset = .ascii;
         self.g1_charset = .ascii;
         self.gl_charset = .ascii;
@@ -151,6 +154,7 @@ pub const Parser = struct {
             .idle => return,
             .osc => {
                 if (byte == 0x07) { // BEL
+                    self.osc_terminator = .bel;
                     self.finishOsc(session);
                     return;
                 }
@@ -164,6 +168,7 @@ pub const Parser = struct {
             },
             .osc_esc => {
                 if (byte == '\\') { // ST
+                    self.osc_terminator = .st;
                     self.finishOsc(session);
                     return;
                 }
@@ -177,7 +182,7 @@ pub const Parser = struct {
     }
 
     fn finishOsc(self: *Parser, session: anytype) void {
-        session.parseOsc(self.osc_buffer.items);
+        session.parseOsc(self.osc_buffer.items, self.osc_terminator);
         self.osc_buffer.clearRetainingCapacity();
         self.osc_state = .idle;
     }
@@ -194,6 +199,11 @@ pub const OscState = enum {
     idle,
     osc,
     osc_esc,
+};
+
+pub const OscTerminator = enum {
+    bel,
+    st,
 };
 
 pub const Charset = enum {
