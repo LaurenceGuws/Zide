@@ -131,11 +131,11 @@ terminal_protocol_todo:
 
     - id: CSI-05
       title: "DSR coverage audit"
-      status: todo
+      status: done
       refs:
         - reference_repos/terminals/xterm_snapshots/ctlseqs.txt
       notes:
-        - "Verify replies for modes beyond 5/6."
+        - "Added DEC-specific replies (e.g., ?6, ?15, ?25, ?26, ?55, ?56, ?75, ?85)."
 
     - id: DCS-01
       title: "XTGETTCAP (DCS +q) minimal support"
