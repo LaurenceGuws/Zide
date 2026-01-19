@@ -77,19 +77,20 @@ const AppState = struct {
         };
         defer config_mod.freeConfig(allocator, &config);
 
-        if (config.raylib_log_level) |level| {
-            renderer_mod.setRaylibLogLevel(level);
-        }
-
-        const renderer = try Renderer.init(allocator, 1280, 720, "Zide - Zig IDE");
-        errdefer renderer.deinit();
-        try app_logger.init();
         if (config.log_file_filter) |filter| {
             app_logger.setFileFilterString(filter) catch {};
         }
         if (config.log_console_filter) |filter| {
             app_logger.setConsoleFilterString(filter) catch {};
         }
+        try app_logger.init();
+
+        if (config.raylib_log_level) |level| {
+            renderer_mod.setRaylibLogLevel(level);
+        }
+
+        const renderer = try Renderer.init(allocator, 1280, 720, "Zide - Zig IDE");
+        errdefer renderer.deinit();
         const app_log = app_logger.logger("app.core");
         app_log.logStdout("logger initialized", .{});
         const metrics_log = app_logger.logger("terminal.metrics");

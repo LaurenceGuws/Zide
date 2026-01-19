@@ -73,10 +73,13 @@ pub const TerminalSession = struct {
     state_mutex: std.Thread.Mutex,
     output_pending: std.atomic.Value(bool),
     output_generation: std.atomic.Value(u64),
+    alt_exit_pending: std.atomic.Value(bool),
+    alt_exit_time_ms: std.atomic.Value(i64),
     view_cells: std.ArrayList(Cell),
     view_dirty_rows: std.ArrayList(bool),
     view_dirty_cols_start: std.ArrayList(u16),
     view_dirty_cols_end: std.ArrayList(u16),
+    alt_last_active: bool,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !*TerminalSession {
         const session = try allocator.create(TerminalSession);
@@ -112,10 +115,13 @@ pub const TerminalSession = struct {
             .state_mutex = .{},
             .output_pending = std.atomic.Value(bool).init(false),
             .output_generation = std.atomic.Value(u64).init(0),
+            .alt_exit_pending = std.atomic.Value(bool).init(false),
+            .alt_exit_time_ms = std.atomic.Value(i64).init(-1),
             .view_cells = .empty,
             .view_dirty_rows = .empty,
             .view_dirty_cols_start = .empty,
             .view_dirty_cols_end = .empty,
+            .alt_last_active = false,
         };
         return session;
     }
@@ -221,6 +227,7 @@ pub const TerminalSession = struct {
             var had_data = false;
             var processed: usize = 0;
             const max_bytes_per_poll: usize = 256 * 1024;
+            const start_ms = std.time.milliTimestamp();
             while (true) {
                 const n = try pty.read(&buf);
                 if (n == null or n.? == 0) break;
@@ -232,6 +239,11 @@ pub const TerminalSession = struct {
             }
             if (had_data) {
                 self.clearSelection();
+            }
+            if (processed > 0 and self.alt_exit_pending.swap(false, .acq_rel)) {
+                const elapsed_ms = @as(f64, @floatFromInt(std.time.milliTimestamp() - start_ms));
+                const log = app_logger.logger("terminal.io");
+                log.logf("alt_exit_io_ms={d:.2} bytes={d}", .{ elapsed_ms, processed });
             }
         }
     }
@@ -245,6 +257,7 @@ pub const TerminalSession = struct {
         }
         return false;
     }
+
 
     pub fn lock(self: *TerminalSession) void {
         self.state_mutex.lock();
@@ -457,6 +470,26 @@ pub const TerminalSession = struct {
     }
 
     pub fn handleCsi(self: *TerminalSession, action: csi_mod.CsiAction) void {
+        const log = app_logger.logger("terminal.csi");
+        if (log.enabled_file or log.enabled_console) {
+            log.logf(
+                "csi final={c} leader={c} private={d} count={d} params={d},{d},{d},{d},{d},{d},{d},{d}",
+                .{
+                    action.final,
+                    if (action.leader == 0) '.' else action.leader,
+                    @as(u8, @intFromBool(action.private)),
+                    action.count,
+                    action.params[0],
+                    action.params[1],
+                    action.params[2],
+                    action.params[3],
+                    action.params[4],
+                    action.params[5],
+                    action.params[6],
+                    action.params[7],
+                },
+            );
+        }
         const p = action.params;
         const count = action.count;
         const get = struct {
@@ -601,6 +634,34 @@ pub const TerminalSession = struct {
             },
             'm' => { // SGR
                 self.applySgr(action);
+            },
+            'n' => { // DSR
+                const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
+                const mode = if (param_len > 0) p[0] else 0;
+                if (action.leader == 0 or action.leader == '?') {
+                    if (self.pty) |*pty| {
+                        var buf: [32]u8 = undefined;
+                        switch (mode) {
+                            5 => { // Device status report
+                                _ = pty.write("\x1b[0n") catch {};
+                            },
+                            6 => { // Cursor position report
+                                const row_1 = screen.cursor.row + 1;
+                                const col_1 = screen.cursor.col + 1;
+                                const seq = std.fmt.bufPrint(&buf, "\x1b[{d};{d}R", .{ row_1, col_1 }) catch return;
+                                _ = pty.write(seq) catch {};
+                            },
+                            else => {},
+                        }
+                    }
+                }
+            },
+            'c' => { // DA
+                if (action.leader == 0 or action.leader == '?') {
+                    if (self.pty) |*pty| {
+                        _ = pty.write("\x1b[?62;1;2;4;6;7;8;9;15;18;21;22;28;29c") catch {};
+                    }
+                }
             },
             'h' => { // SM
                 if (action.leader == '?') {
@@ -1297,6 +1358,8 @@ pub const TerminalSession = struct {
     fn exitAltScreen(self: *TerminalSession, restore_cursor: bool) void {
         if (!self.isAltActive()) return;
         self.active = .primary;
+        self.alt_exit_pending.store(true, .release);
+        self.alt_exit_time_ms.store(std.time.milliTimestamp(), .release);
         self.history.restoreScrollOffset(self.primary.grid.rows);
         self.clearSelection();
         if (restore_cursor) {
@@ -1401,14 +1464,22 @@ fn readThreadMain(session: *TerminalSession) void {
             if (!pty.waitForData(50)) {
                 continue;
             }
+            var processed: usize = 0;
+            const start_ms = std.time.milliTimestamp();
             while (session.read_thread_running.load(.acquire)) {
                 const n = pty.read(&buf) catch break;
                 if (n == null or n.? == 0) break;
+                processed += n.?;
                 session.state_mutex.lock();
                 session.parser.handleSlice(session, buf[0..n.?]);
                 session.state_mutex.unlock();
                 session.output_pending.store(true, .release);
                 _ = session.output_generation.fetchAdd(1, .acq_rel);
+            }
+            if (processed > 0 and session.alt_exit_pending.swap(false, .acq_rel)) {
+                const elapsed_ms = @as(f64, @floatFromInt(std.time.milliTimestamp() - start_ms));
+                const log = app_logger.logger("terminal.io");
+                log.logf("alt_exit_io_ms={d:.2} bytes={d}", .{ elapsed_ms, processed });
             }
         } else {
             break;
