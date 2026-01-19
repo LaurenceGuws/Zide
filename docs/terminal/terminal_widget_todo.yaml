@@ -186,6 +186,19 @@ terminal_widget_todo:
           title: "Define performance budgets (frame time, parse throughput, input latency)"
           files_to_edit:
             - docs/terminal/terminal_widget_todo.yaml
+          budgets:
+            frame_time_ms:
+              target: 8.3
+              max: 16.7
+            terminal_render_ms:
+              target: 2.0
+              max: 4.0
+            parse_throughput_mb_s:
+              target: 200
+              min: 100
+            input_to_draw_latency_ms:
+              target: 8
+              max: 16
 
     - name: "Phase 1 - PTY + IO"
       tasks:

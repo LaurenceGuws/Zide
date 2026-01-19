@@ -58,6 +58,7 @@ pub const TerminalSession = struct {
     active: ActiveScreen,
     history: history_mod.TerminalHistory,
     bracketed_paste: bool,
+    app_cursor_keys: bool,
     input: input_mod.InputState,
     cell_width: u16,
     cell_height: u16,
@@ -100,6 +101,7 @@ pub const TerminalSession = struct {
             .active = .primary,
             .history = history,
             .bracketed_paste = false,
+            .app_cursor_keys = false,
             .input = input_mod.InputState.init(),
             .cell_width = 0,
             .cell_height = 0,
@@ -273,6 +275,21 @@ pub const TerminalSession = struct {
 
     pub fn sendKey(self: *TerminalSession, key: Key, mod: Modifier) !void {
         if (self.pty) |*pty| {
+            if (self.app_cursor_keys and mod == types.VTERM_MOD_NONE) {
+                const seq = switch (key) {
+                    VTERM_KEY_UP => "\x1bOA",
+                    VTERM_KEY_DOWN => "\x1bOB",
+                    VTERM_KEY_RIGHT => "\x1bOC",
+                    VTERM_KEY_LEFT => "\x1bOD",
+                    VTERM_KEY_HOME => "\x1bOH",
+                    VTERM_KEY_END => "\x1bOF",
+                    else => "",
+                };
+                if (seq.len > 0) {
+                    _ = try pty.write(seq);
+                    return;
+                }
+            }
             _ = try input_mod.sendKey(pty, key, mod, self.keyModeFlags());
         }
     }
@@ -373,6 +390,12 @@ pub const TerminalSession = struct {
     }
 
     pub fn parseOsc(self: *TerminalSession, payload: []const u8) void {
+        const log = app_logger.logger("terminal.osc");
+        if (log.enabled_file or log.enabled_console) {
+            const max_len: usize = 160;
+            const slice = if (payload.len > max_len) payload[0..max_len] else payload;
+            log.logf("osc payload=\"{s}\"", .{slice});
+        }
         var i: usize = 0;
         var code: usize = 0;
         var has_code = false;
@@ -395,6 +418,46 @@ pub const TerminalSession = struct {
             0, 2 => {
                 self.setTitle(text);
             },
+            10 => {
+                if (self.pty) |*pty| {
+                    if (text.len == 1 and text[0] == '?') {
+                        self.writeOscColorReply(pty, 10, self.primary.default_attrs.fg);
+                        return;
+                    }
+                }
+                if (parseOscColor(text)) |color| {
+                    const default_attrs = self.primary.default_attrs;
+                    self.setDefaultColors(color, default_attrs.bg);
+                }
+            },
+            11 => {
+                if (self.pty) |*pty| {
+                    if (text.len == 1 and text[0] == '?') {
+                        self.writeOscColorReply(pty, 11, self.primary.default_attrs.bg);
+                        return;
+                    }
+                }
+                if (parseOscColor(text)) |color| {
+                    const default_attrs = self.primary.default_attrs;
+                    self.setDefaultColors(default_attrs.fg, color);
+                }
+            },
+            12 => {
+                if (self.pty) |*pty| {
+                    if (text.len == 1 and text[0] == '?') {
+                        self.writeOscColorReply(pty, 12, self.primary.default_attrs.fg);
+                        return;
+                    }
+                }
+            },
+            19 => {
+                if (self.pty) |*pty| {
+                    if (text.len == 1 and text[0] == '?') {
+                        self.writeOscColorReply(pty, 19, self.primary.default_attrs.bg);
+                        return;
+                    }
+                }
+            },
             8 => {
                 self.parseOscHyperlink(text);
             },
@@ -403,6 +466,71 @@ pub const TerminalSession = struct {
             },
             else => {},
         }
+    }
+
+    fn parseOscColor(text: []const u8) ?types.Color {
+        if (text.len == 0) return null;
+        if (std.mem.eql(u8, text, "?")) return null;
+        if (text[0] == '#') {
+            if (text.len < 7) return null;
+            return parseHexColor(text[1..7]);
+        }
+        if (std.mem.startsWith(u8, text, "rgb:")) {
+            const rest = text[4..];
+            var it = std.mem.splitScalar(u8, rest, '/');
+            const r = it.next() orelse return null;
+            const g = it.next() orelse return null;
+            const b = it.next() orelse return null;
+            const rc = parseHexComponent(r) orelse return null;
+            const gc = parseHexComponent(g) orelse return null;
+            const bc = parseHexComponent(b) orelse return null;
+            return .{ .r = rc, .g = gc, .b = bc };
+        }
+        return null;
+    }
+
+    fn parseHexColor(text: []const u8) ?types.Color {
+        if (text.len < 6) return null;
+        const r = parseHexComponent(text[0..2]) orelse return null;
+        const g = parseHexComponent(text[2..4]) orelse return null;
+        const b = parseHexComponent(text[4..6]) orelse return null;
+        return .{ .r = r, .g = g, .b = b };
+    }
+
+    fn parseHexComponent(text: []const u8) ?u8 {
+        if (text.len == 0) return null;
+        // Accept 1-4 hex digits; scale to 8-bit.
+        var value: u32 = 0;
+        for (text) |c| {
+            const digit: u8 = switch (c) {
+                '0'...'9' => c - '0',
+                'a'...'f' => c - 'a' + 10,
+                'A'...'F' => c - 'A' + 10,
+                else => return null,
+            };
+            value = (value << 4) | digit;
+        }
+        const bits: u8 = @intCast(text.len * 4);
+        if (bits == 8) return @intCast(value);
+        if (bits < 8) {
+        const shift: u5 = @intCast(8 - bits);
+        const scaled: u32 = value << shift;
+        return @intCast(scaled);
+        }
+        const shift: u5 = @intCast(bits - 8);
+        const scaled: u32 = value >> shift;
+        return @intCast(scaled);
+    }
+
+    fn writeOscColorReply(self: *TerminalSession, pty: *Pty, code: u8, color: types.Color) void {
+        _ = self;
+        var buf: [64]u8 = undefined;
+        const seq = std.fmt.bufPrint(
+            &buf,
+            "\x1b]{d};rgb:{x:0>2}/{x:0>2}/{x:0>2}\x1b\\",
+            .{ code, color.r, color.g, color.b },
+        ) catch return;
+        _ = pty.write(seq) catch {};
     }
 
     fn setTitle(self: *TerminalSession, text: []const u8) void {
@@ -473,7 +601,7 @@ pub const TerminalSession = struct {
         const log = app_logger.logger("terminal.csi");
         if (log.enabled_file or log.enabled_console) {
             log.logf(
-                "csi final={c} leader={c} private={d} count={d} params={d},{d},{d},{d},{d},{d},{d},{d}",
+                "csi final={c} leader={c} private={d} count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
                 .{
                     action.final,
                     if (action.leader == 0) '.' else action.leader,
@@ -487,14 +615,22 @@ pub const TerminalSession = struct {
                     action.params[5],
                     action.params[6],
                     action.params[7],
+                    action.params[8],
+                    action.params[9],
+                    action.params[10],
+                    action.params[11],
+                    action.params[12],
+                    action.params[13],
+                    action.params[14],
+                    action.params[15],
                 },
             );
         }
         const p = action.params;
         const count = action.count;
         const get = struct {
-            fn at(params: [8]i32, idx: u8, default: i32) i32 {
-                return if (idx < 8) params[idx] else default;
+            fn at(params: [csi_mod.max_params]i32, idx: u8, default: i32) i32 {
+                return if (idx < csi_mod.max_params) params[idx] else default;
             }
         }.at;
         const screen = self.activeScreen();
@@ -670,6 +806,7 @@ pub const TerminalSession = struct {
                     while (idx < param_len and idx < p.len) : (idx += 1) {
                         const mode = p[idx];
                         switch (mode) {
+                            1 => self.app_cursor_keys = true,
                             47 => self.enterAltScreen(false, false),
                             1047 => self.enterAltScreen(true, false),
                             1048 => self.saveCursor(),
@@ -692,6 +829,7 @@ pub const TerminalSession = struct {
                     while (idx < param_len and idx < p.len) : (idx += 1) {
                         const mode = p[idx];
                         switch (mode) {
+                            1 => self.app_cursor_keys = false,
                             47 => self.exitAltScreen(false),
                             1047 => self.exitAltScreen(false),
                             1048 => self.restoreCursor(),
@@ -937,6 +1075,31 @@ pub const TerminalSession = struct {
         const params = action.params;
         const total = params.len;
         const n_params: usize = if (action.count == 0 and params[0] == 0) 1 else @min(@as(usize, action.count + 1), total);
+        const log = app_logger.logger("terminal.sgr");
+        if (log.enabled_file or log.enabled_console) {
+            log.logf(
+                "sgr count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
+                .{
+                    action.count,
+                    params[0],
+                    params[1],
+                    params[2],
+                    params[3],
+                    params[4],
+                    params[5],
+                    params[6],
+                    params[7],
+                    params[8],
+                    params[9],
+                    params[10],
+                    params[11],
+                    params[12],
+                    params[13],
+                    params[14],
+                    params[15],
+                },
+            );
+        }
         var i: usize = 0;
         while (i < n_params) {
             const p = params[i];

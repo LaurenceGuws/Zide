@@ -1,20 +1,22 @@
+pub const max_params: usize = 16;
+
 pub const CsiAction = struct {
     final: u8,
-    params: [8]i32,
+    params: [max_params]i32,
     count: u8,
     leader: u8,
     private: bool,
 };
 
 pub const CsiParser = struct {
-    params: [8]i32 = [_]i32{0} ** 8,
+    params: [max_params]i32 = [_]i32{0} ** max_params,
     count: u8 = 0,
     leader: u8 = 0,
     private: bool = false,
     in_param: bool = false,
 
     pub fn reset(self: *CsiParser) void {
-        self.params = [_]i32{0} ** 8;
+        self.params = [_]i32{0} ** max_params;
         self.count = 0;
         self.leader = 0;
         self.private = false;
@@ -45,7 +47,7 @@ pub const CsiParser = struct {
             return null;
         }
 
-        if (byte == ';') {
+        if (byte == ';' or byte == ':') {
             if (self.count < self.params.len) self.count += 1;
             self.in_param = false;
             return null;

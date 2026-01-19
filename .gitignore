@@ -21,3 +21,4 @@ zide.log
 # Tree-sitter grammar pack tooling
 tools/grammar_packs/work/
 tools/grammar_packs/dist/
+tools/term_manual_test/terminal-doom
