@@ -17,6 +17,7 @@ terminal_protocol_todo:
       - "Checked off completed tasks through OSC-05 and CSI-02."
       - "DECSCUSR cursor style handling implemented."
       - "Application keypad mode (DECKPAM/DECKPNM) handled for keypad keys."
+      - "XTGETTCAP minimal DCS +q replies implemented."
 
   reference_maps:
     xterm:
@@ -139,10 +140,12 @@ terminal_protocol_todo:
 
     - id: DCS-01
       title: "XTGETTCAP (DCS +q) minimal support"
-      status: todo
+      status: done
       refs:
         - reference_repos/terminals/foot/README.md
         - reference_repos/terminals/rio/docs/docs/escape-sequence-support.md
+      notes:
+        - "Minimal DCS parser and XTGETTCAP replies for TN/Co/RGB."
 
     - id: IMG-01
       title: "Kitty graphics protocol (kitty-icat)"

@@ -505,6 +505,13 @@ pub const TerminalSession = struct {
         }
     }
 
+    pub fn parseDcs(self: *TerminalSession, payload: []const u8) void {
+        if (payload.len < 2) return;
+        if (payload[0] == '+' and payload[1] == 'q') {
+            self.handleXtgettcap(payload[2..]);
+        }
+    }
+
     pub fn parseOsc(self: *TerminalSession, payload: []const u8, terminator: OscTerminator) void {
         const log = app_logger.logger("terminal.osc");
         if (log.enabled_file or log.enabled_console) {
@@ -1048,6 +1055,80 @@ pub const TerminalSession = struct {
             const value: u8 = @as(u8, (hi << 4) | lo);
             _ = out.append(allocator, value) catch return false;
             i += 2;
+        }
+        return true;
+    }
+
+    fn handleXtgettcap(self: *TerminalSession, text: []const u8) void {
+        if (self.pty == null) return;
+        if (text.len == 0) {
+            self.writeXtgettcapReply(false, "", null);
+            return;
+        }
+        var it = std.mem.splitScalar(u8, text, ';');
+        while (it.next()) |cap_hex| {
+            if (cap_hex.len == 0) continue;
+            self.replyXtgettcap(cap_hex);
+        }
+    }
+
+    fn replyXtgettcap(self: *TerminalSession, cap_hex: []const u8) void {
+        var decoded = std.ArrayList(u8).empty;
+        defer decoded.deinit(self.allocator);
+        if (!decodeHex(self.allocator, &decoded, cap_hex)) {
+            self.writeXtgettcapReply(false, cap_hex, null);
+            return;
+        }
+
+        const value = xtgettcapValue(decoded.items);
+        if (value) |val| {
+            self.writeXtgettcapReply(true, cap_hex, val);
+        } else {
+            self.writeXtgettcapReply(false, cap_hex, null);
+        }
+    }
+
+    fn writeXtgettcapReply(self: *TerminalSession, ok: bool, cap_hex: []const u8, value: ?[]const u8) void {
+        const pty = self.pty orelse return;
+        var reply = std.ArrayList(u8).empty;
+        defer reply.deinit(self.allocator);
+
+        const prefix = if (ok) "\x1bP1+r" else "\x1bP0+r";
+        _ = reply.appendSlice(self.allocator, prefix) catch return;
+        _ = reply.appendSlice(self.allocator, cap_hex) catch return;
+        if (ok and value != null) {
+            _ = reply.append(self.allocator, '=') catch return;
+            _ = encodeHex(self.allocator, &reply, value.?) catch return;
+        }
+        _ = reply.appendSlice(self.allocator, "\x1b\\") catch return;
+        _ = pty.write(reply.items) catch {};
+    }
+
+    fn xtgettcapValue(name: []const u8) ?[]const u8 {
+        if (std.mem.eql(u8, name, "TN")) return "zide";
+        if (std.mem.eql(u8, name, "Co") or std.mem.eql(u8, name, "colors")) return "256";
+        if (std.mem.eql(u8, name, "RGB")) return "8";
+        return null;
+    }
+
+    fn decodeHex(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) bool {
+        out.clearRetainingCapacity();
+        if (text.len % 2 != 0) return false;
+        var i: usize = 0;
+        while (i + 1 < text.len) : (i += 2) {
+            const hi = hexNibble(text[i]) orelse return false;
+            const lo = hexNibble(text[i + 1]) orelse return false;
+            const value: u8 = @as(u8, (hi << 4) | lo);
+            _ = out.append(allocator, value) catch return false;
+        }
+        return true;
+    }
+
+    fn encodeHex(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) bool {
+        const hex = "0123456789ABCDEF";
+        for (text) |b| {
+            _ = out.append(allocator, hex[b >> 4]) catch return false;
+            _ = out.append(allocator, hex[b & 0x0f]) catch return false;
         }
         return true;
     }
