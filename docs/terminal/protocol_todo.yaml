@@ -1,0 +1,134 @@
+terminal_protocol_todo:
+  scope:
+    description: "Close VT protocol gaps (OSC/CSI/DCS) for TUI correctness and modern shells."
+    priorities:
+      - "Dynamic colors (OSC 10–19/110–119) with query + reset"
+      - "Palette control (OSC 4/104) with query + reset"
+      - "Keyboard + cursor modes (DECCKM/DECKPAM/DECKPNM)"
+      - "SGR completeness (58 underline color, 38/48/58:6 RGBA)"
+      - "Query/response parity (DA/DSR/OSC queries)"
+  status_snapshot:
+    date: "2026-01-19"
+    notes:
+      - "CSI params expanded to 16 and ':' treated as SGR separator."
+      - "DSR/DA replies implemented; DECCKM app-cursor keys implemented."
+      - "OSC 8 hyperlinks, OSC 52 clipboard write, OSC 10/11 set + query implemented."
+      - "Codex input background still missing: likely dynamic color/palette handling gaps."
+
+  reference_maps:
+    xterm:
+      - reference_repos/terminals/xterm_snapshots/ctlseqs.txt
+      - reference_repos/terminals/xterm_snapshots/VTparse.h
+      - reference_repos/terminals/xterm_snapshots/charproc.c
+    foot:
+      - reference_repos/terminals/foot/osc.c
+      - reference_repos/terminals/foot/csi.c
+      - reference_repos/terminals/foot/README.md
+    ghostty:
+      - reference_repos/terminals/ghostty/src/terminal/osc.zig
+      - reference_repos/terminals/ghostty/src/terminal/formatter.zig
+      - reference_repos/terminals/ghostty/src/terminal/color.zig
+    wezterm:
+      - reference_repos/terminals/wezterm/docs/changelog.md
+      - reference_repos/terminals/wezterm/docs/shell-integration.md
+      - reference_repos/terminals/wezterm/term/src/terminalstate/performer.rs
+    kitty:
+      - reference_repos/terminals/kitty/kitty/vt-parser.c
+      - reference_repos/terminals/kitty/kitty/terminfo.py
+    rio:
+      - reference_repos/terminals/rio/docs/docs/escape-sequence-support.md
+
+  tasks:
+    - id: OSC-01
+      title: "Implement OSC 4 palette set/query + OSC 104 reset"
+      status: todo
+      refs:
+        - reference_repos/terminals/foot/osc.c
+        - reference_repos/terminals/xterm_snapshots/ctlseqs.txt
+      notes:
+        - "Support multiple <index;color> pairs in one OSC 4."
+        - "Support query `OSC 4;<idx>;?` with rgb reply."
+        - "Track terminator (BEL vs ST) for replies."
+
+    - id: OSC-02
+      title: "Implement OSC 10–19 dynamic colors (set/query) + 110–119 reset"
+      status: todo
+      refs:
+        - reference_repos/terminals/foot/README.md
+        - reference_repos/terminals/xterm_snapshots/ctlseqs.txt
+        - reference_repos/terminals/ghostty/src/terminal/osc.zig
+      notes:
+        - "Apply updates to existing cells when defaults change."
+        - "Handle OSC 12/17/19 set + reset."
+
+    - id: OSC-03
+      title: "OSC 52 clipboard read support"
+      status: todo
+      refs:
+        - reference_repos/terminals/ghostty/src/terminal/osc.zig
+        - reference_repos/terminals/alacritty/alacritty_terminal/src/term/mod.rs
+      notes:
+        - "Respond to `OSC 52;?` with base64 data."
+
+    - id: OSC-04
+      title: "OSC 7 CWD parsing + validation"
+      status: todo
+      refs:
+        - reference_repos/terminals/ghostty/src/terminal/osc.zig
+        - reference_repos/terminals/wezterm/docs/shell-integration.md
+      notes:
+        - "Parse file:// URIs and normalize paths."
+
+    - id: OSC-05
+      title: "OSC 133/1337 semantic prompt + user vars"
+      status: todo
+      refs:
+        - reference_repos/terminals/ghostty/src/terminal/osc.zig
+        - reference_repos/terminals/wezterm/docs/shell-integration.md
+
+    - id: CSI-01
+      title: "SGR 58 underline color + 59 reset"
+      status: todo
+      refs:
+        - reference_repos/terminals/wezterm/docs/changelog.md
+        - reference_repos/terminals/xterm_snapshots/ctlseqs.txt
+
+    - id: CSI-02
+      title: "SGR 38/48/58:6 RGBA support"
+      status: todo
+      refs:
+        - reference_repos/terminals/wezterm/docs/changelog.md
+
+    - id: CSI-03
+      title: "DECSCUSR cursor style (CSI q)"
+      status: todo
+      refs:
+        - reference_repos/terminals/xterm_snapshots/ctlseqs.txt
+
+    - id: CSI-04
+      title: "Application keypad mode (DECKPAM/DECKPNM)"
+      status: todo
+      refs:
+        - reference_repos/terminals/xterm_snapshots/ctlseqs.txt
+
+    - id: CSI-05
+      title: "DSR coverage audit"
+      status: todo
+      refs:
+        - reference_repos/terminals/xterm_snapshots/ctlseqs.txt
+      notes:
+        - "Verify replies for modes beyond 5/6."
+
+    - id: DCS-01
+      title: "XTGETTCAP (DCS +q) minimal support"
+      status: todo
+      refs:
+        - reference_repos/terminals/foot/README.md
+        - reference_repos/terminals/rio/docs/docs/escape-sequence-support.md
+
+    - id: TERM-01
+      title: "Terminfo feature parity sweep"
+      status: todo
+      refs:
+        - reference_repos/terminals/kitty/kitty/terminfo.py
+        - reference_repos/terminals/xterm_snapshots/ctlseqs.txt

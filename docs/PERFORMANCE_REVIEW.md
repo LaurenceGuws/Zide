@@ -1,6 +1,6 @@
 # Zide Performance Review (Dock/Layout)
 
-Date: 2026-01-17
+Date: 2026-01-19
 Scope: UI layout/dock structure and redraw behavior, with a focus on responsiveness and CPU usage.
 
 ## Dock/Layout Structure (Current)
@@ -13,31 +13,29 @@ Scope: UI layout/dock structure and redraw behavior, with a focus on responsiven
   - Side nav (left)
 - Terminal is a bottom dock that reduces editor height; there is no split-pane manager beyond this.
 - Draw order: options bar → tab bar → editor → terminal (if visible) → side nav → status bar.
-- The terminal draw path is a full grid draw each frame (two passes: background + glyphs).
+- Terminal renders into a cached texture and re-renders only dirty rows (background + glyphs).
 
 ## Current Redraw Behavior
 - Global `needs_redraw` drives full-frame redraw.
 - Mouse actions (down, pressed, wheel) trigger redraw immediately.
 - Mouse hover movement triggers redraw for non-terminal areas (throttled to 60 FPS); terminal hover movement is ignored to avoid full redraw.
-- Terminal PTY polling happens only when data is available and `idle_frames < 60`.
+- Terminal PTY polling happens only when data is available.
 
 ## Observed Hotspots / Risks
-- Terminal renderer is the dominant cost due to full grid redraw every frame.
+- Terminal renderer cost scales with dirty rows and glyph density; still heavy during full-screen updates.
 - Any animation or continuous hover updates force a full frame redraw, including terminal.
 - Terminal width is large (~190+ columns), so full redraw cost scales quickly with window size.
 - Terminal resizing is handled in multiple code paths (window resize + drag), which can lead to frequent reflow.
 
 ## Recommendations (Priority Order)
 
-### 1) Dirty-Row / Dirty-Rect Rendering for Terminal
-- Track dirty rows (or bounding damage) in `TerminalGrid` and render only those rows.
-- If scrollback offset is unchanged, the terminal can skip redraw entirely.
-- This is the single biggest win for CPU during idle/hover/animations.
+### 1) Dirty-Row / Dirty-Rect Rendering for Terminal (DONE)
+- Dirty rows are tracked and used to update the cached terminal texture.
+- If scrollback offset is unchanged and no dirty rows are present, the terminal does not redraw.
 
-### 2) Render-to-Texture Cache for Editor + Terminal
-- Render editor and terminal into textures only when dirty.
-- Compose cached textures with lightweight UI overlays (tabs, status bar, hover tooltips).
-- This allows animations/hover effects without forcing heavy redraws.
+### 2) Render-to-Texture Cache for Editor + Terminal (PARTIAL)
+- Terminal is cached in a texture and updated on dirty rows.
+- Editor caching is still pending.
 
 ### 3) Event-Driven Layout Invalidation
 - Only recompute layout when:
@@ -52,17 +50,17 @@ Scope: UI layout/dock structure and redraw behavior, with a focus on responsiven
   - We already started this by ignoring hover-only mouse movement over the terminal region since it has no hover UX; this reduced CPU spikes and validates the approach.
 
 ### 5) Terminal Input + Polling
-- Consider moving PTY polling to a timer or event-based wakeup to avoid per-frame checks.
-- Increase idle sleep when terminal is visible and no data is incoming.
+- PTY polling is gated by `hasData()` (non-blocking).
+- Read thread path still wakes on data; deeper event-driven wakeups remain optional.
 
 ### 6) Resize Throttling
 - Debounce terminal resize while dragging (e.g., apply every N ms) to avoid excessive reflow.
 - Keep a “pending size” and apply on drag end to reduce per-move recalculation.
 
 ## Suggested Next Actions
-1) Implement dirty-row tracking in `TerminalGrid` and use it in `TerminalWidget.draw`.
-2) Add a render-to-texture layer for editor and terminal.
-3) Add per-widget hover state tracking to limit redraw invalidations.
+1) Add render-to-texture caching for the editor view.
+2) Add per-widget hover state tracking to limit redraw invalidations.
+3) Consider partial-column damage to reduce overdraw for row-local edits.
 
 ## Terminal Scrollback Status
 - Scrollback is captured when the full screen scrolls and is exposed via a right-side scrollbar with drag and wheel support.
