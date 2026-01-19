@@ -162,11 +162,13 @@ pub const TerminalWidget = struct {
                         .r = cell.attrs.fg.r,
                         .g = cell.attrs.fg.g,
                         .b = cell.attrs.fg.b,
+                        .a = cell.attrs.fg.a,
                     };
                     const bg = Color{
                         .r = cell.attrs.bg.r,
                         .g = cell.attrs.bg.g,
                         .b = cell.attrs.bg.b,
+                        .a = cell.attrs.bg.a,
                     };
                     if (cell.attrs.link_id != 0) {
                         fg = renderer.theme.link;
@@ -216,16 +218,19 @@ pub const TerminalWidget = struct {
                         .r = cell.attrs.fg.r,
                         .g = cell.attrs.fg.g,
                         .b = cell.attrs.fg.b,
+                        .a = cell.attrs.fg.a,
                     };
                     const bg = Color{
                         .r = cell.attrs.bg.r,
                         .g = cell.attrs.bg.g,
                         .b = cell.attrs.bg.b,
+                        .a = cell.attrs.bg.a,
                     };
                     const underline_color = Color{
                         .r = cell.attrs.underline_color.r,
                         .g = cell.attrs.underline_color.g,
                         .b = cell.attrs.underline_color.b,
+                        .a = cell.attrs.underline_color.a,
                     };
 
                     const followed_by_space = blk: {
@@ -389,16 +394,19 @@ pub const TerminalWidget = struct {
                 .r = cell.attrs.fg.r,
                 .g = cell.attrs.fg.g,
                 .b = cell.attrs.fg.b,
+                .a = cell.attrs.fg.a,
             };
             const bg = Color{
                 .r = cell.attrs.bg.r,
                 .g = cell.attrs.bg.g,
                 .b = cell.attrs.bg.b,
+                .a = cell.attrs.bg.a,
             };
             const underline_color = Color{
                 .r = cell.attrs.underline_color.r,
                 .g = cell.attrs.underline_color.g,
                 .b = cell.attrs.underline_color.b,
+                .a = cell.attrs.underline_color.a,
             };
             if (cell.attrs.link_id != 0) {
                 fg = r.theme.link;

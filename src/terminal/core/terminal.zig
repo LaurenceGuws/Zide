@@ -1422,7 +1422,7 @@ pub const TerminalSession = struct {
                             const r = clampColorIndex(params[base]);
                             const g = clampColorIndex(params[base + 1]);
                             const b = clampColorIndex(params[base + 2]);
-                            const color = Color{ .r = r, .g = g, .b = b };
+                            const color = Color{ .r = r, .g = g, .b = b, .a = 255 };
                             switch (p) {
                                 38 => screen.current_attrs.fg = color,
                                 48 => screen.current_attrs.bg = color,
@@ -1430,6 +1430,28 @@ pub const TerminalSession = struct {
                                 else => {},
                             }
                             i = base + 3;
+                            continue;
+                        }
+                    }
+                    if (mode == 6) {
+                        // WezTerm extension: RGBA (38:6::R:G:B:A).
+                        var base: usize = i + 2;
+                        if (i + 6 < n_params) {
+                            base = i + 3;
+                        }
+                        if (base + 3 < n_params) {
+                            const r = clampColorIndex(params[base]);
+                            const g = clampColorIndex(params[base + 1]);
+                            const b = clampColorIndex(params[base + 2]);
+                            const a = clampColorIndex(params[base + 3]);
+                            const color = Color{ .r = r, .g = g, .b = b, .a = a };
+                            switch (p) {
+                                38 => screen.current_attrs.fg = color,
+                                48 => screen.current_attrs.bg = color,
+                                58 => screen.current_attrs.underline_color = color,
+                                else => {},
+                            }
+                            i = base + 4;
                             continue;
                         }
                     }

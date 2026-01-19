@@ -46,9 +46,11 @@ pub const TerminalHistory = struct {
             if (cell.attrs.fg.r == old_fg.r and
                 cell.attrs.fg.g == old_fg.g and
                 cell.attrs.fg.b == old_fg.b and
+                cell.attrs.fg.a == old_fg.a and
                 cell.attrs.bg.r == old_bg.r and
                 cell.attrs.bg.g == old_bg.g and
-                cell.attrs.bg.b == old_bg.b)
+                cell.attrs.bg.b == old_bg.b and
+                cell.attrs.bg.a == old_bg.a)
             {
                 cell.attrs.fg = new_fg;
                 cell.attrs.bg = new_bg;
