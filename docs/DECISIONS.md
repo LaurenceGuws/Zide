@@ -20,7 +20,7 @@ Use this compositor-provided scale as the default mouse scale on Wayland. Keep `
 ## 2026-01-15 — Terminal text rendering quality upgrade path
 
 **Context**
-Terminal text rendering currently uses a custom FreeType/HarfBuzz glyph cache but lacks pixel snapping, LCD/gamma-aware rendering, cluster shaping, and font fallback. This shows up as striping in box drawing and clipping in icon glyphs.
+Terminal text rendering uses a custom FreeType/HarfBuzz glyph cache with integer grid snapping and a Linux fontconfig fallback path. LCD/gamma rendering and full grapheme shaping are still pending.
 
 **Decision**
 Pursue a terminal-first text pipeline upgrade (UI/editor later). The goal is best-in-class terminal font rendering (Kitty/Alacritty/WezTerm quality). Allow separate fonts for terminal, editor, app text, and icons. Implement improvements incrementally, starting with grid snapping and rasterization quality before adding shaping and fallback.

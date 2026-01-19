@@ -23,7 +23,8 @@ Goal: achieve terminal-quality text rendering comparable to Kitty/Alacritty.
 
 ## Phase 4 — Font fallback + styles
 
-- Add font fallback stack (primary mono + symbols + emoji).
+- Add system font fallback (fontconfig on Linux; CoreText/DirectWrite TODO).
+- Keep embedded symbol/emoji fallbacks optional for distribution size control.
 - Load bold/italic faces when available (avoid synthetic styles).
 - Respect terminal attributes: bold, italic, underline, strikethrough.
 

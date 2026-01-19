@@ -147,12 +147,16 @@ Research notes:
 
 Progress:
 - FreeType + HarfBuzz used for single‑codepoint glyph rendering.
+- Linux fontconfig fallback resolves missing glyphs via system font discovery (cached per codepoint + face).
+- Embedded fallback fonts are optional; current default relies on system fallback with the primary mono font.
 
 Decision:
-- TBD for full grapheme shaping and fallback chain.
+- Linux: use fontconfig to resolve missing glyphs across installed fonts; cache resolved faces for reuse.
+- macOS/Windows: TODO for CoreText/DirectWrite fallback to match Linux behavior.
+- Keep embedded fallback fonts optional to avoid bundling large font sets by default.
 
 Why:
-- TBD.
+- System font discovery is the common approach in kitty/wezterm/alacritty; it provides broad glyph coverage without large bundles.
 
 ### Layer 7: Input + UX
 
