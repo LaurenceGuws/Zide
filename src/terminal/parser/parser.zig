@@ -94,6 +94,12 @@ pub const Parser = struct {
                 } else if (byte == '8') {
                     session.restoreCursor();
                     self.esc_state = .ground;
+                } else if (byte == '=') {
+                    session.setKeypadMode(true);
+                    self.esc_state = .ground;
+                } else if (byte == '>') {
+                    session.setKeypadMode(false);
+                    self.esc_state = .ground;
                 } else {
                     self.esc_state = .ground;
                 }

@@ -16,6 +16,7 @@ terminal_protocol_todo:
       - "Codex input background still missing: likely dynamic color/palette handling gaps."
       - "Checked off completed tasks through OSC-05 and CSI-02."
       - "DECSCUSR cursor style handling implemented."
+      - "Application keypad mode (DECKPAM/DECKPNM) handled for keypad keys."
 
   reference_maps:
     xterm:
@@ -122,9 +123,11 @@ terminal_protocol_todo:
 
     - id: CSI-04
       title: "Application keypad mode (DECKPAM/DECKPNM)"
-      status: todo
+      status: done
       refs:
         - reference_repos/terminals/xterm_snapshots/ctlseqs.txt
+      notes:
+        - "Added ESC '='/'>' handling and keypad key mappings for SS3 sequences."
 
     - id: CSI-05
       title: "DSR coverage audit"
