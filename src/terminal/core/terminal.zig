@@ -1089,7 +1089,6 @@ pub const TerminalSession = struct {
     }
 
     fn writeXtgettcapReply(self: *TerminalSession, ok: bool, cap_hex: []const u8, value: ?[]const u8) void {
-        const pty = self.pty orelse return;
         var reply = std.ArrayList(u8).empty;
         defer reply.deinit(self.allocator);
 
@@ -1098,10 +1097,12 @@ pub const TerminalSession = struct {
         _ = reply.appendSlice(self.allocator, cap_hex) catch return;
         if (ok and value != null) {
             _ = reply.append(self.allocator, '=') catch return;
-            _ = encodeHex(self.allocator, &reply, value.?) catch return;
+            if (!encodeHex(self.allocator, &reply, value.?)) return;
         }
         _ = reply.appendSlice(self.allocator, "\x1b\\") catch return;
-        _ = pty.write(reply.items) catch {};
+        if (self.pty) |*pty_mut| {
+            _ = pty_mut.write(reply.items) catch {};
+        }
     }
 
     fn xtgettcapValue(name: []const u8) ?[]const u8 {
