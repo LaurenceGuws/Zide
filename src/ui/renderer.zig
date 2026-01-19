@@ -23,6 +23,14 @@ pub const FONT_PATH: [*:0]const u8 = switch (FONT_FAMILY) {
     .jetbrains_mono => "assets/fonts/JetBrainsMonoNerdFont-Regular.ttf",
 };
 
+pub const SYMBOLS_FALLBACK_PATH: [*:0]const u8 = "assets/fonts/SymbolsNerdFontMono-Regular.ttf";
+pub const UNICODE_SYMBOLS2_PATH: [*:0]const u8 = "assets/fonts/NotoSansSymbols2-Regular.ttf";
+pub const UNICODE_SYMBOLS_PATH: [*:0]const u8 = "assets/fonts/NotoSansSymbols-Regular.ttf";
+pub const UNICODE_MONO_PATH: [*:0]const u8 = "assets/fonts/NotoSansMono-Regular.ttf";
+pub const UNICODE_SANS_PATH: [*:0]const u8 = "assets/fonts/NotoSans-Regular.ttf";
+pub const EMOJI_COLOR_FALLBACK_PATH: [*:0]const u8 = "assets/fonts/NotoColorEmoji.ttf";
+pub const EMOJI_TEXT_FALLBACK_PATH: [*:0]const u8 = "assets/fonts/NotoEmoji-Regular.ttf";
+
 pub const Color = struct {
     r: u8,
     g: u8,
@@ -184,7 +192,18 @@ pub const Renderer = struct {
             renderer.icon_char_width = renderer.char_width;
             renderer.icon_char_height = renderer.char_height;
         }
-        renderer.terminal_font = try TerminalFont.init(allocator, FONT_PATH, font_size);
+        renderer.terminal_font = try TerminalFont.init(
+            allocator,
+            FONT_PATH,
+            font_size,
+            SYMBOLS_FALLBACK_PATH,
+            UNICODE_SYMBOLS2_PATH,
+            UNICODE_SYMBOLS_PATH,
+            UNICODE_MONO_PATH,
+            UNICODE_SANS_PATH,
+            EMOJI_COLOR_FALLBACK_PATH,
+            EMOJI_TEXT_FALLBACK_PATH,
+        );
         renderer.terminal_font.setAtlasFilterPoint();
         renderer.terminal_cell_width = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(renderer.terminal_font.cell_width)))));
         renderer.terminal_cell_height = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(renderer.terminal_font.line_height)))));

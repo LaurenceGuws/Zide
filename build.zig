@@ -160,6 +160,9 @@ pub fn build(b: *std.Build) void {
     exe.linkSystemLibrary("freetype");
     exe.linkSystemLibrary("harfbuzz");
     exe.linkSystemLibrary("lua");
+    if (target_os == .linux) {
+        exe.linkSystemLibrary("fontconfig");
+    }
 
     // Include paths for @cImport
     exe.addIncludePath(b.path("vendor/raylib/src"));
@@ -167,6 +170,9 @@ pub fn build(b: *std.Build) void {
     exe.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
     exe.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
     exe.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
+    if (target_os == .linux) {
+        exe.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
+    }
 
     // Platform-specific linking for the exe
     if (target_os == .windows) {
