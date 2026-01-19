@@ -15,6 +15,7 @@ terminal_protocol_todo:
       - "OSC 8 hyperlinks, OSC 52 clipboard write, OSC 10/11 set + query implemented."
       - "Codex input background still missing: likely dynamic color/palette handling gaps."
       - "Checked off completed tasks through OSC-05 and CSI-02."
+      - "DECSCUSR cursor style handling implemented."
 
   reference_maps:
     xterm:
@@ -113,9 +114,11 @@ terminal_protocol_todo:
 
     - id: CSI-03
       title: "DECSCUSR cursor style (CSI q)"
-      status: todo
+      status: done
       refs:
         - reference_repos/terminals/xterm_snapshots/ctlseqs.txt
+      notes:
+        - "Applied cursor shape (block/underline/bar) to terminal widget."
 
     - id: CSI-04
       title: "Application keypad mode (DECKPAM/DECKPNM)"
