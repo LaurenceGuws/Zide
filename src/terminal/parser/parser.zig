@@ -10,6 +10,8 @@ pub const Parser = struct {
     osc_state: OscState,
     osc_terminator: OscTerminator,
     osc_buffer: std.ArrayList(u8),
+    dcs_state: DcsState,
+    dcs_buffer: std.ArrayList(u8),
     g0_charset: Charset,
     g1_charset: Charset,
     gl_charset: Charset,
@@ -24,6 +26,8 @@ pub const Parser = struct {
             .osc_state = .idle,
             .osc_terminator = .st,
             .osc_buffer = .empty,
+            .dcs_state = .idle,
+            .dcs_buffer = .empty,
             .g0_charset = .ascii,
             .g1_charset = .ascii,
             .gl_charset = .ascii,
@@ -33,6 +37,7 @@ pub const Parser = struct {
 
     pub fn deinit(self: *Parser) void {
         self.osc_buffer.deinit(self.allocator);
+        self.dcs_buffer.deinit(self.allocator);
     }
 
     pub fn reset(self: *Parser) void {
@@ -41,16 +46,22 @@ pub const Parser = struct {
         self.esc_state = .ground;
         self.osc_state = .idle;
         self.osc_terminator = .st;
+        self.dcs_state = .idle;
         self.g0_charset = .ascii;
         self.g1_charset = .ascii;
         self.gl_charset = .ascii;
         self.charset_target = .g0;
         self.osc_buffer.clearRetainingCapacity();
+        self.dcs_buffer.clearRetainingCapacity();
     }
 
     pub fn handleByte(self: *Parser, session: anytype, byte: u8) void {
         if (self.osc_state != .idle) {
             self.handleOscByte(session, byte);
+            return;
+        }
+        if (self.dcs_state != .idle) {
+            self.handleDcsByte(session, byte);
             return;
         }
         switch (self.esc_state) {
@@ -78,6 +89,11 @@ pub const Parser = struct {
                     self.esc_state = .ground;
                     self.osc_state = .osc;
                     self.osc_buffer.clearRetainingCapacity();
+                    return;
+                } else if (byte == 'P') {
+                    self.esc_state = .ground;
+                    self.dcs_state = .dcs;
+                    self.dcs_buffer.clearRetainingCapacity();
                     return;
                 } else if (byte == '(') {
                     self.charset_target = .g0;
@@ -133,6 +149,11 @@ pub const Parser = struct {
         while (i < bytes.len) {
             if (self.osc_state != .idle) {
                 self.handleOscByte(session, bytes[i]);
+                i += 1;
+                continue;
+            }
+            if (self.dcs_state != .idle) {
+                self.handleDcsByte(session, bytes[i]);
                 i += 1;
                 continue;
             }
@@ -192,6 +213,37 @@ pub const Parser = struct {
         self.osc_buffer.clearRetainingCapacity();
         self.osc_state = .idle;
     }
+
+    fn handleDcsByte(self: *Parser, session: anytype, byte: u8) void {
+        switch (self.dcs_state) {
+            .idle => return,
+            .dcs => {
+                if (byte == 0x1B) { // ESC
+                    self.dcs_state = .dcs_esc;
+                    return;
+                }
+                if (self.dcs_buffer.items.len < 4096) {
+                    _ = self.dcs_buffer.append(self.allocator, byte) catch {};
+                }
+            },
+            .dcs_esc => {
+                if (byte == '\\') { // ST
+                    self.finishDcs(session);
+                    return;
+                }
+                self.dcs_state = .dcs;
+                if (self.dcs_buffer.items.len < 4096) {
+                    _ = self.dcs_buffer.append(self.allocator, byte) catch {};
+                }
+            },
+        }
+    }
+
+    fn finishDcs(self: *Parser, session: anytype) void {
+        session.parseDcs(self.dcs_buffer.items);
+        self.dcs_buffer.clearRetainingCapacity();
+        self.dcs_state = .idle;
+    }
 };
 
 pub const EscState = enum {
@@ -210,6 +262,12 @@ pub const OscState = enum {
 pub const OscTerminator = enum {
     bel,
     st,
+};
+
+pub const DcsState = enum {
+    idle,
+    dcs,
+    dcs_esc,
 };
 
 pub const Charset = enum {
