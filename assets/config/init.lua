@@ -4,8 +4,8 @@
 return {
   -- Logging configuration.
   -- Options:
-  --   log = "all" / "none" / "app.core,terminal.core,terminal.metrics,terminal.alt,terminal.font,terminal.io,terminal.csi" (comma-separated)
-  --   log = { enable = { "app.core", "terminal.core", "terminal.metrics", "terminal.alt", "terminal.font", "terminal.io", "terminal.csi" } }
+  --   log = "all" / "none" / "app.core,terminal.core,terminal.metrics,terminal.alt,terminal.font,terminal.io,terminal.csi,terminal.sgr,terminal.osc" (comma-separated)
+  --   log = { enable = { "app.core", "terminal.core", "terminal.metrics", "terminal.alt", "terminal.font", "terminal.io", "terminal.csi", "terminal.sgr", "terminal.osc" } }
   --   log = { file = { ... }, console = { ... } }
   -- If file/console are not set, enable is used for both.
   log = {
