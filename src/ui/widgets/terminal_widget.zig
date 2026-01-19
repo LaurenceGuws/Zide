@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const renderer_mod = @import("../renderer.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
+const app_logger = @import("../../app_logger.zig");
 
 const Renderer = renderer_mod.Renderer;
 const Color = renderer_mod.Color;
@@ -24,6 +25,9 @@ pub const TerminalWidget = struct {
     pub fn draw(self: *TerminalWidget, r: *Renderer, x: f32, y: f32, width: f32, height: f32) void {
         self.session.lock();
         const snapshot = self.session.snapshot();
+        const alt_exit = self.session.alt_last_active and !snapshot.alt_active;
+        self.session.alt_last_active = snapshot.alt_active;
+        const draw_start_time = if (alt_exit) renderer_mod.getTime() else 0;
         const rows = snapshot.rows;
         const cols = snapshot.cols;
         const history_len = self.session.scrollbackCount();
@@ -487,6 +491,24 @@ pub const TerminalWidget = struct {
                 self.session.clearDirty();
             }
             self.session.unlock();
+        }
+
+        if (alt_exit) {
+            const elapsed_ms = (renderer_mod.getTime() - draw_start_time) * 1000.0;
+            const exit_time_ms = self.session.alt_exit_time_ms.swap(-1, .acq_rel);
+            const exit_to_draw_ms: f64 = if (exit_time_ms >= 0)
+                @as(f64, @floatFromInt(std.time.milliTimestamp() - exit_time_ms))
+            else
+                -1.0;
+            const log = app_logger.logger("terminal.alt");
+            log.logf("alt_exit_draw_ms={d:.2} exit_to_draw_ms={d:.2} rows={d} cols={d} history={d} scroll_offset={d}", .{
+                elapsed_ms,
+                exit_to_draw_ms,
+                rows,
+                cols,
+                history_len,
+                scroll_offset,
+            });
         }
     }
 
