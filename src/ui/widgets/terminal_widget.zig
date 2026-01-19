@@ -44,6 +44,7 @@ pub const TerminalWidget = struct {
         const start_line = if (end_line > rows) end_line - rows else 0;
         const draw_cursor = scroll_offset == 0;
         const cursor = if (draw_cursor) snapshot.cursor else CursorPos{ .row = rows + 1, .col = cols + 1 };
+        const cursor_style = snapshot.cursor_style;
         const selection = self.session.selectionState();
 
         if (rows > 0 and cols > 0) {
@@ -387,8 +388,10 @@ pub const TerminalWidget = struct {
             const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_height));
             const base_x_i: i32 = @intFromFloat(std.math.round(base_x));
             const base_y_i: i32 = @intFromFloat(std.math.round(base_y));
-            const cell_x = @as(f32, @floatFromInt(base_x_i + @as(i32, @intCast(cursor.col)) * cell_w_i));
-            const cell_y = @as(f32, @floatFromInt(base_y_i + @as(i32, @intCast(cursor.row)) * cell_h_i));
+            const cell_x_i = base_x_i + @as(i32, @intCast(cursor.col)) * cell_w_i;
+            const cell_y_i = base_y_i + @as(i32, @intCast(cursor.row)) * cell_h_i;
+            const cell_x = @as(f32, @floatFromInt(cell_x_i));
+            const cell_y = @as(f32, @floatFromInt(cell_y_i));
 
             var fg = Color{
                 .r = cell.attrs.fg.r,
@@ -421,21 +424,32 @@ pub const TerminalWidget = struct {
                 break :blk true;
             };
 
-            r.drawTerminalCell(
-                cell.codepoint,
-                cell_x,
-                cell_y,
-                @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cell_width_units)))),
-                @as(f32, @floatFromInt(cell_h_i)),
-                if (cell.attrs.reverse) bg else fg,
-                if (cell.attrs.reverse) fg else bg,
-                underline_color,
-                cell.attrs.bold,
-                cell.attrs.underline,
-                true,
-                followed_by_space,
-                true,
-            );
+            const cursor_w_i: i32 = cell_w_i * @as(i32, @intCast(cell_width_units));
+            switch (cursor_style.shape) {
+                .block => {
+                    r.drawTerminalCell(
+                        cell.codepoint,
+                        cell_x,
+                        cell_y,
+                        @as(f32, @floatFromInt(cursor_w_i)),
+                        @as(f32, @floatFromInt(cell_h_i)),
+                        if (cell.attrs.reverse) bg else fg,
+                        if (cell.attrs.reverse) fg else bg,
+                        underline_color,
+                        cell.attrs.bold,
+                        cell.attrs.underline,
+                        true,
+                        followed_by_space,
+                        true,
+                    );
+                },
+                .underline => {
+                    r.drawRect(cell_x_i, cell_y_i + cell_h_i - 2, cursor_w_i, 2, r.theme.cursor);
+                },
+                .bar => {
+                    r.drawRect(cell_x_i, cell_y_i, 2, cell_h_i, r.theme.cursor);
+                },
+            }
         }
 
         if (height > 0 and width > 0) {

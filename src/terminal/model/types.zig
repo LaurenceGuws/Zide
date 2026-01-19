@@ -3,6 +3,19 @@ pub const CursorPos = struct {
     col: usize,
 };
 
+pub const CursorShape = enum {
+    block,
+    underline,
+    bar,
+};
+
+pub const CursorStyle = struct {
+    shape: CursorShape,
+    blink: bool,
+};
+
+pub const default_cursor_style = CursorStyle{ .shape = .block, .blink = true };
+
 pub const SelectionPos = struct {
     row: usize,
     col: usize,

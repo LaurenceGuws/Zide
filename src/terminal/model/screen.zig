@@ -266,6 +266,7 @@ pub const TabStops = struct {
 pub const Screen = struct {
     grid: TerminalGrid,
     cursor: types.CursorPos,
+    cursor_style: types.CursorStyle,
     saved_cursor: SavedCursor,
     scroll_top: usize,
     scroll_bottom: usize,
@@ -285,6 +286,7 @@ pub const Screen = struct {
         return .{
             .grid = grid,
             .cursor = .{ .row = 0, .col = 0 },
+            .cursor_style = types.default_cursor_style,
             .saved_cursor = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = default_attrs },
             .scroll_top = 0,
             .scroll_bottom = if (rows > 0) @as(usize, rows - 1) else 0,
@@ -336,6 +338,7 @@ pub const Screen = struct {
 
     pub fn resetState(self: *Screen) void {
         self.cursor = .{ .row = 0, .col = 0 };
+        self.cursor_style = types.default_cursor_style;
         self.saved_cursor = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = self.default_attrs };
         self.scroll_top = 0;
         self.scroll_bottom = if (self.grid.rows > 0) @as(usize, self.grid.rows - 1) else 0;

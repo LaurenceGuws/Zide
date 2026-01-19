@@ -96,6 +96,7 @@ pub const TerminalSnapshot = struct {
     dirty_cols_start: []const u16,
     dirty_cols_end: []const u16,
     cursor: CursorPos,
+    cursor_style: types.CursorStyle,
     dirty: Dirty,
     damage: Damage,
     alt_active: bool,
@@ -1299,6 +1300,13 @@ pub const TerminalSession = struct {
             'm' => { // SGR
                 self.applySgr(action);
             },
+            'q' => { // DECSCUSR
+                if (action.leader == 0 and !action.private) {
+                    const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
+                    const mode = if (param_len > 0) p[0] else 0;
+                    self.setCursorStyle(mode);
+                }
+            },
             'n' => { // DSR
                 const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
                 const mode = if (param_len > 0) p[0] else 0;
@@ -2055,6 +2063,20 @@ pub const TerminalSession = struct {
         }
     }
 
+    fn setCursorStyle(self: *TerminalSession, mode: i32) void {
+        const screen = self.activeScreen();
+        const style = switch (mode) {
+            0, 1 => types.CursorStyle{ .shape = .block, .blink = true },
+            2 => types.CursorStyle{ .shape = .block, .blink = false },
+            3 => types.CursorStyle{ .shape = .underline, .blink = true },
+            4 => types.CursorStyle{ .shape = .underline, .blink = false },
+            5 => types.CursorStyle{ .shape = .bar, .blink = true },
+            6 => types.CursorStyle{ .shape = .bar, .blink = false },
+            else => screen.cursor_style,
+        };
+        screen.cursor_style = style;
+    }
+
     pub fn saveCursor(self: *TerminalSession) void {
         const screen = self.activeScreen();
         const slot = &screen.saved_cursor;
@@ -2114,6 +2136,7 @@ pub const TerminalSession = struct {
             .dirty_cols_start = screen.grid.dirty_cols_start.items,
             .dirty_cols_end = screen.grid.dirty_cols_end.items,
             .cursor = screen.cursor,
+            .cursor_style = screen.cursor_style,
             .dirty = screen.grid.dirty,
             .damage = screen.grid.damage,
             .alt_active = self.isAltActive(),
