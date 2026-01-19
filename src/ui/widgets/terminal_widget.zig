@@ -222,6 +222,11 @@ pub const TerminalWidget = struct {
                         .g = cell.attrs.bg.g,
                         .b = cell.attrs.bg.b,
                     };
+                    const underline_color = Color{
+                        .r = cell.attrs.underline_color.r,
+                        .g = cell.attrs.underline_color.g,
+                        .b = cell.attrs.underline_color.b,
+                    };
 
                     const followed_by_space = blk: {
                         const next_col = col + cell_width_units;
@@ -240,6 +245,7 @@ pub const TerminalWidget = struct {
                         @as(f32, @floatFromInt(cell_h_i)),
                         if (cell.attrs.reverse) bg else fg,
                         if (cell.attrs.reverse) fg else bg,
+                        underline_color,
                         cell.attrs.bold,
                         cell.attrs.underline,
                         false,
@@ -389,6 +395,11 @@ pub const TerminalWidget = struct {
                 .g = cell.attrs.bg.g,
                 .b = cell.attrs.bg.b,
             };
+            const underline_color = Color{
+                .r = cell.attrs.underline_color.r,
+                .g = cell.attrs.underline_color.g,
+                .b = cell.attrs.underline_color.b,
+            };
             if (cell.attrs.link_id != 0) {
                 fg = r.theme.link;
             }
@@ -410,6 +421,7 @@ pub const TerminalWidget = struct {
                 @as(f32, @floatFromInt(cell_h_i)),
                 if (cell.attrs.reverse) bg else fg,
                 if (cell.attrs.reverse) fg else bg,
+                underline_color,
                 cell.attrs.bold,
                 cell.attrs.underline,
                 true,

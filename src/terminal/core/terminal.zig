@@ -10,14 +10,65 @@ const app_logger = @import("../../app_logger.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
 const clampColorIndex = types.clampColorIndex;
-const indexToRgb = types.indexToRgb;
-const ansiColors = types.ansiColors;
-const ansiBrightColors = types.ansiBrightColors;
 const Screen = screen_mod.Screen;
 const Dirty = screen_mod.Dirty;
 const Damage = screen_mod.Damage;
 const KeyModeStack = screen_mod.KeyModeStack;
 const builtin = @import("builtin");
+const OscTerminator = parser_mod.OscTerminator;
+
+const dynamic_color_base: u8 = 10;
+const dynamic_color_count: usize = 10;
+
+fn buildDefaultPalette() [256]types.Color {
+    var palette: [256]types.Color = undefined;
+    var idx: usize = 0;
+    while (idx < palette.len) : (idx += 1) {
+        palette[idx] = types.indexToRgb(@intCast(idx));
+    }
+    return palette;
+}
+
+fn logOscReplyHex(log: app_logger.Logger, seq: []const u8) void {
+    if (!(log.enabled_file or log.enabled_console)) return;
+    var buf: [512]u8 = undefined;
+    var out: []u8 = buf[0..0];
+    for (seq) |b| {
+        if (out.len + 3 > buf.len) break;
+        const start = out.len;
+        _ = std.fmt.bufPrint(buf[start..], "{x:0>2} ", .{b}) catch break;
+        out = buf[0 .. start + 3];
+    }
+    log.logf("osc reply bytes len={d} hex={s}", .{ seq.len, out });
+}
+
+fn logCsiSequences(log: app_logger.Logger, buf: []const u8) void {
+    if (!(log.enabled_file or log.enabled_console)) return;
+    var i: usize = 0;
+    while (i + 1 < buf.len) : (i += 1) {
+        if (buf[i] != 0x1b or buf[i + 1] != '[') continue;
+        const start = i;
+        i += 2;
+        while (i < buf.len) : (i += 1) {
+            const b = buf[i];
+            if (b >= 0x40 and b <= 0x7E) {
+                if (b == 'm') {
+                    const seq = buf[start .. i + 1];
+                    var hex_buf: [256]u8 = undefined;
+                    var out: []u8 = hex_buf[0..0];
+                    for (seq) |sb| {
+                        if (out.len + 3 > hex_buf.len) break;
+                        const pos = out.len;
+                        _ = std.fmt.bufPrint(hex_buf[pos..], "{x:0>2} ", .{sb}) catch break;
+                        out = hex_buf[0 .. pos + 3];
+                    }
+                    log.logf("csi raw len={d} hex={s}", .{ seq.len, out });
+                }
+                break;
+            }
+        }
+    }
+}
 
 pub const TerminalSnapshot = struct {
     rows: usize,
@@ -69,6 +120,12 @@ pub const TerminalSession = struct {
     osc_hyperlink_active: bool,
     hyperlink_table: std.ArrayList(Hyperlink),
     current_hyperlink_id: u32,
+    cwd: []const u8,
+    cwd_buffer: std.ArrayList(u8),
+    base_default_attrs: types.CellAttrs,
+    palette_default: [256]types.Color,
+    palette_current: [256]types.Color,
+    dynamic_colors: [dynamic_color_count]?types.Color,
     read_thread: ?std.Thread,
     read_thread_running: std.atomic.Value(bool),
     state_mutex: std.Thread.Mutex,
@@ -91,6 +148,7 @@ pub const TerminalSession = struct {
         const log = app_logger.logger("terminal.core");
         log.logf("terminal init rows={d} cols={d} scrollback_max={d}", .{ rows, cols, default_scrollback_rows });
         log.logStdout("terminal init rows={d} cols={d}", .{ rows, cols });
+        const palette_default = buildDefaultPalette();
         session.* = .{
             .allocator = allocator,
             .title = "Terminal",
@@ -112,6 +170,12 @@ pub const TerminalSession = struct {
             .osc_hyperlink_active = false,
             .hyperlink_table = .empty,
             .current_hyperlink_id = 0,
+            .cwd = "",
+            .cwd_buffer = .empty,
+            .base_default_attrs = default_attrs,
+            .palette_default = palette_default,
+            .palette_current = palette_default,
+            .dynamic_colors = [_]?types.Color{null} ** dynamic_color_count,
             .read_thread = null,
             .read_thread_running = std.atomic.Value(bool).init(false),
             .state_mutex = .{},
@@ -166,6 +230,7 @@ pub const TerminalSession = struct {
         var new_attrs = types.defaultCell().attrs;
         new_attrs.fg = fg;
         new_attrs.bg = bg;
+        new_attrs.underline_color = fg;
 
         self.primary.updateDefaultColors(old_attrs, new_attrs);
         self.alt.updateDefaultColors(old_attrs, new_attrs);
@@ -191,6 +256,7 @@ pub const TerminalSession = struct {
         self.parser.deinit();
         self.osc_clipboard.deinit(self.allocator);
         self.osc_hyperlink.deinit(self.allocator);
+        self.cwd_buffer.deinit(self.allocator);
         for (self.hyperlink_table.items) |link| {
             self.allocator.free(link.uri);
         }
@@ -230,11 +296,13 @@ pub const TerminalSession = struct {
             var processed: usize = 0;
             const max_bytes_per_poll: usize = 256 * 1024;
             const start_ms = std.time.milliTimestamp();
+            const io_log = app_logger.logger("terminal.io");
             while (true) {
                 const n = try pty.read(&buf);
                 if (n == null or n.? == 0) break;
                 had_data = true;
                 processed += n.?;
+                logCsiSequences(io_log, buf[0..n.?]);
                 self.parser.handleSlice(self, buf[0..n.?]);
                 _ = self.output_generation.fetchAdd(1, .acq_rel);
                 if (processed >= max_bytes_per_poll) break;
@@ -244,8 +312,7 @@ pub const TerminalSession = struct {
             }
             if (processed > 0 and self.alt_exit_pending.swap(false, .acq_rel)) {
                 const elapsed_ms = @as(f64, @floatFromInt(std.time.milliTimestamp() - start_ms));
-                const log = app_logger.logger("terminal.io");
-                log.logf("alt_exit_io_ms={d:.2} bytes={d}", .{ elapsed_ms, processed });
+                io_log.logf("alt_exit_io_ms={d:.2} bytes={d}", .{ elapsed_ms, processed });
             }
         }
     }
@@ -389,7 +456,7 @@ pub const TerminalSession = struct {
         }
     }
 
-    pub fn parseOsc(self: *TerminalSession, payload: []const u8) void {
+    pub fn parseOsc(self: *TerminalSession, payload: []const u8, terminator: OscTerminator) void {
         const log = app_logger.logger("terminal.osc");
         if (log.enabled_file or log.enabled_console) {
             const max_len: usize = 160;
@@ -418,51 +485,18 @@ pub const TerminalSession = struct {
             0, 2 => {
                 self.setTitle(text);
             },
-            10 => {
-                if (self.pty) |*pty| {
-                    if (text.len == 1 and text[0] == '?') {
-                        self.writeOscColorReply(pty, 10, self.primary.default_attrs.fg);
-                        return;
-                    }
-                }
-                if (parseOscColor(text)) |color| {
-                    const default_attrs = self.primary.default_attrs;
-                    self.setDefaultColors(color, default_attrs.bg);
-                }
-            },
-            11 => {
-                if (self.pty) |*pty| {
-                    if (text.len == 1 and text[0] == '?') {
-                        self.writeOscColorReply(pty, 11, self.primary.default_attrs.bg);
-                        return;
-                    }
-                }
-                if (parseOscColor(text)) |color| {
-                    const default_attrs = self.primary.default_attrs;
-                    self.setDefaultColors(default_attrs.fg, color);
-                }
-            },
-            12 => {
-                if (self.pty) |*pty| {
-                    if (text.len == 1 and text[0] == '?') {
-                        self.writeOscColorReply(pty, 12, self.primary.default_attrs.fg);
-                        return;
-                    }
-                }
-            },
-            19 => {
-                if (self.pty) |*pty| {
-                    if (text.len == 1 and text[0] == '?') {
-                        self.writeOscColorReply(pty, 19, self.primary.default_attrs.bg);
-                        return;
-                    }
-                }
-            },
+            4 => self.handleOscPalette(text, terminator),
+            10...19 => self.handleOscDynamicColor(@intCast(code), text, terminator),
+            104 => self.handleOscPaletteReset(text),
+            110...119 => self.handleOscDynamicReset(@intCast(code)),
             8 => {
                 self.parseOscHyperlink(text);
             },
+            7 => {
+                self.parseOscCwd(text);
+            },
             52 => {
-                self.parseOscClipboard(text);
+                self.parseOscClipboard(text, terminator);
             },
             else => {},
         }
@@ -522,15 +556,149 @@ pub const TerminalSession = struct {
         return @intCast(scaled);
     }
 
-    fn writeOscColorReply(self: *TerminalSession, pty: *Pty, code: u8, color: types.Color) void {
+    fn writeOscColorReply(self: *TerminalSession, pty: *Pty, code: u8, color: types.Color, terminator: OscTerminator) void {
+        const log = app_logger.logger("terminal.osc");
         _ = self;
-        var buf: [64]u8 = undefined;
+        var buf: [80]u8 = undefined;
+        const end = if (terminator == .bel) "\x07" else "\x1b\\";
+        const r16: u16 = @as(u16, color.r) * 257;
+        const g16: u16 = @as(u16, color.g) * 257;
+        const b16: u16 = @as(u16, color.b) * 257;
         const seq = std.fmt.bufPrint(
             &buf,
-            "\x1b]{d};rgb:{x:0>2}/{x:0>2}/{x:0>2}\x1b\\",
-            .{ code, color.r, color.g, color.b },
+            "\x1b]{d};rgb:{x:0>4}/{x:0>4}/{x:0>4}{s}",
+            .{ code, r16, g16, b16, end },
         ) catch return;
+        if (log.enabled_file or log.enabled_console) {
+            log.logf("osc reply=\"{s}\"", .{seq});
+            logOscReplyHex(log, seq);
+        }
         _ = pty.write(seq) catch {};
+    }
+
+    fn writeOscPaletteReply(self: *TerminalSession, pty: *Pty, idx: u8, color: types.Color, terminator: OscTerminator) void {
+        const log = app_logger.logger("terminal.osc");
+        _ = self;
+        var buf: [88]u8 = undefined;
+        const end = if (terminator == .bel) "\x07" else "\x1b\\";
+        const r16: u16 = @as(u16, color.r) * 257;
+        const g16: u16 = @as(u16, color.g) * 257;
+        const b16: u16 = @as(u16, color.b) * 257;
+        const seq = std.fmt.bufPrint(
+            &buf,
+            "\x1b]4;{d};rgb:{x:0>4}/{x:0>4}/{x:0>4}{s}",
+            .{ idx, r16, g16, b16, end },
+        ) catch return;
+        if (log.enabled_file or log.enabled_console) {
+            log.logf("osc reply=\"{s}\"", .{seq});
+            logOscReplyHex(log, seq);
+        }
+        _ = pty.write(seq) catch {};
+    }
+
+    fn handleOscPalette(self: *TerminalSession, text: []const u8, terminator: OscTerminator) void {
+        if (text.len == 0) return;
+        var it = std.mem.splitScalar(u8, text, ';');
+        while (true) {
+            const idx_text = it.next() orelse break;
+            const color_text = it.next() orelse break;
+            const idx = parseOscIndex(idx_text) orelse continue;
+            if (idx >= self.palette_current.len) continue;
+            if (color_text.len == 1 and color_text[0] == '?') {
+                if (self.pty) |*pty| {
+                    self.writeOscPaletteReply(pty, @intCast(idx), self.palette_current[idx], terminator);
+                }
+                continue;
+            }
+            if (parseOscColor(color_text)) |color| {
+                self.palette_current[idx] = color;
+            }
+        }
+    }
+
+    fn handleOscPaletteReset(self: *TerminalSession, text: []const u8) void {
+        if (text.len == 0) {
+            self.palette_current = self.palette_default;
+            return;
+        }
+        var it = std.mem.splitScalar(u8, text, ';');
+        while (it.next()) |idx_text| {
+            const idx = parseOscIndex(idx_text) orelse continue;
+            if (idx >= self.palette_current.len) continue;
+            self.palette_current[idx] = self.palette_default[idx];
+        }
+    }
+
+    fn handleOscDynamicColor(self: *TerminalSession, code: u8, text: []const u8, terminator: OscTerminator) void {
+        if (self.pty) |*pty| {
+            if (text.len == 1 and text[0] == '?') {
+                const color = self.dynamicColorValue(code);
+                self.writeOscColorReply(pty, code, color, terminator);
+                return;
+            }
+        }
+        if (parseOscColor(text)) |color| {
+            switch (code) {
+                10 => {
+                    const default_attrs = self.primary.default_attrs;
+                    self.setDefaultColors(color, default_attrs.bg);
+                },
+                11 => {
+                    const default_attrs = self.primary.default_attrs;
+                    self.setDefaultColors(default_attrs.fg, color);
+                },
+                else => {
+                    const idx = @as(usize, code - dynamic_color_base);
+                    if (idx < self.dynamic_colors.len) {
+                        self.dynamic_colors[idx] = color;
+                    }
+                },
+            }
+        }
+    }
+
+    fn handleOscDynamicReset(self: *TerminalSession, code: u8) void {
+        const target = code - 100;
+        switch (target) {
+            10 => {
+                const default_attrs = self.primary.default_attrs;
+                self.setDefaultColors(self.base_default_attrs.fg, default_attrs.bg);
+            },
+            11 => {
+                const default_attrs = self.primary.default_attrs;
+                self.setDefaultColors(default_attrs.fg, self.base_default_attrs.bg);
+            },
+            else => {
+                const idx = @as(usize, target - dynamic_color_base);
+                if (idx < self.dynamic_colors.len) {
+                    self.dynamic_colors[idx] = null;
+                }
+            },
+        }
+    }
+
+    fn dynamicColorValue(self: *TerminalSession, code: u8) types.Color {
+        if (code == 10) return self.primary.default_attrs.fg;
+        if (code == 11) return self.primary.default_attrs.bg;
+        const idx = @as(usize, code - dynamic_color_base);
+        if (idx < self.dynamic_colors.len) {
+            if (self.dynamic_colors[idx]) |color| return color;
+        }
+        return switch (code) {
+            12 => self.primary.default_attrs.fg,
+            17, 19 => self.primary.default_attrs.bg,
+            else => self.primary.default_attrs.fg,
+        };
+    }
+
+    fn parseOscIndex(text: []const u8) ?usize {
+        if (text.len == 0) return null;
+        var value: usize = 0;
+        for (text) |c| {
+            if (c < '0' or c > '9') return null;
+            value = value * 10 + @as(usize, c - '0');
+        }
+        return value;
     }
 
     fn setTitle(self: *TerminalSession, text: []const u8) void {
@@ -555,6 +723,97 @@ pub const TerminalSession = struct {
         self.current_hyperlink_id = self.appendHyperlink(uri) orelse 0;
     }
 
+    fn parseOscCwd(self: *TerminalSession, text: []const u8) void {
+        const prefix = "file://";
+        if (!std.mem.startsWith(u8, text, prefix)) return;
+        const rest = text[prefix.len..];
+        const slash = std.mem.indexOfScalar(u8, rest, '/') orelse return;
+        const host = rest[0..slash];
+        const raw_path = rest[slash..];
+        if (raw_path.len == 0) return;
+        if (!self.oscCwdHostOk(host)) return;
+
+        var decoded = std.ArrayList(u8).empty;
+        defer decoded.deinit(self.allocator);
+        if (!decodeOscPercent(self.allocator, &decoded, raw_path)) return;
+
+        self.normalizeCwd(decoded.items);
+    }
+
+    fn oscCwdHostOk(self: *TerminalSession, host: []const u8) bool {
+        _ = self;
+        if (host.len == 0) return true;
+        if (std.mem.eql(u8, host, "localhost")) return true;
+
+        var buf: [std.posix.HOST_NAME_MAX]u8 = undefined;
+        const local = std.posix.gethostname(&buf) catch return false;
+        if (std.mem.eql(u8, host, local)) return true;
+        if (host.len > local.len and std.mem.startsWith(u8, host, local) and host[local.len] == '.') {
+            return true;
+        }
+        return false;
+    }
+
+    fn normalizeCwd(self: *TerminalSession, raw_path: []const u8) void {
+        self.cwd_buffer.clearRetainingCapacity();
+        _ = self.cwd_buffer.append(self.allocator, '/') catch return;
+
+        var stack = std.ArrayList(usize).empty;
+        defer stack.deinit(self.allocator);
+
+        var it = std.mem.splitScalar(u8, raw_path, '/');
+        while (it.next()) |segment| {
+            if (segment.len == 0 or std.mem.eql(u8, segment, ".")) continue;
+            if (std.mem.eql(u8, segment, "..")) {
+                if (stack.pop()) |new_len| {
+                    self.cwd_buffer.items.len = new_len;
+                } else if (self.cwd_buffer.items.len > 1) {
+                    self.cwd_buffer.items.len = 1;
+                }
+                continue;
+            }
+            if (self.cwd_buffer.items.len > 1 and self.cwd_buffer.items[self.cwd_buffer.items.len - 1] != '/') {
+                _ = self.cwd_buffer.append(self.allocator, '/') catch return;
+            }
+            const segment_start = self.cwd_buffer.items.len;
+            _ = self.cwd_buffer.appendSlice(self.allocator, segment) catch return;
+            _ = stack.append(self.allocator, segment_start) catch return;
+        }
+
+        if (self.cwd_buffer.items.len == 0) {
+            _ = self.cwd_buffer.append(self.allocator, '/') catch return;
+        }
+        self.cwd = self.cwd_buffer.items;
+    }
+
+    fn decodeOscPercent(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) bool {
+        out.clearRetainingCapacity();
+        var i: usize = 0;
+        while (i < text.len) : (i += 1) {
+            const b = text[i];
+            if (b != '%') {
+                _ = out.append(allocator, b) catch return false;
+                continue;
+            }
+            if (i + 2 >= text.len) return false;
+            const hi = hexNibble(text[i + 1]) orelse return false;
+            const lo = hexNibble(text[i + 2]) orelse return false;
+            const value: u8 = @as(u8, (hi << 4) | lo);
+            _ = out.append(allocator, value) catch return false;
+            i += 2;
+        }
+        return true;
+    }
+
+    fn hexNibble(c: u8) ?u8 {
+        return switch (c) {
+            '0'...'9' => c - '0',
+            'a'...'f' => c - 'a' + 10,
+            'A'...'F' => c - 'A' + 10,
+            else => null,
+        };
+    }
+
     fn appendHyperlink(self: *TerminalSession, uri: []const u8) ?u32 {
         if (uri.len == 0) return 0;
         if (self.hyperlink_table.items.len >= max_hyperlinks) {
@@ -571,12 +830,18 @@ pub const TerminalSession = struct {
         return @intCast(self.hyperlink_table.items.len);
     }
 
-    fn parseOscClipboard(self: *TerminalSession, text: []const u8) void {
+    fn parseOscClipboard(self: *TerminalSession, text: []const u8, terminator: OscTerminator) void {
         const split = std.mem.indexOfScalar(u8, text, ';') orelse return;
         const selection = text[0..split];
         const payload = text[split + 1 ..];
-        if (payload.len == 0 or std.mem.eql(u8, payload, "?")) return;
+        if (payload.len == 0) return;
         if (!std.mem.containsAtLeast(u8, selection, 1, "c") and !std.mem.containsAtLeast(u8, selection, 1, "0")) {
+            return;
+        }
+        if (std.mem.eql(u8, payload, "?")) {
+            if (self.pty) |*pty| {
+                self.writeOscClipboardReply(pty, selection, terminator);
+            }
             return;
         }
 
@@ -595,6 +860,35 @@ pub const TerminalSession = struct {
         _ = self.osc_clipboard.appendSlice(self.allocator, decoded.items) catch return;
         _ = self.osc_clipboard.append(self.allocator, 0) catch return;
         self.osc_clipboard_pending = true;
+    }
+
+    fn writeOscClipboardReply(self: *TerminalSession, pty: *Pty, selection: []const u8, terminator: OscTerminator) void {
+        const log = app_logger.logger("terminal.osc");
+        const end = if (terminator == .bel) "\x07" else "\x1b\\";
+        var data = self.osc_clipboard.items;
+        if (data.len > 0 and data[data.len - 1] == 0) {
+            data = data[0 .. data.len - 1];
+        }
+        const encoded_len = std.base64.standard.Encoder.calcSize(data.len);
+        var encoded = std.ArrayList(u8).empty;
+        defer encoded.deinit(self.allocator);
+        encoded.resize(self.allocator, encoded_len) catch return;
+        _ = std.base64.standard.Encoder.encode(encoded.items, data);
+
+        const seq_len = 4 + selection.len + 1 + encoded.items.len + end.len;
+        var seq = std.ArrayList(u8).empty;
+        defer seq.deinit(self.allocator);
+        seq.ensureTotalCapacity(self.allocator, seq_len) catch return;
+        _ = seq.appendSlice(self.allocator, "\x1b]52;") catch return;
+        _ = seq.appendSlice(self.allocator, selection) catch return;
+        _ = seq.append(self.allocator, ';') catch return;
+        _ = seq.appendSlice(self.allocator, encoded.items) catch return;
+        _ = seq.appendSlice(self.allocator, end) catch return;
+
+        if (log.enabled_file or log.enabled_console) {
+            log.logf("osc reply=\"{s}\"", .{seq.items});
+        }
+        _ = pty.write(seq.items) catch {};
     }
 
     pub fn handleCsi(self: *TerminalSession, action: csi_mod.CsiAction) void {
@@ -1103,32 +1397,41 @@ pub const TerminalSession = struct {
         var i: usize = 0;
         while (i < n_params) {
             const p = params[i];
-            if (p == 38 or p == 48) {
+            if (p == 38 or p == 48 or p == 58) {
                 if (i + 1 < n_params) {
                     const mode = params[i + 1];
                     if (mode == 5 and i + 2 < n_params) {
                         const idx = clampColorIndex(params[i + 2]);
-                        const color = indexToRgb(idx);
-                        if (p == 38) {
-                            screen.current_attrs.fg = color;
-                        } else {
-                            screen.current_attrs.bg = color;
+                        const color = self.paletteColor(idx);
+                        switch (p) {
+                            38 => screen.current_attrs.fg = color,
+                            48 => screen.current_attrs.bg = color,
+                            58 => screen.current_attrs.underline_color = color,
+                            else => {},
                         }
                         i += 3;
                         continue;
                     }
-                    if (mode == 2 and i + 4 < n_params) {
-                        const r = clampColorIndex(params[i + 2]);
-                        const g = clampColorIndex(params[i + 3]);
-                        const b = clampColorIndex(params[i + 4]);
-                        const color = Color{ .r = r, .g = g, .b = b };
-                        if (p == 38) {
-                            screen.current_attrs.fg = color;
-                        } else {
-                            screen.current_attrs.bg = color;
+                    if (mode == 2) {
+                        // Support optional colorspace parameter (e.g. 38:2::R:G:B).
+                        var base: usize = i + 2;
+                        if (i + 5 < n_params) {
+                            base = i + 3;
                         }
-                        i += 5;
-                        continue;
+                        if (base + 2 < n_params) {
+                            const r = clampColorIndex(params[base]);
+                            const g = clampColorIndex(params[base + 1]);
+                            const b = clampColorIndex(params[base + 2]);
+                            const color = Color{ .r = r, .g = g, .b = b };
+                            switch (p) {
+                                38 => screen.current_attrs.fg = color,
+                                48 => screen.current_attrs.bg = color,
+                                58 => screen.current_attrs.underline_color = color,
+                                else => {},
+                            }
+                            i = base + 3;
+                            continue;
+                        }
                     }
                 }
                 i += 1;
@@ -1144,6 +1447,12 @@ pub const TerminalSession = struct {
                 22 => { // normal intensity
                     screen.current_attrs.bold = false;
                 },
+                4 => { // underline
+                    screen.current_attrs.underline = true;
+                },
+                24 => { // underline off
+                    screen.current_attrs.underline = false;
+                },
                 7 => { // reverse
                     screen.current_attrs.reverse = true;
                 },
@@ -1156,22 +1465,36 @@ pub const TerminalSession = struct {
                 49 => { // default bg
                     screen.current_attrs.bg = screen.default_attrs.bg;
                 },
+                58 => {
+                    screen.current_attrs.underline_color = screen.default_attrs.underline_color;
+                },
+                59 => {
+                    screen.current_attrs.underline_color = screen.default_attrs.underline_color;
+                },
                 30...37 => {
-                    screen.current_attrs.fg = ansiColors[@intCast(p - 30)];
+                    const idx: u8 = @intCast(p - 30);
+                    screen.current_attrs.fg = self.paletteColor(idx);
                 },
                 40...47 => {
-                    screen.current_attrs.bg = ansiColors[@intCast(p - 40)];
+                    const idx: u8 = @intCast(p - 40);
+                    screen.current_attrs.bg = self.paletteColor(idx);
                 },
                 90...97 => {
-                    screen.current_attrs.fg = ansiBrightColors[@intCast(p - 90)];
+                    const idx: u8 = @intCast(8 + (p - 90));
+                    screen.current_attrs.fg = self.paletteColor(idx);
                 },
                 100...107 => {
-                    screen.current_attrs.bg = ansiBrightColors[@intCast(p - 100)];
+                    const idx: u8 = @intCast(8 + (p - 100));
+                    screen.current_attrs.bg = self.paletteColor(idx);
                 },
                 else => {},
             }
             i += 1;
         }
+    }
+
+    fn paletteColor(self: *const TerminalSession, idx: u8) types.Color {
+        return self.palette_current[idx];
     }
 
     pub fn handleCodepoint(self: *TerminalSession, codepoint: u32) void {
@@ -1629,10 +1952,12 @@ fn readThreadMain(session: *TerminalSession) void {
             }
             var processed: usize = 0;
             const start_ms = std.time.milliTimestamp();
+            const io_log = app_logger.logger("terminal.io");
             while (session.read_thread_running.load(.acquire)) {
                 const n = pty.read(&buf) catch break;
                 if (n == null or n.? == 0) break;
                 processed += n.?;
+                logCsiSequences(io_log, buf[0..n.?]);
                 session.state_mutex.lock();
                 session.parser.handleSlice(session, buf[0..n.?]);
                 session.state_mutex.unlock();
@@ -1641,8 +1966,7 @@ fn readThreadMain(session: *TerminalSession) void {
             }
             if (processed > 0 and session.alt_exit_pending.swap(false, .acq_rel)) {
                 const elapsed_ms = @as(f64, @floatFromInt(std.time.milliTimestamp() - start_ms));
-                const log = app_logger.logger("terminal.io");
-                log.logf("alt_exit_io_ms={d:.2} bytes={d}", .{ elapsed_ms, processed });
+                io_log.logf("alt_exit_io_ms={d:.2} bytes={d}", .{ elapsed_ms, processed });
             }
         } else {
             break;

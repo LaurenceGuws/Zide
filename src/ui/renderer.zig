@@ -572,6 +572,7 @@ pub const Renderer = struct {
         cell_height: f32,
         fg: Color,
         bg: Color,
+        underline_color: Color,
         bold: bool,
         underline: bool,
         is_cursor: bool,
@@ -615,7 +616,7 @@ pub const Renderer = struct {
                     underline_y,
                     snapped_cell_w_i,
                     2,
-                    text_color,
+                    underline_color,
                 );
             }
         }

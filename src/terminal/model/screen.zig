@@ -365,10 +365,14 @@ pub const Screen = struct {
             self.current_attrs.fg.b == old_attrs.fg.b and
             self.current_attrs.bg.r == old_attrs.bg.r and
             self.current_attrs.bg.g == old_attrs.bg.g and
-            self.current_attrs.bg.b == old_attrs.bg.b)
+            self.current_attrs.bg.b == old_attrs.bg.b and
+            self.current_attrs.underline_color.r == old_attrs.underline_color.r and
+            self.current_attrs.underline_color.g == old_attrs.underline_color.g and
+            self.current_attrs.underline_color.b == old_attrs.underline_color.b)
         {
             self.current_attrs.fg = new_attrs.fg;
             self.current_attrs.bg = new_attrs.bg;
+            self.current_attrs.underline_color = new_attrs.underline_color;
         }
 
         if (self.saved_cursor.attrs.fg.r == old_attrs.fg.r and
@@ -376,10 +380,14 @@ pub const Screen = struct {
             self.saved_cursor.attrs.fg.b == old_attrs.fg.b and
             self.saved_cursor.attrs.bg.r == old_attrs.bg.r and
             self.saved_cursor.attrs.bg.g == old_attrs.bg.g and
-            self.saved_cursor.attrs.bg.b == old_attrs.bg.b)
+            self.saved_cursor.attrs.bg.b == old_attrs.bg.b and
+            self.saved_cursor.attrs.underline_color.r == old_attrs.underline_color.r and
+            self.saved_cursor.attrs.underline_color.g == old_attrs.underline_color.g and
+            self.saved_cursor.attrs.underline_color.b == old_attrs.underline_color.b)
         {
             self.saved_cursor.attrs.fg = new_attrs.fg;
             self.saved_cursor.attrs.bg = new_attrs.bg;
+            self.saved_cursor.attrs.underline_color = new_attrs.underline_color;
         }
 
         for (self.grid.cells.items) |*cell| {
@@ -388,10 +396,14 @@ pub const Screen = struct {
                 cell.attrs.fg.b == old_attrs.fg.b and
                 cell.attrs.bg.r == old_attrs.bg.r and
                 cell.attrs.bg.g == old_attrs.bg.g and
-                cell.attrs.bg.b == old_attrs.bg.b)
+                cell.attrs.bg.b == old_attrs.bg.b and
+                cell.attrs.underline_color.r == old_attrs.underline_color.r and
+                cell.attrs.underline_color.g == old_attrs.underline_color.g and
+                cell.attrs.underline_color.b == old_attrs.underline_color.b)
             {
                 cell.attrs.fg = new_attrs.fg;
                 cell.attrs.bg = new_attrs.bg;
+                cell.attrs.underline_color = new_attrs.underline_color;
             }
         }
         self.grid.markDirtyAll();

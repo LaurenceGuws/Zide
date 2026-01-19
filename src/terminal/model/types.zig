@@ -27,6 +27,7 @@ pub const CellAttrs = struct {
     bold: bool,
     reverse: bool,
     underline: bool,
+    underline_color: Color,
     link_id: u32,
 };
 
@@ -95,6 +96,7 @@ pub fn defaultCell() Cell {
             .bold = false,
             .reverse = false,
             .underline = false,
+            .underline_color = default_fg,
             .link_id = 0,
         },
     };
