@@ -129,6 +129,7 @@ pub const TerminalSession = struct {
     history: history_mod.TerminalHistory,
     bracketed_paste: bool,
     app_cursor_keys: bool,
+    app_keypad: bool,
     input: input_mod.InputState,
     cell_width: u16,
     cell_height: u16,
@@ -184,6 +185,7 @@ pub const TerminalSession = struct {
             .history = history,
             .bracketed_paste = false,
             .app_cursor_keys = false,
+            .app_keypad = false,
             .input = input_mod.InputState.init(),
             .cell_width = 0,
             .cell_height = 0,
@@ -396,6 +398,16 @@ pub const TerminalSession = struct {
             }
             _ = try input_mod.sendKey(pty, key, mod, self.keyModeFlags());
         }
+    }
+
+    pub fn sendKeypad(self: *TerminalSession, key: input_mod.KeypadKey, mod: Modifier) !void {
+        if (self.pty) |*pty| {
+            _ = try input_mod.sendKeypad(pty, key, mod, self.app_keypad, self.keyModeFlags());
+        }
+    }
+
+    pub fn appKeypadEnabled(self: *const TerminalSession) bool {
+        return self.app_keypad;
     }
 
     pub fn sendChar(self: *TerminalSession, char: u32, mod: Modifier) !void {
@@ -1391,6 +1403,7 @@ pub const TerminalSession = struct {
         self.alt.resetState();
         self.input.resetMouse();
         self.current_hyperlink_id = 0;
+        self.app_keypad = false;
         self.primary.clear();
         self.alt.clear();
     }
@@ -2085,6 +2098,10 @@ pub const TerminalSession = struct {
         slot.attrs = screen.current_attrs;
     }
 
+    pub fn setKeypadMode(self: *TerminalSession, enabled: bool) void {
+        self.app_keypad = enabled;
+    }
+
     pub fn restoreCursor(self: *TerminalSession) void {
         const screen = self.activeScreen();
         const slot = &screen.saved_cursor;
@@ -2266,6 +2283,7 @@ pub const VTERM_KEY_HOME = types.VTERM_KEY_HOME;
 pub const VTERM_KEY_END = types.VTERM_KEY_END;
 pub const VTERM_KEY_PAGEUP = types.VTERM_KEY_PAGEUP;
 pub const VTERM_KEY_PAGEDOWN = types.VTERM_KEY_PAGEDOWN;
+pub const KeypadKey = input_mod.KeypadKey;
 
 pub const VTERM_MOD_NONE = types.VTERM_MOD_NONE;
 pub const VTERM_MOD_SHIFT = types.VTERM_MOD_SHIFT;

@@ -97,6 +97,26 @@ pub const InputState = struct {
     }
 };
 
+pub const KeypadKey = enum {
+    kp0,
+    kp1,
+    kp2,
+    kp3,
+    kp4,
+    kp5,
+    kp6,
+    kp7,
+    kp8,
+    kp9,
+    kp_decimal,
+    kp_divide,
+    kp_multiply,
+    kp_subtract,
+    kp_add,
+    kp_enter,
+    kp_equal,
+};
+
 pub fn sendKey(pty: *pty_mod.Pty, key: types.Key, mod: types.Modifier, key_mode_flags: u32) !bool {
     if (sendKeyWithProtocol(pty, key, mod, key_mode_flags)) return true;
     const seq = switch (key) {
@@ -120,6 +140,23 @@ pub fn sendKey(pty: *pty_mod.Pty, key: types.Key, mod: types.Modifier, key_mode_
         _ = try pty.write(seq);
     }
     return seq.len > 0;
+}
+
+pub fn sendKeypad(pty: *pty_mod.Pty, key: KeypadKey, mod: types.Modifier, app_keypad: bool, key_mode_flags: u32) !bool {
+    if (app_keypad and mod == types.VTERM_MOD_NONE) {
+        if (keypadAppCode(key)) |code| {
+            var buf: [3]u8 = undefined;
+            buf[0] = 0x1b;
+            buf[1] = 'O';
+            buf[2] = code;
+            _ = try pty.write(buf[0..3]);
+            return true;
+        }
+    }
+    if (keypadChar(key)) |ch| {
+        return sendChar(pty, ch, mod, key_mode_flags);
+    }
+    return false;
 }
 
 pub fn sendChar(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, key_mode_flags: u32) !bool {
@@ -146,6 +183,50 @@ pub fn sendChar(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, key_mode_flag
 pub fn sendText(pty: *pty_mod.Pty, text: []const u8) !void {
     if (text.len == 0) return;
     _ = try pty.write(text);
+}
+
+fn keypadChar(key: KeypadKey) ?u32 {
+    return switch (key) {
+        .kp0 => '0',
+        .kp1 => '1',
+        .kp2 => '2',
+        .kp3 => '3',
+        .kp4 => '4',
+        .kp5 => '5',
+        .kp6 => '6',
+        .kp7 => '7',
+        .kp8 => '8',
+        .kp9 => '9',
+        .kp_decimal => '.',
+        .kp_divide => '/',
+        .kp_multiply => '*',
+        .kp_subtract => '-',
+        .kp_add => '+',
+        .kp_enter => '\r',
+        .kp_equal => '=',
+    };
+}
+
+fn keypadAppCode(key: KeypadKey) ?u8 {
+    return switch (key) {
+        .kp0 => 'p',
+        .kp1 => 'q',
+        .kp2 => 'r',
+        .kp3 => 's',
+        .kp4 => 't',
+        .kp5 => 'u',
+        .kp6 => 'v',
+        .kp7 => 'w',
+        .kp8 => 'x',
+        .kp9 => 'y',
+        .kp_decimal => 'n',
+        .kp_divide => 'o',
+        .kp_multiply => 'j',
+        .kp_subtract => 'm',
+        .kp_add => 'k',
+        .kp_enter => 'M',
+        .kp_equal => 'X',
+    };
 }
 
 fn ctrlChar(char: u32) ?u8 {
