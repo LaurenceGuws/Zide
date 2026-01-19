@@ -14,6 +14,7 @@ terminal_protocol_todo:
       - "DSR/DA replies implemented; DECCKM app-cursor keys implemented."
       - "OSC 8 hyperlinks, OSC 52 clipboard write, OSC 10/11 set + query implemented."
       - "Codex input background still missing: likely dynamic color/palette handling gaps."
+      - "Checked off completed tasks through OSC-05 and CSI-02."
 
   reference_maps:
     xterm:
@@ -89,10 +90,13 @@ terminal_protocol_todo:
 
     - id: OSC-05
       title: "OSC 133/1337 semantic prompt + user vars"
-      status: todo
+      status: done
       refs:
         - reference_repos/terminals/ghostty/src/terminal/osc.zig
         - reference_repos/terminals/wezterm/docs/shell-integration.md
+      notes:
+        - "Parsed OSC 133 (A/B/C/D) with prompt state + cmdline handling."
+        - "Parsed OSC 1337 SetUserVar with base64 decode into session user var map."
 
     - id: CSI-01
       title: "SGR 58 underline color + 59 reset"

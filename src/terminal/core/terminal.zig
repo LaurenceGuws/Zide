@@ -20,6 +20,24 @@ const OscTerminator = parser_mod.OscTerminator;
 const dynamic_color_base: u8 = 10;
 const dynamic_color_count: usize = 10;
 
+const SemanticPromptKind = enum {
+    primary,
+    continuation,
+    secondary,
+    right,
+};
+
+const SemanticPromptState = struct {
+    prompt_active: bool = false,
+    input_active: bool = false,
+    output_active: bool = false,
+    kind: SemanticPromptKind = .primary,
+    redraw: bool = true,
+    special_key: bool = false,
+    click_events: bool = false,
+    exit_code: ?u8 = null,
+};
+
 fn buildDefaultPalette() [256]types.Color {
     var palette: [256]types.Color = undefined;
     var idx: usize = 0;
@@ -122,6 +140,11 @@ pub const TerminalSession = struct {
     current_hyperlink_id: u32,
     cwd: []const u8,
     cwd_buffer: std.ArrayList(u8),
+    semantic_prompt: SemanticPromptState,
+    semantic_prompt_aid: std.ArrayList(u8),
+    semantic_cmdline: std.ArrayList(u8),
+    semantic_cmdline_valid: bool,
+    user_vars: std.StringHashMap([]u8),
     base_default_attrs: types.CellAttrs,
     palette_default: [256]types.Color,
     palette_current: [256]types.Color,
@@ -172,6 +195,11 @@ pub const TerminalSession = struct {
             .current_hyperlink_id = 0,
             .cwd = "",
             .cwd_buffer = .empty,
+            .semantic_prompt = .{},
+            .semantic_prompt_aid = .empty,
+            .semantic_cmdline = .empty,
+            .semantic_cmdline_valid = false,
+            .user_vars = std.StringHashMap([]u8).init(allocator),
             .base_default_attrs = default_attrs,
             .palette_default = palette_default,
             .palette_current = palette_default,
@@ -257,6 +285,14 @@ pub const TerminalSession = struct {
         self.osc_clipboard.deinit(self.allocator);
         self.osc_hyperlink.deinit(self.allocator);
         self.cwd_buffer.deinit(self.allocator);
+        self.semantic_prompt_aid.deinit(self.allocator);
+        self.semantic_cmdline.deinit(self.allocator);
+        var user_it = self.user_vars.iterator();
+        while (user_it.next()) |entry| {
+            self.allocator.free(entry.key_ptr.*);
+            self.allocator.free(entry.value_ptr.*);
+        }
+        self.user_vars.deinit();
         for (self.hyperlink_table.items) |link| {
             self.allocator.free(link.uri);
         }
@@ -497,6 +533,12 @@ pub const TerminalSession = struct {
             },
             52 => {
                 self.parseOscClipboard(text, terminator);
+            },
+            133 => {
+                self.parseOscSemanticPrompt(text);
+            },
+            1337 => {
+                self.parseOscUserVar(text);
             },
             else => {},
         }
@@ -784,6 +826,198 @@ pub const TerminalSession = struct {
             _ = self.cwd_buffer.append(self.allocator, '/') catch return;
         }
         self.cwd = self.cwd_buffer.items;
+    }
+
+    fn parseOscSemanticPrompt(self: *TerminalSession, text: []const u8) void {
+        if (text.len == 0) return;
+        const log = app_logger.logger("terminal.osc");
+        const kind = text[0];
+        const rest = if (text.len > 1 and text[1] == ';') text[2..] else if (text.len == 1) "" else text[1..];
+
+        switch (kind) {
+            'A' => {
+                self.semantic_prompt.prompt_active = true;
+                self.semantic_prompt.input_active = false;
+                self.semantic_prompt.output_active = false;
+                self.semantic_prompt.kind = .primary;
+                self.semantic_prompt.redraw = true;
+                self.semantic_prompt.special_key = false;
+                self.semantic_prompt.click_events = false;
+                self.semantic_prompt.exit_code = null;
+                self.semantic_prompt_aid.clearRetainingCapacity();
+                self.semantic_cmdline_valid = false;
+                self.applySemanticPromptOptions(rest, true);
+            },
+            'B' => {
+                self.semantic_prompt.prompt_active = false;
+                self.semantic_prompt.input_active = true;
+                self.semantic_prompt.output_active = false;
+                self.applySemanticPromptOptions(rest, false);
+            },
+            'C' => {
+                self.semantic_prompt.prompt_active = false;
+                self.semantic_prompt.input_active = false;
+                self.semantic_prompt.output_active = true;
+                self.applySemanticPromptEndInput(rest);
+            },
+            'D' => {
+                self.semantic_prompt.prompt_active = false;
+                self.semantic_prompt.input_active = false;
+                self.semantic_prompt.output_active = false;
+                self.applySemanticPromptEndCommand(rest);
+            },
+            else => {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf("osc 133: unknown kind={c}", .{kind});
+                }
+            },
+        }
+    }
+
+    fn applySemanticPromptOptions(self: *TerminalSession, text: []const u8, allow_aid: bool) void {
+        if (text.len == 0) return;
+        var it = std.mem.splitScalar(u8, text, ';');
+        while (it.next()) |kv| {
+            if (kv.len == 0) continue;
+            const eq = std.mem.indexOfScalar(u8, kv, '=');
+            const key = if (eq) |idx| kv[0..idx] else kv;
+            const value = if (eq) |idx| kv[idx + 1 ..] else "";
+            if (allow_aid and std.mem.eql(u8, key, "aid")) {
+                self.semantic_prompt_aid.clearRetainingCapacity();
+                _ = self.semantic_prompt_aid.appendSlice(self.allocator, value) catch {};
+                continue;
+            }
+            if (std.mem.eql(u8, key, "k")) {
+                if (value.len == 1) {
+                    self.semantic_prompt.kind = switch (value[0]) {
+                        'c' => .continuation,
+                        's' => .secondary,
+                        'r' => .right,
+                        else => .primary,
+                    };
+                }
+                continue;
+            }
+            if (std.mem.eql(u8, key, "redraw")) {
+                self.semantic_prompt.redraw = parseBoolFlag(value, self.semantic_prompt.redraw);
+                continue;
+            }
+            if (std.mem.eql(u8, key, "special_key")) {
+                self.semantic_prompt.special_key = parseBoolFlag(value, self.semantic_prompt.special_key);
+                continue;
+            }
+            if (std.mem.eql(u8, key, "click_events")) {
+                self.semantic_prompt.click_events = parseBoolFlag(value, self.semantic_prompt.click_events);
+                continue;
+            }
+        }
+    }
+
+    fn applySemanticPromptEndInput(self: *TerminalSession, text: []const u8) void {
+        if (text.len == 0) return;
+        var it = std.mem.splitScalar(u8, text, ';');
+        while (it.next()) |kv| {
+            if (kv.len == 0) continue;
+            const eq = std.mem.indexOfScalar(u8, kv, '=');
+            const key = if (eq) |idx| kv[0..idx] else kv;
+            const value = if (eq) |idx| kv[idx + 1 ..] else "";
+            if (std.mem.eql(u8, key, "cmdline_url")) {
+                self.setSemanticCmdlineUrl(value);
+                continue;
+            }
+            if (std.mem.eql(u8, key, "cmdline")) {
+                self.setSemanticCmdline(value);
+                continue;
+            }
+        }
+    }
+
+    fn applySemanticPromptEndCommand(self: *TerminalSession, text: []const u8) void {
+        if (text.len == 0) {
+            self.semantic_prompt.exit_code = null;
+            return;
+        }
+        if (text.len >= 2 and text[0] == ';') {
+            const value = text[1..];
+            self.semantic_prompt.exit_code = std.fmt.parseUnsigned(u8, value, 10) catch null;
+            return;
+        }
+        self.semantic_prompt.exit_code = std.fmt.parseUnsigned(u8, text, 10) catch null;
+    }
+
+    fn setSemanticCmdline(self: *TerminalSession, value: []const u8) void {
+        self.semantic_cmdline.clearRetainingCapacity();
+        if (value.len == 0) {
+            self.semantic_cmdline_valid = false;
+            return;
+        }
+        _ = self.semantic_cmdline.appendSlice(self.allocator, value) catch return;
+        self.semantic_cmdline_valid = true;
+    }
+
+    fn setSemanticCmdlineUrl(self: *TerminalSession, value: []const u8) void {
+        var decoded = std.ArrayList(u8).empty;
+        defer decoded.deinit(self.allocator);
+        if (!decodeOscPercent(self.allocator, &decoded, value)) {
+            self.semantic_cmdline_valid = false;
+            return;
+        }
+        self.semantic_cmdline.clearRetainingCapacity();
+        _ = self.semantic_cmdline.appendSlice(self.allocator, decoded.items) catch return;
+        self.semantic_cmdline_valid = true;
+    }
+
+    fn parseBoolFlag(value: []const u8, default_value: bool) bool {
+        if (value.len != 1) return default_value;
+        return switch (value[0]) {
+            '0' => false,
+            '1' => true,
+            else => default_value,
+        };
+    }
+
+    fn parseOscUserVar(self: *TerminalSession, text: []const u8) void {
+        const prefix = "SetUserVar=";
+        if (!std.mem.startsWith(u8, text, prefix)) return;
+        const rest = text[prefix.len..];
+        const split = std.mem.indexOfScalar(u8, rest, '=') orelse return;
+        const name = rest[0..split];
+        const encoded = rest[split + 1 ..];
+        if (name.len == 0) return;
+
+        const max_bytes: usize = 1024 * 1024;
+        if (encoded.len > max_bytes * 2) return;
+
+        var decoded = std.ArrayList(u8).empty;
+        defer decoded.deinit(self.allocator);
+        if (encoded.len > 0) {
+            const decoded_len = std.base64.standard.Decoder.calcSizeForSlice(encoded) catch return;
+            if (decoded_len > max_bytes) return;
+            decoded.resize(self.allocator, decoded_len) catch return;
+            _ = std.base64.standard.Decoder.decode(decoded.items, encoded) catch return;
+        }
+
+        self.setUserVar(name, decoded.items);
+    }
+
+    fn setUserVar(self: *TerminalSession, name: []const u8, value: []const u8) void {
+        const name_owned = self.allocator.dupe(u8, name) catch return;
+        const value_owned = self.allocator.dupe(u8, value) catch {
+            self.allocator.free(name_owned);
+            return;
+        };
+        const entry = self.user_vars.getOrPut(name_owned) catch {
+            self.allocator.free(name_owned);
+            self.allocator.free(value_owned);
+            return;
+        };
+        if (entry.found_existing) {
+            self.allocator.free(name_owned);
+            self.allocator.free(entry.value_ptr.*);
+            entry.value_ptr.* = value_owned;
+        } else {
+            entry.value_ptr.* = value_owned;
+        }
     }
 
     fn decodeOscPercent(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) bool {
@@ -1413,11 +1647,8 @@ pub const TerminalSession = struct {
                         continue;
                     }
                     if (mode == 2) {
-                        // Support optional colorspace parameter (e.g. 38:2::R:G:B).
-                        var base: usize = i + 2;
-                        if (i + 5 < n_params) {
-                            base = i + 3;
-                        }
+                        // Parse 38/48/58;2;R;G;B (truecolor).
+                        const base: usize = i + 2;
                         if (base + 2 < n_params) {
                             const r = clampColorIndex(params[base]);
                             const g = clampColorIndex(params[base + 1]);
@@ -1434,11 +1665,8 @@ pub const TerminalSession = struct {
                         }
                     }
                     if (mode == 6) {
-                        // WezTerm extension: RGBA (38:6::R:G:B:A).
-                        var base: usize = i + 2;
-                        if (i + 6 < n_params) {
-                            base = i + 3;
-                        }
+                        // WezTerm extension: RGBA (38;6;R;G;B;A).
+                        const base: usize = i + 2;
                         if (base + 3 < n_params) {
                             const r = clampColorIndex(params[base]);
                             const g = clampColorIndex(params[base + 1]);
