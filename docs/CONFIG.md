@@ -20,7 +20,17 @@ Config should return a table:
 ```lua
 return {
   log = {
-    enable = { "terminal.core", "terminal.metrics", "app.core" },
+    enable = {
+      "app.core",
+      "terminal.core",
+      "terminal.metrics",
+      "terminal.alt",
+      "terminal.io",
+      "terminal.csi",
+      "terminal.sgr",
+      "terminal.osc",
+      "terminal.font",
+    },
     -- file = { "terminal.metrics" },
     -- console = { "app.core" },
   }
@@ -40,6 +50,17 @@ Supported values:
 - `none` — disable all loggers
 - comma-separated list (via `enable` array)
 - `file` / `console` arrays for per-destination control
+
+Common logger tags:
+- `app.core`
+- `terminal.core`
+- `terminal.metrics`
+- `terminal.alt` (alt-screen timing)
+- `terminal.io` (PTY IO timing)
+- `terminal.csi` (CSI trace)
+- `terminal.sgr` (SGR trace)
+- `terminal.osc` (OSC trace)
+- `terminal.font`
 
 ## Raylib logging
 

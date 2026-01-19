@@ -24,6 +24,7 @@ terminal_rendering_todo:
       tasks:
         - id: R1
           title: "Force integer cell metrics + snap draw positions"
+          status: done
           files_to_edit:
             - src/ui/renderer.zig
             - src/ui/terminal_font.zig
@@ -32,6 +33,7 @@ terminal_rendering_todo:
             - "Snap glyph draw positions to integer pixels."
         - id: R2
           title: "Glyph atlas sampling settings"
+          status: done
           files_to_edit:
             - src/ui/renderer.zig
           notes:
@@ -41,6 +43,7 @@ terminal_rendering_todo:
       tasks:
         - id: R3
           title: "Square/wide glyph overflow policy (scale-to-fit vs allow overflow)"
+          status: done
           files_to_edit:
             - src/ui/terminal_font.zig
             - src/ui/renderer.zig
@@ -52,6 +55,7 @@ terminal_rendering_todo:
       tasks:
         - id: R4
           title: "Symbols Nerd Font Mono fallback"
+          status: partial
           files_to_add:
             - assets/fonts/SymbolsNerdFontMono-Regular.ttf
           files_to_edit:
@@ -60,6 +64,7 @@ terminal_rendering_todo:
           notes:
             - "Use fallback for PUA glyphs."
             - "Keep fallback sized to terminal cell metrics."
+            - "Linux fontconfig fallback is implemented; embedded Nerd font not yet added."
 
     - name: "Phase D - Rasterization quality"
       tasks:

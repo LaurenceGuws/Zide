@@ -1,6 +1,6 @@
 # Terminal Design & Decision Log
 
-Date: 2026-01-17
+Date: 2026-01-19
 
 Purpose: this document tracks terminal architecture decisions and implementation progress. It is not a fixed plan. Each layer will be researched in the reference repos before implementation, and this file will be updated with concrete decisions as they are made.
 
@@ -10,10 +10,11 @@ Purpose: this document tracks terminal architecture decisions and implementation
 - Shell output renders with basic cursor movement, erase ops, and SGR (16/256/truecolor).
 - Scrollback ring buffer captures full‑screen scrolls and is exposed via a scrollbar + offset, plus a scrollback indicator.
 - Alternate screen uses per-screen state (grid, cursor, scroll region, key mode stack, attrs); alt disables scrollback/selection and fully dirties on switch.
-- OSC parsing now handles clipboard (OSC 52) and hyperlinks (OSC 8) as internal state.
+- OSC parsing handles title (OSC 0/2), hyperlinks (OSC 8), clipboard write (OSC 52), and default fg/bg set + query (OSC 10/11). Queries for OSC 12/19 are answered.
 - Keyboard input supports CSI u/kitty protocol flags with per-screen stacks and modifier-aware encoding.
 - Legacy modifier combos now include full letter/number/punctuation mapping; macOS Command is reserved for app shortcuts.
 - Dirty-row tracking and render-texture caching are live; full VT coverage still missing.
+- CSI params support up to 16 entries and `:` separators for SGR sequences.
 - Default colors are configurable per session; erase/blank fills use current attributes so TUI background colors persist.
 
 ## Decisions & Progress by Layer
@@ -86,8 +87,9 @@ Current coverage:
 - Insert/delete: `@`, `P`, `L`, `M`
 - Scroll region: `r`, `S`, `T`
 - Reset: `ESC c`
-- SGR: 16‑color + 256‑color + truecolor, bold/reverse
-- OSC: basic parsing for `OSC 0/2` title updates (consumed, no UI binding yet)
+- DSR/DA replies: `CSI n` (5/6) + `CSI c`
+- SGR: 16‑color + 256‑color + truecolor, bold/reverse; colon-separated SGR supported; params up to 16
+- OSC: `0/2` title, `7` cwd (parsed, not yet consumed), `8` hyperlinks, `52` clipboard write, `10/11` default fg/bg set + query, `12/19` query replies
 
 ### Layer 4: Screen Model (Grid + Scrollback)
 
@@ -197,31 +199,38 @@ Progress:
 - Save/restore cursor via ESC 7/8 and CSI s/u, plus DECSET ?1048.
 - Newline now scrolls within the active scroll region when the cursor hits its bottom edge.
 - OSC 52 clipboard payloads decode into a pending clipboard buffer for the UI.
-- OSC 8 hyperlinks are parsed and stored as active/inactive state (no rendering yet).
+- OSC 8 hyperlinks are parsed and rendered with link color + underline.
 - Fixed autowrap with wrap-next semantics to avoid duplicate lines in full-screen apps (btop/lazygit).
+- Application cursor keys (DECCKM via `CSI ?1 h/l`) implemented.
+- DSR/DA replies added for cursor position queries (Codex compatibility).
+- Default color queries (OSC 10/11) are answered; sets are applied to session defaults.
 
 Decision:
 - Track an alternate grid and per-screen cursor/scroll region state; swap on DECSET/DECRST.
 - Treat alt screen as no-scrollback and clear on ?1047/?1049 per xterm/VTE behavior.
 - Keep save/restore cursor per screen, including attributes.
 - Decode OSC 52 payloads (base64) with size caps and defer clipboard integration to the UI layer.
-- Track OSC 8 hyperlink state without rendering until cell attributes support links.
+- Track OSC 8 hyperlink state and map it to underline + link color during render.
 
 Why:
 - Matches common terminal behavior without forcing a full screen model rewrite.
 - Keeps scrollback semantics clean and prevents history pollution while in alt screen.
 - Aligns cursor save/restore with recorded reference behavior (ESC 7/8 + ?1049 flows).
 - Avoids emitting OSC 52 text while keeping clipboard ownership in the UI.
-- Keeps hyperlink parsing in place for later rendering without blocking VT progress.
+- Allows hyperlink rendering without blocking VT progress.
 
 Research notes:
 - Alacritty saved-cursor fixtures exercise ESC 7/8 and ?1049 enter/exit behavior.
 - VTE scrolling-region notes show cursor movement/scrolling within margins.
 
+Known gaps:
+- Dynamic colors/palette (OSC 4/104, 10–19/110–119) are incomplete; Codex input bg still missing.
+- Underline color (SGR 58/59), DECSCUSR cursor style, keypad mode, and XTGETTCAP are not implemented.
+
 ### Layer 9: Performance + Polish
 
 Progress:
-- Snapshot + flat grid in place; still full redraw each frame.
+- Snapshot + flat grid in place with dirty rows and render-texture caching (no full redraw per frame in steady state).
 - Added per-row dirty tracking in the grid with bounding damage ranges.
 - Terminal rendering now caches the grid into a render texture and only re-renders dirty rows.
 - Terminal glyph atlas now reuses a staging buffer and supports compaction when full.

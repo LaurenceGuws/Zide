@@ -1,6 +1,6 @@
 # Terminal Text Rendering Research (Nerd Font Icons)
 
-Date: 2026-01-15
+Date: 2026-01-19
 
 ## What we tried (and why it failed)
 
@@ -51,3 +51,11 @@ Relevant locations:
   - Use a known Nerd font fallback for PUA glyphs (Symbols Nerd Font Mono).
   - Apply an overflow policy (allow overflow or scale-to-fit) based on glyph aspect ratio and context.
 - Kitty/WezTerm both change glyph rendering size for overflow control; Alacritty does not.
+
+## Current Zide state (implemented)
+
+- Integer pixel snapping for grid + glyph positions.
+- Point-filtered terminal glyph atlas.
+- Overflow policy similar to wezterm (allow overflow when followed by space).
+- Linux font fallback via fontconfig; PUA/symbol glyphs allow overflow to preserve icon size.
+- Box drawing fast path is active; glyph atlas compaction implemented.
