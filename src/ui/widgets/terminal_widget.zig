@@ -679,6 +679,7 @@ pub const TerminalWidget = struct {
         const cell_h: f32 = r.terminal_cell_height;
 
         for (self.kitty_placements_view.items) |placement| {
+            if (placement.is_virtual) continue;
             if (above_text) {
                 if (placement.z < 0) continue;
             } else {

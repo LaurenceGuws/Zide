@@ -164,7 +164,8 @@ terminal_protocol_todo:
         - "Anchored placements to scrollback rows; full-screen scroll keeps images pinned and off-screen placements are dropped."
         - "Rendering order updated: backgrounds → images (z<0) → glyphs → images (z>=0) → selection/cursor."
         - "Delete actions implemented (d= a/A/i/I/n/N/c/C/p/P/z/Z/r/R/x/X/y/Y) with placement_id filtering."
-        - "Basic OK/ERR responses emitted for kitty commands (q=0/1); query action (a=q) acknowledged; parent/virtual placements currently rejected."
+        - "Basic OK/ERR responses emitted for kitty commands (q=0/1); query action (a=q) acknowledged."
+        - "Parented placements supported with parent lookup + offsets; virtual placements stored but not rendered."
       plan:
         - step: "P1: Command surface + validation (parser)"
           details:
