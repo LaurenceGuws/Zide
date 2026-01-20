@@ -229,6 +229,7 @@ pub const TerminalSession = struct {
     kitty_partials: std.AutoHashMap(u32, KittyPartial),
     kitty_next_id: u32,
     kitty_generation: u64,
+    kitty_total_bytes: usize,
     base_default_attrs: types.CellAttrs,
     palette_default: [256]types.Color,
     palette_current: [256]types.Color,
@@ -290,6 +291,7 @@ pub const TerminalSession = struct {
             .kitty_partials = std.AutoHashMap(u32, KittyPartial).init(allocator),
             .kitty_next_id = 1,
             .kitty_generation = 0,
+            .kitty_total_bytes = 0,
             .base_default_attrs = default_attrs,
             .palette_default = palette_default,
             .palette_current = palette_default,
@@ -1847,6 +1849,56 @@ pub const TerminalSession = struct {
         return out;
     }
 
+    fn kittyImageHasPlacement(self: *TerminalSession, image_id: u32) bool {
+        for (self.kitty_placements.items) |placement| {
+            if (placement.image_id == image_id) return true;
+        }
+        return false;
+    }
+
+    fn ensureKittyCapacity(self: *TerminalSession, additional: usize) bool {
+        if (additional == 0) return true;
+        while (self.kitty_total_bytes + additional > kitty_max_bytes) {
+            if (!self.evictKittyImage(true)) {
+                if (!self.evictKittyImage(false)) return false;
+            }
+        }
+        return true;
+    }
+
+    fn evictKittyImage(self: *TerminalSession, prefer_unplaced: bool) bool {
+        if (self.kitty_images.items.len == 0) return false;
+        var best_idx: ?usize = null;
+        var best_version: u64 = std.math.maxInt(u64);
+        for (self.kitty_images.items, 0..) |image, idx| {
+            if (prefer_unplaced and self.kittyImageHasPlacement(image.id)) continue;
+            if (image.version < best_version) {
+                best_version = image.version;
+                best_idx = idx;
+            }
+        }
+        if (best_idx == null) return false;
+        const image = self.kitty_images.items[best_idx.?];
+        self.allocator.free(image.data);
+        self.kitty_total_bytes -= image.data.len;
+        _ = self.kitty_images.swapRemove(best_idx.?);
+        var p: usize = 0;
+        while (p < self.kitty_placements.items.len) {
+            if (self.kitty_placements.items[p].image_id == image.id) {
+                _ = self.kitty_placements.swapRemove(p);
+            } else {
+                p += 1;
+            }
+        }
+        if (self.kitty_partials.getEntry(image.id)) |entry| {
+            entry.value_ptr.data.deinit(self.allocator);
+            _ = self.kitty_partials.remove(image.id);
+        }
+        self.kitty_generation += 1;
+        self.activeScreen().grid.markDirtyAll();
+        return true;
+    }
+
     fn storeKittyImage(self: *TerminalSession, image: KittyImage) void {
         const log = app_logger.logger("terminal.kitty");
         self.kitty_generation += 1;
@@ -1854,9 +1906,21 @@ pub const TerminalSession = struct {
         var idx: usize = 0;
         while (idx < self.kitty_images.items.len) : (idx += 1) {
             if (self.kitty_images.items[idx].id == image.id) {
+                const old_len = self.kitty_images.items[idx].data.len;
+                if (image.data.len > kitty_max_bytes) {
+                    self.allocator.free(image.data);
+                    return;
+                }
+                const extra = if (image.data.len > old_len) image.data.len - old_len else 0;
+                if (!self.ensureKittyCapacity(extra)) {
+                    self.allocator.free(image.data);
+                    return;
+                }
                 self.allocator.free(self.kitty_images.items[idx].data);
+                self.kitty_total_bytes -= old_len;
                 self.kitty_images.items[idx] = image;
                 self.kitty_images.items[idx].version = version;
+                self.kitty_total_bytes += image.data.len;
                 self.activeScreen().grid.markDirtyAll();
                 if (log.enabled_file or log.enabled_console) {
                     log.logf("kitty image updated id={d} format={s} bytes={d}", .{ image.id, @tagName(image.format), image.data.len });
@@ -1864,9 +1928,18 @@ pub const TerminalSession = struct {
                 return;
             }
         }
+        if (image.data.len > kitty_max_bytes) {
+            self.allocator.free(image.data);
+            return;
+        }
+        if (!self.ensureKittyCapacity(image.data.len)) {
+            self.allocator.free(image.data);
+            return;
+        }
         var stored = image;
         stored.version = version;
         _ = self.kitty_images.append(self.allocator, stored) catch {};
+        self.kitty_total_bytes += stored.data.len;
         self.activeScreen().grid.markDirtyAll();
         if (log.enabled_file or log.enabled_console) {
             log.logf("kitty image stored id={d} format={s} bytes={d}", .{ stored.id, @tagName(stored.format), stored.data.len });
@@ -1899,6 +1972,7 @@ pub const TerminalSession = struct {
             var i: usize = 0;
             while (i < self.kitty_images.items.len) {
                 if (self.kitty_images.items[i].id == id) {
+                    self.kitty_total_bytes -= self.kitty_images.items[i].data.len;
                     self.allocator.free(self.kitty_images.items[i].data);
                     _ = self.kitty_images.swapRemove(i);
                 } else {
@@ -1912,6 +1986,10 @@ pub const TerminalSession = struct {
                 } else {
                     p += 1;
                 }
+            }
+            if (self.kitty_partials.getEntry(id)) |entry| {
+                entry.value_ptr.data.deinit(self.allocator);
+                _ = self.kitty_partials.remove(id);
             }
         } else {
             self.clearKittyImages();
@@ -1930,6 +2008,7 @@ pub const TerminalSession = struct {
             entry.value_ptr.data.deinit(self.allocator);
         }
         self.kitty_partials.clearRetainingCapacity();
+        self.kitty_total_bytes = 0;
         self.kitty_generation += 1;
     }
 

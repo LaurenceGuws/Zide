@@ -160,6 +160,7 @@ terminal_protocol_todo:
         - "Rendered images as overlays using raylib textures; no replies/quiet modes yet."
         - "Parsed full key set (incl. q/I/p/x/y/w/h/X/Y/S/O/P/Q/H/V/U) with basic validation (id vs number, direct-medium only, no compression)."
         - "Chunk assembly now honors S/O and zlib (o=z) for direct transfers; oversize payloads rejected."
+        - "Tracked total kitty image bytes and evicted oldest images (preferring unplaced) when exceeding limit."
       plan:
         - step: "P1: Command surface + validation (parser)"
           details:
