@@ -3812,6 +3812,17 @@ pub const TerminalSession = struct {
         return self.osc_clipboard.items;
     }
 
+    pub fn hyperlinkUri(self: *const TerminalSession, link_id: u32) ?[]const u8 {
+        if (link_id == 0) return null;
+        const idx = link_id - 1;
+        if (idx >= self.hyperlink_table.items.len) return null;
+        return self.hyperlink_table.items[idx].uri;
+    }
+
+    pub fn currentCwd(self: *const TerminalSession) []const u8 {
+        return self.cwd;
+    }
+
     pub fn clearDirty(self: *TerminalSession) void {
         self.activeScreen().grid.clearDirty();
     }
