@@ -1352,12 +1352,14 @@ pub const TerminalSession = struct {
         }
         if (control.action == 'd') {
             self.deleteKittyByAction(control);
+            self.writeKittyResponse(control, resolveKittyImageId(control) orelse 0);
             return;
         }
 
         if (control.action == 'p') {
             const image_id = resolveKittyImageId(control) orelse return;
             self.placeKittyImage(image_id, control);
+            self.writeKittyResponse(control, image_id);
             return;
         }
 
@@ -1387,6 +1389,7 @@ pub const TerminalSession = struct {
         if (control.action == 'T') {
             self.placeKittyImage(image_id, control);
         }
+        self.writeKittyResponse(control, image_id);
     }
 
     fn parseKittyControl(
@@ -1590,8 +1593,14 @@ pub const TerminalSession = struct {
             if (control.compression != 0 and control.compression != 'z') return false;
         }
 
-        if (control.action == 'p') {
+        if (control.action == 'p' or control.action == 'T') {
             if (control.image_id == null and control.image_number == null) return false;
+            if (control.virtual != 0 and (control.parent_id != null or control.child_id != null or control.parent_x != 0 or control.parent_y != 0)) {
+                return false;
+            }
+            if (control.virtual == 0 and (control.parent_id != null or control.child_id != null or control.parent_x != 0 or control.parent_y != 0)) {
+                return false;
+            }
         }
 
         return true;
@@ -2332,6 +2341,34 @@ pub const TerminalSession = struct {
         const end_row: u16 = placement.row + height - 1;
         const end_col: u16 = placement.col + width - 1;
         return row >= placement.row and row <= end_row and col >= placement.col and col <= end_col;
+    }
+
+    fn writeKittyResponse(self: *TerminalSession, control: KittyControl, image_id: u32) void {
+        if (control.quiet != 0) return;
+        if (self.pty == null) return;
+        var seq = std.ArrayList(u8).empty;
+        defer seq.deinit(self.allocator);
+        _ = seq.appendSlice(self.allocator, "\x1b_G") catch return;
+        var needs_comma = false;
+        if (image_id != 0) {
+            _ = seq.writer(self.allocator).print("i={d}", .{image_id}) catch return;
+            needs_comma = true;
+        }
+        if (control.image_number) |num| {
+            if (needs_comma) _ = seq.append(self.allocator, ',') catch return;
+            _ = seq.writer(self.allocator).print("I={d}", .{num}) catch return;
+            needs_comma = true;
+        }
+        if (control.placement_id) |pid| {
+            if (needs_comma) _ = seq.append(self.allocator, ',') catch return;
+            _ = seq.writer(self.allocator).print("p={d}", .{pid}) catch return;
+        }
+        _ = seq.append(self.allocator, ';') catch return;
+        _ = seq.appendSlice(self.allocator, "OK") catch return;
+        _ = seq.appendSlice(self.allocator, "\x1b\\") catch return;
+        if (self.pty) |*pty| {
+            _ = pty.write(seq.items) catch {};
+        }
     }
 
     fn clearKittyImages(self: *TerminalSession) void {
