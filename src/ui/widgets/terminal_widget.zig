@@ -75,7 +75,7 @@ pub const TerminalWidget = struct {
         self.last_scroll_offset = scroll_offset;
         const end_line = total_lines - scroll_offset;
         const start_line = if (end_line > rows) end_line - rows else 0;
-        const draw_cursor = scroll_offset == 0;
+        const draw_cursor = scroll_offset == 0 and snapshot.cursor_visible;
         const cursor = if (draw_cursor) snapshot.cursor else CursorPos{ .row = rows + 1, .col = cols + 1 };
         const cursor_style = snapshot.cursor_style;
         const selection = self.session.selectionState();
@@ -832,7 +832,14 @@ pub const TerminalWidget = struct {
         if (alt) mod |= terminal_mod.VTERM_MOD_ALT;
         if (ctrl) mod |= terminal_mod.VTERM_MOD_CTRL;
 
-        const wheel = r.getMouseWheelMove();
+        const wheel_delta = if (in_terminal) r.getMouseWheelMove() else 0;
+        var wheel_steps: i32 = 0;
+        if (wheel_delta != 0) {
+            const abs_delta = @abs(wheel_delta);
+            const rounded: i32 = @intFromFloat(@round(abs_delta));
+            wheel_steps = if (rounded > 0) rounded else 1;
+            if (wheel_delta < 0) wheel_steps = -wheel_steps;
+        }
         const mouse_reporting = allow_input and in_terminal and self.session.mouseReportingEnabled();
 
         if (self.session.takeOscClipboard()) |clip| {
@@ -861,10 +868,14 @@ pub const TerminalWidget = struct {
             row = @min(row, rows - 1);
             col = @min(col, cols - 1);
 
-            if (wheel != 0) {
-                const button: terminal_mod.MouseButton = if (wheel > 0) .wheel_up else .wheel_down;
-                if (try self.session.reportMouseEvent(.{ .kind = .wheel, .button = button, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
-                    handled = true;
+            if (wheel_steps != 0) {
+                var remaining = wheel_steps;
+                while (remaining != 0) {
+                    const button: terminal_mod.MouseButton = if (remaining > 0) .wheel_up else .wheel_down;
+                    if (try self.session.reportMouseEvent(.{ .kind = .wheel, .button = button, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
+                        handled = true;
+                    }
+                    remaining += if (remaining > 0) -1 else 1;
                 }
             }
 
@@ -1367,8 +1378,8 @@ pub const TerminalWidget = struct {
                         handled = true;
                     }
                 }
-                if (wheel != 0) {
-                    const delta: isize = if (wheel > 0) 3 else -3;
+                if (wheel_steps != 0) {
+                    const delta: isize = @intCast(wheel_steps * 3);
                     self.session.scrollBy(delta);
                     handled = true;
                 }
