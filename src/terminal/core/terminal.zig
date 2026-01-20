@@ -126,6 +126,7 @@ const KittyBuildError = error{
 };
 
 const kitty_max_bytes: usize = 320 * 1024 * 1024;
+const kitty_parent_max_depth: u8 = 10;
 
 fn buildDefaultPalette() [256]types.Color {
     var palette: [256]types.Color = undefined;
@@ -1380,7 +1381,61 @@ pub const TerminalSession = struct {
         }
 
         if (control.action == 'q') {
-            self.writeKittyResponse(control, resolveKittyImageId(control) orelse 0, true, "OK");
+            const image_id = resolveKittyImageId(control) orelse {
+                self.writeKittyResponse(control, 0, false, "EINVAL");
+                return;
+            };
+            if (control.more or control.offset != 0) {
+                self.writeKittyResponse(control, image_id, false, "EINVAL");
+                return;
+            }
+            const decoded = self.decodeBase64(data) orelse {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf("kitty decode failed len={d}", .{data.len});
+                }
+                self.writeKittyResponse(control, image_id, false, "EINVAL");
+                return;
+            };
+            var chunk = decoded;
+            if (control.compression == 'z') {
+                const inflated = self.inflateKittyData(chunk, control.size) orelse {
+                    self.allocator.free(chunk);
+                    self.writeKittyResponse(control, image_id, false, "EINVAL");
+                    return;
+                };
+                self.allocator.free(chunk);
+                chunk = inflated;
+            } else if (control.compression != 0) {
+                self.allocator.free(chunk);
+                self.writeKittyResponse(control, image_id, false, "EINVAL");
+                return;
+            }
+            if (kittyExpectedDataBytes(control)) |expected| {
+                if (chunk.len < expected) {
+                    var message = std.ArrayList(u8).empty;
+                    defer message.deinit(self.allocator);
+                    _ = message.writer(self.allocator).print(
+                        "ENODATA:Insufficient image data: {d} < {d}",
+                        .{ chunk.len, expected },
+                    ) catch {
+                        self.allocator.free(chunk);
+                        return;
+                    };
+                    self.allocator.free(chunk);
+                    self.writeKittyResponse(control, image_id, false, message.items);
+                    return;
+                }
+            }
+            const image = self.buildKittyImage(image_id, control, chunk) catch |err| {
+                const message = switch (err) {
+                    error.BadPng => "EBADPNG",
+                    else => "EINVAL",
+                };
+                self.writeKittyResponse(control, image_id, false, message);
+                return;
+            };
+            self.allocator.free(image.data);
+            self.writeKittyResponse(control, image_id, true, "OK");
             return;
         }
         if (control.action != 't' and control.action != 'T') return;
@@ -2166,9 +2221,17 @@ pub const TerminalSession = struct {
         if (control.parent_id != null or control.child_id != null) {
             const parent_id = control.parent_id orelse return "ENOPARENT";
             const parent_pid = control.child_id orelse return "ENOPARENT";
+            const placement_id = control.placement_id orelse 0;
+            if (placement_id != 0 and parent_id == image_id and parent_pid == placement_id) return "EINVAL";
             parent_image_id = parent_id;
             parent_placement_id = parent_pid;
             const parent = self.findKittyPlacement(parent_id, parent_pid) orelse return "ENOPARENT";
+            if (placement_id != 0) {
+                const chain_check = self.kittyValidateParentChain(parent, image_id, placement_id);
+                if (chain_check) |err_msg| return err_msg;
+            } else {
+                if (self.kittyParentChainTooDeep(parent)) return "ETOODEEP";
+            }
             const offset_x: i32 = control.parent_x;
             const offset_y: i32 = control.parent_y;
             const parent_row: i32 = @intCast(parent.row);
@@ -2217,6 +2280,33 @@ pub const TerminalSession = struct {
             screen.wrap_next = false;
         }
         return null;
+    }
+
+    fn kittyValidateParentChain(self: *TerminalSession, parent: KittyPlacement, image_id: u32, placement_id: u32) ?[]const u8 {
+        var current = parent;
+        var depth: u8 = 1;
+        while (true) {
+            if (depth > kitty_parent_max_depth) return "ETOODEEP";
+            if (current.parent_image_id == 0 or current.parent_placement_id == 0) break;
+            if (current.parent_image_id == image_id and current.parent_placement_id == placement_id) return "ECYCLE";
+            const next = self.findKittyPlacement(current.parent_image_id, current.parent_placement_id) orelse break;
+            current = next;
+            depth += 1;
+        }
+        return null;
+    }
+
+    fn kittyParentChainTooDeep(self: *TerminalSession, parent: KittyPlacement) bool {
+        var current = parent;
+        var depth: u8 = 1;
+        while (true) {
+            if (depth > kitty_parent_max_depth) return true;
+            if (current.parent_image_id == 0 or current.parent_placement_id == 0) break;
+            const next = self.findKittyPlacement(current.parent_image_id, current.parent_placement_id) orelse break;
+            current = next;
+            depth += 1;
+        }
+        return false;
     }
 
     fn findKittyPlacement(self: *TerminalSession, image_id: u32, placement_id: u32) ?KittyPlacement {
