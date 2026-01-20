@@ -7,6 +7,7 @@ const parser_mod = @import("../parser/parser.zig");
 const screen_mod = @import("../model/screen.zig");
 const types = @import("../model/types.zig");
 const app_logger = @import("../../app_logger.zig");
+const flate = std.compress.flate;
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
 const clampColorIndex = types.clampColorIndex;
@@ -61,25 +62,55 @@ pub const KittyPlacement = struct {
     z: i32,
 };
 
+const KittyKV = struct {
+    key: u8,
+    value: u32,
+};
+
 const KittyPartial = struct {
     id: u32,
     width: u32,
     height: u32,
     format: KittyImageFormat,
     data: std.ArrayList(u8),
+    expected_size: u32,
+    received: u32,
+    compression: u8,
+    quiet: u8,
+    size_initialized: bool,
 };
 
 const KittyControl = struct {
     action: u8 = 't',
+    quiet: u8 = 0,
+    delete_action: u8 = 'a',
     format: u32 = 0,
+    medium: u8 = 'd',
+    compression: u8 = 0,
     width: u32 = 0,
     height: u32 = 0,
+    size: u32 = 0,
+    offset: u32 = 0,
     image_id: ?u32 = null,
+    image_number: ?u32 = null,
+    placement_id: ?u32 = null,
     cols: u32 = 0,
     rows: u32 = 0,
+    x: u32 = 0,
+    y: u32 = 0,
+    x_offset: u32 = 0,
+    y_offset: u32 = 0,
     z: i32 = 0,
+    cursor_movement: u8 = 0,
+    virtual: u32 = 0,
+    parent_id: ?u32 = null,
+    child_id: ?u32 = null,
+    parent_x: i32 = 0,
+    parent_y: i32 = 0,
     more: bool = false,
 };
+
+const kitty_max_bytes: usize = 320 * 1024 * 1024;
 
 fn buildDefaultPalette() [256]types.Color {
     var palette: [256]types.Color = undefined;
@@ -1304,21 +1335,30 @@ pub const TerminalSession = struct {
     fn parseKittyGraphics(self: *TerminalSession, payload: []const u8) void {
         const log = app_logger.logger("terminal.kitty");
         var control = KittyControl{};
-        const data = parseKittyControl(payload, &control);
+        var raw_kv = std.ArrayList(KittyKV).empty;
+        defer raw_kv.deinit(self.allocator);
+        const data = parseKittyControl(self.allocator, payload, &control, &raw_kv);
+        if (!validateKittyControl(control)) {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf("kitty invalid command a={c} data_len={d}", .{ control.action, data.len });
+            }
+            return;
+        }
         if (control.action == 'd') {
-            self.deleteKittyImages(control.image_id);
+            const image_id = resolveKittyImageId(control);
+            self.deleteKittyImages(image_id);
             return;
         }
 
         if (control.action == 'p') {
-            const image_id = control.image_id orelse return;
+            const image_id = resolveKittyImageId(control) orelse return;
             self.placeKittyImage(image_id, control);
             return;
         }
 
         if (control.action != 't' and control.action != 'T') return;
 
-        const image_id = control.image_id orelse blk: {
+        const image_id = resolveKittyImageId(control) orelse blk: {
             const id = self.kitty_next_id;
             self.kitty_next_id += 1;
             break :blk id;
@@ -1344,7 +1384,12 @@ pub const TerminalSession = struct {
         }
     }
 
-    fn parseKittyControl(payload: []const u8, control: *KittyControl) []const u8 {
+    fn parseKittyControl(
+        allocator: std.mem.Allocator,
+        payload: []const u8,
+        control: *KittyControl,
+        raw_kv: *std.ArrayList(KittyKV),
+    ) []const u8 {
         var i: usize = 0;
         while (i < payload.len) {
             if (payload[i] == ';') {
@@ -1366,18 +1411,132 @@ pub const TerminalSession = struct {
             const start_idx = i;
             while (i < payload.len and payload[i] != ',' and payload[i] != ';') : (i += 1) {}
             const value_slice = payload[start_idx..i];
-            if (parseKittyValue(value_slice)) |value| {
-                switch (key) {
-                    'a' => control.action = @intCast(value),
-                    'f' => control.format = value,
-                    's' => control.width = value,
-                    'v' => control.height = value,
-                    'i' => control.image_id = value,
-                    'c' => control.cols = value,
-                    'r' => control.rows = value,
-                    'z' => control.z = @intCast(value),
-                    'm' => control.more = value != 0,
-                    else => {},
+            const parsed_unsigned = parseKittyValue(value_slice);
+            const parsed_signed = parseKittySigned(value_slice);
+            if (parsed_unsigned != null or parsed_signed != null) {
+                const handled = switch (key) {
+                    'a' => blk: {
+                        if (parsed_unsigned) |value| control.action = @intCast(value);
+                        break :blk true;
+                    },
+                    'q' => blk: {
+                        if (parsed_unsigned) |value| control.quiet = @intCast(value);
+                        break :blk true;
+                    },
+                    'd' => blk: {
+                        if (parsed_unsigned) |value| control.delete_action = @intCast(value);
+                        break :blk true;
+                    },
+                    'f' => blk: {
+                        if (parsed_unsigned) |value| control.format = value;
+                        break :blk true;
+                    },
+                    't' => blk: {
+                        if (parsed_unsigned) |value| control.medium = @intCast(value);
+                        break :blk true;
+                    },
+                    'o' => blk: {
+                        if (parsed_unsigned) |value| control.compression = @intCast(value);
+                        break :blk true;
+                    },
+                    's' => blk: {
+                        if (parsed_unsigned) |value| control.width = value;
+                        break :blk true;
+                    },
+                    'v' => blk: {
+                        if (parsed_unsigned) |value| control.height = value;
+                        break :blk true;
+                    },
+                    'S' => blk: {
+                        if (parsed_unsigned) |value| control.size = value;
+                        break :blk true;
+                    },
+                    'O' => blk: {
+                        if (parsed_unsigned) |value| control.offset = value;
+                        break :blk true;
+                    },
+                    'i' => blk: {
+                        if (parsed_unsigned) |value| control.image_id = value;
+                        break :blk true;
+                    },
+                    'I' => blk: {
+                        if (parsed_unsigned) |value| control.image_number = value;
+                        break :blk true;
+                    },
+                    'p' => blk: {
+                        if (parsed_unsigned) |value| control.placement_id = value;
+                        break :blk true;
+                    },
+                    'c' => blk: {
+                        if (parsed_unsigned) |value| control.cols = value;
+                        break :blk true;
+                    },
+                    'r' => blk: {
+                        if (parsed_unsigned) |value| control.rows = value;
+                        break :blk true;
+                    },
+                    'x' => blk: {
+                        if (parsed_unsigned) |value| control.x = value;
+                        break :blk true;
+                    },
+                    'y' => blk: {
+                        if (parsed_unsigned) |value| control.y = value;
+                        break :blk true;
+                    },
+                    'w' => blk: {
+                        if (parsed_unsigned) |value| control.width = value;
+                        break :blk true;
+                    },
+                    'h' => blk: {
+                        if (parsed_unsigned) |value| control.height = value;
+                        break :blk true;
+                    },
+                    'X' => blk: {
+                        if (parsed_unsigned) |value| control.x_offset = value;
+                        break :blk true;
+                    },
+                    'Y' => blk: {
+                        if (parsed_unsigned) |value| control.y_offset = value;
+                        break :blk true;
+                    },
+                    'z' => blk: {
+                        if (parsed_signed) |value| control.z = value;
+                        break :blk true;
+                    },
+                    'C' => blk: {
+                        if (parsed_unsigned) |value| control.cursor_movement = @intCast(value);
+                        break :blk true;
+                    },
+                    'U' => blk: {
+                        if (parsed_unsigned) |value| control.virtual = value;
+                        break :blk true;
+                    },
+                    'P' => blk: {
+                        if (parsed_unsigned) |value| control.parent_id = value;
+                        break :blk true;
+                    },
+                    'Q' => blk: {
+                        if (parsed_unsigned) |value| control.child_id = value;
+                        break :blk true;
+                    },
+                    'H' => blk: {
+                        if (parsed_signed) |value| control.parent_x = value;
+                        break :blk true;
+                    },
+                    'V' => blk: {
+                        if (parsed_signed) |value| control.parent_y = value;
+                        break :blk true;
+                    },
+                    'm' => blk: {
+                        if (parsed_unsigned) |value| control.more = value != 0;
+                        break :blk true;
+                    },
+                    else => false,
+                };
+                if (!handled) {
+                    if (parsed_unsigned) |value| {
+                        _ = raw_kv.append(allocator, .{ .key = key, .value = value }) catch {};
+                    }
                 }
             }
             if (i < payload.len and payload[i] == ',') {
@@ -1400,6 +1559,39 @@ pub const TerminalSession = struct {
         return std.fmt.parseUnsigned(u32, text, 10) catch null;
     }
 
+    fn parseKittySigned(text: []const u8) ?i32 {
+        if (text.len == 0) return null;
+        return std.fmt.parseInt(i32, text, 10) catch null;
+    }
+
+    fn resolveKittyImageId(control: KittyControl) ?u32 {
+        if (control.image_id) |id| return id;
+        if (control.image_number) |id| return id;
+        return null;
+    }
+
+    fn validateKittyControl(control: KittyControl) bool {
+        switch (control.action) {
+            't', 'T', 'p', 'd' => {},
+            else => return false,
+        }
+
+        if (control.quiet > 2) return false;
+        if (control.image_id != null and control.image_number != null) return false;
+
+        if (control.action == 't' or control.action == 'T') {
+            if (control.format != 0 and kittyFormatFor(control.format) == null) return false;
+            if (control.medium != 'd') return false;
+            if (control.compression != 0 and control.compression != 'z') return false;
+        }
+
+        if (control.action == 'p') {
+            if (control.image_id == null and control.image_number == null) return false;
+        }
+
+        return true;
+    }
+
     fn decodeBase64(self: *TerminalSession, data: []const u8) ?[]u8 {
         if (data.len == 0) {
             return self.allocator.alloc(u8, 0) catch return null;
@@ -1413,11 +1605,30 @@ pub const TerminalSession = struct {
     }
 
     fn accumulateKittyData(self: *TerminalSession, image_id: u32, control: *KittyControl, decoded: []u8) ?[]u8 {
+        var chunk = decoded;
+        var compression = control.compression;
+        if (compression == 0) {
+            if (self.kitty_partials.getEntry(image_id)) |entry| {
+                compression = entry.value_ptr.compression;
+            }
+        }
+        if (compression == 'z') {
+            const inflated = self.inflateKittyData(chunk, control.size) orelse {
+                self.allocator.free(chunk);
+                return null;
+            };
+            self.allocator.free(chunk);
+            chunk = inflated;
+        } else if (compression != 0) {
+            self.allocator.free(chunk);
+            return null;
+        }
+
         if (control.more) {
             const entry = self.kitty_partials.getOrPut(image_id) catch return null;
             if (!entry.found_existing) {
                 const format = kittyFormatFor(control.format) orelse {
-                    self.allocator.free(decoded);
+                    self.allocator.free(chunk);
                     return null;
                 };
                 entry.value_ptr.* = KittyPartial{
@@ -1426,19 +1637,40 @@ pub const TerminalSession = struct {
                     .height = control.height,
                     .format = format,
                     .data = .empty,
+                    .expected_size = control.size,
+                    .received = 0,
+                    .compression = compression,
+                    .quiet = control.quiet,
+                    .size_initialized = false,
                 };
             } else {
                 if (entry.value_ptr.width == 0) entry.value_ptr.width = control.width;
                 if (entry.value_ptr.height == 0) entry.value_ptr.height = control.height;
+                if (entry.value_ptr.expected_size == 0) entry.value_ptr.expected_size = control.size;
             }
-            _ = entry.value_ptr.data.appendSlice(self.allocator, decoded) catch {};
-            self.allocator.free(decoded);
+            if (!self.applyKittyChunk(entry.value_ptr, control, chunk)) {
+                self.allocator.free(chunk);
+                entry.value_ptr.data.deinit(self.allocator);
+                _ = self.kitty_partials.remove(image_id);
+                return null;
+            }
+            self.allocator.free(chunk);
             return null;
         }
 
         if (self.kitty_partials.getEntry(image_id)) |entry| {
-            _ = entry.value_ptr.data.appendSlice(self.allocator, decoded) catch {};
-            self.allocator.free(decoded);
+            if (!self.applyKittyChunk(entry.value_ptr, control, chunk)) {
+                self.allocator.free(chunk);
+                entry.value_ptr.data.deinit(self.allocator);
+                _ = self.kitty_partials.remove(image_id);
+                return null;
+            }
+            self.allocator.free(chunk);
+            if (entry.value_ptr.expected_size > 0 and entry.value_ptr.received != entry.value_ptr.expected_size) {
+                entry.value_ptr.data.deinit(self.allocator);
+                _ = self.kitty_partials.remove(image_id);
+                return null;
+            }
             const combined = entry.value_ptr.data.toOwnedSlice(self.allocator) catch return null;
             if (control.width == 0) control.width = entry.value_ptr.width;
             if (control.height == 0) control.height = entry.value_ptr.height;
@@ -1453,7 +1685,70 @@ pub const TerminalSession = struct {
             return combined;
         }
 
-        return decoded;
+        if (control.size > 0) {
+            if (control.size > kitty_max_bytes) {
+                self.allocator.free(chunk);
+                return null;
+            }
+            if (control.offset > 0) {
+                self.allocator.free(chunk);
+                return null;
+            }
+            if (chunk.len != control.size) {
+                self.allocator.free(chunk);
+                return null;
+            }
+        }
+        if (chunk.len > kitty_max_bytes) {
+            self.allocator.free(chunk);
+            return null;
+        }
+        return chunk;
+    }
+
+    fn applyKittyChunk(self: *TerminalSession, partial: *KittyPartial, control: *KittyControl, chunk: []const u8) bool {
+        const expected_size = if (partial.expected_size > 0) partial.expected_size else control.size;
+        if (expected_size > 0 and expected_size > kitty_max_bytes) return false;
+        if (expected_size > 0) {
+            if (!partial.size_initialized) {
+                partial.data.resize(self.allocator, expected_size) catch return false;
+                @memset(partial.data.items, 0);
+                partial.size_initialized = true;
+            }
+            const offset = control.offset;
+            if (offset > expected_size) return false;
+            const end = offset + @as(u32, @intCast(chunk.len));
+            if (end > expected_size) return false;
+            std.mem.copyForwards(u8, partial.data.items[offset..end], chunk);
+            partial.received = @max(partial.received, end);
+            return true;
+        }
+
+        if (control.offset > 0) return false;
+        if (partial.data.items.len + chunk.len > kitty_max_bytes) return false;
+        _ = partial.data.appendSlice(self.allocator, chunk) catch return false;
+        partial.received = @intCast(partial.data.items.len);
+        return true;
+    }
+
+    fn inflateKittyData(self: *TerminalSession, compressed: []const u8, expected_size: u32) ?[]u8 {
+        var stream = std.io.fixedBufferStream(compressed);
+        var reader_buf: [8192]u8 = undefined;
+        var adapter = stream.reader().adaptToNewApi(&reader_buf);
+        var window: [flate.max_window_len]u8 = undefined;
+        var decompressor = flate.Decompress.init(&adapter.new_interface, .zlib, &window);
+        var out = std.ArrayList(u8).empty;
+        defer out.deinit(self.allocator);
+        const limit: usize = if (expected_size > 0) @intCast(expected_size) else kitty_max_bytes;
+        var buf: [8192]u8 = undefined;
+        while (true) {
+            const n = decompressor.reader.readSliceShort(&buf) catch return null;
+            if (n == 0) break;
+            if (out.items.len + n > limit) return null;
+            _ = out.appendSlice(self.allocator, buf[0..n]) catch return null;
+        }
+        if (expected_size > 0 and out.items.len != expected_size) return null;
+        return out.toOwnedSlice(self.allocator) catch null;
     }
 
     fn kittyFormatFor(value: u32) ?KittyImageFormat {
