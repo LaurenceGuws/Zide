@@ -62,6 +62,11 @@ pub const KittyPlacement = struct {
     rows: u16,
     z: i32,
     anchor_row: u64,
+    is_virtual: bool,
+    parent_image_id: u32,
+    parent_placement_id: u32,
+    offset_x: i32,
+    offset_y: i32,
 };
 
 const KittyKV = struct {
@@ -1358,7 +1363,10 @@ pub const TerminalSession = struct {
 
         if (control.action == 'p') {
             const image_id = resolveKittyImageId(control) orelse return;
-            self.placeKittyImage(image_id, control);
+            if (!self.placeKittyImage(image_id, control)) {
+                self.writeKittyResponse(control, image_id, false, "ENOPARENT");
+                return;
+            }
             self.writeKittyResponse(control, image_id, true, "OK");
             return;
         }
@@ -1393,7 +1401,10 @@ pub const TerminalSession = struct {
         };
         self.storeKittyImage(image);
         if (control.action == 'T') {
-            self.placeKittyImage(image_id, control);
+            if (!self.placeKittyImage(image_id, control)) {
+                self.writeKittyResponse(control, image_id, false, "ENOPARENT");
+                return;
+            }
         }
         self.writeKittyResponse(control, image_id, true, "OK");
     }
@@ -1604,9 +1615,7 @@ pub const TerminalSession = struct {
             if (control.virtual != 0 and (control.parent_id != null or control.child_id != null or control.parent_x != 0 or control.parent_y != 0)) {
                 return false;
             }
-            if (control.virtual == 0 and (control.parent_id != null or control.child_id != null or control.parent_x != 0 or control.parent_y != 0)) {
-                return false;
-            }
+            if ((control.parent_id != null) != (control.child_id != null)) return false;
         }
 
         return true;
@@ -2059,12 +2068,33 @@ pub const TerminalSession = struct {
         }
     }
 
-    fn placeKittyImage(self: *TerminalSession, image_id: u32, control: KittyControl) void {
+    fn placeKittyImage(self: *TerminalSession, image_id: u32, control: KittyControl) bool {
         const log = app_logger.logger("terminal.kitty");
         const screen = self.activeScreen();
-        if (screen.grid.rows == 0 or screen.grid.cols == 0) return;
-        const row = @min(@as(u16, @intCast(screen.cursor.row)), screen.grid.rows - 1);
-        const col = @min(@as(u16, @intCast(screen.cursor.col)), screen.grid.cols - 1);
+        if (screen.grid.rows == 0 or screen.grid.cols == 0) return false;
+        const base_row = @min(@as(u16, @intCast(screen.cursor.row)), screen.grid.rows - 1);
+        const base_col = @min(@as(u16, @intCast(screen.cursor.col)), screen.grid.cols - 1);
+        var row = base_row;
+        var col = base_col;
+        var parent_image_id: u32 = 0;
+        var parent_placement_id: u32 = 0;
+        if (control.parent_id != null or control.child_id != null) {
+            const parent_id = control.parent_id orelse return false;
+            const parent_pid = control.child_id orelse return false;
+            parent_image_id = parent_id;
+            parent_placement_id = parent_pid;
+            const parent = self.findKittyPlacement(parent_id, parent_pid) orelse return false;
+            const offset_x: i32 = control.parent_x;
+            const offset_y: i32 = control.parent_y;
+            const parent_row: i32 = @intCast(parent.row);
+            const parent_col: i32 = @intCast(parent.col);
+            const new_row = parent_row + offset_y;
+            const new_col = parent_col + offset_x;
+            if (new_row < 0 or new_col < 0) return false;
+            row = @as(u16, @intCast(new_row));
+            col = @as(u16, @intCast(new_col));
+            if (row >= screen.grid.rows or col >= screen.grid.cols) return false;
+        }
         const visible_top = self.kittyVisibleTop();
         const placement = KittyPlacement{
             .image_id = image_id,
@@ -2075,6 +2105,11 @@ pub const TerminalSession = struct {
             .rows = @intCast(control.rows),
             .z = control.z,
             .anchor_row = visible_top + @as(u64, row),
+            .is_virtual = control.virtual != 0,
+            .parent_image_id = parent_image_id,
+            .parent_placement_id = parent_placement_id,
+            .offset_x = control.parent_x,
+            .offset_y = control.parent_y,
         };
         _ = self.kitty_placements.append(self.allocator, placement) catch {};
         self.activeScreen().grid.markDirtyAll();
@@ -2096,6 +2131,14 @@ pub const TerminalSession = struct {
             }
             screen.wrap_next = false;
         }
+        return true;
+    }
+
+    fn findKittyPlacement(self: *TerminalSession, image_id: u32, placement_id: u32) ?KittyPlacement {
+        for (self.kitty_placements.items) |placement| {
+            if (placement.image_id == image_id and placement.placement_id == placement_id) return placement;
+        }
+        return null;
     }
 
     fn effectiveKittyColumns(self: *TerminalSession, control: KittyControl, image_id: u32) u32 {
@@ -2135,7 +2178,7 @@ pub const TerminalSession = struct {
             }
             var p: usize = 0;
             while (p < self.kitty_placements.items.len) {
-                if (self.kitty_placements.items[p].image_id == id) {
+                if (self.kitty_placements.items[p].image_id == id or self.kitty_placements.items[p].parent_image_id == id) {
                     _ = self.kitty_placements.swapRemove(p);
                 } else {
                     p += 1;
