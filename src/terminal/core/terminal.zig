@@ -60,6 +60,7 @@ pub const KittyPlacement = struct {
     cols: u16,
     rows: u16,
     z: i32,
+    anchor_row: u64,
 };
 
 const KittyKV = struct {
@@ -230,6 +231,7 @@ pub const TerminalSession = struct {
     kitty_next_id: u32,
     kitty_generation: u64,
     kitty_total_bytes: usize,
+    kitty_scrollback_total: u64,
     base_default_attrs: types.CellAttrs,
     palette_default: [256]types.Color,
     palette_current: [256]types.Color,
@@ -292,6 +294,7 @@ pub const TerminalSession = struct {
             .kitty_next_id = 1,
             .kitty_generation = 0,
             .kitty_total_bytes = 0,
+            .kitty_scrollback_total = 0,
             .base_default_attrs = default_attrs,
             .palette_default = palette_default,
             .palette_current = palette_default,
@@ -1761,6 +1764,13 @@ pub const TerminalSession = struct {
         };
     }
 
+    fn findKittyImageById(images: []const KittyImage, image_id: u32) ?KittyImage {
+        for (images) |image| {
+            if (image.id == image_id) return image;
+        }
+        return null;
+    }
+
     fn buildKittyImage(self: *TerminalSession, image_id: u32, control: KittyControl, data: []u8) ?KittyImage {
         const format = kittyFormatFor(control.format) orelse return null;
         switch (format) {
@@ -1854,6 +1864,94 @@ pub const TerminalSession = struct {
             if (placement.image_id == image_id) return true;
         }
         return false;
+    }
+
+    fn kittyVisibleTop(self: *TerminalSession) u64 {
+        const count = self.history.scrollbackCount();
+        if (self.kitty_scrollback_total < count) return 0;
+        return self.kitty_scrollback_total - count;
+    }
+
+    fn updateKittyPlacementsForScroll(self: *TerminalSession) void {
+        if (self.kitty_placements.items.len == 0) return;
+        const screen = self.activeScreenConst();
+        const rows = @as(u64, screen.grid.rows);
+        const top = self.kittyVisibleTop();
+        const max_row = top + rows;
+        var changed = false;
+        var idx: usize = 0;
+        while (idx < self.kitty_placements.items.len) {
+            const placement = &self.kitty_placements.items[idx];
+            if (placement.anchor_row < top or placement.anchor_row >= max_row) {
+                _ = self.kitty_placements.swapRemove(idx);
+                changed = true;
+                continue;
+            }
+            const new_row: u64 = placement.anchor_row - top;
+            if (placement.row != @as(u16, @intCast(new_row))) {
+                placement.row = @as(u16, @intCast(new_row));
+                changed = true;
+            }
+            idx += 1;
+        }
+        if (changed) {
+            self.kitty_generation += 1;
+            self.activeScreen().grid.markDirtyAll();
+        }
+    }
+
+    fn shiftKittyPlacementsUp(self: *TerminalSession, top: usize, bottom: usize, count: usize) void {
+        if (count == 0 or self.kitty_placements.items.len == 0) return;
+        var changed = false;
+        var idx: usize = 0;
+        while (idx < self.kitty_placements.items.len) {
+            const placement = &self.kitty_placements.items[idx];
+            if (placement.row < top or placement.row > bottom) {
+                idx += 1;
+                continue;
+            }
+            if (placement.row < top + count) {
+                _ = self.kitty_placements.swapRemove(idx);
+                changed = true;
+                continue;
+            }
+            placement.row = @intCast(placement.row - count);
+            if (placement.anchor_row >= count) {
+                placement.anchor_row -= count;
+            }
+            changed = true;
+            idx += 1;
+        }
+        if (changed) {
+            self.kitty_generation += 1;
+            self.activeScreen().grid.markDirtyAll();
+        }
+    }
+
+    fn shiftKittyPlacementsDown(self: *TerminalSession, top: usize, bottom: usize, count: usize) void {
+        if (count == 0 or self.kitty_placements.items.len == 0) return;
+        var changed = false;
+        var idx: usize = 0;
+        while (idx < self.kitty_placements.items.len) {
+            const placement = &self.kitty_placements.items[idx];
+            if (placement.row < top or placement.row > bottom) {
+                idx += 1;
+                continue;
+            }
+            if (placement.row + count > bottom) {
+                _ = self.kitty_placements.swapRemove(idx);
+                changed = true;
+                continue;
+            }
+            placement.row = @intCast(placement.row + count);
+            placement.anchor_row += count;
+            changed = true;
+            idx += 1;
+        }
+        if (changed) {
+            self.kitty_generation += 1;
+            self.activeScreen().grid.markDirtyAll();
+        }
     }
 
     fn ensureKittyCapacity(self: *TerminalSession, additional: usize) bool {
@@ -1952,6 +2050,7 @@ pub const TerminalSession = struct {
         if (screen.grid.rows == 0 or screen.grid.cols == 0) return;
         const row = @min(@as(u16, @intCast(screen.cursor.row)), screen.grid.rows - 1);
         const col = @min(@as(u16, @intCast(screen.cursor.col)), screen.grid.cols - 1);
+        const visible_top = self.kittyVisibleTop();
         const placement = KittyPlacement{
             .image_id = image_id,
             .row = row,
@@ -1959,12 +2058,51 @@ pub const TerminalSession = struct {
             .cols = @intCast(control.cols),
             .rows = @intCast(control.rows),
             .z = control.z,
+            .anchor_row = visible_top + @as(u64, row),
         };
         _ = self.kitty_placements.append(self.allocator, placement) catch {};
         self.activeScreen().grid.markDirtyAll();
         if (log.enabled_file or log.enabled_console) {
             log.logf("kitty placed id={d} row={d} col={d} cols={d} rows={d}", .{ image_id, row, col, placement.cols, placement.rows });
         }
+
+        if (control.cursor_movement != 1) {
+            const cols = self.effectiveKittyColumns(control, image_id);
+            const rows = self.effectiveKittyRows(control, image_id);
+            if (rows > 0) {
+                var moved: u32 = 0;
+                while (moved < rows) : (moved += 1) {
+                    self.newline();
+                }
+                screen.cursor.col = @min(@as(usize, col) + cols, @as(usize, screen.grid.cols - 1));
+            } else if (cols > 0) {
+                screen.cursor.col = @min(@as(usize, col) + cols, @as(usize, screen.grid.cols - 1));
+            }
+            screen.wrap_next = false;
+        }
+    }
+
+    fn effectiveKittyColumns(self: *TerminalSession, control: KittyControl, image_id: u32) u32 {
+        if (control.cols > 0) return control.cols;
+        const cell_w = @as(u32, self.cell_width);
+        const width_px = if (control.width > 0) control.width else blk: {
+            const image = findKittyImageById(self.kitty_images.items, image_id) orelse break :blk 0;
+            break :blk image.width;
+        };
+        if (cell_w == 0 or width_px == 0) return 0;
+        return std.math.divCeil(u32, width_px, cell_w) catch 0;
+    }
+
+    fn effectiveKittyRows(self: *TerminalSession, control: KittyControl, image_id: u32) u32 {
+        if (control.rows > 0) return control.rows;
+        const cell_h = @as(u32, self.cell_height);
+        const height_px = if (control.height > 0) control.height else blk: {
+            const image = findKittyImageById(self.kitty_images.items, image_id) orelse break :blk 0;
+            break :blk image.height;
+        };
+        if (cell_h == 0 or height_px == 0) return 0;
+        if (height_px <= cell_h) return 0;
+        return std.math.divCeil(u32, height_px, cell_h) catch 0;
     }
 
     fn deleteKittyImages(self: *TerminalSession, image_id: ?u32) void {
@@ -2477,6 +2615,7 @@ pub const TerminalSession = struct {
         if (row >= @as(usize, screen.grid.rows)) return;
         const row_start = row * cols;
         self.history.pushRow(screen.grid.cells.items[row_start .. row_start + cols]);
+        self.kitty_scrollback_total += 1;
         const log = app_logger.logger("terminal.core");
         log.logf("scrollback push row={d} total={d}", .{ row, self.history.scrollbackCount() });
         log.logStdout("scrollback push total={d}", .{self.history.scrollbackCount()});
@@ -2499,6 +2638,7 @@ pub const TerminalSession = struct {
             while (row < n) : (row += 1) {
                 self.pushScrollbackRow(screen.scroll_top + row);
             }
+            self.updateKittyPlacementsForScroll();
         }
         const move_len = region_end - region_start - n * cols;
         if (move_len > 0) {
@@ -2506,6 +2646,9 @@ pub const TerminalSession = struct {
         }
         for (screen.grid.cells.items[region_end - n * cols .. region_end]) |*cell| cell.* = blank_cell;
         screen.grid.markDirtyRange(screen.scroll_top, screen.scroll_bottom, 0, cols - 1);
+        if (!self.isFullScrollRegion()) {
+            self.shiftKittyPlacementsUp(screen.scroll_top, screen.scroll_bottom, n);
+        }
     }
 
     fn scrollRegionDown(self: *TerminalSession, count: usize) void {
@@ -2523,6 +2666,7 @@ pub const TerminalSession = struct {
         }
         for (screen.grid.cells.items[region_start .. region_start + n * cols]) |*cell| cell.* = blank_cell;
         screen.grid.markDirtyRange(screen.scroll_top, screen.scroll_bottom, 0, cols - 1);
+        self.shiftKittyPlacementsDown(screen.scroll_top, screen.scroll_bottom, n);
     }
 
     fn applySgr(self: *TerminalSession, action: csi_mod.CsiAction) void {
@@ -2870,6 +3014,7 @@ pub const TerminalSession = struct {
 
         if (self.isFullScrollRegion()) {
             self.pushScrollbackRow(0);
+            self.updateKittyPlacementsForScroll();
         }
         const total = rows * cols;
         const row_bytes = cols * @sizeOf(Cell);
@@ -2884,6 +3029,9 @@ pub const TerminalSession = struct {
         screen.cursor.row = rows - 1;
         screen.cursor.col = 0;
         screen.grid.markDirtyAll();
+        if (!self.isFullScrollRegion()) {
+            self.shiftKittyPlacementsUp(0, rows - 1, 1);
+        }
     }
 
     pub fn getCell(self: *TerminalSession, row: usize, col: usize) Cell {
