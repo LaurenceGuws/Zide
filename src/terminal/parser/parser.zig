@@ -10,6 +10,8 @@ pub const Parser = struct {
     osc_state: OscState,
     osc_terminator: OscTerminator,
     osc_buffer: std.ArrayList(u8),
+    apc_state: ApcState,
+    apc_buffer: std.ArrayList(u8),
     dcs_state: DcsState,
     dcs_buffer: std.ArrayList(u8),
     g0_charset: Charset,
@@ -26,6 +28,8 @@ pub const Parser = struct {
             .osc_state = .idle,
             .osc_terminator = .st,
             .osc_buffer = .empty,
+            .apc_state = .idle,
+            .apc_buffer = .empty,
             .dcs_state = .idle,
             .dcs_buffer = .empty,
             .g0_charset = .ascii,
@@ -37,6 +41,7 @@ pub const Parser = struct {
 
     pub fn deinit(self: *Parser) void {
         self.osc_buffer.deinit(self.allocator);
+        self.apc_buffer.deinit(self.allocator);
         self.dcs_buffer.deinit(self.allocator);
     }
 
@@ -46,18 +51,24 @@ pub const Parser = struct {
         self.esc_state = .ground;
         self.osc_state = .idle;
         self.osc_terminator = .st;
+        self.apc_state = .idle;
         self.dcs_state = .idle;
         self.g0_charset = .ascii;
         self.g1_charset = .ascii;
         self.gl_charset = .ascii;
         self.charset_target = .g0;
         self.osc_buffer.clearRetainingCapacity();
+        self.apc_buffer.clearRetainingCapacity();
         self.dcs_buffer.clearRetainingCapacity();
     }
 
     pub fn handleByte(self: *Parser, session: anytype, byte: u8) void {
         if (self.osc_state != .idle) {
             self.handleOscByte(session, byte);
+            return;
+        }
+        if (self.apc_state != .idle) {
+            self.handleApcByte(session, byte);
             return;
         }
         if (self.dcs_state != .idle) {
@@ -94,6 +105,11 @@ pub const Parser = struct {
                     self.esc_state = .ground;
                     self.dcs_state = .dcs;
                     self.dcs_buffer.clearRetainingCapacity();
+                    return;
+                } else if (byte == '_') { // APC
+                    self.esc_state = .ground;
+                    self.apc_state = .apc;
+                    self.apc_buffer.clearRetainingCapacity();
                     return;
                 } else if (byte == '(') {
                     self.charset_target = .g0;
@@ -149,6 +165,11 @@ pub const Parser = struct {
         while (i < bytes.len) {
             if (self.osc_state != .idle) {
                 self.handleOscByte(session, bytes[i]);
+                i += 1;
+                continue;
+            }
+            if (self.apc_state != .idle) {
+                self.handleApcByte(session, bytes[i]);
                 i += 1;
                 continue;
             }
@@ -214,6 +235,42 @@ pub const Parser = struct {
         self.osc_state = .idle;
     }
 
+    fn handleApcByte(self: *Parser, session: anytype, byte: u8) void {
+        const apc_max_len: usize = 1024 * 1024;
+        switch (self.apc_state) {
+            .idle => return,
+            .apc => {
+                if (byte == 0x07) { // BEL
+                    self.finishApc(session);
+                    return;
+                }
+                if (byte == 0x1B) { // ESC
+                    self.apc_state = .apc_esc;
+                    return;
+                }
+                if (self.apc_buffer.items.len < apc_max_len) {
+                    _ = self.apc_buffer.append(self.allocator, byte) catch {};
+                }
+            },
+            .apc_esc => {
+                if (byte == '\\') { // ST
+                    self.finishApc(session);
+                    return;
+                }
+                self.apc_state = .apc;
+                if (self.apc_buffer.items.len < apc_max_len) {
+                    _ = self.apc_buffer.append(self.allocator, byte) catch {};
+                }
+            },
+        }
+    }
+
+    fn finishApc(self: *Parser, session: anytype) void {
+        session.parseApc(self.apc_buffer.items);
+        self.apc_buffer.clearRetainingCapacity();
+        self.apc_state = .idle;
+    }
+
     fn handleDcsByte(self: *Parser, session: anytype, byte: u8) void {
         switch (self.dcs_state) {
             .idle => return,
@@ -257,6 +314,12 @@ pub const OscState = enum {
     idle,
     osc,
     osc_esc,
+};
+
+pub const ApcState = enum {
+    idle,
+    apc,
+    apc_esc,
 };
 
 pub const OscTerminator = enum {

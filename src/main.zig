@@ -40,6 +40,7 @@ const AppState = struct {
     // Active views
     editors: std.ArrayList(*Editor),
     terminals: std.ArrayList(*TerminalSession),
+    terminal_widgets: std.ArrayList(TerminalWidget),
 
     // Current focus
     active_tab: usize,
@@ -105,6 +106,7 @@ const AppState = struct {
             .status_bar = .{},
             .editors = .empty,
             .terminals = .empty,
+            .terminal_widgets = .empty,
             .active_tab = 0,
             .active_kind = .editor,
             .mode = "NORMAL",
@@ -135,6 +137,10 @@ const AppState = struct {
         }
         self.editors.deinit(self.allocator);
 
+        for (self.terminal_widgets.items) |*widget| {
+            widget.deinit();
+        }
+        self.terminal_widgets.deinit(self.allocator);
         for (self.terminals.items) |t| {
             t.deinit();
         }
@@ -190,6 +196,7 @@ const AppState = struct {
         );
         try term.start(null);
         try self.terminals.append(self.allocator, term);
+        try self.terminal_widgets.append(self.allocator, TerminalWidget.init(term));
 
         self.show_terminal = true;
     }
@@ -504,6 +511,7 @@ const AppState = struct {
         // Update terminal if shown
         if (self.show_terminal and self.terminals.items.len > 0) {
             const term = self.terminals.items[0];
+            var term_widget = &self.terminal_widgets.items[0];
 
             // Only poll PTY if there's data available (non-blocking check)
             // Skip polling when in deep idle to save CPU
@@ -517,7 +525,6 @@ const AppState = struct {
             const term_x = side_nav_width;
             const term_draw_height = @max(0, terminal_h - 2);
             if (self.active_kind == .terminal) {
-                var term_widget = TerminalWidget.init(term);
                 if (try term_widget.handleInput(
                     r,
                     term_x,
@@ -532,7 +539,6 @@ const AppState = struct {
                     self.metrics.noteInput(now);
                 }
             } else {
-                var term_widget = TerminalWidget.init(term);
                 if (try term_widget.handleInput(
                     r,
                     term_x,
@@ -599,7 +605,7 @@ const AppState = struct {
             // Terminal separator
             r.drawRect(@intFromFloat(side_nav_width), @intFromFloat(term_y), @intFromFloat(editor_width), 2, renderer_mod.Color.light_gray);
 
-            var term_widget = TerminalWidget.init(self.terminals.items[0]);
+            var term_widget = &self.terminal_widgets.items[0];
             const term_draw_height = @max(0, terminal_h - 2);
             if (editor_width > 0 and term_draw_height > 0) {
                 r.beginClip(

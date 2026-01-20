@@ -149,14 +149,63 @@ terminal_protocol_todo:
 
     - id: IMG-01
       title: "Kitty graphics protocol (kitty-icat)"
-      status: todo
+      status: partial
       refs:
         - reference_repos/terminals/kitty/kitty_tests/icat.py
         - reference_repos/terminals/kitty/kitty/vt-parser.c
         - reference_repos/terminals/ghostty/src/terminal/kitty/graphics.zig
       notes:
-        - "Support basic image transmission and placement."
-        - "Respect kitty graphics control sequences in DCS."
+        - "APC parser added (ESC _ ... ST) and Kitty 'G' payload parsing wired."
+        - "Basic transmit/display/delete via 'a=t/T/p/d' with PNG or RGBA (f=24/32/100), no compression."
+        - "Rendered images as overlays using raylib textures; no replies/quiet modes yet."
+      plan:
+        - step: "P1: Command surface + validation (parser)"
+          details:
+            - "Parse full key set: a d t o f m i I p q w h x y v s S O c r X Y z C U P Q H V."
+            - "Validate command rules (id vs number, required fields); mirror kitty error cases."
+            - "Model command struct (similar to Ghostty Command) and keep raw kv for unknown fields."
+          files:
+            - src/terminal/core/terminal.zig
+            - src/terminal/parser/parser.zig
+        - step: "P2: Image loading state + chunking + compression"
+          details:
+            - "Track LoadingImage state (per-id) with q inheritance across chunks."
+            - "Support compressed payload (o=1) with zlib inflate."
+            - "Honor S/O data size + offset; reject oversized payloads."
+          files:
+            - src/terminal/core/terminal.zig
+            - src/terminal/model/kitty_storage.zig (new)
+        - step: "P3: Storage limits + eviction"
+          details:
+            - "Implement total byte limit (e.g., 320MB like Ghostty/Kitty)."
+            - "Evict oldest/unused images on overflow."
+          files:
+            - src/terminal/model/kitty_storage.zig (new)
+        - step: "P4: Placement anchoring + scrollback integration"
+          details:
+            - "Anchor placements to scrollback rows (pin or absolute row index)."
+            - "When image placed, consume rows and move cursor beneath image."
+            - "Scroll/trim updates move or drop placements appropriately."
+          files:
+            - src/terminal/model/screen.zig
+            - src/terminal/model/history.zig
+            - src/terminal/core/terminal.zig
+        - step: "P5: Rendering layers + z-index"
+          details:
+            - "Backgrounds → images → glyphs → cursor/selection."
+            - "Sort placements by z; support below/above text."
+            - "Dirty region updates for image moves."
+          files:
+            - src/ui/widgets/terminal_widget.zig
+            - src/ui/renderer.zig
+        - step: "P6: Delete/query + virtual/parented placements"
+          details:
+            - "Delete actions by id/placement/range; clear all."
+            - "Query responses and q= quiet rules."
+            - "Virtual placements (U=1) + parent/child (P/Q/H/V)."
+          files:
+            - src/terminal/core/terminal.zig
+            - src/terminal/model/kitty_storage.zig (new)
 
     - id: TERM-01
       title: "Terminfo feature parity sweep"

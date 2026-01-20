@@ -38,6 +38,49 @@ const SemanticPromptState = struct {
     exit_code: ?u8 = null,
 };
 
+pub const KittyImageFormat = enum {
+    rgba,
+    png,
+};
+
+pub const KittyImage = struct {
+    id: u32,
+    width: u32,
+    height: u32,
+    format: KittyImageFormat,
+    data: []u8,
+    version: u64,
+};
+
+pub const KittyPlacement = struct {
+    image_id: u32,
+    row: u16,
+    col: u16,
+    cols: u16,
+    rows: u16,
+    z: i32,
+};
+
+const KittyPartial = struct {
+    id: u32,
+    width: u32,
+    height: u32,
+    format: KittyImageFormat,
+    data: std.ArrayList(u8),
+};
+
+const KittyControl = struct {
+    action: u8 = 't',
+    format: u32 = 0,
+    width: u32 = 0,
+    height: u32 = 0,
+    image_id: ?u32 = null,
+    cols: u32 = 0,
+    rows: u32 = 0,
+    z: i32 = 0,
+    more: bool = false,
+};
+
 fn buildDefaultPalette() [256]types.Color {
     var palette: [256]types.Color = undefined;
     var idx: usize = 0;
@@ -101,6 +144,9 @@ pub const TerminalSnapshot = struct {
     damage: Damage,
     alt_active: bool,
     generation: u64,
+    kitty_images: []const KittyImage,
+    kitty_placements: []const KittyPlacement,
+    kitty_generation: u64,
 
     pub fn rowSlice(self: *const TerminalSnapshot, row: usize) []const Cell {
         const start = row * self.cols;
@@ -147,6 +193,11 @@ pub const TerminalSession = struct {
     semantic_cmdline: std.ArrayList(u8),
     semantic_cmdline_valid: bool,
     user_vars: std.StringHashMap([]u8),
+    kitty_images: std.ArrayList(KittyImage),
+    kitty_placements: std.ArrayList(KittyPlacement),
+    kitty_partials: std.AutoHashMap(u32, KittyPartial),
+    kitty_next_id: u32,
+    kitty_generation: u64,
     base_default_attrs: types.CellAttrs,
     palette_default: [256]types.Color,
     palette_current: [256]types.Color,
@@ -203,6 +254,11 @@ pub const TerminalSession = struct {
             .semantic_cmdline = .empty,
             .semantic_cmdline_valid = false,
             .user_vars = std.StringHashMap([]u8).init(allocator),
+            .kitty_images = .empty,
+            .kitty_placements = .empty,
+            .kitty_partials = std.AutoHashMap(u32, KittyPartial).init(allocator),
+            .kitty_next_id = 1,
+            .kitty_generation = 0,
             .base_default_attrs = default_attrs,
             .palette_default = palette_default,
             .palette_current = palette_default,
@@ -296,6 +352,16 @@ pub const TerminalSession = struct {
             self.allocator.free(entry.value_ptr.*);
         }
         self.user_vars.deinit();
+        for (self.kitty_images.items) |image| {
+            self.allocator.free(image.data);
+        }
+        self.kitty_images.deinit(self.allocator);
+        self.kitty_placements.deinit(self.allocator);
+        var partial_it = self.kitty_partials.iterator();
+        while (partial_it.next()) |entry| {
+            entry.value_ptr.data.deinit(self.allocator);
+        }
+        self.kitty_partials.deinit();
         for (self.hyperlink_table.items) |link| {
             self.allocator.free(link.uri);
         }
@@ -500,6 +566,8 @@ pub const TerminalSession = struct {
                 self.parser.stream.reset();
                 self.parser.csi.reset();
                 self.parser.osc_state = .idle;
+                self.parser.apc_state = .idle;
+                self.parser.dcs_state = .idle;
             },
             else => {},
         }
@@ -511,6 +579,19 @@ pub const TerminalSession = struct {
             self.handleXtgettcap(payload[2..]);
         }
     }
+
+    pub fn parseApc(self: *TerminalSession, payload: []const u8) void {
+        const log = app_logger.logger("terminal.apc");
+        if (log.enabled_file or log.enabled_console) {
+            const max_len: usize = 160;
+            const slice = if (payload.len > max_len) payload[0..max_len] else payload;
+            log.logf("apc payload len={d} prefix=\"{s}\"", .{ payload.len, slice });
+        }
+        if (payload.len == 0) return;
+        if (payload[0] != 'G') return;
+        self.parseKittyGraphics(payload[1..]);
+    }
+
 
     pub fn parseOsc(self: *TerminalSession, payload: []const u8, terminator: OscTerminator) void {
         const log = app_logger.logger("terminal.osc");
@@ -1220,6 +1301,343 @@ pub const TerminalSession = struct {
         _ = pty.write(seq.items) catch {};
     }
 
+    fn parseKittyGraphics(self: *TerminalSession, payload: []const u8) void {
+        const log = app_logger.logger("terminal.kitty");
+        var control = KittyControl{};
+        const data = parseKittyControl(payload, &control);
+        if (control.action == 'd') {
+            self.deleteKittyImages(control.image_id);
+            return;
+        }
+
+        if (control.action == 'p') {
+            const image_id = control.image_id orelse return;
+            self.placeKittyImage(image_id, control);
+            return;
+        }
+
+        if (control.action != 't' and control.action != 'T') return;
+
+        const image_id = control.image_id orelse blk: {
+            const id = self.kitty_next_id;
+            self.kitty_next_id += 1;
+            break :blk id;
+        };
+
+        const decoded = self.decodeBase64(data) orelse {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf("kitty decode failed len={d}", .{data.len});
+            }
+            return;
+        };
+        const final_data = self.accumulateKittyData(image_id, &control, decoded) orelse return;
+
+        const image = self.buildKittyImage(image_id, control, final_data) orelse {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf("kitty build failed id={d} format={d} data_len={d}", .{ image_id, control.format, final_data.len });
+            }
+            return;
+        };
+        self.storeKittyImage(image);
+        if (control.action == 'T') {
+            self.placeKittyImage(image_id, control);
+        }
+    }
+
+    fn parseKittyControl(payload: []const u8, control: *KittyControl) []const u8 {
+        var i: usize = 0;
+        while (i < payload.len) {
+            if (payload[i] == ';') {
+                i += 1;
+                break;
+            }
+            const key = payload[i];
+            i += 1;
+            if (i >= payload.len or payload[i] != '=') {
+                while (i < payload.len and payload[i] != ',' and payload[i] != ';') : (i += 1) {}
+                if (i < payload.len and payload[i] == ',') i += 1;
+                if (i < payload.len and payload[i] == ';') {
+                    i += 1;
+                    break;
+                }
+                continue;
+            }
+            i += 1;
+            const start_idx = i;
+            while (i < payload.len and payload[i] != ',' and payload[i] != ';') : (i += 1) {}
+            const value_slice = payload[start_idx..i];
+            if (parseKittyValue(value_slice)) |value| {
+                switch (key) {
+                    'a' => control.action = @intCast(value),
+                    'f' => control.format = value,
+                    's' => control.width = value,
+                    'v' => control.height = value,
+                    'i' => control.image_id = value,
+                    'c' => control.cols = value,
+                    'r' => control.rows = value,
+                    'z' => control.z = @intCast(value),
+                    'm' => control.more = value != 0,
+                    else => {},
+                }
+            }
+            if (i < payload.len and payload[i] == ',') {
+                i += 1;
+                continue;
+            }
+            if (i < payload.len and payload[i] == ';') {
+                i += 1;
+                break;
+            }
+        }
+        return payload[i..];
+    }
+
+    fn parseKittyValue(text: []const u8) ?u32 {
+        if (text.len == 0) return null;
+        if (text.len == 1 and (text[0] < '0' or text[0] > '9')) {
+            return @intCast(text[0]);
+        }
+        return std.fmt.parseUnsigned(u32, text, 10) catch null;
+    }
+
+    fn decodeBase64(self: *TerminalSession, data: []const u8) ?[]u8 {
+        if (data.len == 0) {
+            return self.allocator.alloc(u8, 0) catch return null;
+        }
+        const decoded_len = std.base64.standard.Decoder.calcSizeForSlice(data) catch return null;
+        var decoded = std.ArrayList(u8).empty;
+        errdefer decoded.deinit(self.allocator);
+        decoded.resize(self.allocator, decoded_len) catch return null;
+        _ = std.base64.standard.Decoder.decode(decoded.items, data) catch return null;
+        return decoded.toOwnedSlice(self.allocator) catch null;
+    }
+
+    fn accumulateKittyData(self: *TerminalSession, image_id: u32, control: *KittyControl, decoded: []u8) ?[]u8 {
+        if (control.more) {
+            const entry = self.kitty_partials.getOrPut(image_id) catch return null;
+            if (!entry.found_existing) {
+                const format = kittyFormatFor(control.format) orelse {
+                    self.allocator.free(decoded);
+                    return null;
+                };
+                entry.value_ptr.* = KittyPartial{
+                    .id = image_id,
+                    .width = control.width,
+                    .height = control.height,
+                    .format = format,
+                    .data = .empty,
+                };
+            } else {
+                if (entry.value_ptr.width == 0) entry.value_ptr.width = control.width;
+                if (entry.value_ptr.height == 0) entry.value_ptr.height = control.height;
+            }
+            _ = entry.value_ptr.data.appendSlice(self.allocator, decoded) catch {};
+            self.allocator.free(decoded);
+            return null;
+        }
+
+        if (self.kitty_partials.getEntry(image_id)) |entry| {
+            _ = entry.value_ptr.data.appendSlice(self.allocator, decoded) catch {};
+            self.allocator.free(decoded);
+            const combined = entry.value_ptr.data.toOwnedSlice(self.allocator) catch return null;
+            if (control.width == 0) control.width = entry.value_ptr.width;
+            if (control.height == 0) control.height = entry.value_ptr.height;
+            if (control.format == 0) {
+                control.format = switch (entry.value_ptr.format) {
+                    .png => 100,
+                    .rgba => 32,
+                };
+            }
+            entry.value_ptr.data.clearRetainingCapacity();
+            _ = self.kitty_partials.remove(image_id);
+            return combined;
+        }
+
+        return decoded;
+    }
+
+    fn kittyFormatFor(value: u32) ?KittyImageFormat {
+        return switch (value) {
+            24, 32 => .rgba,
+            100 => .png,
+            else => null,
+        };
+    }
+
+    fn buildKittyImage(self: *TerminalSession, image_id: u32, control: KittyControl, data: []u8) ?KittyImage {
+        const format = kittyFormatFor(control.format) orelse return null;
+        switch (format) {
+            .png => {
+                return .{
+                    .id = image_id,
+                    .width = 0,
+                    .height = 0,
+                    .format = .png,
+                    .data = data,
+                    .version = 0,
+                };
+            },
+            .rgba => {
+                if (control.width == 0 or control.height == 0) {
+                    self.allocator.free(data);
+                    return null;
+                }
+                const total_px: usize = @as(usize, control.width) * @as(usize, control.height);
+                if (control.format == 24) {
+                    const expected = total_px * 3;
+                    if (data.len < expected) {
+                        self.allocator.free(data);
+                        return null;
+                    }
+                    const expanded = self.expandRgbToRgba(data[0..expected], control.width, control.height) orelse {
+                        self.allocator.free(data);
+                        return null;
+                    };
+                    self.allocator.free(data);
+                    return .{
+                        .id = image_id,
+                        .width = control.width,
+                        .height = control.height,
+                        .format = .rgba,
+                        .data = expanded,
+                        .version = 0,
+                    };
+                }
+                const expected = total_px * 4;
+                if (data.len < expected) {
+                    self.allocator.free(data);
+                    return null;
+                }
+                if (data.len != expected) {
+                    const trimmed = self.allocator.alloc(u8, expected) catch {
+                        self.allocator.free(data);
+                        return null;
+                    };
+                    std.mem.copyForwards(u8, trimmed, data[0..expected]);
+                    self.allocator.free(data);
+                    return .{
+                        .id = image_id,
+                        .width = control.width,
+                        .height = control.height,
+                        .format = .rgba,
+                        .data = trimmed,
+                        .version = 0,
+                    };
+                }
+                return .{
+                    .id = image_id,
+                    .width = control.width,
+                    .height = control.height,
+                    .format = .rgba,
+                    .data = data,
+                    .version = 0,
+                };
+            },
+        }
+    }
+
+    fn expandRgbToRgba(self: *TerminalSession, rgb: []const u8, width: u32, height: u32) ?[]u8 {
+        const total_px: usize = @as(usize, width) * @as(usize, height);
+        const out_len = total_px * 4;
+        var out = self.allocator.alloc(u8, out_len) catch return null;
+        var src_idx: usize = 0;
+        var dst_idx: usize = 0;
+        while (src_idx + 2 < rgb.len and dst_idx + 3 < out.len) : (src_idx += 3) {
+            out[dst_idx] = rgb[src_idx];
+            out[dst_idx + 1] = rgb[src_idx + 1];
+            out[dst_idx + 2] = rgb[src_idx + 2];
+            out[dst_idx + 3] = 0xFF;
+            dst_idx += 4;
+        }
+        return out;
+    }
+
+    fn storeKittyImage(self: *TerminalSession, image: KittyImage) void {
+        const log = app_logger.logger("terminal.kitty");
+        self.kitty_generation += 1;
+        const version = self.kitty_generation;
+        var idx: usize = 0;
+        while (idx < self.kitty_images.items.len) : (idx += 1) {
+            if (self.kitty_images.items[idx].id == image.id) {
+                self.allocator.free(self.kitty_images.items[idx].data);
+                self.kitty_images.items[idx] = image;
+                self.kitty_images.items[idx].version = version;
+                self.activeScreen().grid.markDirtyAll();
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf("kitty image updated id={d} format={s} bytes={d}", .{ image.id, @tagName(image.format), image.data.len });
+                }
+                return;
+            }
+        }
+        var stored = image;
+        stored.version = version;
+        _ = self.kitty_images.append(self.allocator, stored) catch {};
+        self.activeScreen().grid.markDirtyAll();
+        if (log.enabled_file or log.enabled_console) {
+            log.logf("kitty image stored id={d} format={s} bytes={d}", .{ stored.id, @tagName(stored.format), stored.data.len });
+        }
+    }
+
+    fn placeKittyImage(self: *TerminalSession, image_id: u32, control: KittyControl) void {
+        const log = app_logger.logger("terminal.kitty");
+        const screen = self.activeScreen();
+        if (screen.grid.rows == 0 or screen.grid.cols == 0) return;
+        const row = @min(@as(u16, @intCast(screen.cursor.row)), screen.grid.rows - 1);
+        const col = @min(@as(u16, @intCast(screen.cursor.col)), screen.grid.cols - 1);
+        const placement = KittyPlacement{
+            .image_id = image_id,
+            .row = row,
+            .col = col,
+            .cols = @intCast(control.cols),
+            .rows = @intCast(control.rows),
+            .z = control.z,
+        };
+        _ = self.kitty_placements.append(self.allocator, placement) catch {};
+        self.activeScreen().grid.markDirtyAll();
+        if (log.enabled_file or log.enabled_console) {
+            log.logf("kitty placed id={d} row={d} col={d} cols={d} rows={d}", .{ image_id, row, col, placement.cols, placement.rows });
+        }
+    }
+
+    fn deleteKittyImages(self: *TerminalSession, image_id: ?u32) void {
+        if (image_id) |id| {
+            var i: usize = 0;
+            while (i < self.kitty_images.items.len) {
+                if (self.kitty_images.items[i].id == id) {
+                    self.allocator.free(self.kitty_images.items[i].data);
+                    _ = self.kitty_images.swapRemove(i);
+                } else {
+                    i += 1;
+                }
+            }
+            var p: usize = 0;
+            while (p < self.kitty_placements.items.len) {
+                if (self.kitty_placements.items[p].image_id == id) {
+                    _ = self.kitty_placements.swapRemove(p);
+                } else {
+                    p += 1;
+                }
+            }
+        } else {
+            self.clearKittyImages();
+        }
+        self.activeScreen().grid.markDirtyAll();
+    }
+
+    fn clearKittyImages(self: *TerminalSession) void {
+        for (self.kitty_images.items) |image| {
+            self.allocator.free(image.data);
+        }
+        self.kitty_images.clearRetainingCapacity();
+        self.kitty_placements.clearRetainingCapacity();
+        var partial_it = self.kitty_partials.iterator();
+        while (partial_it.next()) |entry| {
+            entry.value_ptr.data.deinit(self.allocator);
+        }
+        self.kitty_partials.clearRetainingCapacity();
+        self.kitty_generation += 1;
+    }
+
     pub fn handleCsi(self: *TerminalSession, action: csi_mod.CsiAction) void {
         const log = app_logger.logger("terminal.csi");
         if (log.enabled_file or log.enabled_console) {
@@ -1519,6 +1937,7 @@ pub const TerminalSession = struct {
         self.app_keypad = false;
         self.primary.clear();
         self.alt.clear();
+        self.clearKittyImages();
     }
 
     fn eraseDisplay(self: *TerminalSession, mode: i32) void {
@@ -2271,6 +2690,9 @@ pub const TerminalSession = struct {
             .damage = screen.grid.damage,
             .alt_active = self.isAltActive(),
             .generation = self.output_generation.load(.acquire),
+            .kitty_images = self.kitty_images.items,
+            .kitty_placements = self.kitty_placements.items,
+            .kitty_generation = self.kitty_generation,
         };
     }
 
