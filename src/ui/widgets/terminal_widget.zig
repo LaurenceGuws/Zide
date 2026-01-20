@@ -367,14 +367,14 @@ pub const TerminalWidget = struct {
                     }
                     if (has_kitty) {
                         self.cleanupKittyTextures(self.kitty_images_view.items);
-                        self.drawKittyImages(r, base_x_local, base_y_local, false);
+                        self.drawKittyImages(r, base_x_local, base_y_local, false, start_line, rows, cols);
                     }
                     row = 0;
                     while (row < rows) : (row += 1) {
                         drawRowGlyphs(r, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i);
                     }
                     if (has_kitty) {
-                        self.drawKittyImages(r, base_x_local, base_y_local, true);
+                        self.drawKittyImages(r, base_x_local, base_y_local, true, start_line, rows, cols);
                     }
                 } else if (needs_partial) {
                     var row: usize = 0;
@@ -674,9 +674,21 @@ pub const TerminalWidget = struct {
         }
     }
 
-    fn drawKittyImages(self: *TerminalWidget, r: *Renderer, base_x: f32, base_y: f32, above_text: bool) void {
+    fn drawKittyImages(
+        self: *TerminalWidget,
+        r: *Renderer,
+        base_x: f32,
+        base_y: f32,
+        above_text: bool,
+        start_line: usize,
+        rows: usize,
+        cols: usize,
+    ) void {
         const cell_w: f32 = r.terminal_cell_width;
         const cell_h: f32 = r.terminal_cell_height;
+        const start_line_i: i32 = @intCast(start_line);
+        const rows_i: i32 = @intCast(rows);
+        const cols_i: i32 = @intCast(cols);
 
         for (self.kitty_placements_view.items) |placement| {
             if (placement.is_virtual) continue;
@@ -688,11 +700,21 @@ pub const TerminalWidget = struct {
             const image = findKittyImage(self.kitty_images_view.items, placement.image_id) orelse continue;
             const tex = self.ensureKittyTexture(image) orelse continue;
 
-            const x = base_x + @as(f32, @floatFromInt(@as(i32, @intCast(placement.col)))) * cell_w;
-            const y = base_y + @as(f32, @floatFromInt(@as(i32, @intCast(placement.row)))) * cell_h;
+            const col_i: i32 = @as(i32, @intCast(placement.col));
+            if (col_i < 0 or col_i >= cols_i) continue;
+            const row_i: i32 = @as(i32, @intCast(placement.row)) - start_line_i;
 
             const draw_w = if (placement.cols > 0) cell_w * @as(f32, @floatFromInt(placement.cols)) else @as(f32, @floatFromInt(tex.width));
             const draw_h = if (placement.rows > 0) cell_h * @as(f32, @floatFromInt(placement.rows)) else @as(f32, @floatFromInt(tex.height));
+
+            const row_span: i32 = if (placement.rows > 0)
+                @as(i32, @intCast(placement.rows))
+            else
+                @as(i32, @intCast(@max(@as(i32, 1), @as(i32, @intFromFloat(@ceil(draw_h / cell_h))))));
+            if (row_i >= rows_i or row_i + row_span <= 0) continue;
+
+            const x = base_x + @as(f32, @floatFromInt(col_i)) * cell_w;
+            const y = base_y + @as(f32, @floatFromInt(row_i)) * cell_h;
 
             const dest = c.Rectangle{ .x = x, .y = y, .width = draw_w, .height = draw_h };
             const src = c.Rectangle{
