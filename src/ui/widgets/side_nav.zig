@@ -31,19 +31,20 @@ pub const SideNav = struct {
             .{ .icon = "󰏗", .badge = null, .active = false }, // Accounts
         };
 
-        const icon_size: f32 = 32;
+        const scale = r.uiScaleFactor();
+        const icon_size: f32 = 32 * scale;
         const icon_h_unit: f32 = r.icon_char_height;
         const badge_size: f32 = r.font_size * 1.0;
         const badge_h_unit: f32 = r.char_height * (badge_size / r.font_size);
-        const spacing: f32 = 12;
+        const spacing: f32 = 12 * scale;
         const mouse = r.getMousePos();
         const pressed = r.isMouseButtonDown(renderer_mod.MOUSE_LEFT);
-        const hover_pad_x: f32 = 8;
-        const hover_pad_y: f32 = 8;
+        const hover_pad_x: f32 = 8 * scale;
+        const hover_pad_y: f32 = 8 * scale;
 
         const icon_x_pad: f32 = self.width * 0.30;
-        const icon_text_offset: f32 = 1;
-        var icon_y: f32 = y + 10;
+        const icon_text_offset: f32 = 1 * scale;
+        var icon_y: f32 = y + 10 * scale;
         for (top_items) |item| {
             const icon_x: f32 = icon_x_pad;
             const bx = icon_x - hover_pad_x;
@@ -77,7 +78,7 @@ pub const SideNav = struct {
             icon_y += icon_size + spacing;
         }
 
-        var bottom_y: f32 = y + height - 10 - icon_size;
+        var bottom_y: f32 = y + height - 10 * scale - icon_size;
         var i: usize = 0;
         while (i < bottom_items.len) : (i += 1) {
             const item = bottom_items[bottom_items.len - 1 - i];

@@ -93,6 +93,7 @@ const AppState = struct {
 
         const renderer = try Renderer.init(allocator, 1280, 720, "Zide - Zig IDE");
         errdefer renderer.deinit();
+        _ = try renderer.refreshUiScale();
         const app_log = app_logger.logger("app.core");
         app_log.logStdout("logger initialized", .{});
         const metrics_log = app_logger.logger("terminal.metrics");
@@ -129,6 +130,7 @@ const AppState = struct {
             .app_logger = app_log,
             .last_metrics_log_time = 0,
         };
+        state.applyUiScale();
 
         return state;
     }
@@ -216,6 +218,29 @@ const AppState = struct {
         try self.terminal_widgets.append(self.allocator, TerminalWidget.init(term));
 
         self.show_terminal = true;
+    }
+
+    fn applyUiScale(self: *AppState) void {
+        const scale = self.renderer.uiScaleFactor();
+        self.options_bar.height = 26 * scale;
+        self.tab_bar.height = 28 * scale;
+        self.tab_bar.tab_width = 150 * scale;
+        self.tab_bar.tab_spacing = @max(1, scale);
+        self.status_bar.height = 24 * scale;
+        self.side_nav.width = 52 * scale;
+    }
+
+    fn refreshTerminalSizing(self: *AppState) !void {
+        if (self.terminals.items.len == 0) return;
+        const cols: u16 = @intCast(@max(1, @divFloor(self.renderer.width, @as(i32, @intFromFloat(self.renderer.terminal_cell_width)))));
+        const rows: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(self.terminal_height)), @as(i32, @intFromFloat(self.renderer.terminal_cell_height)))));
+        for (self.terminals.items) |term| {
+            term.setCellSize(
+                @intFromFloat(self.renderer.terminal_cell_width),
+                @intFromFloat(self.renderer.terminal_cell_height),
+            );
+            try term.resize(rows, cols);
+        }
     }
 
     pub fn run(self: *AppState) !void {
@@ -312,11 +337,19 @@ const AppState = struct {
     fn update(self: *AppState) !void {
         const r = self.renderer;
         const now = renderer_mod.getTime();
-
+        if (try r.applyPendingZoom(now)) {
+            self.applyUiScale();
+            try self.refreshTerminalSizing();
+            self.needs_redraw = true;
+            self.metrics.noteInput(now);
+        }
         // Check for window resize (event-based, works with Wayland)
         if (renderer_mod.isWindowResized()) {
             r.width = renderer_mod.getScreenWidth();
             r.height = renderer_mod.getScreenHeight();
+            if (try r.refreshUiScale()) {
+                self.applyUiScale();
+            }
             if (self.terminals.items.len > 0) {
                 const term = self.terminals.items[0];
                 const width = @as(f32, @floatFromInt(r.width));
@@ -434,6 +467,25 @@ const AppState = struct {
             try self.newEditor();
             self.needs_redraw = true;
             self.metrics.noteInput(now);
+            return;
+        }
+
+        if (ctrl and (r.isKeyPressed(renderer_mod.KEY_EQUAL) or r.isKeyPressed(renderer_mod.KEY_KP_ADD))) {
+            if (r.queueUserZoom(0.1, now)) {
+                self.metrics.noteInput(now);
+            }
+            return;
+        }
+        if (ctrl and (r.isKeyPressed(renderer_mod.KEY_MINUS) or r.isKeyPressed(renderer_mod.KEY_KP_SUBTRACT))) {
+            if (r.queueUserZoom(-0.1, now)) {
+                self.metrics.noteInput(now);
+            }
+            return;
+        }
+        if (ctrl and r.isKeyPressed(renderer_mod.KEY_ZERO)) {
+            if (r.resetUserZoomTarget(now)) {
+                self.metrics.noteInput(now);
+            }
             return;
         }
 
