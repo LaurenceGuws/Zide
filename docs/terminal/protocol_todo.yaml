@@ -162,6 +162,7 @@ terminal_protocol_todo:
         - "Chunk assembly now honors S/O and zlib (o=z) for direct transfers; oversize payloads rejected."
         - "Tracked total kitty image bytes and evicted oldest images (preferring unplaced) when exceeding limit."
         - "Anchored placements to scrollback rows; full-screen scroll keeps images pinned and off-screen placements are dropped."
+        - "Rendering order updated: backgrounds → images (z<0) → glyphs → images (z>=0) → selection/cursor."
       plan:
         - step: "P1: Command surface + validation (parser)"
           details:
