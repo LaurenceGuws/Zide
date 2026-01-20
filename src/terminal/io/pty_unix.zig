@@ -143,7 +143,8 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
     const shell_path = shell orelse defaultShell();
     const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
 
-    _ = c.setenv("TERM", "xterm-256color", 1);
+    const term = if (terminfoExists("xterm-kitty")) "xterm-kitty" else "xterm-256color";
+    _ = c.setenv("TERM", term, 1);
     if (std.c.getenv("INPUTRC") == null) {
         const pid = c.getpid();
         var path_buf: [128]u8 = undefined;
@@ -175,4 +176,42 @@ fn defaultShell() [:0]const u8 {
         return std.mem.sliceTo(shell, 0);
     }
     return "/bin/sh";
+}
+
+fn terminfoExists(name: []const u8) bool {
+    if (terminfoInDir(std.c.getenv("TERMINFO"), name)) return true;
+
+    if (std.c.getenv("TERMINFO_DIRS")) |dirs_raw| {
+        var it = std.mem.splitScalar(u8, std.mem.sliceTo(dirs_raw, 0), ':');
+        while (it.next()) |dir| {
+            if (dir.len == 0) {
+                if (terminfoInDirSlice("/usr/share/terminfo", name)) return true;
+                continue;
+            }
+            if (terminfoInDirSlice(dir, name)) return true;
+        }
+    }
+
+    return terminfoInDirSlice("/usr/share/terminfo", name) or
+        terminfoInDirSlice("/usr/lib/terminfo", name) or
+        terminfoInDirSlice("/lib/terminfo", name) or
+        terminfoInDirSlice("/etc/terminfo", name);
+}
+
+fn terminfoInDir(dir_c: ?[*:0]const u8, name: []const u8) bool {
+    if (dir_c == null) return false;
+    return terminfoInDirSlice(std.mem.sliceTo(dir_c.?, 0), name);
+}
+
+fn terminfoInDirSlice(dir: []const u8, name: []const u8) bool {
+    if (dir.len == 0 or name.len == 0) return false;
+    var buf: [std.fs.max_path_bytes]u8 = undefined;
+    const subdir = name[0];
+    const path = std.fmt.bufPrint(&buf, "{s}/{c}/{s}", .{ dir, subdir, name }) catch return false;
+    if (std.fs.openFileAbsolute(path, .{ .mode = .read_only })) |file| {
+        file.close();
+        return true;
+    } else |_| {
+        return false;
+    }
 }
