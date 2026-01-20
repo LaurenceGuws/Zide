@@ -163,6 +163,7 @@ terminal_protocol_todo:
         - "Tracked total kitty image bytes and evicted oldest images (preferring unplaced) when exceeding limit."
         - "Anchored placements to scrollback rows; full-screen scroll keeps images pinned and off-screen placements are dropped."
         - "Rendering order updated: backgrounds → images (z<0) → glyphs → images (z>=0) → selection/cursor."
+        - "Delete actions implemented (d= a/A/i/I/n/N/c/C/p/P/z/Z/r/R/x/X/y/Y) with placement_id filtering."
       plan:
         - step: "P1: Command surface + validation (parser)"
           details:

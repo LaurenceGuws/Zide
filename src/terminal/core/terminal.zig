@@ -55,6 +55,7 @@ pub const KittyImage = struct {
 
 pub const KittyPlacement = struct {
     image_id: u32,
+    placement_id: u32,
     row: u16,
     col: u16,
     cols: u16,
@@ -1350,8 +1351,7 @@ pub const TerminalSession = struct {
             return;
         }
         if (control.action == 'd') {
-            const image_id = resolveKittyImageId(control);
-            self.deleteKittyImages(image_id);
+            self.deleteKittyByAction(control);
             return;
         }
 
@@ -2053,6 +2053,7 @@ pub const TerminalSession = struct {
         const visible_top = self.kittyVisibleTop();
         const placement = KittyPlacement{
             .image_id = image_id,
+            .placement_id = control.placement_id orelse 0,
             .row = row,
             .col = col,
             .cols = @intCast(control.cols),
@@ -2133,6 +2134,204 @@ pub const TerminalSession = struct {
             self.clearKittyImages();
         }
         self.activeScreen().grid.markDirtyAll();
+    }
+
+    fn deleteKittyPlacements(
+        self: *TerminalSession,
+        ctx: anytype,
+        predicate: *const fn (@TypeOf(ctx), *TerminalSession, KittyPlacement) bool,
+    ) void {
+        var idx: usize = 0;
+        var changed = false;
+        while (idx < self.kitty_placements.items.len) {
+            if (predicate(ctx, self, self.kitty_placements.items[idx])) {
+                _ = self.kitty_placements.swapRemove(idx);
+                changed = true;
+                continue;
+            }
+            idx += 1;
+        }
+        if (changed) {
+            self.kitty_generation += 1;
+            self.activeScreen().grid.markDirtyAll();
+        }
+    }
+
+    fn deleteKittyByAction(self: *TerminalSession, control: KittyControl) void {
+        const action = if (control.delete_action == 0) 'a' else control.delete_action;
+        const id = resolveKittyImageId(control);
+        const placement_id = control.placement_id orelse 0;
+        const screen = self.activeScreenConst();
+        const cursor_row = @as(u16, @intCast(screen.cursor.row));
+        const cursor_col = @as(u16, @intCast(screen.cursor.col));
+        const x = if (control.x > 0) control.x - 1 else 0;
+        const y = if (control.y > 0) control.y - 1 else 0;
+        const range_start = if (control.x > 0) control.x else 1;
+        const range_end = if (control.y > 0) control.y else 0;
+        const z = control.z;
+        switch (action) {
+            'a' => {
+                const Ctx = struct {
+                    fn pred(_: @This(), _: *TerminalSession, _: KittyPlacement) bool {
+                        return true;
+                    }
+                };
+                self.deleteKittyPlacements(Ctx{}, Ctx.pred);
+            },
+            'A' => {
+                self.clearKittyImages();
+            },
+            'i', 'I' => {
+                if (id == null) return;
+                const target = id.?;
+                if (action == 'I') {
+                    self.deleteKittyImages(target);
+                    return;
+                }
+                const Ctx = struct {
+                    target_id: u32,
+                    target_pid: u32,
+                    fn pred(ctx: @This(), _: *TerminalSession, placement: KittyPlacement) bool {
+                        if (placement.image_id != ctx.target_id) return false;
+                        if (ctx.target_pid != 0 and placement.placement_id != ctx.target_pid) return false;
+                        return true;
+                    }
+                };
+                self.deleteKittyPlacements(Ctx{ .target_id = target, .target_pid = placement_id }, Ctx.pred);
+            },
+            'n', 'N' => {
+                if (id == null) return;
+                const target = id.?;
+                if (action == 'N') {
+                    self.deleteKittyImages(target);
+                    return;
+                }
+                const Ctx = struct {
+                    target_id: u32,
+                    target_pid: u32,
+                    fn pred(ctx: @This(), _: *TerminalSession, placement: KittyPlacement) bool {
+                        if (placement.image_id != ctx.target_id) return false;
+                        if (ctx.target_pid != 0 and placement.placement_id != ctx.target_pid) return false;
+                        return true;
+                    }
+                };
+                self.deleteKittyPlacements(Ctx{ .target_id = target, .target_pid = placement_id }, Ctx.pred);
+            },
+            'c', 'C' => {
+                const delete_images = action == 'C';
+                const Ctx = struct {
+                    row: u16,
+                    col: u16,
+                    delete_images: bool,
+                    fn pred(ctx: @This(), session: *TerminalSession, placement: KittyPlacement) bool {
+                        if (!kittyPlacementIntersects(placement, ctx.row, ctx.col)) return false;
+                        if (ctx.delete_images) {
+                            session.deleteKittyImages(placement.image_id);
+                            return false;
+                        }
+                        return true;
+                    }
+                };
+                self.deleteKittyPlacements(Ctx{ .row = cursor_row, .col = cursor_col, .delete_images = delete_images }, Ctx.pred);
+            },
+            'p', 'P' => {
+                const row = @as(u16, @intCast(y));
+                const col = @as(u16, @intCast(x));
+                const delete_images = action == 'P';
+                const Ctx = struct {
+                    row: u16,
+                    col: u16,
+                    delete_images: bool,
+                    fn pred(ctx: @This(), session: *TerminalSession, placement: KittyPlacement) bool {
+                        if (!kittyPlacementIntersects(placement, ctx.row, ctx.col)) return false;
+                        if (ctx.delete_images) {
+                            session.deleteKittyImages(placement.image_id);
+                            return false;
+                        }
+                        return true;
+                    }
+                };
+                self.deleteKittyPlacements(Ctx{ .row = row, .col = col, .delete_images = delete_images }, Ctx.pred);
+            },
+            'z', 'Z' => {
+                const delete_images = action == 'Z';
+                const Ctx = struct {
+                    z: i32,
+                    delete_images: bool,
+                    fn pred(ctx: @This(), session: *TerminalSession, placement: KittyPlacement) bool {
+                        if (placement.z != ctx.z) return false;
+                        if (ctx.delete_images) {
+                            session.deleteKittyImages(placement.image_id);
+                            return false;
+                        }
+                        return true;
+                    }
+                };
+                self.deleteKittyPlacements(Ctx{ .z = z, .delete_images = delete_images }, Ctx.pred);
+            },
+            'r', 'R' => {
+                const end = if (range_end > 0) range_end else range_start;
+                if (range_start > end) return;
+                const delete_images = action == 'R';
+                const Ctx = struct {
+                    start_id: u32,
+                    end_id: u32,
+                    delete_images: bool,
+                    fn pred(ctx: @This(), session: *TerminalSession, placement: KittyPlacement) bool {
+                        if (placement.image_id < ctx.start_id or placement.image_id > ctx.end_id) return false;
+                        if (ctx.delete_images) {
+                            session.deleteKittyImages(placement.image_id);
+                            return false;
+                        }
+                        return true;
+                    }
+                };
+                self.deleteKittyPlacements(Ctx{ .start_id = range_start, .end_id = end, .delete_images = delete_images }, Ctx.pred);
+            },
+            'x', 'X' => {
+                const col = @as(u16, @intCast(x));
+                const delete_images = action == 'X';
+                const Ctx = struct {
+                    col: u16,
+                    delete_images: bool,
+                    fn pred(ctx: @This(), session: *TerminalSession, placement: KittyPlacement) bool {
+                        if (!kittyPlacementIntersects(placement, placement.row, ctx.col)) return false;
+                        if (ctx.delete_images) {
+                            session.deleteKittyImages(placement.image_id);
+                            return false;
+                        }
+                        return true;
+                    }
+                };
+                self.deleteKittyPlacements(Ctx{ .col = col, .delete_images = delete_images }, Ctx.pred);
+            },
+            'y', 'Y' => {
+                const row = @as(u16, @intCast(y));
+                const delete_images = action == 'Y';
+                const Ctx = struct {
+                    row: u16,
+                    delete_images: bool,
+                    fn pred(ctx: @This(), session: *TerminalSession, placement: KittyPlacement) bool {
+                        if (!kittyPlacementIntersects(placement, ctx.row, placement.col)) return false;
+                        if (ctx.delete_images) {
+                            session.deleteKittyImages(placement.image_id);
+                            return false;
+                        }
+                        return true;
+                    }
+                };
+                self.deleteKittyPlacements(Ctx{ .row = row, .delete_images = delete_images }, Ctx.pred);
+            },
+            else => {},
+        }
+    }
+
+    fn kittyPlacementIntersects(placement: KittyPlacement, row: u16, col: u16) bool {
+        const width = if (placement.cols > 0) placement.cols else 1;
+        const height = if (placement.rows > 0) placement.rows else 1;
+        const end_row: u16 = placement.row + height - 1;
+        const end_col: u16 = placement.col + width - 1;
+        return row >= placement.row and row <= end_row and col >= placement.col and col <= end_col;
     }
 
     fn clearKittyImages(self: *TerminalSession) void {
