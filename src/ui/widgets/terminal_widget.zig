@@ -918,6 +918,137 @@ pub const TerminalWidget = struct {
                     }
                 }
             }.apply;
+            const applyTerminalKey = struct {
+                fn apply(widget: *TerminalWidget, key: c_int, key_mod: terminal_mod.Modifier) !bool {
+                    switch (key) {
+                        renderer_mod.KEY_ENTER => {
+                            try widget.session.sendKey(terminal_mod.VTERM_KEY_ENTER, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_BACKSPACE => {
+                            try widget.session.sendKey(terminal_mod.VTERM_KEY_BACKSPACE, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_TAB => {
+                            try widget.session.sendKey(terminal_mod.VTERM_KEY_TAB, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_ESCAPE => {
+                            try widget.session.sendKey(terminal_mod.VTERM_KEY_ESCAPE, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_UP => {
+                            try widget.session.sendKey(terminal_mod.VTERM_KEY_UP, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_DOWN => {
+                            try widget.session.sendKey(terminal_mod.VTERM_KEY_DOWN, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_LEFT => {
+                            try widget.session.sendKey(terminal_mod.VTERM_KEY_LEFT, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_RIGHT => {
+                            try widget.session.sendKey(terminal_mod.VTERM_KEY_RIGHT, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_HOME => {
+                            try widget.session.sendKey(terminal_mod.VTERM_KEY_HOME, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_END => {
+                            try widget.session.sendKey(terminal_mod.VTERM_KEY_END, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_PAGE_UP => {
+                            try widget.session.sendKey(terminal_mod.VTERM_KEY_PAGEUP, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_PAGE_DOWN => {
+                            try widget.session.sendKey(terminal_mod.VTERM_KEY_PAGEDOWN, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_INSERT => {
+                            try widget.session.sendKey(terminal_mod.VTERM_KEY_INS, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_DELETE => {
+                            try widget.session.sendKey(terminal_mod.VTERM_KEY_DEL, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_KP_0 => {
+                            try widget.session.sendKeypad(terminal_mod.KeypadKey.kp0, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_KP_1 => {
+                            try widget.session.sendKeypad(terminal_mod.KeypadKey.kp1, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_KP_2 => {
+                            try widget.session.sendKeypad(terminal_mod.KeypadKey.kp2, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_KP_3 => {
+                            try widget.session.sendKeypad(terminal_mod.KeypadKey.kp3, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_KP_4 => {
+                            try widget.session.sendKeypad(terminal_mod.KeypadKey.kp4, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_KP_5 => {
+                            try widget.session.sendKeypad(terminal_mod.KeypadKey.kp5, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_KP_6 => {
+                            try widget.session.sendKeypad(terminal_mod.KeypadKey.kp6, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_KP_7 => {
+                            try widget.session.sendKeypad(terminal_mod.KeypadKey.kp7, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_KP_8 => {
+                            try widget.session.sendKeypad(terminal_mod.KeypadKey.kp8, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_KP_9 => {
+                            try widget.session.sendKeypad(terminal_mod.KeypadKey.kp9, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_KP_DECIMAL => {
+                            try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_decimal, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_KP_DIVIDE => {
+                            try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_divide, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_KP_MULTIPLY => {
+                            try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_multiply, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_KP_SUBTRACT => {
+                            try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_subtract, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_KP_ADD => {
+                            try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_add, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_KP_ENTER => {
+                            try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_enter, key_mod);
+                            return true;
+                        },
+                        renderer_mod.KEY_KP_EQUAL => {
+                            try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_equal, key_mod);
+                            return true;
+                        },
+                        else => return false,
+                    }
+                }
+            }.apply;
 
             if (ctrl and shift and r.isKeyPressed(renderer_mod.KEY_V) and in_terminal) {
                 if (r.getClipboardText()) |clip| {
@@ -1011,140 +1142,76 @@ pub const TerminalWidget = struct {
                 }
             }
 
-            if (!skip_chars and allow_terminal_key) {
-                while (r.getKeyPressed()) |key| {
-                    const handled_key = blk: {
-                        switch (key) {
-                            renderer_mod.KEY_ENTER => {
-                                try self.session.sendKey(terminal_mod.VTERM_KEY_ENTER, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_BACKSPACE => {
-                                try self.session.sendKey(terminal_mod.VTERM_KEY_BACKSPACE, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_TAB => {
-                                try self.session.sendKey(terminal_mod.VTERM_KEY_TAB, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_ESCAPE => {
-                                try self.session.sendKey(terminal_mod.VTERM_KEY_ESCAPE, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_UP => {
-                                try self.session.sendKey(terminal_mod.VTERM_KEY_UP, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_DOWN => {
-                                try self.session.sendKey(terminal_mod.VTERM_KEY_DOWN, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_LEFT => {
-                                try self.session.sendKey(terminal_mod.VTERM_KEY_LEFT, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_RIGHT => {
-                                try self.session.sendKey(terminal_mod.VTERM_KEY_RIGHT, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_HOME => {
-                                try self.session.sendKey(terminal_mod.VTERM_KEY_HOME, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_END => {
-                                try self.session.sendKey(terminal_mod.VTERM_KEY_END, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_PAGE_UP => {
-                                try self.session.sendKey(terminal_mod.VTERM_KEY_PAGEUP, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_PAGE_DOWN => {
-                                try self.session.sendKey(terminal_mod.VTERM_KEY_PAGEDOWN, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_INSERT => {
-                                try self.session.sendKey(terminal_mod.VTERM_KEY_INS, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_DELETE => {
-                                try self.session.sendKey(terminal_mod.VTERM_KEY_DEL, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_KP_0 => {
-                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp0, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_KP_1 => {
-                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp1, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_KP_2 => {
-                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp2, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_KP_3 => {
-                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp3, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_KP_4 => {
-                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp4, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_KP_5 => {
-                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp5, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_KP_6 => {
-                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp6, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_KP_7 => {
-                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp7, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_KP_8 => {
-                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp8, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_KP_9 => {
-                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp9, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_KP_DECIMAL => {
-                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp_decimal, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_KP_DIVIDE => {
-                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp_divide, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_KP_MULTIPLY => {
-                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp_multiply, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_KP_SUBTRACT => {
-                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp_subtract, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_KP_ADD => {
-                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp_add, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_KP_ENTER => {
-                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp_enter, mod);
-                                break :blk true;
-                            },
-                            renderer_mod.KEY_KP_EQUAL => {
-                                try self.session.sendKeypad(terminal_mod.KeypadKey.kp_equal, mod);
-                                break :blk true;
-                            },
-                            else => break :blk false,
+            if (allow_terminal_key) {
+                var handled_keys: [32]c_int = undefined;
+                var handled_key_count: usize = 0;
+                const markHandled = struct {
+                    fn apply(keys: *[32]c_int, count: *usize, key: c_int) void {
+                        if (count.* >= keys.len) return;
+                        keys[count.*] = key;
+                        count.* += 1;
+                    }
+                }.apply;
+                const wasHandled = struct {
+                    fn apply(keys: *const [32]c_int, count: usize, key: c_int) bool {
+                        var idx: usize = 0;
+                        while (idx < count) : (idx += 1) {
+                            if (keys[idx] == key) return true;
                         }
-                    };
+                        return false;
+                    }
+                }.apply;
+                const repeat_keys = [_]c_int{
+                    renderer_mod.KEY_ENTER,
+                    renderer_mod.KEY_BACKSPACE,
+                    renderer_mod.KEY_TAB,
+                    renderer_mod.KEY_ESCAPE,
+                    renderer_mod.KEY_UP,
+                    renderer_mod.KEY_DOWN,
+                    renderer_mod.KEY_LEFT,
+                    renderer_mod.KEY_RIGHT,
+                    renderer_mod.KEY_HOME,
+                    renderer_mod.KEY_END,
+                    renderer_mod.KEY_PAGE_UP,
+                    renderer_mod.KEY_PAGE_DOWN,
+                    renderer_mod.KEY_INSERT,
+                    renderer_mod.KEY_DELETE,
+                    renderer_mod.KEY_KP_0,
+                    renderer_mod.KEY_KP_1,
+                    renderer_mod.KEY_KP_2,
+                    renderer_mod.KEY_KP_3,
+                    renderer_mod.KEY_KP_4,
+                    renderer_mod.KEY_KP_5,
+                    renderer_mod.KEY_KP_6,
+                    renderer_mod.KEY_KP_7,
+                    renderer_mod.KEY_KP_8,
+                    renderer_mod.KEY_KP_9,
+                    renderer_mod.KEY_KP_DECIMAL,
+                    renderer_mod.KEY_KP_DIVIDE,
+                    renderer_mod.KEY_KP_MULTIPLY,
+                    renderer_mod.KEY_KP_SUBTRACT,
+                    renderer_mod.KEY_KP_ADD,
+                    renderer_mod.KEY_KP_ENTER,
+                    renderer_mod.KEY_KP_EQUAL,
+                };
+                const isRepeatKey = struct {
+                    fn apply(keys: []const c_int, key: c_int) bool {
+                        for (keys) |value| {
+                            if (value == key) return true;
+                        }
+                        return false;
+                    }
+                }.apply;
+
+                while (r.getKeyPressed()) |key| {
+                    if (isRepeatKey(&repeat_keys, key)) {
+                        continue;
+                    }
+                    const handled_key = try applyTerminalKey(self, key, mod);
 
                     if (handled_key) {
                         clearLiveState(self);
+                        markHandled(&handled_keys, &handled_key_count, key);
                         handled = true;
                         skip_chars = true;
                         continue;
@@ -1206,6 +1273,18 @@ pub const TerminalWidget = struct {
                         if (maybe_char != 0) {
                             clearLiveState(self);
                             try self.session.sendChar(maybe_char, mod);
+                            markHandled(&handled_keys, &handled_key_count, key);
+                            handled = true;
+                            skip_chars = true;
+                        }
+                    }
+                }
+
+                for (repeat_keys) |key| {
+                    if (wasHandled(&handled_keys, handled_key_count, key)) continue;
+                    if (r.isKeyRepeated(key)) {
+                        if (try applyTerminalKey(self, key, mod)) {
+                            clearLiveState(self);
                             handled = true;
                             skip_chars = true;
                         }
