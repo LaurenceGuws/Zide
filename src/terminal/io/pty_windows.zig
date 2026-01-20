@@ -334,12 +334,19 @@ pub const Pty = struct {
     pub fn write(self: *Pty, data: []const u8) !usize {
         const handle = self.input_write orelse return 0;
 
-        var bytes_written: win32.DWORD = 0;
-        if (win32.WriteFile(handle, data.ptr, @intCast(data.len), &bytes_written, null) == 0) {
-            return 0;
+        if (data.len == 0) return 0;
+        var offset: usize = 0;
+        while (offset < data.len) {
+            var bytes_written: win32.DWORD = 0;
+            const remaining: win32.DWORD = @intCast(data.len - offset);
+            if (win32.WriteFile(handle, data.ptr + offset, remaining, &bytes_written, null) == 0) {
+                break;
+            }
+            if (bytes_written == 0) break;
+            offset += bytes_written;
         }
 
-        return bytes_written;
+        return offset;
     }
 
     /// Resize the PTY

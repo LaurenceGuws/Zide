@@ -69,7 +69,27 @@ pub const Pty = struct {
     }
 
     pub fn write(self: *Pty, data: []const u8) !usize {
-        return posix.write(self.master_fd, data);
+        if (data.len == 0) return 0;
+        var offset: usize = 0;
+        while (offset < data.len) {
+            const n = posix.write(self.master_fd, data[offset..]) catch |err| {
+                if (err == error.WouldBlock) {
+                    var fds = [1]posix.pollfd{
+                        .{
+                            .fd = self.master_fd,
+                            .events = posix.POLL.OUT,
+                            .revents = 0,
+                        },
+                    };
+                    _ = posix.poll(&fds, 10) catch {};
+                    continue;
+                }
+                return err;
+            };
+            if (n == 0) break;
+            offset += n;
+        }
+        return offset;
     }
 
     pub fn read(self: *Pty, buffer: []u8) !?usize {

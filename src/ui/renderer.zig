@@ -7,6 +7,8 @@ const c = @cImport({
 });
 const TerminalFont = @import("terminal_font.zig").TerminalFont;
 
+var mouse_wheel_delta: f32 = 0.0;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Font Selection (change this to test different fonts)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -916,7 +918,7 @@ pub const Renderer = struct {
 
     pub fn getMouseWheelMove(self: *Renderer) f32 {
         _ = self;
-        return c.GetMouseWheelMove();
+        return mouse_wheel_delta;
     }
 
 };
@@ -924,6 +926,7 @@ pub const Renderer = struct {
 /// Poll input events (updates raylib's internal input state)
 pub fn pollInputEvents() void {
     c.PollInputEvents();
+    mouse_wheel_delta = c.GetMouseWheelMove();
 }
 
 /// Sleep for specified duration (in seconds)

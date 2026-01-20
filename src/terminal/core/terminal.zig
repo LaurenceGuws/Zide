@@ -198,6 +198,7 @@ pub const TerminalSnapshot = struct {
     dirty_cols_end: []const u16,
     cursor: CursorPos,
     cursor_style: types.CursorStyle,
+    cursor_visible: bool,
     dirty: Dirty,
     damage: Damage,
     alt_active: bool,
@@ -2978,6 +2979,7 @@ pub const TerminalSession = struct {
                         const mode = p[idx];
                         switch (mode) {
                             1 => self.app_cursor_keys = true,
+                            25 => self.activeScreen().cursor_visible = true,
                             47 => self.enterAltScreen(false, false),
                             1047 => self.enterAltScreen(true, false),
                             1048 => self.saveCursor(),
@@ -3001,6 +3003,7 @@ pub const TerminalSession = struct {
                         const mode = p[idx];
                         switch (mode) {
                             1 => self.app_cursor_keys = false,
+                            25 => self.activeScreen().cursor_visible = false,
                             47 => self.exitAltScreen(false),
                             1047 => self.exitAltScreen(false),
                             1048 => self.restoreCursor(),
@@ -3792,6 +3795,7 @@ pub const TerminalSession = struct {
             .dirty_cols_end = screen.grid.dirty_cols_end.items,
             .cursor = screen.cursor,
             .cursor_style = screen.cursor_style,
+            .cursor_visible = screen.cursor_visible,
             .dirty = screen.grid.dirty,
             .damage = screen.grid.damage,
             .alt_active = alt_active,
