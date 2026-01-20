@@ -13,14 +13,15 @@ pub const OptionsBar = struct {
 
         // Menu labels
         const labels = [_][]const u8{ "File", "Edit", "Selection", "View", "Go", "Run", "Terminal", "Help" };
-        var x: f32 = 10;
+        const scale = r.uiScaleFactor();
+        var x: f32 = 10 * scale;
         const y: f32 = (self.height - r.char_height) / 2;
         const mouse = r.getMousePos();
         const pressed = r.isMouseButtonDown(renderer_mod.MOUSE_LEFT);
         for (labels) |label| {
             const text_w = @as(f32, @floatFromInt(label.len)) * r.char_width;
-            const pad_x: f32 = 6;
-            const pad_y: f32 = 4;
+            const pad_x: f32 = 6 * scale;
+            const pad_y: f32 = 4 * scale;
             const bx = x - pad_x;
             const by = y - pad_y;
             const bw = text_w + pad_x * 2;
@@ -31,8 +32,7 @@ pub const OptionsBar = struct {
                 r.drawRect(@intFromFloat(bx), @intFromFloat(by), @intFromFloat(bw), @intFromFloat(bh), bg);
             }
             r.drawText(label, x, y, if (hovered) Color.fg else Color.comment);
-            x += text_w + 16;
+            x += text_w + 16 * scale;
         }
     }
 };
-

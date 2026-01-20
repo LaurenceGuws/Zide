@@ -106,6 +106,7 @@ pub const Renderer = struct {
     height: c_int,
     font: c.Font,
     font_size: f32,
+    base_font_size: f32,
     char_width: f32,
     char_height: f32,
     icon_font: c.Font,
@@ -120,6 +121,11 @@ pub const Renderer = struct {
     terminal_texture_h: c_int,
     theme: Theme,
     mouse_scale: MousePos,
+    user_zoom: f32,
+    user_zoom_target: f32,
+    ui_scale: f32,
+    last_zoom_request_time: f64,
+    last_zoom_apply_time: f64,
     wayland_scale_cache: ?f32,
     wayland_scale_last_update: f64,
     key_repeat_next: [key_repeat_key_count]f64,
@@ -151,8 +157,10 @@ pub const Renderer = struct {
         const renderer = try allocator.create(Renderer);
 
         // Load default monospace font
-        const font_size: f32 = 16.0;
+        const base_font_size: f32 = 16.0;
         const font = c.GetFontDefault();
+        const ui_scale: f32 = 1.0;
+        const font_size = base_font_size * ui_scale;
 
         renderer.* = .{
             .allocator = allocator,
@@ -160,6 +168,7 @@ pub const Renderer = struct {
             .height = actual_height,
             .font = font,
             .font_size = font_size,
+            .base_font_size = base_font_size,
             .char_width = font_size * 0.6, // Approximate monospace width
             .char_height = font_size * 1.2,
             .icon_font = font,
@@ -174,6 +183,11 @@ pub const Renderer = struct {
             .terminal_texture_h = 0,
             .theme = .{},
             .mouse_scale = .{ .x = 1.0, .y = 1.0 },
+            .user_zoom = 1.0,
+            .user_zoom_target = 1.0,
+            .ui_scale = ui_scale,
+            .last_zoom_request_time = 0.0,
+            .last_zoom_apply_time = 0.0,
             .wayland_scale_cache = null,
             .wayland_scale_last_update = -1000.0,
             .key_repeat_next = [_]f64{0} ** key_repeat_key_count,
@@ -257,6 +271,106 @@ pub const Renderer = struct {
             self.char_height = measure.y;
             // Terminal metrics are managed by TerminalFont
         }
+    }
+
+    fn queryUiScale(self: *Renderer) f32 {
+        var scale: f32 = 1.0;
+        const dpi = c.GetWindowScaleDPI();
+        scale = @max(dpi.x, dpi.y);
+
+        if (compositor.isWayland()) {
+            const now = c.GetTime();
+            if (now - self.wayland_scale_last_update > 1.0) {
+                self.wayland_scale_cache = compositor.getWaylandScale(self.allocator);
+                self.wayland_scale_last_update = now;
+            }
+            if (self.wayland_scale_cache) |wl_scale| {
+                if (wl_scale > 0.0) scale = wl_scale;
+            }
+        }
+
+        if (std.c.getenv("ZIDE_UI_SCALE")) |raw| {
+            const s = std.mem.trim(u8, std.mem.span(raw), " \t\r\n");
+            const env_scale = std.fmt.parseFloat(f32, s) catch 1.0;
+            if (env_scale > 0.0) scale *= env_scale;
+        }
+
+        return if (scale > 0.1) scale else 1.0;
+    }
+
+    fn applyFontScale(self: *Renderer) !void {
+        const size = self.base_font_size * self.ui_scale * self.user_zoom;
+        self.loadFontWithGlyphs(self.allocator, FONT_PATH, size);
+        if (loadFontWithGlyphsAtSize(self.allocator, FONT_PATH, size * 2.0)) |icon_font| {
+            if (self.icon_font.texture.id != c.GetFontDefault().texture.id and self.icon_font.texture.id != self.font.texture.id) {
+                c.UnloadFont(self.icon_font);
+            }
+            self.icon_font = icon_font;
+            self.icon_font_size = size * 2.0;
+            const measure = c.MeasureTextEx(self.icon_font, "M", self.icon_font_size, 0);
+            self.icon_char_width = measure.x;
+            self.icon_char_height = measure.y;
+            c.SetTextureFilter(self.icon_font.texture, c.TEXTURE_FILTER_BILINEAR);
+        } else {
+            self.icon_font = self.font;
+            self.icon_font_size = self.font_size;
+            self.icon_char_width = self.char_width;
+            self.icon_char_height = self.char_height;
+        }
+
+        self.terminal_font.deinit();
+        self.terminal_font = try TerminalFont.init(
+            self.allocator,
+            FONT_PATH,
+            size,
+            SYMBOLS_FALLBACK_PATH,
+            UNICODE_SYMBOLS2_PATH,
+            UNICODE_SYMBOLS_PATH,
+            UNICODE_MONO_PATH,
+            UNICODE_SANS_PATH,
+            EMOJI_COLOR_FALLBACK_PATH,
+            EMOJI_TEXT_FALLBACK_PATH,
+        );
+        self.terminal_font.setAtlasFilterPoint();
+        self.terminal_cell_width = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(self.terminal_font.cell_width)))));
+        self.terminal_cell_height = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(self.terminal_font.line_height)))));
+    }
+
+    pub fn queueUserZoom(self: *Renderer, delta: f32, now: f64) bool {
+        const next = std.math.clamp(self.user_zoom_target + delta, 0.5, 3.0);
+        if (std.math.approxEqAbs(f32, next, self.user_zoom_target, 0.0001)) return false;
+        self.user_zoom_target = next;
+        self.last_zoom_request_time = now;
+        return true;
+    }
+
+    pub fn resetUserZoomTarget(self: *Renderer, now: f64) bool {
+        if (std.math.approxEqAbs(f32, self.user_zoom_target, 1.0, 0.0001)) return false;
+        self.user_zoom_target = 1.0;
+        self.last_zoom_request_time = now;
+        return true;
+    }
+
+    pub fn refreshUiScale(self: *Renderer) !bool {
+        const next = self.queryUiScale();
+        if (std.math.approxEqAbs(f32, next, self.ui_scale, 0.0001)) return false;
+        self.ui_scale = next;
+        try self.applyFontScale();
+        return true;
+    }
+
+    pub fn applyPendingZoom(self: *Renderer, now: f64) !bool {
+        if (std.math.approxEqAbs(f32, self.user_zoom_target, self.user_zoom, 0.0001)) return false;
+        if (now - self.last_zoom_request_time < 0.04) return false;
+        if (now - self.last_zoom_apply_time < 0.02) return false;
+        self.user_zoom = self.user_zoom_target;
+        try self.applyFontScale();
+        self.last_zoom_apply_time = now;
+        return true;
+    }
+
+    pub fn uiScaleFactor(self: *const Renderer) f32 {
+        return self.ui_scale * self.user_zoom;
     }
 
     fn loadFontWithGlyphsAtSize(allocator: std.mem.Allocator, path: [*:0]const u8, size: f32) ?c.Font {

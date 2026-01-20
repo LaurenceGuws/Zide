@@ -26,6 +26,7 @@ pub const EditorWidget = struct {
     }
 
     pub fn draw(self: *EditorWidget, r: *Renderer, x: f32, y: f32, width: f32, height: f32) void {
+        self.gutter_width = 50 * r.uiScaleFactor();
         const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
         const start_line = self.editor.scroll_line;
         const end_line = @min(start_line + visible_lines + 1, self.editor.lineCount());
@@ -66,7 +67,7 @@ pub const EditorWidget = struct {
                         r,
                         line_text,
                         line_y,
-                        x + self.gutter_width + 8,
+                        x + self.gutter_width + 8 * r.uiScaleFactor(),
                         line_start,
                         line_end,
                         tokens,
@@ -79,7 +80,7 @@ pub const EditorWidget = struct {
 
         // Draw cursor
         if (self.editor.cursor.line >= start_line and self.editor.cursor.line < end_line) {
-            const cursor_x = x + self.gutter_width + 8 + @as(f32, @floatFromInt(self.editor.cursor.col)) * r.char_width;
+            const cursor_x = x + self.gutter_width + 8 * r.uiScaleFactor() + @as(f32, @floatFromInt(self.editor.cursor.col)) * r.char_width;
             const cursor_y = y + @as(f32, @floatFromInt(self.editor.cursor.line - start_line)) * r.char_height;
             r.drawCursor(cursor_x, cursor_y, .line);
         }
@@ -95,6 +96,7 @@ pub const EditorWidget = struct {
         mouse_x: f32,
         mouse_y: f32,
     ) bool {
+        self.gutter_width = 50 * r.uiScaleFactor();
         if (width <= 0 or height <= 0) return false;
         if (mouse_x < x or mouse_x > x + width) return false;
         if (mouse_y < y or mouse_y > y + height) return false;
@@ -104,7 +106,7 @@ pub const EditorWidget = struct {
         const max_line = self.editor.lineCount() - 1;
         const line = @min(self.editor.scroll_line + line_offset, max_line);
 
-        const text_start_x = x + self.gutter_width + 8;
+        const text_start_x = x + self.gutter_width + 8 * r.uiScaleFactor();
         var col: usize = 0;
         if (mouse_x > text_start_x) {
             col = @as(usize, @intFromFloat((mouse_x - text_start_x) / r.char_width));

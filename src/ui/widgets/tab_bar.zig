@@ -11,6 +11,8 @@ pub const TabBar = struct {
     tabs: std.ArrayList(Tab),
     active_index: usize,
     height: f32,
+    tab_width: f32,
+    tab_spacing: f32,
 
     pub const Tab = struct {
         title: []const u8,
@@ -26,6 +28,8 @@ pub const TabBar = struct {
             .tabs = .empty,
             .active_index = 0,
             .height = 28,
+            .tab_width = 150,
+            .tab_spacing = 1,
         };
     }
 
@@ -54,7 +58,6 @@ pub const TabBar = struct {
 
         var cursor_x: f32 = x;
         for (self.tabs.items, 0..) |tab, i| {
-            const tab_width: f32 = 150;
             const is_active = i == self.active_index;
 
             // Tab background
@@ -62,15 +65,16 @@ pub const TabBar = struct {
                 Color.bg
             else
                 Color{ .r = 35, .g = 36, .b = 48 };
-            r.drawRect(@intFromFloat(cursor_x), @intFromFloat(y), @intFromFloat(tab_width), @intFromFloat(self.height), bg);
+            r.drawRect(@intFromFloat(cursor_x), @intFromFloat(y), @intFromFloat(self.tab_width), @intFromFloat(self.height), bg);
 
             // Tab border
             if (is_active) {
-                r.drawRect(@intFromFloat(cursor_x), @intFromFloat(y + self.height - 2), @intFromFloat(tab_width), 2, Color.purple);
+                const border_h: f32 = @max(1.0, r.uiScaleFactor() * 2.0);
+                r.drawRect(@intFromFloat(cursor_x), @intFromFloat(y + self.height - border_h), @intFromFloat(self.tab_width), @intFromFloat(border_h), Color.purple);
             }
 
             // Tab title
-            const title_x = cursor_x + 8;
+            const title_x = cursor_x + 8 * r.uiScaleFactor();
             const title_y = y + (self.height - r.char_height) / 2;
 
             // Modified indicator
@@ -79,7 +83,7 @@ pub const TabBar = struct {
             }
 
             const prefix_width: f32 = if (tab.modified) r.char_width * 2 else 0;
-            const title_max = tab_width - 16 - prefix_width;
+            const title_max = self.tab_width - 16 * r.uiScaleFactor() - prefix_width;
             const result = common.drawTruncatedText(
                 r,
                 tab.title,
@@ -88,13 +92,13 @@ pub const TabBar = struct {
                 if (is_active) Color.fg else Color.comment,
                 title_max,
             );
-            const in_tab = mouse.x >= cursor_x and mouse.x <= cursor_x + tab_width and
+            const in_tab = mouse.x >= cursor_x and mouse.x <= cursor_x + self.tab_width and
                 mouse.y >= y and mouse.y <= y + self.height;
             if (result.truncated and in_tab) {
                 tooltip = .{ .text = tab.title, .x = mouse.x, .y = mouse.y };
             }
 
-            cursor_x += tab_width + 1;
+            cursor_x += self.tab_width + self.tab_spacing;
         }
 
         r.endClip();
@@ -108,8 +112,7 @@ pub const TabBar = struct {
         if (y < bar_y or y > bar_y + self.height) return false;
         if (x < bar_x) return false;
 
-        const tab_width: f32 = 150;
-        const clicked_index = @as(usize, @intFromFloat((x - bar_x) / (tab_width + 1)));
+        const clicked_index = @as(usize, @intFromFloat((x - bar_x) / (self.tab_width + self.tab_spacing)));
 
         if (clicked_index < self.tabs.items.len) {
             self.active_index = clicked_index;
@@ -118,4 +121,3 @@ pub const TabBar = struct {
         return false;
     }
 };
-

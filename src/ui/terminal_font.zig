@@ -363,10 +363,6 @@ pub const TerminalFont = struct {
         if (self.upload_buffer_capacity > 0) {
             self.allocator.free(self.upload_buffer);
         }
-        var cp_it = self.system_fallback_by_cp.iterator();
-        while (cp_it.next()) |entry| {
-            if (entry.value_ptr.*) |path| self.allocator.free(path);
-        }
         self.system_fallback_by_cp.deinit();
 
         var face_it = self.system_faces.iterator();
