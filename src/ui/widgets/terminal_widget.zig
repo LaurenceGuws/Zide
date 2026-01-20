@@ -4,22 +4,55 @@ const renderer_mod = @import("../renderer.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 const app_logger = @import("../../app_logger.zig");
 
+const c = @cImport({
+    @cInclude("raylib.h");
+});
+
 const Renderer = renderer_mod.Renderer;
 const Color = renderer_mod.Color;
 const TerminalSession = terminal_mod.TerminalSession;
 const CursorPos = terminal_mod.CursorPos;
 const Cell = terminal_mod.Cell;
+const KittyImage = terminal_mod.KittyImage;
+const KittyPlacement = terminal_mod.KittyPlacement;
+
+const KittyTexture = struct {
+    texture: c.Texture2D,
+    width: i32,
+    height: i32,
+    version: u64,
+};
 
 /// Terminal widget for drawing a terminal view
 pub const TerminalWidget = struct {
     session: *TerminalSession,
     last_scroll_offset: usize = 0,
+    kitty_images_view: std.ArrayList(KittyImage),
+    kitty_placements_view: std.ArrayList(KittyPlacement),
+    kitty_textures: std.AutoHashMap(u32, KittyTexture),
+    last_kitty_generation: u64 = 0,
 
     pub fn init(session: *TerminalSession) TerminalWidget {
         return .{
             .session = session,
             .last_scroll_offset = 0,
+            .kitty_images_view = .empty,
+            .kitty_placements_view = .empty,
+            .kitty_textures = std.AutoHashMap(u32, KittyTexture).init(session.allocator),
+            .last_kitty_generation = 0,
         };
+    }
+
+    pub fn deinit(self: *TerminalWidget) void {
+        var it = self.kitty_textures.iterator();
+        while (it.next()) |entry| {
+            if (entry.value_ptr.texture.id != 0) {
+                c.UnloadTexture(entry.value_ptr.texture);
+            }
+        }
+        self.kitty_textures.deinit();
+        self.kitty_images_view.deinit(self.session.allocator);
+        self.kitty_placements_view.deinit(self.session.allocator);
     }
 
     pub fn draw(self: *TerminalWidget, r: *Renderer, x: f32, y: f32, width: f32, height: f32) void {
@@ -46,6 +79,7 @@ pub const TerminalWidget = struct {
         const cursor = if (draw_cursor) snapshot.cursor else CursorPos{ .row = rows + 1, .col = cols + 1 };
         const cursor_style = snapshot.cursor_style;
         const selection = self.session.selectionState();
+        const kitty_generation = snapshot.kitty_generation;
 
         if (rows > 0 and cols > 0) {
             const view_count = rows * cols;
@@ -88,16 +122,27 @@ pub const TerminalWidget = struct {
                     std.mem.copyForwards(Cell, row_dest, snapshot.cells[src_start .. src_start + cols]);
                 }
             }
+
+            _ = self.kitty_images_view.resize(self.session.allocator, snapshot.kitty_images.len) catch {};
+            std.mem.copyForwards(KittyImage, self.kitty_images_view.items, snapshot.kitty_images);
+            _ = self.kitty_placements_view.resize(self.session.allocator, snapshot.kitty_placements.len) catch {};
+            std.mem.copyForwards(KittyPlacement, self.kitty_placements_view.items, snapshot.kitty_placements);
+            if (self.kitty_placements_view.items.len > 1) {
+                sortKittyPlacements(self.kitty_placements_view.items);
+            }
         } else {
             self.session.view_cells.clearRetainingCapacity();
             self.session.view_dirty_rows.clearRetainingCapacity();
             self.session.view_dirty_cols_start.clearRetainingCapacity();
             self.session.view_dirty_cols_end.clearRetainingCapacity();
+            self.kitty_images_view.clearRetainingCapacity();
+            self.kitty_placements_view.clearRetainingCapacity();
         }
         self.session.unlock();
 
         const view_cells = self.session.view_cells.items;
         const view_dirty_rows = self.session.view_dirty_rows.items;
+        const has_kitty = self.kitty_images_view.items.len > 0 and self.kitty_placements_view.items.len > 0;
         const bg_color = if (view_cells.len > 0) Color{
             .r = view_cells[0].attrs.bg.r,
             .g = view_cells[0].attrs.bg.g,
@@ -129,7 +174,7 @@ pub const TerminalWidget = struct {
             }
         }.get;
 
-        const drawRowRange = struct {
+        const drawRowBackgrounds = struct {
             fn render(
                 renderer: *Renderer,
                 snapshot_cells: []const Cell,
@@ -207,8 +252,33 @@ pub const TerminalWidget = struct {
                         } else padding_bg,
                     );
                 }
+            }
+        }.render;
 
-                col = col_start;
+        const drawRowGlyphs = struct {
+            fn render(
+                renderer: *Renderer,
+                snapshot_cells: []const Cell,
+                cols_count: usize,
+                row_idx: usize,
+                col_start_in: usize,
+                col_end_in: usize,
+                base_x_local: f32,
+                base_y_local: f32,
+                padding_x_i: i32,
+            ) void {
+                _ = padding_x_i;
+                const cell_w_i: i32 = @intFromFloat(std.math.round(renderer.terminal_cell_width));
+                const cell_h_i: i32 = @intFromFloat(std.math.round(renderer.terminal_cell_height));
+                const base_x_i: i32 = @intFromFloat(std.math.round(base_x_local));
+                const base_y_i: i32 = @intFromFloat(std.math.round(base_y_local));
+
+                const row_cells = rowSlice(snapshot_cells, cols_count, row_idx);
+                const col_start = @min(col_start_in, cols_count - 1);
+                const col_end = @min(col_end_in, cols_count - 1);
+                if (col_start > col_end) return;
+
+                var col: usize = col_start;
                 while (col <= col_end and col < cols_count) : (col += 1) {
                     const cell = row_cells[col];
                     const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
@@ -273,7 +343,8 @@ pub const TerminalWidget = struct {
             const texture_w = cell_w_i * @as(i32, @intCast(cols)) + padding_x_i;
             const texture_h = @as(i32, @intFromFloat(@round(r.terminal_cell_height * @as(f32, @floatFromInt(rows)))));
             const recreated = r.ensureTerminalTexture(texture_w, texture_h);
-            const needs_full = recreated or snapshot.alt_active or snapshot.dirty == .full or scroll_changed or (snapshot.dirty != .none and scroll_offset > 0);
+            const kitty_changed = kitty_generation != self.last_kitty_generation;
+            const needs_full = recreated or snapshot.alt_active or snapshot.dirty == .full or scroll_changed or (snapshot.dirty != .none and scroll_offset > 0) or has_kitty or kitty_changed;
             const needs_partial = snapshot.dirty == .partial and !needs_full and scroll_offset == 0;
 
             if ((needs_full or needs_partial) and r.beginTerminalTexture()) {
@@ -290,9 +361,21 @@ pub const TerminalWidget = struct {
                         .b = view_cells[0].attrs.bg.b,
                     } else r.theme.background;
                     r.drawRect(0, 0, texture_w, texture_h, bg);
+                    if (has_kitty) {
+                        self.cleanupKittyTextures(self.kitty_images_view.items);
+                        self.drawKittyImages(r, base_x_local, base_y_local);
+                    }
                     var row: usize = 0;
                     while (row < rows) : (row += 1) {
-                        drawRowRange(r, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i);
+                        drawRowBackgrounds(r, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i);
+                    }
+                    if (has_kitty) {
+                        self.cleanupKittyTextures(self.kitty_images_view.items);
+                        self.drawKittyImages(r, base_x_local, base_y_local);
+                    }
+                    row = 0;
+                    while (row < rows) : (row += 1) {
+                        drawRowGlyphs(r, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i);
                     }
                 } else if (needs_partial) {
                     var row: usize = 0;
@@ -300,17 +383,23 @@ pub const TerminalWidget = struct {
                         if (row < view_dirty_rows.len and view_dirty_rows[row]) {
                             const draw_start: usize = 0;
                             const draw_end: usize = cols - 1;
-                            drawRowRange(r, view_cells, cols, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                            drawRowBackgrounds(r, view_cells, cols, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                            drawRowGlyphs(r, view_cells, cols, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
                             if (row > 0) {
-                                drawRowRange(r, view_cells, cols, row - 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                                drawRowBackgrounds(r, view_cells, cols, row - 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                                drawRowGlyphs(r, view_cells, cols, row - 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
                             }
                             if (row + 1 < rows) {
-                                drawRowRange(r, view_cells, cols, row + 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                                drawRowBackgrounds(r, view_cells, cols, row + 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                                drawRowGlyphs(r, view_cells, cols, row + 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
                             }
                         }
                     }
                 }
                 r.endTerminalTexture();
+                if (kitty_changed) {
+                    self.last_kitty_generation = kitty_generation;
+                }
                 const base_x_i: i32 = @intFromFloat(std.math.round(base_x));
                 const base_y_i: i32 = @intFromFloat(std.math.round(base_y));
                 const clip_w_i: i32 = @min(@as(i32, @intFromFloat(std.math.round(width))), cell_w_i * @as(i32, @intCast(cols)));
@@ -325,6 +414,9 @@ pub const TerminalWidget = struct {
             }
 
             r.drawTerminalTexture(base_x, base_y);
+        }
+        if (!has_kitty and self.kitty_textures.count() > 0) {
+            self.cleanupKittyTextures(self.kitty_images_view.items);
         }
 
         if (rows > 0 and cols > 0) {
@@ -543,6 +635,133 @@ pub const TerminalWidget = struct {
                 history_len,
                 scroll_offset,
             });
+        }
+    }
+
+    fn sortKittyPlacements(placements: []KittyPlacement) void {
+        std.sort.heap(KittyPlacement, placements, {}, struct {
+            fn lessThan(_: void, a: KittyPlacement, b: KittyPlacement) bool {
+                if (a.z == b.z) {
+                    if (a.row == b.row) return a.col < b.col;
+                    return a.row < b.row;
+                }
+                return a.z < b.z;
+            }
+        }.lessThan);
+    }
+
+    fn cleanupKittyTextures(self: *TerminalWidget, images: []const KittyImage) void {
+        var stale = std.ArrayList(u32).empty;
+        defer stale.deinit(self.session.allocator);
+        var it = self.kitty_textures.iterator();
+        while (it.next()) |entry| {
+            var found = false;
+            for (images) |img| {
+                if (img.id == entry.key_ptr.*) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                _ = stale.append(self.session.allocator, entry.key_ptr.*) catch {};
+            }
+        }
+        for (stale.items) |id| {
+            if (self.kitty_textures.fetchRemove(id)) |entry| {
+                if (entry.value.texture.id != 0) {
+                    c.UnloadTexture(entry.value.texture);
+                }
+            }
+        }
+    }
+
+    fn drawKittyImages(self: *TerminalWidget, r: *Renderer, base_x: f32, base_y: f32) void {
+        const cell_w: f32 = r.terminal_cell_width;
+        const cell_h: f32 = r.terminal_cell_height;
+
+        for (self.kitty_placements_view.items) |placement| {
+            const image = findKittyImage(self.kitty_images_view.items, placement.image_id) orelse continue;
+            const tex = self.ensureKittyTexture(image) orelse continue;
+
+            const x = base_x + @as(f32, @floatFromInt(@as(i32, @intCast(placement.col)))) * cell_w;
+            const y = base_y + @as(f32, @floatFromInt(@as(i32, @intCast(placement.row)))) * cell_h;
+
+            const draw_w = if (placement.cols > 0) cell_w * @as(f32, @floatFromInt(placement.cols)) else @as(f32, @floatFromInt(tex.width));
+            const draw_h = if (placement.rows > 0) cell_h * @as(f32, @floatFromInt(placement.rows)) else @as(f32, @floatFromInt(tex.height));
+
+            const dest = c.Rectangle{ .x = x, .y = y, .width = draw_w, .height = draw_h };
+            const src = c.Rectangle{
+                .x = 0,
+                .y = 0,
+                .width = @as(f32, @floatFromInt(tex.texture.width)),
+                .height = @as(f32, @floatFromInt(tex.texture.height)),
+            };
+            c.DrawTexturePro(tex.texture, src, dest, .{ .x = 0, .y = 0 }, 0, c.WHITE);
+        }
+    }
+
+    fn findKittyImage(images: []const KittyImage, image_id: u32) ?KittyImage {
+        for (images) |img| {
+            if (img.id == image_id) return img;
+        }
+        return null;
+    }
+
+    fn ensureKittyTexture(self: *TerminalWidget, image: KittyImage) ?KittyTexture {
+        if (self.kitty_textures.getEntry(image.id)) |entry| {
+            if (entry.value_ptr.version == image.version) return entry.value_ptr.*;
+            if (entry.value_ptr.texture.id != 0) {
+                c.UnloadTexture(entry.value_ptr.texture);
+            }
+            _ = self.kitty_textures.remove(image.id);
+        }
+
+        const texture = loadKittyTexture(image) orelse {
+            const log = app_logger.logger("terminal.kitty");
+            if (log.enabled_file or log.enabled_console) {
+                log.logf("kitty texture load failed id={d} format={s} bytes={d}", .{ image.id, @tagName(image.format), image.data.len });
+            }
+            return null;
+        };
+        const stored = KittyTexture{
+            .texture = texture,
+            .width = texture.width,
+            .height = texture.height,
+            .version = image.version,
+        };
+        _ = self.kitty_textures.put(image.id, stored) catch {};
+        const log = app_logger.logger("terminal.kitty");
+        if (log.enabled_file or log.enabled_console) {
+            log.logf("kitty texture ok id={d} w={d} h={d}", .{ image.id, texture.width, texture.height });
+        }
+        return stored;
+    }
+
+    fn loadKittyTexture(image: KittyImage) ?c.Texture2D {
+        switch (image.format) {
+            .png => {
+                const img = c.LoadImageFromMemory(".png", @ptrCast(@constCast(image.data.ptr)), @intCast(image.data.len));
+                if (img.data == null or img.width == 0 or img.height == 0) return null;
+                const texture = c.LoadTextureFromImage(img);
+                c.UnloadImage(img);
+                if (texture.id == 0) return null;
+                c.SetTextureFilter(texture, c.TEXTURE_FILTER_BILINEAR);
+                return texture;
+            },
+            .rgba => {
+                if (image.width == 0 or image.height == 0) return null;
+                const img = c.Image{
+                    .data = @ptrCast(@constCast(image.data.ptr)),
+                    .width = @intCast(image.width),
+                    .height = @intCast(image.height),
+                    .mipmaps = 1,
+                    .format = c.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
+                };
+                const texture = c.LoadTextureFromImage(img);
+                if (texture.id == 0) return null;
+                c.SetTextureFilter(texture, c.TEXTURE_FILTER_BILINEAR);
+                return texture;
+            },
         }
     }
 
