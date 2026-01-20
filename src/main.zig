@@ -62,6 +62,7 @@ const AppState = struct {
     terminal_scroll_dragging: bool,
     terminal_scroll_grab_offset: f32,
     last_mouse_redraw_time: f64,
+    last_ctrl_down: bool,
     metrics: Metrics,
     metrics_logger: Logger,
     app_logger: Logger,
@@ -122,6 +123,7 @@ const AppState = struct {
             .terminal_scroll_dragging = false,
             .terminal_scroll_grab_offset = 0,
             .last_mouse_redraw_time = 0,
+            .last_ctrl_down = false,
             .metrics = Metrics.init(),
             .metrics_logger = metrics_log,
             .app_logger = app_log,
@@ -343,6 +345,7 @@ const AppState = struct {
         const terminal_visible = self.show_terminal and terminal_h > 0;
         const term_y = height - status_bar_height - terminal_h;
         const in_terminal_area = terminal_visible and mouse.y >= term_y;
+        const ctrl_down = r.isKeyDown(renderer_mod.KEY_LEFT_CONTROL) or r.isKeyDown(renderer_mod.KEY_RIGHT_CONTROL);
 
         if (has_mouse_action) {
             self.needs_redraw = true;
@@ -356,9 +359,17 @@ const AppState = struct {
                 }
             }
         }
+        if (in_terminal_area and (ctrl_down != self.last_ctrl_down or (ctrl_down and mouse_moved))) {
+            const interval: f64 = 1.0 / 60.0;
+            if (now - self.last_mouse_redraw_time >= interval) {
+                self.needs_redraw = true;
+                self.last_mouse_redraw_time = now;
+            }
+        }
         if (mouse_moved) {
             self.last_mouse_pos = mouse;
         }
+        self.last_ctrl_down = ctrl_down;
 
         // Terminal resize by dragging separator
         if (self.show_terminal) {

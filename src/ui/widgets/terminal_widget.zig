@@ -31,6 +31,10 @@ pub const TerminalWidget = struct {
     kitty_placements_view: std.ArrayList(KittyPlacement),
     kitty_textures: std.AutoHashMap(u32, KittyTexture),
     last_kitty_generation: u64 = 0,
+    last_hover_link_id: u32 = 0,
+    last_hover_row: isize = -1,
+    last_hover_col: isize = -1,
+    last_hover_ctrl: bool = false,
 
     pub fn init(session: *TerminalSession) TerminalWidget {
         return .{
@@ -40,6 +44,10 @@ pub const TerminalWidget = struct {
             .kitty_placements_view = .empty,
             .kitty_textures = std.AutoHashMap(u32, KittyTexture).init(session.allocator),
             .last_kitty_generation = 0,
+            .last_hover_link_id = 0,
+            .last_hover_row = -1,
+            .last_hover_col = -1,
+            .last_hover_ctrl = false,
         };
     }
 
@@ -166,6 +174,36 @@ pub const TerminalWidget = struct {
         const scrollbar_x = x + width - scrollbar_w;
         const scrollbar_y = y;
         const scrollbar_h = height;
+        const mouse = r.getMousePos();
+        const ctrl = r.isKeyDown(renderer_mod.KEY_LEFT_CONTROL) or r.isKeyDown(renderer_mod.KEY_RIGHT_CONTROL);
+        var hover_row: isize = -1;
+        var hover_col: isize = -1;
+        var hover_link_id: u32 = 0;
+        if (rows > 0 and cols > 0) {
+            const in_terminal = mouse.x >= x and mouse.x <= x + width and mouse.y >= y and mouse.y <= y + height;
+            const in_cells = in_terminal and mouse.x < scrollbar_x;
+            if (in_cells) {
+                const col = @as(usize, @intFromFloat((mouse.x - base_x) / r.terminal_cell_width));
+                const row = @as(usize, @intFromFloat((mouse.y - base_y) / r.terminal_cell_height));
+                if (row < rows and col < cols and view_cells.len >= rows * cols) {
+                    const cell = view_cells[row * cols + col];
+                    hover_row = @intCast(row);
+                    hover_col = @intCast(col);
+                    if (ctrl) {
+                        hover_link_id = cell.attrs.link_id;
+                    }
+                }
+            }
+        }
+        const hover_changed = ctrl != self.last_hover_ctrl or hover_link_id != self.last_hover_link_id or hover_row != self.last_hover_row or hover_col != self.last_hover_col;
+        if (hover_changed) {
+            const log = app_logger.logger("terminal.hover");
+            log.logf("ctrl={any} row={d} col={d} link={d}", .{ ctrl, hover_row, hover_col, hover_link_id });
+            self.last_hover_ctrl = ctrl;
+            self.last_hover_link_id = hover_link_id;
+            self.last_hover_row = hover_row;
+            self.last_hover_col = hover_col;
+        }
 
         const rowSlice = struct {
             fn get(cells: []const Cell, cols_count: usize, row: usize) []const Cell {
@@ -266,6 +304,7 @@ pub const TerminalWidget = struct {
                 base_x_local: f32,
                 base_y_local: f32,
                 padding_x_i: i32,
+                hover_link: u32,
             ) void {
                 _ = padding_x_i;
                 const cell_w_i: i32 = @intFromFloat(std.math.round(renderer.terminal_cell_width));
@@ -303,6 +342,10 @@ pub const TerminalWidget = struct {
                         .b = cell.attrs.underline_color.b,
                         .a = cell.attrs.underline_color.a,
                     };
+                    var underline = cell.attrs.underline;
+                    if (cell.attrs.link_id != 0) {
+                        underline = cell.attrs.link_id == hover_link;
+                    }
 
                     const followed_by_space = blk: {
                         const next_col = col + cell_width_units;
@@ -323,7 +366,7 @@ pub const TerminalWidget = struct {
                         if (cell.attrs.reverse) fg else bg,
                         underline_color,
                         cell.attrs.bold,
-                        cell.attrs.underline,
+                        underline,
                         false,
                         followed_by_space,
                         false,
@@ -344,7 +387,7 @@ pub const TerminalWidget = struct {
             const texture_h = @as(i32, @intFromFloat(@round(r.terminal_cell_height * @as(f32, @floatFromInt(rows)))));
             const recreated = r.ensureTerminalTexture(texture_w, texture_h);
             const kitty_changed = kitty_generation != self.last_kitty_generation;
-            const needs_full = recreated or snapshot.alt_active or snapshot.dirty == .full or scroll_changed or (snapshot.dirty != .none and scroll_offset > 0) or has_kitty or kitty_changed;
+            const needs_full = recreated or snapshot.alt_active or snapshot.dirty == .full or scroll_changed or (snapshot.dirty != .none and scroll_offset > 0) or has_kitty or kitty_changed or hover_changed;
             const needs_partial = snapshot.dirty == .partial and !needs_full and scroll_offset == 0;
 
             if ((needs_full or needs_partial) and r.beginTerminalTexture()) {
@@ -371,7 +414,7 @@ pub const TerminalWidget = struct {
                     }
                     row = 0;
                     while (row < rows) : (row += 1) {
-                        drawRowGlyphs(r, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i);
+                        drawRowGlyphs(r, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id);
                     }
                     if (has_kitty) {
                         self.drawKittyImages(r, base_x_local, base_y_local, true, start_line, rows, cols);
@@ -383,14 +426,14 @@ pub const TerminalWidget = struct {
                             const draw_start: usize = 0;
                             const draw_end: usize = cols - 1;
                             drawRowBackgrounds(r, view_cells, cols, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
-                            drawRowGlyphs(r, view_cells, cols, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                            drawRowGlyphs(r, view_cells, cols, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
                             if (row > 0) {
                                 drawRowBackgrounds(r, view_cells, cols, row - 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
-                                drawRowGlyphs(r, view_cells, cols, row - 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                                drawRowGlyphs(r, view_cells, cols, row - 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
                             }
                             if (row + 1 < rows) {
                                 drawRowBackgrounds(r, view_cells, cols, row + 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
-                                drawRowGlyphs(r, view_cells, cols, row + 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                                drawRowGlyphs(r, view_cells, cols, row + 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
                             }
                         }
                     }
@@ -505,6 +548,10 @@ pub const TerminalWidget = struct {
             if (cell.attrs.link_id != 0) {
                 fg = r.theme.link;
             }
+            var underline = cell.attrs.underline;
+            if (cell.attrs.link_id != 0) {
+                underline = cell.attrs.link_id == hover_link_id;
+            }
 
             const followed_by_space = blk: {
                 const next_col = cursor.col + cell_width_units;
@@ -528,7 +575,7 @@ pub const TerminalWidget = struct {
                         if (cell.attrs.reverse) fg else bg,
                         underline_color,
                         cell.attrs.bold,
-                        cell.attrs.underline,
+                        underline,
                         true,
                         followed_by_space,
                         true,
