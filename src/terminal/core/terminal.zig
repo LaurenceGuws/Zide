@@ -1352,17 +1352,21 @@ pub const TerminalSession = struct {
         }
         if (control.action == 'd') {
             self.deleteKittyByAction(control);
-            self.writeKittyResponse(control, resolveKittyImageId(control) orelse 0);
+            self.writeKittyResponse(control, resolveKittyImageId(control) orelse 0, true, "OK");
             return;
         }
 
         if (control.action == 'p') {
             const image_id = resolveKittyImageId(control) orelse return;
             self.placeKittyImage(image_id, control);
-            self.writeKittyResponse(control, image_id);
+            self.writeKittyResponse(control, image_id, true, "OK");
             return;
         }
 
+        if (control.action == 'q') {
+            self.writeKittyResponse(control, resolveKittyImageId(control) orelse 0, true, "OK");
+            return;
+        }
         if (control.action != 't' and control.action != 'T') return;
 
         const image_id = resolveKittyImageId(control) orelse blk: {
@@ -1375,6 +1379,7 @@ pub const TerminalSession = struct {
             if (log.enabled_file or log.enabled_console) {
                 log.logf("kitty decode failed len={d}", .{data.len});
             }
+            self.writeKittyResponse(control, image_id, false, "EINVAL");
             return;
         };
         const final_data = self.accumulateKittyData(image_id, &control, decoded) orelse return;
@@ -1383,13 +1388,14 @@ pub const TerminalSession = struct {
             if (log.enabled_file or log.enabled_console) {
                 log.logf("kitty build failed id={d} format={d} data_len={d}", .{ image_id, control.format, final_data.len });
             }
+            self.writeKittyResponse(control, image_id, false, "EINVAL");
             return;
         };
         self.storeKittyImage(image);
         if (control.action == 'T') {
             self.placeKittyImage(image_id, control);
         }
-        self.writeKittyResponse(control, image_id);
+        self.writeKittyResponse(control, image_id, true, "OK");
     }
 
     fn parseKittyControl(
@@ -1580,7 +1586,7 @@ pub const TerminalSession = struct {
 
     fn validateKittyControl(control: KittyControl) bool {
         switch (control.action) {
-            't', 'T', 'p', 'd' => {},
+            't', 'T', 'p', 'd', 'q' => {},
             else => return false,
         }
 
@@ -2343,8 +2349,9 @@ pub const TerminalSession = struct {
         return row >= placement.row and row <= end_row and col >= placement.col and col <= end_col;
     }
 
-    fn writeKittyResponse(self: *TerminalSession, control: KittyControl, image_id: u32) void {
-        if (control.quiet != 0) return;
+    fn writeKittyResponse(self: *TerminalSession, control: KittyControl, image_id: u32, ok: bool, message: []const u8) void {
+        if (control.quiet == 2) return;
+        if (control.quiet == 1 and ok) return;
         if (self.pty == null) return;
         var seq = std.ArrayList(u8).empty;
         defer seq.deinit(self.allocator);
@@ -2364,7 +2371,7 @@ pub const TerminalSession = struct {
             _ = seq.writer(self.allocator).print("p={d}", .{pid}) catch return;
         }
         _ = seq.append(self.allocator, ';') catch return;
-        _ = seq.appendSlice(self.allocator, "OK") catch return;
+        _ = seq.appendSlice(self.allocator, message) catch return;
         _ = seq.appendSlice(self.allocator, "\x1b\\") catch return;
         if (self.pty) |*pty| {
             _ = pty.write(seq.items) catch {};
