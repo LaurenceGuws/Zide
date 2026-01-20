@@ -17,6 +17,9 @@ const Damage = screen_mod.Damage;
 const KeyModeStack = screen_mod.KeyModeStack;
 const builtin = @import("builtin");
 const OscTerminator = parser_mod.OscTerminator;
+const rl = @cImport({
+    @cInclude("raylib.h");
+});
 
 const dynamic_color_base: u8 = 10;
 const dynamic_color_count: usize = 10;
@@ -91,7 +94,7 @@ const KittyControl = struct {
     action: u8 = 't',
     quiet: u8 = 0,
     delete_action: u8 = 'a',
-    format: u32 = 0,
+    format: u32 = 32,
     medium: u8 = 'd',
     compression: u8 = 0,
     width: u32 = 0,
@@ -1392,6 +1395,23 @@ pub const TerminalSession = struct {
         };
         const final_data = self.accumulateKittyData(image_id, &control, decoded) orelse return;
 
+        if (kittyExpectedDataBytes(control)) |expected| {
+            if (final_data.len < expected) {
+                var message = std.ArrayList(u8).empty;
+                defer message.deinit(self.allocator);
+                _ = message.writer(self.allocator).print(
+                    "ENODATA:Insufficient image data: {d} < {d}",
+                    .{ final_data.len, expected },
+                ) catch {
+                    self.allocator.free(final_data);
+                    return;
+                };
+                self.allocator.free(final_data);
+                self.writeKittyResponse(control, image_id, false, message.items);
+                return;
+            }
+        }
+
         const image = self.buildKittyImage(image_id, control, final_data) orelse {
             if (log.enabled_file or log.enabled_console) {
                 log.logf("kitty build failed id={d} format={d} data_len={d}", .{ image_id, control.format, final_data.len });
@@ -1636,8 +1656,13 @@ pub const TerminalSession = struct {
     fn accumulateKittyData(self: *TerminalSession, image_id: u32, control: *KittyControl, decoded: []u8) ?[]u8 {
         var chunk = decoded;
         var compression = control.compression;
-        if (compression == 0) {
-            if (self.kitty_partials.getEntry(image_id)) |entry| {
+        if (self.kitty_partials.getEntry(image_id)) |entry| {
+            if (control.quiet == 0) {
+                control.quiet = entry.value_ptr.quiet;
+            } else {
+                entry.value_ptr.quiet = control.quiet;
+            }
+            if (compression == 0) {
                 compression = entry.value_ptr.compression;
             }
         }
@@ -1673,6 +1698,11 @@ pub const TerminalSession = struct {
                     .size_initialized = false,
                 };
             } else {
+                if (control.quiet == 0) {
+                    control.quiet = entry.value_ptr.quiet;
+                } else {
+                    entry.value_ptr.quiet = control.quiet;
+                }
                 if (entry.value_ptr.width == 0) entry.value_ptr.width = control.width;
                 if (entry.value_ptr.height == 0) entry.value_ptr.height = control.height;
                 if (entry.value_ptr.expected_size == 0) entry.value_ptr.expected_size = control.size;
@@ -1788,6 +1818,14 @@ pub const TerminalSession = struct {
         };
     }
 
+    fn kittyExpectedDataBytes(control: KittyControl) ?usize {
+        const format = kittyFormatFor(control.format) orelse return null;
+        if (format != .rgba) return null;
+        if (control.width == 0 or control.height == 0) return null;
+        const total_px: usize = @as(usize, control.width) * @as(usize, control.height);
+        return if (control.format == 24) total_px * 3 else total_px * 4;
+    }
+
     fn findKittyImageById(images: []const KittyImage, image_id: u32) ?KittyImage {
         for (images) |image| {
             if (image.id == image_id) return image;
@@ -1799,12 +1837,17 @@ pub const TerminalSession = struct {
         const format = kittyFormatFor(control.format) orelse return null;
         switch (format) {
             .png => {
+                const decoded = self.decodeKittyPng(data) orelse {
+                    self.allocator.free(data);
+                    return null;
+                };
+                self.allocator.free(data);
                 return .{
                     .id = image_id,
-                    .width = 0,
-                    .height = 0,
-                    .format = .png,
-                    .data = data,
+                    .width = decoded.width,
+                    .height = decoded.height,
+                    .format = .rgba,
+                    .data = decoded.data,
                     .version = 0,
                 };
             },
@@ -1881,6 +1924,38 @@ pub const TerminalSession = struct {
             dst_idx += 4;
         }
         return out;
+    }
+
+    fn decodeKittyPng(self: *TerminalSession, data: []const u8) ?struct { data: []u8, width: u32, height: u32 } {
+        if (data.len == 0) return null;
+        var img = rl.LoadImageFromMemory(".png", @ptrCast(@constCast(data.ptr)), @intCast(data.len));
+        if (img.data == null or img.width <= 0 or img.height <= 0) {
+            if (img.data != null) rl.UnloadImage(img);
+            return null;
+        }
+        if (img.format != rl.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8) {
+            rl.ImageFormat(&img, rl.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+            if (img.data == null or img.format != rl.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8) {
+                if (img.data != null) rl.UnloadImage(img);
+                return null;
+            }
+        }
+        const width: u32 = @intCast(img.width);
+        const height: u32 = @intCast(img.height);
+        const total_px: usize = @as(usize, width) * @as(usize, height);
+        const expected_len = total_px * 4;
+        if (expected_len > kitty_max_bytes) {
+            rl.UnloadImage(img);
+            return null;
+        }
+        const out = self.allocator.alloc(u8, expected_len) catch {
+            rl.UnloadImage(img);
+            return null;
+        };
+        const src = @as([*]const u8, @ptrCast(img.data))[0..expected_len];
+        std.mem.copyForwards(u8, out, src);
+        rl.UnloadImage(img);
+        return .{ .data = out, .width = width, .height = height };
     }
 
     fn kittyImageHasPlacement(self: *TerminalSession, image_id: u32) bool {
