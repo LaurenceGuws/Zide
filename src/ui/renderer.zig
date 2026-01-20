@@ -625,7 +625,8 @@ pub const Renderer = struct {
         is_current: bool,
     ) void {
         self.drawEditorLineBase(line_num, y, x, gutter_width, content_width, is_current);
-        self.drawText(text, x + gutter_width + 8, y, self.theme.foreground);
+        const pad = 8 * self.uiScaleFactor();
+        self.drawText(text, x + gutter_width + pad, y, self.theme.foreground);
     }
 
     pub fn drawEditorLineBase(
@@ -648,12 +649,21 @@ pub const Renderer = struct {
                 @intFromFloat(self.char_height),
                 self.theme.current_line,
             );
+            self.drawRect(
+                @intFromFloat(x),
+                @intFromFloat(line_y),
+                @intFromFloat(gutter_width),
+                @intFromFloat(self.char_height),
+                self.theme.current_line,
+            );
         }
 
         // Draw line number
         var num_buf: [16]u8 = undefined;
         const num_str = std.fmt.bufPrint(&num_buf, "{d: >4}", .{line_num + 1}) catch return;
-        self.drawText(num_str, x + 4, line_y, self.theme.line_number);
+        const pad = 4 * self.uiScaleFactor();
+        const line_color = if (is_current) self.theme.foreground else self.theme.line_number;
+        self.drawText(num_str, x + pad, line_y, line_color);
     }
 
     pub fn drawCursor(self: *Renderer, x: f32, y: f32, mode: enum { block, line, underline }) void {
