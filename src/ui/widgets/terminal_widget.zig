@@ -361,21 +361,20 @@ pub const TerminalWidget = struct {
                         .b = view_cells[0].attrs.bg.b,
                     } else r.theme.background;
                     r.drawRect(0, 0, texture_w, texture_h, bg);
-                    if (has_kitty) {
-                        self.cleanupKittyTextures(self.kitty_images_view.items);
-                        self.drawKittyImages(r, base_x_local, base_y_local);
-                    }
                     var row: usize = 0;
                     while (row < rows) : (row += 1) {
                         drawRowBackgrounds(r, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i);
                     }
                     if (has_kitty) {
                         self.cleanupKittyTextures(self.kitty_images_view.items);
-                        self.drawKittyImages(r, base_x_local, base_y_local);
+                        self.drawKittyImages(r, base_x_local, base_y_local, false);
                     }
                     row = 0;
                     while (row < rows) : (row += 1) {
                         drawRowGlyphs(r, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i);
+                    }
+                    if (has_kitty) {
+                        self.drawKittyImages(r, base_x_local, base_y_local, true);
                     }
                 } else if (needs_partial) {
                     var row: usize = 0;
@@ -675,11 +674,16 @@ pub const TerminalWidget = struct {
         }
     }
 
-    fn drawKittyImages(self: *TerminalWidget, r: *Renderer, base_x: f32, base_y: f32) void {
+    fn drawKittyImages(self: *TerminalWidget, r: *Renderer, base_x: f32, base_y: f32, above_text: bool) void {
         const cell_w: f32 = r.terminal_cell_width;
         const cell_h: f32 = r.terminal_cell_height;
 
         for (self.kitty_placements_view.items) |placement| {
+            if (above_text) {
+                if (placement.z < 0) continue;
+            } else {
+                if (placement.z >= 0) continue;
+            }
             const image = findKittyImage(self.kitty_images_view.items, placement.image_id) orelse continue;
             const tex = self.ensureKittyTexture(image) orelse continue;
 
