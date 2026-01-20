@@ -120,6 +120,11 @@ const KittyControl = struct {
     more: bool = false,
 };
 
+const KittyBuildError = error{
+    InvalidData,
+    BadPng,
+};
+
 const kitty_max_bytes: usize = 320 * 1024 * 1024;
 
 fn buildDefaultPalette() [256]types.Color {
@@ -1366,8 +1371,8 @@ pub const TerminalSession = struct {
 
         if (control.action == 'p') {
             const image_id = resolveKittyImageId(control) orelse return;
-            if (!self.placeKittyImage(image_id, control)) {
-                self.writeKittyResponse(control, image_id, false, "ENOPARENT");
+            if (self.placeKittyImage(image_id, control)) |err_msg| {
+                self.writeKittyResponse(control, image_id, false, err_msg);
                 return;
             }
             self.writeKittyResponse(control, image_id, true, "OK");
@@ -1412,17 +1417,21 @@ pub const TerminalSession = struct {
             }
         }
 
-        const image = self.buildKittyImage(image_id, control, final_data) orelse {
+        const image = self.buildKittyImage(image_id, control, final_data) catch |err| {
             if (log.enabled_file or log.enabled_console) {
                 log.logf("kitty build failed id={d} format={d} data_len={d}", .{ image_id, control.format, final_data.len });
             }
-            self.writeKittyResponse(control, image_id, false, "EINVAL");
+            const message = switch (err) {
+                error.BadPng => "EBADPNG",
+                else => "EINVAL",
+            };
+            self.writeKittyResponse(control, image_id, false, message);
             return;
         };
         self.storeKittyImage(image);
         if (control.action == 'T') {
-            if (!self.placeKittyImage(image_id, control)) {
-                self.writeKittyResponse(control, image_id, false, "ENOPARENT");
+            if (self.placeKittyImage(image_id, control)) |err_msg| {
+                self.writeKittyResponse(control, image_id, false, err_msg);
                 return;
             }
         }
@@ -1833,13 +1842,13 @@ pub const TerminalSession = struct {
         return null;
     }
 
-    fn buildKittyImage(self: *TerminalSession, image_id: u32, control: KittyControl, data: []u8) ?KittyImage {
-        const format = kittyFormatFor(control.format) orelse return null;
+    fn buildKittyImage(self: *TerminalSession, image_id: u32, control: KittyControl, data: []u8) KittyBuildError!KittyImage {
+        const format = kittyFormatFor(control.format) orelse return error.InvalidData;
         switch (format) {
             .png => {
-                const decoded = self.decodeKittyPng(data) orelse {
+                const decoded = self.decodeKittyPng(data) catch |err| {
                     self.allocator.free(data);
-                    return null;
+                    return err;
                 };
                 self.allocator.free(data);
                 return .{
@@ -1854,18 +1863,18 @@ pub const TerminalSession = struct {
             .rgba => {
                 if (control.width == 0 or control.height == 0) {
                     self.allocator.free(data);
-                    return null;
+                    return error.InvalidData;
                 }
                 const total_px: usize = @as(usize, control.width) * @as(usize, control.height);
                 if (control.format == 24) {
                     const expected = total_px * 3;
                     if (data.len < expected) {
                         self.allocator.free(data);
-                        return null;
+                        return error.InvalidData;
                     }
                     const expanded = self.expandRgbToRgba(data[0..expected], control.width, control.height) orelse {
                         self.allocator.free(data);
-                        return null;
+                        return error.InvalidData;
                     };
                     self.allocator.free(data);
                     return .{
@@ -1880,12 +1889,12 @@ pub const TerminalSession = struct {
                 const expected = total_px * 4;
                 if (data.len < expected) {
                     self.allocator.free(data);
-                    return null;
+                    return error.InvalidData;
                 }
                 if (data.len != expected) {
                     const trimmed = self.allocator.alloc(u8, expected) catch {
                         self.allocator.free(data);
-                        return null;
+                        return error.InvalidData;
                     };
                     std.mem.copyForwards(u8, trimmed, data[0..expected]);
                     self.allocator.free(data);
@@ -1926,18 +1935,18 @@ pub const TerminalSession = struct {
         return out;
     }
 
-    fn decodeKittyPng(self: *TerminalSession, data: []const u8) ?struct { data: []u8, width: u32, height: u32 } {
-        if (data.len == 0) return null;
+    fn decodeKittyPng(self: *TerminalSession, data: []const u8) KittyBuildError!struct { data: []u8, width: u32, height: u32 } {
+        if (data.len == 0) return error.BadPng;
         var img = rl.LoadImageFromMemory(".png", @ptrCast(@constCast(data.ptr)), @intCast(data.len));
         if (img.data == null or img.width <= 0 or img.height <= 0) {
             if (img.data != null) rl.UnloadImage(img);
-            return null;
+            return error.BadPng;
         }
         if (img.format != rl.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8) {
             rl.ImageFormat(&img, rl.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
             if (img.data == null or img.format != rl.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8) {
                 if (img.data != null) rl.UnloadImage(img);
-                return null;
+                return error.BadPng;
             }
         }
         const width: u32 = @intCast(img.width);
@@ -1946,11 +1955,11 @@ pub const TerminalSession = struct {
         const expected_len = total_px * 4;
         if (expected_len > kitty_max_bytes) {
             rl.UnloadImage(img);
-            return null;
+            return error.BadPng;
         }
         const out = self.allocator.alloc(u8, expected_len) catch {
             rl.UnloadImage(img);
-            return null;
+            return error.InvalidData;
         };
         const src = @as([*]const u8, @ptrCast(img.data))[0..expected_len];
         std.mem.copyForwards(u8, out, src);
@@ -2143,10 +2152,11 @@ pub const TerminalSession = struct {
         }
     }
 
-    fn placeKittyImage(self: *TerminalSession, image_id: u32, control: KittyControl) bool {
+    fn placeKittyImage(self: *TerminalSession, image_id: u32, control: KittyControl) ?[]const u8 {
         const log = app_logger.logger("terminal.kitty");
         const screen = self.activeScreen();
-        if (screen.grid.rows == 0 or screen.grid.cols == 0) return false;
+        if (screen.grid.rows == 0 or screen.grid.cols == 0) return "EINVAL";
+        if (findKittyImageById(self.kitty_images.items, image_id) == null) return "ENOENT";
         const base_row = @min(@as(u16, @intCast(screen.cursor.row)), screen.grid.rows - 1);
         const base_col = @min(@as(u16, @intCast(screen.cursor.col)), screen.grid.cols - 1);
         var row = base_row;
@@ -2154,21 +2164,21 @@ pub const TerminalSession = struct {
         var parent_image_id: u32 = 0;
         var parent_placement_id: u32 = 0;
         if (control.parent_id != null or control.child_id != null) {
-            const parent_id = control.parent_id orelse return false;
-            const parent_pid = control.child_id orelse return false;
+            const parent_id = control.parent_id orelse return "ENOPARENT";
+            const parent_pid = control.child_id orelse return "ENOPARENT";
             parent_image_id = parent_id;
             parent_placement_id = parent_pid;
-            const parent = self.findKittyPlacement(parent_id, parent_pid) orelse return false;
+            const parent = self.findKittyPlacement(parent_id, parent_pid) orelse return "ENOPARENT";
             const offset_x: i32 = control.parent_x;
             const offset_y: i32 = control.parent_y;
             const parent_row: i32 = @intCast(parent.row);
             const parent_col: i32 = @intCast(parent.col);
             const new_row = parent_row + offset_y;
             const new_col = parent_col + offset_x;
-            if (new_row < 0 or new_col < 0) return false;
+            if (new_row < 0 or new_col < 0) return "EINVAL";
             row = @as(u16, @intCast(new_row));
             col = @as(u16, @intCast(new_col));
-            if (row >= screen.grid.rows or col >= screen.grid.cols) return false;
+            if (row >= screen.grid.rows or col >= screen.grid.cols) return "EINVAL";
         }
         const visible_top = self.kittyVisibleTop();
         const placement = KittyPlacement{
@@ -2206,7 +2216,7 @@ pub const TerminalSession = struct {
             }
             screen.wrap_next = false;
         }
-        return true;
+        return null;
     }
 
     fn findKittyPlacement(self: *TerminalSession, image_id: u32, placement_id: u32) ?KittyPlacement {
