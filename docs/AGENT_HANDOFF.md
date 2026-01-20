@@ -20,9 +20,10 @@ Suggested next steps:
 
 ## Summary of this session
 
-- Kitty graphics: expanded control parsing, chunking with S/O, zlib inflate (o=z), storage limits + eviction, scroll-anchored placements, and z-layer rendering order.
-- Kitty graphics: delete actions implemented (d=a/A/i/I/n/N/c/C/p/P/z/Z/r/R/x/X/y/Y), placement ids tracked, and quiet replies (q=0/1) with basic OK/ERR responses; query action (a=q) acknowledged.
-- Kitty graphics: parented placements supported (P/Q/H/V) with offsets; virtual placements stored but not rendered.
+- Kitty graphics: PNG decoded to RGBA in core so dimensions are known for cursor advance; scrollback overlays now move with viewport.
+- Kitty graphics: query (`a=q`) validates payloads and returns `ENODATA`/`EBADPNG`/`EINVAL` as appropriate; `ENOENT` for missing images; cycle + depth checks (`ECYCLE`/`ETOODEEP`) for parented placements.
+- Kitty graphics: per-screen storage (primary vs alt) so alt apps like yazi can render without leaking to scrollback; alt entry/exit clears its own kitty state.
+- Terminfo: added `assets/terminfo/xterm-kitty.info` and set TERM to xterm-kitty with fallback to xterm-256color when missing.
 
 ## Current issues
 
@@ -30,18 +31,20 @@ Suggested next steps:
 - Lazygit arrow navigation fixed via DECCKM, but re-validate after further input changes.
 - NumLock state is not tracked; keypad always treated as keypad unless app keypad mode is disabled.
 - XTGETTCAP support is minimal (TN/Co/RGB only).
-- Kitty graphics: no proper error replies for specific failure cases; responses are basic OK/ERR and do not match kitty error codes.
 - Kitty graphics: delete semantics are approximate (e.g., 'n/N' treated like 'i/I'); no placement queries, no animation support.
-- Kitty graphics: virtual placements are ignored in rendering; parent/child cycle/validation is minimal vs kitty.
+- Kitty graphics: virtual placements (U=1) are stored but not rendered; no unicode placeholder handling.
+- Kitty graphics: file/temp/shm media support is basic; error mapping for file/shm failures is still coarse.
 
 ## Key changes (recent)
 
 - `src/terminal/core/terminal.zig`
-  - Kitty graphics: parsing/validation, chunking + zlib inflate, storage limits, delete actions, parented placements, basic replies
+  - Kitty graphics: parsing/validation, chunking + zlib inflate, storage limits, delete actions, parented placements, query validation, per-screen storage, PNG decode, alt screen handling
 - `src/terminal/parser/parser.zig`
   - DCS parser added (minimal)
 - `src/ui/widgets/terminal_widget.zig`
-  - Kitty z-layer ordering + skip virtual placements
+  - Kitty z-layer ordering + viewport-aware overlay placement
+- `src/terminal/io/pty_unix.zig`
+  - TERM set to xterm-kitty with fallback to xterm-256color
 - `src/terminal/parser/csi.zig`
   - max CSI params = 16
   - `:` treated as a separator in SGR
