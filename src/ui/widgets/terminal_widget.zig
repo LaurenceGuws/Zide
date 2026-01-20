@@ -35,6 +35,7 @@ pub const TerminalWidget = struct {
     last_hover_row: isize = -1,
     last_hover_col: isize = -1,
     last_hover_ctrl: bool = false,
+    pending_open_path: ?[]u8 = null,
 
     pub fn init(session: *TerminalSession) TerminalWidget {
         return .{
@@ -48,10 +49,15 @@ pub const TerminalWidget = struct {
             .last_hover_row = -1,
             .last_hover_col = -1,
             .last_hover_ctrl = false,
+            .pending_open_path = null,
         };
     }
 
     pub fn deinit(self: *TerminalWidget) void {
+        if (self.pending_open_path) |path| {
+            self.session.allocator.free(path);
+            self.pending_open_path = null;
+        }
         var it = self.kitty_textures.iterator();
         while (it.next()) |entry| {
             if (entry.value_ptr.texture.id != 0) {
@@ -61,6 +67,56 @@ pub const TerminalWidget = struct {
         self.kitty_textures.deinit();
         self.kitty_images_view.deinit(self.session.allocator);
         self.kitty_placements_view.deinit(self.session.allocator);
+    }
+
+    pub fn takePendingOpenPath(self: *TerminalWidget) ?[]u8 {
+        const value = self.pending_open_path;
+        self.pending_open_path = null;
+        return value;
+    }
+
+    fn decodePercent(allocator: std.mem.Allocator, text: []const u8) ?[]u8 {
+        if (text.len == 0) return allocator.dupe(u8, "") catch null;
+        var out = std.ArrayList(u8).empty;
+        errdefer out.deinit(allocator);
+        var i: usize = 0;
+        while (i < text.len) : (i += 1) {
+            const b = text[i];
+            if (b == '%' and i + 2 < text.len) {
+                const hi = std.fmt.charToDigit(text[i + 1], 16) catch return null;
+                const lo = std.fmt.charToDigit(text[i + 2], 16) catch return null;
+                _ = out.append(allocator, @as(u8, (hi << 4) | lo)) catch return null;
+                i += 2;
+                continue;
+            }
+            _ = out.append(allocator, b) catch return null;
+        }
+        return out.toOwnedSlice(allocator) catch null;
+    }
+
+    fn resolveLinkPath(self: *TerminalWidget, uri: []const u8) ?[]u8 {
+        if (uri.len == 0) return null;
+        const allocator = self.session.allocator;
+        if (std.mem.startsWith(u8, uri, "file://")) {
+            var rest = uri["file://".len..];
+            if (rest.len == 0) return null;
+            if (rest[0] != '/') {
+                if (std.mem.indexOfScalar(u8, rest, '/')) |slash| {
+                    const host = rest[0..slash];
+                    if (!(host.len == 0 or std.mem.eql(u8, host, "localhost"))) return null;
+                    rest = rest[slash..];
+                } else {
+                    return null;
+                }
+            }
+            return decodePercent(allocator, rest);
+        }
+        if (uri[0] == '/') {
+            return allocator.dupe(u8, uri) catch null;
+        }
+        const cwd = self.session.currentCwd();
+        if (cwd.len == 0) return null;
+        return std.fs.path.join(allocator, &.{ cwd, uri }) catch null;
     }
 
     pub fn draw(self: *TerminalWidget, r: *Renderer, x: f32, y: f32, width: f32, height: f32) void {
@@ -862,8 +918,9 @@ pub const TerminalWidget = struct {
         const scrollbar_h = height;
 
         const history_len = self.session.scrollbackCount();
-        const rows = self.session.gridRows();
-        const cols = self.session.gridCols();
+        const snapshot = self.session.snapshot();
+        const rows = snapshot.rows;
+        const cols = snapshot.cols;
         const total_lines = history_len + rows;
         const scroll_offset = self.session.scrollOffset();
         const end_line = total_lines - scroll_offset;
@@ -888,6 +945,39 @@ pub const TerminalWidget = struct {
             if (wheel_delta < 0) wheel_steps = -wheel_steps;
         }
         const mouse_reporting = allow_input and in_terminal and self.session.mouseReportingEnabled();
+        var skip_mouse_click = false;
+        if (allow_input and in_terminal and ctrl and r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT)) {
+            if (rows > 0 and cols > 0 and snapshot.cells.len >= rows * cols) {
+                const col = @as(usize, @intFromFloat((mouse.x - x) / r.terminal_cell_width));
+                const row = @as(usize, @intFromFloat((mouse.y - y) / r.terminal_cell_height));
+                if (row < rows and col < cols) {
+                    const global_row = start_line + row;
+                    var link_id: u32 = 0;
+                    if (global_row < history_len) {
+                        if (self.session.scrollbackRow(global_row)) |history_row| {
+                            link_id = history_row[col].attrs.link_id;
+                        }
+                    } else {
+                        const grid_row = global_row - history_len;
+                        if (grid_row < rows) {
+                            link_id = snapshot.cells[grid_row * cols + col].attrs.link_id;
+                        }
+                    }
+                    if (link_id != 0) {
+                        if (self.session.hyperlinkUri(link_id)) |link| {
+                            if (self.resolveLinkPath(link)) |path| {
+                                if (self.pending_open_path) |old| {
+                                    self.session.allocator.free(old);
+                                }
+                                self.pending_open_path = path;
+                                handled = true;
+                                skip_mouse_click = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         if (self.session.takeOscClipboard()) |clip| {
             const cstr: [*:0]const u8 = @ptrCast(clip.ptr);
@@ -926,7 +1016,7 @@ pub const TerminalWidget = struct {
                 }
             }
 
-            if (r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT)) {
+            if (r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT) and !skip_mouse_click) {
                 if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .left, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
                     handled = true;
                 }
@@ -1133,9 +1223,9 @@ pub const TerminalWidget = struct {
 
             if (ctrl and shift and r.isKeyPressed(renderer_mod.KEY_C)) {
                 if (self.session.selectionState()) |selection| {
-                    const snapshot = self.session.snapshot();
-                    const rows_snapshot = snapshot.rows;
-                    const cols_snapshot = snapshot.cols;
+                    const sel_snapshot = self.session.snapshot();
+                    const rows_snapshot = sel_snapshot.rows;
+                    const cols_snapshot = sel_snapshot.cols;
                     const history = self.session.scrollbackCount();
                     const total_lines_copy = history + rows_snapshot;
                     if (rows_snapshot > 0 and cols_snapshot > 0 and total_lines_copy > 0) {
@@ -1162,7 +1252,7 @@ pub const TerminalWidget = struct {
                                 }
                                 const grid_row = row_idx - history;
                                 const row_start = grid_row * cols_snapshot;
-                                break :blk snapshot.cells[row_start .. row_start + cols_snapshot];
+                                break :blk sel_snapshot.cells[row_start .. row_start + cols_snapshot];
                             };
 
                             const col_start = if (row_idx == start_sel.row) start_sel.col else 0;
