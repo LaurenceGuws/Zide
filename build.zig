@@ -237,13 +237,14 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_tests.step);
 
+    const editor_tests_root = b.createModule(.{
+        .root_source_file = b.path("src/tests_main.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
     const editor_tests = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
+        .root_module = editor_tests_root,
     });
     editor_tests.linkLibrary(treesitter);
     editor_tests.linkLibrary(ts_zig);
