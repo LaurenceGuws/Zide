@@ -45,3 +45,23 @@ test "editor grouped undo with mixed insert/delete" {
     defer allocator.free(undone);
     try std.testing.expectEqualStrings("abXYef", undone);
 }
+
+test "editor explicit undo group wraps multiple ops" {
+    const allocator = std.testing.allocator;
+    var editor = try Editor.init(allocator);
+    defer editor.deinit();
+
+    editor.beginUndoGroup();
+    try editor.insertText("foo");
+    try editor.insertText("bar");
+    try editor.endUndoGroup();
+
+    const after = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after);
+    try std.testing.expectEqualStrings("foobar", after);
+
+    try std.testing.expect(try editor.undo());
+    const undone = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(undone);
+    try std.testing.expectEqualStrings("", undone);
+}
