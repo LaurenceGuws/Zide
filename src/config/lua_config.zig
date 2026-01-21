@@ -1,5 +1,4 @@
 const std = @import("std");
-const text_store = @import("../editor/text_store.zig");
 
 const c = @cImport({
     @cInclude("lua.h");
@@ -20,7 +19,6 @@ pub const Config = struct {
     log_file_filter: ?[]u8,
     log_console_filter: ?[]u8,
     raylib_log_level: ?c_int,
-    editor_text_store: ?text_store.TextStoreKind,
 };
 
 pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
@@ -28,7 +26,6 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
         .log_file_filter = null,
         .log_console_filter = null,
         .raylib_log_level = null,
-        .editor_text_store = null,
     };
     if (fileExists("assets/config/init.lua")) {
         config = try loadConfigFromFile(allocator, "assets/config/init.lua");
@@ -69,9 +66,6 @@ fn mergeConfig(base: *Config, overlay: Config) void {
     if (overlay.raylib_log_level) |level| {
         base.raylib_log_level = level;
     }
-    if (overlay.editor_text_store) |kind| {
-        base.editor_text_store = kind;
-    }
 }
 
 fn loadConfigFromFile(allocator: std.mem.Allocator, path: []const u8) LuaConfigError!Config {
@@ -95,7 +89,6 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             .log_file_filter = null,
             .log_console_filter = null,
             .raylib_log_level = null,
-            .editor_text_store = null,
         };
     }
     if (!c.lua_istable(L, -1)) {
@@ -105,7 +98,6 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     var log_file_filter: ?[]u8 = null;
     var log_console_filter: ?[]u8 = null;
     var raylib_log_level: ?c_int = null;
-    var editor_text_store: ?text_store.TextStoreKind = null;
 
     _ = c.lua_getfield(L, -1, "log");
     if (c.lua_isstring(L, -1) != 0) {
@@ -129,21 +121,10 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     }
     c.lua_pop(L, 1);
 
-    _ = c.lua_getfield(L, -1, "editor");
-    if (c.lua_istable(L, -1)) {
-        _ = c.lua_getfield(L, -1, "text_store");
-        if (c.lua_isstring(L, -1) != 0) {
-            editor_text_store = parseTextStoreKind(L, -1);
-        }
-        c.lua_pop(L, 1);
-    }
-    c.lua_pop(L, 1);
-
     return .{
         .log_file_filter = log_file_filter,
         .log_console_filter = log_console_filter,
         .raylib_log_level = raylib_log_level,
-        .editor_text_store = editor_text_store,
     };
 }
 
@@ -282,15 +263,5 @@ fn parseRaylibLogLevel(L: *c.lua_State, idx: c_int) ?c_int {
     if (std.mem.eql(u8, value, "info")) return c.LOG_INFO;
     if (std.mem.eql(u8, value, "debug")) return c.LOG_DEBUG;
     if (std.mem.eql(u8, value, "trace")) return c.LOG_TRACE;
-    return null;
-}
-
-fn parseTextStoreKind(L: *c.lua_State, idx: c_int) ?text_store.TextStoreKind {
-    var len: usize = 0;
-    const ptr = c.lua_tolstring(L, idx, &len) orelse return null;
-    const value = @as([*]const u8, @ptrCast(ptr))[0..len];
-    if (std.mem.eql(u8, value, "rope")) return .rope;
-    if (std.mem.eql(u8, value, "piece_table")) return .piece_table;
-    if (std.mem.eql(u8, value, "piece-table")) return .piece_table;
     return null;
 }

@@ -75,7 +75,6 @@ const AppState = struct {
                 .log_file_filter = null,
                 .log_console_filter = null,
                 .raylib_log_level = null,
-                .editor_text_store = null,
             };
         };
         defer config_mod.freeConfig(allocator, &config);
@@ -90,9 +89,6 @@ const AppState = struct {
 
         if (config.raylib_log_level) |level| {
             renderer_mod.setRaylibLogLevel(level);
-        }
-        if (config.editor_text_store) |kind| {
-            text_store.default_kind = kind;
         }
 
         const renderer = try Renderer.init(allocator, 1280, 720, "Zide - Zig IDE");
@@ -758,7 +754,7 @@ pub fn main() !void {
 test "buffer basic operations" {
     const allocator = std.testing.allocator;
 
-    const store = try text_store.TextStore.initWithKind(allocator, "Hello, World!", .rope);
+    const store = try text_store.TextStore.init(allocator, "Hello, World!");
     defer store.deinit();
 
     try std.testing.expectEqual(@as(usize, 13), store.totalLen());
