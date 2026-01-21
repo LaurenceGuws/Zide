@@ -141,94 +141,123 @@ pub const Rope = struct {
 
     pub fn undo(self: *Rope) !bool {
         if (self.undo_stack.items.len == 0) return false;
-        var op = self.undo_stack.pop() orelse return false;
-        var grouped = false;
-        var moved_any = false;
-        if (op.kind == .boundary) {
-            grouped = true;
-        } else {
-            self.history_suspended = true;
-            defer self.history_suspended = false;
-            switch (op.kind) {
-                .insert => try self.deleteRangeNoHistory(op.pos, op.text.len),
-                .delete => try self.insertNoHistory(op.pos, op.text),
+        self.history_suspended = true;
+        defer self.history_suspended = false;
+        const first = self.undo_stack.pop() orelse return false;
+        if (first.kind != .boundary) {
+            switch (first.kind) {
+                .insert => try self.deleteRangeNoHistory(first.pos, first.text.len),
+                .delete => try self.insertNoHistory(first.pos, first.text),
                 .boundary => {},
             }
-            try self.redo_stack.append(self.allocator, op);
+            try self.redo_stack.append(self.allocator, first);
             return true;
         }
 
-        self.history_suspended = true;
-        defer self.history_suspended = false;
+        const end_marker = first;
+        var temp = std.ArrayList(UndoOp).empty;
+        defer temp.deinit(self.allocator);
         while (self.undo_stack.items.len > 0) {
-            op = self.undo_stack.pop() orelse break;
-            if (op.kind == .boundary) break;
+            const op = self.undo_stack.pop() orelse break;
+            if (op.kind == .boundary) {
+                try self.redo_stack.append(self.allocator, op);
+                for (temp.items) |temp_op| {
+                    try self.redo_stack.append(self.allocator, temp_op);
+                }
+                try self.redo_stack.append(self.allocator, end_marker);
+                return temp.items.len > 0;
+            }
             switch (op.kind) {
                 .insert => try self.deleteRangeNoHistory(op.pos, op.text.len),
                 .delete => try self.insertNoHistory(op.pos, op.text),
                 .boundary => {},
             }
-            try self.redo_stack.append(self.allocator, op);
-            moved_any = true;
+            try temp.append(self.allocator, op);
         }
-        if (grouped and moved_any) {
-            try self.redo_stack.append(self.allocator, try boundaryOp(self));
+        // No start marker found; drop end marker.
+        freeUndoOp(self, end_marker);
+        for (temp.items) |temp_op| {
+            try self.redo_stack.append(self.allocator, temp_op);
         }
-        return moved_any;
+        return temp.items.len > 0;
     }
 
     pub fn redo(self: *Rope) !bool {
         if (self.redo_stack.items.len == 0) return false;
-        var op = self.redo_stack.pop() orelse return false;
-        var grouped = false;
-        var moved_any = false;
-        if (op.kind == .boundary) {
-            grouped = true;
-        } else {
-            self.history_suspended = true;
-            defer self.history_suspended = false;
-            switch (op.kind) {
-                .insert => try self.insertNoHistory(op.pos, op.text),
-                .delete => try self.deleteRangeNoHistory(op.pos, op.text.len),
+        self.history_suspended = true;
+        defer self.history_suspended = false;
+        const first = self.redo_stack.pop() orelse return false;
+        if (first.kind != .boundary) {
+            switch (first.kind) {
+                .insert => try self.insertNoHistory(first.pos, first.text),
+                .delete => try self.deleteRangeNoHistory(first.pos, first.text.len),
                 .boundary => {},
             }
-            try self.undo_stack.append(self.allocator, op);
+            try self.undo_stack.append(self.allocator, first);
             return true;
         }
 
-        self.history_suspended = true;
-        defer self.history_suspended = false;
+        const end_marker = first;
+        var temp = std.ArrayList(UndoOp).empty;
+        defer temp.deinit(self.allocator);
         while (self.redo_stack.items.len > 0) {
-            op = self.redo_stack.pop() orelse break;
-            if (op.kind == .boundary) break;
+            const op = self.redo_stack.pop() orelse break;
+            if (op.kind == .boundary) {
+                try self.undo_stack.append(self.allocator, op);
+                for (temp.items) |temp_op| {
+                    try self.undo_stack.append(self.allocator, temp_op);
+                }
+                try self.undo_stack.append(self.allocator, end_marker);
+                return temp.items.len > 0;
+            }
             switch (op.kind) {
                 .insert => try self.insertNoHistory(op.pos, op.text),
                 .delete => try self.deleteRangeNoHistory(op.pos, op.text.len),
                 .boundary => {},
             }
-            try self.undo_stack.append(self.allocator, op);
-            moved_any = true;
+            try temp.append(self.allocator, op);
         }
-        if (grouped and moved_any) {
-            try self.undo_stack.append(self.allocator, try boundaryOp(self));
+        freeUndoOp(self, end_marker);
+        for (temp.items) |temp_op| {
+            try self.undo_stack.append(self.allocator, temp_op);
         }
-        return moved_any;
+        return temp.items.len > 0;
     }
 
     pub fn beginUndoGroup(self: *Rope) void {
-        self.group_depth += 1;
-        if (self.group_depth == 1) {
+        if (self.group_depth == 0) {
+            const marker = boundaryOp(self) catch return;
+            self.undo_stack.append(self.allocator, marker) catch {
+                freeUndoOp(self, marker);
+                return;
+            };
+            trimUndoStack(self);
             self.group_dirty = false;
         }
+        self.group_depth += 1;
     }
 
     pub fn endUndoGroup(self: *Rope) !void {
         if (self.group_depth == 0) return;
         self.group_depth -= 1;
         if (self.group_depth == 0 and self.group_dirty) {
-            try self.undo_stack.append(self.allocator, try boundaryOp(self));
+            const marker = boundaryOp(self) catch return;
+            self.undo_stack.append(self.allocator, marker) catch {
+                freeUndoOp(self, marker);
+                return;
+            };
             trimUndoStack(self);
             self.group_dirty = false;
+            return;
+        }
+        if (self.group_depth == 0 and !self.group_dirty) {
+            if (self.undo_stack.items.len > 0) {
+                const last_index = self.undo_stack.items.len - 1;
+                if (self.undo_stack.items[last_index].kind == .boundary) {
+                    const marker = self.undo_stack.pop().?;
+                    freeUndoOp(self, marker);
+                }
+            }
         }
     }
 
