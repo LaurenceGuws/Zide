@@ -177,28 +177,28 @@ pub const TextStore = struct {
     pub fn canUndo(self: *TextStore) bool {
         return switch (self.kind) {
             .piece_table => buffer_mod.canUndo(self.buffer.?),
-            .rope => false,
+            .rope => self.rope.?.canUndo(),
         };
     }
 
     pub fn canRedo(self: *TextStore) bool {
         return switch (self.kind) {
             .piece_table => buffer_mod.canRedo(self.buffer.?),
-            .rope => false,
+            .rope => self.rope.?.canRedo(),
         };
     }
 
     pub fn undo(self: *TextStore) !bool {
         return switch (self.kind) {
             .piece_table => try buffer_mod.undo(self.buffer.?),
-            .rope => false,
+            .rope => try self.rope.?.undo(),
         };
     }
 
     pub fn redo(self: *TextStore) !bool {
         return switch (self.kind) {
             .piece_table => try buffer_mod.redo(self.buffer.?),
-            .rope => false,
+            .rope => try self.rope.?.redo(),
         };
     }
 };
