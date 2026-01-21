@@ -25,7 +25,12 @@ pub const Rope = struct {
     root: ?*Node,
     original: []const u8,
     add: std.ArrayList(u8),
+    undo_stack: std.ArrayList(UndoOp),
+    redo_stack: std.ArrayList(UndoOp),
+    history_suspended: bool,
     const target_leaf_bytes: usize = 2048;
+    const max_undo_bytes: usize = 8 * 1024 * 1024;
+    const max_undo_ops: usize = 1000;
 
     pub fn init(allocator: std.mem.Allocator, initial: []const u8) !*Rope {
         var rope = try allocator.create(Rope);
@@ -34,6 +39,9 @@ pub const Rope = struct {
             .root = null,
             .original = try allocator.dupe(u8, initial),
             .add = .{},
+            .undo_stack = .{},
+            .redo_stack = .{},
+            .history_suspended = false,
         };
         if (initial.len > 0) {
             rope.root = try rope.createLeafNode(.original, 0, initial.len);
@@ -46,6 +54,8 @@ pub const Rope = struct {
             self.allocator.free(self.original);
         }
         self.add.deinit(self.allocator);
+        freeUndoStack(self, &self.undo_stack);
+        freeUndoStack(self, &self.redo_stack);
         if (self.root) |root| {
             self.destroyNode(root);
         }
@@ -59,6 +69,81 @@ pub const Rope = struct {
 
     pub fn insert(self: *Rope, offset: usize, data: []const u8) !void {
         if (data.len == 0) return;
+        if (data.len > max_undo_bytes) {
+            clearHistory(self);
+            self.history_suspended = true;
+            defer self.history_suspended = false;
+            try self.insertNoHistory(offset, data);
+            return;
+        }
+        if (self.history_suspended) {
+            try self.insertNoHistory(offset, data);
+            return;
+        }
+        const op = try createUndoOp(self, .insert, offset, data);
+        try self.insertNoHistory(offset, data);
+        try clearRedoStack(self);
+        try self.undo_stack.append(self.allocator, op);
+        trimUndoStack(self);
+    }
+
+    pub fn deleteRange(self: *Rope, start: usize, len: usize) !void {
+        if (len == 0) return;
+        if (len > max_undo_bytes) {
+            clearHistory(self);
+            self.history_suspended = true;
+            defer self.history_suspended = false;
+            try self.deleteRangeNoHistory(start, len);
+            return;
+        }
+        if (self.history_suspended) {
+            try self.deleteRangeNoHistory(start, len);
+            return;
+        }
+        const deleted = try self.readRangeAlloc(start, len);
+        const op = UndoOp{ .kind = .delete, .pos = start, .text = deleted };
+        try self.deleteRangeNoHistory(start, len);
+        try clearRedoStack(self);
+        try self.undo_stack.append(self.allocator, op);
+        trimUndoStack(self);
+    }
+
+    pub fn canUndo(self: *Rope) bool {
+        return self.undo_stack.items.len > 0;
+    }
+
+    pub fn canRedo(self: *Rope) bool {
+        return self.redo_stack.items.len > 0;
+    }
+
+    pub fn undo(self: *Rope) !bool {
+        if (self.undo_stack.items.len == 0) return false;
+        const op = self.undo_stack.pop() orelse return false;
+        self.history_suspended = true;
+        defer self.history_suspended = false;
+        switch (op.kind) {
+            .insert => try self.deleteRangeNoHistory(op.pos, op.text.len),
+            .delete => try self.insertNoHistory(op.pos, op.text),
+        }
+        try self.redo_stack.append(self.allocator, op);
+        return true;
+    }
+
+    pub fn redo(self: *Rope) !bool {
+        if (self.redo_stack.items.len == 0) return false;
+        const op = self.redo_stack.pop() orelse return false;
+        self.history_suspended = true;
+        defer self.history_suspended = false;
+        switch (op.kind) {
+            .insert => try self.insertNoHistory(op.pos, op.text),
+            .delete => try self.deleteRangeNoHistory(op.pos, op.text.len),
+        }
+        try self.undo_stack.append(self.allocator, op);
+        return true;
+    }
+
+    fn insertNoHistory(self: *Rope, offset: usize, data: []const u8) !void {
+        if (data.len == 0) return;
         const total = self.totalLen();
         if (offset > total) return error.OutOfBounds;
         const add_start = self.add.items.len;
@@ -70,7 +155,7 @@ pub const Rope = struct {
         self.root = merged;
     }
 
-    pub fn deleteRange(self: *Rope, start: usize, len: usize) !void {
+    fn deleteRangeNoHistory(self: *Rope, start: usize, len: usize) !void {
         if (len == 0) return;
         const total = self.totalLen();
         if (start > total or start + len > total) return error.OutOfBounds;
@@ -89,6 +174,18 @@ pub const Rope = struct {
         var written: usize = 0;
         self.readNode(self.root, start, out, &written);
         return written;
+    }
+
+    pub fn readRangeAlloc(self: *Rope, start: usize, len: usize) ![]u8 {
+        const total = self.totalLen();
+        if (start >= total or len == 0) return try self.allocator.alloc(u8, 0);
+        const readable = if (start + len > total) total - start else len;
+        var out = try self.allocator.alloc(u8, readable);
+        const written = self.readRange(start, out);
+        if (written < readable) {
+            out = try self.allocator.realloc(out, written);
+        }
+        return out;
     }
 
     pub fn lineCount(self: *Rope) usize {
@@ -188,11 +285,11 @@ pub const Rope = struct {
     }
 
     fn updateNode(self: *Rope, node: *Node) void {
-        _ = self;
         if (node.leaf != null) {
             node.left = null;
             node.right = null;
             node.byte_len = node.leaf.?.len;
+            node.line_breaks = self.countLineBreaks(node.leaf.?.buffer, node.leaf.?.start, node.leaf.?.len);
             node.height = 1;
             return;
         }
@@ -379,6 +476,57 @@ pub const Rope = struct {
     }
 };
 
+const UndoKind = enum(u8) {
+    insert,
+    delete,
+};
+
+const UndoOp = struct {
+    kind: UndoKind,
+    pos: usize,
+    text: []u8,
+};
+
+fn createUndoOp(self: *Rope, kind: UndoKind, pos: usize, data: []const u8) !UndoOp {
+    const copy = try self.allocator.alloc(u8, data.len);
+    if (data.len > 0) {
+        std.mem.copyForwards(u8, copy, data);
+    }
+    return UndoOp{ .kind = kind, .pos = pos, .text = copy };
+}
+
+fn freeUndoOp(self: *Rope, op: UndoOp) void {
+    self.allocator.free(op.text);
+}
+
+fn freeUndoStack(self: *Rope, stack: *std.ArrayList(UndoOp)) void {
+    for (stack.items) |op| {
+        freeUndoOp(self, op);
+    }
+    stack.clearAndFree(self.allocator);
+}
+
+fn clearRedoStack(self: *Rope) !void {
+    if (self.redo_stack.items.len == 0) return;
+    freeUndoStack(self, &self.redo_stack);
+}
+
+fn trimUndoStack(self: *Rope) void {
+    while (self.undo_stack.items.len > Rope.max_undo_ops) {
+        const op = self.undo_stack.orderedRemove(0);
+        freeUndoOp(self, op);
+    }
+}
+
+fn clearHistory(self: *Rope) void {
+    if (self.undo_stack.items.len > 0) {
+        freeUndoStack(self, &self.undo_stack);
+    }
+    if (self.redo_stack.items.len > 0) {
+        freeUndoStack(self, &self.redo_stack);
+    }
+}
+
 test "rope insert/read/delete and line starts" {
     const allocator = std.testing.allocator;
     var rope = try Rope.init(allocator, "hello\nworld");
@@ -412,4 +560,13 @@ test "rope insert/read/delete and line starts" {
     const read_len3 = rope.readRange(0, out);
     try std.testing.expectEqual(@as(usize, 14), read_len3);
     try std.testing.expectEqualStrings("hellobig world", out);
+
+    try std.testing.expect(try rope.undo());
+    const undo_text = try rope.readRangeAlloc(0, rope.totalLen());
+    defer allocator.free(undo_text);
+    try std.testing.expectEqualStrings("hello\nbig world", undo_text);
+    try std.testing.expect(try rope.redo());
+    const redo_text = try rope.readRangeAlloc(0, rope.totalLen());
+    defer allocator.free(redo_text);
+    try std.testing.expectEqualStrings("hellobig world", redo_text);
 }
