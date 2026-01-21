@@ -6,14 +6,10 @@ supporting cheap snapshots and low memory overhead.
 
 Status (2026-01-21):
 - Implemented core rope ops in `src/editor/rope.zig` (split/join/insert/delete/read).
-- Added `TextStore` adapter in `src/editor/text_store.zig`; `Editor` + syntax
-  highlighter now depend on the adapter and can switch implementations via
-  `TextStoreKind` (default rope).
-- Rope undo/redo implemented with per-op text snapshots (matches current
-  piece-table behavior).
+- Integrated as the sole text model via `src/editor/text_store.zig`.
+- Rope undo/redo implemented with per-op text snapshots.
 - Basic undo batching: adjacent inserts merge into a single undo op; adjacent
   deletes at the same position or just before the previous delete also merge.
-- Config toggle added via Lua: `editor.text_store = "rope" | "piece_table"`.
 
 ## Current state (summary)
 - Text buffer is a piece table with a flat `pieces` array.

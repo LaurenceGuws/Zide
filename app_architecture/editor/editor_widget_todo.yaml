@@ -11,7 +11,6 @@ editor_widget_todo:
   zide_integration:
     entry_points:
       - src/main.zig
-      - src/editor/buffer.zig
       - src/editor/editor.zig
       - src/editor/syntax.zig
       - src/ui/widgets/editor_widget.zig
@@ -76,10 +75,9 @@ editor_widget_todo:
         - "Plan: balanced tree + per-node aggregates (bytes + line breaks, later UTF-8/UTF-16)."
         - "Add line index cache via in-tree aggregates or partitioning."
         - "Core rope ops implemented in src/editor/rope.zig."
-        - "TextStore adapter added; Editor + syntax use adapter (default rope)."
+        - "Rope now used as the sole text model."
         - "Rope undo/redo implemented (per-op text snapshots)."
         - "Undo batching: adjacent inserts/deletes merge (rope)."
-        - "Lua config toggle: editor.text_store = rope | piece_table."
       references:
         - reference_repos/editors/helix/helix-core/src/transaction.rs
         - reference_repos/text/ropey/src/rope.rs

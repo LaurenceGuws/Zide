@@ -39,7 +39,7 @@ editor_protocol_todo:
       title: "Text model audit + upgrade plan"
       notes:
         - "Audit complete; see app_architecture/editor/DESIGN.md."
-        - "Decision pending: rope/piece-tree vs indexed piece-table."
+        - "Decision: rope/piece-tree."
       references:
         - reference_repos/text/ropey/src/rope.rs
         - reference_repos/text/xi-rope/src/engine.rs
