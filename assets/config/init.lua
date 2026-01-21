@@ -19,4 +19,10 @@ return {
   raylib = {
     log_level = "info",
   },
+
+  -- Editor configuration.
+  -- text_store options: "rope", "piece_table"
+  editor = {
+    text_store = "rope",
+  },
 }
