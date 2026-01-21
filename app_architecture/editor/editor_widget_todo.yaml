@@ -72,7 +72,7 @@ editor_widget_todo:
       title: "Text model upgrade (large file performance)"
       notes:
         - "Audit complete (see app_architecture/editor/DESIGN.md)."
-        - "Decision needed: rope/piece-tree vs indexed piece-table."
+        - "Decision: rope/piece-tree (see app_architecture/editor/text_model_rope.md)."
         - "Plan: balanced tree + per-node aggregates (bytes + line breaks, later UTF-8/UTF-16)."
         - "Add line index cache via in-tree aggregates or partitioning."
       references:
