@@ -2,6 +2,7 @@ const std = @import("std");
 const buffer_mod = @import("buffer.zig");
 const types = @import("types.zig");
 const syntax_mod = @import("syntax.zig");
+const app_logger = @import("../app_logger.zig");
 
 const TextBuffer = buffer_mod.TextBuffer;
 const CursorPos = types.CursorPos;
@@ -16,6 +17,7 @@ pub const Editor = struct {
     scroll_line: usize,
     scroll_col: usize,
     highlighter: ?*syntax_mod.SyntaxHighlighter,
+    highlight_pending: bool,
     file_path: ?[]const u8,
     modified: bool,
     tab_width: usize,
@@ -35,11 +37,11 @@ pub const Editor = struct {
             .scroll_line = 0,
             .scroll_col = 0,
             .highlighter = null,
+            .highlight_pending = false,
             .file_path = null,
             .modified = false,
             .tab_width = 4,
         };
-        editor.tryInitHighlighter(null) catch {};
         return editor;
     }
 
@@ -55,6 +57,8 @@ pub const Editor = struct {
     }
 
     pub fn openFile(self: *Editor, path: []const u8) !void {
+        const log = app_logger.logger("editor.core");
+        log.logf("openFile path=\"{s}\"", .{path});
         // Clean up old state
         if (self.highlighter) |h| {
             h.destroy();
@@ -78,17 +82,21 @@ pub const Editor = struct {
         self.scroll_col = 0;
         self.modified = false;
 
-        try self.tryInitHighlighter(path);
+        self.scheduleHighlighter(path);
     }
 
     pub fn save(self: *Editor) !void {
         if (self.file_path) |path| {
+            const log = app_logger.logger("editor.core");
+            log.logf("save path=\"{s}\"", .{path});
             try buffer_mod.saveToFile(self.buffer, path);
             self.modified = false;
         }
     }
 
     pub fn saveAs(self: *Editor, path: []const u8) !void {
+        const log = app_logger.logger("editor.core");
+        log.logf("saveAs path=\"{s}\"", .{path});
         try buffer_mod.saveToFile(self.buffer, path);
         if (self.file_path) |old_path| {
             self.allocator.free(old_path);
@@ -252,6 +260,10 @@ pub const Editor = struct {
     pub fn undo(self: *Editor) !bool {
         const result = try buffer_mod.undo(self.buffer);
         if (result) {
+            const log = app_logger.logger("editor.core");
+            log.logf("undo ok", .{});
+        }
+        if (result) {
             self.updateCursorPosition();
             if (self.highlighter) |h| {
                 _ = h.reparse();
@@ -262,6 +274,10 @@ pub const Editor = struct {
 
     pub fn redo(self: *Editor) !bool {
         const result = try buffer_mod.redo(self.buffer);
+        if (result) {
+            const log = app_logger.logger("editor.core");
+            log.logf("redo ok", .{});
+        }
         if (result) {
             self.updateCursorPosition();
             if (self.highlighter) |h| {
@@ -311,16 +327,47 @@ pub const Editor = struct {
         return std.mem.endsWith(u8, path.?, ".zig");
     }
 
-    fn tryInitHighlighter(self: *Editor, path: ?[]const u8) !void {
+    fn scheduleHighlighter(self: *Editor, path: ?[]const u8) void {
+        const log = app_logger.logger("editor.highlight");
         if (!shouldEnableZigHighlight(path)) {
             if (self.highlighter) |h| {
                 h.destroy();
                 self.highlighter = null;
             }
+            self.highlight_pending = false;
+            log.logf("highlight disabled path=\"{s}\"", .{path orelse ""});
+            return;
+        }
+        self.highlight_pending = true;
+        log.logf("highlight scheduled path=\"{s}\"", .{path orelse ""});
+    }
+
+    fn tryInitHighlighter(self: *Editor, path: ?[]const u8) !void {
+        const log = app_logger.logger("editor.highlight");
+        log.logf("highlight init check path=\"{s}\"", .{path orelse ""});
+        self.highlight_pending = false;
+        if (!shouldEnableZigHighlight(path)) {
+            if (self.highlighter) |h| {
+                h.destroy();
+                self.highlighter = null;
+            }
+            log.logf("highlight disabled path=\"{s}\"", .{path orelse ""});
             return;
         }
         if (self.highlighter == null) {
+            const t_start = std.time.nanoTimestamp();
+            log.logf("highlight init start", .{});
             self.highlighter = try syntax_mod.createZigHighlighter(self.allocator, self.buffer);
+            const elapsed_ns = std.time.nanoTimestamp() - t_start;
+            log.logf(
+                "highlight enabled path=\"{s}\" time_us={d}",
+                .{ path orelse "", @as(i64, @intCast(@divTrunc(elapsed_ns, 1000))) },
+            );
         }
+    }
+
+    pub fn ensureHighlighter(self: *Editor) void {
+        if (!self.highlight_pending) return;
+        self.tryInitHighlighter(self.file_path) catch {};
     }
 };
