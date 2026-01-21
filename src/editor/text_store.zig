@@ -6,7 +6,7 @@ pub const TextStore = struct {
     rope: *rope_mod.Rope,
 
     pub fn init(allocator: std.mem.Allocator, initial: []const u8) !*TextStore {
-        var store = try allocator.create(TextStore);
+        const store = try allocator.create(TextStore);
         store.* = .{
             .allocator = allocator,
             .rope = try rope_mod.Rope.init(allocator, initial),
