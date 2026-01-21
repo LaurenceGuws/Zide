@@ -236,4 +236,27 @@ pub fn build(b: *std.Build) void {
     const run_tests = b.addRunArtifact(unit_tests);
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_tests.step);
+
+    const editor_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    editor_tests.linkLibrary(treesitter);
+    editor_tests.linkLibrary(ts_zig);
+    editor_tests.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
+    editor_tests.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
+    editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
+    editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
+    editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
+    if (target_os == .linux) {
+        editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
+    }
+
+    const run_editor_tests = b.addRunArtifact(editor_tests);
+    const editor_test_step = b.step("test-editor", "Run editor-specific tests");
+    editor_test_step.dependOn(&run_editor_tests.step);
 }
