@@ -63,6 +63,9 @@ const AppState = struct {
     terminal_scroll_grab_offset: f32,
     last_mouse_redraw_time: f64,
     last_ctrl_down: bool,
+    editor_dragging: bool,
+    editor_drag_start: types.CursorPos,
+    editor_drag_rect: bool,
     metrics: Metrics,
     metrics_logger: Logger,
     app_logger: Logger,
@@ -125,6 +128,9 @@ const AppState = struct {
             .terminal_scroll_grab_offset = 0,
             .last_mouse_redraw_time = 0,
             .last_ctrl_down = false,
+            .editor_dragging = false,
+            .editor_drag_start = .{ .line = 0, .col = 0, .offset = 0 },
+            .editor_drag_rect = false,
             .metrics = Metrics.init(),
             .metrics_logger = metrics_log,
             .app_logger = app_log,
@@ -576,13 +582,62 @@ const AppState = struct {
                 self.needs_redraw = true;
                 self.metrics.noteInput(now);
             }
-            if (r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT)) {
-                const editor_x = side_nav_width;
-                const editor_y = options_bar_height + tab_bar_height;
-                if (widget.handleMouseClick(r, editor_x, editor_y, editor_width, editor_height, mouse.x, mouse.y)) {
+            const editor_x = side_nav_width;
+            const editor_y = options_bar_height + tab_bar_height;
+            const in_editor = mouse.x >= editor_x and mouse.x <= editor_x + editor_width and
+                mouse.y >= editor_y and mouse.y <= editor_y + editor_height;
+            const alt = r.isKeyDown(renderer_mod.KEY_LEFT_ALT) or r.isKeyDown(renderer_mod.KEY_RIGHT_ALT);
+
+            if (r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT) and in_editor) {
+                if (widget.cursorFromMouse(r, editor_x, editor_y, editor_width, editor_height, mouse.x, mouse.y, false)) |pos| {
+                    widget.editor.setCursor(pos.line, pos.col);
+                    widget.editor.selection = null;
+                    widget.editor.clearSelections();
+                    self.editor_dragging = true;
+                    self.editor_drag_start = pos;
+                    self.editor_drag_rect = alt;
+                    if (alt) {
+                        widget.editor.expandRectSelection(pos.line, pos.line, pos.col, pos.col) catch {};
+                    } else {
+                        widget.editor.selection = .{ .start = pos, .end = pos };
+                    }
                     self.needs_redraw = true;
                     self.metrics.noteInput(now);
                 }
+            }
+
+            if (self.editor_dragging and r.isMouseButtonDown(renderer_mod.MOUSE_LEFT)) {
+                if (widget.cursorFromMouse(r, editor_x, editor_y, editor_width, editor_height, mouse.x, mouse.y, true)) |pos| {
+                    if (self.editor_drag_rect) {
+                        widget.editor.clearSelections();
+                        const start_line = @min(self.editor_drag_start.line, pos.line);
+                        const end_line = @max(self.editor_drag_start.line, pos.line);
+                        const start_col = @min(self.editor_drag_start.col, pos.col);
+                        const end_col = @max(self.editor_drag_start.col, pos.col);
+                        widget.editor.expandRectSelection(start_line, end_line, start_col, end_col) catch {};
+                        widget.editor.selection = null;
+                    } else {
+                        widget.editor.selection = .{ .start = self.editor_drag_start, .end = pos };
+                        widget.editor.clearSelections();
+                    }
+                    widget.editor.setCursor(pos.line, pos.col);
+                    self.needs_redraw = true;
+                    self.metrics.noteInput(now);
+                }
+            }
+
+            if (self.editor_dragging and r.isMouseButtonReleased(renderer_mod.MOUSE_LEFT)) {
+                self.editor_dragging = false;
+                if (!self.editor_drag_rect) {
+                    if (widget.editor.selection) |sel| {
+                        if (sel.start.offset == sel.end.offset) {
+                            widget.editor.selection = null;
+                        }
+                    }
+                } else if (widget.editor.selectionCount() == 0) {
+                    widget.editor.selection = null;
+                }
+                self.needs_redraw = true;
             }
         }
 

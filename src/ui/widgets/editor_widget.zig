@@ -2,6 +2,7 @@ const std = @import("std");
 const renderer_mod = @import("../renderer.zig");
 const editor_mod = @import("../../editor/editor.zig");
 const syntax_mod = @import("../../editor/syntax.zig");
+const types = @import("../../editor/types.zig");
 const app_logger = @import("../../app_logger.zig");
 
 const Renderer = renderer_mod.Renderer;
@@ -83,6 +84,7 @@ pub const EditorWidget = struct {
         var line_buf: [4096]u8 = undefined;
         var line_idx = start_line;
         var token_idx: usize = 0;
+        const text_start_x = x + self.gutter_width + 8 * r.uiScaleFactor();
         while (line_idx < end_line) : (line_idx += 1) {
             const line_y = y + @as(f32, @floatFromInt(line_idx - start_line)) * r.char_height;
             const is_current = line_idx == self.editor.cursor.line;
@@ -91,6 +93,26 @@ pub const EditorWidget = struct {
             const line_text = line_buf[0..len];
             const line_start = self.editor.lineStart(line_idx);
             const line_end = line_start + len;
+            const line_len = len;
+
+            var ranges: [8]SelectionRange = undefined;
+            var range_count: usize = 0;
+            collectSelectionRanges(self.editor, line_idx, line_len, &ranges, &range_count);
+            if (range_count > 0) {
+                var i: usize = 0;
+                while (i < range_count) : (i += 1) {
+                    const range = ranges[i];
+                    const sel_x = text_start_x + @as(f32, @floatFromInt(range.start_col)) * r.char_width;
+                    const sel_w = @as(f32, @floatFromInt(range.end_col - range.start_col)) * r.char_width;
+                    r.drawRect(
+                        @intFromFloat(sel_x),
+                        @intFromFloat(line_y),
+                        @intFromFloat(sel_w),
+                        @intFromFloat(r.char_height),
+                        r.theme.selection,
+                    );
+                }
+            }
 
             if (highlight_tokens_allocated) {
                 while (token_idx < highlight_tokens.len and highlight_tokens[token_idx].end <= line_start) {
@@ -109,7 +131,7 @@ pub const EditorWidget = struct {
                         r,
                         line_text,
                         line_y,
-                        x + self.gutter_width + 8 * r.uiScaleFactor(),
+                        text_start_x,
                         line_start,
                         line_end,
                         tokens,
@@ -138,27 +160,55 @@ pub const EditorWidget = struct {
         mouse_x: f32,
         mouse_y: f32,
     ) bool {
-        self.gutter_width = 50 * r.uiScaleFactor();
-        if (width <= 0 or height <= 0) return false;
-        if (mouse_x < x or mouse_x > x + width) return false;
-        if (mouse_y < y or mouse_y > y + height) return false;
-        if (self.editor.lineCount() == 0) return false;
+        if (self.cursorFromMouse(r, x, y, width, height, mouse_x, mouse_y, false)) |pos| {
+            self.editor.setCursor(pos.line, pos.col);
+            const log = app_logger.logger("editor.input");
+            log.logf("mouse click line={d} col={d}", .{ pos.line, pos.col });
+            return true;
+        }
+        return false;
+    }
 
-        const line_offset = @as(usize, @intFromFloat((mouse_y - y) / r.char_height));
+    pub fn cursorFromMouse(
+        self: *EditorWidget,
+        r: *Renderer,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        mouse_x: f32,
+        mouse_y: f32,
+        clamp: bool,
+    ) ?types.CursorPos {
+        self.gutter_width = 50 * r.uiScaleFactor();
+        if (width <= 0 or height <= 0) return null;
+        if (self.editor.lineCount() == 0) return null;
+        var local_x = mouse_x;
+        var local_y = mouse_y;
+        if (clamp) {
+            local_x = @min(@max(mouse_x, x), x + width);
+            local_y = @min(@max(mouse_y, y), y + height);
+        } else {
+            if (mouse_x < x or mouse_x > x + width) return null;
+            if (mouse_y < y or mouse_y > y + height) return null;
+        }
+        const line_offset = @as(usize, @intFromFloat((local_y - y) / r.char_height));
         const max_line = self.editor.lineCount() - 1;
         const line = @min(self.editor.scroll_line + line_offset, max_line);
 
         const text_start_x = x + self.gutter_width + 8 * r.uiScaleFactor();
         var col: usize = 0;
-        if (mouse_x > text_start_x) {
-            col = @as(usize, @intFromFloat((mouse_x - text_start_x) / r.char_width));
+        if (local_x > text_start_x) {
+            col = @as(usize, @intFromFloat((local_x - text_start_x) / r.char_width));
         }
         const line_len = self.editor.lineLen(line);
         const clamped_col = @min(col, line_len);
-        self.editor.setCursor(line, clamped_col);
-        const log = app_logger.logger("editor.input");
-        log.logf("mouse click line={d} col={d}", .{ line, clamped_col });
-        return true;
+        const line_start = self.editor.lineStart(line);
+        return .{
+            .line = line,
+            .col = clamped_col,
+            .offset = line_start + clamped_col,
+        };
     }
 
     /// Handle input, returns true if any input was processed
@@ -280,6 +330,47 @@ fn drawHighlightedLineText(
         const slice_start = cursor - line_start;
         const x = text_x + @as(f32, @floatFromInt(slice_start)) * r.char_width;
         r.drawText(line_text[slice_start..], x, y, r.theme.foreground);
+    }
+}
+
+const SelectionRange = struct {
+    start_col: usize,
+    end_col: usize,
+};
+
+fn addSelectionRange(ranges: *[8]SelectionRange, count: *usize, start_col: usize, end_col: usize) void {
+    if (end_col <= start_col) return;
+    if (count.* >= ranges.len) return;
+    ranges[count.*] = .{ .start_col = start_col, .end_col = end_col };
+    count.* += 1;
+}
+
+fn collectSelectionRanges(
+    editor: *Editor,
+    line_idx: usize,
+    line_len: usize,
+    ranges: *[8]SelectionRange,
+    count: *usize,
+) void {
+    if (line_len == 0) return;
+    if (editor.selection) |sel| {
+        const norm = sel.normalized();
+        if (line_idx >= norm.start.line and line_idx <= norm.end.line) {
+            var start_col: usize = 0;
+            var end_col: usize = line_len;
+            if (line_idx == norm.start.line) start_col = @min(norm.start.col, line_len);
+            if (line_idx == norm.end.line) end_col = @min(norm.end.col, line_len);
+            addSelectionRange(ranges, count, start_col, end_col);
+        }
+    }
+    for (editor.selections.items) |sel| {
+        const norm = sel.normalized();
+        if (line_idx < norm.start.line or line_idx > norm.end.line) continue;
+        var start_col: usize = 0;
+        var end_col: usize = line_len;
+        if (line_idx == norm.start.line) start_col = @min(norm.start.col, line_len);
+        if (line_idx == norm.end.line) end_col = @min(norm.end.col, line_len);
+        addSelectionRange(ranges, count, start_col, end_col);
     }
 }
 
