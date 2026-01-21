@@ -4,6 +4,10 @@ Goal: replace the current flat piece table with a balanced rope/piece-tree to
 achieve O(log n) edits and O(log n) offset/line queries for large files, while
 supporting cheap snapshots and low memory overhead.
 
+Status (2026-01-21):
+- Implemented core rope ops in `src/editor/rope.zig` (split/join/insert/delete/read).
+- Not integrated with `Editor` yet.
+
 ## Current state (summary)
 - Text buffer is a piece table with a flat `pieces` array.
 - `findPiece` is linear (with a small cache), and insert/delete shift arrays.
