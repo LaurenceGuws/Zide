@@ -104,6 +104,27 @@ pub const Rope = struct {
         return newline_offset + 1;
     }
 
+    pub fn lineLen(self: *Rope, line_index: usize) usize {
+        const total_lines = self.lineCount();
+        if (line_index >= total_lines) return 0;
+        const start = self.lineStart(line_index);
+        if (line_index + 1 < total_lines) {
+            const next_start = self.lineStart(line_index + 1);
+            return if (next_start > start) next_start - start - 1 else 0;
+        }
+        const total = self.totalLen();
+        return if (total > start) total - start else 0;
+    }
+
+    pub fn lineIndexForOffset(self: *Rope, offset: usize) usize {
+        const total = self.totalLen();
+        if (offset >= total) {
+            const total_lines = self.lineCount();
+            return if (total_lines == 0) 0 else total_lines - 1;
+        }
+        return self.countLineBreaksBefore(self.root, offset);
+    }
+
     fn createLeafNode(self: *Rope, buffer: BufferKind, start: usize, len: usize) !*Node {
         const node = try self.allocator.create(Node);
         node.* = .{
@@ -333,6 +354,29 @@ pub const Rope = struct {
         }
         return left_len + self.findNthNewline(cur.right, n - left_breaks);
     }
+
+    fn countLineBreaksBefore(self: *Rope, node: ?*Node, offset: usize) usize {
+        if (node == null or offset == 0) return 0;
+        const cur = node.?;
+        if (cur.leaf != null) {
+            const leaf = cur.leaf.?;
+            const data = switch (leaf.buffer) {
+                .original => self.original,
+                .add => self.add.items,
+            };
+            const limit = @min(offset, leaf.len);
+            var count: usize = 0;
+            for (data[leaf.start .. leaf.start + limit]) |byte| {
+                if (byte == '\n') count += 1;
+            }
+            return count;
+        }
+        const left_len = nodeLen(cur.left);
+        if (offset <= left_len) {
+            return self.countLineBreaksBefore(cur.left, offset);
+        }
+        return nodeBreaks(cur.left) + self.countLineBreaksBefore(cur.right, offset - left_len);
+    }
 };
 
 test "rope insert/read/delete and line starts" {
@@ -343,6 +387,9 @@ test "rope insert/read/delete and line starts" {
     try std.testing.expectEqual(@as(usize, 11), rope.totalLen());
     try std.testing.expectEqual(@as(usize, 2), rope.lineCount());
     try std.testing.expectEqual(@as(usize, 6), rope.lineStart(1));
+    try std.testing.expectEqual(@as(usize, 0), rope.lineIndexForOffset(0));
+    try std.testing.expectEqual(@as(usize, 0), rope.lineIndexForOffset(5));
+    try std.testing.expectEqual(@as(usize, 1), rope.lineIndexForOffset(6));
 
     var out = try allocator.alloc(u8, rope.totalLen());
     defer allocator.free(out);
