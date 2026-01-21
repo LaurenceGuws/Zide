@@ -35,11 +35,11 @@ editor_protocol_todo:
       - reference_repos/text/xi-rope/src/engine.rs
   tasks:
     - id: EP-01
-      status: todo
+      status: done
       title: "Text model audit + upgrade plan"
       notes:
-        - "Document current piece-table design and limits."
-        - "Decide on rope/piece-table hybrid or optimizations."
+        - "Audit complete; see app_architecture/editor/DESIGN.md."
+        - "Decision pending: rope/piece-tree vs indexed piece-table."
       references:
         - reference_repos/text/ropey/src/rope.rs
         - reference_repos/text/xi-rope/src/engine.rs
@@ -87,4 +87,3 @@ editor_protocol_todo:
         - reference_repos/editors/neovim/src/nvim/fold.c
         - reference_repos/editors/zed/crates/editor/src/display_map.rs
         - reference_repos/text/scintilla/src/Editor.c
-
