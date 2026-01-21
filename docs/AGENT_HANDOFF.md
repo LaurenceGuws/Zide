@@ -1,11 +1,11 @@
 # Agent Handoff (Zide)
 
-Date: 2026-01-20
+Date: 2026-01-21
 
 ## Quick start for next agent
 
 - Repo: `/home/home/personal/zide`
-- Current focus: shift from terminal protocol work to editor/widget + text engine roadmap.
+- Current focus: editor/widget + text engine roadmap (rope-only text model, selections, widget input).
 - Key docs (editor):
   - `app_architecture/editor/DESIGN.md`
   - `app_architecture/editor/editor_widget_todo.yaml`
@@ -28,6 +28,14 @@ Suggested next steps:
 - Kitty graphics: query (`a=q`) validates payloads and returns `ENODATA`/`EBADPNG`/`EINVAL` as appropriate; `ENOENT` for missing images; cycle + depth checks (`ECYCLE`/`ETOODEEP`) for parented placements.
 - Kitty graphics: per-screen storage (primary vs alt) so alt apps like yazi can render without leaking to scrollback; alt entry/exit clears its own kitty state.
 - Terminfo: added `assets/terminfo/xterm-kitty.info` and set TERM to xterm-kitty with fallback to xterm-256color when missing.
+- Editor: piece-table removed; rope-only text model with undo/redo, batching, and grouping.
+- Editor: selection set scaffolding + rectangular selection expansion and per-line editing.
+- Editor: editor-only tests added (`zig build test-editor`) using `src/tests_main.zig` + `src/editor_tests.zig`.
+- Editor widget: mouse drag selection wired (normal + Alt-rect) and selection overlay drawing added.
+
+## Current issues (editor)
+
+- Mouse drag selection not working: user reports left click down only moves cursor; selection overlay does not appear.
 
 ## Current issues (terminal, parked)
 
@@ -64,3 +72,12 @@ Suggested next steps:
 - `src/terminal/parser/csi.zig`
 - `app_architecture/terminal/DESIGN.md`
 - `app_architecture/terminal/protocol_todo.yaml`
+
+## Editor files to review
+
+- `src/ui/widgets/editor_widget.zig`
+- `src/main.zig`
+- `src/editor/editor.zig`
+- `src/editor/rope.zig`
+- `src/editor_tests.zig`
+- `src/tests_main.zig`

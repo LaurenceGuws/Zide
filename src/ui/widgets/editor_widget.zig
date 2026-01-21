@@ -95,25 +95,6 @@ pub const EditorWidget = struct {
             const line_end = line_start + len;
             const line_len = len;
 
-            var ranges: [8]SelectionRange = undefined;
-            var range_count: usize = 0;
-            collectSelectionRanges(self.editor, line_idx, line_len, &ranges, &range_count);
-            if (range_count > 0) {
-                var i: usize = 0;
-                while (i < range_count) : (i += 1) {
-                    const range = ranges[i];
-                    const sel_x = text_start_x + @as(f32, @floatFromInt(range.start_col)) * r.char_width;
-                    const sel_w = @as(f32, @floatFromInt(range.end_col - range.start_col)) * r.char_width;
-                    r.drawRect(
-                        @intFromFloat(sel_x),
-                        @intFromFloat(line_y),
-                        @intFromFloat(sel_w),
-                        @intFromFloat(r.char_height),
-                        r.theme.selection,
-                    );
-                }
-            }
-
             if (highlight_tokens_allocated) {
                 while (token_idx < highlight_tokens.len and highlight_tokens[token_idx].end <= line_start) {
                     token_idx += 1;
@@ -123,10 +104,28 @@ pub const EditorWidget = struct {
                     line_token_end += 1;
                 }
                 const tokens = highlight_tokens[token_idx..line_token_end];
+                r.drawEditorLineBase(line_idx, line_y, x, self.gutter_width, width, is_current);
+                var ranges: [8]SelectionRange = undefined;
+                var range_count: usize = 0;
+                collectSelectionRanges(self.editor, line_idx, line_len, &ranges, &range_count);
+                if (range_count > 0) {
+                    var i: usize = 0;
+                    while (i < range_count) : (i += 1) {
+                        const range = ranges[i];
+                        const sel_x = text_start_x + @as(f32, @floatFromInt(range.start_col)) * r.char_width;
+                        const sel_w = @as(f32, @floatFromInt(range.end_col - range.start_col)) * r.char_width;
+                        r.drawRect(
+                            @intFromFloat(sel_x),
+                            @intFromFloat(line_y),
+                            @intFromFloat(sel_w),
+                            @intFromFloat(r.char_height),
+                            r.theme.selection,
+                        );
+                    }
+                }
                 if (tokens.len == 0) {
-                    r.drawEditorLine(line_idx, line_text, line_y, x, self.gutter_width, width, is_current);
+                    r.drawText(line_text, text_start_x, line_y, r.theme.foreground);
                 } else {
-                    r.drawEditorLineBase(line_idx, line_y, x, self.gutter_width, width, is_current);
                     drawHighlightedLineText(
                         r,
                         line_text,
@@ -138,7 +137,26 @@ pub const EditorWidget = struct {
                     );
                 }
             } else {
-                r.drawEditorLine(line_idx, line_text, line_y, x, self.gutter_width, width, is_current);
+                r.drawEditorLineBase(line_idx, line_y, x, self.gutter_width, width, is_current);
+                var ranges: [8]SelectionRange = undefined;
+                var range_count: usize = 0;
+                collectSelectionRanges(self.editor, line_idx, line_len, &ranges, &range_count);
+                if (range_count > 0) {
+                    var i: usize = 0;
+                    while (i < range_count) : (i += 1) {
+                        const range = ranges[i];
+                        const sel_x = text_start_x + @as(f32, @floatFromInt(range.start_col)) * r.char_width;
+                        const sel_w = @as(f32, @floatFromInt(range.end_col - range.start_col)) * r.char_width;
+                        r.drawRect(
+                            @intFromFloat(sel_x),
+                            @intFromFloat(line_y),
+                            @intFromFloat(sel_w),
+                            @intFromFloat(r.char_height),
+                            r.theme.selection,
+                        );
+                    }
+                }
+                r.drawText(line_text, text_start_x, line_y, r.theme.foreground);
             }
         }
 
