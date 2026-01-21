@@ -642,3 +642,37 @@ test "rope undo merges adjacent inserts" {
     defer allocator.free(undo_text);
     try std.testing.expectEqualStrings("abc", undo_text);
 }
+
+test "rope undo merges adjacent deletes (same position)" {
+    const allocator = std.testing.allocator;
+    var rope = try Rope.init(allocator, "abcdef");
+    defer rope.deinit();
+
+    try rope.deleteRange(3, 1); // delete 'd'
+    try rope.deleteRange(3, 1); // delete 'e' (same pos)
+    const after_delete = try rope.readRangeAlloc(0, rope.totalLen());
+    defer allocator.free(after_delete);
+    try std.testing.expectEqualStrings("abcf", after_delete);
+
+    try std.testing.expect(try rope.undo());
+    const undo_text = try rope.readRangeAlloc(0, rope.totalLen());
+    defer allocator.free(undo_text);
+    try std.testing.expectEqualStrings("abcdef", undo_text);
+}
+
+test "rope undo merges adjacent deletes (backspace-style)" {
+    const allocator = std.testing.allocator;
+    var rope = try Rope.init(allocator, "abcdef");
+    defer rope.deinit();
+
+    try rope.deleteRange(2, 1); // delete 'c'
+    try rope.deleteRange(1, 1); // delete 'b' (just before last delete)
+    const after_delete = try rope.readRangeAlloc(0, rope.totalLen());
+    defer allocator.free(after_delete);
+    try std.testing.expectEqualStrings("adef", after_delete);
+
+    try std.testing.expect(try rope.undo());
+    const undo_text = try rope.readRangeAlloc(0, rope.totalLen());
+    defer allocator.free(undo_text);
+    try std.testing.expectEqualStrings("abcdef", undo_text);
+}
