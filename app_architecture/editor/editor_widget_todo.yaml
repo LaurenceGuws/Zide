@@ -102,6 +102,7 @@ editor_widget_todo:
       notes:
         - "Selection = anchor/head ranges; support merging and rectangular selections."
         - "Selection set scaffolding in Editor (normalize/merge)."
+        - "Rectangular selection scaffolding (per-line expansion)."
       references:
         - reference_repos/editors/helix/helix-core/src/selection.rs
         - reference_repos/editors/kakoune/src/selection.cc
