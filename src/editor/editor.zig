@@ -182,7 +182,21 @@ pub const Editor = struct {
     // ─────────────────────────────────────────────────────────────────────────
 
     pub fn insertChar(self: *Editor, char: u8) !void {
-        try self.deleteSelection();
+        if (self.selection != null) {
+            self.beginUndoGroup();
+            errdefer self.endUndoGroup() catch {};
+            try self.deleteSelection();
+            const bytes = [_]u8{char};
+            try self.buffer.insertBytes(self.cursor.offset, &bytes);
+            self.cursor.offset += 1;
+            self.updateCursorPosition();
+            self.modified = true;
+            if (self.highlighter) |h| {
+                _ = h.reparse();
+            }
+            try self.endUndoGroup();
+            return;
+        }
         const bytes = [_]u8{char};
         try self.buffer.insertBytes(self.cursor.offset, &bytes);
         self.cursor.offset += 1;
@@ -194,7 +208,20 @@ pub const Editor = struct {
     }
 
     pub fn insertText(self: *Editor, text: []const u8) !void {
-        try self.deleteSelection();
+        if (self.selection != null) {
+            self.beginUndoGroup();
+            errdefer self.endUndoGroup() catch {};
+            try self.deleteSelection();
+            try self.buffer.insertBytes(self.cursor.offset, text);
+            self.cursor.offset += text.len;
+            self.updateCursorPosition();
+            self.modified = true;
+            if (self.highlighter) |h| {
+                _ = h.reparse();
+            }
+            try self.endUndoGroup();
+            return;
+        }
         try self.buffer.insertBytes(self.cursor.offset, text);
         self.cursor.offset += text.len;
         self.updateCursorPosition();
