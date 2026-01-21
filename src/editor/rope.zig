@@ -28,6 +28,8 @@ pub const Rope = struct {
     undo_stack: std.ArrayList(UndoOp),
     redo_stack: std.ArrayList(UndoOp),
     history_suspended: bool,
+    group_depth: u32,
+    group_dirty: bool,
     const target_leaf_bytes: usize = 2048;
     const max_undo_bytes: usize = 8 * 1024 * 1024;
     const max_undo_ops: usize = 1000;
@@ -42,6 +44,8 @@ pub const Rope = struct {
             .undo_stack = .{},
             .redo_stack = .{},
             .history_suspended = false,
+            .group_depth = 0,
+            .group_dirty = false,
         };
         if (initial.len > 0) {
             rope.root = try rope.createLeafNode(.original, 0, initial.len);
@@ -84,6 +88,7 @@ pub const Rope = struct {
             if (merged) {
                 try self.insertNoHistory(offset, data);
                 try clearRedoStack(self);
+                self.markGroupDirty();
                 return;
             }
         }
@@ -92,6 +97,7 @@ pub const Rope = struct {
         try clearRedoStack(self);
         try self.undo_stack.append(self.allocator, op);
         trimUndoStack(self);
+        self.markGroupDirty();
     }
 
     pub fn deleteRange(self: *Rope, start: usize, len: usize) !void {
@@ -113,6 +119,7 @@ pub const Rope = struct {
                 try self.deleteRangeNoHistory(start, len);
                 try clearRedoStack(self);
                 self.allocator.free(deleted);
+                self.markGroupDirty();
                 return;
             }
         }
@@ -121,6 +128,7 @@ pub const Rope = struct {
         try clearRedoStack(self);
         try self.undo_stack.append(self.allocator, op);
         trimUndoStack(self);
+        self.markGroupDirty();
     }
 
     pub fn canUndo(self: *Rope) bool {
@@ -133,28 +141,95 @@ pub const Rope = struct {
 
     pub fn undo(self: *Rope) !bool {
         if (self.undo_stack.items.len == 0) return false;
-        const op = self.undo_stack.pop() orelse return false;
+        var op = self.undo_stack.pop() orelse return false;
+        var grouped = false;
+        var moved_any = false;
+        if (op.kind == .boundary) {
+            grouped = true;
+        } else {
+            self.history_suspended = true;
+            defer self.history_suspended = false;
+            switch (op.kind) {
+                .insert => try self.deleteRangeNoHistory(op.pos, op.text.len),
+                .delete => try self.insertNoHistory(op.pos, op.text),
+                .boundary => {},
+            }
+            try self.redo_stack.append(self.allocator, op);
+            return true;
+        }
+
         self.history_suspended = true;
         defer self.history_suspended = false;
-        switch (op.kind) {
-            .insert => try self.deleteRangeNoHistory(op.pos, op.text.len),
-            .delete => try self.insertNoHistory(op.pos, op.text),
+        while (self.undo_stack.items.len > 0) {
+            op = self.undo_stack.pop() orelse break;
+            if (op.kind == .boundary) break;
+            switch (op.kind) {
+                .insert => try self.deleteRangeNoHistory(op.pos, op.text.len),
+                .delete => try self.insertNoHistory(op.pos, op.text),
+                .boundary => {},
+            }
+            try self.redo_stack.append(self.allocator, op);
+            moved_any = true;
         }
-        try self.redo_stack.append(self.allocator, op);
-        return true;
+        if (grouped and moved_any) {
+            try self.redo_stack.append(self.allocator, try boundaryOp(self));
+        }
+        return moved_any;
     }
 
     pub fn redo(self: *Rope) !bool {
         if (self.redo_stack.items.len == 0) return false;
-        const op = self.redo_stack.pop() orelse return false;
+        var op = self.redo_stack.pop() orelse return false;
+        var grouped = false;
+        var moved_any = false;
+        if (op.kind == .boundary) {
+            grouped = true;
+        } else {
+            self.history_suspended = true;
+            defer self.history_suspended = false;
+            switch (op.kind) {
+                .insert => try self.insertNoHistory(op.pos, op.text),
+                .delete => try self.deleteRangeNoHistory(op.pos, op.text.len),
+                .boundary => {},
+            }
+            try self.undo_stack.append(self.allocator, op);
+            return true;
+        }
+
         self.history_suspended = true;
         defer self.history_suspended = false;
-        switch (op.kind) {
-            .insert => try self.insertNoHistory(op.pos, op.text),
-            .delete => try self.deleteRangeNoHistory(op.pos, op.text.len),
+        while (self.redo_stack.items.len > 0) {
+            op = self.redo_stack.pop() orelse break;
+            if (op.kind == .boundary) break;
+            switch (op.kind) {
+                .insert => try self.insertNoHistory(op.pos, op.text),
+                .delete => try self.deleteRangeNoHistory(op.pos, op.text.len),
+                .boundary => {},
+            }
+            try self.undo_stack.append(self.allocator, op);
+            moved_any = true;
         }
-        try self.undo_stack.append(self.allocator, op);
-        return true;
+        if (grouped and moved_any) {
+            try self.undo_stack.append(self.allocator, try boundaryOp(self));
+        }
+        return moved_any;
+    }
+
+    pub fn beginUndoGroup(self: *Rope) void {
+        self.group_depth += 1;
+        if (self.group_depth == 1) {
+            self.group_dirty = false;
+        }
+    }
+
+    pub fn endUndoGroup(self: *Rope) !void {
+        if (self.group_depth == 0) return;
+        self.group_depth -= 1;
+        if (self.group_depth == 0 and self.group_dirty) {
+            try self.undo_stack.append(self.allocator, try boundaryOp(self));
+            trimUndoStack(self);
+            self.group_dirty = false;
+        }
     }
 
     fn insertNoHistory(self: *Rope, offset: usize, data: []const u8) !void {
@@ -529,11 +604,18 @@ pub const Rope = struct {
         }
         return null;
     }
+
+    fn markGroupDirty(self: *Rope) void {
+        if (self.group_depth > 0) {
+            self.group_dirty = true;
+        }
+    }
 };
 
 const UndoKind = enum(u8) {
     insert,
     delete,
+    boundary,
 };
 
 const UndoOp = struct {
@@ -580,6 +662,11 @@ fn clearHistory(self: *Rope) void {
     if (self.redo_stack.items.len > 0) {
         freeUndoStack(self, &self.redo_stack);
     }
+}
+
+fn boundaryOp(self: *Rope) !UndoOp {
+    const empty = try self.allocator.alloc(u8, 0);
+    return UndoOp{ .kind = .boundary, .pos = 0, .text = empty };
 }
 
 test "rope insert/read/delete and line starts" {
@@ -675,4 +762,29 @@ test "rope undo merges adjacent deletes (backspace-style)" {
     const undo_text = try rope.readRangeAlloc(0, rope.totalLen());
     defer allocator.free(undo_text);
     try std.testing.expectEqualStrings("abcdef", undo_text);
+}
+
+test "rope undo groups multiple edits" {
+    const allocator = std.testing.allocator;
+    var rope = try Rope.init(allocator, "hi");
+    defer rope.deinit();
+
+    rope.beginUndoGroup();
+    try rope.insert(2, "!");
+    try rope.insert(3, "!");
+    try rope.endUndoGroup();
+
+    const after_group = try rope.readRangeAlloc(0, rope.totalLen());
+    defer allocator.free(after_group);
+    try std.testing.expectEqualStrings("hi!!", after_group);
+
+    try std.testing.expect(try rope.undo());
+    const undo_text = try rope.readRangeAlloc(0, rope.totalLen());
+    defer allocator.free(undo_text);
+    try std.testing.expectEqualStrings("hi", undo_text);
+
+    try std.testing.expect(try rope.redo());
+    const redo_text = try rope.readRangeAlloc(0, rope.totalLen());
+    defer allocator.free(redo_text);
+    try std.testing.expectEqualStrings("hi!!", redo_text);
 }

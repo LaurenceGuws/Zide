@@ -102,4 +102,12 @@ pub const TextStore = struct {
     pub fn redo(self: *TextStore) !bool {
         return self.rope.redo();
     }
+
+    pub fn beginUndoGroup(self: *TextStore) void {
+        self.rope.beginUndoGroup();
+    }
+
+    pub fn endUndoGroup(self: *TextStore) !void {
+        try self.rope.endUndoGroup();
+    }
 };

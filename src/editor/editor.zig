@@ -257,6 +257,14 @@ pub const Editor = struct {
     // Undo/Redo
     // ─────────────────────────────────────────────────────────────────────────
 
+    pub fn beginUndoGroup(self: *Editor) void {
+        self.buffer.beginUndoGroup();
+    }
+
+    pub fn endUndoGroup(self: *Editor) !void {
+        try self.buffer.endUndoGroup();
+    }
+
     pub fn undo(self: *Editor) !bool {
         const result = try self.buffer.undo();
         if (result) {
