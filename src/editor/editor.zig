@@ -244,6 +244,16 @@ pub const Editor = struct {
         }
     }
 
+    fn normalizeSelectionsDescending(self: *Editor) !void {
+        try self.normalizeSelections();
+        if (self.selections.items.len == 0) return;
+        std.sort.block(Selection, self.selections.items, {}, struct {
+            fn lessThan(_: void, a: Selection, b: Selection) bool {
+                return a.start.offset > b.start.offset;
+            }
+        }.lessThan);
+    }
+
     fn updateCursorPosition(self: *Editor) void {
         self.cursor.line = self.buffer.lineIndexForOffset(self.cursor.offset);
         const line_start = self.buffer.lineStart(self.cursor.line);
@@ -260,6 +270,30 @@ pub const Editor = struct {
     // ─────────────────────────────────────────────────────────────────────────
 
     pub fn insertChar(self: *Editor, char: u8) !void {
+        if (self.selections.items.len > 0) {
+            self.beginUndoGroup();
+            errdefer self.endUndoGroup() catch {};
+            try self.normalizeSelectionsDescending();
+            const bytes = [_]u8{char};
+            for (self.selections.items) |sel| {
+                const norm = sel.normalized();
+                const len = norm.end.offset - norm.start.offset;
+                if (len > 0) {
+                    try self.buffer.deleteRange(norm.start.offset, len);
+                }
+                try self.buffer.insertBytes(norm.start.offset, &bytes);
+                self.cursor = norm.start;
+                self.cursor.offset += 1;
+                self.updateCursorPosition();
+            }
+            self.modified = true;
+            if (self.highlighter) |h| {
+                _ = h.reparse();
+            }
+            self.clearSelections();
+            try self.endUndoGroup();
+            return;
+        }
         if (self.selection != null) {
             self.beginUndoGroup();
             errdefer self.endUndoGroup() catch {};
@@ -286,6 +320,27 @@ pub const Editor = struct {
     }
 
     pub fn insertText(self: *Editor, text: []const u8) !void {
+        if (self.selections.items.len > 0) {
+            self.beginUndoGroup();
+            errdefer self.endUndoGroup() catch {};
+            try self.normalizeSelectionsDescending();
+            for (self.selections.items) |sel| {
+                const norm = sel.normalized();
+                const len = norm.end.offset - norm.start.offset;
+                if (len > 0) {
+                    try self.buffer.deleteRange(norm.start.offset, len);
+                }
+                try self.buffer.insertBytes(norm.start.offset, text);
+                self.cursor = norm.start;
+            }
+            self.modified = true;
+            if (self.highlighter) |h| {
+                _ = h.reparse();
+            }
+            self.clearSelections();
+            try self.endUndoGroup();
+            return;
+        }
         if (self.selection != null) {
             self.beginUndoGroup();
             errdefer self.endUndoGroup() catch {};
@@ -343,6 +398,29 @@ pub const Editor = struct {
     }
 
     pub fn deleteSelection(self: *Editor) !void {
+        if (self.selections.items.len > 0) {
+            try self.normalizeSelectionsDescending();
+            var idx: usize = self.selections.items.len;
+            while (idx > 0) {
+                idx -= 1;
+                const sel = self.selections.items[idx];
+                const norm = sel.normalized();
+                const len = norm.end.offset - norm.start.offset;
+                if (len > 0) {
+                    try self.buffer.deleteRange(norm.start.offset, len);
+                    self.cursor = norm.start;
+                    self.modified = true;
+                }
+            }
+            if (self.modified) {
+                if (self.highlighter) |h| {
+                    _ = h.reparse();
+                }
+            }
+            self.clearSelections();
+            self.selection = null;
+            return;
+        }
         if (self.selection) |sel| {
             const norm = sel.normalized();
             const len = norm.end.offset - norm.start.offset;

@@ -93,7 +93,7 @@ test "editor rectangular selections do not merge" {
     var editor = try Editor.init(allocator);
     defer editor.deinit();
 
-    try editor.insertText("one\\ntwo\\nthree");
+    try editor.insertText("one\ntwo\nthree");
     try editor.addRectSelection(.{ .line = 0, .col = 0, .offset = 0 }, .{ .line = 0, .col = 2, .offset = 2 });
     try editor.addRectSelection(.{ .line = 0, .col = 1, .offset = 1 }, .{ .line = 0, .col = 3, .offset = 3 });
     try editor.normalizeSelections();
@@ -110,7 +110,21 @@ test "editor expand rect selection creates per-line selections" {
     var editor = try Editor.init(allocator);
     defer editor.deinit();
 
-    try editor.insertText("one\\ntwo\\nthree");
+    try editor.insertText("one\ntwo\nthree");
     try editor.expandRectSelection(0, 2, 1, 3);
     try std.testing.expectEqual(@as(usize, 3), editor.selectionCount());
+}
+
+test "editor insert across rectangular selections" {
+    const allocator = std.testing.allocator;
+    var editor = try Editor.init(allocator);
+    defer editor.deinit();
+
+    try editor.insertText("one\ntwo\nthree");
+    try editor.expandRectSelection(0, 2, 1, 2);
+    try editor.insertChar('X');
+
+    const after = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after);
+    try std.testing.expectEqualStrings("oXe\ntXo\ntXree", after);
 }
