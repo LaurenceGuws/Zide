@@ -9,6 +9,8 @@ Status (2026-01-21):
 - Added `TextStore` adapter in `src/editor/text_store.zig`; `Editor` + syntax
   highlighter now depend on the adapter and can switch implementations via
   `TextStoreKind` (default rope).
+- Rope undo/redo implemented with per-op text snapshots (matches current
+  piece-table behavior).
 
 ## Current state (summary)
 - Text buffer is a piece table with a flat `pieces` array.
