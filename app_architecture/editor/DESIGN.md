@@ -57,3 +57,7 @@ Notepad++-level capability while keeping Zide's core fast and minimal.
 - Added `TextStore` adapter and wired `Editor` + syntax highlighter to it so we
   can switch between piece-table and rope. Default is currently rope; undo/redo
   now supported in rope with per-op text snapshots.
+
+2026-01-21
+- Added Lua config toggle: `editor.text_store` selects `rope` or `piece_table`
+  at runtime (see `assets/config/init.lua`).
