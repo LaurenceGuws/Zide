@@ -68,11 +68,13 @@ editor_widget_todo:
         - reference_repos/text/scintilla/src/CellBuffer.cxx
   roadmap:
     - id: ED-01
-      status: todo
+      status: in_progress
       title: "Text model upgrade (large file performance)"
       notes:
-        - "Audit piece-table vs rope tradeoffs; ensure O(log n) edits and cheap snapshots."
-        - "Add line index cache and fast byte<->row/col conversion."
+        - "Audit complete (see app_architecture/editor/DESIGN.md)."
+        - "Decision needed: rope/piece-tree vs indexed piece-table."
+        - "Plan: balanced tree + per-node aggregates (bytes + line breaks, later UTF-8/UTF-16)."
+        - "Add line index cache via in-tree aggregates or partitioning."
       references:
         - reference_repos/editors/helix/helix-core/src/transaction.rs
         - reference_repos/text/ropey/src/rope.rs

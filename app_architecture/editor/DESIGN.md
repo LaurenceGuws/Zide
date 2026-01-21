@@ -30,3 +30,20 @@ Notepad++-level capability while keeping Zide's core fast and minimal.
 - Adopt terminal-style workflow for editor work: add explicit todo lists with
   reference repo paths for each task, and update them as tasks are completed.
 
+2026-01-21
+- Text model audit (EP-01) complete. Current buffer is a piece table backed by
+  `original` + `add` arrays with a flat `pieces` array. Inserts/deletes are
+  O(n) due to array insertion/removal, and `findPiece` is linear with a small
+  "last piece" cache. Line indexing is a `line_starts` array of byte offsets,
+  updated incrementally only when index is ready; otherwise it is rebuilt
+  (sync for memory buffers, async for file-backed buffers). All cursor and
+  selection math is byte-based; no UTF-8/UTF-16/grapheme indexing yet.
+- Text model upgrade plan drafted: introduce a rope-like balanced tree or
+  piece-tree with per-node aggregates (bytes + line breaks, later UTF-8/UTF-16
+  code unit counts). This yields O(log n) edits and offset/line queries,
+  plus cheap snapshots/clones. Line index cache becomes an in-tree aggregate
+  (or Scintilla-style partitioning) rather than a full rebuild array.
+- Decision needed: implement a native rope/tree in Zig vs. optimize current
+  piece table with a separate balanced index layer. If we keep piece-table,
+  add a tree of pieces + gapless piece coalescing and switch line index to a
+  partitioning structure similar to Scintilla's `LineVector`.
