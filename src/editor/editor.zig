@@ -14,6 +14,7 @@ pub const Editor = struct {
     buffer: *TextStore,
     cursor: CursorPos,
     selection: ?Selection,
+    selections: std.ArrayList(Selection),
     scroll_line: usize,
     scroll_col: usize,
     highlighter: ?*syntax_mod.SyntaxHighlighter,
@@ -34,6 +35,7 @@ pub const Editor = struct {
             .buffer = buffer,
             .cursor = .{ .line = 0, .col = 0, .offset = 0 },
             .selection = null,
+            .selections = .empty,
             .scroll_line = 0,
             .scroll_col = 0,
             .highlighter = null,
@@ -52,6 +54,7 @@ pub const Editor = struct {
         if (self.file_path) |path| {
             self.allocator.free(path);
         }
+        self.selections.deinit(self.allocator);
         self.buffer.deinit();
         self.allocator.destroy(self);
     }
@@ -78,6 +81,7 @@ pub const Editor = struct {
         // Reset state
         self.cursor = .{ .line = 0, .col = 0, .offset = 0 };
         self.selection = null;
+        self.clearSelections();
         self.scroll_line = 0;
         self.scroll_col = 0;
         self.modified = false;
@@ -115,6 +119,7 @@ pub const Editor = struct {
         self.cursor.offset -= 1;
         self.updateCursorPosition();
         self.selection = null;
+        self.clearSelections();
     }
 
     pub fn moveCursorRight(self: *Editor) void {
@@ -123,6 +128,7 @@ pub const Editor = struct {
         self.cursor.offset += 1;
         self.updateCursorPosition();
         self.selection = null;
+        self.clearSelections();
     }
 
     pub fn moveCursorUp(self: *Editor) void {
@@ -133,6 +139,7 @@ pub const Editor = struct {
         self.cursor.col = @min(target_col, line_len);
         self.updateCursorOffset();
         self.selection = null;
+        self.clearSelections();
     }
 
     pub fn moveCursorDown(self: *Editor) void {
@@ -144,12 +151,14 @@ pub const Editor = struct {
         self.cursor.col = @min(target_col, line_len);
         self.updateCursorOffset();
         self.selection = null;
+        self.clearSelections();
     }
 
     pub fn moveCursorToLineStart(self: *Editor) void {
         self.cursor.col = 0;
         self.updateCursorOffset();
         self.selection = null;
+        self.clearSelections();
     }
 
     pub fn moveCursorToLineEnd(self: *Editor) void {
@@ -157,6 +166,7 @@ pub const Editor = struct {
         self.cursor.col = line_len;
         self.updateCursorOffset();
         self.selection = null;
+        self.clearSelections();
     }
 
     pub fn setCursor(self: *Editor, line: usize, col: usize) void {
@@ -164,6 +174,52 @@ pub const Editor = struct {
         self.cursor.col = col;
         self.updateCursorOffset();
         self.selection = null;
+        self.clearSelections();
+    }
+
+    pub fn clearSelections(self: *Editor) void {
+        self.selections.clearRetainingCapacity();
+    }
+
+    pub fn addSelection(self: *Editor, selection: Selection) !void {
+        try self.selections.append(self.allocator, selection);
+    }
+
+    pub fn selectionCount(self: *Editor) usize {
+        return self.selections.items.len;
+    }
+
+    pub fn selectionAt(self: *Editor, index: usize) ?Selection {
+        if (index >= self.selections.items.len) return null;
+        return self.selections.items[index];
+    }
+
+    pub fn normalizeSelections(self: *Editor) !void {
+        if (self.selections.items.len == 0) return;
+        for (self.selections.items) |*sel| {
+            sel.* = sel.normalized();
+        }
+        std.sort.block(Selection, self.selections.items, {}, struct {
+            fn lessThan(_: void, a: Selection, b: Selection) bool {
+                return a.start.offset < b.start.offset;
+            }
+        }.lessThan);
+
+        var merged = std.ArrayList(Selection).empty;
+        defer merged.deinit(self.allocator);
+        try merged.append(self.allocator, self.selections.items[0]);
+        for (self.selections.items[1..]) |sel| {
+            var last = &merged.items[merged.items.len - 1];
+            if (sel.start.offset <= last.end.offset) {
+                if (sel.end.offset > last.end.offset) {
+                    last.end = sel.end;
+                }
+            } else {
+                try merged.append(self.allocator, sel);
+            }
+        }
+        self.selections.clearRetainingCapacity();
+        try self.selections.appendSlice(self.allocator, merged.items);
     }
 
     fn updateCursorPosition(self: *Editor) void {

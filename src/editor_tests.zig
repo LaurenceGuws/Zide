@@ -65,3 +65,25 @@ test "editor explicit undo group wraps multiple ops" {
     defer allocator.free(undone);
     try std.testing.expectEqualStrings("", undone);
 }
+
+test "editor selection normalization merges overlaps" {
+    const allocator = std.testing.allocator;
+    var editor = try Editor.init(allocator);
+    defer editor.deinit();
+
+    try editor.insertText("abcdef");
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 1, .offset = 1 },
+        .end = .{ .line = 0, .col = 3, .offset = 3 },
+    });
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 2, .offset = 2 },
+        .end = .{ .line = 0, .col = 5, .offset = 5 },
+    });
+    try editor.normalizeSelections();
+
+    try std.testing.expectEqual(@as(usize, 1), editor.selectionCount());
+    const sel = editor.selectionAt(0) orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 1), sel.start.offset);
+    try std.testing.expectEqual(@as(usize, 5), sel.end.offset);
+}
