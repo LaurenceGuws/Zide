@@ -7,7 +7,7 @@ pub const TextStoreKind = enum(u8) {
     rope,
 };
 
-pub const default_kind: TextStoreKind = .rope;
+pub var default_kind: TextStoreKind = .rope;
 
 pub const TextStore = struct {
     allocator: std.mem.Allocator,
