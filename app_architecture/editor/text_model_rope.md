@@ -10,6 +10,8 @@ Status (2026-01-21):
 - Rope undo/redo implemented with per-op text snapshots.
 - Basic undo batching: adjacent inserts merge into a single undo op; adjacent
   deletes at the same position or just before the previous delete also merge.
+- Undo grouping hooks: `beginUndoGroup` / `endUndoGroup` push a boundary marker
+  so grouped edits undo/redo as a single step.
 
 ## Current state (summary)
 - Text buffer is a piece table with a flat `pieces` array.
