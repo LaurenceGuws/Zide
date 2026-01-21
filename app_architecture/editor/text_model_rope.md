@@ -13,6 +13,7 @@ Status (2026-01-21):
   piece-table behavior).
 - Basic undo batching: adjacent inserts merge into a single undo op; adjacent
   deletes at the same position or just before the previous delete also merge.
+- Config toggle added via Lua: `editor.text_store = "rope" | "piece_table"`.
 
 ## Current state (summary)
 - Text buffer is a piece table with a flat `pieces` array.

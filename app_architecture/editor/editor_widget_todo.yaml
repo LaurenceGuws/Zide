@@ -79,6 +79,7 @@ editor_widget_todo:
         - "TextStore adapter added; Editor + syntax use adapter (default rope)."
         - "Rope undo/redo implemented (per-op text snapshots)."
         - "Undo batching: adjacent inserts/deletes merge (rope)."
+        - "Lua config toggle: editor.text_store = rope | piece_table."
       references:
         - reference_repos/editors/helix/helix-core/src/transaction.rs
         - reference_repos/text/ropey/src/rope.rs
