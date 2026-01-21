@@ -1,7 +1,7 @@
 const std = @import("std");
-const buffer_mod = @import("buffer.zig");
+const text_store = @import("text_store.zig");
 
-const TextBuffer = buffer_mod.TextBuffer;
+const TextStore = text_store.TextStore;
 
 const c = @cImport({
     @cInclude("tree_sitter/api.h");
@@ -38,7 +38,7 @@ pub const HighlightToken = struct {
 
 pub const SyntaxHighlighter = struct {
     allocator: std.mem.Allocator,
-    text_buffer: *TextBuffer,
+    text_buffer: *TextStore,
     parser: *c.TSParser,
     tree: ?*c.TSTree,
     query: *c.TSQuery,
@@ -130,14 +130,14 @@ pub const SyntaxHighlighter = struct {
 
 pub fn createZigHighlighter(
     allocator: std.mem.Allocator,
-    text_buffer: *TextBuffer,
+    text_buffer: *TextStore,
 ) !*SyntaxHighlighter {
     return createHighlighter(allocator, text_buffer, tree_sitter_zig(), zig_highlights_query);
 }
 
 pub fn createHighlighter(
     allocator: std.mem.Allocator,
-    text_buffer: *TextBuffer,
+    text_buffer: *TextStore,
     language: *const c.TSLanguage,
     query_src: []const u8,
 ) !*SyntaxHighlighter {
@@ -209,7 +209,7 @@ fn tsRead(
     bytes_read: [*c]u32,
 ) callconv(.c) [*c]const u8 {
     const self: *SyntaxHighlighter = @ptrCast(@alignCast(payload.?));
-    const total = buffer_mod.totalLen(self.text_buffer);
+    const total = self.text_buffer.totalLen();
     if (byte_offset >= total) {
         bytes_read.* = 0;
         return self.read_buffer.ptr;
@@ -217,7 +217,7 @@ fn tsRead(
     const max_len = self.read_buffer.len;
     const remaining = total - byte_offset;
     const to_read = if (remaining > max_len) max_len else remaining;
-    const written = buffer_mod.readRange(self.text_buffer, byte_offset, self.read_buffer[0..to_read]);
+    const written = self.text_buffer.readRange(byte_offset, self.read_buffer[0..to_read]);
     bytes_read[0] = @as(u32, @intCast(written));
     return self.read_buffer.ptr;
 }
