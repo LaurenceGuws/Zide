@@ -101,6 +101,6 @@ terminal_rendering_todo:
         - id: R8
           title: "Render tests: btop + nvim box drawing"
           files_to_edit:
-            - docs/terminal/DESIGN.md
+            - app_architecture/terminal/DESIGN.md
           notes:
             - "Record screenshots or notes for regression tracking."

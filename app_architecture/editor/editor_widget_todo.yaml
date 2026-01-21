@@ -1,0 +1,228 @@
+editor_widget_todo:
+  scope:
+    description: "Build a best-in-class editor widget and text engine for Zide (Linux first), targeting Notepad++-level capability."
+    priorities:
+      - "fast editing on large files"
+      - "correctness for unicode + grapheme clusters"
+      - "multi-cursor + column selection"
+      - "snappy search/replace + regex"
+      - "low-latency rendering with caching"
+      - "extensible syntax highlighting + folding"
+  zide_integration:
+    entry_points:
+      - src/main.zig
+      - src/editor/buffer.zig
+      - src/editor/editor.zig
+      - src/editor/syntax.zig
+      - src/ui/widgets/editor_widget.zig
+      - src/ui/renderer.zig
+  reference_maps:
+    editors:
+      helix:
+        - reference_repos/editors/helix/docs/architecture.md
+        - reference_repos/editors/helix/helix-core/src/selection.rs
+        - reference_repos/editors/helix/helix-core/src/transaction.rs
+        - reference_repos/editors/helix/helix-core/src/syntax.rs
+        - reference_repos/editors/helix/helix-core/src/wrap.rs
+      neovim:
+        - reference_repos/editors/neovim/src/nvim/buffer.c
+        - reference_repos/editors/neovim/src/nvim/memline.c
+        - reference_repos/editors/neovim/src/nvim/undo.c
+        - reference_repos/editors/neovim/src/nvim/search.c
+        - reference_repos/editors/neovim/src/nvim/fold.c
+        - reference_repos/editors/neovim/src/nvim/drawscreen.c
+        - reference_repos/editors/neovim/src/nvim/highlight.c
+      kakoune:
+        - reference_repos/editors/kakoune/src/buffer.cc
+        - reference_repos/editors/kakoune/src/selection.cc
+        - reference_repos/editors/kakoune/src/display_buffer.cc
+        - reference_repos/editors/kakoune/src/highlighter.cc
+      lapce:
+        - reference_repos/editors/lapce/lapce-app/src/doc.rs
+        - reference_repos/editors/lapce/lapce-app/src/editor.rs
+        - reference_repos/editors/lapce/lapce-app/src/find.rs
+      zed:
+        - reference_repos/editors/zed/crates/editor/src/editor.rs
+        - reference_repos/editors/zed/crates/editor/src/display_map.rs
+        - reference_repos/editors/zed/crates/editor/src/inlays.rs
+        - reference_repos/editors/zed/crates/editor/src/indent_guides.rs
+      xi_editor:
+        - reference_repos/editors/xi-editor/rust/core-lib/src/editor.rs
+        - reference_repos/editors/xi-editor/rust/core-lib/src/selection.rs
+        - reference_repos/editors/xi-editor/rust/core-lib/src/syntax.rs
+        - reference_repos/editors/xi-editor/rust/core-lib/src/linewrap.rs
+        - reference_repos/editors/xi-editor/rust/core-lib/src/width_cache.rs
+      lite_xl:
+        - reference_repos/editors/lite-xl/src/rencache.c
+        - reference_repos/editors/lite-xl/src/renderer.c
+    text_libraries:
+      ropey:
+        - reference_repos/text/ropey/src/rope.rs
+        - reference_repos/text/ropey/src/tree.rs
+      xi_rope:
+        - reference_repos/text/xi-rope/src/rope.rs
+        - reference_repos/text/xi-rope/src/engine.rs
+      scintilla:
+        - reference_repos/text/scintilla/src/Editor.c
+        - reference_repos/text/scintilla/src/Document.cxx
+        - reference_repos/text/scintilla/src/CellBuffer.cxx
+  roadmap:
+    - id: ED-01
+      status: todo
+      title: "Text model upgrade (large file performance)"
+      notes:
+        - "Audit piece-table vs rope tradeoffs; ensure O(log n) edits and cheap snapshots."
+        - "Add line index cache and fast byte<->row/col conversion."
+      references:
+        - reference_repos/editors/helix/helix-core/src/transaction.rs
+        - reference_repos/text/ropey/src/rope.rs
+        - reference_repos/text/xi-rope/src/engine.rs
+        - reference_repos/text/scintilla/src/CellBuffer.cxx
+
+    - id: ED-02
+      status: todo
+      title: "Undo/redo batching + history model"
+      notes:
+        - "Group edits by command and merge adjacent inserts."
+        - "Expose undo checkpoints for macros and multi-step ops."
+      references:
+        - reference_repos/editors/helix/helix-core/src/transaction.rs
+        - reference_repos/editors/neovim/src/nvim/undo.c
+        - reference_repos/editors/xi-editor/rust/core-lib/src/editor.rs
+
+    - id: ED-03
+      status: todo
+      title: "Selections + multi-cursor + column mode"
+      notes:
+        - "Selection = anchor/head ranges; support merging and rectangular selections."
+        - "Add multi-cursor editing primitives and selection normalization."
+      references:
+        - reference_repos/editors/helix/helix-core/src/selection.rs
+        - reference_repos/editors/kakoune/src/selection.cc
+        - reference_repos/editors/xi-editor/rust/core-lib/src/selection.rs
+
+    - id: ED-04
+      status: todo
+      title: "Syntax highlighting pipeline (incremental + cached)"
+      notes:
+        - "Incremental tree-sitter parse with query caching per visible range."
+        - "Highlight layers (syntax + diagnostics + search hits)."
+      references:
+        - reference_repos/editors/helix/helix-core/src/syntax.rs
+        - reference_repos/editors/xi-editor/rust/core-lib/src/syntax.rs
+        - reference_repos/editors/neovim/src/nvim/highlight.c
+
+    - id: ED-05
+      status: todo
+      title: "Soft wrap + line layout engine"
+      notes:
+        - "Implement fast line wrapping with width cache."
+        - "Handle tabs, wide glyphs, and grapheme clusters."
+      references:
+        - reference_repos/editors/xi-editor/rust/core-lib/src/linewrap.rs
+        - reference_repos/editors/xi-editor/rust/core-lib/src/width_cache.rs
+        - reference_repos/editors/helix/helix-core/src/wrap.rs
+
+    - id: ED-06
+      status: todo
+      title: "Search/replace with regex + Find-in-files"
+      notes:
+        - "Incremental search and replace across buffer."
+        - "Regex search with highlighting and replace preview."
+      references:
+        - reference_repos/editors/neovim/src/nvim/search.c
+        - reference_repos/editors/lapce/lapce-app/src/find.rs
+        - reference_repos/text/scintilla/src/Editor.c
+
+    - id: ED-07
+      status: todo
+      title: "Code folding + outline"
+      notes:
+        - "Tree-sitter folds + manual fold markers."
+        - "Folded line rendering and interaction."
+      references:
+        - reference_repos/editors/neovim/src/nvim/fold.c
+        - reference_repos/editors/zed/crates/editor/src/display_map.rs
+        - reference_repos/text/scintilla/src/Editor.c
+
+    - id: ED-08
+      status: todo
+      title: "Rendering cache + damage tracking"
+      notes:
+        - "Render-to-texture cache for editor view."
+        - "Dirty rect tracking for fast redraws."
+      references:
+        - reference_repos/editors/lite-xl/src/rencache.c
+        - reference_repos/editors/neovim/src/nvim/drawscreen.c
+        - reference_repos/editors/zed/crates/editor/src/element.rs
+
+    - id: ED-09
+      status: todo
+      title: "Gutters: line numbers, diagnostics, and bookmarks"
+      notes:
+        - "Line numbers, change markers, diagnostics icons."
+        - "Bookmarks + quick jump."
+      references:
+        - reference_repos/editors/lapce/lapce-app/src/doc.rs
+        - reference_repos/editors/neovim/src/nvim/sign.c
+        - reference_repos/editors/zed/crates/editor/src/editor.rs
+
+    - id: ED-10
+      status: todo
+      title: "Indentation guides + bracket matching"
+      notes:
+        - "Indent guide rendering and scope-based highlighting."
+        - "Match/brace highlighting with minimal latency."
+      references:
+        - reference_repos/editors/zed/crates/editor/src/indent_guides.rs
+        - reference_repos/editors/helix/helix-core/src/match_brackets.rs
+        - reference_repos/editors/neovim/src/nvim/search.c
+
+    - id: ED-11
+      status: todo
+      title: "Multi-tab + split view + shared buffers"
+      notes:
+        - "Multiple views over same buffer with independent selections."
+        - "Tab bar and view splits with shared rendering model."
+      references:
+        - reference_repos/editors/helix/docs/architecture.md
+        - reference_repos/editors/zed/crates/editor/src/split.rs
+        - reference_repos/editors/neovim/src/nvim/window.c
+
+    - id: ED-12
+      status: todo
+      title: "Macros + recording/playback"
+      notes:
+        - "Record edit operations and reapply as a single undo unit."
+      references:
+        - reference_repos/editors/helix/helix-core/src/macros.rs
+        - reference_repos/editors/xi-editor/rust/core-lib/src/editor.rs
+
+    - id: ED-13
+      status: todo
+      title: "Clipboard + multi-line paste handling"
+      notes:
+        - "Preserve indentation and line endings."
+      references:
+        - reference_repos/editors/neovim/src/nvim/clipboard.c
+        - reference_repos/editors/zed/crates/editor/src/editor.rs
+
+    - id: ED-14
+      status: todo
+      title: "LSP integration + diagnostics + code actions"
+      notes:
+        - "Diagnostics decorations, code actions, rename, go-to."
+      references:
+        - reference_repos/editors/helix/helix-lsp/src/lib.rs
+        - reference_repos/editors/lapce/lapce-app/src/lsp.rs
+        - reference_repos/editors/zed/crates/editor/src/hover_popover.rs
+
+    - id: ED-15
+      status: todo
+      title: "Theme + syntax color pipeline"
+      notes:
+        - "Theme definition + token-to-color mapping."
+      references:
+        - reference_repos/editors/helix/runtime/themes/monokai_pro.toml
+        - reference_repos/editors/neovim/src/nvim/highlight_group.c
+        - reference_repos/editors/zed/crates/theme/src/theme.rs

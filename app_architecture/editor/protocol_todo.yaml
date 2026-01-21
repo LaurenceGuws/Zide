@@ -1,0 +1,90 @@
+editor_protocol_todo:
+  scope:
+    description: "Text engine + editing semantics (buffer model, undo, selection, search, folding)."
+    priorities:
+      - "large-file performance"
+      - "correctness for unicode + graphemes"
+      - "multi-cursor editing"
+      - "predictable undo/redo"
+  reference_maps:
+    helix:
+      - reference_repos/editors/helix/docs/architecture.md
+      - reference_repos/editors/helix/helix-core/src/transaction.rs
+      - reference_repos/editors/helix/helix-core/src/selection.rs
+    neovim:
+      - reference_repos/editors/neovim/src/nvim/buffer.c
+      - reference_repos/editors/neovim/src/nvim/undo.c
+      - reference_repos/editors/neovim/src/nvim/search.c
+      - reference_repos/editors/neovim/src/nvim/fold.c
+    kakoune:
+      - reference_repos/editors/kakoune/src/buffer.cc
+      - reference_repos/editors/kakoune/src/selection.cc
+    xi_editor:
+      - reference_repos/editors/xi-editor/rust/core-lib/src/editor.rs
+      - reference_repos/editors/xi-editor/rust/core-lib/src/selection.rs
+      - reference_repos/editors/xi-editor/rust/core-lib/src/linewrap.rs
+    scintilla:
+      - reference_repos/text/scintilla/src/Editor.c
+      - reference_repos/text/scintilla/src/Document.cxx
+      - reference_repos/text/scintilla/src/CellBuffer.cxx
+    ropey:
+      - reference_repos/text/ropey/src/rope.rs
+      - reference_repos/text/ropey/src/tree.rs
+    xi_rope:
+      - reference_repos/text/xi-rope/src/rope.rs
+      - reference_repos/text/xi-rope/src/engine.rs
+  tasks:
+    - id: EP-01
+      status: todo
+      title: "Text model audit + upgrade plan"
+      notes:
+        - "Document current piece-table design and limits."
+        - "Decide on rope/piece-table hybrid or optimizations."
+      references:
+        - reference_repos/text/ropey/src/rope.rs
+        - reference_repos/text/xi-rope/src/engine.rs
+        - reference_repos/text/scintilla/src/CellBuffer.cxx
+
+    - id: EP-02
+      status: todo
+      title: "Undo/redo model + batching rules"
+      notes:
+        - "Batch per command; merge consecutive inserts/deletes."
+        - "Support grouped undo for multi-step ops."
+      references:
+        - reference_repos/editors/helix/helix-core/src/transaction.rs
+        - reference_repos/editors/neovim/src/nvim/undo.c
+        - reference_repos/editors/xi-editor/rust/core-lib/src/editor.rs
+
+    - id: EP-03
+      status: todo
+      title: "Selections, multi-cursor, and column mode"
+      notes:
+        - "Range model with anchor/head; normalize and merge."
+        - "Column selection and editing."
+      references:
+        - reference_repos/editors/helix/helix-core/src/selection.rs
+        - reference_repos/editors/kakoune/src/selection.cc
+        - reference_repos/editors/xi-editor/rust/core-lib/src/selection.rs
+
+    - id: EP-04
+      status: todo
+      title: "Search/replace and regex engine"
+      notes:
+        - "Incremental search state with highlights."
+        - "Replace preview and replace-all."
+      references:
+        - reference_repos/editors/neovim/src/nvim/search.c
+        - reference_repos/editors/lapce/lapce-app/src/find.rs
+        - reference_repos/text/scintilla/src/Editor.c
+
+    - id: EP-05
+      status: todo
+      title: "Folding model + markers"
+      notes:
+        - "Syntax-driven folds + manual fold markers."
+      references:
+        - reference_repos/editors/neovim/src/nvim/fold.c
+        - reference_repos/editors/zed/crates/editor/src/display_map.rs
+        - reference_repos/text/scintilla/src/Editor.c
+
