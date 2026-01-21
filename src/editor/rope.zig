@@ -105,7 +105,7 @@ pub const Rope = struct {
     }
 
     fn createLeafNode(self: *Rope, buffer: BufferKind, start: usize, len: usize) !*Node {
-        var node = try self.allocator.create(Node);
+        const node = try self.allocator.create(Node);
         node.* = .{
             .left = null,
             .right = null,
@@ -118,7 +118,7 @@ pub const Rope = struct {
     }
 
     fn createInternalNode(self: *Rope, left: ?*Node, right: ?*Node) !*Node {
-        var node = try self.allocator.create(Node);
+        const node = try self.allocator.create(Node);
         node.* = .{
             .left = left,
             .right = right,
@@ -167,6 +167,7 @@ pub const Rope = struct {
     }
 
     fn updateNode(self: *Rope, node: *Node) void {
+        _ = self;
         if (node.leaf != null) {
             node.left = null;
             node.right = null;
@@ -333,3 +334,35 @@ pub const Rope = struct {
         return left_len + self.findNthNewline(cur.right, n - left_breaks);
     }
 };
+
+test "rope insert/read/delete and line starts" {
+    const allocator = std.testing.allocator;
+    var rope = try Rope.init(allocator, "hello\nworld");
+    defer rope.deinit();
+
+    try std.testing.expectEqual(@as(usize, 11), rope.totalLen());
+    try std.testing.expectEqual(@as(usize, 2), rope.lineCount());
+    try std.testing.expectEqual(@as(usize, 6), rope.lineStart(1));
+
+    var out = try allocator.alloc(u8, rope.totalLen());
+    defer allocator.free(out);
+    const read_len = rope.readRange(0, out);
+    try std.testing.expectEqual(@as(usize, 11), read_len);
+    try std.testing.expectEqualStrings("hello\nworld", out);
+
+    try rope.insert(6, "big ");
+    try std.testing.expectEqual(@as(usize, 15), rope.totalLen());
+    try std.testing.expectEqual(@as(usize, 2), rope.lineCount());
+    out = try allocator.realloc(out, rope.totalLen());
+    const read_len2 = rope.readRange(0, out);
+    try std.testing.expectEqual(@as(usize, 15), read_len2);
+    try std.testing.expectEqualStrings("hello\nbig world", out);
+
+    try rope.deleteRange(5, 1); // remove newline
+    try std.testing.expectEqual(@as(usize, 14), rope.totalLen());
+    try std.testing.expectEqual(@as(usize, 1), rope.lineCount());
+    out = try allocator.realloc(out, rope.totalLen());
+    const read_len3 = rope.readRange(0, out);
+    try std.testing.expectEqual(@as(usize, 14), read_len3);
+    try std.testing.expectEqualStrings("hellobig world", out);
+}
