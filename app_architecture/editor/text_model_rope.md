@@ -11,6 +11,8 @@ Status (2026-01-21):
   `TextStoreKind` (default rope).
 - Rope undo/redo implemented with per-op text snapshots (matches current
   piece-table behavior).
+- Basic undo batching: adjacent inserts merge into a single undo op; adjacent
+  deletes at the same position or just before the previous delete also merge.
 
 ## Current state (summary)
 - Text buffer is a piece table with a flat `pieces` array.

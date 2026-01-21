@@ -78,6 +78,7 @@ editor_widget_todo:
         - "Core rope ops implemented in src/editor/rope.zig."
         - "TextStore adapter added; Editor + syntax use adapter (default rope)."
         - "Rope undo/redo implemented (per-op text snapshots)."
+        - "Undo batching: adjacent inserts/deletes merge (rope)."
       references:
         - reference_repos/editors/helix/helix-core/src/transaction.rs
         - reference_repos/text/ropey/src/rope.rs
