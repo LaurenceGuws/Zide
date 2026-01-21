@@ -104,6 +104,7 @@ editor_widget_todo:
         - "Selection set scaffolding in Editor (normalize/merge)."
         - "Rectangular selection scaffolding (per-line expansion)."
         - "Rectangular selection edit: insert/delete across selections."
+        - "Mouse drag selection (normal + Alt-rect) wired in editor widget."
       references:
         - reference_repos/editors/helix/helix-core/src/selection.rs
         - reference_repos/editors/kakoune/src/selection.cc
