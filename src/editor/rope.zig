@@ -80,6 +80,13 @@ pub const Rope = struct {
             try self.insertNoHistory(offset, data);
             return;
         }
+        if (self.tryMergeUndoInsert(offset, data)) |merged| {
+            if (merged) {
+                try self.insertNoHistory(offset, data);
+                try clearRedoStack(self);
+                return;
+            }
+        }
         const op = try createUndoOp(self, .insert, offset, data);
         try self.insertNoHistory(offset, data);
         try clearRedoStack(self);
@@ -101,6 +108,14 @@ pub const Rope = struct {
             return;
         }
         const deleted = try self.readRangeAlloc(start, len);
+        if (self.tryMergeUndoDelete(start, deleted)) |merged| {
+            if (merged) {
+                try self.deleteRangeNoHistory(start, len);
+                try clearRedoStack(self);
+                self.allocator.free(deleted);
+                return;
+            }
+        }
         const op = UndoOp{ .kind = .delete, .pos = start, .text = deleted };
         try self.deleteRangeNoHistory(start, len);
         try clearRedoStack(self);
@@ -474,6 +489,46 @@ pub const Rope = struct {
         }
         return nodeBreaks(cur.left) + self.countLineBreaksBefore(cur.right, offset - left_len);
     }
+
+    fn tryMergeUndoInsert(self: *Rope, pos: usize, data: []const u8) ?bool {
+        if (self.undo_stack.items.len == 0) return null;
+        const last_index = self.undo_stack.items.len - 1;
+        const last = &self.undo_stack.items[last_index];
+        if (last.kind != .insert) return null;
+        if (last.text.len + data.len > max_undo_bytes) return null;
+        if (last.pos + last.text.len != pos) return null;
+        const new_len = last.text.len + data.len;
+        var merged = self.allocator.realloc(last.text, new_len) catch return null;
+        std.mem.copyForwards(u8, merged[last.text.len..new_len], data);
+        last.text = merged;
+        return true;
+    }
+
+    fn tryMergeUndoDelete(self: *Rope, pos: usize, deleted: []const u8) ?bool {
+        if (self.undo_stack.items.len == 0) return null;
+        const last_index = self.undo_stack.items.len - 1;
+        const last = &self.undo_stack.items[last_index];
+        if (last.kind != .delete) return null;
+        if (last.text.len + deleted.len > max_undo_bytes) return null;
+        if (pos == last.pos) {
+            const new_len = last.text.len + deleted.len;
+            var merged = self.allocator.realloc(last.text, new_len) catch return null;
+            std.mem.copyForwards(u8, merged[last.text.len..new_len], deleted);
+            last.text = merged;
+            return true;
+        }
+        if (pos + deleted.len == last.pos) {
+            const new_len = last.text.len + deleted.len;
+            var merged = self.allocator.alloc(u8, new_len) catch return null;
+            std.mem.copyForwards(u8, merged[0..deleted.len], deleted);
+            std.mem.copyForwards(u8, merged[deleted.len..new_len], last.text);
+            self.allocator.free(last.text);
+            last.text = merged;
+            last.pos = pos;
+            return true;
+        }
+        return null;
+    }
 };
 
 const UndoKind = enum(u8) {
@@ -569,4 +624,21 @@ test "rope insert/read/delete and line starts" {
     const redo_text = try rope.readRangeAlloc(0, rope.totalLen());
     defer allocator.free(redo_text);
     try std.testing.expectEqualStrings("hellobig world", redo_text);
+}
+
+test "rope undo merges adjacent inserts" {
+    const allocator = std.testing.allocator;
+    var rope = try Rope.init(allocator, "abc");
+    defer rope.deinit();
+
+    try rope.insert(3, "d");
+    try rope.insert(4, "e");
+    const merged_text = try rope.readRangeAlloc(0, rope.totalLen());
+    defer allocator.free(merged_text);
+    try std.testing.expectEqualStrings("abcde", merged_text);
+
+    try std.testing.expect(try rope.undo());
+    const undo_text = try rope.readRangeAlloc(0, rope.totalLen());
+    defer allocator.free(undo_text);
+    try std.testing.expectEqualStrings("abc", undo_text);
 }
