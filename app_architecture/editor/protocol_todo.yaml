@@ -63,6 +63,7 @@ editor_protocol_todo:
       notes:
         - "Selection set scaffolding added to Editor (add/clear/normalize/merge)."
         - "Column selection scaffolding: rectangular selections + expand per-line."
+        - "Rectangular selection editing: insert/delete per line."
         - "Column selection and editing."
       references:
         - reference_repos/editors/helix/helix-core/src/selection.rs
