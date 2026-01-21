@@ -58,10 +58,10 @@ editor_protocol_todo:
         - reference_repos/editors/xi-editor/rust/core-lib/src/editor.rs
 
     - id: EP-03
-      status: todo
+      status: in_progress
       title: "Selections, multi-cursor, and column mode"
       notes:
-        - "Range model with anchor/head; normalize and merge."
+        - "Selection set scaffolding added to Editor (add/clear/normalize/merge)."
         - "Column selection and editing."
       references:
         - reference_repos/editors/helix/helix-core/src/selection.rs
