@@ -1,17 +1,17 @@
 const std = @import("std");
-const buffer_mod = @import("buffer.zig");
+const text_store = @import("text_store.zig");
 const types = @import("types.zig");
 const syntax_mod = @import("syntax.zig");
 const app_logger = @import("../app_logger.zig");
 
-const TextBuffer = buffer_mod.TextBuffer;
+const TextStore = text_store.TextStore;
 const CursorPos = types.CursorPos;
 const Selection = types.Selection;
 
 /// High-level editor state wrapping a text buffer
 pub const Editor = struct {
     allocator: std.mem.Allocator,
-    buffer: *TextBuffer,
+    buffer: *TextStore,
     cursor: CursorPos,
     selection: ?Selection,
     scroll_line: usize,
@@ -23,11 +23,11 @@ pub const Editor = struct {
     tab_width: usize,
 
     pub fn init(allocator: std.mem.Allocator) !*Editor {
-        const buffer = try buffer_mod.createBuffer(allocator, "");
-        return initWithBuffer(allocator, buffer);
+        const buffer = try text_store.TextStore.init(allocator, "");
+        return initWithStore(allocator, buffer);
     }
 
-    pub fn initWithBuffer(allocator: std.mem.Allocator, buffer: *TextBuffer) !*Editor {
+    pub fn initWithStore(allocator: std.mem.Allocator, buffer: *TextStore) !*Editor {
         const editor = try allocator.create(Editor);
         editor.* = .{
             .allocator = allocator,
@@ -52,7 +52,7 @@ pub const Editor = struct {
         if (self.file_path) |path| {
             self.allocator.free(path);
         }
-        buffer_mod.destroyBuffer(self.buffer);
+        self.buffer.deinit();
         self.allocator.destroy(self);
     }
 
@@ -64,10 +64,10 @@ pub const Editor = struct {
             h.destroy();
             self.highlighter = null;
         }
-        buffer_mod.destroyBuffer(self.buffer);
+        self.buffer.deinit();
 
         // Create new buffer from file
-        self.buffer = try buffer_mod.createBufferFromFile(self.allocator, path);
+        self.buffer = try text_store.TextStore.initFromFile(self.allocator, path);
 
         // Store path
         if (self.file_path) |old_path| {
@@ -89,7 +89,7 @@ pub const Editor = struct {
         if (self.file_path) |path| {
             const log = app_logger.logger("editor.core");
             log.logf("save path=\"{s}\"", .{path});
-            try buffer_mod.saveToFile(self.buffer, path);
+            try self.buffer.saveToFile(path);
             self.modified = false;
         }
     }
@@ -97,7 +97,7 @@ pub const Editor = struct {
     pub fn saveAs(self: *Editor, path: []const u8) !void {
         const log = app_logger.logger("editor.core");
         log.logf("saveAs path=\"{s}\"", .{path});
-        try buffer_mod.saveToFile(self.buffer, path);
+        try self.buffer.saveToFile(path);
         if (self.file_path) |old_path| {
             self.allocator.free(old_path);
         }
@@ -118,7 +118,7 @@ pub const Editor = struct {
     }
 
     pub fn moveCursorRight(self: *Editor) void {
-        const total = buffer_mod.totalLen(self.buffer);
+        const total = self.buffer.totalLen();
         if (self.cursor.offset >= total) return;
         self.cursor.offset += 1;
         self.updateCursorPosition();
@@ -129,18 +129,18 @@ pub const Editor = struct {
         if (self.cursor.line == 0) return;
         const target_col = self.cursor.col;
         self.cursor.line -= 1;
-        const line_len = buffer_mod.lineLen(self.buffer, self.cursor.line);
+        const line_len = self.buffer.lineLen(self.cursor.line);
         self.cursor.col = @min(target_col, line_len);
         self.updateCursorOffset();
         self.selection = null;
     }
 
     pub fn moveCursorDown(self: *Editor) void {
-        const line_count = buffer_mod.lineCount(self.buffer);
+        const line_count = self.buffer.lineCount();
         if (self.cursor.line + 1 >= line_count) return;
         const target_col = self.cursor.col;
         self.cursor.line += 1;
-        const line_len = buffer_mod.lineLen(self.buffer, self.cursor.line);
+        const line_len = self.buffer.lineLen(self.cursor.line);
         self.cursor.col = @min(target_col, line_len);
         self.updateCursorOffset();
         self.selection = null;
@@ -153,7 +153,7 @@ pub const Editor = struct {
     }
 
     pub fn moveCursorToLineEnd(self: *Editor) void {
-        const line_len = buffer_mod.lineLen(self.buffer, self.cursor.line);
+        const line_len = self.buffer.lineLen(self.cursor.line);
         self.cursor.col = line_len;
         self.updateCursorOffset();
         self.selection = null;
@@ -167,13 +167,13 @@ pub const Editor = struct {
     }
 
     fn updateCursorPosition(self: *Editor) void {
-        self.cursor.line = buffer_mod.lineIndexForOffset(self.buffer, self.cursor.offset);
-        const line_start = buffer_mod.lineStart(self.buffer, self.cursor.line);
+        self.cursor.line = self.buffer.lineIndexForOffset(self.cursor.offset);
+        const line_start = self.buffer.lineStart(self.cursor.line);
         self.cursor.col = self.cursor.offset - line_start;
     }
 
     fn updateCursorOffset(self: *Editor) void {
-        const line_start = buffer_mod.lineStart(self.buffer, self.cursor.line);
+        const line_start = self.buffer.lineStart(self.cursor.line);
         self.cursor.offset = line_start + self.cursor.col;
     }
 
@@ -184,7 +184,7 @@ pub const Editor = struct {
     pub fn insertChar(self: *Editor, char: u8) !void {
         try self.deleteSelection();
         const bytes = [_]u8{char};
-        try buffer_mod.insertBytes(self.buffer, self.cursor.offset, &bytes);
+        try self.buffer.insertBytes(self.cursor.offset, &bytes);
         self.cursor.offset += 1;
         self.updateCursorPosition();
         self.modified = true;
@@ -195,7 +195,7 @@ pub const Editor = struct {
 
     pub fn insertText(self: *Editor, text: []const u8) !void {
         try self.deleteSelection();
-        try buffer_mod.insertBytes(self.buffer, self.cursor.offset, text);
+        try self.buffer.insertBytes(self.cursor.offset, text);
         self.cursor.offset += text.len;
         self.updateCursorPosition();
         self.modified = true;
@@ -214,7 +214,7 @@ pub const Editor = struct {
             return;
         }
         if (self.cursor.offset == 0) return;
-        try buffer_mod.deleteRange(self.buffer, self.cursor.offset - 1, 1);
+        try self.buffer.deleteRange(self.cursor.offset - 1, 1);
         self.cursor.offset -= 1;
         self.updateCursorPosition();
         self.modified = true;
@@ -228,9 +228,9 @@ pub const Editor = struct {
             try self.deleteSelection();
             return;
         }
-        const total = buffer_mod.totalLen(self.buffer);
+        const total = self.buffer.totalLen();
         if (self.cursor.offset >= total) return;
-        try buffer_mod.deleteRange(self.buffer, self.cursor.offset, 1);
+        try self.buffer.deleteRange(self.cursor.offset, 1);
         self.modified = true;
         if (self.highlighter) |h| {
             _ = h.reparse();
@@ -242,7 +242,7 @@ pub const Editor = struct {
             const norm = sel.normalized();
             const len = norm.end.offset - norm.start.offset;
             if (len > 0) {
-                try buffer_mod.deleteRange(self.buffer, norm.start.offset, len);
+                try self.buffer.deleteRange(norm.start.offset, len);
                 self.cursor = norm.start;
                 self.modified = true;
                 if (self.highlighter) |h| {
@@ -258,7 +258,7 @@ pub const Editor = struct {
     // ─────────────────────────────────────────────────────────────────────────
 
     pub fn undo(self: *Editor) !bool {
-        const result = try buffer_mod.undo(self.buffer);
+        const result = try self.buffer.undo();
         if (result) {
             const log = app_logger.logger("editor.core");
             log.logf("undo ok", .{});
@@ -273,7 +273,7 @@ pub const Editor = struct {
     }
 
     pub fn redo(self: *Editor) !bool {
-        const result = try buffer_mod.redo(self.buffer);
+        const result = try self.buffer.redo();
         if (result) {
             const log = app_logger.logger("editor.core");
             log.logf("redo ok", .{});
@@ -292,30 +292,30 @@ pub const Editor = struct {
     // ─────────────────────────────────────────────────────────────────────────
 
     pub fn lineCount(self: *Editor) usize {
-        return buffer_mod.lineCount(self.buffer);
+        return self.buffer.lineCount();
     }
 
     pub fn totalLen(self: *Editor) usize {
-        return buffer_mod.totalLen(self.buffer);
+        return self.buffer.totalLen();
     }
 
     pub fn getLine(self: *Editor, line_index: usize, out: []u8) usize {
-        return buffer_mod.readLine(self.buffer, line_index, out);
+        return self.buffer.readLine(line_index, out);
     }
 
     pub fn lineLen(self: *Editor, line_index: usize) usize {
-        return buffer_mod.lineLen(self.buffer, line_index);
+        return self.buffer.lineLen(line_index);
     }
 
     pub fn lineStart(self: *Editor, line_index: usize) usize {
-        return buffer_mod.lineStart(self.buffer, line_index);
+        return self.buffer.lineStart(line_index);
     }
 
     pub fn getLineAlloc(self: *Editor, line_index: usize) ![]u8 {
-        const len = buffer_mod.lineLen(self.buffer, line_index);
+        const len = self.buffer.lineLen(line_index);
         if (len == 0) return try self.allocator.alloc(u8, 0);
         const out = try self.allocator.alloc(u8, len);
-        const read = buffer_mod.readLine(self.buffer, line_index, out);
+        const read = self.buffer.readLine(line_index, out);
         if (read < len) {
             return self.allocator.realloc(out, read);
         }

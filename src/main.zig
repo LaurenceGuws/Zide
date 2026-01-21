@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 
 // Editor modules
 const editor_mod = @import("editor/editor.zig");
-const buffer_mod = @import("editor/buffer.zig");
+const text_store = @import("editor/text_store.zig");
 const types = @import("editor/types.zig");
 const app_logger = @import("app_logger.zig");
 const config_mod = @import("config/lua_config.zig");
@@ -754,18 +754,18 @@ pub fn main() !void {
 test "buffer basic operations" {
     const allocator = std.testing.allocator;
 
-    const buffer = try buffer_mod.createBuffer(allocator, "Hello, World!");
-    defer buffer_mod.destroyBuffer(buffer);
+    const store = try text_store.TextStore.initWithKind(allocator, "Hello, World!", .rope);
+    defer store.deinit();
 
-    try std.testing.expectEqual(@as(usize, 13), buffer_mod.totalLen(buffer));
+    try std.testing.expectEqual(@as(usize, 13), store.totalLen());
 
     // Test insert
-    try buffer_mod.insertBytes(buffer, 7, "Zig ");
-    try std.testing.expectEqual(@as(usize, 17), buffer_mod.totalLen(buffer));
+    try store.insertBytes(7, "Zig ");
+    try std.testing.expectEqual(@as(usize, 17), store.totalLen());
 
     // Test read
     var out: [32]u8 = undefined;
-    const len = buffer_mod.readRange(buffer, 0, &out);
+    const len = store.readRange(0, &out);
     try std.testing.expectEqualStrings("Hello, Zig World!", out[0..len]);
 }
 
