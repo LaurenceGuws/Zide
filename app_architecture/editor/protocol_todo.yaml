@@ -51,6 +51,7 @@ editor_protocol_todo:
       notes:
         - "Merge consecutive inserts/deletes (rope)."
         - "Added begin/end undo group hooks; grouped undo supported in rope."
+        - "Editor groups selection replace (delete + insert) into one undo."
       references:
         - reference_repos/editors/helix/helix-core/src/transaction.rs
         - reference_repos/editors/neovim/src/nvim/undo.c
