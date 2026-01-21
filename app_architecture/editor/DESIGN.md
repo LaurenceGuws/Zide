@@ -52,3 +52,8 @@ Notepad++-level capability while keeping Zide's core fast and minimal.
 - Decision: adopt a rope/piece-tree text model. Draft design in
   `app_architecture/editor/text_model_rope.md`. Added `src/editor/rope.zig`
   scaffold (not yet integrated).
+
+2026-01-21
+- Added `TextStore` adapter and wired `Editor` + syntax highlighter to it so we
+  can switch between piece-table and rope. Default is currently rope; undo/redo
+  remains piece-table-only until rope history is implemented.

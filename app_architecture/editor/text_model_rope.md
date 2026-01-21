@@ -6,7 +6,9 @@ supporting cheap snapshots and low memory overhead.
 
 Status (2026-01-21):
 - Implemented core rope ops in `src/editor/rope.zig` (split/join/insert/delete/read).
-- Not integrated with `Editor` yet.
+- Added `TextStore` adapter in `src/editor/text_store.zig`; `Editor` + syntax
+  highlighter now depend on the adapter and can switch implementations via
+  `TextStoreKind` (default rope).
 
 ## Current state (summary)
 - Text buffer is a piece table with a flat `pieces` array.
