@@ -46,11 +46,11 @@ editor_protocol_todo:
         - reference_repos/text/scintilla/src/CellBuffer.cxx
 
     - id: EP-02
-      status: todo
+      status: in_progress
       title: "Undo/redo model + batching rules"
       notes:
-        - "Batch per command; merge consecutive inserts/deletes."
-        - "Support grouped undo for multi-step ops."
+        - "Merge consecutive inserts/deletes (rope)."
+        - "Added begin/end undo group hooks; grouped undo supported in rope."
       references:
         - reference_repos/editors/helix/helix-core/src/transaction.rs
         - reference_repos/editors/neovim/src/nvim/undo.c

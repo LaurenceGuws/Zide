@@ -78,6 +78,7 @@ editor_widget_todo:
         - "Rope now used as the sole text model."
         - "Rope undo/redo implemented (per-op text snapshots)."
         - "Undo batching: adjacent inserts/deletes merge (rope)."
+        - "Undo grouping hooks added (begin/end group)."
       references:
         - reference_repos/editors/helix/helix-core/src/transaction.rs
         - reference_repos/text/ropey/src/rope.rs
