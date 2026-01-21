@@ -13,7 +13,7 @@ Notepad++-level capability while keeping Zide's core fast and minimal.
 
 ## Current architecture (Zide)
 
-- Text engine: `src/editor/buffer.zig` (piece table + undo/redo)
+- Text engine: `src/editor/rope.zig` (rope/piece-tree + undo/redo)
 - Editor state: `src/editor/editor.zig`
 - Syntax highlight: `src/editor/syntax.zig`
 - View/render: `src/ui/widgets/editor_widget.zig`, `src/ui/renderer.zig`
@@ -31,33 +31,9 @@ Notepad++-level capability while keeping Zide's core fast and minimal.
   reference repo paths for each task, and update them as tasks are completed.
 
 2026-01-21
-- Text model audit (EP-01) complete. Current buffer is a piece table backed by
-  `original` + `add` arrays with a flat `pieces` array. Inserts/deletes are
-  O(n) due to array insertion/removal, and `findPiece` is linear with a small
-  "last piece" cache. Line indexing is a `line_starts` array of byte offsets,
-  updated incrementally only when index is ready; otherwise it is rebuilt
-  (sync for memory buffers, async for file-backed buffers). All cursor and
-  selection math is byte-based; no UTF-8/UTF-16/grapheme indexing yet.
-- Text model upgrade plan drafted: introduce a rope-like balanced tree or
-  piece-tree with per-node aggregates (bytes + line breaks, later UTF-8/UTF-16
-  code unit counts). This yields O(log n) edits and offset/line queries,
-  plus cheap snapshots/clones. Line index cache becomes an in-tree aggregate
-  (or Scintilla-style partitioning) rather than a full rebuild array.
-- Decision needed: implement a native rope/tree in Zig vs. optimize current
-  piece table with a separate balanced index layer. If we keep piece-table,
-  add a tree of pieces + gapless piece coalescing and switch line index to a
-  partitioning structure similar to Scintilla's `LineVector`.
+- Text model audit complete; migrated to a rope/piece-tree implementation with
+  per-node aggregates (bytes + line breaks) and rope-based undo/redo.
 
 2026-01-21
-- Decision: adopt a rope/piece-tree text model. Draft design in
-  `app_architecture/editor/text_model_rope.md`. Added `src/editor/rope.zig`
-  scaffold (not yet integrated).
-
-2026-01-21
-- Added `TextStore` adapter and wired `Editor` + syntax highlighter to it so we
-  can switch between piece-table and rope. Default is currently rope; undo/redo
-  now supported in rope with per-op text snapshots.
-
-2026-01-21
-- Added Lua config toggle: `editor.text_store` selects `rope` or `piece_table`
-  at runtime (see `assets/config/init.lua`).
+- Rope text model implemented and integrated (see
+  `app_architecture/editor/text_model_rope.md`).
