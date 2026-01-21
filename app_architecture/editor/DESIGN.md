@@ -47,3 +47,8 @@ Notepad++-level capability while keeping Zide's core fast and minimal.
   piece table with a separate balanced index layer. If we keep piece-table,
   add a tree of pieces + gapless piece coalescing and switch line index to a
   partitioning structure similar to Scintilla's `LineVector`.
+
+2026-01-21
+- Decision: adopt a rope/piece-tree text model. Draft design in
+  `app_architecture/editor/text_model_rope.md`. Added `src/editor/rope.zig`
+  scaffold (not yet integrated).
