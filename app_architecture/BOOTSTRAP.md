@@ -16,7 +16,8 @@ A modern, cross-platform IDE for Zig development, built entirely in Zig.
 - `src/` core app code (editor, terminal, UI)
 - `vendor/` third-party sources fetched by bootstrap
 - `assets/` fonts and other resources
-- `docs/` documentation
+- `app_architecture/` design + technical docs
+- `docs/` agent/session instructions
 
 ## System Dependencies
 
@@ -138,6 +139,6 @@ If you only read one thing, read this.
 - **Symptoms:** Nerd icons clip on the right; box drawing shows stripes in some apps (btop/nvim).
 - **What we tried:** LCD rendering, pixel snapping, box drawing fallback, glyph scaling; improvements but not fully fixed.
 - **Docs to read next:**
-  - `docs/TERMINAL_TEXT_RESEARCH.md` (kitty/alacritty/wezterm analysis)
-  - `docs/TERMINAL_TEXT_STEPS.md` (planned upgrade phases)
+  - `app_architecture/terminal/TERMINAL_TEXT_RESEARCH.md` (kitty/alacritty/wezterm analysis)
+  - `app_architecture/terminal/TERMINAL_TEXT_STEPS.md` (planned upgrade phases)
   - `docs/AGENT_HANDOFF.md` (latest status and next steps)

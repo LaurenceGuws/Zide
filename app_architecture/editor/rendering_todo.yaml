@@ -1,0 +1,62 @@
+editor_rendering_todo:
+  scope:
+    description: "Editor rendering + layout pipeline (line layout, wrapping, caching)."
+    priorities:
+      - "fast viewport rendering"
+      - "correct glyph metrics + grapheme clusters"
+      - "damage tracking + caching"
+  reference_maps:
+    helix:
+      - reference_repos/editors/helix/helix-core/src/wrap.rs
+    xi_editor:
+      - reference_repos/editors/xi-editor/rust/core-lib/src/linewrap.rs
+      - reference_repos/editors/xi-editor/rust/core-lib/src/width_cache.rs
+    zed:
+      - reference_repos/editors/zed/crates/editor/src/display_map.rs
+      - reference_repos/editors/zed/crates/editor/src/element.rs
+    lite_xl:
+      - reference_repos/editors/lite-xl/src/rencache.c
+      - reference_repos/editors/lite-xl/src/renderer.c
+    neovim:
+      - reference_repos/editors/neovim/src/nvim/drawscreen.c
+  tasks:
+    - id: ER-01
+      status: todo
+      title: "Line layout + wrap engine"
+      notes:
+        - "Compute visual lines and cache widths per line."
+      references:
+        - reference_repos/editors/xi-editor/rust/core-lib/src/linewrap.rs
+        - reference_repos/editors/xi-editor/rust/core-lib/src/width_cache.rs
+        - reference_repos/editors/helix/helix-core/src/wrap.rs
+
+    - id: ER-02
+      status: todo
+      title: "Viewport rendering cache"
+      notes:
+        - "Render-to-texture or command cache for static regions."
+        - "Only redraw dirty rectangles."
+      references:
+        - reference_repos/editors/lite-xl/src/rencache.c
+        - reference_repos/editors/zed/crates/editor/src/element.rs
+        - reference_repos/editors/neovim/src/nvim/drawscreen.c
+
+    - id: ER-03
+      status: todo
+      title: "Selection + cursor rendering"
+      notes:
+        - "Precise caret positions for graphemes."
+        - "Efficient multi-selection highlights."
+      references:
+        - reference_repos/editors/zed/crates/editor/src/element.rs
+        - reference_repos/editors/helix/helix-core/src/selection.rs
+
+    - id: ER-04
+      status: todo
+      title: "Gutters + overlays"
+      notes:
+        - "Line numbers, diagnostics, and inline decorations."
+      references:
+        - reference_repos/editors/zed/crates/editor/src/editor.rs
+        - reference_repos/editors/lapce/lapce-app/src/doc.rs
+

@@ -18,6 +18,23 @@ TERMINAL_REPOS=(
   "iterm2 - https://github.com/gnachman/iTerm2.git"
 )
 
+# Editors / IDEs (name - URL)
+EDITOR_REPOS=(
+  "helix - https://github.com/helix-editor/helix.git"
+  "neovim - https://github.com/neovim/neovim.git"
+  "kakoune - https://github.com/mawww/kakoune.git"
+  "lapce - https://github.com/lapce/lapce.git"
+  "zed - https://github.com/zed-industries/zed.git"
+  "xi-editor - https://github.com/xi-editor/xi-editor.git"
+  "lite-xl - https://github.com/lite-xl/lite-xl.git"
+)
+
+# Text engines / libraries (name - URL)
+TEXT_REPOS=(
+  # "ropey - https://github.com/cessen/ropey.git"
+  "scintilla - https://github.com/mirror/scintilla.git"
+)
+
 # Fill these with backend/library URLs. Each entry should be "name - URL".
 BACKEND_REPOS=(
   "libtsm - https://github.com/Aetf/libtsm.git"
@@ -45,11 +62,13 @@ RENDER_REPOS=(
 # Base folder for all reference repos
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/reference_repos"
 TERMINAL_DIR="$ROOT_DIR/terminals"
+EDITOR_DIR="$ROOT_DIR/editors"
+TEXT_DIR="$ROOT_DIR/text"
 BACKEND_DIR="$ROOT_DIR/backends"
 FONT_DIR="$ROOT_DIR/fonts"
 RENDER_DIR="$ROOT_DIR/rendering"
 
-mkdir -p "$TERMINAL_DIR" "$BACKEND_DIR" "$FONT_DIR" "$RENDER_DIR"
+mkdir -p "$TERMINAL_DIR" "$EDITOR_DIR" "$TEXT_DIR" "$BACKEND_DIR" "$FONT_DIR" "$RENDER_DIR"
 
 clone_list() {
   local target_dir="$1"
@@ -71,6 +90,8 @@ clone_list() {
 }
 
 clone_list "$TERMINAL_DIR" "${TERMINAL_REPOS[@]}"
+clone_list "$EDITOR_DIR" "${EDITOR_REPOS[@]}"
+clone_list "$TEXT_DIR" "${TEXT_REPOS[@]}"
 clone_list "$BACKEND_DIR" "${BACKEND_REPOS[@]}"
 clone_list "$FONT_DIR" "${FONT_REPOS[@]}"
 clone_list "$RENDER_DIR" "${RENDER_REPOS[@]}"

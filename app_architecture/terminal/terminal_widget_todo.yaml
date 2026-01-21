@@ -185,7 +185,7 @@ terminal_widget_todo:
         - id: P0-03
           title: "Define performance budgets (frame time, parse throughput, input latency)"
           files_to_edit:
-            - docs/terminal/terminal_widget_todo.yaml
+            - app_architecture/terminal/terminal_widget_todo.yaml
           budgets:
             frame_time_ms:
               target: 8.3

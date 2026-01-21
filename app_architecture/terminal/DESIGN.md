@@ -273,4 +273,4 @@ Why:
 
 ## Related docs
 
-- Alt screen redesign proposal: `docs/terminal/ALT_SCREEN_REDESIGN.md`.
+- Alt screen redesign proposal: `app_architecture/terminal/ALT_SCREEN_REDESIGN.md`.
