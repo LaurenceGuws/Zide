@@ -210,7 +210,7 @@ pub const Editor = struct {
         try merged.append(self.allocator, self.selections.items[0]);
         for (self.selections.items[1..]) |sel| {
             var last = &merged.items[merged.items.len - 1];
-            if (sel.start.offset <= last.end.offset) {
+            if (!sel.is_rectangular and !last.is_rectangular and sel.start.offset <= last.end.offset) {
                 if (sel.end.offset > last.end.offset) {
                     last.end = sel.end;
                 }
@@ -220,6 +220,28 @@ pub const Editor = struct {
         }
         self.selections.clearRetainingCapacity();
         try self.selections.appendSlice(self.allocator, merged.items);
+    }
+
+    pub fn addRectSelection(self: *Editor, start: CursorPos, end: CursorPos) !void {
+        try self.selections.append(self.allocator, .{
+            .start = start,
+            .end = end,
+            .is_rectangular = true,
+        });
+    }
+
+    pub fn expandRectSelection(self: *Editor, start_line: usize, end_line: usize, start_col: usize, end_col: usize) !void {
+        if (start_line > end_line) return;
+        var line = start_line;
+        while (line <= end_line) : (line += 1) {
+            const line_start = self.buffer.lineStart(line);
+            const line_len = self.buffer.lineLen(line);
+            const start_clamped = @min(start_col, line_len);
+            const end_clamped = @min(end_col, line_len);
+            const start = CursorPos{ .line = line, .col = start_clamped, .offset = line_start + start_clamped };
+            const end = CursorPos{ .line = line, .col = end_clamped, .offset = line_start + end_clamped };
+            try self.addRectSelection(start, end);
+        }
     }
 
     fn updateCursorPosition(self: *Editor) void {

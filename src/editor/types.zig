@@ -12,6 +12,7 @@ pub const CursorPos = struct {
 pub const Selection = struct {
     start: CursorPos,
     end: CursorPos,
+    is_rectangular: bool = false,
     
     pub fn isEmpty(self: Selection) bool {
         return self.start.offset == self.end.offset;
@@ -21,7 +22,7 @@ pub const Selection = struct {
         if (self.start.offset <= self.end.offset) {
             return self;
         }
-        return .{ .start = self.end, .end = self.start };
+        return .{ .start = self.end, .end = self.start, .is_rectangular = self.is_rectangular };
     }
 };
 

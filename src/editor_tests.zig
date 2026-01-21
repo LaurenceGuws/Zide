@@ -87,3 +87,30 @@ test "editor selection normalization merges overlaps" {
     try std.testing.expectEqual(@as(usize, 1), sel.start.offset);
     try std.testing.expectEqual(@as(usize, 5), sel.end.offset);
 }
+
+test "editor rectangular selections do not merge" {
+    const allocator = std.testing.allocator;
+    var editor = try Editor.init(allocator);
+    defer editor.deinit();
+
+    try editor.insertText("one\\ntwo\\nthree");
+    try editor.addRectSelection(.{ .line = 0, .col = 0, .offset = 0 }, .{ .line = 0, .col = 2, .offset = 2 });
+    try editor.addRectSelection(.{ .line = 0, .col = 1, .offset = 1 }, .{ .line = 0, .col = 3, .offset = 3 });
+    try editor.normalizeSelections();
+
+    try std.testing.expectEqual(@as(usize, 2), editor.selectionCount());
+    const first = editor.selectionAt(0) orelse return error.TestUnexpectedResult;
+    const second = editor.selectionAt(1) orelse return error.TestUnexpectedResult;
+    try std.testing.expect(first.is_rectangular);
+    try std.testing.expect(second.is_rectangular);
+}
+
+test "editor expand rect selection creates per-line selections" {
+    const allocator = std.testing.allocator;
+    var editor = try Editor.init(allocator);
+    defer editor.deinit();
+
+    try editor.insertText("one\\ntwo\\nthree");
+    try editor.expandRectSelection(0, 2, 1, 3);
+    try std.testing.expectEqual(@as(usize, 3), editor.selectionCount());
+}
