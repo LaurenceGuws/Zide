@@ -56,4 +56,4 @@ Notepad++-level capability while keeping Zide's core fast and minimal.
 2026-01-21
 - Added `TextStore` adapter and wired `Editor` + syntax highlighter to it so we
   can switch between piece-table and rope. Default is currently rope; undo/redo
-  remains piece-table-only until rope history is implemented.
+  now supported in rope with per-op text snapshots.

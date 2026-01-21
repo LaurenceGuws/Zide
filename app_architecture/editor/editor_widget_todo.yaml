@@ -77,6 +77,7 @@ editor_widget_todo:
         - "Add line index cache via in-tree aggregates or partitioning."
         - "Core rope ops implemented in src/editor/rope.zig."
         - "TextStore adapter added; Editor + syntax use adapter (default rope)."
+        - "Rope undo/redo implemented (per-op text snapshots)."
       references:
         - reference_repos/editors/helix/helix-core/src/transaction.rs
         - reference_repos/text/ropey/src/rope.rs
