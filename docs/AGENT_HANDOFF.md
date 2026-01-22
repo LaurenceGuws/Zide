@@ -36,6 +36,7 @@ Suggested next steps:
 - Editor widget: undo now groups edits per input tick to avoid over-merged inserts.
 - Editor: undo/redo updates cursor based on last undo/redo op position.
 - Editor widget: selection highlight now renders on empty lines.
+- Editor widget: cursor/selection rendering uses UTF-8 codepoint columns for placement.
 
 ## Current issues (editor)
 
