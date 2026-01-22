@@ -1,6 +1,6 @@
 # Agent Handoff (Zide)
 
-Date: 2026-01-21
+Date: 2026-01-22
 
 ## Quick start for next agent
 
@@ -32,10 +32,11 @@ Suggested next steps:
 - Editor: selection set scaffolding + rectangular selection expansion and per-line editing.
 - Editor: editor-only tests added (`zig build test-editor`) using `src/tests_main.zig` + `src/editor_tests.zig`.
 - Editor widget: mouse drag selection wired (normal + Alt-rect) and selection overlay drawing added.
+- Editor widget: drag selection now preserves selection while updating cursor.
 
 ## Current issues (editor)
 
-- Mouse drag selection not working: user reports left click down only moves cursor; selection overlay does not appear.
+- None noted.
 
 ## Current issues (terminal, parked)
 
