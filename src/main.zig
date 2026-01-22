@@ -27,6 +27,7 @@ const OptionsBar = widgets.OptionsBar;
 const SideNav = widgets.SideNav;
 const StatusBar = widgets.StatusBar;
 const EditorWidget = widgets.EditorWidget;
+const EditorClusterCache = widgets.EditorClusterCache;
 const TerminalWidget = widgets.TerminalWidget;
 
 const AppState = struct {
@@ -66,6 +67,8 @@ const AppState = struct {
     editor_dragging: bool,
     editor_drag_start: types.CursorPos,
     editor_drag_rect: bool,
+    editor_cluster_cache: EditorClusterCache,
+    frame_id: u64,
     metrics: Metrics,
     metrics_logger: Logger,
     app_logger: Logger,
@@ -131,6 +134,8 @@ const AppState = struct {
             .editor_dragging = false,
             .editor_drag_start = .{ .line = 0, .col = 0, .offset = 0 },
             .editor_drag_rect = false,
+            .editor_cluster_cache = EditorClusterCache.init(allocator),
+            .frame_id = 0,
             .metrics = Metrics.init(),
             .metrics_logger = metrics_log,
             .app_logger = app_log,
@@ -158,6 +163,7 @@ const AppState = struct {
 
         self.tab_bar.deinit();
         self.renderer.deinit();
+        self.editor_cluster_cache.deinit();
         app_logger.deinit();
         self.allocator.destroy(self);
     }
@@ -285,6 +291,9 @@ const AppState = struct {
         while (!self.renderer.shouldClose()) {
             // Poll events first (this updates raylib's input state)
             renderer_mod.pollInputEvents();
+
+            self.frame_id +|= 1;
+            self.editor_cluster_cache.beginFrame(self.frame_id);
 
             const frame_time = renderer_mod.getTime();
             self.metrics.beginFrame(frame_time);
@@ -577,8 +586,9 @@ const AppState = struct {
         // Update active view
         if (self.active_kind == .editor and self.editors.items.len > 0) {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
-            var widget = EditorWidget.init(self.editors.items[editor_idx]);
+            var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache);
             if (try widget.handleInput(r)) {
+                self.editor_cluster_cache.clear();
                 self.needs_redraw = true;
                 self.metrics.noteInput(now);
             }
@@ -732,7 +742,7 @@ const AppState = struct {
         // Draw editor
         if (self.editors.items.len > 0) {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
-            var widget = EditorWidget.init(self.editors.items[editor_idx]);
+            var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache);
             if (editor_width > 0 and editor_height > 0) {
                 r.beginClip(
                     @intFromFloat(side_nav_width),
