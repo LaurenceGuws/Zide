@@ -33,6 +33,8 @@ pub const EditorWidget = struct {
         const start_line = self.editor.scroll_line;
         const end_line = @min(start_line + visible_lines + 1, self.editor.lineCount());
         const total_lines = self.editor.lineCount();
+        var cursor_draw_x: ?f32 = null;
+        var cursor_draw_y: ?f32 = null;
 
         var highlight_tokens: []HighlightToken = &[_]HighlightToken{};
         var highlight_tokens_allocated = false;
@@ -107,7 +109,7 @@ pub const EditorWidget = struct {
                 r.drawEditorLineBase(line_idx, line_y, x, self.gutter_width, width, is_current);
                 var ranges: [8]SelectionRange = undefined;
                 var range_count: usize = 0;
-                collectSelectionRanges(self.editor, line_idx, line_len, &ranges, &range_count);
+                collectSelectionRanges(self.editor, line_idx, line_text, &ranges, &range_count);
                 if (range_count > 0) {
                     var i: usize = 0;
                     while (i < range_count) : (i += 1) {
@@ -140,7 +142,7 @@ pub const EditorWidget = struct {
                 r.drawEditorLineBase(line_idx, line_y, x, self.gutter_width, width, is_current);
                 var ranges: [8]SelectionRange = undefined;
                 var range_count: usize = 0;
-                collectSelectionRanges(self.editor, line_idx, line_len, &ranges, &range_count);
+                collectSelectionRanges(self.editor, line_idx, line_text, &ranges, &range_count);
                 if (range_count > 0) {
                     var i: usize = 0;
                     while (i < range_count) : (i += 1) {
@@ -158,13 +160,17 @@ pub const EditorWidget = struct {
                 }
                 r.drawText(line_text, text_start_x, line_y, r.theme.foreground);
             }
+
+            if (is_current) {
+                const cursor_col_vis = utf8ColumnForByteIndex(line_text, self.editor.cursor.col);
+                cursor_draw_x = text_start_x + @as(f32, @floatFromInt(cursor_col_vis)) * r.char_width;
+                cursor_draw_y = line_y;
+            }
         }
 
         // Draw cursor
-        if (self.editor.cursor.line >= start_line and self.editor.cursor.line < end_line) {
-            const cursor_x = x + self.gutter_width + 8 * r.uiScaleFactor() + @as(f32, @floatFromInt(self.editor.cursor.col)) * r.char_width;
-            const cursor_y = y + @as(f32, @floatFromInt(self.editor.cursor.line - start_line)) * r.char_height;
-            r.drawCursor(cursor_x, cursor_y, .line);
+        if (cursor_draw_x != null and cursor_draw_y != null) {
+            r.drawCursor(cursor_draw_x.?, cursor_draw_y.?, .line);
         }
     }
 
@@ -220,7 +226,14 @@ pub const EditorWidget = struct {
             col = @as(usize, @intFromFloat((local_x - text_start_x) / r.char_width));
         }
         const line_len = self.editor.lineLen(line);
-        const clamped_col = @min(col, line_len);
+        var byte_col = col;
+        var line_buf: [4096]u8 = undefined;
+        if (line_len <= line_buf.len) {
+            const len = self.editor.getLine(line, &line_buf);
+            const line_text = line_buf[0..len];
+            byte_col = utf8ByteIndexForColumn(line_text, col);
+        }
+        const clamped_col = @min(byte_col, line_len);
         const line_start = self.editor.lineStart(line);
         return .{
             .line = line,
@@ -388,10 +401,11 @@ fn addSelectionRange(ranges: *[8]SelectionRange, count: *usize, start_col: usize
 fn collectSelectionRanges(
     editor: *Editor,
     line_idx: usize,
-    line_len: usize,
+    line_text: []const u8,
     ranges: *[8]SelectionRange,
     count: *usize,
 ) void {
+    const line_len = line_text.len;
     if (line_len == 0) {
         if (editor.selection) |sel| {
             const norm = sel.normalized();
@@ -414,7 +428,9 @@ fn collectSelectionRanges(
             var end_col: usize = line_len;
             if (line_idx == norm.start.line) start_col = @min(norm.start.col, line_len);
             if (line_idx == norm.end.line) end_col = @min(norm.end.col, line_len);
-            addSelectionRange(ranges, count, start_col, end_col);
+            const start_vis = utf8ColumnForByteIndex(line_text, start_col);
+            const end_vis = utf8ColumnForByteIndex(line_text, end_col);
+            addSelectionRange(ranges, count, start_vis, end_vis);
         }
     }
     for (editor.selections.items) |sel| {
@@ -424,8 +440,38 @@ fn collectSelectionRanges(
         var end_col: usize = line_len;
         if (line_idx == norm.start.line) start_col = @min(norm.start.col, line_len);
         if (line_idx == norm.end.line) end_col = @min(norm.end.col, line_len);
-        addSelectionRange(ranges, count, start_col, end_col);
+        const start_vis = utf8ColumnForByteIndex(line_text, start_col);
+        const end_vis = utf8ColumnForByteIndex(line_text, end_col);
+        addSelectionRange(ranges, count, start_vis, end_vis);
     }
+}
+
+fn utf8ColumnForByteIndex(line_text: []const u8, byte_index: usize) usize {
+    if (byte_index == 0 or line_text.len == 0) return 0;
+    const target = @min(byte_index, line_text.len);
+    var it = std.unicode.Utf8Iterator.init(line_text);
+    var col: usize = 0;
+    var idx: usize = 0;
+    while (it.nextCodepointSlice()) |slice| {
+        const next_idx = idx + slice.len;
+        if (target < next_idx) return col;
+        idx = next_idx;
+        col += 1;
+    }
+    return col;
+}
+
+fn utf8ByteIndexForColumn(line_text: []const u8, column: usize) usize {
+    if (column == 0 or line_text.len == 0) return 0;
+    var it = std.unicode.Utf8Iterator.init(line_text);
+    var col: usize = 0;
+    var idx: usize = 0;
+    while (it.nextCodepointSlice()) |slice| {
+        if (col == column) return idx;
+        idx += slice.len;
+        col += 1;
+    }
+    return line_text.len;
 }
 
 fn highlightTokenLessThan(_: void, a: HighlightToken, b: HighlightToken) bool {
