@@ -2,7 +2,7 @@ const std = @import("std");
 const app_logger = @import("../app_logger.zig");
 const builtin = @import("builtin");
 
-const c = @cImport({
+pub const c = @cImport({
     @cInclude("raylib.h");
     @cInclude("ft2build.h");
     @cInclude("freetype/freetype.h");

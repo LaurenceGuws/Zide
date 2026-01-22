@@ -5,9 +5,7 @@ const syntax_mod = @import("../../editor/syntax.zig");
 const types = @import("../../editor/types.zig");
 const app_logger = @import("../../app_logger.zig");
 
-const c = @cImport({
-    @cInclude("harfbuzz/hb.h");
-});
+const hb = @import("../terminal_font.zig").c;
 
 const Renderer = renderer_mod.Renderer;
 const Color = renderer_mod.Color;
@@ -486,21 +484,21 @@ fn hasNonAscii(text: []const u8) bool {
     return false;
 }
 
-fn graphemeClusterOffsets(allocator: std.mem.Allocator, hb_font: *c.hb_font_t, text: []const u8) ![]u32 {
+fn graphemeClusterOffsets(allocator: std.mem.Allocator, hb_font: *hb.hb_font_t, text: []const u8) ![]u32 {
     if (text.len == 0) return allocator.alloc(u32, 0);
-    const buffer = c.hb_buffer_create();
-    defer c.hb_buffer_destroy(buffer);
-    c.hb_buffer_add_utf8(buffer, text.ptr, @intCast(text.len), 0, @intCast(text.len));
-    c.hb_buffer_guess_segment_properties(buffer);
-    c.hb_shape(hb_font, buffer, null, 0);
+    const buffer = hb.hb_buffer_create();
+    defer hb.hb_buffer_destroy(buffer);
+    hb.hb_buffer_add_utf8(buffer, text.ptr, @intCast(text.len), 0, @intCast(text.len));
+    hb.hb_buffer_guess_segment_properties(buffer);
+    hb.hb_shape(hb_font, buffer, null, 0);
 
     var length: u32 = 0;
-    const infos = c.hb_buffer_get_glyph_infos(buffer, &length);
+    const infos = hb.hb_buffer_get_glyph_infos(buffer, &length);
     if (infos == null or length == 0) return allocator.alloc(u32, 0);
 
-    var clusters = std.ArrayList(u32).init(allocator);
-    defer clusters.deinit();
-    try clusters.ensureTotalCapacity(@intCast(length));
+    var clusters = std.ArrayList(u32).empty;
+    defer clusters.deinit(allocator);
+    try clusters.ensureTotalCapacity(allocator, @intCast(length));
     for (infos[0..length]) |info| {
         clusters.appendAssumeCapacity(info.cluster);
     }
@@ -519,7 +517,7 @@ fn graphemeClusterOffsets(allocator: std.mem.Allocator, hb_font: *c.hb_font_t, t
         }
     }
     clusters.items.len = write;
-    return try clusters.toOwnedSlice();
+    return try clusters.toOwnedSlice(allocator);
 }
 
 fn visualColumnForByteIndex(text: []const u8, byte_index: usize, cluster_offsets: ?[]const u32) usize {
