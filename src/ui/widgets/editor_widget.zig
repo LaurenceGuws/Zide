@@ -91,10 +91,18 @@ pub const EditorWidget = struct {
             const line_y = y + @as(f32, @floatFromInt(line_idx - start_line)) * r.char_height;
             const is_current = line_idx == self.editor.cursor.line;
 
-            const len = self.editor.getLine(line_idx, &line_buf);
-            const line_text = line_buf[0..len];
+            const line_len = self.editor.lineLen(line_idx);
+            var line_alloc: ?[]u8 = null;
+            const line_text = if (line_len <= line_buf.len)
+                line_buf[0..self.editor.getLine(line_idx, &line_buf)]
+            else blk: {
+                const owned = self.editor.getLineAlloc(line_idx) catch break :blk &[_]u8{};
+                line_alloc = owned;
+                break :blk owned;
+            };
+            defer if (line_alloc) |owned| self.editor.allocator.free(owned);
             const line_start = self.editor.lineStart(line_idx);
-            const line_end = line_start + len;
+            const line_end = line_start + line_len;
 
             if (highlight_tokens_allocated) {
                 while (token_idx < highlight_tokens.len and highlight_tokens[token_idx].end <= line_start) {
@@ -231,6 +239,11 @@ pub const EditorWidget = struct {
             const len = self.editor.getLine(line, &line_buf);
             const line_text = line_buf[0..len];
             byte_col = utf8ByteIndexForColumn(line_text, col);
+        } else {
+            if (self.editor.getLineAlloc(line)) |owned| {
+                defer self.editor.allocator.free(owned);
+                byte_col = utf8ByteIndexForColumn(owned, col);
+            } else |_| {}
         }
         const clamped_col = @min(byte_col, line_len);
         const line_start = self.editor.lineStart(line);
@@ -471,6 +484,22 @@ fn utf8ByteIndexForColumn(line_text: []const u8, column: usize) usize {
         col += 1;
     }
     return line_text.len;
+}
+
+test "utf8 column/byte mapping is consistent" {
+    const s = "aé文𐍈z";
+    try std.testing.expectEqual(@as(usize, 0), utf8ColumnForByteIndex(s, 0));
+    try std.testing.expectEqual(@as(usize, 1), utf8ColumnForByteIndex(s, 1));
+    try std.testing.expectEqual(@as(usize, 2), utf8ColumnForByteIndex(s, 3));
+    try std.testing.expectEqual(@as(usize, 3), utf8ColumnForByteIndex(s, 6));
+    try std.testing.expectEqual(@as(usize, 4), utf8ColumnForByteIndex(s, 10));
+
+    try std.testing.expectEqual(@as(usize, 0), utf8ByteIndexForColumn(s, 0));
+    try std.testing.expectEqual(@as(usize, 1), utf8ByteIndexForColumn(s, 1));
+    try std.testing.expectEqual(@as(usize, 3), utf8ByteIndexForColumn(s, 2));
+    try std.testing.expectEqual(@as(usize, 6), utf8ByteIndexForColumn(s, 3));
+    try std.testing.expectEqual(@as(usize, 10), utf8ByteIndexForColumn(s, 4));
+    try std.testing.expectEqual(@as(usize, s.len), utf8ByteIndexForColumn(s, 5));
 }
 
 fn highlightTokenLessThan(_: void, a: HighlightToken, b: HighlightToken) bool {
