@@ -47,6 +47,7 @@ Suggested next steps:
 - Editor widget: scroll wheel now moves by visual rows when soft wrap is active.
 - Editor widget: empty-line rendering restored in wrapped view; scroll-up jump fixed.
 - Config: added Lua `config.editor.wrap` (default false), stored in AppState.
+- Config: wired `config.editor.wrap` into editor widget to toggle soft wrap.
 
 ## Current issues (editor)
 
@@ -66,7 +67,7 @@ Suggested next steps:
 ## Side quest plan (requested)
 
 1) Terminal scrollbar: only show when scrollback overflows and alt screen is inactive.
-2) Editor wrap config: config entry added; widget wiring pending.
+2) Editor wrap config: config entry wired into editor widget.
 3) Editor horizontal scrollbar: show when wrap is off and line width exceeds viewport.
 
 ## After side quest

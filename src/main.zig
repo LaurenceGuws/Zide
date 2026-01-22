@@ -589,7 +589,7 @@ const AppState = struct {
         // Update active view
         if (self.active_kind == .editor and self.editors.items.len > 0) {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
-            var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache);
+            var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache, self.editor_wrap);
             if (try widget.handleInput(r)) {
                 self.editor_cluster_cache.clear();
                 self.needs_redraw = true;
@@ -745,7 +745,7 @@ const AppState = struct {
         // Draw editor
         if (self.editors.items.len > 0) {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
-            var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache);
+            var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache, self.editor_wrap);
             if (editor_width > 0 and editor_height > 0) {
                 r.beginClip(
                     @intFromFloat(side_nav_width),

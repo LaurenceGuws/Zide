@@ -20,19 +20,21 @@ pub const EditorWidget = struct {
     scroll_x: f32,
     scroll_y: f32,
     cluster_cache: ?*ClusterCache,
+    wrap_enabled: bool,
 
-    pub fn init(editor: *Editor) EditorWidget {
+    pub fn init(editor: *Editor, wrap_enabled: bool) EditorWidget {
         return .{
             .editor = editor,
             .gutter_width = 50,
             .scroll_x = 0,
             .scroll_y = 0,
             .cluster_cache = null,
+            .wrap_enabled = wrap_enabled,
         };
     }
 
-    pub fn initWithCache(editor: *Editor, cache: *ClusterCache) EditorWidget {
-        var widget = init(editor);
+    pub fn initWithCache(editor: *Editor, cache: *ClusterCache, wrap_enabled: bool) EditorWidget {
+        var widget = init(editor, wrap_enabled);
         widget.cluster_cache = cache;
         return widget;
     }
@@ -145,22 +147,22 @@ pub const EditorWidget = struct {
             const cols = self.viewportColumns(r);
             const width_cached = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
             const line_width = if (line_len == 0) 1 else if (width_cached == 0 and range_count > 0) 1 else width_cached;
-            const total_visual_lines = visualLineCountForWidth(cols, line_width);
-            const seg_start_idx = if (line_idx == start_line) @min(start_seg, total_visual_lines) else 0;
+            const total_visual_lines = if (self.wrap_enabled) visualLineCountForWidth(cols, line_width) else 1;
+            const seg_start_idx = if (self.wrap_enabled and line_idx == start_line) @min(start_seg, total_visual_lines) else 0;
 
             var cursor_col_vis: usize = 0;
             var cursor_seg: usize = 0;
             if (is_current) {
                 cursor_col_vis = visualColumnForByteIndex(line_text, self.editor.cursor.col, cluster_result.slice);
-                if (cols > 0) {
+                if (cols > 0 and self.wrap_enabled) {
                     cursor_seg = @min(cursor_col_vis / cols, if (total_visual_lines > 0) total_visual_lines - 1 else 0);
                 }
             }
 
             var seg: usize = seg_start_idx;
             while (seg < total_visual_lines and visual_row < visible_lines) : (seg += 1) {
-                const seg_start_col = seg * cols;
-                const seg_end_col = @min(line_width, seg_start_col + cols);
+                const seg_start_col = if (self.wrap_enabled) seg * cols else 0;
+                const seg_end_col = if (self.wrap_enabled) @min(line_width, seg_start_col + cols) else @min(line_width, cols);
                 if (seg_start_col >= seg_end_col and range_count == 0) continue;
                 const seg_y = y + @as(f32, @floatFromInt(visual_row)) * r.char_height;
                 const seg_start_byte = byteIndexForVisualColumn(line_text, seg_start_col, cluster_result.slice);
@@ -241,6 +243,7 @@ pub const EditorWidget = struct {
     }
 
     fn visualLinesForLine(self: *EditorWidget, r: *Renderer, line_idx: usize, cols: usize) usize {
+        if (!self.wrap_enabled) return 1;
         var line_buf: [4096]u8 = undefined;
         const line_len = self.editor.lineLen(line_idx);
         var line_alloc: ?[]u8 = null;
@@ -374,6 +377,11 @@ pub const EditorWidget = struct {
         if (line_count == 0) return null;
         const cols = self.viewportColumns(r);
         if (cols == 0) return null;
+        if (!self.wrap_enabled) {
+            const line = self.editor.scroll_line + visual_row;
+            if (line >= line_count) return null;
+            return .{ .line_idx = line, .seg_idx = 0, .cols = cols };
+        }
 
         var line = self.editor.scroll_line;
         var seg = self.editor.scroll_row_offset;
@@ -509,6 +517,16 @@ pub const EditorWidget = struct {
         if (line_count == 0) return;
         const cols = self.viewportColumns(r);
         if (cols == 0) return;
+        if (!self.wrap_enabled) {
+            if (delta_rows > 0) {
+                self.editor.scroll_line = @min(self.editor.scroll_line + @as(usize, @intCast(delta_rows)), line_count - 1);
+            } else {
+                const delta_abs: usize = @intCast(-delta_rows);
+                self.editor.scroll_line = if (self.editor.scroll_line > delta_abs) self.editor.scroll_line - delta_abs else 0;
+            }
+            self.editor.scroll_row_offset = 0;
+            return;
+        }
 
         var line = self.editor.scroll_line;
         var seg = self.editor.scroll_row_offset;
@@ -563,6 +581,15 @@ pub const EditorWidget = struct {
     }
 
     fn moveCursorVisual(self: *EditorWidget, r: *Renderer, delta: i32) bool {
+        if (!self.wrap_enabled) {
+            const before = self.editor.cursor.line;
+            if (delta < 0) {
+                self.editor.moveCursorUp();
+            } else {
+                self.editor.moveCursorDown();
+            }
+            return self.editor.cursor.line != before;
+        }
         const line_count = self.editor.lineCount();
         if (line_count == 0) return false;
         const cols = self.viewportColumns(r);
