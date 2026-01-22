@@ -41,6 +41,7 @@ Suggested next steps:
 - Editor widget: grapheme cluster mapping uses HarfBuzz cluster offsets for cursor/selection placement.
 - Editor widget: per-frame cluster cache reduces HarfBuzz shaping overhead.
 - Editor: per-line width cache now uses grapheme clusters when available.
+- Editor widget: added visual line count helper for wrap groundwork.
 
 ## Current issues (editor)
 
