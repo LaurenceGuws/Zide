@@ -17,6 +17,7 @@ pub const Editor = struct {
     selections: std.ArrayList(Selection),
     scroll_line: usize,
     scroll_col: usize,
+    scroll_row_offset: usize,
     line_width_cache: std.AutoHashMap(usize, usize),
     highlighter: ?*syntax_mod.SyntaxHighlighter,
     highlight_pending: bool,
@@ -39,6 +40,7 @@ pub const Editor = struct {
             .selections = .empty,
             .scroll_line = 0,
             .scroll_col = 0,
+            .scroll_row_offset = 0,
             .line_width_cache = std.AutoHashMap(usize, usize).init(allocator),
             .highlighter = null,
             .highlight_pending = false,
@@ -87,6 +89,7 @@ pub const Editor = struct {
         self.clearSelections();
         self.scroll_line = 0;
         self.scroll_col = 0;
+        self.scroll_row_offset = 0;
         self.invalidateLineWidthCache();
         self.modified = false;
 
