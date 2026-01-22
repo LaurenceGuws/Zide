@@ -118,12 +118,16 @@ pub const Editor = struct {
         self.line_width_cache.clearRetainingCapacity();
     }
 
-    pub fn lineWidthCached(self: *Editor, line_idx: usize, line_text: []const u8) usize {
+    pub fn lineWidthCached(self: *Editor, line_idx: usize, line_text: []const u8, cluster_offsets: ?[]const u32) usize {
         if (self.line_width_cache.get(line_idx)) |cached| return cached;
-        var it = std.unicode.Utf8View.initUnchecked(line_text).iterator();
         var count: usize = 0;
-        while (it.nextCodepointSlice()) |_| {
-            count += 1;
+        if (cluster_offsets) |clusters| {
+            count = clusters.len;
+        } else {
+            var it = std.unicode.Utf8View.initUnchecked(line_text).iterator();
+            while (it.nextCodepointSlice()) |_| {
+                count += 1;
+            }
         }
         self.line_width_cache.put(line_idx, count) catch {};
         return count;

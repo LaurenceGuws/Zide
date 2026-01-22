@@ -107,7 +107,7 @@ test "editor line width cache counts utf8 codepoints" {
     try editor.insertText("aé文𐍈");
     const line = try editor.getLineAlloc(0);
     defer allocator.free(line);
-    try std.testing.expectEqual(@as(usize, 4), editor.lineWidthCached(0, line));
+    try std.testing.expectEqual(@as(usize, 4), editor.lineWidthCached(0, line, null));
 }
 
 test "editor selection normalization merges overlaps" {
