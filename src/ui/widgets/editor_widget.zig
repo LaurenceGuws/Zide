@@ -241,7 +241,7 @@ pub const EditorWidget = struct {
         }
 
         if (!self.wrap_enabled) {
-            const vscroll_w: f32 = if (show_vscroll) 8 else 0;
+            const vscroll_w: f32 = if (show_vscroll) 12 else 0;
             self.drawHorizontalScrollbar(r, x, y, width, height, max_visible_width, cols, vscroll_w);
             if (show_vscroll) {
                 self.drawVerticalScrollbar(r, x, y, width, height, visible_lines, total_lines);
@@ -589,8 +589,8 @@ pub const EditorWidget = struct {
         if (max_visible_width <= cols) return false;
 
         const show_vscroll = self.editor.lineCount() > visible_lines;
-        const vscroll_w: f32 = if (show_vscroll) 8 else 0;
-        const track_h: f32 = 8;
+        const vscroll_w: f32 = if (show_vscroll) 12 else 0;
+        const track_h: f32 = 12;
         const track_y = y + height - track_h;
         const track_x = x + self.gutter_width;
         const track_w = @max(@as(f32, 1), width - self.gutter_width - vscroll_w);
@@ -649,7 +649,7 @@ pub const EditorWidget = struct {
         const total_lines = self.editor.lineCount();
         if (total_lines <= visible_lines) return false;
 
-        const scrollbar_w: f32 = 8;
+        const scrollbar_w: f32 = 12;
         const scrollbar_x = x + width - scrollbar_w;
         const scrollbar_y = y;
         const scrollbar_h = height;
@@ -658,7 +658,7 @@ pub const EditorWidget = struct {
             self.editor.scroll_line = max_scroll;
         }
 
-        const min_thumb_h: f32 = 18;
+        const min_thumb_h: f32 = 24;
         const thumb_h = @max(min_thumb_h, scrollbar_h * (@as(f32, @floatFromInt(visible_lines)) / @as(f32, @floatFromInt(total_lines))));
         const available = @max(@as(f32, 1), scrollbar_h - thumb_h);
         const ratio = if (max_scroll > 0)
@@ -924,7 +924,7 @@ pub const EditorWidget = struct {
         total_lines: usize,
     ) void {
         if (total_lines <= visible_lines or width <= 0 or height <= 0) return;
-        const scrollbar_w: f32 = 8;
+        const scrollbar_w: f32 = 12;
         const scrollbar_x = x + width - scrollbar_w;
         const scrollbar_y = y;
         const scrollbar_h = height;
