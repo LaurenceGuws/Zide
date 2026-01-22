@@ -40,6 +40,7 @@ Suggested next steps:
 - Editor widget: long lines now use allocated buffers to avoid selection/cursor truncation.
 - Editor widget: grapheme cluster mapping uses HarfBuzz cluster offsets for cursor/selection placement.
 - Editor widget: per-frame cluster cache reduces HarfBuzz shaping overhead.
+- Editor: per-line width cache (UTF-8 codepoint count) primed during draw.
 
 ## Current issues (editor)
 
