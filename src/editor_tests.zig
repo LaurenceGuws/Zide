@@ -66,6 +66,39 @@ test "editor explicit undo group wraps multiple ops" {
     try std.testing.expectEqualStrings("", undone);
 }
 
+test "editor undo redo updates cursor offset" {
+    const allocator = std.testing.allocator;
+    var editor = try Editor.init(allocator);
+    defer editor.deinit();
+
+    try editor.insertText("word1 word2");
+    editor.selection = .{
+        .start = .{ .line = 0, .col = 5, .offset = 5 },
+        .end = .{ .line = 0, .col = 11, .offset = 11 },
+    };
+    try editor.deleteSelection();
+
+    const after_delete = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after_delete);
+    try std.testing.expectEqualStrings("word1", after_delete);
+    try std.testing.expectEqual(@as(usize, 5), editor.cursor.offset);
+    try std.testing.expectEqual(@as(usize, 5), editor.cursor.col);
+
+    try std.testing.expect(try editor.undo());
+    const after_undo = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after_undo);
+    try std.testing.expectEqualStrings("word1 word2", after_undo);
+    try std.testing.expectEqual(@as(usize, 11), editor.cursor.offset);
+    try std.testing.expectEqual(@as(usize, 11), editor.cursor.col);
+
+    try std.testing.expect(try editor.redo());
+    const after_redo = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after_redo);
+    try std.testing.expectEqualStrings("word1", after_redo);
+    try std.testing.expectEqual(@as(usize, 5), editor.cursor.offset);
+    try std.testing.expectEqual(@as(usize, 5), editor.cursor.col);
+}
+
 test "editor selection normalization merges overlaps" {
     const allocator = std.testing.allocator;
     var editor = try Editor.init(allocator);
