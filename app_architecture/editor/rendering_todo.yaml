@@ -48,6 +48,7 @@ editor_rendering_todo:
         - "Precise caret positions for graphemes."
         - "Efficient multi-selection highlights."
         - "Cursor/selection rendering uses UTF-8 codepoint columns for placement."
+        - "Long lines use dynamic buffers to avoid truncated selection/caret placement."
       references:
         - reference_repos/editors/zed/crates/editor/src/element.rs
         - reference_repos/editors/helix/helix-core/src/selection.rs
