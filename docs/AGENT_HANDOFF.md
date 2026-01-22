@@ -53,6 +53,7 @@ Suggested next steps:
 - Editor widget: horizontal scroll + scrollbar when wrap is disabled.
 - Editor widget: horizontal scrollbar click/drag + vertical scrollbar only on overflow (no wrap).
 - Editor widget: vertical scrollbar drag/click support (no wrap).
+- Editor widget: thicker editor scrollbars (12px) for easier hit targets (both axes).
 
 ## Current issues (editor)
 
