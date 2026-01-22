@@ -392,7 +392,21 @@ fn collectSelectionRanges(
     ranges: *[8]SelectionRange,
     count: *usize,
 ) void {
-    if (line_len == 0) return;
+    if (line_len == 0) {
+        if (editor.selection) |sel| {
+            const norm = sel.normalized();
+            if (!norm.isEmpty() and line_idx >= norm.start.line and line_idx <= norm.end.line) {
+                addSelectionRange(ranges, count, 0, 1);
+            }
+        }
+        for (editor.selections.items) |sel| {
+            const norm = sel.normalized();
+            if (norm.isEmpty()) continue;
+            if (line_idx < norm.start.line or line_idx > norm.end.line) continue;
+            addSelectionRange(ranges, count, 0, 1);
+        }
+        return;
+    }
     if (editor.selection) |sel| {
         const norm = sel.normalized();
         if (line_idx >= norm.start.line and line_idx <= norm.end.line) {
