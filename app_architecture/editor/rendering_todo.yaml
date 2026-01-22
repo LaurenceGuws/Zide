@@ -47,6 +47,7 @@ editor_rendering_todo:
       notes:
         - "Precise caret positions for graphemes."
         - "Efficient multi-selection highlights."
+        - "Cursor/selection rendering uses UTF-8 codepoint columns for placement."
       references:
         - reference_repos/editors/zed/crates/editor/src/element.rs
         - reference_repos/editors/helix/helix-core/src/selection.rs
@@ -59,4 +60,3 @@ editor_rendering_todo:
       references:
         - reference_repos/editors/zed/crates/editor/src/editor.rs
         - reference_repos/editors/lapce/lapce-app/src/doc.rs
-
