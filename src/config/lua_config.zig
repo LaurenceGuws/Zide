@@ -131,7 +131,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     _ = c.lua_getfield(L, -1, "editor");
     if (c.lua_istable(L, -1)) {
         _ = c.lua_getfield(L, -1, "wrap");
-        if (c.lua_isboolean(L, -1) != 0) {
+        if (c.lua_isboolean(L, -1)) {
             editor_wrap = c.lua_toboolean(L, -1) != 0;
         }
         c.lua_pop(L, 1);
