@@ -17,6 +17,7 @@ pub const Editor = struct {
     selections: std.ArrayList(Selection),
     scroll_line: usize,
     scroll_col: usize,
+    line_width_cache: std.AutoHashMap(usize, usize),
     highlighter: ?*syntax_mod.SyntaxHighlighter,
     highlight_pending: bool,
     file_path: ?[]const u8,
@@ -38,6 +39,7 @@ pub const Editor = struct {
             .selections = .empty,
             .scroll_line = 0,
             .scroll_col = 0,
+            .line_width_cache = std.AutoHashMap(usize, usize).init(allocator),
             .highlighter = null,
             .highlight_pending = false,
             .file_path = null,
@@ -55,6 +57,7 @@ pub const Editor = struct {
             self.allocator.free(path);
         }
         self.selections.deinit(self.allocator);
+        self.line_width_cache.deinit();
         self.buffer.deinit();
         self.allocator.destroy(self);
     }
@@ -84,6 +87,7 @@ pub const Editor = struct {
         self.clearSelections();
         self.scroll_line = 0;
         self.scroll_col = 0;
+        self.invalidateLineWidthCache();
         self.modified = false;
 
         self.scheduleHighlighter(path);
@@ -108,6 +112,21 @@ pub const Editor = struct {
         self.file_path = try self.allocator.dupe(u8, path);
         self.modified = false;
         try self.tryInitHighlighter(path);
+    }
+
+    pub fn invalidateLineWidthCache(self: *Editor) void {
+        self.line_width_cache.clearRetainingCapacity();
+    }
+
+    pub fn lineWidthCached(self: *Editor, line_idx: usize, line_text: []const u8) usize {
+        if (self.line_width_cache.get(line_idx)) |cached| return cached;
+        var it = std.unicode.Utf8View.initUnchecked(line_text).iterator();
+        var count: usize = 0;
+        while (it.nextCodepointSlice()) |_| {
+            count += 1;
+        }
+        self.line_width_cache.put(line_idx, count) catch {};
+        return count;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -298,6 +317,7 @@ pub const Editor = struct {
                 self.updateCursorPosition();
             }
             self.modified = true;
+            self.invalidateLineWidthCache();
             if (self.highlighter) |h| {
                 _ = h.reparse();
             }
@@ -314,6 +334,7 @@ pub const Editor = struct {
             self.cursor.offset += 1;
             self.updateCursorPosition();
             self.modified = true;
+            self.invalidateLineWidthCache();
             if (self.highlighter) |h| {
                 _ = h.reparse();
             }
@@ -325,6 +346,7 @@ pub const Editor = struct {
         self.cursor.offset += 1;
         self.updateCursorPosition();
         self.modified = true;
+        self.invalidateLineWidthCache();
         if (self.highlighter) |h| {
             _ = h.reparse();
         }
@@ -345,6 +367,7 @@ pub const Editor = struct {
                 self.cursor = norm.start;
             }
             self.modified = true;
+            self.invalidateLineWidthCache();
             if (self.highlighter) |h| {
                 _ = h.reparse();
             }
@@ -360,6 +383,7 @@ pub const Editor = struct {
             self.cursor.offset += text.len;
             self.updateCursorPosition();
             self.modified = true;
+            self.invalidateLineWidthCache();
             if (self.highlighter) |h| {
                 _ = h.reparse();
             }
@@ -370,6 +394,7 @@ pub const Editor = struct {
         self.cursor.offset += text.len;
         self.updateCursorPosition();
         self.modified = true;
+        self.invalidateLineWidthCache();
         if (self.highlighter) |h| {
             _ = h.reparse();
         }
@@ -389,6 +414,7 @@ pub const Editor = struct {
         self.cursor.offset -= 1;
         self.updateCursorPosition();
         self.modified = true;
+        self.invalidateLineWidthCache();
         if (self.highlighter) |h| {
             _ = h.reparse();
         }
@@ -403,6 +429,7 @@ pub const Editor = struct {
         if (self.cursor.offset >= total) return;
         try self.buffer.deleteRange(self.cursor.offset, 1);
         self.modified = true;
+        self.invalidateLineWidthCache();
         if (self.highlighter) |h| {
             _ = h.reparse();
         }
@@ -424,6 +451,7 @@ pub const Editor = struct {
                 }
             }
             if (self.modified) {
+                self.invalidateLineWidthCache();
                 if (self.highlighter) |h| {
                     _ = h.reparse();
                 }
@@ -439,6 +467,7 @@ pub const Editor = struct {
                 try self.buffer.deleteRange(norm.start.offset, len);
                 self.cursor = norm.start;
                 self.modified = true;
+                self.invalidateLineWidthCache();
                 if (self.highlighter) |h| {
                     _ = h.reparse();
                 }

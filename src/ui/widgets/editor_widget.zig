@@ -194,6 +194,8 @@ pub const EditorWidget = struct {
                 cursor_draw_x = text_start_x + @as(f32, @floatFromInt(cursor_col_vis)) * r.char_width;
                 cursor_draw_y = line_y;
             }
+
+            _ = self.editor.lineWidthCached(line_idx, line_text);
         }
 
         // Draw cursor
