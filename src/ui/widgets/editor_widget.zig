@@ -144,7 +144,7 @@ pub const EditorWidget = struct {
 
             const cols = self.viewportColumns(r);
             const width_cached = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
-            const line_width = if (width_cached == 0 and range_count > 0) 1 else width_cached;
+            const line_width = if (line_len == 0) 1 else if (width_cached == 0 and range_count > 0) 1 else width_cached;
             const visual_lines = visualLineCountForWidth(cols, line_width);
 
             var cursor_col_vis: usize = 0;
