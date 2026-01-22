@@ -50,6 +50,7 @@ editor_rendering_todo:
         - "Cursor/selection rendering uses UTF-8 codepoint columns for placement."
         - "Long lines use dynamic buffers to avoid truncated selection/caret placement."
         - "Grapheme clusters derived from HarfBuzz cluster offsets for cursor/selection mapping."
+        - "Per-frame cluster cache avoids repeated HarfBuzz shaping for visible lines."
       references:
         - reference_repos/editors/zed/crates/editor/src/element.rs
         - reference_repos/editors/helix/helix-core/src/selection.rs

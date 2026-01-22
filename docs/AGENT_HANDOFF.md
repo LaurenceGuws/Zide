@@ -39,6 +39,7 @@ Suggested next steps:
 - Editor widget: cursor/selection rendering uses UTF-8 codepoint columns for placement.
 - Editor widget: long lines now use allocated buffers to avoid selection/cursor truncation.
 - Editor widget: grapheme cluster mapping uses HarfBuzz cluster offsets for cursor/selection placement.
+- Editor widget: per-frame cluster cache reduces HarfBuzz shaping overhead.
 
 ## Current issues (editor)
 

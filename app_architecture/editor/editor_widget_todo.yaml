@@ -109,6 +109,7 @@ editor_widget_todo:
         - "Selection rendering shows highlight on empty lines."
         - "Long lines use allocated buffers instead of 4KB truncation for rendering/hit testing."
         - "Cursor/selection mapping uses grapheme clusters when non-ASCII text is present."
+        - "Per-frame grapheme cache reduces HarfBuzz overhead in editor widget."
       references:
         - reference_repos/editors/helix/helix-core/src/selection.rs
         - reference_repos/editors/kakoune/src/selection.cc
