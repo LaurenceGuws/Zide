@@ -50,6 +50,7 @@ Suggested next steps:
 - Config: wired `config.editor.wrap` into editor widget to toggle soft wrap.
 - Editor widget: preserve preferred visual column when moving across short wrapped lines.
 - Editor widget: keep cursor visible when moving up/down in wrapped view.
+- Editor widget: horizontal scroll + scrollbar when wrap is disabled.
 
 ## Current issues (editor)
 

@@ -48,6 +48,7 @@ pub const EditorWidget = struct {
         const end_line = @min(start_line + visible_lines + 1, total_lines);
         var cursor_draw_x: ?f32 = null;
         var cursor_draw_y: ?f32 = null;
+        var max_visible_width: usize = 0;
 
         var highlight_tokens: []HighlightToken = &[_]HighlightToken{};
         var highlight_tokens_allocated = false;
@@ -97,6 +98,7 @@ pub const EditorWidget = struct {
 
         // Draw lines
         var line_buf: [4096]u8 = undefined;
+        const cols = self.viewportColumns(r);
         var line_idx = start_line;
         var visual_row: usize = 0;
         var token_idx: usize = 0;
@@ -144,9 +146,11 @@ pub const EditorWidget = struct {
             var range_count: usize = 0;
             collectSelectionRanges(self.editor, line_idx, line_text, cluster_result.slice, &ranges, &range_count);
 
-            const cols = self.viewportColumns(r);
             const width_cached = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
             const line_width = if (line_len == 0) 1 else if (width_cached == 0 and range_count > 0) 1 else width_cached;
+            if (line_width > max_visible_width) {
+                max_visible_width = line_width;
+            }
             const total_visual_lines = if (self.wrap_enabled) visualLineCountForWidth(cols, line_width) else 1;
             const seg_start_idx = if (self.wrap_enabled and line_idx == start_line) @min(start_seg, total_visual_lines) else 0;
 
@@ -161,8 +165,8 @@ pub const EditorWidget = struct {
 
             var seg: usize = seg_start_idx;
             while (seg < total_visual_lines and visual_row < visible_lines) : (seg += 1) {
-                const seg_start_col = if (self.wrap_enabled) seg * cols else 0;
-                const seg_end_col = if (self.wrap_enabled) @min(line_width, seg_start_col + cols) else @min(line_width, cols);
+                const seg_start_col = if (self.wrap_enabled) seg * cols else self.editor.scroll_col;
+                const seg_end_col = if (self.wrap_enabled) @min(line_width, seg_start_col + cols) else @min(line_width, seg_start_col + cols);
                 if (seg_start_col >= seg_end_col and range_count == 0) continue;
                 const seg_y = y + @as(f32, @floatFromInt(visual_row)) * r.char_height;
                 const seg_start_byte = byteIndexForVisualColumn(line_text, seg_start_col, cluster_result.slice);
@@ -233,6 +237,10 @@ pub const EditorWidget = struct {
         // Draw cursor
         if (cursor_draw_x != null and cursor_draw_y != null) {
             r.drawCursor(cursor_draw_x.?, cursor_draw_y.?, .line);
+        }
+
+        if (!self.wrap_enabled) {
+            self.drawHorizontalScrollbar(r, x, y, width, height, max_visible_width, cols);
         }
     }
 
@@ -338,7 +346,7 @@ pub const EditorWidget = struct {
             defer if (cluster_result.owned) {
                 if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
             };
-            const seg_start_col = line.seg_idx * line.cols;
+            const seg_start_col = line.seg_idx * line.cols + (if (self.wrap_enabled) 0 else self.editor.scroll_col);
             byte_col = byteIndexForVisualColumn(line_text, seg_start_col + col, cluster_result.slice);
         } else {
             if (self.editor.getLineAlloc(line.line_idx)) |owned| {
@@ -353,7 +361,7 @@ pub const EditorWidget = struct {
                 defer if (cluster_result.owned) {
                     if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
                 };
-                const seg_start_col = line.seg_idx * line.cols;
+                const seg_start_col = line.seg_idx * line.cols + (if (self.wrap_enabled) 0 else self.editor.scroll_col);
                 byte_col = byteIndexForVisualColumn(owned, seg_start_col + col, cluster_result.slice);
             } else |_| {}
         }
@@ -469,18 +477,22 @@ pub const EditorWidget = struct {
             }
         } else if (r.isKeyRepeated(renderer_mod.KEY_LEFT)) {
             self.editor.moveCursorLeft();
+            self.ensureCursorVisible(r, height);
             handled = true;
             app_logger.logger("editor.input").logf("key=left", .{});
         } else if (r.isKeyRepeated(renderer_mod.KEY_RIGHT)) {
             self.editor.moveCursorRight();
+            self.ensureCursorVisible(r, height);
             handled = true;
             app_logger.logger("editor.input").logf("key=right", .{});
         } else if (r.isKeyRepeated(renderer_mod.KEY_HOME)) {
             self.editor.moveCursorToLineStart();
+            self.ensureCursorVisible(r, height);
             handled = true;
             app_logger.logger("editor.input").logf("key=home", .{});
         } else if (r.isKeyRepeated(renderer_mod.KEY_END)) {
             self.editor.moveCursorToLineEnd();
+            self.ensureCursorVisible(r, height);
             handled = true;
             app_logger.logger("editor.input").logf("key=end", .{});
         } else if (ctrl and r.isKeyPressed(renderer_mod.KEY_S)) {
@@ -504,10 +516,17 @@ pub const EditorWidget = struct {
         // Scroll handling
         const wheel = r.getMouseWheelMove();
         if (wheel != 0) {
+            const shift = r.isKeyDown(renderer_mod.KEY_LEFT_SHIFT) or r.isKeyDown(renderer_mod.KEY_RIGHT_SHIFT);
             const delta = @as(i32, @intFromFloat(-wheel * 3));
-            self.scrollVisual(r, delta);
-            handled = true;
-            app_logger.logger("editor.input").logf("scroll delta={d} new_line={d} row_offset={d}", .{ delta, self.editor.scroll_line, self.editor.scroll_row_offset });
+            if (shift and !self.wrap_enabled) {
+                self.scrollHorizontal(r, delta);
+                handled = true;
+                app_logger.logger("editor.input").logf("hscroll delta={d} scroll_col={d}", .{ delta, self.editor.scroll_col });
+            } else {
+                self.scrollVisual(r, delta);
+                handled = true;
+                app_logger.logger("editor.input").logf("scroll delta={d} new_line={d} row_offset={d}", .{ delta, self.editor.scroll_line, self.editor.scroll_row_offset });
+            }
         }
 
         return handled;
@@ -524,6 +543,7 @@ pub const EditorWidget = struct {
             } else if (self.editor.cursor.line >= self.editor.scroll_line + visible_lines) {
                 self.editor.scroll_line = self.editor.cursor.line - (visible_lines - 1);
             }
+            self.ensureCursorVisibleHorizontal(r);
             self.editor.scroll_row_offset = 0;
             return;
         }
@@ -574,6 +594,134 @@ pub const EditorWidget = struct {
         const total_visual_lines = visualLineCountForWidth(cols, line_width);
         if (total_visual_lines == 0) return 0;
         return @min(col_vis / cols, total_visual_lines - 1);
+    }
+
+    fn ensureCursorVisibleHorizontal(self: *EditorWidget, r: *Renderer) void {
+        const cols = self.viewportColumns(r);
+        if (cols == 0) return;
+        const line_idx = self.editor.cursor.line;
+        if (line_idx >= self.editor.lineCount()) return;
+        var line_buf: [4096]u8 = undefined;
+        const line_len = self.editor.lineLen(line_idx);
+        var line_alloc: ?[]u8 = null;
+        const line_text = if (line_len <= line_buf.len)
+            line_buf[0..self.editor.getLine(line_idx, &line_buf)]
+        else blk: {
+            const owned = self.editor.getLineAlloc(line_idx) catch break :blk &[_]u8{};
+            line_alloc = owned;
+            break :blk owned;
+        };
+        defer if (line_alloc) |owned| self.editor.allocator.free(owned);
+
+        const cluster_result = getClusterOffsets(
+            self.cluster_cache,
+            self.editor.allocator,
+            r.terminal_font.hb_font,
+            line_idx,
+            line_text,
+        );
+        defer if (cluster_result.owned) {
+            if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
+        };
+
+        const col_vis = visualColumnForByteIndex(line_text, self.editor.cursor.col, cluster_result.slice);
+        const width_cached = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
+        const line_width = if (line_len == 0) 1 else width_cached;
+        const max_scroll = if (line_width > cols) line_width - cols else 0;
+        var scroll_col = self.editor.scroll_col;
+        if (col_vis < scroll_col) {
+            scroll_col = col_vis;
+        } else if (col_vis >= scroll_col + cols) {
+            scroll_col = col_vis - (cols - 1);
+        }
+        if (scroll_col > max_scroll) scroll_col = max_scroll;
+        self.editor.scroll_col = scroll_col;
+    }
+
+    fn scrollHorizontal(self: *EditorWidget, r: *Renderer, delta_cols: i32) void {
+        if (delta_cols == 0) return;
+        const cols = self.viewportColumns(r);
+        if (cols == 0) return;
+        const line_idx = self.editor.cursor.line;
+        if (line_idx >= self.editor.lineCount()) return;
+        var line_buf: [4096]u8 = undefined;
+        const line_len = self.editor.lineLen(line_idx);
+        var line_alloc: ?[]u8 = null;
+        const line_text = if (line_len <= line_buf.len)
+            line_buf[0..self.editor.getLine(line_idx, &line_buf)]
+        else blk: {
+            const owned = self.editor.getLineAlloc(line_idx) catch break :blk &[_]u8{};
+            line_alloc = owned;
+            break :blk owned;
+        };
+        defer if (line_alloc) |owned| self.editor.allocator.free(owned);
+
+        const cluster_result = getClusterOffsets(
+            self.cluster_cache,
+            self.editor.allocator,
+            r.terminal_font.hb_font,
+            line_idx,
+            line_text,
+        );
+        defer if (cluster_result.owned) {
+            if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
+        };
+
+        const width_cached = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
+        const line_width = if (line_len == 0) 1 else width_cached;
+        const max_scroll = if (line_width > cols) line_width - cols else 0;
+        if (delta_cols > 0) {
+            self.editor.scroll_col = @min(self.editor.scroll_col + @as(usize, @intCast(delta_cols)), max_scroll);
+        } else {
+            const delta_abs: usize = @intCast(-delta_cols);
+            self.editor.scroll_col = if (self.editor.scroll_col > delta_abs) self.editor.scroll_col - delta_abs else 0;
+        }
+    }
+
+    fn drawHorizontalScrollbar(
+        self: *EditorWidget,
+        r: *Renderer,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        max_visible_width: usize,
+        cols: usize,
+    ) void {
+        if (width <= 0 or height <= 0 or cols == 0) return;
+        if (max_visible_width <= cols) return;
+        const track_h: f32 = 8;
+        const track_y = y + height - track_h;
+        const track_x = x + self.gutter_width;
+        const track_w = @max(@as(f32, 1), width - self.gutter_width);
+        const max_scroll = max_visible_width - cols;
+        if (self.editor.scroll_col > max_scroll) {
+            self.editor.scroll_col = max_scroll;
+        }
+
+        const min_thumb_w: f32 = 24;
+        const thumb_w = @max(min_thumb_w, track_w * (@as(f32, @floatFromInt(cols)) / @as(f32, @floatFromInt(max_visible_width))));
+        const available = @max(@as(f32, 1), track_w - thumb_w);
+        const ratio = if (max_scroll > 0)
+            @as(f32, @floatFromInt(self.editor.scroll_col)) / @as(f32, @floatFromInt(max_scroll))
+        else
+            0.0;
+        const thumb_x = track_x + available * ratio;
+
+        r.drawRect(
+            @intFromFloat(track_x),
+            @intFromFloat(track_y),
+            @intFromFloat(track_w),
+            @intFromFloat(track_h),
+            r.theme.line_number_bg,
+        );
+        r.drawRect(
+            @intFromFloat(thumb_x),
+            @intFromFloat(track_y + 2),
+            @intFromFloat(thumb_w),
+            @intFromFloat(track_h - 4),
+            r.theme.selection,
+        );
     }
 
     fn cursorRowOffset(self: *EditorWidget, r: *Renderer, cursor_line: usize, cursor_seg: usize, cols: usize) i32 {
