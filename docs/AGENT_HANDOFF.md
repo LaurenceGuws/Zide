@@ -44,6 +44,7 @@ Suggested next steps:
 - Editor widget: added visual line count helper for wrap groundwork.
 - Editor widget: soft wrap rendering uses visual line counts per line.
 - Editor widget: cursor up/down now moves across wrapped segments.
+- Editor widget: scroll wheel now moves by visual rows when soft wrap is active.
 
 ## Current issues (editor)
 
