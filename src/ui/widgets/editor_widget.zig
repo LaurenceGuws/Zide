@@ -195,7 +195,7 @@ pub const EditorWidget = struct {
                 cursor_draw_y = line_y;
             }
 
-            _ = self.editor.lineWidthCached(line_idx, line_text);
+            _ = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
         }
 
         // Draw cursor
