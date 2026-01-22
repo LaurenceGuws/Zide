@@ -608,6 +608,7 @@ const AppState = struct {
 
             if (self.editor_dragging and r.isMouseButtonDown(renderer_mod.MOUSE_LEFT)) {
                 if (widget.cursorFromMouse(r, editor_x, editor_y, editor_width, editor_height, mouse.x, mouse.y, true)) |pos| {
+                    widget.editor.setCursorNoClear(pos.line, pos.col);
                     if (self.editor_drag_rect) {
                         widget.editor.clearSelections();
                         const start_line = @min(self.editor_drag_start.line, pos.line);
@@ -620,7 +621,6 @@ const AppState = struct {
                         widget.editor.selection = .{ .start = self.editor_drag_start, .end = pos };
                         widget.editor.clearSelections();
                     }
-                    widget.editor.setCursor(pos.line, pos.col);
                     self.needs_redraw = true;
                     self.metrics.noteInput(now);
                 }
