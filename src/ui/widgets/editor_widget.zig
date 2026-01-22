@@ -5,6 +5,10 @@ const syntax_mod = @import("../../editor/syntax.zig");
 const types = @import("../../editor/types.zig");
 const app_logger = @import("../../app_logger.zig");
 
+const c = @cImport({
+    @cInclude("harfbuzz/hb.h");
+});
+
 const Renderer = renderer_mod.Renderer;
 const Color = renderer_mod.Color;
 const Editor = editor_mod.Editor;
@@ -104,6 +108,12 @@ pub const EditorWidget = struct {
             const line_start = self.editor.lineStart(line_idx);
             const line_end = line_start + line_len;
 
+            var cluster_offsets: ?[]u32 = null;
+            if (hasNonAscii(line_text)) {
+                cluster_offsets = graphemeClusterOffsets(self.editor.allocator, r.terminal_font.hb_font, line_text) catch null;
+            }
+            defer if (cluster_offsets) |clusters| self.editor.allocator.free(clusters);
+
             if (highlight_tokens_allocated) {
                 while (token_idx < highlight_tokens.len and highlight_tokens[token_idx].end <= line_start) {
                     token_idx += 1;
@@ -116,7 +126,7 @@ pub const EditorWidget = struct {
                 r.drawEditorLineBase(line_idx, line_y, x, self.gutter_width, width, is_current);
                 var ranges: [8]SelectionRange = undefined;
                 var range_count: usize = 0;
-                collectSelectionRanges(self.editor, line_idx, line_text, &ranges, &range_count);
+                collectSelectionRanges(self.editor, line_idx, line_text, cluster_offsets, &ranges, &range_count);
                 if (range_count > 0) {
                     var i: usize = 0;
                     while (i < range_count) : (i += 1) {
@@ -149,7 +159,7 @@ pub const EditorWidget = struct {
                 r.drawEditorLineBase(line_idx, line_y, x, self.gutter_width, width, is_current);
                 var ranges: [8]SelectionRange = undefined;
                 var range_count: usize = 0;
-                collectSelectionRanges(self.editor, line_idx, line_text, &ranges, &range_count);
+                collectSelectionRanges(self.editor, line_idx, line_text, cluster_offsets, &ranges, &range_count);
                 if (range_count > 0) {
                     var i: usize = 0;
                     while (i < range_count) : (i += 1) {
@@ -169,7 +179,7 @@ pub const EditorWidget = struct {
             }
 
             if (is_current) {
-                const cursor_col_vis = utf8ColumnForByteIndex(line_text, self.editor.cursor.col);
+                const cursor_col_vis = visualColumnForByteIndex(line_text, self.editor.cursor.col, cluster_offsets);
                 cursor_draw_x = text_start_x + @as(f32, @floatFromInt(cursor_col_vis)) * r.char_width;
                 cursor_draw_y = line_y;
             }
@@ -238,11 +248,21 @@ pub const EditorWidget = struct {
         if (line_len <= line_buf.len) {
             const len = self.editor.getLine(line, &line_buf);
             const line_text = line_buf[0..len];
-            byte_col = utf8ByteIndexForColumn(line_text, col);
+            var cluster_offsets: ?[]u32 = null;
+            if (hasNonAscii(line_text)) {
+                cluster_offsets = graphemeClusterOffsets(self.editor.allocator, r.terminal_font.hb_font, line_text) catch null;
+            }
+            defer if (cluster_offsets) |clusters| self.editor.allocator.free(clusters);
+            byte_col = byteIndexForVisualColumn(line_text, col, cluster_offsets);
         } else {
             if (self.editor.getLineAlloc(line)) |owned| {
                 defer self.editor.allocator.free(owned);
-                byte_col = utf8ByteIndexForColumn(owned, col);
+                var cluster_offsets: ?[]u32 = null;
+                if (hasNonAscii(owned)) {
+                    cluster_offsets = graphemeClusterOffsets(self.editor.allocator, r.terminal_font.hb_font, owned) catch null;
+                }
+                defer if (cluster_offsets) |clusters| self.editor.allocator.free(clusters);
+                byte_col = byteIndexForVisualColumn(owned, col, cluster_offsets);
             } else |_| {}
         }
         const clamped_col = @min(byte_col, line_len);
@@ -414,6 +434,7 @@ fn collectSelectionRanges(
     editor: *Editor,
     line_idx: usize,
     line_text: []const u8,
+    cluster_offsets: ?[]const u32,
     ranges: *[8]SelectionRange,
     count: *usize,
 ) void {
@@ -440,8 +461,8 @@ fn collectSelectionRanges(
             var end_col: usize = line_len;
             if (line_idx == norm.start.line) start_col = @min(norm.start.col, line_len);
             if (line_idx == norm.end.line) end_col = @min(norm.end.col, line_len);
-            const start_vis = utf8ColumnForByteIndex(line_text, start_col);
-            const end_vis = utf8ColumnForByteIndex(line_text, end_col);
+            const start_vis = visualColumnForByteIndex(line_text, start_col, cluster_offsets);
+            const end_vis = visualColumnForByteIndex(line_text, end_col, cluster_offsets);
             addSelectionRange(ranges, count, start_vis, end_vis);
         }
     }
@@ -452,10 +473,73 @@ fn collectSelectionRanges(
         var end_col: usize = line_len;
         if (line_idx == norm.start.line) start_col = @min(norm.start.col, line_len);
         if (line_idx == norm.end.line) end_col = @min(norm.end.col, line_len);
-        const start_vis = utf8ColumnForByteIndex(line_text, start_col);
-        const end_vis = utf8ColumnForByteIndex(line_text, end_col);
+        const start_vis = visualColumnForByteIndex(line_text, start_col, cluster_offsets);
+        const end_vis = visualColumnForByteIndex(line_text, end_col, cluster_offsets);
         addSelectionRange(ranges, count, start_vis, end_vis);
     }
+}
+
+fn hasNonAscii(text: []const u8) bool {
+    for (text) |byte| {
+        if (byte & 0x80 != 0) return true;
+    }
+    return false;
+}
+
+fn graphemeClusterOffsets(allocator: std.mem.Allocator, hb_font: *c.hb_font_t, text: []const u8) ![]u32 {
+    if (text.len == 0) return allocator.alloc(u32, 0);
+    const buffer = c.hb_buffer_create();
+    defer c.hb_buffer_destroy(buffer);
+    c.hb_buffer_add_utf8(buffer, text.ptr, @intCast(text.len), 0, @intCast(text.len));
+    c.hb_buffer_guess_segment_properties(buffer);
+    c.hb_shape(hb_font, buffer, null, 0);
+
+    var length: u32 = 0;
+    const infos = c.hb_buffer_get_glyph_infos(buffer, &length);
+    if (infos == null or length == 0) return allocator.alloc(u32, 0);
+
+    var clusters = std.ArrayList(u32).init(allocator);
+    defer clusters.deinit();
+    try clusters.ensureTotalCapacity(@intCast(length));
+    for (infos[0..length]) |info| {
+        clusters.appendAssumeCapacity(info.cluster);
+    }
+
+    std.sort.block(u32, clusters.items, {}, struct {
+        fn lessThan(_: void, a: u32, b: u32) bool {
+            return a < b;
+        }
+    }.lessThan);
+
+    var write: usize = 0;
+    for (clusters.items) |cluster| {
+        if (write == 0 or cluster != clusters.items[write - 1]) {
+            clusters.items[write] = cluster;
+            write += 1;
+        }
+    }
+    clusters.items.len = write;
+    return try clusters.toOwnedSlice();
+}
+
+fn visualColumnForByteIndex(text: []const u8, byte_index: usize, cluster_offsets: ?[]const u32) usize {
+    if (cluster_offsets) |clusters| {
+        if (clusters.len == 0) return utf8ColumnForByteIndex(text, byte_index);
+        const target = @min(byte_index, text.len);
+        var idx: usize = 0;
+        while (idx < clusters.len and clusters[idx] < target) : (idx += 1) {}
+        return idx;
+    }
+    return utf8ColumnForByteIndex(text, byte_index);
+}
+
+fn byteIndexForVisualColumn(text: []const u8, column: usize, cluster_offsets: ?[]const u32) usize {
+    if (cluster_offsets) |clusters| {
+        if (clusters.len == 0) return utf8ByteIndexForColumn(text, column);
+        if (column >= clusters.len) return text.len;
+        return @min(@as(usize, clusters[column]), text.len);
+    }
+    return utf8ByteIndexForColumn(text, column);
 }
 
 fn utf8ColumnForByteIndex(line_text: []const u8, byte_index: usize) usize {
