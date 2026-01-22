@@ -33,6 +33,7 @@ Suggested next steps:
 - Editor: editor-only tests added (`zig build test-editor`) using `src/tests_main.zig` + `src/editor_tests.zig`.
 - Editor widget: mouse drag selection wired (normal + Alt-rect) and selection overlay drawing added.
 - Editor widget: drag selection now preserves selection while updating cursor.
+- Editor widget: undo now groups edits per input tick to avoid over-merged inserts.
 
 ## Current issues (editor)
 
