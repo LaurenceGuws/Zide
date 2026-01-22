@@ -95,7 +95,6 @@ pub const EditorWidget = struct {
             const line_text = line_buf[0..len];
             const line_start = self.editor.lineStart(line_idx);
             const line_end = line_start + len;
-            const line_len = len;
 
             if (highlight_tokens_allocated) {
                 while (token_idx < highlight_tokens.len and highlight_tokens[token_idx].end <= line_start) {
@@ -449,7 +448,7 @@ fn collectSelectionRanges(
 fn utf8ColumnForByteIndex(line_text: []const u8, byte_index: usize) usize {
     if (byte_index == 0 or line_text.len == 0) return 0;
     const target = @min(byte_index, line_text.len);
-    var it = std.unicode.Utf8Iterator.init(line_text);
+    var it = std.unicode.Utf8View.initUnchecked(line_text).iterator();
     var col: usize = 0;
     var idx: usize = 0;
     while (it.nextCodepointSlice()) |slice| {
@@ -463,7 +462,7 @@ fn utf8ColumnForByteIndex(line_text: []const u8, byte_index: usize) usize {
 
 fn utf8ByteIndexForColumn(line_text: []const u8, column: usize) usize {
     if (column == 0 or line_text.len == 0) return 0;
-    var it = std.unicode.Utf8Iterator.init(line_text);
+    var it = std.unicode.Utf8View.initUnchecked(line_text).iterator();
     var col: usize = 0;
     var idx: usize = 0;
     while (it.nextCodepointSlice()) |slice| {
