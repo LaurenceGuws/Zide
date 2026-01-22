@@ -51,6 +51,7 @@ Suggested next steps:
 - Editor widget: preserve preferred visual column when moving across short wrapped lines.
 - Editor widget: keep cursor visible when moving up/down in wrapped view.
 - Editor widget: horizontal scroll + scrollbar when wrap is disabled.
+- Editor widget: horizontal scrollbar click/drag + vertical scrollbar only on overflow (no wrap).
 
 ## Current issues (editor)
 

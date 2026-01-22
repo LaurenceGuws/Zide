@@ -67,6 +67,8 @@ const AppState = struct {
     editor_dragging: bool,
     editor_drag_start: types.CursorPos,
     editor_drag_rect: bool,
+    editor_hscroll_dragging: bool,
+    editor_hscroll_grab_offset: f32,
     editor_cluster_cache: EditorClusterCache,
     frame_id: u64,
     metrics: Metrics,
@@ -136,6 +138,8 @@ const AppState = struct {
             .editor_dragging = false,
             .editor_drag_start = .{ .line = 0, .col = 0, .offset = 0 },
             .editor_drag_rect = false,
+            .editor_hscroll_dragging = false,
+            .editor_hscroll_grab_offset = 0,
             .editor_cluster_cache = EditorClusterCache.init(allocator),
             .frame_id = 0,
             .metrics = Metrics.init(),
@@ -600,8 +604,21 @@ const AppState = struct {
             const in_editor = mouse.x >= editor_x and mouse.x <= editor_x + editor_width and
                 mouse.y >= editor_y and mouse.y <= editor_y + editor_height;
             const alt = r.isKeyDown(renderer_mod.KEY_LEFT_ALT) or r.isKeyDown(renderer_mod.KEY_RIGHT_ALT);
+            const scrollbar_handled = widget.handleHorizontalScrollbarInput(
+                r,
+                editor_x,
+                editor_y,
+                editor_width,
+                editor_height,
+                &self.editor_hscroll_dragging,
+                &self.editor_hscroll_grab_offset,
+            );
+            if (scrollbar_handled) {
+                self.needs_redraw = true;
+                self.metrics.noteInput(now);
+            }
 
-            if (r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT) and in_editor) {
+            if (!scrollbar_handled and r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT) and in_editor) {
                 if (widget.cursorFromMouse(r, editor_x, editor_y, editor_width, editor_height, mouse.x, mouse.y, false)) |pos| {
                     widget.editor.setCursor(pos.line, pos.col);
                     widget.editor.selection = null;
@@ -619,7 +636,7 @@ const AppState = struct {
                 }
             }
 
-            if (self.editor_dragging and r.isMouseButtonDown(renderer_mod.MOUSE_LEFT)) {
+            if (!scrollbar_handled and self.editor_dragging and r.isMouseButtonDown(renderer_mod.MOUSE_LEFT)) {
                 if (widget.cursorFromMouse(r, editor_x, editor_y, editor_width, editor_height, mouse.x, mouse.y, true)) |pos| {
                     widget.editor.setCursorNoClear(pos.line, pos.col);
                     if (self.editor_drag_rect) {
