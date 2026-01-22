@@ -195,13 +195,27 @@ pub const EditorWidget = struct {
                 cursor_draw_y = line_y;
             }
 
-            _ = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
+            const cols = self.viewportColumns(r);
+            _ = self.visualLineCountForColumns(cols, line_idx, line_text, cluster_result.slice);
         }
 
         // Draw cursor
         if (cursor_draw_x != null and cursor_draw_y != null) {
             r.drawCursor(cursor_draw_x.?, cursor_draw_y.?, .line);
         }
+    }
+
+    pub fn visualLineCountForColumns(self: *EditorWidget, cols: usize, line_idx: usize, line_text: []const u8, cluster_offsets: ?[]const u32) usize {
+        if (cols == 0) return 1;
+        const width = self.editor.lineWidthCached(line_idx, line_text, cluster_offsets);
+        if (width == 0) return 1;
+        return @max(@as(usize, 1), (width + cols - 1) / cols);
+    }
+
+    fn viewportColumns(self: *EditorWidget, r: *Renderer) usize {
+        const editor_width = @max(0, r.width - @as(i32, @intFromFloat(self.gutter_width)));
+        if (r.char_width <= 0) return 0;
+        return @as(usize, @intFromFloat(@as(f32, @floatFromInt(editor_width)) / r.char_width));
     }
 
     pub fn handleMouseClick(
@@ -677,6 +691,20 @@ test "utf8 column/byte mapping is consistent" {
     try std.testing.expectEqual(@as(usize, 6), utf8ByteIndexForColumn(s, 3));
     try std.testing.expectEqual(@as(usize, 10), utf8ByteIndexForColumn(s, 4));
     try std.testing.expectEqual(@as(usize, s.len), utf8ByteIndexForColumn(s, 5));
+}
+
+test "visual line count rounds to viewport columns" {
+    const allocator = std.testing.allocator;
+    var editor = try Editor.init(allocator);
+    defer editor.deinit();
+    try editor.insertText("1234567890");
+
+    var widget = EditorWidget.init(editor);
+    const cols: usize = 4;
+    const line = try editor.getLineAlloc(0);
+    defer allocator.free(line);
+
+    try std.testing.expectEqual(@as(usize, 3), widget.visualLineCountForColumns(cols, 0, line, null));
 }
 
 fn highlightTokenLessThan(_: void, a: HighlightToken, b: HighlightToken) bool {
