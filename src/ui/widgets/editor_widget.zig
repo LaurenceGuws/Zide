@@ -233,10 +233,16 @@ pub const EditorWidget = struct {
     pub fn handleInput(self: *EditorWidget, r: *Renderer) !bool {
         var handled = false;
         var chars_inserted: usize = 0;
+        var group_started = false;
+        errdefer if (group_started) self.editor.endUndoGroup() catch {};
 
         // Character input
         while (r.getCharPressed()) |char| {
             if (char >= 32 and char < 127) {
+                if (!group_started) {
+                    self.editor.beginUndoGroup();
+                    group_started = true;
+                }
                 try self.editor.insertChar(@intCast(char));
                 handled = true;
                 chars_inserted += 1;
@@ -251,14 +257,26 @@ pub const EditorWidget = struct {
         const ctrl = r.isKeyDown(renderer_mod.KEY_LEFT_CONTROL) or r.isKeyDown(renderer_mod.KEY_RIGHT_CONTROL);
 
         if (r.isKeyPressed(renderer_mod.KEY_ENTER)) {
+            if (!group_started) {
+                self.editor.beginUndoGroup();
+                group_started = true;
+            }
             try self.editor.insertNewline();
             handled = true;
             app_logger.logger("editor.input").logf("key=enter", .{});
         } else if (r.isKeyRepeated(renderer_mod.KEY_BACKSPACE)) {
+            if (!group_started) {
+                self.editor.beginUndoGroup();
+                group_started = true;
+            }
             try self.editor.deleteCharBackward();
             handled = true;
             app_logger.logger("editor.input").logf("key=backspace", .{});
         } else if (r.isKeyRepeated(renderer_mod.KEY_DELETE)) {
+            if (!group_started) {
+                self.editor.beginUndoGroup();
+                group_started = true;
+            }
             try self.editor.deleteCharForward();
             handled = true;
             app_logger.logger("editor.input").logf("key=delete", .{});
@@ -298,6 +316,10 @@ pub const EditorWidget = struct {
             _ = try self.editor.redo();
             handled = true;
             app_logger.logger("editor.input").logf("key=ctrl+y", .{});
+        }
+
+        if (group_started) {
+            try self.editor.endUndoGroup();
         }
 
         // Scroll handling
