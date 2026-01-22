@@ -139,11 +139,16 @@ pub const Rope = struct {
         return self.redo_stack.items.len > 0;
     }
 
-    pub fn undo(self: *Rope) !bool {
-        if (self.undo_stack.items.len == 0) return false;
+    pub const UndoResult = struct {
+        changed: bool,
+        cursor: ?usize,
+    };
+
+    pub fn undo(self: *Rope) !UndoResult {
+        if (self.undo_stack.items.len == 0) return .{ .changed = false, .cursor = null };
         self.history_suspended = true;
         defer self.history_suspended = false;
-        const first = self.undo_stack.pop() orelse return false;
+        const first = self.undo_stack.pop() orelse return .{ .changed = false, .cursor = null };
         if (first.kind != .boundary) {
             switch (first.kind) {
                 .insert => try self.deleteRangeNoHistory(first.pos, first.text.len),
@@ -151,12 +156,13 @@ pub const Rope = struct {
                 .boundary => {},
             }
             try self.redo_stack.append(self.allocator, first);
-            return true;
+            return .{ .changed = true, .cursor = first.pos };
         }
 
         const end_marker = first;
         var temp = std.ArrayList(UndoOp).empty;
         defer temp.deinit(self.allocator);
+        var cursor_pos: ?usize = null;
         while (self.undo_stack.items.len > 0) {
             const op = self.undo_stack.pop() orelse break;
             if (op.kind == .boundary) {
@@ -165,13 +171,14 @@ pub const Rope = struct {
                     try self.redo_stack.append(self.allocator, temp_op);
                 }
                 try self.redo_stack.append(self.allocator, end_marker);
-                return temp.items.len > 0;
+                return .{ .changed = temp.items.len > 0, .cursor = cursor_pos };
             }
             switch (op.kind) {
                 .insert => try self.deleteRangeNoHistory(op.pos, op.text.len),
                 .delete => try self.insertNoHistory(op.pos, op.text),
                 .boundary => {},
             }
+            if (cursor_pos == null) cursor_pos = op.pos;
             try temp.append(self.allocator, op);
         }
         // No start marker found; drop end marker.
@@ -179,14 +186,14 @@ pub const Rope = struct {
         for (temp.items) |temp_op| {
             try self.redo_stack.append(self.allocator, temp_op);
         }
-        return temp.items.len > 0;
+        return .{ .changed = temp.items.len > 0, .cursor = cursor_pos };
     }
 
-    pub fn redo(self: *Rope) !bool {
-        if (self.redo_stack.items.len == 0) return false;
+    pub fn redo(self: *Rope) !UndoResult {
+        if (self.redo_stack.items.len == 0) return .{ .changed = false, .cursor = null };
         self.history_suspended = true;
         defer self.history_suspended = false;
-        const first = self.redo_stack.pop() orelse return false;
+        const first = self.redo_stack.pop() orelse return .{ .changed = false, .cursor = null };
         if (first.kind != .boundary) {
             switch (first.kind) {
                 .insert => try self.insertNoHistory(first.pos, first.text),
@@ -194,12 +201,13 @@ pub const Rope = struct {
                 .boundary => {},
             }
             try self.undo_stack.append(self.allocator, first);
-            return true;
+            return .{ .changed = true, .cursor = first.pos };
         }
 
         const end_marker = first;
         var temp = std.ArrayList(UndoOp).empty;
         defer temp.deinit(self.allocator);
+        var cursor_pos: ?usize = null;
         while (self.redo_stack.items.len > 0) {
             const op = self.redo_stack.pop() orelse break;
             if (op.kind == .boundary) {
@@ -208,20 +216,21 @@ pub const Rope = struct {
                     try self.undo_stack.append(self.allocator, temp_op);
                 }
                 try self.undo_stack.append(self.allocator, end_marker);
-                return temp.items.len > 0;
+                return .{ .changed = temp.items.len > 0, .cursor = cursor_pos };
             }
             switch (op.kind) {
                 .insert => try self.insertNoHistory(op.pos, op.text),
                 .delete => try self.deleteRangeNoHistory(op.pos, op.text.len),
                 .boundary => {},
             }
+            if (cursor_pos == null) cursor_pos = op.pos;
             try temp.append(self.allocator, op);
         }
         freeUndoOp(self, end_marker);
         for (temp.items) |temp_op| {
             try self.undo_stack.append(self.allocator, temp_op);
         }
-        return temp.items.len > 0;
+        return .{ .changed = temp.items.len > 0, .cursor = cursor_pos };
     }
 
     pub fn beginUndoGroup(self: *Rope) void {
@@ -732,11 +741,11 @@ test "rope insert/read/delete and line starts" {
     try std.testing.expectEqual(@as(usize, 14), read_len3);
     try std.testing.expectEqualStrings("hellobig world", out);
 
-    try std.testing.expect(try rope.undo());
+    try std.testing.expect((try rope.undo()).changed);
     const undo_text = try rope.readRangeAlloc(0, rope.totalLen());
     defer allocator.free(undo_text);
     try std.testing.expectEqualStrings("hello\nbig world", undo_text);
-    try std.testing.expect(try rope.redo());
+    try std.testing.expect((try rope.redo()).changed);
     const redo_text = try rope.readRangeAlloc(0, rope.totalLen());
     defer allocator.free(redo_text);
     try std.testing.expectEqualStrings("hellobig world", redo_text);
@@ -753,7 +762,7 @@ test "rope undo merges adjacent inserts" {
     defer allocator.free(merged_text);
     try std.testing.expectEqualStrings("abcde", merged_text);
 
-    try std.testing.expect(try rope.undo());
+    try std.testing.expect((try rope.undo()).changed);
     const undo_text = try rope.readRangeAlloc(0, rope.totalLen());
     defer allocator.free(undo_text);
     try std.testing.expectEqualStrings("abc", undo_text);
@@ -770,7 +779,7 @@ test "rope undo merges adjacent deletes (same position)" {
     defer allocator.free(after_delete);
     try std.testing.expectEqualStrings("abcf", after_delete);
 
-    try std.testing.expect(try rope.undo());
+    try std.testing.expect((try rope.undo()).changed);
     const undo_text = try rope.readRangeAlloc(0, rope.totalLen());
     defer allocator.free(undo_text);
     try std.testing.expectEqualStrings("abcdef", undo_text);
@@ -787,7 +796,7 @@ test "rope undo merges adjacent deletes (backspace-style)" {
     defer allocator.free(after_delete);
     try std.testing.expectEqualStrings("adef", after_delete);
 
-    try std.testing.expect(try rope.undo());
+    try std.testing.expect((try rope.undo()).changed);
     const undo_text = try rope.readRangeAlloc(0, rope.totalLen());
     defer allocator.free(undo_text);
     try std.testing.expectEqualStrings("abcdef", undo_text);
@@ -807,7 +816,7 @@ test "rope undo groups multiple edits" {
     defer allocator.free(after_group);
     try std.testing.expectEqualStrings("hi!!", after_group);
 
-    try std.testing.expect(try rope.undo());
+    try std.testing.expect((try rope.undo()).changed);
     const undo_text = try rope.readRangeAlloc(0, rope.totalLen());
     defer allocator.free(undo_text);
     try std.testing.expectEqualStrings("hi", undo_text);
