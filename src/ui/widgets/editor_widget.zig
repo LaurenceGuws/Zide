@@ -626,6 +626,10 @@ pub const EditorWidget = struct {
         };
 
         const cur_vis_col = visualColumnForByteIndex(line_text, cur_col_byte, cluster_result.slice);
+        const preferred_vis_col = self.editor.preferred_visual_col orelse cur_vis_col;
+        if (self.editor.preferred_visual_col == null) {
+            self.editor.preferred_visual_col = preferred_vis_col;
+        }
         const cur_line_width = self.editor.lineWidthCached(cur_line, line_text, cluster_result.slice);
         const cur_visual_lines = visualLineCountForWidth(cols, cur_line_width);
         const cur_seg = if (cur_visual_lines == 0) 0 else @min(cur_vis_col / cols, cur_visual_lines - 1);
@@ -633,12 +637,13 @@ pub const EditorWidget = struct {
 
         var target_line = cur_line;
         var target_seg: usize = cur_seg;
+        var target_use_preferred = false;
         if (delta < 0) {
             if (cur_seg > 0) {
                 target_seg = cur_seg - 1;
             } else if (cur_line > 0) {
                 target_line = cur_line - 1;
-                target_seg = 0;
+                target_use_preferred = true;
             } else {
                 return false;
             }
@@ -647,7 +652,7 @@ pub const EditorWidget = struct {
                 target_seg = cur_seg + 1;
             } else if (cur_line + 1 < line_count) {
                 target_line = cur_line + 1;
-                target_seg = 0;
+                target_use_preferred = true;
             } else {
                 return false;
             }
@@ -682,12 +687,19 @@ pub const EditorWidget = struct {
 
         const target_width = self.editor.lineWidthCached(target_line, target_text, target_clusters.slice);
         const target_visual_lines = visualLineCountForWidth(cols, target_width);
+        if (target_use_preferred and target_visual_lines > 0) {
+            target_seg = @min(preferred_vis_col / cols, target_visual_lines - 1);
+        }
         if (target_seg >= target_visual_lines) {
             target_seg = if (target_visual_lines > 0) target_visual_lines - 1 else 0;
         }
         const target_seg_start = target_seg * cols;
         const target_seg_len = if (target_width > target_seg_start) @min(cols, target_width - target_seg_start) else 0;
-        const target_col_vis = target_seg_start + @min(cur_seg_col, target_seg_len);
+        const desired_seg_col = if (target_use_preferred)
+            @min(preferred_vis_col - target_seg_start, target_seg_len)
+        else
+            @min(cur_seg_col, target_seg_len);
+        const target_col_vis = target_seg_start + desired_seg_col;
         const target_col_byte = byteIndexForVisualColumn(target_text, target_col_vis, target_clusters.slice);
 
         self.editor.setCursor(target_line, target_col_byte);
