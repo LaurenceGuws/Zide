@@ -552,6 +552,9 @@ pub const EditorWidget = struct {
                 line -= 1;
                 const lines = self.visualLinesForLine(r, line, cols);
                 seg = if (lines > 0) lines - 1 else 0;
+                if (remaining > 0) {
+                    remaining -= 1;
+                }
             }
         }
 
