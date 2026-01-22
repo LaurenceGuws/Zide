@@ -45,10 +45,12 @@ Suggested next steps:
 - Editor widget: soft wrap rendering uses visual line counts per line.
 - Editor widget: cursor up/down now moves across wrapped segments.
 - Editor widget: scroll wheel now moves by visual rows when soft wrap is active.
+- Editor widget: empty-line rendering restored in wrapped view; scroll-up jump fixed.
 
 ## Current issues (editor)
 
-- None noted.
+- Side quest requested: add editor horizontal scrollbar when wrap is off; add Lua config option `config.editor.wrap` (default false).
+- Side quest requested: fix terminal scrollbar visibility (hide when no scrollback overflow or when alt screen active).
 
 ## Current issues (terminal, parked)
 
@@ -59,6 +61,16 @@ Suggested next steps:
 - Kitty graphics: delete semantics are approximate (e.g., 'n/N' treated like 'i/I'); no placement queries, no animation support.
 - Kitty graphics: virtual placements (U=1) are stored but not rendered; no unicode placeholder handling.
 - Kitty graphics: file/temp/shm media support is basic; error mapping for file/shm failures is still coarse.
+
+## Side quest plan (requested)
+
+1) Terminal scrollbar: only show when scrollback overflows and alt screen is inactive.
+2) Editor wrap config: add Lua config `config.editor.wrap` (default false), wire into editor widget to toggle soft wrap.
+3) Editor horizontal scrollbar: show when wrap is off and line width exceeds viewport.
+
+## After side quest
+
+- Return to editor workflow (ER-01): wrap-aware scrolling/cursor tests, line number continuation markers, and wrap-aware Home/End/PageUp/PageDown.
 
 ## Key changes (recent)
 
