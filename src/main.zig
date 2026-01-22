@@ -590,7 +590,7 @@ const AppState = struct {
         if (self.active_kind == .editor and self.editors.items.len > 0) {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache, self.editor_wrap);
-            if (try widget.handleInput(r)) {
+            if (try widget.handleInput(r, editor_height)) {
                 self.editor_cluster_cache.clear();
                 self.needs_redraw = true;
                 self.metrics.noteInput(now);

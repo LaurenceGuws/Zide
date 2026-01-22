@@ -49,6 +49,7 @@ Suggested next steps:
 - Config: added Lua `config.editor.wrap` (default false), stored in AppState.
 - Config: wired `config.editor.wrap` into editor widget to toggle soft wrap.
 - Editor widget: preserve preferred visual column when moving across short wrapped lines.
+- Editor widget: keep cursor visible when moving up/down in wrapped view.
 
 ## Current issues (editor)
 

@@ -213,6 +213,14 @@ pub const Editor = struct {
         self.clearSelections();
     }
 
+    pub fn setCursorPreservePreferred(self: *Editor, line: usize, col: usize) void {
+        self.cursor.line = line;
+        self.cursor.col = col;
+        self.updateCursorOffset();
+        self.selection = null;
+        self.clearSelections();
+    }
+
     pub fn setCursorNoClear(self: *Editor, line: usize, col: usize) void {
         self.cursor.line = line;
         self.cursor.col = col;
