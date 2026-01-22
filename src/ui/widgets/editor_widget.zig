@@ -95,10 +95,11 @@ pub const EditorWidget = struct {
         // Draw lines
         var line_buf: [4096]u8 = undefined;
         var line_idx = start_line;
+        var visual_row: usize = 0;
         var token_idx: usize = 0;
         const text_start_x = x + self.gutter_width + 8 * r.uiScaleFactor();
-        while (line_idx < end_line) : (line_idx += 1) {
-            const line_y = y + @as(f32, @floatFromInt(line_idx - start_line)) * r.char_height;
+        while (line_idx < total_lines and visual_row < visible_lines) : (line_idx += 1) {
+            const line_y_base = y + @as(f32, @floatFromInt(visual_row)) * r.char_height;
             const is_current = line_idx == self.editor.cursor.line;
 
             const line_len = self.editor.lineLen(line_idx);
@@ -125,6 +126,7 @@ pub const EditorWidget = struct {
                 if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
             };
 
+            var tokens: []HighlightToken = &[_]HighlightToken{};
             if (highlight_tokens_allocated) {
                 while (token_idx < highlight_tokens.len and highlight_tokens[token_idx].end <= line_start) {
                     token_idx += 1;
@@ -133,83 +135,103 @@ pub const EditorWidget = struct {
                 while (line_token_end < highlight_tokens.len and highlight_tokens[line_token_end].start < line_end) {
                     line_token_end += 1;
                 }
-                const tokens = highlight_tokens[token_idx..line_token_end];
-                r.drawEditorLineBase(line_idx, line_y, x, self.gutter_width, width, is_current);
-                var ranges: [8]SelectionRange = undefined;
-                var range_count: usize = 0;
-                collectSelectionRanges(self.editor, line_idx, line_text, cluster_result.slice, &ranges, &range_count);
+                tokens = highlight_tokens[token_idx..line_token_end];
+            }
+
+            var ranges: [8]SelectionRange = undefined;
+            var range_count: usize = 0;
+            collectSelectionRanges(self.editor, line_idx, line_text, cluster_result.slice, &ranges, &range_count);
+
+            const cols = self.viewportColumns(r);
+            const width_cached = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
+            const line_width = if (width_cached == 0 and range_count > 0) 1 else width_cached;
+            const visual_lines = visualLineCountForWidth(cols, line_width);
+
+            var cursor_col_vis: usize = 0;
+            var cursor_seg: usize = 0;
+            if (is_current) {
+                cursor_col_vis = visualColumnForByteIndex(line_text, self.editor.cursor.col, cluster_result.slice);
+                if (cols > 0) {
+                    cursor_seg = @min(cursor_col_vis / cols, if (visual_lines > 0) visual_lines - 1 else 0);
+                }
+            }
+
+            var seg: usize = 0;
+            while (seg < visual_lines and visual_row + seg < visible_lines) : (seg += 1) {
+                const seg_start_col = seg * cols;
+                const seg_end_col = @min(line_width, seg_start_col + cols);
+                if (seg_start_col >= seg_end_col and range_count == 0) continue;
+                const seg_y = line_y_base + @as(f32, @floatFromInt(seg)) * r.char_height;
+                const seg_start_byte = byteIndexForVisualColumn(line_text, seg_start_col, cluster_result.slice);
+                const seg_end_byte = byteIndexForVisualColumn(line_text, seg_end_col, cluster_result.slice);
+
+                if (seg == 0) {
+                    r.drawEditorLineBase(line_idx, seg_y, x, self.gutter_width, width, is_current);
+                } else if (is_current) {
+                    r.drawRect(
+                        @intFromFloat(x),
+                        @intFromFloat(seg_y),
+                        @intFromFloat(self.gutter_width),
+                        @intFromFloat(r.char_height),
+                        r.theme.current_line,
+                    );
+                    r.drawRect(
+                        @intFromFloat(x + self.gutter_width),
+                        @intFromFloat(seg_y),
+                        @intFromFloat(width - self.gutter_width),
+                        @intFromFloat(r.char_height),
+                        r.theme.current_line,
+                    );
+                }
+
                 if (range_count > 0) {
-                    var i: usize = 0;
-                    while (i < range_count) : (i += 1) {
-                        const range = ranges[i];
-                        const sel_x = text_start_x + @as(f32, @floatFromInt(range.start_col)) * r.char_width;
-                        const sel_w = @as(f32, @floatFromInt(range.end_col - range.start_col)) * r.char_width;
+                    var r_i: usize = 0;
+                    while (r_i < range_count) : (r_i += 1) {
+                        const range = ranges[r_i];
+                        const sel_start = @max(range.start_col, seg_start_col);
+                        const sel_end = @min(range.end_col, seg_end_col);
+                        if (sel_end <= sel_start) continue;
+                        const sel_x = text_start_x + @as(f32, @floatFromInt(sel_start - seg_start_col)) * r.char_width;
+                        const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r.char_width;
                         r.drawRect(
                             @intFromFloat(sel_x),
-                            @intFromFloat(line_y),
+                            @intFromFloat(seg_y),
                             @intFromFloat(sel_w),
                             @intFromFloat(r.char_height),
                             r.theme.selection,
                         );
                     }
                 }
+
                 if (tokens.len == 0) {
-                    r.drawText(line_text, text_start_x, line_y, r.theme.foreground);
+                    r.drawText(line_text[seg_start_byte..seg_end_byte], text_start_x, seg_y, r.theme.foreground);
                 } else {
-                    drawHighlightedLineText(
+                    drawHighlightedLineSegment(
                         r,
                         line_text,
-                        line_y,
+                        seg_y,
                         text_start_x,
                         line_start,
-                        line_end,
+                        seg_start_byte,
+                        seg_end_byte,
                         tokens,
                     );
                 }
-            } else {
-                r.drawEditorLineBase(line_idx, line_y, x, self.gutter_width, width, is_current);
-                var ranges: [8]SelectionRange = undefined;
-                var range_count: usize = 0;
-                collectSelectionRanges(self.editor, line_idx, line_text, cluster_result.slice, &ranges, &range_count);
-                if (range_count > 0) {
-                    var i: usize = 0;
-                    while (i < range_count) : (i += 1) {
-                        const range = ranges[i];
-                        const sel_x = text_start_x + @as(f32, @floatFromInt(range.start_col)) * r.char_width;
-                        const sel_w = @as(f32, @floatFromInt(range.end_col - range.start_col)) * r.char_width;
-                        r.drawRect(
-                            @intFromFloat(sel_x),
-                            @intFromFloat(line_y),
-                            @intFromFloat(sel_w),
-                            @intFromFloat(r.char_height),
-                            r.theme.selection,
-                        );
-                    }
+
+                if (is_current and seg == cursor_seg) {
+                    const local_col = cursor_col_vis - seg_start_col;
+                    cursor_draw_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.char_width;
+                    cursor_draw_y = seg_y;
                 }
-                r.drawText(line_text, text_start_x, line_y, r.theme.foreground);
             }
 
-            if (is_current) {
-                const cursor_col_vis = visualColumnForByteIndex(line_text, self.editor.cursor.col, cluster_result.slice);
-                cursor_draw_x = text_start_x + @as(f32, @floatFromInt(cursor_col_vis)) * r.char_width;
-                cursor_draw_y = line_y;
-            }
-
-            const cols = self.viewportColumns(r);
-            _ = self.visualLineCountForColumns(cols, line_idx, line_text, cluster_result.slice);
+            visual_row += visual_lines;
         }
 
         // Draw cursor
         if (cursor_draw_x != null and cursor_draw_y != null) {
             r.drawCursor(cursor_draw_x.?, cursor_draw_y.?, .line);
         }
-    }
-
-    pub fn visualLineCountForColumns(self: *EditorWidget, cols: usize, line_idx: usize, line_text: []const u8, cluster_offsets: ?[]const u32) usize {
-        if (cols == 0) return 1;
-        const width = self.editor.lineWidthCached(line_idx, line_text, cluster_offsets);
-        if (width == 0) return 1;
-        return @max(@as(usize, 1), (width + cols - 1) / cols);
     }
 
     fn viewportColumns(self: *EditorWidget, r: *Renderer) usize {
@@ -455,6 +477,49 @@ fn drawHighlightedLineText(
     }
 }
 
+fn drawHighlightedLineSegment(
+    r: *Renderer,
+    line_text: []const u8,
+    y: f32,
+    text_x: f32,
+    line_start: usize,
+    seg_start: usize,
+    seg_end: usize,
+    tokens: []HighlightToken,
+) void {
+    if (seg_start >= seg_end or line_text.len == 0) return;
+
+    var cursor = seg_start;
+    for (tokens) |token| {
+        if (token.end <= line_start + seg_start or token.start >= line_start + seg_end) continue;
+        const start = @max(token.start - line_start, seg_start);
+        const end = @min(token.end - line_start, seg_end);
+        if (start > cursor) {
+            const slice_start = cursor;
+            const slice_end = start;
+            const x = text_x + @as(f32, @floatFromInt(slice_start - seg_start)) * r.char_width;
+            r.drawText(line_text[slice_start..slice_end], x, y, r.theme.foreground);
+        }
+        const slice_start = start;
+        const slice_end = end;
+        const x = text_x + @as(f32, @floatFromInt(slice_start - seg_start)) * r.char_width;
+        r.drawText(line_text[slice_start..slice_end], x, y, colorForToken(r, token.kind));
+        cursor = end;
+    }
+
+    if (cursor < seg_end) {
+        const slice_start = cursor;
+        const x = text_x + @as(f32, @floatFromInt(slice_start - seg_start)) * r.char_width;
+        r.drawText(line_text[slice_start..seg_end], x, y, r.theme.foreground);
+    }
+}
+
+fn visualLineCountForWidth(cols: usize, width: usize) usize {
+    if (cols == 0) return 1;
+    if (width == 0) return 1;
+    return @max(@as(usize, 1), (width + cols - 1) / cols);
+}
+
 const SelectionRange = struct {
     start_col: usize,
     end_col: usize,
@@ -694,17 +759,8 @@ test "utf8 column/byte mapping is consistent" {
 }
 
 test "visual line count rounds to viewport columns" {
-    const allocator = std.testing.allocator;
-    var editor = try Editor.init(allocator);
-    defer editor.deinit();
-    try editor.insertText("1234567890");
-
-    var widget = EditorWidget.init(editor);
     const cols: usize = 4;
-    const line = try editor.getLineAlloc(0);
-    defer allocator.free(line);
-
-    try std.testing.expectEqual(@as(usize, 3), widget.visualLineCountForColumns(cols, 0, line, null));
+    try std.testing.expectEqual(@as(usize, 3), visualLineCountForWidth(cols, 10));
 }
 
 fn highlightTokenLessThan(_: void, a: HighlightToken, b: HighlightToken) bool {
