@@ -110,6 +110,20 @@ test "editor line width cache counts utf8 codepoints" {
     try std.testing.expectEqual(@as(usize, 4), editor.lineWidthCached(0, line, null));
 }
 
+test "editor line width cache uses grapheme clusters when provided" {
+    const allocator = std.testing.allocator;
+    var editor = try Editor.init(allocator);
+    defer editor.deinit();
+
+    // "a" + combining acute accent + "b" should be 2 grapheme clusters.
+    try editor.insertText("a\u{0301}b");
+    const line = try editor.getLineAlloc(0);
+    defer allocator.free(line);
+
+    const clusters = [_]u32{ 0, 3 };
+    try std.testing.expectEqual(@as(usize, 2), editor.lineWidthCached(0, line, &clusters));
+}
+
 test "editor selection normalization merges overlaps" {
     const allocator = std.testing.allocator;
     var editor = try Editor.init(allocator);
