@@ -42,6 +42,7 @@ Suggested next steps:
 - Editor widget: per-frame cluster cache reduces HarfBuzz shaping overhead.
 - Editor: per-line width cache now uses grapheme clusters when available.
 - Editor widget: added visual line count helper for wrap groundwork.
+- Editor widget: soft wrap rendering uses visual line counts per line.
 
 ## Current issues (editor)
 
