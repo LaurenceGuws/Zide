@@ -52,6 +52,7 @@ Suggested next steps:
 - Editor widget: keep cursor visible when moving up/down in wrapped view.
 - Editor widget: horizontal scroll + scrollbar when wrap is disabled.
 - Editor widget: horizontal scrollbar click/drag + vertical scrollbar only on overflow (no wrap).
+- Editor widget: vertical scrollbar drag/click support (no wrap).
 
 ## Current issues (editor)
 
