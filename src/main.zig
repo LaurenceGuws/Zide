@@ -73,6 +73,7 @@ const AppState = struct {
     metrics_logger: Logger,
     app_logger: Logger,
     last_metrics_log_time: f64,
+    editor_wrap: bool,
 
     pub fn init(allocator: std.mem.Allocator) !*AppState {
         var config = config_mod.loadConfig(allocator) catch |err| blk: {
@@ -81,6 +82,7 @@ const AppState = struct {
                 .log_file_filter = null,
                 .log_console_filter = null,
                 .raylib_log_level = null,
+                .editor_wrap = null,
             };
         };
         defer config_mod.freeConfig(allocator, &config);
@@ -140,6 +142,7 @@ const AppState = struct {
             .metrics_logger = metrics_log,
             .app_logger = app_log,
             .last_metrics_log_time = 0,
+            .editor_wrap = config.editor_wrap orelse false,
         };
         state.applyUiScale();
 

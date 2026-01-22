@@ -19,4 +19,10 @@ return {
   raylib = {
     log_level = "info",
   },
+
+  -- Editor configuration.
+  editor = {
+    -- Soft wrap long lines.
+    wrap = false,
+  },
 }

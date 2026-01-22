@@ -19,6 +19,7 @@ pub const Config = struct {
     log_file_filter: ?[]u8,
     log_console_filter: ?[]u8,
     raylib_log_level: ?c_int,
+    editor_wrap: ?bool,
 };
 
 pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
@@ -26,6 +27,7 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
         .log_file_filter = null,
         .log_console_filter = null,
         .raylib_log_level = null,
+        .editor_wrap = null,
     };
     if (fileExists("assets/config/init.lua")) {
         config = try loadConfigFromFile(allocator, "assets/config/init.lua");
@@ -66,6 +68,9 @@ fn mergeConfig(base: *Config, overlay: Config) void {
     if (overlay.raylib_log_level) |level| {
         base.raylib_log_level = level;
     }
+    if (overlay.editor_wrap != null) {
+        base.editor_wrap = overlay.editor_wrap;
+    }
 }
 
 fn loadConfigFromFile(allocator: std.mem.Allocator, path: []const u8) LuaConfigError!Config {
@@ -89,6 +94,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             .log_file_filter = null,
             .log_console_filter = null,
             .raylib_log_level = null,
+            .editor_wrap = null,
         };
     }
     if (!c.lua_istable(L, -1)) {
@@ -98,6 +104,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     var log_file_filter: ?[]u8 = null;
     var log_console_filter: ?[]u8 = null;
     var raylib_log_level: ?c_int = null;
+    var editor_wrap: ?bool = null;
 
     _ = c.lua_getfield(L, -1, "log");
     if (c.lua_isstring(L, -1) != 0) {
@@ -121,10 +128,21 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     }
     c.lua_pop(L, 1);
 
+    _ = c.lua_getfield(L, -1, "editor");
+    if (c.lua_istable(L, -1)) {
+        _ = c.lua_getfield(L, -1, "wrap");
+        if (c.lua_isboolean(L, -1) != 0) {
+            editor_wrap = c.lua_toboolean(L, -1) != 0;
+        }
+        c.lua_pop(L, 1);
+    }
+    c.lua_pop(L, 1);
+
     return .{
         .log_file_filter = log_file_filter,
         .log_console_filter = log_console_filter,
         .raylib_log_level = raylib_log_level,
+        .editor_wrap = editor_wrap,
     };
 }
 
