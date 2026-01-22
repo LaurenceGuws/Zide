@@ -150,13 +150,14 @@ pub const Rope = struct {
         defer self.history_suspended = false;
         const first = self.undo_stack.pop() orelse return .{ .changed = false, .cursor = null };
         if (first.kind != .boundary) {
+            const cursor_pos = undoCursorPos(first);
             switch (first.kind) {
                 .insert => try self.deleteRangeNoHistory(first.pos, first.text.len),
                 .delete => try self.insertNoHistory(first.pos, first.text),
                 .boundary => {},
             }
             try self.redo_stack.append(self.allocator, first);
-            return .{ .changed = true, .cursor = first.pos };
+            return .{ .changed = true, .cursor = cursor_pos };
         }
 
         const end_marker = first;
@@ -173,12 +174,12 @@ pub const Rope = struct {
                 try self.redo_stack.append(self.allocator, end_marker);
                 return .{ .changed = temp.items.len > 0, .cursor = cursor_pos };
             }
+            cursor_pos = undoCursorPos(op);
             switch (op.kind) {
                 .insert => try self.deleteRangeNoHistory(op.pos, op.text.len),
                 .delete => try self.insertNoHistory(op.pos, op.text),
                 .boundary => {},
             }
-            if (cursor_pos == null) cursor_pos = op.pos;
             try temp.append(self.allocator, op);
         }
         // No start marker found; drop end marker.
@@ -195,13 +196,14 @@ pub const Rope = struct {
         defer self.history_suspended = false;
         const first = self.redo_stack.pop() orelse return .{ .changed = false, .cursor = null };
         if (first.kind != .boundary) {
+            const cursor_pos = redoCursorPos(first);
             switch (first.kind) {
                 .insert => try self.insertNoHistory(first.pos, first.text),
                 .delete => try self.deleteRangeNoHistory(first.pos, first.text.len),
                 .boundary => {},
             }
             try self.undo_stack.append(self.allocator, first);
-            return .{ .changed = true, .cursor = first.pos };
+            return .{ .changed = true, .cursor = cursor_pos };
         }
 
         const end_marker = first;
@@ -218,12 +220,12 @@ pub const Rope = struct {
                 try self.undo_stack.append(self.allocator, end_marker);
                 return .{ .changed = temp.items.len > 0, .cursor = cursor_pos };
             }
+            cursor_pos = redoCursorPos(op);
             switch (op.kind) {
                 .insert => try self.insertNoHistory(op.pos, op.text),
                 .delete => try self.deleteRangeNoHistory(op.pos, op.text.len),
                 .boundary => {},
             }
-            if (cursor_pos == null) cursor_pos = op.pos;
             try temp.append(self.allocator, op);
         }
         freeUndoOp(self, end_marker);
@@ -661,6 +663,22 @@ const UndoOp = struct {
     pos: usize,
     text: []u8,
 };
+
+fn undoCursorPos(op: UndoOp) usize {
+    return switch (op.kind) {
+        .insert => op.pos,
+        .delete => op.pos + op.text.len,
+        .boundary => op.pos,
+    };
+}
+
+fn redoCursorPos(op: UndoOp) usize {
+    return switch (op.kind) {
+        .insert => op.pos + op.text.len,
+        .delete => op.pos,
+        .boundary => op.pos,
+    };
+}
 
 fn createUndoOp(self: *Rope, kind: UndoKind, pos: usize, data: []const u8) !UndoOp {
     const copy = try self.allocator.alloc(u8, data.len);
