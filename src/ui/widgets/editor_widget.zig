@@ -19,6 +19,7 @@ pub const EditorWidget = struct {
     gutter_width: f32,
     scroll_x: f32,
     scroll_y: f32,
+    cluster_cache: ?*ClusterCache,
 
     pub fn init(editor: *Editor) EditorWidget {
         return .{
@@ -26,7 +27,14 @@ pub const EditorWidget = struct {
             .gutter_width = 50,
             .scroll_x = 0,
             .scroll_y = 0,
+            .cluster_cache = null,
         };
+    }
+
+    pub fn initWithCache(editor: *Editor, cache: *ClusterCache) EditorWidget {
+        var widget = init(editor);
+        widget.cluster_cache = cache;
+        return widget;
     }
 
     pub fn draw(self: *EditorWidget, r: *Renderer, x: f32, y: f32, width: f32, height: f32) void {
@@ -106,11 +114,16 @@ pub const EditorWidget = struct {
             const line_start = self.editor.lineStart(line_idx);
             const line_end = line_start + line_len;
 
-            var cluster_offsets: ?[]u32 = null;
-            if (hasNonAscii(line_text)) {
-                cluster_offsets = graphemeClusterOffsets(self.editor.allocator, r.terminal_font.hb_font, line_text) catch null;
-            }
-            defer if (cluster_offsets) |clusters| self.editor.allocator.free(clusters);
+            const cluster_result = getClusterOffsets(
+                self.cluster_cache,
+                self.editor.allocator,
+                r.terminal_font.hb_font,
+                line_idx,
+                line_text,
+            );
+            defer if (cluster_result.owned) {
+                if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
+            };
 
             if (highlight_tokens_allocated) {
                 while (token_idx < highlight_tokens.len and highlight_tokens[token_idx].end <= line_start) {
@@ -124,7 +137,7 @@ pub const EditorWidget = struct {
                 r.drawEditorLineBase(line_idx, line_y, x, self.gutter_width, width, is_current);
                 var ranges: [8]SelectionRange = undefined;
                 var range_count: usize = 0;
-                collectSelectionRanges(self.editor, line_idx, line_text, cluster_offsets, &ranges, &range_count);
+                collectSelectionRanges(self.editor, line_idx, line_text, cluster_result.slice, &ranges, &range_count);
                 if (range_count > 0) {
                     var i: usize = 0;
                     while (i < range_count) : (i += 1) {
@@ -157,7 +170,7 @@ pub const EditorWidget = struct {
                 r.drawEditorLineBase(line_idx, line_y, x, self.gutter_width, width, is_current);
                 var ranges: [8]SelectionRange = undefined;
                 var range_count: usize = 0;
-                collectSelectionRanges(self.editor, line_idx, line_text, cluster_offsets, &ranges, &range_count);
+                collectSelectionRanges(self.editor, line_idx, line_text, cluster_result.slice, &ranges, &range_count);
                 if (range_count > 0) {
                     var i: usize = 0;
                     while (i < range_count) : (i += 1) {
@@ -177,7 +190,7 @@ pub const EditorWidget = struct {
             }
 
             if (is_current) {
-                const cursor_col_vis = visualColumnForByteIndex(line_text, self.editor.cursor.col, cluster_offsets);
+                const cursor_col_vis = visualColumnForByteIndex(line_text, self.editor.cursor.col, cluster_result.slice);
                 cursor_draw_x = text_start_x + @as(f32, @floatFromInt(cursor_col_vis)) * r.char_width;
                 cursor_draw_y = line_y;
             }
@@ -246,21 +259,31 @@ pub const EditorWidget = struct {
         if (line_len <= line_buf.len) {
             const len = self.editor.getLine(line, &line_buf);
             const line_text = line_buf[0..len];
-            var cluster_offsets: ?[]u32 = null;
-            if (hasNonAscii(line_text)) {
-                cluster_offsets = graphemeClusterOffsets(self.editor.allocator, r.terminal_font.hb_font, line_text) catch null;
-            }
-            defer if (cluster_offsets) |clusters| self.editor.allocator.free(clusters);
-            byte_col = byteIndexForVisualColumn(line_text, col, cluster_offsets);
+            const cluster_result = getClusterOffsets(
+                self.cluster_cache,
+                self.editor.allocator,
+                r.terminal_font.hb_font,
+                line,
+                line_text,
+            );
+            defer if (cluster_result.owned) {
+                if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
+            };
+            byte_col = byteIndexForVisualColumn(line_text, col, cluster_result.slice);
         } else {
             if (self.editor.getLineAlloc(line)) |owned| {
                 defer self.editor.allocator.free(owned);
-                var cluster_offsets: ?[]u32 = null;
-                if (hasNonAscii(owned)) {
-                    cluster_offsets = graphemeClusterOffsets(self.editor.allocator, r.terminal_font.hb_font, owned) catch null;
-                }
-                defer if (cluster_offsets) |clusters| self.editor.allocator.free(clusters);
-                byte_col = byteIndexForVisualColumn(owned, col, cluster_offsets);
+                const cluster_result = getClusterOffsets(
+                    self.cluster_cache,
+                    self.editor.allocator,
+                    r.terminal_font.hb_font,
+                    line,
+                    owned,
+                );
+                defer if (cluster_result.owned) {
+                    if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
+                };
+                byte_col = byteIndexForVisualColumn(owned, col, cluster_result.slice);
             } else |_| {}
         }
         const clamped_col = @min(byte_col, line_len);
@@ -420,6 +443,76 @@ const SelectionRange = struct {
     start_col: usize,
     end_col: usize,
 };
+
+pub const ClusterCache = struct {
+    allocator: std.mem.Allocator,
+    frame_id: u64,
+    entries: std.AutoHashMap(usize, []u32),
+
+    pub fn init(allocator: std.mem.Allocator) ClusterCache {
+        return .{
+            .allocator = allocator,
+            .frame_id = 0,
+            .entries = std.AutoHashMap(usize, []u32).init(allocator),
+        };
+    }
+
+    pub fn deinit(self: *ClusterCache) void {
+        self.clear();
+        self.entries.deinit();
+    }
+
+    pub fn beginFrame(self: *ClusterCache, frame_id: u64) void {
+        if (self.frame_id == frame_id) return;
+        self.clear();
+        self.frame_id = frame_id;
+    }
+
+    pub fn clear(self: *ClusterCache) void {
+        var it = self.entries.iterator();
+        while (it.next()) |entry| {
+            self.allocator.free(entry.value_ptr.*);
+        }
+        self.entries.clearRetainingCapacity();
+    }
+
+    pub fn getOrCompute(
+        self: *ClusterCache,
+        line_idx: usize,
+        hb_font: *hb.hb_font_t,
+        text: []const u8,
+    ) ?[]const u32 {
+        if (!hasNonAscii(text)) return null;
+        if (self.entries.get(line_idx)) |cached| return cached;
+        const clusters = graphemeClusterOffsets(self.allocator, hb_font, text) catch return null;
+        self.entries.put(line_idx, clusters) catch {
+            self.allocator.free(clusters);
+            return null;
+        };
+        return clusters;
+    }
+};
+
+const ClusterResult = struct {
+    slice: ?[]const u32,
+    owned: bool,
+};
+
+fn getClusterOffsets(
+    cache: ?*ClusterCache,
+    allocator: std.mem.Allocator,
+    hb_font: *hb.hb_font_t,
+    line_idx: usize,
+    text: []const u8,
+) ClusterResult {
+    if (cache) |cluster_cache| {
+        const slice = cluster_cache.getOrCompute(line_idx, hb_font, text);
+        return .{ .slice = slice, .owned = false };
+    }
+    if (!hasNonAscii(text)) return .{ .slice = null, .owned = false };
+    const slice = graphemeClusterOffsets(allocator, hb_font, text) catch null;
+    return .{ .slice = slice, .owned = slice != null };
+}
 
 fn addSelectionRange(ranges: *[8]SelectionRange, count: *usize, start_col: usize, end_col: usize) void {
     if (end_col <= start_col) return;
