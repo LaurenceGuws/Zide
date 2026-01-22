@@ -99,6 +99,17 @@ test "editor undo redo updates cursor offset" {
     try std.testing.expectEqual(@as(usize, 5), editor.cursor.col);
 }
 
+test "editor line width cache counts utf8 codepoints" {
+    const allocator = std.testing.allocator;
+    var editor = try Editor.init(allocator);
+    defer editor.deinit();
+
+    try editor.insertText("aé文𐍈");
+    const line = try editor.getLineAlloc(0);
+    defer allocator.free(line);
+    try std.testing.expectEqual(@as(usize, 4), editor.lineWidthCached(0, line));
+}
+
 test "editor selection normalization merges overlaps" {
     const allocator = std.testing.allocator;
     var editor = try Editor.init(allocator);
