@@ -35,6 +35,7 @@ Suggested next steps:
 - Editor widget: drag selection now preserves selection while updating cursor.
 - Editor widget: undo now groups edits per input tick to avoid over-merged inserts.
 - Editor: undo/redo updates cursor based on last undo/redo op position.
+- Editor widget: selection highlight now renders on empty lines.
 
 ## Current issues (editor)
 

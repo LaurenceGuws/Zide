@@ -106,6 +106,7 @@ editor_widget_todo:
         - "Rectangular selection edit: insert/delete across selections."
         - "Mouse drag selection (normal + Alt-rect) wired in editor widget."
         - "Fixed drag selection clearing on cursor updates (setCursorNoClear)."
+        - "Selection rendering shows highlight on empty lines."
       references:
         - reference_repos/editors/helix/helix-core/src/selection.rs
         - reference_repos/editors/kakoune/src/selection.cc
