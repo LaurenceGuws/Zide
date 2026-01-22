@@ -26,6 +26,7 @@ editor_rendering_todo:
       notes:
         - "Compute visual lines and cache widths per line."
         - "Editor tracks per-line width cache using grapheme clusters when available."
+        - "Editor widget exposes visual line count helper (wrap groundwork)."
       references:
         - reference_repos/editors/xi-editor/rust/core-lib/src/linewrap.rs
         - reference_repos/editors/xi-editor/rust/core-lib/src/width_cache.rs

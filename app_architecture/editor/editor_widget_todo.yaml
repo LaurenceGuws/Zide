@@ -111,6 +111,7 @@ editor_widget_todo:
         - "Cursor/selection mapping uses grapheme clusters when non-ASCII text is present."
         - "Per-frame grapheme cache reduces HarfBuzz overhead in editor widget."
         - "Editor primes per-line width cache (grapheme-aware when available) during draw."
+        - "Editor widget exposes visual line count helper for wrap groundwork."
       references:
         - reference_repos/editors/helix/helix-core/src/selection.rs
         - reference_repos/editors/kakoune/src/selection.cc
