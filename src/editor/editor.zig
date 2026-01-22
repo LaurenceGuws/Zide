@@ -177,6 +177,12 @@ pub const Editor = struct {
         self.clearSelections();
     }
 
+    pub fn setCursorNoClear(self: *Editor, line: usize, col: usize) void {
+        self.cursor.line = line;
+        self.cursor.col = col;
+        self.updateCursorOffset();
+    }
+
     pub fn clearSelections(self: *Editor) void {
         self.selections.clearRetainingCapacity();
     }
