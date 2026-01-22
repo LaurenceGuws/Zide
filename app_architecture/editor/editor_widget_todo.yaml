@@ -107,6 +107,7 @@ editor_widget_todo:
         - "Mouse drag selection (normal + Alt-rect) wired in editor widget."
         - "Fixed drag selection clearing on cursor updates (setCursorNoClear)."
         - "Selection rendering shows highlight on empty lines."
+        - "Long lines use allocated buffers instead of 4KB truncation for rendering/hit testing."
       references:
         - reference_repos/editors/helix/helix-core/src/selection.rs
         - reference_repos/editors/kakoune/src/selection.cc
