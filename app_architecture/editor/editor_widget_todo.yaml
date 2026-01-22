@@ -110,7 +110,7 @@ editor_widget_todo:
         - "Long lines use allocated buffers instead of 4KB truncation for rendering/hit testing."
         - "Cursor/selection mapping uses grapheme clusters when non-ASCII text is present."
         - "Per-frame grapheme cache reduces HarfBuzz overhead in editor widget."
-        - "Editor primes per-line width cache during draw for wrap groundwork."
+        - "Editor primes per-line width cache (grapheme-aware when available) during draw."
       references:
         - reference_repos/editors/helix/helix-core/src/selection.rs
         - reference_repos/editors/kakoune/src/selection.cc
