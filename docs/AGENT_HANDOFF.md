@@ -34,7 +34,7 @@ Suggested next steps:
 - Editor widget: mouse drag selection wired (normal + Alt-rect) and selection overlay drawing added.
 - Editor widget: drag selection now preserves selection while updating cursor.
 - Editor widget: undo now groups edits per input tick to avoid over-merged inserts.
-- Editor: undo/redo updates cursor based on last undo op position.
+- Editor: undo/redo updates cursor based on last undo/redo op position.
 
 ## Current issues (editor)
 

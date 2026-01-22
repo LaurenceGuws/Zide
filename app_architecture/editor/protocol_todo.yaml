@@ -53,7 +53,7 @@ editor_protocol_todo:
         - "Added begin/end undo group hooks; grouped undo supported in rope."
         - "Editor groups selection replace (delete + insert) into one undo."
         - "Editor widget groups edits per input tick to avoid over-merging inserts."
-        - "Undo/redo now returns cursor offset; editor syncs cursor to undo location."
+        - "Undo/redo now returns cursor offset; editor syncs cursor to undo/redo location."
       references:
         - reference_repos/editors/helix/helix-core/src/transaction.rs
         - reference_repos/editors/neovim/src/nvim/undo.c
