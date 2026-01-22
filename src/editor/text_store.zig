@@ -96,10 +96,20 @@ pub const TextStore = struct {
     }
 
     pub fn undo(self: *TextStore) !bool {
-        return self.rope.undo();
+        const result = try self.rope.undo();
+        return result.changed;
     }
 
     pub fn redo(self: *TextStore) !bool {
+        const result = try self.rope.redo();
+        return result.changed;
+    }
+
+    pub fn undoWithCursor(self: *TextStore) !rope_mod.Rope.UndoResult {
+        return self.rope.undo();
+    }
+
+    pub fn redoWithCursor(self: *TextStore) !rope_mod.Rope.UndoResult {
         return self.rope.redo();
     }
 

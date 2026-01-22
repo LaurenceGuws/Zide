@@ -183,6 +183,11 @@ pub const Editor = struct {
         self.updateCursorOffset();
     }
 
+    pub fn setCursorOffsetNoClear(self: *Editor, offset: usize) void {
+        self.cursor.offset = offset;
+        self.updateCursorPosition();
+    }
+
     pub fn clearSelections(self: *Editor) void {
         self.selections.clearRetainingCapacity();
     }
@@ -455,33 +460,49 @@ pub const Editor = struct {
     }
 
     pub fn undo(self: *Editor) !bool {
-        const result = try self.buffer.undo();
-        if (result) {
+        const result = try self.buffer.undoWithCursor();
+        if (result.changed) {
             const log = app_logger.logger("editor.core");
             log.logf("undo ok", .{});
         }
-        if (result) {
-            self.updateCursorPosition();
+        if (result.changed) {
+            if (result.cursor) |cursor_offset| {
+                const clamped = @min(cursor_offset, self.buffer.totalLen());
+                self.setCursorOffsetNoClear(clamped);
+            } else {
+                if (self.cursor.offset > self.buffer.totalLen()) {
+                    self.cursor.offset = self.buffer.totalLen();
+                }
+                self.updateCursorPosition();
+            }
             if (self.highlighter) |h| {
                 _ = h.reparse();
             }
         }
-        return result;
+        return result.changed;
     }
 
     pub fn redo(self: *Editor) !bool {
-        const result = try self.buffer.redo();
-        if (result) {
+        const result = try self.buffer.redoWithCursor();
+        if (result.changed) {
             const log = app_logger.logger("editor.core");
             log.logf("redo ok", .{});
         }
-        if (result) {
-            self.updateCursorPosition();
+        if (result.changed) {
+            if (result.cursor) |cursor_offset| {
+                const clamped = @min(cursor_offset, self.buffer.totalLen());
+                self.setCursorOffsetNoClear(clamped);
+            } else {
+                if (self.cursor.offset > self.buffer.totalLen()) {
+                    self.cursor.offset = self.buffer.totalLen();
+                }
+                self.updateCursorPosition();
+            }
             if (self.highlighter) |h| {
                 _ = h.reparse();
             }
         }
-        return result;
+        return result.changed;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
