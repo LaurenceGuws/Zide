@@ -48,6 +48,7 @@ Suggested next steps:
 - Editor widget: empty-line rendering restored in wrapped view; scroll-up jump fixed.
 - Config: added Lua `config.editor.wrap` (default false), stored in AppState.
 - Config: wired `config.editor.wrap` into editor widget to toggle soft wrap.
+- Editor widget: preserve preferred visual column when moving across short wrapped lines.
 
 ## Current issues (editor)
 

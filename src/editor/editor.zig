@@ -13,6 +13,7 @@ pub const Editor = struct {
     allocator: std.mem.Allocator,
     buffer: *TextStore,
     cursor: CursorPos,
+    preferred_visual_col: ?usize,
     selection: ?Selection,
     selections: std.ArrayList(Selection),
     scroll_line: usize,
@@ -36,6 +37,7 @@ pub const Editor = struct {
             .allocator = allocator,
             .buffer = buffer,
             .cursor = .{ .line = 0, .col = 0, .offset = 0 },
+            .preferred_visual_col = null,
             .selection = null,
             .selections = .empty,
             .scroll_line = 0,
@@ -85,6 +87,7 @@ pub const Editor = struct {
 
         // Reset state
         self.cursor = .{ .line = 0, .col = 0, .offset = 0 };
+        self.preferred_visual_col = null;
         self.selection = null;
         self.clearSelections();
         self.scroll_line = 0;
@@ -144,6 +147,7 @@ pub const Editor = struct {
         if (self.cursor.offset == 0) return;
         self.cursor.offset -= 1;
         self.updateCursorPosition();
+        self.preferred_visual_col = null;
         self.selection = null;
         self.clearSelections();
     }
@@ -153,6 +157,7 @@ pub const Editor = struct {
         if (self.cursor.offset >= total) return;
         self.cursor.offset += 1;
         self.updateCursorPosition();
+        self.preferred_visual_col = null;
         self.selection = null;
         self.clearSelections();
     }
@@ -164,6 +169,7 @@ pub const Editor = struct {
         const line_len = self.buffer.lineLen(self.cursor.line);
         self.cursor.col = @min(target_col, line_len);
         self.updateCursorOffset();
+        self.preferred_visual_col = null;
         self.selection = null;
         self.clearSelections();
     }
@@ -176,6 +182,7 @@ pub const Editor = struct {
         const line_len = self.buffer.lineLen(self.cursor.line);
         self.cursor.col = @min(target_col, line_len);
         self.updateCursorOffset();
+        self.preferred_visual_col = null;
         self.selection = null;
         self.clearSelections();
     }
@@ -183,6 +190,7 @@ pub const Editor = struct {
     pub fn moveCursorToLineStart(self: *Editor) void {
         self.cursor.col = 0;
         self.updateCursorOffset();
+        self.preferred_visual_col = null;
         self.selection = null;
         self.clearSelections();
     }
@@ -191,6 +199,7 @@ pub const Editor = struct {
         const line_len = self.buffer.lineLen(self.cursor.line);
         self.cursor.col = line_len;
         self.updateCursorOffset();
+        self.preferred_visual_col = null;
         self.selection = null;
         self.clearSelections();
     }
@@ -199,6 +208,7 @@ pub const Editor = struct {
         self.cursor.line = line;
         self.cursor.col = col;
         self.updateCursorOffset();
+        self.preferred_visual_col = null;
         self.selection = null;
         self.clearSelections();
     }
@@ -207,11 +217,13 @@ pub const Editor = struct {
         self.cursor.line = line;
         self.cursor.col = col;
         self.updateCursorOffset();
+        self.preferred_visual_col = null;
     }
 
     pub fn setCursorOffsetNoClear(self: *Editor, offset: usize) void {
         self.cursor.offset = offset;
         self.updateCursorPosition();
+        self.preferred_visual_col = null;
     }
 
     pub fn clearSelections(self: *Editor) void {
@@ -307,6 +319,7 @@ pub const Editor = struct {
     // ─────────────────────────────────────────────────────────────────────────
 
     pub fn insertChar(self: *Editor, char: u8) !void {
+        self.preferred_visual_col = null;
         if (self.selections.items.len > 0) {
             self.beginUndoGroup();
             errdefer self.endUndoGroup() catch {};
@@ -360,6 +373,7 @@ pub const Editor = struct {
     }
 
     pub fn insertText(self: *Editor, text: []const u8) !void {
+        self.preferred_visual_col = null;
         if (self.selections.items.len > 0) {
             self.beginUndoGroup();
             errdefer self.endUndoGroup() catch {};
@@ -412,6 +426,7 @@ pub const Editor = struct {
     }
 
     pub fn deleteCharBackward(self: *Editor) !void {
+        self.preferred_visual_col = null;
         if (self.selection) |_| {
             try self.deleteSelection();
             return;
@@ -428,6 +443,7 @@ pub const Editor = struct {
     }
 
     pub fn deleteCharForward(self: *Editor) !void {
+        self.preferred_visual_col = null;
         if (self.selection) |_| {
             try self.deleteSelection();
             return;
@@ -443,6 +459,7 @@ pub const Editor = struct {
     }
 
     pub fn deleteSelection(self: *Editor) !void {
+        self.preferred_visual_col = null;
         if (self.selections.items.len > 0) {
             try self.normalizeSelectionsDescending();
             var idx: usize = self.selections.items.len;
@@ -496,6 +513,7 @@ pub const Editor = struct {
     }
 
     pub fn undo(self: *Editor) !bool {
+        self.preferred_visual_col = null;
         const result = try self.buffer.undoWithCursor();
         if (result.changed) {
             const log = app_logger.logger("editor.core");
@@ -519,6 +537,7 @@ pub const Editor = struct {
     }
 
     pub fn redo(self: *Editor) !bool {
+        self.preferred_visual_col = null;
         const result = try self.buffer.redoWithCursor();
         if (result.changed) {
             const log = app_logger.logger("editor.core");
