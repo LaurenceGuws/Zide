@@ -544,6 +544,7 @@ pub const EditorWidget = struct {
         y: f32,
         width: f32,
         height: f32,
+        mouse: renderer_mod.MousePos,
         dragging: *bool,
         grab_offset: *f32,
     ) bool {
@@ -589,8 +590,9 @@ pub const EditorWidget = struct {
         if (max_visible_width <= cols) return false;
 
         const show_vscroll = self.editor.lineCount() > visible_lines;
-        const vscroll_w: f32 = if (show_vscroll) 12 else 0;
-        const track_h: f32 = 12;
+        const scale = r.uiScaleFactor();
+        const vscroll_w: f32 = if (show_vscroll) 16 * scale else 0;
+        const track_h: f32 = 16 * scale;
         const track_y = y + height - track_h;
         const track_x = x + self.gutter_width;
         const track_w = @max(@as(f32, 1), width - self.gutter_width - vscroll_w);
@@ -599,7 +601,7 @@ pub const EditorWidget = struct {
             self.editor.scroll_col = max_scroll;
         }
 
-        const min_thumb_w: f32 = 24;
+        const min_thumb_w: f32 = 24 * scale;
         const thumb_w = @max(min_thumb_w, track_w * (@as(f32, @floatFromInt(cols)) / @as(f32, @floatFromInt(max_visible_width))));
         const available = @max(@as(f32, 1), track_w - thumb_w);
         const ratio = if (max_scroll > 0)
@@ -608,28 +610,37 @@ pub const EditorWidget = struct {
             0.0;
         const thumb_x = track_x + available * ratio;
 
-        const mouse = r.getMousePos();
         const over_track = mouse.x >= track_x and mouse.x <= track_x + track_w and mouse.y >= track_y and mouse.y <= track_y + track_h;
         const over_thumb = mouse.x >= thumb_x and mouse.x <= thumb_x + thumb_w and mouse.y >= track_y and mouse.y <= track_y + track_h;
 
-        if (r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT) and over_track) {
+        const mouse_down = r.isMouseButtonDown(renderer_mod.MOUSE_LEFT);
+        const mouse_pressed = r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT);
+        const mouse_released = r.isMouseButtonReleased(renderer_mod.MOUSE_LEFT);
+        if (dragging.* and mouse_released) {
+            dragging.* = false;
+            return true;
+        }
+        if (dragging.* and !mouse_down) {
+            dragging.* = false;
+            return false;
+        }
+        if (dragging.* and mouse_pressed and !over_track) {
+            dragging.* = false;
+            return false;
+        }
+        if ((mouse_pressed or (!dragging.* and mouse_down)) and over_track) {
             dragging.* = true;
             grab_offset.* = if (over_thumb) mouse.x - thumb_x else thumb_w * 0.5;
             self.updateHorizontalScrollFromMouse(mouse.x, track_x, available, grab_offset.*, max_scroll);
             return true;
         }
 
-        if (dragging.* and r.isMouseButtonDown(renderer_mod.MOUSE_LEFT)) {
+        if (dragging.* and mouse_down) {
             self.updateHorizontalScrollFromMouse(mouse.x, track_x, available, grab_offset.*, max_scroll);
             return true;
         }
 
-        if (dragging.* and r.isMouseButtonReleased(renderer_mod.MOUSE_LEFT)) {
-            dragging.* = false;
-            return true;
-        }
-
-        return over_track;
+        return false;
     }
 
     pub fn handleVerticalScrollbarInput(
@@ -639,6 +650,7 @@ pub const EditorWidget = struct {
         y: f32,
         width: f32,
         height: f32,
+        mouse: renderer_mod.MousePos,
         dragging: *bool,
         grab_offset: *f32,
     ) bool {
@@ -649,7 +661,8 @@ pub const EditorWidget = struct {
         const total_lines = self.editor.lineCount();
         if (total_lines <= visible_lines) return false;
 
-        const scrollbar_w: f32 = 12;
+        const scale = r.uiScaleFactor();
+        const scrollbar_w: f32 = 16 * scale;
         const scrollbar_x = x + width - scrollbar_w;
         const scrollbar_y = y;
         const scrollbar_h = height;
@@ -658,7 +671,7 @@ pub const EditorWidget = struct {
             self.editor.scroll_line = max_scroll;
         }
 
-        const min_thumb_h: f32 = 24;
+        const min_thumb_h: f32 = 32 * scale;
         const thumb_h = @max(min_thumb_h, scrollbar_h * (@as(f32, @floatFromInt(visible_lines)) / @as(f32, @floatFromInt(total_lines))));
         const available = @max(@as(f32, 1), scrollbar_h - thumb_h);
         const ratio = if (max_scroll > 0)
@@ -667,28 +680,37 @@ pub const EditorWidget = struct {
             0.0;
         const thumb_y = scrollbar_y + available * ratio;
 
-        const mouse = r.getMousePos();
         const over_track = mouse.x >= scrollbar_x and mouse.x <= scrollbar_x + scrollbar_w and mouse.y >= scrollbar_y and mouse.y <= scrollbar_y + scrollbar_h;
         const over_thumb = mouse.x >= scrollbar_x and mouse.x <= scrollbar_x + scrollbar_w and mouse.y >= thumb_y and mouse.y <= thumb_y + thumb_h;
 
-        if (r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT) and over_track) {
+        const mouse_down = r.isMouseButtonDown(renderer_mod.MOUSE_LEFT);
+        const mouse_pressed = r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT);
+        const mouse_released = r.isMouseButtonReleased(renderer_mod.MOUSE_LEFT);
+        if (dragging.* and mouse_released) {
+            dragging.* = false;
+            return true;
+        }
+        if (dragging.* and !mouse_down) {
+            dragging.* = false;
+            return false;
+        }
+        if (dragging.* and mouse_pressed and !over_track) {
+            dragging.* = false;
+            return false;
+        }
+        if ((mouse_pressed or (!dragging.* and mouse_down)) and over_track) {
             dragging.* = true;
             grab_offset.* = if (over_thumb) mouse.y - thumb_y else thumb_h * 0.5;
             self.updateVerticalScrollFromMouse(mouse.y, scrollbar_y, available, grab_offset.*, max_scroll);
             return true;
         }
 
-        if (dragging.* and r.isMouseButtonDown(renderer_mod.MOUSE_LEFT)) {
+        if (dragging.* and mouse_down) {
             self.updateVerticalScrollFromMouse(mouse.y, scrollbar_y, available, grab_offset.*, max_scroll);
             return true;
         }
 
-        if (dragging.* and r.isMouseButtonReleased(renderer_mod.MOUSE_LEFT)) {
-            dragging.* = false;
-            return true;
-        }
-
-        return over_track;
+        return false;
     }
 
     fn ensureCursorVisible(self: *EditorWidget, r: *Renderer, height: f32) void {
@@ -852,7 +874,8 @@ pub const EditorWidget = struct {
     ) void {
         if (width <= 0 or height <= 0 or cols == 0) return;
         if (max_visible_width <= cols) return;
-        const track_h: f32 = 8;
+        const scale = r.uiScaleFactor();
+        const track_h: f32 = 16 * scale;
         const track_y = y + height - track_h;
         const track_x = x + self.gutter_width;
         const track_w = @max(@as(f32, 1), width - self.gutter_width - vscroll_w);
@@ -861,7 +884,7 @@ pub const EditorWidget = struct {
             self.editor.scroll_col = max_scroll;
         }
 
-        const min_thumb_w: f32 = 24;
+        const min_thumb_w: f32 = 32 * scale;
         const thumb_w = @max(min_thumb_w, track_w * (@as(f32, @floatFromInt(cols)) / @as(f32, @floatFromInt(max_visible_width))));
         const available = @max(@as(f32, 1), track_w - thumb_w);
         const ratio = if (max_scroll > 0)
@@ -877,11 +900,12 @@ pub const EditorWidget = struct {
             @intFromFloat(track_h),
             r.theme.line_number_bg,
         );
+        const inset: f32 = @max(1, 2 * scale);
         r.drawRect(
             @intFromFloat(thumb_x),
-            @intFromFloat(track_y + 2),
+            @intFromFloat(track_y + inset),
             @intFromFloat(thumb_w),
-            @intFromFloat(track_h - 4),
+            @intFromFloat(track_h - inset * 2),
             r.theme.selection,
         );
     }
@@ -924,7 +948,8 @@ pub const EditorWidget = struct {
         total_lines: usize,
     ) void {
         if (total_lines <= visible_lines or width <= 0 or height <= 0) return;
-        const scrollbar_w: f32 = 12;
+        const scale = r.uiScaleFactor();
+        const scrollbar_w: f32 = 16 * scale;
         const scrollbar_x = x + width - scrollbar_w;
         const scrollbar_y = y;
         const scrollbar_h = height;
@@ -933,7 +958,7 @@ pub const EditorWidget = struct {
             self.editor.scroll_line = max_scroll;
         }
 
-        const min_thumb_h: f32 = 18;
+        const min_thumb_h: f32 = 32 * scale;
         const thumb_h = @max(min_thumb_h, scrollbar_h * (@as(f32, @floatFromInt(visible_lines)) / @as(f32, @floatFromInt(total_lines))));
         const available = @max(@as(f32, 1), scrollbar_h - thumb_h);
         const ratio = if (max_scroll > 0)
@@ -949,10 +974,11 @@ pub const EditorWidget = struct {
             @intFromFloat(scrollbar_h),
             r.theme.line_number_bg,
         );
+        const inset: f32 = @max(1, 2 * scale);
         r.drawRect(
-            @intFromFloat(scrollbar_x + 2),
+            @intFromFloat(scrollbar_x + inset),
             @intFromFloat(thumb_y),
-            @intFromFloat(scrollbar_w - 4),
+            @intFromFloat(scrollbar_w - inset * 2),
             @intFromFloat(thumb_h),
             r.theme.selection,
         );
