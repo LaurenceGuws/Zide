@@ -43,6 +43,7 @@ Suggested next steps:
 - Editor: per-line width cache now uses grapheme clusters when available.
 - Editor widget: added visual line count helper for wrap groundwork.
 - Editor widget: soft wrap rendering uses visual line counts per line.
+- Editor widget: cursor up/down now moves across wrapped segments.
 
 ## Current issues (editor)
 
