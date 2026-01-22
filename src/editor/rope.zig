@@ -839,7 +839,7 @@ test "rope undo groups multiple edits" {
     defer allocator.free(undo_text);
     try std.testing.expectEqualStrings("hi", undo_text);
 
-    try std.testing.expect(try rope.redo());
+    try std.testing.expect((try rope.redo()).changed);
     const redo_text = try rope.readRangeAlloc(0, rope.totalLen());
     defer allocator.free(redo_text);
     try std.testing.expectEqualStrings("hi!!", redo_text);
