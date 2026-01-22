@@ -49,6 +49,8 @@ pub const EditorWidget = struct {
         var cursor_draw_x: ?f32 = null;
         var cursor_draw_y: ?f32 = null;
         var max_visible_width: usize = 0;
+        const cols = self.viewportColumns(r);
+        const show_vscroll = !self.wrap_enabled and total_lines > visible_lines;
 
         var highlight_tokens: []HighlightToken = &[_]HighlightToken{};
         var highlight_tokens_allocated = false;
@@ -98,7 +100,6 @@ pub const EditorWidget = struct {
 
         // Draw lines
         var line_buf: [4096]u8 = undefined;
-        const cols = self.viewportColumns(r);
         var line_idx = start_line;
         var visual_row: usize = 0;
         var token_idx: usize = 0;
@@ -240,7 +241,11 @@ pub const EditorWidget = struct {
         }
 
         if (!self.wrap_enabled) {
-            self.drawHorizontalScrollbar(r, x, y, width, height, max_visible_width, cols);
+            const vscroll_w: f32 = if (show_vscroll) 8 else 0;
+            self.drawHorizontalScrollbar(r, x, y, width, height, max_visible_width, cols, vscroll_w);
+            if (show_vscroll) {
+                self.drawVerticalScrollbar(r, x, y, width, height, visible_lines, total_lines);
+            }
         }
     }
 
@@ -532,6 +537,101 @@ pub const EditorWidget = struct {
         return handled;
     }
 
+    pub fn handleHorizontalScrollbarInput(
+        self: *EditorWidget,
+        r: *Renderer,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        dragging: *bool,
+        grab_offset: *f32,
+    ) bool {
+        if (self.wrap_enabled) return false;
+        if (width <= 0 or height <= 0) return false;
+        const cols = self.viewportColumns(r);
+        if (cols == 0) return false;
+        const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
+        if (visible_lines == 0) return false;
+
+        var max_visible_width: usize = 0;
+        var line_idx = self.editor.scroll_line;
+        const end_line = @min(line_idx + visible_lines + 1, self.editor.lineCount());
+        while (line_idx < end_line) : (line_idx += 1) {
+            var line_buf: [4096]u8 = undefined;
+            const line_len = self.editor.lineLen(line_idx);
+            var line_alloc: ?[]u8 = null;
+            const line_text = if (line_len <= line_buf.len)
+                line_buf[0..self.editor.getLine(line_idx, &line_buf)]
+            else blk: {
+                const owned = self.editor.getLineAlloc(line_idx) catch break :blk &[_]u8{};
+                line_alloc = owned;
+                break :blk owned;
+            };
+            defer if (line_alloc) |owned| self.editor.allocator.free(owned);
+
+            const cluster_result = getClusterOffsets(
+                self.cluster_cache,
+                self.editor.allocator,
+                r.terminal_font.hb_font,
+                line_idx,
+                line_text,
+            );
+            defer if (cluster_result.owned) {
+                if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
+            };
+
+            const width_cached = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
+            if (width_cached > max_visible_width) {
+                max_visible_width = width_cached;
+            }
+        }
+        if (max_visible_width <= cols) return false;
+
+        const show_vscroll = self.editor.lineCount() > visible_lines;
+        const vscroll_w: f32 = if (show_vscroll) 8 else 0;
+        const track_h: f32 = 8;
+        const track_y = y + height - track_h;
+        const track_x = x + self.gutter_width;
+        const track_w = @max(@as(f32, 1), width - self.gutter_width - vscroll_w);
+        const max_scroll = max_visible_width - cols;
+        if (self.editor.scroll_col > max_scroll) {
+            self.editor.scroll_col = max_scroll;
+        }
+
+        const min_thumb_w: f32 = 24;
+        const thumb_w = @max(min_thumb_w, track_w * (@as(f32, @floatFromInt(cols)) / @as(f32, @floatFromInt(max_visible_width))));
+        const available = @max(@as(f32, 1), track_w - thumb_w);
+        const ratio = if (max_scroll > 0)
+            @as(f32, @floatFromInt(self.editor.scroll_col)) / @as(f32, @floatFromInt(max_scroll))
+        else
+            0.0;
+        const thumb_x = track_x + available * ratio;
+
+        const mouse = r.getMousePos();
+        const over_track = mouse.x >= track_x and mouse.x <= track_x + track_w and mouse.y >= track_y and mouse.y <= track_y + track_h;
+        const over_thumb = mouse.x >= thumb_x and mouse.x <= thumb_x + thumb_w and mouse.y >= track_y and mouse.y <= track_y + track_h;
+
+        if (r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT) and over_track) {
+            dragging.* = true;
+            grab_offset.* = if (over_thumb) mouse.x - thumb_x else thumb_w * 0.5;
+            self.updateHorizontalScrollFromMouse(mouse.x, track_x, available, grab_offset.*, max_scroll);
+            return true;
+        }
+
+        if (dragging.* and r.isMouseButtonDown(renderer_mod.MOUSE_LEFT)) {
+            self.updateHorizontalScrollFromMouse(mouse.x, track_x, available, grab_offset.*, max_scroll);
+            return true;
+        }
+
+        if (dragging.* and r.isMouseButtonReleased(renderer_mod.MOUSE_LEFT)) {
+            dragging.* = false;
+            return true;
+        }
+
+        return over_track;
+    }
+
     fn ensureCursorVisible(self: *EditorWidget, r: *Renderer, height: f32) void {
         const line_count = self.editor.lineCount();
         if (line_count == 0) return;
@@ -670,12 +770,14 @@ pub const EditorWidget = struct {
         const width_cached = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
         const line_width = if (line_len == 0) 1 else width_cached;
         const max_scroll = if (line_width > cols) line_width - cols else 0;
-        if (delta_cols > 0) {
-            self.editor.scroll_col = @min(self.editor.scroll_col + @as(usize, @intCast(delta_cols)), max_scroll);
-        } else {
+        const current = self.editor.scroll_col;
+        const next = if (delta_cols > 0)
+            @min(current + @as(usize, @intCast(delta_cols)), max_scroll)
+        else blk: {
             const delta_abs: usize = @intCast(-delta_cols);
-            self.editor.scroll_col = if (self.editor.scroll_col > delta_abs) self.editor.scroll_col - delta_abs else 0;
-        }
+            break :blk if (current > delta_abs) current - delta_abs else 0;
+        };
+        self.editor.scroll_col = next;
     }
 
     fn drawHorizontalScrollbar(
@@ -687,13 +789,14 @@ pub const EditorWidget = struct {
         height: f32,
         max_visible_width: usize,
         cols: usize,
+        vscroll_w: f32,
     ) void {
         if (width <= 0 or height <= 0 or cols == 0) return;
         if (max_visible_width <= cols) return;
         const track_h: f32 = 8;
         const track_y = y + height - track_h;
         const track_x = x + self.gutter_width;
-        const track_w = @max(@as(f32, 1), width - self.gutter_width);
+        const track_w = @max(@as(f32, 1), width - self.gutter_width - vscroll_w);
         const max_scroll = max_visible_width - cols;
         if (self.editor.scroll_col > max_scroll) {
             self.editor.scroll_col = max_scroll;
@@ -720,6 +823,64 @@ pub const EditorWidget = struct {
             @intFromFloat(track_y + 2),
             @intFromFloat(thumb_w),
             @intFromFloat(track_h - 4),
+            r.theme.selection,
+        );
+    }
+
+    fn updateHorizontalScrollFromMouse(
+        self: *EditorWidget,
+        mouse_x: f32,
+        track_x: f32,
+        available: f32,
+        grab_offset: f32,
+        max_scroll: usize,
+    ) void {
+        const clamped_x = @min(@max(mouse_x - grab_offset, track_x), track_x + available);
+        const ratio = if (available > 0) (clamped_x - track_x) / available else 0;
+        self.editor.scroll_col = @as(usize, @intFromFloat(@round(@as(f32, @floatFromInt(max_scroll)) * ratio)));
+    }
+
+    fn drawVerticalScrollbar(
+        self: *EditorWidget,
+        r: *Renderer,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        visible_lines: usize,
+        total_lines: usize,
+    ) void {
+        if (total_lines <= visible_lines or width <= 0 or height <= 0) return;
+        const scrollbar_w: f32 = 8;
+        const scrollbar_x = x + width - scrollbar_w;
+        const scrollbar_y = y;
+        const scrollbar_h = height;
+        const max_scroll = total_lines - visible_lines;
+        if (self.editor.scroll_line > max_scroll) {
+            self.editor.scroll_line = max_scroll;
+        }
+
+        const min_thumb_h: f32 = 18;
+        const thumb_h = @max(min_thumb_h, scrollbar_h * (@as(f32, @floatFromInt(visible_lines)) / @as(f32, @floatFromInt(total_lines))));
+        const available = @max(@as(f32, 1), scrollbar_h - thumb_h);
+        const ratio = if (max_scroll > 0)
+            @as(f32, @floatFromInt(self.editor.scroll_line)) / @as(f32, @floatFromInt(max_scroll))
+        else
+            0.0;
+        const thumb_y = scrollbar_y + available * ratio;
+
+        r.drawRect(
+            @intFromFloat(scrollbar_x),
+            @intFromFloat(scrollbar_y),
+            @intFromFloat(scrollbar_w),
+            @intFromFloat(scrollbar_h),
+            r.theme.line_number_bg,
+        );
+        r.drawRect(
+            @intFromFloat(scrollbar_x + 2),
+            @intFromFloat(thumb_y),
+            @intFromFloat(scrollbar_w - 4),
+            @intFromFloat(thumb_h),
             r.theme.selection,
         );
     }
