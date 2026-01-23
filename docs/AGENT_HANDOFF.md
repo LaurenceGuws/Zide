@@ -55,6 +55,7 @@ Suggested next steps:
 - Editor widget: horizontal scrollbar click/drag + vertical scrollbar only on overflow (no wrap).
 - Editor widget: vertical scrollbar drag/click support (no wrap).
 - Editor widget: thicker editor scrollbars (12px) for easier hit targets (both axes).
+- Editor widget: horizontal scrollbar uses cached max line width so it works even when long lines are offscreen.
 
 ## Current issues (editor)
 
