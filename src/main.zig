@@ -614,6 +614,7 @@ const AppState = struct {
                 editor_y,
                 editor_width,
                 editor_height,
+                mouse,
                 &self.editor_hscroll_dragging,
                 &self.editor_hscroll_grab_offset,
             );
@@ -623,6 +624,7 @@ const AppState = struct {
                 editor_y,
                 editor_width,
                 editor_height,
+                mouse,
                 &self.editor_vscroll_dragging,
                 &self.editor_vscroll_grab_offset,
             );

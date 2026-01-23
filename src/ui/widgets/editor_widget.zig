@@ -1088,13 +1088,83 @@ pub const EditorWidget = struct {
 
     fn moveCursorVisual(self: *EditorWidget, r: *Renderer, delta: i32) bool {
         if (!self.wrap_enabled) {
-            const before = self.editor.cursor.line;
-            if (delta < 0) {
-                self.editor.moveCursorUp();
-            } else {
-                self.editor.moveCursorDown();
+            const line_count = self.editor.lineCount();
+            if (line_count == 0) return false;
+            const cols = self.viewportColumns(r);
+            if (cols == 0) return false;
+
+            var cur_line = self.editor.cursor.line;
+            var cur_col_byte = self.editor.cursor.col;
+            if (cur_line >= line_count) {
+                cur_line = line_count - 1;
+                cur_col_byte = self.editor.lineLen(cur_line);
             }
-            return self.editor.cursor.line != before;
+
+            var line_buf: [4096]u8 = undefined;
+            var line_alloc: ?[]u8 = null;
+            const line_len = self.editor.lineLen(cur_line);
+            const line_text = if (line_len <= line_buf.len)
+                line_buf[0..self.editor.getLine(cur_line, &line_buf)]
+            else blk: {
+                const owned = self.editor.getLineAlloc(cur_line) catch break :blk &[_]u8{};
+                line_alloc = owned;
+                break :blk owned;
+            };
+            defer if (line_alloc) |owned| self.editor.allocator.free(owned);
+
+            const cluster_result = getClusterOffsets(
+                self.cluster_cache,
+                self.editor.allocator,
+                r.terminal_font.hb_font,
+                cur_line,
+                line_text,
+            );
+            defer if (cluster_result.owned) {
+                if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
+            };
+
+            const cur_vis_col = visualColumnForByteIndex(line_text, cur_col_byte, cluster_result.slice);
+            const preferred_vis_col = self.editor.preferred_visual_col orelse cur_vis_col;
+            if (self.editor.preferred_visual_col == null) {
+                self.editor.preferred_visual_col = preferred_vis_col;
+            }
+
+            const target_line: usize = if (delta < 0) blk: {
+                if (cur_line == 0) return false;
+                break :blk cur_line - 1;
+            } else blk: {
+                if (cur_line + 1 >= line_count) return false;
+                break :blk cur_line + 1;
+            };
+
+            var target_buf: [4096]u8 = undefined;
+            var target_alloc: ?[]u8 = null;
+            const target_len = self.editor.lineLen(target_line);
+            const target_text = if (target_len <= target_buf.len)
+                target_buf[0..self.editor.getLine(target_line, &target_buf)]
+            else blk: {
+                const owned = self.editor.getLineAlloc(target_line) catch break :blk &[_]u8{};
+                target_alloc = owned;
+                break :blk owned;
+            };
+            defer if (target_alloc) |owned| self.editor.allocator.free(owned);
+
+            const target_clusters = getClusterOffsets(
+                self.cluster_cache,
+                self.editor.allocator,
+                r.terminal_font.hb_font,
+                target_line,
+                target_text,
+            );
+            defer if (target_clusters.owned) {
+                if (target_clusters.slice) |clusters| self.editor.allocator.free(clusters);
+            };
+
+            const target_width = self.editor.lineWidthCached(target_line, target_text, target_clusters.slice);
+            const target_col_vis = @min(preferred_vis_col, target_width);
+            const target_col_byte = byteIndexForVisualColumn(target_text, target_col_vis, target_clusters.slice);
+            self.editor.setCursorPreservePreferred(target_line, target_col_byte);
+            return true;
         }
         const line_count = self.editor.lineCount();
         if (line_count == 0) return false;
