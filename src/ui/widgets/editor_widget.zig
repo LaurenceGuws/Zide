@@ -242,7 +242,10 @@ pub const EditorWidget = struct {
 
         if (!self.wrap_enabled) {
             const vscroll_w: f32 = if (show_vscroll) 12 else 0;
-            self.drawHorizontalScrollbar(r, x, y, width, height, max_visible_width, cols, vscroll_w);
+            const max_width = self.editor.maxLineWidthCached();
+            if (max_width > cols) {
+                self.drawHorizontalScrollbar(r, x, y, width, height, max_width, cols, vscroll_w);
+            }
             if (show_vscroll) {
                 self.drawVerticalScrollbar(r, x, y, width, height, visible_lines, total_lines);
             }
@@ -555,38 +558,7 @@ pub const EditorWidget = struct {
         const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
         if (visible_lines == 0) return false;
 
-        var max_visible_width: usize = 0;
-        var line_idx = self.editor.scroll_line;
-        const end_line = @min(line_idx + visible_lines + 1, self.editor.lineCount());
-        while (line_idx < end_line) : (line_idx += 1) {
-            var line_buf: [4096]u8 = undefined;
-            const line_len = self.editor.lineLen(line_idx);
-            var line_alloc: ?[]u8 = null;
-            const line_text = if (line_len <= line_buf.len)
-                line_buf[0..self.editor.getLine(line_idx, &line_buf)]
-            else blk: {
-                const owned = self.editor.getLineAlloc(line_idx) catch break :blk &[_]u8{};
-                line_alloc = owned;
-                break :blk owned;
-            };
-            defer if (line_alloc) |owned| self.editor.allocator.free(owned);
-
-            const cluster_result = getClusterOffsets(
-                self.cluster_cache,
-                self.editor.allocator,
-                r.terminal_font.hb_font,
-                line_idx,
-                line_text,
-            );
-            defer if (cluster_result.owned) {
-                if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
-            };
-
-            const width_cached = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
-            if (width_cached > max_visible_width) {
-                max_visible_width = width_cached;
-            }
-        }
+        const max_visible_width = self.editor.maxLineWidthCached();
         if (max_visible_width <= cols) return false;
 
         const show_vscroll = self.editor.lineCount() > visible_lines;

@@ -20,6 +20,7 @@ pub const Editor = struct {
     scroll_col: usize,
     scroll_row_offset: usize,
     line_width_cache: std.AutoHashMap(usize, usize),
+    max_line_width_cache: ?usize,
     highlighter: ?*syntax_mod.SyntaxHighlighter,
     highlight_pending: bool,
     file_path: ?[]const u8,
@@ -44,6 +45,7 @@ pub const Editor = struct {
             .scroll_col = 0,
             .scroll_row_offset = 0,
             .line_width_cache = std.AutoHashMap(usize, usize).init(allocator),
+            .max_line_width_cache = null,
             .highlighter = null,
             .highlight_pending = false,
             .file_path = null,
@@ -122,6 +124,7 @@ pub const Editor = struct {
 
     pub fn invalidateLineWidthCache(self: *Editor) void {
         self.line_width_cache.clearRetainingCapacity();
+        self.max_line_width_cache = null;
     }
 
     pub fn lineWidthCached(self: *Editor, line_idx: usize, line_text: []const u8, cluster_offsets: ?[]const u32) usize {
@@ -136,7 +139,35 @@ pub const Editor = struct {
             }
         }
         self.line_width_cache.put(line_idx, count) catch {};
+        if (self.max_line_width_cache) |current| {
+            if (count > current) self.max_line_width_cache = count;
+        }
         return count;
+    }
+
+    pub fn maxLineWidthCached(self: *Editor) usize {
+        if (self.max_line_width_cache) |cached| return cached;
+        var max_width: usize = 0;
+        const total_lines = self.lineCount();
+        var line_idx: usize = 0;
+        while (line_idx < total_lines) : (line_idx += 1) {
+            var line_buf: [4096]u8 = undefined;
+            const line_len = self.lineLen(line_idx);
+            var line_alloc: ?[]u8 = null;
+            const line_text = if (line_len <= line_buf.len)
+                line_buf[0..self.getLine(line_idx, &line_buf)]
+            else blk: {
+                const owned = self.getLineAlloc(line_idx) catch break :blk &[_]u8{};
+                line_alloc = owned;
+                break :blk owned;
+            };
+            defer if (line_alloc) |owned| self.allocator.free(owned);
+
+            const width = self.lineWidthCached(line_idx, line_text, null);
+            if (width > max_width) max_width = width;
+        }
+        self.max_line_width_cache = max_width;
+        return max_width;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
