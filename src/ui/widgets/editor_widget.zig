@@ -3,6 +3,7 @@ const renderer_mod = @import("../renderer.zig");
 const editor_mod = @import("../../editor/editor.zig");
 const selection_mod = @import("../../editor/view/selection.zig");
 const layout_mod = @import("../../editor/view/layout.zig");
+const render_cache_mod = @import("../../editor/render/cache.zig");
 const input_mod = @import("editor_widget_input.zig");
 const draw_mod = @import("editor_widget_draw.zig");
 const types = @import("../../editor/types.zig");
@@ -11,6 +12,7 @@ const hb = @import("../terminal_font.zig").c;
 
 const Renderer = renderer_mod.Renderer;
 const Editor = editor_mod.Editor;
+const EditorRenderCache = render_cache_mod.EditorRenderCache;
 
 /// Editor widget for drawing a text editor view
 pub const EditorWidget = struct {
@@ -40,6 +42,19 @@ pub const EditorWidget = struct {
 
     pub fn draw(self: *EditorWidget, r: *Renderer, x: f32, y: f32, width: f32, height: f32) void {
         draw_mod.draw(self, r, x, y, width, height);
+    }
+
+    pub fn drawCached(
+        self: *EditorWidget,
+        r: *Renderer,
+        cache: *EditorRenderCache,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        frame_id: u64,
+    ) void {
+        draw_mod.drawCached(self, r, cache, x, y, width, height, frame_id);
     }
 
     pub fn viewportColumns(self: *EditorWidget, r: *Renderer) usize {

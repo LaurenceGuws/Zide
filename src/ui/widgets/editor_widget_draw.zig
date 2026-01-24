@@ -2,6 +2,7 @@ const std = @import("std");
 const syntax_mod = @import("../../editor/syntax.zig");
 const selection_mod = @import("../../editor/view/selection.zig");
 const layout_mod = @import("../../editor/view/layout.zig");
+const cache_mod = @import("../../editor/render/cache.zig");
 const app_logger = @import("../../app_logger.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
@@ -215,6 +216,336 @@ pub fn draw(widget: anytype, r: anytype, x: f32, y: f32, width: f32, height: f32
             drawVerticalScrollbar(widget, r, x, y, width, height, visible_lines, total_lines);
         }
     }
+}
+
+pub fn drawCached(
+    widget: anytype,
+    r: anytype,
+    cache: *cache_mod.EditorRenderCache,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+    frame_id: u64,
+) void {
+    widget.gutter_width = 50 * r.uiScaleFactor();
+    if (width <= 0 or height <= 0) return;
+    const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
+    const start_line = widget.editor.scroll_line;
+    const start_seg = widget.editor.scroll_row_offset;
+    const total_lines = widget.editor.lineCount();
+    const cols = widget.viewportColumns(r);
+    if (cols == 0) return;
+    const show_vscroll = !widget.wrap_enabled and total_lines > visible_lines;
+
+    const draw_x = x;
+    const draw_y = y;
+    const origin_x: f32 = 0;
+    const origin_y: f32 = 0;
+
+    const texture_changed = r.ensureEditorTexture(@intFromFloat(width), @intFromFloat(height));
+    var force_redraw = cache.beginFrame(
+        frame_id,
+        cols,
+        widget.wrap_enabled,
+        @intFromFloat(width),
+        @intFromFloat(height),
+        widget.editor.change_tick,
+        widget.editor.scroll_line,
+        widget.editor.scroll_row_offset,
+        widget.editor.scroll_col,
+    );
+    if (texture_changed) force_redraw = true;
+
+    var any_dirty = force_redraw;
+
+    if (force_redraw) {
+        if (r.beginEditorTexture()) {
+            r.drawRect(0, 0, @intFromFloat(width), @intFromFloat(height), r.theme.background);
+            r.drawRect(0, 0, @intFromFloat(widget.gutter_width), @intFromFloat(height), r.theme.line_number_bg);
+            r.endEditorTexture();
+        }
+    }
+
+    var line_buf: [4096]u8 = undefined;
+    var line_idx = start_line;
+    var visual_row: usize = 0;
+    while (line_idx < total_lines and visual_row < visible_lines) : (line_idx += 1) {
+        const is_current = line_idx == widget.editor.cursor.line;
+
+        const line_len = widget.editor.lineLen(line_idx);
+        var line_alloc: ?[]u8 = null;
+        const line_text = if (line_len <= line_buf.len)
+            line_buf[0..widget.editor.getLine(line_idx, &line_buf)]
+        else blk: {
+            const owned = widget.editor.getLineAlloc(line_idx) catch break :blk &[_]u8{};
+            line_alloc = owned;
+            break :blk owned;
+        };
+        defer if (line_alloc) |owned| widget.editor.allocator.free(owned);
+        const line_start = widget.editor.lineStart(line_idx);
+        const line_end = line_start + line_len;
+        const line_text_hash = hashLine(line_text);
+
+        var cluster_slice: ?[]const u32 = null;
+        var cluster_owned = false;
+        widget.clusterOffsets(r, line_idx, line_text, &cluster_slice, &cluster_owned);
+        defer if (cluster_owned) {
+            if (cluster_slice) |clusters| widget.editor.allocator.free(clusters);
+        };
+
+        const tokens = cache.highlightTokens(
+            widget.editor.highlighter,
+            line_idx,
+            line_start,
+            line_end,
+            line_text_hash,
+            widget.editor.highlight_epoch,
+        );
+
+        var ranges: [8]SelectionRange = undefined;
+        var range_count: usize = 0;
+        selection_mod.collectSelectionRanges(widget.editor, line_idx, line_text, cluster_slice, &ranges, &range_count);
+
+        const width_cached = widget.editor.lineWidthCached(line_idx, line_text, cluster_slice);
+        const line_width = if (line_len == 0) 1 else if (width_cached == 0 and range_count > 0) 1 else width_cached;
+        const total_visual_lines = if (widget.wrap_enabled) layout_mod.visualLineCountForWidth(cols, line_width) else 1;
+        const seg_start_idx = if (widget.wrap_enabled and line_idx == start_line) @min(start_seg, total_visual_lines) else 0;
+
+        var cursor_col_vis: usize = 0;
+        var cursor_seg: usize = 0;
+        if (is_current) {
+            cursor_col_vis = selection_mod.visualColumnForByteIndex(line_text, widget.editor.cursor.col, cluster_slice);
+            if (cols > 0 and widget.wrap_enabled) {
+                cursor_seg = @min(cursor_col_vis / cols, if (total_visual_lines > 0) total_visual_lines - 1 else 0);
+            }
+        }
+
+        var seg: usize = seg_start_idx;
+        while (seg < total_visual_lines and visual_row < visible_lines) : (seg += 1) {
+            const seg_start_col = if (widget.wrap_enabled) seg * cols else widget.editor.scroll_col;
+            const seg_end_col = if (widget.wrap_enabled) @min(line_width, seg_start_col + cols) else @min(line_width, seg_start_col + cols);
+            if (seg_start_col >= seg_end_col and range_count == 0) continue;
+            const seg_y = origin_y + @as(f32, @floatFromInt(visual_row)) * r.char_height;
+            const seg_start_byte = selection_mod.byteIndexForVisualColumn(line_text, seg_start_col, cluster_slice);
+            const seg_end_byte = selection_mod.byteIndexForVisualColumn(line_text, seg_end_col, cluster_slice);
+
+            const seg_hash = hashSegment(
+                line_text,
+                seg_start_byte,
+                seg_end_byte,
+                ranges[0..range_count],
+                seg_start_col,
+                seg_end_col,
+                tokens,
+                line_start,
+                is_current,
+                seg == cursor_seg,
+                cursor_col_vis,
+                seg_start_col,
+            );
+            const dirty = force_redraw or cache.segmentDirty(.{ .line_idx = line_idx, .seg_idx = seg }, seg_hash);
+            if (dirty) {
+                any_dirty = true;
+                if (r.beginEditorTexture()) {
+                    r.beginClip(
+                        @intFromFloat(origin_x),
+                        @intFromFloat(seg_y),
+                        @intFromFloat(width),
+                        @intFromFloat(r.char_height),
+                    );
+                    r.drawRect(
+                        @intFromFloat(origin_x),
+                        @intFromFloat(seg_y),
+                        @intFromFloat(width),
+                        @intFromFloat(r.char_height),
+                        r.theme.background,
+                    );
+                    r.drawRect(
+                        @intFromFloat(origin_x),
+                        @intFromFloat(seg_y),
+                        @intFromFloat(widget.gutter_width),
+                        @intFromFloat(r.char_height),
+                        r.theme.line_number_bg,
+                    );
+
+                    if (seg == seg_start_idx) {
+                        r.drawEditorLineBase(line_idx, seg_y, origin_x, widget.gutter_width, width, is_current);
+                    } else if (is_current) {
+                        r.drawRect(
+                            @intFromFloat(origin_x),
+                            @intFromFloat(seg_y),
+                            @intFromFloat(widget.gutter_width),
+                            @intFromFloat(r.char_height),
+                            r.theme.current_line,
+                        );
+                        r.drawRect(
+                            @intFromFloat(origin_x + widget.gutter_width),
+                            @intFromFloat(seg_y),
+                            @intFromFloat(width - widget.gutter_width),
+                            @intFromFloat(r.char_height),
+                            r.theme.current_line,
+                        );
+                    }
+
+                    if (range_count > 0) {
+                        var r_i: usize = 0;
+                        while (r_i < range_count) : (r_i += 1) {
+                            const range = ranges[r_i];
+                            const sel_start = @max(range.start_col, seg_start_col);
+                            const sel_end = @min(range.end_col, seg_end_col);
+                            if (sel_end <= sel_start) continue;
+                            const sel_x = origin_x + widget.gutter_width + 8 * r.uiScaleFactor() + @as(f32, @floatFromInt(sel_start - seg_start_col)) * r.char_width;
+                            const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r.char_width;
+                            r.drawRect(
+                                @intFromFloat(sel_x),
+                                @intFromFloat(seg_y),
+                                @intFromFloat(sel_w),
+                                @intFromFloat(r.char_height),
+                                r.theme.selection,
+                            );
+                        }
+                    }
+
+                    const text_start_x = origin_x + widget.gutter_width + 8 * r.uiScaleFactor();
+                    if (tokens.len == 0) {
+                        r.drawText(line_text[seg_start_byte..seg_end_byte], text_start_x, seg_y, r.theme.foreground);
+                    } else {
+                        drawHighlightedLineSegment(
+                            r,
+                            line_text,
+                            seg_y,
+                            text_start_x,
+                            line_start,
+                            seg_start_byte,
+                            seg_end_byte,
+                            tokens,
+                        );
+                    }
+
+                    if (is_current and seg == cursor_seg) {
+                        const local_col = cursor_col_vis - seg_start_col;
+                        const cursor_draw_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.char_width;
+                        r.drawCursor(cursor_draw_x, seg_y, .line);
+                    }
+
+                    r.endClip();
+                    r.endEditorTexture();
+                }
+            }
+            visual_row += 1;
+        }
+    }
+
+    if (!widget.wrap_enabled) {
+        const vscroll_w: f32 = if (show_vscroll) 12 else 0;
+        const scan = widget.editor.advanceMaxLineWidthCache(128);
+        const scroll_hash = hashScrollState(scan.max, cols, widget.editor.scroll_col, visible_lines, total_lines, widget.editor.scroll_line, show_vscroll);
+        if (force_redraw or cache.scrollDirty(scroll_hash)) {
+            any_dirty = true;
+            if (r.beginEditorTexture()) {
+                if (scan.max > cols) {
+                    drawHorizontalScrollbar(widget, r, origin_x, origin_y, width, height, scan.max, cols, vscroll_w);
+                }
+                if (show_vscroll) {
+                    drawVerticalScrollbar(widget, r, origin_x, origin_y, width, height, visible_lines, total_lines);
+                }
+                r.endEditorTexture();
+            }
+        }
+    }
+
+    if (any_dirty or force_redraw) {
+        r.drawEditorTexture(draw_x, draw_y);
+    } else {
+        r.drawEditorTexture(draw_x, draw_y);
+    }
+}
+
+fn hashLine(text: []const u8) u64 {
+    var h: u64 = 1469598103934665603;
+    for (text) |byte| {
+        h ^= byte;
+        h *%= 1099511628211;
+    }
+    return h;
+}
+
+fn hashSegment(
+    line_text: []const u8,
+    seg_start_byte: usize,
+    seg_end_byte: usize,
+    ranges: []const SelectionRange,
+    seg_start_col: usize,
+    seg_end_col: usize,
+    tokens: []const HighlightToken,
+    line_start: usize,
+    is_current: bool,
+    has_cursor: bool,
+    cursor_col_vis: usize,
+    cursor_seg_start: usize,
+) u64 {
+    var h: u64 = 1469598103934665603;
+    for (line_text[seg_start_byte..seg_end_byte]) |byte| {
+        h ^= byte;
+        h *%= 1099511628211;
+    }
+    h ^= @as(u64, @intFromBool(is_current));
+    h *%= 1099511628211;
+    for (ranges) |range| {
+        const sel_start = @max(range.start_col, seg_start_col);
+        const sel_end = @min(range.end_col, seg_end_col);
+        if (sel_end <= sel_start) continue;
+        h ^= @as(u64, sel_start);
+        h *%= 1099511628211;
+        h ^= @as(u64, sel_end);
+        h *%= 1099511628211;
+    }
+    for (tokens) |token| {
+        const t_start = @max(token.start - line_start, seg_start_byte);
+        const t_end = @min(token.end - line_start, seg_end_byte);
+        if (t_end <= t_start) continue;
+        h ^= @as(u64, t_start);
+        h *%= 1099511628211;
+        h ^= @as(u64, t_end);
+        h *%= 1099511628211;
+        h ^= @as(u64, @intFromEnum(token.kind));
+        h *%= 1099511628211;
+    }
+    if (has_cursor) {
+        h ^= 0x9e3779b97f4a7c15;
+        h *%= 1099511628211;
+        h ^= @as(u64, cursor_col_vis - cursor_seg_start);
+        h *%= 1099511628211;
+    }
+    return h;
+}
+
+fn hashScrollState(
+    max_visible_width: usize,
+    cols: usize,
+    scroll_col: usize,
+    visible_lines: usize,
+    total_lines: usize,
+    scroll_line: usize,
+    show_vscroll: bool,
+) u64 {
+    var h: u64 = 1469598103934665603;
+    h ^= @as(u64, max_visible_width);
+    h *%= 1099511628211;
+    h ^= @as(u64, cols);
+    h *%= 1099511628211;
+    h ^= @as(u64, scroll_col);
+    h *%= 1099511628211;
+    h ^= @as(u64, visible_lines);
+    h *%= 1099511628211;
+    h ^= @as(u64, total_lines);
+    h *%= 1099511628211;
+    h ^= @as(u64, scroll_line);
+    h *%= 1099511628211;
+    h ^= @as(u64, @intFromBool(show_vscroll));
+    h *%= 1099511628211;
+    return h;
 }
 
 fn drawHorizontalScrollbar(

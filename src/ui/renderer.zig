@@ -120,6 +120,9 @@ pub const Renderer = struct {
     terminal_texture: ?c.RenderTexture2D,
     terminal_texture_w: c_int,
     terminal_texture_h: c_int,
+    editor_texture: ?c.RenderTexture2D,
+    editor_texture_w: c_int,
+    editor_texture_h: c_int,
     theme: Theme,
     mouse_scale: MousePos,
     user_zoom: f32,
@@ -182,6 +185,9 @@ pub const Renderer = struct {
             .terminal_texture = null,
             .terminal_texture_w = 0,
             .terminal_texture_h = 0,
+            .editor_texture = null,
+            .editor_texture_w = 0,
+            .editor_texture_h = 0,
             .theme = .{},
             .mouse_scale = .{ .x = 1.0, .y = 1.0 },
             .user_zoom = 1.0,
@@ -238,6 +244,10 @@ pub const Renderer = struct {
         if (self.terminal_texture) |rt| {
             c.UnloadRenderTexture(rt);
             self.terminal_texture = null;
+        }
+        if (self.editor_texture) |rt| {
+            c.UnloadRenderTexture(rt);
+            self.editor_texture = null;
         }
         c.CloseWindow();
         self.terminal_font.deinit();
@@ -492,6 +502,28 @@ pub const Renderer = struct {
         return true;
     }
 
+    pub fn ensureEditorTexture(self: *Renderer, width: c_int, height: c_int) bool {
+        if (width <= 0 or height <= 0) return false;
+        if (self.editor_texture != null and self.editor_texture_w == width and self.editor_texture_h == height) {
+            return false;
+        }
+        if (self.editor_texture) |rt| {
+            c.UnloadRenderTexture(rt);
+            self.editor_texture = null;
+        }
+        const rt = c.LoadRenderTexture(width, height);
+        if (rt.texture.id == 0) {
+            self.editor_texture_w = 0;
+            self.editor_texture_h = 0;
+            return false;
+        }
+        c.SetTextureFilter(rt.texture, c.TEXTURE_FILTER_POINT);
+        self.editor_texture = rt;
+        self.editor_texture_w = width;
+        self.editor_texture_h = height;
+        return true;
+    }
+
     pub fn beginTerminalTexture(self: *Renderer) bool {
         if (self.terminal_texture) |rt| {
             c.BeginTextureMode(rt);
@@ -504,8 +536,33 @@ pub const Renderer = struct {
         c.EndTextureMode();
     }
 
+    pub fn beginEditorTexture(self: *Renderer) bool {
+        if (self.editor_texture) |rt| {
+            c.BeginTextureMode(rt);
+            return true;
+        }
+        return false;
+    }
+
+    pub fn endEditorTexture(_: *Renderer) void {
+        c.EndTextureMode();
+    }
+
     pub fn drawTerminalTexture(self: *Renderer, x: f32, y: f32) void {
         if (self.terminal_texture) |rt| {
+            const rect = c.Rectangle{
+                .x = 0,
+                .y = 0,
+                .width = @as(f32, @floatFromInt(rt.texture.width)),
+                .height = -@as(f32, @floatFromInt(rt.texture.height)),
+            };
+            const pos = c.Vector2{ .x = x, .y = y };
+            c.DrawTextureRec(rt.texture, rect, pos, c.WHITE);
+        }
+    }
+
+    pub fn drawEditorTexture(self: *Renderer, x: f32, y: f32) void {
+        if (self.editor_texture) |rt| {
             const rect = c.Rectangle{
                 .x = 0,
                 .y = 0,

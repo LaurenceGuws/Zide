@@ -172,11 +172,13 @@ editor_widget_todo:
         - reference_repos/text/scintilla/src/Editor.c
 
     - id: ED-08
-      status: todo
+      status: in_progress
       title: "Rendering cache + damage tracking"
       notes:
-        - "Render-to-texture cache for editor view."
-        - "Dirty rect tracking for fast redraws."
+        - "Render-to-texture cache for editor view implemented (editor texture)."
+        - "Dirty redraw based on per-line/segment hashing implemented."
+        - "Highlight token cache keyed by line hash + epoch implemented."
+        - "EditorDrawList command buffer integration still pending."
       references:
         - reference_repos/editors/lite-xl/src/rencache.c
         - reference_repos/editors/neovim/src/nvim/drawscreen.c

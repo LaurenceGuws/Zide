@@ -5,6 +5,7 @@ const builtin = @import("builtin");
 const editor_mod = @import("editor/editor.zig");
 const text_store = @import("editor/text_store.zig");
 const types = @import("editor/types.zig");
+const editor_render_cache_mod = @import("editor/render/cache.zig");
 const app_logger = @import("app_logger.zig");
 const config_mod = @import("config/lua_config.zig");
 
@@ -28,6 +29,7 @@ const SideNav = widgets.SideNav;
 const StatusBar = widgets.StatusBar;
 const EditorWidget = widgets.EditorWidget;
 const EditorClusterCache = widgets.EditorClusterCache;
+const EditorRenderCache = editor_render_cache_mod.EditorRenderCache;
 const TerminalWidget = widgets.TerminalWidget;
 
 const AppState = struct {
@@ -72,6 +74,7 @@ const AppState = struct {
     editor_vscroll_dragging: bool,
     editor_vscroll_grab_offset: f32,
     editor_cluster_cache: EditorClusterCache,
+    editor_render_cache: EditorRenderCache,
     frame_id: u64,
     metrics: Metrics,
     metrics_logger: Logger,
@@ -145,6 +148,7 @@ const AppState = struct {
             .editor_vscroll_dragging = false,
             .editor_vscroll_grab_offset = 0,
             .editor_cluster_cache = EditorClusterCache.init(allocator),
+            .editor_render_cache = EditorRenderCache.init(allocator, 4096),
             .frame_id = 0,
             .metrics = Metrics.init(),
             .metrics_logger = metrics_log,
@@ -174,6 +178,7 @@ const AppState = struct {
 
         self.tab_bar.deinit();
         self.renderer.deinit();
+        self.editor_render_cache.deinit();
         self.editor_cluster_cache.deinit();
         app_logger.deinit();
         self.allocator.destroy(self);
@@ -783,18 +788,15 @@ const AppState = struct {
         if (self.editors.items.len > 0) {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache, self.editor_wrap);
-            if (editor_width > 0 and editor_height > 0) {
-                r.beginClip(
-                    @intFromFloat(side_nav_width),
-                    @intFromFloat(options_bar_height + tab_bar_height),
-                    @intFromFloat(editor_width),
-                    @intFromFloat(editor_height),
-                );
-            }
-            widget.draw(r, side_nav_width, options_bar_height + tab_bar_height, editor_width, editor_height);
-            if (editor_width > 0 and editor_height > 0) {
-                r.endClip();
-            }
+            widget.drawCached(
+                r,
+                &self.editor_render_cache,
+                side_nav_width,
+                options_bar_height + tab_bar_height,
+                editor_width,
+                editor_height,
+                self.frame_id,
+            );
         }
 
         // Draw terminal if shown
