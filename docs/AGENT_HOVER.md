@@ -24,6 +24,7 @@ Date: 2026-01-24
 - Tightened render cache eviction to prune older entries before clearing.
 - Routed cached scrollbars through the draw list.
 - Routed non-cached scrollbars through the draw list.
+- Added cached draw snapshot baseline test.
 
 ## Overview
 - Terminal module split is stable; import layering enforced.
@@ -38,6 +39,6 @@ Date: 2026-01-24
   - `zig build` passes after making input-called helpers public.
 
 ## Next Steps
-1) Add coverage for cached draw in harness or golden update flow.
-2) Add render cache stress test for eviction behavior.
-3) Evaluate draw list usage for text runs outside cached path.
+1) Add render cache stress test for eviction behavior.
+2) Evaluate draw list usage for text runs outside cached path.
+3) Add cached draw selection/highlight coverage in tests.

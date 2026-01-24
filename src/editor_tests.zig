@@ -424,6 +424,46 @@ test "editor render snapshot baseline" {
     try std.testing.expectEqualStrings(expected, renderer.log.data.items);
 }
 
+test "editor cached render snapshot baseline" {
+    const allocator = std.testing.allocator;
+    var editor = try Editor.init(allocator);
+    defer editor.deinit();
+
+    try editor.insertText("hello\nworld");
+    editor.setCursor(1, 2);
+
+    var renderer = FakeRenderer.init(allocator, 320, 32, 8, 16);
+    defer renderer.deinit();
+
+    var widget = FakeWidget{
+        .editor = editor,
+        .gutter_width = 0,
+        .wrap_enabled = false,
+    };
+
+    var cache = cache_mod.EditorRenderCache.init(allocator, 256);
+    defer cache.deinit();
+
+    draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 32, 1);
+
+    const expected =
+        "rect 0 0 320 32 #282A36FF\n" ++
+        "rect 0 0 50 32 #21222CFF\n" ++
+        "rect 0 0 320 16 #282A36FF\n" ++
+        "rect 0 0 50 16 #21222CFF\n" ++
+        "text 4 0 \"   1\" #6272A4FF\n" ++
+        "text 58 0 \"hello\" #F8F8F2FF\n" ++
+        "rect 0 16 320 16 #282A36FF\n" ++
+        "rect 0 16 50 16 #21222CFF\n" ++
+        "rect 50 16 270 16 #323442FF\n" ++
+        "rect 0 16 50 16 #323442FF\n" ++
+        "text 4 16 \"   2\" #F8F8F2FF\n" ++
+        "text 58 16 \"world\" #F8F8F2FF\n" ++
+        "rect 74 16 2 16 #F8F8F2FF\n";
+
+    try std.testing.expectEqualStrings(expected, renderer.log.data.items);
+}
+
 test "editor render cache dirty line update" {
     const allocator = std.testing.allocator;
     var editor = try Editor.init(allocator);
