@@ -887,20 +887,21 @@ pub const TerminalSession = struct {
 
     pub fn snapshot(self: *TerminalSession) TerminalSnapshot {
         const screen = self.activeScreenConst();
+        const view = screen.snapshotView();
         const alt_active = self.isAltActive();
         const kitty = kitty_mod.kittyStateConst(self);
         return TerminalSnapshot{
-            .rows = @as(usize, screen.grid.rows),
-            .cols = @as(usize, screen.grid.cols),
-            .cells = screen.grid.cells.items,
-            .dirty_rows = screen.grid.dirty_rows.items,
-            .dirty_cols_start = screen.grid.dirty_cols_start.items,
-            .dirty_cols_end = screen.grid.dirty_cols_end.items,
-            .cursor = screen.cursor,
-            .cursor_style = screen.cursor_style,
-            .cursor_visible = screen.cursor_visible,
-            .dirty = screen.grid.dirty,
-            .damage = screen.grid.damage,
+            .rows = view.rows,
+            .cols = view.cols,
+            .cells = view.cells,
+            .dirty_rows = view.dirty_rows,
+            .dirty_cols_start = view.dirty_cols_start,
+            .dirty_cols_end = view.dirty_cols_end,
+            .cursor = view.cursor,
+            .cursor_style = view.cursor_style,
+            .cursor_visible = view.cursor_visible,
+            .dirty = view.dirty,
+            .damage = view.damage,
             .alt_active = alt_active,
             .generation = self.output_generation.load(.acquire),
             .kitty_images = kitty.images.items,
