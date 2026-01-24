@@ -5,6 +5,7 @@ const selection_mod = @import("../../editor/view/selection.zig");
 const layout_mod = @import("../../editor/view/layout.zig");
 const scroll_mod = @import("../../editor/view/scroll.zig");
 const cursor_mod = @import("../../editor/view/cursor.zig");
+const metrics_mod = @import("../../editor/view/metrics.zig");
 const render_cache_mod = @import("../../editor/render/cache.zig");
 const input_mod = @import("editor_widget_input.zig");
 const draw_mod = @import("editor_widget_draw.zig");
@@ -109,9 +110,7 @@ pub const EditorWidget = struct {
     }
 
     pub fn viewportColumns(self: *EditorWidget, r: *Renderer) usize {
-        const editor_width = @max(0, r.width - @as(i32, @intFromFloat(self.gutter_width)));
-        if (r.char_width <= 0) return 0;
-        return @as(usize, @intFromFloat(@as(f32, @floatFromInt(editor_width)) / r.char_width));
+        return metrics_mod.viewportColumns(r.width, self.gutter_width, r.char_width);
     }
 
     pub fn clusterOffsets(
@@ -369,7 +368,7 @@ pub const EditorWidget = struct {
         const col_vis = selection_mod.visualColumnForByteIndex(line_text, self.editor.cursor.col, cluster_result.slice);
         const width_cached = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
         const line_width = if (line_len == 0) 1 else width_cached;
-        const max_scroll = if (line_width > cols) line_width - cols else 0;
+        const max_scroll = metrics_mod.maxScrollForLine(line_width, cols);
         var scroll_col = self.editor.scroll_col;
         if (col_vis < scroll_col) {
             scroll_col = col_vis;
@@ -411,7 +410,7 @@ pub const EditorWidget = struct {
 
         const width_cached = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
         const line_width = if (line_len == 0) 1 else width_cached;
-        const max_scroll = if (line_width > cols) line_width - cols else 0;
+        const max_scroll = metrics_mod.maxScrollForLine(line_width, cols);
         const current = self.editor.scroll_col;
         const next = if (delta_cols > 0)
             @min(current + @as(usize, @intCast(delta_cols)), max_scroll)
