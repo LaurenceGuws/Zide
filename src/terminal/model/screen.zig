@@ -9,3 +9,4 @@ pub const TerminalGrid = grid_mod.TerminalGrid;
 pub const TabStops = tab_mod.TabStops;
 pub const Screen = screen_mod.Screen;
 pub const KeyModeStack = key_mod.KeyModeStack;
+pub const mapDecSpecial = screen_mod.mapDecSpecial;

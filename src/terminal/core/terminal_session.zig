@@ -669,7 +669,7 @@ pub const TerminalSession = struct {
 
         var cp = codepoint;
         if (self.parser.gl_charset == .dec_special) {
-            cp = mapDecSpecial(codepoint);
+            cp = screen_mod.mapDecSpecial(codepoint);
         }
 
         const screen = self.activeScreen();
@@ -683,10 +683,6 @@ pub const TerminalSession = struct {
         }
         if (screen.cursor.col >= cols or screen.cursor.row >= rows) return;
 
-        const row = screen.cursor.row;
-        const col = screen.cursor.col;
-        const idx = row * cols + col;
-        if (idx >= screen.grid.cells.items.len) return;
         var attrs = screen.current_attrs;
         if (self.osc_hyperlink_active and self.current_hyperlink_id > 0) {
             attrs.link_id = self.current_hyperlink_id;
@@ -694,18 +690,7 @@ pub const TerminalSession = struct {
         } else {
             attrs.link_id = 0;
         }
-        screen.grid.cells.items[idx] = Cell{
-            .codepoint = cp,
-            .width = 1,
-            .attrs = attrs,
-        };
-
-        if (screen.cursor.col + 1 >= cols) {
-            screen.wrap_next = true;
-        } else {
-            screen.cursor.col += 1;
-        }
-        screen.grid.markDirtyRange(row, row, col, col);
+        screen.writeCodepoint(cp, attrs);
     }
 
     pub fn handleAsciiSlice(self: *TerminalSession, bytes: []const u8) void {
@@ -734,101 +719,10 @@ pub const TerminalSession = struct {
             }
             if (screen.cursor.col >= cols or screen.cursor.row >= rows) break;
 
-            const row = screen.cursor.row;
-            const col = screen.cursor.col;
-            const remaining_cols = cols - col;
-            const run_len = @min(remaining_cols, bytes.len - i);
-            const row_start = row * cols + col;
-            if (use_dec_special) {
-                var j: usize = 0;
-                while (j < run_len) {
-                    const b = bytes[i + j];
-                    var same_len: usize = 1;
-                    while (j + same_len < run_len and bytes[i + j + same_len] == b) : (same_len += 1) {}
-                    const cp = mapDecSpecial(b);
-                    const cell = Cell{
-                        .codepoint = cp,
-                        .width = 1,
-                        .attrs = attrs,
-                    };
-                    if (same_len >= 8) {
-                        @memset(screen.grid.cells.items[row_start + j .. row_start + j + same_len], cell);
-                    } else {
-                        var k: usize = 0;
-                        while (k < same_len) : (k += 1) {
-                            screen.grid.cells.items[row_start + j + k] = cell;
-                        }
-                    }
-                    j += same_len;
-                }
-            } else {
-                var j: usize = 0;
-                while (j < run_len) {
-                    const b = bytes[i + j];
-                    var same_len: usize = 1;
-                    while (j + same_len < run_len and bytes[i + j + same_len] == b) : (same_len += 1) {}
-                    const cell = Cell{
-                        .codepoint = b,
-                        .width = 1,
-                        .attrs = attrs,
-                    };
-                    if (same_len >= 8) {
-                        @memset(screen.grid.cells.items[row_start + j .. row_start + j + same_len], cell);
-                    } else {
-                        var k: usize = 0;
-                        while (k < same_len) : (k += 1) {
-                            screen.grid.cells.items[row_start + j + k] = cell;
-                        }
-                    }
-                    j += same_len;
-                }
-            }
-            screen.grid.markDirtyRange(row, row, col, col + run_len - 1);
-
-            if (run_len == remaining_cols) {
-                screen.wrap_next = true;
-            } else {
-                screen.cursor.col += run_len;
-            }
+            const run_len = screen.writeAsciiRun(bytes[i..], attrs, use_dec_special);
+            if (run_len == 0) break;
             i += run_len;
         }
-    }
-
-    fn mapDecSpecial(codepoint: u32) u32 {
-        return switch (codepoint) {
-            0x60 => 0x25C6, // ◆
-            0x61 => 0x2592, // ▒
-            0x62 => 0x2409, // ␉
-            0x63 => 0x240C, // ␌
-            0x64 => 0x240D, // ␍
-            0x65 => 0x240A, // ␊
-            0x66 => 0x00B0, // °
-            0x67 => 0x00B1, // ±
-            0x68 => 0x2424, // ␤
-            0x69 => 0x240B, // ␋
-            0x6A => 0x2518, // ┘
-            0x6B => 0x2510, // ┐
-            0x6C => 0x250C, // ┌
-            0x6D => 0x2514, // └
-            0x6E => 0x253C, // ┼
-            0x6F => 0x23BA, // ⎺
-            0x70 => 0x23BB, // ⎻
-            0x71 => 0x2500, // ─
-            0x72 => 0x23BC, // ⎼
-            0x73 => 0x23BD, // ⎽
-            0x74 => 0x251C, // ├
-            0x75 => 0x2524, // ┤
-            0x76 => 0x2534, // ┴
-            0x77 => 0x252C, // ┬
-            0x78 => 0x2502, // │
-            0x79 => 0x2264, // ≤
-            0x7A => 0x2265, // ≥
-            0x7B => 0x03C0, // π
-            0x7C => 0x2260, // ≠
-            0x7D => 0x00A3, // £
-            0x7E => 0x00B7, // ·
-            else => codepoint,
-        };
     }
 
     pub fn newline(self: *TerminalSession) void {
