@@ -356,10 +356,10 @@ pub fn draw(widget: anytype, r: anytype, x: f32, y: f32, width: f32, height: f32
         const vscroll_w: f32 = if (show_vscroll) 12 else 0;
         const scan = widget.editor.advanceMaxLineWidthCache(128);
         if (scan.max > cols) {
-            drawHorizontalScrollbar(widget, r, x, y, width, height, scan.max, cols, vscroll_w);
+            drawHorizontalScrollbar(widget, r, x, y, width, height, scan.max, cols, vscroll_w, null);
         }
         if (show_vscroll) {
-            drawVerticalScrollbar(widget, r, x, y, width, height, visible_lines, total_lines);
+            drawVerticalScrollbar(widget, r, x, y, width, height, visible_lines, total_lines, null);
         }
     }
 }
@@ -654,10 +654,14 @@ pub fn drawCached(
             any_dirty = true;
             if (r.beginEditorTexture()) {
                 if (scan.max > cols) {
-                    drawHorizontalScrollbar(widget, r, origin_x, origin_y, width, height, scan.max, cols, vscroll_w);
+                    draw_list.clear();
+                    drawHorizontalScrollbar(widget, r, origin_x, origin_y, width, height, scan.max, cols, vscroll_w, draw_list);
+                    flushDrawList(draw_list, r);
                 }
                 if (show_vscroll) {
-                    drawVerticalScrollbar(widget, r, origin_x, origin_y, width, height, visible_lines, total_lines);
+                    draw_list.clear();
+                    drawVerticalScrollbar(widget, r, origin_x, origin_y, width, height, visible_lines, total_lines, draw_list);
+                    flushDrawList(draw_list, r);
                 }
                 r.endEditorTexture();
             }
@@ -909,6 +913,7 @@ fn drawHorizontalScrollbar(
     max_visible_width: usize,
     cols: usize,
     vscroll_w: f32,
+    list: ?*EditorDrawList,
 ) void {
     if (width <= 0 or height <= 0 or cols == 0) return;
     if (max_visible_width <= cols) return;
@@ -931,21 +936,29 @@ fn drawHorizontalScrollbar(
         0.0;
     const thumb_x = track_x + available * ratio;
 
-    r.drawRect(
-        @intFromFloat(track_x),
-        @intFromFloat(track_y),
-        @intFromFloat(track_w),
-        @intFromFloat(track_h),
-        r.theme.line_number_bg,
-    );
+    if (list) |ops| {
+        _ = addRectOp(ops, track_x, track_y, track_w, track_h, r.theme.line_number_bg);
+    } else {
+        r.drawRect(
+            @intFromFloat(track_x),
+            @intFromFloat(track_y),
+            @intFromFloat(track_w),
+            @intFromFloat(track_h),
+            r.theme.line_number_bg,
+        );
+    }
     const inset: f32 = @max(1, 2 * scale);
-    r.drawRect(
-        @intFromFloat(thumb_x),
-        @intFromFloat(track_y + inset),
-        @intFromFloat(thumb_w),
-        @intFromFloat(track_h - inset * 2),
-        r.theme.selection,
-    );
+    if (list) |ops| {
+        _ = addRectOp(ops, thumb_x, track_y + inset, thumb_w, track_h - inset * 2, r.theme.selection);
+    } else {
+        r.drawRect(
+            @intFromFloat(thumb_x),
+            @intFromFloat(track_y + inset),
+            @intFromFloat(thumb_w),
+            @intFromFloat(track_h - inset * 2),
+            r.theme.selection,
+        );
+    }
 }
 
 fn drawVerticalScrollbar(
@@ -957,6 +970,7 @@ fn drawVerticalScrollbar(
     height: f32,
     visible_lines: usize,
     total_lines: usize,
+    list: ?*EditorDrawList,
 ) void {
     if (total_lines <= visible_lines or width <= 0 or height <= 0) return;
     const scale = r.uiScaleFactor();
@@ -978,21 +992,29 @@ fn drawVerticalScrollbar(
         0.0;
     const thumb_y = scrollbar_y + available * ratio;
 
-    r.drawRect(
-        @intFromFloat(scrollbar_x),
-        @intFromFloat(scrollbar_y),
-        @intFromFloat(scrollbar_w),
-        @intFromFloat(scrollbar_h),
-        r.theme.line_number_bg,
-    );
+    if (list) |ops| {
+        _ = addRectOp(ops, scrollbar_x, scrollbar_y, scrollbar_w, scrollbar_h, r.theme.line_number_bg);
+    } else {
+        r.drawRect(
+            @intFromFloat(scrollbar_x),
+            @intFromFloat(scrollbar_y),
+            @intFromFloat(scrollbar_w),
+            @intFromFloat(scrollbar_h),
+            r.theme.line_number_bg,
+        );
+    }
     const inset: f32 = @max(1, 2 * scale);
-    r.drawRect(
-        @intFromFloat(scrollbar_x + inset),
-        @intFromFloat(thumb_y),
-        @intFromFloat(scrollbar_w - inset * 2),
-        @intFromFloat(thumb_h),
-        r.theme.selection,
-    );
+    if (list) |ops| {
+        _ = addRectOp(ops, scrollbar_x + inset, thumb_y, scrollbar_w - inset * 2, thumb_h, r.theme.selection);
+    } else {
+        r.drawRect(
+            @intFromFloat(scrollbar_x + inset),
+            @intFromFloat(thumb_y),
+            @intFromFloat(scrollbar_w - inset * 2),
+            @intFromFloat(thumb_h),
+            r.theme.selection,
+        );
+    }
 }
 
 fn drawHighlightedLineText(
