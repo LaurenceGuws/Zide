@@ -179,6 +179,96 @@ pub const Screen = struct {
         return self.grid.cells.items[idx];
     }
 
+    pub fn writeCodepoint(self: *Screen, cp: u32, attrs: types.CellAttrs) void {
+        const rows = @as(usize, self.grid.rows);
+        const cols = @as(usize, self.grid.cols);
+        if (rows == 0 or cols == 0) return;
+        if (self.cursor.row >= rows) return;
+        if (self.cursor.col >= cols or self.cursor.row >= rows) return;
+        const row = self.cursor.row;
+        const col = self.cursor.col;
+        const idx = row * cols + col;
+        if (idx >= self.grid.cells.items.len) return;
+        self.grid.cells.items[idx] = types.Cell{
+            .codepoint = cp,
+            .width = 1,
+            .attrs = attrs,
+        };
+
+        if (self.cursor.col + 1 >= cols) {
+            self.wrap_next = true;
+        } else {
+            self.cursor.col += 1;
+        }
+        self.grid.markDirtyRange(row, row, col, col);
+    }
+
+    pub fn writeAsciiRun(self: *Screen, bytes: []const u8, attrs: types.CellAttrs, use_dec_special: bool) usize {
+        const rows = @as(usize, self.grid.rows);
+        const cols = @as(usize, self.grid.cols);
+        if (rows == 0 or cols == 0) return 0;
+        if (self.cursor.row >= rows) return 0;
+        if (self.cursor.col >= cols or self.cursor.row >= rows) return 0;
+
+        const row = self.cursor.row;
+        const col = self.cursor.col;
+        const remaining_cols = cols - col;
+        const run_len = @min(remaining_cols, bytes.len);
+        const row_start = row * cols + col;
+        if (use_dec_special) {
+            var j: usize = 0;
+            while (j < run_len) {
+                const b = bytes[j];
+                var same_len: usize = 1;
+                while (j + same_len < run_len and bytes[j + same_len] == b) : (same_len += 1) {}
+                const cp = mapDecSpecial(b);
+                const cell = types.Cell{
+                    .codepoint = cp,
+                    .width = 1,
+                    .attrs = attrs,
+                };
+                if (same_len >= 8) {
+                    @memset(self.grid.cells.items[row_start + j .. row_start + j + same_len], cell);
+                } else {
+                    var k: usize = 0;
+                    while (k < same_len) : (k += 1) {
+                        self.grid.cells.items[row_start + j + k] = cell;
+                    }
+                }
+                j += same_len;
+            }
+        } else {
+            var j: usize = 0;
+            while (j < run_len) {
+                const b = bytes[j];
+                var same_len: usize = 1;
+                while (j + same_len < run_len and bytes[j + same_len] == b) : (same_len += 1) {}
+                const cell = types.Cell{
+                    .codepoint = b,
+                    .width = 1,
+                    .attrs = attrs,
+                };
+                if (same_len >= 8) {
+                    @memset(self.grid.cells.items[row_start + j .. row_start + j + same_len], cell);
+                } else {
+                    var k: usize = 0;
+                    while (k < same_len) : (k += 1) {
+                        self.grid.cells.items[row_start + j + k] = cell;
+                    }
+                }
+                j += same_len;
+            }
+        }
+        self.grid.markDirtyRange(row, row, col, col + run_len - 1);
+
+        if (run_len == remaining_cols) {
+            self.wrap_next = true;
+        } else {
+            self.cursor.col += run_len;
+        }
+        return run_len;
+    }
+
     pub fn setCursor(self: *Screen, row: usize, col: usize) void {
         self.cursor = .{ .row = row, .col = col };
     }
@@ -581,3 +671,40 @@ const SavedCursor = struct {
     cursor: types.CursorPos,
     attrs: types.CellAttrs,
 };
+
+pub fn mapDecSpecial(codepoint: u32) u32 {
+    return switch (codepoint) {
+        0x60 => 0x25C6, // ◆
+        0x61 => 0x2592, // ▒
+        0x62 => 0x2409, // ␉
+        0x63 => 0x240C, // ␌
+        0x64 => 0x240D, // ␍
+        0x65 => 0x240A, // ␊
+        0x66 => 0x00B0, // °
+        0x67 => 0x00B1, // ±
+        0x68 => 0x2424, // ␤
+        0x69 => 0x240B, // ␋
+        0x6A => 0x2518, // ┘
+        0x6B => 0x2510, // ┐
+        0x6C => 0x250C, // ┌
+        0x6D => 0x2514, // └
+        0x6E => 0x253C, // ┼
+        0x6F => 0x23BA, // ⎺
+        0x70 => 0x23BB, // ⎻
+        0x71 => 0x2500, // ─
+        0x72 => 0x23BC, // ⎼
+        0x73 => 0x23BD, // ⎽
+        0x74 => 0x251C, // ├
+        0x75 => 0x2524, // ┤
+        0x76 => 0x2534, // ┴
+        0x77 => 0x252C, // ┬
+        0x78 => 0x2502, // │
+        0x79 => 0x2264, // ≤
+        0x7A => 0x2265, // ≥
+        0x7B => 0x03C0, // π
+        0x7C => 0x2260, // ≠
+        0x7D => 0x00A3, // £
+        0x7E => 0x00B7, // ·
+        else => codepoint,
+    };
+}
