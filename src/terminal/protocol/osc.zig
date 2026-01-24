@@ -1,6 +1,6 @@
 const std = @import("std");
 const types = @import("../model/types.zig");
-const pty_mod = @import("../io/pty.zig");
+const pty_mod = @import("../io/pty.zig"); // TODO(layering): consider routing PTY writes via core to avoid protocol->io coupling.
 const parser_mod = @import("../parser/parser.zig");
 const app_logger = @import("../../app_logger.zig");
 
