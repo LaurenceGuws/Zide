@@ -180,6 +180,7 @@ editor_widget_todo:
         - "Highlight token cache keyed by line hash + epoch implemented."
         - "Highlight tokens are primed in update with a per-frame line budget; draw uses cached tokens only."
         - "Line width cache is primed in update with a per-frame line budget to reduce draw-thread work."
+        - "Wrap line counts are primed in update with a per-frame line budget when wrap is enabled."
         - "EditorDrawList command buffer integration still pending."
       references:
         - reference_repos/editors/lite-xl/src/rencache.c
