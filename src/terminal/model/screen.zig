@@ -438,6 +438,24 @@ pub const Screen = struct {
         self.cursor = .{ .row = row, .col = col };
     }
 
+    pub fn backspace(self: *Screen) void {
+        if (self.cursor.col > 0) self.cursor.col -= 1;
+        self.wrap_next = false;
+    }
+
+    pub fn tab(self: *Screen) void {
+        if (self.grid.cols == 0) return;
+        const max_col = @as(usize, self.grid.cols - 1);
+        const next = self.tabstops.next(self.cursor.col, max_col);
+        self.cursor.col = @min(next, max_col);
+        self.wrap_next = false;
+    }
+
+    pub fn carriageReturn(self: *Screen) void {
+        self.cursor.col = 0;
+        self.wrap_next = false;
+    }
+
     pub fn cursorPos(self: *const Screen) types.CursorPos {
         return self.cursor;
     }

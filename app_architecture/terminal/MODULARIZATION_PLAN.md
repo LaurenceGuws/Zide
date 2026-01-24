@@ -119,7 +119,7 @@ Progress:
 - Completed step 7 (kitty graphics extracted into `terminal/kitty/graphics.zig`).
 - Completed step 8 (screen ops expanded in `terminal/model/screen.zig`).
 - Completed step 9 (selection types/state in `terminal/model/selection.zig`).
-- In progress step 10 (cursor/key-mode/default-cell/dirty/grid helpers moved into `terminal/model/screen.zig`, plus damage/query helpers and markDirty delegations).
+- In progress step 10 (cursor/key-mode/default-cell/dirty/grid helpers moved into `terminal/model/screen.zig`, plus damage/query helpers, markDirty delegations, and basic cursor movement ops).
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.
