@@ -2,6 +2,7 @@ editor_protocol_todo:
   scope:
     description: "Text engine + editing semantics (buffer model, undo, selection, search, folding)."
     priorities:
+      - "modularize editor view/state before behavior changes"
       - "large-file performance"
       - "correctness for unicode + graphemes"
       - "multi-cursor editing"

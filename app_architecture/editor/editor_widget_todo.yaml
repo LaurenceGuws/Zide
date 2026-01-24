@@ -2,6 +2,7 @@ editor_widget_todo:
   scope:
     description: "Build a best-in-class editor widget and text engine for Zide (Linux first), targeting Notepad++-level capability."
     priorities:
+      - "modularize editor_widget + renderer into view/render layers"
       - "fast editing on large files"
       - "correctness for unicode + grapheme clusters"
       - "multi-cursor + column selection"
@@ -66,6 +67,12 @@ editor_widget_todo:
         - reference_repos/text/scintilla/src/Document.cxx
         - reference_repos/text/scintilla/src/CellBuffer.cxx
   roadmap:
+    - id: ED-00
+      status: done
+      title: "Editor modularization plan (layers + migration steps)"
+      notes:
+        - "Plan captured in app_architecture/editor/MODULARIZATION_PLAN.md."
+
     - id: ED-01
       status: in_progress
       title: "Text model upgrade (large file performance)"
