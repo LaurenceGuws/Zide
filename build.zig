@@ -280,4 +280,16 @@ pub fn build(b: *std.Build) void {
     }
     const terminal_replay_step = b.step("test-terminal-replay", "Run terminal replay harness");
     terminal_replay_step.dependOn(&run_terminal_replay.step);
+
+    const terminal_import_check = b.addExecutable(.{
+        .name = "terminal-import-check",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/terminal_import_check.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_terminal_import_check = b.addRunArtifact(terminal_import_check);
+    const terminal_import_check_step = b.step("check-terminal-imports", "Check terminal module import layering");
+    terminal_import_check_step.dependOn(&run_terminal_import_check.step);
 }
