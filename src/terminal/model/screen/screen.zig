@@ -417,6 +417,36 @@ pub const Screen = struct {
         return @as(usize, self.grid.cols);
     }
 
+    pub const SnapshotView = struct {
+        rows: usize,
+        cols: usize,
+        cells: []const types.Cell,
+        dirty_rows: []const bool,
+        dirty_cols_start: []const u16,
+        dirty_cols_end: []const u16,
+        cursor: types.CursorPos,
+        cursor_style: types.CursorStyle,
+        cursor_visible: bool,
+        dirty: grid_mod.Dirty,
+        damage: grid_mod.Damage,
+    };
+
+    pub fn snapshotView(self: *const Screen) SnapshotView {
+        return .{
+            .rows = @as(usize, self.grid.rows),
+            .cols = @as(usize, self.grid.cols),
+            .cells = self.grid.cells.items,
+            .dirty_rows = self.grid.dirty_rows.items,
+            .dirty_cols_start = self.grid.dirty_cols_start.items,
+            .dirty_cols_end = self.grid.dirty_cols_end.items,
+            .cursor = self.cursor,
+            .cursor_style = self.cursor_style,
+            .cursor_visible = self.cursor_visible,
+            .dirty = self.grid.dirty,
+            .damage = self.grid.damage,
+        };
+    }
+
     pub fn markDirtyAll(self: *Screen) void {
         self.grid.markDirtyAll();
     }
