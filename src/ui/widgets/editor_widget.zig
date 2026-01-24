@@ -3,6 +3,7 @@ const renderer_mod = @import("../renderer.zig");
 const editor_mod = @import("../../editor/editor.zig");
 const syntax_mod = @import("../../editor/syntax.zig");
 const selection_mod = @import("../../editor/view/selection.zig");
+const layout_mod = @import("../../editor/view/layout.zig");
 const types = @import("../../editor/types.zig");
 const app_logger = @import("../../app_logger.zig");
 
@@ -154,7 +155,7 @@ pub const EditorWidget = struct {
             if (line_width > max_visible_width) {
                 max_visible_width = line_width;
             }
-            const total_visual_lines = if (self.wrap_enabled) visualLineCountForWidth(cols, line_width) else 1;
+            const total_visual_lines = if (self.wrap_enabled) layout_mod.visualLineCountForWidth(cols, line_width) else 1;
             const seg_start_idx = if (self.wrap_enabled and line_idx == start_line) @min(start_seg, total_visual_lines) else 0;
 
             var cursor_col_vis: usize = 0;
@@ -287,7 +288,7 @@ pub const EditorWidget = struct {
 
         const width_cached = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
         const line_width = if (line_len == 0) 1 else width_cached;
-        return visualLineCountForWidth(cols, line_width);
+        return layout_mod.visualLineCountForWidth(cols, line_width);
     }
 
     pub fn handleMouseClick(
@@ -747,7 +748,7 @@ pub const EditorWidget = struct {
         const col_vis = selection_mod.visualColumnForByteIndex(line_text, self.editor.cursor.col, cluster_result.slice);
         const width_cached = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
         const line_width = if (line_len == 0) 1 else width_cached;
-        const total_visual_lines = visualLineCountForWidth(cols, line_width);
+        const total_visual_lines = layout_mod.visualLineCountForWidth(cols, line_width);
         if (total_visual_lines == 0) return 0;
         return @min(col_vis / cols, total_visual_lines - 1);
     }
@@ -1182,7 +1183,7 @@ pub const EditorWidget = struct {
             self.editor.preferred_visual_col = preferred_vis_col;
         }
         const cur_line_width = self.editor.lineWidthCached(cur_line, line_text, cluster_result.slice);
-        const cur_visual_lines = visualLineCountForWidth(cols, cur_line_width);
+        const cur_visual_lines = layout_mod.visualLineCountForWidth(cols, cur_line_width);
         const cur_seg = if (cur_visual_lines == 0) 0 else @min(cur_vis_col / cols, cur_visual_lines - 1);
         const cur_seg_col = cur_vis_col - cur_seg * cols;
 
@@ -1237,7 +1238,7 @@ pub const EditorWidget = struct {
         };
 
         const target_width = self.editor.lineWidthCached(target_line, target_text, target_clusters.slice);
-        const target_visual_lines = visualLineCountForWidth(cols, target_width);
+        const target_visual_lines = layout_mod.visualLineCountForWidth(cols, target_width);
         if (target_use_preferred and target_visual_lines > 0) {
             target_seg = @min(preferred_vis_col / cols, target_visual_lines - 1);
         }
@@ -1330,12 +1331,6 @@ fn drawHighlightedLineSegment(
         const x = text_x + @as(f32, @floatFromInt(slice_start - seg_start)) * r.char_width;
         r.drawText(line_text[slice_start..seg_end], x, y, r.theme.foreground);
     }
-}
-
-fn visualLineCountForWidth(cols: usize, width: usize) usize {
-    if (cols == 0) return 1;
-    if (width == 0) return 1;
-    return @max(@as(usize, 1), (width + cols - 1) / cols);
 }
 
 pub const ClusterCache = struct {
@@ -1449,11 +1444,6 @@ fn graphemeClusterOffsets(allocator: std.mem.Allocator, hb_font: *hb.hb_font_t, 
     }
     clusters.items.len = write;
     return try clusters.toOwnedSlice(allocator);
-}
-
-test "visual line count rounds to viewport columns" {
-    const cols: usize = 4;
-    try std.testing.expectEqual(@as(usize, 3), visualLineCountForWidth(cols, 10));
 }
 
 fn highlightTokenLessThan(_: void, a: HighlightToken, b: HighlightToken) bool {
