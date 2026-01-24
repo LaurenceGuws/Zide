@@ -140,9 +140,7 @@ pub const EditorRenderCache = struct {
             return true;
         }
         _ = self.line_entries.put(key, .{ .hash = hash, .last_used = self.frame_id }) catch {};
-        if (self.line_entries.count() > self.max_entries) {
-            self.clearLineEntries();
-        }
+        self.maybeEvictLineEntries();
         return true;
     }
 
@@ -184,9 +182,7 @@ pub const EditorRenderCache = struct {
             .tokens = tokens,
             .last_used = self.frame_id,
         }) catch {};
-        if (self.highlight_entries.count() > self.max_entries) {
-            self.clearHighlightEntries();
-        }
+        self.maybeEvictHighlightEntries();
         return tokens;
     }
 
@@ -255,9 +251,7 @@ pub const EditorRenderCache = struct {
             .count = count,
             .last_used = self.frame_id,
         }) catch {};
-        if (self.wrap_entries.count() > self.max_entries) {
-            self.clearWrapEntries();
-        }
+        self.maybeEvictWrapEntries();
     }
 
     pub fn beginHighlightWork(self: *EditorRenderCache, start_line: usize, end_line: usize, epoch: u64) void {
@@ -357,6 +351,55 @@ pub const EditorRenderCache = struct {
 
     fn clearWrapEntries(self: *EditorRenderCache) void {
         self.wrap_entries.clearRetainingCapacity();
+    }
+
+    fn maybeEvictLineEntries(self: *EditorRenderCache) void {
+        if (self.line_entries.count() <= self.max_entries) return;
+        const target = @max(self.max_entries, 1);
+        var evicted: usize = 0;
+        var it = self.line_entries.iterator();
+        while (it.next()) |entry| {
+            if (self.frame_id - entry.value_ptr.last_used <= 1) continue;
+            _ = self.line_entries.remove(entry.key_ptr.*);
+            evicted += 1;
+            if (self.line_entries.count() <= target) break;
+        }
+        if (evicted == 0) {
+            self.clearLineEntries();
+        }
+    }
+
+    fn maybeEvictHighlightEntries(self: *EditorRenderCache) void {
+        if (self.highlight_entries.count() <= self.max_entries) return;
+        const target = @max(self.max_entries, 1);
+        var evicted: usize = 0;
+        var it = self.highlight_entries.iterator();
+        while (it.next()) |entry| {
+            if (self.frame_id - entry.value_ptr.last_used <= 1) continue;
+            self.allocator.free(entry.value_ptr.tokens);
+            _ = self.highlight_entries.remove(entry.key_ptr.*);
+            evicted += 1;
+            if (self.highlight_entries.count() <= target) break;
+        }
+        if (evicted == 0) {
+            self.clearHighlightEntries();
+        }
+    }
+
+    fn maybeEvictWrapEntries(self: *EditorRenderCache) void {
+        if (self.wrap_entries.count() <= self.max_entries) return;
+        const target = @max(self.max_entries, 1);
+        var evicted: usize = 0;
+        var it = self.wrap_entries.iterator();
+        while (it.next()) |entry| {
+            if (self.frame_id - entry.value_ptr.last_used <= 1) continue;
+            _ = self.wrap_entries.remove(entry.key_ptr.*);
+            evicted += 1;
+            if (self.wrap_entries.count() <= target) break;
+        }
+        if (evicted == 0) {
+            self.clearWrapEntries();
+        }
     }
 
     fn clearWrapWork(self: *EditorRenderCache) void {
