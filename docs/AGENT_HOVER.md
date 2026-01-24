@@ -19,6 +19,7 @@ Date: 2026-01-24
 - Added editor render snapshot harness in `src/editor_tests.zig` (draw ops log baseline).
 - Added editor render cache + dirty redraw path (EditorRenderCache + editor texture draw).
 - Editor cached rendering is now in main draw loop (EditorWidget.drawCached).
+- Integrated EditorDrawList command buffer into cached draw path.
 
 ## Overview
 - Terminal module split is stable; import layering enforced.
@@ -33,6 +34,6 @@ Date: 2026-01-24
   - `zig build` passes after making input-called helpers public.
 
 ## Next Steps
-1) Integrate EditorDrawList command buffer into the cached draw path.
-2) Tighten cache eviction/LRU (currently clears on cap).
-3) Add a render cache regression test that exercises dirty-line updates.
+1) Tighten cache eviction/LRU (currently clears on cap).
+2) Add a render cache regression test that exercises dirty-line updates.
+3) Evaluate command buffer usage for scrollbars and non-cached draw path.
