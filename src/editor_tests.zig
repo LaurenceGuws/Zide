@@ -189,6 +189,7 @@ test "editor insert across rectangular selections" {
 
 const draw_mod = @import("ui/widgets/editor_widget_draw.zig");
 const editor_render = @import("editor/render/renderer_ops.zig");
+const cache_mod = @import("editor/render/cache.zig");
 
 const Color = struct {
     r: u8,
@@ -265,6 +266,7 @@ const FakeRenderer = struct {
     char_height: f32,
     theme: Theme,
     log: DrawLog,
+    editor_texture_created: bool,
 
     pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, char_width: f32, char_height: f32) FakeRenderer {
         return .{
@@ -275,6 +277,7 @@ const FakeRenderer = struct {
             .char_height = char_height,
             .theme = .{},
             .log = DrawLog.init(allocator),
+            .editor_texture_created = false,
         };
     }
 
@@ -285,6 +288,47 @@ const FakeRenderer = struct {
     pub fn uiScaleFactor(self: *FakeRenderer) f32 {
         _ = self;
         return 1.0;
+    }
+
+    pub fn ensureEditorTexture(self: *FakeRenderer, width: i32, height: i32) bool {
+        _ = width;
+        _ = height;
+        if (!self.editor_texture_created) {
+            self.editor_texture_created = true;
+            return true;
+        }
+        return false;
+    }
+
+    pub fn beginEditorTexture(self: *FakeRenderer) bool {
+        _ = self;
+        return true;
+    }
+
+    pub fn endEditorTexture(self: *FakeRenderer) void {
+        _ = self;
+    }
+
+    pub fn beginClip(self: *FakeRenderer, x: i32, y: i32, w: i32, h: i32) void {
+        _ = self;
+        _ = x;
+        _ = y;
+        _ = w;
+        _ = h;
+    }
+
+    pub fn endClip(self: *FakeRenderer) void {
+        _ = self;
+    }
+
+    pub fn drawEditorTexture(self: *FakeRenderer, x: f32, y: f32) void {
+        _ = self;
+        _ = x;
+        _ = y;
+    }
+
+    pub fn clearLog(self: *FakeRenderer) void {
+        self.log.data.clearRetainingCapacity();
     }
 
     pub fn drawRect(self: *FakeRenderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
@@ -378,4 +422,38 @@ test "editor render snapshot baseline" {
         "rect 74 16 2 16 #F8F8F2FF\n";
 
     try std.testing.expectEqualStrings(expected, renderer.log.data.items);
+}
+
+test "editor render cache dirty line update" {
+    const allocator = std.testing.allocator;
+    var editor = try Editor.init(allocator);
+    defer editor.deinit();
+
+    try editor.insertText("one\ntwo\nthree");
+    editor.setCursor(0, 0);
+
+    var renderer = FakeRenderer.init(allocator, 320, 48, 8, 16);
+    defer renderer.deinit();
+
+    var widget = FakeWidget{
+        .editor = editor,
+        .gutter_width = 0,
+        .wrap_enabled = false,
+    };
+
+    var cache = cache_mod.EditorRenderCache.init(allocator, 512);
+    defer cache.deinit();
+
+    draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 48, 1);
+    renderer.clearLog();
+
+    editor.setCursor(1, 0);
+    draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 48, 2);
+
+    const log = renderer.log.data.items;
+    try std.testing.expect(log.len > 0);
+    try std.testing.expect(std.mem.indexOf(u8, log, "one") != null);
+    try std.testing.expect(std.mem.indexOf(u8, log, "two") != null);
+    try std.testing.expect(std.mem.indexOf(u8, log, "three") == null);
+    try std.testing.expect(std.mem.indexOf(u8, log, "\"   3\"") == null);
 }

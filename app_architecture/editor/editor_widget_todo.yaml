@@ -182,6 +182,7 @@ editor_widget_todo:
         - "Line width cache is primed in update with a per-frame line budget to reduce draw-thread work."
         - "Wrap line counts are primed in update with a per-frame line budget when wrap is enabled."
         - "EditorDrawList command buffer integrated into cached draw path."
+        - "Render cache regression test added for dirty-line updates."
       references:
         - reference_repos/editors/lite-xl/src/rencache.c
         - reference_repos/editors/neovim/src/nvim/drawscreen.c
