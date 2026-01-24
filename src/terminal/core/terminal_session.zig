@@ -833,19 +833,11 @@ pub const TerminalSession = struct {
 
     pub fn newline(self: *TerminalSession) void {
         const screen = self.activeScreen();
-        if (screen.cursor.row + 1 < @as(usize, screen.grid.rows) and screen.cursor.row != screen.scroll_bottom) {
-            screen.cursor.row += 1;
-            screen.cursor.col = 0;
-            screen.wrap_next = false;
-            return;
+        switch (screen.newlineAction()) {
+            .moved => {},
+            .scroll_region => self.scrollRegionUp(1),
+            .scroll_full => self.scrollUp(),
         }
-        if (screen.cursor.row == screen.scroll_bottom) {
-            self.scrollRegionUp(1);
-            screen.wrap_next = false;
-            return;
-        }
-        self.scrollUp();
-        screen.wrap_next = false;
     }
 
     fn scrollUp(self: *TerminalSession) void {
