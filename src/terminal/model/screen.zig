@@ -351,6 +351,20 @@ pub const Screen = struct {
         self.tabstops.reset();
     }
 
+    pub fn blankCell(self: *const Screen) types.Cell {
+        return .{
+            .codepoint = 0,
+            .width = 1,
+            .attrs = self.current_attrs,
+        };
+    }
+
+    pub fn isFullScrollRegion(self: *const Screen) bool {
+        const rows = @as(usize, self.grid.rows);
+        if (rows == 0) return false;
+        return self.scroll_top == 0 and self.scroll_bottom + 1 == rows;
+    }
+
     pub fn setCursorStyle(self: *Screen, mode: i32) void {
         const style = switch (mode) {
             0, 1 => types.CursorStyle{ .shape = .block, .blink = true },
@@ -376,6 +390,32 @@ pub const Screen = struct {
         if (!slot.active) return;
         self.cursor = slot.cursor;
         self.current_attrs = slot.attrs;
+    }
+
+    pub fn keyModeStack(self: *Screen) *KeyModeStack {
+        return &self.key_mode;
+    }
+
+    pub fn keyModeFlags(self: *const Screen) u32 {
+        return self.key_mode.current();
+    }
+
+    pub fn keyModePush(self: *Screen, flags: u32) void {
+        self.key_mode.push(flags);
+    }
+
+    pub fn keyModePop(self: *Screen, count: usize) void {
+        self.key_mode.pop(count);
+    }
+
+    pub fn keyModeModify(self: *Screen, flags: u32, mode: u32) void {
+        const current = self.key_mode.current();
+        const updated = switch (mode) {
+            2 => current | flags,
+            3 => current & ~flags,
+            else => flags,
+        };
+        self.key_mode.setCurrent(updated);
     }
 
     pub fn clear(self: *Screen) void {
