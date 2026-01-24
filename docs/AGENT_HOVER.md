@@ -9,11 +9,13 @@ Date: 2026-01-24
 - Updated editor docs to reflect modularization focus.
 - Removed stale `src/terminal_replay_tests.zig`.
 - Editor modularization Step 1: selection helpers extracted to `src/editor/view/selection.zig`.
+- Editor modularization Step 2: layout helpers extracted to `src/editor/view/layout.zig`.
 
 ## Overview
 - Terminal module split is stable; import layering enforced.
 - Editor work is now focused on extraction-only modularization of `editor_widget.zig` into view/render layers.
   - Selection/column mapping helpers moved into `editor/view/selection.zig`.
+  - Visual line layout helper moved into `editor/view/layout.zig`.
 
 ## Next Steps
 1) Start editor modularization Step 1: extract selection state from `src/ui/widgets/editor_widget.zig` into `src/editor/view/selection.zig` (extraction-only).
