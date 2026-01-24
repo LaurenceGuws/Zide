@@ -35,6 +35,21 @@ Notes:
 - Update this table with observed behavior once baseline fixtures exist.
 - Contracted behavior only after verified tests; do not assert guarantees early.
 
+## Layering Rules (Imports)
+
+Use `zig build check-terminal-imports` to enforce these rules.
+
+| Layer | Allowed Imports |
+| --- | --- |
+| core | model, parser, protocol, io, input, kitty |
+| protocol | parser, model, io |
+| parser | parser |
+| model | model |
+| input | io, model |
+| io | io |
+| kitty | core |
+| harness | any (test-only) |
+
 ## Fixture Scope (authoritative)
 - VT replay fixtures: see `app_architecture/terminal/MODULARIZATION_PLAN.md`
 - Harness API fixtures (selection)
