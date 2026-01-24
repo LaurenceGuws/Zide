@@ -16,17 +16,10 @@ pub const CursorStyle = struct {
 
 pub const default_cursor_style = CursorStyle{ .shape = .block, .blink = true };
 
-pub const SelectionPos = struct {
-    row: usize,
-    col: usize,
-};
+const selection_mod = @import("selection.zig");
 
-pub const TerminalSelection = struct {
-    active: bool,
-    selecting: bool,
-    start: SelectionPos,
-    end: SelectionPos,
-};
+pub const SelectionPos = selection_mod.SelectionPos;
+pub const TerminalSelection = selection_mod.TerminalSelection;
 
 pub const Cell = struct {
     codepoint: u32,
