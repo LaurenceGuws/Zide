@@ -346,6 +346,17 @@ pub const Screen = struct {
         self.wrap_next = false;
     }
 
+    pub fn setCursorVisible(self: *Screen, visible: bool) void {
+        self.cursor_visible = visible;
+    }
+
+    pub fn cursorReport(self: *const Screen) struct { row_1: usize, col_1: usize } {
+        return .{
+            .row_1 = self.cursor.row + 1,
+            .col_1 = self.cursor.col + 1,
+        };
+    }
+
     pub const NewlineAction = enum {
         moved,
         scroll_region,
