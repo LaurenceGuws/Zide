@@ -12,7 +12,7 @@ Goal: split the editor into clear layers with stable APIs so we can grow feature
 ## Constraints
 - Small, reviewable diffs.
 - No behavior changes during extraction-only refactors.
-- Public symbols and current UI behavior remain stable until a test harness exists.
+- Behavior changes require a harness-backed baseline (now in place for editor render).
 
 ## Target Layer Split
 1) UI Widget (input + draw orchestration)
@@ -66,6 +66,8 @@ Use `zig build check-editor-imports` to enforce these rules.
 4) Introduce `EditorDrawList` to decouple rendering.
 5) Split `editor_widget.zig` into input + draw orchestration.
 6) Split renderer editor-specific code into `src/editor/render/*`.
+7) Add editor render snapshot harness (baseline draw ops).
+8) Implement render cache + dirty redraw path (render texture + per-seg hashing).
 
 ## Non-goals (for now)
 - No new features or UI changes.

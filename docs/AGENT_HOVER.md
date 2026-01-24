@@ -17,10 +17,12 @@ Date: 2026-01-24
 - Editor modularization Step 7: draw orchestration extracted to `src/ui/widgets/editor_widget_draw.zig`.
 - Added editor import layering check: `zig build check-editor-imports`.
 - Added editor render snapshot harness in `src/editor_tests.zig` (draw ops log baseline).
+- Added editor render cache + dirty redraw path (EditorRenderCache + editor texture draw).
+- Editor cached rendering is now in main draw loop (EditorWidget.drawCached).
 
 ## Overview
 - Terminal module split is stable; import layering enforced.
-- Editor work is now focused on extraction-only modularization of `editor_widget.zig` into view/render layers.
+- Editor work moved from extraction-only into render-performance changes (cache + dirty redraw), backed by a render snapshot harness.
   - Selection/column mapping helpers moved into `editor/view/selection.zig`.
   - Visual line layout helper moved into `editor/view/layout.zig`.
   - Scrollbar drag mapping helpers moved into `editor/view/scroll.zig`.
@@ -31,6 +33,6 @@ Date: 2026-01-24
   - `zig build` passes after making input-called helpers public.
 
 ## Next Steps
-1) Add editor import-layer check (mirror terminal check).
-2) Draft a tiny editor harness before any behavior changes.
-3) Review whether draw-list integration should be the next extraction step.
+1) Integrate EditorDrawList command buffer into the cached draw path.
+2) Tighten cache eviction/LRU (currently clears on cap).
+3) Add a render cache regression test that exercises dirty-line updates.

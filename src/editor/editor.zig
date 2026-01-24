@@ -25,6 +25,8 @@ pub const Editor = struct {
     max_line_width_scan_complete: bool,
     highlighter: ?*syntax_mod.SyntaxHighlighter,
     highlight_pending: bool,
+    change_tick: u64,
+    highlight_epoch: u64,
     file_path: ?[]const u8,
     modified: bool,
     tab_width: usize,
@@ -52,6 +54,8 @@ pub const Editor = struct {
             .max_line_width_scan_complete = false,
             .highlighter = null,
             .highlight_pending = false,
+            .change_tick = 0,
+            .highlight_epoch = 0,
             .file_path = null,
             .modified = false,
             .tab_width = 4,
@@ -368,6 +372,16 @@ pub const Editor = struct {
         self.cursor.offset = line_start + self.cursor.col;
     }
 
+    fn noteTextChanged(self: *Editor) void {
+        self.modified = true;
+        self.invalidateLineWidthCache();
+        if (self.highlighter) |h| {
+            _ = h.reparse();
+        }
+        self.change_tick +|= 1;
+        self.highlight_epoch +|= 1;
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Text editing
     // ─────────────────────────────────────────────────────────────────────────
@@ -390,11 +404,7 @@ pub const Editor = struct {
                 self.cursor.offset += 1;
                 self.updateCursorPosition();
             }
-            self.modified = true;
-            self.invalidateLineWidthCache();
-            if (self.highlighter) |h| {
-                _ = h.reparse();
-            }
+            self.noteTextChanged();
             self.clearSelections();
             try self.endUndoGroup();
             return;
@@ -407,11 +417,7 @@ pub const Editor = struct {
             try self.buffer.insertBytes(self.cursor.offset, &bytes);
             self.cursor.offset += 1;
             self.updateCursorPosition();
-            self.modified = true;
-            self.invalidateLineWidthCache();
-            if (self.highlighter) |h| {
-                _ = h.reparse();
-            }
+            self.noteTextChanged();
             try self.endUndoGroup();
             return;
         }
@@ -419,11 +425,7 @@ pub const Editor = struct {
         try self.buffer.insertBytes(self.cursor.offset, &bytes);
         self.cursor.offset += 1;
         self.updateCursorPosition();
-        self.modified = true;
-        self.invalidateLineWidthCache();
-        if (self.highlighter) |h| {
-            _ = h.reparse();
-        }
+        self.noteTextChanged();
     }
 
     pub fn insertText(self: *Editor, text: []const u8) !void {
@@ -441,11 +443,7 @@ pub const Editor = struct {
                 try self.buffer.insertBytes(norm.start.offset, text);
                 self.cursor = norm.start;
             }
-            self.modified = true;
-            self.invalidateLineWidthCache();
-            if (self.highlighter) |h| {
-                _ = h.reparse();
-            }
+            self.noteTextChanged();
             self.clearSelections();
             try self.endUndoGroup();
             return;
@@ -457,22 +455,14 @@ pub const Editor = struct {
             try self.buffer.insertBytes(self.cursor.offset, text);
             self.cursor.offset += text.len;
             self.updateCursorPosition();
-            self.modified = true;
-            self.invalidateLineWidthCache();
-            if (self.highlighter) |h| {
-                _ = h.reparse();
-            }
+            self.noteTextChanged();
             try self.endUndoGroup();
             return;
         }
         try self.buffer.insertBytes(self.cursor.offset, text);
         self.cursor.offset += text.len;
         self.updateCursorPosition();
-        self.modified = true;
-        self.invalidateLineWidthCache();
-        if (self.highlighter) |h| {
-            _ = h.reparse();
-        }
+        self.noteTextChanged();
     }
 
     pub fn insertNewline(self: *Editor) !void {
@@ -489,11 +479,7 @@ pub const Editor = struct {
         try self.buffer.deleteRange(self.cursor.offset - 1, 1);
         self.cursor.offset -= 1;
         self.updateCursorPosition();
-        self.modified = true;
-        self.invalidateLineWidthCache();
-        if (self.highlighter) |h| {
-            _ = h.reparse();
-        }
+        self.noteTextChanged();
     }
 
     pub fn deleteCharForward(self: *Editor) !void {
@@ -505,17 +491,14 @@ pub const Editor = struct {
         const total = self.buffer.totalLen();
         if (self.cursor.offset >= total) return;
         try self.buffer.deleteRange(self.cursor.offset, 1);
-        self.modified = true;
-        self.invalidateLineWidthCache();
-        if (self.highlighter) |h| {
-            _ = h.reparse();
-        }
+        self.noteTextChanged();
     }
 
     pub fn deleteSelection(self: *Editor) !void {
         self.preferred_visual_col = null;
         if (self.selections.items.len > 0) {
             try self.normalizeSelectionsDescending();
+            var changed = false;
             var idx: usize = self.selections.items.len;
             while (idx > 0) {
                 idx -= 1;
@@ -525,15 +508,10 @@ pub const Editor = struct {
                 if (len > 0) {
                     try self.buffer.deleteRange(norm.start.offset, len);
                     self.cursor = norm.start;
-                    self.modified = true;
+                    changed = true;
                 }
             }
-            if (self.modified) {
-                self.invalidateLineWidthCache();
-                if (self.highlighter) |h| {
-                    _ = h.reparse();
-                }
-            }
+            if (changed) self.noteTextChanged();
             self.clearSelections();
             self.selection = null;
             return;
@@ -544,11 +522,7 @@ pub const Editor = struct {
             if (len > 0) {
                 try self.buffer.deleteRange(norm.start.offset, len);
                 self.cursor = norm.start;
-                self.modified = true;
-                self.invalidateLineWidthCache();
-                if (self.highlighter) |h| {
-                    _ = h.reparse();
-                }
+                self.noteTextChanged();
             }
             self.selection = null;
         }
@@ -586,6 +560,9 @@ pub const Editor = struct {
             if (self.highlighter) |h| {
                 _ = h.reparse();
             }
+            self.invalidateLineWidthCache();
+            self.change_tick +|= 1;
+            self.highlight_epoch +|= 1;
         }
         return result.changed;
     }
@@ -610,6 +587,9 @@ pub const Editor = struct {
             if (self.highlighter) |h| {
                 _ = h.reparse();
             }
+            self.invalidateLineWidthCache();
+            self.change_tick +|= 1;
+            self.highlight_epoch +|= 1;
         }
         return result.changed;
     }
