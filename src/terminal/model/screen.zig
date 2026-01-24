@@ -426,6 +426,26 @@ pub const Screen = struct {
         self.key_mode.setCurrent(updated);
     }
 
+    pub fn cellAtOr(self: *const Screen, row: usize, col: usize, default_cell: types.Cell) types.Cell {
+        if (row >= @as(usize, self.grid.rows) or col >= @as(usize, self.grid.cols)) {
+            return default_cell;
+        }
+        const idx = row * @as(usize, self.grid.cols) + col;
+        return self.grid.cells.items[idx];
+    }
+
+    pub fn cursorPos(self: *const Screen) types.CursorPos {
+        return self.cursor;
+    }
+
+    pub fn rowCount(self: *const Screen) usize {
+        return @as(usize, self.grid.rows);
+    }
+
+    pub fn colCount(self: *const Screen) usize {
+        return @as(usize, self.grid.cols);
+    }
+
     pub fn markDirtyAll(self: *Screen) void {
         self.grid.markDirtyAll();
     }
