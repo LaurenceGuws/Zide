@@ -351,6 +351,33 @@ pub const Screen = struct {
         self.tabstops.reset();
     }
 
+    pub fn setCursorStyle(self: *Screen, mode: i32) void {
+        const style = switch (mode) {
+            0, 1 => types.CursorStyle{ .shape = .block, .blink = true },
+            2 => types.CursorStyle{ .shape = .block, .blink = false },
+            3 => types.CursorStyle{ .shape = .underline, .blink = true },
+            4 => types.CursorStyle{ .shape = .underline, .blink = false },
+            5 => types.CursorStyle{ .shape = .bar, .blink = true },
+            6 => types.CursorStyle{ .shape = .bar, .blink = false },
+            else => self.cursor_style,
+        };
+        self.cursor_style = style;
+    }
+
+    pub fn saveCursor(self: *Screen) void {
+        const slot = &self.saved_cursor;
+        slot.active = true;
+        slot.cursor = self.cursor;
+        slot.attrs = self.current_attrs;
+    }
+
+    pub fn restoreCursor(self: *Screen) void {
+        const slot = &self.saved_cursor;
+        if (!slot.active) return;
+        self.cursor = slot.cursor;
+        self.current_attrs = slot.attrs;
+    }
+
     pub fn clear(self: *Screen) void {
         const default_cell = types.Cell{
             .codepoint = 0,
