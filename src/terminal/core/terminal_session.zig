@@ -268,14 +268,6 @@ pub const TerminalSession = struct {
         return self.active == .alt;
     }
 
-    fn defaultCell(self: *const TerminalSession) Cell {
-        return .{
-            .codepoint = 0,
-            .width = 1,
-            .attrs = self.primary.default_attrs,
-        };
-    }
-
     pub fn setDefaultColors(self: *TerminalSession, fg: types.Color, bg: types.Color) void {
         const old_attrs = self.primary.default_attrs;
         var new_attrs = types.defaultCell().attrs;
@@ -459,7 +451,7 @@ pub const TerminalSession = struct {
         try self.primary.resize(rows, cols);
         try self.alt.resize(rows, cols);
         if (cols != old_cols) {
-            try self.history.resizePreserve(cols, self.defaultCell());
+            try self.history.resizePreserve(cols, self.primary.defaultCell());
         }
         const log = app_logger.logger("terminal.core");
         log.logf("terminal resize rows={d} cols={d} scrollback_cols={d}", .{ rows, cols, self.primary.grid.cols });
@@ -886,7 +878,7 @@ pub const TerminalSession = struct {
     pub fn getCell(self: *TerminalSession, row: usize, col: usize) Cell {
         const screen = self.activeScreenConst();
         if (row >= @as(usize, screen.grid.rows) or col >= @as(usize, screen.grid.cols)) {
-            return self.defaultCell();
+            return self.primary.defaultCell();
         }
         const idx = row * @as(usize, screen.grid.cols) + col;
         return screen.grid.cells.items[idx];
