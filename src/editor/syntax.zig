@@ -203,20 +203,28 @@ fn emptyTokens(allocator: std.mem.Allocator) ![]HighlightToken {
 fn mapCaptureKind(name: []const u8) TokenKind {
     if (std.mem.indexOf(u8, name, "comment") != null) return .comment;
     if (std.mem.indexOf(u8, name, "string") != null) return .string;
+    if (std.mem.indexOf(u8, name, "character") != null) return .string;
     if (std.mem.indexOf(u8, name, "keyword") != null) return .keyword;
-    if (std.mem.indexOf(u8, name, "number") != null) return .number;
+    if (std.mem.indexOf(u8, name, "number") != null or std.mem.indexOf(u8, name, "float") != null) return .number;
+    if (std.mem.indexOf(u8, name, "boolean") != null or std.mem.indexOf(u8, name, "constant") != null) return .constant;
     if (std.mem.indexOf(u8, name, "function") != null) return .function;
-    if (std.mem.indexOf(u8, name, "variable") != null) return .variable;
     if (std.mem.indexOf(u8, name, "type") != null) return .type_name;
-    if (std.mem.indexOf(u8, name, "operator") != null) return .operator;
     if (std.mem.indexOf(u8, name, "builtin") != null) return .builtin;
-    if (std.mem.indexOf(u8, name, "punctuation") != null) return .punctuation;
-    if (std.mem.indexOf(u8, name, "constant") != null) return .constant;
-    if (std.mem.indexOf(u8, name, "attribute") != null) return .attribute;
-    if (std.mem.indexOf(u8, name, "namespace") != null) return .namespace;
+    if (std.mem.indexOf(u8, name, "module") != null or std.mem.indexOf(u8, name, "namespace") != null) return .namespace;
     if (std.mem.indexOf(u8, name, "label") != null) return .label;
+    if (std.mem.indexOf(u8, name, "operator") != null) return .operator;
+    if (std.mem.indexOf(u8, name, "punctuation") != null) return .punctuation;
+    if (std.mem.indexOf(u8, name, "attribute") != null or std.mem.indexOf(u8, name, "parameter") != null) return .attribute;
+    if (std.mem.indexOf(u8, name, "variable") != null) return .variable;
     if (std.mem.indexOf(u8, name, "error") != null) return .error_token;
     return .plain;
+}
+
+fn shouldSkipCapture(name: []const u8) bool {
+    if (name.len == 0) return true;
+    if (name[0] == '_') return true;
+    if (std.mem.eql(u8, name, "spell") or std.mem.eql(u8, name, "nospell")) return true;
+    return false;
 }
 
 const QueryBundle = struct {
@@ -288,8 +296,9 @@ const QueryCache = struct {
             var name_len: u32 = 0;
             const name_ptr = c.ts_query_capture_name_for_id(query, @as(u32, @intCast(i)), &name_len);
             const name = name_ptr[0..name_len];
-            capture_noop[i] = name.len > 0 and name[0] == '_';
-            entry.* = mapCaptureKind(name);
+            const kind = mapCaptureKind(name);
+            capture_noop[i] = shouldSkipCapture(name) or kind == .plain;
+            entry.* = kind;
         }
 
         const bundle = try self.allocator.create(QueryBundle);
