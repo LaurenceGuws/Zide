@@ -116,14 +116,14 @@ test "utf8 column mapping" {
     const s = "a😀b";
     try std.testing.expectEqual(@as(usize, 0), utf8ColumnForByteIndex(s, 0));
     try std.testing.expectEqual(@as(usize, 1), utf8ColumnForByteIndex(s, 1));
-    try std.testing.expectEqual(@as(usize, 2), utf8ColumnForByteIndex(s, 3));
+    try std.testing.expectEqual(@as(usize, 1), utf8ColumnForByteIndex(s, 3));
+    try std.testing.expectEqual(@as(usize, 2), utf8ColumnForByteIndex(s, 5));
     try std.testing.expectEqual(@as(usize, 3), utf8ColumnForByteIndex(s, 6));
-    try std.testing.expectEqual(@as(usize, 4), utf8ColumnForByteIndex(s, 10));
 
     try std.testing.expectEqual(@as(usize, 0), utf8ByteIndexForColumn(s, 0));
     try std.testing.expectEqual(@as(usize, 1), utf8ByteIndexForColumn(s, 1));
-    try std.testing.expectEqual(@as(usize, 3), utf8ByteIndexForColumn(s, 2));
+    try std.testing.expectEqual(@as(usize, 5), utf8ByteIndexForColumn(s, 2));
     try std.testing.expectEqual(@as(usize, 6), utf8ByteIndexForColumn(s, 3));
-    try std.testing.expectEqual(@as(usize, 10), utf8ByteIndexForColumn(s, 4));
+    try std.testing.expectEqual(@as(usize, s.len), utf8ByteIndexForColumn(s, 4));
     try std.testing.expectEqual(@as(usize, s.len), utf8ByteIndexForColumn(s, 5));
 }

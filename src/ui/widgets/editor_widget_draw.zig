@@ -1,17 +1,14 @@
 const std = @import("std");
-const renderer_mod = @import("../renderer.zig");
 const syntax_mod = @import("../../editor/syntax.zig");
 const selection_mod = @import("../../editor/view/selection.zig");
 const layout_mod = @import("../../editor/view/layout.zig");
 const app_logger = @import("../../app_logger.zig");
 
-const Renderer = renderer_mod.Renderer;
-const Color = renderer_mod.Color;
 const HighlightToken = syntax_mod.HighlightToken;
 const TokenKind = syntax_mod.TokenKind;
 const SelectionRange = selection_mod.SelectionRange;
 
-pub fn draw(widget: anytype, r: *Renderer, x: f32, y: f32, width: f32, height: f32) void {
+pub fn draw(widget: anytype, r: anytype, x: f32, y: f32, width: f32, height: f32) void {
     widget.gutter_width = 50 * r.uiScaleFactor();
     const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
     const start_line = widget.editor.scroll_line;
@@ -222,7 +219,7 @@ pub fn draw(widget: anytype, r: *Renderer, x: f32, y: f32, width: f32, height: f
 
 fn drawHorizontalScrollbar(
     widget: anytype,
-    r: *Renderer,
+    r: anytype,
     x: f32,
     y: f32,
     width: f32,
@@ -271,7 +268,7 @@ fn drawHorizontalScrollbar(
 
 fn drawVerticalScrollbar(
     widget: anytype,
-    r: *Renderer,
+    r: anytype,
     x: f32,
     y: f32,
     width: f32,
@@ -317,7 +314,7 @@ fn drawVerticalScrollbar(
 }
 
 fn drawHighlightedLineText(
-    r: *Renderer,
+    r: anytype,
     line_text: []const u8,
     y: f32,
     text_x: f32,
@@ -354,7 +351,7 @@ fn drawHighlightedLineText(
 }
 
 fn drawHighlightedLineSegment(
-    r: *Renderer,
+    r: anytype,
     line_text: []const u8,
     y: f32,
     text_x: f32,
@@ -395,7 +392,7 @@ fn highlightTokenLessThan(_: void, a: HighlightToken, b: HighlightToken) bool {
     return a.start < b.start;
 }
 
-fn colorForToken(r: *Renderer, kind: TokenKind) Color {
+fn colorForToken(r: anytype, kind: TokenKind) @TypeOf(r.theme.foreground) {
     return switch (kind) {
         .comment => r.theme.comment_color,
         .string => r.theme.string,

@@ -16,6 +16,7 @@ Date: 2026-01-24
 - Editor modularization Step 6: renderer editor helpers extracted to `src/editor/render/renderer_ops.zig`.
 - Editor modularization Step 7: draw orchestration extracted to `src/ui/widgets/editor_widget_draw.zig`.
 - Added editor import layering check: `zig build check-editor-imports`.
+- Added editor render snapshot harness in `src/editor_tests.zig` (draw ops log baseline).
 
 ## Overview
 - Terminal module split is stable; import layering enforced.
