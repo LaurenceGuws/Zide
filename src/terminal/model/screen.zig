@@ -456,6 +456,69 @@ pub const Screen = struct {
         self.wrap_next = false;
     }
 
+    pub fn cursorUp(self: *Screen, delta: usize) void {
+        self.cursor.row = if (self.cursor.row > delta) self.cursor.row - delta else 0;
+        self.wrap_next = false;
+    }
+
+    pub fn cursorDown(self: *Screen, delta: usize) void {
+        const max_row = @as(usize, self.grid.rows - 1);
+        self.cursor.row = @min(max_row, self.cursor.row + delta);
+        self.wrap_next = false;
+    }
+
+    pub fn cursorForward(self: *Screen, delta: usize) void {
+        const max_col = @as(usize, self.grid.cols - 1);
+        self.cursor.col = @min(max_col, self.cursor.col + delta);
+        self.wrap_next = false;
+    }
+
+    pub fn cursorBack(self: *Screen, delta: usize) void {
+        self.cursor.col = if (self.cursor.col > delta) self.cursor.col - delta else 0;
+        self.wrap_next = false;
+    }
+
+    pub fn cursorNextLine(self: *Screen, delta: usize) void {
+        const max_row = @as(usize, self.grid.rows - 1);
+        self.cursor.row = @min(max_row, self.cursor.row + delta);
+        self.cursor.col = 0;
+        self.wrap_next = false;
+    }
+
+    pub fn cursorPrevLine(self: *Screen, delta: usize) void {
+        self.cursor.row = if (self.cursor.row > delta) self.cursor.row - delta else 0;
+        self.cursor.col = 0;
+        self.wrap_next = false;
+    }
+
+    pub fn cursorColAbsolute(self: *Screen, col_1: i32) void {
+        const col = @min(@as(usize, self.grid.cols - 1), @as(usize, @intCast(col_1 - 1)));
+        self.cursor.col = col;
+        self.wrap_next = false;
+    }
+
+    pub fn cursorPosAbsolute(self: *Screen, row_1: i32, col_1: i32) void {
+        const row = @min(@as(usize, self.grid.rows - 1), @as(usize, @intCast(row_1 - 1)));
+        const col = @min(@as(usize, self.grid.cols - 1), @as(usize, @intCast(col_1 - 1)));
+        self.cursor.row = row;
+        self.cursor.col = col;
+        self.wrap_next = false;
+    }
+
+    pub fn cursorRowAbsolute(self: *Screen, row_1: i32) void {
+        const row = @min(@as(usize, self.grid.rows - 1), @as(usize, @intCast(row_1 - 1)));
+        self.cursor.row = row;
+        self.wrap_next = false;
+    }
+
+    pub fn setScrollRegion(self: *Screen, top: usize, bot: usize) void {
+        self.scroll_top = top;
+        self.scroll_bottom = bot;
+        self.cursor.row = top;
+        self.cursor.col = 0;
+        self.wrap_next = false;
+    }
+
     pub fn cursorPos(self: *const Screen) types.CursorPos {
         return self.cursor;
     }
