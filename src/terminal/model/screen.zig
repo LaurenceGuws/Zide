@@ -363,6 +363,140 @@ pub const Screen = struct {
         self.grid.markDirtyAll();
     }
 
+    pub fn eraseDisplay(self: *Screen, mode: i32, blank_cell: types.Cell) void {
+        const rows = @as(usize, self.grid.rows);
+        const cols = @as(usize, self.grid.cols);
+        if (rows == 0 or cols == 0) return;
+        const row = self.cursor.row;
+        const col = self.cursor.col;
+        if (row >= rows or col >= cols) return;
+
+        switch (mode) {
+            0 => { // cursor to end
+                const start_idx = row * cols + col;
+                for (self.grid.cells.items[start_idx..]) |*cell| cell.* = blank_cell;
+                self.grid.markDirtyRange(row, row, col, cols - 1);
+                if (row + 1 < rows) {
+                    self.grid.markDirtyRange(row + 1, rows - 1, 0, cols - 1);
+                }
+            },
+            1 => { // start to cursor
+                const end = row * cols + col + 1;
+                for (self.grid.cells.items[0..end]) |*cell| cell.* = blank_cell;
+                if (row > 0) {
+                    self.grid.markDirtyRange(0, row - 1, 0, cols - 1);
+                }
+                self.grid.markDirtyRange(row, row, 0, col);
+            },
+            2 => { // all
+                for (self.grid.cells.items) |*cell| cell.* = blank_cell;
+                self.grid.markDirtyAll();
+            },
+            else => {},
+        }
+    }
+
+    pub fn eraseLine(self: *Screen, mode: i32, blank_cell: types.Cell) void {
+        const cols = @as(usize, self.grid.cols);
+        if (cols == 0 or self.grid.rows == 0) return;
+        if (self.cursor.row >= @as(usize, self.grid.rows)) return;
+        const row_start = self.cursor.row * cols;
+        const col = self.cursor.col;
+        if (col >= cols) return;
+        switch (mode) {
+            0 => { // cursor to end of line
+                for (self.grid.cells.items[row_start + col .. row_start + cols]) |*cell| cell.* = blank_cell;
+                self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, cols - 1);
+            },
+            1 => { // start to cursor
+                for (self.grid.cells.items[row_start .. row_start + col + 1]) |*cell| cell.* = blank_cell;
+                self.grid.markDirtyRange(self.cursor.row, self.cursor.row, 0, col);
+            },
+            2 => { // entire line
+                for (self.grid.cells.items[row_start .. row_start + cols]) |*cell| cell.* = blank_cell;
+                self.grid.markDirtyRange(self.cursor.row, self.cursor.row, 0, cols - 1);
+            },
+            else => {},
+        }
+    }
+
+    pub fn insertChars(self: *Screen, count: usize, blank_cell: types.Cell) void {
+        const cols = @as(usize, self.grid.cols);
+        if (cols == 0) return;
+        if (self.cursor.row >= @as(usize, self.grid.rows)) return;
+        const col = self.cursor.col;
+        if (col >= cols) return;
+        const n = @min(count, cols - col);
+        const row_start = self.cursor.row * cols;
+        const line = self.grid.cells.items[row_start .. row_start + cols];
+        if (cols - col > n) {
+            std.mem.copyBackwards(types.Cell, line[col + n ..], line[col .. cols - n]);
+        }
+        for (line[col .. col + n]) |*cell| cell.* = blank_cell;
+        self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, cols - 1);
+    }
+
+    pub fn deleteChars(self: *Screen, count: usize, blank_cell: types.Cell) void {
+        const cols = @as(usize, self.grid.cols);
+        if (cols == 0) return;
+        if (self.cursor.row >= @as(usize, self.grid.rows)) return;
+        const col = self.cursor.col;
+        if (col >= cols) return;
+        const n = @min(count, cols - col);
+        const row_start = self.cursor.row * cols;
+        const line = self.grid.cells.items[row_start .. row_start + cols];
+        if (cols - col > n) {
+            std.mem.copyForwards(types.Cell, line[col .. cols - n], line[col + n ..]);
+        }
+        for (line[cols - n .. cols]) |*cell| cell.* = blank_cell;
+        self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, cols - 1);
+    }
+
+    pub fn eraseChars(self: *Screen, count: usize, blank_cell: types.Cell) void {
+        const cols = @as(usize, self.grid.cols);
+        if (cols == 0) return;
+        if (self.cursor.row >= @as(usize, self.grid.rows)) return;
+        const col = self.cursor.col;
+        if (col >= cols) return;
+        const n = @min(count, cols - col);
+        const row_start = self.cursor.row * cols;
+        const line = self.grid.cells.items[row_start .. row_start + cols];
+        for (line[col .. col + n]) |*cell| cell.* = blank_cell;
+        self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, col + n - 1);
+    }
+
+    pub fn insertLines(self: *Screen, count: usize, blank_cell: types.Cell) void {
+        const cols = @as(usize, self.grid.cols);
+        const rows = @as(usize, self.grid.rows);
+        if (rows == 0 or cols == 0) return;
+        if (self.cursor.row < self.scroll_top or self.cursor.row > self.scroll_bottom) return;
+        const n = @min(count, self.scroll_bottom - self.cursor.row + 1);
+        const region_end = (self.scroll_bottom + 1) * cols;
+        const insert_at = self.cursor.row * cols;
+        const move_len = region_end - insert_at - n * cols;
+        if (move_len > 0) {
+            std.mem.copyBackwards(types.Cell, self.grid.cells.items[insert_at + n * cols .. region_end], self.grid.cells.items[insert_at .. insert_at + move_len]);
+        }
+        for (self.grid.cells.items[insert_at .. insert_at + n * cols]) |*cell| cell.* = blank_cell;
+        self.grid.markDirtyRange(self.cursor.row, self.scroll_bottom, 0, cols - 1);
+    }
+
+    pub fn deleteLines(self: *Screen, count: usize, blank_cell: types.Cell) void {
+        const cols = @as(usize, self.grid.cols);
+        const rows = @as(usize, self.grid.rows);
+        if (rows == 0 or cols == 0) return;
+        if (self.cursor.row < self.scroll_top or self.cursor.row > self.scroll_bottom) return;
+        const n = @min(count, self.scroll_bottom - self.cursor.row + 1);
+        const region_end = (self.scroll_bottom + 1) * cols;
+        const delete_at = self.cursor.row * cols;
+        const move_len = region_end - delete_at - n * cols;
+        if (move_len > 0) {
+            std.mem.copyForwards(types.Cell, self.grid.cells.items[delete_at .. delete_at + move_len], self.grid.cells.items[delete_at + n * cols .. region_end]);
+        }
+        for (self.grid.cells.items[region_end - n * cols .. region_end]) |*cell| cell.* = blank_cell;
+        self.grid.markDirtyRange(self.cursor.row, self.scroll_bottom, 0, cols - 1);
+    }
+
     pub fn updateDefaultColors(self: *Screen, old_attrs: types.CellAttrs, new_attrs: types.CellAttrs) void {
         self.default_attrs = new_attrs;
 

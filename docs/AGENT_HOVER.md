@@ -5,10 +5,12 @@ Date: 2026-01-24
 ## Progress
 - Completed Step 6: protocol handlers extracted into `src/terminal/protocol/*`.
 - Completed Step 7: kitty graphics extracted into `src/terminal/kitty/graphics.zig`.
+- Completed Step 8: screen ops moved into `src/terminal/model/screen.zig`.
 
 ## Overview
 - `TerminalSession` now delegates kitty graphics handling to `kitty_mod`.
 - Scroll/clear hooks route through `kitty_mod` helpers.
+- Screen ops (erase/insert/delete) now live on `Screen`.
 - No behavior changes; extraction-only refactor.
 - Tests: `zig build test-terminal-replay -- --all` passing.
 
