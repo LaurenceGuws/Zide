@@ -877,23 +877,19 @@ pub const TerminalSession = struct {
 
     pub fn getCell(self: *TerminalSession, row: usize, col: usize) Cell {
         const screen = self.activeScreenConst();
-        if (row >= @as(usize, screen.grid.rows) or col >= @as(usize, screen.grid.cols)) {
-            return self.primary.defaultCell();
-        }
-        const idx = row * @as(usize, screen.grid.cols) + col;
-        return screen.grid.cells.items[idx];
+        return screen.cellAtOr(row, col, self.primary.defaultCell());
     }
 
     pub fn getCursorPos(self: *TerminalSession) CursorPos {
-        return self.activeScreenConst().cursor;
+        return self.activeScreenConst().cursorPos();
     }
 
     pub fn gridRows(self: *TerminalSession) usize {
-        return @as(usize, self.activeScreenConst().grid.rows);
+        return self.activeScreenConst().rowCount();
     }
 
     pub fn gridCols(self: *TerminalSession) usize {
-        return @as(usize, self.activeScreenConst().grid.cols);
+        return self.activeScreenConst().colCount();
     }
 
     pub fn scrollbackCount(self: *TerminalSession) usize {
