@@ -24,5 +24,10 @@ return {
     editor = {
         -- Soft wrap long lines.
         wrap = false,
+        -- Render work budgets (lines per frame). Set to 0 to disable precompute.
+        render = {
+            -- highlight_budget = 120,
+            -- width_budget = 120,
+        },
     },
 }

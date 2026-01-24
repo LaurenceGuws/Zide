@@ -20,6 +20,8 @@ pub const Config = struct {
     log_console_filter: ?[]u8,
     raylib_log_level: ?c_int,
     editor_wrap: ?bool,
+    editor_highlight_budget: ?usize,
+    editor_width_budget: ?usize,
 };
 
 pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
@@ -28,6 +30,8 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
         .log_console_filter = null,
         .raylib_log_level = null,
         .editor_wrap = null,
+        .editor_highlight_budget = null,
+        .editor_width_budget = null,
     };
     if (fileExists("assets/config/init.lua")) {
         config = try loadConfigFromFile(allocator, "assets/config/init.lua");
@@ -71,6 +75,12 @@ fn mergeConfig(base: *Config, overlay: Config) void {
     if (overlay.editor_wrap != null) {
         base.editor_wrap = overlay.editor_wrap;
     }
+    if (overlay.editor_highlight_budget != null) {
+        base.editor_highlight_budget = overlay.editor_highlight_budget;
+    }
+    if (overlay.editor_width_budget != null) {
+        base.editor_width_budget = overlay.editor_width_budget;
+    }
 }
 
 fn loadConfigFromFile(allocator: std.mem.Allocator, path: []const u8) LuaConfigError!Config {
@@ -95,6 +105,8 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             .log_console_filter = null,
             .raylib_log_level = null,
             .editor_wrap = null,
+            .editor_highlight_budget = null,
+            .editor_width_budget = null,
         };
     }
     if (!c.lua_istable(L, -1)) {
@@ -105,6 +117,8 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     var log_console_filter: ?[]u8 = null;
     var raylib_log_level: ?c_int = null;
     var editor_wrap: ?bool = null;
+    var editor_highlight_budget: ?usize = null;
+    var editor_width_budget: ?usize = null;
 
     _ = c.lua_getfield(L, -1, "log");
     if (c.lua_isstring(L, -1) != 0) {
@@ -135,6 +149,30 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             editor_wrap = c.lua_toboolean(L, -1) != 0;
         }
         c.lua_pop(L, 1);
+
+        _ = c.lua_getfield(L, -1, "render");
+        if (c.lua_istable(L, -1)) {
+            _ = c.lua_getfield(L, -1, "highlight_budget");
+            if (c.lua_isnumber(L, -1) != 0) {
+                var is_num: c_int = 0;
+                const value = c.lua_tointegerx(L, -1, &is_num);
+                if (is_num != 0 and value >= 0) {
+                    editor_highlight_budget = @intCast(value);
+                }
+            }
+            c.lua_pop(L, 1);
+
+            _ = c.lua_getfield(L, -1, "width_budget");
+            if (c.lua_isnumber(L, -1) != 0) {
+                var is_num: c_int = 0;
+                const value = c.lua_tointegerx(L, -1, &is_num);
+                if (is_num != 0 and value >= 0) {
+                    editor_width_budget = @intCast(value);
+                }
+            }
+            c.lua_pop(L, 1);
+        }
+        c.lua_pop(L, 1);
     }
     c.lua_pop(L, 1);
 
@@ -143,6 +181,8 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         .log_console_filter = log_console_filter,
         .raylib_log_level = raylib_log_level,
         .editor_wrap = editor_wrap,
+        .editor_highlight_budget = editor_highlight_budget,
+        .editor_width_budget = editor_width_budget,
     };
 }
 
