@@ -41,8 +41,9 @@ Date: 2026-01-24
   - Renderer editor-specific helpers now live in `editor/render/renderer_ops.zig`.
   - `zig build` passes after making input-called helpers public.
   - Tree-sitter integration focus documented; tasks tracked separately.
-  - Tree-sitter highlight queries now load from runtime paths and skip `_` captures.
-  - Highlight precompute now initializes the highlighter in cached draw paths.
+- Tree-sitter highlight queries now load from runtime paths and skip `_` captures.
+- Highlight precompute now initializes the highlighter in cached draw paths.
+- Tree-sitter capture mapping expanded; spell/nospell captures now skipped to avoid overriding colors.
 
 ## Next Steps
 1) Add render cache stress test for eviction behavior.
