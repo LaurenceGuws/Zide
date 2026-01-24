@@ -671,11 +671,13 @@ pub const TerminalSession = struct {
         const cols = @as(usize, screen.grid.cols);
         if (rows == 0 or cols == 0) return;
         if (screen.cursor.row >= rows) return;
-        if (screen.wrap_next) {
-            self.newline();
-            screen.wrap_next = false;
+        while (true) {
+            switch (screen.prepareWrite()) {
+                .done => return,
+                .need_newline => self.newline(),
+                .proceed => break,
+            }
         }
-        if (screen.cursor.col >= cols or screen.cursor.row >= rows) return;
 
         var attrs = screen.current_attrs;
         if (self.osc_hyperlink_active and self.current_hyperlink_id > 0) {
@@ -706,12 +708,14 @@ pub const TerminalSession = struct {
 
         var i: usize = 0;
         while (i < bytes.len) {
-            if (screen.wrap_next) {
-                self.newline();
-                screen.wrap_next = false;
-                if (screen.cursor.row >= rows) break;
+            switch (screen.prepareWrite()) {
+                .done => break,
+                .need_newline => {
+                    self.newline();
+                    continue;
+                },
+                .proceed => {},
             }
-            if (screen.cursor.col >= cols or screen.cursor.row >= rows) break;
 
             const run_len = screen.writeAsciiRun(bytes[i..], attrs, use_dec_special);
             if (run_len == 0) break;

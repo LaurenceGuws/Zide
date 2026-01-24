@@ -269,6 +269,25 @@ pub const Screen = struct {
         return run_len;
     }
 
+    pub const WritePrep = enum {
+        proceed,
+        need_newline,
+        done,
+    };
+
+    pub fn prepareWrite(self: *Screen) WritePrep {
+        const rows = @as(usize, self.grid.rows);
+        const cols = @as(usize, self.grid.cols);
+        if (rows == 0 or cols == 0) return .done;
+        if (self.cursor.row >= rows) return .done;
+        if (self.wrap_next) {
+            self.wrap_next = false;
+            return .need_newline;
+        }
+        if (self.cursor.col >= cols or self.cursor.row >= rows) return .done;
+        return .proceed;
+    }
+
     pub fn setCursor(self: *Screen, row: usize, col: usize) void {
         self.cursor = .{ .row = row, .col = col };
     }
