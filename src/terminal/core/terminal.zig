@@ -4,6 +4,9 @@ const input_mod = @import("../input/input.zig");
 const history_mod = @import("../model/history.zig");
 const csi_mod = @import("../parser/csi.zig");
 const parser_mod = @import("../parser/parser.zig");
+const protocol_csi = @import("../protocol/csi.zig");
+const protocol_dcs_apc = @import("../protocol/dcs_apc.zig");
+const protocol_osc = @import("../protocol/osc.zig");
 const screen_mod = @import("../model/screen.zig");
 const snapshot_mod = @import("snapshot.zig");
 const types = @import("../model/types.zig");
@@ -12,7 +15,6 @@ const flate = std.compress.flate;
 const posix = std.posix;
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
-const clampColorIndex = types.clampColorIndex;
 const Screen = screen_mod.Screen;
 const Dirty = screen_mod.Dirty;
 const Damage = screen_mod.Damage;
@@ -23,7 +25,6 @@ const rl = @cImport({
     @cInclude("raylib.h");
 });
 
-const dynamic_color_base: u8 = 10;
 const dynamic_color_count: usize = 10;
 
 const SemanticPromptKind = enum {
@@ -121,19 +122,6 @@ fn buildDefaultPalette() [256]types.Color {
         palette[idx] = types.indexToRgb(@intCast(idx));
     }
     return palette;
-}
-
-fn logOscReplyHex(log: app_logger.Logger, seq: []const u8) void {
-    if (!(log.enabled_file or log.enabled_console)) return;
-    var buf: [512]u8 = undefined;
-    var out: []u8 = buf[0..0];
-    for (seq) |b| {
-        if (out.len + 3 > buf.len) break;
-        const start = out.len;
-        _ = std.fmt.bufPrint(buf[start..], "{x:0>2} ", .{b}) catch break;
-        out = buf[0 .. start + 3];
-    }
-    log.logf("osc reply bytes len={d} hex={s}", .{ seq.len, out });
 }
 
 fn logCsiSequences(log: app_logger.Logger, buf: []const u8) void {
@@ -335,7 +323,7 @@ pub const TerminalSession = struct {
         return session;
     }
 
-    fn activeScreen(self: *TerminalSession) *Screen {
+    pub fn activeScreen(self: *TerminalSession) *Screen {
         return if (self.active == .alt) &self.alt else &self.primary;
     }
 
@@ -643,657 +631,17 @@ pub const TerminalSession = struct {
     }
 
     pub fn parseDcs(self: *TerminalSession, payload: []const u8) void {
-        if (payload.len < 2) return;
-        if (payload[0] == '+' and payload[1] == 'q') {
-            self.handleXtgettcap(payload[2..]);
-        }
+        protocol_dcs_apc.parseDcs(self, payload);
     }
 
     pub fn parseApc(self: *TerminalSession, payload: []const u8) void {
-        const log = app_logger.logger("terminal.apc");
-        if (log.enabled_file or log.enabled_console) {
-            const max_len: usize = 160;
-            const slice = if (payload.len > max_len) payload[0..max_len] else payload;
-            log.logf("apc payload len={d} prefix=\"{s}\"", .{ payload.len, slice });
-        }
-        if (payload.len == 0) return;
-        if (payload[0] != 'G') return;
-        self.parseKittyGraphics(payload[1..]);
+        protocol_dcs_apc.parseApc(self, payload);
     }
-
 
     pub fn parseOsc(self: *TerminalSession, payload: []const u8, terminator: OscTerminator) void {
-        const log = app_logger.logger("terminal.osc");
-        if (log.enabled_file or log.enabled_console) {
-            const max_len: usize = 160;
-            const slice = if (payload.len > max_len) payload[0..max_len] else payload;
-            log.logf("osc payload=\"{s}\"", .{slice});
-        }
-        var i: usize = 0;
-        var code: usize = 0;
-        var has_code = false;
-        while (i < payload.len) : (i += 1) {
-            const b = payload[i];
-            if (b == ';') {
-                has_code = true;
-                i += 1;
-                break;
-            }
-            if (b < '0' or b > '9') {
-                return;
-            }
-            code = code * 10 + @as(usize, b - '0');
-            has_code = true;
-        }
-        if (!has_code or i > payload.len) return;
-        const text = payload[i..];
-        switch (code) {
-            0, 2 => {
-                self.setTitle(text);
-            },
-            4 => self.handleOscPalette(text, terminator),
-            10...19 => self.handleOscDynamicColor(@intCast(code), text, terminator),
-            104 => self.handleOscPaletteReset(text),
-            110...119 => self.handleOscDynamicReset(@intCast(code)),
-            8 => {
-                self.parseOscHyperlink(text);
-            },
-            7 => {
-                self.parseOscCwd(text);
-            },
-            52 => {
-                self.parseOscClipboard(text, terminator);
-            },
-            133 => {
-                self.parseOscSemanticPrompt(text);
-            },
-            1337 => {
-                self.parseOscUserVar(text);
-            },
-            else => {},
-        }
+        protocol_osc.parseOsc(self, payload, terminator);
     }
-
-    fn parseOscColor(text: []const u8) ?types.Color {
-        if (text.len == 0) return null;
-        if (std.mem.eql(u8, text, "?")) return null;
-        if (text[0] == '#') {
-            if (text.len < 7) return null;
-            return parseHexColor(text[1..7]);
-        }
-        if (std.mem.startsWith(u8, text, "rgb:")) {
-            const rest = text[4..];
-            var it = std.mem.splitScalar(u8, rest, '/');
-            const r = it.next() orelse return null;
-            const g = it.next() orelse return null;
-            const b = it.next() orelse return null;
-            const rc = parseHexComponent(r) orelse return null;
-            const gc = parseHexComponent(g) orelse return null;
-            const bc = parseHexComponent(b) orelse return null;
-            return .{ .r = rc, .g = gc, .b = bc };
-        }
-        return null;
-    }
-
-    fn parseHexColor(text: []const u8) ?types.Color {
-        if (text.len < 6) return null;
-        const r = parseHexComponent(text[0..2]) orelse return null;
-        const g = parseHexComponent(text[2..4]) orelse return null;
-        const b = parseHexComponent(text[4..6]) orelse return null;
-        return .{ .r = r, .g = g, .b = b };
-    }
-
-    fn parseHexComponent(text: []const u8) ?u8 {
-        if (text.len == 0) return null;
-        // Accept 1-4 hex digits; scale to 8-bit.
-        var value: u32 = 0;
-        for (text) |c| {
-            const digit: u8 = switch (c) {
-                '0'...'9' => c - '0',
-                'a'...'f' => c - 'a' + 10,
-                'A'...'F' => c - 'A' + 10,
-                else => return null,
-            };
-            value = (value << 4) | digit;
-        }
-        const bits: u8 = @intCast(text.len * 4);
-        if (bits == 8) return @intCast(value);
-        if (bits < 8) {
-        const shift: u5 = @intCast(8 - bits);
-        const scaled: u32 = value << shift;
-        return @intCast(scaled);
-        }
-        const shift: u5 = @intCast(bits - 8);
-        const scaled: u32 = value >> shift;
-        return @intCast(scaled);
-    }
-
-    fn writeOscColorReply(self: *TerminalSession, pty: *Pty, code: u8, color: types.Color, terminator: OscTerminator) void {
-        const log = app_logger.logger("terminal.osc");
-        _ = self;
-        var buf: [80]u8 = undefined;
-        const end = if (terminator == .bel) "\x07" else "\x1b\\";
-        const r16: u16 = @as(u16, color.r) * 257;
-        const g16: u16 = @as(u16, color.g) * 257;
-        const b16: u16 = @as(u16, color.b) * 257;
-        const seq = std.fmt.bufPrint(
-            &buf,
-            "\x1b]{d};rgb:{x:0>4}/{x:0>4}/{x:0>4}{s}",
-            .{ code, r16, g16, b16, end },
-        ) catch return;
-        if (log.enabled_file or log.enabled_console) {
-            log.logf("osc reply=\"{s}\"", .{seq});
-            logOscReplyHex(log, seq);
-        }
-        _ = pty.write(seq) catch {};
-    }
-
-    fn writeOscPaletteReply(self: *TerminalSession, pty: *Pty, idx: u8, color: types.Color, terminator: OscTerminator) void {
-        const log = app_logger.logger("terminal.osc");
-        _ = self;
-        var buf: [88]u8 = undefined;
-        const end = if (terminator == .bel) "\x07" else "\x1b\\";
-        const r16: u16 = @as(u16, color.r) * 257;
-        const g16: u16 = @as(u16, color.g) * 257;
-        const b16: u16 = @as(u16, color.b) * 257;
-        const seq = std.fmt.bufPrint(
-            &buf,
-            "\x1b]4;{d};rgb:{x:0>4}/{x:0>4}/{x:0>4}{s}",
-            .{ idx, r16, g16, b16, end },
-        ) catch return;
-        if (log.enabled_file or log.enabled_console) {
-            log.logf("osc reply=\"{s}\"", .{seq});
-            logOscReplyHex(log, seq);
-        }
-        _ = pty.write(seq) catch {};
-    }
-
-    fn handleOscPalette(self: *TerminalSession, text: []const u8, terminator: OscTerminator) void {
-        if (text.len == 0) return;
-        var it = std.mem.splitScalar(u8, text, ';');
-        while (true) {
-            const idx_text = it.next() orelse break;
-            const color_text = it.next() orelse break;
-            const idx = parseOscIndex(idx_text) orelse continue;
-            if (idx >= self.palette_current.len) continue;
-            if (color_text.len == 1 and color_text[0] == '?') {
-                if (self.pty) |*pty| {
-                    self.writeOscPaletteReply(pty, @intCast(idx), self.palette_current[idx], terminator);
-                }
-                continue;
-            }
-            if (parseOscColor(color_text)) |color| {
-                self.palette_current[idx] = color;
-            }
-        }
-    }
-
-    fn handleOscPaletteReset(self: *TerminalSession, text: []const u8) void {
-        if (text.len == 0) {
-            self.palette_current = self.palette_default;
-            return;
-        }
-        var it = std.mem.splitScalar(u8, text, ';');
-        while (it.next()) |idx_text| {
-            const idx = parseOscIndex(idx_text) orelse continue;
-            if (idx >= self.palette_current.len) continue;
-            self.palette_current[idx] = self.palette_default[idx];
-        }
-    }
-
-    fn handleOscDynamicColor(self: *TerminalSession, code: u8, text: []const u8, terminator: OscTerminator) void {
-        if (self.pty) |*pty| {
-            if (text.len == 1 and text[0] == '?') {
-                const color = self.dynamicColorValue(code);
-                self.writeOscColorReply(pty, code, color, terminator);
-                return;
-            }
-        }
-        if (parseOscColor(text)) |color| {
-            switch (code) {
-                10 => {
-                    const default_attrs = self.primary.default_attrs;
-                    self.setDefaultColors(color, default_attrs.bg);
-                },
-                11 => {
-                    const default_attrs = self.primary.default_attrs;
-                    self.setDefaultColors(default_attrs.fg, color);
-                },
-                else => {
-                    const idx = @as(usize, code - dynamic_color_base);
-                    if (idx < self.dynamic_colors.len) {
-                        self.dynamic_colors[idx] = color;
-                    }
-                },
-            }
-        }
-    }
-
-    fn handleOscDynamicReset(self: *TerminalSession, code: u8) void {
-        const target = code - 100;
-        switch (target) {
-            10 => {
-                const default_attrs = self.primary.default_attrs;
-                self.setDefaultColors(self.base_default_attrs.fg, default_attrs.bg);
-            },
-            11 => {
-                const default_attrs = self.primary.default_attrs;
-                self.setDefaultColors(default_attrs.fg, self.base_default_attrs.bg);
-            },
-            else => {
-                const idx = @as(usize, target - dynamic_color_base);
-                if (idx < self.dynamic_colors.len) {
-                    self.dynamic_colors[idx] = null;
-                }
-            },
-        }
-    }
-
-    fn dynamicColorValue(self: *TerminalSession, code: u8) types.Color {
-        if (code == 10) return self.primary.default_attrs.fg;
-        if (code == 11) return self.primary.default_attrs.bg;
-        const idx = @as(usize, code - dynamic_color_base);
-        if (idx < self.dynamic_colors.len) {
-            if (self.dynamic_colors[idx]) |color| return color;
-        }
-        return switch (code) {
-            12 => self.primary.default_attrs.fg,
-            17, 19 => self.primary.default_attrs.bg,
-            else => self.primary.default_attrs.fg,
-        };
-    }
-
-    fn parseOscIndex(text: []const u8) ?usize {
-        if (text.len == 0) return null;
-        var value: usize = 0;
-        for (text) |c| {
-            if (c < '0' or c > '9') return null;
-            value = value * 10 + @as(usize, c - '0');
-        }
-        return value;
-    }
-
-    fn setTitle(self: *TerminalSession, text: []const u8) void {
-        self.title_buffer.clearRetainingCapacity();
-        const max_len: usize = 256;
-        const slice = if (text.len > max_len) text[0..max_len] else text;
-        _ = self.title_buffer.appendSlice(self.allocator, slice) catch return;
-        self.title = self.title_buffer.items;
-    }
-
-    fn parseOscHyperlink(self: *TerminalSession, text: []const u8) void {
-        const split = std.mem.indexOfScalar(u8, text, ';') orelse return;
-        const uri = text[split + 1 ..];
-        self.osc_hyperlink.clearRetainingCapacity();
-        if (uri.len == 0) {
-            self.osc_hyperlink_active = false;
-            self.current_hyperlink_id = 0;
-            return;
-        }
-        _ = self.osc_hyperlink.appendSlice(self.allocator, uri) catch return;
-        self.osc_hyperlink_active = true;
-        self.current_hyperlink_id = self.appendHyperlink(uri) orelse 0;
-    }
-
-    fn parseOscCwd(self: *TerminalSession, text: []const u8) void {
-        const prefix = "file://";
-        if (!std.mem.startsWith(u8, text, prefix)) return;
-        const rest = text[prefix.len..];
-        const slash = std.mem.indexOfScalar(u8, rest, '/') orelse return;
-        const host = rest[0..slash];
-        const raw_path = rest[slash..];
-        if (raw_path.len == 0) return;
-        if (!self.oscCwdHostOk(host)) return;
-
-        var decoded = std.ArrayList(u8).empty;
-        defer decoded.deinit(self.allocator);
-        if (!decodeOscPercent(self.allocator, &decoded, raw_path)) return;
-
-        self.normalizeCwd(decoded.items);
-    }
-
-    fn oscCwdHostOk(self: *TerminalSession, host: []const u8) bool {
-        _ = self;
-        if (host.len == 0) return true;
-        if (std.mem.eql(u8, host, "localhost")) return true;
-
-        var buf: [std.posix.HOST_NAME_MAX]u8 = undefined;
-        const local = std.posix.gethostname(&buf) catch return false;
-        if (std.mem.eql(u8, host, local)) return true;
-        if (host.len > local.len and std.mem.startsWith(u8, host, local) and host[local.len] == '.') {
-            return true;
-        }
-        return false;
-    }
-
-    fn normalizeCwd(self: *TerminalSession, raw_path: []const u8) void {
-        self.cwd_buffer.clearRetainingCapacity();
-        _ = self.cwd_buffer.append(self.allocator, '/') catch return;
-
-        var stack = std.ArrayList(usize).empty;
-        defer stack.deinit(self.allocator);
-
-        var it = std.mem.splitScalar(u8, raw_path, '/');
-        while (it.next()) |segment| {
-            if (segment.len == 0 or std.mem.eql(u8, segment, ".")) continue;
-            if (std.mem.eql(u8, segment, "..")) {
-                if (stack.pop()) |new_len| {
-                    self.cwd_buffer.items.len = new_len;
-                } else if (self.cwd_buffer.items.len > 1) {
-                    self.cwd_buffer.items.len = 1;
-                }
-                continue;
-            }
-            if (self.cwd_buffer.items.len > 1 and self.cwd_buffer.items[self.cwd_buffer.items.len - 1] != '/') {
-                _ = self.cwd_buffer.append(self.allocator, '/') catch return;
-            }
-            const segment_start = self.cwd_buffer.items.len;
-            _ = self.cwd_buffer.appendSlice(self.allocator, segment) catch return;
-            _ = stack.append(self.allocator, segment_start) catch return;
-        }
-
-        if (self.cwd_buffer.items.len == 0) {
-            _ = self.cwd_buffer.append(self.allocator, '/') catch return;
-        }
-        self.cwd = self.cwd_buffer.items;
-    }
-
-    fn parseOscSemanticPrompt(self: *TerminalSession, text: []const u8) void {
-        if (text.len == 0) return;
-        const log = app_logger.logger("terminal.osc");
-        const kind = text[0];
-        const rest = if (text.len > 1 and text[1] == ';') text[2..] else if (text.len == 1) "" else text[1..];
-
-        switch (kind) {
-            'A' => {
-                self.semantic_prompt.prompt_active = true;
-                self.semantic_prompt.input_active = false;
-                self.semantic_prompt.output_active = false;
-                self.semantic_prompt.kind = .primary;
-                self.semantic_prompt.redraw = true;
-                self.semantic_prompt.special_key = false;
-                self.semantic_prompt.click_events = false;
-                self.semantic_prompt.exit_code = null;
-                self.semantic_prompt_aid.clearRetainingCapacity();
-                self.semantic_cmdline_valid = false;
-                self.applySemanticPromptOptions(rest, true);
-            },
-            'B' => {
-                self.semantic_prompt.prompt_active = false;
-                self.semantic_prompt.input_active = true;
-                self.semantic_prompt.output_active = false;
-                self.applySemanticPromptOptions(rest, false);
-            },
-            'C' => {
-                self.semantic_prompt.prompt_active = false;
-                self.semantic_prompt.input_active = false;
-                self.semantic_prompt.output_active = true;
-                self.applySemanticPromptEndInput(rest);
-            },
-            'D' => {
-                self.semantic_prompt.prompt_active = false;
-                self.semantic_prompt.input_active = false;
-                self.semantic_prompt.output_active = false;
-                self.applySemanticPromptEndCommand(rest);
-            },
-            else => {
-                if (log.enabled_file or log.enabled_console) {
-                    log.logf("osc 133: unknown kind={c}", .{kind});
-                }
-            },
-        }
-    }
-
-    fn applySemanticPromptOptions(self: *TerminalSession, text: []const u8, allow_aid: bool) void {
-        if (text.len == 0) return;
-        var it = std.mem.splitScalar(u8, text, ';');
-        while (it.next()) |kv| {
-            if (kv.len == 0) continue;
-            const eq = std.mem.indexOfScalar(u8, kv, '=');
-            const key = if (eq) |idx| kv[0..idx] else kv;
-            const value = if (eq) |idx| kv[idx + 1 ..] else "";
-            if (allow_aid and std.mem.eql(u8, key, "aid")) {
-                self.semantic_prompt_aid.clearRetainingCapacity();
-                _ = self.semantic_prompt_aid.appendSlice(self.allocator, value) catch {};
-                continue;
-            }
-            if (std.mem.eql(u8, key, "k")) {
-                if (value.len == 1) {
-                    self.semantic_prompt.kind = switch (value[0]) {
-                        'c' => .continuation,
-                        's' => .secondary,
-                        'r' => .right,
-                        else => .primary,
-                    };
-                }
-                continue;
-            }
-            if (std.mem.eql(u8, key, "redraw")) {
-                self.semantic_prompt.redraw = parseBoolFlag(value, self.semantic_prompt.redraw);
-                continue;
-            }
-            if (std.mem.eql(u8, key, "special_key")) {
-                self.semantic_prompt.special_key = parseBoolFlag(value, self.semantic_prompt.special_key);
-                continue;
-            }
-            if (std.mem.eql(u8, key, "click_events")) {
-                self.semantic_prompt.click_events = parseBoolFlag(value, self.semantic_prompt.click_events);
-                continue;
-            }
-        }
-    }
-
-    fn applySemanticPromptEndInput(self: *TerminalSession, text: []const u8) void {
-        if (text.len == 0) return;
-        var it = std.mem.splitScalar(u8, text, ';');
-        while (it.next()) |kv| {
-            if (kv.len == 0) continue;
-            const eq = std.mem.indexOfScalar(u8, kv, '=');
-            const key = if (eq) |idx| kv[0..idx] else kv;
-            const value = if (eq) |idx| kv[idx + 1 ..] else "";
-            if (std.mem.eql(u8, key, "cmdline_url")) {
-                self.setSemanticCmdlineUrl(value);
-                continue;
-            }
-            if (std.mem.eql(u8, key, "cmdline")) {
-                self.setSemanticCmdline(value);
-                continue;
-            }
-        }
-    }
-
-    fn applySemanticPromptEndCommand(self: *TerminalSession, text: []const u8) void {
-        if (text.len == 0) {
-            self.semantic_prompt.exit_code = null;
-            return;
-        }
-        if (text.len >= 2 and text[0] == ';') {
-            const value = text[1..];
-            self.semantic_prompt.exit_code = std.fmt.parseUnsigned(u8, value, 10) catch null;
-            return;
-        }
-        self.semantic_prompt.exit_code = std.fmt.parseUnsigned(u8, text, 10) catch null;
-    }
-
-    fn setSemanticCmdline(self: *TerminalSession, value: []const u8) void {
-        self.semantic_cmdline.clearRetainingCapacity();
-        if (value.len == 0) {
-            self.semantic_cmdline_valid = false;
-            return;
-        }
-        _ = self.semantic_cmdline.appendSlice(self.allocator, value) catch return;
-        self.semantic_cmdline_valid = true;
-    }
-
-    fn setSemanticCmdlineUrl(self: *TerminalSession, value: []const u8) void {
-        var decoded = std.ArrayList(u8).empty;
-        defer decoded.deinit(self.allocator);
-        if (!decodeOscPercent(self.allocator, &decoded, value)) {
-            self.semantic_cmdline_valid = false;
-            return;
-        }
-        self.semantic_cmdline.clearRetainingCapacity();
-        _ = self.semantic_cmdline.appendSlice(self.allocator, decoded.items) catch return;
-        self.semantic_cmdline_valid = true;
-    }
-
-    fn parseBoolFlag(value: []const u8, default_value: bool) bool {
-        if (value.len != 1) return default_value;
-        return switch (value[0]) {
-            '0' => false,
-            '1' => true,
-            else => default_value,
-        };
-    }
-
-    fn parseOscUserVar(self: *TerminalSession, text: []const u8) void {
-        const prefix = "SetUserVar=";
-        if (!std.mem.startsWith(u8, text, prefix)) return;
-        const rest = text[prefix.len..];
-        const split = std.mem.indexOfScalar(u8, rest, '=') orelse return;
-        const name = rest[0..split];
-        const encoded = rest[split + 1 ..];
-        if (name.len == 0) return;
-
-        const max_bytes: usize = 1024 * 1024;
-        if (encoded.len > max_bytes * 2) return;
-
-        var decoded = std.ArrayList(u8).empty;
-        defer decoded.deinit(self.allocator);
-        if (encoded.len > 0) {
-            const decoded_len = std.base64.standard.Decoder.calcSizeForSlice(encoded) catch return;
-            if (decoded_len > max_bytes) return;
-            decoded.resize(self.allocator, decoded_len) catch return;
-            _ = std.base64.standard.Decoder.decode(decoded.items, encoded) catch return;
-        }
-
-        self.setUserVar(name, decoded.items);
-    }
-
-    fn setUserVar(self: *TerminalSession, name: []const u8, value: []const u8) void {
-        const name_owned = self.allocator.dupe(u8, name) catch return;
-        const value_owned = self.allocator.dupe(u8, value) catch {
-            self.allocator.free(name_owned);
-            return;
-        };
-        const entry = self.user_vars.getOrPut(name_owned) catch {
-            self.allocator.free(name_owned);
-            self.allocator.free(value_owned);
-            return;
-        };
-        if (entry.found_existing) {
-            self.allocator.free(name_owned);
-            self.allocator.free(entry.value_ptr.*);
-            entry.value_ptr.* = value_owned;
-        } else {
-            entry.value_ptr.* = value_owned;
-        }
-    }
-
-    fn decodeOscPercent(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) bool {
-        out.clearRetainingCapacity();
-        var i: usize = 0;
-        while (i < text.len) : (i += 1) {
-            const b = text[i];
-            if (b != '%') {
-                _ = out.append(allocator, b) catch return false;
-                continue;
-            }
-            if (i + 2 >= text.len) return false;
-            const hi = hexNibble(text[i + 1]) orelse return false;
-            const lo = hexNibble(text[i + 2]) orelse return false;
-            const value: u8 = @as(u8, (hi << 4) | lo);
-            _ = out.append(allocator, value) catch return false;
-            i += 2;
-        }
-        return true;
-    }
-
-    fn handleXtgettcap(self: *TerminalSession, text: []const u8) void {
-        if (self.pty == null) return;
-        if (text.len == 0) {
-            self.writeXtgettcapReply(false, "", null);
-            return;
-        }
-        var it = std.mem.splitScalar(u8, text, ';');
-        while (it.next()) |cap_hex| {
-            if (cap_hex.len == 0) continue;
-            self.replyXtgettcap(cap_hex);
-        }
-    }
-
-    fn replyXtgettcap(self: *TerminalSession, cap_hex: []const u8) void {
-        var decoded = std.ArrayList(u8).empty;
-        defer decoded.deinit(self.allocator);
-        if (!decodeHex(self.allocator, &decoded, cap_hex)) {
-            self.writeXtgettcapReply(false, cap_hex, null);
-            return;
-        }
-
-        const value = xtgettcapValue(decoded.items);
-        if (value) |val| {
-            self.writeXtgettcapReply(true, cap_hex, val);
-        } else {
-            self.writeXtgettcapReply(false, cap_hex, null);
-        }
-    }
-
-    fn writeXtgettcapReply(self: *TerminalSession, ok: bool, cap_hex: []const u8, value: ?[]const u8) void {
-        var reply = std.ArrayList(u8).empty;
-        defer reply.deinit(self.allocator);
-
-        const prefix = if (ok) "\x1bP1+r" else "\x1bP0+r";
-        _ = reply.appendSlice(self.allocator, prefix) catch return;
-        _ = reply.appendSlice(self.allocator, cap_hex) catch return;
-        if (ok and value != null) {
-            _ = reply.append(self.allocator, '=') catch return;
-            if (!encodeHex(self.allocator, &reply, value.?)) return;
-        }
-        _ = reply.appendSlice(self.allocator, "\x1b\\") catch return;
-        if (self.pty) |*pty_mut| {
-            _ = pty_mut.write(reply.items) catch {};
-        }
-    }
-
-    fn xtgettcapValue(name: []const u8) ?[]const u8 {
-        if (std.mem.eql(u8, name, "TN")) return "zide";
-        if (std.mem.eql(u8, name, "Co") or std.mem.eql(u8, name, "colors")) return "256";
-        if (std.mem.eql(u8, name, "RGB")) return "8";
-        return null;
-    }
-
-    fn decodeHex(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) bool {
-        out.clearRetainingCapacity();
-        if (text.len % 2 != 0) return false;
-        var i: usize = 0;
-        while (i + 1 < text.len) : (i += 2) {
-            const hi = hexNibble(text[i]) orelse return false;
-            const lo = hexNibble(text[i + 1]) orelse return false;
-            const value: u8 = @as(u8, (hi << 4) | lo);
-            _ = out.append(allocator, value) catch return false;
-        }
-        return true;
-    }
-
-    fn encodeHex(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) bool {
-        const hex = "0123456789ABCDEF";
-        for (text) |b| {
-            _ = out.append(allocator, hex[b >> 4]) catch return false;
-            _ = out.append(allocator, hex[b & 0x0f]) catch return false;
-        }
-        return true;
-    }
-
-    fn hexNibble(c: u8) ?u8 {
-        return switch (c) {
-            '0'...'9' => c - '0',
-            'a'...'f' => c - 'a' + 10,
-            'A'...'F' => c - 'A' + 10,
-            else => null,
-        };
-    }
-
-    fn appendHyperlink(self: *TerminalSession, uri: []const u8) ?u32 {
+    pub fn appendHyperlink(self: *TerminalSession, uri: []const u8) ?u32 {
         if (uri.len == 0) return 0;
         if (self.hyperlink_table.items.len >= max_hyperlinks) {
             for (self.hyperlink_table.items) |link| {
@@ -1309,68 +657,7 @@ pub const TerminalSession = struct {
         return @intCast(self.hyperlink_table.items.len);
     }
 
-    fn parseOscClipboard(self: *TerminalSession, text: []const u8, terminator: OscTerminator) void {
-        const split = std.mem.indexOfScalar(u8, text, ';') orelse return;
-        const selection = text[0..split];
-        const payload = text[split + 1 ..];
-        if (payload.len == 0) return;
-        if (!std.mem.containsAtLeast(u8, selection, 1, "c") and !std.mem.containsAtLeast(u8, selection, 1, "0")) {
-            return;
-        }
-        if (std.mem.eql(u8, payload, "?")) {
-            if (self.pty) |*pty| {
-                self.writeOscClipboardReply(pty, selection, terminator);
-            }
-            return;
-        }
-
-        const max_bytes: usize = 1024 * 1024;
-        if (payload.len > max_bytes * 2) return;
-
-        var decoded = std.ArrayList(u8).empty;
-        defer decoded.deinit(self.allocator);
-
-        const decoded_len = std.base64.standard.Decoder.calcSizeForSlice(payload) catch return;
-        if (decoded_len > max_bytes) return;
-        decoded.resize(self.allocator, decoded_len) catch return;
-        _ = std.base64.standard.Decoder.decode(decoded.items, payload) catch return;
-
-        self.osc_clipboard.clearRetainingCapacity();
-        _ = self.osc_clipboard.appendSlice(self.allocator, decoded.items) catch return;
-        _ = self.osc_clipboard.append(self.allocator, 0) catch return;
-        self.osc_clipboard_pending = true;
-    }
-
-    fn writeOscClipboardReply(self: *TerminalSession, pty: *Pty, selection: []const u8, terminator: OscTerminator) void {
-        const log = app_logger.logger("terminal.osc");
-        const end = if (terminator == .bel) "\x07" else "\x1b\\";
-        var data = self.osc_clipboard.items;
-        if (data.len > 0 and data[data.len - 1] == 0) {
-            data = data[0 .. data.len - 1];
-        }
-        const encoded_len = std.base64.standard.Encoder.calcSize(data.len);
-        var encoded = std.ArrayList(u8).empty;
-        defer encoded.deinit(self.allocator);
-        encoded.resize(self.allocator, encoded_len) catch return;
-        _ = std.base64.standard.Encoder.encode(encoded.items, data);
-
-        const seq_len = 4 + selection.len + 1 + encoded.items.len + end.len;
-        var seq = std.ArrayList(u8).empty;
-        defer seq.deinit(self.allocator);
-        seq.ensureTotalCapacity(self.allocator, seq_len) catch return;
-        _ = seq.appendSlice(self.allocator, "\x1b]52;") catch return;
-        _ = seq.appendSlice(self.allocator, selection) catch return;
-        _ = seq.append(self.allocator, ';') catch return;
-        _ = seq.appendSlice(self.allocator, encoded.items) catch return;
-        _ = seq.appendSlice(self.allocator, end) catch return;
-
-        if (log.enabled_file or log.enabled_console) {
-            log.logf("osc reply=\"{s}\"", .{seq.items});
-        }
-        _ = pty.write(seq.items) catch {};
-    }
-
-    fn parseKittyGraphics(self: *TerminalSession, payload: []const u8) void {
+    pub fn parseKittyGraphics(self: *TerminalSession, payload: []const u8) void {
         const log = app_logger.logger("terminal.kitty");
         var control = KittyControl{};
         const kitty = self.kittyState();
@@ -2719,295 +2006,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn handleCsi(self: *TerminalSession, action: csi_mod.CsiAction) void {
-        const log = app_logger.logger("terminal.csi");
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(
-                "csi final={c} leader={c} private={d} count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
-                .{
-                    action.final,
-                    if (action.leader == 0) '.' else action.leader,
-                    @as(u8, @intFromBool(action.private)),
-                    action.count,
-                    action.params[0],
-                    action.params[1],
-                    action.params[2],
-                    action.params[3],
-                    action.params[4],
-                    action.params[5],
-                    action.params[6],
-                    action.params[7],
-                    action.params[8],
-                    action.params[9],
-                    action.params[10],
-                    action.params[11],
-                    action.params[12],
-                    action.params[13],
-                    action.params[14],
-                    action.params[15],
-                },
-            );
-        }
-        const p = action.params;
-        const count = action.count;
-        const get = struct {
-            fn at(params: [csi_mod.max_params]i32, idx: u8, default: i32) i32 {
-                return if (idx < csi_mod.max_params) params[idx] else default;
-            }
-        }.at;
-        const screen = self.activeScreen();
-
-        switch (action.final) {
-            'A' => { // CUU
-                const n = @max(1, get(p, 0, 1));
-                const delta: usize = @intCast(n);
-                screen.cursor.row = if (screen.cursor.row > delta) screen.cursor.row - delta else 0;
-                screen.wrap_next = false;
-            },
-            'B' => { // CUD
-                const n = @max(1, get(p, 0, 1));
-                const delta: usize = @intCast(n);
-                const max_row = @as(usize, screen.grid.rows - 1);
-                screen.cursor.row = @min(max_row, screen.cursor.row + delta);
-                screen.wrap_next = false;
-            },
-            'C' => { // CUF
-                const n = @max(1, get(p, 0, 1));
-                const delta: usize = @intCast(n);
-                const max_col = @as(usize, screen.grid.cols - 1);
-                screen.cursor.col = @min(max_col, screen.cursor.col + delta);
-                screen.wrap_next = false;
-            },
-            'D' => { // CUB
-                const n = @max(1, get(p, 0, 1));
-                const delta: usize = @intCast(n);
-                screen.cursor.col = if (screen.cursor.col > delta) screen.cursor.col - delta else 0;
-                screen.wrap_next = false;
-            },
-            'E' => { // CNL
-                const n = @max(1, get(p, 0, 1));
-                const delta: usize = @intCast(n);
-                const max_row = @as(usize, screen.grid.rows - 1);
-                screen.cursor.row = @min(max_row, screen.cursor.row + delta);
-                screen.cursor.col = 0;
-                screen.wrap_next = false;
-            },
-            'F' => { // CPL
-                const n = @max(1, get(p, 0, 1));
-                const delta: usize = @intCast(n);
-                screen.cursor.row = if (screen.cursor.row > delta) screen.cursor.row - delta else 0;
-                screen.cursor.col = 0;
-                screen.wrap_next = false;
-            },
-            'G' => { // CHA
-                const col_1 = @max(1, get(p, 0, 1));
-                const col = @min(@as(usize, screen.grid.cols - 1), @as(usize, @intCast(col_1 - 1)));
-                screen.cursor.col = col;
-                screen.wrap_next = false;
-            },
-            'H', 'f' => { // CUP
-                const row_1 = @max(1, get(p, 0, 1));
-                const col_1 = @max(1, get(p, 1, 1));
-                const row = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(row_1 - 1)));
-                const col = @min(@as(usize, screen.grid.cols - 1), @as(usize, @intCast(col_1 - 1)));
-                screen.cursor.row = row;
-                screen.cursor.col = col;
-                screen.wrap_next = false;
-            },
-            'd' => { // VPA
-                const row_1 = @max(1, get(p, 0, 1));
-                const row = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(row_1 - 1)));
-                screen.cursor.row = row;
-                screen.wrap_next = false;
-            },
-            'J' => { // ED
-                const mode = if (count > 0) p[0] else 0;
-                self.eraseDisplay(mode);
-            },
-            'K' => { // EL
-                const mode = if (count > 0) p[0] else 0;
-                self.eraseLine(mode);
-            },
-            '@' => { // ICH
-                const n = @max(1, get(p, 0, 1));
-                self.insertChars(@intCast(n));
-            },
-            'P' => { // DCH
-                const n = @max(1, get(p, 0, 1));
-                self.deleteChars(@intCast(n));
-            },
-            'X' => { // ECH
-                const n = @max(1, get(p, 0, 1));
-                self.eraseChars(@intCast(n));
-            },
-            'L' => { // IL
-                const n = @max(1, get(p, 0, 1));
-                self.insertLines(@intCast(n));
-            },
-            'M' => { // DL
-                const n = @max(1, get(p, 0, 1));
-                self.deleteLines(@intCast(n));
-            },
-            'S' => { // SU
-                const n = @max(1, get(p, 0, 1));
-                self.scrollRegionUp(@intCast(n));
-            },
-            'T' => { // SD
-                const n = @max(1, get(p, 0, 1));
-                self.scrollRegionDown(@intCast(n));
-            },
-            'r' => { // DECSTBM
-                const top_1 = if (count > 0 and p[0] > 0) p[0] else 1;
-                const bot_1 = if (count > 1 and p[1] > 0) p[1] else @as(i32, @intCast(screen.grid.rows));
-                const top = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(@max(1, top_1) - 1)));
-                const bot = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(@max(1, bot_1) - 1)));
-                if (top <= bot) {
-                    screen.scroll_top = top;
-                    screen.scroll_bottom = bot;
-                    screen.cursor.row = top;
-                    screen.cursor.col = 0;
-                    screen.wrap_next = false;
-                }
-            },
-            's' => { // SCP
-                if (!action.private) {
-                    self.saveCursor();
-                }
-            },
-            'u' => { // RCP
-                if (action.leader == 0 and !action.private) {
-                    self.restoreCursor();
-                    return;
-                }
-                const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
-                const flags: u32 = if (param_len > 0) @intCast(@max(0, p[0])) else 0;
-                const mode: u32 = if (param_len > 1) @intCast(@max(0, p[1])) else 1;
-                switch (action.leader) {
-                    '>' => self.keyModePush(flags),
-                    '<' => self.keyModePop(if (param_len > 0) @intCast(@max(1, p[0])) else 1),
-                    '=' => self.keyModeModify(flags, mode),
-                    '?' => self.keyModeQuery(),
-                    else => {},
-                }
-            },
-            'm' => { // SGR
-                self.applySgr(action);
-            },
-            'q' => { // DECSCUSR
-                if (action.leader == 0 and !action.private) {
-                    const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
-                    const mode = if (param_len > 0) p[0] else 0;
-                    self.setCursorStyle(mode);
-                }
-            },
-            'n' => { // DSR
-                const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
-                const mode = if (param_len > 0) p[0] else 0;
-                if (self.pty) |*pty| {
-                    var buf: [32]u8 = undefined;
-                    if (action.leader == '?') {
-                        switch (mode) {
-                            6 => { // DECXCPR
-                                const row_1 = screen.cursor.row + 1;
-                                const col_1 = screen.cursor.col + 1;
-                                const seq = std.fmt.bufPrint(&buf, "\x1b[?{d};{d}R", .{ row_1, col_1 }) catch return;
-                                _ = pty.write(seq) catch {};
-                            },
-                            15 => { // Printer status
-                                _ = pty.write("\x1b[?10n") catch {};
-                            },
-                            25 => { // UDK status
-                                _ = pty.write("\x1b[?20n") catch {};
-                            },
-                            26 => { // Keyboard status
-                                _ = pty.write("\x1b[?27;1;0;0n") catch {};
-                            },
-                            55 => { // Locator status
-                                _ = pty.write("\x1b[?50n") catch {};
-                            },
-                            56 => { // Locator type
-                                _ = pty.write("\x1b[?57;0n") catch {};
-                            },
-                            75 => { // Data integrity
-                                _ = pty.write("\x1b[?70n") catch {};
-                            },
-                            85 => { // Multi-session config
-                                _ = pty.write("\x1b[?83n") catch {};
-                            },
-                            else => {},
-                        }
-                    } else if (action.leader == 0) {
-                        switch (mode) {
-                            5 => { // Device status report
-                                _ = pty.write("\x1b[0n") catch {};
-                            },
-                            6 => { // Cursor position report
-                                const row_1 = screen.cursor.row + 1;
-                                const col_1 = screen.cursor.col + 1;
-                                const seq = std.fmt.bufPrint(&buf, "\x1b[{d};{d}R", .{ row_1, col_1 }) catch return;
-                                _ = pty.write(seq) catch {};
-                            },
-                            else => {},
-                        }
-                    }
-                }
-            },
-            'c' => { // DA
-                if (action.leader == 0 or action.leader == '?') {
-                    if (self.pty) |*pty| {
-                        _ = pty.write("\x1b[?62;1;2;4;6;7;8;9;15;18;21;22;28;29c") catch {};
-                    }
-                }
-            },
-            'h' => { // SM
-                if (action.leader == '?') {
-                    const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
-                    var idx: u8 = 0;
-                    while (idx < param_len and idx < p.len) : (idx += 1) {
-                        const mode = p[idx];
-                        switch (mode) {
-                            1 => self.app_cursor_keys = true,
-                            25 => self.activeScreen().cursor_visible = true,
-                            47 => self.enterAltScreen(false, false),
-                            1047 => self.enterAltScreen(true, false),
-                            1048 => self.saveCursor(),
-                            1049 => self.enterAltScreen(true, true),
-                            2004 => self.bracketed_paste = true,
-                            1000 => self.input.mouse_mode_x10 = true,
-                            1002 => self.input.mouse_mode_button = true,
-                            1003 => self.input.mouse_mode_any = true,
-                            1006 => self.input.mouse_mode_sgr = true,
-                            else => {},
-                        }
-                    }
-                    return;
-                }
-            },
-            'l' => { // RM
-                if (action.leader == '?') {
-                    const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
-                    var idx: u8 = 0;
-                    while (idx < param_len and idx < p.len) : (idx += 1) {
-                        const mode = p[idx];
-                        switch (mode) {
-                            1 => self.app_cursor_keys = false,
-                            25 => self.activeScreen().cursor_visible = false,
-                            47 => self.exitAltScreen(false),
-                            1047 => self.exitAltScreen(false),
-                            1048 => self.restoreCursor(),
-                            1049 => self.exitAltScreen(true),
-                            2004 => self.bracketed_paste = false,
-                            1000 => self.input.mouse_mode_x10 = false,
-                            1002 => self.input.mouse_mode_button = false,
-                            1003 => self.input.mouse_mode_any = false,
-                            1006 => self.input.mouse_mode_sgr = false,
-                            else => {},
-                        }
-                    }
-                    return;
-                }
-            },
-            else => {},
-        }
+        protocol_csi.handleCsi(self, action);
     }
 
     pub fn resetState(self: *TerminalSession) void {
@@ -3022,7 +2021,7 @@ pub const TerminalSession = struct {
         self.clearKittyImages();
     }
 
-    fn eraseDisplay(self: *TerminalSession, mode: i32) void {
+    pub fn eraseDisplay(self: *TerminalSession, mode: i32) void {
         const screen = self.activeScreen();
         const rows = @as(usize, screen.grid.rows);
         const cols = @as(usize, screen.grid.cols);
@@ -3057,7 +2056,7 @@ pub const TerminalSession = struct {
         }
     }
 
-    fn eraseLine(self: *TerminalSession, mode: i32) void {
+    pub fn eraseLine(self: *TerminalSession, mode: i32) void {
         const screen = self.activeScreen();
         const cols = @as(usize, screen.grid.cols);
         if (cols == 0 or screen.grid.rows == 0) return;
@@ -3083,7 +2082,7 @@ pub const TerminalSession = struct {
         }
     }
 
-    fn insertChars(self: *TerminalSession, count: usize) void {
+    pub fn insertChars(self: *TerminalSession, count: usize) void {
         const screen = self.activeScreen();
         const cols = @as(usize, screen.grid.cols);
         if (cols == 0) return;
@@ -3101,7 +2100,7 @@ pub const TerminalSession = struct {
         screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, col, cols - 1);
     }
 
-    fn deleteChars(self: *TerminalSession, count: usize) void {
+    pub fn deleteChars(self: *TerminalSession, count: usize) void {
         const screen = self.activeScreen();
         const cols = @as(usize, screen.grid.cols);
         if (cols == 0) return;
@@ -3119,7 +2118,7 @@ pub const TerminalSession = struct {
         screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, col, cols - 1);
     }
 
-    fn eraseChars(self: *TerminalSession, count: usize) void {
+    pub fn eraseChars(self: *TerminalSession, count: usize) void {
         const screen = self.activeScreen();
         const cols = @as(usize, screen.grid.cols);
         if (cols == 0) return;
@@ -3134,7 +2133,7 @@ pub const TerminalSession = struct {
         screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, col, col + n - 1);
     }
 
-    fn insertLines(self: *TerminalSession, count: usize) void {
+    pub fn insertLines(self: *TerminalSession, count: usize) void {
         const screen = self.activeScreen();
         const cols = @as(usize, screen.grid.cols);
         const rows = @as(usize, screen.grid.rows);
@@ -3152,7 +2151,7 @@ pub const TerminalSession = struct {
         screen.grid.markDirtyRange(screen.cursor.row, screen.scroll_bottom, 0, cols - 1);
     }
 
-    fn deleteLines(self: *TerminalSession, count: usize) void {
+    pub fn deleteLines(self: *TerminalSession, count: usize) void {
         const screen = self.activeScreen();
         const cols = @as(usize, screen.grid.cols);
         const rows = @as(usize, screen.grid.rows);
@@ -3191,7 +2190,7 @@ pub const TerminalSession = struct {
         log.logStdout("scrollback push total={d}", .{self.history.scrollbackCount()});
     }
 
-    fn scrollRegionUp(self: *TerminalSession, count: usize) void {
+    pub fn scrollRegionUp(self: *TerminalSession, count: usize) void {
         const log = app_logger.logger("terminal.core");
         const screen = self.activeScreen();
         log.logf("scroll region up count={d} top={d} bottom={d}", .{ count, screen.scroll_top, screen.scroll_bottom });
@@ -3221,7 +2220,7 @@ pub const TerminalSession = struct {
         }
     }
 
-    fn scrollRegionDown(self: *TerminalSession, count: usize) void {
+    pub fn scrollRegionDown(self: *TerminalSession, count: usize) void {
         const screen = self.activeScreen();
         const cols = @as(usize, screen.grid.cols);
         if (cols == 0 or screen.grid.rows == 0) return;
@@ -3240,151 +2239,10 @@ pub const TerminalSession = struct {
     }
 
     fn applySgr(self: *TerminalSession, action: csi_mod.CsiAction) void {
-        const screen = self.activeScreen();
-        const params = action.params;
-        const total = params.len;
-        const n_params: usize = if (action.count == 0 and params[0] == 0) 1 else @min(@as(usize, action.count + 1), total);
-        const log = app_logger.logger("terminal.sgr");
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(
-                "sgr count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
-                .{
-                    action.count,
-                    params[0],
-                    params[1],
-                    params[2],
-                    params[3],
-                    params[4],
-                    params[5],
-                    params[6],
-                    params[7],
-                    params[8],
-                    params[9],
-                    params[10],
-                    params[11],
-                    params[12],
-                    params[13],
-                    params[14],
-                    params[15],
-                },
-            );
-        }
-        var i: usize = 0;
-        while (i < n_params) {
-            const p = params[i];
-            if (p == 38 or p == 48 or p == 58) {
-                if (i + 1 < n_params) {
-                    const mode = params[i + 1];
-                    if (mode == 5 and i + 2 < n_params) {
-                        const idx = clampColorIndex(params[i + 2]);
-                        const color = self.paletteColor(idx);
-                        switch (p) {
-                            38 => screen.current_attrs.fg = color,
-                            48 => screen.current_attrs.bg = color,
-                            58 => screen.current_attrs.underline_color = color,
-                            else => {},
-                        }
-                        i += 3;
-                        continue;
-                    }
-                    if (mode == 2) {
-                        // Parse 38/48/58;2;R;G;B (truecolor).
-                        const base: usize = i + 2;
-                        if (base + 2 < n_params) {
-                            const r = clampColorIndex(params[base]);
-                            const g = clampColorIndex(params[base + 1]);
-                            const b = clampColorIndex(params[base + 2]);
-                            const color = Color{ .r = r, .g = g, .b = b, .a = 255 };
-                            switch (p) {
-                                38 => screen.current_attrs.fg = color,
-                                48 => screen.current_attrs.bg = color,
-                                58 => screen.current_attrs.underline_color = color,
-                                else => {},
-                            }
-                            i = base + 3;
-                            continue;
-                        }
-                    }
-                    if (mode == 6) {
-                        // WezTerm extension: RGBA (38;6;R;G;B;A).
-                        const base: usize = i + 2;
-                        if (base + 3 < n_params) {
-                            const r = clampColorIndex(params[base]);
-                            const g = clampColorIndex(params[base + 1]);
-                            const b = clampColorIndex(params[base + 2]);
-                            const a = clampColorIndex(params[base + 3]);
-                            const color = Color{ .r = r, .g = g, .b = b, .a = a };
-                            switch (p) {
-                                38 => screen.current_attrs.fg = color,
-                                48 => screen.current_attrs.bg = color,
-                                58 => screen.current_attrs.underline_color = color,
-                                else => {},
-                            }
-                            i = base + 4;
-                            continue;
-                        }
-                    }
-                }
-                i += 1;
-                continue;
-            }
-            switch (p) {
-                0 => { // reset
-                    screen.current_attrs = screen.default_attrs;
-                },
-                1 => { // bold
-                    screen.current_attrs.bold = true;
-                },
-                22 => { // normal intensity
-                    screen.current_attrs.bold = false;
-                },
-                4 => { // underline
-                    screen.current_attrs.underline = true;
-                },
-                24 => { // underline off
-                    screen.current_attrs.underline = false;
-                },
-                7 => { // reverse
-                    screen.current_attrs.reverse = true;
-                },
-                27 => { // reverse off
-                    screen.current_attrs.reverse = false;
-                },
-                39 => { // default fg
-                    screen.current_attrs.fg = screen.default_attrs.fg;
-                },
-                49 => { // default bg
-                    screen.current_attrs.bg = screen.default_attrs.bg;
-                },
-                58 => {
-                    screen.current_attrs.underline_color = screen.default_attrs.underline_color;
-                },
-                59 => {
-                    screen.current_attrs.underline_color = screen.default_attrs.underline_color;
-                },
-                30...37 => {
-                    const idx: u8 = @intCast(p - 30);
-                    screen.current_attrs.fg = self.paletteColor(idx);
-                },
-                40...47 => {
-                    const idx: u8 = @intCast(p - 40);
-                    screen.current_attrs.bg = self.paletteColor(idx);
-                },
-                90...97 => {
-                    const idx: u8 = @intCast(8 + (p - 90));
-                    screen.current_attrs.fg = self.paletteColor(idx);
-                },
-                100...107 => {
-                    const idx: u8 = @intCast(8 + (p - 100));
-                    screen.current_attrs.bg = self.paletteColor(idx);
-                },
-                else => {},
-            }
-            i += 1;
-        }
+        protocol_csi.applySgr(self, action);
     }
 
-    fn paletteColor(self: *const TerminalSession, idx: u8) types.Color {
+    pub fn paletteColor(self: *const TerminalSession, idx: u8) types.Color {
         return self.palette_current[idx];
     }
 
@@ -3672,15 +2530,15 @@ pub const TerminalSession = struct {
         return self.keyModeStack().current();
     }
 
-    fn keyModePush(self: *TerminalSession, flags: u32) void {
+    pub fn keyModePush(self: *TerminalSession, flags: u32) void {
         self.keyModeStack().push(flags);
     }
 
-    fn keyModePop(self: *TerminalSession, count: usize) void {
+    pub fn keyModePop(self: *TerminalSession, count: usize) void {
         self.keyModeStack().pop(count);
     }
 
-    fn keyModeModify(self: *TerminalSession, flags: u32, mode: u32) void {
+    pub fn keyModeModify(self: *TerminalSession, flags: u32, mode: u32) void {
         const stack = self.keyModeStack();
         const current = stack.current();
         const updated = switch (mode) {
@@ -3691,7 +2549,7 @@ pub const TerminalSession = struct {
         stack.setCurrent(updated);
     }
 
-    fn keyModeQuery(self: *TerminalSession) void {
+    pub fn keyModeQuery(self: *TerminalSession) void {
         const flags = self.keyModeFlags();
         if (self.pty) |*pty| {
             var buf: [32]u8 = undefined;
@@ -3700,7 +2558,7 @@ pub const TerminalSession = struct {
         }
     }
 
-    fn setCursorStyle(self: *TerminalSession, mode: i32) void {
+    pub fn setCursorStyle(self: *TerminalSession, mode: i32) void {
         const screen = self.activeScreen();
         const style = switch (mode) {
             0, 1 => types.CursorStyle{ .shape = .block, .blink = true },
@@ -3739,7 +2597,7 @@ pub const TerminalSession = struct {
         screen.clear();
     }
 
-    fn enterAltScreen(self: *TerminalSession, clear: bool, save_cursor: bool) void {
+    pub fn enterAltScreen(self: *TerminalSession, clear: bool, save_cursor: bool) void {
         if (self.isAltActive()) return;
         if (save_cursor) {
             self.saveCursor();
@@ -3755,7 +2613,7 @@ pub const TerminalSession = struct {
         self.activeScreen().grid.markDirtyAll();
     }
 
-    fn exitAltScreen(self: *TerminalSession, restore_cursor: bool) void {
+    pub fn exitAltScreen(self: *TerminalSession, restore_cursor: bool) void {
         if (!self.isAltActive()) return;
         self.clearKittyImages();
         self.active = .primary;
