@@ -5,6 +5,7 @@ const history_mod = @import("../model/history.zig");
 const csi_mod = @import("../parser/csi.zig");
 const parser_mod = @import("../parser/parser.zig");
 const screen_mod = @import("../model/screen.zig");
+const snapshot_mod = @import("snapshot.zig");
 const types = @import("../model/types.zig");
 const app_logger = @import("../../app_logger.zig");
 const flate = std.compress.flate;
@@ -43,35 +44,9 @@ const SemanticPromptState = struct {
     exit_code: ?u8 = null,
 };
 
-pub const KittyImageFormat = enum {
-    rgba,
-    png,
-};
-
-pub const KittyImage = struct {
-    id: u32,
-    width: u32,
-    height: u32,
-    format: KittyImageFormat,
-    data: []u8,
-    version: u64,
-};
-
-pub const KittyPlacement = struct {
-    image_id: u32,
-    placement_id: u32,
-    row: u16,
-    col: u16,
-    cols: u16,
-    rows: u16,
-    z: i32,
-    anchor_row: u64,
-    is_virtual: bool,
-    parent_image_id: u32,
-    parent_placement_id: u32,
-    offset_x: i32,
-    offset_y: i32,
-};
+pub const KittyImageFormat = snapshot_mod.KittyImageFormat;
+pub const KittyImage = snapshot_mod.KittyImage;
+pub const KittyPlacement = snapshot_mod.KittyPlacement;
 
 const KittyKV = struct {
     key: u8,
@@ -189,45 +164,8 @@ fn logCsiSequences(log: app_logger.Logger, buf: []const u8) void {
     }
 }
 
-pub const TerminalSnapshot = struct {
-    rows: usize,
-    cols: usize,
-    cells: []const Cell,
-    dirty_rows: []const bool,
-    dirty_cols_start: []const u16,
-    dirty_cols_end: []const u16,
-    cursor: CursorPos,
-    cursor_style: types.CursorStyle,
-    cursor_visible: bool,
-    dirty: Dirty,
-    damage: Damage,
-    alt_active: bool,
-    generation: u64,
-    kitty_images: []const KittyImage,
-    kitty_placements: []const KittyPlacement,
-    kitty_generation: u64,
-
-    pub fn rowSlice(self: *const TerminalSnapshot, row: usize) []const Cell {
-        const start = row * self.cols;
-        return self.cells[start .. start + self.cols];
-    }
-
-    pub fn cellAt(self: *const TerminalSnapshot, row: usize, col: usize) Cell {
-        return self.cells[row * self.cols + col];
-    }
-};
-
-pub const DebugSnapshot = struct {
-    title: []const u8,
-    cwd: []const u8,
-    osc_clipboard: []const u8,
-    osc_clipboard_pending: bool,
-    hyperlinks: []const Hyperlink,
-    scrollback_count: usize,
-    scrollback_offset: usize,
-    selection: ?TerminalSelection,
-    base_default_attrs: types.CellAttrs,
-};
+pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
+pub const DebugSnapshot = snapshot_mod.DebugSnapshot;
 
 pub fn debugSnapshot(self: *TerminalSession) DebugSnapshot {
     if (!debugAccessAllowed()) @panic("debugSnapshot is test-only");
@@ -3969,9 +3907,7 @@ fn readThreadMain(session: *TerminalSession) void {
     }
 }
 
-pub const Hyperlink = struct {
-    uri: []u8,
-};
+pub const Hyperlink = snapshot_mod.Hyperlink;
 
 pub const VTERM_KEY_NONE = types.VTERM_KEY_NONE;
 pub const VTERM_KEY_ENTER = types.VTERM_KEY_ENTER;

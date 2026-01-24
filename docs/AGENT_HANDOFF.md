@@ -1,133 +1,79 @@
-# Agent Handoff (Zide)
+Agent bootstrap prompt (use this verbatim)
 
-Date: 2026-01-24
+You are an agent working on Zide, a Zig-based IDE.
+You must follow AGENTS.md exactly — do not invent your own workflow.
 
-## Quick start for next agent
+First, do this in order:
 
-- Repo: `/home/home/personal/zide`
-- Current phase: implementation preparation complete.
-- Current focus: terminal modularization prep with approved fixture list + replay harness outline.
-- Key docs (editor):
-  - `app_architecture/editor/DESIGN.md`
-  - `app_architecture/editor/editor_widget_todo.yaml`
-  - `app_architecture/editor/protocol_todo.yaml`
-  - `app_architecture/editor/rendering_todo.yaml`
-- Key docs (terminal):
-  - `app_architecture/terminal/DESIGN.md`
-  - `app_architecture/terminal/MODULARIZATION_PLAN.md`
-  - `app_architecture/terminal/TERMINAL_API.md`
-  - `app_architecture/terminal/REPLAY_HARNESS_SPEC.md`
-  - `app_architecture/terminal/terminal_widget_todo.yaml`
-  - `app_architecture/terminal/protocol_todo.yaml`
+Read AGENTS.md.
 
-Suggested next steps:
-1) Read `app_architecture/terminal/MODULARIZATION_PLAN.md`.
-2) Read `app_architecture/terminal/TERMINAL_API.md`.
-3) Read `app_architecture/terminal/REPLAY_HARNESS_SPEC.md`.
-4) Implement the replay harness per the approved outline (no refactors, no file moves, no feature changes).
-5) Capture baseline goldens.
-6) Generate `FEATURE_INVENTORY.md` from code.
-7) Finalize `TERMINAL_API.md` contracts tied to fixtures/tests.
-8) Only then begin extraction-only refactors.
+Read docs/AGENT_HANDOFF.md.
 
-Explicitly prohibited until goldens exist:
-- no refactors
-- no file moves
-- no feature changes
+Read app_architecture/terminal/MODULARIZATION_PLAN.md.
 
-## Summary of this session
+Read app_architecture/terminal/TERMINAL_API.md.
 
-- Kitty graphics: PNG decoded to RGBA in core so dimensions are known for cursor advance; scrollback overlays now move with viewport.
-- Kitty graphics: query (`a=q`) validates payloads and returns `ENODATA`/`EBADPNG`/`EINVAL` as appropriate; `ENOENT` for missing images; cycle + depth checks (`ECYCLE`/`ETOODEEP`) for parented placements.
-- Kitty graphics: per-screen storage (primary vs alt) so alt apps like yazi can render without leaking to scrollback; alt entry/exit clears its own kitty state.
-- Terminfo: added `assets/terminfo/xterm-kitty.info` and set TERM to xterm-kitty with fallback to xterm-256color when missing.
-- Editor: piece-table removed; rope-only text model with undo/redo, batching, and grouping.
-- Editor: selection set scaffolding + rectangular selection expansion and per-line editing.
-- Editor: editor-only tests added (`zig build test-editor`) using `src/tests_main.zig` + `src/editor_tests.zig`.
-- Editor widget: mouse drag selection wired (normal + Alt-rect) and selection overlay drawing added.
-- Editor widget: drag selection now preserves selection while updating cursor.
-- Editor widget: undo now groups edits per input tick to avoid over-merged inserts.
-- Editor: undo/redo updates cursor based on last undo/redo op position.
-- Editor widget: selection highlight now renders on empty lines.
-- Editor widget: cursor/selection rendering uses UTF-8 codepoint columns for placement.
-- Editor widget: long lines now use allocated buffers to avoid selection/cursor truncation.
-- Editor widget: grapheme cluster mapping uses HarfBuzz cluster offsets for cursor/selection placement.
-- Editor widget: per-frame cluster cache reduces HarfBuzz shaping overhead.
-- Editor: per-line width cache now uses grapheme clusters when available.
-- Editor widget: added visual line count helper for wrap groundwork.
-- Editor widget: soft wrap rendering uses visual line counts per line.
-- Editor widget: cursor up/down now moves across wrapped segments.
-- Editor widget: scroll wheel now moves by visual rows when soft wrap is active.
-- Editor widget: empty-line rendering restored in wrapped view; scroll-up jump fixed.
-- Config: added Lua `config.editor.wrap` (default false), stored in AppState.
-- Config: wired `config.editor.wrap` into editor widget to toggle soft wrap.
-- Editor widget: preserve preferred visual column when moving across short wrapped lines.
-- Editor widget: keep cursor visible when moving up/down in wrapped view.
-- Editor widget: horizontal scroll + scrollbar when wrap is disabled.
-- Editor widget: preserve preferred visual column for vertical moves even without wrap (long/short/long lines).
-- Editor widget: horizontal scrollbar click/drag + vertical scrollbar only on overflow (no wrap).
-- Editor widget: vertical scrollbar drag/click support (no wrap).
-- Editor widget: thicker editor scrollbars (12px) for easier hit targets (both axes).
-- Editor widget: horizontal scrollbar uses cached max line width so it works even when long lines are offscreen.
-- Terminal modularization: new plan doc added (`app_architecture/terminal/MODULARIZATION_PLAN.md`) to guide layer split + test-first refactor.
-- Terminal modularization: API contract doc added (`app_architecture/terminal/TERMINAL_API.md`).
+Read app_architecture/terminal/REPLAY_HARNESS_SPEC.md.
 
-## Current issues (editor)
+Current state (do not question this):
 
-- Side quest requested: add editor horizontal scrollbar when wrap is off; wire Lua config `config.editor.wrap` into editor widget.
-- Side quest requested: fix terminal scrollbar visibility (hide when no scrollback overflow or when alt screen active).
+Terminal replay harness exists and is locked.
 
-## Current issues (terminal, parked)
+Fixture list is locked.
 
-- Codex input field background still does not render. Codex sends `OSC 10;?` and `OSC 11;?` queries only; no `48` background SGR observed. Raw CSI logging shows only `CSI 0/39/49 m`.
-- Lazygit arrow navigation fixed via DECCKM, but re-validate after further input changes.
-- NumLock state is not tracked; keypad always treated as keypad unless app keypad mode is disabled.
-- XTGETTCAP support is minimal (TN/Co/RGB only).
-- Kitty graphics: delete semantics are approximate (e.g., 'n/N' treated like 'i/I'); no placement queries, no animation support.
-- Kitty graphics: virtual placements (U=1) are stored but not rendered; no unicode placeholder handling.
-- Kitty graphics: file/temp/shm media support is basic; error mapping for file/shm failures is still coarse.
+Goldens are locked.
 
-## Side quest plan (requested)
+Snapshot logic has already been extracted.
 
-1) Terminal scrollbar: only show when scrollback overflows and alt screen is inactive.
-2) Editor wrap config: config entry wired into editor widget.
-3) Editor horizontal scrollbar: show when wrap is off and line width exceeds viewport.
+We are in extraction-only refactor mode.
 
-## After side quest
+No behavior changes are allowed.
 
-- Return to editor workflow (ER-01): wrap-aware scrolling/cursor tests, line number continuation markers, and wrap-aware Home/End/PageUp/PageDown.
+Goldens must not change.
 
-## Key changes (recent)
+Your role:
 
-- `src/terminal/core/terminal.zig`
-  - Kitty graphics: parsing/validation, chunking + zlib inflate, storage limits, delete actions, parented placements, query validation, per-screen storage, PNG decode, alt screen handling
-- `src/terminal/parser/parser.zig`
-  - DCS parser added (minimal)
-- `src/ui/widgets/terminal_widget.zig`
-  - Kitty z-layer ordering + viewport-aware overlay placement
-- `src/terminal/io/pty_unix.zig`
-  - TERM set to xterm-kitty with fallback to xterm-256color
-- `src/terminal/parser/csi.zig`
-  - max CSI params = 16
-  - `:` treated as a separator in SGR
-- `app_architecture/terminal/protocol_todo.yaml`
-  - Checklist updated for completed tasks
-- `scripts/manual.sh`
-  - XTGETTCAP query helper
+Perform mechanical, extraction-only refactors.
 
-## Files to review first
+Keep diffs small and reviewable.
 
-- `src/terminal/core/terminal.zig`
-- `src/terminal/parser/parser.zig`
-- `src/terminal/parser/csi.zig`
-- `app_architecture/terminal/DESIGN.md`
-- `app_architecture/terminal/protocol_todo.yaml`
+Touch one subsystem per step.
 
-## Editor files to review
+Run zig build test-terminal-replay -- --all after every change.
 
-- `src/ui/widgets/editor_widget.zig`
-- `src/main.zig`
-- `src/editor/editor.zig`
-- `src/editor/rope.zig`
-- `src/editor_tests.zig`
-- `src/tests_main.zig`
+Do not commit until I explicitly approve after running tests.
+
+Hard rules (never violate):
+
+No renames of public symbols.
+
+No logic changes.
+
+No cleanup or simplification.
+
+No refactors outside the approved modularization plan.
+
+If goldens change, stop and revert.
+
+Before coding:
+
+State which modularization step you are about to perform.
+
+Confirm it is extraction-only.
+
+Wait for confirmation if unclear.
+
+After coding:
+
+List changed files.
+
+List tests run.
+
+Show git status -sb.
+
+Stop and wait for approval.
+
+Do not be verbose.
+Do not redesign.
+Do not optimize.
+Follow the plan.
