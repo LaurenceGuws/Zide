@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const pty_mod = @import("../io/pty.zig");
 const types = @import("../model/types.zig");
 
@@ -339,3 +340,67 @@ const key_mode_report_all_keys: u32 = 8;
 const mouse_button_left_mask: u8 = 1;
 const mouse_button_middle_mask: u8 = 2;
 const mouse_button_right_mask: u8 = 4;
+
+pub fn encodeKeyBytesForTest(
+    allocator: std.mem.Allocator,
+    key: types.Key,
+    mod: types.Modifier,
+    flags: u32,
+) ![]u8 {
+    if (!debugAccessAllowed()) @panic("encodeKeyBytesForTest is test-only");
+    if (flags == 0) return allocator.alloc(u8, 0);
+    const mod_code = encodeModifier(mod);
+    if ((flags & key_mode_report_all_keys) == 0) {
+        if (key == types.VTERM_KEY_ENTER or key == types.VTERM_KEY_TAB or key == types.VTERM_KEY_BACKSPACE) {
+            return allocator.alloc(u8, 0);
+        }
+    }
+    return switch (key) {
+        types.VTERM_KEY_UP => encodeCsiWithModBytes(allocator, "1", mod_code, "A"),
+        types.VTERM_KEY_DOWN => encodeCsiWithModBytes(allocator, "1", mod_code, "B"),
+        types.VTERM_KEY_RIGHT => encodeCsiWithModBytes(allocator, "1", mod_code, "C"),
+        types.VTERM_KEY_LEFT => encodeCsiWithModBytes(allocator, "1", mod_code, "D"),
+        types.VTERM_KEY_HOME => encodeCsiWithModBytes(allocator, "1", mod_code, "H"),
+        types.VTERM_KEY_END => encodeCsiWithModBytes(allocator, "1", mod_code, "F"),
+        types.VTERM_KEY_PAGEUP => encodeCsiWithModBytes(allocator, "5", mod_code, "~"),
+        types.VTERM_KEY_PAGEDOWN => encodeCsiWithModBytes(allocator, "6", mod_code, "~"),
+        types.VTERM_KEY_INS => encodeCsiWithModBytes(allocator, "2", mod_code, "~"),
+        types.VTERM_KEY_DEL => encodeCsiWithModBytes(allocator, "3", mod_code, "~"),
+        types.VTERM_KEY_ESCAPE => std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ 27, mod_code }),
+        else => allocator.alloc(u8, 0),
+    };
+}
+
+pub fn encodeCharBytesForTest(
+    allocator: std.mem.Allocator,
+    char: u32,
+    mod: types.Modifier,
+    flags: u32,
+) ![]u8 {
+    if (!debugAccessAllowed()) @panic("encodeCharBytesForTest is test-only");
+    if (flags == 0) return allocator.alloc(u8, 0);
+    if (mod == types.VTERM_MOD_NONE and (flags & key_mode_report_all_keys) == 0) {
+        return allocator.alloc(u8, 0);
+    }
+    const mod_code = encodeModifier(mod);
+    return std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ char, mod_code });
+}
+
+fn encodeCsiWithModBytes(
+    allocator: std.mem.Allocator,
+    prefix: []const u8,
+    mod_code: u8,
+    suffix: []const u8,
+) ![]u8 {
+    if (!debugAccessAllowed()) @panic("encodeCsiWithModBytes is test-only");
+    if (mod_code > 1) {
+        return std.fmt.allocPrint(allocator, "\x1b[{s};{d}{s}", .{ prefix, mod_code, suffix });
+    }
+    return std.fmt.allocPrint(allocator, "\x1b[{s}{s}", .{ prefix, suffix });
+}
+
+fn debugAccessAllowed() bool {
+    if (builtin.is_test) return true;
+    const root = @import("root");
+    return @hasDecl(root, "terminal_replay_enabled") and root.terminal_replay_enabled;
+}

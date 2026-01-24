@@ -260,4 +260,24 @@ pub fn build(b: *std.Build) void {
     const run_editor_tests = b.addRunArtifact(editor_tests);
     const editor_test_step = b.step("test-editor", "Run editor-specific tests");
     editor_test_step.dependOn(&run_editor_tests.step);
+
+    const terminal_replay_exe = b.addExecutable(.{
+        .name = "terminal-replay",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/terminal_replay_main.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    terminal_replay_exe.linkLibrary(raylib);
+    terminal_replay_exe.addIncludePath(b.path("vendor/raylib/src"));
+    terminal_replay_exe.addIncludePath(b.path("vendor/raylib/src/external/glfw/include"));
+
+    const run_terminal_replay = b.addRunArtifact(terminal_replay_exe);
+    if (b.args) |args| {
+        run_terminal_replay.addArgs(args);
+    }
+    const terminal_replay_step = b.step("test-terminal-replay", "Run terminal replay harness");
+    terminal_replay_step.dependOn(&run_terminal_replay.step);
 }
