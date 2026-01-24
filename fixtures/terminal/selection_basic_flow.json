@@ -1,0 +1,34 @@
+{
+  "fixture_type": "harness_api",
+  "rows": 4,
+  "cols": 16,
+  "cursor": {
+    "row": 0,
+    "col": 0
+  },
+  "line_ending": "lf",
+  "assertions": [
+    "selection",
+    "grid"
+  ],
+  "selection": [
+    {
+      "op": "start",
+      "row": 0,
+      "col": 0
+    },
+    {
+      "op": "update",
+      "row": 0,
+      "col": 6
+    },
+    {
+      "op": "update",
+      "row": 1,
+      "col": 3
+    },
+    {
+      "op": "finish"
+    }
+  ]
+}
