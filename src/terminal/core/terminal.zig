@@ -217,6 +217,55 @@ pub const TerminalSnapshot = struct {
     }
 };
 
+pub const DebugSnapshot = struct {
+    title: []const u8,
+    cwd: []const u8,
+    osc_clipboard: []const u8,
+    osc_clipboard_pending: bool,
+    hyperlinks: []const Hyperlink,
+    scrollback_count: usize,
+    scrollback_offset: usize,
+    selection: ?TerminalSelection,
+    base_default_attrs: types.CellAttrs,
+};
+
+pub fn debugSnapshot(self: *TerminalSession) DebugSnapshot {
+    if (!debugAccessAllowed()) @panic("debugSnapshot is test-only");
+    return .{
+        .title = self.title,
+        .cwd = self.cwd,
+        .osc_clipboard = self.osc_clipboard.items,
+        .osc_clipboard_pending = self.osc_clipboard_pending,
+        .hyperlinks = self.hyperlink_table.items,
+        .scrollback_count = self.history.scrollbackCount(),
+        .scrollback_offset = self.history.scrollOffset(),
+        .selection = self.selectionState(),
+        .base_default_attrs = self.base_default_attrs,
+    };
+}
+
+pub fn debugScrollbackRow(self: *TerminalSession, index: usize) ?[]const Cell {
+    if (!debugAccessAllowed()) @panic("debugScrollbackRow is test-only");
+    return self.history.scrollbackRow(index);
+}
+
+pub fn debugSetCursor(self: *TerminalSession, row: usize, col: usize) void {
+    if (!debugAccessAllowed()) @panic("debugSetCursor is test-only");
+    const screen = self.activeScreen();
+    screen.cursor = .{ .row = row, .col = col };
+}
+
+pub fn debugFeedBytes(self: *TerminalSession, bytes: []const u8) void {
+    if (!debugAccessAllowed()) @panic("debugFeedBytes is test-only");
+    self.parser.handleSlice(self, bytes);
+}
+
+fn debugAccessAllowed() bool {
+    if (builtin.is_test) return true;
+    const root = @import("root");
+    return @hasDecl(root, "terminal_replay_enabled") and root.terminal_replay_enabled;
+}
+
 const ActiveScreen = enum {
     primary,
     alt,
@@ -3920,7 +3969,7 @@ fn readThreadMain(session: *TerminalSession) void {
     }
 }
 
-const Hyperlink = struct {
+pub const Hyperlink = struct {
     uri: []u8,
 };
 
