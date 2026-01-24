@@ -659,8 +659,6 @@ pub const TerminalSession = struct {
         const n = @min(count, screen.scroll_bottom - screen.scroll_top + 1);
         if (n == 0) return;
         const blank_cell = self.blankCellForScreen(screen);
-        const region_start = screen.scroll_top * cols;
-        const region_end = (screen.scroll_bottom + 1) * cols;
         if (self.isFullScrollRegion()) {
             var row: usize = 0;
             while (row < n) : (row += 1) {
@@ -668,12 +666,7 @@ pub const TerminalSession = struct {
             }
             kitty_mod.updateKittyPlacementsForScroll(self);
         }
-        const move_len = region_end - region_start - n * cols;
-        if (move_len > 0) {
-            std.mem.copyForwards(Cell, screen.grid.cells.items[region_start .. region_start + move_len], screen.grid.cells.items[region_start + n * cols .. region_end]);
-        }
-        for (screen.grid.cells.items[region_end - n * cols .. region_end]) |*cell| cell.* = blank_cell;
-        screen.grid.markDirtyRange(screen.scroll_top, screen.scroll_bottom, 0, cols - 1);
+        screen.scrollRegionUpBy(n, blank_cell);
         if (!self.isFullScrollRegion()) {
             kitty_mod.shiftKittyPlacementsUp(self, screen.scroll_top, screen.scroll_bottom, n);
         }
@@ -686,14 +679,7 @@ pub const TerminalSession = struct {
         const n = @min(count, screen.scroll_bottom - screen.scroll_top + 1);
         if (n == 0) return;
         const blank_cell = self.blankCellForScreen(screen);
-        const region_start = screen.scroll_top * cols;
-        const region_end = (screen.scroll_bottom + 1) * cols;
-        const move_len = region_end - region_start - n * cols;
-        if (move_len > 0) {
-            std.mem.copyBackwards(Cell, screen.grid.cells.items[region_start + n * cols .. region_end], screen.grid.cells.items[region_start .. region_start + move_len]);
-        }
-        for (screen.grid.cells.items[region_start .. region_start + n * cols]) |*cell| cell.* = blank_cell;
-        screen.grid.markDirtyRange(screen.scroll_top, screen.scroll_bottom, 0, cols - 1);
+        screen.scrollRegionDownBy(n, blank_cell);
         kitty_mod.shiftKittyPlacementsDown(self, screen.scroll_top, screen.scroll_bottom, n);
     }
 
@@ -903,19 +889,8 @@ pub const TerminalSession = struct {
             self.pushScrollbackRow(0);
             kitty_mod.updateKittyPlacementsForScroll(self);
         }
-        const total = rows * cols;
-        const row_bytes = cols * @sizeOf(Cell);
-        const src = @as([*]u8, @ptrCast(screen.grid.cells.items.ptr));
-        std.mem.copyForwards(u8, src[0 .. total * @sizeOf(Cell) - row_bytes], src[row_bytes .. total * @sizeOf(Cell)]);
-
-        const row_start = (rows - 1) * cols;
         const blank_cell = self.blankCellForScreen(screen);
-        for (screen.grid.cells.items[row_start .. row_start + cols]) |*cell| {
-            cell.* = blank_cell;
-        }
-        screen.cursor.row = rows - 1;
-        screen.cursor.col = 0;
-        screen.grid.markDirtyAll();
+        screen.scrollUp(blank_cell);
         if (!self.isFullScrollRegion()) {
             kitty_mod.shiftKittyPlacementsUp(self, 0, rows - 1, 1);
         }

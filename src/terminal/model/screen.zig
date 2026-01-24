@@ -557,6 +557,52 @@ pub const Screen = struct {
         }
         self.grid.markDirtyAll();
     }
+
+    pub fn scrollRegionUpBy(self: *Screen, n: usize, blank_cell: types.Cell) void {
+        const cols = @as(usize, self.grid.cols);
+        if (cols == 0 or self.grid.rows == 0) return;
+        if (n == 0) return;
+        const region_start = self.scroll_top * cols;
+        const region_end = (self.scroll_bottom + 1) * cols;
+        const move_len = region_end - region_start - n * cols;
+        if (move_len > 0) {
+            std.mem.copyForwards(types.Cell, self.grid.cells.items[region_start .. region_start + move_len], self.grid.cells.items[region_start + n * cols .. region_end]);
+        }
+        for (self.grid.cells.items[region_end - n * cols .. region_end]) |*cell| cell.* = blank_cell;
+        self.grid.markDirtyRange(self.scroll_top, self.scroll_bottom, 0, cols - 1);
+    }
+
+    pub fn scrollRegionDownBy(self: *Screen, n: usize, blank_cell: types.Cell) void {
+        const cols = @as(usize, self.grid.cols);
+        if (cols == 0 or self.grid.rows == 0) return;
+        if (n == 0) return;
+        const region_start = self.scroll_top * cols;
+        const region_end = (self.scroll_bottom + 1) * cols;
+        const move_len = region_end - region_start - n * cols;
+        if (move_len > 0) {
+            std.mem.copyBackwards(types.Cell, self.grid.cells.items[region_start + n * cols .. region_end], self.grid.cells.items[region_start .. region_start + move_len]);
+        }
+        for (self.grid.cells.items[region_start .. region_start + n * cols]) |*cell| cell.* = blank_cell;
+        self.grid.markDirtyRange(self.scroll_top, self.scroll_bottom, 0, cols - 1);
+    }
+
+    pub fn scrollUp(self: *Screen, blank_cell: types.Cell) void {
+        const cols = @as(usize, self.grid.cols);
+        const rows = @as(usize, self.grid.rows);
+        if (rows == 0 or cols == 0) return;
+        const total = rows * cols;
+        const row_bytes = cols * @sizeOf(types.Cell);
+        const src = @as([*]u8, @ptrCast(self.grid.cells.items.ptr));
+        std.mem.copyForwards(u8, src[0 .. total * @sizeOf(types.Cell) - row_bytes], src[row_bytes .. total * @sizeOf(types.Cell)]);
+
+        const row_start = (rows - 1) * cols;
+        for (self.grid.cells.items[row_start .. row_start + cols]) |*cell| {
+            cell.* = blank_cell;
+        }
+        self.cursor.row = rows - 1;
+        self.cursor.col = 0;
+        self.grid.markDirtyAll();
+    }
 };
 
 const SavedCursor = struct {
