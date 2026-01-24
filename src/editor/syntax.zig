@@ -11,6 +11,8 @@ const c = @cImport({
 pub const TSLanguage = c.TSLanguage;
 
 extern "c" fn tree_sitter_zig() *const c.TSLanguage;
+extern "c" fn tree_sitter_bash() *const c.TSLanguage;
+extern "c" fn tree_sitter_java() *const c.TSLanguage;
 
 pub const TokenKind = enum(u8) {
     plain = 0,
@@ -131,6 +133,20 @@ pub fn createZigHighlighter(
     text_buffer: *TextStore,
 ) !*SyntaxHighlighter {
     return createHighlighter(allocator, text_buffer, "zig", tree_sitter_zig());
+}
+
+pub fn createBashHighlighter(
+    allocator: std.mem.Allocator,
+    text_buffer: *TextStore,
+) !*SyntaxHighlighter {
+    return createHighlighter(allocator, text_buffer, "bash", tree_sitter_bash());
+}
+
+pub fn createJavaHighlighter(
+    allocator: std.mem.Allocator,
+    text_buffer: *TextStore,
+) !*SyntaxHighlighter {
+    return createHighlighter(allocator, text_buffer, "java", tree_sitter_java());
 }
 
 pub fn createHighlighter(
