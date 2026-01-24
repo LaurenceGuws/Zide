@@ -20,6 +20,7 @@ Date: 2026-01-24
 - Added editor render cache + dirty redraw path (EditorRenderCache + editor texture draw).
 - Editor cached rendering is now in main draw loop (EditorWidget.drawCached).
 - Integrated EditorDrawList command buffer into cached draw path.
+- Added render cache regression test for dirty-line updates.
 
 ## Overview
 - Terminal module split is stable; import layering enforced.
@@ -35,5 +36,5 @@ Date: 2026-01-24
 
 ## Next Steps
 1) Tighten cache eviction/LRU (currently clears on cap).
-2) Add a render cache regression test that exercises dirty-line updates.
-3) Evaluate command buffer usage for scrollbars and non-cached draw path.
+2) Evaluate command buffer usage for scrollbars and non-cached draw path.
+3) Add coverage for cached draw in harness or golden update flow.
