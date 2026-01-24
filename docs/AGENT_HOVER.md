@@ -22,6 +22,7 @@ Date: 2026-01-24
 - Integrated EditorDrawList command buffer into cached draw path.
 - Added render cache regression test for dirty-line updates.
 - Tightened render cache eviction to prune older entries before clearing.
+- Routed cached scrollbars through the draw list.
 
 ## Overview
 - Terminal module split is stable; import layering enforced.
@@ -36,6 +37,6 @@ Date: 2026-01-24
   - `zig build` passes after making input-called helpers public.
 
 ## Next Steps
-1) Evaluate command buffer usage for scrollbars and non-cached draw path.
+1) Evaluate command buffer usage for non-cached draw path.
 2) Add coverage for cached draw in harness or golden update flow.
 3) Add render cache stress test for eviction behavior.
