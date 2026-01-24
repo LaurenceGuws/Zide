@@ -2,6 +2,7 @@ const std = @import("std");
 const syntax_mod = @import("../../editor/syntax.zig");
 const selection_mod = @import("../../editor/view/selection.zig");
 const layout_mod = @import("../../editor/view/layout.zig");
+const metrics_mod = @import("../../editor/view/metrics.zig");
 const cache_mod = @import("../../editor/render/cache.zig");
 const app_logger = @import("../../app_logger.zig");
 
@@ -114,7 +115,7 @@ pub fn draw(widget: anytype, r: anytype, x: f32, y: f32, width: f32, height: f32
         selection_mod.collectSelectionRanges(widget.editor, line_idx, line_text, cluster_slice, &ranges, &range_count);
 
         const width_cached = widget.editor.lineWidthCached(line_idx, line_text, cluster_slice);
-        const line_width = if (line_len == 0) 1 else if (width_cached == 0 and range_count > 0) 1 else width_cached;
+        const line_width = metrics_mod.lineWidthForDisplay(line_len, width_cached, range_count > 0);
         if (line_width > max_visible_width) {
             max_visible_width = line_width;
         }
@@ -308,7 +309,7 @@ pub fn drawCached(
         selection_mod.collectSelectionRanges(widget.editor, line_idx, line_text, cluster_slice, &ranges, &range_count);
 
         const width_cached = widget.editor.lineWidthCached(line_idx, line_text, cluster_slice);
-        const line_width = if (line_len == 0) 1 else if (width_cached == 0 and range_count > 0) 1 else width_cached;
+        const line_width = metrics_mod.lineWidthForDisplay(line_len, width_cached, range_count > 0);
         const total_visual_lines = if (widget.wrap_enabled) layout_mod.visualLineCountForWidth(cols, line_width) else 1;
         const seg_start_idx = if (widget.wrap_enabled and line_idx == start_line) @min(start_seg, total_visual_lines) else 0;
 
