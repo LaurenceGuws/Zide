@@ -115,6 +115,7 @@ Document allowed import directions before any refactor work begins.
 Progress:
 - Completed step 5 (snapshot types + encoding extracted into `terminal/core/snapshot.zig`).
 - Completed step 6 (protocol handlers extracted into `terminal/protocol`).
+- Completed step 7 (kitty graphics extracted into `terminal/kitty/graphics.zig`).
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.
