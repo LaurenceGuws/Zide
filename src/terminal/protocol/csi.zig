@@ -171,8 +171,9 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 if (action.leader == '?') {
                     switch (mode) {
                         6 => { // DECXCPR
-                            const row_1 = screen.cursor.row + 1;
-                            const col_1 = screen.cursor.col + 1;
+                            const pos = screen.cursorReport();
+                            const row_1 = pos.row_1;
+                            const col_1 = pos.col_1;
                             const seq = std.fmt.bufPrint(&buf, "\x1b[?{d};{d}R", .{ row_1, col_1 }) catch return;
                             _ = pty.write(seq) catch {};
                         },
@@ -205,8 +206,9 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             _ = pty.write("\x1b[0n") catch {};
                         },
                         6 => { // Cursor position report
-                            const row_1 = screen.cursor.row + 1;
-                            const col_1 = screen.cursor.col + 1;
+                            const pos = screen.cursorReport();
+                            const row_1 = pos.row_1;
+                            const col_1 = pos.col_1;
                             const seq = std.fmt.bufPrint(&buf, "\x1b[{d};{d}R", .{ row_1, col_1 }) catch return;
                             _ = pty.write(seq) catch {};
                         },
@@ -230,7 +232,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                     const mode = p[idx];
                     switch (mode) {
                         1 => self.app_cursor_keys = true,
-                        25 => self.activeScreen().cursor_visible = true,
+                        25 => self.activeScreen().setCursorVisible(true),
                         47 => self.enterAltScreen(false, false),
                         1047 => self.enterAltScreen(true, false),
                         1048 => self.saveCursor(),
@@ -254,7 +256,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                     const mode = p[idx];
                     switch (mode) {
                         1 => self.app_cursor_keys = false,
-                        25 => self.activeScreen().cursor_visible = false,
+                        25 => self.activeScreen().setCursorVisible(false),
                         47 => self.exitAltScreen(false),
                         1047 => self.exitAltScreen(false),
                         1048 => self.restoreCursor(),
