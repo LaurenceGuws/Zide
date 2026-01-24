@@ -1,0 +1,29 @@
+TERM_SNAPSHOT v1
+size: 6x12
+cursor: r=0 c=1 visible=1 style=block-blink
+alt: 0
+scrollback: count=0 view_offset=0
+title: "Terminal"
+cwd: ""
+clipboard: ""
+selection: none
+grid:
+row0: "Z" . . . . . . . . . . .
+row1: "l" "i" "n" "e" "1" . . . . . . .
+row2: "l" "i" "n" "e" "2" . . . . . . .
+row3: "l" "i" "n" "e" "3" . . . . . . .
+row4: "l" "i" "n" "e" "4" . . . . . . .
+row5: . . . . . . . . . . . .
+attrs:
+row0: cols 0-11 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row1: cols 0-11 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row2: cols 0-11 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row3: cols 0-11 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row4: cols 0-11 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row5: cols 0-11 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+links: none
+scrollback: none
+kitty:
+images=0 placements=0
+image ids: []
+placement ids: []

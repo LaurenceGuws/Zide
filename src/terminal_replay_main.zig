@@ -160,6 +160,7 @@ fn runVtFixture(log: app_logger.Logger, allocator: std.mem.Allocator, fixture: *
     const path = try writeOutputFile(allocator, fixture.name, false, output);
     defer allocator.free(path);
     log.logf("wrote {s}", .{path});
+    try compareGolden(fixture.name, fixture.golden, output);
 }
 
 fn runEncoderFixture(log: app_logger.Logger, allocator: std.mem.Allocator, fixture: *const harness.Fixture) !void {
@@ -170,6 +171,7 @@ fn runEncoderFixture(log: app_logger.Logger, allocator: std.mem.Allocator, fixtu
     const path = try writeOutputFile(allocator, fixture.name, true, output);
     defer allocator.free(path);
     log.logf("wrote {s}", .{path});
+    try compareGolden(fixture.name, fixture.golden, output);
 }
 
 fn formatEncoderOutput(allocator: std.mem.Allocator, bytes: []const u8) ![]u8 {
@@ -224,4 +226,50 @@ fn findFixture(fixtures: []harness.Fixture, name: []const u8) ?*harness.Fixture 
 
 fn tryAppend(out: *std.ArrayList(u8), allocator: std.mem.Allocator, text: []const u8) void {
     _ = out.appendSlice(allocator, text) catch {};
+}
+
+fn compareGolden(name: []const u8, golden: ?[]const u8, output: []const u8) !void {
+    const expected = golden orelse return;
+    if (std.mem.eql(u8, expected, output)) return;
+    reportGoldenDiff(name, expected, output);
+    return error.GoldenMismatch;
+}
+
+fn reportGoldenDiff(name: []const u8, expected: []const u8, actual: []const u8) void {
+    std.debug.print("golden mismatch: {s}\n", .{name});
+    std.debug.print("expected bytes: {d} actual bytes: {d}\n", .{ expected.len, actual.len });
+    var exp_idx: usize = 0;
+    var act_idx: usize = 0;
+    var line_no: usize = 1;
+    while (exp_idx < expected.len or act_idx < actual.len) : (line_no += 1) {
+        const exp_line = readLine(expected, &exp_idx);
+        const act_line = readLine(actual, &act_idx);
+        if (!std.mem.eql(u8, exp_line, act_line)) {
+            const col = firstDiffColumn(exp_line, act_line);
+            std.debug.print("first diff at line {d} col {d}\n", .{ line_no, col + 1 });
+            std.debug.print("expected: {s}\n", .{exp_line});
+            std.debug.print("actual:   {s}\n", .{act_line});
+            return;
+        }
+    }
+}
+
+fn readLine(data: []const u8, idx: *usize) []const u8 {
+    if (idx.* >= data.len) return &.{};
+    const start = idx.*;
+    var i = start;
+    while (i < data.len and data[i] != '\n') : (i += 1) {}
+    const line = data[start..i];
+    if (i < data.len and data[i] == '\n') i += 1;
+    idx.* = i;
+    return line;
+}
+
+fn firstDiffColumn(expected: []const u8, actual: []const u8) usize {
+    const min_len = @min(expected.len, actual.len);
+    var col: usize = 0;
+    while (col < min_len) : (col += 1) {
+        if (expected[col] != actual[col]) break;
+    }
+    return col;
 }
