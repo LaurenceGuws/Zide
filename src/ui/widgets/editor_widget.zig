@@ -3,6 +3,7 @@ const renderer_mod = @import("../renderer.zig");
 const editor_mod = @import("../../editor/editor.zig");
 const selection_mod = @import("../../editor/view/selection.zig");
 const layout_mod = @import("../../editor/view/layout.zig");
+const scroll_mod = @import("../../editor/view/scroll.zig");
 const render_cache_mod = @import("../../editor/render/cache.zig");
 const input_mod = @import("editor_widget_input.zig");
 const draw_mod = @import("editor_widget_draw.zig");
@@ -13,6 +14,16 @@ const hb = @import("../terminal_font.zig").c;
 const Renderer = renderer_mod.Renderer;
 const Editor = editor_mod.Editor;
 const EditorRenderCache = render_cache_mod.EditorRenderCache;
+
+const VisualLinesCtx = struct {
+    widget: *EditorWidget,
+    r: *Renderer,
+};
+
+fn visualLinesForLineWithContext(ctx: *anyopaque, line_idx: usize, cols: usize) usize {
+    const payload: *VisualLinesCtx = @ptrCast(@alignCast(ctx));
+    return payload.widget.visualLinesForLine(payload.r, line_idx, cols);
+}
 
 /// Editor widget for drawing a text editor view
 pub const EditorWidget = struct {
@@ -194,42 +205,19 @@ pub const EditorWidget = struct {
         };
     }
 
-    const VisualLinePos = struct {
-        line_idx: usize,
-        seg_idx: usize,
-        cols: usize,
-    };
+    const VisualLinePos = scroll_mod.VisualLinePos;
 
     fn lineForVisualRow(self: *EditorWidget, r: *Renderer, visual_row: usize) ?VisualLinePos {
-        const line_count = self.editor.lineCount();
-        if (line_count == 0) return null;
         const cols = self.viewportColumns(r);
-        if (cols == 0) return null;
-        if (!self.wrap_enabled) {
-            const line = self.editor.scroll_line + visual_row;
-            if (line >= line_count) return null;
-            return .{ .line_idx = line, .seg_idx = 0, .cols = cols };
-        }
-
-        var line = self.editor.scroll_line;
-        var seg = self.editor.scroll_row_offset;
-        if (line >= line_count) {
-            line = line_count - 1;
-            seg = 0;
-        }
-
-        var remaining = visual_row;
-        while (line < line_count) {
-            const lines = self.visualLinesForLine(r, line, cols);
-            const available = if (lines > seg) lines - seg else 0;
-            if (remaining < available) {
-                return .{ .line_idx = line, .seg_idx = seg + remaining, .cols = cols };
-            }
-            remaining -= available;
-            line += 1;
-            seg = 0;
-        }
-        return null;
+        var ctx = VisualLinesCtx{ .widget = self, .r = r };
+        return scroll_mod.lineForVisualRow(
+            self.editor,
+            visual_row,
+            cols,
+            self.wrap_enabled,
+            &ctx,
+            visualLinesForLineWithContext,
+        );
     }
 
     /// Handle input, returns true if any input was processed
@@ -414,105 +402,28 @@ pub const EditorWidget = struct {
     }
 
     fn cursorRowOffset(self: *EditorWidget, r: *Renderer, cursor_line: usize, cursor_seg: usize, cols: usize) i32 {
-        const scroll_line = self.editor.scroll_line;
-        const scroll_seg = self.editor.scroll_row_offset;
-        if (cursor_line == scroll_line) {
-            return @as(i32, @intCast(cursor_seg)) - @as(i32, @intCast(scroll_seg));
-        }
-        if (cursor_line > scroll_line) {
-            var offset: i32 = 0;
-            var line = scroll_line;
-            var seg = scroll_seg;
-            while (line < cursor_line) : (line += 1) {
-                const lines = self.visualLinesForLine(r, line, cols);
-                const available = if (lines > seg) lines - seg else 0;
-                offset += @as(i32, @intCast(available));
-                seg = 0;
-            }
-            offset += @as(i32, @intCast(cursor_seg));
-            return offset;
-        }
-
-        var offset: i32 = 0;
-        var line = cursor_line;
-        var seg = cursor_seg;
-        while (line < scroll_line) : (line += 1) {
-            const lines = self.visualLinesForLine(r, line, cols);
-            const available = if (lines > seg) lines - seg else 0;
-            offset += @as(i32, @intCast(available));
-            seg = 0;
-        }
-        offset += @as(i32, @intCast(scroll_seg));
-        return -offset;
+        var ctx = VisualLinesCtx{ .widget = self, .r = r };
+        return scroll_mod.cursorRowOffset(
+            self.editor,
+            cursor_line,
+            cursor_seg,
+            cols,
+            &ctx,
+            visualLinesForLineWithContext,
+        );
     }
 
     pub fn scrollVisual(self: *EditorWidget, r: *Renderer, delta_rows: i32) void {
-        if (delta_rows == 0) return;
-        const line_count = self.editor.lineCount();
-        if (line_count == 0) return;
         const cols = self.viewportColumns(r);
-        if (cols == 0) return;
-        if (!self.wrap_enabled) {
-            if (delta_rows > 0) {
-                self.editor.scroll_line = @min(self.editor.scroll_line + @as(usize, @intCast(delta_rows)), line_count - 1);
-            } else {
-                const delta_abs: usize = @intCast(-delta_rows);
-                self.editor.scroll_line = if (self.editor.scroll_line > delta_abs) self.editor.scroll_line - delta_abs else 0;
-            }
-            self.editor.scroll_row_offset = 0;
-            return;
-        }
-
-        var line = self.editor.scroll_line;
-        var seg = self.editor.scroll_row_offset;
-        if (line >= line_count) {
-            line = line_count - 1;
-            seg = 0;
-        }
-
-        if (delta_rows > 0) {
-            var remaining: usize = @intCast(delta_rows);
-            while (remaining > 0 and line < line_count) {
-                const lines = self.visualLinesForLine(r, line, cols);
-                const available = if (lines > seg) lines - seg else 0;
-                if (remaining < available) {
-                    seg += remaining;
-                    remaining = 0;
-                    break;
-                }
-                remaining -= available;
-                if (line + 1 >= line_count) {
-                    seg = 0;
-                    break;
-                }
-                line += 1;
-                seg = 0;
-            }
-        } else {
-            var remaining: usize = @intCast(-delta_rows);
-            while (remaining > 0) {
-                if (line == 0 and seg == 0) break;
-                if (seg >= remaining) {
-                    seg -= remaining;
-                    remaining = 0;
-                    break;
-                }
-                remaining -= seg;
-                if (line == 0) {
-                    seg = 0;
-                    break;
-                }
-                line -= 1;
-                const lines = self.visualLinesForLine(r, line, cols);
-                seg = if (lines > 0) lines - 1 else 0;
-                if (remaining > 0) {
-                    remaining -= 1;
-                }
-            }
-        }
-
-        self.editor.scroll_line = line;
-        self.editor.scroll_row_offset = seg;
+        var ctx = VisualLinesCtx{ .widget = self, .r = r };
+        scroll_mod.scrollVisual(
+            self.editor,
+            delta_rows,
+            cols,
+            self.wrap_enabled,
+            &ctx,
+            visualLinesForLineWithContext,
+        );
     }
 
     pub fn moveCursorVisual(self: *EditorWidget, r: *Renderer, delta: i32) bool {
