@@ -1048,7 +1048,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn clearDirty(self: *TerminalSession) void {
-        self.activeScreen().grid.clearDirty();
+        self.activeScreen().clearDirty();
     }
 
     pub fn clearSelection(self: *TerminalSession) void {
@@ -1107,7 +1107,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn markDirty(self: *TerminalSession) void {
-        self.activeScreen().grid.markDirtyAll();
+        self.activeScreen().markDirtyAll();
     }
 };
 
