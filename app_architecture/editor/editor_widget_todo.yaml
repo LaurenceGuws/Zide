@@ -178,6 +178,8 @@ editor_widget_todo:
         - "Render-to-texture cache for editor view implemented (editor texture)."
         - "Dirty redraw based on per-line/segment hashing implemented."
         - "Highlight token cache keyed by line hash + epoch implemented."
+        - "Highlight tokens are primed in update with a per-frame line budget; draw uses cached tokens only."
+        - "Line width cache is primed in update with a per-frame line budget to reduce draw-thread work."
         - "EditorDrawList command buffer integration still pending."
       references:
         - reference_repos/editors/lite-xl/src/rencache.c
