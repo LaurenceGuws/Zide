@@ -11,6 +11,7 @@ Date: 2026-01-24
 - Editor modularization Step 1: selection helpers extracted to `src/editor/view/selection.zig`.
 - Editor modularization Step 2: layout helpers extracted to `src/editor/view/layout.zig`.
 - Editor modularization Step 3: scroll helpers extracted to `src/editor/view/scroll.zig`.
+- Editor modularization Step 4 (prep): added `src/editor/render/draw_list.zig`.
 
 ## Overview
 - Terminal module split is stable; import layering enforced.
@@ -18,6 +19,7 @@ Date: 2026-01-24
   - Selection/column mapping helpers moved into `editor/view/selection.zig`.
   - Visual line layout helper moved into `editor/view/layout.zig`.
   - Scrollbar drag mapping helpers moved into `editor/view/scroll.zig`.
+  - Render draw list skeleton added under `editor/render/`.
 
 ## Next Steps
 1) Start editor modularization Step 1: extract selection state from `src/ui/widgets/editor_widget.zig` into `src/editor/view/selection.zig` (extraction-only).
