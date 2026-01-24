@@ -106,8 +106,7 @@ pub fn debugScrollbackRow(self: *TerminalSession, index: usize) ?[]const Cell {
 
 pub fn debugSetCursor(self: *TerminalSession, row: usize, col: usize) void {
     if (!debugAccessAllowed()) @panic("debugSetCursor is test-only");
-    const screen = self.activeScreen();
-    screen.cursor = .{ .row = row, .col = col };
+    self.activeScreen().setCursor(row, col);
 }
 
 pub fn debugFeedBytes(self: *TerminalSession, bytes: []const u8) void {
@@ -983,7 +982,7 @@ pub const TerminalSession = struct {
         kitty_mod.clearKittyImages(self);
         if (clear) {
             self.activeScreen().clear();
-            self.activeScreen().cursor = .{ .row = 0, .col = 0 };
+            self.activeScreen().setCursor(0, 0);
         }
         self.activeScreen().grid.markDirtyAll();
     }
@@ -1090,16 +1089,7 @@ pub const TerminalSession = struct {
         start_col: usize,
         end_col: usize,
     } {
-        const screen = self.activeScreenConst();
-        return switch (screen.grid.dirty) {
-            .none => null,
-            else => .{
-                .start_row = screen.grid.damage.start_row,
-                .end_row = screen.grid.damage.end_row,
-                .start_col = screen.grid.damage.start_col,
-                .end_col = screen.grid.damage.end_col,
-            },
-        };
+        return self.activeScreenConst().getDamage();
     }
 
     pub fn markDirty(self: *TerminalSession) void {
