@@ -626,11 +626,9 @@ pub const TerminalSession = struct {
         const screen = self.activeScreen();
         log.logf("scroll region up count={d} top={d} bottom={d}", .{ count, screen.scroll_top, screen.scroll_bottom });
         log.logStdout("scroll region up count={d}", .{count});
-        const cols = @as(usize, screen.grid.cols);
-        if (cols == 0 or screen.grid.rows == 0) return;
-        const n = @min(count, screen.scroll_bottom - screen.scroll_top + 1);
-        if (n == 0) return;
         const blank_cell = screen.blankCell();
+        const n = screen.scrollRegionUp(count, blank_cell);
+        if (n == 0) return;
         if (self.isFullScrollRegion()) {
             var row: usize = 0;
             while (row < n) : (row += 1) {
@@ -638,7 +636,6 @@ pub const TerminalSession = struct {
             }
             kitty_mod.updateKittyPlacementsForScroll(self);
         }
-        screen.scrollRegionUpBy(n, blank_cell);
         if (!self.isFullScrollRegion()) {
             kitty_mod.shiftKittyPlacementsUp(self, screen.scroll_top, screen.scroll_bottom, n);
         }
@@ -646,12 +643,9 @@ pub const TerminalSession = struct {
 
     pub fn scrollRegionDown(self: *TerminalSession, count: usize) void {
         const screen = self.activeScreen();
-        const cols = @as(usize, screen.grid.cols);
-        if (cols == 0 or screen.grid.rows == 0) return;
-        const n = @min(count, screen.scroll_bottom - screen.scroll_top + 1);
-        if (n == 0) return;
         const blank_cell = screen.blankCell();
-        screen.scrollRegionDownBy(n, blank_cell);
+        const n = screen.scrollRegionDown(count, blank_cell);
+        if (n == 0) return;
         kitty_mod.shiftKittyPlacementsDown(self, screen.scroll_top, screen.scroll_bottom, n);
     }
 

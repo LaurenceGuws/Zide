@@ -644,6 +644,15 @@ pub const Screen = struct {
         self.grid.markDirtyRange(self.scroll_top, self.scroll_bottom, 0, cols - 1);
     }
 
+    pub fn scrollRegionUp(self: *Screen, count: usize, blank_cell: types.Cell) usize {
+        const cols = @as(usize, self.grid.cols);
+        if (cols == 0 or self.grid.rows == 0) return 0;
+        const n = @min(count, self.scroll_bottom - self.scroll_top + 1);
+        if (n == 0) return 0;
+        self.scrollRegionUpBy(n, blank_cell);
+        return n;
+    }
+
     pub fn scrollRegionDownBy(self: *Screen, n: usize, blank_cell: types.Cell) void {
         const cols = @as(usize, self.grid.cols);
         if (cols == 0 or self.grid.rows == 0) return;
@@ -656,6 +665,15 @@ pub const Screen = struct {
         }
         for (self.grid.cells.items[region_start .. region_start + n * cols]) |*cell| cell.* = blank_cell;
         self.grid.markDirtyRange(self.scroll_top, self.scroll_bottom, 0, cols - 1);
+    }
+
+    pub fn scrollRegionDown(self: *Screen, count: usize, blank_cell: types.Cell) usize {
+        const cols = @as(usize, self.grid.cols);
+        if (cols == 0 or self.grid.rows == 0) return 0;
+        const n = @min(count, self.scroll_bottom - self.scroll_top + 1);
+        if (n == 0) return 0;
+        self.scrollRegionDownBy(n, blank_cell);
+        return n;
     }
 
     pub fn scrollUp(self: *Screen, blank_cell: types.Cell) void {
