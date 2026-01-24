@@ -2,6 +2,7 @@ editor_rendering_todo:
   scope:
     description: "Editor rendering + layout pipeline (line layout, wrapping, caching)."
     priorities:
+      - "extract editor render primitives into editor/render/*"
       - "fast viewport rendering"
       - "correct glyph metrics + grapheme clusters"
       - "damage tracking + caching"
