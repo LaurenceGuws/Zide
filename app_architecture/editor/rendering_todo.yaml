@@ -31,6 +31,7 @@ editor_rendering_todo:
         - "Editor widget now renders soft-wrapped segments using visual line counts."
         - "Cursor up/down uses visual line segments when soft wrap is active."
         - "Scroll wheel moves by visual rows when soft wrap is active."
+        - "Line width cache is primed during update with a per-frame line budget."
       references:
         - reference_repos/editors/xi-editor/rust/core-lib/src/linewrap.rs
         - reference_repos/editors/xi-editor/rust/core-lib/src/width_cache.rs
@@ -42,6 +43,7 @@ editor_rendering_todo:
       notes:
         - "Render-to-texture or command cache for static regions."
         - "Only redraw dirty rectangles."
+        - "Prime highlight tokens during update with a per-frame line budget (draw uses cached tokens only)."
       references:
         - reference_repos/editors/lite-xl/src/rencache.c
         - reference_repos/editors/zed/crates/editor/src/element.rs

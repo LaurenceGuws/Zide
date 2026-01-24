@@ -252,6 +252,7 @@ pub fn drawCached(
         @intFromFloat(width),
         @intFromFloat(height),
         widget.editor.change_tick,
+        widget.editor.highlight_epoch,
         widget.editor.scroll_line,
         widget.editor.scroll_row_offset,
         widget.editor.scroll_col,
@@ -285,7 +286,6 @@ pub fn drawCached(
         };
         defer if (line_alloc) |owned| widget.editor.allocator.free(owned);
         const line_start = widget.editor.lineStart(line_idx);
-        const line_end = line_start + line_len;
         const line_text_hash = hashLine(line_text);
 
         var cluster_slice: ?[]const u32 = null;
@@ -295,11 +295,8 @@ pub fn drawCached(
             if (cluster_slice) |clusters| widget.editor.allocator.free(clusters);
         };
 
-        const tokens = cache.highlightTokens(
-            widget.editor.highlighter,
+        const tokens = cache.tryHighlightTokens(
             line_idx,
-            line_start,
-            line_end,
             line_text_hash,
             widget.editor.highlight_epoch,
         );
@@ -463,13 +460,105 @@ pub fn drawCached(
     }
 }
 
-fn hashLine(text: []const u8) u64 {
+pub fn hashLine(text: []const u8) u64 {
     var h: u64 = 1469598103934665603;
     for (text) |byte| {
         h ^= byte;
         h *%= 1099511628211;
     }
     return h;
+}
+
+pub fn precomputeHighlightTokens(
+    widget: anytype,
+    cache: *cache_mod.EditorRenderCache,
+    r: anytype,
+    height: f32,
+    budget_lines: usize,
+) void {
+    if (budget_lines == 0) return;
+    if (height <= 0) return;
+    if (widget.editor.highlighter == null) return;
+    const total_lines = widget.editor.lineCount();
+    if (total_lines == 0) return;
+    const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
+    if (visible_lines == 0) return;
+
+    const start_line = widget.editor.scroll_line;
+    const end_line = @min(start_line + visible_lines + 1, total_lines);
+    cache.beginHighlightWork(start_line, end_line, widget.editor.highlight_epoch);
+
+    var line_buf: [4096]u8 = undefined;
+    var remaining = budget_lines;
+    while (remaining > 0) : (remaining -= 1) {
+        const next_line = cache.nextHighlightWorkLine() orelse break;
+        const line_len = widget.editor.lineLen(next_line);
+        var line_alloc: ?[]u8 = null;
+        const line_text = if (line_len <= line_buf.len)
+            line_buf[0..widget.editor.getLine(next_line, &line_buf)]
+        else blk: {
+            const owned = widget.editor.getLineAlloc(next_line) catch break :blk &[_]u8{};
+            line_alloc = owned;
+            break :blk owned;
+        };
+        defer if (line_alloc) |owned| widget.editor.allocator.free(owned);
+
+        const line_start = widget.editor.lineStart(next_line);
+        const line_end = line_start + line_len;
+        const line_text_hash = hashLine(line_text);
+        _ = cache.highlightTokens(
+            widget.editor.highlighter,
+            next_line,
+            line_start,
+            line_end,
+            line_text_hash,
+            widget.editor.highlight_epoch,
+        );
+    }
+}
+
+pub fn precomputeLineWidths(
+    widget: anytype,
+    cache: *cache_mod.EditorRenderCache,
+    r: anytype,
+    height: f32,
+    budget_lines: usize,
+) void {
+    if (budget_lines == 0) return;
+    if (height <= 0) return;
+    const total_lines = widget.editor.lineCount();
+    if (total_lines == 0) return;
+    const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
+    if (visible_lines == 0) return;
+
+    const start_line = widget.editor.scroll_line;
+    const end_line = @min(start_line + visible_lines + 1, total_lines);
+    cache.beginLineWidthWork(start_line, end_line, widget.editor.change_tick);
+
+    var line_buf: [4096]u8 = undefined;
+    var remaining = budget_lines;
+    while (remaining > 0) : (remaining -= 1) {
+        const next_line = cache.nextLineWidthWorkLine() orelse break;
+        const line_len = widget.editor.lineLen(next_line);
+        var line_alloc: ?[]u8 = null;
+        const line_text = if (line_len <= line_buf.len)
+            line_buf[0..widget.editor.getLine(next_line, &line_buf)]
+        else blk: {
+            const owned = widget.editor.getLineAlloc(next_line) catch break :blk &[_]u8{};
+            line_alloc = owned;
+            break :blk owned;
+        };
+        defer if (line_alloc) |owned| widget.editor.allocator.free(owned);
+
+        var cluster_slice: ?[]const u32 = null;
+        var cluster_owned = false;
+        widget.clusterOffsets(r, next_line, line_text, &cluster_slice, &cluster_owned);
+        defer if (cluster_owned) {
+            if (cluster_slice) |clusters| widget.editor.allocator.free(clusters);
+        };
+
+        _ = widget.editor.lineWidthCached(next_line, line_text, cluster_slice);
+    }
 }
 
 fn hashSegment(

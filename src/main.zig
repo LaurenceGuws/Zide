@@ -17,6 +17,7 @@ const term_types = @import("terminal/model/types.zig");
 // UI modules
 const renderer_mod = @import("ui/renderer.zig");
 const widgets = @import("ui/widgets.zig");
+const editor_draw = @import("ui/widgets/editor_widget_draw.zig");
 
 const Editor = editor_mod.Editor;
 const TerminalSession = terminal_mod.TerminalSession;
@@ -693,6 +694,14 @@ const AppState = struct {
                     widget.editor.selection = null;
                 }
                 self.needs_redraw = true;
+            }
+
+            if (editor_width > 0 and editor_height > 0) {
+                const visible_lines = @as(usize, @intFromFloat(editor_height / r.char_height));
+                const highlight_budget = if (visible_lines > 0) visible_lines + 1 else 0;
+                editor_draw.precomputeHighlightTokens(&widget, &self.editor_render_cache, r, editor_height, highlight_budget);
+                const width_budget = highlight_budget;
+                editor_draw.precomputeLineWidths(&widget, &self.editor_render_cache, r, editor_height, width_budget);
             }
         }
 
