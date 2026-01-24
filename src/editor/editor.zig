@@ -664,7 +664,10 @@ pub const Editor = struct {
         if (self.highlighter == null) {
             const t_start = std.time.nanoTimestamp();
             log.logf("highlight init start", .{});
-            self.highlighter = try syntax_mod.createZigHighlighter(self.allocator, self.buffer);
+            self.highlighter = syntax_mod.createZigHighlighter(self.allocator, self.buffer) catch |err| {
+                log.logf("highlight init failed err={any}", .{err});
+                return err;
+            };
             const elapsed_ns = std.time.nanoTimestamp() - t_start;
             log.logf(
                 "highlight enabled path=\"{s}\" time_us={d}",

@@ -124,6 +124,7 @@ fn appendHighlightedLineSegmentOps(
 ) bool {
     if (seg_start >= seg_end or line_text.len == 0) return true;
 
+    const log = app_logger.logger("editor.highlight");
     var ok = true;
     var cursor = seg_start;
     for (tokens) |token| {
@@ -139,7 +140,9 @@ fn appendHighlightedLineSegmentOps(
         const slice_start = start;
         const slice_end = end;
         const x = text_x + @as(f32, @floatFromInt(slice_start - seg_start)) * r.char_width;
-        ok = ok and addTextOp(list, x, y, line_text[slice_start..slice_end], colorForToken(r, token.kind));
+        const color = colorForToken(r, token.kind);
+        logHighlightSlice(log, token.kind, line_start + slice_start, line_start + slice_end, color);
+        ok = ok and addTextOp(list, x, y, line_text[slice_start..slice_end], color);
         cursor = end;
     }
 
@@ -463,6 +466,7 @@ pub fn drawCached(
             cache.wrapLineCount(line_idx, cols, line_width) orelse layout_mod.visualLineCountForWidth(cols, line_width)
         else
             1;
+        
         const seg_start_idx = if (widget.wrap_enabled and line_idx == start_line) @min(start_seg, total_visual_lines) else 0;
 
         var cursor_col_vis: usize = 0;
@@ -497,8 +501,8 @@ pub fn drawCached(
                 cursor_col_vis,
                 seg_start_col,
             );
-            const dirty = force_redraw or cache.segmentDirty(.{ .line_idx = line_idx, .seg_idx = seg }, seg_hash);
-            if (dirty) {
+            const dirty = cache.segmentDirty(.{ .line_idx = line_idx, .seg_idx = seg }, seg_hash);
+            if (force_redraw or dirty) {
                 any_dirty = true;
                 if (r.beginEditorTexture()) {
                     r.beginClip(
@@ -699,6 +703,7 @@ pub fn precomputeHighlightTokens(
 ) void {
     if (budget_lines == 0) return;
     if (height <= 0) return;
+    widget.editor.ensureHighlighter();
     if (widget.editor.highlighter == null) return;
     const total_lines = widget.editor.lineCount();
     if (total_lines == 0) return;
@@ -1072,6 +1077,7 @@ fn drawHighlightedLineSegment(
 ) void {
     if (seg_start >= seg_end or line_text.len == 0) return;
 
+    const log = app_logger.logger("editor.highlight");
     var cursor = seg_start;
     for (tokens) |token| {
         if (token.end <= line_start + seg_start or token.start >= line_start + seg_end) continue;
@@ -1086,7 +1092,9 @@ fn drawHighlightedLineSegment(
         const slice_start = start;
         const slice_end = end;
         const x = text_x + @as(f32, @floatFromInt(slice_start - seg_start)) * r.char_width;
-        r.drawText(line_text[slice_start..slice_end], x, y, colorForToken(r, token.kind));
+        const color = colorForToken(r, token.kind);
+        logHighlightSlice(log, token.kind, line_start + slice_start, line_start + slice_end, color);
+        r.drawText(line_text[slice_start..slice_end], x, y, color);
         cursor = end;
     }
 
@@ -1121,4 +1129,11 @@ fn colorForToken(r: anytype, kind: TokenKind) @TypeOf(r.theme.foreground) {
         .error_token => r.theme.error_token,
         else => r.theme.foreground,
     };
+}
+
+fn logHighlightSlice(log: anytype, kind: TokenKind, start: usize, end: usize, color: anytype) void {
+    log.logf(
+        "highlight apply kind={s} bytes={d}-{d} color=rgba({d},{d},{d},{d})",
+        .{ @tagName(kind), start, end, color.r, color.g, color.b, color.a },
+    );
 }
