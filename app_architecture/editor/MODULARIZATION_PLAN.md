@@ -73,6 +73,7 @@ Use `zig build check-editor-imports` to enforce these rules.
 - Completed step 1 (selection view extracted).
 - Completed step 2 (layout helpers extracted).
 - Completed step 3 (scrolling + visual-row mapping delegated to `src/editor/view/scroll.zig`).
+- Extracted cursor movement helpers into `src/editor/view/cursor.zig`.
 
 ## Non-goals (for now)
 - No new features or UI changes.
