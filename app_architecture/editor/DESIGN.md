@@ -24,6 +24,7 @@ Notepad++-level capability while keeping Zide's core fast and minimal.
 - `app_architecture/editor/protocol_todo.yaml` (text engine + editing semantics)
 - `app_architecture/editor/rendering_todo.yaml` (layout + rendering pipeline)
 - `app_architecture/editor/MODULARIZATION_PLAN.md` (layer split + migration steps)
+- `app_architecture/editor/treesitter_todo.yaml` (tree-sitter query + highlight integration)
 
 ## Decisions
 
@@ -38,3 +39,8 @@ Notepad++-level capability while keeping Zide's core fast and minimal.
 2026-01-21
 - Rope text model implemented and integrated (see
   `app_architecture/editor/text_model_rope.md`).
+
+2026-01-24
+- Focus shifted to tree-sitter highlight integration planning based on Neovim's
+  query/highlighter pipeline. Tasks tracked in
+  `app_architecture/editor/treesitter_todo.yaml`.

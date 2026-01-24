@@ -25,6 +25,7 @@ Date: 2026-01-24
 - Routed cached scrollbars through the draw list.
 - Routed non-cached scrollbars through the draw list.
 - Added cached draw snapshot baseline test.
+- Added tree-sitter integration task list (Neovim-based).
 
 ## Overview
 - Terminal module split is stable; import layering enforced.
@@ -37,8 +38,10 @@ Date: 2026-01-24
   - EditorWidget draw methods now route through `editor_widget_draw.zig`.
   - Renderer editor-specific helpers now live in `editor/render/renderer_ops.zig`.
   - `zig build` passes after making input-called helpers public.
+  - Tree-sitter integration focus documented; tasks tracked separately.
 
 ## Next Steps
 1) Add render cache stress test for eviction behavior.
 2) Evaluate draw list usage for text runs outside cached path.
 3) Add cached draw selection/highlight coverage in tests.
+4) Tree-sitter highlight integration planning tasks (see treesitter_todo.yaml).

@@ -14,6 +14,9 @@ Goal: split the editor into clear layers with stable APIs so we can grow feature
 - No behavior changes during extraction-only refactors.
 - Behavior changes require a harness-backed baseline (now in place for editor render).
 
+## Related Tracking
+- Tree-sitter integration tasks live in `app_architecture/editor/treesitter_todo.yaml`.
+
 ## Target Layer Split
 1) UI Widget (input + draw orchestration)
    - `src/ui/widgets/editor_widget.zig`

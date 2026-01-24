@@ -1,0 +1,55 @@
+treesitter_todo:
+  scope:
+    description: "Tree-sitter integration for syntax highlighting and semantic metadata."
+    priorities:
+      - "match Neovim query/capture semantics for highlight metadata"
+      - "incremental updates based on changed ranges"
+      - "low-latency highlight application with stable priorities"
+      - "query + capture caching per language"
+  references:
+    neovim:
+      - reference_repos/editors/neovim/runtime/doc/treesitter.txt
+      - reference_repos/editors/neovim/runtime/lua/vim/treesitter/highlighter.lua
+      - reference_repos/editors/neovim/runtime/lua/vim/treesitter/query.lua
+  tasks:
+    - id: TS-01
+      status: todo
+      title: "Query + capture pipeline (highlights)"
+      notes:
+        - "Load language highlight queries from runtime path."
+        - "Compile and cache query per language."
+        - "Capture names map to token kinds or highlight groups."
+        - "Honor capture names that start with '_' as no-op."
+    - id: TS-02
+      status: todo
+      title: "Metadata + priorities"
+      notes:
+        - "Support metadata fields used by Neovim: priority, conceal, conceal_lines, url."
+        - "Preserve priority ordering with subpriority per injected tree."
+        - "Spell/no-spell captures mirror Neovim semantics."
+    - id: TS-03
+      status: todo
+      title: "Predicates + directives"
+      notes:
+        - "Implement predicates used by Neovim highlights (eq?, any-of?, match?, contains?)."
+        - "Implement directives set!, offset!, gsub!, trim! (as needed)."
+        - "Allow custom predicate/directive registry for extensions."
+    - id: TS-04
+      status: todo
+      title: "Incremental invalidation"
+      notes:
+        - "Track changed ranges and recompute highlight spans for those ranges only."
+        - "Avoid full-query recompute on small edits."
+    - id: TS-05
+      status: todo
+      title: "Injected languages"
+      notes:
+        - "Support language injections in queries."
+        - "Maintain highlight order so injected nodes override parents."
+    - id: TS-06
+      status: todo
+      title: "Render integration"
+      notes:
+        - "Translate capture spans into editor HighlightToken ranges."
+        - "Ensure stable token ordering for cached draws."
+        - "Add cached draw tests for tree-sitter highlight spans."
