@@ -2,6 +2,7 @@ const std = @import("std");
 const renderer_mod = @import("../renderer.zig");
 const editor_mod = @import("../../editor/editor.zig");
 const syntax_mod = @import("../../editor/syntax.zig");
+const selection_mod = @import("../../editor/view/selection.zig");
 const types = @import("../../editor/types.zig");
 const app_logger = @import("../../app_logger.zig");
 
@@ -12,6 +13,7 @@ const Color = renderer_mod.Color;
 const Editor = editor_mod.Editor;
 const HighlightToken = syntax_mod.HighlightToken;
 const TokenKind = syntax_mod.TokenKind;
+const SelectionRange = selection_mod.SelectionRange;
 
 /// Editor widget for drawing a text editor view
 pub const EditorWidget = struct {
@@ -145,7 +147,7 @@ pub const EditorWidget = struct {
 
             var ranges: [8]SelectionRange = undefined;
             var range_count: usize = 0;
-            collectSelectionRanges(self.editor, line_idx, line_text, cluster_result.slice, &ranges, &range_count);
+            selection_mod.collectSelectionRanges(self.editor, line_idx, line_text, cluster_result.slice, &ranges, &range_count);
 
             const width_cached = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
             const line_width = if (line_len == 0) 1 else if (width_cached == 0 and range_count > 0) 1 else width_cached;
@@ -158,7 +160,7 @@ pub const EditorWidget = struct {
             var cursor_col_vis: usize = 0;
             var cursor_seg: usize = 0;
             if (is_current) {
-                cursor_col_vis = visualColumnForByteIndex(line_text, self.editor.cursor.col, cluster_result.slice);
+                cursor_col_vis = selection_mod.visualColumnForByteIndex(line_text, self.editor.cursor.col, cluster_result.slice);
                 if (cols > 0 and self.wrap_enabled) {
                     cursor_seg = @min(cursor_col_vis / cols, if (total_visual_lines > 0) total_visual_lines - 1 else 0);
                 }
@@ -170,8 +172,8 @@ pub const EditorWidget = struct {
                 const seg_end_col = if (self.wrap_enabled) @min(line_width, seg_start_col + cols) else @min(line_width, seg_start_col + cols);
                 if (seg_start_col >= seg_end_col and range_count == 0) continue;
                 const seg_y = y + @as(f32, @floatFromInt(visual_row)) * r.char_height;
-                const seg_start_byte = byteIndexForVisualColumn(line_text, seg_start_col, cluster_result.slice);
-                const seg_end_byte = byteIndexForVisualColumn(line_text, seg_end_col, cluster_result.slice);
+                const seg_start_byte = selection_mod.byteIndexForVisualColumn(line_text, seg_start_col, cluster_result.slice);
+                const seg_end_byte = selection_mod.byteIndexForVisualColumn(line_text, seg_end_col, cluster_result.slice);
 
                 if (seg == seg_start_idx) {
                     r.drawEditorLineBase(line_idx, seg_y, x, self.gutter_width, width, is_current);
@@ -355,7 +357,7 @@ pub const EditorWidget = struct {
                 if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
             };
             const seg_start_col = line.seg_idx * line.cols + (if (self.wrap_enabled) 0 else self.editor.scroll_col);
-            byte_col = byteIndexForVisualColumn(line_text, seg_start_col + col, cluster_result.slice);
+            byte_col = selection_mod.byteIndexForVisualColumn(line_text, seg_start_col + col, cluster_result.slice);
         } else {
             if (self.editor.getLineAlloc(line.line_idx)) |owned| {
                 defer self.editor.allocator.free(owned);
@@ -370,7 +372,7 @@ pub const EditorWidget = struct {
                     if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
                 };
                 const seg_start_col = line.seg_idx * line.cols + (if (self.wrap_enabled) 0 else self.editor.scroll_col);
-                byte_col = byteIndexForVisualColumn(owned, seg_start_col + col, cluster_result.slice);
+                byte_col = selection_mod.byteIndexForVisualColumn(owned, seg_start_col + col, cluster_result.slice);
             } else |_| {}
         }
         const clamped_col = @min(byte_col, line_len);
@@ -742,7 +744,7 @@ pub const EditorWidget = struct {
             if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
         };
 
-        const col_vis = visualColumnForByteIndex(line_text, self.editor.cursor.col, cluster_result.slice);
+        const col_vis = selection_mod.visualColumnForByteIndex(line_text, self.editor.cursor.col, cluster_result.slice);
         const width_cached = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
         const line_width = if (line_len == 0) 1 else width_cached;
         const total_visual_lines = visualLineCountForWidth(cols, line_width);
@@ -778,7 +780,7 @@ pub const EditorWidget = struct {
             if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
         };
 
-        const col_vis = visualColumnForByteIndex(line_text, self.editor.cursor.col, cluster_result.slice);
+        const col_vis = selection_mod.visualColumnForByteIndex(line_text, self.editor.cursor.col, cluster_result.slice);
         const width_cached = self.editor.lineWidthCached(line_idx, line_text, cluster_result.slice);
         const line_width = if (line_len == 0) 1 else width_cached;
         const max_scroll = if (line_width > cols) line_width - cols else 0;
@@ -1096,7 +1098,7 @@ pub const EditorWidget = struct {
                 if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
             };
 
-            const cur_vis_col = visualColumnForByteIndex(line_text, cur_col_byte, cluster_result.slice);
+            const cur_vis_col = selection_mod.visualColumnForByteIndex(line_text, cur_col_byte, cluster_result.slice);
             const preferred_vis_col = self.editor.preferred_visual_col orelse cur_vis_col;
             if (self.editor.preferred_visual_col == null) {
                 self.editor.preferred_visual_col = preferred_vis_col;
@@ -1135,7 +1137,7 @@ pub const EditorWidget = struct {
 
             const target_width = self.editor.lineWidthCached(target_line, target_text, target_clusters.slice);
             const target_col_vis = @min(preferred_vis_col, target_width);
-            const target_col_byte = byteIndexForVisualColumn(target_text, target_col_vis, target_clusters.slice);
+            const target_col_byte = selection_mod.byteIndexForVisualColumn(target_text, target_col_vis, target_clusters.slice);
             self.editor.setCursorPreservePreferred(target_line, target_col_byte);
             return true;
         }
@@ -1174,7 +1176,7 @@ pub const EditorWidget = struct {
             if (cluster_result.slice) |clusters| self.editor.allocator.free(clusters);
         };
 
-        const cur_vis_col = visualColumnForByteIndex(line_text, cur_col_byte, cluster_result.slice);
+        const cur_vis_col = selection_mod.visualColumnForByteIndex(line_text, cur_col_byte, cluster_result.slice);
         const preferred_vis_col = self.editor.preferred_visual_col orelse cur_vis_col;
         if (self.editor.preferred_visual_col == null) {
             self.editor.preferred_visual_col = preferred_vis_col;
@@ -1249,7 +1251,7 @@ pub const EditorWidget = struct {
         else
             @min(cur_seg_col, target_seg_len);
         const target_col_vis = target_seg_start + desired_seg_col;
-        const target_col_byte = byteIndexForVisualColumn(target_text, target_col_vis, target_clusters.slice);
+        const target_col_byte = selection_mod.byteIndexForVisualColumn(target_text, target_col_vis, target_clusters.slice);
 
         self.editor.setCursorPreservePreferred(target_line, target_col_byte);
         return true;
@@ -1336,11 +1338,6 @@ fn visualLineCountForWidth(cols: usize, width: usize) usize {
     return @max(@as(usize, 1), (width + cols - 1) / cols);
 }
 
-const SelectionRange = struct {
-    start_col: usize,
-    end_col: usize,
-};
-
 pub const ClusterCache = struct {
     allocator: std.mem.Allocator,
     frame_id: u64,
@@ -1411,62 +1408,6 @@ fn getClusterOffsets(
     return .{ .slice = slice, .owned = slice != null };
 }
 
-fn addSelectionRange(ranges: *[8]SelectionRange, count: *usize, start_col: usize, end_col: usize) void {
-    if (end_col <= start_col) return;
-    if (count.* >= ranges.len) return;
-    ranges[count.*] = .{ .start_col = start_col, .end_col = end_col };
-    count.* += 1;
-}
-
-fn collectSelectionRanges(
-    editor: *Editor,
-    line_idx: usize,
-    line_text: []const u8,
-    cluster_offsets: ?[]const u32,
-    ranges: *[8]SelectionRange,
-    count: *usize,
-) void {
-    const line_len = line_text.len;
-    if (line_len == 0) {
-        if (editor.selection) |sel| {
-            const norm = sel.normalized();
-            if (!norm.isEmpty() and line_idx >= norm.start.line and line_idx <= norm.end.line) {
-                addSelectionRange(ranges, count, 0, 1);
-            }
-        }
-        for (editor.selections.items) |sel| {
-            const norm = sel.normalized();
-            if (norm.isEmpty()) continue;
-            if (line_idx < norm.start.line or line_idx > norm.end.line) continue;
-            addSelectionRange(ranges, count, 0, 1);
-        }
-        return;
-    }
-    if (editor.selection) |sel| {
-        const norm = sel.normalized();
-        if (line_idx >= norm.start.line and line_idx <= norm.end.line) {
-            var start_col: usize = 0;
-            var end_col: usize = line_len;
-            if (line_idx == norm.start.line) start_col = @min(norm.start.col, line_len);
-            if (line_idx == norm.end.line) end_col = @min(norm.end.col, line_len);
-            const start_vis = visualColumnForByteIndex(line_text, start_col, cluster_offsets);
-            const end_vis = visualColumnForByteIndex(line_text, end_col, cluster_offsets);
-            addSelectionRange(ranges, count, start_vis, end_vis);
-        }
-    }
-    for (editor.selections.items) |sel| {
-        const norm = sel.normalized();
-        if (line_idx < norm.start.line or line_idx > norm.end.line) continue;
-        var start_col: usize = 0;
-        var end_col: usize = line_len;
-        if (line_idx == norm.start.line) start_col = @min(norm.start.col, line_len);
-        if (line_idx == norm.end.line) end_col = @min(norm.end.col, line_len);
-        const start_vis = visualColumnForByteIndex(line_text, start_col, cluster_offsets);
-        const end_vis = visualColumnForByteIndex(line_text, end_col, cluster_offsets);
-        addSelectionRange(ranges, count, start_vis, end_vis);
-    }
-}
-
 fn hasNonAscii(text: []const u8) bool {
     for (text) |byte| {
         if (byte & 0x80 != 0) return true;
@@ -1508,70 +1449,6 @@ fn graphemeClusterOffsets(allocator: std.mem.Allocator, hb_font: *hb.hb_font_t, 
     }
     clusters.items.len = write;
     return try clusters.toOwnedSlice(allocator);
-}
-
-fn visualColumnForByteIndex(text: []const u8, byte_index: usize, cluster_offsets: ?[]const u32) usize {
-    if (cluster_offsets) |clusters| {
-        if (clusters.len == 0) return utf8ColumnForByteIndex(text, byte_index);
-        const target = @min(byte_index, text.len);
-        var idx: usize = 0;
-        while (idx < clusters.len and clusters[idx] < target) : (idx += 1) {}
-        return idx;
-    }
-    return utf8ColumnForByteIndex(text, byte_index);
-}
-
-fn byteIndexForVisualColumn(text: []const u8, column: usize, cluster_offsets: ?[]const u32) usize {
-    if (cluster_offsets) |clusters| {
-        if (clusters.len == 0) return utf8ByteIndexForColumn(text, column);
-        if (column >= clusters.len) return text.len;
-        return @min(@as(usize, clusters[column]), text.len);
-    }
-    return utf8ByteIndexForColumn(text, column);
-}
-
-fn utf8ColumnForByteIndex(line_text: []const u8, byte_index: usize) usize {
-    if (byte_index == 0 or line_text.len == 0) return 0;
-    const target = @min(byte_index, line_text.len);
-    var it = std.unicode.Utf8View.initUnchecked(line_text).iterator();
-    var col: usize = 0;
-    var idx: usize = 0;
-    while (it.nextCodepointSlice()) |slice| {
-        const next_idx = idx + slice.len;
-        if (target < next_idx) return col;
-        idx = next_idx;
-        col += 1;
-    }
-    return col;
-}
-
-fn utf8ByteIndexForColumn(line_text: []const u8, column: usize) usize {
-    if (column == 0 or line_text.len == 0) return 0;
-    var it = std.unicode.Utf8View.initUnchecked(line_text).iterator();
-    var col: usize = 0;
-    var idx: usize = 0;
-    while (it.nextCodepointSlice()) |slice| {
-        if (col == column) return idx;
-        idx += slice.len;
-        col += 1;
-    }
-    return line_text.len;
-}
-
-test "utf8 column/byte mapping is consistent" {
-    const s = "aé文𐍈z";
-    try std.testing.expectEqual(@as(usize, 0), utf8ColumnForByteIndex(s, 0));
-    try std.testing.expectEqual(@as(usize, 1), utf8ColumnForByteIndex(s, 1));
-    try std.testing.expectEqual(@as(usize, 2), utf8ColumnForByteIndex(s, 3));
-    try std.testing.expectEqual(@as(usize, 3), utf8ColumnForByteIndex(s, 6));
-    try std.testing.expectEqual(@as(usize, 4), utf8ColumnForByteIndex(s, 10));
-
-    try std.testing.expectEqual(@as(usize, 0), utf8ByteIndexForColumn(s, 0));
-    try std.testing.expectEqual(@as(usize, 1), utf8ByteIndexForColumn(s, 1));
-    try std.testing.expectEqual(@as(usize, 3), utf8ByteIndexForColumn(s, 2));
-    try std.testing.expectEqual(@as(usize, 6), utf8ByteIndexForColumn(s, 3));
-    try std.testing.expectEqual(@as(usize, 10), utf8ByteIndexForColumn(s, 4));
-    try std.testing.expectEqual(@as(usize, s.len), utf8ByteIndexForColumn(s, 5));
 }
 
 test "visual line count rounds to viewport columns" {
