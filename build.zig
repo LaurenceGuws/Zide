@@ -292,4 +292,16 @@ pub fn build(b: *std.Build) void {
     const run_terminal_import_check = b.addRunArtifact(terminal_import_check);
     const terminal_import_check_step = b.step("check-terminal-imports", "Check terminal module import layering");
     terminal_import_check_step.dependOn(&run_terminal_import_check.step);
+
+    const editor_import_check = b.addExecutable(.{
+        .name = "editor-import-check",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/editor_import_check.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_editor_import_check = b.addRunArtifact(editor_import_check);
+    const editor_import_check_step = b.step("check-editor-imports", "Check editor module import layering");
+    editor_import_check_step.dependOn(&run_editor_import_check.step);
 }
