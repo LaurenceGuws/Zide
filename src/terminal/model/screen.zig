@@ -434,6 +434,10 @@ pub const Screen = struct {
         return self.grid.cells.items[idx];
     }
 
+    pub fn setCursor(self: *Screen, row: usize, col: usize) void {
+        self.cursor = .{ .row = row, .col = col };
+    }
+
     pub fn cursorPos(self: *const Screen) types.CursorPos {
         return self.cursor;
     }
@@ -452,6 +456,23 @@ pub const Screen = struct {
 
     pub fn clearDirty(self: *Screen) void {
         self.grid.clearDirty();
+    }
+
+    pub fn getDamage(self: *const Screen) ?struct {
+        start_row: usize,
+        end_row: usize,
+        start_col: usize,
+        end_col: usize,
+    } {
+        return switch (self.grid.dirty) {
+            .none => null,
+            else => .{
+                .start_row = self.grid.damage.start_row,
+                .end_row = self.grid.damage.end_row,
+                .start_col = self.grid.damage.start_col,
+                .end_col = self.grid.damage.end_col,
+            },
+        };
     }
 
     pub fn clear(self: *Screen) void {
