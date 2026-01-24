@@ -26,6 +26,8 @@ Date: 2026-01-24
 - Routed non-cached scrollbars through the draw list.
 - Added cached draw snapshot baseline test.
 - Added tree-sitter integration task list (Neovim-based).
+- Implemented tree-sitter query loading from runtime paths with per-language query cache.
+- Cached draw now records segment hashes even on forced redraws.
 
 ## Overview
 - Terminal module split is stable; import layering enforced.
@@ -39,6 +41,8 @@ Date: 2026-01-24
   - Renderer editor-specific helpers now live in `editor/render/renderer_ops.zig`.
   - `zig build` passes after making input-called helpers public.
   - Tree-sitter integration focus documented; tasks tracked separately.
+  - Tree-sitter highlight queries now load from runtime paths and skip `_` captures.
+  - Highlight precompute now initializes the highlighter in cached draw paths.
 
 ## Next Steps
 1) Add render cache stress test for eviction behavior.

@@ -486,7 +486,6 @@ test "editor render cache dirty line update" {
 
     draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 48, 1);
     renderer.clearLog();
-
     editor.setCursor(1, 0);
     draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 48, 2);
 

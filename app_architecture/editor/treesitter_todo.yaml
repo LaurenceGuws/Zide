@@ -13,7 +13,7 @@ treesitter_todo:
       - reference_repos/editors/neovim/runtime/lua/vim/treesitter/query.lua
   tasks:
     - id: TS-01
-      status: todo
+      status: done
       title: "Query + capture pipeline (highlights)"
       notes:
         - "Load language highlight queries from runtime path."
