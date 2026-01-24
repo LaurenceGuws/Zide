@@ -1,5 +1,5 @@
 const std = @import("std");
-const pty_mod = @import("../io/pty.zig");
+const pty_mod = @import("../io/pty.zig"); // TODO(layering): consider routing PTY writes via core to avoid protocol->io coupling.
 const app_logger = @import("../../app_logger.zig");
 
 const Pty = pty_mod.Pty;
