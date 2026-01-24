@@ -112,6 +112,9 @@ Document allowed import directions before any refactor work begins.
 9) Move selection state/extraction into `model/selection.zig`.
 10) Reduce `terminal/core/terminal.zig` to a thin orchestrator.
 
+Progress:
+- Completed step 5 (snapshot types + encoding extracted into `terminal/core/snapshot.zig`).
+
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.
 - SGR: 16/256/truecolor + bold/reverse.
