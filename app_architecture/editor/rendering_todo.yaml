@@ -32,6 +32,7 @@ editor_rendering_todo:
         - "Cursor up/down uses visual line segments when soft wrap is active."
         - "Scroll wheel moves by visual rows when soft wrap is active."
         - "Line width cache is primed during update with a per-frame line budget."
+        - "Wrap line counts are primed during update with a per-frame line budget when wrap is enabled."
       references:
         - reference_repos/editors/xi-editor/rust/core-lib/src/linewrap.rs
         - reference_repos/editors/xi-editor/rust/core-lib/src/width_cache.rs

@@ -8,6 +8,7 @@ pub const EditorRenderCache = struct {
     allocator: std.mem.Allocator,
     line_entries: std.AutoHashMap(LineKey, LineEntry),
     highlight_entries: std.AutoHashMap(usize, HighlightEntry),
+    wrap_entries: std.AutoHashMap(usize, WrapEntry),
     max_entries: usize,
     last_cols: usize,
     last_wrap: bool,
@@ -30,12 +31,19 @@ pub const EditorRenderCache = struct {
     line_width_work_next: usize,
     line_width_work_tick: u64,
     line_width_work_active: bool,
+    wrap_work_start: usize,
+    wrap_work_end: usize,
+    wrap_work_next: usize,
+    wrap_work_tick: u64,
+    wrap_work_cols: usize,
+    wrap_work_active: bool,
 
     pub fn init(allocator: std.mem.Allocator, max_entries: usize) EditorRenderCache {
         return .{
             .allocator = allocator,
             .line_entries = std.AutoHashMap(LineKey, LineEntry).init(allocator),
             .highlight_entries = std.AutoHashMap(usize, HighlightEntry).init(allocator),
+            .wrap_entries = std.AutoHashMap(usize, WrapEntry).init(allocator),
             .max_entries = if (max_entries == 0) 1 else max_entries,
             .last_cols = 0,
             .last_wrap = false,
@@ -58,6 +66,12 @@ pub const EditorRenderCache = struct {
             .line_width_work_next = 0,
             .line_width_work_tick = 0,
             .line_width_work_active = false,
+            .wrap_work_start = 0,
+            .wrap_work_end = 0,
+            .wrap_work_next = 0,
+            .wrap_work_tick = 0,
+            .wrap_work_cols = 0,
+            .wrap_work_active = false,
         };
     }
 
@@ -65,6 +79,7 @@ pub const EditorRenderCache = struct {
         self.clearHighlightEntries();
         self.line_entries.deinit();
         self.highlight_entries.deinit();
+        self.wrap_entries.deinit();
     }
 
     pub fn beginFrame(
@@ -90,6 +105,10 @@ pub const EditorRenderCache = struct {
         if (highlight_dirty) {
             self.clearHighlightEntries();
             self.clearHighlightWork();
+        }
+        if (cols != self.last_cols or wrap_enabled != self.last_wrap or change_tick != self.last_change_tick) {
+            self.clearWrapEntries();
+            self.clearWrapWork();
         }
         if (change_tick != self.last_change_tick) {
             self.clearLineWidthWork();
@@ -189,6 +208,8 @@ pub const EditorRenderCache = struct {
         self.clearHighlightEntries();
         self.clearHighlightWork();
         self.clearLineWidthWork();
+        self.clearWrapEntries();
+        self.clearWrapWork();
     }
 
     fn clearLineEntries(self: *EditorRenderCache) void {
@@ -201,6 +222,38 @@ pub const EditorRenderCache = struct {
             self.allocator.free(entry.value_ptr.tokens);
         }
         self.highlight_entries.clearRetainingCapacity();
+    }
+
+    pub fn wrapLineCount(self: *EditorRenderCache, line_idx: usize, cols: usize, line_width: usize) ?usize {
+        if (self.wrap_entries.getPtr(line_idx)) |entry| {
+            if (entry.cols == cols and entry.line_width == line_width) {
+                entry.last_used = self.frame_id;
+                return entry.count;
+            }
+            _ = self.wrap_entries.remove(line_idx);
+        }
+        return null;
+    }
+
+    pub fn setWrapLineCount(self: *EditorRenderCache, line_idx: usize, cols: usize, line_width: usize, count: usize) void {
+        if (self.wrap_entries.getPtr(line_idx)) |entry| {
+            entry.* = .{
+                .cols = cols,
+                .line_width = line_width,
+                .count = count,
+                .last_used = self.frame_id,
+            };
+            return;
+        }
+        _ = self.wrap_entries.put(line_idx, .{
+            .cols = cols,
+            .line_width = line_width,
+            .count = count,
+            .last_used = self.frame_id,
+        }) catch {};
+        if (self.wrap_entries.count() > self.max_entries) {
+            self.clearWrapEntries();
+        }
     }
 
     pub fn beginHighlightWork(self: *EditorRenderCache, start_line: usize, end_line: usize, epoch: u64) void {
@@ -270,6 +323,46 @@ pub const EditorRenderCache = struct {
         self.line_width_work_next = 0;
         self.line_width_work_tick = 0;
     }
+
+    pub fn beginWrapWork(self: *EditorRenderCache, start_line: usize, end_line: usize, cols: usize, change_tick: u64) void {
+        if (end_line <= start_line) {
+            self.wrap_work_active = false;
+            return;
+        }
+        const range_changed = !self.wrap_work_active or start_line != self.wrap_work_start or end_line != self.wrap_work_end or cols != self.wrap_work_cols or change_tick != self.wrap_work_tick;
+        if (range_changed) {
+            self.wrap_work_start = start_line;
+            self.wrap_work_end = end_line;
+            self.wrap_work_next = start_line;
+            self.wrap_work_tick = change_tick;
+            self.wrap_work_cols = cols;
+            self.wrap_work_active = true;
+        }
+    }
+
+    pub fn nextWrapWorkLine(self: *EditorRenderCache) ?usize {
+        if (!self.wrap_work_active) return null;
+        if (self.wrap_work_next >= self.wrap_work_end) {
+            self.wrap_work_active = false;
+            return null;
+        }
+        const line = self.wrap_work_next;
+        self.wrap_work_next += 1;
+        return line;
+    }
+
+    fn clearWrapEntries(self: *EditorRenderCache) void {
+        self.wrap_entries.clearRetainingCapacity();
+    }
+
+    fn clearWrapWork(self: *EditorRenderCache) void {
+        self.wrap_work_active = false;
+        self.wrap_work_start = 0;
+        self.wrap_work_end = 0;
+        self.wrap_work_next = 0;
+        self.wrap_work_tick = 0;
+        self.wrap_work_cols = 0;
+    }
 };
 
 const LineKey = struct {
@@ -286,6 +379,13 @@ const HighlightEntry = struct {
     text_hash: u64,
     epoch: u64,
     tokens: []HighlightToken,
+    last_used: u64,
+};
+
+const WrapEntry = struct {
+    cols: usize,
+    line_width: usize,
+    count: usize,
     last_used: u64,
 };
 

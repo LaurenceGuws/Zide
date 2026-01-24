@@ -119,7 +119,10 @@ pub fn draw(widget: anytype, r: anytype, x: f32, y: f32, width: f32, height: f32
         if (line_width > max_visible_width) {
             max_visible_width = line_width;
         }
-        const total_visual_lines = if (widget.wrap_enabled) layout_mod.visualLineCountForWidth(cols, line_width) else 1;
+        const total_visual_lines = if (widget.wrap_enabled)
+            layout_mod.visualLineCountForWidth(cols, line_width)
+        else
+            1;
         const seg_start_idx = if (widget.wrap_enabled and line_idx == start_line) @min(start_seg, total_visual_lines) else 0;
 
         var cursor_col_vis: usize = 0;
@@ -307,7 +310,10 @@ pub fn drawCached(
 
         const width_cached = widget.editor.lineWidthCached(line_idx, line_text, cluster_slice);
         const line_width = metrics_mod.lineWidthForDisplay(line_len, width_cached, range_count > 0);
-        const total_visual_lines = if (widget.wrap_enabled) layout_mod.visualLineCountForWidth(cols, line_width) else 1;
+        const total_visual_lines = if (widget.wrap_enabled)
+            cache.wrapLineCount(line_idx, cols, line_width) orelse layout_mod.visualLineCountForWidth(cols, line_width)
+        else
+            1;
         const seg_start_idx = if (widget.wrap_enabled and line_idx == start_line) @min(start_seg, total_visual_lines) else 0;
 
         var cursor_col_vis: usize = 0;
@@ -558,6 +564,56 @@ pub fn precomputeLineWidths(
         };
 
         _ = widget.editor.lineWidthCached(next_line, line_text, cluster_slice);
+    }
+}
+
+pub fn precomputeWrapCounts(
+    widget: anytype,
+    cache: *cache_mod.EditorRenderCache,
+    r: anytype,
+    height: f32,
+    budget_lines: usize,
+) void {
+    if (!widget.wrap_enabled) return;
+    if (budget_lines == 0) return;
+    if (height <= 0) return;
+    const total_lines = widget.editor.lineCount();
+    if (total_lines == 0) return;
+    const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
+    if (visible_lines == 0) return;
+
+    const cols = widget.viewportColumns(r);
+    if (cols == 0) return;
+    const start_line = widget.editor.scroll_line;
+    const end_line = @min(start_line + visible_lines + 1, total_lines);
+    cache.beginWrapWork(start_line, end_line, cols, widget.editor.change_tick);
+
+    var line_buf: [4096]u8 = undefined;
+    var remaining = budget_lines;
+    while (remaining > 0) : (remaining -= 1) {
+        const next_line = cache.nextWrapWorkLine() orelse break;
+        const line_len = widget.editor.lineLen(next_line);
+        var line_alloc: ?[]u8 = null;
+        const line_text = if (line_len <= line_buf.len)
+            line_buf[0..widget.editor.getLine(next_line, &line_buf)]
+        else blk: {
+            const owned = widget.editor.getLineAlloc(next_line) catch break :blk &[_]u8{};
+            line_alloc = owned;
+            break :blk owned;
+        };
+        defer if (line_alloc) |owned| widget.editor.allocator.free(owned);
+
+        var cluster_slice: ?[]const u32 = null;
+        var cluster_owned = false;
+        widget.clusterOffsets(r, next_line, line_text, &cluster_slice, &cluster_owned);
+        defer if (cluster_owned) {
+            if (cluster_slice) |clusters| widget.editor.allocator.free(clusters);
+        };
+
+        const width_cached = widget.editor.lineWidthCached(next_line, line_text, cluster_slice);
+        const line_width = metrics_mod.lineWidthForDisplay(line_len, width_cached, false);
+        const count = layout_mod.visualLineCountForWidth(cols, line_width);
+        cache.setWrapLineCount(next_line, cols, line_width, count);
     }
 }
 

@@ -709,6 +709,7 @@ const AppState = struct {
                 editor_draw.precomputeHighlightTokens(&widget, &self.editor_render_cache, r, editor_height, highlight_budget);
                 const width_budget = self.editor_width_budget orelse highlight_budget;
                 editor_draw.precomputeLineWidths(&widget, &self.editor_render_cache, r, editor_height, width_budget);
+                editor_draw.precomputeWrapCounts(&widget, &self.editor_render_cache, r, editor_height, width_budget);
             }
         }
 
