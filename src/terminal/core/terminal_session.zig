@@ -485,22 +485,16 @@ pub const TerminalSession = struct {
         const screen = self.activeScreen();
         switch (byte) {
             0x08 => { // BS
-                if (screen.cursor.col > 0) screen.cursor.col -= 1;
-                screen.wrap_next = false;
+                screen.backspace();
             },
             0x09 => { // TAB (every 8 columns)
-                if (screen.grid.cols == 0) return;
-                const max_col = @as(usize, screen.grid.cols - 1);
-                const next = screen.tabstops.next(screen.cursor.col, max_col);
-                screen.cursor.col = @min(next, max_col);
-                screen.wrap_next = false;
+                screen.tab();
             },
             0x0A => { // LF
                 self.newline();
             },
             0x0D => { // CR
-                screen.cursor.col = 0;
-                screen.wrap_next = false;
+                screen.carriageReturn();
             },
             0x0E => { // SO (Shift Out) -> G1
                 self.parser.gl_charset = self.parser.g1_charset;
