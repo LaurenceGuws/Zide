@@ -1,5 +1,6 @@
 const std = @import("std");
 const scrollback_mod = @import("scrollback.zig");
+const selection_mod = @import("selection.zig");
 const types = @import("types.zig");
 
 const Scrollback = scrollback_mod.Scrollback(types.Cell);
@@ -9,7 +10,7 @@ pub const TerminalHistory = struct {
     scrollback: Scrollback,
     scrollback_offset: usize,
     saved_scrollback_offset: usize,
-    selection: types.TerminalSelection,
+    selection: selection_mod.SelectionState,
 
     pub fn init(allocator: std.mem.Allocator, max_rows: usize, cols: u16) !TerminalHistory {
         const scrollback = try Scrollback.init(allocator, max_rows, cols);
@@ -18,12 +19,7 @@ pub const TerminalHistory = struct {
             .scrollback = scrollback,
             .scrollback_offset = 0,
             .saved_scrollback_offset = 0,
-            .selection = .{
-                .active = false,
-                .selecting = false,
-                .start = .{ .row = 0, .col = 0 },
-                .end = .{ .row = 0, .col = 0 },
-            },
+            .selection = selection_mod.SelectionState.init(),
         };
     }
 
@@ -110,29 +106,22 @@ pub const TerminalHistory = struct {
     }
 
     pub fn clearSelection(self: *TerminalHistory) void {
-        self.selection.active = false;
-        self.selection.selecting = false;
+        self.selection.clear();
     }
 
     pub fn startSelection(self: *TerminalHistory, row: usize, col: usize) void {
-        self.selection.active = true;
-        self.selection.selecting = true;
-        self.selection.start = .{ .row = row, .col = col };
-        self.selection.end = .{ .row = row, .col = col };
+        self.selection.start(row, col);
     }
 
     pub fn updateSelection(self: *TerminalHistory, row: usize, col: usize) void {
-        if (!self.selection.active) return;
-        self.selection.end = .{ .row = row, .col = col };
+        self.selection.update(row, col);
     }
 
     pub fn finishSelection(self: *TerminalHistory) void {
-        if (!self.selection.active) return;
-        self.selection.selecting = false;
+        self.selection.finish();
     }
 
     pub fn selectionState(self: *TerminalHistory) ?types.TerminalSelection {
-        if (!self.selection.active) return null;
-        return self.selection;
+        return self.selection.state();
     }
 };
