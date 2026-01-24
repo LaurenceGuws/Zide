@@ -14,5 +14,11 @@ Follow this workflow for every feature/task:
 4. Implement the feature.
 5. Update all relevant docs to reflect changes and progress.
 6. Inform the user how to test changes and debug until approved.
-7. Commit each step labeled as the step header.
-8. Return to the todo and suggest 3 next changes.
+7. Do NOT commit until the user has run the tests and explicitly approved (e.g., "nice" or "it's working").
+8. Keep diffs small and reviewable; no file moves before baseline tests exist.
+9. No behavior changes during extraction-only refactors; any semantic change must be separately scoped and test-driven.
+10. Extraction-only constraint: no renaming of public symbols, no logic changes, no behavior-motivated simplifications, no "while we're here" cleanups.
+11. Before any refactor, implement the replay harness, capture baseline goldens, and lock the fixture list as regression authority.
+12. No commits (including tests/harness) until the user approves after running the tests.
+13. Once approved, commit each step labeled as the step header.
+14. Return to the todo and suggest 3 next changes.

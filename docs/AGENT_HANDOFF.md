@@ -1,26 +1,39 @@
 # Agent Handoff (Zide)
 
-Date: 2026-01-22
+Date: 2026-01-24
 
 ## Quick start for next agent
 
 - Repo: `/home/home/personal/zide`
-- Current focus: editor/widget + text engine roadmap (rope-only text model, selections, widget input).
+- Current phase: implementation preparation complete.
+- Current focus: terminal modularization prep with approved fixture list + replay harness outline.
 - Key docs (editor):
   - `app_architecture/editor/DESIGN.md`
   - `app_architecture/editor/editor_widget_todo.yaml`
   - `app_architecture/editor/protocol_todo.yaml`
   - `app_architecture/editor/rendering_todo.yaml`
-- Key docs (terminal, legacy reference):
+- Key docs (terminal):
   - `app_architecture/terminal/DESIGN.md`
+  - `app_architecture/terminal/MODULARIZATION_PLAN.md`
+  - `app_architecture/terminal/TERMINAL_API.md`
+  - `app_architecture/terminal/REPLAY_HARNESS_SPEC.md`
   - `app_architecture/terminal/terminal_widget_todo.yaml`
   - `app_architecture/terminal/protocol_todo.yaml`
 
 Suggested next steps:
-1) Read `app_architecture/editor/editor_widget_todo.yaml` and its reference paths before coding.
-2) Read `app_architecture/editor/protocol_todo.yaml` and `app_architecture/editor/rendering_todo.yaml` for per-feature guidance.
-3) Identify the first editor milestone (ED-01/EP-01/ER-01) and begin implementation.
-4) Update editor docs as tasks are completed (keep notes concise).
+1) Read `app_architecture/terminal/MODULARIZATION_PLAN.md`.
+2) Read `app_architecture/terminal/TERMINAL_API.md`.
+3) Read `app_architecture/terminal/REPLAY_HARNESS_SPEC.md`.
+4) Implement the replay harness per the approved outline (no refactors, no file moves, no feature changes).
+5) Capture baseline goldens.
+6) Generate `FEATURE_INVENTORY.md` from code.
+7) Finalize `TERMINAL_API.md` contracts tied to fixtures/tests.
+8) Only then begin extraction-only refactors.
+
+Explicitly prohibited until goldens exist:
+- no refactors
+- no file moves
+- no feature changes
 
 ## Summary of this session
 
@@ -56,6 +69,8 @@ Suggested next steps:
 - Editor widget: vertical scrollbar drag/click support (no wrap).
 - Editor widget: thicker editor scrollbars (12px) for easier hit targets (both axes).
 - Editor widget: horizontal scrollbar uses cached max line width so it works even when long lines are offscreen.
+- Terminal modularization: new plan doc added (`app_architecture/terminal/MODULARIZATION_PLAN.md`) to guide layer split + test-first refactor.
+- Terminal modularization: API contract doc added (`app_architecture/terminal/TERMINAL_API.md`).
 
 ## Current issues (editor)
 
