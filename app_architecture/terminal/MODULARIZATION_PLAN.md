@@ -98,6 +98,7 @@ Approved replay harness outline is the design source of truth:
 ## Layer Enforcement
 Define explicit layer rules (e.g., UI → core → model/parser/io).
 Add a lightweight build-time check to block forbidden imports or deep coupling.
+Layer check implemented via `zig build check-terminal-imports` (see `tools/terminal_import_check.zig`).
 Document allowed import directions before any refactor work begins.
 
 ## Migration Steps (incremental, each builds + tests)
