@@ -185,6 +185,7 @@ editor_widget_todo:
         - "Render cache regression test added for dirty-line updates."
         - "Cache eviction now prunes least-recent entries instead of clearing everything."
         - "Scrollbars route through draw list when cached draw is active."
+        - "Non-cached scrollbars now use the draw list path."
       references:
         - reference_repos/editors/lite-xl/src/rencache.c
         - reference_repos/editors/neovim/src/nvim/drawscreen.c
