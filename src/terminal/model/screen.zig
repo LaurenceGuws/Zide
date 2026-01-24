@@ -426,6 +426,14 @@ pub const Screen = struct {
         self.key_mode.setCurrent(updated);
     }
 
+    pub fn markDirtyAll(self: *Screen) void {
+        self.grid.markDirtyAll();
+    }
+
+    pub fn clearDirty(self: *Screen) void {
+        self.grid.clearDirty();
+    }
+
     pub fn clear(self: *Screen) void {
         const default_cell = types.Cell{
             .codepoint = 0,
