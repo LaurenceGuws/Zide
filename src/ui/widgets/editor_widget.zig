@@ -4,7 +4,7 @@ const editor_mod = @import("../../editor/editor.zig");
 const syntax_mod = @import("../../editor/syntax.zig");
 const selection_mod = @import("../../editor/view/selection.zig");
 const layout_mod = @import("../../editor/view/layout.zig");
-const scroll_mod = @import("../../editor/view/scroll.zig");
+const input_mod = @import("editor_widget_input.zig");
 const types = @import("../../editor/types.zig");
 const app_logger = @import("../../app_logger.zig");
 
@@ -256,7 +256,7 @@ pub const EditorWidget = struct {
         }
     }
 
-    fn viewportColumns(self: *EditorWidget, r: *Renderer) usize {
+    pub fn viewportColumns(self: *EditorWidget, r: *Renderer) usize {
         const editor_width = @max(0, r.width - @as(i32, @intFromFloat(self.gutter_width)));
         if (r.char_width <= 0) return 0;
         return @as(usize, @intFromFloat(@as(f32, @floatFromInt(editor_width)) / r.char_width));
@@ -302,13 +302,7 @@ pub const EditorWidget = struct {
         mouse_x: f32,
         mouse_y: f32,
     ) bool {
-        if (self.cursorFromMouse(r, x, y, width, height, mouse_x, mouse_y, false)) |pos| {
-            self.editor.setCursor(pos.line, pos.col);
-            const log = app_logger.logger("editor.input");
-            log.logf("mouse click line={d} col={d}", .{ pos.line, pos.col });
-            return true;
-        }
-        return false;
+        return input_mod.handleMouseClick(self, r, x, y, width, height, mouse_x, mouse_y);
     }
 
     pub fn cursorFromMouse(
@@ -426,122 +420,7 @@ pub const EditorWidget = struct {
 
     /// Handle input, returns true if any input was processed
     pub fn handleInput(self: *EditorWidget, r: *Renderer, height: f32) !bool {
-        var handled = false;
-        var chars_inserted: usize = 0;
-        var group_started = false;
-        errdefer if (group_started) self.editor.endUndoGroup() catch {};
-
-        // Character input
-        while (r.getCharPressed()) |char| {
-            if (char >= 32 and char < 127) {
-                if (!group_started) {
-                    self.editor.beginUndoGroup();
-                    group_started = true;
-                }
-                try self.editor.insertChar(@intCast(char));
-                handled = true;
-                chars_inserted += 1;
-            }
-        }
-        if (chars_inserted > 0) {
-            const log = app_logger.logger("editor.input");
-            log.logf("chars inserted={d}", .{chars_inserted});
-        }
-
-        // Control keys
-        const ctrl = r.isKeyDown(renderer_mod.KEY_LEFT_CONTROL) or r.isKeyDown(renderer_mod.KEY_RIGHT_CONTROL);
-
-        if (r.isKeyPressed(renderer_mod.KEY_ENTER)) {
-            if (!group_started) {
-                self.editor.beginUndoGroup();
-                group_started = true;
-            }
-            try self.editor.insertNewline();
-            handled = true;
-            app_logger.logger("editor.input").logf("key=enter", .{});
-        } else if (r.isKeyRepeated(renderer_mod.KEY_BACKSPACE)) {
-            if (!group_started) {
-                self.editor.beginUndoGroup();
-                group_started = true;
-            }
-            try self.editor.deleteCharBackward();
-            handled = true;
-            app_logger.logger("editor.input").logf("key=backspace", .{});
-        } else if (r.isKeyRepeated(renderer_mod.KEY_DELETE)) {
-            if (!group_started) {
-                self.editor.beginUndoGroup();
-                group_started = true;
-            }
-            try self.editor.deleteCharForward();
-            handled = true;
-            app_logger.logger("editor.input").logf("key=delete", .{});
-        } else if (r.isKeyRepeated(renderer_mod.KEY_UP)) {
-            if (self.moveCursorVisual(r, -1)) {
-                self.ensureCursorVisible(r, height);
-                handled = true;
-                app_logger.logger("editor.input").logf("key=up", .{});
-            }
-        } else if (r.isKeyRepeated(renderer_mod.KEY_DOWN)) {
-            if (self.moveCursorVisual(r, 1)) {
-                self.ensureCursorVisible(r, height);
-                handled = true;
-                app_logger.logger("editor.input").logf("key=down", .{});
-            }
-        } else if (r.isKeyRepeated(renderer_mod.KEY_LEFT)) {
-            self.editor.moveCursorLeft();
-            self.ensureCursorVisible(r, height);
-            handled = true;
-            app_logger.logger("editor.input").logf("key=left", .{});
-        } else if (r.isKeyRepeated(renderer_mod.KEY_RIGHT)) {
-            self.editor.moveCursorRight();
-            self.ensureCursorVisible(r, height);
-            handled = true;
-            app_logger.logger("editor.input").logf("key=right", .{});
-        } else if (r.isKeyRepeated(renderer_mod.KEY_HOME)) {
-            self.editor.moveCursorToLineStart();
-            self.ensureCursorVisible(r, height);
-            handled = true;
-            app_logger.logger("editor.input").logf("key=home", .{});
-        } else if (r.isKeyRepeated(renderer_mod.KEY_END)) {
-            self.editor.moveCursorToLineEnd();
-            self.ensureCursorVisible(r, height);
-            handled = true;
-            app_logger.logger("editor.input").logf("key=end", .{});
-        } else if (ctrl and r.isKeyPressed(renderer_mod.KEY_S)) {
-            try self.editor.save();
-            handled = true;
-            app_logger.logger("editor.input").logf("key=ctrl+s", .{});
-        } else if (ctrl and r.isKeyPressed(renderer_mod.KEY_Z)) {
-            _ = try self.editor.undo();
-            handled = true;
-            app_logger.logger("editor.input").logf("key=ctrl+z", .{});
-        } else if (ctrl and r.isKeyPressed(renderer_mod.KEY_Y)) {
-            _ = try self.editor.redo();
-            handled = true;
-            app_logger.logger("editor.input").logf("key=ctrl+y", .{});
-        }
-
-        if (group_started) {
-            try self.editor.endUndoGroup();
-        }
-
-        // Scroll handling
-        const wheel = r.getMouseWheelMove();
-        if (wheel != 0) {
-            const shift = r.isKeyDown(renderer_mod.KEY_LEFT_SHIFT) or r.isKeyDown(renderer_mod.KEY_RIGHT_SHIFT);
-            const delta = @as(i32, @intFromFloat(-wheel * 3));
-            if (shift and !self.wrap_enabled) {
-                self.scrollHorizontal(r, delta);
-                handled = true;
-                app_logger.logger("editor.input").logf("hscroll delta={d} scroll_col={d}", .{ delta, self.editor.scroll_col });
-            } else {
-                self.scrollVisual(r, delta);
-                handled = true;
-                app_logger.logger("editor.input").logf("scroll delta={d} new_line={d} row_offset={d}", .{ delta, self.editor.scroll_line, self.editor.scroll_row_offset });
-            }
-        }
-
-        return handled;
+        return input_mod.handleInput(self, r, height);
     }
 
     pub fn handleHorizontalScrollbarInput(
@@ -555,69 +434,7 @@ pub const EditorWidget = struct {
         dragging: *bool,
         grab_offset: *f32,
     ) bool {
-        if (self.wrap_enabled) return false;
-        if (width <= 0 or height <= 0) return false;
-        const cols = self.viewportColumns(r);
-        if (cols == 0) return false;
-        const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
-        if (visible_lines == 0) return false;
-
-        const scan = self.editor.advanceMaxLineWidthCache(64);
-        const max_visible_width = scan.max;
-        if (max_visible_width <= cols) return false;
-
-        const show_vscroll = self.editor.lineCount() > visible_lines;
-        const scale = r.uiScaleFactor();
-        const vscroll_w: f32 = if (show_vscroll) 16 * scale else 0;
-        const track_h: f32 = 16 * scale;
-        const track_y = y + height - track_h;
-        const track_x = x + self.gutter_width;
-        const track_w = @max(@as(f32, 1), width - self.gutter_width - vscroll_w);
-        const max_scroll = max_visible_width - cols;
-        if (self.editor.scroll_col > max_scroll) {
-            self.editor.scroll_col = max_scroll;
-        }
-
-        const min_thumb_w: f32 = 24 * scale;
-        const thumb_w = @max(min_thumb_w, track_w * (@as(f32, @floatFromInt(cols)) / @as(f32, @floatFromInt(max_visible_width))));
-        const available = @max(@as(f32, 1), track_w - thumb_w);
-        const ratio = if (max_scroll > 0)
-            @as(f32, @floatFromInt(self.editor.scroll_col)) / @as(f32, @floatFromInt(max_scroll))
-        else
-            0.0;
-        const thumb_x = track_x + available * ratio;
-
-        const over_track = mouse.x >= track_x and mouse.x <= track_x + track_w and mouse.y >= track_y and mouse.y <= track_y + track_h;
-        const over_thumb = mouse.x >= thumb_x and mouse.x <= thumb_x + thumb_w and mouse.y >= track_y and mouse.y <= track_y + track_h;
-
-        const mouse_down = r.isMouseButtonDown(renderer_mod.MOUSE_LEFT);
-        const mouse_pressed = r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT);
-        const mouse_released = r.isMouseButtonReleased(renderer_mod.MOUSE_LEFT);
-        if (dragging.* and mouse_released) {
-            dragging.* = false;
-            return true;
-        }
-        if (dragging.* and !mouse_down) {
-            dragging.* = false;
-            return false;
-        }
-        if (dragging.* and mouse_pressed and !over_track) {
-            dragging.* = false;
-            return false;
-        }
-        if ((mouse_pressed or (!dragging.* and mouse_down)) and over_track) {
-            dragging.* = true;
-            grab_offset.* = if (over_thumb) mouse.x - thumb_x else thumb_w * 0.5;
-            scroll_mod.updateHorizontalScrollFromMouse(self.editor, mouse.x, track_x, available, grab_offset.*, max_scroll);
-            return true;
-        }
-
-        if (dragging.* and mouse_down) {
-            scroll_mod.updateHorizontalScrollFromMouse(self.editor, mouse.x, track_x, available, grab_offset.*, max_scroll);
-            return true;
-        }
-
-        return false;
+        return input_mod.handleHorizontalScrollbarInput(self, r, x, y, width, height, mouse, dragging, grab_offset);
     }
 
     pub fn handleVerticalScrollbarInput(
@@ -631,66 +448,10 @@ pub const EditorWidget = struct {
         dragging: *bool,
         grab_offset: *f32,
     ) bool {
-        if (self.wrap_enabled) return false;
-        if (width <= 0 or height <= 0) return false;
-        const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
-        if (visible_lines == 0) return false;
-        const total_lines = self.editor.lineCount();
-        if (total_lines <= visible_lines) return false;
-
-        const scale = r.uiScaleFactor();
-        const scrollbar_w: f32 = 16 * scale;
-        const scrollbar_x = x + width - scrollbar_w;
-        const scrollbar_y = y;
-        const scrollbar_h = height;
-        const max_scroll = total_lines - visible_lines;
-        if (self.editor.scroll_line > max_scroll) {
-            self.editor.scroll_line = max_scroll;
-        }
-
-        const min_thumb_h: f32 = 32 * scale;
-        const thumb_h = @max(min_thumb_h, scrollbar_h * (@as(f32, @floatFromInt(visible_lines)) / @as(f32, @floatFromInt(total_lines))));
-        const available = @max(@as(f32, 1), scrollbar_h - thumb_h);
-        const ratio = if (max_scroll > 0)
-            @as(f32, @floatFromInt(self.editor.scroll_line)) / @as(f32, @floatFromInt(max_scroll))
-        else
-            0.0;
-        const thumb_y = scrollbar_y + available * ratio;
-
-        const over_track = mouse.x >= scrollbar_x and mouse.x <= scrollbar_x + scrollbar_w and mouse.y >= scrollbar_y and mouse.y <= scrollbar_y + scrollbar_h;
-        const over_thumb = mouse.x >= scrollbar_x and mouse.x <= scrollbar_x + scrollbar_w and mouse.y >= thumb_y and mouse.y <= thumb_y + thumb_h;
-
-        const mouse_down = r.isMouseButtonDown(renderer_mod.MOUSE_LEFT);
-        const mouse_pressed = r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT);
-        const mouse_released = r.isMouseButtonReleased(renderer_mod.MOUSE_LEFT);
-        if (dragging.* and mouse_released) {
-            dragging.* = false;
-            return true;
-        }
-        if (dragging.* and !mouse_down) {
-            dragging.* = false;
-            return false;
-        }
-        if (dragging.* and mouse_pressed and !over_track) {
-            dragging.* = false;
-            return false;
-        }
-        if ((mouse_pressed or (!dragging.* and mouse_down)) and over_track) {
-            dragging.* = true;
-            grab_offset.* = if (over_thumb) mouse.y - thumb_y else thumb_h * 0.5;
-            scroll_mod.updateVerticalScrollFromMouse(self.editor, mouse.y, scrollbar_y, available, grab_offset.*, max_scroll);
-            return true;
-        }
-
-        if (dragging.* and mouse_down) {
-            scroll_mod.updateVerticalScrollFromMouse(self.editor, mouse.y, scrollbar_y, available, grab_offset.*, max_scroll);
-            return true;
-        }
-
-        return false;
+        return input_mod.handleVerticalScrollbarInput(self, r, x, y, width, height, mouse, dragging, grab_offset);
     }
 
-    fn ensureCursorVisible(self: *EditorWidget, r: *Renderer, height: f32) void {
+    pub fn ensureCursorVisible(self: *EditorWidget, r: *Renderer, height: f32) void {
         const line_count = self.editor.lineCount();
         if (line_count == 0) return;
         const visible_lines = @max(@as(usize, 1), @as(usize, @intFromFloat(height / r.char_height)));
@@ -796,7 +557,7 @@ pub const EditorWidget = struct {
         self.editor.scroll_col = scroll_col;
     }
 
-    fn scrollHorizontal(self: *EditorWidget, r: *Renderer, delta_cols: i32) void {
+    pub fn scrollHorizontal(self: *EditorWidget, r: *Renderer, delta_cols: i32) void {
         if (delta_cols == 0) return;
         const cols = self.viewportColumns(r);
         if (cols == 0) return;
@@ -967,7 +728,7 @@ pub const EditorWidget = struct {
         return -offset;
     }
 
-    fn scrollVisual(self: *EditorWidget, r: *Renderer, delta_rows: i32) void {
+    pub fn scrollVisual(self: *EditorWidget, r: *Renderer, delta_rows: i32) void {
         if (delta_rows == 0) return;
         const line_count = self.editor.lineCount();
         if (line_count == 0) return;
@@ -1036,7 +797,7 @@ pub const EditorWidget = struct {
         self.editor.scroll_row_offset = seg;
     }
 
-    fn moveCursorVisual(self: *EditorWidget, r: *Renderer, delta: i32) bool {
+    pub fn moveCursorVisual(self: *EditorWidget, r: *Renderer, delta: i32) bool {
         if (!self.wrap_enabled) {
             const line_count = self.editor.lineCount();
             if (line_count == 0) return false;
