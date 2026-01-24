@@ -242,9 +242,9 @@ pub const EditorWidget = struct {
 
         if (!self.wrap_enabled) {
             const vscroll_w: f32 = if (show_vscroll) 12 else 0;
-            const max_width = self.editor.maxLineWidthCached();
-            if (max_width > cols) {
-                self.drawHorizontalScrollbar(r, x, y, width, height, max_width, cols, vscroll_w);
+            const scan = self.editor.advanceMaxLineWidthCache(128);
+            if (scan.max > cols) {
+                self.drawHorizontalScrollbar(r, x, y, width, height, scan.max, cols, vscroll_w);
             }
             if (show_vscroll) {
                 self.drawVerticalScrollbar(r, x, y, width, height, visible_lines, total_lines);
@@ -558,7 +558,8 @@ pub const EditorWidget = struct {
         const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
         if (visible_lines == 0) return false;
 
-        const max_visible_width = self.editor.maxLineWidthCached();
+        const scan = self.editor.advanceMaxLineWidthCache(64);
+        const max_visible_width = scan.max;
         if (max_visible_width <= cols) return false;
 
         const show_vscroll = self.editor.lineCount() > visible_lines;
