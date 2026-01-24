@@ -47,64 +47,45 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
         'A' => { // CUU
             const n = @max(1, get(p, 0, 1));
             const delta: usize = @intCast(n);
-            screen.cursor.row = if (screen.cursor.row > delta) screen.cursor.row - delta else 0;
-            screen.wrap_next = false;
+            screen.cursorUp(delta);
         },
         'B' => { // CUD
             const n = @max(1, get(p, 0, 1));
             const delta: usize = @intCast(n);
-            const max_row = @as(usize, screen.grid.rows - 1);
-            screen.cursor.row = @min(max_row, screen.cursor.row + delta);
-            screen.wrap_next = false;
+            screen.cursorDown(delta);
         },
         'C' => { // CUF
             const n = @max(1, get(p, 0, 1));
             const delta: usize = @intCast(n);
-            const max_col = @as(usize, screen.grid.cols - 1);
-            screen.cursor.col = @min(max_col, screen.cursor.col + delta);
-            screen.wrap_next = false;
+            screen.cursorForward(delta);
         },
         'D' => { // CUB
             const n = @max(1, get(p, 0, 1));
             const delta: usize = @intCast(n);
-            screen.cursor.col = if (screen.cursor.col > delta) screen.cursor.col - delta else 0;
-            screen.wrap_next = false;
+            screen.cursorBack(delta);
         },
         'E' => { // CNL
             const n = @max(1, get(p, 0, 1));
             const delta: usize = @intCast(n);
-            const max_row = @as(usize, screen.grid.rows - 1);
-            screen.cursor.row = @min(max_row, screen.cursor.row + delta);
-            screen.cursor.col = 0;
-            screen.wrap_next = false;
+            screen.cursorNextLine(delta);
         },
         'F' => { // CPL
             const n = @max(1, get(p, 0, 1));
             const delta: usize = @intCast(n);
-            screen.cursor.row = if (screen.cursor.row > delta) screen.cursor.row - delta else 0;
-            screen.cursor.col = 0;
-            screen.wrap_next = false;
+            screen.cursorPrevLine(delta);
         },
         'G' => { // CHA
             const col_1 = @max(1, get(p, 0, 1));
-            const col = @min(@as(usize, screen.grid.cols - 1), @as(usize, @intCast(col_1 - 1)));
-            screen.cursor.col = col;
-            screen.wrap_next = false;
+            screen.cursorColAbsolute(col_1);
         },
         'H', 'f' => { // CUP
             const row_1 = @max(1, get(p, 0, 1));
             const col_1 = @max(1, get(p, 1, 1));
-            const row = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(row_1 - 1)));
-            const col = @min(@as(usize, screen.grid.cols - 1), @as(usize, @intCast(col_1 - 1)));
-            screen.cursor.row = row;
-            screen.cursor.col = col;
-            screen.wrap_next = false;
+            screen.cursorPosAbsolute(row_1, col_1);
         },
         'd' => { // VPA
             const row_1 = @max(1, get(p, 0, 1));
-            const row = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(row_1 - 1)));
-            screen.cursor.row = row;
-            screen.wrap_next = false;
+            screen.cursorRowAbsolute(row_1);
         },
         'J' => { // ED
             const mode = if (count > 0) p[0] else 0;
@@ -148,11 +129,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
             const top = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(@max(1, top_1) - 1)));
             const bot = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(@max(1, bot_1) - 1)));
             if (top <= bot) {
-                screen.scroll_top = top;
-                screen.scroll_bottom = bot;
-                screen.cursor.row = top;
-                screen.cursor.col = 0;
-                screen.wrap_next = false;
+                screen.setScrollRegion(top, bot);
             }
         },
         's' => { // SCP
