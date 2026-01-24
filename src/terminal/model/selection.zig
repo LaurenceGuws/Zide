@@ -1,7 +1,17 @@
-const types = @import("types.zig");
+pub const SelectionPos = struct {
+    row: usize,
+    col: usize,
+};
+
+pub const TerminalSelection = struct {
+    active: bool,
+    selecting: bool,
+    start: SelectionPos,
+    end: SelectionPos,
+};
 
 pub const SelectionState = struct {
-    selection: types.TerminalSelection,
+    selection: TerminalSelection,
 
     pub fn init() SelectionState {
         return .{
@@ -36,7 +46,7 @@ pub const SelectionState = struct {
         self.selection.selecting = false;
     }
 
-    pub fn state(self: *const SelectionState) ?types.TerminalSelection {
+    pub fn state(self: *const SelectionState) ?TerminalSelection {
         if (!self.selection.active) return null;
         return self.selection;
     }
