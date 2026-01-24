@@ -53,9 +53,11 @@ Proposed contracts (sketch):
 
 ## Layering Rules (imports)
 - `ui/widgets/editor_widget.zig` → `editor/view/*`, `editor/editor.zig`, `editor/render/*`.
-- `editor/view/*` → `editor/editor.zig`, `editor/rope.zig`, `editor/syntax.zig` (read-only), no UI.
-- `editor/render/*` → `editor/view/*`, `editor/syntax.zig`, no UI.
-- `editor/editor.zig` → `editor/rope.zig` only.
+- `editor/view/*` → `editor/editor.zig`, `editor/text_store.zig`, `editor/rope.zig`, `editor/syntax.zig` (read-only), `editor/types.zig`, no UI.
+- `editor/render/*` → `editor/view/*`, `editor/syntax.zig`, `editor/types.zig`, no UI.
+- `editor/editor.zig` → `editor/text_store.zig`, `editor/rope.zig`, `editor/syntax.zig`, `editor/types.zig` only.
+
+Use `zig build check-editor-imports` to enforce these rules.
 
 ## Migration Steps (incremental)
 1) Extract view state (cursor + selection) into `src/editor/view/selection.zig`.
