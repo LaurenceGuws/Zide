@@ -629,14 +629,25 @@ pub const Editor = struct {
         return out;
     }
 
-    fn shouldEnableZigHighlight(path: ?[]const u8) bool {
-        if (path == null) return true;
-        return std.mem.endsWith(u8, path.?, ".zig");
+    const HighlightLanguage = enum { zig, bash, java };
+
+    fn detectHighlightLanguage(path: ?[]const u8) ?HighlightLanguage {
+        if (path == null) return .zig;
+        const slice = path.?;
+        if (std.mem.endsWith(u8, slice, ".zig")) return .zig;
+        if (std.mem.endsWith(u8, slice, ".sh")) return .bash;
+        if (std.mem.endsWith(u8, slice, ".java")) return .java;
+        const base = std.fs.path.basename(slice);
+        if (std.mem.eql(u8, base, ".bashrc")) return .bash;
+        if (std.mem.eql(u8, base, ".bash_profile")) return .bash;
+        if (std.mem.eql(u8, base, ".bash_login")) return .bash;
+        if (std.mem.eql(u8, base, ".bash_aliases")) return .bash;
+        return null;
     }
 
     fn scheduleHighlighter(self: *Editor, path: ?[]const u8) void {
         const log = app_logger.logger("editor.highlight");
-        if (!shouldEnableZigHighlight(path)) {
+        if (detectHighlightLanguage(path) == null) {
             if (self.highlighter) |h| {
                 h.destroy();
                 self.highlighter = null;
@@ -653,7 +664,8 @@ pub const Editor = struct {
         const log = app_logger.logger("editor.highlight");
         log.logf("highlight init check path=\"{s}\"", .{path orelse ""});
         self.highlight_pending = false;
-        if (!shouldEnableZigHighlight(path)) {
+        const lang = detectHighlightLanguage(path);
+        if (lang == null) {
             if (self.highlighter) |h| {
                 h.destroy();
                 self.highlighter = null;
@@ -664,7 +676,11 @@ pub const Editor = struct {
         if (self.highlighter == null) {
             const t_start = std.time.nanoTimestamp();
             log.logf("highlight init start", .{});
-            self.highlighter = syntax_mod.createZigHighlighter(self.allocator, self.buffer) catch |err| {
+            self.highlighter = switch (lang.?) {
+                .zig => syntax_mod.createZigHighlighter(self.allocator, self.buffer),
+                .bash => syntax_mod.createBashHighlighter(self.allocator, self.buffer),
+                .java => syntax_mod.createJavaHighlighter(self.allocator, self.buffer),
+            } catch |err| {
                 log.logf("highlight init failed err={any}", .{err});
                 return err;
             };

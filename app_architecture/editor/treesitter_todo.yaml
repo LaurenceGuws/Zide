@@ -53,3 +53,20 @@ treesitter_todo:
         - "Translate capture spans into editor HighlightToken ranges."
         - "Ensure stable token ordering for cached draws."
         - "Add cached draw tests for tree-sitter highlight spans."
+    - id: TS-07
+      status: todo
+      title: "Dynamic grammar loader"
+      notes:
+        - "Load parser .so from cache dir and resolve tree_sitter_<lang> symbol."
+        - "Read highlights.scm from cache dir when present."
+        - "Fallback to assets/queries for bundled languages."
+      references:
+        - app_architecture/editor/treesitter_dynamic_roadmap.md
+    - id: TS-08
+      status: todo
+      title: "Grammar pack install tooling"
+      notes:
+        - "Install packs from tools/grammar_packs/dist into ~/.config/zide/grammars."
+        - "Optional: add download support from release URLs."
+      references:
+        - app_architecture/editor/treesitter_dynamic_roadmap.md

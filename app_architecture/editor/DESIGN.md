@@ -25,6 +25,7 @@ Notepad++-level capability while keeping Zide's core fast and minimal.
 - `app_architecture/editor/rendering_todo.yaml` (layout + rendering pipeline)
 - `app_architecture/editor/MODULARIZATION_PLAN.md` (layer split + migration steps)
 - `app_architecture/editor/treesitter_todo.yaml` (tree-sitter query + highlight integration)
+- `app_architecture/editor/treesitter_dynamic_roadmap.md` (dynamic grammar packs: fetch/compile/load)
 
 ## Decisions
 

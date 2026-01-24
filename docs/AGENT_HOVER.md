@@ -44,6 +44,9 @@ Date: 2026-01-24
 - Tree-sitter highlight queries now load from runtime paths and skip `_` captures.
 - Highlight precompute now initializes the highlighter in cached draw paths.
 - Tree-sitter capture mapping expanded; spell/nospell captures now skipped to avoid overriding colors.
+- Added nvim-treesitter highlight queries for zig, bash, java, python, go, rust, lua, json, toml, and c.
+- Added tree-sitter parsers for bash/java and enabled highlight detection for .bashrc/.sh/.java.
+- Dynamic grammar pack automation is planned (see treesitter_dynamic_roadmap.md).
 
 ## Next Steps
 1) Add render cache stress test for eviction behavior.
