@@ -912,7 +912,7 @@ pub const TerminalSession = struct {
             return;
         }
         self.history.setScrollOffset(self.primary.grid.rows, offset);
-        self.primary.grid.markDirtyAll();
+        self.primary.markDirtyAll();
         const log = app_logger.logger("terminal.core");
         const max_offset = self.history.maxScrollOffset(self.primary.grid.rows);
         log.logf("set scroll offset={d} max={d}", .{ self.history.scrollOffset(), max_offset });
@@ -923,7 +923,7 @@ pub const TerminalSession = struct {
         if (self.isAltActive()) return;
         if (delta == 0) return;
         self.history.scrollBy(self.primary.grid.rows, delta);
-        self.primary.grid.markDirtyAll();
+        self.primary.markDirtyAll();
         const log = app_logger.logger("terminal.core");
         const max_offset = self.history.maxScrollOffset(self.primary.grid.rows);
         log.logf("scroll by delta={d} offset={d} max={d}", .{ delta, self.history.scrollOffset(), max_offset });
@@ -984,7 +984,7 @@ pub const TerminalSession = struct {
             self.activeScreen().clear();
             self.activeScreen().setCursor(0, 0);
         }
-        self.activeScreen().grid.markDirtyAll();
+        self.activeScreen().markDirtyAll();
     }
 
     pub fn exitAltScreen(self: *TerminalSession, restore_cursor: bool) void {
@@ -998,7 +998,7 @@ pub const TerminalSession = struct {
         if (restore_cursor) {
             self.restoreCursor();
         }
-        self.activeScreen().grid.markDirtyAll();
+        self.activeScreen().markDirtyAll();
     }
 
     pub fn snapshot(self: *TerminalSession) TerminalSnapshot {
