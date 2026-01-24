@@ -164,6 +164,8 @@ pub fn draw(widget: anytype, r: anytype, x: f32, y: f32, width: f32, height: f32
     var max_visible_width: usize = 0;
     const cols = widget.viewportColumns(r);
     const show_vscroll = !widget.wrap_enabled and total_lines > visible_lines;
+    var draw_list = EditorDrawList.init(widget.editor.allocator);
+    defer draw_list.deinit();
 
     var highlight_tokens: []HighlightToken = &[_]HighlightToken{};
     var highlight_tokens_allocated = false;
@@ -356,10 +358,14 @@ pub fn draw(widget: anytype, r: anytype, x: f32, y: f32, width: f32, height: f32
         const vscroll_w: f32 = if (show_vscroll) 12 else 0;
         const scan = widget.editor.advanceMaxLineWidthCache(128);
         if (scan.max > cols) {
-            drawHorizontalScrollbar(widget, r, x, y, width, height, scan.max, cols, vscroll_w, null);
+            draw_list.clear();
+            drawHorizontalScrollbar(widget, r, x, y, width, height, scan.max, cols, vscroll_w, &draw_list);
+            flushDrawList(&draw_list, r);
         }
         if (show_vscroll) {
-            drawVerticalScrollbar(widget, r, x, y, width, height, visible_lines, total_lines, null);
+            draw_list.clear();
+            drawVerticalScrollbar(widget, r, x, y, width, height, visible_lines, total_lines, &draw_list);
+            flushDrawList(&draw_list, r);
         }
     }
 }
