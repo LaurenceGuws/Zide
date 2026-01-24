@@ -588,150 +588,44 @@ pub const TerminalSession = struct {
 
     pub fn eraseDisplay(self: *TerminalSession, mode: i32) void {
         const screen = self.activeScreen();
-        const rows = @as(usize, screen.grid.rows);
-        const cols = @as(usize, screen.grid.cols);
-        if (rows == 0 or cols == 0) return;
         const blank_cell = self.blankCellForScreen(screen);
-        const row = screen.cursor.row;
-        const col = screen.cursor.col;
-        if (row >= rows or col >= cols) return;
-
-        switch (mode) {
-            0 => { // cursor to end
-                const start_idx = row * cols + col;
-                for (screen.grid.cells.items[start_idx..]) |*cell| cell.* = blank_cell;
-                screen.grid.markDirtyRange(row, row, col, cols - 1);
-                if (row + 1 < rows) {
-                    screen.grid.markDirtyRange(row + 1, rows - 1, 0, cols - 1);
-                }
-            },
-            1 => { // start to cursor
-                const end = row * cols + col + 1;
-                for (screen.grid.cells.items[0..end]) |*cell| cell.* = blank_cell;
-                if (row > 0) {
-                    screen.grid.markDirtyRange(0, row - 1, 0, cols - 1);
-                }
-                screen.grid.markDirtyRange(row, row, 0, col);
-            },
-            2 => { // all
-                for (screen.grid.cells.items) |*cell| cell.* = blank_cell;
-                screen.grid.markDirtyAll();
-            },
-            else => {},
-        }
+        screen.eraseDisplay(mode, blank_cell);
     }
 
     pub fn eraseLine(self: *TerminalSession, mode: i32) void {
         const screen = self.activeScreen();
-        const cols = @as(usize, screen.grid.cols);
-        if (cols == 0 or screen.grid.rows == 0) return;
         const blank_cell = self.blankCellForScreen(screen);
-        if (screen.cursor.row >= @as(usize, screen.grid.rows)) return;
-        const row_start = screen.cursor.row * cols;
-        const col = screen.cursor.col;
-        if (col >= cols) return;
-        switch (mode) {
-            0 => { // cursor to end of line
-                for (screen.grid.cells.items[row_start + col .. row_start + cols]) |*cell| cell.* = blank_cell;
-                screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, col, cols - 1);
-            },
-            1 => { // start to cursor
-                for (screen.grid.cells.items[row_start .. row_start + col + 1]) |*cell| cell.* = blank_cell;
-                screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, 0, col);
-            },
-            2 => { // entire line
-                for (screen.grid.cells.items[row_start .. row_start + cols]) |*cell| cell.* = blank_cell;
-                screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, 0, cols - 1);
-            },
-            else => {},
-        }
+        screen.eraseLine(mode, blank_cell);
     }
 
     pub fn insertChars(self: *TerminalSession, count: usize) void {
         const screen = self.activeScreen();
-        const cols = @as(usize, screen.grid.cols);
-        if (cols == 0) return;
-        if (screen.cursor.row >= @as(usize, screen.grid.rows)) return;
-        const col = screen.cursor.col;
-        if (col >= cols) return;
-        const n = @min(count, cols - col);
-        const row_start = screen.cursor.row * cols;
-        const line = screen.grid.cells.items[row_start .. row_start + cols];
-        if (cols - col > n) {
-            std.mem.copyBackwards(Cell, line[col + n ..], line[col .. cols - n]);
-        }
         const blank_cell = self.blankCellForScreen(screen);
-        for (line[col .. col + n]) |*cell| cell.* = blank_cell;
-        screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, col, cols - 1);
+        screen.insertChars(count, blank_cell);
     }
 
     pub fn deleteChars(self: *TerminalSession, count: usize) void {
         const screen = self.activeScreen();
-        const cols = @as(usize, screen.grid.cols);
-        if (cols == 0) return;
-        if (screen.cursor.row >= @as(usize, screen.grid.rows)) return;
-        const col = screen.cursor.col;
-        if (col >= cols) return;
-        const n = @min(count, cols - col);
-        const row_start = screen.cursor.row * cols;
-        const line = screen.grid.cells.items[row_start .. row_start + cols];
-        if (cols - col > n) {
-            std.mem.copyForwards(Cell, line[col .. cols - n], line[col + n ..]);
-        }
         const blank_cell = self.blankCellForScreen(screen);
-        for (line[cols - n .. cols]) |*cell| cell.* = blank_cell;
-        screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, col, cols - 1);
+        screen.deleteChars(count, blank_cell);
     }
 
     pub fn eraseChars(self: *TerminalSession, count: usize) void {
         const screen = self.activeScreen();
-        const cols = @as(usize, screen.grid.cols);
-        if (cols == 0) return;
-        if (screen.cursor.row >= @as(usize, screen.grid.rows)) return;
-        const col = screen.cursor.col;
-        if (col >= cols) return;
-        const n = @min(count, cols - col);
-        const row_start = screen.cursor.row * cols;
-        const line = screen.grid.cells.items[row_start .. row_start + cols];
         const blank_cell = self.blankCellForScreen(screen);
-        for (line[col .. col + n]) |*cell| cell.* = blank_cell;
-        screen.grid.markDirtyRange(screen.cursor.row, screen.cursor.row, col, col + n - 1);
+        screen.eraseChars(count, blank_cell);
     }
 
     pub fn insertLines(self: *TerminalSession, count: usize) void {
         const screen = self.activeScreen();
-        const cols = @as(usize, screen.grid.cols);
-        const rows = @as(usize, screen.grid.rows);
-        if (rows == 0 or cols == 0) return;
-        if (screen.cursor.row < screen.scroll_top or screen.cursor.row > screen.scroll_bottom) return;
-        const n = @min(count, screen.scroll_bottom - screen.cursor.row + 1);
         const blank_cell = self.blankCellForScreen(screen);
-        const region_end = (screen.scroll_bottom + 1) * cols;
-        const insert_at = screen.cursor.row * cols;
-        const move_len = region_end - insert_at - n * cols;
-        if (move_len > 0) {
-            std.mem.copyBackwards(Cell, screen.grid.cells.items[insert_at + n * cols .. region_end], screen.grid.cells.items[insert_at .. insert_at + move_len]);
-        }
-        for (screen.grid.cells.items[insert_at .. insert_at + n * cols]) |*cell| cell.* = blank_cell;
-        screen.grid.markDirtyRange(screen.cursor.row, screen.scroll_bottom, 0, cols - 1);
+        screen.insertLines(count, blank_cell);
     }
 
     pub fn deleteLines(self: *TerminalSession, count: usize) void {
         const screen = self.activeScreen();
-        const cols = @as(usize, screen.grid.cols);
-        const rows = @as(usize, screen.grid.rows);
-        if (rows == 0 or cols == 0) return;
-        if (screen.cursor.row < screen.scroll_top or screen.cursor.row > screen.scroll_bottom) return;
-        const n = @min(count, screen.scroll_bottom - screen.cursor.row + 1);
         const blank_cell = self.blankCellForScreen(screen);
-        const region_end = (screen.scroll_bottom + 1) * cols;
-        const delete_at = screen.cursor.row * cols;
-        const move_len = region_end - delete_at - n * cols;
-        if (move_len > 0) {
-            std.mem.copyForwards(Cell, screen.grid.cells.items[delete_at .. delete_at + move_len], screen.grid.cells.items[delete_at + n * cols .. region_end]);
-        }
-        for (screen.grid.cells.items[region_end - n * cols .. region_end]) |*cell| cell.* = blank_cell;
-        screen.grid.markDirtyRange(screen.cursor.row, screen.scroll_bottom, 0, cols - 1);
+        screen.deleteLines(count, blank_cell);
     }
 
     fn isFullScrollRegion(self: *TerminalSession) bool {
