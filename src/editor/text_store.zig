@@ -1,5 +1,6 @@
 const std = @import("std");
 const rope_mod = @import("rope.zig");
+const app_logger = @import("../app_logger.zig");
 
 pub const TextStore = struct {
     allocator: std.mem.Allocator,
@@ -15,12 +16,35 @@ pub const TextStore = struct {
     }
 
     pub fn initFromFile(allocator: std.mem.Allocator, path: []const u8) !*TextStore {
+        const log = app_logger.logger("editor.perf");
+        const t_open = std.time.nanoTimestamp();
         const file = try std.fs.cwd().openFile(path, .{ .mode = .read_only });
         defer file.close();
         const stat = try file.stat();
+        const t_read_start = std.time.nanoTimestamp();
         const data = try file.readToEndAlloc(allocator, @as(usize, @intCast(stat.size)));
+        const t_read_end = std.time.nanoTimestamp();
         defer allocator.free(data);
-        return init(allocator, data);
+
+        const t_rope_start = std.time.nanoTimestamp();
+        const store = try allocator.create(TextStore);
+        store.* = .{
+            .allocator = allocator,
+            .rope = try rope_mod.Rope.init(allocator, data),
+        };
+        const t_rope_end = std.time.nanoTimestamp();
+
+        log.logf(
+            "initFromFile size={d} read_ms={d} rope_ms={d} total_ms={d}",
+            .{
+                stat.size,
+                @as(i64, @intCast(@divTrunc(t_read_end - t_read_start, 1_000_000))),
+                @as(i64, @intCast(@divTrunc(t_rope_end - t_rope_start, 1_000_000))),
+                @as(i64, @intCast(@divTrunc(t_rope_end - t_open, 1_000_000))),
+            },
+        );
+
+        return store;
     }
 
     pub fn deinit(self: *TextStore) void {

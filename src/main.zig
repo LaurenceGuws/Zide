@@ -84,6 +84,12 @@ const AppState = struct {
     editor_wrap: bool,
     editor_highlight_budget: ?usize,
     editor_width_budget: ?usize,
+    perf_mode: bool,
+    perf_frames_total: u64,
+    perf_frames_done: u64,
+    perf_scroll_delta: i32,
+    perf_file_path: ?[]u8,
+    perf_logger: Logger,
 
     pub fn init(allocator: std.mem.Allocator) !*AppState {
         var config = config_mod.loadConfig(allocator) catch |err| blk: {
@@ -117,6 +123,21 @@ const AppState = struct {
         const app_log = app_logger.logger("app.core");
         app_log.logStdout("logger initialized", .{});
         const metrics_log = app_logger.logger("terminal.metrics");
+        const perf_log = app_logger.logger("editor.perf");
+
+        const perf_file_path = if (std.c.getenv("ZIDE_EDITOR_PERF_FILE")) |raw|
+            try allocator.dupe(u8, std.mem.sliceTo(raw, 0))
+        else
+            null;
+        const perf_mode = perf_file_path != null;
+        const perf_frames_total: u64 = if (perf_mode)
+            parseEnvU64("ZIDE_EDITOR_PERF_FRAMES", 240)
+        else
+            0;
+        const perf_scroll_delta: i32 = if (perf_mode)
+            @intCast(parseEnvU64("ZIDE_EDITOR_PERF_SCROLL", 3))
+        else
+            0;
 
         const state = try allocator.create(AppState);
         state.* = .{
@@ -162,6 +183,12 @@ const AppState = struct {
             .editor_wrap = config.editor_wrap orelse false,
             .editor_highlight_budget = config.editor_highlight_budget,
             .editor_width_budget = config.editor_width_budget,
+            .perf_mode = perf_mode,
+            .perf_frames_total = perf_frames_total,
+            .perf_frames_done = 0,
+            .perf_scroll_delta = perf_scroll_delta,
+            .perf_file_path = perf_file_path,
+            .perf_logger = perf_log,
         };
         state.applyUiScale();
 
@@ -187,6 +214,9 @@ const AppState = struct {
         self.renderer.deinit();
         self.editor_render_cache.deinit();
         self.editor_cluster_cache.deinit();
+        if (self.perf_file_path) |path| {
+            self.allocator.free(path);
+        }
         app_logger.deinit();
         self.allocator.destroy(self);
     }
@@ -279,35 +309,39 @@ const AppState = struct {
     }
 
     pub fn run(self: *AppState) !void {
-        // Create initial editor
-        try self.newEditor();
+        if (self.perf_mode and self.perf_file_path != null) {
+            try self.openFile(self.perf_file_path.?);
+        } else {
+            // Create initial editor
+            try self.newEditor();
 
-        // Insert welcome message
-        if (self.editors.items.len > 0) {
-            const editor = self.editors.items[0];
-            try editor.insertText(
-                \\// Welcome to Zide - A Zig IDE
-                \\//
-                \\// Keyboard shortcuts:
-                \\//   Ctrl+N  - New file
-                \\//   Ctrl+O  - Open file
-                \\//   Ctrl+S  - Save file
-                \\//   Ctrl+Z  - Undo
-                \\//   Ctrl+Y  - Redo
-                \\//   Ctrl+`  - Toggle terminal
-                \\//   Ctrl+Q  - Quit
-                \\//
-                \\// Start typing to begin editing...
-                \\
-                \\const std = @import("std");
-                \\
-                \\pub fn main() !void {
-                \\    std.debug.print("Hello, Zide!\n", .{});
-                \\}
-                \\
-            );
-            editor.cursor = .{ .line = 0, .col = 0, .offset = 0 };
-            editor.modified = false;
+            // Insert welcome message
+            if (self.editors.items.len > 0) {
+                const editor = self.editors.items[0];
+                try editor.insertText(
+                    \\// Welcome to Zide - A Zig IDE
+                    \\//
+                    \\// Keyboard shortcuts:
+                    \\//   Ctrl+N  - New file
+                    \\//   Ctrl+O  - Open file
+                    \\//   Ctrl+S  - Save file
+                    \\//   Ctrl+Z  - Undo
+                    \\//   Ctrl+Y  - Redo
+                    \\//   Ctrl+`  - Toggle terminal
+                    \\//   Ctrl+Q  - Quit
+                    \\//
+                    \\// Start typing to begin editing...
+                    \\
+                    \\const std = @import("std");
+                    \\
+                    \\pub fn main() !void {
+                    \\    std.debug.print("Hello, Zide!\n", .{});
+                    \\}
+                    \\
+                );
+                editor.cursor = .{ .line = 0, .col = 0, .offset = 0 };
+                editor.modified = false;
+            }
         }
 
         // Main loop
@@ -329,6 +363,19 @@ const AppState = struct {
                 self.draw();
                 const draw_end = renderer_mod.getTime();
                 self.metrics.recordDraw(draw_start, draw_end);
+                if (self.perf_mode and self.perf_frames_done > 0) {
+                    const draw_ms = (draw_end - draw_start) * 1000.0;
+                    const editor_idx = if (self.editors.items.len > 0) @min(self.active_tab, self.editors.items.len - 1) else 0;
+                    if (self.editors.items.len > 0) {
+                        const editor = self.editors.items[editor_idx];
+                        self.perf_logger.logf(
+                            "frame={d} draw_ms={d:.2} scroll_line={d} scroll_row_offset={d} scroll_col={d}",
+                            .{ self.perf_frames_done, draw_ms, editor.scroll_line, editor.scroll_row_offset, editor.scroll_col },
+                        );
+                    } else {
+                        self.perf_logger.logf("frame={d} draw_ms={d:.2}", .{ self.perf_frames_done, draw_ms });
+                    }
+                }
                 self.maybeLogMetrics(draw_end);
                 self.needs_redraw = false;
                 self.idle_frames = 0;
@@ -351,6 +398,11 @@ const AppState = struct {
 
                 renderer_mod.waitTime(sleep_ms);
                 self.maybeLogMetrics(renderer_mod.getTime());
+            }
+
+            if (self.perf_mode and self.perf_frames_done >= self.perf_frames_total and self.perf_frames_total > 0) {
+                self.perf_logger.logf("perf complete frames={d}", .{self.perf_frames_done});
+                break;
             }
         }
     }
@@ -615,6 +667,12 @@ const AppState = struct {
                 self.needs_redraw = true;
                 self.metrics.noteInput(now);
             }
+            if (self.perf_mode and self.perf_frames_done < self.perf_frames_total) {
+                widget.scrollVisual(r, self.perf_scroll_delta);
+                self.needs_redraw = true;
+                self.metrics.noteInput(now);
+                self.perf_frames_done +|= 1;
+            }
             const editor_x = side_nav_width;
             const editor_y = options_bar_height + tab_bar_height;
             const in_editor = mouse.x >= editor_x and mouse.x <= editor_x + editor_width and
@@ -872,6 +930,13 @@ pub fn main() !void {
     defer app.deinit();
 
     try app.run();
+}
+
+fn parseEnvU64(env_key: [:0]const u8, default_value: u64) u64 {
+    const raw = std.c.getenv(env_key) orelse return default_value;
+    const slice = std.mem.sliceTo(raw, 0);
+    if (slice.len == 0) return default_value;
+    return std.fmt.parseInt(u64, slice, 10) catch default_value;
 }
 
 // Tests

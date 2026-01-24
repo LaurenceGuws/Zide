@@ -249,8 +249,8 @@ pub const Renderer = struct {
             c.UnloadRenderTexture(rt);
             self.editor_texture = null;
         }
-        c.CloseWindow();
         self.terminal_font.deinit();
+        c.CloseWindow();
         self.allocator.destroy(self);
     }
 
