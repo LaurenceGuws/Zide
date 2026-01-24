@@ -359,6 +359,14 @@ pub const Screen = struct {
         };
     }
 
+    pub fn defaultCell(self: *const Screen) types.Cell {
+        return .{
+            .codepoint = 0,
+            .width = 1,
+            .attrs = self.default_attrs,
+        };
+    }
+
     pub fn isFullScrollRegion(self: *const Screen) bool {
         const rows = @as(usize, self.grid.rows);
         if (rows == 0) return false;
