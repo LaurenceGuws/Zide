@@ -4,11 +4,153 @@ const selection_mod = @import("../../editor/view/selection.zig");
 const layout_mod = @import("../../editor/view/layout.zig");
 const metrics_mod = @import("../../editor/view/metrics.zig");
 const cache_mod = @import("../../editor/render/cache.zig");
+const draw_list_mod = @import("../../editor/render/draw_list.zig");
 const app_logger = @import("../../app_logger.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
 const TokenKind = syntax_mod.TokenKind;
 const SelectionRange = selection_mod.SelectionRange;
+const EditorDrawList = draw_list_mod.EditorDrawList;
+const TextOp = draw_list_mod.TextOp;
+const RectOp = draw_list_mod.RectOp;
+const CursorOp = draw_list_mod.CursorOp;
+
+fn packColor(color: anytype) u32 {
+    return @as(u32, color.r) | (@as(u32, color.g) << 8) | (@as(u32, color.b) << 16) | (@as(u32, color.a) << 24);
+}
+
+fn unpackColor(comptime ColorType: type, color: u32) ColorType {
+    return .{
+        .r = @intCast(color & 0xff),
+        .g = @intCast((color >> 8) & 0xff),
+        .b = @intCast((color >> 16) & 0xff),
+        .a = @intCast((color >> 24) & 0xff),
+    };
+}
+
+fn addRectOp(list: *EditorDrawList, x: f32, y: f32, w: f32, h: f32, color: anytype) bool {
+    list.add(.{ .rect = RectOp{ .x = x, .y = y, .w = w, .h = h, .color = packColor(color) } }) catch return false;
+    return true;
+}
+
+fn addTextOp(list: *EditorDrawList, x: f32, y: f32, text: []const u8, color: anytype) bool {
+    list.add(.{ .text = TextOp{ .x = x, .y = y, .text = text, .color = packColor(color) } }) catch return false;
+    return true;
+}
+
+fn addCursorOp(list: *EditorDrawList, x: f32, y: f32, h: f32, color: anytype) bool {
+    list.add(.{ .cursor = CursorOp{ .x = x, .y = y, .h = h, .color = packColor(color) } }) catch return false;
+    return true;
+}
+
+fn flushDrawList(list: *EditorDrawList, r: anytype) void {
+    const ColorType = @TypeOf(r.theme.foreground);
+    for (list.ops.items) |op| {
+        switch (op) {
+            .rect => |rect| {
+                r.drawRect(
+                    @intFromFloat(rect.x),
+                    @intFromFloat(rect.y),
+                    @intFromFloat(rect.w),
+                    @intFromFloat(rect.h),
+                    unpackColor(ColorType, rect.color),
+                );
+            },
+            .text => |text| {
+                r.drawText(text.text, text.x, text.y, unpackColor(ColorType, text.color));
+            },
+            .cursor => |cursor| {
+                r.drawRect(
+                    @intFromFloat(cursor.x),
+                    @intFromFloat(cursor.y),
+                    2,
+                    @intFromFloat(cursor.h),
+                    unpackColor(ColorType, cursor.color),
+                );
+            },
+        }
+    }
+}
+
+fn addEditorLineBaseOps(
+    list: *EditorDrawList,
+    r: anytype,
+    line_num: usize,
+    y: f32,
+    x: f32,
+    gutter_width: f32,
+    content_width: f32,
+    is_current: bool,
+    num_buf: *[16]u8,
+) bool {
+    var ok = true;
+
+    if (is_current) {
+        ok = ok and addRectOp(
+            list,
+            x + gutter_width,
+            y,
+            content_width - gutter_width,
+            r.char_height,
+            r.theme.current_line,
+        );
+        ok = ok and addRectOp(
+            list,
+            x,
+            y,
+            gutter_width,
+            r.char_height,
+            r.theme.current_line,
+        );
+    }
+
+    const num_str = std.fmt.bufPrint(num_buf, "{d: >4}", .{line_num + 1}) catch return false;
+    const pad = 4 * r.uiScaleFactor();
+    const line_color = if (is_current) r.theme.foreground else r.theme.line_number;
+    ok = ok and addTextOp(list, x + pad, y, num_str, line_color);
+    return ok;
+}
+
+fn appendHighlightedLineSegmentOps(
+    list: *EditorDrawList,
+    r: anytype,
+    line_text: []const u8,
+    y: f32,
+    text_x: f32,
+    line_start: usize,
+    seg_start: usize,
+    seg_end: usize,
+    tokens: []HighlightToken,
+) bool {
+    if (seg_start >= seg_end or line_text.len == 0) return true;
+
+    var ok = true;
+    var cursor = seg_start;
+    for (tokens) |token| {
+        if (token.end <= line_start + seg_start or token.start >= line_start + seg_end) continue;
+        const start = @max(token.start - line_start, seg_start);
+        const end = @min(token.end - line_start, seg_end);
+        if (start > cursor) {
+            const slice_start = cursor;
+            const slice_end = start;
+            const x = text_x + @as(f32, @floatFromInt(slice_start - seg_start)) * r.char_width;
+            ok = ok and addTextOp(list, x, y, line_text[slice_start..slice_end], r.theme.foreground);
+        }
+        const slice_start = start;
+        const slice_end = end;
+        const x = text_x + @as(f32, @floatFromInt(slice_start - seg_start)) * r.char_width;
+        ok = ok and addTextOp(list, x, y, line_text[slice_start..slice_end], colorForToken(r, token.kind));
+        cursor = end;
+    }
+
+    if (cursor < seg_end) {
+        const slice_start = cursor;
+        const x = text_x + @as(f32, @floatFromInt(slice_start - seg_start)) * r.char_width;
+        ok = ok and addTextOp(list, x, y, line_text[slice_start..seg_end], r.theme.foreground);
+    }
+
+    return ok;
+}
 
 pub fn draw(widget: anytype, r: anytype, x: f32, y: f32, width: f32, height: f32) void {
     widget.gutter_width = 50 * r.uiScaleFactor();
@@ -246,6 +388,7 @@ pub fn drawCached(
     const draw_y = y;
     const origin_x: f32 = 0;
     const origin_y: f32 = 0;
+    var draw_list = &cache.draw_list;
 
     const texture_changed = r.ensureEditorTexture(@intFromFloat(width), @intFromFloat(height));
     var force_redraw = cache.beginFrame(
@@ -358,38 +501,27 @@ pub fn drawCached(
                         @intFromFloat(width),
                         @intFromFloat(r.char_height),
                     );
-                    r.drawRect(
-                        @intFromFloat(origin_x),
-                        @intFromFloat(seg_y),
-                        @intFromFloat(width),
-                        @intFromFloat(r.char_height),
-                        r.theme.background,
-                    );
-                    r.drawRect(
-                        @intFromFloat(origin_x),
-                        @intFromFloat(seg_y),
-                        @intFromFloat(widget.gutter_width),
-                        @intFromFloat(r.char_height),
-                        r.theme.line_number_bg,
-                    );
+                    draw_list.clear();
+                    var list_ok = true;
+                    list_ok = list_ok and addRectOp(draw_list, origin_x, seg_y, width, r.char_height, r.theme.background);
+                    list_ok = list_ok and addRectOp(draw_list, origin_x, seg_y, widget.gutter_width, r.char_height, r.theme.line_number_bg);
 
                     if (seg == seg_start_idx) {
-                        r.drawEditorLineBase(line_idx, seg_y, origin_x, widget.gutter_width, width, is_current);
+                        var num_buf: [16]u8 = undefined;
+                        list_ok = list_ok and addEditorLineBaseOps(
+                            draw_list,
+                            r,
+                            line_idx,
+                            seg_y,
+                            origin_x,
+                            widget.gutter_width,
+                            width,
+                            is_current,
+                            &num_buf,
+                        );
                     } else if (is_current) {
-                        r.drawRect(
-                            @intFromFloat(origin_x),
-                            @intFromFloat(seg_y),
-                            @intFromFloat(widget.gutter_width),
-                            @intFromFloat(r.char_height),
-                            r.theme.current_line,
-                        );
-                        r.drawRect(
-                            @intFromFloat(origin_x + widget.gutter_width),
-                            @intFromFloat(seg_y),
-                            @intFromFloat(width - widget.gutter_width),
-                            @intFromFloat(r.char_height),
-                            r.theme.current_line,
-                        );
+                        list_ok = list_ok and addRectOp(draw_list, origin_x, seg_y, widget.gutter_width, r.char_height, r.theme.current_line);
+                        list_ok = list_ok and addRectOp(draw_list, origin_x + widget.gutter_width, seg_y, width - widget.gutter_width, r.char_height, r.theme.current_line);
                     }
 
                     if (range_count > 0) {
@@ -401,21 +533,16 @@ pub fn drawCached(
                             if (sel_end <= sel_start) continue;
                             const sel_x = origin_x + widget.gutter_width + 8 * r.uiScaleFactor() + @as(f32, @floatFromInt(sel_start - seg_start_col)) * r.char_width;
                             const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r.char_width;
-                            r.drawRect(
-                                @intFromFloat(sel_x),
-                                @intFromFloat(seg_y),
-                                @intFromFloat(sel_w),
-                                @intFromFloat(r.char_height),
-                                r.theme.selection,
-                            );
+                            list_ok = list_ok and addRectOp(draw_list, sel_x, seg_y, sel_w, r.char_height, r.theme.selection);
                         }
                     }
 
                     const text_start_x = origin_x + widget.gutter_width + 8 * r.uiScaleFactor();
                     if (tokens.len == 0) {
-                        r.drawText(line_text[seg_start_byte..seg_end_byte], text_start_x, seg_y, r.theme.foreground);
+                        list_ok = list_ok and addTextOp(draw_list, text_start_x, seg_y, line_text[seg_start_byte..seg_end_byte], r.theme.foreground);
                     } else {
-                        drawHighlightedLineSegment(
+                        list_ok = list_ok and appendHighlightedLineSegmentOps(
+                            draw_list,
                             r,
                             line_text,
                             seg_y,
@@ -430,7 +557,85 @@ pub fn drawCached(
                     if (is_current and seg == cursor_seg) {
                         const local_col = cursor_col_vis - seg_start_col;
                         const cursor_draw_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.char_width;
-                        r.drawCursor(cursor_draw_x, seg_y, .line);
+                        list_ok = list_ok and addCursorOp(draw_list, cursor_draw_x, seg_y, r.char_height, r.theme.cursor);
+                    }
+
+                    if (list_ok) {
+                        flushDrawList(draw_list, r);
+                    } else {
+                        r.drawRect(
+                            @intFromFloat(origin_x),
+                            @intFromFloat(seg_y),
+                            @intFromFloat(width),
+                            @intFromFloat(r.char_height),
+                            r.theme.background,
+                        );
+                        r.drawRect(
+                            @intFromFloat(origin_x),
+                            @intFromFloat(seg_y),
+                            @intFromFloat(widget.gutter_width),
+                            @intFromFloat(r.char_height),
+                            r.theme.line_number_bg,
+                        );
+
+                        if (seg == seg_start_idx) {
+                            r.drawEditorLineBase(line_idx, seg_y, origin_x, widget.gutter_width, width, is_current);
+                        } else if (is_current) {
+                            r.drawRect(
+                                @intFromFloat(origin_x),
+                                @intFromFloat(seg_y),
+                                @intFromFloat(widget.gutter_width),
+                                @intFromFloat(r.char_height),
+                                r.theme.current_line,
+                            );
+                            r.drawRect(
+                                @intFromFloat(origin_x + widget.gutter_width),
+                                @intFromFloat(seg_y),
+                                @intFromFloat(width - widget.gutter_width),
+                                @intFromFloat(r.char_height),
+                                r.theme.current_line,
+                            );
+                        }
+
+                        if (range_count > 0) {
+                            var r_i: usize = 0;
+                            while (r_i < range_count) : (r_i += 1) {
+                                const range = ranges[r_i];
+                                const sel_start = @max(range.start_col, seg_start_col);
+                                const sel_end = @min(range.end_col, seg_end_col);
+                                if (sel_end <= sel_start) continue;
+                                const sel_x = origin_x + widget.gutter_width + 8 * r.uiScaleFactor() + @as(f32, @floatFromInt(sel_start - seg_start_col)) * r.char_width;
+                                const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r.char_width;
+                                r.drawRect(
+                                    @intFromFloat(sel_x),
+                                    @intFromFloat(seg_y),
+                                    @intFromFloat(sel_w),
+                                    @intFromFloat(r.char_height),
+                                    r.theme.selection,
+                                );
+                            }
+                        }
+
+                        if (tokens.len == 0) {
+                            r.drawText(line_text[seg_start_byte..seg_end_byte], text_start_x, seg_y, r.theme.foreground);
+                        } else {
+                            drawHighlightedLineSegment(
+                                r,
+                                line_text,
+                                seg_y,
+                                text_start_x,
+                                line_start,
+                                seg_start_byte,
+                                seg_end_byte,
+                                tokens,
+                            );
+                        }
+
+                        if (is_current and seg == cursor_seg) {
+                            const local_col = cursor_col_vis - seg_start_col;
+                            const cursor_draw_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.char_width;
+                            r.drawCursor(cursor_draw_x, seg_y, .line);
+                        }
                     }
 
                     r.endClip();

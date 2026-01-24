@@ -7,12 +7,12 @@ pub const EditorDrawList = struct {
     pub fn init(allocator: std.mem.Allocator) EditorDrawList {
         return .{
             .allocator = allocator,
-            .ops = std.ArrayList(DrawOp).init(allocator),
+            .ops = std.ArrayList(DrawOp).empty,
         };
     }
 
     pub fn deinit(self: *EditorDrawList) void {
-        self.ops.deinit();
+        self.ops.deinit(self.allocator);
     }
 
     pub fn clear(self: *EditorDrawList) void {
@@ -20,7 +20,7 @@ pub const EditorDrawList = struct {
     }
 
     pub fn add(self: *EditorDrawList, op: DrawOp) !void {
-        try self.ops.append(op);
+        try self.ops.append(self.allocator, op);
     }
 };
 

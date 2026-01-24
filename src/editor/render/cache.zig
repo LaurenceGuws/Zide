@@ -1,5 +1,6 @@
 const std = @import("std");
 const syntax_mod = @import("../syntax.zig");
+const draw_list_mod = @import("draw_list.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
 const SyntaxHighlighter = syntax_mod.SyntaxHighlighter;
@@ -9,6 +10,7 @@ pub const EditorRenderCache = struct {
     line_entries: std.AutoHashMap(LineKey, LineEntry),
     highlight_entries: std.AutoHashMap(usize, HighlightEntry),
     wrap_entries: std.AutoHashMap(usize, WrapEntry),
+    draw_list: draw_list_mod.EditorDrawList,
     max_entries: usize,
     last_cols: usize,
     last_wrap: bool,
@@ -44,6 +46,7 @@ pub const EditorRenderCache = struct {
             .line_entries = std.AutoHashMap(LineKey, LineEntry).init(allocator),
             .highlight_entries = std.AutoHashMap(usize, HighlightEntry).init(allocator),
             .wrap_entries = std.AutoHashMap(usize, WrapEntry).init(allocator),
+            .draw_list = draw_list_mod.EditorDrawList.init(allocator),
             .max_entries = if (max_entries == 0) 1 else max_entries,
             .last_cols = 0,
             .last_wrap = false,
@@ -76,6 +79,7 @@ pub const EditorRenderCache = struct {
     }
 
     pub fn deinit(self: *EditorRenderCache) void {
+        self.draw_list.deinit();
         self.clearHighlightEntries();
         self.line_entries.deinit();
         self.highlight_entries.deinit();
