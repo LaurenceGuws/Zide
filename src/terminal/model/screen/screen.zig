@@ -256,6 +256,27 @@ pub const Screen = struct {
         self.wrap_next = false;
     }
 
+    pub const NewlineAction = enum {
+        moved,
+        scroll_region,
+        scroll_full,
+    };
+
+    pub fn newlineAction(self: *Screen) NewlineAction {
+        if (self.cursor.row + 1 < @as(usize, self.grid.rows) and self.cursor.row != self.scroll_bottom) {
+            self.cursor.row += 1;
+            self.cursor.col = 0;
+            self.wrap_next = false;
+            return .moved;
+        }
+        if (self.cursor.row == self.scroll_bottom) {
+            self.wrap_next = false;
+            return .scroll_region;
+        }
+        self.wrap_next = false;
+        return .scroll_full;
+    }
+
     pub fn setScrollRegion(self: *Screen, top: usize, bot: usize) void {
         self.scroll_top = top;
         self.scroll_bottom = bot;
