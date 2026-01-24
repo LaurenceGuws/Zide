@@ -82,6 +82,8 @@ const AppState = struct {
     app_logger: Logger,
     last_metrics_log_time: f64,
     editor_wrap: bool,
+    editor_highlight_budget: ?usize,
+    editor_width_budget: ?usize,
 
     pub fn init(allocator: std.mem.Allocator) !*AppState {
         var config = config_mod.loadConfig(allocator) catch |err| blk: {
@@ -91,6 +93,8 @@ const AppState = struct {
                 .log_console_filter = null,
                 .raylib_log_level = null,
                 .editor_wrap = null,
+                .editor_highlight_budget = null,
+                .editor_width_budget = null,
             };
         };
         defer config_mod.freeConfig(allocator, &config);
@@ -156,6 +160,8 @@ const AppState = struct {
             .app_logger = app_log,
             .last_metrics_log_time = 0,
             .editor_wrap = config.editor_wrap orelse false,
+            .editor_highlight_budget = config.editor_highlight_budget,
+            .editor_width_budget = config.editor_width_budget,
         };
         state.applyUiScale();
 
@@ -698,9 +704,10 @@ const AppState = struct {
 
             if (editor_width > 0 and editor_height > 0) {
                 const visible_lines = @as(usize, @intFromFloat(editor_height / r.char_height));
-                const highlight_budget = if (visible_lines > 0) visible_lines + 1 else 0;
+                const default_budget = if (visible_lines > 0) visible_lines + 1 else 0;
+                const highlight_budget = self.editor_highlight_budget orelse default_budget;
                 editor_draw.precomputeHighlightTokens(&widget, &self.editor_render_cache, r, editor_height, highlight_budget);
-                const width_budget = highlight_budget;
+                const width_budget = self.editor_width_budget orelse highlight_budget;
                 editor_draw.precomputeLineWidths(&widget, &self.editor_render_cache, r, editor_height, width_budget);
             }
         }
