@@ -993,25 +993,11 @@ pub const TerminalSession = struct {
     }
 
     pub fn setCursorStyle(self: *TerminalSession, mode: i32) void {
-        const screen = self.activeScreen();
-        const style = switch (mode) {
-            0, 1 => types.CursorStyle{ .shape = .block, .blink = true },
-            2 => types.CursorStyle{ .shape = .block, .blink = false },
-            3 => types.CursorStyle{ .shape = .underline, .blink = true },
-            4 => types.CursorStyle{ .shape = .underline, .blink = false },
-            5 => types.CursorStyle{ .shape = .bar, .blink = true },
-            6 => types.CursorStyle{ .shape = .bar, .blink = false },
-            else => screen.cursor_style,
-        };
-        screen.cursor_style = style;
+        self.activeScreen().setCursorStyle(mode);
     }
 
     pub fn saveCursor(self: *TerminalSession) void {
-        const screen = self.activeScreen();
-        const slot = &screen.saved_cursor;
-        slot.active = true;
-        slot.cursor = screen.cursor;
-        slot.attrs = screen.current_attrs;
+        self.activeScreen().saveCursor();
     }
 
     pub fn setKeypadMode(self: *TerminalSession, enabled: bool) void {
@@ -1019,11 +1005,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn restoreCursor(self: *TerminalSession) void {
-        const screen = self.activeScreen();
-        const slot = &screen.saved_cursor;
-        if (!slot.active) return;
-        screen.cursor = slot.cursor;
-        screen.current_attrs = slot.attrs;
+        self.activeScreen().restoreCursor();
     }
 
     fn clearGrid(self: *TerminalSession) void {
