@@ -4,6 +4,7 @@ const editor_mod = @import("../../editor/editor.zig");
 const syntax_mod = @import("../../editor/syntax.zig");
 const selection_mod = @import("../../editor/view/selection.zig");
 const layout_mod = @import("../../editor/view/layout.zig");
+const scroll_mod = @import("../../editor/view/scroll.zig");
 const types = @import("../../editor/types.zig");
 const app_logger = @import("../../app_logger.zig");
 
@@ -607,12 +608,12 @@ pub const EditorWidget = struct {
         if ((mouse_pressed or (!dragging.* and mouse_down)) and over_track) {
             dragging.* = true;
             grab_offset.* = if (over_thumb) mouse.x - thumb_x else thumb_w * 0.5;
-            self.updateHorizontalScrollFromMouse(mouse.x, track_x, available, grab_offset.*, max_scroll);
+            scroll_mod.updateHorizontalScrollFromMouse(self.editor, mouse.x, track_x, available, grab_offset.*, max_scroll);
             return true;
         }
 
         if (dragging.* and mouse_down) {
-            self.updateHorizontalScrollFromMouse(mouse.x, track_x, available, grab_offset.*, max_scroll);
+            scroll_mod.updateHorizontalScrollFromMouse(self.editor, mouse.x, track_x, available, grab_offset.*, max_scroll);
             return true;
         }
 
@@ -677,12 +678,12 @@ pub const EditorWidget = struct {
         if ((mouse_pressed or (!dragging.* and mouse_down)) and over_track) {
             dragging.* = true;
             grab_offset.* = if (over_thumb) mouse.y - thumb_y else thumb_h * 0.5;
-            self.updateVerticalScrollFromMouse(mouse.y, scrollbar_y, available, grab_offset.*, max_scroll);
+            scroll_mod.updateVerticalScrollFromMouse(self.editor, mouse.y, scrollbar_y, available, grab_offset.*, max_scroll);
             return true;
         }
 
         if (dragging.* and mouse_down) {
-            self.updateVerticalScrollFromMouse(mouse.y, scrollbar_y, available, grab_offset.*, max_scroll);
+            scroll_mod.updateVerticalScrollFromMouse(self.editor, mouse.y, scrollbar_y, available, grab_offset.*, max_scroll);
             return true;
         }
 
@@ -884,33 +885,6 @@ pub const EditorWidget = struct {
             @intFromFloat(track_h - inset * 2),
             r.theme.selection,
         );
-    }
-
-    fn updateHorizontalScrollFromMouse(
-        self: *EditorWidget,
-        mouse_x: f32,
-        track_x: f32,
-        available: f32,
-        grab_offset: f32,
-        max_scroll: usize,
-    ) void {
-        const clamped_x = @min(@max(mouse_x - grab_offset, track_x), track_x + available);
-        const ratio = if (available > 0) (clamped_x - track_x) / available else 0;
-        self.editor.scroll_col = @as(usize, @intFromFloat(@round(@as(f32, @floatFromInt(max_scroll)) * ratio)));
-    }
-
-    fn updateVerticalScrollFromMouse(
-        self: *EditorWidget,
-        mouse_y: f32,
-        track_y: f32,
-        available: f32,
-        grab_offset: f32,
-        max_scroll: usize,
-    ) void {
-        const clamped_y = @min(@max(mouse_y - grab_offset, track_y), track_y + available);
-        const ratio = if (available > 0) (clamped_y - track_y) / available else 0;
-        self.editor.scroll_line = @as(usize, @intFromFloat(@round(@as(f32, @floatFromInt(max_scroll)) * ratio)));
-        self.editor.scroll_row_offset = 0;
     }
 
     fn drawVerticalScrollbar(
