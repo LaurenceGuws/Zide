@@ -118,3 +118,5 @@ If not accessible via public API, use test-only debug access:
 - Normalize line endings per fixture.
 - No timers/randomness.
 
+Notes:
+- Scrollback push ordering aligned with Ghostty/Kitty; `scrollback_push` golden updated.
