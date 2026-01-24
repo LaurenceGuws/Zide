@@ -17,7 +17,6 @@ const PtySize = pty_mod.PtySize;
 const Screen = screen_mod.Screen;
 const Dirty = screen_mod.Dirty;
 const Damage = screen_mod.Damage;
-const KeyModeStack = screen_mod.KeyModeStack;
 const builtin = @import("builtin");
 const OscTerminator = parser_mod.OscTerminator;
 
@@ -274,15 +273,6 @@ pub const TerminalSession = struct {
             .codepoint = 0,
             .width = 1,
             .attrs = self.primary.default_attrs,
-        };
-    }
-
-    fn blankCellForScreen(self: *const TerminalSession, screen: *const Screen) Cell {
-        _ = self;
-        return .{
-            .codepoint = 0,
-            .width = 1,
-            .attrs = screen.current_attrs,
         };
     }
 
@@ -588,51 +578,48 @@ pub const TerminalSession = struct {
 
     pub fn eraseDisplay(self: *TerminalSession, mode: i32) void {
         const screen = self.activeScreen();
-        const blank_cell = self.blankCellForScreen(screen);
+        const blank_cell = screen.blankCell();
         screen.eraseDisplay(mode, blank_cell);
     }
 
     pub fn eraseLine(self: *TerminalSession, mode: i32) void {
         const screen = self.activeScreen();
-        const blank_cell = self.blankCellForScreen(screen);
+        const blank_cell = screen.blankCell();
         screen.eraseLine(mode, blank_cell);
     }
 
     pub fn insertChars(self: *TerminalSession, count: usize) void {
         const screen = self.activeScreen();
-        const blank_cell = self.blankCellForScreen(screen);
+        const blank_cell = screen.blankCell();
         screen.insertChars(count, blank_cell);
     }
 
     pub fn deleteChars(self: *TerminalSession, count: usize) void {
         const screen = self.activeScreen();
-        const blank_cell = self.blankCellForScreen(screen);
+        const blank_cell = screen.blankCell();
         screen.deleteChars(count, blank_cell);
     }
 
     pub fn eraseChars(self: *TerminalSession, count: usize) void {
         const screen = self.activeScreen();
-        const blank_cell = self.blankCellForScreen(screen);
+        const blank_cell = screen.blankCell();
         screen.eraseChars(count, blank_cell);
     }
 
     pub fn insertLines(self: *TerminalSession, count: usize) void {
         const screen = self.activeScreen();
-        const blank_cell = self.blankCellForScreen(screen);
+        const blank_cell = screen.blankCell();
         screen.insertLines(count, blank_cell);
     }
 
     pub fn deleteLines(self: *TerminalSession, count: usize) void {
         const screen = self.activeScreen();
-        const blank_cell = self.blankCellForScreen(screen);
+        const blank_cell = screen.blankCell();
         screen.deleteLines(count, blank_cell);
     }
 
     fn isFullScrollRegion(self: *TerminalSession) bool {
-        const screen = self.activeScreenConst();
-        const rows = @as(usize, screen.grid.rows);
-        if (rows == 0) return false;
-        return screen.scroll_top == 0 and screen.scroll_bottom + 1 == rows;
+        return self.activeScreenConst().isFullScrollRegion();
     }
 
     fn pushScrollbackRow(self: *TerminalSession, row: usize) void {
@@ -658,7 +645,7 @@ pub const TerminalSession = struct {
         if (cols == 0 or screen.grid.rows == 0) return;
         const n = @min(count, screen.scroll_bottom - screen.scroll_top + 1);
         if (n == 0) return;
-        const blank_cell = self.blankCellForScreen(screen);
+        const blank_cell = screen.blankCell();
         if (self.isFullScrollRegion()) {
             var row: usize = 0;
             while (row < n) : (row += 1) {
@@ -678,7 +665,7 @@ pub const TerminalSession = struct {
         if (cols == 0 or screen.grid.rows == 0) return;
         const n = @min(count, screen.scroll_bottom - screen.scroll_top + 1);
         if (n == 0) return;
-        const blank_cell = self.blankCellForScreen(screen);
+        const blank_cell = screen.blankCell();
         screen.scrollRegionDownBy(n, blank_cell);
         kitty_mod.shiftKittyPlacementsDown(self, screen.scroll_top, screen.scroll_bottom, n);
     }
@@ -889,7 +876,7 @@ pub const TerminalSession = struct {
             self.pushScrollbackRow(0);
             kitty_mod.updateKittyPlacementsForScroll(self);
         }
-        const blank_cell = self.blankCellForScreen(screen);
+        const blank_cell = screen.blankCell();
         screen.scrollUp(blank_cell);
         if (!self.isFullScrollRegion()) {
             kitty_mod.shiftKittyPlacementsUp(self, 0, rows - 1, 1);
@@ -956,31 +943,20 @@ pub const TerminalSession = struct {
         log.logStdout("scroll by delta={d} offset={d} max={d}", .{ delta, self.history.scrollOffset(), max_offset });
     }
 
-    fn keyModeStack(self: *TerminalSession) *KeyModeStack {
-        return &self.activeScreen().key_mode;
-    }
-
     fn keyModeFlags(self: *TerminalSession) u32 {
-        return self.keyModeStack().current();
+        return self.activeScreen().keyModeFlags();
     }
 
     pub fn keyModePush(self: *TerminalSession, flags: u32) void {
-        self.keyModeStack().push(flags);
+        self.activeScreen().keyModePush(flags);
     }
 
     pub fn keyModePop(self: *TerminalSession, count: usize) void {
-        self.keyModeStack().pop(count);
+        self.activeScreen().keyModePop(count);
     }
 
     pub fn keyModeModify(self: *TerminalSession, flags: u32, mode: u32) void {
-        const stack = self.keyModeStack();
-        const current = stack.current();
-        const updated = switch (mode) {
-            2 => current | flags,
-            3 => current & ~flags,
-            else => flags,
-        };
-        stack.setCurrent(updated);
+        self.activeScreen().keyModeModify(flags, mode);
     }
 
     pub fn keyModeQuery(self: *TerminalSession) void {
@@ -1008,11 +984,6 @@ pub const TerminalSession = struct {
         self.activeScreen().restoreCursor();
     }
 
-    fn clearGrid(self: *TerminalSession) void {
-        const screen = self.activeScreen();
-        screen.clear();
-    }
-
     pub fn enterAltScreen(self: *TerminalSession, clear: bool, save_cursor: bool) void {
         if (self.isAltActive()) return;
         if (save_cursor) {
@@ -1023,7 +994,7 @@ pub const TerminalSession = struct {
         self.active = .alt;
         kitty_mod.clearKittyImages(self);
         if (clear) {
-            self.clearGrid();
+            self.activeScreen().clear();
             self.activeScreen().cursor = .{ .row = 0, .col = 0 };
         }
         self.activeScreen().grid.markDirtyAll();
