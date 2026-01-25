@@ -359,6 +359,8 @@ const AppState = struct {
         while (!self.shell.shouldClose()) {
             // Poll events first (this updates raylib's input state)
             app_shell.pollInputEvents();
+            var input_batch = buildInputBatch(self.allocator, self.shell);
+            defer input_batch.deinit();
 
             self.frame_id +|= 1;
             self.editor_cluster_cache.beginFrame(self.frame_id);
