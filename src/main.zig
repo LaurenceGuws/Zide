@@ -94,6 +94,7 @@ const AppState = struct {
     perf_scroll_delta: i32,
     perf_file_path: ?[]u8,
     perf_logger: Logger,
+    last_input: shared_types.input.InputSnapshot,
 
     pub fn init(allocator: std.mem.Allocator) !*AppState {
         var config = config_mod.loadConfig(allocator) catch |err| blk: {
@@ -197,6 +198,7 @@ const AppState = struct {
             .perf_scroll_delta = perf_scroll_delta,
             .perf_file_path = perf_file_path,
             .perf_logger = perf_log,
+            .last_input = .{ .mouse_pos = .{ .x = 0, .y = 0 }, .mods = .{} },
         };
         state.applyUiScale();
 
@@ -441,6 +443,7 @@ const AppState = struct {
     fn update(self: *AppState, input_batch: *shared_types.input.InputBatch) !void {
         const shell = self.shell;
         const r = shell.rendererPtr();
+        self.last_input = input_batch.snapshot();
         const now = app_shell.getTime();
         if (try shell.applyPendingZoom(now)) {
             self.applyUiScale();
@@ -928,7 +931,7 @@ const AppState = struct {
                     @intFromFloat(term_draw_height),
                 );
             }
-            term_widget.draw(shell, layout.terminal.x, term_y + 2, layout.terminal.width, term_draw_height);
+            term_widget.draw(shell, layout.terminal.x, term_y + 2, layout.terminal.width, term_draw_height, self.last_input);
             if (layout.terminal.width > 0 and term_draw_height > 0) {
                 shell.endClip();
             }

@@ -120,7 +120,15 @@ pub const TerminalWidget = struct {
         return std.fs.path.join(allocator, &.{ cwd, uri }) catch null;
     }
 
-    pub fn draw(self: *TerminalWidget, shell: *Shell, x: f32, y: f32, width: f32, height: f32) void {
+    pub fn draw(
+        self: *TerminalWidget,
+        shell: *Shell,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        input: shared_types.input.InputSnapshot,
+    ) void {
         const r = shell.rendererPtr();
         self.session.lock();
         const snapshot = self.session.snapshot();
@@ -232,8 +240,8 @@ pub const TerminalWidget = struct {
         const scrollbar_x = x + width - scrollbar_w;
         const scrollbar_y = y;
         const scrollbar_h = height;
-        const mouse = r.getMousePos();
-        const ctrl = r.isKeyDown(app_shell.KEY_LEFT_CONTROL) or r.isKeyDown(app_shell.KEY_RIGHT_CONTROL);
+        const mouse = input.mouse_pos;
+        const ctrl = input.mods.ctrl;
         var hover_row: isize = -1;
         var hover_col: isize = -1;
         var hover_link_id: u32 = 0;

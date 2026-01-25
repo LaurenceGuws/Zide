@@ -36,6 +36,7 @@ Next session focus: full query plan.
 - `tools/app_import_check.zig` updated to treat `src/types` as shared and forbid types importing `src/ui`.
 - `AppState.draw()` and `AppState.update()` now compute/use `WidgetLayout` for geometry.
 - `InputBatch` lifecycle wired; `AppState.update()` receives batch; widgets read from batch for input.
+- Terminal widget draw now consumes an `InputSnapshot` for hover state instead of polling renderer input.
 - `InputBatch` now captures input state/events; editor/terminal widgets and `AppState.update()` read from batch instead of renderer.
 
 Current state (do not question this):
