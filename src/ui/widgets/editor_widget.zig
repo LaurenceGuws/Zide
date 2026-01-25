@@ -279,8 +279,9 @@ pub const EditorWidget = struct {
         mouse: app_shell.MousePos,
         dragging: *bool,
         grab_offset: *f32,
+        input_batch: *shared_types.input.InputBatch,
     ) bool {
-        return input_mod.handleHorizontalScrollbarInput(self, shell, x, y, width, height, mouse, dragging, grab_offset);
+        return input_mod.handleHorizontalScrollbarInput(self, shell, x, y, width, height, mouse, dragging, grab_offset, input_batch);
     }
 
     pub fn handleVerticalScrollbarInput(
@@ -293,8 +294,9 @@ pub const EditorWidget = struct {
         mouse: app_shell.MousePos,
         dragging: *bool,
         grab_offset: *f32,
+        input_batch: *shared_types.input.InputBatch,
     ) bool {
-        return input_mod.handleVerticalScrollbarInput(self, shell, x, y, width, height, mouse, dragging, grab_offset);
+        return input_mod.handleVerticalScrollbarInput(self, shell, x, y, width, height, mouse, dragging, grab_offset, input_batch);
     }
 
     pub fn ensureCursorVisible(self: *EditorWidget, shell: *Shell, height: f32) void {

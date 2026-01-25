@@ -28,6 +28,16 @@ Next session focus: full query plan.
 - Runtime only loads `highlights` per language (`src/editor/syntax.zig`).
 - Need to extend packaging + runtime to support other query types (`injections.scm`, `locals.scm`, `tags.scm`, `textobjects.scm`, `indents.scm`) and injection handling (TS-05).
 
+## Handover Notes (2026-01-25) — Layering Split
+- AppShell façade enforced for widgets and main; widgets now take `*app_shell.Shell` and pass through `rendererPtr()` as needed.
+- Added shared types under `src/types/` with `mod.zig` entrypoint: input/actions/layout/snapshots.
+- Editor snapshot stub now fills `line_offsets`, cursor, and small text (`text_owned` indicates ownership). Tests cover ownership.
+- Terminal snapshot adapter stub now maps rows/cols/cursor only (cells empty). Tests pin this behavior.
+- `tools/app_import_check.zig` updated to treat `src/types` as shared and forbid types importing `src/ui`.
+- `AppState.draw()` and `AppState.update()` now compute/use `WidgetLayout` for geometry.
+- `InputBatch` lifecycle wired; `AppState.update()` receives batch; widgets read from batch for input.
+- `InputBatch` now captures input state/events; editor/terminal widgets and `AppState.update()` read from batch instead of renderer.
+
 Current state (do not question this):
 
 Tree-sitter dynamic grammar roadmap exists (2026-01-24) under app_architecture/editor/treesitter_dynamic_roadmap.md.

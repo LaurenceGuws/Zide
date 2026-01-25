@@ -26,23 +26,24 @@ pub fn handleMouseClick(
 
 /// Handle input, returns true if any input was processed
 pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *shared_types.input.InputBatch) !bool {
-    _ = input_batch;
-    const r = shell.rendererPtr();
     var handled = false;
     var chars_inserted: usize = 0;
     var group_started = false;
     errdefer if (group_started) widget.editor.endUndoGroup() catch {};
 
     // Character input
-    while (r.getCharPressed()) |char| {
-        if (char >= 32 and char < 127) {
-            if (!group_started) {
-                widget.editor.beginUndoGroup();
-                group_started = true;
+    for (input_batch.events.items) |event| {
+        if (event == .text) {
+            const char = event.text.codepoint;
+            if (char >= 32 and char < 127) {
+                if (!group_started) {
+                    widget.editor.beginUndoGroup();
+                    group_started = true;
+                }
+                try widget.editor.insertChar(@intCast(char));
+                handled = true;
+                chars_inserted += 1;
             }
-            try widget.editor.insertChar(@intCast(char));
-            handled = true;
-            chars_inserted += 1;
         }
     }
     if (chars_inserted > 0) {
@@ -51,9 +52,9 @@ pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *sh
     }
 
     // Control keys
-    const ctrl = r.isKeyDown(app_shell.KEY_LEFT_CONTROL) or r.isKeyDown(app_shell.KEY_RIGHT_CONTROL);
+    const ctrl = input_batch.mods.ctrl;
 
-    if (r.isKeyPressed(app_shell.KEY_ENTER)) {
+    if (input_batch.keyPressed(.enter)) {
         if (!group_started) {
             widget.editor.beginUndoGroup();
             group_started = true;
@@ -61,7 +62,7 @@ pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *sh
         try widget.editor.insertNewline();
         handled = true;
         app_logger.logger("editor.input").logf("key=enter", .{});
-    } else if (r.isKeyRepeated(app_shell.KEY_BACKSPACE)) {
+    } else if (input_batch.keyRepeated(.backspace)) {
         if (!group_started) {
             widget.editor.beginUndoGroup();
             group_started = true;
@@ -69,7 +70,7 @@ pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *sh
         try widget.editor.deleteCharBackward();
         handled = true;
         app_logger.logger("editor.input").logf("key=backspace", .{});
-    } else if (r.isKeyRepeated(app_shell.KEY_DELETE)) {
+    } else if (input_batch.keyRepeated(.delete)) {
         if (!group_started) {
             widget.editor.beginUndoGroup();
             group_started = true;
@@ -77,47 +78,47 @@ pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *sh
         try widget.editor.deleteCharForward();
         handled = true;
         app_logger.logger("editor.input").logf("key=delete", .{});
-    } else if (r.isKeyRepeated(app_shell.KEY_UP)) {
+    } else if (input_batch.keyRepeated(.up)) {
         if (widget.moveCursorVisual(shell, -1)) {
             widget.ensureCursorVisible(shell, height);
             handled = true;
             app_logger.logger("editor.input").logf("key=up", .{});
         }
-    } else if (r.isKeyRepeated(app_shell.KEY_DOWN)) {
+    } else if (input_batch.keyRepeated(.down)) {
         if (widget.moveCursorVisual(shell, 1)) {
             widget.ensureCursorVisible(shell, height);
             handled = true;
             app_logger.logger("editor.input").logf("key=down", .{});
         }
-    } else if (r.isKeyRepeated(app_shell.KEY_LEFT)) {
+    } else if (input_batch.keyRepeated(.left)) {
         widget.editor.moveCursorLeft();
         widget.ensureCursorVisible(shell, height);
         handled = true;
         app_logger.logger("editor.input").logf("key=left", .{});
-    } else if (r.isKeyRepeated(app_shell.KEY_RIGHT)) {
+    } else if (input_batch.keyRepeated(.right)) {
         widget.editor.moveCursorRight();
         widget.ensureCursorVisible(shell, height);
         handled = true;
         app_logger.logger("editor.input").logf("key=right", .{});
-    } else if (r.isKeyRepeated(app_shell.KEY_HOME)) {
+    } else if (input_batch.keyRepeated(.home)) {
         widget.editor.moveCursorToLineStart();
         widget.ensureCursorVisible(shell, height);
         handled = true;
         app_logger.logger("editor.input").logf("key=home", .{});
-    } else if (r.isKeyRepeated(app_shell.KEY_END)) {
+    } else if (input_batch.keyRepeated(.end)) {
         widget.editor.moveCursorToLineEnd();
         widget.ensureCursorVisible(shell, height);
         handled = true;
         app_logger.logger("editor.input").logf("key=end", .{});
-    } else if (ctrl and r.isKeyPressed(app_shell.KEY_S)) {
+    } else if (ctrl and input_batch.keyPressed(.s)) {
         try widget.editor.save();
         handled = true;
         app_logger.logger("editor.input").logf("key=ctrl+s", .{});
-    } else if (ctrl and r.isKeyPressed(app_shell.KEY_Z)) {
+    } else if (ctrl and input_batch.keyPressed(.z)) {
         _ = try widget.editor.undo();
         handled = true;
         app_logger.logger("editor.input").logf("key=ctrl+z", .{});
-    } else if (ctrl and r.isKeyPressed(app_shell.KEY_Y)) {
+    } else if (ctrl and input_batch.keyPressed(.y)) {
         _ = try widget.editor.redo();
         handled = true;
         app_logger.logger("editor.input").logf("key=ctrl+y", .{});
@@ -128,9 +129,9 @@ pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *sh
     }
 
     // Scroll handling
-    const wheel = r.getMouseWheelMove();
+    const wheel = input_batch.scroll.y;
     if (wheel != 0) {
-        const shift = r.isKeyDown(app_shell.KEY_LEFT_SHIFT) or r.isKeyDown(app_shell.KEY_RIGHT_SHIFT);
+        const shift = input_batch.mods.shift;
         const delta = @as(i32, @intFromFloat(-wheel * 3));
         if (shift and !widget.wrap_enabled) {
             widget.scrollHorizontal(shell, delta);
@@ -156,13 +157,13 @@ pub fn handleHorizontalScrollbarInput(
     mouse: app_shell.MousePos,
     dragging: *bool,
     grab_offset: *f32,
+    input_batch: *shared_types.input.InputBatch,
 ) bool {
-    const r = shell.rendererPtr();
     if (widget.wrap_enabled) return false;
     if (width <= 0 or height <= 0) return false;
     const cols = widget.viewportColumns(shell);
     if (cols == 0) return false;
-    const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
+    const visible_lines = @as(usize, @intFromFloat(height / shell.charHeight()));
     if (visible_lines == 0) return false;
 
     const scan = widget.editor.advanceMaxLineWidthCache(64);
@@ -170,7 +171,7 @@ pub fn handleHorizontalScrollbarInput(
     if (max_visible_width <= cols) return false;
 
     const show_vscroll = widget.editor.lineCount() > visible_lines;
-    const scale = r.uiScaleFactor();
+    const scale = shell.uiScaleFactor();
     const vscroll_w: f32 = if (show_vscroll) 16 * scale else 0;
     const track_h: f32 = 16 * scale;
     const track_y = y + height - track_h;
@@ -193,9 +194,9 @@ pub fn handleHorizontalScrollbarInput(
     const over_track = mouse.x >= track_x and mouse.x <= track_x + track_w and mouse.y >= track_y and mouse.y <= track_y + track_h;
     const over_thumb = mouse.x >= thumb_x and mouse.x <= thumb_x + thumb_w and mouse.y >= track_y and mouse.y <= track_y + track_h;
 
-    const mouse_down = r.isMouseButtonDown(app_shell.MOUSE_LEFT);
-    const mouse_pressed = r.isMouseButtonPressed(app_shell.MOUSE_LEFT);
-    const mouse_released = r.isMouseButtonReleased(app_shell.MOUSE_LEFT);
+    const mouse_down = input_batch.mouseDown(.left);
+    const mouse_pressed = input_batch.mousePressed(.left);
+    const mouse_released = input_batch.mouseReleased(.left);
     if (dragging.* and mouse_released) {
         dragging.* = false;
         return true;
@@ -233,16 +234,16 @@ pub fn handleVerticalScrollbarInput(
     mouse: app_shell.MousePos,
     dragging: *bool,
     grab_offset: *f32,
+    input_batch: *shared_types.input.InputBatch,
 ) bool {
-    const r = shell.rendererPtr();
     if (widget.wrap_enabled) return false;
     if (width <= 0 or height <= 0) return false;
-    const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
+    const visible_lines = @as(usize, @intFromFloat(height / shell.charHeight()));
     if (visible_lines == 0) return false;
     const total_lines = widget.editor.lineCount();
     if (total_lines <= visible_lines) return false;
 
-    const scale = r.uiScaleFactor();
+    const scale = shell.uiScaleFactor();
     const scrollbar_w: f32 = 16 * scale;
     const scrollbar_x = x + width - scrollbar_w;
     const scrollbar_y = y;
@@ -264,9 +265,9 @@ pub fn handleVerticalScrollbarInput(
     const over_track = mouse.x >= scrollbar_x and mouse.x <= scrollbar_x + scrollbar_w and mouse.y >= scrollbar_y and mouse.y <= scrollbar_y + scrollbar_h;
     const over_thumb = mouse.x >= scrollbar_x and mouse.x <= scrollbar_x + scrollbar_w and mouse.y >= thumb_y and mouse.y <= thumb_y + thumb_h;
 
-    const mouse_down = r.isMouseButtonDown(app_shell.MOUSE_LEFT);
-    const mouse_pressed = r.isMouseButtonPressed(app_shell.MOUSE_LEFT);
-    const mouse_released = r.isMouseButtonReleased(app_shell.MOUSE_LEFT);
+    const mouse_down = input_batch.mouseDown(.left);
+    const mouse_pressed = input_batch.mousePressed(.left);
+    const mouse_released = input_batch.mouseReleased(.left);
     if (dragging.* and mouse_released) {
         dragging.* = false;
         return true;

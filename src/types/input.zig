@@ -56,6 +56,71 @@ pub const Key = enum(u16) {
     f10,
     f11,
     f12,
+    a,
+    b,
+    c,
+    d,
+    e,
+    f,
+    g,
+    h,
+    i,
+    j,
+    k,
+    l,
+    m,
+    n,
+    o,
+    p,
+    q,
+    r,
+    s,
+    t,
+    u,
+    v,
+    w,
+    x,
+    y,
+    z,
+    zero,
+    one,
+    two,
+    three,
+    four,
+    five,
+    six,
+    seven,
+    eight,
+    nine,
+    space,
+    minus,
+    equal,
+    left_bracket,
+    right_bracket,
+    backslash,
+    semicolon,
+    apostrophe,
+    comma,
+    period,
+    slash,
+    grave,
+    kp_0,
+    kp_1,
+    kp_2,
+    kp_3,
+    kp_4,
+    kp_5,
+    kp_6,
+    kp_7,
+    kp_8,
+    kp_9,
+    kp_decimal,
+    kp_divide,
+    kp_multiply,
+    kp_subtract,
+    kp_add,
+    kp_enter,
+    kp_equal,
 };
 
 pub const MousePos = struct {
@@ -106,12 +171,44 @@ pub const InputEvent = union(enum) {
     focus: bool,
 };
 
+pub const KEY_COUNT: usize = switch (@typeInfo(Key)) {
+    .@"enum" => |info| info.fields.len,
+    else => 0,
+};
+pub const MOUSE_BUTTON_COUNT: usize = switch (@typeInfo(MouseButton)) {
+    .@"enum" => |info| info.fields.len,
+    else => 0,
+};
+
 pub const InputBatch = struct {
     allocator: std.mem.Allocator,
     events: std.ArrayList(InputEvent),
+    key_down: [KEY_COUNT]bool,
+    key_pressed: [KEY_COUNT]bool,
+    key_repeated: [KEY_COUNT]bool,
+    mouse_down: [MOUSE_BUTTON_COUNT]bool,
+    mouse_pressed: [MOUSE_BUTTON_COUNT]bool,
+    mouse_released: [MOUSE_BUTTON_COUNT]bool,
+    mouse_pos: MousePos,
+    mouse_pos_raw: MousePos,
+    scroll: ScrollDelta,
+    mods: Modifiers,
 
     pub fn init(allocator: std.mem.Allocator) InputBatch {
-        return .{ .allocator = allocator, .events = .empty };
+        return .{
+            .allocator = allocator,
+            .events = .empty,
+            .key_down = [_]bool{false} ** KEY_COUNT,
+            .key_pressed = [_]bool{false} ** KEY_COUNT,
+            .key_repeated = [_]bool{false} ** KEY_COUNT,
+            .mouse_down = [_]bool{false} ** MOUSE_BUTTON_COUNT,
+            .mouse_pressed = [_]bool{false} ** MOUSE_BUTTON_COUNT,
+            .mouse_released = [_]bool{false} ** MOUSE_BUTTON_COUNT,
+            .mouse_pos = .{ .x = 0, .y = 0 },
+            .mouse_pos_raw = .{ .x = 0, .y = 0 },
+            .scroll = .{ .x = 0, .y = 0 },
+            .mods = .{},
+        };
     }
 
     pub fn deinit(self: *InputBatch) void {
@@ -120,9 +217,43 @@ pub const InputBatch = struct {
 
     pub fn clear(self: *InputBatch) void {
         self.events.clearRetainingCapacity();
+        self.key_down = [_]bool{false} ** KEY_COUNT;
+        self.key_pressed = [_]bool{false} ** KEY_COUNT;
+        self.key_repeated = [_]bool{false} ** KEY_COUNT;
+        self.mouse_down = [_]bool{false} ** MOUSE_BUTTON_COUNT;
+        self.mouse_pressed = [_]bool{false} ** MOUSE_BUTTON_COUNT;
+        self.mouse_released = [_]bool{false} ** MOUSE_BUTTON_COUNT;
+        self.mouse_pos = .{ .x = 0, .y = 0 };
+        self.mouse_pos_raw = .{ .x = 0, .y = 0 };
+        self.scroll = .{ .x = 0, .y = 0 };
+        self.mods = .{};
     }
 
     pub fn append(self: *InputBatch, event: InputEvent) !void {
         try self.events.append(self.allocator, event);
+    }
+
+    pub fn keyDown(self: *const InputBatch, key: Key) bool {
+        return self.key_down[@intFromEnum(key)];
+    }
+
+    pub fn keyPressed(self: *const InputBatch, key: Key) bool {
+        return self.key_pressed[@intFromEnum(key)];
+    }
+
+    pub fn keyRepeated(self: *const InputBatch, key: Key) bool {
+        return self.key_repeated[@intFromEnum(key)];
+    }
+
+    pub fn mouseDown(self: *const InputBatch, button: MouseButton) bool {
+        return self.mouse_down[@intFromEnum(button)];
+    }
+
+    pub fn mousePressed(self: *const InputBatch, button: MouseButton) bool {
+        return self.mouse_pressed[@intFromEnum(button)];
+    }
+
+    pub fn mouseReleased(self: *const InputBatch, button: MouseButton) bool {
+        return self.mouse_released[@intFromEnum(button)];
     }
 };
