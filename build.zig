@@ -306,6 +306,18 @@ pub fn build(b: *std.Build) void {
     const editor_import_check_step = b.step("check-editor-imports", "Check editor module import layering");
     editor_import_check_step.dependOn(&run_editor_import_check.step);
 
+    const app_import_check = b.addExecutable(.{
+        .name = "app-import-check",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/app_import_check.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_app_import_check = b.addRunArtifact(app_import_check);
+    const app_import_check_step = b.step("check-app-imports", "Check app-level import layering");
+    app_import_check_step.dependOn(&run_app_import_check.step);
+
     const grammar_update = b.addExecutable(.{
         .name = "grammar-update",
         .root_module = b.createModule(.{
