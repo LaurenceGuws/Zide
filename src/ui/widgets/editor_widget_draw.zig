@@ -156,7 +156,16 @@ fn appendHighlightedLineSegmentOps(
     return ok;
 }
 
-pub fn draw(widget: anytype, shell: anytype, x: f32, y: f32, width: f32, height: f32) void {
+pub fn draw(
+    widget: anytype,
+    shell: anytype,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+    input: anytype,
+) void {
+    _ = input;
     const r = shell.rendererPtr();
     widget.gutter_width = 50 * r.uiScaleFactor();
     const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
@@ -384,7 +393,9 @@ pub fn drawCached(
     width: f32,
     height: f32,
     frame_id: u64,
+    input: anytype,
 ) void {
+    _ = input;
     const r = shell.rendererPtr();
     widget.gutter_width = 50 * r.uiScaleFactor();
     if (width <= 0 or height <= 0) return;

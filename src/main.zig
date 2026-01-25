@@ -912,6 +912,7 @@ const AppState = struct {
                 layout.editor.width,
                 layout.editor.height,
                 self.frame_id,
+                self.last_input,
             );
         }
 

@@ -93,8 +93,16 @@ pub const EditorWidget = struct {
         return widget;
     }
 
-    pub fn draw(self: *EditorWidget, shell: *Shell, x: f32, y: f32, width: f32, height: f32) void {
-        draw_mod.draw(self, shell, x, y, width, height);
+    pub fn draw(
+        self: *EditorWidget,
+        shell: *Shell,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        input: shared_types.input.InputSnapshot,
+    ) void {
+        draw_mod.draw(self, shell, x, y, width, height, input);
     }
 
     pub fn drawCached(
@@ -106,8 +114,9 @@ pub const EditorWidget = struct {
         width: f32,
         height: f32,
         frame_id: u64,
+        input: shared_types.input.InputSnapshot,
     ) void {
-        draw_mod.drawCached(self, shell, cache, x, y, width, height, frame_id);
+        draw_mod.drawCached(self, shell, cache, x, y, width, height, frame_id, input);
     }
 
     pub fn viewportColumns(self: *EditorWidget, shell: *Shell) usize {

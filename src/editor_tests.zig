@@ -1,6 +1,7 @@
 const std = @import("std");
 const Editor = @import("editor/editor.zig").Editor;
 const grammar_manager_mod = @import("editor/grammar_manager.zig");
+const shared_types = @import("types/mod.zig");
 
 const EditorFixture = struct {
     grammar_manager: grammar_manager_mod.GrammarManager,
@@ -480,7 +481,8 @@ test "editor cached render snapshot baseline" {
     var cache = cache_mod.EditorRenderCache.init(allocator, 256);
     defer cache.deinit();
 
-    draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 32, 1);
+    const input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
+    draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 32, 1, input);
 
     const expected =
         "rect 0 0 320 32 #282A36FF\n" ++
@@ -521,10 +523,11 @@ test "editor render cache dirty line update" {
     var cache = cache_mod.EditorRenderCache.init(allocator, 512);
     defer cache.deinit();
 
-    draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 48, 1);
+    const input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
+    draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 48, 1, input);
     renderer.clearLog();
     editor.setCursor(1, 0);
-    draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 48, 2);
+    draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 48, 2, input);
 
     const log = renderer.log.data.items;
     try std.testing.expect(log.len > 0);
