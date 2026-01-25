@@ -24,7 +24,7 @@ const Editor = editor_mod.Editor;
 const TerminalSession = terminal_mod.TerminalSession;
 const Metrics = metrics_mod.Metrics;
 const Logger = app_logger.Logger;
-const Renderer = app_shell.Renderer;
+const Shell = app_shell.Shell;
 const TabBar = widgets.TabBar;
 const OptionsBar = widgets.OptionsBar;
 const SideNav = widgets.SideNav;
@@ -36,7 +36,7 @@ const TerminalWidget = widgets.TerminalWidget;
 
 const AppState = struct {
     allocator: std.mem.Allocator,
-    renderer: *Renderer,
+    shell: *Shell,
     options_bar: OptionsBar,
     tab_bar: TabBar,
     side_nav: SideNav,
@@ -119,9 +119,9 @@ const AppState = struct {
             app_shell.setRaylibLogLevel(level);
         }
 
-        const renderer = try Renderer.init(allocator, 1280, 720, "Zide - Zig IDE");
-        errdefer renderer.deinit();
-        _ = try renderer.refreshUiScale();
+        const shell = try Shell.init(allocator, 1280, 720, "Zide - Zig IDE");
+        errdefer shell.deinit(allocator);
+        _ = try shell.refreshUiScale();
         const app_log = app_logger.logger("app.core");
         app_log.logStdout("logger initialized", .{});
         const metrics_log = app_logger.logger("terminal.metrics");
@@ -147,7 +147,7 @@ const AppState = struct {
         const state = try allocator.create(AppState);
         state.* = .{
             .allocator = allocator,
-            .renderer = renderer,
+            .shell = shell,
             .options_bar = .{},
             .tab_bar = TabBar.init(allocator),
             .side_nav = .{},
@@ -217,7 +217,7 @@ const AppState = struct {
         self.terminals.deinit(self.allocator);
 
         self.tab_bar.deinit();
-        self.renderer.deinit();
+        self.shell.deinit(self.allocator);
         self.editor_render_cache.deinit();
         self.editor_cluster_cache.deinit();
         self.grammar_manager.deinit();
@@ -265,25 +265,27 @@ const AppState = struct {
 
     pub fn newTerminal(self: *AppState) !void {
         // Calculate terminal size based on UI
-        const cols: u16 = @intCast(@max(80, @divFloor(self.renderer.width, @as(i32, @intFromFloat(self.renderer.terminal_cell_width)))));
-        const rows: u16 = @intCast(@max(24, @divFloor(@as(i32, @intFromFloat(self.terminal_height)), @as(i32, @intFromFloat(self.renderer.terminal_cell_height)))));
+        const shell = self.shell;
+        const cols: u16 = @intCast(@max(80, @divFloor(shell.width(), @as(i32, @intFromFloat(shell.terminalCellWidth())))));
+        const rows: u16 = @intCast(@max(24, @divFloor(@as(i32, @intFromFloat(self.terminal_height)), @as(i32, @intFromFloat(shell.terminalCellHeight())))));
+        const theme = shell.theme();
 
         const term = try TerminalSession.init(self.allocator, rows, cols);
         term.setDefaultColors(
             term_types.Color{
-                .r = self.renderer.theme.foreground.r,
-                .g = self.renderer.theme.foreground.g,
-                .b = self.renderer.theme.foreground.b,
+                .r = theme.foreground.r,
+                .g = theme.foreground.g,
+                .b = theme.foreground.b,
             },
             term_types.Color{
-                .r = self.renderer.theme.background.r,
-                .g = self.renderer.theme.background.g,
-                .b = self.renderer.theme.background.b,
+                .r = theme.background.r,
+                .g = theme.background.g,
+                .b = theme.background.b,
             },
         );
         term.setCellSize(
-            @intFromFloat(self.renderer.terminal_cell_width),
-            @intFromFloat(self.renderer.terminal_cell_height),
+            @intFromFloat(shell.terminalCellWidth()),
+            @intFromFloat(shell.terminalCellHeight()),
         );
         try term.start(null);
         try self.terminals.append(self.allocator, term);
@@ -293,7 +295,7 @@ const AppState = struct {
     }
 
     fn applyUiScale(self: *AppState) void {
-        const scale = self.renderer.uiScaleFactor();
+        const scale = self.shell.uiScaleFactor();
         self.options_bar.height = 26 * scale;
         self.tab_bar.height = 28 * scale;
         self.tab_bar.tab_width = 150 * scale;
@@ -304,12 +306,13 @@ const AppState = struct {
 
     fn refreshTerminalSizing(self: *AppState) !void {
         if (self.terminals.items.len == 0) return;
-        const cols: u16 = @intCast(@max(1, @divFloor(self.renderer.width, @as(i32, @intFromFloat(self.renderer.terminal_cell_width)))));
-        const rows: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(self.terminal_height)), @as(i32, @intFromFloat(self.renderer.terminal_cell_height)))));
+        const shell = self.shell;
+        const cols: u16 = @intCast(@max(1, @divFloor(shell.width(), @as(i32, @intFromFloat(shell.terminalCellWidth())))));
+        const rows: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(self.terminal_height)), @as(i32, @intFromFloat(shell.terminalCellHeight())))));
         for (self.terminals.items) |term| {
             term.setCellSize(
-                @intFromFloat(self.renderer.terminal_cell_width),
-                @intFromFloat(self.renderer.terminal_cell_height),
+                @intFromFloat(shell.terminalCellWidth()),
+                @intFromFloat(shell.terminalCellHeight()),
             );
             try term.resize(rows, cols);
         }
@@ -352,7 +355,7 @@ const AppState = struct {
         }
 
         // Main loop
-        while (!self.renderer.shouldClose()) {
+        while (!self.shell.shouldClose()) {
             // Poll events first (this updates raylib's input state)
             app_shell.pollInputEvents();
 
@@ -432,9 +435,10 @@ const AppState = struct {
     }
 
     fn update(self: *AppState) !void {
-        const r = self.renderer;
+        const shell = self.shell;
+        const r = shell.rendererPtr();
         const now = app_shell.getTime();
-        if (try r.applyPendingZoom(now)) {
+        if (try shell.applyPendingZoom(now)) {
             self.applyUiScale();
             try self.refreshTerminalSizing();
             self.needs_redraw = true;
@@ -442,33 +446,32 @@ const AppState = struct {
         }
         // Check for window resize (event-based, works with Wayland)
         if (app_shell.isWindowResized()) {
-            r.width = app_shell.getScreenWidth();
-            r.height = app_shell.getScreenHeight();
-            if (try r.refreshUiScale()) {
+            shell.setSize(app_shell.getScreenWidth(), app_shell.getScreenHeight());
+            if (try shell.refreshUiScale()) {
                 self.applyUiScale();
             }
             if (self.terminals.items.len > 0) {
                 const term = self.terminals.items[0];
-                const width = @as(f32, @floatFromInt(r.width));
-                const height = @as(f32, @floatFromInt(r.height));
+                const width = @as(f32, @floatFromInt(shell.width()));
+                const height = @as(f32, @floatFromInt(shell.height()));
                 const options_bar_height = self.options_bar.height;
                 const tab_bar_height = self.tab_bar.height;
                 const status_bar_height = self.status_bar.height;
                 const max_terminal_h = @max(0, height - options_bar_height - tab_bar_height - status_bar_height);
                 const terminal_h = if (self.show_terminal) @min(self.terminal_height, max_terminal_h) else 0;
-                const cols: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(width)), @as(i32, @intFromFloat(r.terminal_cell_width)))));
-                const rows: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(terminal_h)), @as(i32, @intFromFloat(r.terminal_cell_height)))));
+                const cols: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(width)), @as(i32, @intFromFloat(shell.terminalCellWidth())))));
+                const rows: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(terminal_h)), @as(i32, @intFromFloat(shell.terminalCellHeight())))));
                 term.setCellSize(
-                    @intFromFloat(r.terminal_cell_width),
-                    @intFromFloat(r.terminal_cell_height),
+                    @intFromFloat(shell.terminalCellWidth()),
+                    @intFromFloat(shell.terminalCellHeight()),
                 );
                 try term.resize(rows, cols);
             }
             self.needs_redraw = true;
         }
 
-        const width = @as(f32, @floatFromInt(r.width));
-        const height = @as(f32, @floatFromInt(r.height));
+        const width = @as(f32, @floatFromInt(shell.width()));
+        const height = @as(f32, @floatFromInt(shell.height()));
         const options_bar_height = self.options_bar.height;
         const tab_bar_height = self.tab_bar.height;
         const side_nav_width = self.side_nav.width;
@@ -536,11 +539,11 @@ const AppState = struct {
                     self.terminal_height = new_height;
                     if (self.terminals.items.len > 0) {
                         const term = self.terminals.items[0];
-                        const cols: u16 = @intCast(@max(1, @divFloor(self.renderer.width, @as(i32, @intFromFloat(self.renderer.terminal_cell_width)))));
-                        const rows: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(self.terminal_height)), @as(i32, @intFromFloat(self.renderer.terminal_cell_height)))));
+                        const cols: u16 = @intCast(@max(1, @divFloor(shell.width(), @as(i32, @intFromFloat(shell.terminalCellWidth())))));
+                        const rows: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(self.terminal_height)), @as(i32, @intFromFloat(shell.terminalCellHeight())))));
                         term.setCellSize(
-                            @intFromFloat(self.renderer.terminal_cell_width),
-                            @intFromFloat(self.renderer.terminal_cell_height),
+                            @intFromFloat(shell.terminalCellWidth()),
+                            @intFromFloat(shell.terminalCellHeight()),
                         );
                         try term.resize(rows, cols);
                     }
@@ -568,19 +571,19 @@ const AppState = struct {
         }
 
         if (ctrl and (r.isKeyPressed(app_shell.KEY_EQUAL) or r.isKeyPressed(app_shell.KEY_KP_ADD))) {
-            if (r.queueUserZoom(0.1, now)) {
+            if (shell.queueUserZoom(0.1, now)) {
                 self.metrics.noteInput(now);
             }
             return;
         }
         if (ctrl and (r.isKeyPressed(app_shell.KEY_MINUS) or r.isKeyPressed(app_shell.KEY_KP_SUBTRACT))) {
-            if (r.queueUserZoom(-0.1, now)) {
+            if (shell.queueUserZoom(-0.1, now)) {
                 self.metrics.noteInput(now);
             }
             return;
         }
         if (ctrl and r.isKeyPressed(app_shell.KEY_ZERO)) {
-            if (r.resetUserZoomTarget(now)) {
+            if (shell.resetUserZoomTarget(now)) {
                 self.metrics.noteInput(now);
             }
             return;
@@ -659,7 +662,7 @@ const AppState = struct {
                         via_screen.y,
                         via_render.x,
                         via_render.y,
-                        r.mouse_scale.x,
+                        shell.mouseScale().x,
                     },
                 );
             }
@@ -843,12 +846,13 @@ const AppState = struct {
     }
 
     fn draw(self: *AppState) void {
-        const r = self.renderer;
+        const shell = self.shell;
+        const r = shell.rendererPtr();
 
-        r.beginFrame();
+        shell.beginFrame();
 
-        const width = @as(f32, @floatFromInt(r.width));
-        const height = @as(f32, @floatFromInt(r.height));
+        const width = @as(f32, @floatFromInt(shell.width()));
+        const height = @as(f32, @floatFromInt(shell.height()));
 
         // Calculate layout
         const options_bar_height = self.options_bar.height;
@@ -886,12 +890,12 @@ const AppState = struct {
             const term_y = height - status_bar_height - terminal_h;
 
             // Terminal separator
-            r.drawRect(@intFromFloat(side_nav_width), @intFromFloat(term_y), @intFromFloat(editor_width), 2, app_shell.Color.light_gray);
+            shell.drawRect(@intFromFloat(side_nav_width), @intFromFloat(term_y), @intFromFloat(editor_width), 2, app_shell.Color.light_gray);
 
             var term_widget = &self.terminal_widgets.items[0];
             const term_draw_height = @max(0, terminal_h - 2);
             if (editor_width > 0 and term_draw_height > 0) {
-                r.beginClip(
+                shell.beginClip(
                     @intFromFloat(side_nav_width),
                     @intFromFloat(term_y + 2),
                     @intFromFloat(editor_width),
@@ -900,7 +904,7 @@ const AppState = struct {
             }
             term_widget.draw(r, side_nav_width, term_y + 2, editor_width, term_draw_height);
             if (editor_width > 0 and term_draw_height > 0) {
-                r.endClip();
+                shell.endClip();
             }
         }
 
@@ -924,7 +928,7 @@ const AppState = struct {
             );
         }
 
-        r.endFrame();
+        shell.endFrame();
     }
 };
 
