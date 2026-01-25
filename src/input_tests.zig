@@ -34,3 +34,70 @@ test "input batch state helpers" {
     try std.testing.expect(batch.mousePressed(.right));
     try std.testing.expect(batch.mouseReleased(.middle));
 }
+
+const Frame = struct {
+    mouse_x: f32,
+    mouse_y: f32,
+    scroll_y: f32,
+    key_down: []const shared_types.input.Key,
+    key_pressed: []const shared_types.input.Key,
+    key_repeated: []const shared_types.input.Key,
+};
+
+fn applyFrame(batch: *shared_types.input.InputBatch, frame: Frame) void {
+    batch.clear();
+    batch.mouse_pos = .{ .x = frame.mouse_x, .y = frame.mouse_y };
+    batch.scroll = .{ .x = 0, .y = frame.scroll_y };
+    for (frame.key_down) |key| {
+        batch.key_down[@intFromEnum(key)] = true;
+    }
+    for (frame.key_pressed) |key| {
+        batch.key_pressed[@intFromEnum(key)] = true;
+    }
+    for (frame.key_repeated) |key| {
+        batch.key_repeated[@intFromEnum(key)] = true;
+    }
+}
+
+test "input replay harness applies frames" {
+    const allocator = std.testing.allocator;
+    var batch = shared_types.input.InputBatch.init(allocator);
+    defer batch.deinit();
+
+    const frames = [_]Frame{
+        .{
+            .mouse_x = 12,
+            .mouse_y = 34,
+            .scroll_y = 1,
+            .key_down = &.{ .a },
+            .key_pressed = &.{ .enter },
+            .key_repeated = &.{},
+        },
+        .{
+            .mouse_x = 12,
+            .mouse_y = 40,
+            .scroll_y = -2,
+            .key_down = &.{ .a, .left },
+            .key_pressed = &.{},
+            .key_repeated = &.{ .left },
+        },
+    };
+
+    applyFrame(&batch, frames[0]);
+    try std.testing.expectEqual(@as(f32, 12), batch.mouse_pos.x);
+    try std.testing.expectEqual(@as(f32, 34), batch.mouse_pos.y);
+    try std.testing.expectEqual(@as(f32, 1), batch.scroll.y);
+    try std.testing.expect(batch.keyDown(.a));
+    try std.testing.expect(batch.keyPressed(.enter));
+    try std.testing.expect(!batch.keyRepeated(.a));
+
+    const snap = batch.snapshot();
+    try std.testing.expectEqual(@as(f32, 12), snap.mouse_pos.x);
+    try std.testing.expectEqual(@as(f32, 34), snap.mouse_pos.y);
+
+    applyFrame(&batch, frames[1]);
+    try std.testing.expectEqual(@as(f32, 40), batch.mouse_pos.y);
+    try std.testing.expectEqual(@as(f32, -2), batch.scroll.y);
+    try std.testing.expect(batch.keyDown(.left));
+    try std.testing.expect(batch.keyRepeated(.left));
+}
