@@ -47,7 +47,8 @@ Date: 2026-01-24
 - Added nvim-treesitter highlight queries for zig, bash, java, python, go, rust, lua, json, toml, and c.
 - Added dynamic grammar pack loader + runtime grammar manager.
 - Added `zig build grammar-update` tooling (parallel builds, skip-git, continue-on-error).
-- Generated `assets/syntax/default.lua` from Neovim filetype + parsers.lua, with user/project overrides.
+- Generated `assets/syntax/generated.lua` from Neovim filetype + parsers.lua, with user/project overrides.
+- Manual overrides live in `assets/syntax/overrides.lua`.
 
 ## Next Steps
 1) Add render cache stress test for eviction behavior.

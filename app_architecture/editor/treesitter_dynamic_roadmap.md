@@ -42,7 +42,8 @@ Errors/logging:
 - keep Zig fallback to avoid regression
 
 Defaults + overrides:
-- Defaults baked at `assets/syntax/default.lua` (generated from Neovim + parsers.lua)
+- Defaults baked at `assets/syntax/generated.lua` (generated from Neovim + parsers.lua)
+- Manual overrides at `assets/syntax/overrides.lua` (extensions, basenames, globs)
 - User overrides at `~/.config/zide/syntax.lua`
 - Project overrides at `.zide/syntax.lua`
 

@@ -37,6 +37,15 @@ def read_table(path, table_name):
                 m = re.match(r'\s*([A-Za-z0-9_]+)\s*=\s*"([^"]+)"', line)
             if m:
                 entries[m.group(1)] = m.group(2)
+                continue
+
+            m = re.match(r"\s*\['([^']+)'\]\s*=\s*detect\.([A-Za-z0-9_]+)", line)
+            if not m:
+                m = re.match(r'\s*\["([^"]+)"\]\s*=\s*detect\.([A-Za-z0-9_]+)', line)
+            if not m:
+                m = re.match(r"\s*([A-Za-z0-9_]+)\s*=\s*detect\.([A-Za-z0-9_]+)", line)
+            if m:
+                entries[m.group(1)] = m.group(2)
     return entries
 
 

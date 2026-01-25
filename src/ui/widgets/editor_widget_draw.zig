@@ -129,7 +129,8 @@ fn appendHighlightedLineSegmentOps(
     var cursor = seg_start;
     for (tokens) |token| {
         if (token.end <= line_start + seg_start or token.start >= line_start + seg_end) continue;
-        const start = @max(token.start - line_start, seg_start);
+        const rel_start = if (token.start > line_start) token.start - line_start else 0;
+        const start = @max(rel_start, seg_start);
         const end = @min(token.end - line_start, seg_end);
         if (start > cursor) {
             const slice_start = cursor;
@@ -868,7 +869,8 @@ fn hashSegment(
         h *%= 1099511628211;
     }
     for (tokens) |token| {
-        const t_start = @max(token.start - line_start, seg_start_byte);
+        const rel_start = if (token.start > line_start) token.start - line_start else 0;
+        const t_start = @max(rel_start, seg_start_byte);
         const t_end = @min(token.end - line_start, seg_end_byte);
         if (t_end <= t_start) continue;
         h ^= @as(u64, t_start);

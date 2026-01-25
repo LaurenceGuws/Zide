@@ -184,7 +184,7 @@ PY
 "$root/scripts/package_queries.sh"
 "$root/scripts/generate_manifest.sh"
 
-syntax_out="$repo_root/assets/syntax/default.lua"
+syntax_out="$repo_root/assets/syntax/generated.lua"
 filetype_lua="$repo_root/reference_repos/editors/neovim/runtime/lua/vim/filetype.lua"
 parsers_lua="$work/parsers.lua"
 if [[ -f "$filetype_lua" && -f "$parsers_lua" ]]; then
