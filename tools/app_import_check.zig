@@ -21,10 +21,12 @@ pub fn main() !void {
     const editor_root = try std.fs.path.join(allocator, &.{ root_path, "src", "editor" });
     const terminal_root = try std.fs.path.join(allocator, &.{ root_path, "src", "terminal" });
     const types_root = try std.fs.path.join(allocator, &.{ root_path, "src", "types" });
+    const ui_root = try std.fs.path.join(allocator, &.{ root_path, "src", "ui" });
     const ui_renderer_path = try std.fs.path.join(allocator, &.{ root_path, "src", "ui", "renderer.zig" });
     const editor_root_sep = try std.mem.concat(allocator, u8, &.{ editor_root, std.fs.path.sep_str });
     const terminal_root_sep = try std.mem.concat(allocator, u8, &.{ terminal_root, std.fs.path.sep_str });
     const types_root_sep = try std.mem.concat(allocator, u8, &.{ types_root, std.fs.path.sep_str });
+    const ui_root_sep = try std.mem.concat(allocator, u8, &.{ ui_root, std.fs.path.sep_str });
 
     var had_error = false;
     const stderr_file = std.fs.File.stderr();
@@ -36,6 +38,7 @@ pub fn main() !void {
         editor_root_sep,
         terminal_root_sep,
         types_root_sep,
+        ui_root_sep,
         ui_renderer_path,
         &had_error,
         stderr_file,
@@ -48,6 +51,7 @@ pub fn main() !void {
         editor_root_sep,
         terminal_root_sep,
         types_root_sep,
+        ui_root_sep,
         ui_renderer_path,
         "src/main.zig",
         .app_main,
@@ -62,6 +66,7 @@ pub fn main() !void {
         editor_root_sep,
         terminal_root_sep,
         types_root_sep,
+        ui_root_sep,
         ui_renderer_path,
         "src/ui/renderer.zig",
         .shell_renderer,
@@ -79,6 +84,7 @@ fn checkWidgetImports(
     editor_root_sep: []const u8,
     terminal_root_sep: []const u8,
     types_root_sep: []const u8,
+    ui_root_sep: []const u8,
     ui_renderer_path: []const u8,
     had_error: *bool,
     stderr_file: std.fs.File,
@@ -105,6 +111,7 @@ fn checkWidgetImports(
             editor_root_sep,
             terminal_root_sep,
             types_root_sep,
+            ui_root_sep,
             ui_renderer_path,
             from_layer,
             had_error,
@@ -120,6 +127,7 @@ fn checkFileImports(
     editor_root_sep: []const u8,
     terminal_root_sep: []const u8,
     types_root_sep: []const u8,
+    ui_root_sep: []const u8,
     ui_renderer_path: []const u8,
     rel_path: []const u8,
     from_layer: Layer,
@@ -135,6 +143,7 @@ fn checkFileImports(
         editor_root_sep,
         terminal_root_sep,
         types_root_sep,
+        ui_root_sep,
         ui_renderer_path,
         from_layer,
         had_error,
@@ -150,6 +159,7 @@ fn checkImportsInFile(
     editor_root_sep: []const u8,
     terminal_root_sep: []const u8,
     types_root_sep: []const u8,
+    ui_root_sep: []const u8,
     ui_renderer_path: []const u8,
     from_layer: Layer,
     had_error: *bool,
@@ -170,7 +180,7 @@ fn checkImportsInFile(
         const resolved = std.fs.path.resolve(allocator, &.{ dir, import_path }) catch continue;
 
         const to_layer = layerForResolvedPath(resolved, editor_root_sep, terminal_root_sep, types_root_sep);
-        if (!isAllowed(from_layer, to_layer, resolved, editor_root_sep, terminal_root_sep, types_root_sep, ui_renderer_path)) {
+        if (!isAllowed(from_layer, to_layer, resolved, editor_root_sep, terminal_root_sep, types_root_sep, ui_root_sep, ui_renderer_path)) {
             had_error.* = true;
             var line_buf: [2048]u8 = undefined;
             const msg = try std.fmt.bufPrint(
@@ -208,10 +218,12 @@ fn isAllowed(
     editor_root: []const u8,
     terminal_root: []const u8,
     types_root: []const u8,
+    ui_root: []const u8,
     ui_renderer_path: []const u8,
 ) bool {
     if (from == .app_main and std.mem.eql(u8, resolved, ui_renderer_path)) return false;
     if (from == .shared_types and (to == .editor_core or to == .terminal_core)) return false;
+    if (from == .shared_types and std.mem.startsWith(u8, resolved, ui_root)) return false;
     if (from == .other or to == .other) return true;
     if (from == to) return true;
     return switch (from) {
