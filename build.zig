@@ -321,6 +321,10 @@ pub fn build(b: *std.Build) void {
     const app_import_check_step = b.step("check-app-imports", "Check app-level import layering");
     app_import_check_step.dependOn(&run_app_import_check.step);
 
+    const run_input_import_check = b.addRunArtifact(app_import_check);
+    const input_import_check_step = b.step("check-input-imports", "Check input module import layering");
+    input_import_check_step.dependOn(&run_input_import_check.step);
+
     const grammar_update = b.addExecutable(.{
         .name = "grammar-update",
         .root_module = b.createModule(.{
