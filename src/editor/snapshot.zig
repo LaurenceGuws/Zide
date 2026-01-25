@@ -23,9 +23,17 @@ pub fn buildSnapshot(allocator: std.mem.Allocator, editor: *editor_mod.Editor, v
         break :blk out;
     };
 
-    // TODO: populate text/highlights once widget/core split lands.
+    const total_len = editor.totalLen();
+    const text = if (total_len > 0 and total_len <= 4096)
+        try editor.buffer.readRangeAlloc(0, total_len)
+    else
+        &[_]u8{};
+    const text_owned = text.len > 0;
+
+    // TODO: populate highlights once widget/core split lands.
     return shared.EditorSnapshot{
-        .text = &[_]u8{},
+        .text = text,
+        .text_owned = text_owned,
         .line_offsets = line_offsets,
         .cursor_line = @as(u32, @intCast(editor.cursor.line)),
         .cursor_col = @as(u32, @intCast(editor.cursor.col)),

@@ -6,6 +6,7 @@ pub const HighlightSpan = struct {
 
 pub const EditorSnapshot = struct {
     text: []const u8,
+    text_owned: bool = false,
     line_offsets: []const u32,
     cursor_line: u32,
     cursor_col: u32,

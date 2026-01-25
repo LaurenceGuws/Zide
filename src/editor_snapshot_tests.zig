@@ -15,6 +15,7 @@ test "editor snapshot stub is empty" {
 
     const snapshot = try snapshot_mod.buildSnapshot(allocator, editor, .{ .width = 0, .height = 0 });
     defer if (snapshot.line_offsets.len > 0) allocator.free(@constCast(snapshot.line_offsets));
+    defer if (snapshot.text_owned and snapshot.text.len > 0) allocator.free(@constCast(snapshot.text));
 
     try std.testing.expectEqual(@as(usize, 0), snapshot.text.len);
     try std.testing.expectEqual(editor.lineCount(), snapshot.line_offsets.len);
