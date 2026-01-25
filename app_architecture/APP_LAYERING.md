@@ -79,6 +79,9 @@ Enforcement:
 - Widgets
   - Accept snapshots + input events; return actions for core app (open file, spawn terminal, etc.).
 
+Shared types entry point:
+- `src/types/mod.zig` re-exports shared input/actions/layout/snapshot types.
+
 ## Interface Contracts (initial targets)
 Text engine (pure Zig):
 - `EditorSession.init(allocator, grammar_manager)` → owns text + undo + syntax state.
