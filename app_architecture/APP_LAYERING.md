@@ -81,6 +81,7 @@ Enforcement:
 
 Shared types entry point:
 - `src/types/mod.zig` re-exports shared input/actions/layout/snapshot types.
+- `EditorSnapshot.text_owned` indicates whether `text` must be freed by the caller.
 
 ## Interface Contracts (initial targets)
 Text engine (pure Zig):
