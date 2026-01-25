@@ -48,6 +48,7 @@ Next session focus: full query plan.
 - Editor draw paths accept `InputSnapshot` (kept input-free; currently unused in draw).
 - Terminal hover state now updates during input handling; draw uses cached hover info.
 - Top bars update hover state during input; draw uses cached state.
+- CLI: `--mode terminal|editor|ide` (default ide) controls which shell parts initialize/draw.
 
 ## Current Focus (2026-01-25)
 - App layering input separation: keep draw paths input-free, keep `InputBatch` central, and enforce import rules.
