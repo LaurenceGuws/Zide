@@ -42,8 +42,12 @@ Next session focus: full query plan.
 - Added a small input replay test harness in `src/input_tests.zig` for scroll + key repeat frames.
 - Input replay harness now covers mouse drag sequences.
 - `tools/app_import_check.zig` recognizes `src/input/` and blocks UI-layer imports from it.
+- `tools/app_import_check.zig` now scans `src/input/` files directly for forbidden imports.
+- `tools/app_import_check.zig` now scans `src/ui/` (non-widgets) for forbidden imports.
 - `zig build check-input-imports` runs the shared import checker for input layering.
 - Editor draw paths accept `InputSnapshot` (kept input-free; currently unused in draw).
+- Terminal hover state now updates during input handling; draw uses cached hover info.
+- Top bars update hover state during input; draw uses cached state.
 
 ## Current Focus (2026-01-25)
 - App layering input separation: keep draw paths input-free, keep `InputBatch` central, and enforce import rules.

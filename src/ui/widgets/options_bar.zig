@@ -7,8 +7,15 @@ const Color = app_shell.Color;
 /// Top options bar (VSCode-style app menu)
 pub const OptionsBar = struct {
     height: f32 = 26,
+    last_mouse: shared_types.input.MousePos = .{ .x = 0, .y = 0 },
+    mouse_down_left: bool = false,
 
-    pub fn draw(self: *OptionsBar, shell: *Shell, width: f32, input: shared_types.input.InputSnapshot) void {
+    pub fn updateInput(self: *OptionsBar, input: shared_types.input.InputSnapshot) void {
+        self.last_mouse = input.mouse_pos;
+        self.mouse_down_left = input.mouse_down[@intFromEnum(shared_types.input.MouseButton.left)];
+    }
+
+    pub fn draw(self: *OptionsBar, shell: *Shell, width: f32) void {
         // Background
         shell.drawRect(0, 0, @intFromFloat(width), @intFromFloat(self.height), Color{ .r = 24, .g = 25, .b = 33 });
 
@@ -17,8 +24,8 @@ pub const OptionsBar = struct {
         const scale = shell.uiScaleFactor();
         var x: f32 = 10 * scale;
         const y: f32 = (self.height - shell.charHeight()) / 2;
-        const mouse = input.mouse_pos;
-        const pressed = input.mouse_down[@intFromEnum(shared_types.input.MouseButton.left)];
+        const mouse = self.last_mouse;
+        const pressed = self.mouse_down_left;
         for (labels) |label| {
             const text_w = @as(f32, @floatFromInt(label.len)) * shell.charWidth();
             const pad_x: f32 = 6 * scale;

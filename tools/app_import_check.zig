@@ -48,6 +48,34 @@ pub fn main() !void {
         stderr_file,
     );
 
+    try checkInputImports(
+        allocator,
+        cwd,
+        root_path,
+        editor_root_sep,
+        terminal_root_sep,
+        types_root_sep,
+        input_root_sep,
+        ui_root_sep,
+        ui_renderer_path,
+        &had_error,
+        stderr_file,
+    );
+
+    try checkUiImports(
+        allocator,
+        cwd,
+        root_path,
+        editor_root_sep,
+        terminal_root_sep,
+        types_root_sep,
+        input_root_sep,
+        ui_root_sep,
+        ui_renderer_path,
+        &had_error,
+        stderr_file,
+    );
+
     try checkFileImports(
         allocator,
         cwd,
@@ -81,6 +109,48 @@ pub fn main() !void {
     );
 
     if (had_error) return error.ForbiddenImport;
+}
+
+fn checkInputImports(
+    allocator: std.mem.Allocator,
+    cwd: std.fs.Dir,
+    root_path: []const u8,
+    editor_root_sep: []const u8,
+    terminal_root_sep: []const u8,
+    types_root_sep: []const u8,
+    input_root_sep: []const u8,
+    ui_root_sep: []const u8,
+    ui_renderer_path: []const u8,
+    had_error: *bool,
+    stderr_file: std.fs.File,
+) !void {
+    var input_dir = try cwd.openDir("src/input", .{ .iterate = true });
+    defer input_dir.close();
+    var walker = try input_dir.walk(allocator);
+    defer walker.deinit();
+
+    while (try walker.next()) |entry| {
+        if (entry.kind != .file) continue;
+        if (!std.mem.endsWith(u8, entry.basename, ".zig")) continue;
+
+        const rel_path = try std.fs.path.join(allocator, &.{ "src/input", entry.path });
+        const abs_path = try std.fs.path.join(allocator, &.{ root_path, rel_path });
+        try checkImportsInFile(
+            allocator,
+            cwd,
+            rel_path,
+            abs_path,
+            editor_root_sep,
+            terminal_root_sep,
+            types_root_sep,
+            input_root_sep,
+            ui_root_sep,
+            ui_renderer_path,
+            .input_support,
+            had_error,
+            stderr_file,
+        );
+    }
 }
 
 fn checkWidgetImports(
@@ -122,6 +192,50 @@ fn checkWidgetImports(
             ui_root_sep,
             ui_renderer_path,
             from_layer,
+            had_error,
+            stderr_file,
+        );
+    }
+}
+
+fn checkUiImports(
+    allocator: std.mem.Allocator,
+    cwd: std.fs.Dir,
+    root_path: []const u8,
+    editor_root_sep: []const u8,
+    terminal_root_sep: []const u8,
+    types_root_sep: []const u8,
+    input_root_sep: []const u8,
+    ui_root_sep: []const u8,
+    ui_renderer_path: []const u8,
+    had_error: *bool,
+    stderr_file: std.fs.File,
+) !void {
+    var ui_dir = try cwd.openDir("src/ui", .{ .iterate = true });
+    defer ui_dir.close();
+    var walker = try ui_dir.walk(allocator);
+    defer walker.deinit();
+
+    while (try walker.next()) |entry| {
+        if (entry.kind != .file) continue;
+        if (!std.mem.endsWith(u8, entry.basename, ".zig")) continue;
+        if (std.mem.eql(u8, entry.basename, "renderer.zig")) continue;
+        if (std.mem.startsWith(u8, entry.path, "widgets")) continue;
+
+        const rel_path = try std.fs.path.join(allocator, &.{ "src/ui", entry.path });
+        const abs_path = try std.fs.path.join(allocator, &.{ root_path, rel_path });
+        try checkImportsInFile(
+            allocator,
+            cwd,
+            rel_path,
+            abs_path,
+            editor_root_sep,
+            terminal_root_sep,
+            types_root_sep,
+            input_root_sep,
+            ui_root_sep,
+            ui_renderer_path,
+            .shell_renderer,
             had_error,
             stderr_file,
         );
@@ -247,7 +361,7 @@ fn isAllowed(
         .app_main => isAllowedAppMain(to, resolved, editor_root, terminal_root, types_root),
         .shell_renderer => isAllowedShellRenderer(to, resolved, editor_root, types_root),
         .shared_types => to == .shared_types or to == .other,
-        .input_support => to == .input_support or to == .other,
+        .input_support => to == .input_support or to == .shared_types or to == .other,
         .editor_core, .terminal_core, .other => true,
     };
 }
