@@ -12,8 +12,8 @@ test "terminal snapshot adapter empty" {
     const snapshot = session.snapshot();
     const shared_snapshot = adapter.toSharedSnapshot(snapshot);
 
-    try std.testing.expectEqual(@as(u16, 0), shared_snapshot.rows);
-    try std.testing.expectEqual(@as(u16, 0), shared_snapshot.cols);
+    try std.testing.expectEqual(snapshot.rows, shared_snapshot.rows);
+    try std.testing.expectEqual(snapshot.cols, shared_snapshot.cols);
     try std.testing.expectEqual(@as(usize, 0), shared_snapshot.cells.len);
     try std.testing.expectEqual(@as(u16, 0), shared_snapshot.cursor_row);
     try std.testing.expectEqual(@as(u16, 0), shared_snapshot.cursor_col);
@@ -32,8 +32,8 @@ test "terminal snapshot adapter remains empty after write" {
     const snapshot = session.snapshot();
     const shared_snapshot = adapter.toSharedSnapshot(snapshot);
 
-    try std.testing.expectEqual(@as(u16, 0), shared_snapshot.rows);
-    try std.testing.expectEqual(@as(u16, 0), shared_snapshot.cols);
+    try std.testing.expectEqual(snapshot.rows, shared_snapshot.rows);
+    try std.testing.expectEqual(snapshot.cols, shared_snapshot.cols);
     try std.testing.expectEqual(@as(usize, 0), shared_snapshot.cells.len);
     try std.testing.expectEqual(@as(u16, 0), shared_snapshot.cursor_row);
     try std.testing.expectEqual(@as(u16, 0), shared_snapshot.cursor_col);
