@@ -171,6 +171,11 @@ pub const InputEvent = union(enum) {
     focus: bool,
 };
 
+pub const InputSnapshot = struct {
+    mouse_pos: MousePos,
+    mods: Modifiers,
+};
+
 pub const KEY_COUNT: usize = switch (@typeInfo(Key)) {
     .@"enum" => |info| info.fields.len,
     else => 0,
@@ -255,5 +260,12 @@ pub const InputBatch = struct {
 
     pub fn mouseReleased(self: *const InputBatch, button: MouseButton) bool {
         return self.mouse_released[@intFromEnum(button)];
+    }
+
+    pub fn snapshot(self: *const InputBatch) InputSnapshot {
+        return .{
+            .mouse_pos = self.mouse_pos,
+            .mods = self.mods,
+        };
     }
 };
