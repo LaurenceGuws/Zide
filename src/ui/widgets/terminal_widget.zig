@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const app_shell = @import("../../app_shell.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 const app_logger = @import("../../app_logger.zig");
+const shared_types = @import("../../types/mod.zig");
 
 const c = @cImport({
     @cInclude("raylib.h");
@@ -910,7 +911,9 @@ pub const TerminalWidget = struct {
         allow_input: bool,
         scroll_dragging: *bool,
         scroll_grab_offset: *f32,
+        input_batch: *shared_types.input.InputBatch,
     ) !bool {
+        _ = input_batch;
         const r = shell.rendererPtr();
         self.session.lock();
         defer self.session.unlock();

@@ -10,6 +10,7 @@ const render_cache_mod = @import("../../editor/render/cache.zig");
 const input_mod = @import("editor_widget_input.zig");
 const draw_mod = @import("editor_widget_draw.zig");
 const types = @import("../../editor/types.zig");
+const shared_types = @import("../../types/mod.zig");
 
 const hb = @import("../terminal_font.zig").c;
 
@@ -264,8 +265,8 @@ pub const EditorWidget = struct {
     }
 
     /// Handle input, returns true if any input was processed
-    pub fn handleInput(self: *EditorWidget, shell: *Shell, height: f32) !bool {
-        return input_mod.handleInput(self, shell, height);
+    pub fn handleInput(self: *EditorWidget, shell: *Shell, height: f32, input_batch: *shared_types.input.InputBatch) !bool {
+        return input_mod.handleInput(self, shell, height, input_batch);
     }
 
     pub fn handleHorizontalScrollbarInput(
