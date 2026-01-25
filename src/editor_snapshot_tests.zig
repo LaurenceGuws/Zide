@@ -26,3 +26,22 @@ test "editor snapshot stub is empty" {
     try std.testing.expect(snapshot.selection_end == null);
     _ = @as(shared.EditorSnapshot, snapshot);
 }
+
+test "editor snapshot text owned frees on small buffers" {
+    const allocator = std.testing.allocator;
+
+    var grammar_manager = try grammar_manager_mod.GrammarManager.init(allocator);
+    defer grammar_manager.deinit();
+
+    var editor = try editor_mod.Editor.init(allocator, &grammar_manager);
+    defer editor.deinit();
+
+    try editor.insertText("hello");
+
+    const snapshot = try snapshot_mod.buildSnapshot(allocator, editor, .{ .width = 0, .height = 0 });
+    defer if (snapshot.line_offsets.len > 0) allocator.free(@constCast(snapshot.line_offsets));
+    defer if (snapshot.text_owned and snapshot.text.len > 0) allocator.free(@constCast(snapshot.text));
+
+    try std.testing.expect(snapshot.text_owned);
+    try std.testing.expectEqualStrings("hello", snapshot.text);
+}
