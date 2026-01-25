@@ -876,13 +876,11 @@ const AppState = struct {
             .terminal = .{ .x = side_nav_width, .y = height - status_bar_height - terminal_h, .width = editor_width, .height = terminal_h },
             .status_bar = .{ .x = 0, .y = height - status_bar_height, .width = width, .height = status_bar_height },
         };
-        _ = layout;
-
         // Draw options bar
-        self.options_bar.draw(shell, width);
+        self.options_bar.draw(shell, layout.window.width);
 
         // Draw tab bar
-        self.tab_bar.draw(shell, side_nav_width, options_bar_height, editor_width);
+        self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
 
         // Draw editor
         if (self.editors.items.len > 0) {
@@ -891,40 +889,39 @@ const AppState = struct {
             widget.drawCached(
                 shell,
                 &self.editor_render_cache,
-                side_nav_width,
-                options_bar_height + tab_bar_height,
-                editor_width,
-                editor_height,
+                layout.editor.x,
+                layout.editor.y,
+                layout.editor.width,
+                layout.editor.height,
                 self.frame_id,
             );
         }
 
         // Draw terminal if shown
         if (self.show_terminal and self.terminals.items.len > 0) {
-            const term_y = height - status_bar_height - terminal_h;
+            const term_y = layout.terminal.y;
 
             // Terminal separator
-            shell.drawRect(@intFromFloat(side_nav_width), @intFromFloat(term_y), @intFromFloat(editor_width), 2, app_shell.Color.light_gray);
+            shell.drawRect(@intFromFloat(layout.terminal.x), @intFromFloat(term_y), @intFromFloat(layout.terminal.width), 2, app_shell.Color.light_gray);
 
             var term_widget = &self.terminal_widgets.items[0];
-            const term_draw_height = @max(0, terminal_h - 2);
-            if (editor_width > 0 and term_draw_height > 0) {
+            const term_draw_height = @max(0, layout.terminal.height - 2);
+            if (layout.terminal.width > 0 and term_draw_height > 0) {
                 shell.beginClip(
-                    @intFromFloat(side_nav_width),
+                    @intFromFloat(layout.terminal.x),
                     @intFromFloat(term_y + 2),
-                    @intFromFloat(editor_width),
+                    @intFromFloat(layout.terminal.width),
                     @intFromFloat(term_draw_height),
                 );
             }
-            term_widget.draw(shell, side_nav_width, term_y + 2, editor_width, term_draw_height);
-            if (editor_width > 0 and term_draw_height > 0) {
+            term_widget.draw(shell, layout.terminal.x, term_y + 2, layout.terminal.width, term_draw_height);
+            if (layout.terminal.width > 0 and term_draw_height > 0) {
                 shell.endClip();
             }
         }
 
         // Draw side navigation bar (covers terminal icon overflow)
-        const side_nav_height = height - status_bar_height - options_bar_height;
-        self.side_nav.draw(shell, side_nav_height, options_bar_height);
+        self.side_nav.draw(shell, layout.side_nav.height, layout.side_nav.y);
 
         // Draw status bar LAST so it spans full width over everything
         if (self.editors.items.len > 0) {
@@ -932,8 +929,8 @@ const AppState = struct {
             const editor = self.editors.items[editor_idx];
             self.status_bar.draw(
                 shell,
-                width,
-                height - status_bar_height,
+                layout.window.width,
+                layout.status_bar.y,
                 self.mode,
                 editor.file_path,
                 editor.cursor.line,
