@@ -7,8 +7,8 @@ pub fn toSharedSnapshot(snapshot: term_mod.TerminalSnapshot) shared.TerminalSnap
         .rows = @intCast(snapshot.rows),
         .cols = @intCast(snapshot.cols),
         .cells = &[_]shared.TerminalCell{},
-        .cursor_row = 0,
-        .cursor_col = 0,
+        .cursor_row = @intCast(snapshot.cursor.row),
+        .cursor_col = @intCast(snapshot.cursor.col),
         .selection = null,
     };
 }
