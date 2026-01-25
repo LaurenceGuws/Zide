@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const common = @import("common.zig");
+const shared_types = @import("../../types/mod.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
@@ -19,6 +20,7 @@ pub const StatusBar = struct {
         line: usize,
         col: usize,
         modified: bool,
+        input: shared_types.input.InputSnapshot,
     ) void {
         const scale = shell.uiScaleFactor();
         // Background
@@ -41,8 +43,8 @@ pub const StatusBar = struct {
         const mode_width: f32 = 80 * scale;
         const text_y: f32 = y + (self.height - shell.charHeight()) / 2;
         const text_x: f32 = 8 * scale;
-        const mouse = shell.getMousePos();
-        const pressed = shell.isMouseButtonDown(app_shell.MOUSE_LEFT);
+        const mouse = input.mouse_pos;
+        const pressed = input.mouse_down[@intFromEnum(shared_types.input.MouseButton.left)];
         const mode_hover = mouse.x >= 0 and mouse.x <= mode_width and mouse.y >= y and mouse.y <= y + self.height;
         const mode_bg_final = if (mode_hover and pressed) Color{ .r = 58, .g = 60, .b = 78 } else if (mode_hover) Color.selection else mode_bg;
         shell.drawRect(0, @intFromFloat(y), @intFromFloat(mode_width), @intFromFloat(self.height), mode_bg_final);
@@ -53,11 +55,10 @@ pub const StatusBar = struct {
         if (file_path) |path| {
             const available = pos_start - 16 * scale - x;
             const result = common.drawTruncatedText(shell, path, x, text_y, Color.fg, available);
-            const mouse_path = shell.getMousePos();
-            const in_path = mouse_path.x >= x and mouse_path.x <= x + result.drawn_width and
-                mouse_path.y >= y and mouse_path.y <= y + self.height;
+            const in_path = mouse.x >= x and mouse.x <= x + result.drawn_width and
+                mouse.y >= y and mouse.y <= y + self.height;
             if (result.truncated and in_path) {
-                common.drawTooltip(shell, path, mouse_path.x, mouse_path.y);
+                common.drawTooltip(shell, path, mouse.x, mouse.y);
             }
             x += result.drawn_width + 16 * scale;
         }

@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const common = @import("common.zig");
+const shared_types = @import("../../types/mod.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
@@ -45,7 +46,7 @@ pub const TabBar = struct {
         });
     }
 
-    pub fn draw(self: *TabBar, shell: *Shell, x: f32, y: f32, width: f32) void {
+    pub fn draw(self: *TabBar, shell: *Shell, x: f32, y: f32, width: f32, input: shared_types.input.InputSnapshot) void {
         // Draw tab bar background
         shell.drawRect(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height), Color{ .r = 30, .g = 31, .b = 41 });
 
@@ -54,7 +55,7 @@ pub const TabBar = struct {
         shell.beginClip(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height));
 
         var tooltip: ?Tooltip = null;
-        const mouse = shell.getMousePos();
+        const mouse = input.mouse_pos;
 
         var cursor_x: f32 = x;
         for (self.tabs.items, 0..) |tab, i| {

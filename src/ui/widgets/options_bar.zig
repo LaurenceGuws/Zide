@@ -1,4 +1,5 @@
 const app_shell = @import("../../app_shell.zig");
+const shared_types = @import("../../types/mod.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
@@ -7,7 +8,7 @@ const Color = app_shell.Color;
 pub const OptionsBar = struct {
     height: f32 = 26,
 
-    pub fn draw(self: *OptionsBar, shell: *Shell, width: f32) void {
+    pub fn draw(self: *OptionsBar, shell: *Shell, width: f32, input: shared_types.input.InputSnapshot) void {
         // Background
         shell.drawRect(0, 0, @intFromFloat(width), @intFromFloat(self.height), Color{ .r = 24, .g = 25, .b = 33 });
 
@@ -16,8 +17,8 @@ pub const OptionsBar = struct {
         const scale = shell.uiScaleFactor();
         var x: f32 = 10 * scale;
         const y: f32 = (self.height - shell.charHeight()) / 2;
-        const mouse = shell.getMousePos();
-        const pressed = shell.isMouseButtonDown(app_shell.MOUSE_LEFT);
+        const mouse = input.mouse_pos;
+        const pressed = input.mouse_down[@intFromEnum(shared_types.input.MouseButton.left)];
         for (labels) |label| {
             const text_w = @as(f32, @floatFromInt(label.len)) * shell.charWidth();
             const pad_x: f32 = 6 * scale;
