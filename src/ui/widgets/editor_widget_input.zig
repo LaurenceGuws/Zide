@@ -1,6 +1,7 @@
 const app_shell = @import("../../app_shell.zig");
 const scroll_mod = @import("../../editor/view/scroll.zig");
 const app_logger = @import("../../app_logger.zig");
+const shared_types = @import("../../types/mod.zig");
 
 const Shell = app_shell.Shell;
 
@@ -24,7 +25,8 @@ pub fn handleMouseClick(
 }
 
 /// Handle input, returns true if any input was processed
-pub fn handleInput(widget: anytype, shell: *Shell, height: f32) !bool {
+pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *shared_types.input.InputBatch) !bool {
+    _ = input_batch;
     const r = shell.rendererPtr();
     var handled = false;
     var chars_inserted: usize = 0;

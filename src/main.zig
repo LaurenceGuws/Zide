@@ -439,7 +439,6 @@ const AppState = struct {
     }
 
     fn update(self: *AppState, input_batch: *shared_types.input.InputBatch) !void {
-        _ = input_batch;
         const shell = self.shell;
         const r = shell.rendererPtr();
         const now = app_shell.getTime();
@@ -687,7 +686,7 @@ const AppState = struct {
         if (self.active_kind == .editor and self.editors.items.len > 0) {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache, self.editor_wrap);
-            if (try widget.handleInput(shell, layout.editor.height)) {
+            if (try widget.handleInput(shell, layout.editor.height, input_batch)) {
                 self.editor_cluster_cache.clear();
                 self.needs_redraw = true;
                 self.metrics.noteInput(now);
@@ -822,6 +821,7 @@ const AppState = struct {
                     true,
                     &self.terminal_scroll_dragging,
                     &self.terminal_scroll_grab_offset,
+                    input_batch,
                 )) {
                     self.needs_redraw = true;
                     self.metrics.noteInput(now);
@@ -844,6 +844,7 @@ const AppState = struct {
                     false,
                     &self.terminal_scroll_dragging,
                     &self.terminal_scroll_grab_offset,
+                    input_batch,
                 )) {
                     self.needs_redraw = true;
                     self.metrics.noteInput(now);
