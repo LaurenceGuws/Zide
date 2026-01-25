@@ -1,6 +1,6 @@
 const std = @import("std");
 const editor_mod = @import("editor.zig");
-const shared = @import("../types/snapshots.zig");
+const shared = @import("../types/mod.zig").snapshots;
 
 pub const Viewport = struct {
     width: u32,
