@@ -15,6 +15,19 @@ Read app_architecture/editor/treesitter_todo.yaml.
 
 Read src/editor/syntax.zig.
 
+## Handover Notes (2026-01-25)
+- Tree-sitter dynamic grammar support updated: syntax registry now loads `assets/syntax/generated.lua` + `assets/syntax/overrides.lua`.
+- Added glob matching for syntax registry (supports `*` and `?`; uses full path when pattern contains `/`).
+- Added manual mappings in `assets/syntax/overrides.lua`, including globs (Blade/Helm/Hocon/Glimmer/etc) and injection-only placeholders.
+- Coverage tool added: `tools/grammar_packs/scripts/check_syntax_coverage.py` now reports extensions/basenames/globs/injections; dump via `--dump-lua-out`.
+- Removed untracked `vendor/tree-sitter-bash/` and `vendor/tree-sitter-java/` per user request.
+- Fixed highlight overflow panics in `src/ui/widgets/editor_widget_draw.zig` (clamp `token.start - line_start`).
+
+Next session focus: full query plan.
+- Packaging currently only copies `*_highlights.scm` into packs (`tools/grammar_packs/scripts/package_queries.sh`).
+- Runtime only loads `highlights` per language (`src/editor/syntax.zig`).
+- Need to extend packaging + runtime to support other query types (`injections.scm`, `locals.scm`, `tags.scm`, `textobjects.scm`, `indents.scm`) and injection handling (TS-05).
+
 Current state (do not question this):
 
 Tree-sitter dynamic grammar roadmap exists (2026-01-24) under app_architecture/editor/treesitter_dynamic_roadmap.md.

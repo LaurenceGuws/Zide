@@ -30,4 +30,13 @@ zig build grammar-update -- --skip-git --continue-on-error --jobs 8
 
 This writes:
 - `tools/grammar_packs/dist/manifest.json`
-- `assets/syntax/default.lua` (extension + basename → grammar map)
+- `assets/syntax/generated.lua` (extension + basename → grammar map)
+
+Manual edits belong in:
+- `assets/syntax/overrides.lua`
+
+## Mapping coverage helper
+To check that every installed grammar pack maps to at least one extension/basename:
+```
+tools/grammar_packs/scripts/check_syntax_coverage.py
+```

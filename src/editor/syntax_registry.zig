@@ -8,6 +8,8 @@ pub const SyntaxRegistry = struct {
 
         if (basenameLanguage(base)) |lang| return lang;
 
+        if (globLanguage(slice)) |lang| return lang;
+
         if (extensionLanguage(slice)) |lang| return lang;
 
         return null;
@@ -22,15 +24,32 @@ pub const SyntaxRegistry = struct {
 const MapTable = struct {
     extensions: std.StringHashMap([]const u8),
     basenames: std.StringHashMap([]const u8),
+    globs: []GlobEntry,
 };
 
 var map_loaded: bool = false;
 var map_tables: MapTable = undefined;
 var map_arena: std.heap.ArenaAllocator = undefined;
 
+const GlobEntry = struct {
+    pattern: []const u8,
+    lang: []const u8,
+};
+
 fn basenameLanguage(name: []const u8) ?[]const u8 {
     const maps = loadMaps();
     if (maps.basenames.get(name)) |lang| return lang;
+    return null;
+}
+
+fn globLanguage(path: []const u8) ?[]const u8 {
+    const maps = loadMaps();
+    if (maps.globs.len == 0) return null;
+    const base = std.fs.path.basename(path);
+    for (maps.globs) |entry| {
+        const target = if (std.mem.indexOfScalar(u8, entry.pattern, '/')) |_| path else base;
+        if (globMatch(entry.pattern, target)) return entry.lang;
+    }
     return null;
 }
 
@@ -47,6 +66,35 @@ fn extensionName(path: []const u8) ?[]const u8 {
     return ext[1..];
 }
 
+fn globMatch(pattern: []const u8, target: []const u8) bool {
+    var p: usize = 0;
+    var t: usize = 0;
+    var star: ?usize = null;
+    var match: usize = 0;
+    while (t < target.len) {
+        if (p < pattern.len and (pattern[p] == target[t] or pattern[p] == '?')) {
+            p += 1;
+            t += 1;
+            continue;
+        }
+        if (p < pattern.len and pattern[p] == '*') {
+            star = p;
+            match = t;
+            p += 1;
+            continue;
+        }
+        if (star) |s| {
+            p = s + 1;
+            match += 1;
+            t = match;
+            continue;
+        }
+        return false;
+    }
+    while (p < pattern.len and pattern[p] == '*') : (p += 1) {}
+    return p == pattern.len;
+}
+
 fn loadMaps() *MapTable {
     if (map_loaded) return &map_tables;
     map_loaded = true;
@@ -55,9 +103,11 @@ fn loadMaps() *MapTable {
     map_tables = .{
         .extensions = std.StringHashMap([]const u8).init(allocator),
         .basenames = std.StringHashMap([]const u8).init(allocator),
+        .globs = &.{},
     };
 
-    _ = loadLuaMap(allocator, "assets/syntax/default.lua") catch {};
+    _ = loadLuaMap(allocator, "assets/syntax/generated.lua") catch {};
+    _ = loadLuaMap(allocator, "assets/syntax/overrides.lua") catch {};
     if (configSyntaxPath(allocator)) |path| {
         _ = loadLuaMap(allocator, path) catch {};
         allocator.free(path);
@@ -93,7 +143,9 @@ fn loadLuaMap(allocator: std.mem.Allocator, path: []const u8) !void {
     const data = try handle.readToEndAlloc(allocator, std.math.maxInt(usize));
     defer allocator.free(data);
 
-    var section: enum { none, extensions, basenames } = .none;
+    var section: enum { none, extensions, basenames, globs } = .none;
+    var globs_list = std.ArrayList(GlobEntry).empty;
+    defer globs_list.deinit(allocator);
     var it = std.mem.splitScalar(u8, data, '\n');
     while (it.next()) |line_raw| {
         const line = std.mem.trim(u8, line_raw, " \t\r");
@@ -107,6 +159,10 @@ fn loadLuaMap(allocator: std.mem.Allocator, path: []const u8) !void {
             section = .basenames;
             continue;
         }
+        if (std.mem.startsWith(u8, line, "globs")) {
+            section = .globs;
+            continue;
+        }
         if (line[0] == '}') {
             section = .none;
             continue;
@@ -118,8 +174,23 @@ fn loadLuaMap(allocator: std.mem.Allocator, path: []const u8) !void {
         switch (section) {
             .extensions => _ = try map_tables.extensions.put(key, value),
             .basenames => _ = try map_tables.basenames.put(key, value),
+            .globs => try globs_list.append(allocator, .{ .pattern = key, .lang = value }),
             else => {},
         }
+    }
+
+    if (globs_list.items.len > 0) {
+        const old = map_tables.globs;
+        const total = old.len + globs_list.items.len;
+        const combined = try allocator.alloc(GlobEntry, total);
+        if (old.len > 0) {
+            std.mem.copyForwards(GlobEntry, combined[0..old.len], old);
+        }
+        std.mem.copyForwards(GlobEntry, combined[old.len..], globs_list.items);
+        if (old.len > 0) {
+            allocator.free(old);
+        }
+        map_tables.globs = combined;
     }
 }
 
@@ -150,4 +221,11 @@ test "resolveLanguage matches common extensions" {
     try std.testing.expectEqualStrings("bash", SyntaxRegistry.resolveLanguage("script.sh").?);
     try std.testing.expectEqualStrings("java", SyntaxRegistry.resolveLanguage("Main.java").?);
     try std.testing.expectEqualStrings("rs", SyntaxRegistry.resolveExtension("lib.rs").?);
+}
+
+test "globMatch handles basic wildcards" {
+    try std.testing.expect(globMatch("*.blade.php", "index.blade.php"));
+    try std.testing.expect(globMatch("templates/*.yaml", "templates/values.yaml"));
+    try std.testing.expect(globMatch("templates/_*.tpl", "templates/_helpers.tpl"));
+    try std.testing.expect(!globMatch("templates/*.yaml", "templates/values.yml"));
 }

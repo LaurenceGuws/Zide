@@ -639,9 +639,7 @@ pub const Editor = struct {
 
     fn scheduleHighlighter(self: *Editor, path: ?[]const u8) void {
         const log = app_logger.logger("editor.highlight");
-        if (syntax_registry_mod.SyntaxRegistry.resolveLanguage(path) == null and
-            syntax_registry_mod.SyntaxRegistry.resolveExtension(path) == null)
-        {
+        if (syntax_registry_mod.SyntaxRegistry.resolveLanguage(path) == null) {
             if (self.highlighter) |h| {
                 h.destroy();
                 self.highlighter = null;
@@ -658,12 +656,7 @@ pub const Editor = struct {
         const log = app_logger.logger("editor.highlight");
         log.logf("highlight init check path=\"{s}\"", .{path orelse ""});
         self.highlight_pending = false;
-        var lang = syntax_registry_mod.SyntaxRegistry.resolveLanguage(path);
-        if (lang == null) {
-            if (syntax_registry_mod.SyntaxRegistry.resolveExtension(path)) |ext| {
-                lang = ext;
-            }
-        }
+        const lang = syntax_registry_mod.SyntaxRegistry.resolveLanguage(path);
         if (lang == null) {
             if (self.highlighter) |h| {
                 h.destroy();
