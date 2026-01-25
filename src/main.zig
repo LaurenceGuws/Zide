@@ -6,6 +6,7 @@ const editor_mod = @import("editor/editor.zig");
 const text_store = @import("editor/text_store.zig");
 const types = @import("editor/types.zig");
 const editor_render_cache_mod = @import("editor/render/cache.zig");
+const grammar_manager_mod = @import("editor/grammar_manager.zig");
 const app_logger = @import("app_logger.zig");
 const config_mod = @import("config/lua_config.zig");
 
@@ -76,6 +77,7 @@ const AppState = struct {
     editor_vscroll_grab_offset: f32,
     editor_cluster_cache: EditorClusterCache,
     editor_render_cache: EditorRenderCache,
+    grammar_manager: grammar_manager_mod.GrammarManager,
     frame_id: u64,
     metrics: Metrics,
     metrics_logger: Logger,
@@ -139,6 +141,9 @@ const AppState = struct {
         else
             0;
 
+        var grammar_manager = try grammar_manager_mod.GrammarManager.init(allocator);
+        errdefer grammar_manager.deinit();
+
         const state = try allocator.create(AppState);
         state.* = .{
             .allocator = allocator,
@@ -175,6 +180,7 @@ const AppState = struct {
             .editor_vscroll_grab_offset = 0,
             .editor_cluster_cache = EditorClusterCache.init(allocator),
             .editor_render_cache = EditorRenderCache.init(allocator, 4096),
+            .grammar_manager = grammar_manager,
             .frame_id = 0,
             .metrics = Metrics.init(),
             .metrics_logger = metrics_log,
@@ -214,6 +220,7 @@ const AppState = struct {
         self.renderer.deinit();
         self.editor_render_cache.deinit();
         self.editor_cluster_cache.deinit();
+        self.grammar_manager.deinit();
         if (self.perf_file_path) |path| {
             self.allocator.free(path);
         }
@@ -222,7 +229,7 @@ const AppState = struct {
     }
 
     pub fn newEditor(self: *AppState) !void {
-        const editor = try Editor.init(self.allocator);
+        const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try self.editors.append(self.allocator, editor);
         try self.tab_bar.addTab("untitled", .editor);
         self.active_tab = self.tab_bar.tabs.items.len - 1;
@@ -230,7 +237,7 @@ const AppState = struct {
     }
 
     pub fn openFile(self: *AppState, path: []const u8) !void {
-        const editor = try Editor.init(self.allocator);
+        const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try editor.openFile(path);
         try self.editors.append(self.allocator, editor);
 
@@ -961,7 +968,10 @@ test "buffer basic operations" {
 test "editor cursor movement" {
     const allocator = std.testing.allocator;
 
-    var editor = try Editor.init(allocator);
+    var grammar_manager = try grammar_manager_mod.GrammarManager.init(allocator);
+    defer grammar_manager.deinit();
+
+    var editor = try Editor.init(allocator, &grammar_manager);
     defer editor.deinit();
 
     try editor.insertText("Line 1\nLine 2\nLine 3");

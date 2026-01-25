@@ -91,5 +91,5 @@ for lang, info in sorted(found.items()):
 
     if rev:
         subprocess.check_call(["git", "-C", dest, "fetch", "--depth", "1", "origin", rev])
-        subprocess.check_call(["git", "-C", dest, "checkout", "-f", rev])
+        subprocess.check_call(["git", "-C", dest, "checkout", "-f", "FETCH_HEAD"])
 PY

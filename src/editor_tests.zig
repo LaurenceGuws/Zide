@@ -1,10 +1,31 @@
 const std = @import("std");
 const Editor = @import("editor/editor.zig").Editor;
+const grammar_manager_mod = @import("editor/grammar_manager.zig");
+
+const EditorFixture = struct {
+    grammar_manager: grammar_manager_mod.GrammarManager,
+    editor: *Editor,
+
+    pub fn init(allocator: std.mem.Allocator) !EditorFixture {
+        var grammar_manager = try grammar_manager_mod.GrammarManager.init(allocator);
+        const editor = try Editor.init(allocator, &grammar_manager);
+        return .{
+            .grammar_manager = grammar_manager,
+            .editor = editor,
+        };
+    }
+
+    pub fn deinit(self: *EditorFixture) void {
+        self.editor.deinit();
+        self.grammar_manager.deinit();
+    }
+};
 
 test "editor selection replace uses single undo" {
     const allocator = std.testing.allocator;
-    var editor = try Editor.init(allocator);
-    defer editor.deinit();
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
 
     try editor.insertText("hello world");
     editor.selection = .{
@@ -25,8 +46,9 @@ test "editor selection replace uses single undo" {
 
 test "editor grouped undo with mixed insert/delete" {
     const allocator = std.testing.allocator;
-    var editor = try Editor.init(allocator);
-    defer editor.deinit();
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
 
     try editor.insertText("abcdef");
     editor.selection = .{
@@ -48,8 +70,9 @@ test "editor grouped undo with mixed insert/delete" {
 
 test "editor explicit undo group wraps multiple ops" {
     const allocator = std.testing.allocator;
-    var editor = try Editor.init(allocator);
-    defer editor.deinit();
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
 
     editor.beginUndoGroup();
     try editor.insertText("foo");
@@ -68,8 +91,9 @@ test "editor explicit undo group wraps multiple ops" {
 
 test "editor undo redo updates cursor offset" {
     const allocator = std.testing.allocator;
-    var editor = try Editor.init(allocator);
-    defer editor.deinit();
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
 
     try editor.insertText("word1 word2");
     editor.selection = .{
@@ -101,8 +125,9 @@ test "editor undo redo updates cursor offset" {
 
 test "editor line width cache counts utf8 codepoints" {
     const allocator = std.testing.allocator;
-    var editor = try Editor.init(allocator);
-    defer editor.deinit();
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
 
     try editor.insertText("aé文𐍈");
     const line = try editor.getLineAlloc(0);
@@ -112,8 +137,9 @@ test "editor line width cache counts utf8 codepoints" {
 
 test "editor line width cache uses grapheme clusters when provided" {
     const allocator = std.testing.allocator;
-    var editor = try Editor.init(allocator);
-    defer editor.deinit();
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
 
     // "a" + combining acute accent + "b" should be 2 grapheme clusters.
     try editor.insertText("a\u{0301}b");
@@ -126,8 +152,9 @@ test "editor line width cache uses grapheme clusters when provided" {
 
 test "editor selection normalization merges overlaps" {
     const allocator = std.testing.allocator;
-    var editor = try Editor.init(allocator);
-    defer editor.deinit();
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
 
     try editor.insertText("abcdef");
     try editor.addSelection(.{
@@ -148,8 +175,9 @@ test "editor selection normalization merges overlaps" {
 
 test "editor rectangular selections do not merge" {
     const allocator = std.testing.allocator;
-    var editor = try Editor.init(allocator);
-    defer editor.deinit();
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
 
     try editor.insertText("one\ntwo\nthree");
     try editor.addRectSelection(.{ .line = 0, .col = 0, .offset = 0 }, .{ .line = 0, .col = 2, .offset = 2 });
@@ -165,8 +193,9 @@ test "editor rectangular selections do not merge" {
 
 test "editor expand rect selection creates per-line selections" {
     const allocator = std.testing.allocator;
-    var editor = try Editor.init(allocator);
-    defer editor.deinit();
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
 
     try editor.insertText("one\ntwo\nthree");
     try editor.expandRectSelection(0, 2, 1, 3);
@@ -175,8 +204,9 @@ test "editor expand rect selection creates per-line selections" {
 
 test "editor insert across rectangular selections" {
     const allocator = std.testing.allocator;
-    var editor = try Editor.init(allocator);
-    defer editor.deinit();
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
 
     try editor.insertText("one\ntwo\nthree");
     try editor.expandRectSelection(0, 2, 1, 2);
@@ -394,8 +424,9 @@ const FakeWidget = struct {
 
 test "editor render snapshot baseline" {
     const allocator = std.testing.allocator;
-    var editor = try Editor.init(allocator);
-    defer editor.deinit();
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
 
     try editor.insertText("hello\nworld");
     editor.setCursor(1, 2);
@@ -426,8 +457,9 @@ test "editor render snapshot baseline" {
 
 test "editor cached render snapshot baseline" {
     const allocator = std.testing.allocator;
-    var editor = try Editor.init(allocator);
-    defer editor.deinit();
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
 
     try editor.insertText("hello\nworld");
     editor.setCursor(1, 2);
@@ -466,8 +498,9 @@ test "editor cached render snapshot baseline" {
 
 test "editor render cache dirty line update" {
     const allocator = std.testing.allocator;
-    var editor = try Editor.init(allocator);
-    defer editor.deinit();
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
 
     try editor.insertText("one\ntwo\nthree");
     editor.setCursor(0, 0);
