@@ -179,3 +179,26 @@ test "input replay harness supports mouse drag sequence" {
     try std.testing.expectEqual(@as(f32, 20), batch.mouse_pos.x);
     try std.testing.expectEqual(@as(f32, 14), batch.mouse_pos.y);
 }
+
+test "input snapshot init and snapshot copy" {
+    const allocator = std.testing.allocator;
+    var batch = shared_types.input.InputBatch.init(allocator);
+    defer batch.deinit();
+
+    batch.mouse_pos = .{ .x = 5, .y = 6 };
+    batch.mods = .{ .shift = true, .ctrl = true };
+    batch.mouse_down[@intFromEnum(shared_types.input.MouseButton.left)] = true;
+
+    const snap = batch.snapshot();
+    try std.testing.expectEqual(@as(f32, 5), snap.mouse_pos.x);
+    try std.testing.expectEqual(@as(f32, 6), snap.mouse_pos.y);
+    try std.testing.expect(snap.mods.shift);
+    try std.testing.expect(snap.mods.ctrl);
+    try std.testing.expect(snap.mouse_down[@intFromEnum(shared_types.input.MouseButton.left)]);
+
+    const init_snap = shared_types.input.InputSnapshot.init(.{ .x = 1, .y = 2 }, .{});
+    try std.testing.expectEqual(@as(f32, 1), init_snap.mouse_pos.x);
+    try std.testing.expectEqual(@as(f32, 2), init_snap.mouse_pos.y);
+    try std.testing.expect(!init_snap.mods.shift);
+    try std.testing.expect(!init_snap.mouse_down[@intFromEnum(shared_types.input.MouseButton.left)]);
+}

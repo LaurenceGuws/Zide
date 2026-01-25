@@ -42,6 +42,23 @@ Next session focus: full query plan.
 - Added a small input replay test harness in `src/input_tests.zig` for scroll + key repeat frames.
 - Input replay harness now covers mouse drag sequences.
 - `tools/app_import_check.zig` recognizes `src/input/` and blocks UI-layer imports from it.
+- `zig build check-input-imports` runs the shared import checker for input layering.
+- Editor draw paths accept `InputSnapshot` (kept input-free; currently unused in draw).
+
+## Current Focus (2026-01-25)
+- App layering input separation: keep draw paths input-free, keep `InputBatch` central, and enforce import rules.
+- Next likely steps: extend import checks to cover input explicitly, add minimal input replay fixtures, and tighten draw/input separation where needed.
+
+## Progress Snapshot
+- Input flow is centralized: `InputBatch` captures key/mouse/text state in `src/input/input_builder.zig`.
+- `InputSnapshot` is plumbed through terminal + top-level UI draws; editor draw APIs now accept it.
+- Import checks updated to treat `src/input/` as shared support (UI cannot import it).
+- Added replay tests for key repeat, scroll, and mouse drag sequences.
+
+## Handover Checklist
+- Run: `zig build test`
+- Run: `zig build check-app-imports`
+- Run: `zig build check-input-imports`
 - `InputBatch` now captures input state/events; editor/terminal widgets and `AppState.update()` read from batch instead of renderer.
 
 Current state (do not question this):
