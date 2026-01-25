@@ -36,6 +36,9 @@ current Raylib-based rendering.
 - **Main entry** should use `src/app_shell.zig` instead of importing `src/ui/renderer.zig` directly.
 - **Renderer** (`src/ui/renderer.zig`) must not import terminal core code.
 
+AppShell interface:
+- `src/app_shell.zig` exposes a narrow `Shell` surface (init/draw/input accessors).
+
 Enforcement:
 - `zig build check-app-imports` (widget cross-imports + main/renderer boundary guard).
 
