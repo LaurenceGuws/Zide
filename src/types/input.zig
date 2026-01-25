@@ -174,6 +174,7 @@ pub const InputEvent = union(enum) {
 pub const InputSnapshot = struct {
     mouse_pos: MousePos,
     mods: Modifiers,
+    mouse_down: [MOUSE_BUTTON_COUNT]bool,
 };
 
 pub const KEY_COUNT: usize = switch (@typeInfo(Key)) {
@@ -266,6 +267,7 @@ pub const InputBatch = struct {
         return .{
             .mouse_pos = self.mouse_pos,
             .mods = self.mods,
+            .mouse_down = self.mouse_down,
         };
     }
 };

@@ -199,7 +199,11 @@ const AppState = struct {
             .perf_scroll_delta = perf_scroll_delta,
             .perf_file_path = perf_file_path,
             .perf_logger = perf_log,
-            .last_input = .{ .mouse_pos = .{ .x = 0, .y = 0 }, .mods = .{} },
+            .last_input = .{
+                .mouse_pos = .{ .x = 0, .y = 0 },
+                .mods = .{},
+                .mouse_down = [_]bool{false} ** shared_types.input.MOUSE_BUTTON_COUNT,
+            },
         };
         state.applyUiScale();
 
@@ -895,10 +899,10 @@ const AppState = struct {
             .status_bar = .{ .x = 0, .y = height - status_bar_height, .width = width, .height = status_bar_height },
         };
         // Draw options bar
-        self.options_bar.draw(shell, layout.window.width);
+        self.options_bar.draw(shell, layout.window.width, self.last_input);
 
         // Draw tab bar
-        self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
+        self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width, self.last_input);
 
         // Draw editor
         if (self.editors.items.len > 0) {
@@ -939,7 +943,7 @@ const AppState = struct {
         }
 
         // Draw side navigation bar (covers terminal icon overflow)
-        self.side_nav.draw(shell, layout.side_nav.height, layout.side_nav.y);
+        self.side_nav.draw(shell, layout.side_nav.height, layout.side_nav.y, self.last_input);
 
         // Draw status bar LAST so it spans full width over everything
         if (self.editors.items.len > 0) {
@@ -954,6 +958,7 @@ const AppState = struct {
                 editor.cursor.line,
                 editor.cursor.col,
                 editor.modified,
+                self.last_input,
             );
         }
 

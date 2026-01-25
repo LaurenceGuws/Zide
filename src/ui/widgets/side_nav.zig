@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
+const shared_types = @import("../../types/mod.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
@@ -8,7 +9,7 @@ const Color = app_shell.Color;
 pub const SideNav = struct {
     width: f32 = 52,
 
-    pub fn draw(self: *SideNav, shell: *Shell, height: f32, y: f32) void {
+    pub fn draw(self: *SideNav, shell: *Shell, height: f32, y: f32, input: shared_types.input.InputSnapshot) void {
         // Background
         shell.drawRect(0, @intFromFloat(y), @intFromFloat(self.width), @intFromFloat(height), Color{ .r = 30, .g = 31, .b = 41 });
 
@@ -37,8 +38,8 @@ pub const SideNav = struct {
         const badge_size: f32 = shell.fontSize() * 1.0;
         const badge_h_unit: f32 = shell.charHeight() * (badge_size / shell.fontSize());
         const spacing: f32 = 12 * scale;
-        const mouse = shell.getMousePos();
-        const pressed = shell.isMouseButtonDown(app_shell.MOUSE_LEFT);
+        const mouse = input.mouse_pos;
+        const pressed = input.mouse_down[@intFromEnum(shared_types.input.MouseButton.left)];
         const hover_pad_x: f32 = 8 * scale;
         const hover_pad_y: f32 = 8 * scale;
 
