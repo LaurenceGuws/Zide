@@ -8,6 +8,7 @@ const Layer = enum {
     editor_core,
     terminal_core,
     shared_types,
+    input_support,
     other,
 };
 
@@ -21,11 +22,13 @@ pub fn main() !void {
     const editor_root = try std.fs.path.join(allocator, &.{ root_path, "src", "editor" });
     const terminal_root = try std.fs.path.join(allocator, &.{ root_path, "src", "terminal" });
     const types_root = try std.fs.path.join(allocator, &.{ root_path, "src", "types" });
+    const input_root = try std.fs.path.join(allocator, &.{ root_path, "src", "input" });
     const ui_root = try std.fs.path.join(allocator, &.{ root_path, "src", "ui" });
     const ui_renderer_path = try std.fs.path.join(allocator, &.{ root_path, "src", "ui", "renderer.zig" });
     const editor_root_sep = try std.mem.concat(allocator, u8, &.{ editor_root, std.fs.path.sep_str });
     const terminal_root_sep = try std.mem.concat(allocator, u8, &.{ terminal_root, std.fs.path.sep_str });
     const types_root_sep = try std.mem.concat(allocator, u8, &.{ types_root, std.fs.path.sep_str });
+    const input_root_sep = try std.mem.concat(allocator, u8, &.{ input_root, std.fs.path.sep_str });
     const ui_root_sep = try std.mem.concat(allocator, u8, &.{ ui_root, std.fs.path.sep_str });
 
     var had_error = false;
@@ -38,6 +41,7 @@ pub fn main() !void {
         editor_root_sep,
         terminal_root_sep,
         types_root_sep,
+        input_root_sep,
         ui_root_sep,
         ui_renderer_path,
         &had_error,
@@ -51,6 +55,7 @@ pub fn main() !void {
         editor_root_sep,
         terminal_root_sep,
         types_root_sep,
+        input_root_sep,
         ui_root_sep,
         ui_renderer_path,
         "src/main.zig",
@@ -66,6 +71,7 @@ pub fn main() !void {
         editor_root_sep,
         terminal_root_sep,
         types_root_sep,
+        input_root_sep,
         ui_root_sep,
         ui_renderer_path,
         "src/ui/renderer.zig",
@@ -84,6 +90,7 @@ fn checkWidgetImports(
     editor_root_sep: []const u8,
     terminal_root_sep: []const u8,
     types_root_sep: []const u8,
+    input_root_sep: []const u8,
     ui_root_sep: []const u8,
     ui_renderer_path: []const u8,
     had_error: *bool,
@@ -111,6 +118,7 @@ fn checkWidgetImports(
             editor_root_sep,
             terminal_root_sep,
             types_root_sep,
+            input_root_sep,
             ui_root_sep,
             ui_renderer_path,
             from_layer,
@@ -127,6 +135,7 @@ fn checkFileImports(
     editor_root_sep: []const u8,
     terminal_root_sep: []const u8,
     types_root_sep: []const u8,
+    input_root_sep: []const u8,
     ui_root_sep: []const u8,
     ui_renderer_path: []const u8,
     rel_path: []const u8,
@@ -143,6 +152,7 @@ fn checkFileImports(
         editor_root_sep,
         terminal_root_sep,
         types_root_sep,
+        input_root_sep,
         ui_root_sep,
         ui_renderer_path,
         from_layer,
@@ -159,6 +169,7 @@ fn checkImportsInFile(
     editor_root_sep: []const u8,
     terminal_root_sep: []const u8,
     types_root_sep: []const u8,
+    input_root_sep: []const u8,
     ui_root_sep: []const u8,
     ui_renderer_path: []const u8,
     from_layer: Layer,
@@ -179,7 +190,7 @@ fn checkImportsInFile(
         const dir = std.fs.path.dirname(abs_path) orelse continue;
         const resolved = std.fs.path.resolve(allocator, &.{ dir, import_path }) catch continue;
 
-        const to_layer = layerForResolvedPath(resolved, editor_root_sep, terminal_root_sep, types_root_sep);
+        const to_layer = layerForResolvedPath(resolved, editor_root_sep, terminal_root_sep, types_root_sep, input_root_sep);
         if (!isAllowed(from_layer, to_layer, resolved, editor_root_sep, terminal_root_sep, types_root_sep, ui_root_sep, ui_renderer_path)) {
             had_error.* = true;
             var line_buf: [2048]u8 = undefined;
@@ -204,10 +215,12 @@ fn layerForResolvedPath(
     editor_root: []const u8,
     terminal_root: []const u8,
     types_root: []const u8,
+    input_root: []const u8,
 ) Layer {
     if (std.mem.startsWith(u8, path, editor_root)) return .editor_core;
     if (std.mem.startsWith(u8, path, terminal_root)) return .terminal_core;
     if (std.mem.startsWith(u8, path, types_root)) return .shared_types;
+    if (std.mem.startsWith(u8, path, input_root)) return .input_support;
     return .other;
 }
 
@@ -224,6 +237,8 @@ fn isAllowed(
     if (from == .app_main and std.mem.eql(u8, resolved, ui_renderer_path)) return false;
     if (from == .shared_types and (to == .editor_core or to == .terminal_core)) return false;
     if (from == .shared_types and std.mem.startsWith(u8, resolved, ui_root)) return false;
+    if (from == .input_support and std.mem.startsWith(u8, resolved, ui_root)) return false;
+    if (to == .input_support and (from == .editor_widget or from == .terminal_widget or from == .shell_renderer or from == .shared_types)) return false;
     if (from == .other or to == .other) return true;
     if (from == to) return true;
     return switch (from) {
@@ -232,6 +247,7 @@ fn isAllowed(
         .app_main => isAllowedAppMain(to, resolved, editor_root, terminal_root, types_root),
         .shell_renderer => isAllowedShellRenderer(to, resolved, editor_root, types_root),
         .shared_types => to == .shared_types or to == .other,
+        .input_support => to == .input_support or to == .other,
         .editor_core, .terminal_core, .other => true,
     };
 }
@@ -272,6 +288,7 @@ fn layerName(layer: Layer) []const u8 {
         .editor_core => "editor_core",
         .terminal_core => "terminal_core",
         .shared_types => "shared_types",
+        .input_support => "input_support",
         .other => "other",
     };
 }

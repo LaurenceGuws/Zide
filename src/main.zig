@@ -199,11 +199,7 @@ const AppState = struct {
             .perf_scroll_delta = perf_scroll_delta,
             .perf_file_path = perf_file_path,
             .perf_logger = perf_log,
-            .last_input = .{
-                .mouse_pos = .{ .x = 0, .y = 0 },
-                .mods = .{},
-                .mouse_down = [_]bool{false} ** shared_types.input.MOUSE_BUTTON_COUNT,
-            },
+            .last_input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{}),
         };
         state.applyUiScale();
 

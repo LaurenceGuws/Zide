@@ -175,6 +175,14 @@ pub const InputSnapshot = struct {
     mouse_pos: MousePos,
     mods: Modifiers,
     mouse_down: [MOUSE_BUTTON_COUNT]bool,
+
+    pub fn init(mouse_pos: MousePos, mods: Modifiers) InputSnapshot {
+        return .{
+            .mouse_pos = mouse_pos,
+            .mods = mods,
+            .mouse_down = [_]bool{false} ** MOUSE_BUTTON_COUNT,
+        };
+    }
 };
 
 pub const KEY_COUNT: usize = switch (@typeInfo(Key)) {
