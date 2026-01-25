@@ -42,6 +42,9 @@ const Frame = struct {
     key_down: []const shared_types.input.Key,
     key_pressed: []const shared_types.input.Key,
     key_repeated: []const shared_types.input.Key,
+    mouse_down: []const shared_types.input.MouseButton,
+    mouse_pressed: []const shared_types.input.MouseButton,
+    mouse_released: []const shared_types.input.MouseButton,
 };
 
 fn applyFrame(batch: *shared_types.input.InputBatch, frame: Frame) void {
@@ -56,6 +59,15 @@ fn applyFrame(batch: *shared_types.input.InputBatch, frame: Frame) void {
     }
     for (frame.key_repeated) |key| {
         batch.key_repeated[@intFromEnum(key)] = true;
+    }
+    for (frame.mouse_down) |button| {
+        batch.mouse_down[@intFromEnum(button)] = true;
+    }
+    for (frame.mouse_pressed) |button| {
+        batch.mouse_pressed[@intFromEnum(button)] = true;
+    }
+    for (frame.mouse_released) |button| {
+        batch.mouse_released[@intFromEnum(button)] = true;
     }
 }
 
@@ -72,6 +84,9 @@ test "input replay harness applies frames" {
             .key_down = &.{ .a },
             .key_pressed = &.{ .enter },
             .key_repeated = &.{},
+            .mouse_down = &.{},
+            .mouse_pressed = &.{},
+            .mouse_released = &.{},
         },
         .{
             .mouse_x = 12,
@@ -80,6 +95,9 @@ test "input replay harness applies frames" {
             .key_down = &.{ .a, .left },
             .key_pressed = &.{},
             .key_repeated = &.{ .left },
+            .mouse_down = &.{},
+            .mouse_pressed = &.{},
+            .mouse_released = &.{},
         },
     };
 
@@ -100,4 +118,64 @@ test "input replay harness applies frames" {
     try std.testing.expectEqual(@as(f32, -2), batch.scroll.y);
     try std.testing.expect(batch.keyDown(.left));
     try std.testing.expect(batch.keyRepeated(.left));
+}
+
+test "input replay harness supports mouse drag sequence" {
+    const allocator = std.testing.allocator;
+    var batch = shared_types.input.InputBatch.init(allocator);
+    defer batch.deinit();
+
+    const frames = [_]Frame{
+        .{
+            .mouse_x = 10,
+            .mouse_y = 10,
+            .scroll_y = 0,
+            .key_down = &.{},
+            .key_pressed = &.{},
+            .key_repeated = &.{},
+            .mouse_down = &.{ .left },
+            .mouse_pressed = &.{ .left },
+            .mouse_released = &.{},
+        },
+        .{
+            .mouse_x = 18,
+            .mouse_y = 12,
+            .scroll_y = 0,
+            .key_down = &.{},
+            .key_pressed = &.{},
+            .key_repeated = &.{},
+            .mouse_down = &.{ .left },
+            .mouse_pressed = &.{},
+            .mouse_released = &.{},
+        },
+        .{
+            .mouse_x = 20,
+            .mouse_y = 14,
+            .scroll_y = 0,
+            .key_down = &.{},
+            .key_pressed = &.{},
+            .key_repeated = &.{},
+            .mouse_down = &.{},
+            .mouse_pressed = &.{},
+            .mouse_released = &.{ .left },
+        },
+    };
+
+    applyFrame(&batch, frames[0]);
+    try std.testing.expect(batch.mouseDown(.left));
+    try std.testing.expect(batch.mousePressed(.left));
+    try std.testing.expectEqual(@as(f32, 10), batch.mouse_pos.x);
+    try std.testing.expectEqual(@as(f32, 10), batch.mouse_pos.y);
+
+    applyFrame(&batch, frames[1]);
+    try std.testing.expect(batch.mouseDown(.left));
+    try std.testing.expect(!batch.mousePressed(.left));
+    try std.testing.expectEqual(@as(f32, 18), batch.mouse_pos.x);
+    try std.testing.expectEqual(@as(f32, 12), batch.mouse_pos.y);
+
+    applyFrame(&batch, frames[2]);
+    try std.testing.expect(!batch.mouseDown(.left));
+    try std.testing.expect(batch.mouseReleased(.left));
+    try std.testing.expectEqual(@as(f32, 20), batch.mouse_pos.x);
+    try std.testing.expectEqual(@as(f32, 14), batch.mouse_pos.y);
 }

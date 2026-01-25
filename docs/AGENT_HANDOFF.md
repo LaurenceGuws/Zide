@@ -40,6 +40,8 @@ Next session focus: full query plan.
 - `buildInputBatch` moved into `src/input/input_builder.zig` to keep `main.zig` slimmer.
 - Top-level UI draws (options/tab/side/status bars) now use `InputSnapshot` instead of querying input during draw.
 - Added a small input replay test harness in `src/input_tests.zig` for scroll + key repeat frames.
+- Input replay harness now covers mouse drag sequences.
+- `tools/app_import_check.zig` recognizes `src/input/` and blocks UI-layer imports from it.
 - `InputBatch` now captures input state/events; editor/terminal widgets and `AppState.update()` read from batch instead of renderer.
 
 Current state (do not question this):
