@@ -247,10 +247,13 @@ pub fn build(b: *std.Build) void {
     const editor_tests = b.addTest(.{
         .root_module = editor_tests_root,
     });
+    editor_tests.linkLibrary(raylib);
     editor_tests.linkLibrary(treesitter);
     editor_tests.linkLibrary(ts_zig);
     editor_tests.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
     editor_tests.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
+    editor_tests.addIncludePath(b.path("vendor/raylib/src"));
+    editor_tests.addIncludePath(b.path("vendor/raylib/src/external/glfw/include"));
     editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
     editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
     editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });

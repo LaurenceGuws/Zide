@@ -156,7 +156,8 @@ fn appendHighlightedLineSegmentOps(
     return ok;
 }
 
-pub fn draw(widget: anytype, r: anytype, x: f32, y: f32, width: f32, height: f32) void {
+pub fn draw(widget: anytype, shell: anytype, x: f32, y: f32, width: f32, height: f32) void {
+    const r = shell.rendererPtr();
     widget.gutter_width = 50 * r.uiScaleFactor();
     const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
     const start_line = widget.editor.scroll_line;
@@ -166,7 +167,7 @@ pub fn draw(widget: anytype, r: anytype, x: f32, y: f32, width: f32, height: f32
     var cursor_draw_x: ?f32 = null;
     var cursor_draw_y: ?f32 = null;
     var max_visible_width: usize = 0;
-    const cols = widget.viewportColumns(r);
+    const cols = widget.viewportColumns(shell);
     const show_vscroll = !widget.wrap_enabled and total_lines > visible_lines;
     var draw_list = EditorDrawList.init(widget.editor.allocator);
     defer draw_list.deinit();
@@ -241,7 +242,7 @@ pub fn draw(widget: anytype, r: anytype, x: f32, y: f32, width: f32, height: f32
 
         var cluster_slice: ?[]const u32 = null;
         var cluster_owned = false;
-        widget.clusterOffsets(r, line_idx, line_text, &cluster_slice, &cluster_owned);
+        widget.clusterOffsets(shell, line_idx, line_text, &cluster_slice, &cluster_owned);
         defer if (cluster_owned) {
             if (cluster_slice) |clusters| widget.editor.allocator.free(clusters);
         };
@@ -376,7 +377,7 @@ pub fn draw(widget: anytype, r: anytype, x: f32, y: f32, width: f32, height: f32
 
 pub fn drawCached(
     widget: anytype,
-    r: anytype,
+    shell: anytype,
     cache: *cache_mod.EditorRenderCache,
     x: f32,
     y: f32,
@@ -384,13 +385,14 @@ pub fn drawCached(
     height: f32,
     frame_id: u64,
 ) void {
+    const r = shell.rendererPtr();
     widget.gutter_width = 50 * r.uiScaleFactor();
     if (width <= 0 or height <= 0) return;
     const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
     const start_line = widget.editor.scroll_line;
     const start_seg = widget.editor.scroll_row_offset;
     const total_lines = widget.editor.lineCount();
-    const cols = widget.viewportColumns(r);
+    const cols = widget.viewportColumns(shell);
     if (cols == 0) return;
     const show_vscroll = !widget.wrap_enabled and total_lines > visible_lines;
 
@@ -446,7 +448,7 @@ pub fn drawCached(
 
         var cluster_slice: ?[]const u32 = null;
         var cluster_owned = false;
-        widget.clusterOffsets(r, line_idx, line_text, &cluster_slice, &cluster_owned);
+        widget.clusterOffsets(shell, line_idx, line_text, &cluster_slice, &cluster_owned);
         defer if (cluster_owned) {
             if (cluster_slice) |clusters| widget.editor.allocator.free(clusters);
         };
@@ -698,10 +700,11 @@ pub fn hashLine(text: []const u8) u64 {
 pub fn precomputeHighlightTokens(
     widget: anytype,
     cache: *cache_mod.EditorRenderCache,
-    r: anytype,
+    shell: anytype,
     height: f32,
     budget_lines: usize,
 ) void {
+    const r = shell.rendererPtr();
     if (budget_lines == 0) return;
     if (height <= 0) return;
     widget.editor.ensureHighlighter();
@@ -747,10 +750,11 @@ pub fn precomputeHighlightTokens(
 pub fn precomputeLineWidths(
     widget: anytype,
     cache: *cache_mod.EditorRenderCache,
-    r: anytype,
+    shell: anytype,
     height: f32,
     budget_lines: usize,
 ) void {
+    const r = shell.rendererPtr();
     if (budget_lines == 0) return;
     if (height <= 0) return;
     const total_lines = widget.editor.lineCount();
@@ -779,7 +783,7 @@ pub fn precomputeLineWidths(
 
         var cluster_slice: ?[]const u32 = null;
         var cluster_owned = false;
-        widget.clusterOffsets(r, next_line, line_text, &cluster_slice, &cluster_owned);
+        widget.clusterOffsets(shell, next_line, line_text, &cluster_slice, &cluster_owned);
         defer if (cluster_owned) {
             if (cluster_slice) |clusters| widget.editor.allocator.free(clusters);
         };
@@ -791,10 +795,11 @@ pub fn precomputeLineWidths(
 pub fn precomputeWrapCounts(
     widget: anytype,
     cache: *cache_mod.EditorRenderCache,
-    r: anytype,
+    shell: anytype,
     height: f32,
     budget_lines: usize,
 ) void {
+    const r = shell.rendererPtr();
     if (!widget.wrap_enabled) return;
     if (budget_lines == 0) return;
     if (height <= 0) return;
@@ -803,7 +808,7 @@ pub fn precomputeWrapCounts(
     const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
     if (visible_lines == 0) return;
 
-    const cols = widget.viewportColumns(r);
+    const cols = widget.viewportColumns(shell);
     if (cols == 0) return;
     const start_line = widget.editor.scroll_line;
     const end_line = @min(start_line + visible_lines + 1, total_lines);
@@ -826,7 +831,7 @@ pub fn precomputeWrapCounts(
 
         var cluster_slice: ?[]const u32 = null;
         var cluster_owned = false;
-        widget.clusterOffsets(r, next_line, line_text, &cluster_slice, &cluster_owned);
+        widget.clusterOffsets(shell, next_line, line_text, &cluster_slice, &cluster_owned);
         defer if (cluster_owned) {
             if (cluster_slice) |clusters| widget.editor.allocator.free(clusters);
         };

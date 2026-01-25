@@ -1,5 +1,5 @@
 const std = @import("std");
-const renderer_mod = @import("../renderer.zig");
+const app_shell = @import("../../app_shell.zig");
 const editor_mod = @import("../../editor/editor.zig");
 const selection_mod = @import("../../editor/view/selection.zig");
 const layout_mod = @import("../../editor/view/layout.zig");
@@ -13,7 +13,7 @@ const types = @import("../../editor/types.zig");
 
 const hb = @import("../terminal_font.zig").c;
 
-const Renderer = renderer_mod.Renderer;
+const Shell = app_shell.Shell;
 const Editor = editor_mod.Editor;
 const EditorRenderCache = render_cache_mod.EditorRenderCache;
 const LineScratch = cursor_mod.LineScratch;
@@ -23,7 +23,7 @@ const LineProvider = cursor_mod.LineProvider;
 
 const VisualLinesCtx = struct {
     widget: *EditorWidget,
-    r: *Renderer,
+    r: *Shell,
 };
 
 fn visualLinesForLineWithContext(ctx: *anyopaque, line_idx: usize, cols: usize) usize {
@@ -33,7 +33,7 @@ fn visualLinesForLineWithContext(ctx: *anyopaque, line_idx: usize, cols: usize) 
 
 const CursorLineCtx = struct {
     widget: *EditorWidget,
-    r: *Renderer,
+    r: *Shell,
 };
 
 fn cursorLineText(ctx: *anyopaque, line_idx: usize, scratch: *LineScratch) LineSlice {
@@ -92,13 +92,13 @@ pub const EditorWidget = struct {
         return widget;
     }
 
-    pub fn draw(self: *EditorWidget, r: *Renderer, x: f32, y: f32, width: f32, height: f32) void {
-        draw_mod.draw(self, r, x, y, width, height);
+    pub fn draw(self: *EditorWidget, shell: *Shell, x: f32, y: f32, width: f32, height: f32) void {
+        draw_mod.draw(self, shell, x, y, width, height);
     }
 
     pub fn drawCached(
         self: *EditorWidget,
-        r: *Renderer,
+        shell: *Shell,
         cache: *EditorRenderCache,
         x: f32,
         y: f32,
@@ -106,27 +106,30 @@ pub const EditorWidget = struct {
         height: f32,
         frame_id: u64,
     ) void {
-        draw_mod.drawCached(self, r, cache, x, y, width, height, frame_id);
+        draw_mod.drawCached(self, shell, cache, x, y, width, height, frame_id);
     }
 
-    pub fn viewportColumns(self: *EditorWidget, r: *Renderer) usize {
+    pub fn viewportColumns(self: *EditorWidget, shell: *Shell) usize {
+        const r = shell.rendererPtr();
         return metrics_mod.viewportColumns(r.width, self.gutter_width, r.char_width);
     }
 
     pub fn clusterOffsets(
         self: *EditorWidget,
-        r: *Renderer,
+        shell: *Shell,
         line_idx: usize,
         line_text: []const u8,
         out_slice: *?[]const u32,
         out_owned: *bool,
     ) void {
+        const r = shell.rendererPtr();
         const result = getClusterOffsets(self.cluster_cache, self.editor.allocator, r.terminal_font.hb_font, line_idx, line_text);
         out_slice.* = result.slice;
         out_owned.* = result.owned;
     }
 
-    fn visualLinesForLine(self: *EditorWidget, r: *Renderer, line_idx: usize, cols: usize) usize {
+    fn visualLinesForLine(self: *EditorWidget, shell: *Shell, line_idx: usize, cols: usize) usize {
+        const r = shell.rendererPtr();
         if (!self.wrap_enabled) return 1;
         var line_buf: [4096]u8 = undefined;
         const line_len = self.editor.lineLen(line_idx);
@@ -158,7 +161,7 @@ pub const EditorWidget = struct {
 
     pub fn handleMouseClick(
         self: *EditorWidget,
-        r: *Renderer,
+        shell: *Shell,
         x: f32,
         y: f32,
         width: f32,
@@ -166,12 +169,12 @@ pub const EditorWidget = struct {
         mouse_x: f32,
         mouse_y: f32,
     ) bool {
-        return input_mod.handleMouseClick(self, r, x, y, width, height, mouse_x, mouse_y);
+        return input_mod.handleMouseClick(self, shell, x, y, width, height, mouse_x, mouse_y);
     }
 
     pub fn cursorFromMouse(
         self: *EditorWidget,
-        r: *Renderer,
+        shell: *Shell,
         x: f32,
         y: f32,
         width: f32,
@@ -180,6 +183,7 @@ pub const EditorWidget = struct {
         mouse_y: f32,
         clamp: bool,
     ) ?types.CursorPos {
+        const r = shell.rendererPtr();
         self.gutter_width = 50 * r.uiScaleFactor();
         if (width <= 0 or height <= 0) return null;
         if (self.editor.lineCount() == 0) return null;
@@ -193,7 +197,7 @@ pub const EditorWidget = struct {
             if (mouse_y < y or mouse_y > y + height) return null;
         }
         const line_offset = @as(usize, @intFromFloat((local_y - y) / r.char_height));
-        const line = self.lineForVisualRow(r, line_offset) orelse return null;
+        const line = self.lineForVisualRow(shell, line_offset) orelse return null;
 
         const text_start_x = x + self.gutter_width + 8 * r.uiScaleFactor();
         var col: usize = 0;
@@ -246,9 +250,9 @@ pub const EditorWidget = struct {
 
     const VisualLinePos = scroll_mod.VisualLinePos;
 
-    fn lineForVisualRow(self: *EditorWidget, r: *Renderer, visual_row: usize) ?VisualLinePos {
-        const cols = self.viewportColumns(r);
-        var ctx = VisualLinesCtx{ .widget = self, .r = r };
+    fn lineForVisualRow(self: *EditorWidget, shell: *Shell, visual_row: usize) ?VisualLinePos {
+        const cols = self.viewportColumns(shell);
+        var ctx = VisualLinesCtx{ .widget = self, .r = shell };
         return scroll_mod.lineForVisualRow(
             self.editor,
             visual_row,
@@ -260,39 +264,40 @@ pub const EditorWidget = struct {
     }
 
     /// Handle input, returns true if any input was processed
-    pub fn handleInput(self: *EditorWidget, r: *Renderer, height: f32) !bool {
-        return input_mod.handleInput(self, r, height);
+    pub fn handleInput(self: *EditorWidget, shell: *Shell, height: f32) !bool {
+        return input_mod.handleInput(self, shell, height);
     }
 
     pub fn handleHorizontalScrollbarInput(
         self: *EditorWidget,
-        r: *Renderer,
+        shell: *Shell,
         x: f32,
         y: f32,
         width: f32,
         height: f32,
-        mouse: renderer_mod.MousePos,
+        mouse: app_shell.MousePos,
         dragging: *bool,
         grab_offset: *f32,
     ) bool {
-        return input_mod.handleHorizontalScrollbarInput(self, r, x, y, width, height, mouse, dragging, grab_offset);
+        return input_mod.handleHorizontalScrollbarInput(self, shell, x, y, width, height, mouse, dragging, grab_offset);
     }
 
     pub fn handleVerticalScrollbarInput(
         self: *EditorWidget,
-        r: *Renderer,
+        shell: *Shell,
         x: f32,
         y: f32,
         width: f32,
         height: f32,
-        mouse: renderer_mod.MousePos,
+        mouse: app_shell.MousePos,
         dragging: *bool,
         grab_offset: *f32,
     ) bool {
-        return input_mod.handleVerticalScrollbarInput(self, r, x, y, width, height, mouse, dragging, grab_offset);
+        return input_mod.handleVerticalScrollbarInput(self, shell, x, y, width, height, mouse, dragging, grab_offset);
     }
 
-    pub fn ensureCursorVisible(self: *EditorWidget, r: *Renderer, height: f32) void {
+    pub fn ensureCursorVisible(self: *EditorWidget, shell: *Shell, height: f32) void {
+        const r = shell.rendererPtr();
         const line_count = self.editor.lineCount();
         if (line_count == 0) return;
         const visible_lines = @max(@as(usize, 1), @as(usize, @intFromFloat(height / r.char_height)));
@@ -303,15 +308,15 @@ pub const EditorWidget = struct {
             } else if (self.editor.cursor.line >= self.editor.scroll_line + visible_lines) {
                 self.editor.scroll_line = self.editor.cursor.line - (visible_lines - 1);
             }
-            self.ensureCursorVisibleHorizontal(r);
+            self.ensureCursorVisibleHorizontal(shell);
             self.editor.scroll_row_offset = 0;
             return;
         }
 
-        const cols = self.viewportColumns(r);
+        const cols = self.viewportColumns(shell);
         if (cols == 0) return;
-        const cursor_seg = self.cursorSegmentForLine(r, self.editor.cursor.line, cols) orelse return;
-        const offset = self.cursorRowOffset(r, self.editor.cursor.line, cursor_seg, cols);
+        const cursor_seg = self.cursorSegmentForLine(shell, self.editor.cursor.line, cols) orelse return;
+        const offset = self.cursorRowOffset(shell, self.editor.cursor.line, cursor_seg, cols);
         if (offset < 0) {
             self.editor.scroll_line = self.editor.cursor.line;
             self.editor.scroll_row_offset = cursor_seg;
@@ -319,14 +324,14 @@ pub const EditorWidget = struct {
         }
         if (offset >= @as(i32, @intCast(visible_lines))) {
             const delta = offset - @as(i32, @intCast(visible_lines - 1));
-            self.scrollVisual(r, delta);
+            self.scrollVisual(shell, delta);
         }
     }
 
-    fn cursorSegmentForLine(self: *EditorWidget, r: *Renderer, line_idx: usize, cols: usize) ?usize {
+    fn cursorSegmentForLine(self: *EditorWidget, shell: *Shell, line_idx: usize, cols: usize) ?usize {
         var scratch_buf: [4096]u8 = undefined;
         var scratch = LineScratch{ .buf = scratch_buf[0..] };
-        var ctx = CursorLineCtx{ .widget = self, .r = r };
+        var ctx = CursorLineCtx{ .widget = self, .r = shell };
         const provider = LineProvider{
             .ctx = &ctx,
             .getLineText = cursorLineText,
@@ -337,8 +342,9 @@ pub const EditorWidget = struct {
         return cursor_mod.cursorSegmentForLine(self.editor, line_idx, cols, &provider, &scratch);
     }
 
-    fn ensureCursorVisibleHorizontal(self: *EditorWidget, r: *Renderer) void {
-        const cols = self.viewportColumns(r);
+    fn ensureCursorVisibleHorizontal(self: *EditorWidget, shell: *Shell) void {
+        const r = shell.rendererPtr();
+        const cols = self.viewportColumns(shell);
         if (cols == 0) return;
         const line_idx = self.editor.cursor.line;
         if (line_idx >= self.editor.lineCount()) return;
@@ -379,9 +385,10 @@ pub const EditorWidget = struct {
         self.editor.scroll_col = scroll_col;
     }
 
-    pub fn scrollHorizontal(self: *EditorWidget, r: *Renderer, delta_cols: i32) void {
+    pub fn scrollHorizontal(self: *EditorWidget, shell: *Shell, delta_cols: i32) void {
         if (delta_cols == 0) return;
-        const cols = self.viewportColumns(r);
+        const r = shell.rendererPtr();
+        const cols = self.viewportColumns(shell);
         if (cols == 0) return;
         const line_idx = self.editor.cursor.line;
         if (line_idx >= self.editor.lineCount()) return;
@@ -421,8 +428,8 @@ pub const EditorWidget = struct {
         self.editor.scroll_col = next;
     }
 
-    fn cursorRowOffset(self: *EditorWidget, r: *Renderer, cursor_line: usize, cursor_seg: usize, cols: usize) i32 {
-        var ctx = VisualLinesCtx{ .widget = self, .r = r };
+    fn cursorRowOffset(self: *EditorWidget, shell: *Shell, cursor_line: usize, cursor_seg: usize, cols: usize) i32 {
+        var ctx = VisualLinesCtx{ .widget = self, .r = shell };
         return scroll_mod.cursorRowOffset(
             self.editor,
             cursor_line,
@@ -433,9 +440,9 @@ pub const EditorWidget = struct {
         );
     }
 
-    pub fn scrollVisual(self: *EditorWidget, r: *Renderer, delta_rows: i32) void {
-        const cols = self.viewportColumns(r);
-        var ctx = VisualLinesCtx{ .widget = self, .r = r };
+    pub fn scrollVisual(self: *EditorWidget, shell: *Shell, delta_rows: i32) void {
+        const cols = self.viewportColumns(shell);
+        var ctx = VisualLinesCtx{ .widget = self, .r = shell };
         scroll_mod.scrollVisual(
             self.editor,
             delta_rows,
@@ -446,9 +453,9 @@ pub const EditorWidget = struct {
         );
     }
 
-    pub fn moveCursorVisual(self: *EditorWidget, r: *Renderer, delta: i32) bool {
-        const cols = self.viewportColumns(r);
-        var ctx = CursorLineCtx{ .widget = self, .r = r };
+    pub fn moveCursorVisual(self: *EditorWidget, shell: *Shell, delta: i32) bool {
+        const cols = self.viewportColumns(shell);
+        var ctx = CursorLineCtx{ .widget = self, .r = shell };
         const provider = LineProvider{
             .ctx = &ctx,
             .getLineText = cursorLineText,

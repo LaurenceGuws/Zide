@@ -1,6 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const renderer_mod = @import("../renderer.zig");
+const app_shell = @import("../../app_shell.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 const app_logger = @import("../../app_logger.zig");
 
@@ -8,8 +8,8 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
-const Renderer = renderer_mod.Renderer;
-const Color = renderer_mod.Color;
+const Shell = app_shell.Shell;
+const Color = app_shell.Color;
 const TerminalSession = terminal_mod.TerminalSession;
 const CursorPos = terminal_mod.CursorPos;
 const Cell = terminal_mod.Cell;
@@ -119,12 +119,13 @@ pub const TerminalWidget = struct {
         return std.fs.path.join(allocator, &.{ cwd, uri }) catch null;
     }
 
-    pub fn draw(self: *TerminalWidget, r: *Renderer, x: f32, y: f32, width: f32, height: f32) void {
+    pub fn draw(self: *TerminalWidget, shell: *Shell, x: f32, y: f32, width: f32, height: f32) void {
+        const r = shell.rendererPtr();
         self.session.lock();
         const snapshot = self.session.snapshot();
         const alt_exit = self.session.alt_last_active and !snapshot.alt_active;
         self.session.alt_last_active = snapshot.alt_active;
-        const draw_start_time = if (alt_exit) renderer_mod.getTime() else 0;
+        const draw_start_time = if (alt_exit) app_shell.getTime() else 0;
         const rows = snapshot.rows;
         const cols = snapshot.cols;
         const history_len = self.session.scrollbackCount();
@@ -231,7 +232,7 @@ pub const TerminalWidget = struct {
         const scrollbar_y = y;
         const scrollbar_h = height;
         const mouse = r.getMousePos();
-        const ctrl = r.isKeyDown(renderer_mod.KEY_LEFT_CONTROL) or r.isKeyDown(renderer_mod.KEY_RIGHT_CONTROL);
+        const ctrl = r.isKeyDown(app_shell.KEY_LEFT_CONTROL) or r.isKeyDown(app_shell.KEY_RIGHT_CONTROL);
         var hover_row: isize = -1;
         var hover_col: isize = -1;
         var hover_link_id: u32 = 0;
@@ -270,7 +271,7 @@ pub const TerminalWidget = struct {
 
         const drawRowBackgrounds = struct {
             fn render(
-                renderer: *Renderer,
+                renderer: *Shell,
                 snapshot_cells: []const Cell,
                 cols_count: usize,
                 row_idx: usize,
@@ -280,8 +281,9 @@ pub const TerminalWidget = struct {
                 base_y_local: f32,
                 padding_x_i: i32,
             ) void {
-                const cell_w_i: i32 = @intFromFloat(std.math.round(renderer.terminal_cell_width));
-                const cell_h_i: i32 = @intFromFloat(std.math.round(renderer.terminal_cell_height));
+                const rr = renderer.rendererPtr();
+                const cell_w_i: i32 = @intFromFloat(std.math.round(rr.terminal_cell_width));
+                const cell_h_i: i32 = @intFromFloat(std.math.round(rr.terminal_cell_height));
                 const base_x_i: i32 = @intFromFloat(std.math.round(base_x_local));
                 const base_y_i: i32 = @intFromFloat(std.math.round(base_y_local));
 
@@ -311,10 +313,10 @@ pub const TerminalWidget = struct {
                         .a = cell.attrs.bg.a,
                     };
                     if (cell.attrs.link_id != 0) {
-                        fg = renderer.theme.link;
+                        fg = rr.theme.link;
                     }
 
-                    renderer.drawRect(
+                    rr.drawRect(
                         cell_x_i,
                         cell_y_i,
                         cell_w_i_scaled,
@@ -334,7 +336,7 @@ pub const TerminalWidget = struct {
                         .g = last_cell.attrs.bg.g,
                         .b = last_cell.attrs.bg.b,
                     };
-                    renderer.drawRect(
+                    rr.drawRect(
                         base_x_i + @as(i32, @intCast(cols_count)) * cell_w_i,
                         base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i,
                         padding_x_i,
@@ -351,7 +353,7 @@ pub const TerminalWidget = struct {
 
         const drawRowGlyphs = struct {
             fn render(
-                renderer: *Renderer,
+                renderer: *Shell,
                 snapshot_cells: []const Cell,
                 cols_count: usize,
                 row_idx: usize,
@@ -363,8 +365,9 @@ pub const TerminalWidget = struct {
                 hover_link: u32,
             ) void {
                 _ = padding_x_i;
-                const cell_w_i: i32 = @intFromFloat(std.math.round(renderer.terminal_cell_width));
-                const cell_h_i: i32 = @intFromFloat(std.math.round(renderer.terminal_cell_height));
+                const rr = renderer.rendererPtr();
+                const cell_w_i: i32 = @intFromFloat(std.math.round(rr.terminal_cell_width));
+                const cell_h_i: i32 = @intFromFloat(std.math.round(rr.terminal_cell_height));
                 const base_x_i: i32 = @intFromFloat(std.math.round(base_x_local));
                 const base_y_i: i32 = @intFromFloat(std.math.round(base_y_local));
 
@@ -412,7 +415,7 @@ pub const TerminalWidget = struct {
                         break :blk true;
                     };
 
-                    renderer.drawTerminalCell(
+                    rr.drawTerminalCell(
                         cell.codepoint,
                         @as(f32, @floatFromInt(cell_x_i)),
                         @as(f32, @floatFromInt(cell_y_i)),
@@ -462,18 +465,18 @@ pub const TerminalWidget = struct {
                     r.drawRect(0, 0, texture_w, texture_h, bg);
                     var row: usize = 0;
                     while (row < rows) : (row += 1) {
-                        drawRowBackgrounds(r, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i);
+                        drawRowBackgrounds(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i);
                     }
                     if (has_kitty) {
                         self.cleanupKittyTextures(self.kitty_images_view.items);
-                        self.drawKittyImages(r, base_x_local, base_y_local, false, start_line, rows, cols);
+                        self.drawKittyImages(shell, base_x_local, base_y_local, false, start_line, rows, cols);
                     }
                     row = 0;
                     while (row < rows) : (row += 1) {
-                        drawRowGlyphs(r, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id);
+                        drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id);
                     }
                     if (has_kitty) {
-                        self.drawKittyImages(r, base_x_local, base_y_local, true, start_line, rows, cols);
+                        self.drawKittyImages(shell, base_x_local, base_y_local, true, start_line, rows, cols);
                     }
                 } else if (needs_partial) {
                     var row: usize = 0;
@@ -481,15 +484,15 @@ pub const TerminalWidget = struct {
                         if (row < view_dirty_rows.len and view_dirty_rows[row]) {
                             const draw_start: usize = 0;
                             const draw_end: usize = cols - 1;
-                            drawRowBackgrounds(r, view_cells, cols, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
-                            drawRowGlyphs(r, view_cells, cols, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
+                            drawRowBackgrounds(shell, view_cells, cols, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                            drawRowGlyphs(shell, view_cells, cols, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
                             if (row > 0) {
-                                drawRowBackgrounds(r, view_cells, cols, row - 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
-                                drawRowGlyphs(r, view_cells, cols, row - 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
+                                drawRowBackgrounds(shell, view_cells, cols, row - 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                                drawRowGlyphs(shell, view_cells, cols, row - 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
                             }
                             if (row + 1 < rows) {
-                                drawRowBackgrounds(r, view_cells, cols, row + 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
-                                drawRowGlyphs(r, view_cells, cols, row + 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
+                                drawRowBackgrounds(shell, view_cells, cols, row + 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                                drawRowGlyphs(shell, view_cells, cols, row + 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
                             }
                         }
                     }
@@ -722,7 +725,7 @@ pub const TerminalWidget = struct {
         }
 
         if (alt_exit) {
-            const elapsed_ms = (renderer_mod.getTime() - draw_start_time) * 1000.0;
+            const elapsed_ms = (app_shell.getTime() - draw_start_time) * 1000.0;
             const exit_time_ms = self.session.alt_exit_time_ms.swap(-1, .acq_rel);
             const exit_to_draw_ms: f64 = if (exit_time_ms >= 0)
                 @as(f64, @floatFromInt(std.time.milliTimestamp() - exit_time_ms))
@@ -779,7 +782,7 @@ pub const TerminalWidget = struct {
 
     fn drawKittyImages(
         self: *TerminalWidget,
-        r: *Renderer,
+        shell: *Shell,
         base_x: f32,
         base_y: f32,
         above_text: bool,
@@ -787,6 +790,7 @@ pub const TerminalWidget = struct {
         rows: usize,
         cols: usize,
     ) void {
+        const r = shell.rendererPtr();
         const cell_w: f32 = r.terminal_cell_width;
         const cell_h: f32 = r.terminal_cell_height;
         const start_line_i: i32 = @intCast(start_line);
@@ -898,7 +902,7 @@ pub const TerminalWidget = struct {
     /// Handle input, returns true if any input was processed
     pub fn handleInput(
         self: *TerminalWidget,
-        r: *Renderer,
+        shell: *Shell,
         x: f32,
         y: f32,
         width: f32,
@@ -907,6 +911,7 @@ pub const TerminalWidget = struct {
         scroll_dragging: *bool,
         scroll_grab_offset: *f32,
     ) !bool {
+        const r = shell.rendererPtr();
         self.session.lock();
         defer self.session.unlock();
         var handled = false;
@@ -927,10 +932,10 @@ pub const TerminalWidget = struct {
         const start_line = if (end_line > rows) end_line - rows else 0;
         const max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
 
-        const ctrl = r.isKeyDown(renderer_mod.KEY_LEFT_CONTROL) or r.isKeyDown(renderer_mod.KEY_RIGHT_CONTROL);
-        const shift = r.isKeyDown(renderer_mod.KEY_LEFT_SHIFT) or r.isKeyDown(renderer_mod.KEY_RIGHT_SHIFT);
-        const alt = r.isKeyDown(renderer_mod.KEY_LEFT_ALT) or r.isKeyDown(renderer_mod.KEY_RIGHT_ALT);
-        const super = r.isKeyDown(renderer_mod.KEY_LEFT_SUPER) or r.isKeyDown(renderer_mod.KEY_RIGHT_SUPER);
+        const ctrl = r.isKeyDown(app_shell.KEY_LEFT_CONTROL) or r.isKeyDown(app_shell.KEY_RIGHT_CONTROL);
+        const shift = r.isKeyDown(app_shell.KEY_LEFT_SHIFT) or r.isKeyDown(app_shell.KEY_RIGHT_SHIFT);
+        const alt = r.isKeyDown(app_shell.KEY_LEFT_ALT) or r.isKeyDown(app_shell.KEY_RIGHT_ALT);
+        const super = r.isKeyDown(app_shell.KEY_LEFT_SUPER) or r.isKeyDown(app_shell.KEY_RIGHT_SUPER);
         var mod: terminal_mod.Modifier = terminal_mod.VTERM_MOD_NONE;
         if (shift) mod |= terminal_mod.VTERM_MOD_SHIFT;
         if (alt) mod |= terminal_mod.VTERM_MOD_ALT;
@@ -946,7 +951,7 @@ pub const TerminalWidget = struct {
         }
         const mouse_reporting = allow_input and in_terminal and self.session.mouseReportingEnabled();
         var skip_mouse_click = false;
-        if (allow_input and in_terminal and ctrl and r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT)) {
+        if (allow_input and in_terminal and ctrl and r.isMouseButtonPressed(app_shell.MOUSE_LEFT)) {
             if (rows > 0 and cols > 0 and snapshot.cells.len >= rows * cols) {
                 const col = @as(usize, @intFromFloat((mouse.x - x) / r.terminal_cell_width));
                 const row = @as(usize, @intFromFloat((mouse.y - y) / r.terminal_cell_height));
@@ -986,9 +991,9 @@ pub const TerminalWidget = struct {
         }
 
         if (mouse_reporting and rows > 0 and cols > 0) {
-            const mouse_left_down = r.isMouseButtonDown(renderer_mod.MOUSE_LEFT);
-            const mouse_middle_down = r.isMouseButtonDown(renderer_mod.MOUSE_MIDDLE);
-            const mouse_right_down = r.isMouseButtonDown(renderer_mod.MOUSE_RIGHT);
+            const mouse_left_down = r.isMouseButtonDown(app_shell.MOUSE_LEFT);
+            const mouse_middle_down = r.isMouseButtonDown(app_shell.MOUSE_MIDDLE);
+            const mouse_right_down = r.isMouseButtonDown(app_shell.MOUSE_RIGHT);
             var buttons_down: u8 = 0;
             if (mouse_left_down) buttons_down |= 1;
             if (mouse_middle_down) buttons_down |= 2;
@@ -1016,33 +1021,33 @@ pub const TerminalWidget = struct {
                 }
             }
 
-            if (r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT) and !skip_mouse_click) {
+            if (r.isMouseButtonPressed(app_shell.MOUSE_LEFT) and !skip_mouse_click) {
                 if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .left, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
                     handled = true;
                 }
             }
-            if (r.isMouseButtonPressed(renderer_mod.MOUSE_MIDDLE)) {
+            if (r.isMouseButtonPressed(app_shell.MOUSE_MIDDLE)) {
                 if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .middle, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
                     handled = true;
                 }
             }
-            if (r.isMouseButtonPressed(renderer_mod.MOUSE_RIGHT)) {
+            if (r.isMouseButtonPressed(app_shell.MOUSE_RIGHT)) {
                 if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .right, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
                     handled = true;
                 }
             }
 
-            if (r.isMouseButtonReleased(renderer_mod.MOUSE_LEFT)) {
+            if (r.isMouseButtonReleased(app_shell.MOUSE_LEFT)) {
                 if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .left, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
                     handled = true;
                 }
             }
-            if (r.isMouseButtonReleased(renderer_mod.MOUSE_MIDDLE)) {
+            if (r.isMouseButtonReleased(app_shell.MOUSE_MIDDLE)) {
                 if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .middle, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
                     handled = true;
                 }
             }
-            if (r.isMouseButtonReleased(renderer_mod.MOUSE_RIGHT)) {
+            if (r.isMouseButtonReleased(app_shell.MOUSE_RIGHT)) {
                 if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .right, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
                     handled = true;
                 }
@@ -1069,127 +1074,127 @@ pub const TerminalWidget = struct {
             const applyTerminalKey = struct {
                 fn apply(widget: *TerminalWidget, key: c_int, key_mod: terminal_mod.Modifier) !bool {
                     switch (key) {
-                        renderer_mod.KEY_ENTER => {
+                        app_shell.KEY_ENTER => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_ENTER, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_BACKSPACE => {
+                        app_shell.KEY_BACKSPACE => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_BACKSPACE, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_TAB => {
+                        app_shell.KEY_TAB => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_TAB, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_ESCAPE => {
+                        app_shell.KEY_ESCAPE => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_ESCAPE, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_UP => {
+                        app_shell.KEY_UP => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_UP, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_DOWN => {
+                        app_shell.KEY_DOWN => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_DOWN, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_LEFT => {
+                        app_shell.KEY_LEFT => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_LEFT, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_RIGHT => {
+                        app_shell.KEY_RIGHT => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_RIGHT, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_HOME => {
+                        app_shell.KEY_HOME => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_HOME, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_END => {
+                        app_shell.KEY_END => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_END, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_PAGE_UP => {
+                        app_shell.KEY_PAGE_UP => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_PAGEUP, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_PAGE_DOWN => {
+                        app_shell.KEY_PAGE_DOWN => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_PAGEDOWN, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_INSERT => {
+                        app_shell.KEY_INSERT => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_INS, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_DELETE => {
+                        app_shell.KEY_DELETE => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_DEL, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_KP_0 => {
+                        app_shell.KEY_KP_0 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp0, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_KP_1 => {
+                        app_shell.KEY_KP_1 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp1, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_KP_2 => {
+                        app_shell.KEY_KP_2 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp2, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_KP_3 => {
+                        app_shell.KEY_KP_3 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp3, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_KP_4 => {
+                        app_shell.KEY_KP_4 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp4, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_KP_5 => {
+                        app_shell.KEY_KP_5 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp5, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_KP_6 => {
+                        app_shell.KEY_KP_6 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp6, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_KP_7 => {
+                        app_shell.KEY_KP_7 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp7, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_KP_8 => {
+                        app_shell.KEY_KP_8 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp8, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_KP_9 => {
+                        app_shell.KEY_KP_9 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp9, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_KP_DECIMAL => {
+                        app_shell.KEY_KP_DECIMAL => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_decimal, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_KP_DIVIDE => {
+                        app_shell.KEY_KP_DIVIDE => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_divide, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_KP_MULTIPLY => {
+                        app_shell.KEY_KP_MULTIPLY => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_multiply, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_KP_SUBTRACT => {
+                        app_shell.KEY_KP_SUBTRACT => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_subtract, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_KP_ADD => {
+                        app_shell.KEY_KP_ADD => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_add, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_KP_ENTER => {
+                        app_shell.KEY_KP_ENTER => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_enter, key_mod);
                             return true;
                         },
-                        renderer_mod.KEY_KP_EQUAL => {
+                        app_shell.KEY_KP_EQUAL => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_equal, key_mod);
                             return true;
                         },
@@ -1198,7 +1203,7 @@ pub const TerminalWidget = struct {
                 }
             }.apply;
 
-            if (ctrl and shift and r.isKeyPressed(renderer_mod.KEY_V) and in_terminal) {
+            if (ctrl and shift and r.isKeyPressed(app_shell.KEY_V) and in_terminal) {
                 if (r.getClipboardText()) |clip| {
                     clearLiveState(self);
                     if (self.session.bracketedPasteEnabled()) {
@@ -1221,7 +1226,7 @@ pub const TerminalWidget = struct {
                 }
             }
 
-            if (ctrl and shift and r.isKeyPressed(renderer_mod.KEY_C)) {
+            if (ctrl and shift and r.isKeyPressed(app_shell.KEY_C)) {
                 if (self.session.selectionState()) |selection| {
                     const sel_snapshot = self.session.snapshot();
                     const rows_snapshot = sel_snapshot.rows;
@@ -1310,37 +1315,37 @@ pub const TerminalWidget = struct {
                     }
                 }.apply;
                 const repeat_keys = [_]c_int{
-                    renderer_mod.KEY_ENTER,
-                    renderer_mod.KEY_BACKSPACE,
-                    renderer_mod.KEY_TAB,
-                    renderer_mod.KEY_ESCAPE,
-                    renderer_mod.KEY_UP,
-                    renderer_mod.KEY_DOWN,
-                    renderer_mod.KEY_LEFT,
-                    renderer_mod.KEY_RIGHT,
-                    renderer_mod.KEY_HOME,
-                    renderer_mod.KEY_END,
-                    renderer_mod.KEY_PAGE_UP,
-                    renderer_mod.KEY_PAGE_DOWN,
-                    renderer_mod.KEY_INSERT,
-                    renderer_mod.KEY_DELETE,
-                    renderer_mod.KEY_KP_0,
-                    renderer_mod.KEY_KP_1,
-                    renderer_mod.KEY_KP_2,
-                    renderer_mod.KEY_KP_3,
-                    renderer_mod.KEY_KP_4,
-                    renderer_mod.KEY_KP_5,
-                    renderer_mod.KEY_KP_6,
-                    renderer_mod.KEY_KP_7,
-                    renderer_mod.KEY_KP_8,
-                    renderer_mod.KEY_KP_9,
-                    renderer_mod.KEY_KP_DECIMAL,
-                    renderer_mod.KEY_KP_DIVIDE,
-                    renderer_mod.KEY_KP_MULTIPLY,
-                    renderer_mod.KEY_KP_SUBTRACT,
-                    renderer_mod.KEY_KP_ADD,
-                    renderer_mod.KEY_KP_ENTER,
-                    renderer_mod.KEY_KP_EQUAL,
+                    app_shell.KEY_ENTER,
+                    app_shell.KEY_BACKSPACE,
+                    app_shell.KEY_TAB,
+                    app_shell.KEY_ESCAPE,
+                    app_shell.KEY_UP,
+                    app_shell.KEY_DOWN,
+                    app_shell.KEY_LEFT,
+                    app_shell.KEY_RIGHT,
+                    app_shell.KEY_HOME,
+                    app_shell.KEY_END,
+                    app_shell.KEY_PAGE_UP,
+                    app_shell.KEY_PAGE_DOWN,
+                    app_shell.KEY_INSERT,
+                    app_shell.KEY_DELETE,
+                    app_shell.KEY_KP_0,
+                    app_shell.KEY_KP_1,
+                    app_shell.KEY_KP_2,
+                    app_shell.KEY_KP_3,
+                    app_shell.KEY_KP_4,
+                    app_shell.KEY_KP_5,
+                    app_shell.KEY_KP_6,
+                    app_shell.KEY_KP_7,
+                    app_shell.KEY_KP_8,
+                    app_shell.KEY_KP_9,
+                    app_shell.KEY_KP_DECIMAL,
+                    app_shell.KEY_KP_DIVIDE,
+                    app_shell.KEY_KP_MULTIPLY,
+                    app_shell.KEY_KP_SUBTRACT,
+                    app_shell.KEY_KP_ADD,
+                    app_shell.KEY_KP_ENTER,
+                    app_shell.KEY_KP_EQUAL,
                 };
                 const isRepeatKey = struct {
                     fn apply(keys: []const c_int, key: c_int) bool {
@@ -1368,54 +1373,54 @@ pub const TerminalWidget = struct {
                     if (ctrl or alt) {
                         var maybe_char: u32 = 0;
                         switch (key) {
-                            renderer_mod.KEY_A => maybe_char = if (shift) 'A' else 'a',
-                            renderer_mod.KEY_B => maybe_char = if (shift) 'B' else 'b',
-                            renderer_mod.KEY_C => maybe_char = if (shift) 'C' else 'c',
-                            renderer_mod.KEY_D => maybe_char = if (shift) 'D' else 'd',
-                            renderer_mod.KEY_E => maybe_char = if (shift) 'E' else 'e',
-                            renderer_mod.KEY_F => maybe_char = if (shift) 'F' else 'f',
-                            renderer_mod.KEY_G => maybe_char = if (shift) 'G' else 'g',
-                            renderer_mod.KEY_H => maybe_char = if (shift) 'H' else 'h',
-                            renderer_mod.KEY_I => maybe_char = if (shift) 'I' else 'i',
-                            renderer_mod.KEY_J => maybe_char = if (shift) 'J' else 'j',
-                            renderer_mod.KEY_K => maybe_char = if (shift) 'K' else 'k',
-                            renderer_mod.KEY_L => maybe_char = if (shift) 'L' else 'l',
-                            renderer_mod.KEY_M => maybe_char = if (shift) 'M' else 'm',
-                            renderer_mod.KEY_N => maybe_char = if (shift) 'N' else 'n',
-                            renderer_mod.KEY_O => maybe_char = if (shift) 'O' else 'o',
-                            renderer_mod.KEY_P => maybe_char = if (shift) 'P' else 'p',
-                            renderer_mod.KEY_Q => maybe_char = if (shift) 'Q' else 'q',
-                            renderer_mod.KEY_R => maybe_char = if (shift) 'R' else 'r',
-                            renderer_mod.KEY_S => maybe_char = if (shift) 'S' else 's',
-                            renderer_mod.KEY_T => maybe_char = if (shift) 'T' else 't',
-                            renderer_mod.KEY_U => maybe_char = if (shift) 'U' else 'u',
-                            renderer_mod.KEY_V => maybe_char = if (shift) 'V' else 'v',
-                            renderer_mod.KEY_W => maybe_char = if (shift) 'W' else 'w',
-                            renderer_mod.KEY_X => maybe_char = if (shift) 'X' else 'x',
-                            renderer_mod.KEY_Y => maybe_char = if (shift) 'Y' else 'y',
-                            renderer_mod.KEY_Z => maybe_char = if (shift) 'Z' else 'z',
-                            renderer_mod.KEY_ZERO => maybe_char = if (shift) ')' else '0',
-                            renderer_mod.KEY_ONE => maybe_char = if (shift) '!' else '1',
-                            renderer_mod.KEY_TWO => maybe_char = if (shift) '@' else '2',
-                            renderer_mod.KEY_THREE => maybe_char = if (shift) '#' else '3',
-                            renderer_mod.KEY_FOUR => maybe_char = if (shift) '$' else '4',
-                            renderer_mod.KEY_FIVE => maybe_char = if (shift) '%' else '5',
-                            renderer_mod.KEY_SIX => maybe_char = if (shift) '^' else '6',
-                            renderer_mod.KEY_SEVEN => maybe_char = if (shift) '&' else '7',
-                            renderer_mod.KEY_EIGHT => maybe_char = if (shift) '*' else '8',
-                            renderer_mod.KEY_NINE => maybe_char = if (shift) '(' else '9',
-                            renderer_mod.KEY_SPACE => maybe_char = ' ',
-                            renderer_mod.KEY_MINUS => maybe_char = if (shift) '_' else '-',
-                            renderer_mod.KEY_EQUAL => maybe_char = if (shift) '+' else '=',
-                            renderer_mod.KEY_LEFT_BRACKET => maybe_char = if (shift) '{' else '[',
-                            renderer_mod.KEY_RIGHT_BRACKET => maybe_char = if (shift) '}' else ']',
-                            renderer_mod.KEY_BACKSLASH => maybe_char = if (shift) '|' else '\\',
-                            renderer_mod.KEY_SEMICOLON => maybe_char = if (shift) ':' else ';',
-                            renderer_mod.KEY_APOSTROPHE => maybe_char = if (shift) '"' else '\'',
-                            renderer_mod.KEY_GRAVE => maybe_char = if (shift) '~' else '`',
-                            renderer_mod.KEY_COMMA => maybe_char = if (shift) '<' else ',',
-                            renderer_mod.KEY_PERIOD => maybe_char = if (shift) '>' else '.',
-                            renderer_mod.KEY_SLASH => maybe_char = if (shift) '?' else '/',
+                            app_shell.KEY_A => maybe_char = if (shift) 'A' else 'a',
+                            app_shell.KEY_B => maybe_char = if (shift) 'B' else 'b',
+                            app_shell.KEY_C => maybe_char = if (shift) 'C' else 'c',
+                            app_shell.KEY_D => maybe_char = if (shift) 'D' else 'd',
+                            app_shell.KEY_E => maybe_char = if (shift) 'E' else 'e',
+                            app_shell.KEY_F => maybe_char = if (shift) 'F' else 'f',
+                            app_shell.KEY_G => maybe_char = if (shift) 'G' else 'g',
+                            app_shell.KEY_H => maybe_char = if (shift) 'H' else 'h',
+                            app_shell.KEY_I => maybe_char = if (shift) 'I' else 'i',
+                            app_shell.KEY_J => maybe_char = if (shift) 'J' else 'j',
+                            app_shell.KEY_K => maybe_char = if (shift) 'K' else 'k',
+                            app_shell.KEY_L => maybe_char = if (shift) 'L' else 'l',
+                            app_shell.KEY_M => maybe_char = if (shift) 'M' else 'm',
+                            app_shell.KEY_N => maybe_char = if (shift) 'N' else 'n',
+                            app_shell.KEY_O => maybe_char = if (shift) 'O' else 'o',
+                            app_shell.KEY_P => maybe_char = if (shift) 'P' else 'p',
+                            app_shell.KEY_Q => maybe_char = if (shift) 'Q' else 'q',
+                            app_shell.KEY_R => maybe_char = if (shift) 'R' else 'r',
+                            app_shell.KEY_S => maybe_char = if (shift) 'S' else 's',
+                            app_shell.KEY_T => maybe_char = if (shift) 'T' else 't',
+                            app_shell.KEY_U => maybe_char = if (shift) 'U' else 'u',
+                            app_shell.KEY_V => maybe_char = if (shift) 'V' else 'v',
+                            app_shell.KEY_W => maybe_char = if (shift) 'W' else 'w',
+                            app_shell.KEY_X => maybe_char = if (shift) 'X' else 'x',
+                            app_shell.KEY_Y => maybe_char = if (shift) 'Y' else 'y',
+                            app_shell.KEY_Z => maybe_char = if (shift) 'Z' else 'z',
+                            app_shell.KEY_ZERO => maybe_char = if (shift) ')' else '0',
+                            app_shell.KEY_ONE => maybe_char = if (shift) '!' else '1',
+                            app_shell.KEY_TWO => maybe_char = if (shift) '@' else '2',
+                            app_shell.KEY_THREE => maybe_char = if (shift) '#' else '3',
+                            app_shell.KEY_FOUR => maybe_char = if (shift) '$' else '4',
+                            app_shell.KEY_FIVE => maybe_char = if (shift) '%' else '5',
+                            app_shell.KEY_SIX => maybe_char = if (shift) '^' else '6',
+                            app_shell.KEY_SEVEN => maybe_char = if (shift) '&' else '7',
+                            app_shell.KEY_EIGHT => maybe_char = if (shift) '*' else '8',
+                            app_shell.KEY_NINE => maybe_char = if (shift) '(' else '9',
+                            app_shell.KEY_SPACE => maybe_char = ' ',
+                            app_shell.KEY_MINUS => maybe_char = if (shift) '_' else '-',
+                            app_shell.KEY_EQUAL => maybe_char = if (shift) '+' else '=',
+                            app_shell.KEY_LEFT_BRACKET => maybe_char = if (shift) '{' else '[',
+                            app_shell.KEY_RIGHT_BRACKET => maybe_char = if (shift) '}' else ']',
+                            app_shell.KEY_BACKSLASH => maybe_char = if (shift) '|' else '\\',
+                            app_shell.KEY_SEMICOLON => maybe_char = if (shift) ':' else ';',
+                            app_shell.KEY_APOSTROPHE => maybe_char = if (shift) '"' else '\'',
+                            app_shell.KEY_GRAVE => maybe_char = if (shift) '~' else '`',
+                            app_shell.KEY_COMMA => maybe_char = if (shift) '<' else ',',
+                            app_shell.KEY_PERIOD => maybe_char = if (shift) '>' else '.',
+                            app_shell.KEY_SLASH => maybe_char = if (shift) '?' else '/',
                             else => {},
                         }
                         if (maybe_char != 0) {
@@ -1451,7 +1456,7 @@ pub const TerminalWidget = struct {
             }
 
             if (!mouse_reporting and in_terminal) {
-                if (r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT)) {
+                if (r.isMouseButtonPressed(app_shell.MOUSE_LEFT)) {
                     const local_x = mouse.x - x;
                     const local_y = mouse.y - y;
                     const col = @as(usize, @intFromFloat(local_x / r.terminal_cell_width));
@@ -1467,7 +1472,7 @@ pub const TerminalWidget = struct {
                     }
                 }
 
-                if (r.isMouseButtonDown(renderer_mod.MOUSE_LEFT)) {
+                if (r.isMouseButtonDown(app_shell.MOUSE_LEFT)) {
                     if (self.session.selectionState()) |_| {
                         const local_x = mouse.x - x;
                         const local_y = mouse.y - y;
@@ -1494,7 +1499,7 @@ pub const TerminalWidget = struct {
                     }
                 }
 
-                if (r.isMouseButtonReleased(renderer_mod.MOUSE_LEFT)) {
+                if (r.isMouseButtonReleased(app_shell.MOUSE_LEFT)) {
                     if (self.session.selectionState() != null) {
                         self.session.finishSelection();
                         handled = true;
@@ -1503,7 +1508,7 @@ pub const TerminalWidget = struct {
             }
 
             if (!mouse_reporting and in_terminal) {
-                if (r.isMouseButtonPressed(renderer_mod.MOUSE_MIDDLE)) {
+                if (r.isMouseButtonPressed(app_shell.MOUSE_MIDDLE)) {
                     if (r.getClipboardText()) |clip| {
                         if (self.session.bracketedPasteEnabled()) {
                             try self.session.sendText("\x1b[200~");
@@ -1524,7 +1529,7 @@ pub const TerminalWidget = struct {
 
             const mouse_on_scrollbar = mouse.x >= scrollbar_x and mouse.x <= scrollbar_x + scrollbar_w and mouse.y >= scrollbar_y and mouse.y <= scrollbar_y + scrollbar_h;
             if (!mouse_reporting and in_terminal and mouse_on_scrollbar) {
-                if (r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT)) {
+                if (r.isMouseButtonPressed(app_shell.MOUSE_LEFT)) {
                     scroll_dragging.* = true;
                     const track_h = scrollbar_h;
                     const min_thumb_h: f32 = 18;
@@ -1545,7 +1550,7 @@ pub const TerminalWidget = struct {
             }
 
             if (!mouse_reporting and scroll_dragging.*) {
-                if (r.isMouseButtonDown(renderer_mod.MOUSE_LEFT)) {
+                if (r.isMouseButtonDown(app_shell.MOUSE_LEFT)) {
                     const track_h = scrollbar_h;
                     const min_thumb_h: f32 = 18;
                     const thumb_h = if (total_lines > rows)

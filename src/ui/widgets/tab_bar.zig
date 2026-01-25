@@ -1,9 +1,9 @@
 const std = @import("std");
-const renderer_mod = @import("../renderer.zig");
+const app_shell = @import("../../app_shell.zig");
 const common = @import("common.zig");
 
-const Renderer = renderer_mod.Renderer;
-const Color = renderer_mod.Color;
+const Shell = app_shell.Shell;
+const Color = app_shell.Color;
 const Tooltip = common.Tooltip;
 
 pub const TabBar = struct {
@@ -45,16 +45,16 @@ pub const TabBar = struct {
         });
     }
 
-    pub fn draw(self: *TabBar, r: *Renderer, x: f32, y: f32, width: f32) void {
+    pub fn draw(self: *TabBar, shell: *Shell, x: f32, y: f32, width: f32) void {
         // Draw tab bar background
-        r.drawRect(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height), Color{ .r = 30, .g = 31, .b = 41 });
+        shell.drawRect(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height), Color{ .r = 30, .g = 31, .b = 41 });
 
         if (width <= 0 or self.height <= 0) return;
 
-        r.beginClip(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height));
+        shell.beginClip(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height));
 
         var tooltip: ?Tooltip = null;
-        const mouse = r.getMousePos();
+        const mouse = shell.getMousePos();
 
         var cursor_x: f32 = x;
         for (self.tabs.items, 0..) |tab, i| {
@@ -65,27 +65,27 @@ pub const TabBar = struct {
                 Color.bg
             else
                 Color{ .r = 35, .g = 36, .b = 48 };
-            r.drawRect(@intFromFloat(cursor_x), @intFromFloat(y), @intFromFloat(self.tab_width), @intFromFloat(self.height), bg);
+            shell.drawRect(@intFromFloat(cursor_x), @intFromFloat(y), @intFromFloat(self.tab_width), @intFromFloat(self.height), bg);
 
             // Tab border
             if (is_active) {
-                const border_h: f32 = @max(1.0, r.uiScaleFactor() * 2.0);
-                r.drawRect(@intFromFloat(cursor_x), @intFromFloat(y + self.height - border_h), @intFromFloat(self.tab_width), @intFromFloat(border_h), Color.purple);
+                const border_h: f32 = @max(1.0, shell.uiScaleFactor() * 2.0);
+                shell.drawRect(@intFromFloat(cursor_x), @intFromFloat(y + self.height - border_h), @intFromFloat(self.tab_width), @intFromFloat(border_h), Color.purple);
             }
 
             // Tab title
-            const title_x = cursor_x + 8 * r.uiScaleFactor();
-            const title_y = y + (self.height - r.char_height) / 2;
+            const title_x = cursor_x + 8 * shell.uiScaleFactor();
+            const title_y = y + (self.height - shell.charHeight()) / 2;
 
             // Modified indicator
             if (tab.modified) {
-                r.drawText("* ", title_x, title_y, Color.orange);
+                shell.drawText("* ", title_x, title_y, Color.orange);
             }
 
-            const prefix_width: f32 = if (tab.modified) r.char_width * 2 else 0;
-            const title_max = self.tab_width - 16 * r.uiScaleFactor() - prefix_width;
+            const prefix_width: f32 = if (tab.modified) shell.charWidth() * 2 else 0;
+            const title_max = self.tab_width - 16 * shell.uiScaleFactor() - prefix_width;
             const result = common.drawTruncatedText(
-                r,
+                shell,
                 tab.title,
                 title_x + prefix_width,
                 title_y,
@@ -101,10 +101,10 @@ pub const TabBar = struct {
             cursor_x += self.tab_width + self.tab_spacing;
         }
 
-        r.endClip();
+        shell.endClip();
 
         if (tooltip) |tip| {
-            common.drawTooltip(r, tip.text, tip.x, tip.y);
+            common.drawTooltip(shell, tip.text, tip.x, tip.y);
         }
     }
 
