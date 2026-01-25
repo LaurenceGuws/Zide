@@ -4,15 +4,12 @@ const app_logger = @import("../app_logger.zig");
 
 const TextStore = text_store.TextStore;
 
-const c = @cImport({
-    @cInclude("tree_sitter/api.h");
-});
+const ts_api = @import("treesitter_api.zig");
+const c = ts_api.c_api;
 
-pub const TSLanguage = c.TSLanguage;
+pub const TSLanguage = ts_api.TSLanguage;
 
 extern "c" fn tree_sitter_zig() *const c.TSLanguage;
-extern "c" fn tree_sitter_bash() *const c.TSLanguage;
-extern "c" fn tree_sitter_java() *const c.TSLanguage;
 
 pub const TokenKind = enum(u8) {
     plain = 0,
@@ -132,21 +129,17 @@ pub fn createZigHighlighter(
     allocator: std.mem.Allocator,
     text_buffer: *TextStore,
 ) !*SyntaxHighlighter {
-    return createHighlighter(allocator, text_buffer, "zig", tree_sitter_zig());
+    return createHighlighter(allocator, text_buffer, "zig", tree_sitter_zig(), null);
 }
 
-pub fn createBashHighlighter(
+pub fn createHighlighterForLanguage(
     allocator: std.mem.Allocator,
     text_buffer: *TextStore,
+    language_name: []const u8,
+    language: *const c.TSLanguage,
+    query_path: ?[]const u8,
 ) !*SyntaxHighlighter {
-    return createHighlighter(allocator, text_buffer, "bash", tree_sitter_bash());
-}
-
-pub fn createJavaHighlighter(
-    allocator: std.mem.Allocator,
-    text_buffer: *TextStore,
-) !*SyntaxHighlighter {
-    return createHighlighter(allocator, text_buffer, "java", tree_sitter_java());
+    return createHighlighter(allocator, text_buffer, language_name, language, query_path);
 }
 
 pub fn createHighlighter(
@@ -154,6 +147,7 @@ pub fn createHighlighter(
     text_buffer: *TextStore,
     language_name: []const u8,
     language: *const c.TSLanguage,
+    query_path: ?[]const u8,
 ) !*SyntaxHighlighter {
     const parser = c.ts_parser_new() orelse return error.InitFailed;
     errdefer c.ts_parser_delete(parser);
@@ -170,6 +164,7 @@ pub fn createHighlighter(
         language_name,
         "highlights",
         language,
+        query_path,
     ) orelse return error.InitFailed;
 
     const self = try allocator.create(SyntaxHighlighter);
@@ -266,14 +261,19 @@ const QueryCache = struct {
         language_name: []const u8,
         query_name: []const u8,
         language: *const c.TSLanguage,
+        query_path: ?[]const u8,
     ) !?*QueryBundle {
-        const key = try std.fmt.allocPrint(self.allocator, "{s}:{s}", .{ language_name, query_name });
+        const key = try std.fmt.allocPrint(self.allocator, "{s}:{s}:{s}", .{
+            language_name,
+            query_name,
+            query_path orelse "",
+        });
         if (self.map.get(key)) |bundle| {
             self.allocator.free(key);
             return bundle;
         }
 
-        const query_text = try loadQueryText(self.allocator, language_name, query_name) orelse {
+        const query_text = try loadQueryText(self.allocator, language_name, query_name, query_path) orelse {
             self.allocator.free(key);
             return null;
         };
@@ -337,7 +337,16 @@ fn loadQueryText(
     allocator: std.mem.Allocator,
     language_name: []const u8,
     query_name: []const u8,
+    query_path: ?[]const u8,
 ) !?[]u8 {
+    if (query_path) |path| {
+        if (try readFileAbsoluteIfExists(allocator, path)) |data| {
+            const log = app_logger.logger("editor.highlight");
+            log.logf("query source path={s} bytes={d}", .{ path, data.len });
+            return data;
+        }
+    }
+
     const rel_path = try std.fmt.allocPrint(allocator, "queries/{s}/{s}.scm", .{ language_name, query_name });
     defer allocator.free(rel_path);
 
@@ -397,12 +406,16 @@ fn readFileJoinedIfExists(allocator: std.mem.Allocator, parts: []const []const u
 }
 
 fn readFileAbsoluteIfExists(allocator: std.mem.Allocator, path: []const u8) !?[]u8 {
-    const file = std.fs.openFileAbsolute(path, .{}) catch |err| switch (err) {
+    const file = if (std.fs.path.isAbsolute(path))
+        std.fs.openFileAbsolute(path, .{})
+    else
+        std.fs.cwd().openFile(path, .{});
+    const handle = file catch |err| switch (err) {
         error.FileNotFound => return null,
         else => return err,
     };
-    defer file.close();
-    return try file.readToEndAlloc(allocator, std.math.maxInt(usize));
+    defer handle.close();
+    return try handle.readToEndAlloc(allocator, std.math.maxInt(usize));
 }
 
 /// Default Zig highlights query

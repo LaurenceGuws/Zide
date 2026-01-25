@@ -44,41 +44,6 @@ pub fn build(b: *std.Build) void {
     ts_zig.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
     ts_zig.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
 
-    const ts_bash = b.addLibrary(.{
-        .name = "tree-sitter-bash",
-        .linkage = .static,
-        .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-    ts_bash.addCSourceFile(.{
-        .file = b.path("vendor/tree-sitter-bash/src/parser.c"),
-        .flags = &.{"-std=c99"},
-    });
-    ts_bash.addCSourceFile(.{
-        .file = b.path("vendor/tree-sitter-bash/src/scanner.c"),
-        .flags = &.{"-std=c99"},
-    });
-    ts_bash.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
-    ts_bash.addIncludePath(b.path("vendor/tree-sitter-bash/src"));
-
-    const ts_java = b.addLibrary(.{
-        .name = "tree-sitter-java",
-        .linkage = .static,
-        .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-    ts_java.addCSourceFile(.{
-        .file = b.path("vendor/tree-sitter-java/src/parser.c"),
-        .flags = &.{"-std=c99"},
-    });
-    ts_java.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
-    ts_java.addIncludePath(b.path("vendor/tree-sitter-java/src"));
 
     // ─────────────────────────────────────────────────────────────────────────
     // Raylib (built from source)
@@ -193,8 +158,6 @@ pub fn build(b: *std.Build) void {
     exe.linkLibrary(raylib);
     exe.linkLibrary(treesitter);
     exe.linkLibrary(ts_zig);
-    exe.linkLibrary(ts_bash);
-    exe.linkLibrary(ts_java);
     exe.linkSystemLibrary("freetype");
     exe.linkSystemLibrary("harfbuzz");
     exe.linkSystemLibrary("lua");
@@ -205,8 +168,6 @@ pub fn build(b: *std.Build) void {
     // Include paths for @cImport
     exe.addIncludePath(b.path("vendor/raylib/src"));
     exe.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
-    exe.addIncludePath(b.path("vendor/tree-sitter-bash/src"));
-    exe.addIncludePath(b.path("vendor/tree-sitter-java/src"));
     exe.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
     exe.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
     exe.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
@@ -288,12 +249,8 @@ pub fn build(b: *std.Build) void {
     });
     editor_tests.linkLibrary(treesitter);
     editor_tests.linkLibrary(ts_zig);
-    editor_tests.linkLibrary(ts_bash);
-    editor_tests.linkLibrary(ts_java);
     editor_tests.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
     editor_tests.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
-    editor_tests.addIncludePath(b.path("vendor/tree-sitter-bash/src"));
-    editor_tests.addIncludePath(b.path("vendor/tree-sitter-java/src"));
     editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
     editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
     editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
@@ -348,4 +305,20 @@ pub fn build(b: *std.Build) void {
     const run_editor_import_check = b.addRunArtifact(editor_import_check);
     const editor_import_check_step = b.step("check-editor-imports", "Check editor module import layering");
     editor_import_check_step.dependOn(&run_editor_import_check.step);
+
+    const grammar_update = b.addExecutable(.{
+        .name = "grammar-update",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/tools/grammar_update.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    const run_grammar_update = b.addRunArtifact(grammar_update);
+    if (b.args) |args| {
+        run_grammar_update.addArgs(args);
+    }
+    const grammar_update_step = b.step("grammar-update", "Build and install tree-sitter grammar packs");
+    grammar_update_step.dependOn(&run_grammar_update.step);
 }

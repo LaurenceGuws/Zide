@@ -9,71 +9,54 @@ Read AGENTS.md.
 
 Read docs/AGENT_HANDOFF.md.
 
-Read app_architecture/terminal/MODULARIZATION_PLAN.md.
+Read app_architecture/editor/treesitter_dynamic_roadmap.md.
 
-Read app_architecture/terminal/TERMINAL_API.md.
+Read app_architecture/editor/treesitter_todo.yaml.
 
-Read app_architecture/terminal/REPLAY_HARNESS_SPEC.md.
+Read src/editor/syntax.zig.
 
 Current state (do not question this):
 
-Terminal replay harness exists and is locked.
+Tree-sitter dynamic grammar roadmap exists (2026-01-24) under app_architecture/editor/treesitter_dynamic_roadmap.md.
 
-Fixture list is locked.
+Multi-language query loading is implemented in src/editor/syntax.zig (loads from .zide/, config path, and assets/).
 
-Goldens are locked.
+Tree-sitter runtime is vendored in vendor/tree-sitter/.
 
-Snapshot logic has already been extracted.
-
-We are in extraction-only refactor mode.
-
-No behavior changes are allowed.
-
-Goldens must not change.
+vendor/tree-sitter-bash/ and vendor/tree-sitter-java/ are intentionally untracked to support dynamic pulling.
 
 Your role:
 
-Perform mechanical, extraction-only refactors.
+Implement full Tree-sitter dynamic grammar support (TSUpdate-style workflow) quickly and end-to-end.
 
-Keep diffs small and reviewable.
-
-Touch one subsystem per step.
-
-Run zig build test-terminal-replay -- --all after every change.
+Large refactors are allowed to move fast.
 
 Do not commit until I explicitly approve after running tests.
 
 Hard rules (never violate):
 
-No renames of public symbols.
+Refactors are allowed and expected.
 
-No logic changes.
+Avoid unrelated cleanups.
 
-No cleanup or simplification.
+Behavior changes are allowed but must be backed by tests.
 
-No refactors outside the approved modularization plan.
-
-If goldens change, stop and revert.
+If you introduce new tooling, document it in the relevant app_architecture/editor docs.
 
 Before coding:
 
-State which modularization step you are about to perform.
+State the scope and major files touched.
 
-Confirm it is extraction-only.
-
-Wait for confirmation if unclear.
+Move fast; no need to wait for confirmation unless blocked.
 
 After coding:
 
 List changed files.
 
-List tests run.
+List tests run (or note if not run).
 
 Show git status -sb.
 
 Stop and wait for approval.
 
 Do not be verbose.
-Do not redesign.
-Do not optimize.
-Follow the plan.

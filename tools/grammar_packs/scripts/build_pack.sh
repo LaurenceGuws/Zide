@@ -15,6 +15,11 @@ files=("$@")
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 work="$root/work"
+zig_cache="${ZIG_GLOBAL_CACHE_DIR:-$work/zig-cache}"
+
+if [[ -n "$zig_cache" ]]; then
+  export ZIG_GLOBAL_CACHE_DIR="$zig_cache"
+fi
 
 case "$os" in
   linux) ext="so" ;;
@@ -69,8 +74,14 @@ if [[ "$os" == "android" ]]; then
   android_api="${ANDROID_API:-29}"
   if [[ -n "${ANDROID_NDK_ROOT:-}" ]]; then
     ndk_root="$ANDROID_NDK_ROOT"
+  elif [[ -n "${ANDROID_SDK_ROOT:-}" ]]; then
+    ndk_root="$ANDROID_SDK_ROOT/ndk"
   elif [[ -n "${ANDROID_HOME:-}" ]]; then
     ndk_root="$ANDROID_HOME/ndk"
+  elif [[ -n "${HOME:-}" && -d "$HOME/.local/android-sdk/ndk" ]]; then
+    ndk_root="$HOME/.local/android-sdk/ndk"
+  elif [[ -n "${HOME:-}" && -d "$HOME/Android/Sdk/ndk" ]]; then
+    ndk_root="$HOME/Android/Sdk/ndk"
   else
     ndk_root=""
   fi

@@ -33,7 +33,7 @@ Add a lightweight runtime loader that can:
 
 Suggested files:
 - `src/editor/grammar_manager.zig` (new)
-- `src/editor/syntax_registry.zig` (new: extension → language map)
+- `src/editor/syntax_registry.zig` (extension + basename → language map, defaults + overrides)
 - `src/editor/syntax.zig` (add `createHighlighterForLanguage`)
 - `src/editor/editor.zig` (replace hard-coded detection with registry lookup)
 
@@ -41,15 +41,23 @@ Errors/logging:
 - log missing packs clearly (language + expected path)
 - keep Zig fallback to avoid regression
 
+Defaults + overrides:
+- Defaults baked at `assets/syntax/default.lua` (generated from Neovim + parsers.lua)
+- User overrides at `~/.config/zide/syntax.lua`
+- Project overrides at `.zide/syntax.lua`
+
 ### Step 2: Pack Fetch/Install (local)
-Add a CLI command or tool to install packs locally:
-- `zig build grammar-install -- <lang>`
-- uses `tools/grammar_packs/dist/` or downloads a release asset if available
-- writes to cache dir and updates manifest
+Add a CLI command or tool to build + install packs locally:
+- `zig build grammar-update`
+- runs `tools/grammar_packs/scripts/sync_from_nvim.sh`, `fetch_grammars.sh`, `build_all.sh`
+- installs `tools/grammar_packs/dist/` into `~/.config/zide/grammars`
+- writes per-pack `manifest.json` next to the `.so` + `highlights.scm`
+- supports `--skip-git` and `--continue-on-error` for best-effort builds
+- supports `--targets` / `--skip-targets` to limit os/arch combos
+ - supports `--jobs <n>` to parallelize pack builds
 
 Suggested files:
-- `tools/grammar_packs/scripts/install_local.sh` (new)
-- `src/tools/grammar_install.zig` or a small `zig` tool under `tools/`
+- `src/tools/grammar_update.zig` (new)
 
 ### Step 3: Auto-sync Queries (optional)
 Keep queries in sync with nvim-treesitter:

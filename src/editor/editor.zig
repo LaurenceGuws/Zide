@@ -2,6 +2,8 @@ const std = @import("std");
 const text_store = @import("text_store.zig");
 const types = @import("types.zig");
 const syntax_mod = @import("syntax.zig");
+const grammar_manager_mod = @import("grammar_manager.zig");
+const syntax_registry_mod = @import("syntax_registry.zig");
 const app_logger = @import("../app_logger.zig");
 
 const TextStore = text_store.TextStore;
@@ -30,13 +32,18 @@ pub const Editor = struct {
     file_path: ?[]const u8,
     modified: bool,
     tab_width: usize,
+    grammar_manager: *grammar_manager_mod.GrammarManager,
 
-    pub fn init(allocator: std.mem.Allocator) !*Editor {
+    pub fn init(allocator: std.mem.Allocator, grammar_manager: *grammar_manager_mod.GrammarManager) !*Editor {
         const buffer = try text_store.TextStore.init(allocator, "");
-        return initWithStore(allocator, buffer);
+        return initWithStore(allocator, buffer, grammar_manager);
     }
 
-    pub fn initWithStore(allocator: std.mem.Allocator, buffer: *TextStore) !*Editor {
+    pub fn initWithStore(
+        allocator: std.mem.Allocator,
+        buffer: *TextStore,
+        grammar_manager: *grammar_manager_mod.GrammarManager,
+    ) !*Editor {
         const editor = try allocator.create(Editor);
         editor.* = .{
             .allocator = allocator,
@@ -59,6 +66,7 @@ pub const Editor = struct {
             .file_path = null,
             .modified = false,
             .tab_width = 4,
+            .grammar_manager = grammar_manager,
         };
         return editor;
     }
@@ -629,25 +637,11 @@ pub const Editor = struct {
         return out;
     }
 
-    const HighlightLanguage = enum { zig, bash, java };
-
-    fn detectHighlightLanguage(path: ?[]const u8) ?HighlightLanguage {
-        if (path == null) return .zig;
-        const slice = path.?;
-        if (std.mem.endsWith(u8, slice, ".zig")) return .zig;
-        if (std.mem.endsWith(u8, slice, ".sh")) return .bash;
-        if (std.mem.endsWith(u8, slice, ".java")) return .java;
-        const base = std.fs.path.basename(slice);
-        if (std.mem.eql(u8, base, ".bashrc")) return .bash;
-        if (std.mem.eql(u8, base, ".bash_profile")) return .bash;
-        if (std.mem.eql(u8, base, ".bash_login")) return .bash;
-        if (std.mem.eql(u8, base, ".bash_aliases")) return .bash;
-        return null;
-    }
-
     fn scheduleHighlighter(self: *Editor, path: ?[]const u8) void {
         const log = app_logger.logger("editor.highlight");
-        if (detectHighlightLanguage(path) == null) {
+        if (syntax_registry_mod.SyntaxRegistry.resolveLanguage(path) == null and
+            syntax_registry_mod.SyntaxRegistry.resolveExtension(path) == null)
+        {
             if (self.highlighter) |h| {
                 h.destroy();
                 self.highlighter = null;
@@ -664,7 +658,12 @@ pub const Editor = struct {
         const log = app_logger.logger("editor.highlight");
         log.logf("highlight init check path=\"{s}\"", .{path orelse ""});
         self.highlight_pending = false;
-        const lang = detectHighlightLanguage(path);
+        var lang = syntax_registry_mod.SyntaxRegistry.resolveLanguage(path);
+        if (lang == null) {
+            if (syntax_registry_mod.SyntaxRegistry.resolveExtension(path)) |ext| {
+                lang = ext;
+            }
+        }
         if (lang == null) {
             if (self.highlighter) |h| {
                 h.destroy();
@@ -676,11 +675,17 @@ pub const Editor = struct {
         if (self.highlighter == null) {
             const t_start = std.time.nanoTimestamp();
             log.logf("highlight init start", .{});
-            self.highlighter = switch (lang.?) {
-                .zig => syntax_mod.createZigHighlighter(self.allocator, self.buffer),
-                .bash => syntax_mod.createBashHighlighter(self.allocator, self.buffer),
-                .java => syntax_mod.createJavaHighlighter(self.allocator, self.buffer),
-            } catch |err| {
+            const grammar = try self.grammar_manager.getOrLoad(lang.?) orelse {
+                log.logf("highlight missing grammar lang={s}", .{lang.?});
+                return;
+            };
+            self.highlighter = syntax_mod.createHighlighterForLanguage(
+                self.allocator,
+                self.buffer,
+                lang.?,
+                grammar.ts_language,
+                grammar.query_path,
+            ) catch |err| {
                 log.logf("highlight init failed err={any}", .{err});
                 return err;
             };
