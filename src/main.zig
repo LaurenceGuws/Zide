@@ -20,6 +20,7 @@ const input_types = @import("types/input.zig");
 const app_shell = @import("app_shell.zig");
 const widgets = @import("ui/widgets.zig");
 const editor_draw = @import("ui/widgets/editor_widget_draw.zig");
+const layout_types = @import("types/layout.zig");
 
 const Editor = editor_mod.Editor;
 const TerminalSession = terminal_mod.TerminalSession;
@@ -865,6 +866,17 @@ const AppState = struct {
         const terminal_h = if (self.show_terminal) @min(self.terminal_height, max_terminal_h) else 0;
         const editor_height = @max(0, height - options_bar_height - tab_bar_height - status_bar_height - terminal_h);
         const editor_width = @max(0, width - side_nav_width);
+
+        const layout = layout_types.WidgetLayout{
+            .window = .{ .x = 0, .y = 0, .width = width, .height = height },
+            .options_bar = .{ .x = 0, .y = 0, .width = width, .height = options_bar_height },
+            .tab_bar = .{ .x = side_nav_width, .y = options_bar_height, .width = editor_width, .height = tab_bar_height },
+            .side_nav = .{ .x = 0, .y = options_bar_height, .width = side_nav_width, .height = height - status_bar_height - options_bar_height },
+            .editor = .{ .x = side_nav_width, .y = options_bar_height + tab_bar_height, .width = editor_width, .height = editor_height },
+            .terminal = .{ .x = side_nav_width, .y = height - status_bar_height - terminal_h, .width = editor_width, .height = terminal_h },
+            .status_bar = .{ .x = 0, .y = height - status_bar_height, .width = width, .height = status_bar_height },
+        };
+        _ = layout;
 
         // Draw options bar
         self.options_bar.draw(shell, width);
