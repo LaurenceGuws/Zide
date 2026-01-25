@@ -41,6 +41,8 @@ AppShell interface:
 
 Enforcement:
 - `zig build check-app-imports` (widget cross-imports + main/renderer boundary guard).
+- `zig build check-input-imports` now scans `src/input/` for forbidden imports.
+- `zig build check-app-imports` now scans `src/ui/` (excluding widgets + renderer) for forbidden imports.
 
 ## Proposed Module Map (incremental)
 - Text engine
@@ -84,6 +86,8 @@ Shared types entry point:
 - `EditorSnapshot.text_owned` indicates whether `text` must be freed by the caller.
 - Terminal snapshot adapter currently maps rows/cols/cursor only (cells remain empty).
 - `InputBatch` now captures per-frame key/mouse state + text events and is used by main + widgets.
+- Terminal hover state is updated during input handling; draw reads cached hover info.
+- Top bars (options/tab/side/status) update hover state during input; draw uses cached state.
 
 ## Interface Contracts (initial targets)
 Text engine (pure Zig):

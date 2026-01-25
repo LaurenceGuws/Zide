@@ -445,6 +445,10 @@ const AppState = struct {
         const shell = self.shell;
         const r = shell.rendererPtr();
         self.last_input = input_batch.snapshot();
+        self.options_bar.updateInput(self.last_input);
+        self.tab_bar.updateInput(self.last_input);
+        self.side_nav.updateInput(self.last_input);
+        self.status_bar.updateInput(self.last_input);
         const now = app_shell.getTime();
         if (try shell.applyPendingZoom(now)) {
             self.applyUiScale();
@@ -895,10 +899,10 @@ const AppState = struct {
             .status_bar = .{ .x = 0, .y = height - status_bar_height, .width = width, .height = status_bar_height },
         };
         // Draw options bar
-        self.options_bar.draw(shell, layout.window.width, self.last_input);
+        self.options_bar.draw(shell, layout.window.width);
 
         // Draw tab bar
-        self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width, self.last_input);
+        self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
 
         // Draw editor
         if (self.editors.items.len > 0) {
@@ -940,7 +944,7 @@ const AppState = struct {
         }
 
         // Draw side navigation bar (covers terminal icon overflow)
-        self.side_nav.draw(shell, layout.side_nav.height, layout.side_nav.y, self.last_input);
+        self.side_nav.draw(shell, layout.side_nav.height, layout.side_nav.y);
 
         // Draw status bar LAST so it spans full width over everything
         if (self.editors.items.len > 0) {
@@ -955,7 +959,6 @@ const AppState = struct {
                 editor.cursor.line,
                 editor.cursor.col,
                 editor.modified,
-                self.last_input,
             );
         }
 

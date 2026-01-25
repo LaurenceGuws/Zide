@@ -8,8 +8,15 @@ const Color = app_shell.Color;
 /// Side navigation bar (VSCode activity bar)
 pub const SideNav = struct {
     width: f32 = 52,
+    last_mouse: shared_types.input.MousePos = .{ .x = 0, .y = 0 },
+    mouse_down_left: bool = false,
 
-    pub fn draw(self: *SideNav, shell: *Shell, height: f32, y: f32, input: shared_types.input.InputSnapshot) void {
+    pub fn updateInput(self: *SideNav, input: shared_types.input.InputSnapshot) void {
+        self.last_mouse = input.mouse_pos;
+        self.mouse_down_left = input.mouse_down[@intFromEnum(shared_types.input.MouseButton.left)];
+    }
+
+    pub fn draw(self: *SideNav, shell: *Shell, height: f32, y: f32) void {
         // Background
         shell.drawRect(0, @intFromFloat(y), @intFromFloat(self.width), @intFromFloat(height), Color{ .r = 30, .g = 31, .b = 41 });
 
@@ -38,8 +45,8 @@ pub const SideNav = struct {
         const badge_size: f32 = shell.fontSize() * 1.0;
         const badge_h_unit: f32 = shell.charHeight() * (badge_size / shell.fontSize());
         const spacing: f32 = 12 * scale;
-        const mouse = input.mouse_pos;
-        const pressed = input.mouse_down[@intFromEnum(shared_types.input.MouseButton.left)];
+        const mouse = self.last_mouse;
+        const pressed = self.mouse_down_left;
         const hover_pad_x: f32 = 8 * scale;
         const hover_pad_y: f32 = 8 * scale;
 

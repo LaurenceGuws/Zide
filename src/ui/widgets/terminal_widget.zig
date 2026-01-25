@@ -36,6 +36,7 @@ pub const TerminalWidget = struct {
     last_hover_row: isize = -1,
     last_hover_col: isize = -1,
     last_hover_ctrl: bool = false,
+    hover_dirty: bool = false,
     pending_open_path: ?[]u8 = null,
 
     pub fn init(session: *TerminalSession) TerminalWidget {
@@ -120,6 +121,94 @@ pub const TerminalWidget = struct {
         return std.fs.path.join(allocator, &.{ cwd, uri }) catch null;
     }
 
+    fn linkIdAtCell(
+        self: *TerminalWidget,
+        snapshot: terminal_mod.TerminalSnapshot,
+        history_len: usize,
+        start_line: usize,
+        rows: usize,
+        cols: usize,
+        row: usize,
+        col: usize,
+    ) u32 {
+        if (rows == 0 or cols == 0) return 0;
+        if (row >= rows or col >= cols) return 0;
+        const global_row = start_line + row;
+        if (global_row < history_len) {
+            if (self.session.scrollbackRow(global_row)) |history_row| {
+                return history_row[col].attrs.link_id;
+            }
+            return 0;
+        }
+        const grid_row = global_row - history_len;
+        if (grid_row < rows and snapshot.cells.len >= rows * cols) {
+            return snapshot.cells[grid_row * cols + col].attrs.link_id;
+        }
+        return 0;
+    }
+
+    pub fn updateHoverState(
+        self: *TerminalWidget,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        cell_width: f32,
+        cell_height: f32,
+        snapshot: terminal_mod.TerminalSnapshot,
+        history_len: usize,
+        start_line: usize,
+        input_batch: *shared_types.input.InputBatch,
+    ) void {
+        const rows = snapshot.rows;
+        const cols = snapshot.cols;
+        const mouse = input_batch.mouse_pos;
+        const ctrl = input_batch.mods.ctrl;
+        const scrollbar_w: f32 = 10;
+        const scrollbar_x = x + width - scrollbar_w;
+        var hover_row: isize = -1;
+        var hover_col: isize = -1;
+        var hover_link_id: u32 = 0;
+        if (rows > 0 and cols > 0) {
+            const in_terminal = mouse.x >= x and mouse.x <= x + width and mouse.y >= y and mouse.y <= y + height;
+            const in_cells = in_terminal and mouse.x < scrollbar_x;
+            if (in_cells) {
+                const base_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(x)))));
+                const base_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(y)))));
+                const col = @as(usize, @intFromFloat((mouse.x - base_x) / cell_width));
+                const row = @as(usize, @intFromFloat((mouse.y - base_y) / cell_height));
+                if (row < rows and col < cols) {
+                    hover_row = @intCast(row);
+                    hover_col = @intCast(col);
+                    if (ctrl) {
+                        hover_link_id = self.linkIdAtCell(
+                            snapshot,
+                            history_len,
+                            start_line,
+                            rows,
+                            cols,
+                            row,
+                            col,
+                        );
+                    }
+                }
+            }
+        }
+        const hover_changed = ctrl != self.last_hover_ctrl or
+            hover_link_id != self.last_hover_link_id or
+            hover_row != self.last_hover_row or
+            hover_col != self.last_hover_col;
+        if (hover_changed) {
+            const log = app_logger.logger("terminal.hover");
+            log.logf("ctrl={any} row={d} col={d} link={d}", .{ ctrl, hover_row, hover_col, hover_link_id });
+            self.hover_dirty = true;
+        }
+        self.last_hover_ctrl = ctrl;
+        self.last_hover_link_id = hover_link_id;
+        self.last_hover_row = hover_row;
+        self.last_hover_col = hover_col;
+    }
+
     pub fn draw(
         self: *TerminalWidget,
         shell: *Shell,
@@ -129,6 +218,7 @@ pub const TerminalWidget = struct {
         height: f32,
         input: shared_types.input.InputSnapshot,
     ) void {
+        _ = input;
         const r = shell.rendererPtr();
         self.session.lock();
         const snapshot = self.session.snapshot();
@@ -240,36 +330,9 @@ pub const TerminalWidget = struct {
         const scrollbar_x = x + width - scrollbar_w;
         const scrollbar_y = y;
         const scrollbar_h = height;
-        const mouse = input.mouse_pos;
-        const ctrl = input.mods.ctrl;
-        var hover_row: isize = -1;
-        var hover_col: isize = -1;
-        var hover_link_id: u32 = 0;
-        if (rows > 0 and cols > 0) {
-            const in_terminal = mouse.x >= x and mouse.x <= x + width and mouse.y >= y and mouse.y <= y + height;
-            const in_cells = in_terminal and mouse.x < scrollbar_x;
-            if (in_cells) {
-                const col = @as(usize, @intFromFloat((mouse.x - base_x) / r.terminal_cell_width));
-                const row = @as(usize, @intFromFloat((mouse.y - base_y) / r.terminal_cell_height));
-                if (row < rows and col < cols and view_cells.len >= rows * cols) {
-                    const cell = view_cells[row * cols + col];
-                    hover_row = @intCast(row);
-                    hover_col = @intCast(col);
-                    if (ctrl) {
-                        hover_link_id = cell.attrs.link_id;
-                    }
-                }
-            }
-        }
-        const hover_changed = ctrl != self.last_hover_ctrl or hover_link_id != self.last_hover_link_id or hover_row != self.last_hover_row or hover_col != self.last_hover_col;
-        if (hover_changed) {
-            const log = app_logger.logger("terminal.hover");
-            log.logf("ctrl={any} row={d} col={d} link={d}", .{ ctrl, hover_row, hover_col, hover_link_id });
-            self.last_hover_ctrl = ctrl;
-            self.last_hover_link_id = hover_link_id;
-            self.last_hover_row = hover_row;
-            self.last_hover_col = hover_col;
-        }
+        const hover_changed = self.hover_dirty;
+        self.hover_dirty = false;
+        const hover_link_id = if (self.last_hover_ctrl) self.last_hover_link_id else 0;
 
         const rowSlice = struct {
             fn get(cells: []const Cell, cols_count: usize, row: usize) []const Cell {
@@ -941,6 +1004,20 @@ pub const TerminalWidget = struct {
         const start_line = if (end_line > rows) end_line - rows else 0;
         const max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
 
+        const r = shell.rendererPtr();
+        self.updateHoverState(
+            x,
+            y,
+            width,
+            height,
+            r.terminal_cell_width,
+            r.terminal_cell_height,
+            snapshot,
+            history_len,
+            start_line,
+            input_batch,
+        );
+
         const ctrl = input_batch.mods.ctrl;
         const shift = input_batch.mods.shift;
         const alt = input_batch.mods.alt;
@@ -965,18 +1042,7 @@ pub const TerminalWidget = struct {
                 const col = @as(usize, @intFromFloat((mouse.x - x) / shell.terminalCellWidth()));
                 const row = @as(usize, @intFromFloat((mouse.y - y) / shell.terminalCellHeight()));
                 if (row < rows and col < cols) {
-                    const global_row = start_line + row;
-                    var link_id: u32 = 0;
-                    if (global_row < history_len) {
-                        if (self.session.scrollbackRow(global_row)) |history_row| {
-                            link_id = history_row[col].attrs.link_id;
-                        }
-                    } else {
-                        const grid_row = global_row - history_len;
-                        if (grid_row < rows) {
-                            link_id = snapshot.cells[grid_row * cols + col].attrs.link_id;
-                        }
-                    }
+                    const link_id = self.linkIdAtCell(snapshot, history_len, start_line, rows, cols, row, col);
                     if (link_id != 0) {
                         if (self.session.hyperlinkUri(link_id)) |link| {
                             if (self.resolveLinkPath(link)) |path| {

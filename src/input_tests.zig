@@ -1,5 +1,7 @@
 const std = @import("std");
 const shared_types = @import("types/mod.zig");
+const terminal_mod = @import("terminal/core/terminal.zig");
+const terminal_widget_mod = @import("ui/widgets/terminal_widget.zig");
 
 test "input batch append/clear" {
     const allocator = std.testing.allocator;
@@ -201,4 +203,39 @@ test "input snapshot init and snapshot copy" {
     try std.testing.expectEqual(@as(f32, 2), init_snap.mouse_pos.y);
     try std.testing.expect(!init_snap.mods.shift);
     try std.testing.expect(!init_snap.mouse_down[@intFromEnum(shared_types.input.MouseButton.left)]);
+}
+
+test "input replay updates terminal hover state" {
+    const allocator = std.testing.allocator;
+    var session = try terminal_mod.TerminalSession.init(allocator, 2, 3);
+    defer session.deinit();
+
+    var widget = terminal_widget_mod.TerminalWidget.init(session);
+    defer widget.deinit();
+
+    var batch = shared_types.input.InputBatch.init(allocator);
+    defer batch.deinit();
+
+    const snapshot = session.snapshot();
+    const history_len = session.scrollbackCount();
+    const start_line: usize = 0;
+
+    batch.mouse_pos = .{ .x = 5, .y = 5 };
+    batch.mods = .{};
+    widget.updateHoverState(0, 0, 30, 40, 10, 20, snapshot, history_len, start_line, &batch);
+    try std.testing.expectEqual(@as(isize, 0), widget.last_hover_row);
+    try std.testing.expectEqual(@as(isize, 0), widget.last_hover_col);
+    try std.testing.expect(!widget.last_hover_ctrl);
+
+    batch.mouse_pos = .{ .x = 25, .y = 5 };
+    batch.mods.ctrl = true;
+    widget.updateHoverState(0, 0, 30, 40, 10, 20, snapshot, history_len, start_line, &batch);
+    try std.testing.expectEqual(@as(isize, 0), widget.last_hover_row);
+    try std.testing.expectEqual(@as(isize, 2), widget.last_hover_col);
+    try std.testing.expect(widget.last_hover_ctrl);
+
+    batch.mouse_pos = .{ .x = 45, .y = 5 };
+    widget.updateHoverState(0, 0, 30, 40, 10, 20, snapshot, history_len, start_line, &batch);
+    try std.testing.expectEqual(@as(isize, -1), widget.last_hover_row);
+    try std.testing.expectEqual(@as(isize, -1), widget.last_hover_col);
 }

@@ -9,6 +9,13 @@ const Color = app_shell.Color;
 /// Status bar at the bottom
 pub const StatusBar = struct {
     height: f32 = 24,
+    last_mouse: shared_types.input.MousePos = .{ .x = 0, .y = 0 },
+    mouse_down_left: bool = false,
+
+    pub fn updateInput(self: *StatusBar, input: shared_types.input.InputSnapshot) void {
+        self.last_mouse = input.mouse_pos;
+        self.mouse_down_left = input.mouse_down[@intFromEnum(shared_types.input.MouseButton.left)];
+    }
 
     pub fn draw(
         self: *StatusBar,
@@ -20,7 +27,6 @@ pub const StatusBar = struct {
         line: usize,
         col: usize,
         modified: bool,
-        input: shared_types.input.InputSnapshot,
     ) void {
         const scale = shell.uiScaleFactor();
         // Background
@@ -43,8 +49,8 @@ pub const StatusBar = struct {
         const mode_width: f32 = 80 * scale;
         const text_y: f32 = y + (self.height - shell.charHeight()) / 2;
         const text_x: f32 = 8 * scale;
-        const mouse = input.mouse_pos;
-        const pressed = input.mouse_down[@intFromEnum(shared_types.input.MouseButton.left)];
+        const mouse = self.last_mouse;
+        const pressed = self.mouse_down_left;
         const mode_hover = mouse.x >= 0 and mouse.x <= mode_width and mouse.y >= y and mouse.y <= y + self.height;
         const mode_bg_final = if (mode_hover and pressed) Color{ .r = 58, .g = 60, .b = 78 } else if (mode_hover) Color.selection else mode_bg;
         shell.drawRect(0, @intFromFloat(y), @intFromFloat(mode_width), @intFromFloat(self.height), mode_bg_final);

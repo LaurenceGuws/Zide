@@ -14,6 +14,7 @@ pub const TabBar = struct {
     height: f32,
     tab_width: f32,
     tab_spacing: f32,
+    last_mouse: shared_types.input.MousePos,
 
     pub const Tab = struct {
         title: []const u8,
@@ -31,6 +32,7 @@ pub const TabBar = struct {
             .height = 28,
             .tab_width = 150,
             .tab_spacing = 1,
+            .last_mouse = .{ .x = 0, .y = 0 },
         };
     }
 
@@ -46,7 +48,11 @@ pub const TabBar = struct {
         });
     }
 
-    pub fn draw(self: *TabBar, shell: *Shell, x: f32, y: f32, width: f32, input: shared_types.input.InputSnapshot) void {
+    pub fn updateInput(self: *TabBar, input: shared_types.input.InputSnapshot) void {
+        self.last_mouse = input.mouse_pos;
+    }
+
+    pub fn draw(self: *TabBar, shell: *Shell, x: f32, y: f32, width: f32) void {
         // Draw tab bar background
         shell.drawRect(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height), Color{ .r = 30, .g = 31, .b = 41 });
 
@@ -55,7 +61,7 @@ pub const TabBar = struct {
         shell.beginClip(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height));
 
         var tooltip: ?Tooltip = null;
-        const mouse = input.mouse_pos;
+        const mouse = self.last_mouse;
 
         var cursor_x: f32 = x;
         for (self.tabs.items, 0..) |tab, i| {
