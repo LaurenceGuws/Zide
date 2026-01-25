@@ -913,12 +913,10 @@ pub const TerminalWidget = struct {
         scroll_grab_offset: *f32,
         input_batch: *shared_types.input.InputBatch,
     ) !bool {
-        _ = input_batch;
-        const r = shell.rendererPtr();
         self.session.lock();
         defer self.session.unlock();
         var handled = false;
-        const mouse = r.getMousePos();
+        const mouse = input_batch.mouse_pos;
         const in_terminal = mouse.x >= x and mouse.x <= x + width and mouse.y >= y and mouse.y <= y + height;
         const scrollbar_w: f32 = 10;
         const scrollbar_x = x + width - scrollbar_w;
@@ -935,16 +933,16 @@ pub const TerminalWidget = struct {
         const start_line = if (end_line > rows) end_line - rows else 0;
         const max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
 
-        const ctrl = r.isKeyDown(app_shell.KEY_LEFT_CONTROL) or r.isKeyDown(app_shell.KEY_RIGHT_CONTROL);
-        const shift = r.isKeyDown(app_shell.KEY_LEFT_SHIFT) or r.isKeyDown(app_shell.KEY_RIGHT_SHIFT);
-        const alt = r.isKeyDown(app_shell.KEY_LEFT_ALT) or r.isKeyDown(app_shell.KEY_RIGHT_ALT);
-        const super = r.isKeyDown(app_shell.KEY_LEFT_SUPER) or r.isKeyDown(app_shell.KEY_RIGHT_SUPER);
+        const ctrl = input_batch.mods.ctrl;
+        const shift = input_batch.mods.shift;
+        const alt = input_batch.mods.alt;
+        const super = input_batch.mods.super;
         var mod: terminal_mod.Modifier = terminal_mod.VTERM_MOD_NONE;
         if (shift) mod |= terminal_mod.VTERM_MOD_SHIFT;
         if (alt) mod |= terminal_mod.VTERM_MOD_ALT;
         if (ctrl) mod |= terminal_mod.VTERM_MOD_CTRL;
 
-        const wheel_delta = if (in_terminal) r.getMouseWheelMove() else 0;
+        const wheel_delta = if (in_terminal) input_batch.scroll.y else 0;
         var wheel_steps: i32 = 0;
         if (wheel_delta != 0) {
             const abs_delta = @abs(wheel_delta);
@@ -954,10 +952,10 @@ pub const TerminalWidget = struct {
         }
         const mouse_reporting = allow_input and in_terminal and self.session.mouseReportingEnabled();
         var skip_mouse_click = false;
-        if (allow_input and in_terminal and ctrl and r.isMouseButtonPressed(app_shell.MOUSE_LEFT)) {
+        if (allow_input and in_terminal and ctrl and input_batch.mousePressed(.left)) {
             if (rows > 0 and cols > 0 and snapshot.cells.len >= rows * cols) {
-                const col = @as(usize, @intFromFloat((mouse.x - x) / r.terminal_cell_width));
-                const row = @as(usize, @intFromFloat((mouse.y - y) / r.terminal_cell_height));
+                const col = @as(usize, @intFromFloat((mouse.x - x) / shell.terminalCellWidth()));
+                const row = @as(usize, @intFromFloat((mouse.y - y) / shell.terminalCellHeight()));
                 if (row < rows and col < cols) {
                     const global_row = start_line + row;
                     var link_id: u32 = 0;
@@ -989,14 +987,14 @@ pub const TerminalWidget = struct {
 
         if (self.session.takeOscClipboard()) |clip| {
             const cstr: [*:0]const u8 = @ptrCast(clip.ptr);
-            r.setClipboardText(cstr);
+            shell.setClipboardText(cstr);
             handled = true;
         }
 
         if (mouse_reporting and rows > 0 and cols > 0) {
-            const mouse_left_down = r.isMouseButtonDown(app_shell.MOUSE_LEFT);
-            const mouse_middle_down = r.isMouseButtonDown(app_shell.MOUSE_MIDDLE);
-            const mouse_right_down = r.isMouseButtonDown(app_shell.MOUSE_RIGHT);
+            const mouse_left_down = input_batch.mouseDown(.left);
+            const mouse_middle_down = input_batch.mouseDown(.middle);
+            const mouse_right_down = input_batch.mouseDown(.right);
             var buttons_down: u8 = 0;
             if (mouse_left_down) buttons_down |= 1;
             if (mouse_middle_down) buttons_down |= 2;
@@ -1004,11 +1002,11 @@ pub const TerminalWidget = struct {
 
             var col: usize = 0;
             if (mouse.x > x) {
-                col = @as(usize, @intFromFloat((mouse.x - x) / r.terminal_cell_width));
+                col = @as(usize, @intFromFloat((mouse.x - x) / shell.terminalCellWidth()));
             }
             var row: usize = 0;
             if (mouse.y > y) {
-                row = @as(usize, @intFromFloat((mouse.y - y) / r.terminal_cell_height));
+                row = @as(usize, @intFromFloat((mouse.y - y) / shell.terminalCellHeight()));
             }
             row = @min(row, rows - 1);
             col = @min(col, cols - 1);
@@ -1024,33 +1022,33 @@ pub const TerminalWidget = struct {
                 }
             }
 
-            if (r.isMouseButtonPressed(app_shell.MOUSE_LEFT) and !skip_mouse_click) {
+            if (input_batch.mousePressed(.left) and !skip_mouse_click) {
                 if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .left, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
                     handled = true;
                 }
             }
-            if (r.isMouseButtonPressed(app_shell.MOUSE_MIDDLE)) {
+            if (input_batch.mousePressed(.middle)) {
                 if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .middle, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
                     handled = true;
                 }
             }
-            if (r.isMouseButtonPressed(app_shell.MOUSE_RIGHT)) {
+            if (input_batch.mousePressed(.right)) {
                 if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .right, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
                     handled = true;
                 }
             }
 
-            if (r.isMouseButtonReleased(app_shell.MOUSE_LEFT)) {
+            if (input_batch.mouseReleased(.left)) {
                 if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .left, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
                     handled = true;
                 }
             }
-            if (r.isMouseButtonReleased(app_shell.MOUSE_MIDDLE)) {
+            if (input_batch.mouseReleased(.middle)) {
                 if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .middle, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
                     handled = true;
                 }
             }
-            if (r.isMouseButtonReleased(app_shell.MOUSE_RIGHT)) {
+            if (input_batch.mouseReleased(.right)) {
                 if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .right, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
                     handled = true;
                 }
@@ -1075,129 +1073,129 @@ pub const TerminalWidget = struct {
                 }
             }.apply;
             const applyTerminalKey = struct {
-                fn apply(widget: *TerminalWidget, key: c_int, key_mod: terminal_mod.Modifier) !bool {
+                fn apply(widget: *TerminalWidget, key: shared_types.input.Key, key_mod: terminal_mod.Modifier) !bool {
                     switch (key) {
-                        app_shell.KEY_ENTER => {
+                        .enter => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_ENTER, key_mod);
                             return true;
                         },
-                        app_shell.KEY_BACKSPACE => {
+                        .backspace => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_BACKSPACE, key_mod);
                             return true;
                         },
-                        app_shell.KEY_TAB => {
+                        .tab => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_TAB, key_mod);
                             return true;
                         },
-                        app_shell.KEY_ESCAPE => {
+                        .escape => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_ESCAPE, key_mod);
                             return true;
                         },
-                        app_shell.KEY_UP => {
+                        .up => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_UP, key_mod);
                             return true;
                         },
-                        app_shell.KEY_DOWN => {
+                        .down => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_DOWN, key_mod);
                             return true;
                         },
-                        app_shell.KEY_LEFT => {
+                        .left => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_LEFT, key_mod);
                             return true;
                         },
-                        app_shell.KEY_RIGHT => {
+                        .right => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_RIGHT, key_mod);
                             return true;
                         },
-                        app_shell.KEY_HOME => {
+                        .home => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_HOME, key_mod);
                             return true;
                         },
-                        app_shell.KEY_END => {
+                        .end => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_END, key_mod);
                             return true;
                         },
-                        app_shell.KEY_PAGE_UP => {
+                        .page_up => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_PAGEUP, key_mod);
                             return true;
                         },
-                        app_shell.KEY_PAGE_DOWN => {
+                        .page_down => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_PAGEDOWN, key_mod);
                             return true;
                         },
-                        app_shell.KEY_INSERT => {
+                        .insert => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_INS, key_mod);
                             return true;
                         },
-                        app_shell.KEY_DELETE => {
+                        .delete => {
                             try widget.session.sendKey(terminal_mod.VTERM_KEY_DEL, key_mod);
                             return true;
                         },
-                        app_shell.KEY_KP_0 => {
+                        .kp_0 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp0, key_mod);
                             return true;
                         },
-                        app_shell.KEY_KP_1 => {
+                        .kp_1 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp1, key_mod);
                             return true;
                         },
-                        app_shell.KEY_KP_2 => {
+                        .kp_2 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp2, key_mod);
                             return true;
                         },
-                        app_shell.KEY_KP_3 => {
+                        .kp_3 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp3, key_mod);
                             return true;
                         },
-                        app_shell.KEY_KP_4 => {
+                        .kp_4 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp4, key_mod);
                             return true;
                         },
-                        app_shell.KEY_KP_5 => {
+                        .kp_5 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp5, key_mod);
                             return true;
                         },
-                        app_shell.KEY_KP_6 => {
+                        .kp_6 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp6, key_mod);
                             return true;
                         },
-                        app_shell.KEY_KP_7 => {
+                        .kp_7 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp7, key_mod);
                             return true;
                         },
-                        app_shell.KEY_KP_8 => {
+                        .kp_8 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp8, key_mod);
                             return true;
                         },
-                        app_shell.KEY_KP_9 => {
+                        .kp_9 => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp9, key_mod);
                             return true;
                         },
-                        app_shell.KEY_KP_DECIMAL => {
+                        .kp_decimal => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_decimal, key_mod);
                             return true;
                         },
-                        app_shell.KEY_KP_DIVIDE => {
+                        .kp_divide => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_divide, key_mod);
                             return true;
                         },
-                        app_shell.KEY_KP_MULTIPLY => {
+                        .kp_multiply => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_multiply, key_mod);
                             return true;
                         },
-                        app_shell.KEY_KP_SUBTRACT => {
+                        .kp_subtract => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_subtract, key_mod);
                             return true;
                         },
-                        app_shell.KEY_KP_ADD => {
+                        .kp_add => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_add, key_mod);
                             return true;
                         },
-                        app_shell.KEY_KP_ENTER => {
+                        .kp_enter => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_enter, key_mod);
                             return true;
                         },
-                        app_shell.KEY_KP_EQUAL => {
+                        .kp_equal => {
                             try widget.session.sendKeypad(terminal_mod.KeypadKey.kp_equal, key_mod);
                             return true;
                         },
@@ -1206,8 +1204,8 @@ pub const TerminalWidget = struct {
                 }
             }.apply;
 
-            if (ctrl and shift and r.isKeyPressed(app_shell.KEY_V) and in_terminal) {
-                if (r.getClipboardText()) |clip| {
+            if (ctrl and shift and input_batch.keyPressed(.v) and in_terminal) {
+                if (shell.getClipboardText()) |clip| {
                     clearLiveState(self);
                     if (self.session.bracketedPasteEnabled()) {
                         try self.session.sendText("\x1b[200~");
@@ -1229,7 +1227,7 @@ pub const TerminalWidget = struct {
                 }
             }
 
-            if (ctrl and shift and r.isKeyPressed(app_shell.KEY_C)) {
+            if (ctrl and shift and input_batch.keyPressed(.c)) {
                 if (self.session.selectionState()) |selection| {
                     const sel_snapshot = self.session.snapshot();
                     const rows_snapshot = sel_snapshot.rows;
@@ -1250,7 +1248,7 @@ pub const TerminalWidget = struct {
                         end_sel.col = @min(end_sel.col, cols_snapshot - 1);
 
                         var text = std.ArrayList(u8).empty;
-                        defer text.deinit(r.allocator);
+                        defer text.deinit(self.session.allocator);
 
                         var row_idx: usize = start_sel.row;
                         while (row_idx <= end_sel.row and row_idx < total_lines_copy) : (row_idx += 1) {
@@ -1269,13 +1267,13 @@ pub const TerminalWidget = struct {
                             while (col_idx <= col_end and col_idx < cols_snapshot) : (col_idx += 1) {
                                 const cell = row_cells[col_idx];
                                 if (cell.codepoint == 0) {
-                                    _ = text.append(r.allocator, ' ') catch {};
+                                    _ = text.append(self.session.allocator, ' ') catch {};
                                     continue;
                                 }
                                 var buf: [4]u8 = undefined;
                                 const len = std.unicode.utf8Encode(@intCast(cell.codepoint), &buf) catch 0;
                                 if (len > 0) {
-                                    _ = text.appendSlice(r.allocator, buf[0..len]) catch {};
+                                    _ = text.appendSlice(self.session.allocator, buf[0..len]) catch {};
                                 }
                             }
 
@@ -1285,13 +1283,13 @@ pub const TerminalWidget = struct {
                             }
 
                             if (row_idx != end_sel.row) {
-                                _ = text.append(r.allocator, '\n') catch {};
+                                _ = text.append(self.session.allocator, '\n') catch {};
                             }
                         }
 
-                        _ = text.append(r.allocator, 0) catch {};
+                        _ = text.append(self.session.allocator, 0) catch {};
                         const cstr: [*:0]const u8 = @ptrCast(text.items.ptr);
-                        r.setClipboardText(cstr);
+                        shell.setClipboardText(cstr);
                         handled = true;
                         skip_chars = true;
                     }
@@ -1299,17 +1297,17 @@ pub const TerminalWidget = struct {
             }
 
             if (allow_terminal_key) {
-                var handled_keys: [32]c_int = undefined;
+                var handled_keys: [32]shared_types.input.Key = undefined;
                 var handled_key_count: usize = 0;
                 const markHandled = struct {
-                    fn apply(keys: *[32]c_int, count: *usize, key: c_int) void {
+                    fn apply(keys: *[32]shared_types.input.Key, count: *usize, key: shared_types.input.Key) void {
                         if (count.* >= keys.len) return;
                         keys[count.*] = key;
                         count.* += 1;
                     }
                 }.apply;
                 const wasHandled = struct {
-                    fn apply(keys: *const [32]c_int, count: usize, key: c_int) bool {
+                    fn apply(keys: *const [32]shared_types.input.Key, count: usize, key: shared_types.input.Key) bool {
                         var idx: usize = 0;
                         while (idx < count) : (idx += 1) {
                             if (keys[idx] == key) return true;
@@ -1317,41 +1315,41 @@ pub const TerminalWidget = struct {
                         return false;
                     }
                 }.apply;
-                const repeat_keys = [_]c_int{
-                    app_shell.KEY_ENTER,
-                    app_shell.KEY_BACKSPACE,
-                    app_shell.KEY_TAB,
-                    app_shell.KEY_ESCAPE,
-                    app_shell.KEY_UP,
-                    app_shell.KEY_DOWN,
-                    app_shell.KEY_LEFT,
-                    app_shell.KEY_RIGHT,
-                    app_shell.KEY_HOME,
-                    app_shell.KEY_END,
-                    app_shell.KEY_PAGE_UP,
-                    app_shell.KEY_PAGE_DOWN,
-                    app_shell.KEY_INSERT,
-                    app_shell.KEY_DELETE,
-                    app_shell.KEY_KP_0,
-                    app_shell.KEY_KP_1,
-                    app_shell.KEY_KP_2,
-                    app_shell.KEY_KP_3,
-                    app_shell.KEY_KP_4,
-                    app_shell.KEY_KP_5,
-                    app_shell.KEY_KP_6,
-                    app_shell.KEY_KP_7,
-                    app_shell.KEY_KP_8,
-                    app_shell.KEY_KP_9,
-                    app_shell.KEY_KP_DECIMAL,
-                    app_shell.KEY_KP_DIVIDE,
-                    app_shell.KEY_KP_MULTIPLY,
-                    app_shell.KEY_KP_SUBTRACT,
-                    app_shell.KEY_KP_ADD,
-                    app_shell.KEY_KP_ENTER,
-                    app_shell.KEY_KP_EQUAL,
+                const repeat_keys = [_]shared_types.input.Key{
+                    .enter,
+                    .backspace,
+                    .tab,
+                    .escape,
+                    .up,
+                    .down,
+                    .left,
+                    .right,
+                    .home,
+                    .end,
+                    .page_up,
+                    .page_down,
+                    .insert,
+                    .delete,
+                    .kp_0,
+                    .kp_1,
+                    .kp_2,
+                    .kp_3,
+                    .kp_4,
+                    .kp_5,
+                    .kp_6,
+                    .kp_7,
+                    .kp_8,
+                    .kp_9,
+                    .kp_decimal,
+                    .kp_divide,
+                    .kp_multiply,
+                    .kp_subtract,
+                    .kp_add,
+                    .kp_enter,
+                    .kp_equal,
                 };
                 const isRepeatKey = struct {
-                    fn apply(keys: []const c_int, key: c_int) bool {
+                    fn apply(keys: []const shared_types.input.Key, key: shared_types.input.Key) bool {
                         for (keys) |value| {
                             if (value == key) return true;
                         }
@@ -1359,7 +1357,10 @@ pub const TerminalWidget = struct {
                     }
                 }.apply;
 
-                while (r.getKeyPressed()) |key| {
+                for (input_batch.events.items) |event| {
+                    if (event != .key) continue;
+                    if (!event.key.pressed) continue;
+                    const key = event.key.key;
                     if (isRepeatKey(&repeat_keys, key)) {
                         continue;
                     }
@@ -1376,54 +1377,54 @@ pub const TerminalWidget = struct {
                     if (ctrl or alt) {
                         var maybe_char: u32 = 0;
                         switch (key) {
-                            app_shell.KEY_A => maybe_char = if (shift) 'A' else 'a',
-                            app_shell.KEY_B => maybe_char = if (shift) 'B' else 'b',
-                            app_shell.KEY_C => maybe_char = if (shift) 'C' else 'c',
-                            app_shell.KEY_D => maybe_char = if (shift) 'D' else 'd',
-                            app_shell.KEY_E => maybe_char = if (shift) 'E' else 'e',
-                            app_shell.KEY_F => maybe_char = if (shift) 'F' else 'f',
-                            app_shell.KEY_G => maybe_char = if (shift) 'G' else 'g',
-                            app_shell.KEY_H => maybe_char = if (shift) 'H' else 'h',
-                            app_shell.KEY_I => maybe_char = if (shift) 'I' else 'i',
-                            app_shell.KEY_J => maybe_char = if (shift) 'J' else 'j',
-                            app_shell.KEY_K => maybe_char = if (shift) 'K' else 'k',
-                            app_shell.KEY_L => maybe_char = if (shift) 'L' else 'l',
-                            app_shell.KEY_M => maybe_char = if (shift) 'M' else 'm',
-                            app_shell.KEY_N => maybe_char = if (shift) 'N' else 'n',
-                            app_shell.KEY_O => maybe_char = if (shift) 'O' else 'o',
-                            app_shell.KEY_P => maybe_char = if (shift) 'P' else 'p',
-                            app_shell.KEY_Q => maybe_char = if (shift) 'Q' else 'q',
-                            app_shell.KEY_R => maybe_char = if (shift) 'R' else 'r',
-                            app_shell.KEY_S => maybe_char = if (shift) 'S' else 's',
-                            app_shell.KEY_T => maybe_char = if (shift) 'T' else 't',
-                            app_shell.KEY_U => maybe_char = if (shift) 'U' else 'u',
-                            app_shell.KEY_V => maybe_char = if (shift) 'V' else 'v',
-                            app_shell.KEY_W => maybe_char = if (shift) 'W' else 'w',
-                            app_shell.KEY_X => maybe_char = if (shift) 'X' else 'x',
-                            app_shell.KEY_Y => maybe_char = if (shift) 'Y' else 'y',
-                            app_shell.KEY_Z => maybe_char = if (shift) 'Z' else 'z',
-                            app_shell.KEY_ZERO => maybe_char = if (shift) ')' else '0',
-                            app_shell.KEY_ONE => maybe_char = if (shift) '!' else '1',
-                            app_shell.KEY_TWO => maybe_char = if (shift) '@' else '2',
-                            app_shell.KEY_THREE => maybe_char = if (shift) '#' else '3',
-                            app_shell.KEY_FOUR => maybe_char = if (shift) '$' else '4',
-                            app_shell.KEY_FIVE => maybe_char = if (shift) '%' else '5',
-                            app_shell.KEY_SIX => maybe_char = if (shift) '^' else '6',
-                            app_shell.KEY_SEVEN => maybe_char = if (shift) '&' else '7',
-                            app_shell.KEY_EIGHT => maybe_char = if (shift) '*' else '8',
-                            app_shell.KEY_NINE => maybe_char = if (shift) '(' else '9',
-                            app_shell.KEY_SPACE => maybe_char = ' ',
-                            app_shell.KEY_MINUS => maybe_char = if (shift) '_' else '-',
-                            app_shell.KEY_EQUAL => maybe_char = if (shift) '+' else '=',
-                            app_shell.KEY_LEFT_BRACKET => maybe_char = if (shift) '{' else '[',
-                            app_shell.KEY_RIGHT_BRACKET => maybe_char = if (shift) '}' else ']',
-                            app_shell.KEY_BACKSLASH => maybe_char = if (shift) '|' else '\\',
-                            app_shell.KEY_SEMICOLON => maybe_char = if (shift) ':' else ';',
-                            app_shell.KEY_APOSTROPHE => maybe_char = if (shift) '"' else '\'',
-                            app_shell.KEY_GRAVE => maybe_char = if (shift) '~' else '`',
-                            app_shell.KEY_COMMA => maybe_char = if (shift) '<' else ',',
-                            app_shell.KEY_PERIOD => maybe_char = if (shift) '>' else '.',
-                            app_shell.KEY_SLASH => maybe_char = if (shift) '?' else '/',
+                            .a => maybe_char = if (shift) 'A' else 'a',
+                            .b => maybe_char = if (shift) 'B' else 'b',
+                            .c => maybe_char = if (shift) 'C' else 'c',
+                            .d => maybe_char = if (shift) 'D' else 'd',
+                            .e => maybe_char = if (shift) 'E' else 'e',
+                            .f => maybe_char = if (shift) 'F' else 'f',
+                            .g => maybe_char = if (shift) 'G' else 'g',
+                            .h => maybe_char = if (shift) 'H' else 'h',
+                            .i => maybe_char = if (shift) 'I' else 'i',
+                            .j => maybe_char = if (shift) 'J' else 'j',
+                            .k => maybe_char = if (shift) 'K' else 'k',
+                            .l => maybe_char = if (shift) 'L' else 'l',
+                            .m => maybe_char = if (shift) 'M' else 'm',
+                            .n => maybe_char = if (shift) 'N' else 'n',
+                            .o => maybe_char = if (shift) 'O' else 'o',
+                            .p => maybe_char = if (shift) 'P' else 'p',
+                            .q => maybe_char = if (shift) 'Q' else 'q',
+                            .r => maybe_char = if (shift) 'R' else 'r',
+                            .s => maybe_char = if (shift) 'S' else 's',
+                            .t => maybe_char = if (shift) 'T' else 't',
+                            .u => maybe_char = if (shift) 'U' else 'u',
+                            .v => maybe_char = if (shift) 'V' else 'v',
+                            .w => maybe_char = if (shift) 'W' else 'w',
+                            .x => maybe_char = if (shift) 'X' else 'x',
+                            .y => maybe_char = if (shift) 'Y' else 'y',
+                            .z => maybe_char = if (shift) 'Z' else 'z',
+                            .zero => maybe_char = if (shift) ')' else '0',
+                            .one => maybe_char = if (shift) '!' else '1',
+                            .two => maybe_char = if (shift) '@' else '2',
+                            .three => maybe_char = if (shift) '#' else '3',
+                            .four => maybe_char = if (shift) '$' else '4',
+                            .five => maybe_char = if (shift) '%' else '5',
+                            .six => maybe_char = if (shift) '^' else '6',
+                            .seven => maybe_char = if (shift) '&' else '7',
+                            .eight => maybe_char = if (shift) '*' else '8',
+                            .nine => maybe_char = if (shift) '(' else '9',
+                            .space => maybe_char = ' ',
+                            .minus => maybe_char = if (shift) '_' else '-',
+                            .equal => maybe_char = if (shift) '+' else '=',
+                            .left_bracket => maybe_char = if (shift) '{' else '[',
+                            .right_bracket => maybe_char = if (shift) '}' else ']',
+                            .backslash => maybe_char = if (shift) '|' else '\\',
+                            .semicolon => maybe_char = if (shift) ':' else ';',
+                            .apostrophe => maybe_char = if (shift) '"' else '\'',
+                            .grave => maybe_char = if (shift) '~' else '`',
+                            .comma => maybe_char = if (shift) '<' else ',',
+                            .period => maybe_char = if (shift) '>' else '.',
+                            .slash => maybe_char = if (shift) '?' else '/',
                             else => {},
                         }
                         if (maybe_char != 0) {
@@ -1438,7 +1439,7 @@ pub const TerminalWidget = struct {
 
                 for (repeat_keys) |key| {
                     if (wasHandled(&handled_keys, handled_key_count, key)) continue;
-                    if (r.isKeyRepeated(key)) {
+                    if (input_batch.keyRepeated(key)) {
                         if (try applyTerminalKey(self, key, mod)) {
                             clearLiveState(self);
                             handled = true;
@@ -1449,21 +1450,24 @@ pub const TerminalWidget = struct {
             }
 
             if (!skip_chars) {
-                while (r.getCharPressed()) |char| {
-                    if (char >= 32) {
-                        clearLiveState(self);
-                        try self.session.sendChar(char, mod);
-                        handled = true;
+                for (input_batch.events.items) |event| {
+                    if (event == .text) {
+                        const char = event.text.codepoint;
+                        if (char >= 32) {
+                            clearLiveState(self);
+                            try self.session.sendChar(char, mod);
+                            handled = true;
+                        }
                     }
                 }
             }
 
             if (!mouse_reporting and in_terminal) {
-                if (r.isMouseButtonPressed(app_shell.MOUSE_LEFT)) {
+                if (input_batch.mousePressed(.left)) {
                     const local_x = mouse.x - x;
                     const local_y = mouse.y - y;
-                    const col = @as(usize, @intFromFloat(local_x / r.terminal_cell_width));
-                    const row = @as(usize, @intFromFloat(local_y / r.terminal_cell_height));
+                    const col = @as(usize, @intFromFloat(local_x / shell.terminalCellWidth()));
+                    const row = @as(usize, @intFromFloat(local_y / shell.terminalCellHeight()));
                     if (cols > 0 and rows > 0) {
                         const clamped_col = @min(col, cols - 1);
                         const clamped_row = @min(row, rows - 1);
@@ -1475,12 +1479,12 @@ pub const TerminalWidget = struct {
                     }
                 }
 
-                if (r.isMouseButtonDown(app_shell.MOUSE_LEFT)) {
+                if (input_batch.mouseDown(.left)) {
                     if (self.session.selectionState()) |_| {
                         const local_x = mouse.x - x;
                         const local_y = mouse.y - y;
-                        const col = @as(usize, @intFromFloat(local_x / r.terminal_cell_width));
-                        const row = @as(usize, @intFromFloat(local_y / r.terminal_cell_height));
+                        const col = @as(usize, @intFromFloat(local_x / shell.terminalCellWidth()));
+                        const row = @as(usize, @intFromFloat(local_y / shell.terminalCellHeight()));
                         if (cols > 0 and rows > 0) {
                             const clamped_col = @min(col, cols - 1);
                             const clamped_row = @min(row, rows - 1);
@@ -1502,7 +1506,7 @@ pub const TerminalWidget = struct {
                     }
                 }
 
-                if (r.isMouseButtonReleased(app_shell.MOUSE_LEFT)) {
+                if (input_batch.mouseReleased(.left)) {
                     if (self.session.selectionState() != null) {
                         self.session.finishSelection();
                         handled = true;
@@ -1511,8 +1515,8 @@ pub const TerminalWidget = struct {
             }
 
             if (!mouse_reporting and in_terminal) {
-                if (r.isMouseButtonPressed(app_shell.MOUSE_MIDDLE)) {
-                    if (r.getClipboardText()) |clip| {
+                if (input_batch.mousePressed(.middle)) {
+                    if (shell.getClipboardText()) |clip| {
                         if (self.session.bracketedPasteEnabled()) {
                             try self.session.sendText("\x1b[200~");
                             try self.session.sendText(clip);
@@ -1532,7 +1536,7 @@ pub const TerminalWidget = struct {
 
             const mouse_on_scrollbar = mouse.x >= scrollbar_x and mouse.x <= scrollbar_x + scrollbar_w and mouse.y >= scrollbar_y and mouse.y <= scrollbar_y + scrollbar_h;
             if (!mouse_reporting and in_terminal and mouse_on_scrollbar) {
-                if (r.isMouseButtonPressed(app_shell.MOUSE_LEFT)) {
+                if (input_batch.mousePressed(.left)) {
                     scroll_dragging.* = true;
                     const track_h = scrollbar_h;
                     const min_thumb_h: f32 = 18;
@@ -1553,7 +1557,7 @@ pub const TerminalWidget = struct {
             }
 
             if (!mouse_reporting and scroll_dragging.*) {
-                if (r.isMouseButtonDown(app_shell.MOUSE_LEFT)) {
+                if (input_batch.mouseDown(.left)) {
                     const track_h = scrollbar_h;
                     const min_thumb_h: f32 = 18;
                     const thumb_h = if (total_lines > rows)

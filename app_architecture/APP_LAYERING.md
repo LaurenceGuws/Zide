@@ -82,6 +82,8 @@ Enforcement:
 Shared types entry point:
 - `src/types/mod.zig` re-exports shared input/actions/layout/snapshot types.
 - `EditorSnapshot.text_owned` indicates whether `text` must be freed by the caller.
+- Terminal snapshot adapter currently maps rows/cols/cursor only (cells remain empty).
+- `InputBatch` now captures per-frame key/mouse state + text events and is used by main + widgets.
 
 ## Interface Contracts (initial targets)
 Text engine (pure Zig):
