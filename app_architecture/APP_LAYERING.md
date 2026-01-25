@@ -79,6 +79,54 @@ Enforcement:
 - Widgets
   - Accept snapshots + input events; return actions for core app (open file, spawn terminal, etc.).
 
+## Interface Contracts (initial targets)
+Text engine (pure Zig):
+- `EditorSession.init(allocator, grammar_manager)` → owns text + undo + syntax state.
+- `EditorSession.apply(EditCommand)` → returns `EditResult` (dirty ranges, selection changes).
+- `EditorSession.snapshot(viewport)` → `EditorSnapshot` (text slices, tokens, cursor/selection, gutters).
+- `EditorSession.serialize/deserialize` → for cache + session restore.
+
+Terminal backend (pure Zig):
+- `TerminalSession.init(allocator, shell_cmd, env)` → owns PTY + protocol state.
+- `TerminalSession.apply(InputEvent)` → returns `TerminalActions` (bell, title change, open path).
+- `TerminalSession.resize(cols, rows)` → returns `ResizeResult` (needs redraw, scrollback trims).
+- `TerminalSession.snapshot(viewport)` → `TerminalSnapshot` (cells, attrs, cursor, selections).
+
+Raylib editor widget:
+- `EditorWidget.draw(shell, snapshot, layout)` → draws only from snapshot.
+- `EditorWidget.handleInput(shell, events, layout)` → returns `EditorWidgetActions` (scroll, cursor move, command intents).
+- No direct mutation of `EditorSession` internals.
+
+Raylib terminal widget:
+- `TerminalWidget.draw(shell, snapshot, layout)` → draws only from snapshot.
+- `TerminalWidget.handleInput(shell, events, layout)` → returns `TerminalWidgetActions` (input bytes, selection copy, open link).
+- No direct mutation of `TerminalSession` internals.
+
+Core app logic:
+- Owns `EditorSession` + `TerminalSession` lifetimes and caches.
+- Translates widget actions into engine/backend commands.
+- Manages workspace + config + LSP + persistence.
+
+Raylib IDE shell:
+- Owns window lifecycle + input polling + frame timing.
+- Dispatches inputs to core; renders via widgets.
+- Exposes `app_shell.Shell` surface only.
+
+## Data Flow (directional)
+- Input → IDE shell → core app → (session apply) → snapshot → widget draw.
+- Widgets emit action intents; core decides and mutates sessions.
+- Snapshots are immutable and owned by core app (widgets treat as read-only).
+
+## Ownership + Lifecycle
+- Core app owns all long-lived state (sessions, caches, tools).
+- Widgets are ephemeral views; no persistent state beyond UI affordances (hover, drag, local cache).
+- App shell owns rendering resources; widgets must not retain renderer handles.
+
+## Event + Action Types (sketch)
+- `InputEvent` (key, mouse, scroll, text) from shell to core.
+- `EditorWidgetActions` (edit intent, selection intent, scroll intent).
+- `TerminalWidgetActions` (pty input bytes, selection copy, open-link intent).
+
 ## Migration Steps (small, testable)
 1) **Codify import rules** in a single document (this file) and align per-module checks.
 2) **Add core → widget boundaries** by introducing snapshot types and reducing direct data access.
