@@ -369,7 +369,7 @@ const AppState = struct {
             const frame_time = app_shell.getTime();
             self.metrics.beginFrame(frame_time);
 
-            try self.update();
+            try self.update(&input_batch);
 
             // Only redraw when something changed
             if (self.needs_redraw) {
@@ -438,7 +438,8 @@ const AppState = struct {
         );
     }
 
-    fn update(self: *AppState) !void {
+    fn update(self: *AppState, input_batch: *shared_types.input.InputBatch) !void {
+        _ = input_batch;
         const shell = self.shell;
         const r = shell.rendererPtr();
         const now = app_shell.getTime();
