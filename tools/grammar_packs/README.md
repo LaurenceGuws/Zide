@@ -22,3 +22,12 @@ Configuration lives in `config/grammar_packs.json`.
 ## Important
 All fetched sources and built artifacts live in `work/` and `dist/` and are gitignored.
 
+## App Integration
+The app uses:
+```
+zig build grammar-update -- --skip-git --continue-on-error --jobs 8
+```
+
+This writes:
+- `tools/grammar_packs/dist/manifest.json`
+- `assets/syntax/default.lua` (extension + basename → grammar map)

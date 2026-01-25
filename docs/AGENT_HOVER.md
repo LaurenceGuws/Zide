@@ -45,8 +45,9 @@ Date: 2026-01-24
 - Highlight precompute now initializes the highlighter in cached draw paths.
 - Tree-sitter capture mapping expanded; spell/nospell captures now skipped to avoid overriding colors.
 - Added nvim-treesitter highlight queries for zig, bash, java, python, go, rust, lua, json, toml, and c.
-- Added tree-sitter parsers for bash/java and enabled highlight detection for .bashrc/.sh/.java.
-- Dynamic grammar pack automation is planned (see treesitter_dynamic_roadmap.md).
+- Added dynamic grammar pack loader + runtime grammar manager.
+- Added `zig build grammar-update` tooling (parallel builds, skip-git, continue-on-error).
+- Generated `assets/syntax/default.lua` from Neovim filetype + parsers.lua, with user/project overrides.
 
 ## Next Steps
 1) Add render cache stress test for eviction behavior.

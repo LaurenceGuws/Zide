@@ -26,7 +26,7 @@ zig build run
 
 - Native Wayland support (Hyprland, Sway, etc.)
 - Integrated terminal panel (backend in progress)
-- Tree-sitter syntax highlighting
+- Tree-sitter syntax highlighting (dynamic grammar packs)
 - Piece-table text buffer with undo/redo
 - Low CPU usage when idle (<1%)
 
@@ -37,6 +37,14 @@ See [app_architecture/BOOTSTRAP.md](app_architecture/BOOTSTRAP.md) for:
 - Architecture overview
 - Keyboard shortcuts
 - Configuration options
+
+Tree-sitter grammar packs:
+```bash
+zig build grammar-update -- --skip-git --continue-on-error --jobs 8
+```
+Overrides:
+- `~/.config/zide/syntax.lua` (user)
+- `.zide/syntax.lua` (project)
 
 ## Dependencies
 

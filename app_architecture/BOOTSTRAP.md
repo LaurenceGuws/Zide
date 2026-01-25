@@ -56,7 +56,8 @@ make bootstrap
 ```
 
 Tree-sitter (runtime + Zig parser) is vendored under `vendor/tree-sitter/` and
-`vendor/tree-sitter-zig/`, so no extra bootstrap step is required.
+`vendor/tree-sitter-zig/`, so no extra bootstrap step is required. Grammar packs
+are built and installed via `zig build grammar-update`.
 
 On Linux, this also generates Wayland protocol headers via `make wayland-protocols`.
 
@@ -71,6 +72,16 @@ zig build
 # or
 make build
 ```
+
+## Tree-sitter Grammar Packs
+
+```bash
+zig build grammar-update -- --skip-git --continue-on-error --jobs 8
+```
+
+If you want Android grammars, ensure an NDK is available:
+- `ANDROID_NDK_ROOT` or `ANDROID_SDK_ROOT` set, or
+- `~/.local/android-sdk/ndk/<version>`
 
 ## Run
 
