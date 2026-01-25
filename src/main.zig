@@ -14,13 +14,13 @@ const config_mod = @import("config/lua_config.zig");
 const terminal_mod = @import("terminal/core/terminal.zig");
 const metrics_mod = @import("terminal/model/metrics.zig");
 const term_types = @import("terminal/model/types.zig");
-const input_types = @import("types/input.zig");
+const shared_types = @import("types/mod.zig");
 
 // UI modules
 const app_shell = @import("app_shell.zig");
 const widgets = @import("ui/widgets.zig");
 const editor_draw = @import("ui/widgets/editor_widget_draw.zig");
-const layout_types = @import("types/layout.zig");
+const layout_types = shared_types.layout;
 
 const Editor = editor_mod.Editor;
 const TerminalSession = terminal_mod.TerminalSession;
@@ -964,10 +964,10 @@ fn parseEnvU64(env_key: [:0]const u8, default_value: u64) u64 {
     return std.fmt.parseInt(u64, slice, 10) catch default_value;
 }
 
-fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) input_types.InputBatch {
+fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) shared_types.input.InputBatch {
     _ = shell;
     // TODO: wire shell input polling into typed events.
-    return input_types.InputBatch.init(allocator);
+    return shared_types.input.InputBatch.init(allocator);
 }
 
 // Tests

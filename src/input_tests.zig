@@ -1,10 +1,10 @@
 const std = @import("std");
-const input_types = @import("types/input.zig");
+const shared_types = @import("types/mod.zig");
 
 test "input batch append/clear" {
     const allocator = std.testing.allocator;
 
-    var batch = input_types.InputBatch.init(allocator);
+    var batch = shared_types.input.InputBatch.init(allocator);
     defer batch.deinit();
 
     try batch.append(.{ .focus = true });

@@ -1,4 +1,4 @@
-const shared = @import("../../types/snapshots.zig");
+const shared = @import("../../types/mod.zig").snapshots;
 const term_mod = @import("terminal.zig");
 
 pub fn toSharedSnapshot(snapshot: term_mod.TerminalSnapshot) shared.TerminalSnapshot {
