@@ -37,6 +37,7 @@ Next session focus: full query plan.
 - `AppState.draw()` and `AppState.update()` now compute/use `WidgetLayout` for geometry.
 - `InputBatch` lifecycle wired; `AppState.update()` receives batch; widgets read from batch for input.
 - Terminal widget draw now consumes an `InputSnapshot` for hover state instead of polling renderer input.
+- `buildInputBatch` moved into `src/input/input_builder.zig` to keep `main.zig` slimmer.
 - `InputBatch` now captures input state/events; editor/terminal widgets and `AppState.update()` read from batch instead of renderer.
 
 Current state (do not question this):
