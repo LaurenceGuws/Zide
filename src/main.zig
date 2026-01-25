@@ -37,6 +37,12 @@ const EditorClusterCache = widgets.EditorClusterCache;
 const EditorRenderCache = editor_render_cache_mod.EditorRenderCache;
 const TerminalWidget = widgets.TerminalWidget;
 
+const AppMode = enum {
+    ide,
+    editor,
+    terminal,
+};
+
 const AppState = struct {
     allocator: std.mem.Allocator,
     shell: *Shell,
@@ -96,8 +102,9 @@ const AppState = struct {
     perf_file_path: ?[]u8,
     perf_logger: Logger,
     last_input: shared_types.input.InputSnapshot,
+    app_mode: AppMode,
 
-    pub fn init(allocator: std.mem.Allocator) !*AppState {
+    pub fn init(allocator: std.mem.Allocator, app_mode: AppMode) !*AppState {
         var config = config_mod.loadConfig(allocator) catch |err| blk: {
             std.debug.print("config load error: {any}\n", .{err});
             break :blk config_mod.Config{
@@ -160,9 +167,9 @@ const AppState = struct {
             .terminals = .empty,
             .terminal_widgets = .empty,
             .active_tab = 0,
-            .active_kind = .editor,
+            .active_kind = if (app_mode == .terminal) .terminal else .editor,
             .mode = "NORMAL",
-            .show_terminal = false,
+            .show_terminal = app_mode == .terminal,
             .terminal_height = 200,
             .needs_redraw = true,
             .idle_frames = 0,
@@ -200,6 +207,7 @@ const AppState = struct {
             .perf_file_path = perf_file_path,
             .perf_logger = perf_log,
             .last_input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{}),
+            .app_mode = app_mode,
         };
         state.applyUiScale();
 
@@ -271,8 +279,16 @@ const AppState = struct {
     pub fn newTerminal(self: *AppState) !void {
         // Calculate terminal size based on UI
         const shell = self.shell;
-        const cols: u16 = @intCast(@max(80, @divFloor(shell.width(), @as(i32, @intFromFloat(shell.terminalCellWidth())))));
-        const rows: u16 = @intCast(@max(24, @divFloor(@as(i32, @intFromFloat(self.terminal_height)), @as(i32, @intFromFloat(shell.terminalCellHeight())))));
+        const width = @as(f32, @floatFromInt(shell.width()));
+        const height = @as(f32, @floatFromInt(shell.height()));
+        const layout = self.computeLayout(width, height);
+        if (self.app_mode == .terminal) {
+            self.active_kind = .terminal;
+        } else if (self.app_mode == .editor) {
+            self.active_kind = .editor;
+        }
+        const cols: u16 = @intCast(@max(80, @divFloor(@as(i32, @intFromFloat(layout.terminal.width)), @as(i32, @intFromFloat(shell.terminalCellWidth())))));
+        const rows: u16 = @intCast(@max(24, @divFloor(@as(i32, @intFromFloat(layout.terminal.height)), @as(i32, @intFromFloat(shell.terminalCellHeight())))));
         const theme = shell.theme();
 
         const term = try TerminalSession.init(self.allocator, rows, cols);
@@ -312,8 +328,12 @@ const AppState = struct {
     fn refreshTerminalSizing(self: *AppState) !void {
         if (self.terminals.items.len == 0) return;
         const shell = self.shell;
-        const cols: u16 = @intCast(@max(1, @divFloor(shell.width(), @as(i32, @intFromFloat(shell.terminalCellWidth())))));
-        const rows: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(self.terminal_height)), @as(i32, @intFromFloat(shell.terminalCellHeight())))));
+        const width = @as(f32, @floatFromInt(shell.width()));
+        const height = @as(f32, @floatFromInt(shell.height()));
+        const layout = self.computeLayout(width, height);
+        const effective_height = if (self.app_mode == .ide and !self.show_terminal) self.terminal_height else layout.terminal.height;
+        const cols: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(layout.terminal.width)), @as(i32, @intFromFloat(shell.terminalCellWidth())))));
+        const rows: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(effective_height)), @as(i32, @intFromFloat(shell.terminalCellHeight())))));
         for (self.terminals.items) |term| {
             term.setCellSize(
                 @intFromFloat(shell.terminalCellWidth()),
@@ -323,39 +343,93 @@ const AppState = struct {
         }
     }
 
-    pub fn run(self: *AppState) !void {
-        if (self.perf_mode and self.perf_file_path != null) {
-            try self.openFile(self.perf_file_path.?);
-        } else {
-            // Create initial editor
-            try self.newEditor();
+    fn computeLayout(self: *AppState, width: f32, height: f32) layout_types.WidgetLayout {
+        switch (self.app_mode) {
+            .terminal => {
+                const terminal_h = if (self.show_terminal) height else 0;
+                return .{
+                    .window = .{ .x = 0, .y = 0, .width = width, .height = height },
+                    .options_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                    .tab_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                    .side_nav = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                    .editor = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                    .terminal = .{ .x = 0, .y = 0, .width = width, .height = terminal_h },
+                    .status_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                };
+            },
+            .editor => {
+                return .{
+                    .window = .{ .x = 0, .y = 0, .width = width, .height = height },
+                    .options_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                    .tab_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                    .side_nav = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                    .editor = .{ .x = 0, .y = 0, .width = width, .height = height },
+                    .terminal = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                    .status_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                };
+            },
+            .ide => {},
+        }
 
-            // Insert welcome message
-            if (self.editors.items.len > 0) {
-                const editor = self.editors.items[0];
-                try editor.insertText(
-                    \\// Welcome to Zide - A Zig IDE
-                    \\//
-                    \\// Keyboard shortcuts:
-                    \\//   Ctrl+N  - New file
-                    \\//   Ctrl+O  - Open file
-                    \\//   Ctrl+S  - Save file
-                    \\//   Ctrl+Z  - Undo
-                    \\//   Ctrl+Y  - Redo
-                    \\//   Ctrl+`  - Toggle terminal
-                    \\//   Ctrl+Q  - Quit
-                    \\//
-                    \\// Start typing to begin editing...
-                    \\
-                    \\const std = @import("std");
-                    \\
-                    \\pub fn main() !void {
-                    \\    std.debug.print("Hello, Zide!\n", .{});
-                    \\}
-                    \\
-                );
-                editor.cursor = .{ .line = 0, .col = 0, .offset = 0 };
-                editor.modified = false;
+        const options_bar_height = self.options_bar.height;
+        const tab_bar_height = self.tab_bar.height;
+        const side_nav_width = self.side_nav.width;
+        const status_bar_height = self.status_bar.height;
+        const max_terminal_h = @max(0, height - options_bar_height - tab_bar_height - status_bar_height);
+        const terminal_h = if (self.show_terminal) @min(self.terminal_height, max_terminal_h) else 0;
+        const editor_height = @max(0, height - options_bar_height - tab_bar_height - status_bar_height - terminal_h);
+        const editor_width = @max(0, width - side_nav_width);
+
+        return .{
+            .window = .{ .x = 0, .y = 0, .width = width, .height = height },
+            .options_bar = .{ .x = 0, .y = 0, .width = width, .height = options_bar_height },
+            .tab_bar = .{ .x = side_nav_width, .y = options_bar_height, .width = editor_width, .height = tab_bar_height },
+            .side_nav = .{ .x = 0, .y = options_bar_height, .width = side_nav_width, .height = height - status_bar_height - options_bar_height },
+            .editor = .{ .x = side_nav_width, .y = options_bar_height + tab_bar_height, .width = editor_width, .height = editor_height },
+            .terminal = .{ .x = side_nav_width, .y = height - status_bar_height - terminal_h, .width = editor_width, .height = terminal_h },
+            .status_bar = .{ .x = 0, .y = height - status_bar_height, .width = width, .height = status_bar_height },
+        };
+    }
+
+    pub fn run(self: *AppState) !void {
+        if (self.app_mode == .terminal) {
+            if (self.terminals.items.len == 0) {
+                try self.newTerminal();
+            }
+        } else {
+            if (self.perf_mode and self.perf_file_path != null) {
+                try self.openFile(self.perf_file_path.?);
+            } else {
+                // Create initial editor
+                try self.newEditor();
+
+                // Insert welcome message
+                if (self.editors.items.len > 0) {
+                    const editor = self.editors.items[0];
+                    try editor.insertText(
+                        \\// Welcome to Zide - A Zig IDE
+                        \\//
+                        \\// Keyboard shortcuts:
+                        \\//   Ctrl+N  - New file
+                        \\//   Ctrl+O  - Open file
+                        \\//   Ctrl+S  - Save file
+                        \\//   Ctrl+Z  - Undo
+                        \\//   Ctrl+Y  - Redo
+                        \\//   Ctrl+`  - Toggle terminal
+                        \\//   Ctrl+Q  - Quit
+                        \\//
+                        \\// Start typing to begin editing...
+                        \\
+                        \\const std = @import("std");
+                        \\
+                        \\pub fn main() !void {
+                        \\    std.debug.print("Hello, Zide!\n", .{});
+                        \\}
+                        \\
+                    );
+                    editor.cursor = .{ .line = 0, .col = 0, .offset = 0 };
+                    editor.modified = false;
+                }
             }
         }
 
@@ -367,7 +441,9 @@ const AppState = struct {
             defer input_batch.deinit();
 
             self.frame_id +|= 1;
-            self.editor_cluster_cache.beginFrame(self.frame_id);
+            if (self.app_mode != .terminal) {
+                self.editor_cluster_cache.beginFrame(self.frame_id);
+            }
 
             const frame_time = app_shell.getTime();
             self.metrics.beginFrame(frame_time);
@@ -466,13 +542,10 @@ const AppState = struct {
                 const term = self.terminals.items[0];
                 const width = @as(f32, @floatFromInt(shell.width()));
                 const height = @as(f32, @floatFromInt(shell.height()));
-                const options_bar_height = self.options_bar.height;
-                const tab_bar_height = self.tab_bar.height;
-                const status_bar_height = self.status_bar.height;
-                const max_terminal_h = @max(0, height - options_bar_height - tab_bar_height - status_bar_height);
-                const terminal_h = if (self.show_terminal) @min(self.terminal_height, max_terminal_h) else 0;
-                const cols: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(width)), @as(i32, @intFromFloat(shell.terminalCellWidth())))));
-                const rows: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(terminal_h)), @as(i32, @intFromFloat(shell.terminalCellHeight())))));
+                const layout = self.computeLayout(width, height);
+                const effective_height = if (self.app_mode == .ide and !self.show_terminal) self.terminal_height else layout.terminal.height;
+                const cols: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(layout.terminal.width)), @as(i32, @intFromFloat(shell.terminalCellWidth())))));
+                const rows: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(effective_height)), @as(i32, @intFromFloat(shell.terminalCellHeight())))));
                 term.setCellSize(
                     @intFromFloat(shell.terminalCellWidth()),
                     @intFromFloat(shell.terminalCellHeight()),
@@ -484,24 +557,7 @@ const AppState = struct {
 
         const width = @as(f32, @floatFromInt(shell.width()));
         const height = @as(f32, @floatFromInt(shell.height()));
-        const options_bar_height = self.options_bar.height;
-        const tab_bar_height = self.tab_bar.height;
-        const side_nav_width = self.side_nav.width;
-        const status_bar_height = self.status_bar.height;
-        const max_terminal_h = @max(0, height - options_bar_height - tab_bar_height - status_bar_height);
-        const terminal_h = if (self.show_terminal) @min(self.terminal_height, max_terminal_h) else 0;
-        const editor_height = @max(0, height - options_bar_height - tab_bar_height - status_bar_height - terminal_h);
-        const editor_width = @max(0, width - side_nav_width);
-
-        const layout = layout_types.WidgetLayout{
-            .window = .{ .x = 0, .y = 0, .width = width, .height = height },
-            .options_bar = .{ .x = 0, .y = 0, .width = width, .height = options_bar_height },
-            .tab_bar = .{ .x = side_nav_width, .y = options_bar_height, .width = editor_width, .height = tab_bar_height },
-            .side_nav = .{ .x = 0, .y = options_bar_height, .width = side_nav_width, .height = height - status_bar_height - options_bar_height },
-            .editor = .{ .x = side_nav_width, .y = options_bar_height + tab_bar_height, .width = editor_width, .height = editor_height },
-            .terminal = .{ .x = side_nav_width, .y = height - status_bar_height - terminal_h, .width = editor_width, .height = terminal_h },
-            .status_bar = .{ .x = 0, .y = height - status_bar_height, .width = width, .height = status_bar_height },
-        };
+        const layout = self.computeLayout(width, height);
 
         // Check for mouse activity (doesn't consume input)
         const mouse = input_batch.mouse_pos;
@@ -541,10 +597,11 @@ const AppState = struct {
         self.last_ctrl_down = ctrl_down;
 
         // Terminal resize by dragging separator
-        if (self.show_terminal) {
+        if (self.app_mode == .ide and self.show_terminal) {
             const separator_y = layout.terminal.y;
             const hit_zone: f32 = 6;
             const over_separator = mouse.y >= separator_y - hit_zone and mouse.y <= separator_y + hit_zone;
+            const max_terminal_h = @max(0, height - self.options_bar.height - self.tab_bar.height - self.status_bar.height);
 
             if (!self.resizing_terminal and mouse_down and over_separator) {
                 self.resizing_terminal = true;
@@ -560,7 +617,7 @@ const AppState = struct {
                     self.terminal_height = new_height;
                     if (self.terminals.items.len > 0) {
                         const term = self.terminals.items[0];
-                        const cols: u16 = @intCast(@max(1, @divFloor(shell.width(), @as(i32, @intFromFloat(shell.terminalCellWidth())))));
+                        const cols: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(layout.terminal.width)), @as(i32, @intFromFloat(shell.terminalCellWidth())))));
                         const rows: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(self.terminal_height)), @as(i32, @intFromFloat(shell.terminalCellHeight())))));
                         term.setCellSize(
                             @intFromFloat(shell.terminalCellWidth()),
@@ -584,7 +641,7 @@ const AppState = struct {
             return;
         }
 
-        if (ctrl and input_batch.keyPressed(.n)) {
+        if (self.app_mode != .terminal and ctrl and input_batch.keyPressed(.n)) {
             try self.newEditor();
             self.needs_redraw = true;
             self.metrics.noteInput(now);
@@ -611,7 +668,7 @@ const AppState = struct {
         }
 
         // Toggle terminal with Ctrl+`
-        if (ctrl and input_batch.keyPressed(.grave)) {
+        if (self.app_mode == .ide and ctrl and input_batch.keyPressed(.grave)) {
             if (self.show_terminal) {
                 self.show_terminal = false;
             } else {
@@ -627,29 +684,35 @@ const AppState = struct {
 
         // Tab bar click handling
         if (input_batch.mousePressed(.left)) {
-            const tab_bar_y = self.options_bar.height;
-            if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.side_nav.width, tab_bar_y)) {
-                // Tab was clicked
-                self.active_tab = self.tab_bar.active_index;
-                self.needs_redraw = true;
-                self.metrics.noteInput(now);
-            }
+            if (self.app_mode == .ide) {
+                const tab_bar_y = self.options_bar.height;
+                if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.side_nav.width, tab_bar_y)) {
+                    // Tab was clicked
+                    self.active_tab = self.tab_bar.active_index;
+                    self.needs_redraw = true;
+                    self.metrics.noteInput(now);
+                }
 
-            const editor_x = layout.editor.x;
-            const editor_y = layout.editor.y;
-            const in_editor = mouse.x >= editor_x and mouse.x <= editor_x + layout.editor.width and
-                mouse.y >= editor_y and mouse.y <= editor_y + layout.editor.height;
+                const editor_x = layout.editor.x;
+                const editor_y = layout.editor.y;
+                const in_editor = mouse.x >= editor_x and mouse.x <= editor_x + layout.editor.width and
+                    mouse.y >= editor_y and mouse.y <= editor_y + layout.editor.height;
 
-            const in_terminal = layout.terminal.height > 0 and mouse.y >= term_y and mouse.y <= term_y + layout.terminal.height;
+                const in_terminal = layout.terminal.height > 0 and mouse.y >= term_y and mouse.y <= term_y + layout.terminal.height;
 
-            if (in_terminal and self.show_terminal) {
+                if (in_terminal and self.show_terminal) {
+                    self.active_kind = .terminal;
+                    self.needs_redraw = true;
+                    self.metrics.noteInput(now);
+                } else if (in_editor) {
+                    self.active_kind = .editor;
+                    self.needs_redraw = true;
+                    self.metrics.noteInput(now);
+                }
+            } else if (self.app_mode == .terminal) {
                 self.active_kind = .terminal;
-                self.needs_redraw = true;
-                self.metrics.noteInput(now);
-            } else if (in_editor) {
+            } else {
                 self.active_kind = .editor;
-                self.needs_redraw = true;
-                self.metrics.noteInput(now);
             }
 
             if (self.mouse_debug) {
@@ -690,7 +753,7 @@ const AppState = struct {
         }
 
         // Update active view
-        if (self.active_kind == .editor and self.editors.items.len > 0) {
+        if (self.app_mode != .terminal and self.active_kind == .editor and self.editors.items.len > 0) {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache, self.editor_wrap);
             if (try widget.handleInput(shell, layout.editor.height, input_batch)) {
@@ -806,7 +869,7 @@ const AppState = struct {
         }
 
         // Update terminal if shown
-        if (self.show_terminal and self.terminals.items.len > 0) {
+        if (self.app_mode != .editor and self.show_terminal and self.terminals.items.len > 0) {
             const term = self.terminals.items[0];
             var term_widget = &self.terminal_widgets.items[0];
 
@@ -878,34 +941,18 @@ const AppState = struct {
 
         const width = @as(f32, @floatFromInt(shell.width()));
         const height = @as(f32, @floatFromInt(shell.height()));
+        const layout = self.computeLayout(width, height);
 
-        // Calculate layout
-        const options_bar_height = self.options_bar.height;
-        const tab_bar_height = self.tab_bar.height;
-        const side_nav_width = self.side_nav.width;
-        const status_bar_height = self.status_bar.height;
-        const max_terminal_h = @max(0, height - options_bar_height - tab_bar_height - status_bar_height);
-        const terminal_h = if (self.show_terminal) @min(self.terminal_height, max_terminal_h) else 0;
-        const editor_height = @max(0, height - options_bar_height - tab_bar_height - status_bar_height - terminal_h);
-        const editor_width = @max(0, width - side_nav_width);
+        if (self.app_mode == .ide) {
+            // Draw options bar
+            self.options_bar.draw(shell, layout.window.width);
 
-        const layout = layout_types.WidgetLayout{
-            .window = .{ .x = 0, .y = 0, .width = width, .height = height },
-            .options_bar = .{ .x = 0, .y = 0, .width = width, .height = options_bar_height },
-            .tab_bar = .{ .x = side_nav_width, .y = options_bar_height, .width = editor_width, .height = tab_bar_height },
-            .side_nav = .{ .x = 0, .y = options_bar_height, .width = side_nav_width, .height = height - status_bar_height - options_bar_height },
-            .editor = .{ .x = side_nav_width, .y = options_bar_height + tab_bar_height, .width = editor_width, .height = editor_height },
-            .terminal = .{ .x = side_nav_width, .y = height - status_bar_height - terminal_h, .width = editor_width, .height = terminal_h },
-            .status_bar = .{ .x = 0, .y = height - status_bar_height, .width = width, .height = status_bar_height },
-        };
-        // Draw options bar
-        self.options_bar.draw(shell, layout.window.width);
-
-        // Draw tab bar
-        self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
+            // Draw tab bar
+            self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
+        }
 
         // Draw editor
-        if (self.editors.items.len > 0) {
+        if (self.app_mode != .terminal and self.editors.items.len > 0) {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache, self.editor_wrap);
             widget.drawCached(
@@ -921,33 +968,38 @@ const AppState = struct {
         }
 
         // Draw terminal if shown
-        if (self.show_terminal and self.terminals.items.len > 0) {
+        if (self.app_mode != .editor and self.show_terminal and self.terminals.items.len > 0) {
             const term_y = layout.terminal.y;
 
             // Terminal separator
-            shell.drawRect(@intFromFloat(layout.terminal.x), @intFromFloat(term_y), @intFromFloat(layout.terminal.width), 2, app_shell.Color.light_gray);
+            if (self.app_mode == .ide) {
+                shell.drawRect(@intFromFloat(layout.terminal.x), @intFromFloat(term_y), @intFromFloat(layout.terminal.width), 2, app_shell.Color.light_gray);
+            }
 
             var term_widget = &self.terminal_widgets.items[0];
-            const term_draw_height = @max(0, layout.terminal.height - 2);
-            if (layout.terminal.width > 0 and term_draw_height > 0) {
+            const term_offset_y: f32 = if (self.app_mode == .ide) 2 else 0;
+            const term_height = if (self.app_mode == .ide) @max(0, layout.terminal.height - 2) else layout.terminal.height;
+            if (layout.terminal.width > 0 and term_height > 0) {
                 shell.beginClip(
                     @intFromFloat(layout.terminal.x),
-                    @intFromFloat(term_y + 2),
+                    @intFromFloat(term_y + term_offset_y),
                     @intFromFloat(layout.terminal.width),
-                    @intFromFloat(term_draw_height),
+                    @intFromFloat(term_height),
                 );
             }
-            term_widget.draw(shell, layout.terminal.x, term_y + 2, layout.terminal.width, term_draw_height, self.last_input);
-            if (layout.terminal.width > 0 and term_draw_height > 0) {
+            term_widget.draw(shell, layout.terminal.x, term_y + term_offset_y, layout.terminal.width, term_height, self.last_input);
+            if (layout.terminal.width > 0 and term_height > 0) {
                 shell.endClip();
             }
         }
 
-        // Draw side navigation bar (covers terminal icon overflow)
-        self.side_nav.draw(shell, layout.side_nav.height, layout.side_nav.y);
+        if (self.app_mode == .ide) {
+            // Draw side navigation bar (covers terminal icon overflow)
+            self.side_nav.draw(shell, layout.side_nav.height, layout.side_nav.y);
+        }
 
         // Draw status bar LAST so it spans full width over everything
-        if (self.editors.items.len > 0) {
+        if (self.app_mode == .ide and self.editors.items.len > 0) {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             const editor = self.editors.items[editor_idx];
             self.status_bar.draw(
@@ -971,10 +1023,46 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var app = try AppState.init(allocator);
+    const app_mode = parseAppMode(allocator);
+    var app = try AppState.init(allocator, app_mode);
     defer app.deinit();
 
     try app.run();
+}
+
+fn parseAppMode(allocator: std.mem.Allocator) AppMode {
+    const args = std.process.argsAlloc(allocator) catch return .ide;
+    defer std.process.argsFree(allocator, args);
+
+    var i: usize = 1;
+    while (i < args.len) : (i += 1) {
+        const arg = args[i];
+        if (std.mem.eql(u8, arg, "--terminal") or std.mem.eql(u8, arg, "terminal")) {
+            return .terminal;
+        }
+        if (std.mem.eql(u8, arg, "--editor") or std.mem.eql(u8, arg, "editor")) {
+            return .editor;
+        }
+        if (std.mem.eql(u8, arg, "--ide") or std.mem.eql(u8, arg, "ide")) {
+            return .ide;
+        }
+        if (std.mem.startsWith(u8, arg, "--mode=")) {
+            const value = arg["--mode=".len..];
+            if (modeFromArg(value)) |mode| return mode;
+        } else if (std.mem.eql(u8, arg, "--mode") and i + 1 < args.len) {
+            i += 1;
+            if (modeFromArg(args[i])) |mode| return mode;
+        }
+    }
+
+    return .ide;
+}
+
+fn modeFromArg(value: []const u8) ?AppMode {
+    if (std.mem.eql(u8, value, "terminal")) return .terminal;
+    if (std.mem.eql(u8, value, "editor")) return .editor;
+    if (std.mem.eql(u8, value, "ide")) return .ide;
+    return null;
 }
 
 fn parseEnvU64(env_key: [:0]const u8, default_value: u64) u64 {

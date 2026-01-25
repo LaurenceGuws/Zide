@@ -121,6 +121,7 @@ Raylib IDE shell:
 - Owns window lifecycle + input polling + frame timing.
 - Dispatches inputs to core; renders via widgets.
 - Exposes `app_shell.Shell` surface only.
+- CLI mode flag can launch IDE/editor/terminal-only shells (`--mode terminal|editor|ide`).
 
 ## Data Flow (directional)
 - Input → IDE shell → core app → (session apply) → snapshot → widget draw.
