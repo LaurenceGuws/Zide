@@ -14,11 +14,13 @@ test "editor snapshot stub is empty" {
     defer editor.deinit();
 
     const snapshot = try snapshot_mod.buildSnapshot(allocator, editor, .{ .width = 0, .height = 0 });
+    defer if (snapshot.line_offsets.len > 0) allocator.free(@constCast(snapshot.line_offsets));
+
     try std.testing.expectEqual(@as(usize, 0), snapshot.text.len);
-    try std.testing.expectEqual(@as(usize, 0), snapshot.line_offsets.len);
+    try std.testing.expectEqual(editor.lineCount(), snapshot.line_offsets.len);
     try std.testing.expectEqual(@as(usize, 0), snapshot.highlights.len);
-    try std.testing.expectEqual(@as(u32, 0), snapshot.cursor_line);
-    try std.testing.expectEqual(@as(u32, 0), snapshot.cursor_col);
+    try std.testing.expectEqual(@as(u32, @intCast(editor.cursor.line)), snapshot.cursor_line);
+    try std.testing.expectEqual(@as(u32, @intCast(editor.cursor.col)), snapshot.cursor_col);
     try std.testing.expect(snapshot.selection_start == null);
     try std.testing.expect(snapshot.selection_end == null);
     _ = @as(shared.EditorSnapshot, snapshot);
