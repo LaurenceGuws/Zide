@@ -16,7 +16,7 @@ const metrics_mod = @import("terminal/model/metrics.zig");
 const term_types = @import("terminal/model/types.zig");
 
 // UI modules
-const renderer_mod = @import("ui/renderer.zig");
+const app_shell = @import("app_shell.zig");
 const widgets = @import("ui/widgets.zig");
 const editor_draw = @import("ui/widgets/editor_widget_draw.zig");
 
@@ -24,7 +24,7 @@ const Editor = editor_mod.Editor;
 const TerminalSession = terminal_mod.TerminalSession;
 const Metrics = metrics_mod.Metrics;
 const Logger = app_logger.Logger;
-const Renderer = renderer_mod.Renderer;
+const Renderer = app_shell.Renderer;
 const TabBar = widgets.TabBar;
 const OptionsBar = widgets.OptionsBar;
 const SideNav = widgets.SideNav;
@@ -59,7 +59,7 @@ const AppState = struct {
     // Dirty tracking for efficient rendering
     needs_redraw: bool,
     idle_frames: u32, // Count frames without activity for adaptive sleep
-    last_mouse_pos: renderer_mod.MousePos,
+    last_mouse_pos: app_shell.MousePos,
     resizing_terminal: bool,
     resize_start_y: f32,
     resize_start_height: f32,
@@ -116,7 +116,7 @@ const AppState = struct {
         try app_logger.init();
 
         if (config.raylib_log_level) |level| {
-            renderer_mod.setRaylibLogLevel(level);
+            app_shell.setRaylibLogLevel(level);
         }
 
         const renderer = try Renderer.init(allocator, 1280, 720, "Zide - Zig IDE");
@@ -354,21 +354,21 @@ const AppState = struct {
         // Main loop
         while (!self.renderer.shouldClose()) {
             // Poll events first (this updates raylib's input state)
-            renderer_mod.pollInputEvents();
+            app_shell.pollInputEvents();
 
             self.frame_id +|= 1;
             self.editor_cluster_cache.beginFrame(self.frame_id);
 
-            const frame_time = renderer_mod.getTime();
+            const frame_time = app_shell.getTime();
             self.metrics.beginFrame(frame_time);
 
             try self.update();
 
             // Only redraw when something changed
             if (self.needs_redraw) {
-                const draw_start = renderer_mod.getTime();
+                const draw_start = app_shell.getTime();
                 self.draw();
-                const draw_end = renderer_mod.getTime();
+                const draw_end = app_shell.getTime();
                 self.metrics.recordDraw(draw_start, draw_end);
                 if (self.perf_mode and self.perf_frames_done > 0) {
                     const draw_ms = (draw_end - draw_start) * 1000.0;
@@ -393,7 +393,7 @@ const AppState = struct {
                 // - Startup grace period: stay responsive for first 3 seconds
                 // - Active: 16ms (~60fps responsiveness)
                 // - Idle: up to 100ms (~10fps, saves CPU)
-                const uptime = renderer_mod.getTime();
+                const uptime = app_shell.getTime();
                 const sleep_ms: f64 = if (uptime < 3.0)
                     0.016 // Startup: stay fully responsive
                 else if (self.idle_frames < 10)
@@ -403,8 +403,8 @@ const AppState = struct {
                 else
                     0.100; // Deep idle: 10fps check rate
 
-                renderer_mod.waitTime(sleep_ms);
-                self.maybeLogMetrics(renderer_mod.getTime());
+                app_shell.waitTime(sleep_ms);
+                self.maybeLogMetrics(app_shell.getTime());
             }
 
             if (self.perf_mode and self.perf_frames_done >= self.perf_frames_total and self.perf_frames_total > 0) {
@@ -433,7 +433,7 @@ const AppState = struct {
 
     fn update(self: *AppState) !void {
         const r = self.renderer;
-        const now = renderer_mod.getTime();
+        const now = app_shell.getTime();
         if (try r.applyPendingZoom(now)) {
             self.applyUiScale();
             try self.refreshTerminalSizing();
@@ -441,9 +441,9 @@ const AppState = struct {
             self.metrics.noteInput(now);
         }
         // Check for window resize (event-based, works with Wayland)
-        if (renderer_mod.isWindowResized()) {
-            r.width = renderer_mod.getScreenWidth();
-            r.height = renderer_mod.getScreenHeight();
+        if (app_shell.isWindowResized()) {
+            r.width = app_shell.getScreenWidth();
+            r.height = app_shell.getScreenHeight();
             if (try r.refreshUiScale()) {
                 self.applyUiScale();
             }
@@ -480,17 +480,17 @@ const AppState = struct {
 
         // Check for mouse activity (doesn't consume input)
         const mouse = r.getMousePos();
-        const mouse_down = r.isMouseButtonDown(renderer_mod.MOUSE_LEFT);
+        const mouse_down = r.isMouseButtonDown(app_shell.MOUSE_LEFT);
         const mouse_moved = mouse.x != self.last_mouse_pos.x or mouse.y != self.last_mouse_pos.y;
         const wheel = r.getMouseWheelMove();
-        const mouse_pressed = r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT) or
-            r.isMouseButtonPressed(renderer_mod.MOUSE_RIGHT);
+        const mouse_pressed = r.isMouseButtonPressed(app_shell.MOUSE_LEFT) or
+            r.isMouseButtonPressed(app_shell.MOUSE_RIGHT);
         const has_mouse_action = mouse_pressed or wheel != 0 or mouse_down;
 
         const terminal_visible = self.show_terminal and terminal_h > 0;
         const term_y = height - status_bar_height - terminal_h;
         const in_terminal_area = terminal_visible and mouse.y >= term_y;
-        const ctrl_down = r.isKeyDown(renderer_mod.KEY_LEFT_CONTROL) or r.isKeyDown(renderer_mod.KEY_RIGHT_CONTROL);
+        const ctrl_down = r.isKeyDown(app_shell.KEY_LEFT_CONTROL) or r.isKeyDown(app_shell.KEY_RIGHT_CONTROL);
 
         if (has_mouse_action) {
             self.needs_redraw = true;
@@ -552,34 +552,34 @@ const AppState = struct {
             }
         }
 
-        const ctrl = r.isKeyDown(renderer_mod.KEY_LEFT_CONTROL) or r.isKeyDown(renderer_mod.KEY_RIGHT_CONTROL);
+        const ctrl = r.isKeyDown(app_shell.KEY_LEFT_CONTROL) or r.isKeyDown(app_shell.KEY_RIGHT_CONTROL);
 
         // Global shortcuts
-        if (ctrl and r.isKeyPressed(renderer_mod.KEY_Q)) {
+        if (ctrl and r.isKeyPressed(app_shell.KEY_Q)) {
             // Quit - handled by window close
             return;
         }
 
-        if (ctrl and r.isKeyPressed(renderer_mod.KEY_N)) {
+        if (ctrl and r.isKeyPressed(app_shell.KEY_N)) {
             try self.newEditor();
             self.needs_redraw = true;
             self.metrics.noteInput(now);
             return;
         }
 
-        if (ctrl and (r.isKeyPressed(renderer_mod.KEY_EQUAL) or r.isKeyPressed(renderer_mod.KEY_KP_ADD))) {
+        if (ctrl and (r.isKeyPressed(app_shell.KEY_EQUAL) or r.isKeyPressed(app_shell.KEY_KP_ADD))) {
             if (r.queueUserZoom(0.1, now)) {
                 self.metrics.noteInput(now);
             }
             return;
         }
-        if (ctrl and (r.isKeyPressed(renderer_mod.KEY_MINUS) or r.isKeyPressed(renderer_mod.KEY_KP_SUBTRACT))) {
+        if (ctrl and (r.isKeyPressed(app_shell.KEY_MINUS) or r.isKeyPressed(app_shell.KEY_KP_SUBTRACT))) {
             if (r.queueUserZoom(-0.1, now)) {
                 self.metrics.noteInput(now);
             }
             return;
         }
-        if (ctrl and r.isKeyPressed(renderer_mod.KEY_ZERO)) {
+        if (ctrl and r.isKeyPressed(app_shell.KEY_ZERO)) {
             if (r.resetUserZoomTarget(now)) {
                 self.metrics.noteInput(now);
             }
@@ -587,7 +587,7 @@ const AppState = struct {
         }
 
         // Toggle terminal with Ctrl+`
-        if (ctrl and r.isKeyPressed(renderer_mod.KEY_GRAVE)) {
+        if (ctrl and r.isKeyPressed(app_shell.KEY_GRAVE)) {
             if (self.show_terminal) {
                 self.show_terminal = false;
             } else {
@@ -602,7 +602,7 @@ const AppState = struct {
         }
 
         // Tab bar click handling
-        if (r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT)) {
+        if (r.isMouseButtonPressed(app_shell.MOUSE_LEFT)) {
             const tab_bar_y = self.options_bar.height;
             if (self.tab_bar.handleClick(mouse.x, mouse.y, self.side_nav.width, tab_bar_y)) {
                 // Tab was clicked
@@ -684,7 +684,7 @@ const AppState = struct {
             const editor_y = options_bar_height + tab_bar_height;
             const in_editor = mouse.x >= editor_x and mouse.x <= editor_x + editor_width and
                 mouse.y >= editor_y and mouse.y <= editor_y + editor_height;
-            const alt = r.isKeyDown(renderer_mod.KEY_LEFT_ALT) or r.isKeyDown(renderer_mod.KEY_RIGHT_ALT);
+            const alt = r.isKeyDown(app_shell.KEY_LEFT_ALT) or r.isKeyDown(app_shell.KEY_RIGHT_ALT);
             const scrollbar_handled = widget.handleHorizontalScrollbarInput(
                 r,
                 editor_x,
@@ -715,7 +715,7 @@ const AppState = struct {
                 self.metrics.noteInput(now);
             }
 
-            if (!scrollbar_blocking and r.isMouseButtonPressed(renderer_mod.MOUSE_LEFT) and in_editor) {
+            if (!scrollbar_blocking and r.isMouseButtonPressed(app_shell.MOUSE_LEFT) and in_editor) {
                 if (widget.cursorFromMouse(r, editor_x, editor_y, editor_width, editor_height, mouse.x, mouse.y, false)) |pos| {
                     widget.editor.setCursor(pos.line, pos.col);
                     widget.editor.selection = null;
@@ -733,7 +733,7 @@ const AppState = struct {
                 }
             }
 
-            if (!scrollbar_blocking and self.editor_dragging and r.isMouseButtonDown(renderer_mod.MOUSE_LEFT)) {
+            if (!scrollbar_blocking and self.editor_dragging and r.isMouseButtonDown(app_shell.MOUSE_LEFT)) {
                 if (widget.cursorFromMouse(r, editor_x, editor_y, editor_width, editor_height, mouse.x, mouse.y, true)) |pos| {
                     widget.editor.setCursorNoClear(pos.line, pos.col);
                     if (self.editor_drag_rect) {
@@ -753,7 +753,7 @@ const AppState = struct {
                 }
             }
 
-            if (self.editor_dragging and r.isMouseButtonReleased(renderer_mod.MOUSE_LEFT)) {
+            if (self.editor_dragging and r.isMouseButtonReleased(app_shell.MOUSE_LEFT)) {
                 self.editor_dragging = false;
                 if (!self.editor_drag_rect) {
                     if (widget.editor.selection) |sel| {
@@ -886,7 +886,7 @@ const AppState = struct {
             const term_y = height - status_bar_height - terminal_h;
 
             // Terminal separator
-            r.drawRect(@intFromFloat(side_nav_width), @intFromFloat(term_y), @intFromFloat(editor_width), 2, renderer_mod.Color.light_gray);
+            r.drawRect(@intFromFloat(side_nav_width), @intFromFloat(term_y), @intFromFloat(editor_width), 2, app_shell.Color.light_gray);
 
             var term_widget = &self.terminal_widgets.items[0];
             const term_draw_height = @max(0, terminal_h - 2);
