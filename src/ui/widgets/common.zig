@@ -1,7 +1,7 @@
-const renderer_mod = @import("../renderer.zig");
+const app_shell = @import("../../app_shell.zig");
 
-const Renderer = renderer_mod.Renderer;
-const Color = renderer_mod.Color;
+const Shell = app_shell.Shell;
+const Color = app_shell.Color;
 
 pub const TruncResult = struct {
     drawn_width: f32,
@@ -15,11 +15,11 @@ pub const Tooltip = struct {
     y: f32,
 };
 
-pub fn drawTruncatedText(r: *Renderer, text: []const u8, x: f32, y: f32, color: Color, max_width: f32) TruncResult {
+pub fn drawTruncatedText(shell: *Shell, text: []const u8, x: f32, y: f32, color: Color, max_width: f32) TruncResult {
     if (max_width <= 0 or text.len == 0) {
         return .{ .drawn_width = 0, .truncated = text.len > 0, .drawn_len = 0 };
     }
-    const max_chars: usize = @intCast(@max(0, @as(i32, @intFromFloat(max_width / r.char_width))));
+    const max_chars: usize = @intCast(@max(0, @as(i32, @intFromFloat(max_width / shell.charWidth()))));
     if (max_chars == 0) {
         return .{ .drawn_width = 0, .truncated = text.len > 0, .drawn_len = 0 };
     }
@@ -42,24 +42,24 @@ pub fn drawTruncatedText(r: *Renderer, text: []const u8, x: f32, y: f32, color: 
         out_len = prefix_len + 3;
     }
 
-    r.drawText(buf[0..out_len], x, y, color);
+    shell.drawText(buf[0..out_len], x, y, color);
     return .{
-        .drawn_width = @as(f32, @floatFromInt(out_len)) * r.char_width,
+        .drawn_width = @as(f32, @floatFromInt(out_len)) * shell.charWidth(),
         .truncated = truncated,
         .drawn_len = out_len,
     };
 }
 
-pub fn drawTooltip(r: *Renderer, text: []const u8, x: f32, y: f32) void {
+pub fn drawTooltip(shell: *Shell, text: []const u8, x: f32, y: f32) void {
     if (text.len == 0) return;
     const padding: f32 = 6;
-    const text_w = @as(f32, @floatFromInt(text.len)) * r.char_width;
-    const text_h = r.char_height;
+    const text_w = @as(f32, @floatFromInt(text.len)) * shell.charWidth();
+    const text_h = shell.charHeight();
     const w = text_w + padding * 2;
     const h = text_h + padding * 2;
 
-    const max_w = @as(f32, @floatFromInt(r.width));
-    const max_h = @as(f32, @floatFromInt(r.height));
+    const max_w = @as(f32, @floatFromInt(shell.width()));
+    const max_h = @as(f32, @floatFromInt(shell.height()));
     var draw_x = x + 12;
     var draw_y = y + 12;
     if (draw_x + w > max_w) draw_x = max_w - w - 4;
@@ -68,8 +68,7 @@ pub fn drawTooltip(r: *Renderer, text: []const u8, x: f32, y: f32) void {
     if (draw_y < 4) draw_y = 4;
 
     const bg = Color{ .r = 24, .g = 25, .b = 33, .a = 235 };
-    r.drawRect(@intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(w), @intFromFloat(h), bg);
-    r.drawRectOutline(@intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(w), @intFromFloat(h), Color.light_gray);
-    r.drawText(text, draw_x + padding, draw_y + padding, Color.fg);
+    shell.drawRect(@intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(w), @intFromFloat(h), bg);
+    shell.drawRectOutline(@intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(w), @intFromFloat(h), Color.light_gray);
+    shell.drawText(text, draw_x + padding, draw_y + padding, Color.fg);
 }
-

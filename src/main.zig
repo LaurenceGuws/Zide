@@ -672,13 +672,13 @@ const AppState = struct {
         if (self.active_kind == .editor and self.editors.items.len > 0) {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache, self.editor_wrap);
-            if (try widget.handleInput(r, editor_height)) {
+            if (try widget.handleInput(shell, editor_height)) {
                 self.editor_cluster_cache.clear();
                 self.needs_redraw = true;
                 self.metrics.noteInput(now);
             }
             if (self.perf_mode and self.perf_frames_done < self.perf_frames_total) {
-                widget.scrollVisual(r, self.perf_scroll_delta);
+                widget.scrollVisual(shell, self.perf_scroll_delta);
                 self.needs_redraw = true;
                 self.metrics.noteInput(now);
                 self.perf_frames_done +|= 1;
@@ -689,7 +689,7 @@ const AppState = struct {
                 mouse.y >= editor_y and mouse.y <= editor_y + editor_height;
             const alt = r.isKeyDown(app_shell.KEY_LEFT_ALT) or r.isKeyDown(app_shell.KEY_RIGHT_ALT);
             const scrollbar_handled = widget.handleHorizontalScrollbarInput(
-                r,
+                shell,
                 editor_x,
                 editor_y,
                 editor_width,
@@ -699,7 +699,7 @@ const AppState = struct {
                 &self.editor_hscroll_grab_offset,
             );
             const vscroll_handled = widget.handleVerticalScrollbarInput(
-                r,
+                shell,
                 editor_x,
                 editor_y,
                 editor_width,
@@ -719,7 +719,7 @@ const AppState = struct {
             }
 
             if (!scrollbar_blocking and r.isMouseButtonPressed(app_shell.MOUSE_LEFT) and in_editor) {
-                if (widget.cursorFromMouse(r, editor_x, editor_y, editor_width, editor_height, mouse.x, mouse.y, false)) |pos| {
+                if (widget.cursorFromMouse(shell, editor_x, editor_y, editor_width, editor_height, mouse.x, mouse.y, false)) |pos| {
                     widget.editor.setCursor(pos.line, pos.col);
                     widget.editor.selection = null;
                     widget.editor.clearSelections();
@@ -737,7 +737,7 @@ const AppState = struct {
             }
 
             if (!scrollbar_blocking and self.editor_dragging and r.isMouseButtonDown(app_shell.MOUSE_LEFT)) {
-                if (widget.cursorFromMouse(r, editor_x, editor_y, editor_width, editor_height, mouse.x, mouse.y, true)) |pos| {
+                if (widget.cursorFromMouse(shell, editor_x, editor_y, editor_width, editor_height, mouse.x, mouse.y, true)) |pos| {
                     widget.editor.setCursorNoClear(pos.line, pos.col);
                     if (self.editor_drag_rect) {
                         widget.editor.clearSelections();
@@ -774,10 +774,10 @@ const AppState = struct {
                 const visible_lines = @as(usize, @intFromFloat(editor_height / r.char_height));
                 const default_budget = if (visible_lines > 0) visible_lines + 1 else 0;
                 const highlight_budget = self.editor_highlight_budget orelse default_budget;
-                editor_draw.precomputeHighlightTokens(&widget, &self.editor_render_cache, r, editor_height, highlight_budget);
+                editor_draw.precomputeHighlightTokens(&widget, &self.editor_render_cache, shell, editor_height, highlight_budget);
                 const width_budget = self.editor_width_budget orelse highlight_budget;
-                editor_draw.precomputeLineWidths(&widget, &self.editor_render_cache, r, editor_height, width_budget);
-                editor_draw.precomputeWrapCounts(&widget, &self.editor_render_cache, r, editor_height, width_budget);
+                editor_draw.precomputeLineWidths(&widget, &self.editor_render_cache, shell, editor_height, width_budget);
+                editor_draw.precomputeWrapCounts(&widget, &self.editor_render_cache, shell, editor_height, width_budget);
             }
         }
 
@@ -799,7 +799,7 @@ const AppState = struct {
             const term_draw_height = @max(0, terminal_h - 2);
             if (self.active_kind == .terminal) {
                 if (try term_widget.handleInput(
-                    r,
+                    shell,
                     term_x,
                     term_y_draw,
                     editor_width,
@@ -821,7 +821,7 @@ const AppState = struct {
                 }
             } else {
                 if (try term_widget.handleInput(
-                    r,
+                    shell,
                     term_x,
                     term_y_draw,
                     editor_width,
@@ -847,7 +847,6 @@ const AppState = struct {
 
     fn draw(self: *AppState) void {
         const shell = self.shell;
-        const r = shell.rendererPtr();
 
         shell.beginFrame();
 
@@ -865,17 +864,17 @@ const AppState = struct {
         const editor_width = @max(0, width - side_nav_width);
 
         // Draw options bar
-        self.options_bar.draw(r, width);
+        self.options_bar.draw(shell, width);
 
         // Draw tab bar
-        self.tab_bar.draw(r, side_nav_width, options_bar_height, editor_width);
+        self.tab_bar.draw(shell, side_nav_width, options_bar_height, editor_width);
 
         // Draw editor
         if (self.editors.items.len > 0) {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache, self.editor_wrap);
             widget.drawCached(
-                r,
+                shell,
                 &self.editor_render_cache,
                 side_nav_width,
                 options_bar_height + tab_bar_height,
@@ -902,7 +901,7 @@ const AppState = struct {
                     @intFromFloat(term_draw_height),
                 );
             }
-            term_widget.draw(r, side_nav_width, term_y + 2, editor_width, term_draw_height);
+            term_widget.draw(shell, side_nav_width, term_y + 2, editor_width, term_draw_height);
             if (editor_width > 0 and term_draw_height > 0) {
                 shell.endClip();
             }
@@ -910,14 +909,14 @@ const AppState = struct {
 
         // Draw side navigation bar (covers terminal icon overflow)
         const side_nav_height = height - status_bar_height - options_bar_height;
-        self.side_nav.draw(r, side_nav_height, options_bar_height);
+        self.side_nav.draw(shell, side_nav_height, options_bar_height);
 
         // Draw status bar LAST so it spans full width over everything
         if (self.editors.items.len > 0) {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             const editor = self.editors.items[editor_idx];
             self.status_bar.draw(
-                r,
+                shell,
                 width,
                 height - status_bar_height,
                 self.mode,

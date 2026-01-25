@@ -1,16 +1,16 @@
 const std = @import("std");
-const renderer_mod = @import("../renderer.zig");
+const app_shell = @import("../../app_shell.zig");
 
-const Renderer = renderer_mod.Renderer;
-const Color = renderer_mod.Color;
+const Shell = app_shell.Shell;
+const Color = app_shell.Color;
 
 /// Side navigation bar (VSCode activity bar)
 pub const SideNav = struct {
     width: f32 = 52,
 
-    pub fn draw(self: *SideNav, r: *Renderer, height: f32, y: f32) void {
+    pub fn draw(self: *SideNav, shell: *Shell, height: f32, y: f32) void {
         // Background
-        r.drawRect(0, @intFromFloat(y), @intFromFloat(self.width), @intFromFloat(height), Color{ .r = 30, .g = 31, .b = 41 });
+        shell.drawRect(0, @intFromFloat(y), @intFromFloat(self.width), @intFromFloat(height), Color{ .r = 30, .g = 31, .b = 41 });
 
         const Item = struct {
             icon: []const u8,
@@ -31,14 +31,14 @@ pub const SideNav = struct {
             .{ .icon = "󰏗", .badge = null, .active = false }, // Accounts
         };
 
-        const scale = r.uiScaleFactor();
+        const scale = shell.uiScaleFactor();
         const icon_size: f32 = 32 * scale;
-        const icon_h_unit: f32 = r.icon_char_height;
-        const badge_size: f32 = r.font_size * 1.0;
-        const badge_h_unit: f32 = r.char_height * (badge_size / r.font_size);
+        const icon_h_unit: f32 = shell.iconCharHeight();
+        const badge_size: f32 = shell.fontSize() * 1.0;
+        const badge_h_unit: f32 = shell.charHeight() * (badge_size / shell.fontSize());
         const spacing: f32 = 12 * scale;
-        const mouse = r.getMousePos();
-        const pressed = r.isMouseButtonDown(renderer_mod.MOUSE_LEFT);
+        const mouse = shell.getMousePos();
+        const pressed = shell.isMouseButtonDown(app_shell.MOUSE_LEFT);
         const hover_pad_x: f32 = 8 * scale;
         const hover_pad_y: f32 = 8 * scale;
 
@@ -55,16 +55,16 @@ pub const SideNav = struct {
 
             if (hovered or item.active) {
                 const bg = if (pressed and hovered) Color{ .r = 58, .g = 60, .b = 78 } else Color.selection;
-                r.drawRect(@intFromFloat(bx), @intFromFloat(by), @intFromFloat(bw), @intFromFloat(bh), bg);
+                shell.drawRect(@intFromFloat(bx), @intFromFloat(by), @intFromFloat(bw), @intFromFloat(bh), bg);
             }
             if (item.active) {
-                r.drawRect(0, @intFromFloat(by), 2, @intFromFloat(bh), Color.purple);
+                shell.drawRect(0, @intFromFloat(by), 2, @intFromFloat(bh), Color.purple);
             }
 
             const icon_color = if (item.active or hovered) Color.fg else Color.comment;
             const icon_text_x = icon_x + icon_text_offset;
             const icon_text_y = icon_y + (icon_size - icon_h_unit) / 2;
-            r.drawIconText(item.icon, icon_text_x, icon_text_y, icon_color);
+            shell.drawIconText(item.icon, icon_text_x, icon_text_y, icon_color);
 
             if (item.badge) |count| {
                 var buf: [4]u8 = undefined;
@@ -72,7 +72,7 @@ pub const SideNav = struct {
                 const text_h = badge_h_unit;
                 const badge_x = icon_x + icon_text_offset + 2;
                 const badge_y = icon_y + (icon_size - text_h) / 2 + 1;
-                r.drawTextSized(text, badge_x, badge_y, badge_size, Color.fg);
+                shell.drawTextSized(text, badge_x, badge_y, badge_size, Color.fg);
             }
 
             icon_y += icon_size + spacing;
@@ -91,16 +91,16 @@ pub const SideNav = struct {
 
             if (hovered or item.active) {
                 const bg = if (pressed and hovered) Color{ .r = 58, .g = 60, .b = 78 } else Color.selection;
-                r.drawRect(@intFromFloat(bx), @intFromFloat(by), @intFromFloat(bw), @intFromFloat(bh), bg);
+                shell.drawRect(@intFromFloat(bx), @intFromFloat(by), @intFromFloat(bw), @intFromFloat(bh), bg);
             }
             if (item.active) {
-                r.drawRect(0, @intFromFloat(by), 2, @intFromFloat(bh), Color.purple);
+                shell.drawRect(0, @intFromFloat(by), 2, @intFromFloat(bh), Color.purple);
             }
 
             const icon_color = if (item.active or hovered) Color.fg else Color.comment;
             const icon_text_x = icon_x + icon_text_offset;
             const icon_text_y = bottom_y + (icon_size - icon_h_unit) / 2;
-            r.drawIconText(item.icon, icon_text_x, icon_text_y, icon_color);
+            shell.drawIconText(item.icon, icon_text_x, icon_text_y, icon_color);
 
             bottom_y -= icon_size + spacing;
         }

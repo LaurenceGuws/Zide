@@ -320,6 +320,10 @@ const FakeRenderer = struct {
         return 1.0;
     }
 
+    pub fn rendererPtr(self: *FakeRenderer) *FakeRenderer {
+        return self;
+    }
+
     pub fn ensureEditorTexture(self: *FakeRenderer, width: i32, height: i32) bool {
         _ = width;
         _ = height;
