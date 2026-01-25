@@ -14,6 +14,7 @@ const config_mod = @import("config/lua_config.zig");
 const terminal_mod = @import("terminal/core/terminal.zig");
 const metrics_mod = @import("terminal/model/metrics.zig");
 const term_types = @import("terminal/model/types.zig");
+const input_types = @import("types/input.zig");
 
 // UI modules
 const app_shell = @import("app_shell.zig");
@@ -947,6 +948,12 @@ fn parseEnvU64(env_key: [:0]const u8, default_value: u64) u64 {
     const slice = std.mem.sliceTo(raw, 0);
     if (slice.len == 0) return default_value;
     return std.fmt.parseInt(u64, slice, 10) catch default_value;
+}
+
+fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) input_types.InputBatch {
+    _ = shell;
+    // TODO: wire shell input polling into typed events.
+    return input_types.InputBatch.init(allocator);
 }
 
 // Tests
