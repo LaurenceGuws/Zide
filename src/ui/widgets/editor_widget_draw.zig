@@ -428,6 +428,11 @@ pub fn drawCached(
     );
     if (texture_changed) force_redraw = true;
 
+    if (widget.editor.takeHighlightDirtyRange()) |range| {
+        const end_line = @min(range.end_line, total_lines);
+        cache.invalidateHighlightRange(range.start_line, end_line);
+    }
+
     var any_dirty = force_redraw;
 
     if (force_redraw) {
@@ -464,8 +469,12 @@ pub fn drawCached(
             if (cluster_slice) |clusters| widget.editor.allocator.free(clusters);
         };
 
-        const tokens = cache.tryHighlightTokens(
+        const line_end = line_start + line_len;
+        const tokens = cache.highlightTokens(
+            widget.editor.highlighter,
             line_idx,
+            line_start,
+            line_end,
             line_text_hash,
             widget.editor.highlight_epoch,
         );
@@ -885,9 +894,11 @@ fn hashSegment(
         h *%= 1099511628211;
     }
     for (tokens) |token| {
+        if (token.end <= line_start) continue;
         const rel_start = if (token.start > line_start) token.start - line_start else 0;
         const t_start = @max(rel_start, seg_start_byte);
-        const t_end = @min(token.end - line_start, seg_end_byte);
+        const rel_end = if (token.end > line_start) token.end - line_start else 0;
+        const t_end = @min(rel_end, seg_end_byte);
         if (t_end <= t_start) continue;
         h ^= @as(u64, t_start);
         h *%= 1099511628211;

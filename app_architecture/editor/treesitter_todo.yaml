@@ -39,11 +39,14 @@ treesitter_todo:
         - "Implemented eq?/any-of?/contains?/match? predicates; match? uses a minimal regex subset (anchors + . * + ?)."
         - "Implemented set! directive for priority/conceal/conceal_lines/url metadata; offset!/gsub!/trim! pending."
     - id: TS-04
-      status: todo
+      status: in_progress
       title: "Incremental invalidation"
       notes:
         - "Track changed ranges and recompute highlight spans for those ranges only."
         - "Avoid full-query recompute on small edits."
+        - "Added tree edit + changed range tracking; editor records dirty highlight line ranges."
+        - "Render cache now invalidates highlight entries by dirty line range (no full clear on each edit)."
+        - "Undo/redo forces full Tree-sitter reparse to avoid corrupted incremental trees."
     - id: TS-05
       status: todo
       title: "Injected languages"

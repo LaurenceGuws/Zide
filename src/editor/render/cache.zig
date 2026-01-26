@@ -101,7 +101,7 @@ pub const EditorRenderCache = struct {
     ) bool {
         self.frame_id = frame_id;
         const line_cache_dirty = cols != self.last_cols or wrap_enabled != self.last_wrap or width != self.last_width or height != self.last_height or change_tick != self.last_change_tick or scroll_line != self.last_scroll_line or scroll_row_offset != self.last_scroll_row_offset or scroll_col != self.last_scroll_col;
-        const highlight_dirty = change_tick != self.last_change_tick or highlight_epoch != self.last_highlight_epoch;
+        const highlight_dirty = highlight_epoch != self.last_highlight_epoch;
         const full_redraw = line_cache_dirty or highlight_dirty;
         if (line_cache_dirty) {
             self.clearLineEntries();
@@ -127,6 +127,18 @@ pub const EditorRenderCache = struct {
         self.last_scroll_row_offset = scroll_row_offset;
         self.last_scroll_col = scroll_col;
         return full_redraw;
+    }
+
+    pub fn invalidateHighlightRange(self: *EditorRenderCache, start_line: usize, end_line: usize) void {
+        if (start_line >= end_line) return;
+        var line = start_line;
+        while (line < end_line) : (line += 1) {
+            if (self.highlight_entries.getPtr(line)) |entry| {
+                self.allocator.free(entry.tokens);
+                _ = self.highlight_entries.remove(line);
+            }
+        }
+        self.clearHighlightWork();
     }
 
     pub fn segmentDirty(self: *EditorRenderCache, key: LineKey, hash: u64) bool {
@@ -161,23 +173,27 @@ pub const EditorRenderCache = struct {
     ) []HighlightToken {
         if (highlighter == null) return &[_]HighlightToken{};
         if (self.highlight_entries.getPtr(line_idx)) |entry| {
-            if (entry.text_hash == line_text_hash and entry.epoch == highlight_epoch) {
+            if (entry.text_hash == line_text_hash and entry.epoch == highlight_epoch and entry.line_start == line_start) {
                 entry.last_used = self.frame_id;
                 return entry.tokens;
             }
             self.allocator.free(entry.tokens);
             entry.* = .{
                 .text_hash = line_text_hash,
+                .line_start = line_start,
                 .epoch = highlight_epoch,
                 .tokens = highlightLine(highlighter.?, line_start, line_end, self.allocator),
                 .last_used = self.frame_id,
             };
+            sortTokens(entry.tokens);
             return entry.tokens;
         }
 
         const tokens = highlightLine(highlighter.?, line_start, line_end, self.allocator);
+        sortTokens(tokens);
         _ = self.highlight_entries.put(line_idx, .{
             .text_hash = line_text_hash,
+            .line_start = line_start,
             .epoch = highlight_epoch,
             .tokens = tokens,
             .last_used = self.frame_id,
@@ -189,11 +205,12 @@ pub const EditorRenderCache = struct {
     pub fn tryHighlightTokens(
         self: *EditorRenderCache,
         line_idx: usize,
+        line_start: usize,
         line_text_hash: u64,
         highlight_epoch: u64,
     ) []HighlightToken {
         if (self.highlight_entries.getPtr(line_idx)) |entry| {
-            if (entry.text_hash == line_text_hash and entry.epoch == highlight_epoch) {
+            if (entry.text_hash == line_text_hash and entry.epoch == highlight_epoch and entry.line_start == line_start) {
                 entry.last_used = self.frame_id;
                 return entry.tokens;
             }
@@ -424,6 +441,7 @@ const LineEntry = struct {
 
 const HighlightEntry = struct {
     text_hash: u64,
+    line_start: usize,
     epoch: u64,
     tokens: []HighlightToken,
     last_used: u64,
@@ -443,4 +461,15 @@ fn highlightLine(
     allocator: std.mem.Allocator,
 ) []HighlightToken {
     return highlighter.highlightRange(start, end, allocator) catch allocator.alloc(HighlightToken, 0) catch &[_]HighlightToken{};
+}
+
+fn sortTokens(tokens: []HighlightToken) void {
+    if (tokens.len <= 1) return;
+    std.sort.heap(HighlightToken, tokens, {}, struct {
+        fn lessThan(_: void, a: HighlightToken, b: HighlightToken) bool {
+            if (a.start != b.start) return a.start < b.start;
+            if (a.priority != b.priority) return a.priority < b.priority;
+            return a.end < b.end;
+        }
+    }.lessThan);
 }

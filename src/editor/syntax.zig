@@ -74,6 +74,85 @@ pub const SyntaxHighlighter = struct {
         return true;
     }
 
+    pub fn reparseFull(self: *SyntaxHighlighter) bool {
+        const input = c.TSInput{
+            .payload = self,
+            .read = tsRead,
+            .encoding = c.TSInputEncodingUTF8,
+        };
+        const new_tree = c.ts_parser_parse(self.parser, null, input);
+        if (new_tree == null) return false;
+        if (self.tree) |tree| {
+            c.ts_tree_delete(tree);
+        }
+        self.tree = new_tree;
+        return true;
+    }
+
+    pub const ChangedRange = struct {
+        start_byte: usize,
+        end_byte: usize,
+    };
+
+    pub fn applyEdit(
+        self: *SyntaxHighlighter,
+        start_byte: usize,
+        old_end_byte: usize,
+        new_end_byte: usize,
+        start_point: c.TSPoint,
+        old_end_point: c.TSPoint,
+        new_end_point: c.TSPoint,
+        allocator: std.mem.Allocator,
+    ) ![]ChangedRange {
+        const input = c.TSInput{
+            .payload = self,
+            .read = tsRead,
+            .encoding = c.TSInputEncodingUTF8,
+        };
+
+        if (self.tree) |tree| {
+            const edit = c.TSInputEdit{
+                .start_byte = @as(u32, @intCast(start_byte)),
+                .old_end_byte = @as(u32, @intCast(old_end_byte)),
+                .new_end_byte = @as(u32, @intCast(new_end_byte)),
+                .start_point = start_point,
+                .old_end_point = old_end_point,
+                .new_end_point = new_end_point,
+            };
+            c.ts_tree_edit(tree, &edit);
+        }
+
+        const new_tree = c.ts_parser_parse(self.parser, self.tree, input);
+        if (new_tree == null) {
+            return allocator.alloc(ChangedRange, 0);
+        }
+
+        const old_tree = self.tree;
+        self.tree = new_tree;
+
+        if (old_tree == null) {
+            return allocator.alloc(ChangedRange, 0);
+        }
+
+        var range_count: u32 = 0;
+        const ranges_ptr = c.ts_tree_get_changed_ranges(old_tree.?, new_tree, &range_count);
+        c.ts_tree_delete(old_tree.?);
+        if (ranges_ptr == null or range_count == 0) {
+            return allocator.alloc(ChangedRange, 0);
+        }
+        defer std.c.free(ranges_ptr);
+
+        const ranges = ranges_ptr[0..range_count];
+        var out = try allocator.alloc(ChangedRange, ranges.len);
+        for (ranges, 0..) |range, i| {
+            out[i] = .{
+                .start_byte = range.start_byte,
+                .end_byte = range.end_byte,
+            };
+        }
+        return out;
+    }
+
     pub fn highlightRange(
         self: *SyntaxHighlighter,
         start: usize,

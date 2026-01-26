@@ -2,6 +2,7 @@ const std = @import("std");
 const text_store = @import("text_store.zig");
 const types = @import("types.zig");
 const syntax_mod = @import("syntax.zig");
+const ts_api = @import("treesitter_api.zig");
 const grammar_manager_mod = @import("grammar_manager.zig");
 const syntax_registry_mod = @import("syntax_registry.zig");
 const app_logger = @import("../app_logger.zig");
@@ -9,6 +10,7 @@ const app_logger = @import("../app_logger.zig");
 const TextStore = text_store.TextStore;
 const CursorPos = types.CursorPos;
 const Selection = types.Selection;
+const c = ts_api.c_api;
 
 /// High-level editor state wrapping a text buffer
 pub const Editor = struct {
@@ -26,6 +28,8 @@ pub const Editor = struct {
     max_line_width_scan_index: usize,
     max_line_width_scan_complete: bool,
     highlighter: ?*syntax_mod.SyntaxHighlighter,
+    highlight_dirty_start_line: ?usize,
+    highlight_dirty_end_line: ?usize,
     highlight_pending: bool,
     change_tick: u64,
     highlight_epoch: u64,
@@ -60,6 +64,8 @@ pub const Editor = struct {
             .max_line_width_scan_index = 0,
             .max_line_width_scan_complete = false,
             .highlighter = null,
+            .highlight_dirty_start_line = null,
+            .highlight_dirty_end_line = null,
             .highlight_pending = false,
             .change_tick = 0,
             .highlight_epoch = 0,
@@ -82,6 +88,20 @@ pub const Editor = struct {
         self.line_width_cache.deinit();
         self.buffer.deinit();
         self.allocator.destroy(self);
+    }
+
+    pub const HighlightDirtyRange = struct {
+        start_line: usize,
+        end_line: usize,
+    };
+
+    pub fn takeHighlightDirtyRange(self: *Editor) ?HighlightDirtyRange {
+        if (self.highlight_dirty_start_line == null) return null;
+        const start = self.highlight_dirty_start_line.?;
+        const end = self.highlight_dirty_end_line orelse (start + 1);
+        self.highlight_dirty_start_line = null;
+        self.highlight_dirty_end_line = null;
+        return .{ .start_line = start, .end_line = end };
     }
 
     pub fn openFile(self: *Editor, path: []const u8) !void {
@@ -113,6 +133,8 @@ pub const Editor = struct {
         self.scroll_row_offset = 0;
         self.invalidateLineWidthCache();
         self.modified = false;
+        self.highlight_dirty_start_line = null;
+        self.highlight_dirty_end_line = null;
 
         self.scheduleHighlighter(path);
     }
@@ -383,11 +405,62 @@ pub const Editor = struct {
     fn noteTextChanged(self: *Editor) void {
         self.modified = true;
         self.invalidateLineWidthCache();
-        if (self.highlighter) |h| {
-            _ = h.reparse();
-        }
         self.change_tick +|= 1;
-        self.highlight_epoch +|= 1;
+    }
+
+    fn noteHighlightDirtyRange(self: *Editor, start_byte: usize, end_byte: usize) void {
+        const start_line = self.buffer.lineIndexForOffset(start_byte);
+        const end_line = self.buffer.lineIndexForOffset(end_byte) + 1;
+        const start = self.highlight_dirty_start_line orelse start_line;
+        const end = self.highlight_dirty_end_line orelse end_line;
+        self.highlight_dirty_start_line = @min(start, start_line);
+        self.highlight_dirty_end_line = @max(end, end_line);
+    }
+
+    fn applyHighlightEdit(
+        self: *Editor,
+        start_byte: usize,
+        old_end_byte: usize,
+        new_end_byte: usize,
+        start_point: c.TSPoint,
+        old_end_point: c.TSPoint,
+    ) void {
+        if (self.highlighter == null) return;
+        const h = self.highlighter.?;
+        const new_end_point = self.pointForByte(new_end_byte);
+        const ranges = h.applyEdit(
+            start_byte,
+            old_end_byte,
+            new_end_byte,
+            start_point,
+            old_end_point,
+            new_end_point,
+            self.allocator,
+        ) catch {
+            _ = h.reparseFull();
+            self.noteHighlightDirtyRange(0, self.buffer.totalLen());
+            return;
+        };
+        defer self.allocator.free(ranges);
+
+        if (ranges.len == 0) {
+            const min_byte = @min(start_byte, @min(old_end_byte, new_end_byte));
+            const max_byte = @max(start_byte, @max(old_end_byte, new_end_byte));
+            self.noteHighlightDirtyRange(min_byte, max_byte);
+            return;
+        }
+        for (ranges) |range| {
+            self.noteHighlightDirtyRange(range.start_byte, range.end_byte);
+        }
+    }
+
+    fn pointForByte(self: *Editor, byte_offset: usize) c.TSPoint {
+        const line = self.buffer.lineIndexForOffset(byte_offset);
+        const line_start = self.buffer.lineStart(line);
+        return .{
+            .row = @as(u32, @intCast(line)),
+            .column = @as(u32, @intCast(byte_offset - line_start)),
+        };
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -405,9 +478,17 @@ pub const Editor = struct {
                 const norm = sel.normalized();
                 const len = norm.end.offset - norm.start.offset;
                 if (len > 0) {
-                    try self.buffer.deleteRange(norm.start.offset, len);
+                    const start = norm.start.offset;
+                    const end = norm.end.offset;
+                    const start_point = self.pointForByte(start);
+                    const end_point = self.pointForByte(end);
+                    try self.buffer.deleteRange(start, len);
+                    self.applyHighlightEdit(start, end, start, start_point, end_point);
                 }
-                try self.buffer.insertBytes(norm.start.offset, &bytes);
+                const insert_start = norm.start.offset;
+                const insert_point = self.pointForByte(insert_start);
+                try self.buffer.insertBytes(insert_start, &bytes);
+                self.applyHighlightEdit(insert_start, insert_start, insert_start + 1, insert_point, insert_point);
                 self.cursor = norm.start;
                 self.cursor.offset += 1;
                 self.updateCursorPosition();
@@ -422,7 +503,10 @@ pub const Editor = struct {
             errdefer self.endUndoGroup() catch {};
             try self.deleteSelection();
             const bytes = [_]u8{char};
-            try self.buffer.insertBytes(self.cursor.offset, &bytes);
+            const insert_start = self.cursor.offset;
+            const insert_point = self.pointForByte(insert_start);
+            try self.buffer.insertBytes(insert_start, &bytes);
+            self.applyHighlightEdit(insert_start, insert_start, insert_start + 1, insert_point, insert_point);
             self.cursor.offset += 1;
             self.updateCursorPosition();
             self.noteTextChanged();
@@ -430,7 +514,10 @@ pub const Editor = struct {
             return;
         }
         const bytes = [_]u8{char};
-        try self.buffer.insertBytes(self.cursor.offset, &bytes);
+        const insert_start = self.cursor.offset;
+        const insert_point = self.pointForByte(insert_start);
+        try self.buffer.insertBytes(insert_start, &bytes);
+        self.applyHighlightEdit(insert_start, insert_start, insert_start + 1, insert_point, insert_point);
         self.cursor.offset += 1;
         self.updateCursorPosition();
         self.noteTextChanged();
@@ -446,9 +533,17 @@ pub const Editor = struct {
                 const norm = sel.normalized();
                 const len = norm.end.offset - norm.start.offset;
                 if (len > 0) {
-                    try self.buffer.deleteRange(norm.start.offset, len);
+                    const start = norm.start.offset;
+                    const end = norm.end.offset;
+                    const start_point = self.pointForByte(start);
+                    const end_point = self.pointForByte(end);
+                    try self.buffer.deleteRange(start, len);
+                    self.applyHighlightEdit(start, end, start, start_point, end_point);
                 }
-                try self.buffer.insertBytes(norm.start.offset, text);
+                const insert_start = norm.start.offset;
+                const insert_point = self.pointForByte(insert_start);
+                try self.buffer.insertBytes(insert_start, text);
+                self.applyHighlightEdit(insert_start, insert_start, insert_start + text.len, insert_point, insert_point);
                 self.cursor = norm.start;
             }
             self.noteTextChanged();
@@ -460,14 +555,20 @@ pub const Editor = struct {
             self.beginUndoGroup();
             errdefer self.endUndoGroup() catch {};
             try self.deleteSelection();
-            try self.buffer.insertBytes(self.cursor.offset, text);
+            const insert_start = self.cursor.offset;
+            const insert_point = self.pointForByte(insert_start);
+            try self.buffer.insertBytes(insert_start, text);
+            self.applyHighlightEdit(insert_start, insert_start, insert_start + text.len, insert_point, insert_point);
             self.cursor.offset += text.len;
             self.updateCursorPosition();
             self.noteTextChanged();
             try self.endUndoGroup();
             return;
         }
-        try self.buffer.insertBytes(self.cursor.offset, text);
+        const insert_start = self.cursor.offset;
+        const insert_point = self.pointForByte(insert_start);
+        try self.buffer.insertBytes(insert_start, text);
+        self.applyHighlightEdit(insert_start, insert_start, insert_start + text.len, insert_point, insert_point);
         self.cursor.offset += text.len;
         self.updateCursorPosition();
         self.noteTextChanged();
@@ -484,7 +585,12 @@ pub const Editor = struct {
             return;
         }
         if (self.cursor.offset == 0) return;
-        try self.buffer.deleteRange(self.cursor.offset - 1, 1);
+        const start = self.cursor.offset - 1;
+        const end = self.cursor.offset;
+        const start_point = self.pointForByte(start);
+        const end_point = self.pointForByte(end);
+        try self.buffer.deleteRange(start, 1);
+        self.applyHighlightEdit(start, end, start, start_point, end_point);
         self.cursor.offset -= 1;
         self.updateCursorPosition();
         self.noteTextChanged();
@@ -498,7 +604,12 @@ pub const Editor = struct {
         }
         const total = self.buffer.totalLen();
         if (self.cursor.offset >= total) return;
-        try self.buffer.deleteRange(self.cursor.offset, 1);
+        const start = self.cursor.offset;
+        const end = self.cursor.offset + 1;
+        const start_point = self.pointForByte(start);
+        const end_point = self.pointForByte(end);
+        try self.buffer.deleteRange(start, 1);
+        self.applyHighlightEdit(start, end, start, start_point, end_point);
         self.noteTextChanged();
     }
 
@@ -514,7 +625,12 @@ pub const Editor = struct {
                 const norm = sel.normalized();
                 const len = norm.end.offset - norm.start.offset;
                 if (len > 0) {
-                    try self.buffer.deleteRange(norm.start.offset, len);
+                    const start = norm.start.offset;
+                    const end = norm.end.offset;
+                    const start_point = self.pointForByte(start);
+                    const end_point = self.pointForByte(end);
+                    try self.buffer.deleteRange(start, len);
+                    self.applyHighlightEdit(start, end, start, start_point, end_point);
                     self.cursor = norm.start;
                     changed = true;
                 }
@@ -528,7 +644,12 @@ pub const Editor = struct {
             const norm = sel.normalized();
             const len = norm.end.offset - norm.start.offset;
             if (len > 0) {
-                try self.buffer.deleteRange(norm.start.offset, len);
+                const start = norm.start.offset;
+                const end = norm.end.offset;
+                const start_point = self.pointForByte(start);
+                const end_point = self.pointForByte(end);
+                try self.buffer.deleteRange(start, len);
+                self.applyHighlightEdit(start, end, start, start_point, end_point);
                 self.cursor = norm.start;
                 self.noteTextChanged();
             }
@@ -566,11 +687,12 @@ pub const Editor = struct {
                 self.updateCursorPosition();
             }
             if (self.highlighter) |h| {
-                _ = h.reparse();
+                _ = h.reparseFull();
+                self.noteHighlightDirtyRange(0, self.buffer.totalLen());
+                self.highlight_epoch +|= 1;
             }
             self.invalidateLineWidthCache();
             self.change_tick +|= 1;
-            self.highlight_epoch +|= 1;
         }
         return result.changed;
     }
@@ -593,11 +715,12 @@ pub const Editor = struct {
                 self.updateCursorPosition();
             }
             if (self.highlighter) |h| {
-                _ = h.reparse();
+                _ = h.reparseFull();
+                self.noteHighlightDirtyRange(0, self.buffer.totalLen());
+                self.highlight_epoch +|= 1;
             }
             self.invalidateLineWidthCache();
             self.change_tick +|= 1;
-            self.highlight_epoch +|= 1;
         }
         return result.changed;
     }
@@ -644,6 +767,9 @@ pub const Editor = struct {
                 h.destroy();
                 self.highlighter = null;
             }
+            self.highlight_epoch +|= 1;
+            self.highlight_dirty_start_line = null;
+            self.highlight_dirty_end_line = null;
             self.highlight_pending = false;
             log.logf("highlight disabled path=\"{s}\"", .{path orelse ""});
             return;
@@ -662,6 +788,9 @@ pub const Editor = struct {
                 h.destroy();
                 self.highlighter = null;
             }
+            self.highlight_epoch +|= 1;
+            self.highlight_dirty_start_line = null;
+            self.highlight_dirty_end_line = null;
             log.logf("highlight disabled path=\"{s}\"", .{path orelse ""});
             return;
         }
@@ -682,6 +811,8 @@ pub const Editor = struct {
                 log.logf("highlight init failed err={any}", .{err});
                 return err;
             };
+            self.highlight_epoch +|= 1;
+            self.noteHighlightDirtyRange(0, self.buffer.totalLen());
             const elapsed_ns = std.time.nanoTimestamp() - t_start;
             log.logf(
                 "highlight enabled path=\"{s}\" time_us={d}",

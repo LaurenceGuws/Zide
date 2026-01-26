@@ -53,6 +53,7 @@ Date: 2026-01-24
 - Manual overrides live in `assets/syntax/overrides.lua`.
 - Tree-sitter highlights now evaluate predicates (eq?/any-of?/contains?/match?) and parse set! metadata (priority/conceal/url).
 - Highlight tokens carry priority metadata; draw ordering now sorts by start + priority.
+- Incremental highlight invalidation: Tree-sitter edits report changed ranges, editor tracks dirty lines, cache invalidates per-range.
 
 ## Next Steps
 1) Add render cache stress test for eviction behavior.

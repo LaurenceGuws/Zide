@@ -50,6 +50,19 @@ Next session focus: full query plan.
 - Top bars update hover state during input; draw uses cached state.
 - CLI: `--mode terminal|editor|ide` (default ide) controls which shell parts initialize/draw.
 
+## Handover Notes (2026-01-26) — Tree-sitter Incremental Invalidation
+- Incremental highlight invalidation added (TS-04 in progress): editor applies `ts_tree_edit` and tracks dirty highlight line ranges.
+- Highlight cache now keys by `line_start` + text hash to avoid stale absolute offsets after edits.
+- Cached draw path now computes highlight tokens on-demand for visible lines (no blank highlight state).
+- Token sorting added for cached highlights to keep stable, correct spans.
+- Undo/redo now force a full Tree-sitter reparse (`reparseFull`) to avoid corrupted incremental trees.
+- Known issue: incremental edits may still be fragile; if new regressions appear, fall back to full reparse on each edit until a replay harness is added.
+
+### Next agent: do this next (no further clarification needed)
+1) TS-04: verify incremental edit correctness with a replay harness (capture edits + compare highlight output).
+2) TS-05: implement injected languages (query loading + ordering + subpriority).
+3) TS-06: add cached-draw tests for highlight spans to lock regressions.
+
 ## Current Focus (2026-01-25)
 - App layering input separation: keep draw paths input-free, keep `InputBatch` central, and enforce import rules.
 - Next likely steps: extend import checks to cover input explicitly, add minimal input replay fixtures, and tighten draw/input separation where needed.
