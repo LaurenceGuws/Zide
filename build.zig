@@ -232,7 +232,9 @@ pub fn build(b: *std.Build) void {
         }),
     });
     unit_tests.linkLibrary(treesitter);
+    unit_tests.linkLibrary(ts_zig);
     unit_tests.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
+    unit_tests.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
 
     const run_tests = b.addRunArtifact(unit_tests);
     const test_step = b.step("test", "Run unit tests");

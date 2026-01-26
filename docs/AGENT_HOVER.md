@@ -51,6 +51,8 @@ Date: 2026-01-24
 - Added `zig build grammar-update` tooling (parallel builds, skip-git, continue-on-error).
 - Generated `assets/syntax/generated.lua` from Neovim filetype + parsers.lua, with user/project overrides.
 - Manual overrides live in `assets/syntax/overrides.lua`.
+- Tree-sitter highlights now evaluate predicates (eq?/any-of?/contains?/match?) and parse set! metadata (priority/conceal/url).
+- Highlight tokens carry priority metadata; draw ordering now sorts by start + priority.
 
 ## Next Steps
 1) Add render cache stress test for eviction behavior.
