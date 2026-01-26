@@ -34,6 +34,10 @@ pub const HighlightToken = struct {
     start: usize,
     end: usize,
     kind: TokenKind,
+    priority: i32,
+    conceal: ?[]const u8,
+    url: ?[]const u8,
+    conceal_lines: bool,
 };
 
 pub const SyntaxHighlighter = struct {
@@ -99,8 +103,35 @@ pub const SyntaxHighlighter = struct {
         var tokens = std.ArrayList(HighlightToken).empty;
         errdefer tokens.deinit(allocator);
 
+        const capture_count = self.query_bundle.capture_count;
+        var capture_meta_stack: [64]CaptureMeta = undefined;
+        const capture_meta = if (capture_count <= capture_meta_stack.len)
+            capture_meta_stack[0..capture_count]
+        else
+            try allocator.alloc(CaptureMeta, capture_count);
+        defer if (capture_count > capture_meta_stack.len) allocator.free(capture_meta);
+
         var match: c.TSQueryMatch = undefined;
         while (c.ts_query_cursor_next_match(self.cursor, &match)) {
+            if (!predicatesMatch(
+                self.query_bundle,
+                &match,
+                self.text_buffer,
+                allocator,
+            )) {
+                continue;
+            }
+
+            initCaptureMeta(capture_meta);
+            var match_meta = MatchMeta{};
+            applyDirectives(
+                self.query_bundle,
+                &match,
+                &match_meta,
+                capture_meta,
+                allocator,
+            );
+
             var i: u32 = 0;
             while (i < match.capture_count) : (i += 1) {
                 const capture = match.captures[i];
@@ -110,10 +141,19 @@ pub const SyntaxHighlighter = struct {
                 if (end_b <= range_start or start_b >= range_end) continue;
                 if (self.query_bundle.capture_noop[capture.index]) continue;
                 const token_kind = self.query_bundle.capture_kinds[capture.index];
+                const meta = capture_meta[capture.index];
+                const priority = if (meta.has_priority) meta.priority else match_meta.priority;
+                const conceal = if (meta.conceal != null) meta.conceal else match_meta.conceal;
+                const url = if (meta.url != null) meta.url else match_meta.url;
+                const conceal_lines = if (meta.conceal_lines) true else match_meta.conceal_lines;
                 try tokens.append(allocator, .{
                     .start = start_b,
                     .end = end_b,
                     .kind = token_kind,
+                    .priority = priority,
+                    .conceal = conceal,
+                    .url = url,
+                    .conceal_lines = conceal_lines,
                 });
             }
         }
@@ -211,6 +251,28 @@ fn emptyTokens(allocator: std.mem.Allocator) ![]HighlightToken {
     return allocator.alloc(HighlightToken, 0);
 }
 
+const CaptureMeta = struct {
+    priority: i32 = 0,
+    has_priority: bool = false,
+    conceal: ?[]const u8 = null,
+    url: ?[]const u8 = null,
+    conceal_lines: bool = false,
+};
+
+const MatchMeta = struct {
+    priority: i32 = 0,
+    has_priority: bool = false,
+    conceal: ?[]const u8 = null,
+    url: ?[]const u8 = null,
+    conceal_lines: bool = false,
+};
+
+fn initCaptureMeta(meta: []CaptureMeta) void {
+    for (meta) |*entry| {
+        entry.* = .{};
+    }
+}
+
 fn mapCaptureKind(name: []const u8) TokenKind {
     if (std.mem.indexOf(u8, name, "comment") != null) return .comment;
     if (std.mem.indexOf(u8, name, "string") != null) return .string;
@@ -238,11 +300,609 @@ fn shouldSkipCapture(name: []const u8) bool {
     return false;
 }
 
+const PredicateArg = union(enum) {
+    capture: u32,
+    string: []const u8,
+};
+
+fn predicatesMatch(
+    bundle: *QueryBundle,
+    match: *const c.TSQueryMatch,
+    text_buffer: *TextStore,
+    allocator: std.mem.Allocator,
+) bool {
+    var step_count: u32 = 0;
+    const steps = c.ts_query_predicates_for_pattern(bundle.query, match.pattern_index, &step_count);
+    if (steps == null or step_count == 0) return true;
+
+    var args = std.ArrayList(PredicateArg).empty;
+    defer args.deinit(allocator);
+
+    var current_name: ?[]const u8 = null;
+    var i: u32 = 0;
+    while (i < step_count) : (i += 1) {
+        const step = steps[i];
+        switch (step.type) {
+            c.TSQueryPredicateStepTypeDone => {
+                if (current_name) |name| {
+                    if (!predicateSatisfied(
+                        bundle,
+                        name,
+                        args.items,
+                        match,
+                        text_buffer,
+                        allocator,
+                    )) {
+                        return false;
+                    }
+                }
+                args.clearRetainingCapacity();
+                current_name = null;
+            },
+            c.TSQueryPredicateStepTypeCapture => {
+                if (current_name == null) continue;
+                args.append(allocator, .{ .capture = step.value_id }) catch return false;
+            },
+            c.TSQueryPredicateStepTypeString => {
+                var len: u32 = 0;
+                const value_ptr = c.ts_query_string_value_for_id(bundle.query, step.value_id, &len);
+                const value = value_ptr[0..len];
+                if (current_name == null) {
+                    current_name = value;
+                } else {
+                    args.append(allocator, .{ .string = value }) catch return false;
+                }
+            },
+            else => {},
+        }
+    }
+
+    return true;
+}
+
+fn predicateSatisfied(
+    bundle: *QueryBundle,
+    name_raw: []const u8,
+    args: []const PredicateArg,
+    match: *const c.TSQueryMatch,
+    text_buffer: *TextStore,
+    allocator: std.mem.Allocator,
+) bool {
+    if (name_raw.len == 0) return true;
+    if (isDirectiveName(name_raw)) return true;
+
+    var name = name_raw;
+    var negate = false;
+    var any = false;
+    while (true) {
+        if (std.mem.startsWith(u8, name, "not-")) {
+            negate = !negate;
+            name = name[4..];
+            continue;
+        }
+        if (std.mem.startsWith(u8, name, "any-") and !std.mem.eql(u8, name, "any-of?")) {
+            any = true;
+            name = name[4..];
+            continue;
+        }
+        break;
+    }
+
+    const result = if (std.mem.eql(u8, name, "eq?"))
+        predicateEq(args, match, text_buffer, allocator, any)
+    else if (std.mem.eql(u8, name, "any-of?"))
+        predicateAnyOf(args, match, text_buffer, allocator)
+    else if (std.mem.eql(u8, name, "contains?"))
+        predicateContains(args, match, text_buffer, allocator, any)
+    else if (std.mem.eql(u8, name, "match?"))
+        predicateMatch(bundle, args, match, text_buffer, allocator, any)
+    else
+        true;
+
+    return if (negate) !result else result;
+}
+
+fn predicateEq(
+    args: []const PredicateArg,
+    match: *const c.TSQueryMatch,
+    text_buffer: *TextStore,
+    allocator: std.mem.Allocator,
+    any: bool,
+) bool {
+    if (args.len < 2) return false;
+    const cap = args[0];
+    if (cap != .capture) return false;
+    const capture_id = cap.capture;
+    const rhs = args[1];
+
+    return switch (rhs) {
+        .string => |value| captureMatchesString(
+            match,
+            capture_id,
+            text_buffer,
+            allocator,
+            value,
+            any,
+            nodeTextEquals,
+        ),
+        .capture => |rhs_capture| captureMatchesCapture(
+            match,
+            capture_id,
+            rhs_capture,
+            text_buffer,
+            allocator,
+            any,
+        ),
+    };
+}
+
+fn predicateAnyOf(
+    args: []const PredicateArg,
+    match: *const c.TSQueryMatch,
+    text_buffer: *TextStore,
+    allocator: std.mem.Allocator,
+) bool {
+    if (args.len < 2) return false;
+    const cap = args[0];
+    if (cap != .capture) return false;
+    const capture_id = cap.capture;
+    var ok = false;
+    for (args[1..]) |arg| {
+        if (arg == .string) {
+            if (captureMatchesString(
+                match,
+                capture_id,
+                text_buffer,
+                allocator,
+                arg.string,
+                true,
+                nodeTextEquals,
+            )) {
+                ok = true;
+                break;
+            }
+        }
+    }
+    return ok;
+}
+
+fn predicateContains(
+    args: []const PredicateArg,
+    match: *const c.TSQueryMatch,
+    text_buffer: *TextStore,
+    allocator: std.mem.Allocator,
+    any: bool,
+) bool {
+    if (args.len < 2) return false;
+    const cap = args[0];
+    if (cap != .capture) return false;
+    const capture_id = cap.capture;
+    var ok = false;
+    for (args[1..]) |arg| {
+        if (arg == .string) {
+            if (captureMatchesString(
+                match,
+                capture_id,
+                text_buffer,
+                allocator,
+                arg.string,
+                any,
+                nodeTextContains,
+            )) {
+                ok = true;
+                if (any) break;
+            } else if (!any) {
+                return false;
+            }
+        }
+    }
+    return ok;
+}
+
+fn predicateMatch(
+    bundle: *QueryBundle,
+    args: []const PredicateArg,
+    match: *const c.TSQueryMatch,
+    text_buffer: *TextStore,
+    allocator: std.mem.Allocator,
+    any: bool,
+) bool {
+    _ = bundle;
+    if (args.len < 2) return false;
+    const cap = args[0];
+    if (cap != .capture) return false;
+    const capture_id = cap.capture;
+    const rhs = args[1];
+    if (rhs != .string) return false;
+    return captureMatchesPattern(
+        match,
+        capture_id,
+        text_buffer,
+        allocator,
+        rhs.string,
+        any,
+    );
+}
+
+fn captureMatchesString(
+    match: *const c.TSQueryMatch,
+    capture_id: u32,
+    text_buffer: *TextStore,
+    allocator: std.mem.Allocator,
+    needle: []const u8,
+    any: bool,
+    predicate: anytype,
+) bool {
+    var found = false;
+    var any_ok = false;
+    var i: u32 = 0;
+    while (i < match.capture_count) : (i += 1) {
+        const capture = match.captures[i];
+        if (capture.index != capture_id) continue;
+        found = true;
+        const ok = predicate(text_buffer, allocator, capture.node, needle);
+        if (any) {
+            if (ok) return true;
+        } else if (!ok) {
+            return false;
+        }
+        any_ok = any_ok or ok;
+    }
+    if (!found) return false;
+    return if (any) any_ok else true;
+}
+
+fn captureMatchesPattern(
+    match: *const c.TSQueryMatch,
+    capture_id: u32,
+    text_buffer: *TextStore,
+    allocator: std.mem.Allocator,
+    pattern: []const u8,
+    any: bool,
+) bool {
+    var found = false;
+    var any_ok = false;
+    var i: u32 = 0;
+    while (i < match.capture_count) : (i += 1) {
+        const capture = match.captures[i];
+        if (capture.index != capture_id) continue;
+        found = true;
+        const text = readNodeTextAlloc(text_buffer, allocator, capture.node) catch return false;
+        defer allocator.free(text);
+        const ok = simpleRegexMatch(pattern, text);
+        if (any) {
+            if (ok) return true;
+        } else if (!ok) {
+            return false;
+        }
+        any_ok = any_ok or ok;
+    }
+    if (!found) return false;
+    return if (any) any_ok else true;
+}
+
+fn captureMatchesCapture(
+    match: *const c.TSQueryMatch,
+    capture_id: u32,
+    other_capture_id: u32,
+    text_buffer: *TextStore,
+    allocator: std.mem.Allocator,
+    any: bool,
+) bool {
+    const other = firstCaptureNode(match, other_capture_id) orelse return false;
+    var found = false;
+    var any_ok = false;
+    var i: u32 = 0;
+    while (i < match.capture_count) : (i += 1) {
+        const capture = match.captures[i];
+        if (capture.index != capture_id) continue;
+        found = true;
+        const ok = nodeTextEqualsCapture(text_buffer, allocator, capture.node, other);
+        if (any) {
+            if (ok) return true;
+        } else if (!ok) {
+            return false;
+        }
+        any_ok = any_ok or ok;
+    }
+    if (!found) return false;
+    return if (any) any_ok else true;
+}
+
+fn firstCaptureNode(match: *const c.TSQueryMatch, capture_id: u32) ?c.TSNode {
+    var i: u32 = 0;
+    while (i < match.capture_count) : (i += 1) {
+        const capture = match.captures[i];
+        if (capture.index == capture_id) return capture.node;
+    }
+    return null;
+}
+
+fn nodeTextEquals(
+    text_buffer: *TextStore,
+    allocator: std.mem.Allocator,
+    node: c.TSNode,
+    needle: []const u8,
+) bool {
+    const text = readNodeTextAlloc(text_buffer, allocator, node) catch return false;
+    defer allocator.free(text);
+    return std.mem.eql(u8, text, needle);
+}
+
+fn nodeTextEqualsCapture(
+    text_buffer: *TextStore,
+    allocator: std.mem.Allocator,
+    left: c.TSNode,
+    right: c.TSNode,
+) bool {
+    const left_start = c.ts_node_start_byte(left);
+    const left_end = c.ts_node_end_byte(left);
+    const right_start = c.ts_node_start_byte(right);
+    const right_end = c.ts_node_end_byte(right);
+    const left_len = @as(usize, @intCast(left_end - left_start));
+    const right_len = @as(usize, @intCast(right_end - right_start));
+    if (left_len != right_len) return false;
+    const left_text = readNodeTextAlloc(text_buffer, allocator, left) catch return false;
+    defer allocator.free(left_text);
+    const right_text = readNodeTextAlloc(text_buffer, allocator, right) catch return false;
+    defer allocator.free(right_text);
+    return std.mem.eql(u8, left_text, right_text);
+}
+
+fn readNodeTextAlloc(
+    text_buffer: *TextStore,
+    allocator: std.mem.Allocator,
+    node: c.TSNode,
+) ![]u8 {
+    const start_b = c.ts_node_start_byte(node);
+    const end_b = c.ts_node_end_byte(node);
+    if (end_b <= start_b) return allocator.alloc(u8, 0);
+    const len = @as(usize, @intCast(end_b - start_b));
+    var out = try allocator.alloc(u8, len);
+    const written = text_buffer.readRange(start_b, out);
+    if (written < len) {
+        out = try allocator.realloc(out, written);
+    }
+    return out;
+}
+
+fn nodeTextContains(
+    text_buffer: *TextStore,
+    allocator: std.mem.Allocator,
+    node: c.TSNode,
+    needle: []const u8,
+) bool {
+    const text = readNodeTextAlloc(text_buffer, allocator, node) catch return false;
+    defer allocator.free(text);
+    return std.mem.indexOf(u8, text, needle) != null;
+}
+
+fn applyDirectives(
+    bundle: *QueryBundle,
+    match: *const c.TSQueryMatch,
+    match_meta: *MatchMeta,
+    capture_meta: []CaptureMeta,
+    allocator: std.mem.Allocator,
+) void {
+    var step_count: u32 = 0;
+    const steps = c.ts_query_predicates_for_pattern(bundle.query, match.pattern_index, &step_count);
+    if (steps == null or step_count == 0) return;
+
+    var args = std.ArrayList(PredicateArg).empty;
+    defer args.deinit(allocator);
+
+    var current_name: ?[]const u8 = null;
+    var i: u32 = 0;
+    while (i < step_count) : (i += 1) {
+        const step = steps[i];
+        switch (step.type) {
+            c.TSQueryPredicateStepTypeDone => {
+                if (current_name) |name| {
+                    if (isDirectiveName(name)) {
+                        applyDirective(name, args.items, match_meta, capture_meta);
+                    }
+                }
+                args.clearRetainingCapacity();
+                current_name = null;
+            },
+            c.TSQueryPredicateStepTypeCapture => {
+                if (current_name == null) continue;
+                args.append(allocator, .{ .capture = step.value_id }) catch return;
+            },
+            c.TSQueryPredicateStepTypeString => {
+                var len: u32 = 0;
+                const value_ptr = c.ts_query_string_value_for_id(bundle.query, step.value_id, &len);
+                const value = value_ptr[0..len];
+                if (current_name == null) {
+                    current_name = value;
+                } else {
+                    args.append(allocator, .{ .string = value }) catch return;
+                }
+            },
+            else => {},
+        }
+    }
+}
+
+fn applyDirective(
+    name: []const u8,
+    args: []const PredicateArg,
+    match_meta: *MatchMeta,
+    capture_meta: []CaptureMeta,
+) void {
+    if (!std.mem.eql(u8, name, "set!")) return;
+    if (args.len < 2) return;
+
+    var arg_index: usize = 0;
+    var capture_id: ?u32 = null;
+    if (args[0] == .capture and args.len >= 3) {
+        capture_id = args[0].capture;
+        arg_index = 1;
+    }
+
+    if (arg_index + 1 >= args.len) return;
+    if (args[arg_index] != .string or args[arg_index + 1] != .string) return;
+    const key = args[arg_index].string;
+    const value = args[arg_index + 1].string;
+
+    if (capture_id) |cid| {
+        if (cid >= capture_meta.len) return;
+        applyDirectiveValue(&capture_meta[cid], key, value);
+    } else {
+        applyDirectiveValue(match_meta, key, value);
+    }
+}
+
+fn applyDirectiveValue(meta: anytype, key: []const u8, value: []const u8) void {
+    if (std.mem.eql(u8, key, "priority")) {
+        const parsed = std.fmt.parseInt(i32, value, 10) catch return;
+        meta.priority = parsed;
+        meta.has_priority = true;
+        return;
+    }
+    if (std.mem.eql(u8, key, "conceal")) {
+        meta.conceal = value;
+        return;
+    }
+    if (std.mem.eql(u8, key, "conceal_lines")) {
+        meta.conceal_lines = true;
+        return;
+    }
+    if (std.mem.eql(u8, key, "url")) {
+        meta.url = value;
+        return;
+    }
+}
+
+fn isDirectiveName(name: []const u8) bool {
+    return name.len > 0 and name[name.len - 1] == '!';
+}
+
+fn simpleRegexMatch(pattern: []const u8, text: []const u8) bool {
+    var pat = pattern;
+    var anchored_start = false;
+    var anchored_end = false;
+    if (pat.len > 0 and pat[0] == '^') {
+        anchored_start = true;
+        pat = pat[1..];
+    }
+    if (pat.len > 0 and pat[pat.len - 1] == '$') {
+        anchored_end = true;
+        pat = pat[0 .. pat.len - 1];
+    }
+    if (anchored_start) {
+        return simpleRegexMatchHere(pat, text, anchored_end);
+    }
+    var i: usize = 0;
+    while (i <= text.len) : (i += 1) {
+        if (simpleRegexMatchHere(pat, text[i..], anchored_end)) return true;
+        if (i == text.len) break;
+    }
+    return false;
+}
+
+fn simpleRegexMatchHere(pattern: []const u8, text: []const u8, anchored_end: bool) bool {
+    if (pattern.len == 0) return !anchored_end or text.len == 0;
+    const token = simpleRegexNextToken(pattern);
+    const rest = pattern[token.next_index..];
+    if (token.quantifier == '*') {
+        return simpleRegexMatchStar(token, rest, text, anchored_end);
+    }
+    if (token.quantifier == '+') {
+        return simpleRegexMatchPlus(token, rest, text, anchored_end);
+    }
+    if (token.quantifier == '?') {
+        return simpleRegexMatchQuestion(token, rest, text, anchored_end);
+    }
+    if (text.len == 0) return false;
+    if (!simpleRegexTokenMatch(token, text[0])) return false;
+    return simpleRegexMatchHere(rest, text[1..], anchored_end);
+}
+
+const SimpleRegexToken = struct {
+    byte: u8,
+    any: bool,
+    next_index: usize,
+    quantifier: u8,
+};
+
+fn simpleRegexNextToken(pattern: []const u8) SimpleRegexToken {
+    if (pattern.len == 0) return .{ .byte = 0, .any = false, .next_index = 0, .quantifier = 0 };
+    var idx: usize = 0;
+    var byte = pattern[0];
+    var any = false;
+    if (byte == '\\' and pattern.len > 1) {
+        byte = pattern[1];
+        idx = 2;
+    } else {
+        idx = 1;
+        if (byte == '.') any = true;
+    }
+    var quantifier: u8 = 0;
+    if (idx < pattern.len) {
+        const q = pattern[idx];
+        if (q == '*' or q == '+' or q == '?') {
+            quantifier = q;
+            idx += 1;
+        }
+    }
+    return .{
+        .byte = byte,
+        .any = any,
+        .next_index = idx,
+        .quantifier = quantifier,
+    };
+}
+
+fn simpleRegexTokenMatch(token: SimpleRegexToken, value: u8) bool {
+    return token.any or token.byte == value;
+}
+
+fn simpleRegexMatchStar(
+    token: SimpleRegexToken,
+    rest: []const u8,
+    text: []const u8,
+    anchored_end: bool,
+) bool {
+    var i: usize = 0;
+    while (true) {
+        if (simpleRegexMatchHere(rest, text[i..], anchored_end)) return true;
+        if (i >= text.len) break;
+        if (!simpleRegexTokenMatch(token, text[i])) break;
+        i += 1;
+    }
+    return false;
+}
+
+fn simpleRegexMatchPlus(
+    token: SimpleRegexToken,
+    rest: []const u8,
+    text: []const u8,
+    anchored_end: bool,
+) bool {
+    if (text.len == 0) return false;
+    if (!simpleRegexTokenMatch(token, text[0])) return false;
+    return simpleRegexMatchStar(token, rest, text[1..], anchored_end);
+}
+
+fn simpleRegexMatchQuestion(
+    token: SimpleRegexToken,
+    rest: []const u8,
+    text: []const u8,
+    anchored_end: bool,
+) bool {
+    if (simpleRegexMatchHere(rest, text, anchored_end)) return true;
+    if (text.len == 0) return false;
+    if (!simpleRegexTokenMatch(token, text[0])) return false;
+    return simpleRegexMatchHere(rest, text[1..], anchored_end);
+}
+
 const QueryBundle = struct {
     query: *c.TSQuery,
     capture_kinds: []TokenKind,
     capture_noop: []bool,
     query_source: []u8,
+    capture_count: usize,
 };
 
 const QueryCache = struct {
@@ -324,6 +984,7 @@ const QueryCache = struct {
             .capture_kinds = capture_kinds,
             .capture_noop = capture_noop,
             .query_source = query_text,
+            .capture_count = @as(usize, @intCast(capture_count)),
         };
 
         try self.map.put(key, bundle);
@@ -443,3 +1104,76 @@ pub const zig_highlights_query =
     \\(call_expression function: (identifier) @function)
     \\(function_declaration name: (identifier) @function)
 ;
+
+test "predicates + priority metadata filter highlights" {
+    const allocator = std.testing.allocator;
+    const text = "const foo = 1;\nconst bar = 2;\n";
+    var store = try TextStore.init(allocator, text);
+    defer store.deinit();
+
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    const query =
+        \\((identifier) @variable (#eq? @variable "foo") (#set! @variable priority 50))
+        \\((identifier) @variable (#any-of? @variable "bar" "baz") (#set! @variable priority 10))
+    ;
+    try tmp.dir.writeFile(.{ .sub_path = "highlights.scm", .data = query });
+    const query_path = try tmp.dir.realpathAlloc(allocator, "highlights.scm");
+    defer allocator.free(query_path);
+
+    const highlighter = try createHighlighterForLanguage(
+        allocator,
+        store,
+        "zig",
+        tree_sitter_zig(),
+        query_path,
+    );
+    defer highlighter.destroy();
+
+    const tokens = try highlighter.highlightRange(0, store.totalLen(), allocator);
+    defer allocator.free(tokens);
+
+    try std.testing.expectEqual(@as(usize, 2), tokens.len);
+    var foo_priority: ?i32 = null;
+    var bar_priority: ?i32 = null;
+    for (tokens) |token| {
+        const slice = text[token.start..token.end];
+        if (std.mem.eql(u8, slice, "foo")) foo_priority = token.priority;
+        if (std.mem.eql(u8, slice, "bar")) bar_priority = token.priority;
+    }
+    try std.testing.expectEqual(@as(?i32, 50), foo_priority);
+    try std.testing.expectEqual(@as(?i32, 10), bar_priority);
+}
+
+test "match predicate filters captures" {
+    const allocator = std.testing.allocator;
+    const text = "const foo = 1;\nconst bar = 2;\n";
+    var store = try TextStore.init(allocator, text);
+    defer store.deinit();
+
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    const query =
+        \\((identifier) @variable (#match? @variable "^ba"))
+    ;
+    try tmp.dir.writeFile(.{ .sub_path = "highlights.scm", .data = query });
+    const query_path = try tmp.dir.realpathAlloc(allocator, "highlights.scm");
+    defer allocator.free(query_path);
+
+    const highlighter = try createHighlighterForLanguage(
+        allocator,
+        store,
+        "zig",
+        tree_sitter_zig(),
+        query_path,
+    );
+    defer highlighter.destroy();
+
+    const tokens = try highlighter.highlightRange(0, store.totalLen(), allocator);
+    defer allocator.free(tokens);
+
+    try std.testing.expectEqual(@as(usize, 1), tokens.len);
+    try std.testing.expectEqualStrings("bar", text[tokens[0].start..tokens[0].end]);
+}

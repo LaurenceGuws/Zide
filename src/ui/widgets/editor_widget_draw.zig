@@ -1124,8 +1124,9 @@ fn drawHighlightedLineSegment(
 }
 
 fn highlightTokenLessThan(_: void, a: HighlightToken, b: HighlightToken) bool {
-    if (a.start == b.start) return a.end < b.end;
-    return a.start < b.start;
+    if (a.start != b.start) return a.start < b.start;
+    if (a.priority != b.priority) return a.priority < b.priority;
+    return a.end < b.end;
 }
 
 fn colorForToken(r: anytype, kind: TokenKind) @TypeOf(r.theme.foreground) {

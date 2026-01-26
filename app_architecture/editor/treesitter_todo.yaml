@@ -21,19 +21,23 @@ treesitter_todo:
         - "Capture names map to token kinds or highlight groups."
         - "Honor capture names that start with '_' as no-op."
     - id: TS-02
-      status: todo
+      status: in_progress
       title: "Metadata + priorities"
       notes:
         - "Support metadata fields used by Neovim: priority, conceal, conceal_lines, url."
         - "Preserve priority ordering with subpriority per injected tree."
         - "Spell/no-spell captures mirror Neovim semantics."
+        - "Implemented priority metadata parsing via #set!; tokens carry priority/metadata (not yet used for conceal/url)."
+        - "Current ordering only sorts by start + priority (no overlap-splitting yet)."
     - id: TS-03
-      status: todo
+      status: in_progress
       title: "Predicates + directives"
       notes:
         - "Implement predicates used by Neovim highlights (eq?, any-of?, match?, contains?)."
         - "Implement directives set!, offset!, gsub!, trim! (as needed)."
         - "Allow custom predicate/directive registry for extensions."
+        - "Implemented eq?/any-of?/contains?/match? predicates; match? uses a minimal regex subset (anchors + . * + ?)."
+        - "Implemented set! directive for priority/conceal/conceal_lines/url metadata; offset!/gsub!/trim! pending."
     - id: TS-04
       status: todo
       title: "Incremental invalidation"
