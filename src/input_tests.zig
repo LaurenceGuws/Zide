@@ -37,6 +37,53 @@ test "input batch state helpers" {
     try std.testing.expect(batch.mouseReleased(.middle));
 }
 
+test "combo repeat applies to modifier + key" {
+    const allocator = std.testing.allocator;
+
+    var batch = shared_types.input.InputBatch.init(allocator);
+    defer batch.deinit();
+
+    batch.key_down[@intFromEnum(shared_types.input.Key.z)] = true;
+    batch.mods.ctrl = true;
+    batch.applyComboRepeats();
+
+    try std.testing.expect(batch.keyRepeated(.z));
+}
+
+test "combo repeat applies to multi-key chords" {
+    const allocator = std.testing.allocator;
+
+    var batch = shared_types.input.InputBatch.init(allocator);
+    defer batch.deinit();
+
+    batch.key_down[@intFromEnum(shared_types.input.Key.k)] = true;
+    batch.key_down[@intFromEnum(shared_types.input.Key.l)] = true;
+    batch.key_down[@intFromEnum(shared_types.input.Key.j)] = true;
+    batch.key_down[@intFromEnum(shared_types.input.Key.period)] = true;
+    batch.key_down[@intFromEnum(shared_types.input.Key.seven)] = true;
+    batch.key_down[@intFromEnum(shared_types.input.Key.q)] = true;
+    batch.applyComboRepeats();
+
+    try std.testing.expect(batch.keyRepeated(.k));
+    try std.testing.expect(batch.keyRepeated(.l));
+    try std.testing.expect(batch.keyRepeated(.j));
+    try std.testing.expect(batch.keyRepeated(.period));
+    try std.testing.expect(batch.keyRepeated(.seven));
+    try std.testing.expect(batch.keyRepeated(.q));
+}
+
+test "combo repeat does not force single key without mods" {
+    const allocator = std.testing.allocator;
+
+    var batch = shared_types.input.InputBatch.init(allocator);
+    defer batch.deinit();
+
+    batch.key_down[@intFromEnum(shared_types.input.Key.a)] = true;
+    batch.applyComboRepeats();
+
+    try std.testing.expect(!batch.keyRepeated(.a));
+}
+
 const Frame = struct {
     mouse_x: f32,
     mouse_y: f32,
