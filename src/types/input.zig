@@ -259,6 +259,19 @@ pub const InputBatch = struct {
         return self.key_repeated[@intFromEnum(key)];
     }
 
+    pub fn applyComboRepeats(self: *InputBatch) void {
+        var key_down_count: usize = 0;
+        for (self.key_down) |down| {
+            if (down) key_down_count += 1;
+        }
+        if (key_down_count == 0) return;
+        const combo_active = key_down_count > 1 or !self.mods.isEmpty();
+        if (!combo_active) return;
+        for (self.key_down, 0..) |down, idx| {
+            if (down) self.key_repeated[idx] = true;
+        }
+    }
+
     pub fn mouseDown(self: *const InputBatch, button: MouseButton) bool {
         return self.mouse_down[@intFromEnum(button)];
     }

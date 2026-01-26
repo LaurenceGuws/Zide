@@ -114,11 +114,11 @@ pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *sh
         try widget.editor.save();
         handled = true;
         app_logger.logger("editor.input").logf("key=ctrl+s", .{});
-    } else if (ctrl and input_batch.keyPressed(.z)) {
+    } else if (ctrl and input_batch.keyRepeated(.z)) {
         _ = try widget.editor.undo();
         handled = true;
         app_logger.logger("editor.input").logf("key=ctrl+z", .{});
-    } else if (ctrl and input_batch.keyPressed(.y)) {
+    } else if (ctrl and input_batch.keyRepeated(.y)) {
         _ = try widget.editor.redo();
         handled = true;
         app_logger.logger("editor.input").logf("key=ctrl+y", .{});
