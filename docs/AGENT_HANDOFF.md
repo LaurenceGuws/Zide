@@ -20,7 +20,11 @@ Read src/editor/syntax.zig.
 ## Handoff (High-Level)
 
 ### Current Focus
-- TS-05: injected languages + full query handling (beyond highlights). See `app_architecture/editor/treesitter_todo.yaml`.
+- TS-05: injected languages + full query handling beyond highlights. See `app_architecture/editor/treesitter_todo.yaml` and `app_architecture/editor/treesitter_dynamic_roadmap.md`.
+
+### Recent Changes (High-Level)
+- Zig no longer uses embedded highlight queries; it now uses the same query lookup path as other languages.
+- TS-04 replay harness is in place; see the todo for details.
 
 ### Constraints / Guardrails
 - Handoff docs are high-level only; progress tracking lives in todo + app_architecture docs.

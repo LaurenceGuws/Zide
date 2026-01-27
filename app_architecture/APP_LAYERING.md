@@ -89,7 +89,7 @@ Shared types entry point:
 - Terminal hover state is updated during input handling; draw reads cached hover info.
 - Top bars (options/tab/side/status) update hover state during input; draw uses cached state.
 
-## Interface Contracts (initial targets)
+## Interface Contracts (initial targets — not fully implemented)
 Text engine (pure Zig):
 - `EditorSession.init(allocator, grammar_manager)` → owns text + undo + syntax state.
 - `EditorSession.apply(EditCommand)` → returns `EditResult` (dirty ranges, selection changes).

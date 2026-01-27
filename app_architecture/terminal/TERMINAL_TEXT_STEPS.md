@@ -30,8 +30,9 @@ Goal: achieve terminal-quality text rendering comparable to Kitty/Alacritty.
 
 ## Phase 5 — Metrics + wide glyph handling (partial)
 
-- Use exact font metrics for cell sizing and baseline.
-- Center wide glyphs within the cell, or expand to double-cell width when needed.
+- Use exact font metrics for cell sizing and baseline. (partial; integer snapping in place)
+- Wide/square glyphs: allow overflow when followed by space; otherwise scale to fit.
+- Symbols/PUA glyphs: always allow overflow (no scaling), clamped to cell origin.
 - Ensure box-drawing glyphs align to grid without seams.
 
 ## Validation checklist
