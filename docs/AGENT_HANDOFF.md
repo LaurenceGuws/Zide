@@ -58,6 +58,7 @@ Next session focus: full query plan.
 - Undo/redo now force a full Tree-sitter reparse (`reparseFull`) to avoid corrupted incremental trees.
 - Highlight replay test now compares incremental edits against full reparse output.
 - Replay harness now includes a multiline delete spanning comment tokens.
+- Replay harness now includes a larger Zig fixture and validates changed ranges cover edited lines.
 - Known issue: typing can still affect highlight on the next line (likely multi-line token ranges / changed-range span). Needs targeted range tightening or visible-window fallback.
 - Known issue: incremental edits may still be fragile; if new regressions appear, fall back to full reparse on each edit.
 
