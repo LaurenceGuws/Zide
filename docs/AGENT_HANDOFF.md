@@ -56,8 +56,10 @@ Next session focus: full query plan.
 - Cached draw path now computes highlight tokens on-demand for visible lines (no blank highlight state).
 - Token sorting added for cached highlights to keep stable, correct spans.
 - Undo/redo now force a full Tree-sitter reparse (`reparseFull`) to avoid corrupted incremental trees.
+- Highlight replay test now compares incremental edits against full reparse output.
+- Replay harness now includes a multiline delete spanning comment tokens.
 - Known issue: typing can still affect highlight on the next line (likely multi-line token ranges / changed-range span). Needs targeted range tightening or visible-window fallback.
-- Known issue: incremental edits may still be fragile; if new regressions appear, fall back to full reparse on each edit until a replay harness is added.
+- Known issue: incremental edits may still be fragile; if new regressions appear, fall back to full reparse on each edit.
 
 ## Handover Notes (2026-01-26) — Input Combo Repeats
 - Combo key repeats now fire when modifiers are held or multiple keys are down, even if the platform doesn't generate repeated events.
