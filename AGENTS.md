@@ -28,3 +28,4 @@ Follow this workflow for every feature/task:
 - `docs/AGENT_HANDOFF.md` and `docs/AGENT_HOVER.md` are **high-level only**: focus, constraints, and entrypoint pointers for a fresh session.
 - All task progress, checkpoints, and detailed changes live in the relevant todo files and `app_architecture/` docs.
 - If research was done to create or update a todo item, capture it in the relevant `app_architecture/` doc (not in handoff).
+- See `docs/WORKFLOW.md` for the full workflow + docs usage guide.
