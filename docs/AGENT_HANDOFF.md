@@ -15,121 +15,28 @@ Read app_architecture/editor/treesitter_todo.yaml.
 
 Read src/editor/syntax.zig.
 
-## Handover Notes (2026-01-25)
-- Tree-sitter dynamic grammar support updated: syntax registry now loads `assets/syntax/generated.lua` + `assets/syntax/overrides.lua`.
-- Added glob matching for syntax registry (supports `*` and `?`; uses full path when pattern contains `/`).
-- Added manual mappings in `assets/syntax/overrides.lua`, including globs (Blade/Helm/Hocon/Glimmer/etc) and injection-only placeholders.
-- Coverage tool added: `tools/grammar_packs/scripts/check_syntax_coverage.py` now reports extensions/basenames/globs/injections; dump via `--dump-lua-out`.
-- Removed untracked `vendor/tree-sitter-bash/` and `vendor/tree-sitter-java/` per user request.
-- Fixed highlight overflow panics in `src/ui/widgets/editor_widget_draw.zig` (clamp `token.start - line_start`).
+---
 
-Next session focus: full query plan.
-- Packaging currently only copies `*_highlights.scm` into packs (`tools/grammar_packs/scripts/package_queries.sh`).
-- Runtime only loads `highlights` per language (`src/editor/syntax.zig`).
-- Need to extend packaging + runtime to support other query types (`injections.scm`, `locals.scm`, `tags.scm`, `textobjects.scm`, `indents.scm`) and injection handling (TS-05).
+## Handoff (High-Level)
 
-## Handover Notes (2026-01-25) — Layering Split
-- AppShell façade enforced for widgets and main; widgets now take `*app_shell.Shell` and pass through `rendererPtr()` as needed.
-- Added shared types under `src/types/` with `mod.zig` entrypoint: input/actions/layout/snapshots.
-- Editor snapshot stub now fills `line_offsets`, cursor, and small text (`text_owned` indicates ownership). Tests cover ownership.
-- Terminal snapshot adapter stub now maps rows/cols/cursor only (cells empty). Tests pin this behavior.
-- `tools/app_import_check.zig` updated to treat `src/types` as shared and forbid types importing `src/ui`.
-- `AppState.draw()` and `AppState.update()` now compute/use `WidgetLayout` for geometry.
-- `InputBatch` lifecycle wired; `AppState.update()` receives batch; widgets read from batch for input.
-- Terminal widget draw now consumes an `InputSnapshot` for hover state instead of polling renderer input.
-- `buildInputBatch` moved into `src/input/input_builder.zig` to keep `main.zig` slimmer.
-- Top-level UI draws (options/tab/side/status bars) now use `InputSnapshot` instead of querying input during draw.
-- Added a small input replay test harness in `src/input_tests.zig` for scroll + key repeat frames.
-- Input replay harness now covers mouse drag sequences.
-- `tools/app_import_check.zig` recognizes `src/input/` and blocks UI-layer imports from it.
-- `tools/app_import_check.zig` now scans `src/input/` files directly for forbidden imports.
-- `tools/app_import_check.zig` now scans `src/ui/` (non-widgets) for forbidden imports.
-- `zig build check-input-imports` runs the shared import checker for input layering.
-- Editor draw paths accept `InputSnapshot` (kept input-free; currently unused in draw).
-- Terminal hover state now updates during input handling; draw uses cached hover info.
-- Top bars update hover state during input; draw uses cached state.
-- CLI: `--mode terminal|editor|ide` (default ide) controls which shell parts initialize/draw.
+### Current Focus
+- TS-05: injected languages + full query handling (beyond highlights). See `app_architecture/editor/treesitter_todo.yaml`.
 
-## Handover Notes (2026-01-26) — Tree-sitter Incremental Invalidation
-- Incremental highlight invalidation added (TS-04 in progress): editor applies `ts_tree_edit` and tracks dirty highlight line ranges.
-- Highlight cache now keys by `line_start` + text hash to avoid stale absolute offsets after edits.
-- Cached draw path now computes highlight tokens on-demand for visible lines (no blank highlight state).
-- Token sorting added for cached highlights to keep stable, correct spans.
-- Undo/redo now force a full Tree-sitter reparse (`reparseFull`) to avoid corrupted incremental trees.
-- Highlight replay test now compares incremental edits against full reparse output.
-- Replay harness now includes a multiline delete spanning comment tokens.
-- Replay harness now includes a larger Zig fixture and validates changed ranges cover edited lines.
-- Known issue: typing can still affect highlight on the next line (likely multi-line token ranges / changed-range span). Needs targeted range tightening or visible-window fallback.
-- Known issue: incremental edits may still be fragile; if new regressions appear, fall back to full reparse on each edit.
-- Removed embedded Zig highlights; Zig now uses the same query lookup path as other languages.
+### Constraints / Guardrails
+- Handoff docs are high-level only; progress tracking lives in todo + app_architecture docs.
+- Follow layering rules and import checks (see `tools/app_import_check.zig`).
+- No commits until the user approves after tests.
 
-## Handover Notes (2026-01-26) — Input Combo Repeats
-- Combo key repeats now fire when modifiers are held or multiple keys are down, even if the platform doesn't generate repeated events.
-- Single-key repeat behavior remains unchanged when no modifiers are pressed.
+### Where to Look for Details
+- Tree-sitter plan + research: `app_architecture/editor/treesitter_dynamic_roadmap.md`
+- Task tracking: `app_architecture/editor/treesitter_todo.yaml`
+- Editor widget roadmap: `app_architecture/editor/editor_widget_todo.yaml`
+- Terminal roadmap: `app_architecture/terminal/*_todo.yaml`
 
-### Next agent: do this next (no further clarification needed)
-1) TS-04: verify incremental edit correctness with a replay harness (capture edits + compare highlight output).
-2) TS-05: implement injected languages (query loading + ordering + subpriority).
-3) TS-06: add cached-draw tests for highlight spans to lock regressions.
+### Known Risk (High-Level)
+- Incremental highlight edits can still be fragile; see TS-04 notes in the todo.
 
-## Current Focus (2026-01-25)
-- App layering input separation: keep draw paths input-free, keep `InputBatch` central, and enforce import rules.
-- Next likely steps: extend import checks to cover input explicitly, add minimal input replay fixtures, and tighten draw/input separation where needed.
-
-## Progress Snapshot
-- Input flow is centralized: `InputBatch` captures key/mouse/text state in `src/input/input_builder.zig`.
-- `InputSnapshot` is plumbed through terminal + top-level UI draws; editor draw APIs now accept it.
-- Import checks updated to treat `src/input/` as shared support (UI cannot import it).
-- Added replay tests for key repeat, scroll, and mouse drag sequences.
-
-## Handover Checklist
-- Run: `zig build test`
-- Run: `zig build check-app-imports`
-- Run: `zig build check-input-imports`
-- `InputBatch` now captures input state/events; editor/terminal widgets and `AppState.update()` read from batch instead of renderer.
-
-Current state (do not question this):
-
-Tree-sitter dynamic grammar roadmap exists (2026-01-24) under app_architecture/editor/treesitter_dynamic_roadmap.md.
-
-Multi-language query loading is implemented in src/editor/syntax.zig (loads from .zide/, config path, and assets/).
-
-Tree-sitter runtime is vendored in vendor/tree-sitter/.
-
-vendor/tree-sitter-bash/ and vendor/tree-sitter-java/ are intentionally untracked to support dynamic pulling.
-
-Your role:
-
-Implement full Tree-sitter dynamic grammar support (TSUpdate-style workflow) quickly and end-to-end.
-
-Large refactors are allowed to move fast.
-
-Do not commit until I explicitly approve after running tests.
-
-Hard rules (never violate):
-
-Refactors are allowed and expected.
-
-Avoid unrelated cleanups.
-
-Behavior changes are allowed but must be backed by tests.
-
-If you introduce new tooling, document it in the relevant app_architecture/editor docs.
-
-Before coding:
-
-State the scope and major files touched.
-
-Move fast; no need to wait for confirmation unless blocked.
-
-After coding:
-
-List changed files.
-
-List tests run (or note if not run).
-
-Show git status -sb.
-
-Stop and wait for approval.
-
-Do not be verbose.
+### Checklist
+- `zig build test`
+- `zig build check-app-imports`
+- `zig build check-input-imports`

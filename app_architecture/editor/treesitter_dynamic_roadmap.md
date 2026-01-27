@@ -8,9 +8,8 @@ This roadmap is optimized for a new agent to pick up with minimal context. Each 
 to be small and testable, and to reuse the existing `tools/grammar_packs` workflow.
 
 ## Current State
-- Queries live under `assets/queries/<lang>/highlights.scm`.
-- Only Zig highlights are guaranteed to work; other languages need parser loading.
-- Grammar pack tooling already exists in `tools/grammar_packs/`.
+- Queries live under `assets/queries/<lang>/highlights.scm` (highlights only).
+- Grammar pack tooling already exists in `tools/grammar_packs/` and packages highlights queries only.
 - Tree-sitter runtime is vendored in `vendor/tree-sitter/`.
 
 ## Target Runtime Layout
@@ -19,6 +18,11 @@ Default cache dir (Linux):
 ~/.config/zide/grammars/<lang>/<version>/
   - <lang>_<version>_<os>_<arch>.so
   - <lang>_<version>_highlights.scm
+  - <lang>_<version>_injections.scm
+  - <lang>_<version>_locals.scm
+  - <lang>_<version>_tags.scm
+  - <lang>_<version>_textobjects.scm
+  - <lang>_<version>_indents.scm
   - manifest.json
 ```
 
@@ -29,7 +33,7 @@ Add a lightweight runtime loader that can:
 - resolve language by file extension
 - find a cached grammar pack on disk
 - `dlopen` the `.so` and resolve `tree_sitter_<lang>` symbol
-- read `highlights.scm` text for that language
+- read query text for that language (highlights + additional query types)
 
 Suggested files:
 - `src/editor/grammar_manager.zig` (new)
@@ -39,7 +43,7 @@ Suggested files:
 
 Errors/logging:
 - log missing packs clearly (language + expected path)
-- keep Zig fallback to avoid regression
+- avoid language-specific fallbacks; use the same lookup path for all languages
 
 Defaults + overrides:
 - Defaults baked at `assets/syntax/generated.lua` (generated from Neovim + parsers.lua)
@@ -52,7 +56,7 @@ Add a CLI command or tool to build + install packs locally:
 - `zig build grammar-update`
 - runs `tools/grammar_packs/scripts/sync_from_nvim.sh`, `fetch_grammars.sh`, `build_all.sh`
 - installs `tools/grammar_packs/dist/` into `~/.config/zide/grammars`
-- writes per-pack `manifest.json` next to the `.so` + `highlights.scm`
+- writes per-pack `manifest.json` next to the `.so` + query files
 - supports `--skip-git` and `--continue-on-error` for best-effort builds
 - supports `--targets` / `--skip-targets` to limit os/arch combos
  - supports `--jobs <n>` to parallelize pack builds
@@ -62,9 +66,9 @@ Suggested files:
 
 ### Step 3: Auto-sync Queries (optional)
 Keep queries in sync with nvim-treesitter:
-- add a helper to copy `tools/grammar_packs/work/queries/<lang>_highlights.scm`
-  into `assets/queries/<lang>/highlights.scm`
-- this keeps editor defaults aligned with upstream
+- add a helper to copy `tools/grammar_packs/work/queries/<lang>_<query>.scm`
+  into `assets/queries/<lang>/<query>.scm`
+- this keeps editor defaults aligned with upstream across all query types
 
 Suggested files:
 - `tools/grammar_packs/scripts/sync_queries_to_assets.sh` (new)
