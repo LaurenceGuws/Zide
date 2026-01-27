@@ -47,6 +47,8 @@ treesitter_todo:
         - "Added tree edit + changed range tracking; editor records dirty highlight line ranges."
         - "Render cache now invalidates highlight entries by dirty line range (no full clear on each edit)."
         - "Undo/redo forces full Tree-sitter reparse to avoid corrupted incremental trees."
+        - "Added highlight replay test comparing incremental edits to full reparse output."
+        - "Replay harness covers multiline delete spanning comment tokens."
     - id: TS-05
       status: todo
       title: "Injected languages"
