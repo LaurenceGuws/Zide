@@ -1109,12 +1109,6 @@ fn loadQueryText(
         return data;
     }
 
-    if (std.mem.eql(u8, language_name, "zig") and std.mem.eql(u8, query_name, "highlights")) {
-        const data = try allocator.dupe(u8, zig_highlights_query);
-        log.logf("query source embedded lang={s} name={s} bytes={d}", .{ language_name, query_name, data.len });
-        return @as(?[]u8, data);
-    }
-
     return null;
 }
 
@@ -1157,32 +1151,6 @@ fn readFileAbsoluteIfExists(allocator: std.mem.Allocator, path: []const u8) !?[]
     defer handle.close();
     return try handle.readToEndAlloc(allocator, std.math.maxInt(usize));
 }
-
-/// Default Zig highlights query
-pub const zig_highlights_query =
-    \\; Comments
-    \\(comment) @comment
-    \\
-    \\; Strings
-    \\(string) @string
-    \\(multiline_string) @string
-    \\(character) @string
-    \\
-    \\; Numbers
-    \\(integer) @number
-    \\(float) @number
-    \\
-    \\; Types / Builtins
-    \\(builtin_type) @type
-    \\(builtin_identifier) @builtin
-    \\
-    \\; Variables
-    \\(identifier) @variable
-    \\
-    \\; Functions
-    \\(call_expression function: (identifier) @function)
-    \\(function_declaration name: (identifier) @function)
-;
 
 test "predicates + priority metadata filter highlights" {
     const allocator = std.testing.allocator;

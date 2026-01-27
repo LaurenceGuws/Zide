@@ -57,6 +57,7 @@ treesitter_todo:
       notes:
         - "Support language injections in queries."
         - "Maintain highlight order so injected nodes override parents."
+        - "Extend query packaging + runtime loading beyond highlights.scm (injections, locals, tags, textobjects, indents) per language."
     - id: TS-06
       status: todo
       title: "Render integration"
