@@ -1085,7 +1085,21 @@ fn drawHighlightedLineText(
         const slice_start = start - line_start;
         const slice_end = end - line_start;
         const x = text_x + @as(f32, @floatFromInt(slice_start)) * r.char_width;
-        r.drawText(line_text[slice_start..slice_end], x, y, colorForToken(r, token.kind));
+        const conceal_text: ?[]const u8 = if (token.conceal != null or token.conceal_lines)
+            token.conceal orelse ""
+        else
+            null;
+        var color = colorForToken(r, token.kind);
+        if (token.url != null) {
+            color = r.theme.link;
+        }
+        if (conceal_text) |text| {
+            if (text.len > 0) {
+                r.drawText(text, x, y, color);
+            }
+        } else {
+            r.drawText(line_text[slice_start..slice_end], x, y, color);
+        }
         if (end > cursor) {
             cursor = end;
         }
@@ -1125,10 +1139,25 @@ fn drawHighlightedLineSegment(
         const slice_start = start;
         const slice_end = end;
         const x = text_x + @as(f32, @floatFromInt(slice_start - seg_start)) * r.char_width;
-        const color = colorForToken(r, token.kind);
+        const conceal_text: ?[]const u8 = if (token.conceal != null or token.conceal_lines)
+            token.conceal orelse ""
+        else
+            null;
+        var color = colorForToken(r, token.kind);
+        if (token.url != null) {
+            color = r.theme.link;
+        }
         logHighlightSlice(log, token.kind, line_start + slice_start, line_start + slice_end, color);
-        r.drawText(line_text[slice_start..slice_end], x, y, color);
-        cursor = end;
+        if (conceal_text) |text| {
+            if (text.len > 0) {
+                r.drawText(text, x, y, color);
+            }
+        } else {
+            r.drawText(line_text[slice_start..slice_end], x, y, color);
+        }
+        if (end > cursor) {
+            cursor = end;
+        }
     }
 
     if (cursor < seg_end) {
