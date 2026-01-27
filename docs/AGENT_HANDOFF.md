@@ -61,6 +61,7 @@ Next session focus: full query plan.
 - Replay harness now includes a larger Zig fixture and validates changed ranges cover edited lines.
 - Known issue: typing can still affect highlight on the next line (likely multi-line token ranges / changed-range span). Needs targeted range tightening or visible-window fallback.
 - Known issue: incremental edits may still be fragile; if new regressions appear, fall back to full reparse on each edit.
+- Removed embedded Zig highlights; Zig now uses the same query lookup path as other languages.
 
 ## Handover Notes (2026-01-26) — Input Combo Repeats
 - Combo key repeats now fire when modifiers are held or multiple keys are down, even if the platform doesn't generate repeated events.
