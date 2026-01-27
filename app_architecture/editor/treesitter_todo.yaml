@@ -49,6 +49,8 @@ treesitter_todo:
         - "Undo/redo forces full Tree-sitter reparse to avoid corrupted incremental trees."
         - "Added highlight replay test comparing incremental edits to full reparse output."
         - "Replay harness covers multiline delete spanning comment tokens."
+        - "Replay harness now includes a larger Zig fixture with multiple token types."
+        - "Added a test to ensure applyEdit changed ranges cover edited line spans."
     - id: TS-05
       status: todo
       title: "Injected languages"

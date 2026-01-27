@@ -61,6 +61,52 @@ fn applyEdit(
     allocator.free(ranges);
 }
 
+fn applyEditWithRanges(
+    store: *TextStore,
+    highlighter: *syntax_mod.SyntaxHighlighter,
+    start: usize,
+    delete_len: usize,
+    insert_text: []const u8,
+    allocator: std.mem.Allocator,
+) ![]syntax_mod.SyntaxHighlighter.ChangedRange {
+    const start_point = pointForByte(store, start);
+    const old_end = start + delete_len;
+    const old_end_point = pointForByte(store, old_end);
+
+    if (delete_len > 0) {
+        try store.deleteRange(start, delete_len);
+    }
+    if (insert_text.len > 0) {
+        try store.insertBytes(start, insert_text);
+    }
+
+    const new_end = start + insert_text.len;
+    return highlighter.applyEdit(
+        start,
+        old_end,
+        new_end,
+        start_point,
+        old_end_point,
+        allocator,
+    );
+}
+
+fn rangesToLineSpan(store: *TextStore, ranges: []const syntax_mod.SyntaxHighlighter.ChangedRange) ?struct {
+    start_line: usize,
+    end_line: usize,
+} {
+    if (ranges.len == 0) return null;
+    var min_line = store.lineIndexForOffset(ranges[0].start_byte);
+    var max_line = store.lineIndexForOffset(ranges[0].end_byte) + 1;
+    for (ranges[1..]) |range| {
+        const start_line = store.lineIndexForOffset(range.start_byte);
+        const end_line = store.lineIndexForOffset(range.end_byte) + 1;
+        if (start_line < min_line) min_line = start_line;
+        if (end_line > max_line) max_line = end_line;
+    }
+    return .{ .start_line = min_line, .end_line = max_line };
+}
+
 fn tokenLessThan(_: void, a: HighlightToken, b: HighlightToken) bool {
     if (a.start != b.start) return a.start < b.start;
     if (a.end != b.end) return a.end < b.end;
@@ -171,4 +217,78 @@ test "incremental edits match full reparse highlights with multiline delete" {
     try applyEdit(store, incremental, start, delete_len, "", allocator);
     try std.testing.expect(full.reparseFull());
     try compareHighlights(store, incremental, full, allocator);
+}
+
+test "incremental edits match full reparse highlights with larger fixture" {
+    const allocator = std.testing.allocator;
+    const initial =
+        "const std = @import(\"std\");\n" ++
+        "const Foo = struct {\n" ++
+        "    name: []const u8,\n" ++
+        "    count: usize,\n" ++
+        "};\n" ++
+        "\n" ++
+        "fn greet(foo: Foo) []const u8 {\n" ++
+        "    if (foo.count > 0) {\n" ++
+        "        return \"hello\";\n" ++
+        "    }\n" ++
+        "    return \"bye\";\n" ++
+        "}\n" ++
+        "\n" ++
+        "pub fn main() void {\n" ++
+        "    const foo = Foo{ .name = \"Zide\", .count = 2 };\n" ++
+        "    _ = greet(foo);\n" ++
+        "}\n";
+
+    var store = try TextStore.init(allocator, initial);
+    defer store.deinit();
+
+    const incremental = try syntax_mod.createZigHighlighter(allocator, store);
+    defer incremental.destroy();
+    const full = try syntax_mod.createZigHighlighter(allocator, store);
+    defer full.destroy();
+
+    try compareHighlights(store, incremental, full, allocator);
+
+    const edits = [_]Edit{
+        .{ .needle = "greet", .delete_len = 5, .insert_text = "welcome" },
+        .{ .needle = "Zide", .delete_len = 4, .insert_text = "Zed" },
+        .{ .needle = "count: usize,\n", .delete_len = 14, .insert_text = "count: usize,\n    active: bool,\n" },
+        .{ .needle = "return \"bye\";", .delete_len = 12, .insert_text = "return \"later\";" },
+    };
+
+    for (edits) |edit| {
+        const start = try findOffset(store, edit.needle.?, allocator);
+        try applyEdit(store, incremental, start, edit.delete_len, edit.insert_text, allocator);
+        try std.testing.expect(full.reparseFull());
+        try compareHighlights(store, incremental, full, allocator);
+    }
+}
+
+test "applyEdit dirty ranges cover edited lines" {
+    const allocator = std.testing.allocator;
+    const initial =
+        "const alpha = 1;\n" ++
+        "const beta = 2;\n" ++
+        "const gamma = 3;\n";
+
+    var store = try TextStore.init(allocator, initial);
+    defer store.deinit();
+
+    const highlighter = try syntax_mod.createZigHighlighter(allocator, store);
+    defer highlighter.destroy();
+
+    const needle = "beta";
+    const start = try findOffset(store, needle, allocator);
+    const delete_len = needle.len;
+    const start_line = store.lineIndexForOffset(start);
+    const end_line = store.lineIndexForOffset(start + delete_len) + 1;
+
+    const ranges = try applyEditWithRanges(store, highlighter, start, delete_len, "beta_long", allocator);
+    defer allocator.free(ranges);
+
+    try std.testing.expect(ranges.len > 0);
+    const span = rangesToLineSpan(store, ranges) orelse return error.TestUnexpectedResult;
+    try std.testing.expect(span.start_line <= start_line);
+    try std.testing.expect(span.end_line >= end_line);
 }
