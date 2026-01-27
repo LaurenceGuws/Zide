@@ -22,3 +22,9 @@ Follow this workflow for every feature/task:
 12. No commits (including tests/harness) until the user approves after running the tests.
 13. Once approved, commit each step labeled as the step header.
 14. Return to the todo and suggest 3 next changes.
+
+## Doc scope policy
+
+- `docs/AGENT_HANDOFF.md` and `docs/AGENT_HOVER.md` are **high-level only**: focus, constraints, and entrypoint pointers for a fresh session.
+- All task progress, checkpoints, and detailed changes live in the relevant todo files and `app_architecture/` docs.
+- If research was done to create or update a todo item, capture it in the relevant `app_architecture/` doc (not in handoff).

@@ -27,7 +27,7 @@ zig build run
 - Native Wayland support (Hyprland, Sway, etc.)
 - Integrated terminal panel (backend in progress)
 - Tree-sitter syntax highlighting (dynamic grammar packs)
-- Piece-table text buffer with undo/redo
+- Rope text buffer with undo/redo
 - Low CPU usage when idle (<1%)
 
 ## Documentation
