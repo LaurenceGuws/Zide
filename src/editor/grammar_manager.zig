@@ -11,11 +11,20 @@ extern "c" fn tree_sitter_zig() *const c.TSLanguage;
 
 const LanguageFn = *const fn () callconv(.c) *const c.TSLanguage;
 
+pub const QueryPaths = struct {
+    highlights: ?[]u8 = null,
+    injections: ?[]u8 = null,
+    locals: ?[]u8 = null,
+    tags: ?[]u8 = null,
+    textobjects: ?[]u8 = null,
+    indents: ?[]u8 = null,
+};
+
 pub const LoadedGrammar = struct {
     language_name: []u8,
     version: ?[]u8,
     lib_path: ?[]u8,
-    query_path: ?[]u8,
+    query_paths: QueryPaths,
     handle: ?std.DynLib,
     ts_language: *const c.TSLanguage,
 };
@@ -46,7 +55,7 @@ pub const GrammarManager = struct {
             }
             if (grammar.version) |version| self.allocator.free(version);
             if (grammar.lib_path) |path| self.allocator.free(path);
-            if (grammar.query_path) |path| self.allocator.free(path);
+            freeQueryPaths(self.allocator, &grammar.query_paths);
             self.allocator.destroy(grammar);
         }
         self.loaded.deinit();
@@ -85,7 +94,7 @@ pub const GrammarManager = struct {
             .language_name = name,
             .version = null,
             .lib_path = null,
-            .query_path = null,
+            .query_paths = .{},
             .handle = null,
             .ts_language = tree_sitter_zig(),
         };
@@ -124,28 +133,18 @@ pub const GrammarManager = struct {
         });
         defer self.allocator.free(lib_name);
 
-        const query_name = try std.fmt.allocPrint(self.allocator, "{s}_{s}_highlights.scm", .{
-            language_name,
-            latest,
-        });
-        defer self.allocator.free(query_name);
-
         const lib_path = try std.fs.path.join(self.allocator, &.{ self.cache_root, language_name, latest, lib_name });
         errdefer self.allocator.free(lib_path);
-        const query_path = try std.fs.path.join(self.allocator, &.{ self.cache_root, language_name, latest, query_name });
-        errdefer self.allocator.free(query_path);
 
         if (!fileExistsAbsolute(lib_path)) {
             log.logf("grammar lib missing lang={s} path={s}", .{ language_name, lib_path });
             self.allocator.free(lib_path);
-            self.allocator.free(query_path);
             return null;
         }
 
         var handle = std.DynLib.open(lib_path) catch |err| {
             log.logf("grammar dlopen failed lang={s} path={s} err={any}", .{ language_name, lib_path, err });
             self.allocator.free(lib_path);
-            self.allocator.free(query_path);
             return err;
         };
         errdefer handle.close();
@@ -156,7 +155,6 @@ pub const GrammarManager = struct {
         const loader = handle.lookup(LanguageFn, symbol) orelse {
             log.logf("grammar symbol missing lang={s} symbol={s}", .{ language_name, symbol });
             self.allocator.free(lib_path);
-            self.allocator.free(query_path);
             return null;
         };
 
@@ -169,19 +167,16 @@ pub const GrammarManager = struct {
         const version = try self.allocator.dupe(u8, latest);
         errdefer self.allocator.free(version);
 
-        const stored_query_path = if (fileExistsAbsolute(query_path))
-            query_path
-        else
-            blk: {
-                self.allocator.free(query_path);
-                break :blk null;
-            };
+        const pack_root = try std.fs.path.join(self.allocator, &.{ self.cache_root, language_name, latest });
+        errdefer self.allocator.free(pack_root);
+        const query_paths = try loadQueryPaths(self.allocator, pack_root, language_name, latest);
+        defer self.allocator.free(pack_root);
 
         grammar.* = .{
             .language_name = name,
             .version = version,
             .lib_path = lib_path,
-            .query_path = stored_query_path,
+            .query_paths = query_paths,
             .handle = handle,
             .ts_language = loader(),
         };
@@ -244,6 +239,55 @@ fn fileExistsAbsolute(path: []const u8) bool {
     };
     handle.close();
     return true;
+}
+
+fn freeQueryPaths(allocator: std.mem.Allocator, paths: *QueryPaths) void {
+    if (paths.highlights) |path| allocator.free(path);
+    if (paths.injections) |path| allocator.free(path);
+    if (paths.locals) |path| allocator.free(path);
+    if (paths.tags) |path| allocator.free(path);
+    if (paths.textobjects) |path| allocator.free(path);
+    if (paths.indents) |path| allocator.free(path);
+    paths.* = .{};
+}
+
+fn loadQueryPaths(
+    allocator: std.mem.Allocator,
+    pack_root: []const u8,
+    language_name: []const u8,
+    version: []const u8,
+) !QueryPaths {
+    return .{
+        .highlights = try queryPathIfExists(allocator, pack_root, language_name, version, "highlights"),
+        .injections = try queryPathIfExists(allocator, pack_root, language_name, version, "injections"),
+        .locals = try queryPathIfExists(allocator, pack_root, language_name, version, "locals"),
+        .tags = try queryPathIfExists(allocator, pack_root, language_name, version, "tags"),
+        .textobjects = try queryPathIfExists(allocator, pack_root, language_name, version, "textobjects"),
+        .indents = try queryPathIfExists(allocator, pack_root, language_name, version, "indents"),
+    };
+}
+
+fn queryPathIfExists(
+    allocator: std.mem.Allocator,
+    pack_root: []const u8,
+    language_name: []const u8,
+    version: []const u8,
+    query_name: []const u8,
+) !?[]u8 {
+    const file_name = try std.fmt.allocPrint(allocator, "{s}_{s}_{s}.scm", .{
+        language_name,
+        version,
+        query_name,
+    });
+    defer allocator.free(file_name);
+
+    const path = try std.fs.path.join(allocator, &.{ pack_root, file_name });
+    errdefer allocator.free(path);
+    if (!fileExistsAbsolute(path)) {
+        allocator.free(path);
+        return null;
+    }
+    return path;
 }
 
 fn findLatestVersion(

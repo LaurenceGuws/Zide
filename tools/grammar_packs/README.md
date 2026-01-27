@@ -7,7 +7,7 @@ It is intentionally decoupled from the app and Zig runtime.
 - Syncs parser metadata + queries from `nvim-treesitter`.
 - Clones grammar sources at the exact revisions used by nvim.
 - Builds shared-library grammar packs for all languages.
-- Packages `highlights.scm` alongside each pack.
+- Packages `highlights.scm`, `injections.scm`, `locals.scm`, `tags.scm`, `textobjects.scm`, and `indents.scm` alongside each pack (when present).
 - Publishes assets to GitHub Releases.
 
 ## Running

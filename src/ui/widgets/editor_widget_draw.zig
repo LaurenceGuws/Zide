@@ -144,7 +144,9 @@ fn appendHighlightedLineSegmentOps(
         const color = colorForToken(r, token.kind);
         logHighlightSlice(log, token.kind, line_start + slice_start, line_start + slice_end, color);
         ok = ok and addTextOp(list, x, y, line_text[slice_start..slice_end], color);
-        cursor = end;
+        if (end > cursor) {
+            cursor = end;
+        }
     }
 
     if (cursor < seg_end) {
@@ -1084,7 +1086,9 @@ fn drawHighlightedLineText(
         const slice_end = end - line_start;
         const x = text_x + @as(f32, @floatFromInt(slice_start)) * r.char_width;
         r.drawText(line_text[slice_start..slice_end], x, y, colorForToken(r, token.kind));
-        cursor = end;
+        if (end > cursor) {
+            cursor = end;
+        }
     }
 
     if (cursor < line_end) {
@@ -1156,6 +1160,7 @@ fn colorForToken(r: anytype, kind: TokenKind) @TypeOf(r.theme.foreground) {
         .attribute => r.theme.attribute,
         .namespace => r.theme.namespace,
         .label => r.theme.label,
+        .link => r.theme.link,
         .error_token => r.theme.error_token,
         else => r.theme.foreground,
     };

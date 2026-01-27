@@ -68,6 +68,9 @@ cflags=("-std=c99")
 if [[ "$os" != "windows" ]]; then
   cflags+=("-D_POSIX_C_SOURCE=200809L" "-D_DEFAULT_SOURCE" "-D_GNU_SOURCE")
 fi
+if [[ "$os" == "android" ]]; then
+  cflags=("-std=c11" "${cflags[@]}")
+fi
 
 android_cc=""
 if [[ "$os" == "android" ]]; then

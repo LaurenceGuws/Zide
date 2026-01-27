@@ -1,4 +1,5 @@
 const std = @import("std");
+const renderer = @import("../ui/renderer.zig");
 
 const c = @cImport({
     @cInclude("lua.h");
@@ -6,6 +7,9 @@ const c = @cImport({
     @cInclude("lualib.h");
     @cInclude("raylib.h");
 });
+
+const Color = renderer.Color;
+const Theme = renderer.Theme;
 
 pub const LuaConfigError = error{
     LuaInitFailed,
@@ -22,6 +26,33 @@ pub const Config = struct {
     editor_wrap: ?bool,
     editor_highlight_budget: ?usize,
     editor_width_budget: ?usize,
+    theme: ?ThemeConfig,
+};
+
+pub const ThemeConfig = struct {
+    background: ?Color = null,
+    foreground: ?Color = null,
+    selection: ?Color = null,
+    cursor: ?Color = null,
+    link: ?Color = null,
+    line_number: ?Color = null,
+    line_number_bg: ?Color = null,
+    current_line: ?Color = null,
+    comment_color: ?Color = null,
+    string: ?Color = null,
+    keyword: ?Color = null,
+    number: ?Color = null,
+    function: ?Color = null,
+    variable: ?Color = null,
+    type_name: ?Color = null,
+    operator: ?Color = null,
+    builtin_color: ?Color = null,
+    punctuation: ?Color = null,
+    constant: ?Color = null,
+    attribute: ?Color = null,
+    namespace: ?Color = null,
+    label: ?Color = null,
+    error_token: ?Color = null,
 };
 
 pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
@@ -32,6 +63,7 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
         .editor_wrap = null,
         .editor_highlight_budget = null,
         .editor_width_budget = null,
+        .theme = null,
     };
     if (fileExists("assets/config/init.lua")) {
         config = try loadConfigFromFile(allocator, "assets/config/init.lua");
@@ -81,6 +113,15 @@ fn mergeConfig(base: *Config, overlay: Config) void {
     if (overlay.editor_width_budget != null) {
         base.editor_width_budget = overlay.editor_width_budget;
     }
+    if (overlay.theme) |overlay_theme| {
+        if (base.theme) |base_theme| {
+            var merged = base_theme;
+            mergeThemeConfig(&merged, overlay_theme);
+            base.theme = merged;
+        } else {
+            base.theme = overlay_theme;
+        }
+    }
 }
 
 fn loadConfigFromFile(allocator: std.mem.Allocator, path: []const u8) LuaConfigError!Config {
@@ -107,6 +148,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             .editor_wrap = null,
             .editor_highlight_budget = null,
             .editor_width_budget = null,
+            .theme = null,
         };
     }
     if (!c.lua_istable(L, -1)) {
@@ -119,6 +161,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     var editor_wrap: ?bool = null;
     var editor_highlight_budget: ?usize = null;
     var editor_width_budget: ?usize = null;
+    var theme: ?ThemeConfig = null;
 
     _ = c.lua_getfield(L, -1, "log");
     if (c.lua_isstring(L, -1) != 0) {
@@ -176,6 +219,12 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     }
     c.lua_pop(L, 1);
 
+    _ = c.lua_getfield(L, -1, "theme");
+    if (c.lua_istable(L, -1)) {
+        theme = try parseThemeFromTable(L, -1);
+    }
+    c.lua_pop(L, 1);
+
     return .{
         .log_file_filter = log_file_filter,
         .log_console_filter = log_console_filter,
@@ -183,6 +232,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         .editor_wrap = editor_wrap,
         .editor_highlight_budget = editor_highlight_budget,
         .editor_width_budget = editor_width_budget,
+        .theme = theme,
     };
 }
 
@@ -322,4 +372,191 @@ fn parseRaylibLogLevel(L: *c.lua_State, idx: c_int) ?c_int {
     if (std.mem.eql(u8, value, "debug")) return c.LOG_DEBUG;
     if (std.mem.eql(u8, value, "trace")) return c.LOG_TRACE;
     return null;
+}
+
+fn mergeThemeConfig(base: *ThemeConfig, overlay: ThemeConfig) void {
+    if (overlay.background) |color| base.background = color;
+    if (overlay.foreground) |color| base.foreground = color;
+    if (overlay.selection) |color| base.selection = color;
+    if (overlay.cursor) |color| base.cursor = color;
+    if (overlay.link) |color| base.link = color;
+    if (overlay.line_number) |color| base.line_number = color;
+    if (overlay.line_number_bg) |color| base.line_number_bg = color;
+    if (overlay.current_line) |color| base.current_line = color;
+    if (overlay.comment_color) |color| base.comment_color = color;
+    if (overlay.string) |color| base.string = color;
+    if (overlay.keyword) |color| base.keyword = color;
+    if (overlay.number) |color| base.number = color;
+    if (overlay.function) |color| base.function = color;
+    if (overlay.variable) |color| base.variable = color;
+    if (overlay.type_name) |color| base.type_name = color;
+    if (overlay.operator) |color| base.operator = color;
+    if (overlay.builtin_color) |color| base.builtin_color = color;
+    if (overlay.punctuation) |color| base.punctuation = color;
+    if (overlay.constant) |color| base.constant = color;
+    if (overlay.attribute) |color| base.attribute = color;
+    if (overlay.namespace) |color| base.namespace = color;
+    if (overlay.label) |color| base.label = color;
+    if (overlay.error_token) |color| base.error_token = color;
+}
+
+pub fn applyThemeConfig(theme: *Theme, overlay: ThemeConfig) void {
+    if (overlay.background) |color| theme.background = color;
+    if (overlay.foreground) |color| theme.foreground = color;
+    if (overlay.selection) |color| theme.selection = color;
+    if (overlay.cursor) |color| theme.cursor = color;
+    if (overlay.link) |color| theme.link = color;
+    if (overlay.line_number) |color| theme.line_number = color;
+    if (overlay.line_number_bg) |color| theme.line_number_bg = color;
+    if (overlay.current_line) |color| theme.current_line = color;
+    if (overlay.comment_color) |color| theme.comment_color = color;
+    if (overlay.string) |color| theme.string = color;
+    if (overlay.keyword) |color| theme.keyword = color;
+    if (overlay.number) |color| theme.number = color;
+    if (overlay.function) |color| theme.function = color;
+    if (overlay.variable) |color| theme.variable = color;
+    if (overlay.type_name) |color| theme.type_name = color;
+    if (overlay.operator) |color| theme.operator = color;
+    if (overlay.builtin_color) |color| theme.builtin_color = color;
+    if (overlay.punctuation) |color| theme.punctuation = color;
+    if (overlay.constant) |color| theme.constant = color;
+    if (overlay.attribute) |color| theme.attribute = color;
+    if (overlay.namespace) |color| theme.namespace = color;
+    if (overlay.label) |color| theme.label = color;
+    if (overlay.error_token) |color| theme.error_token = color;
+}
+
+fn parseThemeFromTable(L: *c.lua_State, idx: c_int) LuaConfigError!ThemeConfig {
+    var theme: ThemeConfig = .{};
+    parseThemePaletteTable(L, idx, &theme);
+    parseThemeSyntaxTable(L, idx, &theme);
+
+    _ = c.lua_getfield(L, idx, "palette");
+    if (c.lua_istable(L, -1)) {
+        parseThemePaletteTable(L, -1, &theme);
+    }
+    c.lua_pop(L, 1);
+
+    _ = c.lua_getfield(L, idx, "syntax");
+    if (c.lua_istable(L, -1)) {
+        parseThemeSyntaxTable(L, -1, &theme);
+    }
+    c.lua_pop(L, 1);
+
+    return theme;
+}
+
+fn parseThemePaletteTable(L: *c.lua_State, idx: c_int, theme: *ThemeConfig) void {
+    parseColorField(L, idx, "background", &theme.background);
+    parseColorField(L, idx, "foreground", &theme.foreground);
+    parseColorField(L, idx, "selection", &theme.selection);
+    parseColorField(L, idx, "cursor", &theme.cursor);
+    parseColorField(L, idx, "link", &theme.link);
+    parseColorField(L, idx, "line_number", &theme.line_number);
+    parseColorField(L, idx, "line_number_bg", &theme.line_number_bg);
+    parseColorField(L, idx, "current_line", &theme.current_line);
+}
+
+fn parseThemeSyntaxTable(L: *c.lua_State, idx: c_int, theme: *ThemeConfig) void {
+    parseColorField(L, idx, "comment", &theme.comment_color);
+    parseColorField(L, idx, "comment_color", &theme.comment_color);
+    parseColorField(L, idx, "string", &theme.string);
+    parseColorField(L, idx, "keyword", &theme.keyword);
+    parseColorField(L, idx, "number", &theme.number);
+    parseColorField(L, idx, "function", &theme.function);
+    parseColorField(L, idx, "variable", &theme.variable);
+    parseColorField(L, idx, "type_name", &theme.type_name);
+    parseColorField(L, idx, "operator", &theme.operator);
+    parseColorField(L, idx, "builtin", &theme.builtin_color);
+    parseColorField(L, idx, "builtin_color", &theme.builtin_color);
+    parseColorField(L, idx, "punctuation", &theme.punctuation);
+    parseColorField(L, idx, "constant", &theme.constant);
+    parseColorField(L, idx, "attribute", &theme.attribute);
+    parseColorField(L, idx, "namespace", &theme.namespace);
+    parseColorField(L, idx, "label", &theme.label);
+    parseColorField(L, idx, "error", &theme.error_token);
+    parseColorField(L, idx, "error_token", &theme.error_token);
+}
+
+fn parseColorField(L: *c.lua_State, idx: c_int, field: [:0]const u8, out: *?Color) void {
+    _ = c.lua_getfield(L, idx, field.ptr);
+    const color = parseColorFromValue(L, -1);
+    if (color != null) {
+        out.* = color.?;
+    }
+    c.lua_pop(L, 1);
+}
+
+fn parseColorFromValue(L: *c.lua_State, idx: c_int) ?Color {
+    if (c.lua_isstring(L, idx) != 0) {
+        var len: usize = 0;
+        const ptr = c.lua_tolstring(L, idx, &len) orelse return null;
+        const value = @as([*]const u8, @ptrCast(ptr))[0..len];
+        return parseHexColor(value);
+    }
+    if (c.lua_istable(L, idx)) {
+        var r: ?u8 = null;
+        var g: ?u8 = null;
+        var b: ?u8 = null;
+        var a: ?u8 = null;
+
+        _ = c.lua_getfield(L, idx, "r");
+        if (c.lua_isnumber(L, -1) != 0) {
+            r = parseColorChannel(L, -1);
+        }
+        c.lua_pop(L, 1);
+
+        _ = c.lua_getfield(L, idx, "g");
+        if (c.lua_isnumber(L, -1) != 0) {
+            g = parseColorChannel(L, -1);
+        }
+        c.lua_pop(L, 1);
+
+        _ = c.lua_getfield(L, idx, "b");
+        if (c.lua_isnumber(L, -1) != 0) {
+            b = parseColorChannel(L, -1);
+        }
+        c.lua_pop(L, 1);
+
+        _ = c.lua_getfield(L, idx, "a");
+        if (c.lua_isnumber(L, -1) != 0) {
+            a = parseColorChannel(L, -1);
+        }
+        c.lua_pop(L, 1);
+
+        if (r != null and g != null and b != null) {
+            return Color{ .r = r.?, .g = g.?, .b = b.?, .a = a orelse 255 };
+        }
+    }
+    return null;
+}
+
+fn parseHexColor(value: []const u8) ?Color {
+    var slice = value;
+    if (slice.len >= 2 and slice[0] == '0' and (slice[1] == 'x' or slice[1] == 'X')) {
+        slice = slice[2..];
+    }
+    if (slice.len > 0 and slice[0] == '#') {
+        slice = slice[1..];
+    }
+    if (slice.len != 6 and slice.len != 8) return null;
+
+    const r = parseHexByte(slice[0..2]) orelse return null;
+    const g = parseHexByte(slice[2..4]) orelse return null;
+    const b = parseHexByte(slice[4..6]) orelse return null;
+    const a = if (slice.len == 8) parseHexByte(slice[6..8]) orelse return null else 255;
+
+    return Color{ .r = r, .g = g, .b = b, .a = a };
+}
+
+fn parseHexByte(slice: []const u8) ?u8 {
+    return std.fmt.parseInt(u8, slice, 16) catch null;
+}
+
+fn parseColorChannel(L: *c.lua_State, idx: c_int) ?u8 {
+    var is_num: c_int = 0;
+    const value = c.lua_tointegerx(L, idx, &is_num);
+    if (is_num == 0) return null;
+    if (value < 0 or value > 255) return null;
+    return @intCast(value);
 }

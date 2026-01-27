@@ -766,6 +766,9 @@ static int symbol_table_id_for_name(
   const char *name,
   uint32_t length
 ) {
+  if (length == 0 && name == NULL) {
+    name = "";
+  }
   for (unsigned i = 0; i < self->slices.size; i++) {
     Slice slice = *array_get(&self->slices, i);
     if (
@@ -791,6 +794,9 @@ static uint16_t symbol_table_insert_name(
   const char *name,
   uint32_t length
 ) {
+  if (length == 0 && name == NULL) {
+    name = "";
+  }
   int id = symbol_table_id_for_name(self, name, length);
   if (id >= 0) return (uint16_t)id;
   Slice slice = {
