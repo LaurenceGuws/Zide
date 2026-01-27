@@ -190,6 +190,10 @@ pub const Shell = struct {
         return &self.renderer.theme;
     }
 
+    pub fn setTheme(self: *Shell, new_theme: Theme) void {
+        self.renderer.theme = new_theme;
+    }
+
     pub fn rendererPtr(self: *Shell) *r.Renderer {
         return self.renderer;
     }

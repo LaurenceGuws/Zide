@@ -1,6 +1,8 @@
 const std = @import("std");
 const text_store = @import("text_store.zig");
 const app_logger = @import("../app_logger.zig");
+const grammar_manager_mod = @import("grammar_manager.zig");
+const syntax_registry_mod = @import("syntax_registry.zig");
 
 const TextStore = text_store.TextStore;
 
@@ -8,6 +10,7 @@ const ts_api = @import("treesitter_api.zig");
 const c = ts_api.c_api;
 
 pub const TSLanguage = ts_api.TSLanguage;
+pub const QueryPaths = grammar_manager_mod.QueryPaths;
 
 extern "c" fn tree_sitter_zig() *const c.TSLanguage;
 
@@ -27,7 +30,8 @@ pub const TokenKind = enum(u8) {
     attribute = 12,
     namespace = 13,
     label = 14,
-    error_token = 15,
+    link = 15,
+    error_token = 16,
 };
 
 pub const HighlightToken = struct {
@@ -40,14 +44,44 @@ pub const HighlightToken = struct {
     conceal_lines: bool,
 };
 
+const InjectedLanguage = struct {
+    language_name: []u8,
+    parser: *c.TSParser,
+    cursor: *c.TSQueryCursor,
+    ts_language: *const c.TSLanguage,
+    highlight_query: *QueryBundle,
+    injection_query: ?*InjectionQuery,
+};
+
+const max_injection_depth: usize = 6;
+const injection_priority_bias: i32 = 100000;
+
+const InjectionSettings = struct {
+    language: ?[]const u8 = null,
+    include_children: bool = false,
+    combined: bool = false,
+    use_self: bool = false,
+    use_parent: bool = false,
+};
+
+const CombinedInjection = struct {
+    language_name: []u8,
+    include_children: bool,
+    nodes: std.ArrayList(c.TSNode),
+};
+
 pub const SyntaxHighlighter = struct {
     allocator: std.mem.Allocator,
     text_buffer: *TextStore,
+    language_name: []const u8,
+    grammar_manager: ?*grammar_manager_mod.GrammarManager,
     parser: *c.TSParser,
     tree: ?*c.TSTree,
     query_bundle: *QueryBundle,
+    injection_query: ?*InjectionQuery,
     cursor: *c.TSQueryCursor,
     read_buffer: []u8,
+    injected_languages: std.StringHashMap(*InjectedLanguage),
 
     pub fn destroy(self: *SyntaxHighlighter) void {
         if (self.tree) |tree| {
@@ -55,8 +89,21 @@ pub const SyntaxHighlighter = struct {
         }
         c.ts_query_cursor_delete(self.cursor);
         c.ts_parser_delete(self.parser);
+        self.destroyInjectedLanguages();
         self.allocator.free(self.read_buffer);
         self.allocator.destroy(self);
+    }
+
+    fn destroyInjectedLanguages(self: *SyntaxHighlighter) void {
+        var it = self.injected_languages.iterator();
+        while (it.next()) |entry| {
+            const injected = entry.value_ptr.*;
+            c.ts_query_cursor_delete(injected.cursor);
+            c.ts_parser_delete(injected.parser);
+            self.allocator.free(injected.language_name);
+            self.allocator.destroy(injected);
+        }
+        self.injected_languages.deinit();
     }
 
     pub fn reparse(self: *SyntaxHighlighter) bool {
@@ -174,26 +221,114 @@ pub const SyntaxHighlighter = struct {
             return emptyTokens(allocator);
         }
 
-        const tree = self.tree.?;
-        const root = c.ts_tree_root_node(tree);
-        _ = c.ts_query_cursor_set_byte_range(self.cursor, range_start, range_end);
-        c.ts_query_cursor_exec(self.cursor, self.query_bundle.query, root);
-
         var tokens = std.ArrayList(HighlightToken).empty;
         errdefer tokens.deinit(allocator);
 
-        const capture_count = self.query_bundle.capture_count;
-        var capture_meta_stack: [64]CaptureMeta = undefined;
-        const capture_meta = if (capture_count <= capture_meta_stack.len)
-            capture_meta_stack[0..capture_count]
-        else
-            try allocator.alloc(CaptureMeta, capture_count);
-        defer if (capture_count > capture_meta_stack.len) allocator.free(capture_meta);
+        const tree = self.tree.?;
+        const full_range = fullDocumentRange(self.text_buffer);
+        var full_ranges = [1]c.TSRange{full_range};
+
+        try self.highlightLayer(
+            self.language_name,
+            tree,
+            self.query_bundle,
+            self.injection_query,
+            self.cursor,
+            range_start,
+            range_end,
+            full_ranges[0..],
+            0,
+            null,
+            allocator,
+            &tokens,
+        );
+
+        const out = try tokens.toOwnedSlice(allocator);
+        const log = app_logger.logger("editor.highlight");
+        log.logf("highlight range bytes={d}-{d} tokens={d}", .{ range_start, range_end, out.len });
+        return out;
+    }
+
+    fn highlightLayer(
+        self: *SyntaxHighlighter,
+        language_name: []const u8,
+        tree: *c.TSTree,
+        query_bundle: *QueryBundle,
+        injection_query: ?*InjectionQuery,
+        cursor: *c.TSQueryCursor,
+        range_start: u32,
+        range_end: u32,
+        parent_ranges: []const c.TSRange,
+        depth: usize,
+        parent_language: ?[]const u8,
+        allocator: std.mem.Allocator,
+        tokens: *std.ArrayList(HighlightToken),
+    ) anyerror!void {
+        try appendHighlightTokens(
+            self.text_buffer,
+            query_bundle,
+            cursor,
+            tree,
+            range_start,
+            range_end,
+            depth,
+            allocator,
+            tokens,
+        );
+
+        if (injection_query == null) return;
+        if (self.grammar_manager == null) return;
+        if (depth >= max_injection_depth) return;
+
+        try self.highlightInjectedLanguages(
+            language_name,
+            parent_language,
+            tree,
+            injection_query.?,
+            range_start,
+            range_end,
+            parent_ranges,
+            depth,
+            allocator,
+            tokens,
+        );
+    }
+
+    fn highlightInjectedLanguages(
+        self: *SyntaxHighlighter,
+        language_name: []const u8,
+        parent_language: ?[]const u8,
+        tree: *c.TSTree,
+        injection_query: *InjectionQuery,
+        range_start: u32,
+        range_end: u32,
+        parent_ranges: []const c.TSRange,
+        depth: usize,
+        allocator: std.mem.Allocator,
+        tokens: *std.ArrayList(HighlightToken),
+    ) anyerror!void {
+        if (injection_query.content_capture == null) return;
+
+        const cursor = c.ts_query_cursor_new() orelse return;
+        defer c.ts_query_cursor_delete(cursor);
+
+        const root = c.ts_tree_root_node(tree);
+        c.ts_query_cursor_exec(cursor, injection_query.query, root);
+
+        var combined = std.AutoHashMap(u32, CombinedInjection).init(allocator);
+        defer {
+            var it = combined.iterator();
+            while (it.next()) |entry| {
+                entry.value_ptr.nodes.deinit(allocator);
+                allocator.free(entry.value_ptr.language_name);
+            }
+            combined.deinit();
+        }
 
         var match: c.TSQueryMatch = undefined;
-        while (c.ts_query_cursor_next_match(self.cursor, &match)) {
+        while (c.ts_query_cursor_next_match(cursor, &match)) {
             if (!predicatesMatch(
-                self.query_bundle,
+                injection_query.query,
                 &match,
                 self.text_buffer,
                 allocator,
@@ -201,46 +336,220 @@ pub const SyntaxHighlighter = struct {
                 continue;
             }
 
-            initCaptureMeta(capture_meta);
-            var match_meta = MatchMeta{};
-            applyDirectives(
-                self.query_bundle,
-                &match,
-                &match_meta,
-                capture_meta,
-                allocator,
-            );
+            var content_nodes = std.ArrayList(c.TSNode).empty;
+            defer content_nodes.deinit(allocator);
+
+            var captured_language: ?[]u8 = null;
+            defer if (captured_language) |value| allocator.free(value);
 
             var i: u32 = 0;
             while (i < match.capture_count) : (i += 1) {
                 const capture = match.captures[i];
-                const node = capture.node;
-                const start_b = c.ts_node_start_byte(node);
-                const end_b = c.ts_node_end_byte(node);
-                if (end_b <= range_start or start_b >= range_end) continue;
-                if (self.query_bundle.capture_noop[capture.index]) continue;
-                const token_kind = self.query_bundle.capture_kinds[capture.index];
-                const meta = capture_meta[capture.index];
-                const priority = if (meta.has_priority) meta.priority else match_meta.priority;
-                const conceal = if (meta.conceal != null) meta.conceal else match_meta.conceal;
-                const url = if (meta.url != null) meta.url else match_meta.url;
-                const conceal_lines = if (meta.conceal_lines) true else match_meta.conceal_lines;
-                try tokens.append(allocator, .{
-                    .start = start_b,
-                    .end = end_b,
-                    .kind = token_kind,
-                    .priority = priority,
-                    .conceal = conceal,
-                    .url = url,
-                    .conceal_lines = conceal_lines,
-                });
+                if (capture.index == injection_query.content_capture.?) {
+                    content_nodes.append(allocator, capture.node) catch continue;
+                } else if (injection_query.language_capture) |lang_capture| {
+                    if (capture.index == lang_capture) {
+                        if (captured_language) |old| allocator.free(old);
+                        captured_language = readNodeTextAlloc(self.text_buffer, allocator, capture.node) catch null;
+                    }
+                }
+            }
+
+            if (content_nodes.items.len == 0) continue;
+
+            var settings = InjectionSettings{};
+            collectInjectionSettings(
+                injection_query.query,
+                &match,
+                allocator,
+                &settings,
+            );
+
+            var resolved_language: ?[]u8 = null;
+            if (captured_language) |raw| {
+                resolved_language = resolveInjectionLanguageName(allocator, raw);
+            }
+            if (resolved_language == null and settings.language != null) {
+                resolved_language = resolveInjectionLanguageName(allocator, settings.language.?);
+            }
+            if (resolved_language == null and settings.use_self) {
+                resolved_language = resolveInjectionLanguageName(allocator, language_name);
+            }
+            if (resolved_language == null and settings.use_parent and parent_language != null) {
+                resolved_language = resolveInjectionLanguageName(allocator, parent_language.?);
+            }
+
+            if (resolved_language == null) continue;
+            var include_children = settings.include_children;
+            if (!include_children and resolved_language != null and std.mem.eql(u8, resolved_language.?, "markdown_inline")) {
+                include_children = true;
+            }
+
+            if (settings.combined) {
+                const entry = try combined.getOrPut(match.pattern_index);
+                if (!entry.found_existing) {
+                    entry.value_ptr.* = .{
+                        .language_name = resolved_language.?,
+                        .include_children = include_children,
+                        .nodes = std.ArrayList(c.TSNode).empty,
+                    };
+                } else {
+                    if (!std.mem.eql(u8, entry.value_ptr.language_name, resolved_language.?)) {
+                        allocator.free(resolved_language.?);
+                        continue;
+                    }
+                    allocator.free(resolved_language.?);
+                    entry.value_ptr.include_children = entry.value_ptr.include_children or include_children;
+                }
+                try entry.value_ptr.nodes.appendSlice(allocator, content_nodes.items);
+                continue;
+            }
+
+            const lang_name = resolved_language.?;
+            defer allocator.free(lang_name);
+            for (content_nodes.items) |node| {
+                try self.highlightInjectionNodes(
+                    lang_name,
+                    &.{node},
+                    include_children,
+                    range_start,
+                    range_end,
+                    parent_ranges,
+                    depth,
+                    language_name,
+                    allocator,
+                    tokens,
+                );
             }
         }
 
-        const out = try tokens.toOwnedSlice(allocator);
-        const log = app_logger.logger("editor.highlight");
-        log.logf("highlight range bytes={d}-{d} tokens={d}", .{ range_start, range_end, out.len });
-        return out;
+        var it = combined.iterator();
+        while (it.next()) |entry| {
+            const group = entry.value_ptr.*;
+            if (group.nodes.items.len == 0) continue;
+            try self.highlightInjectionNodes(
+                group.language_name,
+                group.nodes.items,
+                group.include_children,
+                range_start,
+                range_end,
+                parent_ranges,
+                depth,
+                language_name,
+                allocator,
+                tokens,
+            );
+        }
+    }
+
+    fn highlightInjectionNodes(
+        self: *SyntaxHighlighter,
+        language_name: []const u8,
+        nodes: []const c.TSNode,
+        include_children: bool,
+        range_start: u32,
+        range_end: u32,
+        parent_ranges: []const c.TSRange,
+        depth: usize,
+        parent_language: []const u8,
+        allocator: std.mem.Allocator,
+        tokens: *std.ArrayList(HighlightToken),
+    ) anyerror!void {
+        const injected = try self.getOrLoadInjectedLanguage(language_name) orelse return;
+        if (nodes.len == 0) return;
+
+        const ranges = try intersectRanges(allocator, parent_ranges, nodes, include_children);
+        defer allocator.free(ranges);
+        if (ranges.len == 0) return;
+
+        if (!c.ts_parser_set_included_ranges(
+            injected.parser,
+            ranges.ptr,
+            @as(u32, @intCast(ranges.len)),
+        )) {
+            return;
+        }
+
+        const input = c.TSInput{
+            .payload = self,
+            .read = tsRead,
+            .encoding = c.TSInputEncodingUTF8,
+        };
+        const injected_tree = c.ts_parser_parse(injected.parser, null, input) orelse return;
+        defer c.ts_tree_delete(injected_tree);
+
+        try self.highlightLayer(
+            injected.language_name,
+            injected_tree,
+            injected.highlight_query,
+            injected.injection_query,
+            injected.cursor,
+            range_start,
+            range_end,
+            ranges,
+            depth + 1,
+            parent_language,
+            allocator,
+            tokens,
+        );
+    }
+
+    fn getOrLoadInjectedLanguage(
+        self: *SyntaxHighlighter,
+        language_name: []const u8,
+    ) !?*InjectedLanguage {
+        if (self.injected_languages.get(language_name)) |entry| {
+            return entry;
+        }
+
+        const manager = self.grammar_manager orelse return null;
+        const grammar = try manager.getOrLoad(language_name) orelse return null;
+
+        const parser = c.ts_parser_new() orelse return error.InitFailed;
+        errdefer c.ts_parser_delete(parser);
+        if (!c.ts_parser_set_language(parser, grammar.ts_language)) {
+            return error.InitFailed;
+        }
+
+        const cursor = c.ts_query_cursor_new() orelse {
+            c.ts_parser_delete(parser);
+            return error.InitFailed;
+        };
+        errdefer c.ts_query_cursor_delete(cursor);
+
+        const highlight_query = try global_query_cache.getOrLoad(
+            language_name,
+            "highlights",
+            grammar.ts_language,
+            grammar.query_paths.highlights,
+        ) orelse {
+            c.ts_query_cursor_delete(cursor);
+            c.ts_parser_delete(parser);
+            return null;
+        };
+
+        const injection_query = try global_injection_query_cache.getOrLoad(
+            language_name,
+            grammar.ts_language,
+            grammar.query_paths.injections,
+        );
+
+        const name = try self.allocator.dupe(u8, language_name);
+        errdefer self.allocator.free(name);
+        const injected = try self.allocator.create(InjectedLanguage);
+        errdefer self.allocator.destroy(injected);
+
+        injected.* = .{
+            .language_name = name,
+            .parser = parser,
+            .cursor = cursor,
+            .ts_language = grammar.ts_language,
+            .highlight_query = highlight_query,
+            .injection_query = injection_query,
+        };
+
+        try self.injected_languages.put(name, injected);
+        return injected;
     }
 };
 
@@ -248,7 +557,7 @@ pub fn createZigHighlighter(
     allocator: std.mem.Allocator,
     text_buffer: *TextStore,
 ) !*SyntaxHighlighter {
-    return createHighlighter(allocator, text_buffer, "zig", tree_sitter_zig(), null);
+    return createHighlighter(allocator, text_buffer, "zig", tree_sitter_zig(), .{}, null);
 }
 
 pub fn createHighlighterForLanguage(
@@ -256,9 +565,10 @@ pub fn createHighlighterForLanguage(
     text_buffer: *TextStore,
     language_name: []const u8,
     language: *const c.TSLanguage,
-    query_path: ?[]const u8,
+    query_paths: QueryPaths,
+    grammar_manager: ?*grammar_manager_mod.GrammarManager,
 ) !*SyntaxHighlighter {
-    return createHighlighter(allocator, text_buffer, language_name, language, query_path);
+    return createHighlighter(allocator, text_buffer, language_name, language, query_paths, grammar_manager);
 }
 
 pub fn createHighlighter(
@@ -266,7 +576,8 @@ pub fn createHighlighter(
     text_buffer: *TextStore,
     language_name: []const u8,
     language: *const c.TSLanguage,
-    query_path: ?[]const u8,
+    query_paths: QueryPaths,
+    grammar_manager: ?*grammar_manager_mod.GrammarManager,
 ) !*SyntaxHighlighter {
     const parser = c.ts_parser_new() orelse return error.InitFailed;
     errdefer c.ts_parser_delete(parser);
@@ -283,7 +594,7 @@ pub fn createHighlighter(
         language_name,
         "highlights",
         language,
-        query_path,
+        query_paths.highlights,
     ) orelse return error.InitFailed;
 
     const self = try allocator.create(SyntaxHighlighter);
@@ -292,14 +603,27 @@ pub fn createHighlighter(
     const read_buffer = try allocator.alloc(u8, 64 * 1024);
     errdefer allocator.free(read_buffer);
 
+    var injected_languages = std.StringHashMap(*InjectedLanguage).init(allocator);
+    errdefer injected_languages.deinit();
+
+    const injection_query = try global_injection_query_cache.getOrLoad(
+        language_name,
+        language,
+        query_paths.injections,
+    );
+
     self.* = .{
         .allocator = allocator,
         .text_buffer = text_buffer,
+        .language_name = language_name,
+        .grammar_manager = grammar_manager,
         .parser = parser,
         .tree = null,
         .query_bundle = query_bundle,
+        .injection_query = injection_query,
         .cursor = cursor,
         .read_buffer = read_buffer,
+        .injected_languages = injected_languages,
     };
 
     _ = self.reparse();
@@ -324,6 +648,25 @@ fn tsRead(
     const written = self.text_buffer.readRange(byte_offset, self.read_buffer[0..to_read]);
     bytes_read[0] = @as(u32, @intCast(written));
     return self.read_buffer.ptr;
+}
+
+fn pointForByte(buffer: *TextStore, byte_offset: usize) c.TSPoint {
+    const line = buffer.lineIndexForOffset(byte_offset);
+    const line_start = buffer.lineStart(line);
+    return .{
+        .row = @as(u32, @intCast(line)),
+        .column = @as(u32, @intCast(byte_offset - line_start)),
+    };
+}
+
+fn fullDocumentRange(buffer: *TextStore) c.TSRange {
+    const total = buffer.totalLen();
+    return .{
+        .start_point = .{ .row = 0, .column = 0 },
+        .end_point = pointForByte(buffer, total),
+        .start_byte = 0,
+        .end_byte = @as(u32, @intCast(@min(total, std.math.maxInt(u32)))),
+    };
 }
 
 fn emptyTokens(allocator: std.mem.Allocator) ![]HighlightToken {
@@ -352,23 +695,119 @@ fn initCaptureMeta(meta: []CaptureMeta) void {
     }
 }
 
+fn addPriorityBias(priority: i32, depth: usize) i32 {
+    if (depth == 0) return priority;
+    const bias = @as(i64, @intCast(depth)) * @as(i64, injection_priority_bias);
+    const value = @as(i64, priority) + bias;
+    if (value > std.math.maxInt(i32)) return std.math.maxInt(i32);
+    if (value < std.math.minInt(i32)) return std.math.minInt(i32);
+    return @as(i32, @intCast(value));
+}
+
+fn appendHighlightTokens(
+    text_buffer: *TextStore,
+    query_bundle: *QueryBundle,
+    cursor: *c.TSQueryCursor,
+    tree: *c.TSTree,
+    range_start: u32,
+    range_end: u32,
+    depth: usize,
+    allocator: std.mem.Allocator,
+    tokens: *std.ArrayList(HighlightToken),
+) !void {
+    const root = c.ts_tree_root_node(tree);
+    _ = c.ts_query_cursor_set_byte_range(cursor, range_start, range_end);
+    c.ts_query_cursor_exec(cursor, query_bundle.query, root);
+
+    const capture_count = query_bundle.capture_count;
+    var capture_meta_stack: [64]CaptureMeta = undefined;
+    const capture_meta = if (capture_count <= capture_meta_stack.len)
+        capture_meta_stack[0..capture_count]
+    else
+        try allocator.alloc(CaptureMeta, capture_count);
+    defer if (capture_count > capture_meta_stack.len) allocator.free(capture_meta);
+
+    var match: c.TSQueryMatch = undefined;
+    while (c.ts_query_cursor_next_match(cursor, &match)) {
+        if (!predicatesMatch(
+            query_bundle.query,
+            &match,
+            text_buffer,
+            allocator,
+        )) {
+            continue;
+        }
+
+        initCaptureMeta(capture_meta);
+        var match_meta = MatchMeta{};
+        applyDirectives(
+            query_bundle.query,
+            &match,
+            &match_meta,
+            capture_meta,
+            allocator,
+        );
+
+        var i: u32 = 0;
+        while (i < match.capture_count) : (i += 1) {
+            const capture = match.captures[i];
+            const node = capture.node;
+            const start_b = c.ts_node_start_byte(node);
+            const end_b = c.ts_node_end_byte(node);
+            if (end_b <= range_start or start_b >= range_end) continue;
+            if (query_bundle.capture_noop[capture.index]) continue;
+            const token_kind = query_bundle.capture_kinds[capture.index];
+            const meta = capture_meta[capture.index];
+            const base_priority = if (meta.has_priority) meta.priority else match_meta.priority;
+            const priority = addPriorityBias(base_priority, depth);
+            const conceal = if (meta.conceal != null) meta.conceal else match_meta.conceal;
+            const url = if (meta.url != null) meta.url else match_meta.url;
+            const conceal_lines = if (meta.conceal_lines) true else match_meta.conceal_lines;
+            try tokens.append(allocator, .{
+                .start = start_b,
+                .end = end_b,
+                .kind = token_kind,
+                .priority = priority,
+                .conceal = conceal,
+                .url = url,
+                .conceal_lines = conceal_lines,
+            });
+        }
+    }
+}
+
 fn mapCaptureKind(name: []const u8) TokenKind {
-    if (std.mem.indexOf(u8, name, "comment") != null) return .comment;
-    if (std.mem.indexOf(u8, name, "string") != null) return .string;
-    if (std.mem.indexOf(u8, name, "character") != null) return .string;
-    if (std.mem.indexOf(u8, name, "keyword") != null) return .keyword;
-    if (std.mem.indexOf(u8, name, "number") != null or std.mem.indexOf(u8, name, "float") != null) return .number;
-    if (std.mem.indexOf(u8, name, "boolean") != null or std.mem.indexOf(u8, name, "constant") != null) return .constant;
-    if (std.mem.indexOf(u8, name, "function") != null) return .function;
-    if (std.mem.indexOf(u8, name, "type") != null) return .type_name;
+    if (std.mem.startsWith(u8, name, "comment")) return .comment;
     if (std.mem.indexOf(u8, name, "builtin") != null) return .builtin;
-    if (std.mem.indexOf(u8, name, "module") != null or std.mem.indexOf(u8, name, "namespace") != null) return .namespace;
-    if (std.mem.indexOf(u8, name, "label") != null) return .label;
-    if (std.mem.indexOf(u8, name, "operator") != null) return .operator;
-    if (std.mem.indexOf(u8, name, "punctuation") != null) return .punctuation;
-    if (std.mem.indexOf(u8, name, "attribute") != null or std.mem.indexOf(u8, name, "parameter") != null) return .attribute;
-    if (std.mem.indexOf(u8, name, "variable") != null) return .variable;
-    if (std.mem.indexOf(u8, name, "error") != null) return .error_token;
+    if (std.mem.startsWith(u8, name, "string")) return .string;
+    if (std.mem.startsWith(u8, name, "markup.link")) return .link;
+    if (std.mem.startsWith(u8, name, "markup")) return .string;
+    if (std.mem.startsWith(u8, name, "character")) return .string;
+    if (std.mem.startsWith(u8, name, "number")) return .number;
+    if (std.mem.startsWith(u8, name, "float")) return .number;
+    if (std.mem.startsWith(u8, name, "boolean")) return .constant;
+    if (std.mem.startsWith(u8, name, "constant")) return .constant;
+    if (std.mem.startsWith(u8, name, "keyword")) return .keyword;
+    if (std.mem.startsWith(u8, name, "function")) return .function;
+    if (std.mem.startsWith(u8, name, "method")) return .function;
+    if (std.mem.startsWith(u8, name, "constructor")) return .function;
+    if (std.mem.startsWith(u8, name, "type")) return .type_name;
+    if (std.mem.startsWith(u8, name, "class")) return .type_name;
+    if (std.mem.startsWith(u8, name, "interface")) return .type_name;
+    if (std.mem.startsWith(u8, name, "struct")) return .type_name;
+    if (std.mem.startsWith(u8, name, "enum")) return .type_name;
+    if (std.mem.startsWith(u8, name, "tag")) return .type_name;
+    if (std.mem.startsWith(u8, name, "module")) return .namespace;
+    if (std.mem.startsWith(u8, name, "namespace")) return .namespace;
+    if (std.mem.startsWith(u8, name, "label")) return .label;
+    if (std.mem.startsWith(u8, name, "operator")) return .operator;
+    if (std.mem.startsWith(u8, name, "punctuation")) return .punctuation;
+    if (std.mem.startsWith(u8, name, "attribute")) return .attribute;
+    if (std.mem.startsWith(u8, name, "property")) return .variable;
+    if (std.mem.startsWith(u8, name, "field")) return .variable;
+    if (std.mem.startsWith(u8, name, "parameter")) return .variable;
+    if (std.mem.startsWith(u8, name, "variable")) return .variable;
+    if (std.mem.startsWith(u8, name, "error")) return .error_token;
     return .plain;
 }
 
@@ -385,13 +824,13 @@ const PredicateArg = union(enum) {
 };
 
 fn predicatesMatch(
-    bundle: *QueryBundle,
+    query: *c.TSQuery,
     match: *const c.TSQueryMatch,
     text_buffer: *TextStore,
     allocator: std.mem.Allocator,
 ) bool {
     var step_count: u32 = 0;
-    const steps = c.ts_query_predicates_for_pattern(bundle.query, match.pattern_index, &step_count);
+    const steps = c.ts_query_predicates_for_pattern(query, match.pattern_index, &step_count);
     if (steps == null or step_count == 0) return true;
 
     var args = std.ArrayList(PredicateArg).empty;
@@ -405,7 +844,7 @@ fn predicatesMatch(
             c.TSQueryPredicateStepTypeDone => {
                 if (current_name) |name| {
                     if (!predicateSatisfied(
-                        bundle,
+                        query,
                         name,
                         args.items,
                         match,
@@ -424,7 +863,7 @@ fn predicatesMatch(
             },
             c.TSQueryPredicateStepTypeString => {
                 var len: u32 = 0;
-                const value_ptr = c.ts_query_string_value_for_id(bundle.query, step.value_id, &len);
+                const value_ptr = c.ts_query_string_value_for_id(query, step.value_id, &len);
                 const value = value_ptr[0..len];
                 if (current_name == null) {
                     current_name = value;
@@ -440,7 +879,7 @@ fn predicatesMatch(
 }
 
 fn predicateSatisfied(
-    bundle: *QueryBundle,
+    query: *c.TSQuery,
     name_raw: []const u8,
     args: []const PredicateArg,
     match: *const c.TSQueryMatch,
@@ -474,7 +913,7 @@ fn predicateSatisfied(
     else if (std.mem.eql(u8, name, "contains?"))
         predicateContains(args, match, text_buffer, allocator, any)
     else if (std.mem.eql(u8, name, "match?"))
-        predicateMatch(bundle, args, match, text_buffer, allocator, any)
+        predicateMatch(query, args, match, text_buffer, allocator, any)
     else
         true;
 
@@ -579,14 +1018,14 @@ fn predicateContains(
 }
 
 fn predicateMatch(
-    bundle: *QueryBundle,
+    query: *c.TSQuery,
     args: []const PredicateArg,
     match: *const c.TSQueryMatch,
     text_buffer: *TextStore,
     allocator: std.mem.Allocator,
     any: bool,
 ) bool {
-    _ = bundle;
+    _ = query;
     if (args.len < 2) return false;
     const cap = args[0];
     if (cap != .capture) return false;
@@ -745,6 +1184,13 @@ fn readNodeTextAlloc(
     return out;
 }
 
+fn resolveInjectionLanguageName(allocator: std.mem.Allocator, name: []const u8) ?[]u8 {
+    const trimmed = std.mem.trim(u8, name, " \t\r\n");
+    if (trimmed.len == 0) return null;
+    const resolved = syntax_registry_mod.SyntaxRegistry.resolveInjectionLanguage(trimmed) orelse return null;
+    return allocator.dupe(u8, resolved) catch null;
+}
+
 fn nodeTextContains(
     text_buffer: *TextStore,
     allocator: std.mem.Allocator,
@@ -756,15 +1202,125 @@ fn nodeTextContains(
     return std.mem.indexOf(u8, text, needle) != null;
 }
 
+fn intersectRanges(
+    allocator: std.mem.Allocator,
+    parent_ranges: []const c.TSRange,
+    nodes: []const c.TSNode,
+    include_children: bool,
+) ![]c.TSRange {
+    if (parent_ranges.len == 0 or nodes.len == 0) {
+        return allocator.alloc(c.TSRange, 0);
+    }
+
+    const sorted_nodes = try allocator.alloc(c.TSNode, nodes.len);
+    defer allocator.free(sorted_nodes);
+    std.mem.copyForwards(c.TSNode, sorted_nodes, nodes);
+    std.sort.heap(c.TSNode, sorted_nodes, {}, struct {
+        fn lessThan(_: void, a: c.TSNode, b: c.TSNode) bool {
+            const start_a = c.ts_node_start_byte(a);
+            const start_b = c.ts_node_start_byte(b);
+            if (start_a != start_b) return start_a < start_b;
+            return c.ts_node_end_byte(a) < c.ts_node_end_byte(b);
+        }
+    }.lessThan);
+
+    var result = std.ArrayList(c.TSRange).empty;
+    errdefer result.deinit(allocator);
+
+    var parent_index: usize = 0;
+    var parent_range = parent_ranges[parent_index];
+    const max_byte = std.math.maxInt(u32);
+    const max_point = c.TSPoint{ .row = max_byte, .column = max_byte };
+
+    for (sorted_nodes) |node| {
+        var preceding = c.TSRange{
+            .start_byte = 0,
+            .end_byte = c.ts_node_start_byte(node),
+            .start_point = .{ .row = 0, .column = 0 },
+            .end_point = c.ts_node_start_point(node),
+        };
+
+        const following = c.TSRange{
+            .start_byte = c.ts_node_end_byte(node),
+            .end_byte = max_byte,
+            .start_point = c.ts_node_end_point(node),
+            .end_point = max_point,
+        };
+
+        const child_count = if (include_children) 0 else c.ts_node_child_count(node);
+        var child_index: u32 = 0;
+        while (child_index <= child_count) : (child_index += 1) {
+            const excluded = if (child_index == child_count)
+                following
+            else blk: {
+                const child = c.ts_node_child(node, child_index);
+                break :blk c.TSRange{
+                    .start_byte = c.ts_node_start_byte(child),
+                    .end_byte = c.ts_node_end_byte(child),
+                    .start_point = c.ts_node_start_point(child),
+                    .end_point = c.ts_node_end_point(child),
+                };
+            };
+
+            var range = c.TSRange{
+                .start_byte = preceding.end_byte,
+                .end_byte = excluded.start_byte,
+                .start_point = preceding.end_point,
+                .end_point = excluded.start_point,
+            };
+            preceding = excluded;
+
+            if (range.end_byte < parent_range.start_byte) {
+                continue;
+            }
+
+            while (parent_range.start_byte <= range.end_byte) {
+                if (parent_range.end_byte > range.start_byte) {
+                    if (range.start_byte < parent_range.start_byte) {
+                        range.start_byte = parent_range.start_byte;
+                        range.start_point = parent_range.start_point;
+                    }
+
+                    if (parent_range.end_byte < range.end_byte) {
+                        if (range.start_byte < parent_range.end_byte) {
+                            try result.append(allocator, .{
+                                .start_byte = range.start_byte,
+                                .end_byte = parent_range.end_byte,
+                                .start_point = range.start_point,
+                                .end_point = parent_range.end_point,
+                            });
+                        }
+                        range.start_byte = parent_range.end_byte;
+                        range.start_point = parent_range.end_point;
+                    } else {
+                        if (range.start_byte < range.end_byte) {
+                            try result.append(allocator, range);
+                        }
+                        break;
+                    }
+                }
+
+                parent_index += 1;
+                if (parent_index >= parent_ranges.len) {
+                    return result.toOwnedSlice(allocator);
+                }
+                parent_range = parent_ranges[parent_index];
+            }
+        }
+    }
+
+    return result.toOwnedSlice(allocator);
+}
+
 fn applyDirectives(
-    bundle: *QueryBundle,
+    query: *c.TSQuery,
     match: *const c.TSQueryMatch,
     match_meta: *MatchMeta,
     capture_meta: []CaptureMeta,
     allocator: std.mem.Allocator,
 ) void {
     var step_count: u32 = 0;
-    const steps = c.ts_query_predicates_for_pattern(bundle.query, match.pattern_index, &step_count);
+    const steps = c.ts_query_predicates_for_pattern(query, match.pattern_index, &step_count);
     if (steps == null or step_count == 0) return;
 
     var args = std.ArrayList(PredicateArg).empty;
@@ -790,7 +1346,7 @@ fn applyDirectives(
             },
             c.TSQueryPredicateStepTypeString => {
                 var len: u32 = 0;
-                const value_ptr = c.ts_query_string_value_for_id(bundle.query, step.value_id, &len);
+                const value_ptr = c.ts_query_string_value_for_id(query, step.value_id, &len);
                 const value = value_ptr[0..len];
                 if (current_name == null) {
                     current_name = value;
@@ -800,6 +1356,96 @@ fn applyDirectives(
             },
             else => {},
         }
+    }
+}
+
+fn collectInjectionSettings(
+    query: *c.TSQuery,
+    match: *const c.TSQueryMatch,
+    allocator: std.mem.Allocator,
+    settings: *InjectionSettings,
+) void {
+    var step_count: u32 = 0;
+    const steps = c.ts_query_predicates_for_pattern(query, match.pattern_index, &step_count);
+    if (steps == null or step_count == 0) return;
+
+    var args = std.ArrayList(PredicateArg).empty;
+    defer args.deinit(allocator);
+
+    var current_name: ?[]const u8 = null;
+    var i: u32 = 0;
+    while (i < step_count) : (i += 1) {
+        const step = steps[i];
+        switch (step.type) {
+            c.TSQueryPredicateStepTypeDone => {
+                if (current_name) |name| {
+                    if (isDirectiveName(name)) {
+                        applyInjectionDirective(name, args.items, settings);
+                    }
+                }
+                args.clearRetainingCapacity();
+                current_name = null;
+            },
+            c.TSQueryPredicateStepTypeCapture => {
+                if (current_name == null) continue;
+                args.append(allocator, .{ .capture = step.value_id }) catch return;
+            },
+            c.TSQueryPredicateStepTypeString => {
+                var len: u32 = 0;
+                const value_ptr = c.ts_query_string_value_for_id(query, step.value_id, &len);
+                const value = value_ptr[0..len];
+                if (current_name == null) {
+                    current_name = value;
+                } else {
+                    args.append(allocator, .{ .string = value }) catch return;
+                }
+            },
+            else => {},
+        }
+    }
+}
+
+fn applyInjectionDirective(
+    name: []const u8,
+    args: []const PredicateArg,
+    settings: *InjectionSettings,
+) void {
+    if (!std.mem.eql(u8, name, "set!")) return;
+    if (args.len == 0) return;
+
+    var arg_index: usize = 0;
+    if (args[0] == .capture) {
+        if (args.len < 2) return;
+        arg_index = 1;
+    }
+
+    if (arg_index >= args.len) return;
+    if (args[arg_index] != .string) return;
+    const key = args[arg_index].string;
+    const value = if (arg_index + 1 < args.len and args[arg_index + 1] == .string)
+        args[arg_index + 1].string
+    else
+        null;
+
+    if (std.mem.eql(u8, key, "injection.language")) {
+        if (value != null) settings.language = value;
+        return;
+    }
+    if (std.mem.eql(u8, key, "injection.combined")) {
+        settings.combined = true;
+        return;
+    }
+    if (std.mem.eql(u8, key, "injection.include-children")) {
+        settings.include_children = true;
+        return;
+    }
+    if (std.mem.eql(u8, key, "injection.self")) {
+        settings.use_self = true;
+        return;
+    }
+    if (std.mem.eql(u8, key, "injection.parent")) {
+        settings.use_parent = true;
+        return;
     }
 }
 
@@ -984,6 +1630,14 @@ const QueryBundle = struct {
     capture_count: usize,
 };
 
+const InjectionQuery = struct {
+    query: *c.TSQuery,
+    query_source: []u8,
+    capture_count: usize,
+    content_capture: ?u32,
+    language_capture: ?u32,
+};
+
 const QueryCache = struct {
     allocator: std.mem.Allocator,
     map: std.StringHashMap(*QueryBundle),
@@ -1016,6 +1670,11 @@ const QueryCache = struct {
             self.allocator.free(key);
             return null;
         };
+        if (query_text.len == 0) {
+            self.allocator.free(query_text);
+            self.allocator.free(key);
+            return null;
+        }
         errdefer self.allocator.free(query_text);
 
         var error_offset: u32 = 0;
@@ -1071,7 +1730,94 @@ const QueryCache = struct {
     }
 };
 
+const InjectionQueryCache = struct {
+    allocator: std.mem.Allocator,
+    map: std.StringHashMap(*InjectionQuery),
+
+    pub fn init(allocator: std.mem.Allocator) InjectionQueryCache {
+        return .{
+            .allocator = allocator,
+            .map = std.StringHashMap(*InjectionQuery).init(allocator),
+        };
+    }
+
+    pub fn getOrLoad(
+        self: *InjectionQueryCache,
+        language_name: []const u8,
+        language: *const c.TSLanguage,
+        query_path: ?[]const u8,
+    ) !?*InjectionQuery {
+        const key = try std.fmt.allocPrint(self.allocator, "{s}:injections:{s}", .{
+            language_name,
+            query_path orelse "",
+        });
+        if (self.map.get(key)) |bundle| {
+            self.allocator.free(key);
+            return bundle;
+        }
+
+        const query_text = try loadQueryText(self.allocator, language_name, "injections", query_path) orelse {
+            self.allocator.free(key);
+            return null;
+        };
+        if (query_text.len == 0) {
+            self.allocator.free(query_text);
+            self.allocator.free(key);
+            return null;
+        }
+        errdefer self.allocator.free(query_text);
+
+        var error_offset: u32 = 0;
+        var error_type: c.TSQueryError = c.TSQueryErrorNone;
+        const query = c.ts_query_new(
+            language,
+            query_text.ptr,
+            @as(u32, @intCast(query_text.len)),
+            &error_offset,
+            &error_type,
+        ) orelse {
+            const log = app_logger.logger("editor.highlight");
+            log.logf(
+                "injection query parse failed lang={s} error_type={d} error_offset={d}",
+                .{ language_name, @as(u32, error_type), error_offset },
+            );
+            self.allocator.free(key);
+            return error.InitFailed;
+        };
+        errdefer c.ts_query_delete(query);
+
+        const capture_count = c.ts_query_capture_count(query);
+        var content_capture: ?u32 = null;
+        var language_capture: ?u32 = null;
+        var i: u32 = 0;
+        while (i < capture_count) : (i += 1) {
+            var name_len: u32 = 0;
+            const name_ptr = c.ts_query_capture_name_for_id(query, i, &name_len);
+            const name = name_ptr[0..name_len];
+            if (std.mem.eql(u8, name, "injection.content")) {
+                content_capture = i;
+            } else if (std.mem.eql(u8, name, "injection.language")) {
+                language_capture = i;
+            }
+        }
+
+        const bundle = try self.allocator.create(InjectionQuery);
+        errdefer self.allocator.destroy(bundle);
+        bundle.* = .{
+            .query = query,
+            .query_source = query_text,
+            .capture_count = @as(usize, @intCast(capture_count)),
+            .content_capture = content_capture,
+            .language_capture = language_capture,
+        };
+
+        try self.map.put(key, bundle);
+        return bundle;
+    }
+};
+
 var global_query_cache = QueryCache.init(std.heap.page_allocator);
+var global_injection_query_cache = InjectionQueryCache.init(std.heap.page_allocator);
 
 fn loadQueryText(
     allocator: std.mem.Allocator,
@@ -1081,6 +1827,10 @@ fn loadQueryText(
 ) !?[]u8 {
     if (query_path) |path| {
         if (try readFileAbsoluteIfExists(allocator, path)) |data| {
+            if (data.len == 0) {
+                allocator.free(data);
+                return null;
+            }
             const log = app_logger.logger("editor.highlight");
             log.logf("query source path={s} bytes={d}", .{ path, data.len });
             return data;
@@ -1092,6 +1842,10 @@ fn loadQueryText(
 
     const log = app_logger.logger("editor.highlight");
     if (try readFileJoinedIfExists(allocator, &.{ ".zide", rel_path })) |data| {
+        if (data.len == 0) {
+            allocator.free(data);
+            return null;
+        }
         log.logf("query source path=.zide/{s} bytes={d}", .{ rel_path, data.len });
         return data;
     }
@@ -1099,12 +1853,20 @@ fn loadQueryText(
     if (try configQueryPath(allocator, rel_path)) |path| {
         defer allocator.free(path);
         if (try readFileAbsoluteIfExists(allocator, path)) |data| {
+            if (data.len == 0) {
+                allocator.free(data);
+                return null;
+            }
             log.logf("query source path={s} bytes={d}", .{ path, data.len });
             return data;
         }
     }
 
     if (try readFileJoinedIfExists(allocator, &.{ "assets", rel_path })) |data| {
+        if (data.len == 0) {
+            allocator.free(data);
+            return null;
+        }
         log.logf("query source path=assets/{s} bytes={d}", .{ rel_path, data.len });
         return data;
     }
@@ -1174,7 +1936,8 @@ test "predicates + priority metadata filter highlights" {
         store,
         "zig",
         tree_sitter_zig(),
-        query_path,
+        .{ .highlights = query_path },
+        null,
     );
     defer highlighter.destroy();
 
@@ -1214,7 +1977,8 @@ test "match predicate filters captures" {
         store,
         "zig",
         tree_sitter_zig(),
-        query_path,
+        .{ .highlights = query_path },
+        null,
     );
     defer highlighter.destroy();
 

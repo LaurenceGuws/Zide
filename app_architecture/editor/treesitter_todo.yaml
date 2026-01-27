@@ -29,6 +29,7 @@ treesitter_todo:
         - "Spell/no-spell captures mirror Neovim semantics."
         - "Implemented priority metadata parsing via #set!; tokens carry priority/metadata (not yet used for conceal/url)."
         - "Current ordering only sorts by start + priority (no overlap-splitting yet)."
+        - "Capture mapping treats markup.link.* as a link token kind."
     - id: TS-03
       status: in_progress
       title: "Predicates + directives"
@@ -52,12 +53,17 @@ treesitter_todo:
         - "Replay harness now includes a larger Zig fixture with multiple token types."
         - "Added a test to ensure applyEdit changed ranges cover edited line spans."
     - id: TS-05
-      status: todo
+      status: in_progress
       title: "Injected languages"
       notes:
         - "Support language injections in queries."
         - "Maintain highlight order so injected nodes override parents."
         - "Extend query packaging + runtime loading beyond highlights.scm (injections, locals, tags, textobjects, indents) per language."
+        - "Added injection query cache + injected-layer highlighting with included ranges (supports injection.language/self/parent/include-children/combined)."
+        - "Markdown inline injections default to include children to avoid empty ranges when upstream queries omit include-children."
+        - "Highlight priority is biased by injection depth to keep injected captures on top."
+        - "Grammar packs now sync/package multiple query types; GrammarManager stores per-pack query paths."
+        - "Syntax registry parses injection language overrides."
     - id: TS-06
       status: todo
       title: "Render integration"

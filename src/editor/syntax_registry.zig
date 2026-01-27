@@ -19,12 +19,20 @@ pub const SyntaxRegistry = struct {
         if (path == null) return null;
         return extensionName(path.?);
     }
+
+    pub fn resolveInjectionLanguage(name: []const u8) ?[]const u8 {
+        if (name.len == 0) return null;
+        const maps = loadMaps();
+        if (maps.injections.get(name)) |lang| return lang;
+        return name;
+    }
 };
 
 const MapTable = struct {
     extensions: std.StringHashMap([]const u8),
     basenames: std.StringHashMap([]const u8),
     globs: []GlobEntry,
+    injections: std.StringHashMap([]const u8),
 };
 
 var map_loaded: bool = false;
@@ -104,6 +112,7 @@ fn loadMaps() *MapTable {
         .extensions = std.StringHashMap([]const u8).init(allocator),
         .basenames = std.StringHashMap([]const u8).init(allocator),
         .globs = &.{},
+        .injections = std.StringHashMap([]const u8).init(allocator),
     };
 
     _ = loadLuaMap(allocator, "assets/syntax/generated.lua") catch {};
@@ -143,7 +152,7 @@ fn loadLuaMap(allocator: std.mem.Allocator, path: []const u8) !void {
     const data = try handle.readToEndAlloc(allocator, std.math.maxInt(usize));
     defer allocator.free(data);
 
-    var section: enum { none, extensions, basenames, globs } = .none;
+    var section: enum { none, extensions, basenames, globs, injections } = .none;
     var globs_list = std.ArrayList(GlobEntry).empty;
     defer globs_list.deinit(allocator);
     var it = std.mem.splitScalar(u8, data, '\n');
@@ -163,6 +172,10 @@ fn loadLuaMap(allocator: std.mem.Allocator, path: []const u8) !void {
             section = .globs;
             continue;
         }
+        if (std.mem.startsWith(u8, line, "injections")) {
+            section = .injections;
+            continue;
+        }
         if (line[0] == '}') {
             section = .none;
             continue;
@@ -175,6 +188,7 @@ fn loadLuaMap(allocator: std.mem.Allocator, path: []const u8) !void {
             .extensions => _ = try map_tables.extensions.put(key, value),
             .basenames => _ = try map_tables.basenames.put(key, value),
             .globs => try globs_list.append(allocator, .{ .pattern = key, .lang = value }),
+            .injections => _ = try map_tables.injections.put(key, value),
             else => {},
         }
     }

@@ -46,22 +46,22 @@ pub const Color = struct {
 
     pub const black = Color{ .r = 0, .g = 0, .b = 0 };
     pub const white = Color{ .r = 255, .g = 255, .b = 255 };
-    pub const gray = Color{ .r = 128, .g = 128, .b = 128 };
-    pub const dark_gray = Color{ .r = 40, .g = 42, .b = 54 };
-    pub const light_gray = Color{ .r = 68, .g = 71, .b = 90 };
+    pub const gray = Color{ .r = 76, .g = 86, .b = 106 };
+    pub const dark_gray = Color{ .r = 46, .g = 52, .b = 64 };
+    pub const light_gray = Color{ .r = 67, .g = 76, .b = 94 };
 
-    // Dracula theme colors
-    pub const bg = Color{ .r = 40, .g = 42, .b = 54 };
-    pub const fg = Color{ .r = 248, .g = 248, .b = 242 };
-    pub const selection = Color{ .r = 68, .g = 71, .b = 90 };
-    pub const comment = Color{ .r = 98, .g = 114, .b = 164 };
-    pub const cyan = Color{ .r = 139, .g = 233, .b = 253 };
-    pub const green = Color{ .r = 80, .g = 250, .b = 123 };
-    pub const orange = Color{ .r = 255, .g = 184, .b = 108 };
-    pub const pink = Color{ .r = 255, .g = 121, .b = 198 };
-    pub const purple = Color{ .r = 189, .g = 147, .b = 249 };
-    pub const red = Color{ .r = 255, .g = 85, .b = 85 };
-    pub const yellow = Color{ .r = 241, .g = 250, .b = 140 };
+    // Nordic palette colors
+    pub const bg = Color{ .r = 36, .g = 41, .b = 51 };
+    pub const fg = Color{ .r = 187, .g = 195, .b = 212 };
+    pub const selection = Color{ .r = 59, .g = 66, .b = 82 };
+    pub const comment = Color{ .r = 76, .g = 86, .b = 106 };
+    pub const cyan = Color{ .r = 143, .g = 188, .b = 187 };
+    pub const green = Color{ .r = 163, .g = 190, .b = 140 };
+    pub const orange = Color{ .r = 208, .g = 135, .b = 112 };
+    pub const pink = Color{ .r = 180, .g = 142, .b = 173 };
+    pub const purple = Color{ .r = 190, .g = 157, .b = 184 };
+    pub const red = Color{ .r = 197, .g = 114, .b = 122 };
+    pub const yellow = Color{ .r = 235, .g = 203, .b = 139 };
 };
 
 pub const MousePos = struct {
@@ -73,27 +73,27 @@ pub const Theme = struct {
     background: Color = Color.bg,
     foreground: Color = Color.fg,
     selection: Color = Color.selection,
-    cursor: Color = Color.fg,
-    link: Color = Color.cyan,
+    cursor: Color = Color{ .r = 216, .g = 222, .b = 233 },
+    link: Color = Color{ .r = 129, .g = 161, .b = 193 },
     line_number: Color = Color.comment,
-    line_number_bg: Color = Color{ .r = 33, .g = 34, .b = 44 },
-    current_line: Color = Color{ .r = 50, .g = 52, .b = 66 },
+    line_number_bg: Color = Color{ .r = 30, .g = 34, .b = 42 },
+    current_line: Color = Color{ .r = 25, .g = 29, .b = 36 },
 
     // Syntax colors
     comment_color: Color = Color.comment,
-    string: Color = Color.yellow,
-    keyword: Color = Color.pink,
+    string: Color = Color.green,
+    keyword: Color = Color.orange,
     number: Color = Color.purple,
-    function: Color = Color.green,
+    function: Color = Color{ .r = 136, .g = 192, .b = 208 },
     variable: Color = Color.fg,
-    type_name: Color = Color.cyan,
-    operator: Color = Color.pink,
-    builtin_color: Color = Color.cyan,
-    punctuation: Color = Color.fg,
+    type_name: Color = Color.yellow,
+    operator: Color = Color.fg,
+    builtin_color: Color = Color{ .r = 94, .g = 129, .b = 172 },
+    punctuation: Color = Color{ .r = 96, .g = 114, .b = 138 },
     constant: Color = Color.purple,
-    attribute: Color = Color.green,
-    namespace: Color = Color.cyan,
-    label: Color = Color.cyan,
+    attribute: Color = Color.cyan,
+    namespace: Color = Color{ .r = 231, .g = 193, .b = 115 },
+    label: Color = Color.orange,
     error_token: Color = Color.red,
 };
 
@@ -151,7 +151,7 @@ pub const Renderer = struct {
         // Do a dummy frame to let the compositor configure the window (Wayland/tiling WMs)
         // Without this, the first real frame may use wrong dimensions
         c.BeginDrawing();
-        c.ClearBackground(c.Color{ .r = 40, .g = 42, .b = 54, .a = 255 }); // Match theme bg
+        c.ClearBackground(Color.bg.toRaylib()); // Match theme bg
         c.EndDrawing();
 
         // Now get the actual window size after compositor has configured it

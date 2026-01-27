@@ -110,12 +110,13 @@ const AppState = struct {
             break :blk config_mod.Config{
                 .log_file_filter = null,
                 .log_console_filter = null,
-                .raylib_log_level = null,
-                .editor_wrap = null,
-                .editor_highlight_budget = null,
-                .editor_width_budget = null,
-            };
+            .raylib_log_level = null,
+            .editor_wrap = null,
+            .editor_highlight_budget = null,
+            .editor_width_budget = null,
+            .theme = null,
         };
+    };
         defer config_mod.freeConfig(allocator, &config);
 
         if (config.log_file_filter) |filter| {
@@ -132,6 +133,11 @@ const AppState = struct {
 
         const shell = try Shell.init(allocator, 1280, 720, "Zide - Zig IDE");
         errdefer shell.deinit(allocator);
+        if (config.theme) |theme_config| {
+            var theme = shell.theme().*;
+            config_mod.applyThemeConfig(&theme, theme_config);
+            shell.setTheme(theme);
+        }
         _ = try shell.refreshUiScale();
         const app_log = app_logger.logger("app.core");
         app_log.logStdout("logger initialized", .{});

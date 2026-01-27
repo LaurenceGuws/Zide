@@ -21,15 +21,44 @@ queries_src="$nvim_dir/runtime/queries"
 queries_dst="$work/queries"
 mkdir -p "$queries_dst"
 
-# Sync all highlights.scm files.
+# Sync all query files we care about.
+query_files=(
+  highlights.scm
+  injections.scm
+  locals.scm
+  tags.scm
+  textobjects.scm
+  indents.scm
+)
+
 find "$queries_src" -mindepth 1 -maxdepth 1 -type d -print0 | while IFS= read -r -d '' dir; do
   lang=$(basename "$dir")
-  src="$dir/highlights.scm"
-  if [[ -f "$src" ]]; then
-    cp "$src" "$queries_dst/${lang}_highlights.scm"
-  fi
+  for name in "${query_files[@]}"; do
+    src="$dir/$name"
+    if [[ -f "$src" ]]; then
+      suffix="${name%.scm}"
+      cp "$src" "$queries_dst/${lang}_${suffix}.scm"
+    fi
+  done
  done
+
+# Patch markdown inline injections to include children (matches Helix behavior).
+markdown_injections="$queries_dst/markdown_injections.scm"
+if [[ -f "$markdown_injections" ]]; then
+  python - "$markdown_injections" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+data = path.read_text(encoding="utf-8")
+
+needle = '(#set! injection.language "markdown_inline")'
+insert = needle + '\n  (#set! injection.include-children)'
+if "injection.include-children" not in data and needle in data:
+    data = data.replace(needle, insert)
+    path.write_text(data, encoding="utf-8")
+PY
+fi
 
 # Copy parsers.lua for parsing.
 cp "$nvim_dir/lua/nvim-treesitter/parsers.lua" "$work/parsers.lua"
-

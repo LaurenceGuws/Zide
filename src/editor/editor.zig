@@ -806,7 +806,8 @@ pub const Editor = struct {
                 self.buffer,
                 lang.?,
                 grammar.ts_language,
-                grammar.query_path,
+                grammar.query_paths,
+                self.grammar_manager,
             ) catch |err| {
                 log.logf("highlight init failed err={any}", .{err});
                 return err;
