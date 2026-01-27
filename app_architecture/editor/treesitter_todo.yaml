@@ -28,7 +28,7 @@ treesitter_todo:
         - "Preserve priority ordering with subpriority per injected tree."
         - "Spell/no-spell captures mirror Neovim semantics."
         - "Implemented priority metadata parsing via #set!; tokens carry priority/metadata (not yet used for conceal/url)."
-        - "Current ordering only sorts by start + priority (no overlap-splitting yet)."
+        - "Overlap splitting now resolves competing captures by priority and produces non-overlapping segments."
         - "Capture mapping treats markup.link.* as a link token kind."
     - id: TS-03
       status: in_progress
