@@ -1,30 +1,26 @@
-# Rope Text Model Design (Draft)
+# Rope Text Model Design
 
-Goal: replace the current flat piece table with a balanced rope/piece-tree to
-achieve O(log n) edits and O(log n) offset/line queries for large files, while
-supporting cheap snapshots and low memory overhead.
+Goal: use a balanced rope/piece‑tree to achieve O(log n) edits and O(log n)
+offset/line queries for large files, while supporting cheap snapshots and low
+memory overhead.
 
-Status (2026-01-21):
-- Implemented core rope ops in `src/editor/rope.zig` (split/join/insert/delete/read).
-- Integrated as the sole text model via `src/editor/text_store.zig`.
-- Rope undo/redo implemented with per-op text snapshots.
-- Basic undo batching: adjacent inserts merge into a single undo op; adjacent
-  deletes at the same position or just before the previous delete also merge.
-- Undo grouping hooks: `beginUndoGroup` / `endUndoGroup` push a boundary marker
-  so grouped edits undo/redo as a single step.
+Status (2026-01-27):
+- Rope is the sole text model (`src/editor/rope.zig` + `src/editor/text_store.zig`).
+- Rope undo/redo is implemented with per-op text snapshots.
+- Undo batching merges adjacent inserts/deletes; undo groups are supported.
 
 ## Current state (summary)
-- Text buffer is a piece table with a flat `pieces` array.
-- `findPiece` is linear (with a small cache), and insert/delete shift arrays.
-- Line index is `line_starts` rebuilt or incrementally updated, with a
-  background thread for file-backed buffers.
+- Text buffer is a rope/piece‑tree with per-node aggregates for byte length and
+  line breaks.
+- Line/offset queries use rope aggregates (no background indexing thread).
+- The editor uses `TextStore` as the single text interface.
 
-## Proposed rope model
+## Rope model (implemented)
 
 ### Structure
-- A balanced binary tree of nodes (rope/piece-tree style).
+- Balanced binary tree of nodes (rope/piece‑tree style).
 - Leaf nodes store a slice of a backing buffer (`original` or `add`).
-- Internal nodes store aggregate metadata for their subtrees.
+- Internal nodes store aggregate metadata for subtrees.
 
 ### Node types
 - `Leaf`: points to a backing buffer + start + len.
@@ -45,8 +41,7 @@ These allow:
 - Keeps per-edit work bounded and tree depth small.
 
 ### Balancing strategy
-- Weight-balanced or AVL-style rotations.
-- Keep it simple and deterministic (avoid complex rebalancing cost spikes).
+- Weight-balanced or AVL-style rotations (implementation-specific).
 - Store `height` (or `weight`) per node for balancing decisions.
 
 ### Backing buffers
@@ -63,32 +58,10 @@ These allow:
 - `line_count()` = 1 + root.line_breaks
 - `line_start(line)` = descend by line_breaks to find byte offset
 
-### Concurrency
-- Single-writer. Optional snapshots via structural sharing (copy-on-write).
-- Can add `Arc`-like refcounts later for cheap clones.
-
-## Migration plan (phases)
-
-Phase 0: Design + scaffolding
-- Add `src/editor/rope.zig` with structs and APIs.
-- Do not integrate with Editor yet.
-
-Phase 1: Minimal rope backing
-- Implement insert/delete/read/len.
-- Build in-tree aggregates for byte_len + line_breaks.
-- Keep editor working by swapping buffer implementation.
-
-Phase 2: Indexing upgrades
-- Add fast byte<->line conversions using aggregates.
-- Remove `line_starts` array and background index thread.
-
-Phase 3: Unicode-aware indices
-- Track UTF-16 units and grapheme boundaries per node.
-- Provide caret-safe movement and selections.
-
-Phase 4: Snapshots + history
-- Add copy-on-write snapshots for undo/redo batching.
-- Enable cheap background saves and analysis tasks.
+## Remaining work
+- Unicode-aware indices (UTF‑16 units, grapheme boundaries).
+- Snapshot optimizations (structural sharing / COW) for cheaper cloning.
+- Optional mmap for large file reads.
 
 ## Open decisions
 - Balance strategy (AVL vs weight-balanced) based on implementation effort.

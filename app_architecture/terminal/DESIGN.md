@@ -104,7 +104,7 @@ Notes:
 - Scrollback view supports wheel + drag via the terminal widget; no selection/copy yet.
 
 Decision:
-- Current grid is a minimal stepping stone; will be replaced by a proper model with dirty‑row tracking and scrollback.
+- Grid model supports dirty‑row tracking and scrollback; treat it as the current baseline rather than a throwaway prototype.
 
 Why:
 - Necessary for performance and correctness with real TUI apps.
