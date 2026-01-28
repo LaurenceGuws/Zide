@@ -122,6 +122,7 @@ editor_widget_todo:
         - "Editor widget renders soft-wrapped segments based on visual line counts."
         - "Cursor up/down moves across wrapped segments."
         - "Mouse wheel scrolls by visual rows in soft-wrap mode."
+        - "Editor text rendering uses monospace advances to align cursor columns with glyph positions."
       references:
         - reference_repos/editors/helix/helix-core/src/selection.rs
         - reference_repos/editors/kakoune/src/selection.cc

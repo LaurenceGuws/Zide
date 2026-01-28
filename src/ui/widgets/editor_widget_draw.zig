@@ -57,7 +57,7 @@ fn flushDrawList(list: *EditorDrawList, r: anytype) void {
                 );
             },
             .text => |text| {
-                r.drawText(text.text, text.x, text.y, unpackColor(ColorType, text.color));
+                r.drawTextMonospace(text.text, text.x, text.y, unpackColor(ColorType, text.color));
             },
             .cursor => |cursor| {
                 r.drawRect(
@@ -342,7 +342,7 @@ pub fn draw(
             }
 
             if (tokens.len == 0) {
-                r.drawText(line_text[seg_start_byte..seg_end_byte], text_start_x, seg_y, r.theme.foreground);
+                r.drawTextMonospace(line_text[seg_start_byte..seg_end_byte], text_start_x, seg_y, r.theme.foreground);
             } else {
                 drawHighlightedLineSegment(
                     r,
@@ -652,7 +652,7 @@ pub fn drawCached(
                         }
 
                         if (tokens.len == 0) {
-                            r.drawText(line_text[seg_start_byte..seg_end_byte], text_start_x, seg_y, r.theme.foreground);
+                            r.drawTextMonospace(line_text[seg_start_byte..seg_end_byte], text_start_x, seg_y, r.theme.foreground);
                         } else {
                             drawHighlightedLineSegment(
                                 r,
@@ -1080,7 +1080,7 @@ fn drawHighlightedLineText(
             const slice_start = cursor - line_start;
             const slice_end = start - line_start;
             const x = text_x + @as(f32, @floatFromInt(slice_start)) * r.char_width;
-            r.drawText(line_text[slice_start..slice_end], x, y, r.theme.foreground);
+            r.drawTextMonospace(line_text[slice_start..slice_end], x, y, r.theme.foreground);
         }
         const slice_start = start - line_start;
         const slice_end = end - line_start;
@@ -1095,10 +1095,10 @@ fn drawHighlightedLineText(
         }
         if (conceal_text) |text| {
             if (text.len > 0) {
-                r.drawText(text, x, y, color);
+                r.drawTextMonospace(text, x, y, color);
             }
         } else {
-            r.drawText(line_text[slice_start..slice_end], x, y, color);
+            r.drawTextMonospace(line_text[slice_start..slice_end], x, y, color);
         }
         if (end > cursor) {
             cursor = end;
@@ -1108,7 +1108,7 @@ fn drawHighlightedLineText(
     if (cursor < line_end) {
         const slice_start = cursor - line_start;
         const x = text_x + @as(f32, @floatFromInt(slice_start)) * r.char_width;
-        r.drawText(line_text[slice_start..], x, y, r.theme.foreground);
+        r.drawTextMonospace(line_text[slice_start..], x, y, r.theme.foreground);
     }
 }
 
@@ -1134,7 +1134,7 @@ fn drawHighlightedLineSegment(
             const slice_start = cursor;
             const slice_end = start;
             const x = text_x + @as(f32, @floatFromInt(slice_start - seg_start)) * r.char_width;
-            r.drawText(line_text[slice_start..slice_end], x, y, r.theme.foreground);
+            r.drawTextMonospace(line_text[slice_start..slice_end], x, y, r.theme.foreground);
         }
         const slice_start = start;
         const slice_end = end;
@@ -1150,10 +1150,10 @@ fn drawHighlightedLineSegment(
         logHighlightSlice(log, token.kind, line_start + slice_start, line_start + slice_end, color);
         if (conceal_text) |text| {
             if (text.len > 0) {
-                r.drawText(text, x, y, color);
+                r.drawTextMonospace(text, x, y, color);
             }
         } else {
-            r.drawText(line_text[slice_start..slice_end], x, y, color);
+            r.drawTextMonospace(line_text[slice_start..slice_end], x, y, color);
         }
         if (end > cursor) {
             cursor = end;
@@ -1163,7 +1163,7 @@ fn drawHighlightedLineSegment(
     if (cursor < seg_end) {
         const slice_start = cursor;
         const x = text_x + @as(f32, @floatFromInt(slice_start - seg_start)) * r.char_width;
-        r.drawText(line_text[slice_start..seg_end], x, y, r.theme.foreground);
+        r.drawTextMonospace(line_text[slice_start..seg_end], x, y, r.theme.foreground);
     }
 }
 

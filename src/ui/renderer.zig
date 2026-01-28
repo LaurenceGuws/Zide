@@ -664,6 +664,10 @@ pub const Renderer = struct {
         self.drawTextWithFont(&self.terminal_font, self.terminal_font.cell_width, self.terminal_font.line_height, text, x, y, color);
     }
 
+    pub fn drawTextMonospace(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
+        self.drawTextWithFontMonospace(&self.terminal_font, self.terminal_font.cell_width, self.terminal_font.line_height, text, x, y, color);
+    }
+
     pub fn drawTextSized(self: *Renderer, text: []const u8, x: f32, y: f32, size: f32, color: Color) void {
         const font = self.fontForSize(size) orelse {
             self.drawText(text, x, y, color);
@@ -1134,6 +1138,33 @@ pub const Renderer = struct {
             font.drawGlyph(draw, cp, cursor_x, y, cell_w, cell_h, followed_by_space, color.toRgba());
             const adv = font.glyphAdvance(cp) catch cell_w;
             cursor_x += if (adv > 0) adv else cell_w;
+        }
+    }
+
+    fn drawTextWithFontMonospace(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: Color) void {
+        if (text.len == 0) return;
+
+        var codepoints = std.ArrayList(u32).empty;
+        defer codepoints.deinit(self.allocator);
+        var cp_idx: usize = 0;
+        while (true) {
+            const cp = nextCodepointLossy(text, &cp_idx) orelse break;
+            _ = codepoints.append(self.allocator, cp) catch {};
+        }
+        if (codepoints.items.len == 0) return;
+
+        var cursor_x = x;
+        const draw = terminal_font_mod.DrawContext{
+            .ctx = self,
+            .drawTexture = drawTextureThunk,
+        };
+        var idx: usize = 0;
+        while (idx < codepoints.items.len) : (idx += 1) {
+            const cp = codepoints.items[idx];
+            const next = if (idx + 1 < codepoints.items.len) codepoints.items[idx + 1] else 0;
+            const followed_by_space = next == ' ';
+            font.drawGlyph(draw, cp, cursor_x, y, cell_w, cell_h, followed_by_space, color.toRgba());
+            cursor_x += cell_w;
         }
     }
 
