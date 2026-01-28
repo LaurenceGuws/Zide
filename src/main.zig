@@ -642,11 +642,6 @@ const AppState = struct {
         const ctrl = input_batch.mods.ctrl;
 
         // Global shortcuts
-        if (ctrl and (input_batch.keyPressed(.q) or input_batch.keyDown(.q))) {
-            shell.requestClose();
-            return;
-        }
-
         if (self.app_mode != .terminal and ctrl and input_batch.keyPressed(.n)) {
             try self.newEditor();
             self.needs_redraw = true;
