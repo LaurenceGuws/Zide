@@ -159,6 +159,7 @@ terminal_protocol_todo:
         - "Basic transmit/display/delete via 'a=t/T/p/d' with PNG or RGBA (f=24/32/100), no compression."
         - "Rendered images as overlays using renderer textures; no replies/quiet modes yet."
         - "Parsed full key set (incl. q/I/p/x/y/w/h/X/Y/S/O/P/Q/H/V/U) with basic validation (id vs number, direct-medium only, no compression)."
+        - "Chunked transfers now reuse the loading image id when later chunks omit i/I (m=1 flow)."
         - "Chunk assembly now honors S/O and zlib (o=z) for direct transfers; oversize payloads rejected."
         - "Tracked total kitty image bytes and evicted oldest images (preferring unplaced) when exceeding limit."
         - "Anchored placements to scrollback rows; full-screen scroll keeps images pinned and off-screen placements are dropped."

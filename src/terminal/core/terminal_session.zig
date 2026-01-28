@@ -164,6 +164,9 @@ pub const TerminalSession = struct {
     read_thread: ?std.Thread,
     read_thread_running: std.atomic.Value(bool),
     state_mutex: std.Thread.Mutex,
+    io_mutex: std.Thread.Mutex,
+    io_buffer: std.ArrayList(u8),
+    io_read_offset: usize,
     output_pending: std.atomic.Value(bool),
     output_generation: std.atomic.Value(u64),
     alt_exit_pending: std.atomic.Value(bool),
@@ -218,6 +221,7 @@ pub const TerminalSession = struct {
                 .placements = .empty,
                 .partials = std.AutoHashMap(u32, kitty_mod.KittyPartial).init(allocator),
                 .next_id = 1,
+                .loading_image_id = null,
                 .generation = 0,
                 .total_bytes = 0,
                 .scrollback_total = 0,
@@ -227,6 +231,7 @@ pub const TerminalSession = struct {
                 .placements = .empty,
                 .partials = std.AutoHashMap(u32, kitty_mod.KittyPartial).init(allocator),
                 .next_id = 1,
+                .loading_image_id = null,
                 .generation = 0,
                 .total_bytes = 0,
                 .scrollback_total = 0,
@@ -238,6 +243,9 @@ pub const TerminalSession = struct {
             .read_thread = null,
             .read_thread_running = std.atomic.Value(bool).init(false),
             .state_mutex = .{},
+            .io_mutex = .{},
+            .io_buffer = .empty,
+            .io_read_offset = 0,
             .output_pending = std.atomic.Value(bool).init(false),
             .output_generation = std.atomic.Value(u64).init(0),
             .alt_exit_pending = std.atomic.Value(bool).init(false),
@@ -292,6 +300,7 @@ pub const TerminalSession = struct {
         self.view_dirty_rows.deinit(self.allocator);
         self.view_dirty_cols_start.deinit(self.allocator);
         self.view_dirty_cols_end.deinit(self.allocator);
+        self.io_buffer.deinit(self.allocator);
         self.history.deinit();
         self.primary.deinit();
         self.alt.deinit();
@@ -334,15 +343,72 @@ pub const TerminalSession = struct {
 
     pub fn poll(self: *TerminalSession) !void {
         if (self.read_thread != null) {
-            if (self.output_pending.swap(false, .acq_rel)) {
-                if (self.state_mutex.tryLock()) {
-                    self.clearSelection();
-                    self.state_mutex.unlock();
-                } else {
-                    // Defer until we can safely lock without stalling the UI thread.
-                    self.output_pending.store(true, .release);
-                }
+            _ = self.output_pending.swap(false, .acq_rel);
+            var queued_bytes: usize = 0;
+            self.io_mutex.lock();
+            if (self.io_buffer.items.len > self.io_read_offset) {
+                queued_bytes = self.io_buffer.items.len - self.io_read_offset;
             }
+            self.io_mutex.unlock();
+
+            var max_bytes_per_poll: usize = 64 * 1024;
+            var max_ms: i64 = 2;
+            if (queued_bytes >= 8 * 1024 * 1024) {
+                max_bytes_per_poll = 2 * 1024 * 1024;
+                max_ms = 16;
+            } else if (queued_bytes >= 1024 * 1024) {
+                max_bytes_per_poll = 512 * 1024;
+                max_ms = 8;
+            }
+            const start_ms = std.time.milliTimestamp();
+            var processed: usize = 0;
+            var had_data = false;
+            var temp: [4096]u8 = undefined;
+
+            while (processed < max_bytes_per_poll and std.time.milliTimestamp() - start_ms < max_ms) {
+                var chunk_len: usize = 0;
+                self.io_mutex.lock();
+                const available = if (self.io_buffer.items.len > self.io_read_offset)
+                    self.io_buffer.items.len - self.io_read_offset
+                else
+                    0;
+                if (available > 0) {
+                    chunk_len = @min(temp.len, available);
+                    std.mem.copyForwards(u8, temp[0..chunk_len], self.io_buffer.items[self.io_read_offset .. self.io_read_offset + chunk_len]);
+                    self.io_read_offset += chunk_len;
+                    had_data = true;
+                    if (self.io_read_offset >= self.io_buffer.items.len) {
+                        self.io_buffer.items.len = 0;
+                        self.io_read_offset = 0;
+                    } else if (self.io_read_offset > 64 * 1024 and self.io_read_offset > self.io_buffer.items.len / 2) {
+                        const remaining = self.io_buffer.items.len - self.io_read_offset;
+                        std.mem.copyForwards(u8, self.io_buffer.items[0..remaining], self.io_buffer.items[self.io_read_offset..self.io_buffer.items.len]);
+                        self.io_buffer.items.len = remaining;
+                        self.io_read_offset = 0;
+                    }
+                }
+                self.io_mutex.unlock();
+
+                if (chunk_len == 0) break;
+
+                self.state_mutex.lock();
+                self.parser.handleSlice(self, temp[0..chunk_len]);
+                self.state_mutex.unlock();
+                processed += chunk_len;
+                _ = self.output_generation.fetchAdd(1, .acq_rel);
+            }
+
+            if (had_data) {
+                self.state_mutex.lock();
+                self.clearSelection();
+                self.state_mutex.unlock();
+            }
+
+            self.io_mutex.lock();
+            if (self.io_buffer.items.len > self.io_read_offset) {
+                self.output_pending.store(true, .release);
+            }
+            self.io_mutex.unlock();
             return;
         }
 
@@ -375,7 +441,14 @@ pub const TerminalSession = struct {
 
     pub fn hasData(self: *TerminalSession) bool {
         if (self.read_thread != null) {
-            return self.output_pending.load(.acquire);
+            if (self.output_pending.load(.acquire)) return true;
+            var pending = false;
+            self.io_mutex.lock();
+            if (self.io_buffer.items.len > self.io_read_offset) {
+                pending = true;
+            }
+            self.io_mutex.unlock();
+            return pending;
         }
         if (self.pty) |*pty| {
             return pty.hasData();
@@ -1007,9 +1080,9 @@ fn readThreadMain(session: *TerminalSession) void {
                 if (n == null or n.? == 0) break;
                 processed += n.?;
                 logCsiSequences(io_log, buf[0..n.?]);
-                session.state_mutex.lock();
-                session.parser.handleSlice(session, buf[0..n.?]);
-                session.state_mutex.unlock();
+                session.io_mutex.lock();
+                _ = session.io_buffer.appendSlice(session.allocator, buf[0..n.?]) catch {};
+                session.io_mutex.unlock();
                 session.output_pending.store(true, .release);
                 _ = session.output_generation.fetchAdd(1, .acq_rel);
             }

@@ -71,6 +71,7 @@ pub const KittyState = struct {
     placements: std.ArrayList(KittyPlacement),
     partials: std.AutoHashMap(u32, KittyPartial),
     next_id: u32,
+    loading_image_id: ?u32,
     generation: u64,
     total_bytes: usize,
     scrollback_total: u64,
@@ -82,6 +83,14 @@ pub fn kittyState(self: anytype) *KittyState {
 
 pub fn kittyStateConst(self: anytype) *const KittyState {
     return if (self.active == .alt) &self.kitty_alt else &self.kitty_primary;
+}
+
+fn clearKittyLoading(kitty: *KittyState, image_id: u32) void {
+    if (kitty.loading_image_id) |loading_id| {
+        if (loading_id == image_id) {
+            kitty.loading_image_id = null;
+        }
+    }
 }
 
 pub fn deinitKittyState(self: anytype, state: *KittyState) void {
@@ -169,20 +178,42 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
     }
     if (control.action != 't' and control.action != 'T') return;
 
-    const image_id = resolveKittyImageId(control) orelse blk: {
+    var image_id = resolveKittyImageId(control);
+    if (kitty.loading_image_id) |loading_id| {
+        if (image_id) |explicit_id| {
+            if (explicit_id != loading_id and control.more) {
+                kitty.loading_image_id = null;
+                writeKittyResponse(self, control, explicit_id, false, "EINVAL");
+                return;
+            }
+        } else {
+            image_id = loading_id;
+        }
+    }
+    if (image_id == null) {
         const id = kitty.next_id;
         kitty.next_id += 1;
-        break :blk id;
-    };
+        image_id = id;
+    }
+    const final_image_id = image_id.?;
+    if (control.more and kitty.loading_image_id == null) {
+        kitty.loading_image_id = final_image_id;
+    }
 
     const decoded = loadKittyPayload(self, &control, data) orelse {
         if (log.enabled_file or log.enabled_console) {
             log.logf("kitty decode failed len={d}", .{data.len});
         }
-        writeKittyResponse(self, control, image_id, false, "EINVAL");
+        clearKittyLoading(kitty, final_image_id);
+        writeKittyResponse(self, control, final_image_id, false, "EINVAL");
         return;
     };
-    const final_data = accumulateKittyData(self, image_id, &control, decoded) orelse return;
+    const final_data = accumulateKittyData(self, final_image_id, &control, decoded) orelse {
+        if (!control.more) {
+            clearKittyLoading(kitty, final_image_id);
+        }
+        return;
+    };
 
     if (kittyExpectedDataBytes(control)) |expected| {
         if (final_data.len < expected) {
@@ -196,30 +227,34 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
                 return;
             };
             self.allocator.free(final_data);
-            writeKittyResponse(self, control, image_id, false, message.items);
+            clearKittyLoading(kitty, final_image_id);
+            writeKittyResponse(self, control, final_image_id, false, message.items);
             return;
         }
     }
 
-    const image = buildKittyImage(self, image_id, control, final_data) catch |err| {
+    const image = buildKittyImage(self, final_image_id, control, final_data) catch |err| {
         if (log.enabled_file or log.enabled_console) {
-            log.logf("kitty build failed id={d} format={d} data_len={d}", .{ image_id, control.format, final_data.len });
+            log.logf("kitty build failed id={d} format={d} data_len={d}", .{ final_image_id, control.format, final_data.len });
         }
         const message = switch (err) {
             error.BadPng => "EBADPNG",
             else => "EINVAL",
         };
-        writeKittyResponse(self, control, image_id, false, message);
+        clearKittyLoading(kitty, final_image_id);
+        writeKittyResponse(self, control, final_image_id, false, message);
         return;
     };
     storeKittyImage(self, image);
     if (control.action == 'T') {
-        if (placeKittyImage(self, image_id, control)) |err_msg| {
-            writeKittyResponse(self, control, image_id, false, err_msg);
+        if (placeKittyImage(self, final_image_id, control)) |err_msg| {
+            clearKittyLoading(kitty, final_image_id);
+            writeKittyResponse(self, control, final_image_id, false, err_msg);
             return;
         }
     }
-    writeKittyResponse(self, control, image_id, true, "OK");
+    clearKittyLoading(kitty, final_image_id);
+    writeKittyResponse(self, control, final_image_id, true, "OK");
 }
 
 fn parseKittyControl(
