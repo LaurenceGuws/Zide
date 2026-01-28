@@ -63,18 +63,10 @@ pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *sh
         handled = true;
         app_logger.logger("editor.input").logf("key=enter", .{});
     } else if (input_batch.keyRepeated(.backspace)) {
-        if (!group_started) {
-            widget.editor.beginUndoGroup();
-            group_started = true;
-        }
         try widget.editor.deleteCharBackward();
         handled = true;
         app_logger.logger("editor.input").logf("key=backspace", .{});
     } else if (input_batch.keyRepeated(.delete)) {
-        if (!group_started) {
-            widget.editor.beginUndoGroup();
-            group_started = true;
-        }
         try widget.editor.deleteCharForward();
         handled = true;
         app_logger.logger("editor.input").logf("key=delete", .{});

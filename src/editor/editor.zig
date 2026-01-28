@@ -616,6 +616,8 @@ pub const Editor = struct {
     pub fn deleteSelection(self: *Editor) !void {
         self.preferred_visual_col = null;
         if (self.selections.items.len > 0) {
+            self.beginUndoGroup();
+            errdefer self.endUndoGroup() catch {};
             try self.normalizeSelectionsDescending();
             var changed = false;
             var idx: usize = self.selections.items.len;
@@ -638,6 +640,7 @@ pub const Editor = struct {
             if (changed) self.noteTextChanged();
             self.clearSelections();
             self.selection = null;
+            try self.endUndoGroup();
             return;
         }
         if (self.selection) |sel| {
