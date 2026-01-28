@@ -26,20 +26,36 @@ pub fn drawTruncatedText(shell: *Shell, text: []const u8, x: f32, y: f32, color:
 
     var buf: [256]u8 = undefined;
     var out_len: usize = 0;
-    const truncated = text.len > max_chars;
-    if (text.len <= max_chars) {
-        out_len = @min(text.len, buf.len);
-        @memcpy(buf[0..out_len], text[0..out_len]);
+
+    var idx: usize = 0;
+    var count: usize = 0;
+    var truncated = false;
+    while (true) {
+        const cp = nextCodepointLossy(text, &idx) orelse break;
+        count += 1;
+        if (count > max_chars) {
+            truncated = true;
+            break;
+        }
+        _ = cp;
+    }
+
+    if (!truncated) {
+        idx = 0;
+        out_len = copyCodepointsLossy(text, &idx, count, buf[0..]);
+        if (idx < text.len) truncated = true;
     } else if (max_chars <= 3) {
-        out_len = @min(max_chars, buf.len);
-        @memcpy(buf[0..out_len], text[0..out_len]);
+        idx = 0;
+        out_len = copyCodepointsLossy(text, &idx, max_chars, buf[0..]);
     } else {
-        const prefix_len = @min(max_chars - 3, buf.len - 3);
-        @memcpy(buf[0..prefix_len], text[0..prefix_len]);
-        buf[prefix_len + 0] = '.';
-        buf[prefix_len + 1] = '.';
-        buf[prefix_len + 2] = '.';
-        out_len = prefix_len + 3;
+        idx = 0;
+        out_len = copyCodepointsLossy(text, &idx, max_chars - 3, buf[0..]);
+        if (out_len + 3 <= buf.len) {
+            buf[out_len + 0] = '.';
+            buf[out_len + 1] = '.';
+            buf[out_len + 2] = '.';
+            out_len += 3;
+        }
     }
 
     shell.drawText(buf[0..out_len], x, y, color);
@@ -48,6 +64,41 @@ pub fn drawTruncatedText(shell: *Shell, text: []const u8, x: f32, y: f32, color:
         .truncated = truncated,
         .drawn_len = out_len,
     };
+}
+
+fn nextCodepointLossy(text: []const u8, idx: *usize) ?u32 {
+    if (idx.* >= text.len) return null;
+    const first = text[idx.*];
+    const seq_len = std.unicode.utf8ByteSequenceLength(first) catch {
+        idx.* += 1;
+        return 0xFFFD;
+    };
+    if (idx.* + seq_len > text.len) {
+        idx.* += 1;
+        return 0xFFFD;
+    }
+    const slice = text[idx.* .. idx.* + seq_len];
+    const cp = std.unicode.utf8Decode(slice) catch {
+        idx.* += 1;
+        return 0xFFFD;
+    };
+    idx.* += seq_len;
+    return cp;
+}
+
+fn copyCodepointsLossy(text: []const u8, idx: *usize, max_count: usize, buf: []u8) usize {
+    var out_len: usize = 0;
+    var count: usize = 0;
+    while (count < max_count) {
+        const cp = nextCodepointLossy(text, idx) orelse break;
+        var tmp: [4]u8 = undefined;
+        const len = std.unicode.utf8Encode(cp, &tmp) catch 0;
+        if (len == 0 or out_len + len > buf.len) break;
+        @memcpy(buf[out_len .. out_len + len], tmp[0..len]);
+        out_len += len;
+        count += 1;
+    }
+    return out_len;
 }
 
 pub fn drawTooltip(shell: *Shell, text: []const u8, x: f32, y: f32) void {
