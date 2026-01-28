@@ -93,7 +93,8 @@ fn copyCodepointsLossy(text: []const u8, idx: *usize, max_count: usize, buf: []u
     while (count < max_count) {
         const cp = nextCodepointLossy(text, idx) orelse break;
         var tmp: [4]u8 = undefined;
-        const len = std.unicode.utf8Encode(cp, &tmp) catch 0;
+        const safe = if (cp > 0x10FFFF or (cp >= 0xD800 and cp <= 0xDFFF)) 0xFFFD else cp;
+        const len = std.unicode.utf8Encode(@intCast(safe), &tmp) catch 0;
         if (len == 0 or out_len + len > buf.len) break;
         @memcpy(buf[out_len .. out_len + len], tmp[0..len]);
         out_len += len;
