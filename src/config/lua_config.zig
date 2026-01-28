@@ -73,11 +73,13 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
         defer allocator.free(path);
         const user_config = try loadConfigFromFile(allocator, path);
         mergeConfig(&config, user_config);
+        freeConfig(allocator, &user_config);
     }
 
     if (fileExists(".zide.lua")) {
         const project_config = try loadConfigFromFile(allocator, ".zide.lua");
         mergeConfig(&config, project_config);
+        freeConfig(allocator, &project_config);
     }
 
     return config;
