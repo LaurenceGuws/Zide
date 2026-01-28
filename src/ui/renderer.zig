@@ -1,5 +1,6 @@
 const std = @import("std");
 const compositor = @import("../platform/compositor.zig");
+const app_logger = @import("../app_logger.zig");
 const editor_render = @import("../editor/render/renderer_ops.zig");
 const terminal_font_mod = @import("terminal_font.zig");
 const TerminalFont = terminal_font_mod.TerminalFont;
@@ -286,6 +287,8 @@ pub const Renderer = struct {
     }
 
     pub fn deinit(self: *Renderer) void {
+        const log = app_logger.logger("app.quit");
+        log.logf("renderer=deinit_start", .{});
         self.destroyRenderTarget(&self.terminal_target);
         self.destroyRenderTarget(&self.editor_target);
 
@@ -323,6 +326,7 @@ pub const Renderer = struct {
 
         if (active_renderer == self) active_renderer = null;
         self.allocator.destroy(self);
+        log.logf("renderer=deinit_done", .{});
     }
 
     fn initGlResources(self: *Renderer) !void {
@@ -1326,17 +1330,23 @@ pub const Renderer = struct {
         self.window_resized_flag = false;
         mouse_wheel_delta = 0.0;
 
+        const log = app_logger.logger("sdl.event");
         var event: sdl.SDL_Event = undefined;
         while (sdl.SDL_PollEvent(&event) != 0) {
             switch (event.type) {
                 sdl.SDL_QUIT => {
+                    log.logf("event=quit", .{});
                     self.should_close_flag = true;
                 },
                 sdl.SDL_WINDOWEVENT => {
                     if (event.window.event == sdl.SDL_WINDOWEVENT_RESIZED or event.window.event == sdl.SDL_WINDOWEVENT_SIZE_CHANGED) {
+                        log.logf("event=window_resize type={d}", .{event.window.event});
                         self.window_resized_flag = true;
                     } else if (event.window.event == sdl.SDL_WINDOWEVENT_CLOSE) {
+                        log.logf("event=window_close", .{});
                         self.should_close_flag = true;
+                    } else {
+                        log.logf("event=window_other type={d}", .{event.window.event});
                     }
                 },
                 sdl.SDL_KEYDOWN => {

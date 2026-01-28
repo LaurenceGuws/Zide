@@ -221,6 +221,8 @@ const AppState = struct {
     }
 
     pub fn deinit(self: *AppState) void {
+        const quit_log = app_logger.logger("app.quit");
+        quit_log.logf("deinit=start", .{});
         for (self.editors.items) |e| {
             e.deinit();
         }
@@ -244,6 +246,7 @@ const AppState = struct {
             self.allocator.free(path);
         }
         app_logger.deinit();
+        quit_log.logf("deinit=done", .{});
         self.allocator.destroy(self);
     }
 
@@ -398,6 +401,7 @@ const AppState = struct {
     }
 
     pub fn run(self: *AppState) !void {
+        const quit_log = app_logger.logger("app.quit");
         if (self.app_mode == .terminal) {
             if (self.terminals.items.len == 0) {
                 try self.newTerminal();
@@ -443,6 +447,10 @@ const AppState = struct {
         while (!self.shell.shouldClose()) {
             // Poll events first (this updates SDL's input state)
             app_shell.pollInputEvents();
+            if (self.shell.shouldClose()) {
+                quit_log.logf("quit_requested=1", .{});
+                break;
+            }
             var input_batch = input_builder.buildInputBatch(self.allocator, self.shell);
             defer input_batch.deinit();
 
