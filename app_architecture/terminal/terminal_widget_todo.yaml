@@ -496,6 +496,39 @@ terminal_widget_todo:
             - reference_repos/terminals/rio/rio-backend/src/batched_parser.rs
             - reference_repos/terminals/rio/rio-backend/src/batch_utf8.rs
             - reference_repos/terminals/rio/rio-backend/src/simd_utf8.rs
+        - id: P8-05
+          title: "Batch terminal draw calls (glyphs + backgrounds)"
+          files_to_edit:
+            - src/ui/renderer.zig
+            - src/ui/widgets/terminal_widget.zig
+          refs:
+            - reference_repos/terminals/kitty/kitty/text-cache.h
+            - reference_repos/terminals/alacritty/alacritty/src/renderer/text/mod.rs
+            - reference_repos/terminals/ghostty/src/terminal/render.zig
+        - id: P8-06
+          title: "Honor dirty column bounds in partial redraw"
+          files_to_edit:
+            - src/ui/widgets/terminal_widget.zig
+          refs:
+            - reference_repos/terminals/alacritty/alacritty/src/display/damage.rs
+        - id: P8-07
+          title: "Reduce render lock contention (double-buffered snapshots)"
+          files_to_edit:
+            - src/terminal/core/terminal_session.zig
+            - src/ui/widgets/terminal_widget.zig
+          refs:
+            - reference_repos/terminals/kitty/kitty/benchmark.py
+            - reference_repos/terminals/ghostty/src/terminal/Terminal.zig
+        - id: P8-08
+          title: "Hover/link styling as overlay pass (avoid full redraw)"
+          files_to_edit:
+            - src/ui/widgets/terminal_widget.zig
+          refs:
+            - reference_repos/terminals/foot/render.c
+        - id: P8-09
+          title: "Skip view_cells rebuild when idle"
+          files_to_edit:
+            - src/ui/widgets/terminal_widget.zig
 
     - name: "Phase 9 - Tests + Fixtures"
       tasks:

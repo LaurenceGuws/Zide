@@ -17,6 +17,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 
 ### Current Focus
 - UI rendering journey: SDL2 window/input + OpenGL renderer implementation and stabilization on Linux. See `app_architecture/ui/DEVELOPMENT_JOURNEY.md`.
+- Terminal rendering performance (flicker + throughput regressions vs raylib baseline).
 
 ### Recent Changes (High-Level)
 - Replaced raylib wiring in the renderer with SDL2 + OpenGL and introduced stb_image for PNG decode.
