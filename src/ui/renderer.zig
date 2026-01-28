@@ -1044,17 +1044,8 @@ pub const Renderer = struct {
         var sy: f32 = if (window_size.h > 0) @as(f32, @floatFromInt(drawable.h)) / @as(f32, @floatFromInt(window_size.h)) else 1.0;
 
         if (compositor.isWayland()) {
-            const now = getTime();
-            if (now - self.wayland_scale_last_update > 1.0) {
-                self.wayland_scale_cache = compositor.getWaylandScale(self.allocator);
-                self.wayland_scale_last_update = now;
-            }
-            if (self.wayland_scale_cache) |scale| {
-                if (scale > 0.0) {
-                    sx *= scale;
-                    sy *= scale;
-                }
-            }
+            // SDL already reports logical mouse coords; drawable/window ratio matches render scale.
+            // Avoid double-applying compositor scale here.
         }
 
         if (std.c.getenv("ZIDE_MOUSE_SCALE")) |raw| {
@@ -1123,8 +1114,9 @@ pub const Renderer = struct {
 
         var codepoints = std.ArrayList(u32).empty;
         defer codepoints.deinit(self.allocator);
-        var it = std.unicode.Utf8View.initUnchecked(text).iterator();
-        while (it.nextCodepoint()) |cp| {
+        var idx: usize = 0;
+        while (true) {
+            const cp = nextCodepointLossy(text, &idx) orelse break;
             _ = codepoints.append(self.allocator, cp) catch {};
         }
         if (codepoints.items.len == 0) return;
@@ -1148,12 +1140,33 @@ pub const Renderer = struct {
     fn measureTextWidth(_: *Renderer, font: *TerminalFont, text: []const u8) f32 {
         if (text.len == 0) return 0;
         var width: f32 = 0;
-        var it = std.unicode.Utf8View.initUnchecked(text).iterator();
-        while (it.nextCodepoint()) |cp| {
+        var idx: usize = 0;
+        while (true) {
+            const cp = nextCodepointLossy(text, &idx) orelse break;
             const adv = font.glyphAdvance(cp) catch font.cell_width;
             width += if (adv > 0) adv else font.cell_width;
         }
         return width;
+    }
+
+    fn nextCodepointLossy(text: []const u8, idx: *usize) ?u32 {
+        if (idx.* >= text.len) return null;
+        const first = text[idx.*];
+        const seq_len = std.unicode.utf8ByteSequenceLength(first) catch {
+            idx.* += 1;
+            return 0xFFFD;
+        };
+        if (idx.* + seq_len > text.len) {
+            idx.* += 1;
+            return 0xFFFD;
+        }
+        const slice = text[idx.* .. idx.* + seq_len];
+        const cp = std.unicode.utf8Decode(slice) catch {
+            idx.* += 1;
+            return 0xFFFD;
+        };
+        idx.* += seq_len;
+        return cp;
     }
 
     fn bindDefaultTarget(self: *Renderer) void {
