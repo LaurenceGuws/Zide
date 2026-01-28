@@ -14,13 +14,13 @@ Follow this workflow for every feature/task:
 4. Implement the feature.
 5. Update all relevant docs to reflect changes and progress.
 6. Inform the user how to test changes and debug until approved.
-7. Do NOT commit until the user has run the tests and explicitly approved (e.g., "nice" or "it's working").
-8. Keep diffs small and reviewable; no file moves before baseline tests exist.
-9. No behavior changes during extraction-only refactors; any semantic change must be separately scoped and test-driven.
-10. Extraction-only constraint: no renaming of public symbols, no logic changes, no behavior-motivated simplifications, no "while we're here" cleanups.
-11. Before any refactor, implement the replay harness, capture baseline goldens, and lock the fixture list as regression authority.
-12. No commits (including tests/harness) until the user approves after running the tests.
-13. Once approved, commit each step labeled as the step header.
+7. Default: do not commit until tests have been run and the user explicitly approves.
+8. If the user explicitly says to commit, treat that instruction as approval and comply without blocking on test approval.
+9. Keep diffs small and reviewable; no file moves before baseline tests exist.
+10. No behavior changes during extraction-only refactors; any semantic change must be separately scoped and test-driven.
+11. Extraction-only constraint: no renaming of public symbols, no logic changes, no behavior-motivated simplifications, no "while we're here" cleanups.
+12. Before any refactor, implement the replay harness, capture baseline goldens, and lock the fixture list as regression authority.
+13. Once approved (or explicitly instructed to commit), commit each step labeled as the step header.
 14. Return to the todo and suggest 3 next changes.
 
 ## Doc scope policy

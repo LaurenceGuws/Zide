@@ -29,7 +29,7 @@ Read src/editor/syntax.zig.
 ### Constraints / Guardrails
 - Handoff docs are high-level only; progress tracking lives in todo + app_architecture docs.
 - Follow layering rules and import checks (see `tools/app_import_check.zig`).
-- No commits until the user approves after tests.
+- Default: no commits until the user approves after tests. If the user explicitly says to commit, treat that as approval.
 
 ### Where to Look for Details
 - Tree-sitter plan + research: `app_architecture/editor/treesitter_dynamic_roadmap.md`

@@ -157,7 +157,7 @@ terminal_protocol_todo:
       notes:
         - "APC parser added (ESC _ ... ST) and Kitty 'G' payload parsing wired."
         - "Basic transmit/display/delete via 'a=t/T/p/d' with PNG or RGBA (f=24/32/100), no compression."
-        - "Rendered images as overlays using raylib textures; no replies/quiet modes yet."
+        - "Rendered images as overlays using renderer textures; no replies/quiet modes yet."
         - "Parsed full key set (incl. q/I/p/x/y/w/h/X/Y/S/O/P/Q/H/V/U) with basic validation (id vs number, direct-medium only, no compression)."
         - "Chunk assembly now honors S/O and zlib (o=z) for direct transfers; oversize payloads rejected."
         - "Tracked total kitty image bytes and evicted oldest images (preferring unplaced) when exceeding limit."
