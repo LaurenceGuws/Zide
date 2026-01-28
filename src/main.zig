@@ -642,7 +642,7 @@ const AppState = struct {
         const ctrl = input_batch.mods.ctrl;
 
         // Global shortcuts
-        if (ctrl and input_batch.keyPressed(.q)) {
+        if (ctrl and (input_batch.keyPressed(.q) or input_batch.keyDown(.q))) {
             shell.requestClose();
             return;
         }
