@@ -643,7 +643,7 @@ const AppState = struct {
 
         // Global shortcuts
         if (ctrl and input_batch.keyPressed(.q)) {
-            // Quit - handled by window close
+            shell.requestClose();
             return;
         }
 

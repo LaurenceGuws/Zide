@@ -141,6 +141,10 @@ pub const Shell = struct {
         return self.renderer.uiScaleFactor();
     }
 
+    pub fn requestClose(self: *Shell) void {
+        self.renderer.requestClose();
+    }
+
     pub fn shouldClose(self: *Shell) bool {
         return self.renderer.shouldClose();
     }
