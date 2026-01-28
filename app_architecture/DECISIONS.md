@@ -17,6 +17,9 @@ Use this compositor-provided scale as the default mouse scale on Wayland. Keep `
 - Requires optional external tools (`hyprctl`, `kscreen-doctor`) when running on those compositors.
 - Adds a small platform detection layer with clear fallbacks.
 
+**Status**
+- Resolved by the SDL2 + OpenGL renderer migration (January 28, 2026). The compositor-based scale fallback remains as a safety net for fractional Wayland setups.
+
 ## 2026-01-15 — Terminal text rendering quality upgrade path
 
 **Context**

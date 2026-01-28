@@ -62,15 +62,15 @@ Common logger tags:
 - `terminal.osc` (OSC trace)
 - `terminal.font`
 
-## Raylib logging
+## SDL logging
 
 ```lua
 return {
-  raylib = { log_level = "warning" }
+  sdl = { log_level = "warning" }
 }
 ```
 
-Accepted `log_level` values: `none`, `error`, `warning`/`warn`, `info`, `debug`, `trace`.
+Accepted `log_level` values: `none`, `critical`, `error`, `warning`/`warn`, `info`, `debug`, `trace`.
 
 ## Env fallback
 

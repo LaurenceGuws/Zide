@@ -16,10 +16,10 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 ## Handoff (High-Level)
 
 ### Current Focus
-- UI rendering journey: replay raylib behavior while building a proper renderer abstraction and a Linux implementation first. See `app_architecture/ui/DEVELOPMENT_JOURNEY.md`.
+- UI rendering journey: SDL2 window/input + OpenGL renderer implementation and stabilization on Linux. See `app_architecture/ui/DEVELOPMENT_JOURNEY.md`.
 
 ### Recent Changes (High-Level)
-- UI development journey documented in `app_architecture/ui/DEVELOPMENT_JOURNEY.md`.
+- Replaced raylib wiring in the renderer with SDL2 + OpenGL and introduced stb_image for PNG decode.
 
 ### Constraints / Guardrails
 - Handoff docs are high-level only; progress tracking lives in todo + app_architecture docs.

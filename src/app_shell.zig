@@ -97,7 +97,7 @@ pub const KEY_RIGHT_BRACKET = r.KEY_RIGHT_BRACKET;
 pub const KEY_BACKSLASH = r.KEY_BACKSLASH;
 pub const KEY_SPACE = r.KEY_SPACE;
 
-pub const setRaylibLogLevel = r.setRaylibLogLevel;
+pub const setSdlLogLevel = r.setSdlLogLevel;
 pub const pollInputEvents = r.pollInputEvents;
 pub const getTime = r.getTime;
 pub const waitTime = r.waitTime;

@@ -110,7 +110,7 @@ const AppState = struct {
             break :blk config_mod.Config{
                 .log_file_filter = null,
                 .log_console_filter = null,
-            .raylib_log_level = null,
+            .sdl_log_level = null,
             .editor_wrap = null,
             .editor_highlight_budget = null,
             .editor_width_budget = null,
@@ -127,8 +127,8 @@ const AppState = struct {
         }
         try app_logger.init();
 
-        if (config.raylib_log_level) |level| {
-            app_shell.setRaylibLogLevel(level);
+        if (config.sdl_log_level) |level| {
+            app_shell.setSdlLogLevel(level);
         }
 
         const shell = try Shell.init(allocator, 1280, 720, "Zide - Zig IDE");
@@ -441,7 +441,7 @@ const AppState = struct {
 
         // Main loop
         while (!self.shell.shouldClose()) {
-            // Poll events first (this updates raylib's input state)
+            // Poll events first (this updates SDL's input state)
             app_shell.pollInputEvents();
             var input_batch = input_builder.buildInputBatch(self.allocator, self.shell);
             defer input_batch.deinit();
