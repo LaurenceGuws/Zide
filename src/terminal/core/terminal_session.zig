@@ -280,14 +280,10 @@ pub const TerminalSession = struct {
     }
 
     pub fn deinit(self: *TerminalSession) void {
-        const log = app_logger.logger("terminal.quit");
-        log.logf("deinit=start", .{});
         if (self.read_thread) |thread| {
-            log.logf("read_thread=join", .{});
             self.read_thread_running.store(false, .release);
             thread.join();
             self.read_thread = null;
-            log.logf("read_thread=joined", .{});
         }
         if (self.pty) |*pty| {
             pty.deinit();
@@ -318,7 +314,6 @@ pub const TerminalSession = struct {
         }
         self.hyperlink_table.deinit(self.allocator);
         self.title_buffer.deinit(self.allocator);
-        log.logf("deinit=done", .{});
         self.allocator.destroy(self);
     }
 
