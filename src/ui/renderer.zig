@@ -1,24 +1,21 @@
 const std = @import("std");
-const builtin = @import("builtin");
 const compositor = @import("../platform/compositor.zig");
 const editor_render = @import("../editor/render/renderer_ops.zig");
+const terminal_font_mod = @import("terminal_font.zig");
+const TerminalFont = terminal_font_mod.TerminalFont;
+const gl = @import("renderer/gl.zig");
+const types = @import("renderer/types.zig");
 
-const c = @cImport({
-    @cInclude("raylib.h");
-});
-const TerminalFont = @import("terminal_font.zig").TerminalFont;
+const sdl = gl.c;
 
+var active_renderer: ?*Renderer = null;
 var mouse_wheel_delta: f32 = 0.0;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Font Selection (change this to test different fonts)
-// ─────────────────────────────────────────────────────────────────────────────
 pub const FontFamily = enum {
     iosevka,
     jetbrains_mono,
 };
 
-/// Change this to switch fonts at compile time
 pub const FONT_FAMILY: FontFamily = .jetbrains_mono;
 
 pub const FONT_PATH: [*:0]const u8 = switch (FONT_FAMILY) {
@@ -40,7 +37,7 @@ pub const Color = struct {
     b: u8,
     a: u8 = 255,
 
-    pub fn toRaylib(self: Color) c.Color {
+    pub fn toRgba(self: Color) types.Rgba {
         return .{ .r = self.r, .g = self.g, .b = self.b, .a = self.a };
     }
 
@@ -97,32 +94,61 @@ pub const Theme = struct {
     error_token: Color = Color.red,
 };
 
-const key_repeat_key_count: usize = 512;
+const key_repeat_key_count: usize = @intCast(sdl.SDL_NUM_SCANCODES);
+const mouse_button_count: usize = 8;
 const key_repeat_initial_delay: f64 = 0.45;
 const key_repeat_rate: f64 = 30.0;
 
+const RenderTarget = struct {
+    texture: types.Texture,
+    fbo: gl.GLuint,
+};
+
+const Vertex = packed struct {
+    x: f32,
+    y: f32,
+    u: f32,
+    v: f32,
+    r: f32,
+    g: f32,
+    b: f32,
+    a: f32,
+};
+
 pub const Renderer = struct {
     allocator: std.mem.Allocator,
-    width: c_int,
-    height: c_int,
-    font: c.Font,
+    window: *sdl.SDL_Window,
+    gl_context: sdl.SDL_GLContext,
+    width: i32,
+    height: i32,
+    render_width: i32,
+    render_height: i32,
+    target_width: i32,
+    target_height: i32,
+
+    shader_program: gl.GLuint,
+    vao: gl.GLuint,
+    vbo: gl.GLuint,
+    uniform_proj: gl.GLint,
+    uniform_tex: gl.GLint,
+    white_texture: types.Texture,
+
     font_size: f32,
     base_font_size: f32,
     char_width: f32,
     char_height: f32,
-    icon_font: c.Font,
+    icon_font: TerminalFont,
     icon_font_size: f32,
     icon_char_width: f32,
     icon_char_height: f32,
     terminal_cell_width: f32,
     terminal_cell_height: f32,
     terminal_font: TerminalFont,
-    terminal_texture: ?c.RenderTexture2D,
-    terminal_texture_w: c_int,
-    terminal_texture_h: c_int,
-    editor_texture: ?c.RenderTexture2D,
-    editor_texture_w: c_int,
-    editor_texture_h: c_int,
+    font_cache: std.AutoHashMap(u32, *TerminalFont),
+
+    terminal_target: ?RenderTarget,
+    editor_target: ?RenderTarget,
+
     theme: Theme,
     mouse_scale: MousePos,
     user_zoom: f32,
@@ -134,7 +160,22 @@ pub const Renderer = struct {
     wayland_scale_last_update: f64,
     key_repeat_next: [key_repeat_key_count]f64,
 
-    fn snapInt(value: f32) c_int {
+    key_down: [key_repeat_key_count]bool,
+    key_pressed: [key_repeat_key_count]bool,
+    key_released: [key_repeat_key_count]bool,
+    mouse_down: [mouse_button_count]bool,
+    mouse_pressed: [mouse_button_count]bool,
+    mouse_released: [mouse_button_count]bool,
+    key_queue: std.ArrayList(i32),
+    char_queue: std.ArrayList(u32),
+    clipboard_buffer: std.ArrayList(u8),
+    should_close_flag: bool,
+    window_resized_flag: bool,
+
+    start_counter: u64,
+    perf_freq: f64,
+
+    fn snapInt(value: f32) i32 {
         return @intFromFloat(std.math.round(value));
     }
 
@@ -142,52 +183,74 @@ pub const Renderer = struct {
         return @as(f32, @floatFromInt(snapInt(value)));
     }
 
-    pub fn init(allocator: std.mem.Allocator, width: c_int, height: c_int, title: [*:0]const u8) !*Renderer {
-        c.SetConfigFlags(c.FLAG_WINDOW_RESIZABLE | c.FLAG_VSYNC_HINT);
-        c.InitWindow(width, height, title);
-        // Note: Don't use SetTargetFPS() - it busy-waits and causes 100% CPU usage.
-        // VSync (FLAG_VSYNC_HINT) properly blocks in SwapBuffers instead.
+    pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8) !*Renderer {
+        if (sdl.SDL_Init(sdl.SDL_INIT_VIDEO | sdl.SDL_INIT_TIMER) != 0) {
+            return error.SdlInitFailed;
+        }
+        errdefer sdl.SDL_Quit();
 
-        // Do a dummy frame to let the compositor configure the window (Wayland/tiling WMs)
-        // Without this, the first real frame may use wrong dimensions
-        c.BeginDrawing();
-        c.ClearBackground(Color.bg.toRaylib()); // Match theme bg
-        c.EndDrawing();
+        _ = sdl.SDL_GL_SetAttribute(sdl.SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+        _ = sdl.SDL_GL_SetAttribute(sdl.SDL_GL_CONTEXT_MINOR_VERSION, 3);
+        _ = sdl.SDL_GL_SetAttribute(sdl.SDL_GL_CONTEXT_PROFILE_MASK, sdl.SDL_GL_CONTEXT_PROFILE_CORE);
+        _ = sdl.SDL_GL_SetAttribute(sdl.SDL_GL_DOUBLEBUFFER, 1);
 
-        // Now get the actual window size after compositor has configured it
-        const actual_width = c.GetScreenWidth();
-        const actual_height = c.GetScreenHeight();
+        const window = sdl.SDL_CreateWindow(
+            title,
+            sdl.SDL_WINDOWPOS_CENTERED,
+            sdl.SDL_WINDOWPOS_CENTERED,
+            width,
+            height,
+            sdl.SDL_WINDOW_OPENGL | sdl.SDL_WINDOW_RESIZABLE | sdl.SDL_WINDOW_ALLOW_HIGHDPI,
+        ) orelse return error.SdlWindowFailed;
+        errdefer sdl.SDL_DestroyWindow(window);
 
-        const renderer = try allocator.create(Renderer);
+        const gl_context = sdl.SDL_GL_CreateContext(window) orelse return error.SdlGlContextFailed;
+        errdefer sdl.SDL_GL_DeleteContext(gl_context);
+        _ = sdl.SDL_GL_MakeCurrent(window, gl_context);
+        _ = sdl.SDL_GL_SetSwapInterval(1);
 
-        // Load default monospace font
+        try gl.load();
+
+        var renderer = try allocator.create(Renderer);
+        errdefer allocator.destroy(renderer);
+
+        const drawable = getDrawableSize(window);
+        const window_size = getWindowSize(window);
+
         const base_font_size: f32 = 16.0;
-        const font = c.GetFontDefault();
         const ui_scale: f32 = 1.0;
         const font_size = base_font_size * ui_scale;
 
         renderer.* = .{
             .allocator = allocator,
-            .width = actual_width,
-            .height = actual_height,
-            .font = font,
+            .window = window,
+            .gl_context = gl_context,
+            .width = window_size.w,
+            .height = window_size.h,
+            .render_width = drawable.w,
+            .render_height = drawable.h,
+            .target_width = drawable.w,
+            .target_height = drawable.h,
+            .shader_program = 0,
+            .vao = 0,
+            .vbo = 0,
+            .uniform_proj = -1,
+            .uniform_tex = -1,
+            .white_texture = .{ .id = 0, .width = 0, .height = 0 },
             .font_size = font_size,
             .base_font_size = base_font_size,
-            .char_width = font_size * 0.6, // Approximate monospace width
+            .char_width = font_size * 0.6,
             .char_height = font_size * 1.2,
-            .icon_font = font,
-            .icon_font_size = font_size,
-            .icon_char_width = font_size * 0.6,
+            .icon_font = undefined,
+            .icon_font_size = font_size * 2.0,
+            .icon_char_width = font_size * 1.2,
             .icon_char_height = font_size * 1.2,
             .terminal_cell_width = font_size * 0.6,
             .terminal_cell_height = font_size * 1.2,
             .terminal_font = undefined,
-            .terminal_texture = null,
-            .terminal_texture_w = 0,
-            .terminal_texture_h = 0,
-            .editor_texture = null,
-            .editor_texture_w = 0,
-            .editor_texture_h = 0,
+            .font_cache = std.AutoHashMap(u32, *TerminalFont).init(allocator),
+            .terminal_target = null,
+            .editor_target = null,
             .theme = .{},
             .mouse_scale = .{ .x = 1.0, .y = 1.0 },
             .user_zoom = 1.0,
@@ -198,27 +261,139 @@ pub const Renderer = struct {
             .wayland_scale_cache = null,
             .wayland_scale_last_update = -1000.0,
             .key_repeat_next = [_]f64{0} ** key_repeat_key_count,
+            .key_down = [_]bool{false} ** key_repeat_key_count,
+            .key_pressed = [_]bool{false} ** key_repeat_key_count,
+            .key_released = [_]bool{false} ** key_repeat_key_count,
+            .mouse_down = [_]bool{false} ** mouse_button_count,
+            .mouse_pressed = [_]bool{false} ** mouse_button_count,
+            .mouse_released = [_]bool{false} ** mouse_button_count,
+            .key_queue = std.ArrayList(i32).empty,
+            .char_queue = std.ArrayList(u32).empty,
+            .clipboard_buffer = std.ArrayList(u8).empty,
+            .should_close_flag = false,
+            .window_resized_flag = false,
+            .start_counter = sdl.SDL_GetPerformanceCounter(),
+            .perf_freq = @as(f64, @floatFromInt(sdl.SDL_GetPerformanceFrequency())),
         };
 
-        // Load app font with Nerd Font glyphs if available
-        renderer.loadFontWithGlyphs(allocator, FONT_PATH, font_size);
-        if (loadFontWithGlyphsAtSize(allocator, FONT_PATH, font_size * 2.0)) |icon_font| {
-            renderer.icon_font = icon_font;
-            renderer.icon_font_size = font_size * 2.0;
-            const measure = c.MeasureTextEx(renderer.icon_font, "M", renderer.icon_font_size, 0);
-            renderer.icon_char_width = measure.x;
-            renderer.icon_char_height = measure.y;
-            c.SetTextureFilter(renderer.icon_font.texture, c.TEXTURE_FILTER_BILINEAR);
-        } else {
-            renderer.icon_font = renderer.font;
-            renderer.icon_font_size = renderer.font_size;
-            renderer.icon_char_width = renderer.char_width;
-            renderer.icon_char_height = renderer.char_height;
+        try renderer.initGlResources();
+        try renderer.initFonts(font_size);
+
+        sdl.SDL_StartTextInput();
+
+        active_renderer = renderer;
+        return renderer;
+    }
+
+    pub fn deinit(self: *Renderer) void {
+        self.destroyRenderTarget(&self.terminal_target);
+        self.destroyRenderTarget(&self.editor_target);
+
+        var font_it = self.font_cache.iterator();
+        while (font_it.next()) |entry| {
+            entry.value_ptr.*.deinit();
+            self.allocator.destroy(entry.value_ptr.*);
         }
-        renderer.terminal_font = try TerminalFont.init(
-            allocator,
+        self.font_cache.deinit();
+
+        self.terminal_font.deinit();
+        self.icon_font.deinit();
+
+        self.key_queue.deinit(self.allocator);
+        self.char_queue.deinit(self.allocator);
+        self.clipboard_buffer.deinit(self.allocator);
+
+        if (self.white_texture.id != 0) {
+            gl.DeleteTextures(1, &self.white_texture.id);
+        }
+        if (self.vbo != 0) {
+            gl.DeleteBuffers(1, &self.vbo);
+        }
+        if (self.vao != 0) {
+            gl.DeleteVertexArrays(1, &self.vao);
+        }
+        if (self.shader_program != 0) {
+            gl.DeleteProgram(self.shader_program);
+        }
+
+        sdl.SDL_StopTextInput();
+        sdl.SDL_GL_DeleteContext(self.gl_context);
+        sdl.SDL_DestroyWindow(self.window);
+        sdl.SDL_Quit();
+
+        if (active_renderer == self) active_renderer = null;
+        self.allocator.destroy(self);
+    }
+
+    fn initGlResources(self: *Renderer) !void {
+        const vertex_src =
+            "#version 330 core\n" ++
+            "layout (location = 0) in vec2 a_pos;\n" ++
+            "layout (location = 1) in vec2 a_uv;\n" ++
+            "layout (location = 2) in vec4 a_color;\n" ++
+            "out vec2 v_uv;\n" ++
+            "out vec4 v_color;\n" ++
+            "uniform mat4 u_proj;\n" ++
+            "void main() {\n" ++
+            "    v_uv = a_uv;\n" ++
+            "    v_color = a_color;\n" ++
+            "    gl_Position = u_proj * vec4(a_pos, 0.0, 1.0);\n" ++
+            "}\n";
+        const fragment_src =
+            "#version 330 core\n" ++
+            "in vec2 v_uv;\n" ++
+            "in vec4 v_color;\n" ++
+            "out vec4 frag_color;\n" ++
+            "uniform sampler2D u_tex;\n" ++
+            "void main() {\n" ++
+            "    vec4 tex = texture(u_tex, v_uv);\n" ++
+            "    frag_color = tex * v_color;\n" ++
+            "}\n";
+
+        const vert = try compileShader(gl.c.GL_VERTEX_SHADER, vertex_src);
+        defer gl.DeleteShader(vert);
+        const frag = try compileShader(gl.c.GL_FRAGMENT_SHADER, fragment_src);
+        defer gl.DeleteShader(frag);
+        const program = try linkProgram(vert, frag);
+        self.shader_program = program;
+        gl.UseProgram(program);
+
+        self.uniform_proj = gl.GetUniformLocation(program, "u_proj");
+        self.uniform_tex = gl.GetUniformLocation(program, "u_tex");
+        if (self.uniform_tex >= 0) gl.Uniform1i(self.uniform_tex, 0);
+
+        gl.GenVertexArrays(1, &self.vao);
+        gl.GenBuffers(1, &self.vbo);
+        gl.BindVertexArray(self.vao);
+        gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, self.vbo);
+        gl.BufferData(
+            gl.c.GL_ARRAY_BUFFER,
+            @as(gl.GLsizeiptr, @intCast(@sizeOf(Vertex) * 6)),
+            null,
+            gl.c.GL_DYNAMIC_DRAW,
+        );
+
+        gl.EnableVertexAttribArray(0);
+        gl.VertexAttribPointer(0, 2, gl.c.GL_FLOAT, gl.c.GL_FALSE, @sizeOf(Vertex), @ptrFromInt(0));
+        gl.EnableVertexAttribArray(1);
+        gl.VertexAttribPointer(1, 2, gl.c.GL_FLOAT, gl.c.GL_FALSE, @sizeOf(Vertex), @ptrFromInt(2 * @sizeOf(f32)));
+        gl.EnableVertexAttribArray(2);
+        gl.VertexAttribPointer(2, 4, gl.c.GL_FLOAT, gl.c.GL_FALSE, @sizeOf(Vertex), @ptrFromInt(4 * @sizeOf(f32)));
+
+        gl.Enable(gl.c.GL_BLEND);
+        gl.BlendFunc(gl.c.GL_SRC_ALPHA, gl.c.GL_ONE_MINUS_SRC_ALPHA);
+        gl.Disable(gl.c.GL_DEPTH_TEST);
+        gl.Disable(gl.c.GL_CULL_FACE);
+
+        self.white_texture = createSolidTexture(1, 1, .{ 255, 255, 255, 255 });
+        self.updateProjection(self.render_width, self.render_height);
+    }
+
+    fn initFonts(self: *Renderer, size: f32) !void {
+        self.terminal_font = try TerminalFont.init(
+            self.allocator,
             FONT_PATH,
-            font_size,
+            size,
             SYMBOLS_FALLBACK_PATH,
             UNICODE_SYMBOLS2_PATH,
             UNICODE_SYMBOLS_PATH,
@@ -227,70 +402,64 @@ pub const Renderer = struct {
             EMOJI_COLOR_FALLBACK_PATH,
             EMOJI_TEXT_FALLBACK_PATH,
         );
-        renderer.terminal_font.setAtlasFilterPoint();
-        renderer.terminal_cell_width = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(renderer.terminal_font.cell_width)))));
-        renderer.terminal_cell_height = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(renderer.terminal_font.line_height)))));
+        self.terminal_font.setAtlasFilterPoint();
+        self.terminal_cell_width = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(self.terminal_font.cell_width)))));
+        self.terminal_cell_height = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(self.terminal_font.line_height)))));
+        self.char_width = self.terminal_cell_width;
+        self.char_height = self.terminal_cell_height;
 
-        return renderer;
-    }
-
-    pub fn deinit(self: *Renderer) void {
-        if (self.font.texture.id != c.GetFontDefault().texture.id) {
-            c.UnloadFont(self.font);
-        }
-        if (self.icon_font.texture.id != c.GetFontDefault().texture.id and self.icon_font.texture.id != self.font.texture.id) {
-            c.UnloadFont(self.icon_font);
-        }
-        if (self.terminal_texture) |rt| {
-            c.UnloadRenderTexture(rt);
-            self.terminal_texture = null;
-        }
-        if (self.editor_texture) |rt| {
-            c.UnloadRenderTexture(rt);
-            self.editor_texture = null;
-        }
-        self.terminal_font.deinit();
-        c.CloseWindow();
-        self.allocator.destroy(self);
+        self.icon_font = try TerminalFont.init(
+            self.allocator,
+            FONT_PATH,
+            size * 2.0,
+            SYMBOLS_FALLBACK_PATH,
+            UNICODE_SYMBOLS2_PATH,
+            UNICODE_SYMBOLS_PATH,
+            UNICODE_MONO_PATH,
+            UNICODE_SANS_PATH,
+            EMOJI_COLOR_FALLBACK_PATH,
+            EMOJI_TEXT_FALLBACK_PATH,
+        );
+        self.icon_font.setAtlasFilterPoint();
+        self.icon_font_size = size * 2.0;
+        self.icon_char_width = self.icon_font.cell_width;
+        self.icon_char_height = self.icon_font.line_height;
     }
 
     pub fn loadFont(self: *Renderer, path: [*:0]const u8, size: f32) void {
-        const font = c.LoadFontEx(path, @intFromFloat(size), null, 0);
-        if (font.texture.id != 0) {
-            if (self.font.texture.id != c.GetFontDefault().texture.id) {
-                c.UnloadFont(self.font);
-            }
-            self.font = font;
-            self.font_size = size;
-            // Measure a character to get proper width
-            const measure = c.MeasureTextEx(self.font, "M", size, 0);
-            self.char_width = measure.x;
-            self.char_height = measure.y;
-            self.terminal_cell_width = self.char_width;
-        }
+        self.terminal_font.deinit();
+        self.terminal_font = TerminalFont.init(
+            self.allocator,
+            path,
+            size,
+            SYMBOLS_FALLBACK_PATH,
+            UNICODE_SYMBOLS2_PATH,
+            UNICODE_SYMBOLS_PATH,
+            UNICODE_MONO_PATH,
+            UNICODE_SANS_PATH,
+            EMOJI_COLOR_FALLBACK_PATH,
+            EMOJI_TEXT_FALLBACK_PATH,
+        ) catch return;
+        self.terminal_font.setAtlasFilterPoint();
+        self.font_size = size;
+        self.char_width = self.terminal_font.cell_width;
+        self.char_height = self.terminal_font.line_height;
+        self.terminal_cell_width = self.char_width;
+        self.terminal_cell_height = self.char_height;
     }
 
     pub fn loadFontWithGlyphs(self: *Renderer, allocator: std.mem.Allocator, path: [*:0]const u8, size: f32) void {
-        if (loadFontWithGlyphsAtSize(allocator, path, size)) |font| {
-            if (self.font.texture.id != c.GetFontDefault().texture.id) {
-                c.UnloadFont(self.font);
-            }
-            self.font = font;
-            self.font_size = size;
-            const measure = c.MeasureTextEx(self.font, "M", size, 0);
-            self.char_width = measure.x;
-            self.char_height = measure.y;
-            // Terminal metrics are managed by TerminalFont
-        }
+        _ = allocator;
+        self.loadFont(path, size);
     }
 
     fn queryUiScale(self: *Renderer) f32 {
         var scale: f32 = 1.0;
-        const dpi = c.GetWindowScaleDPI();
+        const dpi = self.getDpiScale();
         scale = @max(dpi.x, dpi.y);
 
         if (compositor.isWayland()) {
-            const now = c.GetTime();
+            const now = getTime();
             if (now - self.wayland_scale_last_update > 1.0) {
                 self.wayland_scale_cache = compositor.getWaylandScale(self.allocator);
                 self.wayland_scale_last_update = now;
@@ -311,40 +480,16 @@ pub const Renderer = struct {
 
     fn applyFontScale(self: *Renderer) !void {
         const size = self.base_font_size * self.ui_scale * self.user_zoom;
-        self.loadFontWithGlyphs(self.allocator, FONT_PATH, size);
-        if (loadFontWithGlyphsAtSize(self.allocator, FONT_PATH, size * 2.0)) |icon_font| {
-            if (self.icon_font.texture.id != c.GetFontDefault().texture.id and self.icon_font.texture.id != self.font.texture.id) {
-                c.UnloadFont(self.icon_font);
-            }
-            self.icon_font = icon_font;
-            self.icon_font_size = size * 2.0;
-            const measure = c.MeasureTextEx(self.icon_font, "M", self.icon_font_size, 0);
-            self.icon_char_width = measure.x;
-            self.icon_char_height = measure.y;
-            c.SetTextureFilter(self.icon_font.texture, c.TEXTURE_FILTER_BILINEAR);
-        } else {
-            self.icon_font = self.font;
-            self.icon_font_size = self.font_size;
-            self.icon_char_width = self.char_width;
-            self.icon_char_height = self.char_height;
+        var font_it = self.font_cache.iterator();
+        while (font_it.next()) |entry| {
+            entry.value_ptr.*.deinit();
+            self.allocator.destroy(entry.value_ptr.*);
         }
-
+        self.font_cache.clearRetainingCapacity();
         self.terminal_font.deinit();
-        self.terminal_font = try TerminalFont.init(
-            self.allocator,
-            FONT_PATH,
-            size,
-            SYMBOLS_FALLBACK_PATH,
-            UNICODE_SYMBOLS2_PATH,
-            UNICODE_SYMBOLS_PATH,
-            UNICODE_MONO_PATH,
-            UNICODE_SANS_PATH,
-            EMOJI_COLOR_FALLBACK_PATH,
-            EMOJI_TEXT_FALLBACK_PATH,
-        );
-        self.terminal_font.setAtlasFilterPoint();
-        self.terminal_cell_width = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(self.terminal_font.cell_width)))));
-        self.terminal_cell_height = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(self.terminal_font.line_height)))));
+        self.icon_font.deinit();
+        self.font_size = size;
+        try self.initFonts(size);
     }
 
     pub fn queueUserZoom(self: *Renderer, delta: f32, now: f64) bool {
@@ -384,293 +529,191 @@ pub const Renderer = struct {
         return self.ui_scale * self.user_zoom;
     }
 
-    fn loadFontWithGlyphsAtSize(allocator: std.mem.Allocator, path: [*:0]const u8, size: f32) ?c.Font {
-        const ranges = [_]struct { start: u32, end: u32 }{
-            .{ .start = 0x20, .end = 0x7E },   // Basic Latin
-            .{ .start = 0xA0, .end = 0xFF },   // Latin-1 Supplement
-            .{ .start = 0x2500, .end = 0x257F }, // Box Drawing
-            .{ .start = 0x2580, .end = 0x259F }, // Block Elements
-            .{ .start = 0x2700, .end = 0x27BF }, // Dingbats (includes ❯)
-            .{ .start = 0x2800, .end = 0x28FF }, // Braille Patterns
-            .{ .start = 0xE000, .end = 0xF8FF }, // PUA (BMP) - Nerd Font
-            .{ .start = 0xF0000, .end = 0xF2FFF }, // PUA-A - Nerd Font v3
-        };
-
-        var total: usize = 0;
-        for (ranges) |range| {
-            total += @as(usize, @intCast(range.end - range.start + 1));
-        }
-
-        const glyphs = allocator.alloc(c_int, total) catch return null;
-        defer allocator.free(glyphs);
-
-        var idx: usize = 0;
-        for (ranges) |range| {
-            var codepoint: u32 = range.start;
-            while (codepoint <= range.end) : (codepoint += 1) {
-                glyphs[idx] = @intCast(codepoint);
-                idx += 1;
-            }
-        }
-
-        // Load font with extra padding to avoid glyph clipping
-        var data_size: c_int = 0;
-        const file_data = c.LoadFileData(path, &data_size);
-        if (file_data == null or data_size == 0) return null;
-        defer c.UnloadFileData(file_data);
-
-        var glyph_count: c_int = 0;
-        const font_data = c.LoadFontData(
-            file_data,
-            data_size,
-            @intFromFloat(size),
-            glyphs.ptr,
-            @intCast(total),
-            0,
-            &glyph_count,
-        );
-        if (font_data == null or glyph_count == 0) return null;
-
-        var recs: [*c]c.Rectangle = null;
-        const padding: c_int = 2;
-        const image = c.GenImageFontAtlas(font_data, &recs, glyph_count, @intFromFloat(size), padding, 0);
-        const texture = c.LoadTextureFromImage(image);
-        c.UnloadImage(image);
-
-        if (texture.id != 0) {
-            return .{
-                .baseSize = @intFromFloat(size),
-                .glyphCount = glyph_count,
-                .glyphPadding = padding,
-                .texture = texture,
-                .recs = recs,
-                .glyphs = font_data,
-            };
-        } else {
-            const temp_font = c.Font{
-                .baseSize = @intFromFloat(size),
-                .glyphCount = glyph_count,
-                .glyphPadding = padding,
-                .texture = texture,
-                .recs = recs,
-                .glyphs = font_data,
-            };
-            c.UnloadFont(temp_font);
-            return null;
-        }
-    }
-
     pub fn shouldClose(self: *Renderer) bool {
-        _ = self;
-        return c.WindowShouldClose();
+        return self.should_close_flag;
     }
 
     pub fn beginFrame(self: *Renderer) void {
-        c.BeginDrawing();
+        const window_size = getWindowSize(self.window);
+        const drawable = getDrawableSize(self.window);
+        self.width = window_size.w;
+        self.height = window_size.h;
+        self.render_width = drawable.w;
+        self.render_height = drawable.h;
 
-        // Update dimensions AFTER BeginDrawing (which polls events and updates state)
-        self.width = c.GetScreenWidth();
-        self.height = c.GetScreenHeight();
-
+        self.bindDefaultTarget();
         self.updateMouseScale();
-        c.ClearBackground(self.theme.background.toRaylib());
+        gl.Disable(gl.c.GL_SCISSOR_TEST);
+
+        const bg = self.theme.background.toRgba();
+        gl.ClearColor(
+            @as(f32, @floatFromInt(bg.r)) / 255.0,
+            @as(f32, @floatFromInt(bg.g)) / 255.0,
+            @as(f32, @floatFromInt(bg.b)) / 255.0,
+            @as(f32, @floatFromInt(bg.a)) / 255.0,
+        );
+        gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
     }
 
-    pub fn endFrame(_: *Renderer) void {
-        c.EndDrawing();
+    pub fn endFrame(self: *Renderer) void {
+        sdl.SDL_GL_SwapWindow(self.window);
     }
 
-    pub fn ensureTerminalTexture(self: *Renderer, width: c_int, height: c_int) bool {
-        if (width <= 0 or height <= 0) return false;
-        if (self.terminal_texture != null and self.terminal_texture_w == width and self.terminal_texture_h == height) {
-            return false;
-        }
-        if (self.terminal_texture) |rt| {
-            c.UnloadRenderTexture(rt);
-            self.terminal_texture = null;
-        }
-        const rt = c.LoadRenderTexture(width, height);
-        if (rt.texture.id == 0) {
-            self.terminal_texture_w = 0;
-            self.terminal_texture_h = 0;
-            return false;
-        }
-        c.SetTextureFilter(rt.texture, c.TEXTURE_FILTER_POINT);
-        self.terminal_texture = rt;
-        self.terminal_texture_w = width;
-        self.terminal_texture_h = height;
-        return true;
+    pub fn ensureTerminalTexture(self: *Renderer, width: i32, height: i32) bool {
+        return self.ensureRenderTarget(&self.terminal_target, width, height, gl.c.GL_NEAREST);
     }
 
-    pub fn ensureEditorTexture(self: *Renderer, width: c_int, height: c_int) bool {
-        if (width <= 0 or height <= 0) return false;
-        if (self.editor_texture != null and self.editor_texture_w == width and self.editor_texture_h == height) {
-            return false;
-        }
-        if (self.editor_texture) |rt| {
-            c.UnloadRenderTexture(rt);
-            self.editor_texture = null;
-        }
-        const rt = c.LoadRenderTexture(width, height);
-        if (rt.texture.id == 0) {
-            self.editor_texture_w = 0;
-            self.editor_texture_h = 0;
-            return false;
-        }
-        c.SetTextureFilter(rt.texture, c.TEXTURE_FILTER_POINT);
-        self.editor_texture = rt;
-        self.editor_texture_w = width;
-        self.editor_texture_h = height;
-        return true;
+    pub fn ensureEditorTexture(self: *Renderer, width: i32, height: i32) bool {
+        return self.ensureRenderTarget(&self.editor_target, width, height, gl.c.GL_NEAREST);
     }
 
     pub fn beginTerminalTexture(self: *Renderer) bool {
-        if (self.terminal_texture) |rt| {
-            c.BeginTextureMode(rt);
-            return true;
-        }
-        return false;
+        return self.beginRenderTarget(self.terminal_target);
     }
 
-    pub fn endTerminalTexture(_: *Renderer) void {
-        c.EndTextureMode();
+    pub fn endTerminalTexture(self: *Renderer) void {
+        self.bindDefaultTarget();
     }
 
     pub fn beginEditorTexture(self: *Renderer) bool {
-        if (self.editor_texture) |rt| {
-            c.BeginTextureMode(rt);
-            return true;
-        }
-        return false;
+        return self.beginRenderTarget(self.editor_target);
     }
 
-    pub fn endEditorTexture(_: *Renderer) void {
-        c.EndTextureMode();
+    pub fn endEditorTexture(self: *Renderer) void {
+        self.bindDefaultTarget();
     }
 
     pub fn drawTerminalTexture(self: *Renderer, x: f32, y: f32) void {
-        if (self.terminal_texture) |rt| {
-            const rect = c.Rectangle{
+        if (self.terminal_target) |target| {
+            const src = types.Rect{
                 .x = 0,
-                .y = 0,
-                .width = @as(f32, @floatFromInt(rt.texture.width)),
-                .height = -@as(f32, @floatFromInt(rt.texture.height)),
+                .y = @floatFromInt(target.texture.height),
+                .width = @floatFromInt(target.texture.width),
+                .height = -@as(f32, @floatFromInt(target.texture.height)),
             };
-            const pos = c.Vector2{ .x = x, .y = y };
-            c.DrawTextureRec(rt.texture, rect, pos, c.WHITE);
+            const dest = types.Rect{
+                .x = x,
+                .y = y,
+                .width = @floatFromInt(target.texture.width),
+                .height = @floatFromInt(target.texture.height),
+            };
+            self.drawTextureRect(target.texture, src, dest, Color.white.toRgba());
         }
     }
 
     pub fn drawEditorTexture(self: *Renderer, x: f32, y: f32) void {
-        if (self.editor_texture) |rt| {
-            const rect = c.Rectangle{
+        if (self.editor_target) |target| {
+            const src = types.Rect{
                 .x = 0,
-                .y = 0,
-                .width = @as(f32, @floatFromInt(rt.texture.width)),
-                .height = -@as(f32, @floatFromInt(rt.texture.height)),
+                .y = @floatFromInt(target.texture.height),
+                .width = @floatFromInt(target.texture.width),
+                .height = -@as(f32, @floatFromInt(target.texture.height)),
             };
-            const pos = c.Vector2{ .x = x, .y = y };
-            c.DrawTextureRec(rt.texture, rect, pos, c.WHITE);
+            const dest = types.Rect{
+                .x = x,
+                .y = y,
+                .width = @floatFromInt(target.texture.width),
+                .height = @floatFromInt(target.texture.height),
+            };
+            self.drawTextureRect(target.texture, src, dest, Color.white.toRgba());
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Basic drawing primitives
-    // ─────────────────────────────────────────────────────────────────────────
-
-    pub fn drawRect(self: *Renderer, x: c_int, y: c_int, w: c_int, h: c_int, color: Color) void {
-        _ = self;
-        c.DrawRectangle(x, y, w, h, color.toRaylib());
+    pub fn drawRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
+        if (w <= 0 or h <= 0) return;
+        const dest = types.Rect{
+            .x = @floatFromInt(x),
+            .y = @floatFromInt(y),
+            .width = @floatFromInt(w),
+            .height = @floatFromInt(h),
+        };
+        const src = types.Rect{ .x = 0, .y = 0, .width = 1, .height = 1 };
+        self.drawTextureRect(self.white_texture, src, dest, color.toRgba());
     }
 
-    pub fn drawRectOutline(self: *Renderer, x: c_int, y: c_int, w: c_int, h: c_int, color: Color) void {
-        _ = self;
-        c.DrawRectangleLines(x, y, w, h, color.toRaylib());
+    pub fn drawRectOutline(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
+        const thick: i32 = 1;
+        self.drawRect(x, y, w, thick, color);
+        self.drawRect(x, y + h - thick, w, thick, color);
+        self.drawRect(x, y, thick, h, color);
+        self.drawRect(x + w - thick, y, thick, h, color);
     }
 
-    pub fn setClipboardText(self: *Renderer, text: [*:0]const u8) void {
-        _ = self;
-        c.SetClipboardText(text);
+    pub fn setClipboardText(_: *Renderer, text: [*:0]const u8) void {
+        _ = sdl.SDL_SetClipboardText(text);
     }
 
     pub fn getClipboardText(self: *Renderer) ?[]const u8 {
-        _ = self;
-        const ptr = c.GetClipboardText();
+        const ptr = sdl.SDL_GetClipboardText();
         if (ptr == null) return null;
-        const cstr: [*:0]const u8 = @ptrCast(ptr);
-        const slice = std.mem.span(cstr);
-        if (slice.len == 0) return null;
-        return slice;
+        const slice = std.mem.span(@as([*:0]const u8, @ptrCast(ptr)));
+        if (slice.len == 0) {
+            sdl.SDL_free(ptr);
+            return null;
+        }
+        self.clipboard_buffer.clearRetainingCapacity();
+        _ = self.clipboard_buffer.appendSlice(self.allocator, slice) catch {
+            sdl.SDL_free(ptr);
+            return null;
+        };
+        sdl.SDL_free(ptr);
+        return self.clipboard_buffer.items;
     }
 
     pub fn drawText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
-        if (text.len == 0) return;
-
-        // Need null-terminated string for raylib
-        var buf: [1024]u8 = undefined;
-        const len = @min(text.len, buf.len - 1);
-        @memcpy(buf[0..len], text[0..len]);
-        buf[len] = 0;
-
-        c.DrawTextEx(self.font, &buf, .{ .x = x, .y = y }, self.font_size, 0, color.toRaylib());
+        self.drawTextWithFont(&self.terminal_font, self.terminal_font.cell_width, self.terminal_font.line_height, text, x, y, color);
     }
 
     pub fn drawTextSized(self: *Renderer, text: []const u8, x: f32, y: f32, size: f32, color: Color) void {
-        if (text.len == 0) return;
-
-        // Need null-terminated string for raylib
-        var buf: [1024]u8 = undefined;
-        const len = @min(text.len, buf.len - 1);
-        @memcpy(buf[0..len], text[0..len]);
-        buf[len] = 0;
-
-        c.DrawTextEx(self.font, &buf, .{ .x = x, .y = y }, size, 0, color.toRaylib());
+        const font = self.fontForSize(size) orelse {
+            self.drawText(text, x, y, color);
+            return;
+        };
+        self.drawTextWithFont(font, font.cell_width, font.line_height, text, x, y, color);
     }
 
     pub fn drawIconText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
-        if (text.len == 0) return;
-
-        var buf: [1024]u8 = undefined;
-        const len = @min(text.len, buf.len - 1);
-        @memcpy(buf[0..len], text[0..len]);
-        buf[len] = 0;
-
-        c.DrawTextEx(self.icon_font, &buf, .{ .x = x, .y = y }, self.icon_font_size, 0, color.toRaylib());
+        self.drawTextWithFont(&self.icon_font, self.icon_font.cell_width, self.icon_font.line_height, text, x, y, color);
     }
 
     pub fn measureIconTextWidth(self: *Renderer, text: []const u8) f32 {
-        if (text.len == 0) return 0;
-        var buf: [1024]u8 = undefined;
-        const len = @min(text.len, buf.len - 1);
-        @memcpy(buf[0..len], text[0..len]);
-        buf[len] = 0;
-        const measure = c.MeasureTextEx(self.icon_font, &buf, self.icon_font_size, 0);
-        return measure.x;
+        return self.measureTextWidth(&self.icon_font, text);
     }
 
     pub fn drawChar(self: *Renderer, char: u8, x: f32, y: f32, color: Color) void {
-        var buf = [2]u8{ char, 0 };
-        c.DrawTextEx(self.font, &buf, .{ .x = x, .y = y }, self.font_size, 0, color.toRaylib());
+        var buf = [1]u8{char};
+        self.drawText(buf[0..], x, y, color);
     }
 
-    pub fn drawLine(self: *Renderer, x1: c_int, y1: c_int, x2: c_int, y2: c_int, color: Color) void {
-        _ = self;
-        c.DrawLine(x1, y1, x2, y2, color.toRaylib());
+    pub fn drawLine(self: *Renderer, x1: i32, y1: i32, x2: i32, y2: i32, color: Color) void {
+        if (x1 == x2) {
+            const top = @min(y1, y2);
+            const h = @abs(y2 - y1) + 1;
+            self.drawRect(x1, top, 1, h, color);
+            return;
+        }
+        if (y1 == y2) {
+            const left = @min(x1, x2);
+            const w = @abs(x2 - x1) + 1;
+            self.drawRect(left, y1, w, 1, color);
+            return;
+        }
+        // Fallback: draw bounding rect for diagonal lines.
+        const left = @min(x1, x2);
+        const top = @min(y1, y2);
+        const w = @abs(x2 - x1) + 1;
+        const h = @abs(y2 - y1) + 1;
+        self.drawRect(left, top, w, h, color);
     }
 
-    pub fn beginClip(self: *Renderer, x: c_int, y: c_int, w: c_int, h: c_int) void {
-        _ = self;
-        c.BeginScissorMode(x, y, w, h);
+    pub fn beginClip(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
+        gl.Enable(gl.c.GL_SCISSOR_TEST);
+        gl.Scissor(x, self.target_height - (y + h), w, h);
     }
 
-    pub fn endClip(self: *Renderer) void {
-        _ = self;
-        c.EndScissorMode();
+    pub fn endClip(_: *Renderer) void {
+        gl.Disable(gl.c.GL_SCISSOR_TEST);
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Editor-specific drawing
-    // ─────────────────────────────────────────────────────────────────────────
 
     pub fn drawEditorLine(
         self: *Renderer,
@@ -701,10 +744,6 @@ pub const Renderer = struct {
         editor_render.drawCursor(self, x, y, mode);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Terminal drawing
-    // ─────────────────────────────────────────────────────────────────────────
-
     pub fn drawTerminalCell(
         self: *Renderer,
         codepoint: u32,
@@ -728,7 +767,6 @@ pub const Renderer = struct {
         const snapped_cell_w_i = snapInt(self.terminal_cell_width);
         const snapped_cell_h_i = snapInt(self.terminal_cell_height);
 
-        // Draw background
         if (draw_bg) {
             self.drawRect(
                 snapInt(snapped_x),
@@ -739,20 +777,27 @@ pub const Renderer = struct {
             );
         }
 
-        // Draw character
         if (codepoint != 0) {
             const text_color = if (is_cursor) bg else fg;
-            _ = bold; // TODO: handle bold with different font weight
+            _ = bold;
+            const draw = terminal_font_mod.DrawContext{
+                .ctx = self,
+                .drawTexture = drawTextureThunk,
+            };
             if (!self.drawTerminalBoxGlyph(codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color)) {
-                self.terminal_font.drawGlyph(codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, followed_by_space, .{
-                    .r = text_color.r,
-                    .g = text_color.g,
-                    .b = text_color.b,
-                    .a = text_color.a,
-                });
+                self.terminal_font.drawGlyph(
+                    draw,
+                    codepoint,
+                    snapped_x,
+                    snapped_y,
+                    snapped_cell_width,
+                    snapped_cell_height,
+                    followed_by_space,
+                    text_color.toRgba(),
+                );
             }
             if (underline) {
-                const underline_y: c_int = snapInt(snapped_y + self.terminal_cell_height - 2);
+                const underline_y: i32 = snapInt(snapped_y + self.terminal_cell_height - 2);
                 self.drawRect(
                     snapInt(snapped_x),
                     underline_y,
@@ -773,178 +818,169 @@ pub const Renderer = struct {
         h: f32,
         color: Color,
     ) bool {
-        _ = self;
 
-        const ix = @as(c_int, @intFromFloat(x));
-        const iy = @as(c_int, @intFromFloat(y));
-        const iw = @as(c_int, @intFromFloat(w));
-        const ih = @as(c_int, @intFromFloat(h));
+        const ix = @as(i32, @intFromFloat(x));
+        const iy = @as(i32, @intFromFloat(y));
+        const iw = @as(i32, @intFromFloat(w));
+        const ih = @as(i32, @intFromFloat(h));
         const mid_x = ix + @divTrunc(iw, 2);
         const mid_y = iy + @divTrunc(ih, 2);
-        const thin: c_int = 1;
-        const thick: c_int = @max(2, @divTrunc(ih, 6));
-
-        // With integer-snapped cell metrics we avoid gaps, so no extra extension needed.
-        const extend: c_int = 0;
+        const thin: i32 = 1;
+        const thick: i32 = @max(2, @divTrunc(ih, 6));
+        const extend: i32 = 0;
 
         switch (codepoint) {
             0x2500 => { // ─
-                c.DrawRectangle(ix, mid_y, iw, thin, color.toRaylib());
+                self.drawRect(ix, mid_y, iw, thin, color);
                 return true;
             },
             0x2501 => { // ━
-                c.DrawRectangle(ix, mid_y - @divTrunc(thick, 2), iw, thick, color.toRaylib());
+                self.drawRect(ix, mid_y - @divTrunc(thick, 2), iw, thick, color);
                 return true;
             },
-            0x2502 => { // │ - full height vertical, extend both ends
-                c.DrawRectangle(mid_x, iy - extend, thin, ih + extend * 2, color.toRaylib());
+            0x2502 => { // │
+                self.drawRect(mid_x, iy - extend, thin, ih + extend * 2, color);
                 return true;
             },
             0x2503 => { // ┃
-                c.DrawRectangle(mid_x - @divTrunc(thick, 2), iy - extend, thick, ih + extend * 2, color.toRaylib());
+                self.drawRect(mid_x - @divTrunc(thick, 2), iy - extend, thick, ih + extend * 2, color);
                 return true;
             },
-            0x256d => { // ╭ - rounded corner (treat as light ┌)
-                c.DrawRectangle(mid_x, mid_y, iw - (mid_x - ix), thin, color.toRaylib());
-                c.DrawRectangle(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color.toRaylib());
+            0x256d => { // ╭
+                self.drawRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
+                self.drawRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
                 return true;
             },
-            0x256e => { // ╮ - rounded corner (treat as light ┐)
-                c.DrawRectangle(ix, mid_y, mid_x - ix + thin, thin, color.toRaylib());
-                c.DrawRectangle(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color.toRaylib());
+            0x256e => { // ╮
+                self.drawRect(ix, mid_y, mid_x - ix + thin, thin, color);
+                self.drawRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
                 return true;
             },
-            0x256f => { // ╯ - rounded corner (treat as light ┘)
-                c.DrawRectangle(ix, mid_y, mid_x - ix + thin, thin, color.toRaylib());
-                c.DrawRectangle(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color.toRaylib());
+            0x256f => { // ╯
+                self.drawRect(ix, mid_y, mid_x - ix + thin, thin, color);
+                self.drawRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
                 return true;
             },
-            0x2570 => { // ╰ - rounded corner (treat as light └)
-                c.DrawRectangle(mid_x, mid_y, iw - (mid_x - ix), thin, color.toRaylib());
-                c.DrawRectangle(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color.toRaylib());
+            0x2570 => { // ╰
+                self.drawRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
+                self.drawRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
                 return true;
             },
-            0x250c => { // ┌ - corner down-right, extend down
-                c.DrawRectangle(mid_x, mid_y, iw - (mid_x - ix), thin, color.toRaylib());
-                c.DrawRectangle(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color.toRaylib());
+            0x250c => { // ┌
+                self.drawRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
+                self.drawRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
                 return true;
             },
-            0x2510 => { // ┐ - corner down-left, extend down
-                c.DrawRectangle(ix, mid_y, mid_x - ix + thin, thin, color.toRaylib());
-                c.DrawRectangle(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color.toRaylib());
+            0x2510 => { // ┐
+                self.drawRect(ix, mid_y, mid_x - ix + thin, thin, color);
+                self.drawRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
                 return true;
             },
-            0x2514 => { // └ - corner up-right, extend up
-                c.DrawRectangle(mid_x, mid_y, iw - (mid_x - ix), thin, color.toRaylib());
-                c.DrawRectangle(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color.toRaylib());
+            0x2514 => { // └
+                self.drawRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
+                self.drawRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
                 return true;
             },
-            0x2518 => { // ┘ - corner up-left, extend up
-                c.DrawRectangle(ix, mid_y, mid_x - ix + thin, thin, color.toRaylib());
-                c.DrawRectangle(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color.toRaylib());
+            0x2518 => { // ┘
+                self.drawRect(ix, mid_y, mid_x - ix + thin, thin, color);
+                self.drawRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
                 return true;
             },
-            0x2574 => { // ╴ - light left
-                c.DrawRectangle(ix, mid_y, mid_x - ix + thin, thin, color.toRaylib());
+            0x2574 => { // ╴
+                self.drawRect(ix, mid_y, mid_x - ix + thin, thin, color);
                 return true;
             },
-            0x2575 => { // ╵ - light up
-                c.DrawRectangle(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color.toRaylib());
+            0x2575 => { // ╵
+                self.drawRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
                 return true;
             },
-            0x2576 => { // ╶ - light right
-                c.DrawRectangle(mid_x, mid_y, iw - (mid_x - ix), thin, color.toRaylib());
+            0x2576 => { // ╶
+                self.drawRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
                 return true;
             },
-            0x2577 => { // ╷ - light down
-                c.DrawRectangle(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color.toRaylib());
+            0x2577 => { // ╷
+                self.drawRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
                 return true;
             },
-            0x251c => { // ├ - T right, extend both ends
-                c.DrawRectangle(mid_x, iy - extend, thin, ih + extend * 2, color.toRaylib());
-                c.DrawRectangle(mid_x, mid_y, iw - (mid_x - ix), thin, color.toRaylib());
+            0x251c => { // ├
+                self.drawRect(mid_x, iy - extend, thin, ih + extend * 2, color);
+                self.drawRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
                 return true;
             },
-            0x2524 => { // ┤ - T left, extend both ends
-                c.DrawRectangle(mid_x, iy - extend, thin, ih + extend * 2, color.toRaylib());
-                c.DrawRectangle(ix, mid_y, mid_x - ix + thin, thin, color.toRaylib());
+            0x2524 => { // ┤
+                self.drawRect(mid_x, iy - extend, thin, ih + extend * 2, color);
+                self.drawRect(ix, mid_y, mid_x - ix + thin, thin, color);
                 return true;
             },
-            0x252c => { // ┬ - T down, extend down
-                c.DrawRectangle(ix, mid_y, iw, thin, color.toRaylib());
-                c.DrawRectangle(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color.toRaylib());
+            0x252c => { // ┬
+                self.drawRect(ix, mid_y, iw, thin, color);
+                self.drawRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
                 return true;
             },
-            0x2534 => { // ┴ - T up, extend up
-                c.DrawRectangle(ix, mid_y, iw, thin, color.toRaylib());
-                c.DrawRectangle(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color.toRaylib());
+            0x2534 => { // ┴
+                self.drawRect(ix, mid_y, iw, thin, color);
+                self.drawRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
                 return true;
             },
-            0x253c => { // ┼ - cross, extend both ends
-                c.DrawRectangle(ix, mid_y, iw, thin, color.toRaylib());
-                c.DrawRectangle(mid_x, iy - extend, thin, ih + extend * 2, color.toRaylib());
+            0x253c => { // ┼
+                self.drawRect(ix, mid_y, iw, thin, color);
+                self.drawRect(mid_x, iy - extend, thin, ih + extend * 2, color);
                 return true;
             },
-            0x2580 => { // ▀ upper half block
-                c.DrawRectangle(ix, iy, iw, @divTrunc(ih, 2), color.toRaylib());
+            0x2580 => { // ▀
+                self.drawRect(ix, iy, iw, @divTrunc(ih, 2), color);
                 return true;
             },
-            0x2584 => { // ▄ lower half block
+            0x2584 => { // ▄
                 const half = @divTrunc(ih, 2);
-                c.DrawRectangle(ix, iy + half, iw, ih - half, color.toRaylib());
+                self.drawRect(ix, iy + half, iw, ih - half, color);
                 return true;
             },
-            0x2588 => { // █ full block
-                c.DrawRectangle(ix, iy, iw, ih, color.toRaylib());
+            0x2588 => { // █
+                self.drawRect(ix, iy, iw, ih, color);
                 return true;
             },
             else => return false,
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Input handling
-    // ─────────────────────────────────────────────────────────────────────────
-
     pub fn getCharPressed(self: *Renderer) ?u32 {
-        _ = self;
-        const char = c.GetCharPressed();
-        if (char > 0) return @intCast(char);
-        return null;
+        if (self.char_queue.items.len == 0) return null;
+        return self.char_queue.orderedRemove(0);
     }
 
-    pub fn getKeyPressed(self: *Renderer) ?c_int {
-        _ = self;
-        const key = c.GetKeyPressed();
-        if (key > 0) return key;
-        return null;
+    pub fn getKeyPressed(self: *Renderer) ?i32 {
+        if (self.key_queue.items.len == 0) return null;
+        return self.key_queue.orderedRemove(0);
     }
 
-    pub fn isKeyDown(self: *Renderer, key: c_int) bool {
-        _ = self;
-        return c.IsKeyDown(key);
-    }
-
-    pub fn isKeyPressed(self: *Renderer, key: c_int) bool {
-        _ = self;
-        return c.IsKeyPressed(key);
-    }
-
-    pub fn isKeyRepeated(self: *Renderer, key: c_int) bool {
+    pub fn isKeyDown(self: *Renderer, key: i32) bool {
         if (key < 0) return false;
         const idx: usize = @intCast(key);
-        if (idx >= key_repeat_key_count) {
-            return c.IsKeyPressed(key);
-        }
+        if (idx >= key_repeat_key_count) return false;
+        return self.key_down[idx];
+    }
 
-        const now = c.GetTime();
-        const down = c.IsKeyDown(key);
+    pub fn isKeyPressed(self: *Renderer, key: i32) bool {
+        if (key < 0) return false;
+        const idx: usize = @intCast(key);
+        if (idx >= key_repeat_key_count) return false;
+        return self.key_pressed[idx];
+    }
+
+    pub fn isKeyRepeated(self: *Renderer, key: i32) bool {
+        if (key < 0) return false;
+        const idx: usize = @intCast(key);
+        if (idx >= key_repeat_key_count) return false;
+
+        const now = getTime();
+        const down = self.key_down[idx];
         if (!down) {
             self.key_repeat_next[idx] = 0;
             return false;
         }
 
-        if (c.IsKeyPressed(key)) {
+        if (self.key_pressed[idx]) {
             self.key_repeat_next[idx] = now + key_repeat_initial_delay;
             return true;
         }
@@ -961,55 +997,54 @@ pub const Renderer = struct {
     }
 
     pub fn getMousePos(self: *Renderer) MousePos {
-        _ = self;
-        const pos = c.GetMousePosition();
-        return .{ .x = pos.x, .y = pos.y };
+        const pos = self.getMousePosRaw();
+        return .{ .x = pos.x * self.mouse_scale.x, .y = pos.y * self.mouse_scale.y };
     }
 
-    pub fn getMousePosScaled(_: *Renderer, scale: f32) MousePos {
-        const pos = c.GetMousePosition();
+    pub fn getMousePosScaled(self: *Renderer, scale: f32) MousePos {
+        const pos = self.getMousePosRaw();
         return .{ .x = pos.x * scale, .y = pos.y * scale };
     }
 
-    pub fn getMousePosRaw(self: *Renderer) MousePos {
-        _ = self;
-        const pos = c.GetMousePosition();
-        return .{ .x = pos.x, .y = pos.y };
+    pub fn getMousePosRaw(_: *Renderer) MousePos {
+        var x: c_int = 0;
+        var y: c_int = 0;
+        _ = sdl.SDL_GetMouseState(&x, &y);
+        return .{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
     }
 
     pub fn getDpiScale(self: *Renderer) MousePos {
-        _ = self;
-        const scale = c.GetWindowScaleDPI();
-        return .{ .x = scale.x, .y = scale.y };
+        const window_size = getWindowSize(self.window);
+        const drawable = getDrawableSize(self.window);
+        if (window_size.w <= 0 or window_size.h <= 0) return .{ .x = 1.0, .y = 1.0 };
+        return .{
+            .x = @as(f32, @floatFromInt(drawable.w)) / @as(f32, @floatFromInt(window_size.w)),
+            .y = @as(f32, @floatFromInt(drawable.h)) / @as(f32, @floatFromInt(window_size.h)),
+        };
     }
 
     pub fn getScreenSize(self: *Renderer) MousePos {
-        _ = self;
-        return .{
-            .x = @as(f32, @floatFromInt(c.GetScreenWidth())),
-            .y = @as(f32, @floatFromInt(c.GetScreenHeight())),
-        };
+        const window_size = getWindowSize(self.window);
+        return .{ .x = @floatFromInt(window_size.w), .y = @floatFromInt(window_size.h) };
     }
 
     pub fn getMonitorSize(self: *Renderer) MousePos {
-        _ = self;
-        const monitor = c.GetCurrentMonitor();
-        return .{
-            .x = @as(f32, @floatFromInt(c.GetMonitorWidth(monitor))),
-            .y = @as(f32, @floatFromInt(c.GetMonitorHeight(monitor))),
-        };
+        const display = sdl.SDL_GetWindowDisplayIndex(self.window);
+        var rect: sdl.SDL_Rect = undefined;
+        if (display >= 0 and sdl.SDL_GetDisplayBounds(display, &rect) == 0) {
+            return .{ .x = @floatFromInt(rect.w), .y = @floatFromInt(rect.h) };
+        }
+        return self.getScreenSize();
     }
 
     fn updateMouseScale(self: *Renderer) void {
-        const screen_w = @as(f32, @floatFromInt(c.GetScreenWidth()));
-        const screen_h = @as(f32, @floatFromInt(c.GetScreenHeight()));
-        const render_w = @as(f32, @floatFromInt(c.GetRenderWidth()));
-        const render_h = @as(f32, @floatFromInt(c.GetRenderHeight()));
-        var sx: f32 = if (screen_w > 0) render_w / screen_w else 1.0;
-        var sy: f32 = if (screen_h > 0) render_h / screen_h else 1.0;
+        const window_size = getWindowSize(self.window);
+        const drawable = getDrawableSize(self.window);
+        var sx: f32 = if (window_size.w > 0) @as(f32, @floatFromInt(drawable.w)) / @as(f32, @floatFromInt(window_size.w)) else 1.0;
+        var sy: f32 = if (window_size.h > 0) @as(f32, @floatFromInt(drawable.h)) / @as(f32, @floatFromInt(window_size.h)) else 1.0;
 
         if (compositor.isWayland()) {
-            const now = c.GetTime();
+            const now = getTime();
             if (now - self.wayland_scale_last_update > 1.0) {
                 self.wayland_scale_cache = compositor.getWaylandScale(self.allocator);
                 self.wayland_scale_last_update = now;
@@ -1030,164 +1065,539 @@ pub const Renderer = struct {
         }
 
         self.mouse_scale = .{ .x = sx, .y = sy };
-        c.SetMouseScale(sx, sy);
     }
 
     pub fn getRenderSize(self: *Renderer) MousePos {
-        _ = self;
-        return .{
-            .x = @as(f32, @floatFromInt(c.GetRenderWidth())),
-            .y = @as(f32, @floatFromInt(c.GetRenderHeight())),
-        };
+        const drawable = getDrawableSize(self.window);
+        return .{ .x = @floatFromInt(drawable.w), .y = @floatFromInt(drawable.h) };
     }
 
-    pub fn isMouseButtonPressed(self: *Renderer, button: c_int) bool {
-        _ = self;
-        return c.IsMouseButtonPressed(button);
+    pub fn isMouseButtonPressed(self: *Renderer, button: i32) bool {
+        if (button < 0 or @as(usize, @intCast(button)) >= mouse_button_count) return false;
+        return self.mouse_pressed[@intCast(button)];
     }
 
-    pub fn isMouseButtonDown(self: *Renderer, button: c_int) bool {
-        _ = self;
-        return c.IsMouseButtonDown(button);
+    pub fn isMouseButtonDown(self: *Renderer, button: i32) bool {
+        if (button < 0 or @as(usize, @intCast(button)) >= mouse_button_count) return false;
+        return self.mouse_down[@intCast(button)];
     }
 
-    pub fn isMouseButtonReleased(self: *Renderer, button: c_int) bool {
-        _ = self;
-        return c.IsMouseButtonReleased(button);
+    pub fn isMouseButtonReleased(self: *Renderer, button: i32) bool {
+        if (button < 0 or @as(usize, @intCast(button)) >= mouse_button_count) return false;
+        return self.mouse_released[@intCast(button)];
     }
 
-    pub fn getMouseWheelMove(self: *Renderer) f32 {
-        _ = self;
+    pub fn getMouseWheelMove(_: *Renderer) f32 {
         return mouse_wheel_delta;
     }
 
+    fn fontForSize(self: *Renderer, size: f32) ?*TerminalFont {
+        if (std.math.approxEqAbs(f32, size, self.font_size, 0.01)) return &self.terminal_font;
+        if (std.math.approxEqAbs(f32, size, self.icon_font_size, 0.01)) return &self.icon_font;
+        const key: u32 = @intFromFloat(std.math.round(size));
+        if (self.font_cache.get(key)) |font_ptr| return font_ptr;
+
+        const font_ptr = self.allocator.create(TerminalFont) catch return null;
+        font_ptr.* = TerminalFont.init(
+            self.allocator,
+            FONT_PATH,
+            @floatFromInt(key),
+            SYMBOLS_FALLBACK_PATH,
+            UNICODE_SYMBOLS2_PATH,
+            UNICODE_SYMBOLS_PATH,
+            UNICODE_MONO_PATH,
+            UNICODE_SANS_PATH,
+            EMOJI_COLOR_FALLBACK_PATH,
+            EMOJI_TEXT_FALLBACK_PATH,
+        ) catch {
+            self.allocator.destroy(font_ptr);
+            return null;
+        };
+        font_ptr.setAtlasFilterPoint();
+        _ = self.font_cache.put(key, font_ptr) catch {};
+        return font_ptr;
+    }
+
+    fn drawTextWithFont(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: Color) void {
+        if (text.len == 0) return;
+
+        var codepoints = std.ArrayList(u32).empty;
+        defer codepoints.deinit(self.allocator);
+        var it = std.unicode.Utf8View.initUnchecked(text).iterator();
+        while (it.nextCodepoint()) |cp| {
+            _ = codepoints.append(self.allocator, cp) catch {};
+        }
+        if (codepoints.items.len == 0) return;
+
+        var cursor_x = x;
+        const draw = terminal_font_mod.DrawContext{
+            .ctx = self,
+            .drawTexture = drawTextureThunk,
+        };
+        var idx: usize = 0;
+        while (idx < codepoints.items.len) : (idx += 1) {
+            const cp = codepoints.items[idx];
+            const next = if (idx + 1 < codepoints.items.len) codepoints.items[idx + 1] else 0;
+            const followed_by_space = next == ' ';
+            font.drawGlyph(draw, cp, cursor_x, y, cell_w, cell_h, followed_by_space, color.toRgba());
+            const adv = font.glyphAdvance(cp) catch cell_w;
+            cursor_x += if (adv > 0) adv else cell_w;
+        }
+    }
+
+    fn measureTextWidth(_: *Renderer, font: *TerminalFont, text: []const u8) f32 {
+        if (text.len == 0) return 0;
+        var width: f32 = 0;
+        var it = std.unicode.Utf8View.initUnchecked(text).iterator();
+        while (it.nextCodepoint()) |cp| {
+            const adv = font.glyphAdvance(cp) catch font.cell_width;
+            width += if (adv > 0) adv else font.cell_width;
+        }
+        return width;
+    }
+
+    fn bindDefaultTarget(self: *Renderer) void {
+        gl.BindFramebuffer(gl.c.GL_FRAMEBUFFER, 0);
+        self.updateProjection(self.render_width, self.render_height);
+    }
+
+    fn beginRenderTarget(self: *Renderer, target: ?RenderTarget) bool {
+        if (target) |t| {
+            gl.BindFramebuffer(gl.c.GL_FRAMEBUFFER, t.fbo);
+            self.updateProjection(t.texture.width, t.texture.height);
+            return true;
+        }
+        return false;
+    }
+
+    fn ensureRenderTarget(self: *Renderer, target: *?RenderTarget, width: i32, height: i32, filter: i32) bool {
+        if (width <= 0 or height <= 0) return false;
+        if (target.*) |t| {
+            if (t.texture.width == width and t.texture.height == height) return false;
+            self.destroyRenderTarget(target);
+        }
+
+        const texture = createTextureEmpty(width, height, filter);
+        var fbo: gl.GLuint = 0;
+        gl.GenFramebuffers(1, &fbo);
+        gl.BindFramebuffer(gl.c.GL_FRAMEBUFFER, fbo);
+        gl.FramebufferTexture2D(gl.c.GL_FRAMEBUFFER, gl.c.GL_COLOR_ATTACHMENT0, gl.c.GL_TEXTURE_2D, texture.id, 0);
+        const status = gl.CheckFramebufferStatus(gl.c.GL_FRAMEBUFFER);
+        gl.BindFramebuffer(gl.c.GL_FRAMEBUFFER, 0);
+        if (status != gl.c.GL_FRAMEBUFFER_COMPLETE) {
+            gl.DeleteFramebuffers(1, &fbo);
+            gl.DeleteTextures(1, &texture.id);
+            return false;
+        }
+
+        target.* = .{ .texture = texture, .fbo = fbo };
+        return true;
+    }
+
+    fn destroyRenderTarget(_: *Renderer, target: *?RenderTarget) void {
+        if (target.*) |t| {
+            gl.DeleteFramebuffers(1, &t.fbo);
+            gl.DeleteTextures(1, &t.texture.id);
+            target.* = null;
+        }
+    }
+
+    fn updateProjection(self: *Renderer, width: i32, height: i32) void {
+        self.target_width = width;
+        self.target_height = height;
+        gl.Viewport(0, 0, width, height);
+        if (self.uniform_proj >= 0) {
+            const w = @as(f32, @floatFromInt(width));
+            const h = @as(f32, @floatFromInt(height));
+            const proj = [_]f32{
+                2.0 / w, 0, 0, 0,
+                0, -2.0 / h, 0, 0,
+                0, 0, 1, 0,
+                -1, 1, 0, 1,
+            };
+            gl.UseProgram(self.shader_program);
+            gl.UniformMatrix4fv(self.uniform_proj, 1, gl.c.GL_FALSE, &proj);
+        }
+    }
+
+    fn drawTextureRect(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
+        if (texture.id == 0 or texture.width <= 0 or texture.height <= 0) return;
+        gl.UseProgram(self.shader_program);
+        gl.BindVertexArray(self.vao);
+        gl.ActiveTexture(gl.c.GL_TEXTURE0);
+        gl.BindTexture(gl.c.GL_TEXTURE_2D, texture.id);
+
+        const tex_w = @as(f32, @floatFromInt(texture.width));
+        const tex_h = @as(f32, @floatFromInt(texture.height));
+        const u_min = src.x / tex_w;
+        const v_min = src.y / tex_h;
+        const u_max = (src.x + src.width) / tex_w;
+        const v_max = (src.y + src.height) / tex_h;
+
+        const r = @as(f32, @floatFromInt(color.r)) / 255.0;
+        const g = @as(f32, @floatFromInt(color.g)) / 255.0;
+        const b = @as(f32, @floatFromInt(color.b)) / 255.0;
+        const a = @as(f32, @floatFromInt(color.a)) / 255.0;
+
+        const x0 = dest.x;
+        const y0 = dest.y;
+        const x1 = dest.x + dest.width;
+        const y1 = dest.y + dest.height;
+
+        const verts = [_]Vertex{
+            .{ .x = x0, .y = y0, .u = u_min, .v = v_min, .r = r, .g = g, .b = b, .a = a },
+            .{ .x = x1, .y = y0, .u = u_max, .v = v_min, .r = r, .g = g, .b = b, .a = a },
+            .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a },
+            .{ .x = x0, .y = y0, .u = u_min, .v = v_min, .r = r, .g = g, .b = b, .a = a },
+            .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a },
+            .{ .x = x0, .y = y1, .u = u_min, .v = v_max, .r = r, .g = g, .b = b, .a = a },
+        };
+
+        gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, self.vbo);
+        gl.BufferSubData(
+            gl.c.GL_ARRAY_BUFFER,
+            0,
+            @as(gl.GLsizeiptr, @intCast(@sizeOf(Vertex) * 6)),
+            &verts,
+        );
+        gl.DrawArrays(gl.c.GL_TRIANGLES, 0, 6);
+    }
+
+    fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
+        const renderer: *Renderer = @ptrCast(@alignCast(ctx));
+        renderer.drawTextureRect(texture, src, dest, color);
+    }
+
+    pub fn createTextureFromRgba(_: *Renderer, width: i32, height: i32, data: []const u8, filter: i32) ?types.Texture {
+        if (width <= 0 or height <= 0) return null;
+        if (@as(usize, @intCast(width * height * 4)) > data.len) return null;
+
+        var id: gl.GLuint = 0;
+        gl.GenTextures(1, &id);
+        gl.BindTexture(gl.c.GL_TEXTURE_2D, id);
+        gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MIN_FILTER, filter);
+        gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MAG_FILTER, filter);
+        gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_WRAP_S, gl.c.GL_CLAMP_TO_EDGE);
+        gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_WRAP_T, gl.c.GL_CLAMP_TO_EDGE);
+        gl.PixelStorei(gl.c.GL_UNPACK_ALIGNMENT, 1);
+        gl.TexImage2D(
+            gl.c.GL_TEXTURE_2D,
+            0,
+            gl.c.GL_RGBA,
+            width,
+            height,
+            0,
+            gl.c.GL_RGBA,
+            gl.c.GL_UNSIGNED_BYTE,
+            data.ptr,
+        );
+        return .{ .id = id, .width = width, .height = height };
+    }
+
+    pub fn destroyTexture(_: *Renderer, texture: *types.Texture) void {
+        if (texture.id != 0) {
+            gl.DeleteTextures(1, &texture.id);
+            texture.id = 0;
+        }
+    }
+
+    pub fn drawTexture(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: Color) void {
+        self.drawTextureRect(texture, src, dest, color.toRgba());
+    }
+
+    fn pollInputEvents(self: *Renderer) void {
+        @memset(self.key_pressed[0..], false);
+        @memset(self.key_released[0..], false);
+        @memset(self.mouse_pressed[0..], false);
+        @memset(self.mouse_released[0..], false);
+        self.window_resized_flag = false;
+        mouse_wheel_delta = 0.0;
+
+        var event: sdl.SDL_Event = undefined;
+        while (sdl.SDL_PollEvent(&event) != 0) {
+            switch (event.type) {
+                sdl.SDL_QUIT => {
+                    self.should_close_flag = true;
+                },
+                sdl.SDL_WINDOWEVENT => {
+                    if (event.window.event == sdl.SDL_WINDOWEVENT_RESIZED or event.window.event == sdl.SDL_WINDOWEVENT_SIZE_CHANGED) {
+                        self.window_resized_flag = true;
+                    }
+                },
+                sdl.SDL_KEYDOWN => {
+                    const sc = @as(i32, @intCast(event.key.keysym.scancode));
+                    if (sc >= 0 and @as(usize, @intCast(sc)) < key_repeat_key_count) {
+                        self.key_down[@intCast(sc)] = true;
+                        if (event.key.repeat == 0) {
+                            self.key_pressed[@intCast(sc)] = true;
+                            _ = self.key_queue.append(self.allocator, sc) catch {};
+                        }
+                    }
+                },
+                sdl.SDL_KEYUP => {
+                    const sc = @as(i32, @intCast(event.key.keysym.scancode));
+                    if (sc >= 0 and @as(usize, @intCast(sc)) < key_repeat_key_count) {
+                        self.key_down[@intCast(sc)] = false;
+                        self.key_released[@intCast(sc)] = true;
+                    }
+                },
+                sdl.SDL_TEXTINPUT => {
+                    const text = std.mem.span(@as([*:0]const u8, @ptrCast(&event.text.text)));
+                    var it = std.unicode.Utf8View.initUnchecked(text).iterator();
+                    while (it.nextCodepoint()) |cp| {
+                        _ = self.char_queue.append(self.allocator, cp) catch {};
+                    }
+                },
+                sdl.SDL_MOUSEBUTTONDOWN => {
+                    const btn = @as(i32, @intCast(event.button.button));
+                    if (btn >= 0 and @as(usize, @intCast(btn)) < mouse_button_count) {
+                        self.mouse_down[@intCast(btn)] = true;
+                        self.mouse_pressed[@intCast(btn)] = true;
+                    }
+                },
+                sdl.SDL_MOUSEBUTTONUP => {
+                    const btn = @as(i32, @intCast(event.button.button));
+                    if (btn >= 0 and @as(usize, @intCast(btn)) < mouse_button_count) {
+                        self.mouse_down[@intCast(btn)] = false;
+                        self.mouse_released[@intCast(btn)] = true;
+                    }
+                },
+                sdl.SDL_MOUSEWHEEL => {
+                    mouse_wheel_delta += @floatFromInt(event.wheel.y);
+                },
+                else => {},
+            }
+        }
+    }
 };
 
-/// Poll input events (updates raylib's internal input state)
+fn compileShader(kind: gl.GLenum, source: []const u8) !gl.GLuint {
+    const shader = gl.CreateShader(kind);
+    const src_ptr: [*]const gl.GLchar = @ptrCast(source.ptr);
+    const src_len: gl.GLint = @intCast(source.len);
+    const lengths = [_]gl.GLint{src_len};
+    gl.ShaderSource(shader, 1, @ptrCast(&src_ptr), @ptrCast(&lengths));
+    gl.CompileShader(shader);
+    var status: gl.GLint = 0;
+    gl.GetShaderiv(shader, gl.c.GL_COMPILE_STATUS, &status);
+    if (status == 0) {
+        var log_buf: [1024]u8 = undefined;
+        var len: gl.GLsizei = 0;
+        gl.GetShaderInfoLog(shader, log_buf.len, &len, @ptrCast(&log_buf));
+        return error.GlShaderCompileFailed;
+    }
+    return shader;
+}
+
+fn linkProgram(vert: gl.GLuint, frag: gl.GLuint) !gl.GLuint {
+    const program = gl.CreateProgram();
+    gl.AttachShader(program, vert);
+    gl.AttachShader(program, frag);
+    gl.LinkProgram(program);
+    var status: gl.GLint = 0;
+    gl.GetProgramiv(program, gl.c.GL_LINK_STATUS, &status);
+    if (status == 0) {
+        var log_buf: [1024]u8 = undefined;
+        var len: gl.GLsizei = 0;
+        gl.GetProgramInfoLog(program, log_buf.len, &len, @ptrCast(&log_buf));
+        return error.GlProgramLinkFailed;
+    }
+    return program;
+}
+
+fn createSolidTexture(width: i32, height: i32, rgba: [4]u8) types.Texture {
+    var id: gl.GLuint = 0;
+    gl.GenTextures(1, &id);
+    gl.BindTexture(gl.c.GL_TEXTURE_2D, id);
+    gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MIN_FILTER, gl.c.GL_NEAREST);
+    gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MAG_FILTER, gl.c.GL_NEAREST);
+    gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_WRAP_S, gl.c.GL_CLAMP_TO_EDGE);
+    gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_WRAP_T, gl.c.GL_CLAMP_TO_EDGE);
+    gl.PixelStorei(gl.c.GL_UNPACK_ALIGNMENT, 1);
+    gl.TexImage2D(
+        gl.c.GL_TEXTURE_2D,
+        0,
+        gl.c.GL_RGBA,
+        width,
+        height,
+        0,
+        gl.c.GL_RGBA,
+        gl.c.GL_UNSIGNED_BYTE,
+        &rgba,
+    );
+    return .{ .id = id, .width = width, .height = height };
+}
+
+fn createTextureEmpty(width: i32, height: i32, filter: i32) types.Texture {
+    var id: gl.GLuint = 0;
+    gl.GenTextures(1, &id);
+    gl.BindTexture(gl.c.GL_TEXTURE_2D, id);
+    gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MIN_FILTER, filter);
+    gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MAG_FILTER, filter);
+    gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_WRAP_S, gl.c.GL_CLAMP_TO_EDGE);
+    gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_WRAP_T, gl.c.GL_CLAMP_TO_EDGE);
+    gl.PixelStorei(gl.c.GL_UNPACK_ALIGNMENT, 1);
+    gl.TexImage2D(
+        gl.c.GL_TEXTURE_2D,
+        0,
+        gl.c.GL_RGBA,
+        width,
+        height,
+        0,
+        gl.c.GL_RGBA,
+        gl.c.GL_UNSIGNED_BYTE,
+        null,
+    );
+    return .{ .id = id, .width = width, .height = height };
+}
+
+fn getWindowSize(window: *sdl.SDL_Window) struct { w: i32, h: i32 } {
+    var w: c_int = 0;
+    var h: c_int = 0;
+    sdl.SDL_GetWindowSize(window, &w, &h);
+    return .{ .w = w, .h = h };
+}
+
+fn getDrawableSize(window: *sdl.SDL_Window) struct { w: i32, h: i32 } {
+    var w: c_int = 0;
+    var h: c_int = 0;
+    sdl.SDL_GL_GetDrawableSize(window, &w, &h);
+    return .{ .w = w, .h = h };
+}
+
 pub fn pollInputEvents() void {
-    c.PollInputEvents();
-    mouse_wheel_delta = c.GetMouseWheelMove();
+    if (active_renderer) |renderer| {
+        renderer.pollInputEvents();
+    }
 }
 
-/// Sleep for specified duration (in seconds)
 pub fn waitTime(seconds: f64) void {
-    c.WaitTime(seconds);
+    if (seconds <= 0) return;
+    const ms = @as(u32, @intFromFloat(seconds * 1000.0));
+    sdl.SDL_Delay(ms);
 }
 
-/// Get time since window was initialized (seconds)
 pub fn getTime() f64 {
-    return c.GetTime();
+    if (active_renderer) |renderer| {
+        const counter = sdl.SDL_GetPerformanceCounter();
+        if (renderer.perf_freq <= 0) return 0.0;
+        return @as(f64, @floatFromInt(counter - renderer.start_counter)) / renderer.perf_freq;
+    }
+    const counter = sdl.SDL_GetPerformanceCounter();
+    const freq = sdl.SDL_GetPerformanceFrequency();
+    if (freq == 0) return 0.0;
+    return @as(f64, @floatFromInt(counter)) / @as(f64, @floatFromInt(freq));
 }
 
-/// Configure raylib trace log level before window init.
-pub fn setRaylibLogLevel(level: c_int) void {
-    c.SetTraceLogLevel(level);
+pub fn setSdlLogLevel(level: c_int) void {
+    _ = sdl.SDL_LogSetAllPriority(@intCast(level));
 }
 
-/// Check if window was resized (event-based, works with X11/Wayland)
 pub fn isWindowResized() bool {
-    return c.IsWindowResized();
+    if (active_renderer) |renderer| {
+        return renderer.window_resized_flag;
+    }
+    return false;
 }
 
-/// Get current screen width
-pub fn getScreenWidth() c_int {
-    return c.GetScreenWidth();
+pub fn getScreenWidth() i32 {
+    if (active_renderer) |renderer| return renderer.width;
+    return 0;
 }
 
-/// Get current screen height
-pub fn getScreenHeight() c_int {
-    return c.GetScreenHeight();
+pub fn getScreenHeight() i32 {
+    if (active_renderer) |renderer| return renderer.height;
+    return 0;
 }
 
-// Raylib key constants
-pub const KEY_ENTER = c.KEY_ENTER;
-pub const KEY_BACKSPACE = c.KEY_BACKSPACE;
-pub const KEY_DELETE = c.KEY_DELETE;
-pub const KEY_TAB = c.KEY_TAB;
-pub const KEY_ESCAPE = c.KEY_ESCAPE;
-pub const KEY_UP = c.KEY_UP;
-pub const KEY_DOWN = c.KEY_DOWN;
-pub const KEY_LEFT = c.KEY_LEFT;
-pub const KEY_RIGHT = c.KEY_RIGHT;
-pub const KEY_HOME = c.KEY_HOME;
-pub const KEY_END = c.KEY_END;
-pub const KEY_PAGE_UP = c.KEY_PAGE_UP;
-pub const KEY_PAGE_DOWN = c.KEY_PAGE_DOWN;
-pub const KEY_INSERT = c.KEY_INSERT;
-pub const KEY_KP_0 = c.KEY_KP_0;
-pub const KEY_KP_1 = c.KEY_KP_1;
-pub const KEY_KP_2 = c.KEY_KP_2;
-pub const KEY_KP_3 = c.KEY_KP_3;
-pub const KEY_KP_4 = c.KEY_KP_4;
-pub const KEY_KP_5 = c.KEY_KP_5;
-pub const KEY_KP_6 = c.KEY_KP_6;
-pub const KEY_KP_7 = c.KEY_KP_7;
-pub const KEY_KP_8 = c.KEY_KP_8;
-pub const KEY_KP_9 = c.KEY_KP_9;
-pub const KEY_KP_DECIMAL = c.KEY_KP_DECIMAL;
-pub const KEY_KP_DIVIDE = c.KEY_KP_DIVIDE;
-pub const KEY_KP_MULTIPLY = c.KEY_KP_MULTIPLY;
-pub const KEY_KP_SUBTRACT = c.KEY_KP_SUBTRACT;
-pub const KEY_KP_ADD = c.KEY_KP_ADD;
-pub const KEY_KP_ENTER = c.KEY_KP_ENTER;
-pub const KEY_KP_EQUAL = c.KEY_KP_EQUAL;
-pub const KEY_LEFT_CONTROL = c.KEY_LEFT_CONTROL;
-pub const KEY_RIGHT_CONTROL = c.KEY_RIGHT_CONTROL;
-pub const KEY_LEFT_SHIFT = c.KEY_LEFT_SHIFT;
-pub const KEY_RIGHT_SHIFT = c.KEY_RIGHT_SHIFT;
-pub const KEY_LEFT_ALT = c.KEY_LEFT_ALT;
-pub const KEY_RIGHT_ALT = c.KEY_RIGHT_ALT;
-pub const KEY_LEFT_SUPER = c.KEY_LEFT_SUPER;
-pub const KEY_RIGHT_SUPER = c.KEY_RIGHT_SUPER;
-pub const KEY_ZERO = c.KEY_ZERO;
-pub const KEY_ONE = c.KEY_ONE;
-pub const KEY_TWO = c.KEY_TWO;
-pub const KEY_THREE = c.KEY_THREE;
-pub const KEY_FOUR = c.KEY_FOUR;
-pub const KEY_FIVE = c.KEY_FIVE;
-pub const KEY_SIX = c.KEY_SIX;
-pub const KEY_SEVEN = c.KEY_SEVEN;
-pub const KEY_EIGHT = c.KEY_EIGHT;
-pub const KEY_NINE = c.KEY_NINE;
-pub const KEY_SPACE = c.KEY_SPACE;
-pub const KEY_MINUS = c.KEY_MINUS;
-pub const KEY_EQUAL = c.KEY_EQUAL;
-pub const KEY_LEFT_BRACKET = c.KEY_LEFT_BRACKET;
-pub const KEY_RIGHT_BRACKET = c.KEY_RIGHT_BRACKET;
-pub const KEY_BACKSLASH = c.KEY_BACKSLASH;
-pub const KEY_SEMICOLON = c.KEY_SEMICOLON;
-pub const KEY_APOSTROPHE = c.KEY_APOSTROPHE;
-pub const KEY_GRAVE = c.KEY_GRAVE;
-pub const KEY_COMMA = c.KEY_COMMA;
-pub const KEY_PERIOD = c.KEY_PERIOD;
-pub const KEY_SLASH = c.KEY_SLASH;
-pub const KEY_S = c.KEY_S;
-pub const KEY_Z = c.KEY_Z;
-pub const KEY_Y = c.KEY_Y;
-pub const KEY_C = c.KEY_C;
-pub const KEY_V = c.KEY_V;
-pub const KEY_X = c.KEY_X;
-pub const KEY_A = c.KEY_A;
-pub const KEY_B = c.KEY_B;
-pub const KEY_D = c.KEY_D;
-pub const KEY_E = c.KEY_E;
-pub const KEY_F = c.KEY_F;
-pub const KEY_G = c.KEY_G;
-pub const KEY_H = c.KEY_H;
-pub const KEY_I = c.KEY_I;
-pub const KEY_J = c.KEY_J;
-pub const KEY_K = c.KEY_K;
-pub const KEY_L = c.KEY_L;
-pub const KEY_M = c.KEY_M;
-pub const KEY_N = c.KEY_N;
-pub const KEY_O = c.KEY_O;
-pub const KEY_P = c.KEY_P;
-pub const KEY_Q = c.KEY_Q;
-pub const KEY_R = c.KEY_R;
-pub const KEY_T = c.KEY_T;
-pub const KEY_U = c.KEY_U;
-pub const KEY_W = c.KEY_W;
+pub const KEY_ENTER = @as(i32, @intCast(sdl.SDL_SCANCODE_RETURN));
+pub const KEY_BACKSPACE = @as(i32, @intCast(sdl.SDL_SCANCODE_BACKSPACE));
+pub const KEY_DELETE = @as(i32, @intCast(sdl.SDL_SCANCODE_DELETE));
+pub const KEY_TAB = @as(i32, @intCast(sdl.SDL_SCANCODE_TAB));
+pub const KEY_ESCAPE = @as(i32, @intCast(sdl.SDL_SCANCODE_ESCAPE));
+pub const KEY_UP = @as(i32, @intCast(sdl.SDL_SCANCODE_UP));
+pub const KEY_DOWN = @as(i32, @intCast(sdl.SDL_SCANCODE_DOWN));
+pub const KEY_LEFT = @as(i32, @intCast(sdl.SDL_SCANCODE_LEFT));
+pub const KEY_RIGHT = @as(i32, @intCast(sdl.SDL_SCANCODE_RIGHT));
+pub const KEY_HOME = @as(i32, @intCast(sdl.SDL_SCANCODE_HOME));
+pub const KEY_END = @as(i32, @intCast(sdl.SDL_SCANCODE_END));
+pub const KEY_PAGE_UP = @as(i32, @intCast(sdl.SDL_SCANCODE_PAGEUP));
+pub const KEY_PAGE_DOWN = @as(i32, @intCast(sdl.SDL_SCANCODE_PAGEDOWN));
+pub const KEY_INSERT = @as(i32, @intCast(sdl.SDL_SCANCODE_INSERT));
+pub const KEY_KP_0 = @as(i32, @intCast(sdl.SDL_SCANCODE_KP_0));
+pub const KEY_KP_1 = @as(i32, @intCast(sdl.SDL_SCANCODE_KP_1));
+pub const KEY_KP_2 = @as(i32, @intCast(sdl.SDL_SCANCODE_KP_2));
+pub const KEY_KP_3 = @as(i32, @intCast(sdl.SDL_SCANCODE_KP_3));
+pub const KEY_KP_4 = @as(i32, @intCast(sdl.SDL_SCANCODE_KP_4));
+pub const KEY_KP_5 = @as(i32, @intCast(sdl.SDL_SCANCODE_KP_5));
+pub const KEY_KP_6 = @as(i32, @intCast(sdl.SDL_SCANCODE_KP_6));
+pub const KEY_KP_7 = @as(i32, @intCast(sdl.SDL_SCANCODE_KP_7));
+pub const KEY_KP_8 = @as(i32, @intCast(sdl.SDL_SCANCODE_KP_8));
+pub const KEY_KP_9 = @as(i32, @intCast(sdl.SDL_SCANCODE_KP_9));
+pub const KEY_KP_DECIMAL = @as(i32, @intCast(sdl.SDL_SCANCODE_KP_DECIMAL));
+pub const KEY_KP_DIVIDE = @as(i32, @intCast(sdl.SDL_SCANCODE_KP_DIVIDE));
+pub const KEY_KP_MULTIPLY = @as(i32, @intCast(sdl.SDL_SCANCODE_KP_MULTIPLY));
+pub const KEY_KP_SUBTRACT = @as(i32, @intCast(sdl.SDL_SCANCODE_KP_MINUS));
+pub const KEY_KP_ADD = @as(i32, @intCast(sdl.SDL_SCANCODE_KP_PLUS));
+pub const KEY_KP_ENTER = @as(i32, @intCast(sdl.SDL_SCANCODE_KP_ENTER));
+pub const KEY_KP_EQUAL = @as(i32, @intCast(sdl.SDL_SCANCODE_KP_EQUALS));
+pub const KEY_LEFT_CONTROL = @as(i32, @intCast(sdl.SDL_SCANCODE_LCTRL));
+pub const KEY_RIGHT_CONTROL = @as(i32, @intCast(sdl.SDL_SCANCODE_RCTRL));
+pub const KEY_LEFT_SHIFT = @as(i32, @intCast(sdl.SDL_SCANCODE_LSHIFT));
+pub const KEY_RIGHT_SHIFT = @as(i32, @intCast(sdl.SDL_SCANCODE_RSHIFT));
+pub const KEY_LEFT_ALT = @as(i32, @intCast(sdl.SDL_SCANCODE_LALT));
+pub const KEY_RIGHT_ALT = @as(i32, @intCast(sdl.SDL_SCANCODE_RALT));
+pub const KEY_LEFT_SUPER = @as(i32, @intCast(sdl.SDL_SCANCODE_LGUI));
+pub const KEY_RIGHT_SUPER = @as(i32, @intCast(sdl.SDL_SCANCODE_RGUI));
+pub const KEY_ZERO = @as(i32, @intCast(sdl.SDL_SCANCODE_0));
+pub const KEY_ONE = @as(i32, @intCast(sdl.SDL_SCANCODE_1));
+pub const KEY_TWO = @as(i32, @intCast(sdl.SDL_SCANCODE_2));
+pub const KEY_THREE = @as(i32, @intCast(sdl.SDL_SCANCODE_3));
+pub const KEY_FOUR = @as(i32, @intCast(sdl.SDL_SCANCODE_4));
+pub const KEY_FIVE = @as(i32, @intCast(sdl.SDL_SCANCODE_5));
+pub const KEY_SIX = @as(i32, @intCast(sdl.SDL_SCANCODE_6));
+pub const KEY_SEVEN = @as(i32, @intCast(sdl.SDL_SCANCODE_7));
+pub const KEY_EIGHT = @as(i32, @intCast(sdl.SDL_SCANCODE_8));
+pub const KEY_NINE = @as(i32, @intCast(sdl.SDL_SCANCODE_9));
+pub const KEY_SPACE = @as(i32, @intCast(sdl.SDL_SCANCODE_SPACE));
+pub const KEY_MINUS = @as(i32, @intCast(sdl.SDL_SCANCODE_MINUS));
+pub const KEY_EQUAL = @as(i32, @intCast(sdl.SDL_SCANCODE_EQUALS));
+pub const KEY_LEFT_BRACKET = @as(i32, @intCast(sdl.SDL_SCANCODE_LEFTBRACKET));
+pub const KEY_RIGHT_BRACKET = @as(i32, @intCast(sdl.SDL_SCANCODE_RIGHTBRACKET));
+pub const KEY_BACKSLASH = @as(i32, @intCast(sdl.SDL_SCANCODE_BACKSLASH));
+pub const KEY_SEMICOLON = @as(i32, @intCast(sdl.SDL_SCANCODE_SEMICOLON));
+pub const KEY_APOSTROPHE = @as(i32, @intCast(sdl.SDL_SCANCODE_APOSTROPHE));
+pub const KEY_GRAVE = @as(i32, @intCast(sdl.SDL_SCANCODE_GRAVE));
+pub const KEY_COMMA = @as(i32, @intCast(sdl.SDL_SCANCODE_COMMA));
+pub const KEY_PERIOD = @as(i32, @intCast(sdl.SDL_SCANCODE_PERIOD));
+pub const KEY_SLASH = @as(i32, @intCast(sdl.SDL_SCANCODE_SLASH));
+pub const KEY_S = @as(i32, @intCast(sdl.SDL_SCANCODE_S));
+pub const KEY_Z = @as(i32, @intCast(sdl.SDL_SCANCODE_Z));
+pub const KEY_Y = @as(i32, @intCast(sdl.SDL_SCANCODE_Y));
+pub const KEY_C = @as(i32, @intCast(sdl.SDL_SCANCODE_C));
+pub const KEY_V = @as(i32, @intCast(sdl.SDL_SCANCODE_V));
+pub const KEY_X = @as(i32, @intCast(sdl.SDL_SCANCODE_X));
+pub const KEY_A = @as(i32, @intCast(sdl.SDL_SCANCODE_A));
+pub const KEY_B = @as(i32, @intCast(sdl.SDL_SCANCODE_B));
+pub const KEY_D = @as(i32, @intCast(sdl.SDL_SCANCODE_D));
+pub const KEY_E = @as(i32, @intCast(sdl.SDL_SCANCODE_E));
+pub const KEY_F = @as(i32, @intCast(sdl.SDL_SCANCODE_F));
+pub const KEY_G = @as(i32, @intCast(sdl.SDL_SCANCODE_G));
+pub const KEY_H = @as(i32, @intCast(sdl.SDL_SCANCODE_H));
+pub const KEY_I = @as(i32, @intCast(sdl.SDL_SCANCODE_I));
+pub const KEY_J = @as(i32, @intCast(sdl.SDL_SCANCODE_J));
+pub const KEY_K = @as(i32, @intCast(sdl.SDL_SCANCODE_K));
+pub const KEY_L = @as(i32, @intCast(sdl.SDL_SCANCODE_L));
+pub const KEY_M = @as(i32, @intCast(sdl.SDL_SCANCODE_M));
+pub const KEY_N = @as(i32, @intCast(sdl.SDL_SCANCODE_N));
+pub const KEY_O = @as(i32, @intCast(sdl.SDL_SCANCODE_O));
+pub const KEY_P = @as(i32, @intCast(sdl.SDL_SCANCODE_P));
+pub const KEY_Q = @as(i32, @intCast(sdl.SDL_SCANCODE_Q));
+pub const KEY_R = @as(i32, @intCast(sdl.SDL_SCANCODE_R));
+pub const KEY_T = @as(i32, @intCast(sdl.SDL_SCANCODE_T));
+pub const KEY_U = @as(i32, @intCast(sdl.SDL_SCANCODE_U));
+pub const KEY_W = @as(i32, @intCast(sdl.SDL_SCANCODE_W));
 
-pub const MOUSE_LEFT = c.MOUSE_BUTTON_LEFT;
-pub const MOUSE_RIGHT = c.MOUSE_BUTTON_RIGHT;
-pub const MOUSE_MIDDLE = c.MOUSE_BUTTON_MIDDLE;
+pub const MOUSE_LEFT = @as(i32, @intCast(sdl.SDL_BUTTON_LEFT));
+pub const MOUSE_RIGHT = @as(i32, @intCast(sdl.SDL_BUTTON_RIGHT));
+pub const MOUSE_MIDDLE = @as(i32, @intCast(sdl.SDL_BUTTON_MIDDLE));

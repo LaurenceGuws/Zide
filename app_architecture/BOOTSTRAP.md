@@ -25,25 +25,26 @@ A modern, cross-platform IDE for Zig development, built entirely in Zig.
 
 ```bash
 # Arch Linux
-sudo pacman -S zig freetype2 harfbuzz wayland wayland-protocols libxkbcommon mesa lua
+sudo pacman -S zig freetype2 harfbuzz sdl2 wayland wayland-protocols libxkbcommon mesa lua
 
 # Ubuntu/Debian
-sudo apt install zig libfreetype-dev libharfbuzz-dev libwayland-dev wayland-protocols libxkbcommon-dev libgl-dev libegl-dev liblua5.4-dev
+sudo apt install zig libfreetype-dev libharfbuzz-dev libsdl2-dev libwayland-dev wayland-protocols libxkbcommon-dev libgl-dev libegl-dev liblua5.4-dev
 
 # Fedora
-sudo dnf install zig freetype-devel harfbuzz-devel wayland-devel wayland-protocols-devel libxkbcommon-devel mesa-libGL-devel mesa-libEGL-devel lua-devel
+sudo dnf install zig freetype-devel harfbuzz-devel SDL2-devel wayland-devel wayland-protocols-devel libxkbcommon-devel mesa-libGL-devel mesa-libEGL-devel lua-devel
 ```
 
 ### macOS
 
 ```bash
-brew install zig freetype harfbuzz
+brew install zig freetype harfbuzz sdl2
 ```
 
 ### Windows
 
 - Install [Zig](https://ziglang.org/download/)
 - Visual Studio Build Tools (for MSVC linker)
+- SDL2 development libraries (vcpkg or MSYS2 recommended)
 
 ## Bootstrap
 
@@ -51,7 +52,7 @@ This document is for dependencies, bootstrapping, build/run/test, and platform n
 Current focus and active issues live in `docs/AGENT_HANDOFF.md` and the relevant
 `app_architecture/**/_todo.yaml` files.
 
-Fetch vendor dependencies (legacy raylib until renderer migration is complete):
+Fetch vendor dependencies:
 
 ```bash
 make bootstrap
@@ -59,17 +60,13 @@ make bootstrap
 ./scripts/bootstrap.sh
 ```
 
-Tree-sitter (runtime + Zig parser) is vendored under `vendor/tree-sitter/` and
-`vendor/tree-sitter-zig/`, so no extra bootstrap step is required. Grammar packs
-are built and installed via `zig build grammar-update`.
+Tree-sitter (runtime + Zig parser) and stb_image (PNG decode) are vendored under
+`vendor/`, so no extra bootstrap step is required. Grammar packs are built and
+installed via `zig build grammar-update`.
 
 On Linux, this also generates Wayland protocol headers via `make wayland-protocols`.
 
-Options:
-- `RAYLIB_REF=5.5` - Override raylib version
-- `FORCE=1` - Force re-download
-
-UI rendering journey (future stack): `app_architecture/ui/DEVELOPMENT_JOURNEY.md`.
+UI rendering journey: `app_architecture/ui/DEVELOPMENT_JOURNEY.md`.
 
 ## Build
 

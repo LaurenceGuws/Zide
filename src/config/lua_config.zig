@@ -5,7 +5,7 @@ const c = @cImport({
     @cInclude("lua.h");
     @cInclude("lauxlib.h");
     @cInclude("lualib.h");
-    @cInclude("raylib.h");
+    @cInclude("SDL2/SDL.h");
 });
 
 const Color = renderer.Color;
@@ -22,7 +22,7 @@ pub const LuaConfigError = error{
 pub const Config = struct {
     log_file_filter: ?[]u8,
     log_console_filter: ?[]u8,
-    raylib_log_level: ?c_int,
+    sdl_log_level: ?c_int,
     editor_wrap: ?bool,
     editor_highlight_budget: ?usize,
     editor_width_budget: ?usize,
@@ -59,7 +59,7 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
     var config: Config = .{
         .log_file_filter = null,
         .log_console_filter = null,
-        .raylib_log_level = null,
+        .sdl_log_level = null,
         .editor_wrap = null,
         .editor_highlight_budget = null,
         .editor_width_budget = null,
@@ -101,8 +101,8 @@ fn mergeConfig(base: *Config, overlay: Config) void {
     if (overlay.log_console_filter) |filter| {
         base.log_console_filter = filter;
     }
-    if (overlay.raylib_log_level) |level| {
-        base.raylib_log_level = level;
+    if (overlay.sdl_log_level) |level| {
+        base.sdl_log_level = level;
     }
     if (overlay.editor_wrap != null) {
         base.editor_wrap = overlay.editor_wrap;
@@ -144,7 +144,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         return .{
             .log_file_filter = null,
             .log_console_filter = null,
-            .raylib_log_level = null,
+            .sdl_log_level = null,
             .editor_wrap = null,
             .editor_highlight_budget = null,
             .editor_width_budget = null,
@@ -157,7 +157,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
 
     var log_file_filter: ?[]u8 = null;
     var log_console_filter: ?[]u8 = null;
-    var raylib_log_level: ?c_int = null;
+    var sdl_log_level: ?c_int = null;
     var editor_wrap: ?bool = null;
     var editor_highlight_budget: ?usize = null;
     var editor_width_budget: ?usize = null;
@@ -173,17 +173,31 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     }
     c.lua_pop(L, 1);
 
-    _ = c.lua_getfield(L, -1, "raylib");
+    _ = c.lua_getfield(L, -1, "sdl");
     if (c.lua_isstring(L, -1) != 0) {
-        raylib_log_level = parseRaylibLogLevel(L, -1);
+        sdl_log_level = parseSdlLogLevel(L, -1);
     } else if (c.lua_istable(L, -1)) {
         _ = c.lua_getfield(L, -1, "log_level");
         if (c.lua_isstring(L, -1) != 0) {
-            raylib_log_level = parseRaylibLogLevel(L, -1);
+            sdl_log_level = parseSdlLogLevel(L, -1);
         }
         c.lua_pop(L, 1);
     }
     c.lua_pop(L, 1);
+
+    if (sdl_log_level == null) {
+        _ = c.lua_getfield(L, -1, "raylib");
+        if (c.lua_isstring(L, -1) != 0) {
+            sdl_log_level = parseSdlLogLevel(L, -1);
+        } else if (c.lua_istable(L, -1)) {
+            _ = c.lua_getfield(L, -1, "log_level");
+            if (c.lua_isstring(L, -1) != 0) {
+                sdl_log_level = parseSdlLogLevel(L, -1);
+            }
+            c.lua_pop(L, 1);
+        }
+        c.lua_pop(L, 1);
+    }
 
     _ = c.lua_getfield(L, -1, "editor");
     if (c.lua_istable(L, -1)) {
@@ -228,7 +242,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     return .{
         .log_file_filter = log_file_filter,
         .log_console_filter = log_console_filter,
-        .raylib_log_level = raylib_log_level,
+        .sdl_log_level = sdl_log_level,
         .editor_wrap = editor_wrap,
         .editor_highlight_budget = editor_highlight_budget,
         .editor_width_budget = editor_width_budget,
@@ -360,17 +374,18 @@ fn parseLogFiltersFromTable(
     }
 }
 
-fn parseRaylibLogLevel(L: *c.lua_State, idx: c_int) ?c_int {
+fn parseSdlLogLevel(L: *c.lua_State, idx: c_int) ?c_int {
     var len: usize = 0;
     const ptr = c.lua_tolstring(L, idx, &len) orelse return null;
     const value = @as([*]const u8, @ptrCast(ptr))[0..len];
-    if (std.mem.eql(u8, value, "none")) return c.LOG_NONE;
-    if (std.mem.eql(u8, value, "error")) return c.LOG_ERROR;
-    if (std.mem.eql(u8, value, "warning")) return c.LOG_WARNING;
-    if (std.mem.eql(u8, value, "warn")) return c.LOG_WARNING;
-    if (std.mem.eql(u8, value, "info")) return c.LOG_INFO;
-    if (std.mem.eql(u8, value, "debug")) return c.LOG_DEBUG;
-    if (std.mem.eql(u8, value, "trace")) return c.LOG_TRACE;
+    if (std.mem.eql(u8, value, "none")) return c.SDL_LOG_PRIORITY_CRITICAL;
+    if (std.mem.eql(u8, value, "critical")) return c.SDL_LOG_PRIORITY_CRITICAL;
+    if (std.mem.eql(u8, value, "error")) return c.SDL_LOG_PRIORITY_ERROR;
+    if (std.mem.eql(u8, value, "warning")) return c.SDL_LOG_PRIORITY_WARN;
+    if (std.mem.eql(u8, value, "warn")) return c.SDL_LOG_PRIORITY_WARN;
+    if (std.mem.eql(u8, value, "info")) return c.SDL_LOG_PRIORITY_INFO;
+    if (std.mem.eql(u8, value, "debug")) return c.SDL_LOG_PRIORITY_DEBUG;
+    if (std.mem.eql(u8, value, "trace")) return c.SDL_LOG_PRIORITY_VERBOSE;
     return null;
 }
 

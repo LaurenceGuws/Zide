@@ -45,101 +45,8 @@ pub fn build(b: *std.Build) void {
     ts_zig.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
 
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Raylib (built from source)
-    // ─────────────────────────────────────────────────────────────────────────
-    const raylib = b.addLibrary(.{
-        .name = "raylib",
-        .linkage = .static,
-        .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-
-    // Platform detection (needed for Wayland vs X11 decision)
+    // Platform detection
     const target_os = target.result.os.tag;
-
-    const raylib_src_path = "vendor/raylib/src/";
-    const raylib_sources: []const []const u8 = &.{
-        raylib_src_path ++ "rcore.c",
-        raylib_src_path ++ "rshapes.c",
-        raylib_src_path ++ "rtextures.c",
-        raylib_src_path ++ "rtext.c",
-        raylib_src_path ++ "rmodels.c",
-        raylib_src_path ++ "raudio.c",
-    };
-
-    // Wayland-native on Linux (for proper Hyprland/Sway integration)
-    const use_wayland = target_os == .linux;
-
-    const raylib_flags: []const []const u8 = if (use_wayland) &.{
-        "-std=c99",
-        "-DPLATFORM_DESKTOP_GLFW",
-        "-DGRAPHICS_API_OPENGL_33",
-        "-D_GLFW_WAYLAND",
-    } else &.{
-        "-std=c99",
-        "-DPLATFORM_DESKTOP_GLFW",
-        "-DGRAPHICS_API_OPENGL_33",
-        "-D_GLFW_X11",
-    };
-
-    raylib.addCSourceFiles(.{
-        .files = raylib_sources,
-        .flags = raylib_flags,
-    });
-
-    // Platform-specific raylib source
-    if (target_os == .windows) {
-        raylib.addCSourceFile(.{
-            .file = b.path(raylib_src_path ++ "rglfw.c"),
-            .flags = raylib_flags,
-        });
-        raylib.linkSystemLibrary("opengl32");
-        raylib.linkSystemLibrary("gdi32");
-        raylib.linkSystemLibrary("winmm");
-        raylib.linkSystemLibrary("user32");
-        raylib.linkSystemLibrary("shell32");
-    } else if (target_os == .macos) {
-        raylib.addCSourceFile(.{
-            .file = b.path(raylib_src_path ++ "rglfw.c"),
-            .flags = raylib_flags,
-        });
-        raylib.linkFramework("OpenGL");
-        raylib.linkFramework("Cocoa");
-        raylib.linkFramework("IOKit");
-        raylib.linkFramework("CoreVideo");
-    } else {
-        // Linux
-        raylib.addCSourceFile(.{
-            .file = b.path(raylib_src_path ++ "rglfw.c"),
-            .flags = raylib_flags,
-        });
-
-        if (use_wayland) {
-            // Native Wayland support - generated protocol headers are in vendor/wayland-protocols
-            raylib.addIncludePath(b.path("vendor/wayland-protocols"));
-            raylib.linkSystemLibrary("wayland-client");
-            raylib.linkSystemLibrary("wayland-cursor");
-            raylib.linkSystemLibrary("wayland-egl");
-            raylib.linkSystemLibrary("xkbcommon");
-            raylib.linkSystemLibrary("EGL");
-            raylib.linkSystemLibrary("GL");
-        } else {
-            // X11 fallback
-            raylib.linkSystemLibrary("GL");
-            raylib.linkSystemLibrary("X11");
-        }
-        raylib.linkSystemLibrary("m");
-        raylib.linkSystemLibrary("pthread");
-        raylib.linkSystemLibrary("dl");
-        raylib.linkSystemLibrary("rt");
-    }
-
-    raylib.addIncludePath(b.path("vendor/raylib/src"));
-    raylib.addIncludePath(b.path("vendor/raylib/src/external/glfw/include"));
 
     // ─────────────────────────────────────────────────────────────────────────
     // Main executable
@@ -155,22 +62,25 @@ pub fn build(b: *std.Build) void {
     });
 
     // Link C libraries
-    exe.linkLibrary(raylib);
     exe.linkLibrary(treesitter);
     exe.linkLibrary(ts_zig);
     exe.linkSystemLibrary("freetype");
     exe.linkSystemLibrary("harfbuzz");
     exe.linkSystemLibrary("lua");
+    exe.linkSystemLibrary("SDL2");
     if (target_os == .linux) {
         exe.linkSystemLibrary("fontconfig");
     }
 
     // Include paths for @cImport
-    exe.addIncludePath(b.path("vendor/raylib/src"));
+    exe.addIncludePath(b.path("vendor"));
     exe.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
     exe.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
     exe.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
     exe.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
+    if (target_os == .linux) {
+        exe.addIncludePath(.{ .cwd_relative = "/usr/include/SDL2" });
+    }
     if (target_os == .linux) {
         exe.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
     }
@@ -188,23 +98,17 @@ pub fn build(b: *std.Build) void {
         exe.linkFramework("IOKit");
         exe.linkFramework("CoreVideo");
     } else {
-        if (use_wayland) {
-            // Native Wayland support
-            exe.linkSystemLibrary("wayland-client");
-            exe.linkSystemLibrary("wayland-cursor");
-            exe.linkSystemLibrary("wayland-egl");
-            exe.linkSystemLibrary("xkbcommon");
-            exe.linkSystemLibrary("EGL");
-            exe.linkSystemLibrary("GL");
-        } else {
-            exe.linkSystemLibrary("GL");
-            exe.linkSystemLibrary("X11");
-        }
+        exe.linkSystemLibrary("GL");
         exe.linkSystemLibrary("m");
         exe.linkSystemLibrary("pthread");
         exe.linkSystemLibrary("dl");
         exe.linkSystemLibrary("rt");
     }
+
+    exe.addCSourceFile(.{
+        .file = b.path("src/c/stb_image.c"),
+        .flags = &.{"-std=c99"},
+    });
 
     b.installArtifact(exe);
 
@@ -231,10 +135,26 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
+    unit_tests.linkSystemLibrary("SDL2");
+    if (target_os == .linux) {
+        unit_tests.linkSystemLibrary("GL");
+    } else if (target_os == .windows) {
+        unit_tests.linkSystemLibrary("opengl32");
+    } else if (target_os == .macos) {
+        unit_tests.linkFramework("OpenGL");
+    }
     unit_tests.linkLibrary(treesitter);
     unit_tests.linkLibrary(ts_zig);
+    unit_tests.addIncludePath(b.path("vendor"));
     unit_tests.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
     unit_tests.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
+    if (target_os == .linux) {
+        unit_tests.addIncludePath(.{ .cwd_relative = "/usr/include/SDL2" });
+    }
+    unit_tests.addCSourceFile(.{
+        .file = b.path("src/c/stb_image.c"),
+        .flags = &.{"-std=c99"},
+    });
 
     const run_tests = b.addRunArtifact(unit_tests);
     const test_step = b.step("test", "Run unit tests");
@@ -249,19 +169,32 @@ pub fn build(b: *std.Build) void {
     const editor_tests = b.addTest(.{
         .root_module = editor_tests_root,
     });
-    editor_tests.linkLibrary(raylib);
+    editor_tests.linkSystemLibrary("SDL2");
+    if (target_os == .linux) {
+        editor_tests.linkSystemLibrary("GL");
+    } else if (target_os == .windows) {
+        editor_tests.linkSystemLibrary("opengl32");
+    } else if (target_os == .macos) {
+        editor_tests.linkFramework("OpenGL");
+    }
     editor_tests.linkLibrary(treesitter);
     editor_tests.linkLibrary(ts_zig);
+    editor_tests.addIncludePath(b.path("vendor"));
     editor_tests.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
     editor_tests.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
-    editor_tests.addIncludePath(b.path("vendor/raylib/src"));
-    editor_tests.addIncludePath(b.path("vendor/raylib/src/external/glfw/include"));
     editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
     editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
     editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
     if (target_os == .linux) {
+        editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/SDL2" });
+    }
+    if (target_os == .linux) {
         editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
     }
+    editor_tests.addCSourceFile(.{
+        .file = b.path("src/c/stb_image.c"),
+        .flags = &.{"-std=c99"},
+    });
 
     const run_editor_tests = b.addRunArtifact(editor_tests);
     const editor_test_step = b.step("test-editor", "Run editor-specific tests");
@@ -276,9 +209,22 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
-    terminal_replay_exe.linkLibrary(raylib);
-    terminal_replay_exe.addIncludePath(b.path("vendor/raylib/src"));
-    terminal_replay_exe.addIncludePath(b.path("vendor/raylib/src/external/glfw/include"));
+    terminal_replay_exe.linkSystemLibrary("SDL2");
+    if (target_os == .linux) {
+        terminal_replay_exe.linkSystemLibrary("GL");
+    } else if (target_os == .windows) {
+        terminal_replay_exe.linkSystemLibrary("opengl32");
+    } else if (target_os == .macos) {
+        terminal_replay_exe.linkFramework("OpenGL");
+    }
+    terminal_replay_exe.addIncludePath(b.path("vendor"));
+    if (target_os == .linux) {
+        terminal_replay_exe.addIncludePath(.{ .cwd_relative = "/usr/include/SDL2" });
+    }
+    terminal_replay_exe.addCSourceFile(.{
+        .file = b.path("src/c/stb_image.c"),
+        .flags = &.{"-std=c99"},
+    });
 
     const run_terminal_replay = b.addRunArtifact(terminal_replay_exe);
     if (b.args) |args| {

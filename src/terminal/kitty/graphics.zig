@@ -4,9 +4,7 @@ const app_logger = @import("../../app_logger.zig");
 const builtin = @import("builtin");
 const flate = std.compress.flate;
 const posix = std.posix;
-const rl = @cImport({
-    @cInclude("raylib.h");
-});
+const image_decode = @import("../../ui/image_decode.zig");
 
 pub const KittyImageFormat = snapshot_mod.KittyImageFormat;
 pub const KittyImage = snapshot_mod.KittyImage;
@@ -812,34 +810,14 @@ fn expandRgbToRgba(self: anytype, rgb: []const u8, width: u32, height: u32) ?[]u
 
 fn decodeKittyPng(self: anytype, data: []const u8) KittyBuildError!struct { data: []u8, width: u32, height: u32 } {
     if (data.len == 0) return error.BadPng;
-    var img = rl.LoadImageFromMemory(".png", @ptrCast(@constCast(data.ptr)), @intCast(data.len));
-    if (img.data == null or img.width <= 0 or img.height <= 0) {
-        if (img.data != null) rl.UnloadImage(img);
-        return error.BadPng;
-    }
-    if (img.format != rl.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8) {
-        rl.ImageFormat(&img, rl.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
-        if (img.data == null or img.format != rl.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8) {
-            if (img.data != null) rl.UnloadImage(img);
-            return error.BadPng;
-        }
-    }
-    const width: u32 = @intCast(img.width);
-    const height: u32 = @intCast(img.height);
-    const total_px: usize = @as(usize, width) * @as(usize, height);
+    const decoded = image_decode.decodePngRgba(self.allocator, data) catch return error.BadPng;
+    const total_px: usize = @as(usize, decoded.width) * @as(usize, decoded.height);
     const expected_len = total_px * 4;
     if (expected_len > kitty_max_bytes) {
-        rl.UnloadImage(img);
+        self.allocator.free(decoded.data);
         return error.BadPng;
     }
-    const out = self.allocator.alloc(u8, expected_len) catch {
-        rl.UnloadImage(img);
-        return error.InvalidData;
-    };
-    const src = @as([*]const u8, @ptrCast(img.data))[0..expected_len];
-    std.mem.copyForwards(u8, out, src);
-    rl.UnloadImage(img);
-    return .{ .data = out, .width = width, .height = height };
+    return .{ .data = decoded.data, .width = decoded.width, .height = decoded.height };
 }
 
 fn kittyImageHasPlacement(self: anytype, image_id: u32) bool {

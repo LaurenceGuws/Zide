@@ -4,6 +4,11 @@ Goal
 - Build a fast, reliable GUI rendering stack for Zide across Linux, Windows 11, macOS, and Android.
 - Treat reference repos as canonical. We only diverge when required by Zide's code or to exceed the reference quality.
 
+Status (2026-01-28)
+- SDL2 window/input + OpenGL 3.3 renderer is now the active stack on Linux.
+- Raylib has been removed from the build path; PNG decoding is handled via stb_image.
+- Fixed texture UV orientation: CPU textures use top-left UVs; FBO blits flip Y at draw time.
+
 Canonical references (do not diverge without a documented reason)
 - kitty: OpenGL renderer, glyph atlas, render loop discipline.
   - reference_repos/terminals/kitty/docs/overview.rst
@@ -81,11 +86,11 @@ Module layout (target)
 Per-OS implementation plan (Linux first)
 
 Phase 1 - Linux (SDL2 + OpenGL)
-- Create SDL2 window and OpenGL context.
-- Implement the renderer interface with OpenGL 3.3.
-- Bring up text rendering with a GPU atlas (kitty/alacritty model).
-- Draw list supports rects, text runs, and clip rects.
-- Replace raylib usage in renderer only (no UI behavior changes).
+- Create SDL2 window and OpenGL context. (done)
+- Implement the renderer interface with OpenGL 3.3. (done; immediate-mode quad pipeline)
+- Bring up text rendering with a GPU atlas (kitty/alacritty model). (done; FreeType + GL atlas)
+- Draw list supports rects, text runs, and clip rects. (pending; immediate-mode for now)
+- Replace raylib usage in renderer only (no UI behavior changes). (done)
 
 Phase 2 - Windows 11 (SDL2 + OpenGL)
 - Use same OpenGL backend via WGL or EGL/ANGLE.
@@ -109,10 +114,9 @@ What we do not do
 - No backend proliferation.
 
 Validation
-- Compare render output and perf against reference repos and current raylib baseline.
+- Compare render output and perf against reference repos and the last raylib baseline.
 - Add per-OS smoke tests for window create, text render, and input.
 
 Open questions (to resolve later)
 - Decide whether Windows should use WGL or EGL/ANGLE.
 - Decide if macOS requires CoreText for font discovery or if FreeType is sufficient.
-

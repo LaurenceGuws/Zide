@@ -52,7 +52,7 @@ Overrides:
 
 ## Dependencies
 
-- Vendored: raylib, tree-sitter (runtime + Zig parser).
+- Vendored: tree-sitter (runtime + Zig parser), stb_image (PNG decode).
 - System deps: see `app_architecture/BOOTSTRAP.md` for platform packages (freetype, harfbuzz, lua, Wayland/X11, etc.).
 
 ## License

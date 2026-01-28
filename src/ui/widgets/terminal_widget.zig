@@ -4,10 +4,9 @@ const app_shell = @import("../../app_shell.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
-
-const c = @cImport({
-    @cInclude("raylib.h");
-});
+const gl = @import("../renderer/gl.zig");
+const types = @import("../renderer/types.zig");
+const image_decode = @import("../image_decode.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
@@ -18,7 +17,7 @@ const KittyImage = terminal_mod.KittyImage;
 const KittyPlacement = terminal_mod.KittyPlacement;
 
 const KittyTexture = struct {
-    texture: c.Texture2D,
+    texture: types.Texture,
     width: i32,
     height: i32,
     version: u64,
@@ -63,7 +62,7 @@ pub const TerminalWidget = struct {
         var it = self.kitty_textures.iterator();
         while (it.next()) |entry| {
             if (entry.value_ptr.texture.id != 0) {
-                c.UnloadTexture(entry.value_ptr.texture);
+                gl.DeleteTextures(1, &entry.value_ptr.texture.id);
             }
         }
         self.kitty_textures.deinit();
@@ -846,7 +845,7 @@ pub const TerminalWidget = struct {
         for (stale.items) |id| {
             if (self.kitty_textures.fetchRemove(id)) |entry| {
                 if (entry.value.texture.id != 0) {
-                    c.UnloadTexture(entry.value.texture);
+                    gl.DeleteTextures(1, &entry.value.texture.id);
                 }
             }
         }
@@ -877,7 +876,7 @@ pub const TerminalWidget = struct {
                 if (placement.z >= 0) continue;
             }
             const image = findKittyImage(self.kitty_images_view.items, placement.image_id) orelse continue;
-            const tex = self.ensureKittyTexture(image) orelse continue;
+            const tex = self.ensureKittyTexture(shell, image) orelse continue;
 
             const col_i: i32 = @as(i32, @intCast(placement.col));
             if (col_i < 0 or col_i >= cols_i) continue;
@@ -895,14 +894,14 @@ pub const TerminalWidget = struct {
             const x = base_x + @as(f32, @floatFromInt(col_i)) * cell_w;
             const y = base_y + @as(f32, @floatFromInt(row_i)) * cell_h;
 
-            const dest = c.Rectangle{ .x = x, .y = y, .width = draw_w, .height = draw_h };
-            const src = c.Rectangle{
+            const dest = types.Rect{ .x = x, .y = y, .width = draw_w, .height = draw_h };
+            const src = types.Rect{
                 .x = 0,
                 .y = 0,
                 .width = @as(f32, @floatFromInt(tex.texture.width)),
                 .height = @as(f32, @floatFromInt(tex.texture.height)),
             };
-            c.DrawTexturePro(tex.texture, src, dest, .{ .x = 0, .y = 0 }, 0, c.WHITE);
+            r.drawTexture(tex.texture, src, dest, Color.white);
         }
     }
 
@@ -913,16 +912,16 @@ pub const TerminalWidget = struct {
         return null;
     }
 
-    fn ensureKittyTexture(self: *TerminalWidget, image: KittyImage) ?KittyTexture {
+    fn ensureKittyTexture(self: *TerminalWidget, shell: *Shell, image: KittyImage) ?KittyTexture {
         if (self.kitty_textures.getEntry(image.id)) |entry| {
             if (entry.value_ptr.version == image.version) return entry.value_ptr.*;
             if (entry.value_ptr.texture.id != 0) {
-                c.UnloadTexture(entry.value_ptr.texture);
+                gl.DeleteTextures(1, &entry.value_ptr.texture.id);
             }
             _ = self.kitty_textures.remove(image.id);
         }
 
-        const texture = loadKittyTexture(image) orelse {
+        const texture = loadKittyTexture(shell.rendererPtr(), image) orelse {
             const log = app_logger.logger("terminal.kitty");
             if (log.enabled_file or log.enabled_console) {
                 log.logf("kitty texture load failed id={d} format={s} bytes={d}", .{ image.id, @tagName(image.format), image.data.len });
@@ -943,30 +942,16 @@ pub const TerminalWidget = struct {
         return stored;
     }
 
-    fn loadKittyTexture(image: KittyImage) ?c.Texture2D {
+    fn loadKittyTexture(renderer: anytype, image: KittyImage) ?types.Texture {
         switch (image.format) {
             .png => {
-                const img = c.LoadImageFromMemory(".png", @ptrCast(@constCast(image.data.ptr)), @intCast(image.data.len));
-                if (img.data == null or img.width == 0 or img.height == 0) return null;
-                const texture = c.LoadTextureFromImage(img);
-                c.UnloadImage(img);
-                if (texture.id == 0) return null;
-                c.SetTextureFilter(texture, c.TEXTURE_FILTER_BILINEAR);
-                return texture;
+                const decoded = image_decode.decodePngRgba(renderer.allocator, image.data) catch return null;
+                defer renderer.allocator.free(decoded.data);
+                return renderer.createTextureFromRgba(@intCast(decoded.width), @intCast(decoded.height), decoded.data, gl.c.GL_LINEAR);
             },
             .rgba => {
                 if (image.width == 0 or image.height == 0) return null;
-                const img = c.Image{
-                    .data = @ptrCast(@constCast(image.data.ptr)),
-                    .width = @intCast(image.width),
-                    .height = @intCast(image.height),
-                    .mipmaps = 1,
-                    .format = c.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
-                };
-                const texture = c.LoadTextureFromImage(img);
-                if (texture.id == 0) return null;
-                c.SetTextureFilter(texture, c.TEXTURE_FILTER_BILINEAR);
-                return texture;
+                return renderer.createTextureFromRgba(@intCast(image.width), @intCast(image.height), image.data, gl.c.GL_LINEAR);
             },
         }
     }

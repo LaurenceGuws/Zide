@@ -15,9 +15,9 @@ return {
         -- console = { "app.core" },
     },
 
-    -- Raylib logging configuration.
-    -- log_level options: "none", "error", "warning", "warn", "info", "debug", "trace"
-    raylib = {
+    -- SDL logging configuration.
+    -- log_level options: "none", "critical", "error", "warning", "warn", "info", "debug", "trace"
+    sdl = {
         log_level = "info",
     },
 

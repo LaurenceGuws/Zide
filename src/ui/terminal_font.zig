@@ -1,9 +1,10 @@
 const std = @import("std");
 const app_logger = @import("../app_logger.zig");
 const builtin = @import("builtin");
+const gl = @import("renderer/gl.zig");
+const types = @import("renderer/types.zig");
 
 pub const c = @cImport({
-    @cInclude("raylib.h");
     @cInclude("ft2build.h");
     @cInclude("freetype/freetype.h");
     @cInclude("freetype/ftglyph.h");
@@ -23,21 +24,23 @@ pub const AllowSquareGlyphOverflow = enum {
     when_followed_by_space,
 };
 
+pub const Rect = types.Rect;
+pub const Texture = types.Texture;
+pub const Rgba = types.Rgba;
+
+pub const DrawContext = struct {
+    ctx: *anyopaque,
+    drawTexture: *const fn (ctx: *anyopaque, texture: Texture, src: Rect, dest: Rect, color: Rgba) void,
+};
+
 pub const Glyph = struct {
-    rect: c.Rectangle,
+    rect: Rect,
     bearing_x: i32,
     bearing_y: i32,
     advance: f32,
     width: i32,
     height: i32,
     is_color: bool,
-};
-
-pub const Rgba = extern struct {
-    r: u8,
-    g: u8,
-    b: u8,
-    a: u8,
 };
 
 const FacePair = struct {
@@ -76,7 +79,7 @@ pub const TerminalFont = struct {
     fc_config: ?*fc.FcConfig,
     system_fallback_by_cp: std.AutoHashMap(u32, ?[]u8),
     system_faces: std.StringHashMapUnmanaged(FacePair),
-    texture: c.Texture2D,
+    texture: Texture,
     atlas_width: i32,
     atlas_height: i32,
     pen_x: i32,
@@ -301,10 +304,11 @@ pub const TerminalFont = struct {
         const atlas_height: i32 = 2048;
         const padding: i32 = 1;
 
-        const image = c.GenImageColor(atlas_width, atlas_height, .{ .r = 0, .g = 0, .b = 0, .a = 0 });
-        const texture = c.LoadTextureFromImage(image);
-        c.UnloadImage(image);
-        c.SetTextureFilter(texture, c.TEXTURE_FILTER_POINT);
+        const zero_len: usize = @as(usize, @intCast(atlas_width * atlas_height * 4));
+        const zero_buf = allocator.alloc(u8, zero_len) catch return error.OutOfMemory;
+        defer allocator.free(zero_buf);
+        @memset(zero_buf, 0);
+        const texture = createTexture(atlas_width, atlas_height, zero_buf);
 
         return .{
             .allocator = allocator,
@@ -373,7 +377,9 @@ pub const TerminalFont = struct {
         }
         self.system_faces.deinit(self.allocator);
 
-        c.UnloadTexture(self.texture);
+        if (self.texture.id != 0) {
+            gl.DeleteTextures(1, &self.texture.id);
+        }
         if (self.symbols_hb_font) |fb_hb| c.hb_font_destroy(fb_hb);
         if (self.symbols_ft_face) |fb_face| _ = c.FT_Done_Face(fb_face);
         if (self.unicode_symbols2_hb_font) |fb_hb| c.hb_font_destroy(fb_hb);
@@ -394,10 +400,12 @@ pub const TerminalFont = struct {
     }
 
     pub fn setAtlasFilterPoint(self: *TerminalFont) void {
-        c.SetTextureFilter(self.texture, c.TEXTURE_FILTER_POINT);
+        gl.BindTexture(gl.c.GL_TEXTURE_2D, self.texture.id);
+        gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MIN_FILTER, gl.c.GL_NEAREST);
+        gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MAG_FILTER, gl.c.GL_NEAREST);
     }
 
-    pub fn drawGlyph(self: *TerminalFont, codepoint: u32, x: f32, y: f32, cell_width: f32, cell_height: f32, followed_by_space: bool, color: Rgba) void {
+    pub fn drawGlyph(self: *TerminalFont, draw: DrawContext, codepoint: u32, x: f32, y: f32, cell_width: f32, cell_height: f32, followed_by_space: bool, color: Rgba) void {
         if (codepoint == 0) return;
         const glyph = self.getGlyph(codepoint) catch return;
         const baseline = y + self.ascent;
@@ -438,22 +446,8 @@ pub const TerminalFont = struct {
             const draw_y = baseline - @as(f32, @floatFromInt(glyph.bearing_y)) * scale;
             const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
             const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y)))));
-            if (scale == 1.0) {
-                c.DrawTextureRec(self.texture, glyph.rect, .{ .x = snapped_x, .y = snapped_y }, .{
-                    .r = draw_color.r,
-                    .g = draw_color.g,
-                    .b = draw_color.b,
-                    .a = draw_color.a,
-                });
-            } else {
-                const dest = c.Rectangle{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
-                c.DrawTexturePro(self.texture, glyph.rect, dest, .{ .x = 0, .y = 0 }, 0, .{
-                    .r = draw_color.r,
-                    .g = draw_color.g,
-                    .b = draw_color.b,
-                    .a = draw_color.a,
-                });
-            }
+            const dest = Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
+            draw.drawTexture(draw.ctx, self.texture, glyph.rect, dest, draw_color);
             return;
         }
 
@@ -462,22 +456,13 @@ pub const TerminalFont = struct {
         const draw_y = baseline - @as(f32, @floatFromInt(glyph.bearing_y)) * scale;
         const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
         const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y)))));
-        if (scale == 1.0) {
-            c.DrawTextureRec(self.texture, glyph.rect, .{ .x = snapped_x, .y = snapped_y }, .{
-                .r = draw_color.r,
-                .g = draw_color.g,
-                .b = draw_color.b,
-                .a = draw_color.a,
-            });
-        } else {
-            const dest = c.Rectangle{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
-            c.DrawTexturePro(self.texture, glyph.rect, dest, .{ .x = 0, .y = 0 }, 0, .{
-                .r = draw_color.r,
-                .g = draw_color.g,
-                .b = draw_color.b,
-                .a = draw_color.a,
-            });
-        }
+        const dest = Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
+        draw.drawTexture(draw.ctx, self.texture, glyph.rect, dest, draw_color);
+    }
+
+    pub fn glyphAdvance(self: *TerminalFont, codepoint: u32) GlyphError!f32 {
+        const glyph = try self.getGlyph(codepoint);
+        return glyph.advance;
     }
 
     fn getGlyph(self: *TerminalFont, codepoint: u32) GlyphError!*Glyph {
@@ -814,13 +799,13 @@ pub const TerminalFont = struct {
                 }
             }
 
-            const rec = c.Rectangle{
+            const rec = Rect{
                 .x = @floatFromInt(self.pen_x),
                 .y = @floatFromInt(self.pen_y),
                 .width = @floatFromInt(width),
                 .height = @floatFromInt(height),
             };
-            c.UpdateTextureRec(self.texture, rec, rgba.ptr);
+            updateTextureRegion(self.texture, rec, rgba);
 
             if (height > self.row_h) self.row_h = height;
             const advance = @as(f32, @floatFromInt(positions[0].x_advance)) / 64.0;
@@ -876,11 +861,14 @@ pub const TerminalFont = struct {
         self.pen_y = self.padding;
         self.row_h = 0;
 
-        const image = c.GenImageColor(self.atlas_width, self.atlas_height, .{ .r = 0, .g = 0, .b = 0, .a = 0 });
-        c.UnloadTexture(self.texture);
-        self.texture = c.LoadTextureFromImage(image);
-        c.UnloadImage(image);
-        c.SetTextureFilter(self.texture, c.TEXTURE_FILTER_POINT);
+        if (self.texture.id != 0) {
+            gl.DeleteTextures(1, &self.texture.id);
+        }
+        const zero_len: usize = @as(usize, @intCast(self.atlas_width * self.atlas_height * 4));
+        const zero_buf = self.allocator.alloc(u8, zero_len) catch return error.OutOfMemory;
+        defer self.allocator.free(zero_buf);
+        @memset(zero_buf, 0);
+        self.texture = createTexture(self.atlas_width, self.atlas_height, zero_buf);
 
         const count = old_order.items.len;
         var kept: usize = 0;
@@ -893,3 +881,45 @@ pub const TerminalFont = struct {
         }
     }
 };
+
+fn createTexture(width: i32, height: i32, data: []const u8) Texture {
+    var id: gl.GLuint = 0;
+    gl.GenTextures(1, &id);
+    gl.BindTexture(gl.c.GL_TEXTURE_2D, id);
+    gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MIN_FILTER, gl.c.GL_NEAREST);
+    gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MAG_FILTER, gl.c.GL_NEAREST);
+    gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_WRAP_S, gl.c.GL_CLAMP_TO_EDGE);
+    gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_WRAP_T, gl.c.GL_CLAMP_TO_EDGE);
+    gl.PixelStorei(gl.c.GL_UNPACK_ALIGNMENT, 1);
+    gl.TexImage2D(
+        gl.c.GL_TEXTURE_2D,
+        0,
+        gl.c.GL_RGBA,
+        width,
+        height,
+        0,
+        gl.c.GL_RGBA,
+        gl.c.GL_UNSIGNED_BYTE,
+        data.ptr,
+    );
+    return .{ .id = id, .width = width, .height = height };
+}
+
+fn updateTextureRegion(texture: Texture, rect: Rect, data: []const u8) void {
+    const w: i32 = @intFromFloat(rect.width);
+    const h: i32 = @intFromFloat(rect.height);
+    if (w <= 0 or h <= 0) return;
+    gl.BindTexture(gl.c.GL_TEXTURE_2D, texture.id);
+    gl.PixelStorei(gl.c.GL_UNPACK_ALIGNMENT, 1);
+    gl.TexSubImage2D(
+        gl.c.GL_TEXTURE_2D,
+        0,
+        @intFromFloat(rect.x),
+        @intFromFloat(rect.y),
+        w,
+        h,
+        gl.c.GL_RGBA,
+        gl.c.GL_UNSIGNED_BYTE,
+        data.ptr,
+    );
+}
