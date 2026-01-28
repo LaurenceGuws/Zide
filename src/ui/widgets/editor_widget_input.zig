@@ -28,18 +28,12 @@ pub fn handleMouseClick(
 pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *shared_types.input.InputBatch) !bool {
     var handled = false;
     var chars_inserted: usize = 0;
-    var group_started = false;
-    errdefer if (group_started) widget.editor.endUndoGroup() catch {};
 
     // Character input
     for (input_batch.events.items) |event| {
         if (event == .text) {
             const char = event.text.codepoint;
-            if (char >= 32 and char < 127) {
-                if (!group_started) {
-                    widget.editor.beginUndoGroup();
-                    group_started = true;
-                }
+            if (!input_batch.mods.ctrl and !input_batch.mods.alt and !input_batch.mods.super and char >= 32 and char < 127) {
                 try widget.editor.insertChar(@intCast(char));
                 handled = true;
                 chars_inserted += 1;
@@ -55,10 +49,6 @@ pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *sh
     const ctrl = input_batch.mods.ctrl;
 
     if (input_batch.keyPressed(.enter)) {
-        if (!group_started) {
-            widget.editor.beginUndoGroup();
-            group_started = true;
-        }
         try widget.editor.insertNewline();
         handled = true;
         app_logger.logger("editor.input").logf("key=enter", .{});
@@ -114,10 +104,6 @@ pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *sh
         _ = try widget.editor.redo();
         handled = true;
         app_logger.logger("editor.input").logf("key=ctrl+y", .{});
-    }
-
-    if (group_started) {
-        try widget.editor.endUndoGroup();
     }
 
     // Scroll handling
