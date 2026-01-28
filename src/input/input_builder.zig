@@ -119,8 +119,6 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
         batch.key_repeated[@intFromEnum(entry.key)] = r.isKeyRepeated(entry.code);
     }
 
-    batch.applyComboRepeats();
-
     while (r.getKeyPressed()) |raw_key| {
         if (inputKeyFromShell(raw_key)) |key| {
             batch.append(.{
