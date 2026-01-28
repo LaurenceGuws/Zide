@@ -72,13 +72,13 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
     if (try findUserConfigPath(allocator)) |path| {
         defer allocator.free(path);
         var user_config = try loadConfigFromFile(allocator, path);
-        mergeConfig(&config, user_config);
+        mergeConfig(allocator, &config, user_config);
         freeConfig(allocator, &user_config);
     }
 
     if (fileExists(".zide.lua")) {
         var project_config = try loadConfigFromFile(allocator, ".zide.lua");
-        mergeConfig(&config, project_config);
+        mergeConfig(allocator, &config, project_config);
         freeConfig(allocator, &project_config);
     }
 
@@ -96,12 +96,14 @@ pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
     }
 }
 
-fn mergeConfig(base: *Config, overlay: Config) void {
+fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) void {
     if (overlay.log_file_filter) |filter| {
-        base.log_file_filter = filter;
+        if (base.log_file_filter) |old| allocator.free(old);
+        base.log_file_filter = allocator.dupe(u8, filter) catch base.log_file_filter;
     }
     if (overlay.log_console_filter) |filter| {
-        base.log_console_filter = filter;
+        if (base.log_console_filter) |old| allocator.free(old);
+        base.log_console_filter = allocator.dupe(u8, filter) catch base.log_console_filter;
     }
     if (overlay.sdl_log_level) |level| {
         base.sdl_log_level = level;
