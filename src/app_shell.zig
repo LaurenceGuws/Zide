@@ -145,6 +145,10 @@ pub const Shell = struct {
         return self.renderer.shouldClose();
     }
 
+    pub fn requestClose(self: *Shell) void {
+        self.renderer.should_close_flag = true;
+    }
+
     pub fn width(self: *Shell) i32 {
         return self.renderer.width;
     }

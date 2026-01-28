@@ -43,6 +43,22 @@ const AppMode = enum {
     terminal,
 };
 
+var sigint_requested = std.atomic.Value(bool).init(false);
+
+fn handleSigint(_: c_int) callconv(.C) void {
+    sigint_requested.store(true, .release);
+}
+
+fn installSignalHandlers() void {
+    if (builtin.os.tag == .windows) return;
+    const act = std.posix.Sigaction{
+        .handler = .{ .handler = handleSigint },
+        .mask = std.posix.sigemptyset(),
+        .flags = 0,
+    };
+    std.posix.sigaction(std.posix.SIG.INT, &act, null);
+}
+
 const AppState = struct {
     allocator: std.mem.Allocator,
     shell: *Shell,
@@ -444,6 +460,10 @@ const AppState = struct {
             // Poll events first (this updates SDL's input state)
             app_shell.pollInputEvents();
             if (self.shell.shouldClose()) break;
+            if (sigint_requested.load(.acquire)) {
+                self.shell.requestClose();
+                break;
+            }
             var input_batch = input_builder.buildInputBatch(self.allocator, self.shell);
             defer input_batch.deinit();
 
@@ -1024,6 +1044,8 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
+
+    installSignalHandlers();
 
     const app_mode = parseAppMode(allocator);
     var app = try AppState.init(allocator, app_mode);
