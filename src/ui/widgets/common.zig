@@ -1,3 +1,4 @@
+const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 
 const Shell = app_shell.Shell;
