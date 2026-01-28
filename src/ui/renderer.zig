@@ -533,10 +533,6 @@ pub const Renderer = struct {
         return self.should_close_flag;
     }
 
-    pub fn requestClose(self: *Renderer) void {
-        self.should_close_flag = true;
-    }
-
     pub fn beginFrame(self: *Renderer) void {
         const window_size = getWindowSize(self.window);
         const drawable = getDrawableSize(self.window);
