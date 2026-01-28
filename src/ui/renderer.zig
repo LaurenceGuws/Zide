@@ -1335,6 +1335,8 @@ pub const Renderer = struct {
                 sdl.SDL_WINDOWEVENT => {
                     if (event.window.event == sdl.SDL_WINDOWEVENT_RESIZED or event.window.event == sdl.SDL_WINDOWEVENT_SIZE_CHANGED) {
                         self.window_resized_flag = true;
+                    } else if (event.window.event == sdl.SDL_WINDOWEVENT_CLOSE) {
+                        self.should_close_flag = true;
                     }
                 },
                 sdl.SDL_KEYDOWN => {
