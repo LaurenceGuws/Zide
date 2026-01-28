@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
+const shared_types = @import("../../types/mod.zig");
 const editor_mod = @import("../../editor/editor.zig");
 const selection_mod = @import("../../editor/view/selection.zig");
 const layout_mod = @import("../../editor/view/layout.zig");
@@ -10,7 +11,6 @@ const render_cache_mod = @import("../../editor/render/cache.zig");
 const input_mod = @import("editor_widget_input.zig");
 const draw_mod = @import("editor_widget_draw.zig");
 const types = @import("../../editor/types.zig");
-const shared_types = @import("../../types/mod.zig");
 
 const hb = @import("../terminal_font.zig").c;
 

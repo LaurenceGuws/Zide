@@ -9,6 +9,7 @@ Status (2026-01-28)
 - Raylib has been removed from the build path; PNG decoding is handled via stb_image.
 - Fixed texture UV orientation: CPU textures use top-left UVs; FBO blits flip Y at draw time.
 - Wayland mouse scale uses SDL's drawable/window ratio only; avoid double-applying compositor scale.
+- Known issue: long-press undo/redo can loop between states after repeated edits (e.g., holding a key like "l"); fix needs undo grouping logic, not input hacks.
 
 Canonical references (do not diverge without a documented reason)
 - kitty: OpenGL renderer, glyph atlas, render loop discipline.
