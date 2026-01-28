@@ -25,10 +25,11 @@ zig build run
 ## Features
 
 - Native Wayland support (Hyprland, Sway, etc.)
-- Integrated terminal panel (backend in progress)
+- Integrated terminal panel (PTY + VT core with scrollback; rendering polish ongoing)
 - Tree-sitter syntax highlighting (dynamic grammar packs)
 - Rope text buffer with undo/redo
 - Low CPU usage when idle (<1%)
+ - Cross-platform roadmap (Linux first; macOS/Windows planned)
 
 ## Documentation
 
@@ -37,6 +38,9 @@ See [app_architecture/BOOTSTRAP.md](app_architecture/BOOTSTRAP.md) for:
 - Architecture overview
 - Keyboard shortcuts
 - Configuration options
+
+UI renderer roadmap:
+- `app_architecture/ui/DEVELOPMENT_JOURNEY.md`
 
 Tree-sitter grammar packs:
 ```bash

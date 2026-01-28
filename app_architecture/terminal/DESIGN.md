@@ -223,9 +223,11 @@ Research notes:
 - Alacritty saved-cursor fixtures exercise ESC 7/8 and ?1049 enter/exit behavior.
 - VTE scrolling-region notes show cursor movement/scrolling within margins.
 
-Known gaps:
-- Dynamic colors/palette (OSC 4/104, 10–19/110–119) are incomplete; Codex input bg still missing.
-- Underline color (SGR 58/59), DECSCUSR cursor style, keypad mode, and XTGETTCAP are not implemented.
+Known gaps (as of 2026-01-28):
+- Kitty graphics protocol is still partial (see IMG-01 in `app_architecture/terminal/protocol_todo.yaml`).
+- Terminfo feature parity sweep is pending (TERM-01).
+- Tests + fixtures are not implemented yet (see Layer 10).
+- Cross-platform font fallback (macOS/Windows) is still TODO.
 
 ### Layer 9: Performance + Polish
 
@@ -267,9 +269,9 @@ Why:
 
 ## Immediate next steps
 
-1) Add overflow policy for square/wide glyphs (scale-to-fit vs allow overflow when followed by space).
-2) Add Symbols Nerd Font Mono fallback for PUA glyphs.
-3) Improve rasterization quality (LCD + grayscale fallback).
+1) Implement the terminal replay harness + goldens (Layer 10; see `app_architecture/terminal/REPLAY_HARNESS_SPEC.md`).
+2) Finish kitty graphics protocol completeness (IMG-01 plan).
+3) Improve font fallback and rasterization quality (multi-font chain + LCD/grayscale).
 
 ## Related docs
 

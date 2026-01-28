@@ -13,6 +13,7 @@ This doc explains how workflow and documentation are intended to be used.
 - `AGENTS.md`: authoritative workflow rules.
 - `docs/AGENT_HANDOFF.md`: short entrypoint for the next session (focus, constraints, where to look).
 - `docs/AGENT_HOVER.md`: high‑level editor context only; can be removed if redundant.
+- `docs/INDEX.md`: map of docs and where to look.
 - `app_architecture/*_todo.yaml`: task tracker and status for each area.
 - `app_architecture/**.md`: design decisions, research notes, and architecture guidance.
 - `README.md`: user‑facing overview and quick start.
