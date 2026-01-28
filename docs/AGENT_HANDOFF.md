@@ -20,6 +20,9 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 
 ### Recent Changes (High-Level)
 - Replaced raylib wiring in the renderer with SDL2 + OpenGL and introduced stb_image for PNG decode.
+- Fixed terminal quit hang by making PTY shutdown non-blocking with timeout + SIGKILL fallback.
+- Removed legacy combo-repeat handling from input (raylib-era).
+- Fixed editor undo repeat loop by removing input-level undo grouping and filtering text events while modifiers are held.
 
 ### Constraints / Guardrails
 - Handoff docs are high-level only; progress tracking lives in todo + app_architecture docs.
@@ -30,6 +33,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - UI rendering plan + per-OS journey: `app_architecture/ui/DEVELOPMENT_JOURNEY.md`
 - Editor widget roadmap: `app_architecture/editor/editor_widget_todo.yaml`
 - Terminal roadmap: `app_architecture/terminal/*_todo.yaml`
+- Undo loop notes: `app_architecture/ui/DEVELOPMENT_JOURNEY.md` (known issue entry).
 
 ### Known Risk (High-Level)
 - Incremental highlight edits can still be fragile; see TS-04 notes in the todo.
