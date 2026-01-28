@@ -23,6 +23,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - Fixed terminal quit hang by making PTY shutdown non-blocking with timeout + SIGKILL fallback.
 - Removed legacy combo-repeat handling from input (raylib-era).
 - Fixed editor undo repeat loop by removing input-level undo grouping and filtering text events while modifiers are held.
+- Fixed editor cursor drift by rendering editor text with monospace advances.
 
 ### Constraints / Guardrails
 - Handoff docs are high-level only; progress tracking lives in todo + app_architecture docs.

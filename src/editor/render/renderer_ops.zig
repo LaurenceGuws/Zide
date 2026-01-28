@@ -12,7 +12,7 @@ pub fn drawEditorLine(
 ) void {
     drawEditorLineBase(self, line_num, y, x, gutter_width, content_width, is_current);
     const pad = 8 * self.uiScaleFactor();
-    self.drawText(text, x + gutter_width + pad, y, self.theme.foreground);
+    self.drawTextMonospace(text, x + gutter_width + pad, y, self.theme.foreground);
 }
 
 pub fn drawEditorLineBase(
@@ -49,7 +49,7 @@ pub fn drawEditorLineBase(
     const num_str = std.fmt.bufPrint(&num_buf, "{d: >4}", .{line_num + 1}) catch return;
     const pad = 4 * self.uiScaleFactor();
     const line_color = if (is_current) self.theme.foreground else self.theme.line_number;
-    self.drawText(num_str, x + pad, line_y, line_color);
+    self.drawTextMonospace(num_str, x + pad, line_y, line_color);
 }
 
 pub fn drawCursor(self: anytype, x: f32, y: f32, mode: anytype) void {

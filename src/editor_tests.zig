@@ -382,6 +382,10 @@ const FakeRenderer = struct {
         self.log.append("\n", .{});
     }
 
+    pub fn drawTextMonospace(self: *FakeRenderer, text: []const u8, x: f32, y: f32, color: Color) void {
+        self.drawText(text, x, y, color);
+    }
+
     pub fn drawEditorLineBase(
         self: *FakeRenderer,
         line_num: usize,
