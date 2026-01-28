@@ -1114,9 +1114,9 @@ pub const Renderer = struct {
 
         var codepoints = std.ArrayList(u32).empty;
         defer codepoints.deinit(self.allocator);
-        var idx: usize = 0;
+        var cp_idx: usize = 0;
         while (true) {
-            const cp = nextCodepointLossy(text, &idx) orelse break;
+            const cp = nextCodepointLossy(text, &cp_idx) orelse break;
             _ = codepoints.append(self.allocator, cp) catch {};
         }
         if (codepoints.items.len == 0) return;
