@@ -3,22 +3,22 @@
 Date: 2026-01-25
 
 Goal: keep Zide’s major components loosely coupled and independently testable while preserving
-current Raylib-based rendering.
+the UI rendering stack defined in `app_architecture/ui/DEVELOPMENT_JOURNEY.md`.
 
 ## Target Components
 1) **Text Engine (Zig)**
    - Pure text model + edit operations + undo/redo + syntax hooks.
-   - No UI, no Raylib, no platform IO.
+   - No UI, no renderer, no platform IO.
 2) **Terminal Backend (Zig)**
    - PTY + protocol + screen model + snapshot API.
-   - No UI, no Raylib.
-3) **Raylib Terminal Widget**
+   - No UI, no renderer.
+3) **UI Terminal Widget**
    - Renders terminal snapshots + handles input, IME, selection, scroll.
-4) **Raylib Editor Widget**
+4) **UI Editor Widget**
    - Renders editor view + handles input, selection, scroll, IME.
 5) **Core App Logic**
    - Entry point, workspace state, cache, tooling, LSP, config.
-6) **Raylib IDE Shell**
+6) **UI Shell**
    - Window lifecycle, global input dispatch, layout + docking + theme.
 
 ## Current Anchors
@@ -27,7 +27,7 @@ current Raylib-based rendering.
 - **Terminal API + layering rules**: `app_architecture/terminal/TERMINAL_API.md`.
 
 ## Layer Boundaries (import rules)
-- **Raylib IDE shell** → may import core app logic + widgets only.
+- **UI shell** → may import core app logic + widgets only.
 - **Core app logic** → may import text engine + terminal backend (and shared types) only.
 - **Editor widget** → may import editor view/core/render helpers only (no terminal core).
 - **Terminal widget** → may import terminal core + snapshot types only (no editor core).
@@ -56,17 +56,17 @@ Enforcement:
   - `src/terminal/model/*`
   - `src/terminal/protocol/*`
   - `src/terminal/io/*`
-- Raylib editor widget
+- UI editor widget
   - `src/ui/widgets/editor_widget*.zig`
   - `src/editor/view/*`
   - `src/editor/render/*`
-- Raylib terminal widget
+- UI terminal widget
   - `src/ui/widgets/terminal_widget.zig`
 - Core app logic
   - `src/main.zig`
   - `src/config/*`
   - `src/tools/*`
-- Raylib IDE shell
+- UI shell
   - `src/ui/renderer.zig`
   - `src/ui/*` (excluding widgets)
   - `src/platform/*`
@@ -102,12 +102,12 @@ Terminal backend (pure Zig):
 - `TerminalSession.resize(cols, rows)` → returns `ResizeResult` (needs redraw, scrollback trims).
 - `TerminalSession.snapshot(viewport)` → `TerminalSnapshot` (cells, attrs, cursor, selections).
 
-Raylib editor widget:
+UI editor widget:
 - `EditorWidget.draw(shell, snapshot, layout)` → draws only from snapshot.
 - `EditorWidget.handleInput(shell, events, layout)` → returns `EditorWidgetActions` (scroll, cursor move, command intents).
 - No direct mutation of `EditorSession` internals.
 
-Raylib terminal widget:
+UI terminal widget:
 - `TerminalWidget.draw(shell, snapshot, layout)` → draws only from snapshot.
 - `TerminalWidget.handleInput(shell, events, layout)` → returns `TerminalWidgetActions` (input bytes, selection copy, open link).
 - No direct mutation of `TerminalSession` internals.
@@ -117,7 +117,7 @@ Core app logic:
 - Translates widget actions into engine/backend commands.
 - Manages workspace + config + LSP + persistence.
 
-Raylib IDE shell:
+UI shell:
 - Owns window lifecycle + input polling + frame timing.
 - Dispatches inputs to core; renders via widgets.
 - Exposes `app_shell.Shell` surface only.
@@ -142,10 +142,10 @@ Raylib IDE shell:
 1) **Codify import rules** in a single document (this file) and align per-module checks.
 2) **Add core → widget boundaries** by introducing snapshot types and reducing direct data access.
 3) **Pull shared UI-agnostic types** into `src/types/` (if needed) to avoid cyclic imports.
-4) **Introduce an AppShell façade** to isolate `main.zig` from Raylib API calls.
+4) **Introduce an AppShell façade** to isolate `main.zig` from renderer/platform API calls.
 5) **Add harnesses** for text engine + terminal backend to lock behavior (reuse existing terminal/editor harnesses).
 
 ## Non-goals
-- No renderer swap.
+- No renderer work outside the UI journey plan.
 - No feature changes without tests.
 - No large file moves before baseline tests exist.

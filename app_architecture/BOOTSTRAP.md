@@ -47,7 +47,7 @@ brew install zig freetype harfbuzz
 
 ## Bootstrap
 
-Fetch vendor dependencies (raylib):
+Fetch vendor dependencies (legacy raylib until renderer migration is complete):
 
 ```bash
 make bootstrap
@@ -64,6 +64,8 @@ On Linux, this also generates Wayland protocol headers via `make wayland-protoco
 Options:
 - `RAYLIB_REF=5.5` - Override raylib version
 - `FORCE=1` - Force re-download
+
+UI rendering journey (future stack): `app_architecture/ui/DEVELOPMENT_JOURNEY.md`.
 
 ## Build
 
