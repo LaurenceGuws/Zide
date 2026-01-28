@@ -280,10 +280,14 @@ pub const TerminalSession = struct {
     }
 
     pub fn deinit(self: *TerminalSession) void {
+        const log = app_logger.logger("terminal.quit");
+        log.logf("deinit=start", .{});
         if (self.read_thread) |thread| {
+            log.logf("read_thread=join", .{});
             self.read_thread_running.store(false, .release);
             thread.join();
             self.read_thread = null;
+            log.logf("read_thread=joined", .{});
         }
         if (self.pty) |*pty| {
             pty.deinit();
@@ -314,6 +318,7 @@ pub const TerminalSession = struct {
         }
         self.hyperlink_table.deinit(self.allocator);
         self.title_buffer.deinit(self.allocator);
+        log.logf("deinit=done", .{});
         self.allocator.destroy(self);
     }
 
@@ -335,9 +340,13 @@ pub const TerminalSession = struct {
     pub fn poll(self: *TerminalSession) !void {
         if (self.read_thread != null) {
             if (self.output_pending.swap(false, .acq_rel)) {
-                self.state_mutex.lock();
-                self.clearSelection();
-                self.state_mutex.unlock();
+                if (self.state_mutex.tryLock()) {
+                    self.clearSelection();
+                    self.state_mutex.unlock();
+                } else {
+                    // Defer until we can safely lock without stalling the UI thread.
+                    self.output_pending.store(true, .release);
+                }
             }
             return;
         }
@@ -382,6 +391,10 @@ pub const TerminalSession = struct {
 
     pub fn lock(self: *TerminalSession) void {
         self.state_mutex.lock();
+    }
+
+    pub fn tryLock(self: *TerminalSession) bool {
+        return self.state_mutex.tryLock();
     }
 
     pub fn unlock(self: *TerminalSession) void {

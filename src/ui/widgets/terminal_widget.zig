@@ -219,7 +219,7 @@ pub const TerminalWidget = struct {
     ) void {
         _ = input;
         const r = shell.rendererPtr();
-        self.session.lock();
+        if (!self.session.tryLock()) return;
         const snapshot = self.session.snapshot();
         const alt_exit = self.session.alt_last_active and !snapshot.alt_active;
         self.session.alt_last_active = snapshot.alt_active;
@@ -787,12 +787,13 @@ pub const TerminalWidget = struct {
         }
 
         if (updated or snapshot.dirty == .none) {
-            self.session.lock();
-            const current_gen = self.session.currentGeneration();
-            if (current_gen == snapshot.generation) {
-                self.session.clearDirty();
+            if (self.session.tryLock()) {
+                const current_gen = self.session.currentGeneration();
+                if (current_gen == snapshot.generation) {
+                    self.session.clearDirty();
+                }
+                self.session.unlock();
             }
-            self.session.unlock();
         }
 
         if (alt_exit) {
@@ -969,7 +970,7 @@ pub const TerminalWidget = struct {
         scroll_grab_offset: *f32,
         input_batch: *shared_types.input.InputBatch,
     ) !bool {
-        self.session.lock();
+        if (!self.session.tryLock()) return false;
         defer self.session.unlock();
         var handled = false;
         const mouse = input_batch.mouse_pos;

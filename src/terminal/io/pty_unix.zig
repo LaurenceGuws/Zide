@@ -52,7 +52,17 @@ pub const Pty = struct {
     pub fn deinit(self: *Pty) void {
         if (self.child_pid) |pid| {
             _ = posix.kill(pid, posix.SIG.TERM) catch {};
-            _ = posix.waitpid(pid, 0);
+            const start_ms = std.time.milliTimestamp();
+            while (true) {
+                const res = posix.waitpid(pid, posix.W.NOHANG);
+                if (res.pid != 0) break;
+                if (std.time.milliTimestamp() - start_ms > 200) {
+                    _ = posix.kill(pid, posix.SIG.KILL) catch {};
+                    _ = posix.waitpid(pid, 0);
+                    break;
+                }
+                std.Thread.sleep(10 * std.time.ns_per_ms);
+            }
             self.child_pid = null;
         }
         posix.close(self.master_fd);
