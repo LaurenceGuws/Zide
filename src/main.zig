@@ -45,7 +45,7 @@ const AppMode = enum {
 
 var sigint_requested = std.atomic.Value(bool).init(false);
 
-fn handleSigint(_: c_int) callconv(.C) void {
+fn handleSigint(_: c_int) callconv(.c) void {
     sigint_requested.store(true, .release);
 }
 
