@@ -51,6 +51,8 @@ Why:
 Progress:
 - Implemented cross‑platform PTY API with Linux `openpty`, macOS login shell handling, and Windows ConPTY stub.
 - PTY output is piped into the VT stream; input is sent back to PTY.
+- PTY read thread now queues bytes; the main thread drains with a per-frame budget to avoid render starvation.
+- Drain budget scales up when backlog is large to keep cat/scrollback responsive.
 
 Research notes:
 - Alacritty (Unix) uses `openpty`, sets IUTF8 on the master, spawns with `setsid` + `TIOCSCTTY`, and polls for PTY + child exit.
@@ -225,6 +227,7 @@ Research notes:
 
 Known gaps (as of 2026-01-28):
 - Kitty graphics protocol is still partial (see IMG-01 in `app_architecture/terminal/protocol_todo.yaml`).
+- Synchronized updates (DECSET ?2026) are not implemented; some apps rely on this for frame presentation.
 - Terminfo feature parity sweep is pending (TERM-01).
 - Tests + fixtures are not implemented yet (see Layer 10).
 - Cross-platform font fallback (macOS/Windows) is still TODO.
