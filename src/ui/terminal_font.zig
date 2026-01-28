@@ -367,7 +367,17 @@ pub const TerminalFont = struct {
         if (self.upload_buffer_capacity > 0) {
             self.allocator.free(self.upload_buffer);
         }
-        self.system_fallback_by_cp.deinit();
+        {
+            var it = self.system_fallback_by_cp.iterator();
+            while (it.next()) |entry| {
+                if (entry.value_ptr.*) |path| {
+                    if (!self.system_faces.contains(path)) {
+                        self.allocator.free(path);
+                    }
+                }
+            }
+            self.system_fallback_by_cp.deinit();
+        }
 
         var face_it = self.system_faces.iterator();
         while (face_it.next()) |entry| {
@@ -588,6 +598,7 @@ pub const TerminalFont = struct {
         if (self.system_fallback_by_cp.get(codepoint)) |cached| {
             if (cached) |path| {
                 if (self.system_faces.get(path)) |pair| return pair;
+                _ = self.system_fallback_by_cp.put(codepoint, null) catch {};
             }
             return null;
         }
@@ -622,13 +633,13 @@ pub const TerminalFont = struct {
         }
 
         const path = std.mem.sliceTo(@as([*:0]const u8, @ptrCast(file_ptr)), 0);
+        if (self.system_faces.getEntry(path)) |entry| {
+            _ = self.system_fallback_by_cp.put(codepoint, entry.key_ptr.*) catch {};
+            return entry.value_ptr.*;
+        }
+
         const owned = self.allocator.dupe(u8, path) catch return null;
         errdefer self.allocator.free(owned);
-
-        if (self.system_faces.get(owned)) |pair| {
-            _ = self.system_fallback_by_cp.put(codepoint, owned) catch {};
-            return pair;
-        }
 
         var fb_face: c.FT_Face = null;
         if (c.FT_New_Face(self.ft_library, owned.ptr, 0, &fb_face) != 0) {
@@ -647,7 +658,13 @@ pub const TerminalFont = struct {
         };
 
         const pair = FacePair{ .face = fb_face, .hb = fb_hb };
-        _ = self.system_faces.put(self.allocator, owned, pair) catch {};
+        self.system_faces.put(self.allocator, owned, pair) catch {
+            c.hb_font_destroy(fb_hb);
+            _ = c.FT_Done_Face(fb_face);
+            self.allocator.free(owned);
+            _ = self.system_fallback_by_cp.put(codepoint, null) catch {};
+            return null;
+        };
         _ = self.system_fallback_by_cp.put(codepoint, owned) catch {};
         result = pair;
         return result;
