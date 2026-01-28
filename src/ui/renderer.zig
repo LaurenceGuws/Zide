@@ -104,6 +104,12 @@ const RenderTarget = struct {
     fbo: gl.GLuint,
 };
 
+const BatchDraw = struct {
+    texture_id: gl.GLuint,
+    start: usize,
+    count: usize,
+};
+
 const Vertex = packed struct {
     x: f32,
     y: f32,
@@ -129,6 +135,7 @@ pub const Renderer = struct {
     shader_program: gl.GLuint,
     vao: gl.GLuint,
     vbo: gl.GLuint,
+    vbo_capacity_vertices: usize,
     uniform_proj: gl.GLint,
     uniform_tex: gl.GLint,
     white_texture: types.Texture,
@@ -169,6 +176,8 @@ pub const Renderer = struct {
     key_queue: std.ArrayList(i32),
     char_queue: std.ArrayList(u32),
     clipboard_buffer: std.ArrayList(u8),
+    batch_vertices: std.ArrayList(Vertex),
+    batch_draws: std.ArrayList(BatchDraw),
     should_close_flag: bool,
     window_resized_flag: bool,
 
@@ -234,6 +243,7 @@ pub const Renderer = struct {
             .shader_program = 0,
             .vao = 0,
             .vbo = 0,
+            .vbo_capacity_vertices = 0,
             .uniform_proj = -1,
             .uniform_tex = -1,
             .white_texture = .{ .id = 0, .width = 0, .height = 0 },
@@ -270,6 +280,8 @@ pub const Renderer = struct {
             .key_queue = std.ArrayList(i32).empty,
             .char_queue = std.ArrayList(u32).empty,
             .clipboard_buffer = std.ArrayList(u8).empty,
+            .batch_vertices = std.ArrayList(Vertex).empty,
+            .batch_draws = std.ArrayList(BatchDraw).empty,
             .should_close_flag = false,
             .window_resized_flag = false,
             .start_counter = sdl.SDL_GetPerformanceCounter(),
@@ -302,6 +314,8 @@ pub const Renderer = struct {
         self.key_queue.deinit(self.allocator);
         self.char_queue.deinit(self.allocator);
         self.clipboard_buffer.deinit(self.allocator);
+        self.batch_vertices.deinit(self.allocator);
+        self.batch_draws.deinit(self.allocator);
 
         if (self.white_texture.id != 0) {
             gl.DeleteTextures(1, &self.white_texture.id);
@@ -372,6 +386,7 @@ pub const Renderer = struct {
             null,
             gl.c.GL_DYNAMIC_DRAW,
         );
+        self.vbo_capacity_vertices = 6;
 
         gl.EnableVertexAttribArray(0);
         gl.VertexAttribPointer(0, 2, gl.c.GL_FLOAT, gl.c.GL_FALSE, @sizeOf(Vertex), @ptrFromInt(0));
@@ -813,6 +828,71 @@ pub const Renderer = struct {
         }
     }
 
+    pub fn drawTerminalCellBatched(
+        self: *Renderer,
+        codepoint: u32,
+        x: f32,
+        y: f32,
+        cell_width: f32,
+        cell_height: f32,
+        fg: Color,
+        bg: Color,
+        underline_color: Color,
+        bold: bool,
+        underline: bool,
+        is_cursor: bool,
+        followed_by_space: bool,
+        draw_bg: bool,
+    ) void {
+        const snapped_x = snapFloat(x);
+        const snapped_y = snapFloat(y);
+        const snapped_cell_width = snapFloat(cell_width);
+        const snapped_cell_height = snapFloat(cell_height);
+        const snapped_cell_w_i = snapInt(self.terminal_cell_width);
+        const snapped_cell_h_i = snapInt(self.terminal_cell_height);
+
+        if (draw_bg) {
+            self.addTerminalRect(
+                snapInt(snapped_x),
+                snapInt(snapped_y),
+                snapped_cell_w_i,
+                snapped_cell_h_i,
+                if (is_cursor) fg else bg,
+            );
+        }
+
+        if (codepoint != 0) {
+            const text_color = if (is_cursor) bg else fg;
+            _ = bold;
+            if (!self.drawTerminalBoxGlyphBatched(codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color)) {
+                const draw = terminal_font_mod.DrawContext{
+                    .ctx = self,
+                    .drawTexture = drawTextureBatchThunk,
+                };
+                self.terminal_font.drawGlyph(
+                    draw,
+                    codepoint,
+                    snapped_x,
+                    snapped_y,
+                    snapped_cell_width,
+                    snapped_cell_height,
+                    followed_by_space,
+                    text_color.toRgba(),
+                );
+            }
+            if (underline) {
+                const underline_y: i32 = snapInt(snapped_y + self.terminal_cell_height - 2);
+                self.addTerminalRect(
+                    snapInt(snapped_x),
+                    underline_y,
+                    snapped_cell_w_i,
+                    2,
+                    underline_color,
+                );
+            }
+        }
+    }
+
     fn drawTerminalBoxGlyph(
         self: *Renderer,
         codepoint: u32,
@@ -942,6 +1022,140 @@ pub const Renderer = struct {
             },
             0x2588 => { // █
                 self.drawRect(ix, iy, iw, ih, color);
+                return true;
+            },
+            else => return false,
+        }
+    }
+
+    fn drawTerminalBoxGlyphBatched(
+        self: *Renderer,
+        codepoint: u32,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        color: Color,
+    ) bool {
+        const ix = @as(i32, @intFromFloat(x));
+        const iy = @as(i32, @intFromFloat(y));
+        const iw = @as(i32, @intFromFloat(w));
+        const ih = @as(i32, @intFromFloat(h));
+        const mid_x = ix + @divTrunc(iw, 2);
+        const mid_y = iy + @divTrunc(ih, 2);
+        const thin: i32 = 1;
+        const thick: i32 = @max(2, @divTrunc(ih, 6));
+        const extend: i32 = 0;
+
+        switch (codepoint) {
+            0x2500 => { // ─
+                self.addTerminalRect(ix, mid_y, iw, thin, color);
+                return true;
+            },
+            0x2501 => { // ━
+                self.addTerminalRect(ix, mid_y - @divTrunc(thick, 2), iw, thick, color);
+                return true;
+            },
+            0x2502 => { // │
+                self.addTerminalRect(mid_x, iy - extend, thin, ih + extend * 2, color);
+                return true;
+            },
+            0x2503 => { // ┃
+                self.addTerminalRect(mid_x - @divTrunc(thick, 2), iy - extend, thick, ih + extend * 2, color);
+                return true;
+            },
+            0x256d => { // ╭
+                self.addTerminalRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
+                self.addTerminalRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
+                return true;
+            },
+            0x256e => { // ╮
+                self.addTerminalRect(ix, mid_y, mid_x - ix + thin, thin, color);
+                self.addTerminalRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
+                return true;
+            },
+            0x256f => { // ╯
+                self.addTerminalRect(ix, mid_y, mid_x - ix + thin, thin, color);
+                self.addTerminalRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
+                return true;
+            },
+            0x2570 => { // ╰
+                self.addTerminalRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
+                self.addTerminalRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
+                return true;
+            },
+            0x250c => { // ┌
+                self.addTerminalRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
+                self.addTerminalRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
+                return true;
+            },
+            0x2510 => { // ┐
+                self.addTerminalRect(ix, mid_y, mid_x - ix + thin, thin, color);
+                self.addTerminalRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
+                return true;
+            },
+            0x2514 => { // └
+                self.addTerminalRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
+                self.addTerminalRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
+                return true;
+            },
+            0x2518 => { // ┘
+                self.addTerminalRect(ix, mid_y, mid_x - ix + thin, thin, color);
+                self.addTerminalRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
+                return true;
+            },
+            0x2574 => { // ╴
+                self.addTerminalRect(ix, mid_y, mid_x - ix + thin, thin, color);
+                return true;
+            },
+            0x2575 => { // ╵
+                self.addTerminalRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
+                return true;
+            },
+            0x2576 => { // ╶
+                self.addTerminalRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
+                return true;
+            },
+            0x2577 => { // ╷
+                self.addTerminalRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
+                return true;
+            },
+            0x251c => { // ├
+                self.addTerminalRect(mid_x, iy - extend, thin, ih + extend * 2, color);
+                self.addTerminalRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
+                return true;
+            },
+            0x2524 => { // ┤
+                self.addTerminalRect(mid_x, iy - extend, thin, ih + extend * 2, color);
+                self.addTerminalRect(ix, mid_y, mid_x - ix + thin, thin, color);
+                return true;
+            },
+            0x252c => { // ┬
+                self.addTerminalRect(ix, mid_y, iw, thin, color);
+                self.addTerminalRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
+                return true;
+            },
+            0x2534 => { // ┴
+                self.addTerminalRect(ix, mid_y, iw, thin, color);
+                self.addTerminalRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
+                return true;
+            },
+            0x253c => { // ┼
+                self.addTerminalRect(ix, mid_y, iw, thin, color);
+                self.addTerminalRect(mid_x, iy - extend, thin, ih + extend * 2, color);
+                return true;
+            },
+            0x2580 => { // ▀
+                self.addTerminalRect(ix, iy, iw, @divTrunc(ih, 2), color);
+                return true;
+            },
+            0x2584 => { // ▄
+                const half = @divTrunc(ih, 2);
+                self.addTerminalRect(ix, iy + half, iw, ih - half, color);
+                return true;
+            },
+            0x2588 => { // █
+                self.addTerminalRect(ix, iy, iw, ih, color);
                 return true;
             },
             else => return false,
@@ -1264,6 +1478,32 @@ pub const Renderer = struct {
         }
     }
 
+    pub fn beginTerminalBatch(self: *Renderer) void {
+        self.batch_vertices.clearRetainingCapacity();
+        self.batch_draws.clearRetainingCapacity();
+    }
+
+    pub fn flushTerminalBatch(self: *Renderer) void {
+        const vertex_count = self.batch_vertices.items.len;
+        if (vertex_count == 0) return;
+        self.ensureVboCapacity(vertex_count);
+        gl.UseProgram(self.shader_program);
+        gl.BindVertexArray(self.vao);
+        gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, self.vbo);
+        gl.BufferSubData(
+            gl.c.GL_ARRAY_BUFFER,
+            0,
+            @as(gl.GLsizeiptr, @intCast(@sizeOf(Vertex) * vertex_count)),
+            self.batch_vertices.items.ptr,
+        );
+        for (self.batch_draws.items) |draw| {
+            if (draw.texture_id == 0) continue;
+            gl.ActiveTexture(gl.c.GL_TEXTURE0);
+            gl.BindTexture(gl.c.GL_TEXTURE_2D, draw.texture_id);
+            gl.DrawArrays(gl.c.GL_TRIANGLES, @intCast(draw.start), @intCast(draw.count));
+        }
+    }
+
     fn drawTextureRect(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
         if (texture.id == 0 or texture.width <= 0 or texture.height <= 0) return;
         gl.UseProgram(self.shader_program);
@@ -1305,6 +1545,81 @@ pub const Renderer = struct {
             &verts,
         );
         gl.DrawArrays(gl.c.GL_TRIANGLES, 0, 6);
+    }
+
+    fn ensureVboCapacity(self: *Renderer, vertex_count: usize) void {
+        if (vertex_count <= self.vbo_capacity_vertices) return;
+        var next_cap = self.vbo_capacity_vertices * 2;
+        if (next_cap < 6) next_cap = 6;
+        if (next_cap < vertex_count) next_cap = vertex_count;
+        gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, self.vbo);
+        gl.BufferData(
+            gl.c.GL_ARRAY_BUFFER,
+            @as(gl.GLsizeiptr, @intCast(@sizeOf(Vertex) * next_cap)),
+            null,
+            gl.c.GL_DYNAMIC_DRAW,
+        );
+        self.vbo_capacity_vertices = next_cap;
+    }
+
+    fn addBatchQuad(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
+        if (texture.id == 0 or texture.width <= 0 or texture.height <= 0) return;
+        const tex_w = @as(f32, @floatFromInt(texture.width));
+        const tex_h = @as(f32, @floatFromInt(texture.height));
+        const u_min = src.x / tex_w;
+        const v_min = src.y / tex_h;
+        const u_max = (src.x + src.width) / tex_w;
+        const v_max = (src.y + src.height) / tex_h;
+
+        const r = @as(f32, @floatFromInt(color.r)) / 255.0;
+        const g = @as(f32, @floatFromInt(color.g)) / 255.0;
+        const b = @as(f32, @floatFromInt(color.b)) / 255.0;
+        const a = @as(f32, @floatFromInt(color.a)) / 255.0;
+
+        const x0 = dest.x;
+        const y0 = dest.y;
+        const x1 = dest.x + dest.width;
+        const y1 = dest.y + dest.height;
+
+        const base = self.batch_vertices.items.len;
+        const verts = [_]Vertex{
+            .{ .x = x0, .y = y0, .u = u_min, .v = v_min, .r = r, .g = g, .b = b, .a = a },
+            .{ .x = x1, .y = y0, .u = u_max, .v = v_min, .r = r, .g = g, .b = b, .a = a },
+            .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a },
+            .{ .x = x0, .y = y0, .u = u_min, .v = v_min, .r = r, .g = g, .b = b, .a = a },
+            .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a },
+            .{ .x = x0, .y = y1, .u = u_min, .v = v_max, .r = r, .g = g, .b = b, .a = a },
+        };
+        self.batch_vertices.appendSlice(self.allocator, &verts) catch return;
+        if (self.batch_draws.items.len > 0) {
+            const last_idx = self.batch_draws.items.len - 1;
+            if (self.batch_draws.items[last_idx].texture_id == texture.id) {
+                self.batch_draws.items[last_idx].count += 6;
+                return;
+            }
+        }
+        _ = self.batch_draws.append(self.allocator, .{
+            .texture_id = texture.id,
+            .start = base,
+            .count = 6,
+        }) catch {};
+    }
+
+    pub fn addTerminalRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
+        if (w <= 0 or h <= 0) return;
+        const dest = types.Rect{
+            .x = @floatFromInt(x),
+            .y = @floatFromInt(y),
+            .width = @floatFromInt(w),
+            .height = @floatFromInt(h),
+        };
+        const src = types.Rect{ .x = 0, .y = 0, .width = 1, .height = 1 };
+        self.addBatchQuad(self.white_texture, src, dest, color.toRgba());
+    }
+
+    fn drawTextureBatchThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
+        const renderer: *Renderer = @ptrCast(@alignCast(ctx));
+        renderer.addBatchQuad(texture, src, dest, color);
     }
 
     fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {

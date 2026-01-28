@@ -219,7 +219,17 @@ pub const TerminalWidget = struct {
     ) void {
         _ = input;
         const r = shell.rendererPtr();
-        if (!self.session.tryLock()) return;
+        if (!self.session.tryLock()) {
+            r.drawRect(
+                @intFromFloat(x),
+                @intFromFloat(y),
+                @intFromFloat(width),
+                @intFromFloat(height),
+                r.theme.background,
+            );
+            r.drawTerminalTexture(x, y);
+            return;
+        }
         const snapshot = self.session.snapshot();
         const alt_exit = self.session.alt_last_active and !snapshot.alt_active;
         self.session.alt_last_active = snapshot.alt_active;
@@ -387,7 +397,7 @@ pub const TerminalWidget = struct {
                         fg = rr.theme.link;
                     }
 
-                    rr.drawRect(
+                    rr.addTerminalRect(
                         cell_x_i,
                         cell_y_i,
                         cell_w_i_scaled,
@@ -407,7 +417,7 @@ pub const TerminalWidget = struct {
                         .g = last_cell.attrs.bg.g,
                         .b = last_cell.attrs.bg.b,
                     };
-                    rr.drawRect(
+                    rr.addTerminalRect(
                         base_x_i + @as(i32, @intCast(cols_count)) * cell_w_i,
                         base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i,
                         padding_x_i,
@@ -486,7 +496,7 @@ pub const TerminalWidget = struct {
                         break :blk true;
                     };
 
-                    rr.drawTerminalCell(
+                    rr.drawTerminalCellBatched(
                         cell.codepoint,
                         @as(f32, @floatFromInt(cell_x_i)),
                         @as(f32, @floatFromInt(cell_y_i)),
@@ -533,23 +543,28 @@ pub const TerminalWidget = struct {
                         .g = view_cells[0].attrs.bg.g,
                         .b = view_cells[0].attrs.bg.b,
                     } else r.theme.background;
-                    r.drawRect(0, 0, texture_w, texture_h, bg);
+                    r.beginTerminalBatch();
+                    r.addTerminalRect(0, 0, texture_w, texture_h, bg);
                     var row: usize = 0;
                     while (row < rows) : (row += 1) {
                         drawRowBackgrounds(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i);
                     }
+                    r.flushTerminalBatch();
                     if (has_kitty) {
                         self.cleanupKittyTextures(self.kitty_images_view.items);
                         self.drawKittyImages(shell, base_x_local, base_y_local, false, start_line, rows, cols);
                     }
+                    r.beginTerminalBatch();
                     row = 0;
                     while (row < rows) : (row += 1) {
                         drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id);
                     }
+                    r.flushTerminalBatch();
                     if (has_kitty) {
                         self.drawKittyImages(shell, base_x_local, base_y_local, true, start_line, rows, cols);
                     }
                 } else if (needs_partial) {
+                    r.beginTerminalBatch();
                     var row: usize = 0;
                     while (row < rows) : (row += 1) {
                         if (row < view_dirty_rows.len and view_dirty_rows[row]) {
@@ -560,17 +575,35 @@ pub const TerminalWidget = struct {
                                 draw_end = @min(@as(usize, self.session.view_dirty_cols_end.items[row]), cols - 1);
                             }
                             drawRowBackgrounds(shell, view_cells, cols, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
-                            drawRowGlyphs(shell, view_cells, cols, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
                             if (row > 0) {
                                 drawRowBackgrounds(shell, view_cells, cols, row - 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
-                                drawRowGlyphs(shell, view_cells, cols, row - 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
                             }
                             if (row + 1 < rows) {
                                 drawRowBackgrounds(shell, view_cells, cols, row + 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                            }
+                        }
+                    }
+                    r.flushTerminalBatch();
+                    r.beginTerminalBatch();
+                    row = 0;
+                    while (row < rows) : (row += 1) {
+                        if (row < view_dirty_rows.len and view_dirty_rows[row]) {
+                            var draw_start: usize = 0;
+                            var draw_end: usize = cols - 1;
+                            if (row < self.session.view_dirty_cols_start.items.len and row < self.session.view_dirty_cols_end.items.len) {
+                                draw_start = @min(@as(usize, self.session.view_dirty_cols_start.items[row]), cols - 1);
+                                draw_end = @min(@as(usize, self.session.view_dirty_cols_end.items[row]), cols - 1);
+                            }
+                            drawRowGlyphs(shell, view_cells, cols, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
+                            if (row > 0) {
+                                drawRowGlyphs(shell, view_cells, cols, row - 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
+                            }
+                            if (row + 1 < rows) {
                                 drawRowGlyphs(shell, view_cells, cols, row + 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
                             }
                         }
                     }
+                    r.flushTerminalBatch();
                 }
                 r.endTerminalTexture();
                 if (kitty_changed) {

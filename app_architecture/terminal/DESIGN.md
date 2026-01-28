@@ -235,6 +235,7 @@ Progress:
 - Snapshot + flat grid in place with dirty rows and render-texture caching (no full redraw per frame in steady state).
 - Added per-row dirty tracking in the grid with bounding damage ranges.
 - Terminal rendering now caches the grid into a render texture and only re-renders dirty rows.
+- Terminal grid updates now batch background and glyph draws to reduce per-cell GL calls.
 - Terminal glyph atlas now reuses a staging buffer and supports compaction when full.
 - Added lightweight frame/draw/input-latency metrics to track pacing.
 - Refined ED (erase display) damage to track the cursor row column range separately from full-row damage below/above.
