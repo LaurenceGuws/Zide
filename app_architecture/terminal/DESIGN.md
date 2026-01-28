@@ -256,6 +256,13 @@ Research notes:
 - Ghostty marks per-row dirty flags, promoting to full redraw when global state changes.
 - libvterm damage tests emphasize scroll/move damage vs. cell damage merging.
 
+Planned improvements (2026-01-28):
+- Batch terminal draw calls into large vertex buffers (glyphs + backgrounds) to avoid per-cell GL draws.
+- Honor dirty column bounds in partial redraws and avoid redrawing neighbor rows unless overflow requires it.
+- Reduce render-thread lock contention by double-buffering snapshots or shortening parser lock holds.
+- Avoid full re-render on hover/link changes; draw link/hover underline as a lightweight overlay pass.
+- Skip rebuilding view_cells when nothing changed (dirty == none and scroll unchanged).
+
 ### Layer 10: Tests + Fixtures
 
 Progress:

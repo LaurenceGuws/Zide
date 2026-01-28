@@ -553,8 +553,12 @@ pub const TerminalWidget = struct {
                     var row: usize = 0;
                     while (row < rows) : (row += 1) {
                         if (row < view_dirty_rows.len and view_dirty_rows[row]) {
-                            const draw_start: usize = 0;
-                            const draw_end: usize = cols - 1;
+                            var draw_start: usize = 0;
+                            var draw_end: usize = cols - 1;
+                            if (row < self.session.view_dirty_cols_start.items.len and row < self.session.view_dirty_cols_end.items.len) {
+                                draw_start = @min(@as(usize, self.session.view_dirty_cols_start.items[row]), cols - 1);
+                                draw_end = @min(@as(usize, self.session.view_dirty_cols_end.items[row]), cols - 1);
+                            }
                             drawRowBackgrounds(shell, view_cells, cols, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
                             drawRowGlyphs(shell, view_cells, cols, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
                             if (row > 0) {
