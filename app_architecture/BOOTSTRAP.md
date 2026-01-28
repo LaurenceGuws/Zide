@@ -4,12 +4,12 @@ A modern, cross-platform IDE for Zig development, built entirely in Zig.
 
 ## Features
 
-- **Text Editor**: Piece-table based text buffer with undo/redo
+- **Text Editor**: Rope-based text buffer with undo/redo
 - **Syntax Highlighting**: Tree-sitter based, with Zig language support
-- **Integrated Terminal**: terminal panel stub (backend pending)
+- **Integrated Terminal**: PTY + VT core with scrollback (rendering polish ongoing)
 - **Native Wayland**: Wayland support in progress (Hyprland first; KDE planned)
 - **Low CPU Usage**: Adaptive frame rate with intelligent idle detection
-- **Cross-platform**: Linux (Wayland), macOS, and Windows support
+- **Cross-platform roadmap**: Linux first; macOS and Windows planned
 
 ## Layout (brief)
 
@@ -46,6 +46,10 @@ brew install zig freetype harfbuzz
 - Visual Studio Build Tools (for MSVC linker)
 
 ## Bootstrap
+
+This document is for dependencies, bootstrapping, build/run/test, and platform notes.
+Current focus and active issues live in `docs/AGENT_HANDOFF.md` and the relevant
+`app_architecture/**/_todo.yaml` files.
 
 Fetch vendor dependencies (legacy raylib until renderer migration is complete):
 
@@ -143,15 +147,3 @@ windowrulev2 = tile, title:^(Zide)
 ## Fonts
 
 - Bundled fonts live in `assets/fonts/` (currently JetBrains Mono Nerd Font).
-
-## Current Focus / Known Issues
-
-If you only read one thing, read this.
-
-- **Current focus:** terminal text rendering quality (Nerd icons clipping, box drawing striping).
-- **Symptoms:** Nerd icons clip on the right; box drawing shows stripes in some apps (btop/nvim).
-- **What we tried:** LCD rendering, pixel snapping, box drawing fallback, glyph scaling; improvements but not fully fixed.
-- **Docs to read next:**
-  - `app_architecture/terminal/TERMINAL_TEXT_RESEARCH.md` (kitty/alacritty/wezterm analysis)
-  - `app_architecture/terminal/TERMINAL_TEXT_STEPS.md` (planned upgrade phases)
-  - `docs/AGENT_HANDOFF.md` (latest status and next steps)

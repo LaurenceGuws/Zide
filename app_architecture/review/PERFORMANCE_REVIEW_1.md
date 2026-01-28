@@ -1,6 +1,6 @@
 # Zide Performance Review (Dock/Layout)
 
-Date: 2026-01-19
+Date: 2026-01-19 (status updated 2026-01-28)
 Scope: UI layout/dock structure and redraw behavior, with a focus on responsiveness and CPU usage.
 
 ## Dock/Layout Structure (Current)
@@ -33,9 +33,9 @@ Scope: UI layout/dock structure and redraw behavior, with a focus on responsiven
 - Dirty rows are tracked and used to update the cached terminal texture.
 - If scrollback offset is unchanged and no dirty rows are present, the terminal does not redraw.
 
-### 2) Render-to-Texture Cache for Editor + Terminal (PARTIAL)
+### 2) Render-to-Texture Cache for Editor + Terminal (DONE)
 - Terminal is cached in a texture and updated on dirty rows.
-- Editor caching is still pending.
+- Editor render-to-texture cache + dirty redraw are implemented (see ED-08).
 
 ### 3) Event-Driven Layout Invalidation
 - Only recompute layout when:
@@ -58,9 +58,9 @@ Scope: UI layout/dock structure and redraw behavior, with a focus on responsiven
 - Keep a “pending size” and apply on drag end to reduce per-move recalculation.
 
 ## Suggested Next Actions
-1) Add render-to-texture caching for the editor view.
-2) Add per-widget hover state tracking to limit redraw invalidations.
-3) Consider partial-column damage to reduce overdraw for row-local edits.
+1) Add per-widget hover state tracking to limit redraw invalidations.
+2) Consider partial-column damage to reduce overdraw for row-local edits.
+3) Debounce terminal resize while dragging (apply pending size on drag end).
 
 ## Terminal Scrollback Status
 - Scrollback is captured when the full screen scrolls and is exposed via a right-side scrollbar with drag and wheel support.

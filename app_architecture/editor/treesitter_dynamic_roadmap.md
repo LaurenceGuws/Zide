@@ -7,10 +7,11 @@ Goal: fully automate Tree-sitter grammar/query pulling, compiling, and runtime l
 This roadmap is optimized for a new agent to pick up with minimal context. Each step is intended
 to be small and testable, and to reuse the existing `tools/grammar_packs` workflow.
 
-## Current State
-- Queries live under `assets/queries/<lang>/highlights.scm` (highlights only).
-- Grammar pack tooling already exists in `tools/grammar_packs/` and packages highlights queries only.
-- Tree-sitter runtime is vendored in `vendor/tree-sitter/`.
+## Current State (2026-01-28)
+- Grammar pack tooling builds multi-query packs (highlights/injections/locals/tags/textobjects/indents).
+- Runtime loader + syntax registry are implemented (`src/editor/grammar_manager.zig`, `src/editor/syntax_registry.zig`).
+- `zig build grammar-update` installs packs into `~/.config/zide/grammars`.
+- Tree-sitter runtime is vendored in `vendor/tree-sitter/`; Zig language is built-in.
 
 ## Target Runtime Layout
 Default cache dir (Linux):
@@ -28,18 +29,18 @@ Default cache dir (Linux):
 
 ## Roadmap Steps
 
-### Step 1: Loader + Registry (runtime)
-Add a lightweight runtime loader that can:
+### Step 1: Loader + Registry (runtime) — done
+Implemented loader + registry:
 - resolve language by file extension
 - find a cached grammar pack on disk
 - `dlopen` the `.so` and resolve `tree_sitter_<lang>` symbol
 - read query text for that language (highlights + additional query types)
 
-Suggested files:
-- `src/editor/grammar_manager.zig` (new)
+Implemented files:
+- `src/editor/grammar_manager.zig`
 - `src/editor/syntax_registry.zig` (extension + basename → language map, defaults + overrides)
-- `src/editor/syntax.zig` (add `createHighlighterForLanguage`)
-- `src/editor/editor.zig` (replace hard-coded detection with registry lookup)
+- `src/editor/syntax.zig` (`createHighlighterForLanguage`)
+- `src/editor/editor.zig` (registry lookup)
 
 Errors/logging:
 - log missing packs clearly (language + expected path)
@@ -51,8 +52,8 @@ Defaults + overrides:
 - User overrides at `~/.config/zide/syntax.lua`
 - Project overrides at `.zide/syntax.lua`
 
-### Step 2: Pack Fetch/Install (local)
-Add a CLI command or tool to build + install packs locally:
+### Step 2: Pack Fetch/Install (local) — done
+CLI command in place:
 - `zig build grammar-update`
 - runs `tools/grammar_packs/scripts/sync_from_nvim.sh`, `fetch_grammars.sh`, `build_all.sh`
 - installs `tools/grammar_packs/dist/` into `~/.config/zide/grammars`
@@ -61,8 +62,8 @@ Add a CLI command or tool to build + install packs locally:
 - supports `--targets` / `--skip-targets` to limit os/arch combos
  - supports `--jobs <n>` to parallelize pack builds
 
-Suggested files:
-- `src/tools/grammar_update.zig` (new)
+Implemented files:
+- `src/tools/grammar_update.zig`
 
 ### Step 3: Auto-sync Queries (optional)
 Keep queries in sync with nvim-treesitter:
@@ -84,7 +85,7 @@ Suggested files:
 - `src/editor/grammar_downloader.zig`
 - config option in `assets/config/init.lua` for `grammar_base_url`
 
-## Testing Plan
+## Testing Plan (pending)
 - Unit test: `GrammarManager.resolveLanguage("foo.java") == .java`
 - Unit test: `GrammarManager.loadQuery("zig")` reads correct file
 - Integration: open `.bashrc` and a `.java` file with installed packs

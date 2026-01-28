@@ -9,22 +9,17 @@ Read AGENTS.md.
 
 Read docs/AGENT_HANDOFF.md.
 
-Read app_architecture/editor/treesitter_dynamic_roadmap.md.
-
-Read app_architecture/editor/treesitter_todo.yaml.
-
-Read src/editor/syntax.zig.
+Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current focus.
 
 ---
 
 ## Handoff (High-Level)
 
 ### Current Focus
-- TS-05: injected languages + full query handling beyond highlights. See `app_architecture/editor/treesitter_todo.yaml` and `app_architecture/editor/treesitter_dynamic_roadmap.md`.
+- UI rendering journey: replay raylib behavior while building a proper renderer abstraction and a Linux implementation first. See `app_architecture/ui/DEVELOPMENT_JOURNEY.md`.
 
 ### Recent Changes (High-Level)
-- Zig no longer uses embedded highlight queries; it now uses the same query lookup path as other languages.
-- TS-04 replay harness is in place; see the todo for details.
+- UI development journey documented in `app_architecture/ui/DEVELOPMENT_JOURNEY.md`.
 
 ### Constraints / Guardrails
 - Handoff docs are high-level only; progress tracking lives in todo + app_architecture docs.
@@ -32,8 +27,7 @@ Read src/editor/syntax.zig.
 - Default: no commits until the user approves after tests. If the user explicitly says to commit, treat that as approval.
 
 ### Where to Look for Details
-- Tree-sitter plan + research: `app_architecture/editor/treesitter_dynamic_roadmap.md`
-- Task tracking: `app_architecture/editor/treesitter_todo.yaml`
+- UI rendering plan + per-OS journey: `app_architecture/ui/DEVELOPMENT_JOURNEY.md`
 - Editor widget roadmap: `app_architecture/editor/editor_widget_todo.yaml`
 - Terminal roadmap: `app_architecture/terminal/*_todo.yaml`
 
@@ -44,3 +38,4 @@ Read src/editor/syntax.zig.
 - `zig build test`
 - `zig build check-app-imports`
 - `zig build check-input-imports`
+- `zig build check-editor-imports`

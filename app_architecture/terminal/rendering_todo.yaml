@@ -1,5 +1,0 @@
-terminal_rendering_todo:
-  status: deprecated
-  notes:
-    - "Superseded by app_architecture/ui/DEVELOPMENT_JOURNEY.md."
-    - "Do not update this file; track renderer work in the UI journey doc and per-OS plan."
