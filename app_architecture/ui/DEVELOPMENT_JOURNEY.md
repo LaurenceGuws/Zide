@@ -11,6 +11,7 @@ Status (2026-01-29)
 - Wayland mouse scale uses SDL's drawable/window ratio only; avoid double-applying compositor scale.
 - Undo repeat loop fixed by removing input-level undo grouping and ignoring text events while ctrl/alt/super are held.
 - Key repeat now uses SDL's native key repeat events (no custom repeat timers) to align with terminal/editor input behavior.
+- SDL event polling now runs on a dedicated input thread with a lock-protected queue to decouple input latency from render work (aligned with kitty's IO loop and ghostty's thread-based event handling).
 
 Canonical references (do not diverge without a documented reason)
 - kitty: OpenGL renderer, glyph atlas, render loop discipline.
