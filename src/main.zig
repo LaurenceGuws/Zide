@@ -597,7 +597,7 @@ const AppState = struct {
         }
         // Check for window resize (event-based, works with Wayland)
         if (app_shell.isWindowResized()) {
-            shell.setSize(app_shell.getScreenWidth(), app_shell.getScreenHeight());
+            _ = shell.refreshWindowMetrics("window-event");
             if (try shell.refreshUiScale()) {
                 self.applyUiScale();
             }
