@@ -264,6 +264,7 @@ fn sendCsiWithMod(pty: *pty_mod.Pty, prefix: []const u8, mod_code: u8, suffix: [
 }
 
 fn sendKeyWithProtocol(pty: *pty_mod.Pty, key: types.Key, mod: types.Modifier, flags: u32) bool {
+    if (!supportsKeyEncoding(flags)) return false;
     if (flags == 0) return false;
 
     const mod_code = encodeModifier(mod);
@@ -295,6 +296,7 @@ fn sendKeyWithProtocol(pty: *pty_mod.Pty, key: types.Key, mod: types.Modifier, f
 }
 
 fn sendCharWithProtocol(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, flags: u32) bool {
+    if (!supportsKeyEncoding(flags)) return false;
     if (flags == 0) return false;
     if (mod == types.VTERM_MOD_NONE and (flags & key_mode_report_all_keys) == 0) return false;
     const mod_code = encodeModifier(mod);
@@ -340,6 +342,13 @@ const key_mode_report_all_keys: u32 = 8;
 const mouse_button_left_mask: u8 = 1;
 const mouse_button_middle_mask: u8 = 2;
 const mouse_button_right_mask: u8 = 4;
+
+fn supportsKeyEncoding(flags: u32) bool {
+    if (flags == 0) return false;
+    // Kitty keyboard protocol flags are parsed but not fully encoded yet.
+    // Fall back to legacy sequences until press/repeat/release encoding is implemented.
+    return false;
+}
 
 pub fn encodeKeyBytesForTest(
     allocator: std.mem.Allocator,

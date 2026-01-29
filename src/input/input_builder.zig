@@ -119,13 +119,13 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
         batch.key_repeated[@intFromEnum(entry.key)] = r.isKeyRepeated(entry.code);
     }
 
-    while (r.getKeyPressed()) |raw_key| {
-        if (inputKeyFromShell(raw_key)) |key| {
+    while (r.getKeyPressed()) |press| {
+        if (inputKeyFromShell(press.scancode)) |key| {
             batch.append(.{
                 .key = .{
                     .key = key,
                     .mods = batch.mods,
-                    .repeated = false,
+                    .repeated = press.repeated,
                     .pressed = true,
                 },
             }) catch {};

@@ -476,6 +476,16 @@ pub const TerminalSession = struct {
     }
 
     pub fn sendKey(self: *TerminalSession, key: Key, mod: Modifier) !void {
+        const log = app_logger.logger("terminal.input");
+        if (log.enabled_file or log.enabled_console) {
+            log.logf("sendKey key={s} code={d} mod=0x{x} app_cursor={any} key_mode=0x{x}", .{
+                keyName(key),
+                key,
+                mod,
+                self.app_cursor_keys,
+                self.keyModeFlags(),
+            });
+        }
         if (self.pty) |*pty| {
             if (self.app_cursor_keys and mod == types.VTERM_MOD_NONE) {
                 const seq = switch (key) {
@@ -497,6 +507,15 @@ pub const TerminalSession = struct {
     }
 
     pub fn sendKeypad(self: *TerminalSession, key: input_mod.KeypadKey, mod: Modifier) !void {
+        const log = app_logger.logger("terminal.input");
+        if (log.enabled_file or log.enabled_console) {
+            log.logf("sendKeypad key={s} mod=0x{x} app_keypad={any} key_mode=0x{x}", .{
+                keypadKeyName(key),
+                mod,
+                self.app_keypad,
+                self.keyModeFlags(),
+            });
+        }
         if (self.pty) |*pty| {
             _ = try input_mod.sendKeypad(pty, key, mod, self.app_keypad, self.keyModeFlags());
         }
@@ -507,6 +526,14 @@ pub const TerminalSession = struct {
     }
 
     pub fn sendChar(self: *TerminalSession, char: u32, mod: Modifier) !void {
+        const log = app_logger.logger("terminal.input");
+        if (log.enabled_file or log.enabled_console) {
+            log.logf("sendChar cp={d} mod=0x{x} key_mode=0x{x}", .{
+                char,
+                mod,
+                self.keyModeFlags(),
+            });
+        }
         if (self.pty) |*pty| {
             _ = try input_mod.sendChar(pty, char, mod, self.keyModeFlags());
         }
@@ -523,6 +550,10 @@ pub const TerminalSession = struct {
 
     pub fn sendText(self: *TerminalSession, text: []const u8) !void {
         if (text.len == 0) return;
+        const log = app_logger.logger("terminal.input");
+        if (log.enabled_file or log.enabled_console) {
+            log.logf("sendText len={d}", .{text.len});
+        }
         if (self.pty) |*pty| {
             try input_mod.sendText(pty, text);
         }
@@ -1137,6 +1168,48 @@ pub const VTERM_MOD_CTRL = types.VTERM_MOD_CTRL;
 const default_scrollback_rows: usize = 1000;
 const key_mode_disambiguate: u32 = 1;
 const key_mode_report_all_keys: u32 = 8;
+
+fn keyName(key: Key) []const u8 {
+    return switch (key) {
+        VTERM_KEY_ENTER => "enter",
+        VTERM_KEY_TAB => "tab",
+        VTERM_KEY_BACKSPACE => "backspace",
+        VTERM_KEY_ESCAPE => "escape",
+        VTERM_KEY_UP => "up",
+        VTERM_KEY_DOWN => "down",
+        VTERM_KEY_LEFT => "left",
+        VTERM_KEY_RIGHT => "right",
+        VTERM_KEY_INS => "insert",
+        VTERM_KEY_DEL => "delete",
+        VTERM_KEY_HOME => "home",
+        VTERM_KEY_END => "end",
+        VTERM_KEY_PAGEUP => "page_up",
+        VTERM_KEY_PAGEDOWN => "page_down",
+        else => "unknown",
+    };
+}
+
+fn keypadKeyName(key: input_mod.KeypadKey) []const u8 {
+    return switch (key) {
+        .kp0 => "kp0",
+        .kp1 => "kp1",
+        .kp2 => "kp2",
+        .kp3 => "kp3",
+        .kp4 => "kp4",
+        .kp5 => "kp5",
+        .kp6 => "kp6",
+        .kp7 => "kp7",
+        .kp8 => "kp8",
+        .kp9 => "kp9",
+        .kp_decimal => "kp_decimal",
+        .kp_divide => "kp_divide",
+        .kp_multiply => "kp_multiply",
+        .kp_subtract => "kp_subtract",
+        .kp_add => "kp_add",
+        .kp_enter => "kp_enter",
+        .kp_equal => "kp_equal",
+    };
+}
 const mouse_button_left_mask: u8 = 1;
 const mouse_button_middle_mask: u8 = 2;
 const mouse_button_right_mask: u8 = 4;

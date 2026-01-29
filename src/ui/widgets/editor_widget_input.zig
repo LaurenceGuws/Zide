@@ -52,42 +52,42 @@ pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *sh
         try widget.editor.insertNewline();
         handled = true;
         app_logger.logger("editor.input").logf("key=enter", .{});
-    } else if (input_batch.keyRepeated(.backspace)) {
+    } else if (input_batch.keyPressed(.backspace) or input_batch.keyRepeated(.backspace)) {
         try widget.editor.deleteCharBackward();
         handled = true;
         app_logger.logger("editor.input").logf("key=backspace", .{});
-    } else if (input_batch.keyRepeated(.delete)) {
+    } else if (input_batch.keyPressed(.delete) or input_batch.keyRepeated(.delete)) {
         try widget.editor.deleteCharForward();
         handled = true;
         app_logger.logger("editor.input").logf("key=delete", .{});
-    } else if (input_batch.keyRepeated(.up)) {
+    } else if (input_batch.keyPressed(.up) or input_batch.keyRepeated(.up)) {
         if (widget.moveCursorVisual(shell, -1)) {
             widget.ensureCursorVisible(shell, height);
             handled = true;
             app_logger.logger("editor.input").logf("key=up", .{});
         }
-    } else if (input_batch.keyRepeated(.down)) {
+    } else if (input_batch.keyPressed(.down) or input_batch.keyRepeated(.down)) {
         if (widget.moveCursorVisual(shell, 1)) {
             widget.ensureCursorVisible(shell, height);
             handled = true;
             app_logger.logger("editor.input").logf("key=down", .{});
         }
-    } else if (input_batch.keyRepeated(.left)) {
+    } else if (input_batch.keyPressed(.left) or input_batch.keyRepeated(.left)) {
         widget.editor.moveCursorLeft();
         widget.ensureCursorVisible(shell, height);
         handled = true;
         app_logger.logger("editor.input").logf("key=left", .{});
-    } else if (input_batch.keyRepeated(.right)) {
+    } else if (input_batch.keyPressed(.right) or input_batch.keyRepeated(.right)) {
         widget.editor.moveCursorRight();
         widget.ensureCursorVisible(shell, height);
         handled = true;
         app_logger.logger("editor.input").logf("key=right", .{});
-    } else if (input_batch.keyRepeated(.home)) {
+    } else if (input_batch.keyPressed(.home) or input_batch.keyRepeated(.home)) {
         widget.editor.moveCursorToLineStart();
         widget.ensureCursorVisible(shell, height);
         handled = true;
         app_logger.logger("editor.input").logf("key=home", .{});
-    } else if (input_batch.keyRepeated(.end)) {
+    } else if (input_batch.keyPressed(.end) or input_batch.keyRepeated(.end)) {
         widget.editor.moveCursorToLineEnd();
         widget.ensureCursorVisible(shell, height);
         handled = true;
@@ -96,11 +96,11 @@ pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *sh
         try widget.editor.save();
         handled = true;
         app_logger.logger("editor.input").logf("key=ctrl+s", .{});
-    } else if (ctrl and input_batch.keyRepeated(.z)) {
+    } else if (ctrl and (input_batch.keyPressed(.z) or input_batch.keyRepeated(.z))) {
         _ = try widget.editor.undo();
         handled = true;
         app_logger.logger("editor.input").logf("key=ctrl+z", .{});
-    } else if (ctrl and input_batch.keyRepeated(.y)) {
+    } else if (ctrl and (input_batch.keyPressed(.y) or input_batch.keyRepeated(.y))) {
         _ = try widget.editor.redo();
         handled = true;
         app_logger.logger("editor.input").logf("key=ctrl+y", .{});

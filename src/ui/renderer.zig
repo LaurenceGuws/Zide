@@ -5,6 +5,7 @@ const terminal_font_mod = @import("terminal_font.zig");
 const TerminalFont = terminal_font_mod.TerminalFont;
 const gl = @import("renderer/gl.zig");
 const types = @import("renderer/types.zig");
+const app_logger = @import("../app_logger.zig");
 
 const sdl = gl.c;
 
@@ -96,8 +97,10 @@ pub const Theme = struct {
 
 const key_repeat_key_count: usize = @intCast(sdl.SDL_NUM_SCANCODES);
 const mouse_button_count: usize = 8;
-const key_repeat_initial_delay: f64 = 0.45;
-const key_repeat_rate: f64 = 30.0;
+const KeyPress = struct {
+    scancode: i32,
+    repeated: bool,
+};
 
 const RenderTarget = struct {
     texture: types.Texture,
@@ -165,15 +168,14 @@ pub const Renderer = struct {
     last_zoom_apply_time: f64,
     wayland_scale_cache: ?f32,
     wayland_scale_last_update: f64,
-    key_repeat_next: [key_repeat_key_count]f64,
-
     key_down: [key_repeat_key_count]bool,
     key_pressed: [key_repeat_key_count]bool,
+    key_repeated: [key_repeat_key_count]bool,
     key_released: [key_repeat_key_count]bool,
     mouse_down: [mouse_button_count]bool,
     mouse_pressed: [mouse_button_count]bool,
     mouse_released: [mouse_button_count]bool,
-    key_queue: std.ArrayList(i32),
+    key_queue: std.ArrayList(KeyPress),
     char_queue: std.ArrayList(u32),
     clipboard_buffer: std.ArrayList(u8),
     batch_vertices: std.ArrayList(Vertex),
@@ -270,14 +272,14 @@ pub const Renderer = struct {
             .last_zoom_apply_time = 0.0,
             .wayland_scale_cache = null,
             .wayland_scale_last_update = -1000.0,
-            .key_repeat_next = [_]f64{0} ** key_repeat_key_count,
             .key_down = [_]bool{false} ** key_repeat_key_count,
             .key_pressed = [_]bool{false} ** key_repeat_key_count,
+            .key_repeated = [_]bool{false} ** key_repeat_key_count,
             .key_released = [_]bool{false} ** key_repeat_key_count,
             .mouse_down = [_]bool{false} ** mouse_button_count,
             .mouse_pressed = [_]bool{false} ** mouse_button_count,
             .mouse_released = [_]bool{false} ** mouse_button_count,
-            .key_queue = std.ArrayList(i32).empty,
+            .key_queue = std.ArrayList(KeyPress).empty,
             .char_queue = std.ArrayList(u32).empty,
             .clipboard_buffer = std.ArrayList(u8).empty,
             .batch_vertices = std.ArrayList(Vertex).empty,
@@ -1167,7 +1169,7 @@ pub const Renderer = struct {
         return self.char_queue.orderedRemove(0);
     }
 
-    pub fn getKeyPressed(self: *Renderer) ?i32 {
+    pub fn getKeyPressed(self: *Renderer) ?KeyPress {
         if (self.key_queue.items.len == 0) return null;
         return self.key_queue.orderedRemove(0);
     }
@@ -1190,28 +1192,7 @@ pub const Renderer = struct {
         if (key < 0) return false;
         const idx: usize = @intCast(key);
         if (idx >= key_repeat_key_count) return false;
-
-        const now = getTime();
-        const down = self.key_down[idx];
-        if (!down) {
-            self.key_repeat_next[idx] = 0;
-            return false;
-        }
-
-        if (self.key_pressed[idx]) {
-            self.key_repeat_next[idx] = now + key_repeat_initial_delay;
-            return true;
-        }
-
-        if (self.key_repeat_next[idx] > 0 and now >= self.key_repeat_next[idx]) {
-            const interval: f64 = if (key_repeat_rate > 0.0) 1.0 / key_repeat_rate else 0.05;
-            while (self.key_repeat_next[idx] <= now) {
-                self.key_repeat_next[idx] += interval;
-            }
-            return true;
-        }
-
-        return false;
+        return self.key_repeated[idx];
     }
 
     pub fn getMousePos(self: *Renderer) MousePos {
@@ -1691,7 +1672,9 @@ pub const Renderer = struct {
     }
 
     fn pollInputEvents(self: *Renderer) void {
+        const input_log = app_logger.logger("input.sdl");
         @memset(self.key_pressed[0..], false);
+        @memset(self.key_repeated[0..], false);
         @memset(self.key_released[0..], false);
         @memset(self.mouse_pressed[0..], false);
         @memset(self.mouse_released[0..], false);
@@ -1717,8 +1700,19 @@ pub const Renderer = struct {
                         self.key_down[@intCast(sc)] = true;
                         if (event.key.repeat == 0) {
                             self.key_pressed[@intCast(sc)] = true;
-                            _ = self.key_queue.append(self.allocator, sc) catch {};
+                        } else {
+                            self.key_repeated[@intCast(sc)] = true;
                         }
+                        _ = self.key_queue.append(self.allocator, .{
+                            .scancode = sc,
+                            .repeated = event.key.repeat != 0,
+                        }) catch {};
+                    }
+                    if (input_log.enabled_file or input_log.enabled_console) {
+                        input_log.logf(
+                            "keydown sc={d} sym={d} repeat={d}",
+                            .{ sc, @as(i32, @intCast(event.key.keysym.sym)), event.key.repeat },
+                        );
                     }
                 },
                 sdl.SDL_KEYUP => {
@@ -1727,12 +1721,21 @@ pub const Renderer = struct {
                         self.key_down[@intCast(sc)] = false;
                         self.key_released[@intCast(sc)] = true;
                     }
+                    if (input_log.enabled_file or input_log.enabled_console) {
+                        input_log.logf(
+                            "keyup sc={d} sym={d}",
+                            .{ sc, @as(i32, @intCast(event.key.keysym.sym)) },
+                        );
+                    }
                 },
                 sdl.SDL_TEXTINPUT => {
                     const text = std.mem.span(@as([*:0]const u8, @ptrCast(&event.text.text)));
                     var it = std.unicode.Utf8View.initUnchecked(text).iterator();
                     while (it.nextCodepoint()) |cp| {
                         _ = self.char_queue.append(self.allocator, cp) catch {};
+                    }
+                    if (input_log.enabled_file or input_log.enabled_console) {
+                        input_log.logf("textinput bytes={d}", .{text.len});
                     }
                 },
                 sdl.SDL_MOUSEBUTTONDOWN => {
