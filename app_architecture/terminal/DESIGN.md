@@ -206,6 +206,7 @@ Progress:
 - Application cursor keys (DECCKM via `CSI ?1 h/l`) implemented.
 - DSR/DA replies added for cursor position queries (Codex compatibility).
 - Default color queries (OSC 10/11) are answered; sets are applied to session defaults.
+- Synchronized updates (DECSET ?2026) now freeze terminal rendering until reset.
 
 Decision:
 - Track an alternate grid and per-screen cursor/scroll region state; swap on DECSET/DECRST.
@@ -227,7 +228,6 @@ Research notes:
 
 Known gaps (as of 2026-01-28):
 - Kitty graphics protocol is still partial (see IMG-01 in `app_architecture/terminal/protocol_todo.yaml`).
-- Synchronized updates (DECSET ?2026) are not implemented; some apps rely on this for frame presentation.
 - Terminfo feature parity sweep is pending (TERM-01).
 - Tests + fixtures are not implemented yet (see Layer 10).
 - Cross-platform font fallback (macOS/Windows) is still TODO.

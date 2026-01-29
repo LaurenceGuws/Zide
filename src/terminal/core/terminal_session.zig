@@ -167,6 +167,7 @@ pub const TerminalSession = struct {
     io_mutex: std.Thread.Mutex,
     io_buffer: std.ArrayList(u8),
     io_read_offset: usize,
+    sync_updates_active: bool,
     output_pending: std.atomic.Value(bool),
     output_generation: std.atomic.Value(u64),
     alt_exit_pending: std.atomic.Value(bool),
@@ -246,6 +247,7 @@ pub const TerminalSession = struct {
             .io_mutex = .{},
             .io_buffer = .empty,
             .io_read_offset = 0,
+            .sync_updates_active = false,
             .output_pending = std.atomic.Value(bool).init(false),
             .output_generation = std.atomic.Value(u64).init(0),
             .alt_exit_pending = std.atomic.Value(bool).init(false),
@@ -989,6 +991,18 @@ pub const TerminalSession = struct {
             .kitty_placements = kitty.placements.items,
             .kitty_generation = kitty.generation,
         };
+    }
+
+    pub fn syncUpdatesActive(self: *const TerminalSession) bool {
+        return self.sync_updates_active;
+    }
+
+    pub fn setSyncUpdates(self: *TerminalSession, enabled: bool) void {
+        if (self.sync_updates_active == enabled) return;
+        self.sync_updates_active = enabled;
+        if (!enabled) {
+            self.activeScreen().markDirtyAll();
+        }
     }
 
     pub fn takeOscClipboard(self: *TerminalSession) ?[]const u8 {

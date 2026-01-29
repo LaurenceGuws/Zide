@@ -230,6 +230,25 @@ pub const TerminalWidget = struct {
             r.drawTerminalTexture(x, y);
             return;
         }
+        const sync_updates = self.session.syncUpdatesActive();
+        if (sync_updates and self.session.view_cells.items.len > 0) {
+            const view_cells = self.session.view_cells.items;
+            const bg_color = if (view_cells.len > 0) Color{
+                .r = view_cells[0].attrs.bg.r,
+                .g = view_cells[0].attrs.bg.g,
+                .b = view_cells[0].attrs.bg.b,
+            } else r.theme.background;
+            self.session.unlock();
+            r.drawRect(
+                @intFromFloat(x),
+                @intFromFloat(y),
+                @intFromFloat(width),
+                @intFromFloat(height),
+                bg_color,
+            );
+            r.drawTerminalTexture(x, y);
+            return;
+        }
         const snapshot = self.session.snapshot();
         const alt_exit = self.session.alt_last_active and !snapshot.alt_active;
         self.session.alt_last_active = snapshot.alt_active;
@@ -823,7 +842,7 @@ pub const TerminalWidget = struct {
             );
         }
 
-        if (updated or snapshot.dirty == .none) {
+        if (!sync_updates and (updated or snapshot.dirty == .none)) {
             if (self.session.tryLock()) {
                 const current_gen = self.session.currentGeneration();
                 if (current_gen == snapshot.generation) {
