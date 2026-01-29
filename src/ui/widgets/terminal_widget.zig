@@ -695,55 +695,39 @@ pub const TerminalWidget = struct {
             self.cleanupKittyTextures(self.kitty_images_view.items);
         }
 
-        if (rows > 0 and cols > 0) {
-            if (selection) |selection_state| {
-                const total_lines_sel = history_len + rows;
-                if (total_lines_sel > 0) {
-                    var start_sel = selection_state.start;
-                    var end_sel = selection_state.end;
-                    if (start_sel.row > end_sel.row or (start_sel.row == end_sel.row and start_sel.col > end_sel.col)) {
-                        const tmp = start_sel;
-                        start_sel = end_sel;
-                        end_sel = tmp;
-                    }
-                    start_sel.row = @min(start_sel.row, total_lines_sel - 1);
-                    end_sel.row = @min(end_sel.row, total_lines_sel - 1);
-                    start_sel.col = @min(start_sel.col, cols - 1);
-                    end_sel.col = @min(end_sel.col, cols - 1);
+        if (rows > 0 and cols > 0 and selection != null) {
+            const selection_rows = self.session.view_selection_rows.items;
+            if (selection_rows.len == rows) {
+                const selection_color = Color{
+                    .r = r.theme.selection.r,
+                    .g = r.theme.selection.g,
+                    .b = r.theme.selection.b,
+                    .a = 140,
+                };
+                const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
+                const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_height));
+                const base_x_i: i32 = @intFromFloat(std.math.round(base_x));
+                const base_y_i: i32 = @intFromFloat(std.math.round(base_y));
 
-                    const selection_color = Color{
-                        .r = r.theme.selection.r,
-                        .g = r.theme.selection.g,
-                        .b = r.theme.selection.b,
-                        .a = 140,
-                    };
+                var row_idx: usize = 0;
+                while (row_idx < rows) : (row_idx += 1) {
+                    if (!selection_rows[row_idx]) continue;
+                    const col_start = @as(usize, self.session.view_selection_cols_start.items[row_idx]);
+                    const col_end = @as(usize, self.session.view_selection_cols_end.items[row_idx]);
+                    if (col_end < col_start or col_end >= cols) continue;
 
-                    var row_idx: usize = 0;
-                    while (row_idx < rows) : (row_idx += 1) {
-                        const global_row = start_line + row_idx;
-                        if (global_row < start_sel.row or global_row > end_sel.row) continue;
+                    const rect_x = base_x_i + @as(i32, @intCast(col_start)) * cell_w_i;
+                    const rect_y = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
+                    const rect_w = cell_w_i * @as(i32, @intCast(col_end - col_start + 1));
+                    const rect_h = cell_h_i;
 
-                        const col_start = if (global_row == start_sel.row) start_sel.col else 0;
-                        const col_end = if (global_row == end_sel.row) end_sel.col else cols - 1;
-                        if (col_end < col_start) continue;
-
-                        const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
-                        const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_height));
-                        const base_x_i: i32 = @intFromFloat(std.math.round(base_x));
-                        const base_y_i: i32 = @intFromFloat(std.math.round(base_y));
-                        const rect_x = base_x_i + @as(i32, @intCast(col_start)) * cell_w_i;
-                        const rect_y = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
-                        const rect_w = cell_w_i * @as(i32, @intCast(col_end - col_start + 1));
-                        const rect_h = cell_h_i;
-
-                        r.drawRect(
-                            rect_x,
-                            rect_y,
-                            rect_w,
-                            rect_h,
-                            selection_color,
-                        );
-                    }
+                    r.drawRect(
+                        rect_x,
+                        rect_y,
+                        rect_w,
+                        rect_h,
+                        selection_color,
+                    );
                 }
             }
         }

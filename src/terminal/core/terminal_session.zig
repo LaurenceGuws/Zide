@@ -183,6 +183,9 @@ pub const TerminalSession = struct {
     view_dirty_rows: std.ArrayList(bool),
     view_dirty_cols_start: std.ArrayList(u16),
     view_dirty_cols_end: std.ArrayList(u16),
+    view_selection_rows: std.ArrayList(bool),
+    view_selection_cols_start: std.ArrayList(u16),
+    view_selection_cols_end: std.ArrayList(u16),
     kitty_view_images: std.ArrayList(kitty_mod.KittyImage),
     kitty_view_placements: std.ArrayList(kitty_mod.KittyPlacement),
     kitty_view_generation: std.atomic.Value(u64),
@@ -279,6 +282,9 @@ pub const TerminalSession = struct {
             .view_dirty_rows = .empty,
             .view_dirty_cols_start = .empty,
             .view_dirty_cols_end = .empty,
+            .view_selection_rows = .empty,
+            .view_selection_cols_start = .empty,
+            .view_selection_cols_end = .empty,
             .kitty_view_images = .empty,
             .kitty_view_placements = .empty,
             .kitty_view_generation = std.atomic.Value(u64).init(0),
@@ -330,6 +336,9 @@ pub const TerminalSession = struct {
             self.view_dirty_rows.clearRetainingCapacity();
             self.view_dirty_cols_start.clearRetainingCapacity();
             self.view_dirty_cols_end.clearRetainingCapacity();
+            self.view_selection_rows.clearRetainingCapacity();
+            self.view_selection_cols_start.clearRetainingCapacity();
+            self.view_selection_cols_end.clearRetainingCapacity();
             self.view_cache_rows.store(0, .release);
             self.view_cache_cols.store(0, .release);
             self.view_cache_generation.store(generation, .release);
@@ -343,6 +352,9 @@ pub const TerminalSession = struct {
         _ = self.view_dirty_rows.resize(self.allocator, rows) catch {};
         _ = self.view_dirty_cols_start.resize(self.allocator, rows) catch {};
         _ = self.view_dirty_cols_end.resize(self.allocator, rows) catch {};
+        _ = self.view_selection_rows.resize(self.allocator, rows) catch {};
+        _ = self.view_selection_cols_start.resize(self.allocator, rows) catch {};
+        _ = self.view_selection_cols_end.resize(self.allocator, rows) catch {};
 
         const start_line = if (total_lines > rows + clamped_offset)
             total_lines - rows - clamped_offset
@@ -363,6 +375,54 @@ pub const TerminalSession = struct {
                 const grid_row = global_row - history_len;
                 const src_start = grid_row * cols;
                 std.mem.copyForwards(Cell, row_dest, view.cells[src_start .. src_start + cols]);
+            }
+        }
+
+        if (self.isAltActive()) {
+            for (self.view_selection_rows.items) |*row_selected| {
+                row_selected.* = false;
+            }
+        } else if (self.history.selectionState()) |selection| {
+            var start_sel = selection.start;
+            var end_sel = selection.end;
+            if (start_sel.row > end_sel.row or (start_sel.row == end_sel.row and start_sel.col > end_sel.col)) {
+                const tmp = start_sel;
+                start_sel = end_sel;
+                end_sel = tmp;
+            }
+            const total_lines_sel = total_lines;
+            if (total_lines_sel > 0) {
+                start_sel.row = @min(start_sel.row, total_lines_sel - 1);
+                end_sel.row = @min(end_sel.row, total_lines_sel - 1);
+                start_sel.col = @min(start_sel.col, cols - 1);
+                end_sel.col = @min(end_sel.col, cols - 1);
+            } else {
+                start_sel.row = 0;
+                end_sel.row = 0;
+                start_sel.col = 0;
+                end_sel.col = 0;
+            }
+
+            row = 0;
+            while (row < rows) : (row += 1) {
+                const global_row = start_line + row;
+                if (global_row < start_sel.row or global_row > end_sel.row) {
+                    self.view_selection_rows.items[row] = false;
+                    continue;
+                }
+                const col_start = if (global_row == start_sel.row) start_sel.col else 0;
+                const col_end = if (global_row == end_sel.row) end_sel.col else cols - 1;
+                if (col_end < col_start) {
+                    self.view_selection_rows.items[row] = false;
+                    continue;
+                }
+                self.view_selection_rows.items[row] = true;
+                self.view_selection_cols_start.items[row] = @intCast(col_start);
+                self.view_selection_cols_end.items[row] = @intCast(col_end);
+            }
+        } else {
+            for (self.view_selection_rows.items) |*row_selected| {
+                row_selected.* = false;
             }
         }
         if (view.dirty_rows.len == rows) {
@@ -451,6 +511,9 @@ pub const TerminalSession = struct {
         self.view_dirty_rows.deinit(self.allocator);
         self.view_dirty_cols_start.deinit(self.allocator);
         self.view_dirty_cols_end.deinit(self.allocator);
+        self.view_selection_rows.deinit(self.allocator);
+        self.view_selection_cols_start.deinit(self.allocator);
+        self.view_selection_cols_end.deinit(self.allocator);
         self.kitty_view_images.deinit(self.allocator);
         self.kitty_view_placements.deinit(self.allocator);
         self.io_buffer.deinit(self.allocator);
@@ -1311,21 +1374,33 @@ pub const TerminalSession = struct {
 
     pub fn clearSelection(self: *TerminalSession) void {
         self.history.clearSelection();
+        self.view_cache_request_offset.store(@intCast(self.history.scrollOffset()), .release);
+        self.view_cache_pending.store(true, .release);
+        self.io_wait_cond.signal();
     }
 
     pub fn startSelection(self: *TerminalSession, row: usize, col: usize) void {
         if (self.isAltActive()) return;
         self.history.startSelection(row, col);
+        self.view_cache_request_offset.store(@intCast(self.history.scrollOffset()), .release);
+        self.view_cache_pending.store(true, .release);
+        self.io_wait_cond.signal();
     }
 
     pub fn updateSelection(self: *TerminalSession, row: usize, col: usize) void {
         if (self.isAltActive()) return;
         self.history.updateSelection(row, col);
+        self.view_cache_request_offset.store(@intCast(self.history.scrollOffset()), .release);
+        self.view_cache_pending.store(true, .release);
+        self.io_wait_cond.signal();
     }
 
     pub fn finishSelection(self: *TerminalSession) void {
         if (self.isAltActive()) return;
         self.history.finishSelection();
+        self.view_cache_request_offset.store(@intCast(self.history.scrollOffset()), .release);
+        self.view_cache_pending.store(true, .release);
+        self.io_wait_cond.signal();
     }
 
     pub fn selectionState(self: *TerminalSession) ?TerminalSelection {

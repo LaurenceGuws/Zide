@@ -20,6 +20,7 @@ Status (2026-01-29)
 - Terminal view cache is updated on the parse thread and reused by the renderer when not scrolled to avoid per-frame view rebuilds.
 - Scrollback view cache rebuilds are queued to the parse thread on scroll changes to reduce render-thread work.
 - Kitty image/placement view lists are built and sorted on the parse thread; renderer reuses the cached lists per frame.
+- Selection highlight spans are cached alongside the view snapshot to avoid per-frame selection range scans.
 - Kitty image uploads are now queued and uploaded in a per-frame budget to avoid large render-thread spikes.
 
 Canonical references (do not diverge without a documented reason)
