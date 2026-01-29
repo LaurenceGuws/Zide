@@ -183,12 +183,20 @@ pub const InputSnapshot = struct {
     mouse_pos: MousePos,
     mods: Modifiers,
     mouse_down: [MOUSE_BUTTON_COUNT]bool,
+    composing_text: []const u8,
+    composing_cursor: i32,
+    composing_selection_len: i32,
+    composing_active: bool,
 
     pub fn init(mouse_pos: MousePos, mods: Modifiers) InputSnapshot {
         return .{
             .mouse_pos = mouse_pos,
             .mods = mods,
             .mouse_down = [_]bool{false} ** MOUSE_BUTTON_COUNT,
+            .composing_text = &[_]u8{},
+            .composing_cursor = 0,
+            .composing_selection_len = 0,
+            .composing_active = false,
         };
     }
 };
@@ -205,6 +213,11 @@ pub const MOUSE_BUTTON_COUNT: usize = switch (@typeInfo(MouseButton)) {
 pub const InputBatch = struct {
     allocator: std.mem.Allocator,
     events: std.ArrayList(InputEvent),
+    composing_buffer: std.ArrayList(u8),
+    composing_text: []const u8,
+    composing_cursor: i32,
+    composing_selection_len: i32,
+    composing_active: bool,
     key_down: [KEY_COUNT]bool,
     key_pressed: [KEY_COUNT]bool,
     key_repeated: [KEY_COUNT]bool,
@@ -221,6 +234,11 @@ pub const InputBatch = struct {
         return .{
             .allocator = allocator,
             .events = .empty,
+            .composing_buffer = .empty,
+            .composing_text = &[_]u8{},
+            .composing_cursor = 0,
+            .composing_selection_len = 0,
+            .composing_active = false,
             .key_down = [_]bool{false} ** KEY_COUNT,
             .key_pressed = [_]bool{false} ** KEY_COUNT,
             .key_repeated = [_]bool{false} ** KEY_COUNT,
@@ -237,10 +255,16 @@ pub const InputBatch = struct {
 
     pub fn deinit(self: *InputBatch) void {
         self.events.deinit(self.allocator);
+        self.composing_buffer.deinit(self.allocator);
     }
 
     pub fn clear(self: *InputBatch) void {
         self.events.clearRetainingCapacity();
+        self.composing_buffer.clearRetainingCapacity();
+        self.composing_text = &[_]u8{};
+        self.composing_cursor = 0;
+        self.composing_selection_len = 0;
+        self.composing_active = false;
         self.key_down = [_]bool{false} ** KEY_COUNT;
         self.key_pressed = [_]bool{false} ** KEY_COUNT;
         self.key_repeated = [_]bool{false} ** KEY_COUNT;
@@ -291,6 +315,10 @@ pub const InputBatch = struct {
             .mouse_pos = self.mouse_pos,
             .mods = self.mods,
             .mouse_down = self.mouse_down,
+            .composing_text = self.composing_text,
+            .composing_cursor = self.composing_cursor,
+            .composing_selection_len = self.composing_selection_len,
+            .composing_active = self.composing_active,
         };
     }
 };

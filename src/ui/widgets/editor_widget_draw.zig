@@ -167,7 +167,6 @@ pub fn draw(
     height: f32,
     input: anytype,
 ) void {
-    _ = input;
     const r = shell.rendererPtr();
     widget.gutter_width = 50 * r.uiScaleFactor();
     const visible_lines = @as(usize, @intFromFloat(height / r.char_height));
@@ -368,6 +367,31 @@ pub fn draw(
     // Draw cursor
     if (cursor_draw_x != null and cursor_draw_y != null) {
         r.drawCursor(cursor_draw_x.?, cursor_draw_y.?, .line);
+        if (input.composing_active and input.composing_text.len > 0) {
+            const comp_x = cursor_draw_x.?;
+            const comp_y = cursor_draw_y.?;
+            r.drawTextMonospace(input.composing_text, comp_x, comp_y, r.theme.foreground);
+            r.drawRect(
+                @intFromFloat(comp_x),
+                @intFromFloat(comp_y + r.char_height - 2),
+                @intFromFloat(@as(f32, @floatFromInt(input.composing_text.len)) * r.char_width),
+                2,
+                r.theme.selection,
+            );
+            shell.setTextInputRect(
+                @intFromFloat(comp_x),
+                @intFromFloat(comp_y),
+                @intFromFloat(@as(f32, @floatFromInt(@max(@as(usize, 1), input.composing_text.len))) * r.char_width),
+                @intFromFloat(r.char_height),
+            );
+        } else {
+            shell.setTextInputRect(
+                @intFromFloat(cursor_draw_x.?),
+                @intFromFloat(cursor_draw_y.?),
+                @intFromFloat(r.char_width),
+                @intFromFloat(r.char_height),
+            );
+        }
     }
 
     if (!widget.wrap_enabled) {

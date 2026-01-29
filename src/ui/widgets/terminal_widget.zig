@@ -225,7 +225,6 @@ pub const TerminalWidget = struct {
         height: f32,
         input: shared_types.input.InputSnapshot,
     ) void {
-        _ = input;
         const draw_start = app_shell.getTime();
         const r = shell.rendererPtr();
         if (!self.session.tryLock()) {
@@ -805,6 +804,50 @@ pub const TerminalWidget = struct {
                 .bar => {
                     r.drawRect(cell_x_i, cell_y_i, 2, cell_h_i, r.theme.cursor);
                 },
+            }
+            const composing_cells: usize = if (input.composing_active and input.composing_text.len > 0) blk: {
+                var count: usize = 0;
+                var count_iter = std.unicode.Utf8Iterator{ .bytes = input.composing_text, .i = 0 };
+                while (count_iter.nextCodepoint()) |_| {
+                    count += 1;
+                }
+                break :blk count;
+            } else 0;
+            const cursor_rect_w = if (composing_cells > 0)
+                @as(i32, @intCast(@max(@as(usize, 1), composing_cells))) * cell_w_i
+            else
+                cell_w_i;
+            shell.setTextInputRect(
+                cell_x_i,
+                cell_y_i,
+                cursor_rect_w,
+                cell_h_i,
+            );
+
+            if (composing_cells > 0) {
+                var iter = std.unicode.Utf8Iterator{ .bytes = input.composing_text, .i = 0 };
+                var comp_col: usize = 0;
+                while (iter.nextCodepoint()) |cp| {
+                    const comp_x = cell_x + @as(f32, @floatFromInt(@as(i32, @intCast(comp_col)) * cell_w_i));
+                    r.drawTerminalCell(
+                        cp,
+                        comp_x,
+                        cell_y,
+                        @as(f32, @floatFromInt(cell_w_i)),
+                        @as(f32, @floatFromInt(cell_h_i)),
+                        r.theme.foreground,
+                        bg,
+                        underline_color,
+                        false,
+                        true,
+                        false,
+                        true,
+                        false,
+                    );
+                    comp_col += 1;
+                }
+                const underline_w = @as(i32, @intCast(@max(@as(usize, 1), comp_col))) * cell_w_i;
+                r.drawRect(cell_x_i, cell_y_i + cell_h_i - 2, underline_w, 2, r.theme.selection);
             }
         }
 

@@ -103,6 +103,7 @@ Phase 1 - Linux (SDL2 + OpenGL)
 - Create SDL2 window and OpenGL context. (done)
 - Implement the renderer interface with OpenGL 3.3. (done; immediate-mode quad pipeline)
 - Bring up text rendering with a GPU atlas (kitty/alacritty model). (done; FreeType + GL atlas)
+- Add SDL text composition (IME) handling + text input rect updates for editor/terminal. (done)
 - Draw list supports rects, text runs, and clip rects. (pending; immediate-mode for now)
 - Replace raylib usage in renderer only (no UI behavior changes). (done)
 
