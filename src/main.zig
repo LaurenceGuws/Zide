@@ -131,6 +131,12 @@ const AppState = struct {
             .editor_wrap = null,
             .editor_highlight_budget = null,
             .editor_width_budget = null,
+            .app_font_path = null,
+            .app_font_size = null,
+            .editor_font_path = null,
+            .editor_font_size = null,
+            .terminal_font_path = null,
+            .terminal_font_size = null,
             .theme = null,
         };
     };
@@ -150,6 +156,16 @@ const AppState = struct {
 
         const shell = try Shell.init(allocator, 1280, 720, "Zide - Zig IDE");
         errdefer shell.deinit(allocator);
+        if (config.app_font_path != null or config.app_font_size != null or
+            config.editor_font_path != null or config.editor_font_size != null or
+            config.terminal_font_path != null or config.terminal_font_size != null)
+        {
+            const font_path = config.terminal_font_path orelse config.editor_font_path orelse config.app_font_path;
+            const font_size = config.terminal_font_size orelse config.editor_font_size orelse config.app_font_size;
+            if (font_path != null or font_size != null) {
+                shell.rendererPtr().setFontConfig(font_path, font_size) catch {};
+            }
+        }
         if (config.theme) |theme_config| {
             var theme = shell.theme().*;
             config_mod.applyThemeConfig(&theme, theme_config);
