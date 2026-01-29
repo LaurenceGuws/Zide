@@ -106,6 +106,7 @@ const AppState = struct {
     frame_id: u64,
     metrics: Metrics,
     metrics_logger: Logger,
+    input_latency_logger: Logger,
     app_logger: Logger,
     last_metrics_log_time: f64,
     editor_wrap: bool,
@@ -158,6 +159,7 @@ const AppState = struct {
         const app_log = app_logger.logger("app.core");
         app_log.logStdout("logger initialized", .{});
         const metrics_log = app_logger.logger("terminal.metrics");
+        const input_latency_log = app_logger.logger("input.latency");
         const perf_log = app_logger.logger("editor.perf");
 
         const perf_file_path = if (std.c.getenv("ZIDE_EDITOR_PERF_FILE")) |raw|
@@ -217,6 +219,7 @@ const AppState = struct {
             .frame_id = 0,
             .metrics = Metrics.init(),
             .metrics_logger = metrics_log,
+            .input_latency_logger = input_latency_log,
             .app_logger = app_log,
             .last_metrics_log_time = 0,
             .editor_wrap = config.editor_wrap orelse false,
@@ -458,13 +461,17 @@ const AppState = struct {
         // Main loop
         while (!self.shell.shouldClose()) {
             // Poll events first (this updates SDL's input state)
+            const poll_start = app_shell.getTime();
             app_shell.pollInputEvents();
+            const poll_end = app_shell.getTime();
             if (self.shell.shouldClose()) break;
             if (sigint_requested.load(.acquire)) {
                 self.shell.requestClose();
                 break;
             }
+            const build_start = app_shell.getTime();
             var input_batch = input_builder.buildInputBatch(self.allocator, self.shell);
+            const build_end = app_shell.getTime();
             defer input_batch.deinit();
 
             self.frame_id +|= 1;
@@ -475,32 +482,61 @@ const AppState = struct {
             const frame_time = app_shell.getTime();
             self.metrics.beginFrame(frame_time);
 
+            const update_start = app_shell.getTime();
             try self.update(&input_batch);
+            const update_end = app_shell.getTime();
+            var draw_ms: f64 = 0.0;
+            const poll_ms = (poll_end - poll_start) * 1000.0;
+            const build_ms = (build_end - build_start) * 1000.0;
+            const update_ms = (update_end - update_start) * 1000.0;
 
             // Only redraw when something changed
             if (self.needs_redraw) {
                 const draw_start = app_shell.getTime();
                 self.draw();
                 const draw_end = app_shell.getTime();
+                draw_ms = (draw_end - draw_start) * 1000.0;
                 self.metrics.recordDraw(draw_start, draw_end);
                 if (self.perf_mode and self.perf_frames_done > 0) {
-                    const draw_ms = (draw_end - draw_start) * 1000.0;
+                    const draw_ms_perf = (draw_end - draw_start) * 1000.0;
                     const editor_idx = if (self.editors.items.len > 0) @min(self.active_tab, self.editors.items.len - 1) else 0;
                     if (self.editors.items.len > 0) {
                         const editor = self.editors.items[editor_idx];
                         self.perf_logger.logf(
                             "frame={d} draw_ms={d:.2} scroll_line={d} scroll_row_offset={d} scroll_col={d}",
-                            .{ self.perf_frames_done, draw_ms, editor.scroll_line, editor.scroll_row_offset, editor.scroll_col },
+                            .{ self.perf_frames_done, draw_ms_perf, editor.scroll_line, editor.scroll_row_offset, editor.scroll_col },
                         );
                     } else {
-                        self.perf_logger.logf("frame={d} draw_ms={d:.2}", .{ self.perf_frames_done, draw_ms });
+                        self.perf_logger.logf("frame={d} draw_ms={d:.2}", .{ self.perf_frames_done, draw_ms_perf });
                     }
                 }
                 self.maybeLogMetrics(draw_end);
                 self.needs_redraw = false;
                 self.idle_frames = 0;
+                if (self.input_latency_logger.enabled_file or self.input_latency_logger.enabled_console) {
+                    if (input_batch.events.items.len > 0) {
+                        const total_ms = poll_ms + build_ms + update_ms + draw_ms;
+                        if (total_ms >= 1.0) {
+                            self.input_latency_logger.logf(
+                                "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2}",
+                                .{ poll_ms, build_ms, update_ms, draw_ms },
+                            );
+                        }
+                    }
+                }
             } else {
                 self.idle_frames +|= 1; // Saturating add
+                if (self.input_latency_logger.enabled_file or self.input_latency_logger.enabled_console) {
+                    if (input_batch.events.items.len > 0) {
+                        const total_ms = poll_ms + build_ms + update_ms;
+                        if (total_ms >= 1.0) {
+                            self.input_latency_logger.logf(
+                                "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms=0.00",
+                                .{ poll_ms, build_ms, update_ms },
+                            );
+                        }
+                    }
+                }
 
                 // Adaptive sleep: longer sleep when idle longer
                 // - Startup grace period: stay responsive for first 3 seconds
@@ -898,6 +934,7 @@ const AppState = struct {
             // Only poll PTY if there's data available (non-blocking check)
             // Skip polling when in deep idle to save CPU
             if (term.hasData()) {
+                term.setInputPressure(input_batch.events.items.len > 0);
                 try term.poll();
                 self.needs_redraw = true;
             }

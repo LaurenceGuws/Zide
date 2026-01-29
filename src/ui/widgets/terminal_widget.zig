@@ -37,6 +37,7 @@ pub const TerminalWidget = struct {
     last_hover_ctrl: bool = false,
     hover_dirty: bool = false,
     pending_open_path: ?[]u8 = null,
+    last_draw_log_time: f64 = 0,
 
     pub fn init(session: *TerminalSession) TerminalWidget {
         return .{
@@ -51,6 +52,7 @@ pub const TerminalWidget = struct {
             .last_hover_col = -1,
             .last_hover_ctrl = false,
             .pending_open_path = null,
+            .last_draw_log_time = 0,
         };
     }
 
@@ -218,6 +220,7 @@ pub const TerminalWidget = struct {
         input: shared_types.input.InputSnapshot,
     ) void {
         _ = input;
+        const draw_start = app_shell.getTime();
         const r = shell.rendererPtr();
         if (!self.session.tryLock()) {
             r.drawRect(
@@ -587,18 +590,18 @@ pub const TerminalWidget = struct {
                     var row: usize = 0;
                     while (row < rows) : (row += 1) {
                         if (row < view_dirty_rows.len and view_dirty_rows[row]) {
-                            var draw_start: usize = 0;
-                            var draw_end: usize = cols - 1;
+                            var col_start: usize = 0;
+                            var col_end: usize = cols - 1;
                             if (row < self.session.view_dirty_cols_start.items.len and row < self.session.view_dirty_cols_end.items.len) {
-                                draw_start = @min(@as(usize, self.session.view_dirty_cols_start.items[row]), cols - 1);
-                                draw_end = @min(@as(usize, self.session.view_dirty_cols_end.items[row]), cols - 1);
+                                col_start = @min(@as(usize, self.session.view_dirty_cols_start.items[row]), cols - 1);
+                                col_end = @min(@as(usize, self.session.view_dirty_cols_end.items[row]), cols - 1);
                             }
-                            drawRowBackgrounds(shell, view_cells, cols, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                            drawRowBackgrounds(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i);
                             if (row > 0) {
-                                drawRowBackgrounds(shell, view_cells, cols, row - 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                                drawRowBackgrounds(shell, view_cells, cols, row - 1, col_start, col_end, base_x_local, base_y_local, padding_x_i);
                             }
                             if (row + 1 < rows) {
-                                drawRowBackgrounds(shell, view_cells, cols, row + 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i);
+                                drawRowBackgrounds(shell, view_cells, cols, row + 1, col_start, col_end, base_x_local, base_y_local, padding_x_i);
                             }
                         }
                     }
@@ -607,18 +610,18 @@ pub const TerminalWidget = struct {
                     row = 0;
                     while (row < rows) : (row += 1) {
                         if (row < view_dirty_rows.len and view_dirty_rows[row]) {
-                            var draw_start: usize = 0;
-                            var draw_end: usize = cols - 1;
+                            var col_start: usize = 0;
+                            var col_end: usize = cols - 1;
                             if (row < self.session.view_dirty_cols_start.items.len and row < self.session.view_dirty_cols_end.items.len) {
-                                draw_start = @min(@as(usize, self.session.view_dirty_cols_start.items[row]), cols - 1);
-                                draw_end = @min(@as(usize, self.session.view_dirty_cols_end.items[row]), cols - 1);
+                                col_start = @min(@as(usize, self.session.view_dirty_cols_start.items[row]), cols - 1);
+                                col_end = @min(@as(usize, self.session.view_dirty_cols_end.items[row]), cols - 1);
                             }
-                            drawRowGlyphs(shell, view_cells, cols, row, draw_start, draw_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
+                            drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
                             if (row > 0) {
-                                drawRowGlyphs(shell, view_cells, cols, row - 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
+                                drawRowGlyphs(shell, view_cells, cols, row - 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
                             }
                             if (row + 1 < rows) {
-                                drawRowGlyphs(shell, view_cells, cols, row + 1, draw_start, draw_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
+                                drawRowGlyphs(shell, view_cells, cols, row + 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
                             }
                         }
                     }
@@ -869,6 +872,28 @@ pub const TerminalWidget = struct {
                 scroll_offset,
             });
         }
+
+        const draw_log = app_logger.logger("terminal.draw");
+        if (draw_log.enabled_file or draw_log.enabled_console) {
+            const now = app_shell.getTime();
+            const elapsed_ms = (now - draw_start) * 1000.0;
+            const has_kitty_images = self.kitty_images_view.items.len > 0;
+            if ((elapsed_ms >= 4.0 or has_kitty_images) and (now - self.last_draw_log_time) >= 0.1) {
+                self.last_draw_log_time = now;
+                draw_log.logf(
+                    "draw_ms={d:.2} rows={d} cols={d} history={d} cells={d} kitty_images={d} kitty_placements={d}",
+                    .{
+                        elapsed_ms,
+                        rows,
+                        cols,
+                        history_len,
+                        rows * cols,
+                        self.kitty_images_view.items.len,
+                        self.kitty_placements_view.items.len,
+                    },
+                );
+            }
+        }
     }
 
     fn sortKittyPlacements(placements: []KittyPlacement) void {
@@ -1030,8 +1055,14 @@ pub const TerminalWidget = struct {
         scroll_grab_offset: *f32,
         input_batch: *shared_types.input.InputBatch,
     ) !bool {
-        if (!self.session.tryLock()) return false;
-        defer self.session.unlock();
+        var locked = self.session.tryLock();
+        if (!locked) {
+            const needs_input = allow_input and input_batch.events.items.len > 0;
+            if (!needs_input) return false;
+            self.session.lock();
+            locked = true;
+        }
+        defer if (locked) self.session.unlock();
         var handled = false;
         const mouse = input_batch.mouse_pos;
         const in_terminal = mouse.x >= x and mouse.x <= x + width and mouse.y >= y and mouse.y <= y + height;
