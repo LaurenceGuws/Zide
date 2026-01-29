@@ -183,6 +183,9 @@ pub const TerminalSession = struct {
     view_dirty_rows: std.ArrayList(bool),
     view_dirty_cols_start: std.ArrayList(u16),
     view_dirty_cols_end: std.ArrayList(u16),
+    view_cache_generation: std.atomic.Value(u64),
+    view_cache_rows: std.atomic.Value(u16),
+    view_cache_cols: std.atomic.Value(u16),
     alt_last_active: bool,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !*TerminalSession {
@@ -270,6 +273,9 @@ pub const TerminalSession = struct {
             .view_dirty_rows = .empty,
             .view_dirty_cols_start = .empty,
             .view_dirty_cols_end = .empty,
+            .view_cache_generation = std.atomic.Value(u64).init(0),
+            .view_cache_rows = std.atomic.Value(u16).init(0),
+            .view_cache_cols = std.atomic.Value(u16).init(0),
             .alt_last_active = false,
         };
         session.updateInputSnapshot();
@@ -296,6 +302,50 @@ pub const TerminalSession = struct {
         self.input_snapshot.mouse_mode_button.store(self.input.mouse_mode_button, .release);
         self.input_snapshot.mouse_mode_any.store(self.input.mouse_mode_any, .release);
         self.input_snapshot.mouse_mode_sgr.store(self.input.mouse_mode_sgr, .release);
+    }
+
+    fn updateViewCacheNoLock(self: *TerminalSession, generation: u64) void {
+        const view = self.activeScreenConst().snapshotView();
+        const rows = view.rows;
+        const cols = view.cols;
+        if (rows == 0 or cols == 0) {
+            self.view_cells.clearRetainingCapacity();
+            self.view_dirty_rows.clearRetainingCapacity();
+            self.view_dirty_cols_start.clearRetainingCapacity();
+            self.view_dirty_cols_end.clearRetainingCapacity();
+            self.view_cache_rows.store(0, .release);
+            self.view_cache_cols.store(0, .release);
+            self.view_cache_generation.store(generation, .release);
+            return;
+        }
+
+        const view_count = rows * cols;
+        _ = self.view_cells.resize(self.allocator, view_count) catch {};
+        _ = self.view_dirty_rows.resize(self.allocator, rows) catch {};
+        _ = self.view_dirty_cols_start.resize(self.allocator, rows) catch {};
+        _ = self.view_dirty_cols_end.resize(self.allocator, rows) catch {};
+
+        std.mem.copyForwards(Cell, self.view_cells.items, view.cells);
+        if (view.dirty_rows.len == rows) {
+            std.mem.copyForwards(bool, self.view_dirty_rows.items, view.dirty_rows);
+        } else {
+            for (self.view_dirty_rows.items) |*row_dirty| {
+                row_dirty.* = true;
+            }
+        }
+        if (view.dirty_cols_start.len == rows and view.dirty_cols_end.len == rows) {
+            std.mem.copyForwards(u16, self.view_dirty_cols_start.items, view.dirty_cols_start);
+            std.mem.copyForwards(u16, self.view_dirty_cols_end.items, view.dirty_cols_end);
+        } else {
+            for (self.view_dirty_cols_start.items, self.view_dirty_cols_end.items) |*col_start, *col_end| {
+                col_start.* = 0;
+                col_end.* = if (cols > 0) @intCast(cols - 1) else 0;
+            }
+        }
+
+        self.view_cache_rows.store(@intCast(rows), .release);
+        self.view_cache_cols.store(@intCast(cols), .release);
+        self.view_cache_generation.store(generation, .release);
     }
 
     fn inactiveScreen(self: *TerminalSession) *Screen {
@@ -446,6 +496,7 @@ pub const TerminalSession = struct {
             if (had_data) {
                 self.state_mutex.lock();
                 self.clearSelection();
+                self.updateViewCacheNoLock(self.output_generation.load(.acquire));
                 self.state_mutex.unlock();
             }
 
@@ -492,6 +543,7 @@ pub const TerminalSession = struct {
             }
             if (had_data) {
                 self.clearSelection();
+                self.updateViewCacheNoLock(self.output_generation.load(.acquire));
             }
             if (processed > 0 and self.alt_exit_pending.swap(false, .acq_rel)) {
                 const elapsed_ms = @as(f64, @floatFromInt(std.time.milliTimestamp() - start_ms));
@@ -1362,6 +1414,7 @@ fn parseThreadMain(session: *TerminalSession) void {
         if (had_data) {
             session.state_mutex.lock();
             session.clearSelection();
+            session.updateViewCacheNoLock(session.output_generation.load(.acquire));
             session.state_mutex.unlock();
             session.output_pending.store(true, .release);
         }

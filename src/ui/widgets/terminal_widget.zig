@@ -281,46 +281,65 @@ pub const TerminalWidget = struct {
         const cursor_style = snapshot.cursor_style;
         const selection = self.session.selectionState();
         const kitty_generation = snapshot.kitty_generation;
+        var use_cached_view = false;
 
         if (rows > 0 and cols > 0) {
-            const view_count = rows * cols;
-            _ = self.session.view_cells.resize(self.session.allocator, view_count) catch {};
-            _ = self.session.view_dirty_rows.resize(self.session.allocator, rows) catch {};
-            _ = self.session.view_dirty_cols_start.resize(self.session.allocator, rows) catch {};
-            _ = self.session.view_dirty_cols_end.resize(self.session.allocator, rows) catch {};
-
-            if (snapshot.dirty_rows.len == rows) {
-                std.mem.copyForwards(bool, self.session.view_dirty_rows.items, snapshot.dirty_rows);
-            } else {
-                for (self.session.view_dirty_rows.items) |*row_dirty| {
-                    row_dirty.* = true;
-                }
-            }
-            if (snapshot.dirty_cols_start.len == rows and snapshot.dirty_cols_end.len == rows) {
-                std.mem.copyForwards(u16, self.session.view_dirty_cols_start.items, snapshot.dirty_cols_start);
-                std.mem.copyForwards(u16, self.session.view_dirty_cols_end.items, snapshot.dirty_cols_end);
-            } else {
-                for (self.session.view_dirty_cols_start.items, self.session.view_dirty_cols_end.items) |*col_start, *col_end| {
-                    col_start.* = 0;
-                    col_end.* = if (cols > 0) @intCast(cols - 1) else 0;
-                }
-            }
-
-            var row: usize = 0;
-            while (row < rows) : (row += 1) {
-                const global_row = start_line + row;
-                const row_start = row * cols;
-                const row_dest = self.session.view_cells.items[row_start .. row_start + cols];
-                if (global_row < history_len) {
-                    if (self.session.scrollbackRow(global_row)) |history_row| {
-                        std.mem.copyForwards(Cell, row_dest, history_row[0..cols]);
-                    } else {
-                        std.mem.copyForwards(Cell, row_dest, snapshot.cells[0..cols]);
+            if (scroll_offset == 0) {
+                const cache_gen = self.session.view_cache_generation.load(.acquire);
+                const cache_rows = self.session.view_cache_rows.load(.acquire);
+                const cache_cols = self.session.view_cache_cols.load(.acquire);
+                if (cache_gen == snapshot.generation and cache_rows == rows and cache_cols == cols) {
+                    const view_count = rows * cols;
+                    if (self.session.view_cells.items.len == view_count and
+                        self.session.view_dirty_rows.items.len == rows and
+                        self.session.view_dirty_cols_start.items.len == rows and
+                        self.session.view_dirty_cols_end.items.len == rows)
+                    {
+                        use_cached_view = true;
                     }
+                }
+            }
+
+            const view_count = rows * cols;
+            if (!use_cached_view) {
+                _ = self.session.view_cells.resize(self.session.allocator, view_count) catch {};
+                _ = self.session.view_dirty_rows.resize(self.session.allocator, rows) catch {};
+                _ = self.session.view_dirty_cols_start.resize(self.session.allocator, rows) catch {};
+                _ = self.session.view_dirty_cols_end.resize(self.session.allocator, rows) catch {};
+
+                if (snapshot.dirty_rows.len == rows) {
+                    std.mem.copyForwards(bool, self.session.view_dirty_rows.items, snapshot.dirty_rows);
                 } else {
-                    const grid_row = global_row - history_len;
-                    const src_start = grid_row * cols;
-                    std.mem.copyForwards(Cell, row_dest, snapshot.cells[src_start .. src_start + cols]);
+                    for (self.session.view_dirty_rows.items) |*row_dirty| {
+                        row_dirty.* = true;
+                    }
+                }
+                if (snapshot.dirty_cols_start.len == rows and snapshot.dirty_cols_end.len == rows) {
+                    std.mem.copyForwards(u16, self.session.view_dirty_cols_start.items, snapshot.dirty_cols_start);
+                    std.mem.copyForwards(u16, self.session.view_dirty_cols_end.items, snapshot.dirty_cols_end);
+                } else {
+                    for (self.session.view_dirty_cols_start.items, self.session.view_dirty_cols_end.items) |*col_start, *col_end| {
+                        col_start.* = 0;
+                        col_end.* = if (cols > 0) @intCast(cols - 1) else 0;
+                    }
+                }
+
+                var row: usize = 0;
+                while (row < rows) : (row += 1) {
+                    const global_row = start_line + row;
+                    const row_start = row * cols;
+                    const row_dest = self.session.view_cells.items[row_start .. row_start + cols];
+                    if (global_row < history_len) {
+                        if (self.session.scrollbackRow(global_row)) |history_row| {
+                            std.mem.copyForwards(Cell, row_dest, history_row[0..cols]);
+                        } else {
+                            std.mem.copyForwards(Cell, row_dest, snapshot.cells[0..cols]);
+                        }
+                    } else {
+                        const grid_row = global_row - history_len;
+                        const src_start = grid_row * cols;
+                        std.mem.copyForwards(Cell, row_dest, snapshot.cells[src_start .. src_start + cols]);
+                    }
                 }
             }
 
