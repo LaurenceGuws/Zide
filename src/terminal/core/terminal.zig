@@ -31,7 +31,17 @@ pub const VTERM_KEY_HOME = session_mod.VTERM_KEY_HOME;
 pub const VTERM_KEY_END = session_mod.VTERM_KEY_END;
 pub const VTERM_KEY_PAGEUP = session_mod.VTERM_KEY_PAGEUP;
 pub const VTERM_KEY_PAGEDOWN = session_mod.VTERM_KEY_PAGEDOWN;
+pub const VTERM_KEY_LEFT_SHIFT = session_mod.VTERM_KEY_LEFT_SHIFT;
+pub const VTERM_KEY_RIGHT_SHIFT = session_mod.VTERM_KEY_RIGHT_SHIFT;
+pub const VTERM_KEY_LEFT_CTRL = session_mod.VTERM_KEY_LEFT_CTRL;
+pub const VTERM_KEY_RIGHT_CTRL = session_mod.VTERM_KEY_RIGHT_CTRL;
+pub const VTERM_KEY_LEFT_ALT = session_mod.VTERM_KEY_LEFT_ALT;
+pub const VTERM_KEY_RIGHT_ALT = session_mod.VTERM_KEY_RIGHT_ALT;
+pub const VTERM_KEY_LEFT_SUPER = session_mod.VTERM_KEY_LEFT_SUPER;
+pub const VTERM_KEY_RIGHT_SUPER = session_mod.VTERM_KEY_RIGHT_SUPER;
 pub const KeypadKey = session_mod.KeypadKey;
+pub const KeyAction = session_mod.KeyAction;
+pub const keyModeFlagsValue = session_mod.TerminalSession.keyModeFlagsValue;
 
 pub const VTERM_MOD_NONE = session_mod.VTERM_MOD_NONE;
 pub const VTERM_MOD_SHIFT = session_mod.VTERM_MOD_SHIFT;

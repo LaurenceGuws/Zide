@@ -19,6 +19,7 @@ terminal_protocol_todo:
       - "Application keypad mode (DECKPAM/DECKPNM) handled for keypad keys."
       - "XTGETTCAP minimal DCS +q replies implemented."
       - "Key encoding flags (CSI u set/push/pop) are tracked, but input still falls back to legacy sequences until kitty press/repeat/release encoding is implemented."
+      - "Kitty key encoding now implemented for core functional keys with press/repeat/release (SDL keyup wired to terminal input); text encoding uses CSI u when report_text/embed_text flags are set."
 
   reference_maps:
     xterm:

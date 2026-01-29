@@ -476,18 +476,23 @@ pub const TerminalSession = struct {
     }
 
     pub fn sendKey(self: *TerminalSession, key: Key, mod: Modifier) !void {
+        try self.sendKeyAction(key, mod, input_mod.KeyAction.press);
+    }
+
+    pub fn sendKeyAction(self: *TerminalSession, key: Key, mod: Modifier, action: input_mod.KeyAction) !void {
         const log = app_logger.logger("terminal.input");
         if (log.enabled_file or log.enabled_console) {
-            log.logf("sendKey key={s} code={d} mod=0x{x} app_cursor={any} key_mode=0x{x}", .{
+            log.logf("sendKey key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x}", .{
                 keyName(key),
                 key,
                 mod,
+                @tagName(action),
                 self.app_cursor_keys,
                 self.keyModeFlags(),
             });
         }
         if (self.pty) |*pty| {
-            if (self.app_cursor_keys and mod == types.VTERM_MOD_NONE) {
+            if (self.keyModeFlags() == 0 and self.app_cursor_keys and mod == types.VTERM_MOD_NONE and action == .press) {
                 const seq = switch (key) {
                     VTERM_KEY_UP => "\x1bOA",
                     VTERM_KEY_DOWN => "\x1bOB",
@@ -502,22 +507,29 @@ pub const TerminalSession = struct {
                     return;
                 }
             }
-            _ = try input_mod.sendKey(pty, key, mod, self.keyModeFlags());
+            _ = try input_mod.sendKeyAction(pty, key, mod, self.keyModeFlags(), action);
         }
     }
 
     pub fn sendKeypad(self: *TerminalSession, key: input_mod.KeypadKey, mod: Modifier) !void {
+        try self.sendKeypadAction(key, mod, input_mod.KeyAction.press);
+    }
+
+    pub fn sendKeypadAction(self: *TerminalSession, key: input_mod.KeypadKey, mod: Modifier, action: input_mod.KeyAction) !void {
         const log = app_logger.logger("terminal.input");
         if (log.enabled_file or log.enabled_console) {
-            log.logf("sendKeypad key={s} mod=0x{x} app_keypad={any} key_mode=0x{x}", .{
+            log.logf("sendKeypad key={s} mod=0x{x} action={s} app_keypad={any} key_mode=0x{x}", .{
                 keypadKeyName(key),
                 mod,
+                @tagName(action),
                 self.app_keypad,
                 self.keyModeFlags(),
             });
         }
         if (self.pty) |*pty| {
-            _ = try input_mod.sendKeypad(pty, key, mod, self.app_keypad, self.keyModeFlags());
+            if (action == .press) {
+                _ = try input_mod.sendKeypad(pty, key, mod, self.app_keypad, self.keyModeFlags());
+            }
         }
     }
 
@@ -526,16 +538,21 @@ pub const TerminalSession = struct {
     }
 
     pub fn sendChar(self: *TerminalSession, char: u32, mod: Modifier) !void {
+        try self.sendCharAction(char, mod, input_mod.KeyAction.press);
+    }
+
+    pub fn sendCharAction(self: *TerminalSession, char: u32, mod: Modifier, action: input_mod.KeyAction) !void {
         const log = app_logger.logger("terminal.input");
         if (log.enabled_file or log.enabled_console) {
-            log.logf("sendChar cp={d} mod=0x{x} key_mode=0x{x}", .{
+            log.logf("sendChar cp={d} mod=0x{x} action={s} key_mode=0x{x}", .{
                 char,
                 mod,
+                @tagName(action),
                 self.keyModeFlags(),
             });
         }
         if (self.pty) |*pty| {
-            _ = try input_mod.sendChar(pty, char, mod, self.keyModeFlags());
+            _ = try input_mod.sendCharAction(pty, char, mod, self.keyModeFlags(), action);
         }
     }
 
@@ -932,6 +949,10 @@ pub const TerminalSession = struct {
         return self.activeScreen().keyModeFlags();
     }
 
+    pub fn keyModeFlagsValue(self: *TerminalSession) u32 {
+        return self.keyModeFlags();
+    }
+
     pub fn keyModePush(self: *TerminalSession, flags: u32) void {
         self.activeScreen().keyModePush(flags);
     }
@@ -1158,7 +1179,16 @@ pub const VTERM_KEY_HOME = types.VTERM_KEY_HOME;
 pub const VTERM_KEY_END = types.VTERM_KEY_END;
 pub const VTERM_KEY_PAGEUP = types.VTERM_KEY_PAGEUP;
 pub const VTERM_KEY_PAGEDOWN = types.VTERM_KEY_PAGEDOWN;
+pub const VTERM_KEY_LEFT_SHIFT = types.VTERM_KEY_LEFT_SHIFT;
+pub const VTERM_KEY_RIGHT_SHIFT = types.VTERM_KEY_RIGHT_SHIFT;
+pub const VTERM_KEY_LEFT_CTRL = types.VTERM_KEY_LEFT_CTRL;
+pub const VTERM_KEY_RIGHT_CTRL = types.VTERM_KEY_RIGHT_CTRL;
+pub const VTERM_KEY_LEFT_ALT = types.VTERM_KEY_LEFT_ALT;
+pub const VTERM_KEY_RIGHT_ALT = types.VTERM_KEY_RIGHT_ALT;
+pub const VTERM_KEY_LEFT_SUPER = types.VTERM_KEY_LEFT_SUPER;
+pub const VTERM_KEY_RIGHT_SUPER = types.VTERM_KEY_RIGHT_SUPER;
 pub const KeypadKey = input_mod.KeypadKey;
+pub const KeyAction = input_mod.KeyAction;
 
 pub const VTERM_MOD_NONE = types.VTERM_MOD_NONE;
 pub const VTERM_MOD_SHIFT = types.VTERM_MOD_SHIFT;
@@ -1167,7 +1197,10 @@ pub const VTERM_MOD_CTRL = types.VTERM_MOD_CTRL;
 
 const default_scrollback_rows: usize = 1000;
 const key_mode_disambiguate: u32 = 1;
-const key_mode_report_all_keys: u32 = 8;
+const key_mode_report_all_event_types: u32 = 2;
+const key_mode_report_alternate_key: u32 = 4;
+const key_mode_report_text: u32 = 8;
+const key_mode_embed_text: u32 = 16;
 
 fn keyName(key: Key) []const u8 {
     return switch (key) {

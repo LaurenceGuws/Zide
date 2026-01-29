@@ -87,6 +87,14 @@ pub const VTERM_KEY_HOME: Key = 11;
 pub const VTERM_KEY_END: Key = 12;
 pub const VTERM_KEY_PAGEUP: Key = 13;
 pub const VTERM_KEY_PAGEDOWN: Key = 14;
+pub const VTERM_KEY_LEFT_SHIFT: Key = 15;
+pub const VTERM_KEY_RIGHT_SHIFT: Key = 16;
+pub const VTERM_KEY_LEFT_CTRL: Key = 17;
+pub const VTERM_KEY_RIGHT_CTRL: Key = 18;
+pub const VTERM_KEY_LEFT_ALT: Key = 19;
+pub const VTERM_KEY_RIGHT_ALT: Key = 20;
+pub const VTERM_KEY_LEFT_SUPER: Key = 21;
+pub const VTERM_KEY_RIGHT_SUPER: Key = 22;
 
 pub const VTERM_MOD_NONE: Modifier = 0;
 pub const VTERM_MOD_SHIFT: Modifier = 1;

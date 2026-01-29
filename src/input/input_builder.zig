@@ -111,12 +111,21 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
         .{ .key = .kp_add, .code = app_shell.KEY_KP_ADD },
         .{ .key = .kp_enter, .code = app_shell.KEY_KP_ENTER },
         .{ .key = .kp_equal, .code = app_shell.KEY_KP_EQUAL },
+        .{ .key = .left_shift, .code = app_shell.KEY_LEFT_SHIFT },
+        .{ .key = .right_shift, .code = app_shell.KEY_RIGHT_SHIFT },
+        .{ .key = .left_ctrl, .code = app_shell.KEY_LEFT_CONTROL },
+        .{ .key = .right_ctrl, .code = app_shell.KEY_RIGHT_CONTROL },
+        .{ .key = .left_alt, .code = app_shell.KEY_LEFT_ALT },
+        .{ .key = .right_alt, .code = app_shell.KEY_RIGHT_ALT },
+        .{ .key = .left_super, .code = app_shell.KEY_LEFT_SUPER },
+        .{ .key = .right_super, .code = app_shell.KEY_RIGHT_SUPER },
     };
 
     for (key_map) |entry| {
         batch.key_down[@intFromEnum(entry.key)] = r.isKeyDown(entry.code);
         batch.key_pressed[@intFromEnum(entry.key)] = r.isKeyPressed(entry.code);
         batch.key_repeated[@intFromEnum(entry.key)] = r.isKeyRepeated(entry.code);
+        batch.key_released[@intFromEnum(entry.key)] = r.isKeyReleased(entry.code);
     }
 
     while (r.getKeyPressed()) |press| {
@@ -130,6 +139,18 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
                 },
             }) catch {};
         }
+    }
+
+    for (key_map) |entry| {
+        if (!r.isKeyReleased(entry.code)) continue;
+        batch.append(.{
+            .key = .{
+                .key = entry.key,
+                .mods = batch.mods,
+                .repeated = false,
+                .pressed = false,
+            },
+        }) catch {};
     }
 
     while (r.getCharPressed()) |char| {
@@ -220,6 +241,14 @@ fn inputKeyFromShell(key: i32) ?shared_types.input.Key {
         app_shell.KEY_KP_ADD => .kp_add,
         app_shell.KEY_KP_ENTER => .kp_enter,
         app_shell.KEY_KP_EQUAL => .kp_equal,
+        app_shell.KEY_LEFT_SHIFT => .left_shift,
+        app_shell.KEY_RIGHT_SHIFT => .right_shift,
+        app_shell.KEY_LEFT_CONTROL => .left_ctrl,
+        app_shell.KEY_RIGHT_CONTROL => .right_ctrl,
+        app_shell.KEY_LEFT_ALT => .left_alt,
+        app_shell.KEY_RIGHT_ALT => .right_alt,
+        app_shell.KEY_LEFT_SUPER => .left_super,
+        app_shell.KEY_RIGHT_SUPER => .right_super,
         else => null,
     };
 }
