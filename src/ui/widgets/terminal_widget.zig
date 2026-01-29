@@ -288,7 +288,23 @@ pub const TerminalWidget = struct {
                 const cache_gen = self.session.view_cache_generation.load(.acquire);
                 const cache_rows = self.session.view_cache_rows.load(.acquire);
                 const cache_cols = self.session.view_cache_cols.load(.acquire);
-                if (cache_gen == snapshot.generation and cache_rows == rows and cache_cols == cols) {
+                const cache_scroll = self.session.view_cache_scroll_offset.load(.acquire);
+                if (cache_gen == snapshot.generation and cache_rows == rows and cache_cols == cols and cache_scroll == scroll_offset) {
+                    const view_count = rows * cols;
+                    if (self.session.view_cells.items.len == view_count and
+                        self.session.view_dirty_rows.items.len == rows and
+                        self.session.view_dirty_cols_start.items.len == rows and
+                        self.session.view_dirty_cols_end.items.len == rows)
+                    {
+                        use_cached_view = true;
+                    }
+                }
+            } else {
+                const cache_gen = self.session.view_cache_generation.load(.acquire);
+                const cache_rows = self.session.view_cache_rows.load(.acquire);
+                const cache_cols = self.session.view_cache_cols.load(.acquire);
+                const cache_scroll = self.session.view_cache_scroll_offset.load(.acquire);
+                if (cache_gen == snapshot.generation and cache_rows == rows and cache_cols == cols and cache_scroll == scroll_offset) {
                     const view_count = rows * cols;
                     if (self.session.view_cells.items.len == view_count and
                         self.session.view_dirty_rows.items.len == rows and

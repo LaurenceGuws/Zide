@@ -186,6 +186,9 @@ pub const TerminalSession = struct {
     view_cache_generation: std.atomic.Value(u64),
     view_cache_rows: std.atomic.Value(u16),
     view_cache_cols: std.atomic.Value(u16),
+    view_cache_scroll_offset: std.atomic.Value(u64),
+    view_cache_pending: std.atomic.Value(bool),
+    view_cache_request_offset: std.atomic.Value(u64),
     alt_last_active: bool,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !*TerminalSession {
@@ -276,6 +279,9 @@ pub const TerminalSession = struct {
             .view_cache_generation = std.atomic.Value(u64).init(0),
             .view_cache_rows = std.atomic.Value(u16).init(0),
             .view_cache_cols = std.atomic.Value(u16).init(0),
+            .view_cache_scroll_offset = std.atomic.Value(u64).init(0),
+            .view_cache_pending = std.atomic.Value(bool).init(false),
+            .view_cache_request_offset = std.atomic.Value(u64).init(0),
             .alt_last_active = false,
         };
         session.updateInputSnapshot();
@@ -304,10 +310,15 @@ pub const TerminalSession = struct {
         self.input_snapshot.mouse_mode_sgr.store(self.input.mouse_mode_sgr, .release);
     }
 
-    fn updateViewCacheNoLock(self: *TerminalSession, generation: u64) void {
-        const view = self.activeScreenConst().snapshotView();
+    fn updateViewCacheNoLock(self: *TerminalSession, generation: u64, scroll_offset: usize) void {
+        const screen = self.activeScreenConst();
+        const view = screen.snapshotView();
         const rows = view.rows;
         const cols = view.cols;
+        const history_len = if (self.isAltActive()) 0 else self.history.scrollbackCount();
+        const total_lines = history_len + rows;
+        const max_offset = if (total_lines > rows) total_lines - rows else 0;
+        const clamped_offset = if (scroll_offset > max_offset) max_offset else scroll_offset;
         if (rows == 0 or cols == 0) {
             self.view_cells.clearRetainingCapacity();
             self.view_dirty_rows.clearRetainingCapacity();
@@ -316,6 +327,7 @@ pub const TerminalSession = struct {
             self.view_cache_rows.store(0, .release);
             self.view_cache_cols.store(0, .release);
             self.view_cache_generation.store(generation, .release);
+            self.view_cache_scroll_offset.store(@intCast(clamped_offset), .release);
             return;
         }
 
@@ -325,7 +337,27 @@ pub const TerminalSession = struct {
         _ = self.view_dirty_cols_start.resize(self.allocator, rows) catch {};
         _ = self.view_dirty_cols_end.resize(self.allocator, rows) catch {};
 
-        std.mem.copyForwards(Cell, self.view_cells.items, view.cells);
+        const start_line = if (total_lines > rows + clamped_offset)
+            total_lines - rows - clamped_offset
+        else
+            0;
+        var row: usize = 0;
+        while (row < rows) : (row += 1) {
+            const global_row = start_line + row;
+            const row_start = row * cols;
+            const row_dest = self.view_cells.items[row_start .. row_start + cols];
+            if (global_row < history_len) {
+                if (self.history.scrollbackRow(global_row)) |history_row| {
+                    std.mem.copyForwards(Cell, row_dest, history_row[0..cols]);
+                } else {
+                    std.mem.copyForwards(Cell, row_dest, view.cells[0..cols]);
+                }
+            } else {
+                const grid_row = global_row - history_len;
+                const src_start = grid_row * cols;
+                std.mem.copyForwards(Cell, row_dest, view.cells[src_start .. src_start + cols]);
+            }
+        }
         if (view.dirty_rows.len == rows) {
             std.mem.copyForwards(bool, self.view_dirty_rows.items, view.dirty_rows);
         } else {
@@ -346,6 +378,7 @@ pub const TerminalSession = struct {
         self.view_cache_rows.store(@intCast(rows), .release);
         self.view_cache_cols.store(@intCast(cols), .release);
         self.view_cache_generation.store(generation, .release);
+        self.view_cache_scroll_offset.store(@intCast(clamped_offset), .release);
     }
 
     fn inactiveScreen(self: *TerminalSession) *Screen {
@@ -496,7 +529,7 @@ pub const TerminalSession = struct {
             if (had_data) {
                 self.state_mutex.lock();
                 self.clearSelection();
-                self.updateViewCacheNoLock(self.output_generation.load(.acquire));
+                self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
                 self.state_mutex.unlock();
             }
 
@@ -520,6 +553,12 @@ pub const TerminalSession = struct {
                 self.output_pending.store(true, .release);
             }
             self.io_mutex.unlock();
+            if (self.view_cache_pending.swap(false, .acq_rel)) {
+                self.state_mutex.lock();
+                const offset: usize = @intCast(self.view_cache_request_offset.load(.acquire));
+                self.updateViewCacheNoLock(self.output_generation.load(.acquire), offset);
+                self.state_mutex.unlock();
+            }
             return;
         }
 
@@ -543,7 +582,7 @@ pub const TerminalSession = struct {
             }
             if (had_data) {
                 self.clearSelection();
-                self.updateViewCacheNoLock(self.output_generation.load(.acquire));
+                self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
             }
             if (processed > 0 and self.alt_exit_pending.swap(false, .acq_rel)) {
                 const elapsed_ms = @as(f64, @floatFromInt(std.time.milliTimestamp() - start_ms));
@@ -561,6 +600,10 @@ pub const TerminalSession = struct {
                         input_pressure,
                     });
                 }
+            }
+            if (self.view_cache_pending.swap(false, .acq_rel)) {
+                const offset: usize = @intCast(self.view_cache_request_offset.load(.acquire));
+                self.updateViewCacheNoLock(self.output_generation.load(.acquire), offset);
             }
         }
     }
@@ -1073,6 +1116,9 @@ pub const TerminalSession = struct {
         }
         self.history.setScrollOffset(self.primary.grid.rows, offset);
         self.primary.markDirtyAll();
+        self.view_cache_request_offset.store(@intCast(self.history.scrollOffset()), .release);
+        self.view_cache_pending.store(true, .release);
+        self.io_wait_cond.signal();
         const log = app_logger.logger("terminal.core");
         const max_offset = self.history.maxScrollOffset(self.primary.grid.rows);
         log.logf("set scroll offset={d} max={d}", .{ self.history.scrollOffset(), max_offset });
@@ -1084,6 +1130,9 @@ pub const TerminalSession = struct {
         if (delta == 0) return;
         self.history.scrollBy(self.primary.grid.rows, delta);
         self.primary.markDirtyAll();
+        self.view_cache_request_offset.store(@intCast(self.history.scrollOffset()), .release);
+        self.view_cache_pending.store(true, .release);
+        self.io_wait_cond.signal();
         const log = app_logger.logger("terminal.core");
         const max_offset = self.history.maxScrollOffset(self.primary.grid.rows);
         log.logf("scroll by delta={d} offset={d} max={d}", .{ delta, self.history.scrollOffset(), max_offset });
@@ -1344,13 +1393,19 @@ fn parseThreadMain(session: *TerminalSession) void {
         const input_pressure = session.input_pressure.load(.acquire);
         var max_bytes: usize = if (input_pressure) 64 * 1024 else 512 * 1024;
         var max_ms: i64 = if (input_pressure) 2 else 8;
+        var pending_offset: ?usize = null;
+        if (session.view_cache_pending.swap(false, .acq_rel)) {
+            pending_offset = @intCast(session.view_cache_request_offset.load(.acquire));
+        }
 
         var queued_bytes: usize = 0;
         session.io_mutex.lock();
         if (session.io_buffer.items.len > session.io_read_offset) {
             queued_bytes = session.io_buffer.items.len - session.io_read_offset;
         } else {
-            session.io_wait_cond.timedWait(&session.io_mutex, 10 * std.time.ns_per_ms) catch {};
+            if (pending_offset == null) {
+                session.io_wait_cond.timedWait(&session.io_mutex, 10 * std.time.ns_per_ms) catch {};
+            }
             if (!session.parse_thread_running.load(.acquire)) {
                 session.io_mutex.unlock();
                 break;
@@ -1362,6 +1417,11 @@ fn parseThreadMain(session: *TerminalSession) void {
         session.io_mutex.unlock();
 
         if (queued_bytes == 0) {
+            if (pending_offset) |offset| {
+                session.state_mutex.lock();
+                session.updateViewCacheNoLock(session.output_generation.load(.acquire), offset);
+                session.state_mutex.unlock();
+            }
             continue;
         }
 
@@ -1411,10 +1471,11 @@ fn parseThreadMain(session: *TerminalSession) void {
             _ = session.output_generation.fetchAdd(1, .acq_rel);
         }
 
-        if (had_data) {
+        if (had_data or pending_offset != null) {
+            const target_offset = pending_offset orelse session.history.scrollOffset();
             session.state_mutex.lock();
             session.clearSelection();
-            session.updateViewCacheNoLock(session.output_generation.load(.acquire));
+            session.updateViewCacheNoLock(session.output_generation.load(.acquire), target_offset);
             session.state_mutex.unlock();
             session.output_pending.store(true, .release);
         }
