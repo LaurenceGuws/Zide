@@ -163,6 +163,7 @@ terminal_protocol_todo:
         - "Chunked transfers now preserve the original f=24 vs f=32 format when assembling later chunks."
         - "Placements with the same image id + placement id now replace existing entries instead of appending."
         - "Re-transmitting an image id now clears old placements for that id before replacing the image."
+        - "RGB (f=24) images are now stored/uploaded as RGB to avoid RGBA expansion."
         - "Chunk assembly now honors S/O and zlib (o=z) for direct transfers; oversize payloads rejected."
         - "Tracked total kitty image bytes and evicted oldest images (preferring unplaced) when exceeding limit."
         - "Anchored placements to scrollback rows; full-screen scroll keeps images pinned and off-screen placements are dropped."

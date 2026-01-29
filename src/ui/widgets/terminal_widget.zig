@@ -1006,6 +1006,10 @@ pub const TerminalWidget = struct {
                 defer renderer.allocator.free(decoded.data);
                 return renderer.createTextureFromRgba(@intCast(decoded.width), @intCast(decoded.height), decoded.data, gl.c.GL_LINEAR);
             },
+            .rgb => {
+                if (image.width == 0 or image.height == 0) return null;
+                return renderer.createTextureFromRgb(@intCast(image.width), @intCast(image.height), image.data, gl.c.GL_LINEAR);
+            },
             .rgba => {
                 if (image.width == 0 or image.height == 0) return null;
                 return renderer.createTextureFromRgba(@intCast(image.width), @intCast(image.height), image.data, gl.c.GL_LINEAR);
