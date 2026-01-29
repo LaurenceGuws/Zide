@@ -231,7 +231,10 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 while (idx < param_len and idx < p.len) : (idx += 1) {
                     const mode = p[idx];
                     switch (mode) {
-                        1 => self.app_cursor_keys = true,
+                        1 => {
+                            self.app_cursor_keys = true;
+                            self.updateInputSnapshot();
+                        },
                         25 => self.activeScreen().setCursorVisible(true),
                         47 => self.enterAltScreen(false, false),
                         1047 => self.enterAltScreen(true, false),
@@ -239,10 +242,22 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         1049 => self.enterAltScreen(true, true),
                         2004 => self.bracketed_paste = true,
                         2026 => self.setSyncUpdates(true),
-                        1000 => self.input.mouse_mode_x10 = true,
-                        1002 => self.input.mouse_mode_button = true,
-                        1003 => self.input.mouse_mode_any = true,
-                        1006 => self.input.mouse_mode_sgr = true,
+                        1000 => {
+                            self.input.mouse_mode_x10 = true;
+                            self.updateInputSnapshot();
+                        },
+                        1002 => {
+                            self.input.mouse_mode_button = true;
+                            self.updateInputSnapshot();
+                        },
+                        1003 => {
+                            self.input.mouse_mode_any = true;
+                            self.updateInputSnapshot();
+                        },
+                        1006 => {
+                            self.input.mouse_mode_sgr = true;
+                            self.updateInputSnapshot();
+                        },
                         else => {},
                     }
                 }
@@ -256,7 +271,10 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 while (idx < param_len and idx < p.len) : (idx += 1) {
                     const mode = p[idx];
                     switch (mode) {
-                        1 => self.app_cursor_keys = false,
+                        1 => {
+                            self.app_cursor_keys = false;
+                            self.updateInputSnapshot();
+                        },
                         25 => self.activeScreen().setCursorVisible(false),
                         47 => self.exitAltScreen(false),
                         1047 => self.exitAltScreen(false),
@@ -264,10 +282,22 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         1049 => self.exitAltScreen(true),
                         2004 => self.bracketed_paste = false,
                         2026 => self.setSyncUpdates(false),
-                        1000 => self.input.mouse_mode_x10 = false,
-                        1002 => self.input.mouse_mode_button = false,
-                        1003 => self.input.mouse_mode_any = false,
-                        1006 => self.input.mouse_mode_sgr = false,
+                        1000 => {
+                            self.input.mouse_mode_x10 = false;
+                            self.updateInputSnapshot();
+                        },
+                        1002 => {
+                            self.input.mouse_mode_button = false;
+                            self.updateInputSnapshot();
+                        },
+                        1003 => {
+                            self.input.mouse_mode_any = false;
+                            self.updateInputSnapshot();
+                        },
+                        1006 => {
+                            self.input.mouse_mode_sgr = false;
+                            self.updateInputSnapshot();
+                        },
                         else => {},
                     }
                 }

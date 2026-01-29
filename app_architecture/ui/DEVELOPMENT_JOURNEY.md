@@ -13,6 +13,10 @@ Status (2026-01-29)
 - Key repeat now uses SDL's native key repeat events (no custom repeat timers) to align with terminal/editor input behavior.
 - SDL event polling now runs on a dedicated input thread with a lock-protected queue to decouple input latency from render work (aligned with kitty's IO loop and ghostty's thread-based event handling).
 - Idle sleep now waits on a condition variable signaled by the input thread to reduce input-to-frame latency when idle.
+- Added input latency logging (poll/build/update/draw timings) under `input.latency` for bottleneck tracing.
+- Added terminal perf logs: `terminal.parse` (parse_ms/bytes) and `terminal.draw` (draw_ms + grid size) to isolate input latency bottlenecks.
+- Parse loop now reduces work when input is pending, and perf logs are throttled to avoid spam.
+- Terminal PTY parsing now runs on a dedicated parse thread (decoupled from UI update) to reduce input latency under heavy output.
 
 Canonical references (do not diverge without a documented reason)
 - kitty: OpenGL renderer, glyph atlas, render loop discipline.

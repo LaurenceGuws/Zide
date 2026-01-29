@@ -139,6 +139,8 @@ pub const TerminalSession = struct {
     app_cursor_keys: bool,
     app_keypad: bool,
     input: input_mod.InputState,
+    input_snapshot: InputSnapshot,
+    pty_write_mutex: std.Thread.Mutex,
     cell_width: u16,
     cell_height: u16,
     parser: parser_mod.Parser,
@@ -163,15 +165,20 @@ pub const TerminalSession = struct {
     dynamic_colors: [dynamic_color_count]?types.Color,
     read_thread: ?std.Thread,
     read_thread_running: std.atomic.Value(bool),
+    parse_thread: ?std.Thread,
+    parse_thread_running: std.atomic.Value(bool),
     state_mutex: std.Thread.Mutex,
     io_mutex: std.Thread.Mutex,
+    io_wait_cond: std.Thread.Condition,
     io_buffer: std.ArrayList(u8),
     io_read_offset: usize,
     sync_updates_active: bool,
     output_pending: std.atomic.Value(bool),
     output_generation: std.atomic.Value(u64),
+    input_pressure: std.atomic.Value(bool),
     alt_exit_pending: std.atomic.Value(bool),
     alt_exit_time_ms: std.atomic.Value(i64),
+    last_parse_log_ms: i64,
     view_cells: std.ArrayList(Cell),
     view_dirty_rows: std.ArrayList(bool),
     view_dirty_cols_start: std.ArrayList(u16),
@@ -201,6 +208,8 @@ pub const TerminalSession = struct {
             .app_cursor_keys = false,
             .app_keypad = false,
             .input = input_mod.InputState.init(),
+            .input_snapshot = InputSnapshot.init(),
+            .pty_write_mutex = .{},
             .cell_width = 0,
             .cell_height = 0,
             .parser = parser_mod.Parser.init(allocator),
@@ -243,21 +252,27 @@ pub const TerminalSession = struct {
             .dynamic_colors = [_]?types.Color{null} ** dynamic_color_count,
             .read_thread = null,
             .read_thread_running = std.atomic.Value(bool).init(false),
+            .parse_thread = null,
+            .parse_thread_running = std.atomic.Value(bool).init(false),
             .state_mutex = .{},
             .io_mutex = .{},
+            .io_wait_cond = .{},
             .io_buffer = .empty,
             .io_read_offset = 0,
             .sync_updates_active = false,
             .output_pending = std.atomic.Value(bool).init(false),
             .output_generation = std.atomic.Value(u64).init(0),
+            .input_pressure = std.atomic.Value(bool).init(false),
             .alt_exit_pending = std.atomic.Value(bool).init(false),
             .alt_exit_time_ms = std.atomic.Value(i64).init(-1),
+            .last_parse_log_ms = 0,
             .view_cells = .empty,
             .view_dirty_rows = .empty,
             .view_dirty_cols_start = .empty,
             .view_dirty_cols_end = .empty,
             .alt_last_active = false,
         };
+        session.updateInputSnapshot();
         return session;
     }
 
@@ -267,6 +282,20 @@ pub const TerminalSession = struct {
 
     pub fn activeScreenConst(self: *const TerminalSession) *const Screen {
         return if (self.active == .alt) &self.alt else &self.primary;
+    }
+
+    pub fn setInputPressure(self: *TerminalSession, value: bool) void {
+        self.input_pressure.store(value, .release);
+    }
+
+    pub fn updateInputSnapshot(self: *TerminalSession) void {
+        self.input_snapshot.app_cursor_keys.store(self.app_cursor_keys, .release);
+        self.input_snapshot.app_keypad.store(self.app_keypad, .release);
+        self.input_snapshot.key_mode_flags.store(self.keyModeFlags(), .release);
+        self.input_snapshot.mouse_mode_x10.store(self.input.mouse_mode_x10, .release);
+        self.input_snapshot.mouse_mode_button.store(self.input.mouse_mode_button, .release);
+        self.input_snapshot.mouse_mode_any.store(self.input.mouse_mode_any, .release);
+        self.input_snapshot.mouse_mode_sgr.store(self.input.mouse_mode_sgr, .release);
     }
 
     fn inactiveScreen(self: *TerminalSession) *Screen {
@@ -294,6 +323,12 @@ pub const TerminalSession = struct {
             self.read_thread_running.store(false, .release);
             thread.join();
             self.read_thread = null;
+        }
+        if (self.parse_thread) |thread| {
+            self.parse_thread_running.store(false, .release);
+            self.io_wait_cond.signal();
+            thread.join();
+            self.parse_thread = null;
         }
         if (self.pty) |*pty| {
             pty.deinit();
@@ -340,11 +375,19 @@ pub const TerminalSession = struct {
         if (builtin.os.tag == .linux or builtin.os.tag == .macos) {
             self.read_thread_running.store(true, .release);
             self.read_thread = try std.Thread.spawn(.{}, readThreadMain, .{self});
+            self.parse_thread_running.store(true, .release);
+            self.parse_thread = try std.Thread.spawn(.{}, parseThreadMain, .{self});
         }
     }
 
     pub fn poll(self: *TerminalSession) !void {
+        const input_pressure = self.input_pressure.load(.acquire);
         if (self.read_thread != null) {
+            if (self.parse_thread != null) {
+                _ = self.output_pending.swap(false, .acq_rel);
+                return;
+            }
+            const perf_log = app_logger.logger("terminal.parse");
             _ = self.output_pending.swap(false, .acq_rel);
             var queued_bytes: usize = 0;
             self.io_mutex.lock();
@@ -353,14 +396,14 @@ pub const TerminalSession = struct {
             }
             self.io_mutex.unlock();
 
-            var max_bytes_per_poll: usize = 64 * 1024;
-            var max_ms: i64 = 2;
+            var max_bytes_per_poll: usize = if (input_pressure) 32 * 1024 else 64 * 1024;
+            var max_ms: i64 = if (input_pressure) 1 else 2;
             if (queued_bytes >= 8 * 1024 * 1024) {
-                max_bytes_per_poll = 2 * 1024 * 1024;
-                max_ms = 16;
+                max_bytes_per_poll = if (input_pressure) 256 * 1024 else 2 * 1024 * 1024;
+                max_ms = if (input_pressure) 4 else 16;
             } else if (queued_bytes >= 1024 * 1024) {
-                max_bytes_per_poll = 512 * 1024;
-                max_ms = 8;
+                max_bytes_per_poll = if (input_pressure) 128 * 1024 else 512 * 1024;
+                max_ms = if (input_pressure) 2 else 8;
             }
             const start_ms = std.time.milliTimestamp();
             var processed: usize = 0;
@@ -406,6 +449,21 @@ pub const TerminalSession = struct {
                 self.state_mutex.unlock();
             }
 
+            if (processed > 0 and (perf_log.enabled_file or perf_log.enabled_console)) {
+                const end_ms = std.time.milliTimestamp();
+                const elapsed_ms = @as(f64, @floatFromInt(end_ms - start_ms));
+                const should_log = elapsed_ms >= 8.0 or queued_bytes >= 1024 * 1024 or processed >= 512 * 1024;
+                if (should_log and (end_ms - self.last_parse_log_ms) >= 100) {
+                    self.last_parse_log_ms = end_ms;
+                    perf_log.logf("parse_ms={d:.2} bytes={d} queued_bytes={d} input_pressure={any}", .{
+                        elapsed_ms,
+                        processed,
+                        queued_bytes,
+                        input_pressure,
+                    });
+                }
+            }
+
             self.io_mutex.lock();
             if (self.io_buffer.items.len > self.io_read_offset) {
                 self.output_pending.store(true, .release);
@@ -415,6 +473,7 @@ pub const TerminalSession = struct {
         }
 
         if (self.pty) |*pty| {
+            const perf_log = app_logger.logger("terminal.parse");
             var buf: [262144]u8 = undefined;
             var had_data = false;
             var processed: usize = 0;
@@ -438,11 +497,27 @@ pub const TerminalSession = struct {
                 const elapsed_ms = @as(f64, @floatFromInt(std.time.milliTimestamp() - start_ms));
                 io_log.logf("alt_exit_io_ms={d:.2} bytes={d}", .{ elapsed_ms, processed });
             }
+            if (processed > 0 and (perf_log.enabled_file or perf_log.enabled_console)) {
+                const end_ms = std.time.milliTimestamp();
+                const elapsed_ms = @as(f64, @floatFromInt(end_ms - start_ms));
+                const should_log = elapsed_ms >= 8.0 or processed >= 512 * 1024;
+                if (should_log and (end_ms - self.last_parse_log_ms) >= 100) {
+                    self.last_parse_log_ms = end_ms;
+                    perf_log.logf("parse_ms={d:.2} bytes={d} input_pressure={any}", .{
+                        elapsed_ms,
+                        processed,
+                        input_pressure,
+                    });
+                }
+            }
         }
     }
 
     pub fn hasData(self: *TerminalSession) bool {
         if (self.read_thread != null) {
+            if (self.parse_thread != null) {
+                return self.output_pending.load(.acquire);
+            }
             if (self.output_pending.load(.acquire)) return true;
             var pending = false;
             self.io_mutex.lock();
@@ -481,18 +556,23 @@ pub const TerminalSession = struct {
 
     pub fn sendKeyAction(self: *TerminalSession, key: Key, mod: Modifier, action: input_mod.KeyAction) !void {
         const log = app_logger.logger("terminal.input");
+        const input_snapshot = self.input_snapshot;
+        const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
+        const app_cursor = input_snapshot.app_cursor_keys.load(.acquire);
         if (log.enabled_file or log.enabled_console) {
             log.logf("sendKey key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x}", .{
                 keyName(key),
                 key,
                 mod,
                 @tagName(action),
-                self.app_cursor_keys,
-                self.keyModeFlags(),
+                app_cursor,
+                key_mode_flags,
             });
         }
         if (self.pty) |*pty| {
-            if (self.keyModeFlags() == 0 and self.app_cursor_keys and mod == types.VTERM_MOD_NONE and action == .press) {
+            self.pty_write_mutex.lock();
+            defer self.pty_write_mutex.unlock();
+            if (key_mode_flags == 0 and app_cursor and mod == types.VTERM_MOD_NONE and action == .press) {
                 const seq = switch (key) {
                     VTERM_KEY_UP => "\x1bOA",
                     VTERM_KEY_DOWN => "\x1bOB",
@@ -507,7 +587,7 @@ pub const TerminalSession = struct {
                     return;
                 }
             }
-            _ = try input_mod.sendKeyAction(pty, key, mod, self.keyModeFlags(), action);
+            _ = try input_mod.sendKeyAction(pty, key, mod, key_mode_flags, action);
         }
     }
 
@@ -517,24 +597,29 @@ pub const TerminalSession = struct {
 
     pub fn sendKeypadAction(self: *TerminalSession, key: input_mod.KeypadKey, mod: Modifier, action: input_mod.KeyAction) !void {
         const log = app_logger.logger("terminal.input");
+        const input_snapshot = self.input_snapshot;
+        const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
+        const app_keypad = input_snapshot.app_keypad.load(.acquire);
         if (log.enabled_file or log.enabled_console) {
             log.logf("sendKeypad key={s} mod=0x{x} action={s} app_keypad={any} key_mode=0x{x}", .{
                 keypadKeyName(key),
                 mod,
                 @tagName(action),
-                self.app_keypad,
-                self.keyModeFlags(),
+                app_keypad,
+                key_mode_flags,
             });
         }
         if (self.pty) |*pty| {
+            self.pty_write_mutex.lock();
+            defer self.pty_write_mutex.unlock();
             if (action == .press) {
-                _ = try input_mod.sendKeypad(pty, key, mod, self.app_keypad, self.keyModeFlags());
+                _ = try input_mod.sendKeypad(pty, key, mod, app_keypad, key_mode_flags);
             }
         }
     }
 
     pub fn appKeypadEnabled(self: *const TerminalSession) bool {
-        return self.app_keypad;
+        return self.input_snapshot.app_keypad.load(.acquire);
     }
 
     pub fn sendChar(self: *TerminalSession, char: u32, mod: Modifier) !void {
@@ -543,16 +628,20 @@ pub const TerminalSession = struct {
 
     pub fn sendCharAction(self: *TerminalSession, char: u32, mod: Modifier, action: input_mod.KeyAction) !void {
         const log = app_logger.logger("terminal.input");
+        const input_snapshot = self.input_snapshot;
+        const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
         if (log.enabled_file or log.enabled_console) {
             log.logf("sendChar cp={d} mod=0x{x} action={s} key_mode=0x{x}", .{
                 char,
                 mod,
                 @tagName(action),
-                self.keyModeFlags(),
+                key_mode_flags,
             });
         }
         if (self.pty) |*pty| {
-            _ = try input_mod.sendCharAction(pty, char, mod, self.keyModeFlags(), action);
+            self.pty_write_mutex.lock();
+            defer self.pty_write_mutex.unlock();
+            _ = try input_mod.sendCharAction(pty, char, mod, key_mode_flags, action);
         }
     }
 
@@ -560,6 +649,8 @@ pub const TerminalSession = struct {
         if (self.pty == null) return false;
         const screen = self.activeScreen();
         if (self.pty) |*pty| {
+            self.pty_write_mutex.lock();
+            defer self.pty_write_mutex.unlock();
             return self.input.reportMouseEvent(pty, event, screen.grid.rows, screen.grid.cols);
         }
         return false;
@@ -572,6 +663,8 @@ pub const TerminalSession = struct {
             log.logf("sendText len={d}", .{text.len});
         }
         if (self.pty) |*pty| {
+            self.pty_write_mutex.lock();
+            defer self.pty_write_mutex.unlock();
             try input_mod.sendText(pty, text);
         }
     }
@@ -955,14 +1048,17 @@ pub const TerminalSession = struct {
 
     pub fn keyModePush(self: *TerminalSession, flags: u32) void {
         self.activeScreen().keyModePush(flags);
+        self.updateInputSnapshot();
     }
 
     pub fn keyModePop(self: *TerminalSession, count: usize) void {
         self.activeScreen().keyModePop(count);
+        self.updateInputSnapshot();
     }
 
     pub fn keyModeModify(self: *TerminalSession, flags: u32, mode: u32) void {
         self.activeScreen().keyModeModify(flags, mode);
+        self.updateInputSnapshot();
     }
 
     pub fn keyModeQuery(self: *TerminalSession) void {
@@ -984,6 +1080,7 @@ pub const TerminalSession = struct {
 
     pub fn setKeypadMode(self: *TerminalSession, enabled: bool) void {
         self.app_keypad = enabled;
+        self.updateInputSnapshot();
     }
 
     pub fn restoreCursor(self: *TerminalSession) void {
@@ -1107,7 +1204,8 @@ pub const TerminalSession = struct {
     }
 
     pub fn mouseReportingEnabled(self: *TerminalSession) bool {
-        return self.input.mouseTrackingActive();
+        const input_snapshot = self.input_snapshot;
+        return input_snapshot.mouse_mode_x10.load(.acquire) or input_snapshot.mouse_mode_button.load(.acquire) or input_snapshot.mouse_mode_any.load(.acquire);
     }
 
     pub fn isAlive(self: *TerminalSession) bool {
@@ -1126,6 +1224,28 @@ pub const TerminalSession = struct {
 
     pub fn markDirty(self: *TerminalSession) void {
         self.activeScreen().markDirtyAll();
+    }
+};
+
+pub const InputSnapshot = struct {
+    app_cursor_keys: std.atomic.Value(bool),
+    app_keypad: std.atomic.Value(bool),
+    key_mode_flags: std.atomic.Value(u32),
+    mouse_mode_x10: std.atomic.Value(bool),
+    mouse_mode_button: std.atomic.Value(bool),
+    mouse_mode_any: std.atomic.Value(bool),
+    mouse_mode_sgr: std.atomic.Value(bool),
+
+    pub fn init() InputSnapshot {
+        return .{
+            .app_cursor_keys = std.atomic.Value(bool).init(false),
+            .app_keypad = std.atomic.Value(bool).init(false),
+            .key_mode_flags = std.atomic.Value(u32).init(0),
+            .mouse_mode_x10 = std.atomic.Value(bool).init(false),
+            .mouse_mode_button = std.atomic.Value(bool).init(false),
+            .mouse_mode_any = std.atomic.Value(bool).init(false),
+            .mouse_mode_sgr = std.atomic.Value(bool).init(false),
+        };
     }
 };
 
@@ -1149,8 +1269,11 @@ fn readThreadMain(session: *TerminalSession) void {
                 session.io_mutex.lock();
                 _ = session.io_buffer.appendSlice(session.allocator, buf[0..n.?]) catch {};
                 session.io_mutex.unlock();
-                session.output_pending.store(true, .release);
-                _ = session.output_generation.fetchAdd(1, .acq_rel);
+                session.io_wait_cond.signal();
+                if (session.parse_thread == null) {
+                    session.output_pending.store(true, .release);
+                    _ = session.output_generation.fetchAdd(1, .acq_rel);
+                }
             }
             if (processed > 0 and session.alt_exit_pending.swap(false, .acq_rel)) {
                 const elapsed_ms = @as(f64, @floatFromInt(std.time.milliTimestamp() - start_ms));
@@ -1158,6 +1281,104 @@ fn readThreadMain(session: *TerminalSession) void {
             }
         } else {
             break;
+        }
+    }
+}
+
+fn parseThreadMain(session: *TerminalSession) void {
+    var temp: [4096]u8 = undefined;
+
+    while (session.parse_thread_running.load(.acquire)) {
+        const input_pressure = session.input_pressure.load(.acquire);
+        var max_bytes: usize = if (input_pressure) 64 * 1024 else 512 * 1024;
+        var max_ms: i64 = if (input_pressure) 2 else 8;
+
+        var queued_bytes: usize = 0;
+        session.io_mutex.lock();
+        if (session.io_buffer.items.len > session.io_read_offset) {
+            queued_bytes = session.io_buffer.items.len - session.io_read_offset;
+        } else {
+            session.io_wait_cond.timedWait(&session.io_mutex, 10 * std.time.ns_per_ms) catch {};
+            if (!session.parse_thread_running.load(.acquire)) {
+                session.io_mutex.unlock();
+                break;
+            }
+            if (session.io_buffer.items.len > session.io_read_offset) {
+                queued_bytes = session.io_buffer.items.len - session.io_read_offset;
+            }
+        }
+        session.io_mutex.unlock();
+
+        if (queued_bytes == 0) {
+            continue;
+        }
+
+        if (queued_bytes >= 8 * 1024 * 1024) {
+            max_bytes = if (input_pressure) 256 * 1024 else 2 * 1024 * 1024;
+            max_ms = if (input_pressure) 4 else 16;
+        } else if (queued_bytes >= 1024 * 1024) {
+            max_bytes = if (input_pressure) 128 * 1024 else 512 * 1024;
+            max_ms = if (input_pressure) 2 else 8;
+        }
+
+        const perf_log = app_logger.logger("terminal.parse");
+        const start_ms = std.time.milliTimestamp();
+        var processed: usize = 0;
+        var had_data = false;
+
+        while (processed < max_bytes and std.time.milliTimestamp() - start_ms < max_ms) {
+            var chunk_len: usize = 0;
+            session.io_mutex.lock();
+            const available = if (session.io_buffer.items.len > session.io_read_offset)
+                session.io_buffer.items.len - session.io_read_offset
+            else
+                0;
+            if (available > 0) {
+                chunk_len = @min(temp.len, available);
+                std.mem.copyForwards(u8, temp[0..chunk_len], session.io_buffer.items[session.io_read_offset .. session.io_read_offset + chunk_len]);
+                session.io_read_offset += chunk_len;
+                had_data = true;
+                if (session.io_read_offset >= session.io_buffer.items.len) {
+                    session.io_buffer.items.len = 0;
+                    session.io_read_offset = 0;
+                } else if (session.io_read_offset > 64 * 1024 and session.io_read_offset > session.io_buffer.items.len / 2) {
+                    const remaining = session.io_buffer.items.len - session.io_read_offset;
+                    std.mem.copyForwards(u8, session.io_buffer.items[0..remaining], session.io_buffer.items[session.io_read_offset..session.io_buffer.items.len]);
+                    session.io_buffer.items.len = remaining;
+                    session.io_read_offset = 0;
+                }
+            }
+            session.io_mutex.unlock();
+
+            if (chunk_len == 0) break;
+
+            session.state_mutex.lock();
+            session.parser.handleSlice(session, temp[0..chunk_len]);
+            session.state_mutex.unlock();
+            processed += chunk_len;
+            _ = session.output_generation.fetchAdd(1, .acq_rel);
+        }
+
+        if (had_data) {
+            session.state_mutex.lock();
+            session.clearSelection();
+            session.state_mutex.unlock();
+            session.output_pending.store(true, .release);
+        }
+
+        if (processed > 0 and (perf_log.enabled_file or perf_log.enabled_console)) {
+            const end_ms = std.time.milliTimestamp();
+            const elapsed_ms = @as(f64, @floatFromInt(end_ms - start_ms));
+            const should_log = elapsed_ms >= 8.0 or queued_bytes >= 1024 * 1024 or processed >= 512 * 1024;
+            if (should_log and (end_ms - session.last_parse_log_ms) >= 100) {
+                session.last_parse_log_ms = end_ms;
+                perf_log.logf("parse_ms={d:.2} bytes={d} queued_bytes={d} input_pressure={any}", .{
+                    elapsed_ms,
+                    processed,
+                    queued_bytes,
+                    input_pressure,
+                });
+            }
         }
     }
 }
