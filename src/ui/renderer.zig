@@ -97,9 +97,69 @@ pub const Theme = struct {
 
 const key_repeat_key_count: usize = @intCast(sdl.SDL_NUM_SCANCODES);
 const mouse_button_count: usize = 8;
+const input_queue_capacity: usize = 8192;
 const KeyPress = struct {
     scancode: i32,
     repeated: bool,
+};
+
+const InputQueue = struct {
+    mutex: std.Thread.Mutex = .{},
+    events: []sdl.SDL_Event = &.{},
+    head: usize = 0,
+    tail: usize = 0,
+    count: usize = 0,
+    dropped: usize = 0,
+
+    fn init(allocator: std.mem.Allocator, capacity: usize) !InputQueue {
+        return .{
+            .events = try allocator.alloc(sdl.SDL_Event, capacity),
+        };
+    }
+
+    fn deinit(self: *InputQueue, allocator: std.mem.Allocator) void {
+        if (self.events.len == 0) return;
+        allocator.free(self.events);
+        self.events = &.{};
+        self.head = 0;
+        self.tail = 0;
+        self.count = 0;
+        self.dropped = 0;
+    }
+
+    fn push(self: *InputQueue, event: sdl.SDL_Event) void {
+        self.mutex.lock();
+        defer self.mutex.unlock();
+
+        if (self.events.len == 0) return;
+
+        if (self.count == self.events.len) {
+            self.head = (self.head + 1) % self.events.len;
+            self.count -= 1;
+            self.dropped +|= 1;
+        }
+
+        self.events[self.tail] = event;
+        self.tail = (self.tail + 1) % self.events.len;
+        self.count += 1;
+    }
+
+    fn drain(self: *InputQueue, out: *std.ArrayList(sdl.SDL_Event)) void {
+        self.mutex.lock();
+        defer self.mutex.unlock();
+
+        if (self.count == 0) return;
+        if (out.capacity < self.count) return;
+
+        var idx = self.head;
+        for (0..self.count) |_| {
+            out.appendAssumeCapacity(self.events[idx]);
+            idx = (idx + 1) % self.events.len;
+        }
+        self.head = 0;
+        self.tail = 0;
+        self.count = 0;
+    }
 };
 
 const RenderTarget = struct {
@@ -177,6 +237,10 @@ pub const Renderer = struct {
     mouse_released: [mouse_button_count]bool,
     key_queue: std.ArrayList(KeyPress),
     char_queue: std.ArrayList(u32),
+    input_queue: InputQueue,
+    input_drain: std.ArrayList(sdl.SDL_Event),
+    input_thread: ?std.Thread,
+    input_thread_running: std.atomic.Value(bool),
     clipboard_buffer: std.ArrayList(u8),
     batch_vertices: std.ArrayList(Vertex),
     batch_draws: std.ArrayList(BatchDraw),
@@ -281,6 +345,10 @@ pub const Renderer = struct {
             .mouse_released = [_]bool{false} ** mouse_button_count,
             .key_queue = std.ArrayList(KeyPress).empty,
             .char_queue = std.ArrayList(u32).empty,
+            .input_queue = .{},
+            .input_drain = std.ArrayList(sdl.SDL_Event).empty,
+            .input_thread = null,
+            .input_thread_running = std.atomic.Value(bool).init(false),
             .clipboard_buffer = std.ArrayList(u8).empty,
             .batch_vertices = std.ArrayList(Vertex).empty,
             .batch_draws = std.ArrayList(BatchDraw).empty,
@@ -294,12 +362,25 @@ pub const Renderer = struct {
         try renderer.initFonts(font_size);
 
         sdl.SDL_StartTextInput();
+        try renderer.initInputThread();
 
         active_renderer = renderer;
         return renderer;
     }
 
+    fn initInputThread(self: *Renderer) !void {
+        self.input_queue = try InputQueue.init(self.allocator, input_queue_capacity);
+        errdefer self.input_queue.deinit(self.allocator);
+
+        try self.input_drain.ensureTotalCapacity(self.allocator, input_queue_capacity);
+        errdefer self.input_drain.deinit(self.allocator);
+
+        self.input_thread_running.store(true, .release);
+        self.input_thread = try std.Thread.spawn(.{}, inputThreadMain, .{self});
+    }
+
     pub fn deinit(self: *Renderer) void {
+        self.shutdownInputThread();
         self.destroyRenderTarget(&self.terminal_target);
         self.destroyRenderTarget(&self.editor_target);
 
@@ -315,6 +396,8 @@ pub const Renderer = struct {
 
         self.key_queue.deinit(self.allocator);
         self.char_queue.deinit(self.allocator);
+        self.input_drain.deinit(self.allocator);
+        self.input_queue.deinit(self.allocator);
         self.clipboard_buffer.deinit(self.allocator);
         self.batch_vertices.deinit(self.allocator);
         self.batch_draws.deinit(self.allocator);
@@ -339,6 +422,15 @@ pub const Renderer = struct {
 
         if (active_renderer == self) active_renderer = null;
         self.allocator.destroy(self);
+    }
+
+    fn shutdownInputThread(self: *Renderer) void {
+        if (!self.input_thread_running.load(.acquire)) return;
+        self.input_thread_running.store(false, .release);
+        if (self.input_thread) |thread| {
+            thread.join();
+            self.input_thread = null;
+        }
     }
 
     fn initGlResources(self: *Renderer) !void {
@@ -1688,8 +1780,9 @@ pub const Renderer = struct {
         self.window_resized_flag = false;
         mouse_wheel_delta = 0.0;
 
-        var event: sdl.SDL_Event = undefined;
-        while (sdl.SDL_PollEvent(&event) != 0) {
+        self.input_drain.clearRetainingCapacity();
+        self.input_queue.drain(&self.input_drain);
+        for (self.input_drain.items) |event| {
             switch (event.type) {
                 sdl.SDL_QUIT => {
                     self.should_close_flag = true;
@@ -1767,6 +1860,18 @@ pub const Renderer = struct {
         }
     }
 };
+
+fn inputThreadMain(self: *Renderer) void {
+    var event: sdl.SDL_Event = undefined;
+    while (self.input_thread_running.load(.acquire)) {
+        if (sdl.SDL_WaitEventTimeout(&event, 8) != 0) {
+            self.input_queue.push(event);
+            while (sdl.SDL_PollEvent(&event) != 0) {
+                self.input_queue.push(event);
+            }
+        }
+    }
+}
 
 fn compileShader(kind: gl.GLenum, source: []const u8) !gl.GLuint {
     const shader = gl.CreateShader(kind);
