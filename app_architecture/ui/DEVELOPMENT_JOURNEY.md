@@ -12,6 +12,7 @@ Status (2026-01-29)
 - Undo repeat loop fixed by removing input-level undo grouping and ignoring text events while ctrl/alt/super are held.
 - Key repeat now uses SDL's native key repeat events (no custom repeat timers) to align with terminal/editor input behavior.
 - SDL event polling now runs on a dedicated input thread with a lock-protected queue to decouple input latency from render work (aligned with kitty's IO loop and ghostty's thread-based event handling).
+- Idle sleep now checks for pending input and yields early to reduce input-to-frame latency when the render loop is idle.
 
 Canonical references (do not diverge without a documented reason)
 - kitty: OpenGL renderer, glyph atlas, render loop discipline.
