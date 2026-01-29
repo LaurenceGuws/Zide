@@ -30,6 +30,8 @@ pub const TerminalWidget = struct {
     kitty_images_view: std.ArrayList(KittyImage),
     kitty_placements_view: std.ArrayList(KittyPlacement),
     kitty_textures: std.AutoHashMap(u32, KittyTexture),
+    kitty_pending_uploads: std.ArrayList(u32),
+    kitty_pending_uploads_set: std.AutoHashMap(u32, void),
     last_kitty_generation: u64 = 0,
     last_hover_link_id: u32 = 0,
     last_hover_row: isize = -1,
@@ -46,6 +48,8 @@ pub const TerminalWidget = struct {
             .kitty_images_view = .empty,
             .kitty_placements_view = .empty,
             .kitty_textures = std.AutoHashMap(u32, KittyTexture).init(session.allocator),
+            .kitty_pending_uploads = .empty,
+            .kitty_pending_uploads_set = std.AutoHashMap(u32, void).init(session.allocator),
             .last_kitty_generation = 0,
             .last_hover_link_id = 0,
             .last_hover_row = -1,
@@ -68,6 +72,8 @@ pub const TerminalWidget = struct {
             }
         }
         self.kitty_textures.deinit();
+        self.kitty_pending_uploads.deinit(self.session.allocator);
+        self.kitty_pending_uploads_set.deinit();
         self.kitty_images_view.deinit(self.session.allocator);
         self.kitty_placements_view.deinit(self.session.allocator);
     }
@@ -334,6 +340,11 @@ pub const TerminalWidget = struct {
             self.kitty_placements_view.clearRetainingCapacity();
         }
         self.session.unlock();
+
+        if (self.kitty_images_view.items.len > 0) {
+            self.primeKittyUploads();
+            self.processPendingKittyUploads(shell);
+        }
 
         const view_cells = self.session.view_cells.items;
         const view_dirty_rows = self.session.view_dirty_rows.items;
@@ -930,6 +941,7 @@ pub const TerminalWidget = struct {
                     gl.DeleteTextures(1, &entry.value.texture.id);
                 }
             }
+            _ = self.kitty_pending_uploads_set.remove(id);
         }
     }
 
@@ -958,7 +970,7 @@ pub const TerminalWidget = struct {
                 if (placement.z >= 0) continue;
             }
             const image = findKittyImage(self.kitty_images_view.items, placement.image_id) orelse continue;
-            const tex = self.ensureKittyTexture(shell, image) orelse continue;
+            const tex = self.ensureKittyTexture(image) orelse continue;
 
             const col_i: i32 = @as(i32, @intCast(placement.col));
             if (col_i < 0 or col_i >= cols_i) continue;
@@ -994,7 +1006,7 @@ pub const TerminalWidget = struct {
         return null;
     }
 
-    fn ensureKittyTexture(self: *TerminalWidget, shell: *Shell, image: KittyImage) ?KittyTexture {
+    fn ensureKittyTexture(self: *TerminalWidget, image: KittyImage) ?KittyTexture {
         if (self.kitty_textures.getEntry(image.id)) |entry| {
             if (entry.value_ptr.version == image.version) return entry.value_ptr.*;
             if (entry.value_ptr.texture.id != 0) {
@@ -1002,13 +1014,86 @@ pub const TerminalWidget = struct {
             }
             _ = self.kitty_textures.remove(image.id);
         }
+        self.enqueueKittyUpload(image.id);
+        return null;
+    }
 
-        const texture = loadKittyTexture(shell.rendererPtr(), image) orelse {
+    fn loadKittyTexture(renderer: anytype, image: KittyImage) ?types.Texture {
+        switch (image.format) {
+            .png => {
+                const log = app_logger.logger("terminal.kitty");
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf("kitty upload skipped: png needs decode id={d}", .{image.id});
+                }
+                return null;
+            },
+            .rgb => {
+                if (image.width == 0 or image.height == 0) return null;
+                return renderer.createTextureFromRgb(@intCast(image.width), @intCast(image.height), image.data, gl.c.GL_LINEAR);
+            },
+            .rgba => {
+                if (image.width == 0 or image.height == 0) return null;
+                return renderer.createTextureFromRgba(@intCast(image.width), @intCast(image.height), image.data, gl.c.GL_LINEAR);
+            },
+        }
+    }
+
+    fn enqueueKittyUpload(self: *TerminalWidget, image_id: u32) void {
+        if (self.kitty_pending_uploads_set.contains(image_id)) return;
+        _ = self.kitty_pending_uploads.append(self.session.allocator, image_id) catch return;
+        _ = self.kitty_pending_uploads_set.put(image_id, {}) catch {};
+    }
+
+    fn processPendingKittyUploads(self: *TerminalWidget, shell: *Shell) void {
+        if (self.kitty_pending_uploads.items.len == 0) return;
+        const renderer = shell.rendererPtr();
+        const max_bytes: usize = 2 * 1024 * 1024;
+        var used_bytes: usize = 0;
+
+        while (self.kitty_pending_uploads.items.len > 0) {
+            const image_id = self.kitty_pending_uploads.items[0];
+            if (self.kitty_textures.contains(image_id)) {
+                _ = self.kitty_pending_uploads_set.remove(image_id);
+                _ = self.kitty_pending_uploads.swapRemove(0);
+                continue;
+            }
+            const image = findKittyImage(self.kitty_images_view.items, image_id) orelse {
+                _ = self.kitty_pending_uploads_set.remove(image_id);
+                _ = self.kitty_pending_uploads.swapRemove(0);
+                continue;
+            };
+            const bytes_per_px: usize = switch (image.format) {
+                .rgb => 3,
+                .rgba => 4,
+                .png => 4,
+            };
+            const image_bytes: usize = @as(usize, image.width) * @as(usize, image.height) * bytes_per_px;
+            if (used_bytes > 0 and used_bytes + image_bytes > max_bytes) break;
+
+            if (self.uploadKittyTexture(renderer, image)) {
+                used_bytes += image_bytes;
+            }
+            _ = self.kitty_pending_uploads_set.remove(image_id);
+            _ = self.kitty_pending_uploads.swapRemove(0);
+        }
+    }
+
+    fn primeKittyUploads(self: *TerminalWidget) void {
+        if (self.kitty_placements_view.items.len == 0) return;
+        for (self.kitty_placements_view.items) |placement| {
+            const image_id = placement.image_id;
+            if (self.kitty_textures.contains(image_id)) continue;
+            self.enqueueKittyUpload(image_id);
+        }
+    }
+
+    fn uploadKittyTexture(self: *TerminalWidget, renderer: anytype, image: KittyImage) bool {
+        const texture = loadKittyTexture(renderer, image) orelse {
             const log = app_logger.logger("terminal.kitty");
             if (log.enabled_file or log.enabled_console) {
                 log.logf("kitty texture load failed id={d} format={s} bytes={d}", .{ image.id, @tagName(image.format), image.data.len });
             }
-            return null;
+            return false;
         };
         const stored = KittyTexture{
             .texture = texture,
@@ -1021,25 +1106,7 @@ pub const TerminalWidget = struct {
         if (log.enabled_file or log.enabled_console) {
             log.logf("kitty texture ok id={d} w={d} h={d}", .{ image.id, texture.width, texture.height });
         }
-        return stored;
-    }
-
-    fn loadKittyTexture(renderer: anytype, image: KittyImage) ?types.Texture {
-        switch (image.format) {
-            .png => {
-                const decoded = image_decode.decodePngRgba(renderer.allocator, image.data) catch return null;
-                defer renderer.allocator.free(decoded.data);
-                return renderer.createTextureFromRgba(@intCast(decoded.width), @intCast(decoded.height), decoded.data, gl.c.GL_LINEAR);
-            },
-            .rgb => {
-                if (image.width == 0 or image.height == 0) return null;
-                return renderer.createTextureFromRgb(@intCast(image.width), @intCast(image.height), image.data, gl.c.GL_LINEAR);
-            },
-            .rgba => {
-                if (image.width == 0 or image.height == 0) return null;
-                return renderer.createTextureFromRgba(@intCast(image.width), @intCast(image.height), image.data, gl.c.GL_LINEAR);
-            },
-        }
+        return true;
     }
 
     /// Handle input, returns true if any input was processed

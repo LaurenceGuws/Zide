@@ -17,6 +17,7 @@ Status (2026-01-29)
 - Added terminal perf logs: `terminal.parse` (parse_ms/bytes) and `terminal.draw` (draw_ms + grid size) to isolate input latency bottlenecks.
 - Parse loop now reduces work when input is pending, and perf logs are throttled to avoid spam.
 - Terminal PTY parsing now runs on a dedicated parse thread (decoupled from UI update) to reduce input latency under heavy output.
+- Kitty image uploads are now queued and uploaded in a per-frame budget to avoid large render-thread spikes.
 
 Canonical references (do not diverge without a documented reason)
 - kitty: OpenGL renderer, glyph atlas, render loop discipline.
