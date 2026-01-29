@@ -241,6 +241,7 @@ pub const Renderer = struct {
     input_drain: std.ArrayList(sdl.SDL_Event),
     input_thread: ?std.Thread,
     input_thread_running: std.atomic.Value(bool),
+    input_pending: std.atomic.Value(bool),
     clipboard_buffer: std.ArrayList(u8),
     batch_vertices: std.ArrayList(Vertex),
     batch_draws: std.ArrayList(BatchDraw),
@@ -349,6 +350,7 @@ pub const Renderer = struct {
             .input_drain = std.ArrayList(sdl.SDL_Event).empty,
             .input_thread = null,
             .input_thread_running = std.atomic.Value(bool).init(false),
+            .input_pending = std.atomic.Value(bool).init(false),
             .clipboard_buffer = std.ArrayList(u8).empty,
             .batch_vertices = std.ArrayList(Vertex).empty,
             .batch_draws = std.ArrayList(BatchDraw).empty,
@@ -376,6 +378,7 @@ pub const Renderer = struct {
         errdefer self.input_drain.deinit(self.allocator);
 
         self.input_thread_running.store(true, .release);
+        self.input_pending.store(false, .release);
         self.input_thread = try std.Thread.spawn(.{}, inputThreadMain, .{self});
     }
 
@@ -1782,6 +1785,9 @@ pub const Renderer = struct {
 
         self.input_drain.clearRetainingCapacity();
         self.input_queue.drain(&self.input_drain);
+        if (self.input_drain.items.len > 0) {
+            self.input_pending.store(false, .release);
+        }
         for (self.input_drain.items) |event| {
             switch (event.type) {
                 sdl.SDL_QUIT => {
@@ -1866,9 +1872,11 @@ fn inputThreadMain(self: *Renderer) void {
     while (self.input_thread_running.load(.acquire)) {
         if (sdl.SDL_WaitEventTimeout(&event, 8) != 0) {
             self.input_queue.push(event);
+            self.input_pending.store(true, .release);
             while (sdl.SDL_PollEvent(&event) != 0) {
                 self.input_queue.push(event);
             }
+            self.input_pending.store(true, .release);
         }
     }
 }
@@ -1975,8 +1983,18 @@ pub fn pollInputEvents() void {
 
 pub fn waitTime(seconds: f64) void {
     if (seconds <= 0) return;
-    const ms = @as(u32, @intFromFloat(seconds * 1000.0));
-    sdl.SDL_Delay(ms);
+    const total_ms = @as(u32, @intFromFloat(seconds * 1000.0));
+    if (total_ms == 0) return;
+
+    var remaining = total_ms;
+    while (remaining > 0) {
+        if (active_renderer) |renderer| {
+            if (renderer.input_pending.load(.acquire)) return;
+        }
+        const step: u32 = if (remaining > 1) 1 else remaining;
+        sdl.SDL_Delay(step);
+        remaining -= step;
+    }
 }
 
 pub fn getTime() f64 {
