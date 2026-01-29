@@ -26,6 +26,12 @@ pub const Config = struct {
     editor_wrap: ?bool,
     editor_highlight_budget: ?usize,
     editor_width_budget: ?usize,
+    app_font_path: ?[]u8,
+    app_font_size: ?f32,
+    editor_font_path: ?[]u8,
+    editor_font_size: ?f32,
+    terminal_font_path: ?[]u8,
+    terminal_font_size: ?f32,
     theme: ?ThemeConfig,
 };
 
@@ -63,6 +69,12 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
         .editor_wrap = null,
         .editor_highlight_budget = null,
         .editor_width_budget = null,
+        .app_font_path = null,
+        .app_font_size = null,
+        .editor_font_path = null,
+        .editor_font_size = null,
+        .terminal_font_path = null,
+        .terminal_font_size = null,
         .theme = null,
     };
     if (fileExists("assets/config/init.lua")) {
@@ -94,6 +106,18 @@ pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
         allocator.free(filter);
         config.log_console_filter = null;
     }
+    if (config.app_font_path) |path| {
+        allocator.free(path);
+        config.app_font_path = null;
+    }
+    if (config.editor_font_path) |path| {
+        allocator.free(path);
+        config.editor_font_path = null;
+    }
+    if (config.terminal_font_path) |path| {
+        allocator.free(path);
+        config.terminal_font_path = null;
+    }
 }
 
 fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) void {
@@ -116,6 +140,27 @@ fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) voi
     }
     if (overlay.editor_width_budget != null) {
         base.editor_width_budget = overlay.editor_width_budget;
+    }
+    if (overlay.app_font_path) |path| {
+        if (base.app_font_path) |old| allocator.free(old);
+        base.app_font_path = allocator.dupe(u8, path) catch base.app_font_path;
+    }
+    if (overlay.app_font_size != null) {
+        base.app_font_size = overlay.app_font_size;
+    }
+    if (overlay.editor_font_path) |path| {
+        if (base.editor_font_path) |old| allocator.free(old);
+        base.editor_font_path = allocator.dupe(u8, path) catch base.editor_font_path;
+    }
+    if (overlay.editor_font_size != null) {
+        base.editor_font_size = overlay.editor_font_size;
+    }
+    if (overlay.terminal_font_path) |path| {
+        if (base.terminal_font_path) |old| allocator.free(old);
+        base.terminal_font_path = allocator.dupe(u8, path) catch base.terminal_font_path;
+    }
+    if (overlay.terminal_font_size != null) {
+        base.terminal_font_size = overlay.terminal_font_size;
     }
     if (overlay.theme) |overlay_theme| {
         if (base.theme) |base_theme| {
@@ -152,6 +197,12 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             .editor_wrap = null,
             .editor_highlight_budget = null,
             .editor_width_budget = null,
+            .app_font_path = null,
+            .app_font_size = null,
+            .editor_font_path = null,
+            .editor_font_size = null,
+            .terminal_font_path = null,
+            .terminal_font_size = null,
             .theme = null,
         };
     }
@@ -165,6 +216,12 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     var editor_wrap: ?bool = null;
     var editor_highlight_budget: ?usize = null;
     var editor_width_budget: ?usize = null;
+    var app_font_path: ?[]u8 = null;
+    var app_font_size: ?f32 = null;
+    var editor_font_path: ?[]u8 = null;
+    var editor_font_size: ?f32 = null;
+    var terminal_font_path: ?[]u8 = null;
+    var terminal_font_size: ?f32 = null;
     var theme: ?ThemeConfig = null;
 
     _ = c.lua_getfield(L, -1, "log");
@@ -205,6 +262,14 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
 
     _ = c.lua_getfield(L, -1, "editor");
     if (c.lua_istable(L, -1)) {
+        _ = c.lua_getfield(L, -1, "font");
+        if (c.lua_isstring(L, -1) != 0) {
+            editor_font_path = try luaStringToOwned(allocator, L, -1);
+        } else if (c.lua_istable(L, -1)) {
+            parseFontTable(allocator, L, -1, &editor_font_path, &editor_font_size);
+        }
+        c.lua_pop(L, 1);
+
         _ = c.lua_getfield(L, -1, "wrap");
         if (c.lua_isboolean(L, -1)) {
             editor_wrap = c.lua_toboolean(L, -1) != 0;
@@ -237,6 +302,30 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     }
     c.lua_pop(L, 1);
 
+    _ = c.lua_getfield(L, -1, "app");
+    if (c.lua_istable(L, -1)) {
+        _ = c.lua_getfield(L, -1, "font");
+        if (c.lua_isstring(L, -1) != 0) {
+            app_font_path = try luaStringToOwned(allocator, L, -1);
+        } else if (c.lua_istable(L, -1)) {
+            parseFontTable(allocator, L, -1, &app_font_path, &app_font_size);
+        }
+        c.lua_pop(L, 1);
+    }
+    c.lua_pop(L, 1);
+
+    _ = c.lua_getfield(L, -1, "terminal");
+    if (c.lua_istable(L, -1)) {
+        _ = c.lua_getfield(L, -1, "font");
+        if (c.lua_isstring(L, -1) != 0) {
+            terminal_font_path = try luaStringToOwned(allocator, L, -1);
+        } else if (c.lua_istable(L, -1)) {
+            parseFontTable(allocator, L, -1, &terminal_font_path, &terminal_font_size);
+        }
+        c.lua_pop(L, 1);
+    }
+    c.lua_pop(L, 1);
+
     _ = c.lua_getfield(L, -1, "theme");
     if (c.lua_istable(L, -1)) {
         theme = try parseThemeFromTable(L, -1);
@@ -250,8 +339,37 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         .editor_wrap = editor_wrap,
         .editor_highlight_budget = editor_highlight_budget,
         .editor_width_budget = editor_width_budget,
+        .app_font_path = app_font_path,
+        .app_font_size = app_font_size,
+        .editor_font_path = editor_font_path,
+        .editor_font_size = editor_font_size,
+        .terminal_font_path = terminal_font_path,
+        .terminal_font_size = terminal_font_size,
         .theme = theme,
     };
+}
+
+fn parseFontTable(
+    allocator: std.mem.Allocator,
+    L: *c.lua_State,
+    idx: c_int,
+    path_out: *?[]u8,
+    size_out: *?f32,
+) void {
+    _ = c.lua_getfield(L, idx, "path");
+    if (c.lua_isstring(L, -1) != 0) {
+        path_out.* = luaStringToOwned(allocator, L, -1) catch path_out.*;
+    }
+    c.lua_pop(L, 1);
+
+    _ = c.lua_getfield(L, idx, "size");
+    if (c.lua_isnumber(L, -1) != 0) {
+        const value = c.lua_tonumberx(L, -1, null);
+        if (value > 0) {
+            size_out.* = @floatCast(value);
+        }
+    }
+    c.lua_pop(L, 1);
 }
 
 fn findUserConfigPath(allocator: std.mem.Allocator) LuaConfigError!?[]u8 {

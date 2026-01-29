@@ -72,6 +72,63 @@ return {
 
 Accepted `log_level` values: `none`, `critical`, `error`, `warning`/`warn`, `info`, `debug`, `trace`.
 
+## Theme config
+
+Theme applies across the app shell, editor, and terminal.
+
+```lua
+return {
+  theme = {
+    palette = {
+      background = "#242933",
+      foreground = "#BBC3D4",
+      selection = "#3B4252",
+      cursor = "#D8DEE9",
+      link = "#81A1C1",
+      line_number = "#4C566A",
+      line_number_bg = "#1E222A",
+      current_line = "#191D24",
+    },
+    syntax = {
+      comment = "#4C566A",
+      string = "#A3BE8C",
+      keyword = "#D08770",
+      number = "#BE9DB8",
+      ["function"] = "#88C0D0",
+      variable = "#BBC3D4",
+      type_name = "#EBCB8B",
+      operator = "#BBC3D4",
+      builtin = "#5E81AC",
+      punctuation = "#60728A",
+      constant = "#BE9DB8",
+      attribute = "#8FBCBB",
+      namespace = "#E7C173",
+      label = "#D08770",
+      error = "#C5727A",
+    },
+  }
+}
+```
+
+## Font config
+
+Editor + terminal currently share the same font stack. You can set it under `app.font`
+or override it under `editor.font` / `terminal.font` (last one wins).
+
+```lua
+return {
+  app = {
+    font = { path = "assets/fonts/JetBrainsMonoNerdFont-Regular.ttf", size = 16 },
+  },
+  editor = {
+    -- font = { path = "/usr/share/fonts/...", size = 16 },
+  },
+  terminal = {
+    -- font = { path = "/usr/share/fonts/...", size = 16 },
+  },
+}
+```
+
 ## Env fallback
 
 Env fallbacks:

@@ -238,6 +238,8 @@ pub const Renderer = struct {
     terminal_cell_height: f32,
     terminal_font: TerminalFont,
     font_cache: std.AutoHashMap(u32, *TerminalFont),
+    font_path: [*:0]const u8,
+    font_path_owned: ?[]u8,
 
     terminal_target: ?RenderTarget,
     editor_target: ?RenderTarget,
@@ -357,6 +359,8 @@ pub const Renderer = struct {
             .terminal_cell_height = font_size * 1.2,
             .terminal_font = undefined,
             .font_cache = std.AutoHashMap(u32, *TerminalFont).init(allocator),
+            .font_path = FONT_PATH,
+            .font_path_owned = null,
             .terminal_target = null,
             .editor_target = null,
             .theme = .{},
@@ -442,6 +446,10 @@ pub const Renderer = struct {
 
         self.terminal_font.deinit();
         self.icon_font.deinit();
+        if (self.font_path_owned) |owned| {
+            self.allocator.free(owned);
+            self.font_path_owned = null;
+        }
 
         self.key_queue.deinit(self.allocator);
         self.char_queue.deinit(self.allocator);
@@ -551,7 +559,7 @@ pub const Renderer = struct {
     fn initFonts(self: *Renderer, size: f32) !void {
         self.terminal_font = try TerminalFont.init(
             self.allocator,
-            FONT_PATH,
+            self.font_path,
             size,
             SYMBOLS_FALLBACK_PATH,
             UNICODE_SYMBOLS2_PATH,
@@ -569,7 +577,7 @@ pub const Renderer = struct {
 
         self.icon_font = try TerminalFont.init(
             self.allocator,
-            FONT_PATH,
+            self.font_path,
             size * 2.0,
             SYMBOLS_FALLBACK_PATH,
             UNICODE_SYMBOLS2_PATH,
@@ -586,25 +594,33 @@ pub const Renderer = struct {
     }
 
     pub fn loadFont(self: *Renderer, path: [*:0]const u8, size: f32) void {
-        self.terminal_font.deinit();
-        self.terminal_font = TerminalFont.init(
-            self.allocator,
-            path,
-            size,
-            SYMBOLS_FALLBACK_PATH,
-            UNICODE_SYMBOLS2_PATH,
-            UNICODE_SYMBOLS_PATH,
-            UNICODE_MONO_PATH,
-            UNICODE_SANS_PATH,
-            EMOJI_COLOR_FALLBACK_PATH,
-            EMOJI_TEXT_FALLBACK_PATH,
-        ) catch return;
-        self.terminal_font.setAtlasFilterPoint();
-        self.font_size = size;
-        self.char_width = self.terminal_font.cell_width;
-        self.char_height = self.terminal_font.line_height;
-        self.terminal_cell_width = self.char_width;
-        self.terminal_cell_height = self.char_height;
+        if (self.font_path_owned) |owned| {
+            self.allocator.free(owned);
+            self.font_path_owned = null;
+        }
+        self.font_path = path;
+        self.base_font_size = size;
+        self.applyFontScale() catch {};
+    }
+
+    pub fn setFontConfig(self: *Renderer, path: ?[]const u8, size: ?f32) !void {
+        if (path) |raw| {
+            const owned = try self.allocator.alloc(u8, raw.len + 1);
+            std.mem.copyForwards(u8, owned[0..raw.len], raw);
+            owned[raw.len] = 0;
+            if (self.font_path_owned) |old| {
+                self.allocator.free(old);
+            }
+            self.font_path_owned = owned;
+            const ptr: [*:0]u8 = @ptrCast(owned.ptr);
+            self.font_path = ptr;
+        }
+        if (size) |value| {
+            if (value > 0.0) {
+                self.base_font_size = value;
+            }
+        }
+        try self.applyFontScale();
     }
 
     pub fn loadFontWithGlyphs(self: *Renderer, allocator: std.mem.Allocator, path: [*:0]const u8, size: f32) void {

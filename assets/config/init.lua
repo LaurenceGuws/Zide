@@ -54,6 +54,15 @@ return {
         },
     },
 
+    -- App shell configuration.
+    -- Note: editor + terminal currently share the same font stack.
+    app = {
+        font = {
+            path = "assets/fonts/JetBrainsMonoNerdFont-Regular.ttf",
+            size = 16,
+        },
+    },
+
     -- Editor configuration.
     editor = {
         -- Soft wrap long lines.
@@ -63,5 +72,13 @@ return {
             -- highlight_budget = 120,
             -- width_budget = 120,
         },
+        -- Optional override (same font as app/terminal for now).
+        -- font = { path = "/usr/share/fonts/...", size = 16 },
+    },
+
+    -- Terminal configuration.
+    terminal = {
+        -- Optional override (same font as app/editor for now).
+        -- font = { path = "/usr/share/fonts/...", size = 16 },
     },
 }
