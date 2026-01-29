@@ -157,6 +157,16 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
         batch.append(.{ .text = .{ .codepoint = char } }) catch {};
     }
 
+    const composition = r.getTextComposition();
+    if (composition.active and composition.text.len > 0) {
+        batch.composing_buffer.clearRetainingCapacity();
+        _ = batch.composing_buffer.appendSlice(allocator, composition.text) catch {};
+        batch.composing_text = batch.composing_buffer.items;
+        batch.composing_cursor = composition.cursor;
+        batch.composing_selection_len = composition.selection_len;
+        batch.composing_active = true;
+    }
+
     return batch;
 }
 

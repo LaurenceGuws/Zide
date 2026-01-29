@@ -260,6 +260,10 @@ pub const Renderer = struct {
     mouse_released: [mouse_button_count]bool,
     key_queue: std.ArrayList(KeyPress),
     char_queue: std.ArrayList(u32),
+    composing_text: std.ArrayList(u8),
+    composing_cursor: i32,
+    composing_selection_len: i32,
+    composing_active: bool,
     input_queue: InputQueue,
     input_drain: std.ArrayList(sdl.SDL_Event),
     input_thread: ?std.Thread,
@@ -272,6 +276,8 @@ pub const Renderer = struct {
     batch_draws: std.ArrayList(BatchDraw),
     should_close_flag: bool,
     window_resized_flag: bool,
+    text_input_rect: sdl.SDL_Rect,
+    text_input_rect_valid: bool,
 
     start_counter: u64,
     perf_freq: f64,
@@ -371,6 +377,10 @@ pub const Renderer = struct {
             .mouse_released = [_]bool{false} ** mouse_button_count,
             .key_queue = std.ArrayList(KeyPress).empty,
             .char_queue = std.ArrayList(u32).empty,
+            .composing_text = std.ArrayList(u8).empty,
+            .composing_cursor = 0,
+            .composing_selection_len = 0,
+            .composing_active = false,
             .input_queue = .{},
             .input_drain = std.ArrayList(sdl.SDL_Event).empty,
             .input_thread = null,
@@ -383,6 +393,8 @@ pub const Renderer = struct {
             .batch_draws = std.ArrayList(BatchDraw).empty,
             .should_close_flag = false,
             .window_resized_flag = false,
+            .text_input_rect = .{ .x = 0, .y = 0, .w = 0, .h = 0 },
+            .text_input_rect_valid = false,
             .start_counter = sdl.SDL_GetPerformanceCounter(),
             .perf_freq = @as(f64, @floatFromInt(sdl.SDL_GetPerformanceFrequency())),
         };
@@ -433,6 +445,7 @@ pub const Renderer = struct {
 
         self.key_queue.deinit(self.allocator);
         self.char_queue.deinit(self.allocator);
+        self.composing_text.deinit(self.allocator);
         self.input_drain.deinit(self.allocator);
         self.input_queue.deinit(self.allocator);
         self.clipboard_buffer.deinit(self.allocator);
@@ -703,6 +716,26 @@ pub const Renderer = struct {
 
     pub fn endFrame(self: *Renderer) void {
         sdl.SDL_GL_SwapWindow(self.window);
+    }
+
+    pub fn setTextInputRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
+        if (w <= 0 or h <= 0) return;
+        const rect = sdl.SDL_Rect{ .x = x, .y = y, .w = w, .h = h };
+        if (self.text_input_rect_valid and
+            rect.x == self.text_input_rect.x and
+            rect.y == self.text_input_rect.y and
+            rect.w == self.text_input_rect.w and
+            rect.h == self.text_input_rect.h)
+        {
+            return;
+        }
+        self.text_input_rect = rect;
+        self.text_input_rect_valid = true;
+        sdl.SDL_SetTextInputRect(&self.text_input_rect);
+        const log = app_logger.logger("sdl.ime");
+        if (log.enabled_file or log.enabled_console) {
+            log.logf("text_input_rect x={d} y={d} w={d} h={d}", .{ rect.x, rect.y, rect.w, rect.h });
+        }
     }
 
     pub fn ensureTerminalTexture(self: *Renderer, width: i32, height: i32) bool {
@@ -1296,6 +1329,22 @@ pub const Renderer = struct {
     pub fn getCharPressed(self: *Renderer) ?u32 {
         if (self.char_queue.items.len == 0) return null;
         return self.char_queue.orderedRemove(0);
+    }
+
+    pub const TextComposition = struct {
+        text: []const u8,
+        cursor: i32,
+        selection_len: i32,
+        active: bool,
+    };
+
+    pub fn getTextComposition(self: *Renderer) TextComposition {
+        return .{
+            .text = self.composing_text.items,
+            .cursor = self.composing_cursor,
+            .selection_len = self.composing_selection_len,
+            .active = self.composing_active,
+        };
     }
 
     pub fn getKeyPressed(self: *Renderer) ?KeyPress {
@@ -1894,6 +1943,7 @@ pub fn refreshWindowMetrics(self: *Renderer, reason: []const u8) WindowMetrics {
     fn pollInputEvents(self: *Renderer) void {
         const input_log = app_logger.logger("input.sdl");
         const window_log = app_logger.logger("sdl.window");
+        const ime_log = app_logger.logger("sdl.ime");
         @memset(self.key_pressed[0..], false);
         @memset(self.key_repeated[0..], false);
         @memset(self.key_released[0..], false);
@@ -1974,8 +2024,28 @@ pub fn refreshWindowMetrics(self: *Renderer, reason: []const u8) WindowMetrics {
                     while (it.nextCodepoint()) |cp| {
                         _ = self.char_queue.append(self.allocator, cp) catch {};
                     }
+                    if (self.composing_active) {
+                        self.composing_active = false;
+                        self.composing_text.clearRetainingCapacity();
+                        self.composing_cursor = 0;
+                        self.composing_selection_len = 0;
+                    }
                     if (input_log.enabled_file or input_log.enabled_console) {
                         input_log.logf("textinput bytes={d}", .{text.len});
+                    }
+                },
+                sdl.SDL_TEXTEDITING => {
+                    const text = std.mem.span(@as([*:0]const u8, @ptrCast(&event.edit.text)));
+                    self.composing_text.clearRetainingCapacity();
+                    _ = self.composing_text.appendSlice(self.allocator, text) catch {};
+                    self.composing_cursor = event.edit.start;
+                    self.composing_selection_len = event.edit.length;
+                    self.composing_active = text.len > 0;
+                    if (ime_log.enabled_file or ime_log.enabled_console) {
+                        ime_log.logf(
+                            "textediting bytes={d} cursor={d} selection={d}",
+                            .{ text.len, event.edit.start, event.edit.length },
+                        );
                     }
                 },
                 sdl.SDL_MOUSEBUTTONDOWN => {

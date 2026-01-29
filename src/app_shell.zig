@@ -105,6 +105,7 @@ pub const isWindowResized = r.isWindowResized;
 pub const getScreenWidth = r.getScreenWidth;
 pub const getScreenHeight = r.getScreenHeight;
 pub const WindowMetrics = r.Renderer.WindowMetrics;
+pub const TextComposition = r.Renderer.TextComposition;
 
 pub const Shell = struct {
     renderer: *r.Renderer,
@@ -165,6 +166,10 @@ pub const Shell = struct {
 
     pub fn refreshWindowMetrics(self: *Shell, reason: []const u8) WindowMetrics {
         return self.renderer.refreshWindowMetrics(reason);
+    }
+
+    pub fn setTextInputRect(self: *Shell, x: i32, y: i32, w: i32, h: i32) void {
+        self.renderer.setTextInputRect(x, y, w, h);
     }
 
     pub fn charWidth(self: *Shell) f32 {
