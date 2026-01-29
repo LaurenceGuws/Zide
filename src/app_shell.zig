@@ -104,6 +104,7 @@ pub const waitTime = r.waitTime;
 pub const isWindowResized = r.isWindowResized;
 pub const getScreenWidth = r.getScreenWidth;
 pub const getScreenHeight = r.getScreenHeight;
+pub const WindowMetrics = r.Renderer.WindowMetrics;
 
 pub const Shell = struct {
     renderer: *r.Renderer,
@@ -160,6 +161,10 @@ pub const Shell = struct {
     pub fn setSize(self: *Shell, new_width: i32, new_height: i32) void {
         self.renderer.width = new_width;
         self.renderer.height = new_height;
+    }
+
+    pub fn refreshWindowMetrics(self: *Shell, reason: []const u8) WindowMetrics {
+        return self.renderer.refreshWindowMetrics(reason);
     }
 
     pub fn charWidth(self: *Shell) f32 {

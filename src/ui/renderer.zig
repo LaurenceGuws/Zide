@@ -32,6 +32,29 @@ pub const UNICODE_SANS_PATH: ?[*:0]const u8 = null;
 pub const EMOJI_COLOR_FALLBACK_PATH: ?[*:0]const u8 = null;
 pub const EMOJI_TEXT_FALLBACK_PATH: ?[*:0]const u8 = null;
 
+fn windowEventName(event_id: u8) []const u8 {
+    return switch (event_id) {
+        sdl.SDL_WINDOWEVENT_SHOWN => "shown",
+        sdl.SDL_WINDOWEVENT_HIDDEN => "hidden",
+        sdl.SDL_WINDOWEVENT_EXPOSED => "exposed",
+        sdl.SDL_WINDOWEVENT_MOVED => "moved",
+        sdl.SDL_WINDOWEVENT_RESIZED => "resized",
+        sdl.SDL_WINDOWEVENT_SIZE_CHANGED => "size_changed",
+        sdl.SDL_WINDOWEVENT_MINIMIZED => "minimized",
+        sdl.SDL_WINDOWEVENT_MAXIMIZED => "maximized",
+        sdl.SDL_WINDOWEVENT_RESTORED => "restored",
+        sdl.SDL_WINDOWEVENT_ENTER => "enter",
+        sdl.SDL_WINDOWEVENT_LEAVE => "leave",
+        sdl.SDL_WINDOWEVENT_FOCUS_GAINED => "focus_gained",
+        sdl.SDL_WINDOWEVENT_FOCUS_LOST => "focus_lost",
+        sdl.SDL_WINDOWEVENT_CLOSE => "close",
+        sdl.SDL_WINDOWEVENT_TAKE_FOCUS => "take_focus",
+        sdl.SDL_WINDOWEVENT_HIT_TEST => "hit_test",
+        sdl.SDL_WINDOWEVENT_DISPLAY_CHANGED => "display_changed",
+        else => "unknown",
+    };
+}
+
 pub const Color = struct {
     r: u8,
     g: u8,
@@ -1340,14 +1363,98 @@ pub const Renderer = struct {
         return .{ .x = @floatFromInt(window_size.w), .y = @floatFromInt(window_size.h) };
     }
 
-    pub fn getMonitorSize(self: *Renderer) MousePos {
+pub fn getMonitorSize(self: *Renderer) MousePos {
         const display = sdl.SDL_GetWindowDisplayIndex(self.window);
         var rect: sdl.SDL_Rect = undefined;
         if (display >= 0 and sdl.SDL_GetDisplayBounds(display, &rect) == 0) {
             return .{ .x = @floatFromInt(rect.w), .y = @floatFromInt(rect.h) };
         }
-        return self.getScreenSize();
+    return self.getScreenSize();
+}
+
+pub const WindowMetrics = struct {
+    window_w: i32,
+    window_h: i32,
+    drawable_w: i32,
+    drawable_h: i32,
+    display_index: i32,
+    display_w: i32,
+    display_h: i32,
+    dpi: MousePos,
+    ddpi: f32,
+    hdpi: f32,
+    vdpi: f32,
+    refresh_hz: i32,
+};
+
+pub fn refreshWindowMetrics(self: *Renderer, reason: []const u8) WindowMetrics {
+    const window_size = getWindowSize(self.window);
+    const drawable = getDrawableSize(self.window);
+    self.width = window_size.w;
+    self.height = window_size.h;
+    self.render_width = drawable.w;
+    self.render_height = drawable.h;
+    self.updateMouseScale();
+
+    const display = sdl.SDL_GetWindowDisplayIndex(self.window);
+    var rect: sdl.SDL_Rect = .{ .x = 0, .y = 0, .w = 0, .h = 0 };
+    var display_w: i32 = 0;
+    var display_h: i32 = 0;
+    if (display >= 0 and sdl.SDL_GetDisplayBounds(display, &rect) == 0) {
+        display_w = rect.w;
+        display_h = rect.h;
     }
+
+    var ddpi: f32 = 0;
+    var hdpi: f32 = 0;
+    var vdpi: f32 = 0;
+    _ = sdl.SDL_GetDisplayDPI(display, &ddpi, &hdpi, &vdpi);
+    const dpi = self.getDpiScale();
+
+    var refresh_hz: i32 = 0;
+    var mode: sdl.SDL_DisplayMode = undefined;
+    if (display >= 0 and sdl.SDL_GetCurrentDisplayMode(display, &mode) == 0) {
+        refresh_hz = mode.refresh_rate;
+    }
+
+    const log = app_logger.logger("sdl.window");
+    if (log.enabled_file or log.enabled_console) {
+        log.logf(
+            "metrics reason={s} window={d}x{d} drawable={d}x{d} display={d} bounds={d}x{d} dpi_scale={d:.3},{d:.3} dpi={d:.1}/{d:.1}/{d:.1} refresh_hz={d}",
+            .{
+                reason,
+                window_size.w,
+                window_size.h,
+                drawable.w,
+                drawable.h,
+                display,
+                display_w,
+                display_h,
+                dpi.x,
+                dpi.y,
+                ddpi,
+                hdpi,
+                vdpi,
+                refresh_hz,
+            },
+        );
+    }
+
+    return .{
+        .window_w = window_size.w,
+        .window_h = window_size.h,
+        .drawable_w = drawable.w,
+        .drawable_h = drawable.h,
+        .display_index = display,
+        .display_w = display_w,
+        .display_h = display_h,
+        .dpi = dpi,
+        .ddpi = ddpi,
+        .hdpi = hdpi,
+        .vdpi = vdpi,
+        .refresh_hz = refresh_hz,
+    };
+}
 
     fn updateMouseScale(self: *Renderer) void {
         const window_size = getWindowSize(self.window);
@@ -1786,6 +1893,7 @@ pub const Renderer = struct {
 
     fn pollInputEvents(self: *Renderer) void {
         const input_log = app_logger.logger("input.sdl");
+        const window_log = app_logger.logger("sdl.window");
         @memset(self.key_pressed[0..], false);
         @memset(self.key_repeated[0..], false);
         @memset(self.key_released[0..], false);
@@ -1805,10 +1913,25 @@ pub const Renderer = struct {
                     self.should_close_flag = true;
                 },
                 sdl.SDL_WINDOWEVENT => {
-                    if (event.window.event == sdl.SDL_WINDOWEVENT_RESIZED or event.window.event == sdl.SDL_WINDOWEVENT_SIZE_CHANGED) {
+                    const evt = event.window.event;
+                    if (evt == sdl.SDL_WINDOWEVENT_RESIZED or
+                        evt == sdl.SDL_WINDOWEVENT_SIZE_CHANGED or
+                        evt == sdl.SDL_WINDOWEVENT_MOVED or
+                        evt == sdl.SDL_WINDOWEVENT_DISPLAY_CHANGED)
+                    {
                         self.window_resized_flag = true;
-                    } else if (event.window.event == sdl.SDL_WINDOWEVENT_CLOSE) {
+                    } else if (evt == sdl.SDL_WINDOWEVENT_CLOSE) {
                         self.should_close_flag = true;
+                    }
+                    if (window_log.enabled_file or window_log.enabled_console) {
+                        window_log.logf(
+                            "event={s} data1={d} data2={d}",
+                            .{
+                                windowEventName(evt),
+                                @as(i32, @intCast(event.window.data1)),
+                                @as(i32, @intCast(event.window.data2)),
+                            },
+                        );
                     }
                 },
                 sdl.SDL_KEYDOWN => {
