@@ -1195,6 +1195,13 @@ pub const Renderer = struct {
         return self.key_repeated[idx];
     }
 
+    pub fn isKeyReleased(self: *Renderer, key: i32) bool {
+        if (key < 0) return false;
+        const idx: usize = @intCast(key);
+        if (idx >= key_repeat_key_count) return false;
+        return self.key_released[idx];
+    }
+
     pub fn getMousePos(self: *Renderer) MousePos {
         const pos = self.getMousePosRaw();
         return .{ .x = pos.x * self.mouse_scale.x, .y = pos.y * self.mouse_scale.y };

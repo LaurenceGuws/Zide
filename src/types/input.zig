@@ -121,6 +121,14 @@ pub const Key = enum(u16) {
     kp_add,
     kp_enter,
     kp_equal,
+    left_shift,
+    right_shift,
+    left_ctrl,
+    right_ctrl,
+    left_alt,
+    right_alt,
+    left_super,
+    right_super,
 };
 
 pub const MousePos = struct {
@@ -200,6 +208,7 @@ pub const InputBatch = struct {
     key_down: [KEY_COUNT]bool,
     key_pressed: [KEY_COUNT]bool,
     key_repeated: [KEY_COUNT]bool,
+    key_released: [KEY_COUNT]bool,
     mouse_down: [MOUSE_BUTTON_COUNT]bool,
     mouse_pressed: [MOUSE_BUTTON_COUNT]bool,
     mouse_released: [MOUSE_BUTTON_COUNT]bool,
@@ -215,6 +224,7 @@ pub const InputBatch = struct {
             .key_down = [_]bool{false} ** KEY_COUNT,
             .key_pressed = [_]bool{false} ** KEY_COUNT,
             .key_repeated = [_]bool{false} ** KEY_COUNT,
+            .key_released = [_]bool{false} ** KEY_COUNT,
             .mouse_down = [_]bool{false} ** MOUSE_BUTTON_COUNT,
             .mouse_pressed = [_]bool{false} ** MOUSE_BUTTON_COUNT,
             .mouse_released = [_]bool{false} ** MOUSE_BUTTON_COUNT,
@@ -234,6 +244,7 @@ pub const InputBatch = struct {
         self.key_down = [_]bool{false} ** KEY_COUNT;
         self.key_pressed = [_]bool{false} ** KEY_COUNT;
         self.key_repeated = [_]bool{false} ** KEY_COUNT;
+        self.key_released = [_]bool{false} ** KEY_COUNT;
         self.mouse_down = [_]bool{false} ** MOUSE_BUTTON_COUNT;
         self.mouse_pressed = [_]bool{false} ** MOUSE_BUTTON_COUNT;
         self.mouse_released = [_]bool{false} ** MOUSE_BUTTON_COUNT;
@@ -257,6 +268,10 @@ pub const InputBatch = struct {
 
     pub fn keyRepeated(self: *const InputBatch, key: Key) bool {
         return self.key_repeated[@intFromEnum(key)];
+    }
+
+    pub fn keyReleased(self: *const InputBatch, key: Key) bool {
+        return self.key_released[@intFromEnum(key)];
     }
 
     pub fn mouseDown(self: *const InputBatch, button: MouseButton) bool {
