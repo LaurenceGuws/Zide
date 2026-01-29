@@ -1037,6 +1037,14 @@ fn storeKittyImage(self: anytype, image: KittyImage) void {
     while (idx < kitty.images.items.len) : (idx += 1) {
         if (kitty.images.items[idx].id == image.id) {
             const old_len = kitty.images.items[idx].data.len;
+            var p: usize = 0;
+            while (p < kitty.placements.items.len) {
+                if (kitty.placements.items[p].image_id == image.id) {
+                    _ = kitty.placements.swapRemove(p);
+                } else {
+                    p += 1;
+                }
+            }
             if (image.data.len > kitty_max_bytes) {
                 self.allocator.free(image.data);
                 return;
@@ -1114,9 +1122,10 @@ fn placeKittyImage(self: anytype, image_id: u32, control: KittyControl) ?[]const
         if (row >= screen.grid.rows or col >= screen.grid.cols) return "EINVAL";
     }
     const visible_top = kittyVisibleTop(self);
+    const placement_id = control.placement_id orelse 0;
     const placement = KittyPlacement{
         .image_id = image_id,
-        .placement_id = control.placement_id orelse 0,
+        .placement_id = placement_id,
         .row = row,
         .col = col,
         .cols = @intCast(control.cols),
@@ -1129,7 +1138,15 @@ fn placeKittyImage(self: anytype, image_id: u32, control: KittyControl) ?[]const
         .offset_x = control.parent_x,
         .offset_y = control.parent_y,
     };
-    _ = kitty.placements.append(self.allocator, placement) catch {};
+    if (placement_id != 0) {
+        if (findKittyPlacementIndex(self, image_id, placement_id)) |idx| {
+            kitty.placements.items[idx] = placement;
+        } else {
+            _ = kitty.placements.append(self.allocator, placement) catch {};
+        }
+    } else {
+        _ = kitty.placements.append(self.allocator, placement) catch {};
+    }
     self.activeScreen().grid.markDirtyAll();
     if (log.enabled_file or log.enabled_console) {
         log.logf("kitty placed id={d} row={d} col={d} cols={d} rows={d}", .{ image_id, row, col, placement.cols, placement.rows });
@@ -1183,6 +1200,14 @@ fn findKittyPlacement(self: anytype, image_id: u32, placement_id: u32) ?KittyPla
     const kitty = kittyStateConst(self);
     for (kitty.placements.items) |placement| {
         if (placement.image_id == image_id and placement.placement_id == placement_id) return placement;
+    }
+    return null;
+}
+
+fn findKittyPlacementIndex(self: anytype, image_id: u32, placement_id: u32) ?usize {
+    const kitty = kittyStateConst(self);
+    for (kitty.placements.items, 0..) |placement, idx| {
+        if (placement.image_id == image_id and placement.placement_id == placement_id) return idx;
     }
     return null;
 }
