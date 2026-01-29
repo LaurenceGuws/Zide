@@ -18,6 +18,7 @@ terminal_protocol_todo:
       - "DECSCUSR cursor style handling implemented."
       - "Application keypad mode (DECKPAM/DECKPNM) handled for keypad keys."
       - "XTGETTCAP minimal DCS +q replies implemented."
+      - "Key encoding flags (CSI u set/push/pop) are tracked, but input still falls back to legacy sequences until kitty press/repeat/release encoding is implemented."
 
   reference_maps:
     xterm:

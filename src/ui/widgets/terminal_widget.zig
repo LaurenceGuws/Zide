@@ -1559,7 +1559,7 @@ pub const TerminalWidget = struct {
 
                 for (repeat_keys) |key| {
                     if (wasHandled(&handled_keys, handled_key_count, key)) continue;
-                    if (input_batch.keyRepeated(key)) {
+                    if (input_batch.keyPressed(key) or input_batch.keyRepeated(key)) {
                         if (try applyTerminalKey(self, key, mod)) {
                             clearLiveState(self);
                             handled = true;

@@ -4,12 +4,13 @@ Goal
 - Build a fast, reliable GUI rendering stack for Zide across Linux, Windows 11, macOS, and Android.
 - Treat reference repos as canonical. We only diverge when required by Zide's code or to exceed the reference quality.
 
-Status (2026-01-28)
+Status (2026-01-29)
 - SDL2 window/input + OpenGL 3.3 renderer is now the active stack on Linux.
 - Raylib has been removed from the build path; PNG decoding is handled via stb_image.
 - Fixed texture UV orientation: CPU textures use top-left UVs; FBO blits flip Y at draw time.
 - Wayland mouse scale uses SDL's drawable/window ratio only; avoid double-applying compositor scale.
 - Undo repeat loop fixed by removing input-level undo grouping and ignoring text events while ctrl/alt/super are held.
+- Key repeat now uses SDL's native key repeat events (no custom repeat timers) to align with terminal/editor input behavior.
 
 Canonical references (do not diverge without a documented reason)
 - kitty: OpenGL renderer, glyph atlas, render loop discipline.
