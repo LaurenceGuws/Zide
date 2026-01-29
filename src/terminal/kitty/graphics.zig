@@ -678,6 +678,7 @@ fn accumulateKittyData(self: anytype, image_id: u32, control: *KittyControl, dec
                 control.format = entry.value_ptr.format_value;
             } else {
                 control.format = switch (entry.value_ptr.format) {
+                    .rgb => 24,
                     .png => 100,
                     .rgba => 32,
                 };
@@ -756,7 +757,8 @@ fn inflateKittyData(self: anytype, compressed: []const u8, expected_size: u32) ?
 
 fn kittyFormatFor(value: u32) ?KittyImageFormat {
     return switch (value) {
-        24, 32 => .rgba,
+        24 => .rgb,
+        32 => .rgba,
         100 => .png,
         else => null,
     };
@@ -764,10 +766,13 @@ fn kittyFormatFor(value: u32) ?KittyImageFormat {
 
 fn kittyExpectedDataBytes(control: KittyControl) ?usize {
     const format = kittyFormatFor(control.format) orelse return null;
-    if (format != .rgba) return null;
     if (control.width == 0 or control.height == 0) return null;
     const total_px: usize = @as(usize, control.width) * @as(usize, control.height);
-    return if (control.format == 24) total_px * 3 else total_px * 4;
+    return switch (format) {
+        .rgb => total_px * 3,
+        .rgba => total_px * 4,
+        else => null,
+    };
 }
 
 fn findKittyImageById(images: []const KittyImage, image_id: u32) ?KittyImage {
@@ -795,32 +800,48 @@ fn buildKittyImage(self: anytype, image_id: u32, control: KittyControl, data: []
                 .version = 0,
             };
         },
+        .rgb => {
+            if (control.width == 0 or control.height == 0) {
+                self.allocator.free(data);
+                return error.InvalidData;
+            }
+            const total_px: usize = @as(usize, control.width) * @as(usize, control.height);
+            const expected = total_px * 3;
+            if (data.len < expected) {
+                self.allocator.free(data);
+                return error.InvalidData;
+            }
+            if (data.len != expected) {
+                const trimmed = self.allocator.alloc(u8, expected) catch {
+                    self.allocator.free(data);
+                    return error.InvalidData;
+                };
+                std.mem.copyForwards(u8, trimmed, data[0..expected]);
+                self.allocator.free(data);
+                return .{
+                    .id = image_id,
+                    .width = control.width,
+                    .height = control.height,
+                    .format = .rgb,
+                    .data = trimmed,
+                    .version = 0,
+                };
+            }
+            return .{
+                .id = image_id,
+                .width = control.width,
+                .height = control.height,
+                .format = .rgb,
+                .data = data,
+                .version = 0,
+            };
+        },
         .rgba => {
             if (control.width == 0 or control.height == 0) {
                 self.allocator.free(data);
                 return error.InvalidData;
             }
             const total_px: usize = @as(usize, control.width) * @as(usize, control.height);
-            if (control.format == 24) {
-                const expected = total_px * 3;
-                if (data.len < expected) {
-                    self.allocator.free(data);
-                    return error.InvalidData;
-                }
-                const expanded = expandRgbToRgba(self, data[0..expected], control.width, control.height) orelse {
-                    self.allocator.free(data);
-                    return error.InvalidData;
-                };
-                self.allocator.free(data);
-                return .{
-                    .id = image_id,
-                    .width = control.width,
-                    .height = control.height,
-                    .format = .rgba,
-                    .data = expanded,
-                    .version = 0,
-                };
-            }
             const expected = total_px * 4;
             if (data.len < expected) {
                 self.allocator.free(data);
@@ -852,22 +873,6 @@ fn buildKittyImage(self: anytype, image_id: u32, control: KittyControl, data: []
             };
         },
     }
-}
-
-fn expandRgbToRgba(self: anytype, rgb: []const u8, width: u32, height: u32) ?[]u8 {
-    const total_px: usize = @as(usize, width) * @as(usize, height);
-    const out_len = total_px * 4;
-    var out = self.allocator.alloc(u8, out_len) catch return null;
-    var src_idx: usize = 0;
-    var dst_idx: usize = 0;
-    while (src_idx + 2 < rgb.len and dst_idx + 3 < out.len) : (src_idx += 3) {
-        out[dst_idx] = rgb[src_idx];
-        out[dst_idx + 1] = rgb[src_idx + 1];
-        out[dst_idx + 2] = rgb[src_idx + 2];
-        out[dst_idx + 3] = 0xFF;
-        dst_idx += 4;
-    }
-    return out;
 }
 
 fn decodeKittyPng(self: anytype, data: []const u8) KittyBuildError!struct { data: []u8, width: u32, height: u32 } {

@@ -3,6 +3,7 @@ const screen_mod = @import("../model/screen.zig");
 const types = @import("../model/types.zig");
 
 pub const KittyImageFormat = enum {
+    rgb,
     rgba,
     png,
 };
