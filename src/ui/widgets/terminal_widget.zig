@@ -359,13 +359,12 @@ pub const TerminalWidget = struct {
                 }
             }
 
-            _ = self.kitty_images_view.resize(self.session.allocator, snapshot.kitty_images.len) catch {};
-            std.mem.copyForwards(KittyImage, self.kitty_images_view.items, snapshot.kitty_images);
-            _ = self.kitty_placements_view.resize(self.session.allocator, snapshot.kitty_placements.len) catch {};
-            std.mem.copyForwards(KittyPlacement, self.kitty_placements_view.items, snapshot.kitty_placements);
-            if (self.kitty_placements_view.items.len > 1) {
-                sortKittyPlacements(self.kitty_placements_view.items);
-            }
+            const session_images = self.session.kitty_view_images.items;
+            const session_placements = self.session.kitty_view_placements.items;
+            _ = self.kitty_images_view.resize(self.session.allocator, session_images.len) catch {};
+            _ = self.kitty_placements_view.resize(self.session.allocator, session_placements.len) catch {};
+            std.mem.copyForwards(KittyImage, self.kitty_images_view.items, session_images);
+            std.mem.copyForwards(KittyPlacement, self.kitty_placements_view.items, session_placements);
         } else {
             self.session.view_cells.clearRetainingCapacity();
             self.session.view_dirty_rows.clearRetainingCapacity();
@@ -940,18 +939,6 @@ pub const TerminalWidget = struct {
                 );
             }
         }
-    }
-
-    fn sortKittyPlacements(placements: []KittyPlacement) void {
-        std.sort.heap(KittyPlacement, placements, {}, struct {
-            fn lessThan(_: void, a: KittyPlacement, b: KittyPlacement) bool {
-                if (a.z == b.z) {
-                    if (a.row == b.row) return a.col < b.col;
-                    return a.row < b.row;
-                }
-                return a.z < b.z;
-            }
-        }.lessThan);
     }
 
     fn cleanupKittyTextures(self: *TerminalWidget, images: []const KittyImage) void {

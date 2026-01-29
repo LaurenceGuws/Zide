@@ -183,6 +183,9 @@ pub const TerminalSession = struct {
     view_dirty_rows: std.ArrayList(bool),
     view_dirty_cols_start: std.ArrayList(u16),
     view_dirty_cols_end: std.ArrayList(u16),
+    kitty_view_images: std.ArrayList(kitty_mod.KittyImage),
+    kitty_view_placements: std.ArrayList(kitty_mod.KittyPlacement),
+    kitty_view_generation: std.atomic.Value(u64),
     view_cache_generation: std.atomic.Value(u64),
     view_cache_rows: std.atomic.Value(u16),
     view_cache_cols: std.atomic.Value(u16),
@@ -276,6 +279,9 @@ pub const TerminalSession = struct {
             .view_dirty_rows = .empty,
             .view_dirty_cols_start = .empty,
             .view_dirty_cols_end = .empty,
+            .kitty_view_images = .empty,
+            .kitty_view_placements = .empty,
+            .kitty_view_generation = std.atomic.Value(u64).init(0),
             .view_cache_generation = std.atomic.Value(u64).init(0),
             .view_cache_rows = std.atomic.Value(u16).init(0),
             .view_cache_cols = std.atomic.Value(u16).init(0),
@@ -328,6 +334,7 @@ pub const TerminalSession = struct {
             self.view_cache_cols.store(0, .release);
             self.view_cache_generation.store(generation, .release);
             self.view_cache_scroll_offset.store(@intCast(clamped_offset), .release);
+            self.updateKittyViewNoLock();
             return;
         }
 
@@ -379,6 +386,30 @@ pub const TerminalSession = struct {
         self.view_cache_cols.store(@intCast(cols), .release);
         self.view_cache_generation.store(generation, .release);
         self.view_cache_scroll_offset.store(@intCast(clamped_offset), .release);
+        self.updateKittyViewNoLock();
+    }
+
+    fn updateKittyViewNoLock(self: *TerminalSession) void {
+        const kitty = kitty_mod.kittyStateConst(self);
+        const kitty_generation = kitty.generation;
+        if (kitty_generation == self.kitty_view_generation.load(.acquire)) return;
+
+        _ = self.kitty_view_images.resize(self.allocator, kitty.images.items.len) catch {};
+        _ = self.kitty_view_placements.resize(self.allocator, kitty.placements.items.len) catch {};
+        std.mem.copyForwards(kitty_mod.KittyImage, self.kitty_view_images.items, kitty.images.items);
+        std.mem.copyForwards(kitty_mod.KittyPlacement, self.kitty_view_placements.items, kitty.placements.items);
+        if (self.kitty_view_placements.items.len > 1) {
+            std.sort.block(kitty_mod.KittyPlacement, self.kitty_view_placements.items, {}, struct {
+                fn lessThan(_: void, a: kitty_mod.KittyPlacement, b: kitty_mod.KittyPlacement) bool {
+                    if (a.z == b.z) {
+                        if (a.row == b.row) return a.col < b.col;
+                        return a.row < b.row;
+                    }
+                    return a.z < b.z;
+                }
+            }.lessThan);
+        }
+        self.kitty_view_generation.store(kitty_generation, .release);
     }
 
     fn inactiveScreen(self: *TerminalSession) *Screen {
@@ -420,6 +451,8 @@ pub const TerminalSession = struct {
         self.view_dirty_rows.deinit(self.allocator);
         self.view_dirty_cols_start.deinit(self.allocator);
         self.view_dirty_cols_end.deinit(self.allocator);
+        self.kitty_view_images.deinit(self.allocator);
+        self.kitty_view_placements.deinit(self.allocator);
         self.io_buffer.deinit(self.allocator);
         self.history.deinit();
         self.primary.deinit();
