@@ -242,6 +242,8 @@ pub const Renderer = struct {
     input_thread: ?std.Thread,
     input_thread_running: std.atomic.Value(bool),
     input_pending: std.atomic.Value(bool),
+    input_wait_mutex: std.Thread.Mutex,
+    input_wait_cond: std.Thread.Condition,
     clipboard_buffer: std.ArrayList(u8),
     batch_vertices: std.ArrayList(Vertex),
     batch_draws: std.ArrayList(BatchDraw),
@@ -351,6 +353,8 @@ pub const Renderer = struct {
             .input_thread = null,
             .input_thread_running = std.atomic.Value(bool).init(false),
             .input_pending = std.atomic.Value(bool).init(false),
+            .input_wait_mutex = .{},
+            .input_wait_cond = .{},
             .clipboard_buffer = std.ArrayList(u8).empty,
             .batch_vertices = std.ArrayList(Vertex).empty,
             .batch_draws = std.ArrayList(BatchDraw).empty,
@@ -380,6 +384,13 @@ pub const Renderer = struct {
         self.input_thread_running.store(true, .release);
         self.input_pending.store(false, .release);
         self.input_thread = try std.Thread.spawn(.{}, inputThreadMain, .{self});
+    }
+
+    fn signalInputPending(self: *Renderer) void {
+        self.input_wait_mutex.lock();
+        self.input_pending.store(true, .release);
+        self.input_wait_cond.signal();
+        self.input_wait_mutex.unlock();
     }
 
     pub fn deinit(self: *Renderer) void {
@@ -1872,11 +1883,11 @@ fn inputThreadMain(self: *Renderer) void {
     while (self.input_thread_running.load(.acquire)) {
         if (sdl.SDL_WaitEventTimeout(&event, 8) != 0) {
             self.input_queue.push(event);
-            self.input_pending.store(true, .release);
+            self.signalInputPending();
             while (sdl.SDL_PollEvent(&event) != 0) {
                 self.input_queue.push(event);
             }
-            self.input_pending.store(true, .release);
+            self.signalInputPending();
         }
     }
 }
@@ -1983,18 +1994,19 @@ pub fn pollInputEvents() void {
 
 pub fn waitTime(seconds: f64) void {
     if (seconds <= 0) return;
-    const total_ms = @as(u32, @intFromFloat(seconds * 1000.0));
-    if (total_ms == 0) return;
+    const total_ns = @as(u64, @intFromFloat(seconds * std.time.ns_per_s));
+    if (total_ns == 0) return;
 
-    var remaining = total_ms;
-    while (remaining > 0) {
-        if (active_renderer) |renderer| {
-            if (renderer.input_pending.load(.acquire)) return;
-        }
-        const step: u32 = if (remaining > 1) 1 else remaining;
-        sdl.SDL_Delay(step);
-        remaining -= step;
+    if (active_renderer) |renderer| {
+        if (renderer.input_pending.load(.acquire)) return;
+        renderer.input_wait_mutex.lock();
+        defer renderer.input_wait_mutex.unlock();
+        if (renderer.input_pending.load(.acquire)) return;
+        _ = renderer.input_wait_cond.timedWait(&renderer.input_wait_mutex, total_ns) catch {};
+        return;
     }
+    const ms = @as(u32, @intFromFloat(seconds * 1000.0));
+    sdl.SDL_Delay(ms);
 }
 
 pub fn getTime() f64 {
