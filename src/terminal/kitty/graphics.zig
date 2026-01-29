@@ -20,6 +20,7 @@ pub const KittyPartial = struct {
     width: u32,
     height: u32,
     format: KittyImageFormat,
+    format_value: u32,
     data: std.ArrayList(u8),
     expected_size: u32,
     received: u32,
@@ -32,7 +33,7 @@ pub const KittyControl = struct {
     action: u8 = 't',
     quiet: u8 = 0,
     delete_action: u8 = 'a',
-    format: u32 = 32,
+    format: u32 = 0,
     medium: u8 = 'd',
     compression: u8 = 0,
     width: u32 = 0,
@@ -140,6 +141,13 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
             writeKittyResponse(self, control, 0, false, "EINVAL");
             return;
         };
+        if (data.len == 0 and control.size == 0 and control.width == 0 and control.height == 0) {
+            writeKittyResponse(self, control, image_id, true, "OK");
+            return;
+        }
+        if (control.format == 0) {
+            control.format = 32;
+        }
         if (control.more or control.offset != 0) {
             writeKittyResponse(self, control, image_id, false, "EINVAL");
             return;
@@ -200,6 +208,12 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
         kitty.loading_image_id = final_image_id;
     }
 
+    if (control.format == 0) {
+        if (kitty.partials.getEntry(final_image_id) == null) {
+            control.format = 32;
+        }
+    }
+
     const decoded = loadKittyPayload(self, &control, data) orelse {
         if (log.enabled_file or log.enabled_console) {
             log.logf("kitty decode failed len={d}", .{data.len});
@@ -214,6 +228,10 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
         }
         return;
     };
+
+    if (control.format == 0) {
+        control.format = 32;
+    }
 
     if (kittyExpectedDataBytes(control)) |expected| {
         if (final_data.len < expected) {
@@ -602,11 +620,13 @@ fn accumulateKittyData(self: anytype, image_id: u32, control: *KittyControl, dec
                 self.allocator.free(chunk);
                 return null;
             };
+            const format_value: u32 = if (control.format != 0) control.format else 32;
             entry.value_ptr.* = KittyPartial{
                 .id = image_id,
                 .width = control.width,
                 .height = control.height,
                 .format = format,
+                .format_value = format_value,
                 .data = .empty,
                 .expected_size = control.size,
                 .received = 0,
@@ -623,6 +643,9 @@ fn accumulateKittyData(self: anytype, image_id: u32, control: *KittyControl, dec
             if (entry.value_ptr.width == 0) entry.value_ptr.width = control.width;
             if (entry.value_ptr.height == 0) entry.value_ptr.height = control.height;
             if (entry.value_ptr.expected_size == 0) entry.value_ptr.expected_size = control.size;
+            if (entry.value_ptr.format_value == 0 and control.format != 0) {
+                entry.value_ptr.format_value = control.format;
+            }
         }
         if (!applyKittyChunk(self, entry.value_ptr, control, chunk)) {
             self.allocator.free(chunk);
@@ -651,10 +674,14 @@ fn accumulateKittyData(self: anytype, image_id: u32, control: *KittyControl, dec
         if (control.width == 0) control.width = entry.value_ptr.width;
         if (control.height == 0) control.height = entry.value_ptr.height;
         if (control.format == 0) {
-            control.format = switch (entry.value_ptr.format) {
-                .png => 100,
-                .rgba => 32,
-            };
+            if (entry.value_ptr.format_value != 0) {
+                control.format = entry.value_ptr.format_value;
+            } else {
+                control.format = switch (entry.value_ptr.format) {
+                    .png => 100,
+                    .rgba => 32,
+                };
+            }
         }
         entry.value_ptr.data.clearRetainingCapacity();
         _ = kitty.partials.remove(image_id);
