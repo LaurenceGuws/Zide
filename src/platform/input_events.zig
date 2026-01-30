@@ -98,21 +98,11 @@ pub fn handleTextInput(
     event: *const sdl.SDL_Event,
     char_queue: *std.ArrayList(u32),
     allocator: std.mem.Allocator,
-    composing_active: *bool,
-    composing_text: *std.ArrayList(u8),
-    composing_cursor: *i32,
-    composing_selection_len: *i32,
 ) usize {
     const text = std.mem.span(@as([*:0]const u8, @ptrCast(&event.text.text)));
     var it = std.unicode.Utf8View.initUnchecked(text).iterator();
     while (it.nextCodepoint()) |cp| {
         _ = char_queue.append(allocator, cp) catch {};
-    }
-    if (composing_active.*) {
-        composing_active.* = false;
-        composing_text.clearRetainingCapacity();
-        composing_cursor.* = 0;
-        composing_selection_len.* = 0;
     }
     return text.len;
 }

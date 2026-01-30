@@ -24,7 +24,7 @@ Status (2026-01-29)
 - Selection highlight spans are cached alongside the view snapshot to avoid per-frame selection range scans.
 - Kitty image uploads are now queued and uploaded in a per-frame budget to avoid large render-thread spikes.
 - Renderer modularization + OS abstraction work is tracked in `app_architecture/ui/renderer_todo.yaml`.
-- Renderer cleanup continues: input constants, clipboard helpers, texture utilities, window event helpers, text input rect handling, timing helpers, input event helpers, and SDL window/GL context init extracted into renderer/platform modules (see renderer_todo).
+- Renderer cleanup continues: input constants, clipboard helpers, texture utilities, window event helpers, text input rect handling, timing helpers, input event helpers, SDL window/GL context init, and input state helpers extracted into renderer/platform modules (see renderer_todo).
 
 Canonical references (do not diverge without a documented reason)
 - kitty: OpenGL renderer, glyph atlas, render loop discipline.
