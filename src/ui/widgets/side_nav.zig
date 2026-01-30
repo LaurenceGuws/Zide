@@ -17,8 +17,9 @@ pub const SideNav = struct {
     }
 
     pub fn draw(self: *SideNav, shell: *Shell, height: f32, y: f32) void {
+        const theme = shell.theme();
         // Background
-        shell.drawRect(0, @intFromFloat(y), @intFromFloat(self.width), @intFromFloat(height), Color{ .r = 30, .g = 31, .b = 41 });
+        shell.drawRect(0, @intFromFloat(y), @intFromFloat(self.width), @intFromFloat(height), theme.ui_bar_bg);
 
         const Item = struct {
             icon: []const u8,
@@ -62,14 +63,14 @@ pub const SideNav = struct {
             const hovered = mouse.x >= bx and mouse.x <= bx + bw and mouse.y >= by and mouse.y <= by + bh;
 
             if (hovered or item.active) {
-                const bg = if (pressed and hovered) Color{ .r = 58, .g = 60, .b = 78 } else Color.selection;
+                const bg = if (pressed and hovered) theme.ui_pressed else theme.ui_hover;
                 shell.drawRect(@intFromFloat(bx), @intFromFloat(by), @intFromFloat(bw), @intFromFloat(bh), bg);
             }
             if (item.active) {
-                shell.drawRect(0, @intFromFloat(by), 2, @intFromFloat(bh), Color.purple);
+                shell.drawRect(0, @intFromFloat(by), 2, @intFromFloat(bh), theme.ui_accent);
             }
 
-            const icon_color = if (item.active or hovered) Color.fg else Color.comment;
+            const icon_color = if (item.active or hovered) theme.foreground else theme.comment_color;
             const icon_text_x = icon_x + icon_text_offset;
             const icon_text_y = icon_y + (icon_size - icon_h_unit) / 2;
             shell.drawIconText(item.icon, icon_text_x, icon_text_y, icon_color);
@@ -98,14 +99,14 @@ pub const SideNav = struct {
             const hovered = mouse.x >= bx and mouse.x <= bx + bw and mouse.y >= by and mouse.y <= by + bh;
 
             if (hovered or item.active) {
-                const bg = if (pressed and hovered) Color{ .r = 58, .g = 60, .b = 78 } else Color.selection;
+                const bg = if (pressed and hovered) theme.ui_pressed else theme.ui_hover;
                 shell.drawRect(@intFromFloat(bx), @intFromFloat(by), @intFromFloat(bw), @intFromFloat(bh), bg);
             }
             if (item.active) {
-                shell.drawRect(0, @intFromFloat(by), 2, @intFromFloat(bh), Color.purple);
+                shell.drawRect(0, @intFromFloat(by), 2, @intFromFloat(bh), theme.ui_accent);
             }
 
-            const icon_color = if (item.active or hovered) Color.fg else Color.comment;
+            const icon_color = if (item.active or hovered) theme.foreground else theme.comment_color;
             const icon_text_x = icon_x + icon_text_offset;
             const icon_text_y = bottom_y + (icon_size - icon_h_unit) / 2;
             shell.drawIconText(item.icon, icon_text_x, icon_text_y, icon_color);

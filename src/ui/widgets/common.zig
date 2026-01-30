@@ -105,6 +105,7 @@ fn copyCodepointsLossy(text: []const u8, idx: *usize, max_count: usize, buf: []u
 
 pub fn drawTooltip(shell: *Shell, text: []const u8, x: f32, y: f32) void {
     if (text.len == 0) return;
+    const theme = shell.theme();
     const padding: f32 = 6;
     const text_w = @as(f32, @floatFromInt(text.len)) * shell.charWidth();
     const text_h = shell.charHeight();
@@ -120,8 +121,7 @@ pub fn drawTooltip(shell: *Shell, text: []const u8, x: f32, y: f32) void {
     if (draw_x < 4) draw_x = 4;
     if (draw_y < 4) draw_y = 4;
 
-    const bg = Color{ .r = 24, .g = 25, .b = 33, .a = 235 };
-    shell.drawRect(@intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(w), @intFromFloat(h), bg);
-    shell.drawRectOutline(@intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(w), @intFromFloat(h), Color.light_gray);
-    shell.drawText(text, draw_x + padding, draw_y + padding, Color.fg);
+    shell.drawRect(@intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(w), @intFromFloat(h), theme.ui_panel_overlay);
+    shell.drawRectOutline(@intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(w), @intFromFloat(h), theme.ui_border);
+    shell.drawText(text, draw_x + padding, draw_y + padding, theme.foreground);
 }
