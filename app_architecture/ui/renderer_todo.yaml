@@ -183,6 +183,27 @@ renderer_todo:
             - src/ui/renderer/draw_batch.zig
           files_to_edit:
             - src/ui/renderer.zig
+        - id: R0-23
+          title: "Extract target draw helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/target_draw.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+        - id: R0-24
+          title: "Extract key state helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/key_state.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+        - id: R0-25
+          title: "Extract shape helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/shape_utils.zig
+          files_to_edit:
+            - src/ui/renderer.zig
 
     - name: "Phase 1 - OS abstraction surface"
       tasks:

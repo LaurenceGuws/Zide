@@ -20,6 +20,9 @@ const targets = @import("renderer/targets.zig");
 const text_draw = @import("renderer/text_draw.zig");
 const gl_resources = @import("renderer/gl_resources.zig");
 const draw_batch = @import("renderer/draw_batch.zig");
+const target_draw = @import("renderer/target_draw.zig");
+const key_state = @import("renderer/key_state.zig");
+const shape_utils = @import("renderer/shape_utils.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_input_events = @import("../platform/input_events.zig");
 const platform_mouse = @import("../platform/mouse_state.zig");
@@ -514,11 +517,11 @@ pub const Renderer = struct {
     }
 
     pub fn ensureTerminalTexture(self: *Renderer, width: i32, height: i32) bool {
-        return self.ensureRenderTarget(&self.terminal_target, width, height, gl.c.GL_NEAREST);
+        return self.ensureRenderTarget(&self.terminal_target, width, height, target_draw.nearestFilter());
     }
 
     pub fn ensureEditorTexture(self: *Renderer, width: i32, height: i32) bool {
-        return self.ensureRenderTarget(&self.editor_target, width, height, gl.c.GL_NEAREST);
+        return self.ensureRenderTarget(&self.editor_target, width, height, target_draw.nearestFilter());
     }
 
     pub fn beginTerminalTexture(self: *Renderer) bool {
@@ -539,49 +542,20 @@ pub const Renderer = struct {
 
     pub fn drawTerminalTexture(self: *Renderer, x: f32, y: f32) void {
         if (self.terminal_target) |target| {
-            const src = types.Rect{
-                .x = 0,
-                .y = @floatFromInt(target.texture.height),
-                .width = @floatFromInt(target.texture.width),
-                .height = -@as(f32, @floatFromInt(target.texture.height)),
-            };
-            const dest = types.Rect{
-                .x = x,
-                .y = y,
-                .width = @floatFromInt(target.texture.width),
-                .height = @floatFromInt(target.texture.height),
-            };
-            self.drawTextureRect(target.texture, src, dest, Color.white.toRgba());
+            target_draw.drawTarget(drawTextureRectThunk, self, target.texture, x, y);
         }
     }
 
     pub fn drawEditorTexture(self: *Renderer, x: f32, y: f32) void {
         if (self.editor_target) |target| {
-            const src = types.Rect{
-                .x = 0,
-                .y = @floatFromInt(target.texture.height),
-                .width = @floatFromInt(target.texture.width),
-                .height = -@as(f32, @floatFromInt(target.texture.height)),
-            };
-            const dest = types.Rect{
-                .x = x,
-                .y = y,
-                .width = @floatFromInt(target.texture.width),
-                .height = @floatFromInt(target.texture.height),
-            };
-            self.drawTextureRect(target.texture, src, dest, Color.white.toRgba());
+            target_draw.drawTarget(drawTextureRectThunk, self, target.texture, x, y);
         }
     }
 
     pub fn drawRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         if (w <= 0 or h <= 0) return;
-        const dest = types.Rect{
-            .x = @floatFromInt(x),
-            .y = @floatFromInt(y),
-            .width = @floatFromInt(w),
-            .height = @floatFromInt(h),
-        };
-        const src = types.Rect{ .x = 0, .y = 0, .width = 1, .height = 1 };
+        const dest = shape_utils.rectFromInts(x, y, w, h);
+        const src = shape_utils.unitRect();
         self.drawTextureRect(self.white_texture, src, dest, color.toRgba());
     }
 
@@ -1125,31 +1099,19 @@ pub const Renderer = struct {
     }
 
     pub fn isKeyDown(self: *Renderer, key: i32) bool {
-        if (key < 0) return false;
-        const idx: usize = @intCast(key);
-        if (idx >= key_repeat_key_count) return false;
-        return self.key_down[idx];
+        return key_state.isKeyDown(self.key_down[0..], key);
     }
 
     pub fn isKeyPressed(self: *Renderer, key: i32) bool {
-        if (key < 0) return false;
-        const idx: usize = @intCast(key);
-        if (idx >= key_repeat_key_count) return false;
-        return self.key_pressed[idx];
+        return key_state.isKeyPressed(self.key_pressed[0..], key);
     }
 
     pub fn isKeyRepeated(self: *Renderer, key: i32) bool {
-        if (key < 0) return false;
-        const idx: usize = @intCast(key);
-        if (idx >= key_repeat_key_count) return false;
-        return self.key_repeated[idx];
+        return key_state.isKeyRepeated(self.key_repeated[0..], key);
     }
 
     pub fn isKeyReleased(self: *Renderer, key: i32) bool {
-        if (key < 0) return false;
-        const idx: usize = @intCast(key);
-        if (idx >= key_repeat_key_count) return false;
-        return self.key_released[idx];
+        return key_state.isKeyReleased(self.key_released[0..], key);
     }
 
     pub fn getMousePos(self: *Renderer) MousePos {
@@ -1292,6 +1254,11 @@ pub const Renderer = struct {
 
     fn drawTextureRect(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
         draw_ops.drawTextureRect(self, texture, src, dest, color);
+    }
+
+    fn drawTextureRectThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
+        const self: *Renderer = @ptrCast(@alignCast(ctx));
+        self.drawTextureRect(texture, src, dest, color);
     }
 
     fn ensureVboCapacity(self: *Renderer, vertex_count: usize) void {
