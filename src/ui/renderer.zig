@@ -23,6 +23,9 @@ const draw_batch = @import("renderer/draw_batch.zig");
 const target_draw = @import("renderer/target_draw.zig");
 const key_state = @import("renderer/key_state.zig");
 const shape_utils = @import("renderer/shape_utils.zig");
+const shape_draw = @import("renderer/shape_draw.zig");
+const terminal_glyphs = @import("renderer/terminal_glyphs.zig");
+const clipboard_state = @import("renderer/clipboard_state.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_input_events = @import("../platform/input_events.zig");
 const platform_mouse = @import("../platform/mouse_state.zig");
@@ -560,11 +563,7 @@ pub const Renderer = struct {
     }
 
     pub fn drawRectOutline(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        const thick: i32 = 1;
-        self.drawRect(x, y, w, thick, color);
-        self.drawRect(x, y + h - thick, w, thick, color);
-        self.drawRect(x, y, thick, h, color);
-        self.drawRect(x + w - thick, y, thick, h, color);
+        shape_draw.drawRectOutline(drawRectThunk, self, x, y, w, h, color);
     }
 
     pub fn setClipboardText(_: *Renderer, text: [*:0]const u8) void {
@@ -572,18 +571,7 @@ pub const Renderer = struct {
     }
 
     pub fn getClipboardText(self: *Renderer) ?[]const u8 {
-        const slice = clipboard.getText() orelse return null;
-        if (slice.len == 0) {
-            clipboard.freeText(slice);
-            return null;
-        }
-        self.clipboard_buffer.clearRetainingCapacity();
-        _ = self.clipboard_buffer.appendSlice(self.allocator, slice) catch {
-            clipboard.freeText(slice);
-            return null;
-        };
-        clipboard.freeText(slice);
-        return self.clipboard_buffer.items;
+        return clipboard_state.getText(self.allocator, &self.clipboard_buffer);
     }
 
     pub fn drawText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
@@ -616,24 +604,7 @@ pub const Renderer = struct {
     }
 
     pub fn drawLine(self: *Renderer, x1: i32, y1: i32, x2: i32, y2: i32, color: Color) void {
-        if (x1 == x2) {
-            const top = @min(y1, y2);
-            const h = @abs(y2 - y1) + 1;
-            self.drawRect(x1, top, 1, h, color);
-            return;
-        }
-        if (y1 == y2) {
-            const left = @min(x1, x2);
-            const w = @abs(x2 - x1) + 1;
-            self.drawRect(left, y1, w, 1, color);
-            return;
-        }
-        // Fallback: draw bounding rect for diagonal lines.
-        const left = @min(x1, x2);
-        const top = @min(y1, y2);
-        const w = @abs(x2 - x1) + 1;
-        const h = @abs(y2 - y1) + 1;
-        self.drawRect(left, top, w, h, color);
+        shape_draw.drawLine(drawRectThunk, self, x1, y1, x2, y2, color);
     }
 
     pub fn beginClip(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
@@ -813,129 +784,7 @@ pub const Renderer = struct {
         h: f32,
         color: Color,
     ) bool {
-        const ix = @as(i32, @intFromFloat(x));
-        const iy = @as(i32, @intFromFloat(y));
-        const iw = @as(i32, @intFromFloat(w));
-        const ih = @as(i32, @intFromFloat(h));
-        const mid_x = ix + @divTrunc(iw, 2);
-        const mid_y = iy + @divTrunc(ih, 2);
-        const thin: i32 = 1;
-        const thick: i32 = @max(2, @divTrunc(ih, 6));
-        const extend: i32 = 0;
-
-        switch (codepoint) {
-            0x2500 => { // ─
-                self.drawRect(ix, mid_y, iw, thin, color);
-                return true;
-            },
-            0x2501 => { // ━
-                self.drawRect(ix, mid_y - @divTrunc(thick, 2), iw, thick, color);
-                return true;
-            },
-            0x2502 => { // │
-                self.drawRect(mid_x, iy - extend, thin, ih + extend * 2, color);
-                return true;
-            },
-            0x2503 => { // ┃
-                self.drawRect(mid_x - @divTrunc(thick, 2), iy - extend, thick, ih + extend * 2, color);
-                return true;
-            },
-            0x256d => { // ╭
-                self.drawRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
-                self.drawRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
-                return true;
-            },
-            0x256e => { // ╮
-                self.drawRect(ix, mid_y, mid_x - ix + thin, thin, color);
-                self.drawRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
-                return true;
-            },
-            0x256f => { // ╯
-                self.drawRect(ix, mid_y, mid_x - ix + thin, thin, color);
-                self.drawRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
-                return true;
-            },
-            0x2570 => { // ╰
-                self.drawRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
-                self.drawRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
-                return true;
-            },
-            0x250c => { // ┌
-                self.drawRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
-                self.drawRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
-                return true;
-            },
-            0x2510 => { // ┐
-                self.drawRect(ix, mid_y, mid_x - ix + thin, thin, color);
-                self.drawRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
-                return true;
-            },
-            0x2514 => { // └
-                self.drawRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
-                self.drawRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
-                return true;
-            },
-            0x2518 => { // ┘
-                self.drawRect(ix, mid_y, mid_x - ix + thin, thin, color);
-                self.drawRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
-                return true;
-            },
-            0x2574 => { // ╴
-                self.drawRect(ix, mid_y, mid_x - ix + thin, thin, color);
-                return true;
-            },
-            0x2575 => { // ╵
-                self.drawRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
-                return true;
-            },
-            0x2576 => { // ╶
-                self.drawRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
-                return true;
-            },
-            0x2577 => { // ╷
-                self.drawRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
-                return true;
-            },
-            0x251c => { // ├
-                self.drawRect(mid_x, iy - extend, thin, ih + extend * 2, color);
-                self.drawRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
-                return true;
-            },
-            0x2524 => { // ┤
-                self.drawRect(mid_x, iy - extend, thin, ih + extend * 2, color);
-                self.drawRect(ix, mid_y, mid_x - ix + thin, thin, color);
-                return true;
-            },
-            0x252c => { // ┬
-                self.drawRect(ix, mid_y, iw, thin, color);
-                self.drawRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
-                return true;
-            },
-            0x2534 => { // ┴
-                self.drawRect(ix, mid_y, iw, thin, color);
-                self.drawRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
-                return true;
-            },
-            0x253c => { // ┼
-                self.drawRect(ix, mid_y, iw, thin, color);
-                self.drawRect(mid_x, iy - extend, thin, ih + extend * 2, color);
-                return true;
-            },
-            0x2580 => { // ▀
-                self.drawRect(ix, iy, iw, @divTrunc(ih, 2), color);
-                return true;
-            },
-            0x2584 => { // ▄
-                const half = @divTrunc(ih, 2);
-                self.drawRect(ix, iy + half, iw, ih - half, color);
-                return true;
-            },
-            0x2588 => { // █
-                self.drawRect(ix, iy, iw, ih, color);
-                return true;
-            },
-            else => return false,
-        }
+        return terminal_glyphs.drawBoxGlyph(drawRectThunk, self, codepoint, x, y, w, h, color);
     }
 
     fn drawTerminalBoxGlyphBatched(
@@ -947,129 +796,7 @@ pub const Renderer = struct {
         h: f32,
         color: Color,
     ) bool {
-        const ix = @as(i32, @intFromFloat(x));
-        const iy = @as(i32, @intFromFloat(y));
-        const iw = @as(i32, @intFromFloat(w));
-        const ih = @as(i32, @intFromFloat(h));
-        const mid_x = ix + @divTrunc(iw, 2);
-        const mid_y = iy + @divTrunc(ih, 2);
-        const thin: i32 = 1;
-        const thick: i32 = @max(2, @divTrunc(ih, 6));
-        const extend: i32 = 0;
-
-        switch (codepoint) {
-            0x2500 => { // ─
-                self.addTerminalRect(ix, mid_y, iw, thin, color);
-                return true;
-            },
-            0x2501 => { // ━
-                self.addTerminalRect(ix, mid_y - @divTrunc(thick, 2), iw, thick, color);
-                return true;
-            },
-            0x2502 => { // │
-                self.addTerminalRect(mid_x, iy - extend, thin, ih + extend * 2, color);
-                return true;
-            },
-            0x2503 => { // ┃
-                self.addTerminalRect(mid_x - @divTrunc(thick, 2), iy - extend, thick, ih + extend * 2, color);
-                return true;
-            },
-            0x256d => { // ╭
-                self.addTerminalRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
-                self.addTerminalRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
-                return true;
-            },
-            0x256e => { // ╮
-                self.addTerminalRect(ix, mid_y, mid_x - ix + thin, thin, color);
-                self.addTerminalRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
-                return true;
-            },
-            0x256f => { // ╯
-                self.addTerminalRect(ix, mid_y, mid_x - ix + thin, thin, color);
-                self.addTerminalRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
-                return true;
-            },
-            0x2570 => { // ╰
-                self.addTerminalRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
-                self.addTerminalRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
-                return true;
-            },
-            0x250c => { // ┌
-                self.addTerminalRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
-                self.addTerminalRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
-                return true;
-            },
-            0x2510 => { // ┐
-                self.addTerminalRect(ix, mid_y, mid_x - ix + thin, thin, color);
-                self.addTerminalRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
-                return true;
-            },
-            0x2514 => { // └
-                self.addTerminalRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
-                self.addTerminalRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
-                return true;
-            },
-            0x2518 => { // ┘
-                self.addTerminalRect(ix, mid_y, mid_x - ix + thin, thin, color);
-                self.addTerminalRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
-                return true;
-            },
-            0x2574 => { // ╴
-                self.addTerminalRect(ix, mid_y, mid_x - ix + thin, thin, color);
-                return true;
-            },
-            0x2575 => { // ╵
-                self.addTerminalRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
-                return true;
-            },
-            0x2576 => { // ╶
-                self.addTerminalRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
-                return true;
-            },
-            0x2577 => { // ╷
-                self.addTerminalRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
-                return true;
-            },
-            0x251c => { // ├
-                self.addTerminalRect(mid_x, iy - extend, thin, ih + extend * 2, color);
-                self.addTerminalRect(mid_x, mid_y, iw - (mid_x - ix), thin, color);
-                return true;
-            },
-            0x2524 => { // ┤
-                self.addTerminalRect(mid_x, iy - extend, thin, ih + extend * 2, color);
-                self.addTerminalRect(ix, mid_y, mid_x - ix + thin, thin, color);
-                return true;
-            },
-            0x252c => { // ┬
-                self.addTerminalRect(ix, mid_y, iw, thin, color);
-                self.addTerminalRect(mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
-                return true;
-            },
-            0x2534 => { // ┴
-                self.addTerminalRect(ix, mid_y, iw, thin, color);
-                self.addTerminalRect(mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
-                return true;
-            },
-            0x253c => { // ┼
-                self.addTerminalRect(ix, mid_y, iw, thin, color);
-                self.addTerminalRect(mid_x, iy - extend, thin, ih + extend * 2, color);
-                return true;
-            },
-            0x2580 => { // ▀
-                self.addTerminalRect(ix, iy, iw, @divTrunc(ih, 2), color);
-                return true;
-            },
-            0x2584 => { // ▄
-                const half = @divTrunc(ih, 2);
-                self.addTerminalRect(ix, iy + half, iw, ih - half, color);
-                return true;
-            },
-            0x2588 => { // █
-                self.addTerminalRect(ix, iy, iw, ih, color);
-                return true;
-            },
-            else => return false,
-        }
+        return terminal_glyphs.drawBoxGlyphBatched(addTerminalRectThunk, self, codepoint, x, y, w, h, color);
     }
 
     pub fn getCharPressed(self: *Renderer) ?u32 {
@@ -1259,6 +986,16 @@ pub const Renderer = struct {
     fn drawTextureRectThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
         const self: *Renderer = @ptrCast(@alignCast(ctx));
         self.drawTextureRect(texture, src, dest, color);
+    }
+
+    fn drawRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
+        const self: *Renderer = @ptrCast(@alignCast(ctx));
+        self.drawRect(x, y, w, h, color);
+    }
+
+    fn addTerminalRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
+        const self: *Renderer = @ptrCast(@alignCast(ctx));
+        self.addTerminalRect(x, y, w, h, color);
     }
 
     fn ensureVboCapacity(self: *Renderer, vertex_count: usize) void {

@@ -204,6 +204,27 @@ renderer_todo:
             - src/ui/renderer/shape_utils.zig
           files_to_edit:
             - src/ui/renderer.zig
+        - id: R0-26
+          title: "Extract shape draw helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/shape_draw.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+        - id: R0-27
+          title: "Extract terminal glyph helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/terminal_glyphs.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+        - id: R0-28
+          title: "Extract clipboard buffer helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/clipboard_state.zig
+          files_to_edit:
+            - src/ui/renderer.zig
 
     - name: "Phase 1 - OS abstraction surface"
       tasks:
