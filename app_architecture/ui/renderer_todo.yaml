@@ -107,6 +107,7 @@ renderer_todo:
           notes:
             - "Record compiler errors and missing deps."
             - "Windows smoke build (2026-01-30): missing freetype/harfbuzz/lua/SDL2 system libs for x86_64-windows-gnu."
+            - "Windows smoke build (2026-01-30): vcpkg env missing (VCPKG_ROOT/VCPKG_DEFAULT_TRIPLET), build aborted."
 
     - name: "Phase 3 - macOS + Android stubs"
       tasks:
