@@ -11,7 +11,10 @@ const input_constants = @import("renderer/input_constants.zig");
 const clipboard = @import("renderer/clipboard.zig");
 const texture_utils = @import("renderer/texture_utils.zig");
 const text_input = @import("renderer/text_input.zig");
+const time_utils = @import("renderer/time_utils.zig");
+const window_init = @import("renderer/window_init.zig");
 const platform_window = @import("../platform/window.zig");
+const platform_input_events = @import("../platform/input_events.zig");
 const platform_window_events = @import("../platform/window_events.zig");
 const build_options = @import("build_options");
 const gl = @import("renderer/gl.zig");
@@ -146,10 +149,7 @@ fn parseRendererBackend(raw: []const u8) RendererBackend {
 const key_repeat_key_count: usize = @intCast(sdl.SDL_NUM_SCANCODES);
 const mouse_button_count: usize = 8;
 const input_queue_capacity: usize = 8192;
-const KeyPress = struct {
-    scancode: i32,
-    repeated: bool,
-};
+const KeyPress = platform_input_events.KeyPress;
 
 const RenderTarget = gl_backend.RenderTarget;
 
@@ -235,33 +235,16 @@ pub const Renderer = struct {
     }
 
     pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8) !*Renderer {
-        _ = sdl.SDL_SetHint("SDL_APP_NAME", "Zide");
-        _ = sdl.SDL_SetHint("SDL_AUDIO_DEVICE_APP_NAME", "Zide");
-        _ = sdl.SDL_SetHint("SDL_APP_ID", "com.zide.ide");
-        if (sdl.SDL_Init(sdl.SDL_INIT_VIDEO | sdl.SDL_INIT_TIMER) != 0) {
-            return error.SdlInitFailed;
-        }
+        try window_init.initSdl();
         errdefer sdl.SDL_Quit();
 
-        _ = sdl.SDL_GL_SetAttribute(sdl.SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-        _ = sdl.SDL_GL_SetAttribute(sdl.SDL_GL_CONTEXT_MINOR_VERSION, 3);
-        _ = sdl.SDL_GL_SetAttribute(sdl.SDL_GL_CONTEXT_PROFILE_MASK, sdl.SDL_GL_CONTEXT_PROFILE_CORE);
-        _ = sdl.SDL_GL_SetAttribute(sdl.SDL_GL_DOUBLEBUFFER, 1);
+        window_init.configureGlAttributes();
 
-        const window = sdl.SDL_CreateWindow(
-            title,
-            sdl.SDL_WINDOWPOS_CENTERED,
-            sdl.SDL_WINDOWPOS_CENTERED,
-            width,
-            height,
-            sdl.SDL_WINDOW_OPENGL | sdl.SDL_WINDOW_RESIZABLE | sdl.SDL_WINDOW_ALLOW_HIGHDPI,
-        ) orelse return error.SdlWindowFailed;
+        const window = try window_init.createWindow(width, height, title);
         errdefer sdl.SDL_DestroyWindow(window);
 
-        const gl_context = sdl.SDL_GL_CreateContext(window) orelse return error.SdlGlContextFailed;
+        const gl_context = try window_init.createGlContext(window);
         errdefer sdl.SDL_GL_DeleteContext(gl_context);
-        _ = sdl.SDL_GL_MakeCurrent(window, gl_context);
-        _ = sdl.SDL_GL_SetSwapInterval(1);
 
         try gl.load();
 
@@ -1456,85 +1439,80 @@ pub const Renderer = struct {
                     }
                 },
                 sdl.SDL_KEYDOWN => {
-                    const sc = @as(i32, @intCast(event.key.keysym.scancode));
-                    if (sc >= 0 and @as(usize, @intCast(sc)) < key_repeat_key_count) {
-                        self.key_down[@intCast(sc)] = true;
-                        if (event.key.repeat == 0) {
-                            self.key_pressed[@intCast(sc)] = true;
-                        } else {
-                            self.key_repeated[@intCast(sc)] = true;
-                        }
-                        _ = self.key_queue.append(self.allocator, .{
-                            .scancode = sc,
-                            .repeated = event.key.repeat != 0,
-                        }) catch {};
-                    }
+                    const key_info = platform_input_events.handleKeyDown(
+                        &event,
+                        self.key_down[0..],
+                        self.key_pressed[0..],
+                        self.key_repeated[0..],
+                        &self.key_queue,
+                        self.allocator,
+                    );
                     if (input_log.enabled_file or input_log.enabled_console) {
                         input_log.logf(
                             "keydown sc={d} sym={d} repeat={d}",
-                            .{ sc, @as(i32, @intCast(event.key.keysym.sym)), event.key.repeat },
+                            .{ key_info.scancode, key_info.sym, key_info.repeat },
                         );
                     }
                 },
                 sdl.SDL_KEYUP => {
-                    const sc = @as(i32, @intCast(event.key.keysym.scancode));
-                    if (sc >= 0 and @as(usize, @intCast(sc)) < key_repeat_key_count) {
-                        self.key_down[@intCast(sc)] = false;
-                        self.key_released[@intCast(sc)] = true;
-                    }
+                    const key_info = platform_input_events.handleKeyUp(
+                        &event,
+                        self.key_down[0..],
+                        self.key_released[0..],
+                    );
                     if (input_log.enabled_file or input_log.enabled_console) {
                         input_log.logf(
                             "keyup sc={d} sym={d}",
-                            .{ sc, @as(i32, @intCast(event.key.keysym.sym)) },
+                            .{ key_info.scancode, key_info.sym },
                         );
                     }
                 },
                 sdl.SDL_TEXTINPUT => {
-                    const text = std.mem.span(@as([*:0]const u8, @ptrCast(&event.text.text)));
-                    var it = std.unicode.Utf8View.initUnchecked(text).iterator();
-                    while (it.nextCodepoint()) |cp| {
-                        _ = self.char_queue.append(self.allocator, cp) catch {};
-                    }
-                    if (self.composing_active) {
-                        self.composing_active = false;
-                        self.composing_text.clearRetainingCapacity();
-                        self.composing_cursor = 0;
-                        self.composing_selection_len = 0;
-                    }
+                    const text_len = platform_input_events.handleTextInput(
+                        &event,
+                        &self.char_queue,
+                        self.allocator,
+                        &self.composing_active,
+                        &self.composing_text,
+                        &self.composing_cursor,
+                        &self.composing_selection_len,
+                    );
                     if (input_log.enabled_file or input_log.enabled_console) {
-                        input_log.logf("textinput bytes={d}", .{text.len});
+                        input_log.logf("textinput bytes={d}", .{text_len});
                     }
                 },
                 sdl.SDL_TEXTEDITING => {
-                    const text = std.mem.span(@as([*:0]const u8, @ptrCast(&event.edit.text)));
-                    self.composing_text.clearRetainingCapacity();
-                    _ = self.composing_text.appendSlice(self.allocator, text) catch {};
-                    self.composing_cursor = event.edit.start;
-                    self.composing_selection_len = event.edit.length;
-                    self.composing_active = text.len > 0;
+                    const edit_info = platform_input_events.handleTextEditing(
+                        &event,
+                        &self.composing_text,
+                        &self.composing_cursor,
+                        &self.composing_selection_len,
+                        &self.composing_active,
+                        self.allocator,
+                    );
                     if (ime_log.enabled_file or ime_log.enabled_console) {
                         ime_log.logf(
                             "textediting bytes={d} cursor={d} selection={d}",
-                            .{ text.len, event.edit.start, event.edit.length },
+                            .{ edit_info.bytes, edit_info.cursor, edit_info.selection_len },
                         );
                     }
                 },
                 sdl.SDL_MOUSEBUTTONDOWN => {
-                    const btn = @as(i32, @intCast(event.button.button));
-                    if (btn >= 0 and @as(usize, @intCast(btn)) < mouse_button_count) {
-                        self.mouse_down[@intCast(btn)] = true;
-                        self.mouse_pressed[@intCast(btn)] = true;
-                    }
+                    platform_input_events.handleMouseButtonDown(
+                        &event,
+                        self.mouse_down[0..],
+                        self.mouse_pressed[0..],
+                    );
                 },
                 sdl.SDL_MOUSEBUTTONUP => {
-                    const btn = @as(i32, @intCast(event.button.button));
-                    if (btn >= 0 and @as(usize, @intCast(btn)) < mouse_button_count) {
-                        self.mouse_down[@intCast(btn)] = false;
-                        self.mouse_released[@intCast(btn)] = true;
-                    }
+                    platform_input_events.handleMouseButtonUp(
+                        &event,
+                        self.mouse_down[0..],
+                        self.mouse_released[0..],
+                    );
                 },
                 sdl.SDL_MOUSEWHEEL => {
-                    mouse_wheel_delta += @floatFromInt(event.wheel.y);
+                    mouse_wheel_delta += platform_input_events.wheelDelta(&event);
                 },
                 else => {},
             }
@@ -1549,28 +1527,18 @@ pub fn pollInputEvents() void {
 }
 
 pub fn waitTime(seconds: f64) void {
-    if (seconds <= 0) return;
-    const total_ns = @as(u64, @intFromFloat(seconds * std.time.ns_per_s));
-    if (total_ns == 0) return;
-
     if (active_renderer) |renderer| {
-        renderer.sdl_input.wait(seconds);
-        return;
+        time_utils.waitTime(seconds, &renderer.sdl_input);
+    } else {
+        time_utils.waitTime(seconds, null);
     }
-    const ms = @as(u32, @intFromFloat(seconds * 1000.0));
-    sdl.SDL_Delay(ms);
 }
 
 pub fn getTime() f64 {
     if (active_renderer) |renderer| {
-        const counter = sdl.SDL_GetPerformanceCounter();
-        if (renderer.perf_freq <= 0) return 0.0;
-        return @as(f64, @floatFromInt(counter - renderer.start_counter)) / renderer.perf_freq;
+        return time_utils.getTime(renderer.start_counter, renderer.perf_freq);
     }
-    const counter = sdl.SDL_GetPerformanceCounter();
-    const freq = sdl.SDL_GetPerformanceFrequency();
-    if (freq == 0) return 0.0;
-    return @as(f64, @floatFromInt(counter)) / @as(f64, @floatFromInt(freq));
+    return time_utils.getTime(null, null);
 }
 
 pub fn setSdlLogLevel(level: c_int) void {
