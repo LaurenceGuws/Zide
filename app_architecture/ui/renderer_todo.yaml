@@ -98,6 +98,27 @@ renderer_todo:
             - src/ui/renderer/text_input.zig
           files_to_edit:
             - src/ui/renderer.zig
+        - id: R0-11
+          title: "Extract timing helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/time_utils.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+        - id: R0-12
+          title: "Extract input event helpers"
+          status: done
+          files_to_add:
+            - src/platform/input_events.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+        - id: R0-13
+          title: "Extract SDL window + GL context init"
+          status: done
+          files_to_add:
+            - src/ui/renderer/window_init.zig
+          files_to_edit:
+            - src/ui/renderer.zig
 
     - name: "Phase 1 - OS abstraction surface"
       tasks:
