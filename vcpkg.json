@@ -1,0 +1,10 @@
+{
+  "name": "zide",
+  "version-string": "0.0.0",
+  "dependencies": [
+    "sdl2",
+    "freetype",
+    "harfbuzz",
+    "lua"
+  ]
+}
