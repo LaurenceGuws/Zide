@@ -1,5 +1,6 @@
 const input_events = @import("../../platform/input_events.zig");
 const std = @import("std");
+const text_composition = @import("text_composition.zig");
 
 pub const KeyPress = input_events.KeyPress;
 
@@ -32,9 +33,10 @@ pub fn resetForFrame(state: InputState) void {
 }
 
 pub fn applyTextInputReset(state: InputState) void {
-    if (!state.composing_active.*) return;
-    state.composing_active.* = false;
-    state.composing_text.clearRetainingCapacity();
-    state.composing_cursor.* = 0;
-    state.composing_selection_len.* = 0;
+    text_composition.reset(
+        state.composing_text,
+        state.composing_cursor,
+        state.composing_selection_len,
+        state.composing_active,
+    );
 }

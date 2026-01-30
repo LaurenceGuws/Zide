@@ -248,6 +248,28 @@ renderer_todo:
             - src/ui/renderer.zig
             - src/ui/renderer/target_draw.zig
             - src/ui/renderer/draw_ops.zig
+        - id: R0-32
+          title: "Extract text composition helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/text_composition.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+            - src/ui/renderer/input_state.zig
+        - id: R0-33
+          title: "Extract window flag helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/window_flags.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+        - id: R0-34
+          title: "Extract mouse wheel helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/mouse_wheel.zig
+          files_to_edit:
+            - src/ui/renderer.zig
 
     - name: "Phase 1 - OS abstraction surface"
       tasks:
