@@ -133,6 +133,13 @@ renderer_todo:
             - src/platform/mouse_state.zig
           files_to_edit:
             - src/ui/renderer.zig
+        - id: R0-16
+          title: "Extract window metrics helpers"
+          status: done
+          files_to_add:
+            - src/platform/window_metrics.zig
+          files_to_edit:
+            - src/platform/window.zig
 
     - name: "Phase 1 - OS abstraction surface"
       tasks:
