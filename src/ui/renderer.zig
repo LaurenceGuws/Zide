@@ -14,6 +14,7 @@ const text_input = @import("renderer/text_input.zig");
 const time_utils = @import("renderer/time_utils.zig");
 const window_init = @import("renderer/window_init.zig");
 const input_state = @import("renderer/input_state.zig");
+const input_queue = @import("renderer/input_queue.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_input_events = @import("../platform/input_events.zig");
 const platform_mouse = @import("../platform/mouse_state.zig");
@@ -1409,8 +1410,8 @@ pub const Renderer = struct {
         };
         input_state.resetForFrame(state);
 
-        self.sdl_input.drainEvents();
-        for (self.sdl_input.drain.items) |event| {
+        const events = input_queue.drain(&self.sdl_input);
+        for (events) |event| {
             switch (event.type) {
                 sdl.SDL_QUIT => {
                     self.should_close_flag = true;
