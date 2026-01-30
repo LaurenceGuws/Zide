@@ -13,6 +13,7 @@ const texture_utils = @import("renderer/texture_utils.zig");
 const text_input = @import("renderer/text_input.zig");
 const time_utils = @import("renderer/time_utils.zig");
 const window_init = @import("renderer/window_init.zig");
+const input_state = @import("renderer/input_state.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_input_events = @import("../platform/input_events.zig");
 const platform_window_events = @import("../platform/window_events.zig");
@@ -149,7 +150,7 @@ fn parseRendererBackend(raw: []const u8) RendererBackend {
 const key_repeat_key_count: usize = @intCast(sdl.SDL_NUM_SCANCODES);
 const mouse_button_count: usize = 8;
 const input_queue_capacity: usize = 8192;
-const KeyPress = platform_input_events.KeyPress;
+const KeyPress = input_state.KeyPress;
 
 const RenderTarget = gl_backend.RenderTarget;
 
@@ -1406,13 +1407,24 @@ pub const Renderer = struct {
         const input_log = app_logger.logger("input.sdl");
         const window_log = app_logger.logger("sdl.window");
         const ime_log = app_logger.logger("sdl.ime");
-        @memset(self.key_pressed[0..], false);
-        @memset(self.key_repeated[0..], false);
-        @memset(self.key_released[0..], false);
-        @memset(self.mouse_pressed[0..], false);
-        @memset(self.mouse_released[0..], false);
-        self.window_resized_flag = false;
-        mouse_wheel_delta = 0.0;
+        const state = input_state.InputState{
+            .key_down = self.key_down[0..],
+            .key_pressed = self.key_pressed[0..],
+            .key_repeated = self.key_repeated[0..],
+            .key_released = self.key_released[0..],
+            .mouse_down = self.mouse_down[0..],
+            .mouse_pressed = self.mouse_pressed[0..],
+            .mouse_released = self.mouse_released[0..],
+            .key_queue = &self.key_queue,
+            .char_queue = &self.char_queue,
+            .composing_text = &self.composing_text,
+            .composing_cursor = &self.composing_cursor,
+            .composing_selection_len = &self.composing_selection_len,
+            .composing_active = &self.composing_active,
+            .mouse_wheel_delta = &mouse_wheel_delta,
+            .window_resized_flag = &self.window_resized_flag,
+        };
+        input_state.resetForFrame(state);
 
         self.sdl_input.drainEvents();
         for (self.sdl_input.drain.items) |event| {
@@ -1472,11 +1484,8 @@ pub const Renderer = struct {
                         &event,
                         &self.char_queue,
                         self.allocator,
-                        &self.composing_active,
-                        &self.composing_text,
-                        &self.composing_cursor,
-                        &self.composing_selection_len,
                     );
+                    input_state.applyTextInputReset(state);
                     if (input_log.enabled_file or input_log.enabled_console) {
                         input_log.logf("textinput bytes={d}", .{text_len});
                     }
