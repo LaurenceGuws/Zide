@@ -8,6 +8,7 @@ const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
 const platform_window = @import("../platform/window.zig");
+const build_options = @import("build_options");
 const gl = @import("renderer/gl.zig");
 const sdl_input = @import("renderer/sdl_input.zig");
 const types = @import("renderer/types.zig");
@@ -55,6 +56,20 @@ fn windowEventName(event_id: u8) []const u8 {
 pub const Color = iface.Color;
 pub const MousePos = iface.MousePos;
 pub const Theme = iface.Theme;
+
+pub const RendererBackend = enum {
+    sdl_gl,
+    wgl,
+    egl,
+};
+
+pub const renderer_backend: RendererBackend = parseRendererBackend(build_options.renderer_backend);
+
+fn parseRendererBackend(raw: []const u8) RendererBackend {
+    if (std.mem.eql(u8, raw, "wgl")) return .wgl;
+    if (std.mem.eql(u8, raw, "egl")) return .egl;
+    return .sdl_gl;
+}
 
 const key_repeat_key_count: usize = @intCast(sdl.SDL_NUM_SCANCODES);
 const mouse_button_count: usize = 8;

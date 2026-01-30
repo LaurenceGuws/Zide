@@ -95,6 +95,7 @@ renderer_todo:
             - src/ui/renderer/gl_backend.zig
         - id: R2-02
           title: "Build config switches for OS backend selection"
+          status: done
           files_to_edit:
             - build.zig
             - src/ui/renderer.zig

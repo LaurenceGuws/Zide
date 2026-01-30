@@ -48,6 +48,18 @@ pub fn build(b: *std.Build) void {
     // Platform detection
     const target_os = target.result.os.tag;
 
+    const default_renderer_backend = switch (target_os) {
+        .windows => "wgl",
+        else => "sdl_gl",
+    };
+    const renderer_backend = b.option(
+        []const u8,
+        "renderer-backend",
+        "Renderer backend (sdl_gl, wgl, egl)",
+    ) orelse default_renderer_backend;
+    const build_options = b.addOptions();
+    build_options.addOption([]const u8, "renderer_backend", renderer_backend);
+
     // ─────────────────────────────────────────────────────────────────────────
     // Main executable
     // ─────────────────────────────────────────────────────────────────────────
@@ -60,6 +72,7 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
+    exe.root_module.addOptions("build_options", build_options);
 
     // Link C libraries
     exe.linkLibrary(treesitter);
@@ -135,6 +148,7 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
+    unit_tests.root_module.addOptions("build_options", build_options);
     unit_tests.linkSystemLibrary("SDL2");
     if (target_os == .linux) {
         unit_tests.linkSystemLibrary("GL");
@@ -169,6 +183,7 @@ pub fn build(b: *std.Build) void {
     const editor_tests = b.addTest(.{
         .root_module = editor_tests_root,
     });
+    editor_tests_root.addOptions("build_options", build_options);
     editor_tests.linkSystemLibrary("SDL2");
     if (target_os == .linux) {
         editor_tests.linkSystemLibrary("GL");
