@@ -225,6 +225,29 @@ renderer_todo:
             - src/ui/renderer/clipboard_state.zig
           files_to_edit:
             - src/ui/renderer.zig
+        - id: R0-29
+          title: "Extract terminal underline helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/terminal_underline.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+        - id: R0-30
+          title: "Extract mouse button helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/mouse_state.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+        - id: R0-31
+          title: "Extract texture draw helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/texture_draw.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+            - src/ui/renderer/target_draw.zig
+            - src/ui/renderer/draw_ops.zig
 
     - name: "Phase 1 - OS abstraction surface"
       tasks:
