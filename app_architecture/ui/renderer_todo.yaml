@@ -37,6 +37,7 @@ renderer_todo:
             - "Keep public API identical while splitting implementation."
         - id: R0-02
           title: "Extract SDL input thread + queue"
+          status: done
           files_to_add:
             - src/ui/renderer/sdl_input.zig
           files_to_edit:
