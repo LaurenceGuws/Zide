@@ -60,6 +60,19 @@ pub fn build(b: *std.Build) void {
     const build_options = b.addOptions();
     build_options.addOption([]const u8, "renderer_backend", renderer_backend);
 
+    const use_vcpkg = b.option(bool, "use-vcpkg", "Use vcpkg for native dependencies") orelse false;
+    const vcpkg_root = b.option([]const u8, "vcpkg-root", "Path to vcpkg root") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_ROOT") catch null;
+    const vcpkg_triplet = b.option([]const u8, "vcpkg-triplet", "vcpkg triplet (e.g. x64-windows)") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_DEFAULT_TRIPLET") catch null;
+    var vcpkg_include: ?[]const u8 = null;
+    var vcpkg_lib: ?[]const u8 = null;
+    if (use_vcpkg) {
+        if (vcpkg_root == null or vcpkg_triplet == null) {
+            @panic("use-vcpkg requires VCPKG_ROOT and VCPKG_DEFAULT_TRIPLET (or --vcpkg-root/--vcpkg-triplet)");
+        }
+        vcpkg_lib = b.pathJoin(&.{ vcpkg_root.?, "installed", vcpkg_triplet.?, "lib" });
+        vcpkg_include = b.pathJoin(&.{ vcpkg_root.?, "installed", vcpkg_triplet.?, "include" });
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Main executable
     // ─────────────────────────────────────────────────────────────────────────
@@ -77,10 +90,19 @@ pub fn build(b: *std.Build) void {
     // Link C libraries
     exe.linkLibrary(treesitter);
     exe.linkLibrary(ts_zig);
-    exe.linkSystemLibrary("freetype");
-    exe.linkSystemLibrary("harfbuzz");
-    exe.linkSystemLibrary("lua");
-    exe.linkSystemLibrary("SDL2");
+    if (use_vcpkg) {
+        exe.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
+        exe.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
+        exe.linkSystemLibrary("freetype");
+        exe.linkSystemLibrary("harfbuzz");
+        exe.linkSystemLibrary("lua");
+        exe.linkSystemLibrary("SDL2");
+    } else {
+        exe.linkSystemLibrary("freetype");
+        exe.linkSystemLibrary("harfbuzz");
+        exe.linkSystemLibrary("lua");
+        exe.linkSystemLibrary("SDL2");
+    }
     if (target_os == .linux) {
         exe.linkSystemLibrary("fontconfig");
     }
@@ -88,14 +110,16 @@ pub fn build(b: *std.Build) void {
     // Include paths for @cImport
     exe.addIncludePath(b.path("vendor"));
     exe.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
-    exe.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
-    exe.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
-    exe.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
-    if (target_os == .linux) {
-        exe.addIncludePath(.{ .cwd_relative = "/usr/include/SDL2" });
-    }
-    if (target_os == .linux) {
-        exe.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
+    if (!use_vcpkg) {
+        exe.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
+        exe.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
+        exe.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
+        if (target_os == .linux) {
+            exe.addIncludePath(.{ .cwd_relative = "/usr/include/SDL2" });
+        }
+        if (target_os == .linux) {
+            exe.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
+        }
     }
 
     // Platform-specific linking for the exe
@@ -149,6 +173,10 @@ pub fn build(b: *std.Build) void {
         }),
     });
     unit_tests.root_module.addOptions("build_options", build_options);
+    if (use_vcpkg) {
+        unit_tests.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
+        unit_tests.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
+    }
     unit_tests.linkSystemLibrary("SDL2");
     if (target_os == .linux) {
         unit_tests.linkSystemLibrary("GL");
@@ -162,7 +190,7 @@ pub fn build(b: *std.Build) void {
     unit_tests.addIncludePath(b.path("vendor"));
     unit_tests.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
     unit_tests.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
-    if (target_os == .linux) {
+    if (!use_vcpkg and target_os == .linux) {
         unit_tests.addIncludePath(.{ .cwd_relative = "/usr/include/SDL2" });
     }
     unit_tests.addCSourceFile(.{
@@ -184,6 +212,10 @@ pub fn build(b: *std.Build) void {
         .root_module = editor_tests_root,
     });
     editor_tests_root.addOptions("build_options", build_options);
+    if (use_vcpkg) {
+        editor_tests.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
+        editor_tests.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
+    }
     editor_tests.linkSystemLibrary("SDL2");
     if (target_os == .linux) {
         editor_tests.linkSystemLibrary("GL");
@@ -197,14 +229,16 @@ pub fn build(b: *std.Build) void {
     editor_tests.addIncludePath(b.path("vendor"));
     editor_tests.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
     editor_tests.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
-    editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
-    editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
-    editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
-    if (target_os == .linux) {
-        editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/SDL2" });
-    }
-    if (target_os == .linux) {
-        editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
+    if (!use_vcpkg) {
+        editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
+        editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
+        editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
+        if (target_os == .linux) {
+            editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/SDL2" });
+        }
+        if (target_os == .linux) {
+            editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
+        }
     }
     editor_tests.addCSourceFile(.{
         .file = b.path("src/c/stb_image.c"),

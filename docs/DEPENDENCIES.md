@@ -40,6 +40,16 @@ Recommended environment variables:
 - `VCPKG_ROOT` = path to vcpkg repo
 - `VCPKG_DEFAULT_TRIPLET` = `x64-windows`
 
+Build with vcpkg enabled:
+```
+ zig build -Duse-vcpkg=true
+```
+
+You can also pass paths explicitly:
+```
+ zig build -Duse-vcpkg=true -Dvcpkg-root=C:\\path\\to\\vcpkg -Dvcpkg-triplet=x64-windows
+```
+
 Then build on Windows:
 ```
  zig build
