@@ -86,6 +86,7 @@ renderer_todo:
       tasks:
         - id: R2-01
           title: "Add Windows backend stubs (WGL/EGL selection)"
+          status: done
           files_to_add:
             - src/ui/renderer/backends/wgl.zig
             - src/ui/renderer/backends/egl.zig
