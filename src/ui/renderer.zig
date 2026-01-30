@@ -7,6 +7,7 @@ const TerminalFont = terminal_font_mod.TerminalFont;
 const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
+const platform_window = @import("../platform/window.zig");
 const gl = @import("renderer/gl.zig");
 const sdl_input = @import("renderer/sdl_input.zig");
 const types = @import("renderer/types.zig");
@@ -178,8 +179,8 @@ pub const Renderer = struct {
         var renderer = try allocator.create(Renderer);
         errdefer allocator.destroy(renderer);
 
-        const drawable = getDrawableSize(window);
-        const window_size = getWindowSize(window);
+        const drawable = platform_window.getDrawableSize(window);
+        const window_size = platform_window.getWindowSize(window);
 
         const base_font_size: f32 = 16.0;
         const ui_scale: f32 = 1.0;
@@ -413,8 +414,8 @@ pub const Renderer = struct {
     }
 
     pub fn beginFrame(self: *Renderer) void {
-        const window_size = getWindowSize(self.window);
-        const drawable = getDrawableSize(self.window);
+        const window_size = platform_window.getWindowSize(self.window);
+        const drawable = platform_window.getDrawableSize(self.window);
         self.width = window_size.w;
         self.height = window_size.h;
         self.render_width = drawable.w;
@@ -1118,116 +1119,33 @@ pub const Renderer = struct {
     }
 
     pub fn getDpiScale(self: *Renderer) MousePos {
-        const window_size = getWindowSize(self.window);
-        const drawable = getDrawableSize(self.window);
-        if (window_size.w <= 0 or window_size.h <= 0) return .{ .x = 1.0, .y = 1.0 };
-        return .{
-            .x = @as(f32, @floatFromInt(drawable.w)) / @as(f32, @floatFromInt(window_size.w)),
-            .y = @as(f32, @floatFromInt(drawable.h)) / @as(f32, @floatFromInt(window_size.h)),
-        };
+        return platform_window.getDpiScale(self.window);
     }
 
     pub fn getScreenSize(self: *Renderer) MousePos {
-        const window_size = getWindowSize(self.window);
-        return .{ .x = @floatFromInt(window_size.w), .y = @floatFromInt(window_size.h) };
+        return platform_window.getScreenSize(self.window);
     }
 
-pub fn getMonitorSize(self: *Renderer) MousePos {
-        const display = sdl.SDL_GetWindowDisplayIndex(self.window);
-        var rect: sdl.SDL_Rect = undefined;
-        if (display >= 0 and sdl.SDL_GetDisplayBounds(display, &rect) == 0) {
-            return .{ .x = @floatFromInt(rect.w), .y = @floatFromInt(rect.h) };
-        }
-    return self.getScreenSize();
-}
+    pub fn getMonitorSize(self: *Renderer) MousePos {
+        return platform_window.getMonitorSize(self.window);
+    }
 
-pub const WindowMetrics = struct {
-    window_w: i32,
-    window_h: i32,
-    drawable_w: i32,
-    drawable_h: i32,
-    display_index: i32,
-    display_w: i32,
-    display_h: i32,
-    dpi: MousePos,
-    ddpi: f32,
-    hdpi: f32,
-    vdpi: f32,
-    refresh_hz: i32,
-};
+pub const WindowMetrics = platform_window.WindowMetrics;
 
 pub fn refreshWindowMetrics(self: *Renderer, reason: []const u8) WindowMetrics {
-    const window_size = getWindowSize(self.window);
-    const drawable = getDrawableSize(self.window);
+    const window_size = platform_window.getWindowSize(self.window);
+    const drawable = platform_window.getDrawableSize(self.window);
     self.width = window_size.w;
     self.height = window_size.h;
     self.render_width = drawable.w;
     self.render_height = drawable.h;
     self.updateMouseScale();
-
-    const display = sdl.SDL_GetWindowDisplayIndex(self.window);
-    var rect: sdl.SDL_Rect = .{ .x = 0, .y = 0, .w = 0, .h = 0 };
-    var display_w: i32 = 0;
-    var display_h: i32 = 0;
-    if (display >= 0 and sdl.SDL_GetDisplayBounds(display, &rect) == 0) {
-        display_w = rect.w;
-        display_h = rect.h;
-    }
-
-    var ddpi: f32 = 0;
-    var hdpi: f32 = 0;
-    var vdpi: f32 = 0;
-    _ = sdl.SDL_GetDisplayDPI(display, &ddpi, &hdpi, &vdpi);
-    const dpi = self.getDpiScale();
-
-    var refresh_hz: i32 = 0;
-    var mode: sdl.SDL_DisplayMode = undefined;
-    if (display >= 0 and sdl.SDL_GetCurrentDisplayMode(display, &mode) == 0) {
-        refresh_hz = mode.refresh_rate;
-    }
-
-    const log = app_logger.logger("sdl.window");
-    if (log.enabled_file or log.enabled_console) {
-        log.logf(
-            "metrics reason={s} window={d}x{d} drawable={d}x{d} display={d} bounds={d}x{d} dpi_scale={d:.3},{d:.3} dpi={d:.1}/{d:.1}/{d:.1} refresh_hz={d}",
-            .{
-                reason,
-                window_size.w,
-                window_size.h,
-                drawable.w,
-                drawable.h,
-                display,
-                display_w,
-                display_h,
-                dpi.x,
-                dpi.y,
-                ddpi,
-                hdpi,
-                vdpi,
-                refresh_hz,
-            },
-        );
-    }
-
-    return .{
-        .window_w = window_size.w,
-        .window_h = window_size.h,
-        .drawable_w = drawable.w,
-        .drawable_h = drawable.h,
-        .display_index = display,
-        .display_w = display_w,
-        .display_h = display_h,
-        .dpi = dpi,
-        .ddpi = ddpi,
-        .hdpi = hdpi,
-        .vdpi = vdpi,
-        .refresh_hz = refresh_hz,
-    };
+    return platform_window.collectWindowMetrics(self.window, reason);
 }
 
     fn updateMouseScale(self: *Renderer) void {
-        const window_size = getWindowSize(self.window);
-        const drawable = getDrawableSize(self.window);
+        const window_size = platform_window.getWindowSize(self.window);
+        const drawable = platform_window.getDrawableSize(self.window);
         var sx: f32 = if (window_size.w > 0) @as(f32, @floatFromInt(drawable.w)) / @as(f32, @floatFromInt(window_size.w)) else 1.0;
         var sy: f32 = if (window_size.h > 0) @as(f32, @floatFromInt(drawable.h)) / @as(f32, @floatFromInt(window_size.h)) else 1.0;
 
@@ -1247,7 +1165,7 @@ pub fn refreshWindowMetrics(self: *Renderer, reason: []const u8) WindowMetrics {
     }
 
     pub fn getRenderSize(self: *Renderer) MousePos {
-        const drawable = getDrawableSize(self.window);
+        const drawable = platform_window.getDrawableSize(self.window);
         return .{ .x = @floatFromInt(drawable.w), .y = @floatFromInt(drawable.h) };
     }
 
@@ -1605,20 +1523,6 @@ pub fn refreshWindowMetrics(self: *Renderer, reason: []const u8) WindowMetrics {
         }
     }
 };
-
-fn getWindowSize(window: *sdl.SDL_Window) struct { w: i32, h: i32 } {
-    var w: c_int = 0;
-    var h: c_int = 0;
-    sdl.SDL_GetWindowSize(window, &w, &h);
-    return .{ .w = w, .h = h };
-}
-
-fn getDrawableSize(window: *sdl.SDL_Window) struct { w: i32, h: i32 } {
-    var w: c_int = 0;
-    var h: c_int = 0;
-    sdl.SDL_GL_GetDrawableSize(window, &w, &h);
-    return .{ .w = w, .h = h };
-}
 
 pub fn pollInputEvents() void {
     if (active_renderer) |renderer| {

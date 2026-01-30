@@ -77,6 +77,7 @@ renderer_todo:
             - src/ui/renderer.zig
         - id: R1-02
           title: "Move SDL-specific window metrics + logging under platform/"
+          status: done
           files_to_edit:
             - src/ui/renderer.zig
             - src/platform/window.zig
