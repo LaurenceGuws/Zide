@@ -140,6 +140,13 @@ renderer_todo:
             - src/platform/window_metrics.zig
           files_to_edit:
             - src/platform/window.zig
+        - id: R0-17
+          title: "Extract input queue helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/input_queue.zig
+          files_to_edit:
+            - src/ui/renderer.zig
 
     - name: "Phase 1 - OS abstraction surface"
       tasks:
