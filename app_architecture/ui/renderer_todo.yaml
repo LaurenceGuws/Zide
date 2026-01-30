@@ -58,6 +58,7 @@ renderer_todo:
             - src/ui/renderer.zig
         - id: R0-05
           title: "Extract draw ops + batching"
+          status: done
           files_to_add:
             - src/ui/renderer/draw_ops.zig
           files_to_edit:
