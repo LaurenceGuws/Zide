@@ -164,6 +164,9 @@ pub const Renderer = struct {
     }
 
     pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8) !*Renderer {
+        if (@hasDecl(sdl, "SDL_SetAppMetadata")) {
+            _ = sdl.SDL_SetAppMetadata("Zide", "0.0.0", "com.zide.ide");
+        }
         if (sdl.SDL_Init(sdl.SDL_INIT_VIDEO | sdl.SDL_INIT_TIMER) != 0) {
             return error.SdlInitFailed;
         }
