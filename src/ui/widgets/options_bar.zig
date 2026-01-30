@@ -16,8 +16,9 @@ pub const OptionsBar = struct {
     }
 
     pub fn draw(self: *OptionsBar, shell: *Shell, width: f32) void {
+        const theme = shell.theme();
         // Background
-        shell.drawRect(0, 0, @intFromFloat(width), @intFromFloat(self.height), Color{ .r = 24, .g = 25, .b = 33 });
+        shell.drawRect(0, 0, @intFromFloat(width), @intFromFloat(self.height), theme.ui_panel_bg);
 
         // Menu labels
         const labels = [_][]const u8{ "File", "Edit", "Selection", "View", "Go", "Run", "Terminal", "Help" };
@@ -36,10 +37,10 @@ pub const OptionsBar = struct {
             const bh = shell.charHeight() + pad_y * 2;
             const hovered = mouse.x >= bx and mouse.x <= bx + bw and mouse.y >= by and mouse.y <= by + bh;
             if (hovered) {
-                const bg = if (pressed) Color{ .r = 58, .g = 60, .b = 78 } else Color.selection;
+                const bg = if (pressed) theme.ui_pressed else theme.ui_hover;
                 shell.drawRect(@intFromFloat(bx), @intFromFloat(by), @intFromFloat(bw), @intFromFloat(bh), bg);
             }
-            shell.drawText(label, x, y, if (hovered) Color.fg else Color.comment);
+            shell.drawText(label, x, y, if (hovered) theme.foreground else theme.comment_color);
             x += text_w + 16 * scale;
         }
     }

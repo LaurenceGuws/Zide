@@ -44,6 +44,15 @@ pub const ThemeConfig = struct {
     line_number: ?Color = null,
     line_number_bg: ?Color = null,
     current_line: ?Color = null,
+    ui_bar_bg: ?Color = null,
+    ui_panel_bg: ?Color = null,
+    ui_panel_overlay: ?Color = null,
+    ui_hover: ?Color = null,
+    ui_pressed: ?Color = null,
+    ui_tab_inactive_bg: ?Color = null,
+    ui_accent: ?Color = null,
+    ui_border: ?Color = null,
+    ui_modified: ?Color = null,
     comment_color: ?Color = null,
     string: ?Color = null,
     keyword: ?Color = null,
@@ -520,6 +529,15 @@ fn mergeThemeConfig(base: *ThemeConfig, overlay: ThemeConfig) void {
     if (overlay.line_number) |color| base.line_number = color;
     if (overlay.line_number_bg) |color| base.line_number_bg = color;
     if (overlay.current_line) |color| base.current_line = color;
+    if (overlay.ui_bar_bg) |color| base.ui_bar_bg = color;
+    if (overlay.ui_panel_bg) |color| base.ui_panel_bg = color;
+    if (overlay.ui_panel_overlay) |color| base.ui_panel_overlay = color;
+    if (overlay.ui_hover) |color| base.ui_hover = color;
+    if (overlay.ui_pressed) |color| base.ui_pressed = color;
+    if (overlay.ui_tab_inactive_bg) |color| base.ui_tab_inactive_bg = color;
+    if (overlay.ui_accent) |color| base.ui_accent = color;
+    if (overlay.ui_border) |color| base.ui_border = color;
+    if (overlay.ui_modified) |color| base.ui_modified = color;
     if (overlay.comment_color) |color| base.comment_color = color;
     if (overlay.string) |color| base.string = color;
     if (overlay.keyword) |color| base.keyword = color;
@@ -546,6 +564,15 @@ pub fn applyThemeConfig(theme: *Theme, overlay: ThemeConfig) void {
     if (overlay.line_number) |color| theme.line_number = color;
     if (overlay.line_number_bg) |color| theme.line_number_bg = color;
     if (overlay.current_line) |color| theme.current_line = color;
+    if (overlay.ui_bar_bg) |color| theme.ui_bar_bg = color;
+    if (overlay.ui_panel_bg) |color| theme.ui_panel_bg = color;
+    if (overlay.ui_panel_overlay) |color| theme.ui_panel_overlay = color;
+    if (overlay.ui_hover) |color| theme.ui_hover = color;
+    if (overlay.ui_pressed) |color| theme.ui_pressed = color;
+    if (overlay.ui_tab_inactive_bg) |color| theme.ui_tab_inactive_bg = color;
+    if (overlay.ui_accent) |color| theme.ui_accent = color;
+    if (overlay.ui_border) |color| theme.ui_border = color;
+    if (overlay.ui_modified) |color| theme.ui_modified = color;
     if (overlay.comment_color) |color| theme.comment_color = color;
     if (overlay.string) |color| theme.string = color;
     if (overlay.keyword) |color| theme.keyword = color;
@@ -592,6 +619,15 @@ fn parseThemePaletteTable(L: *c.lua_State, idx: c_int, theme: *ThemeConfig) void
     parseColorField(L, idx, "line_number", &theme.line_number);
     parseColorField(L, idx, "line_number_bg", &theme.line_number_bg);
     parseColorField(L, idx, "current_line", &theme.current_line);
+    parseColorField(L, idx, "ui_bar_bg", &theme.ui_bar_bg);
+    parseColorField(L, idx, "ui_panel_bg", &theme.ui_panel_bg);
+    parseColorField(L, idx, "ui_panel_overlay", &theme.ui_panel_overlay);
+    parseColorField(L, idx, "ui_hover", &theme.ui_hover);
+    parseColorField(L, idx, "ui_pressed", &theme.ui_pressed);
+    parseColorField(L, idx, "ui_tab_inactive_bg", &theme.ui_tab_inactive_bg);
+    parseColorField(L, idx, "ui_accent", &theme.ui_accent);
+    parseColorField(L, idx, "ui_border", &theme.ui_border);
+    parseColorField(L, idx, "ui_modified", &theme.ui_modified);
 }
 
 fn parseThemeSyntaxTable(L: *c.lua_State, idx: c_int, theme: *ThemeConfig) void {

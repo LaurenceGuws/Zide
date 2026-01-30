@@ -53,8 +53,9 @@ pub const TabBar = struct {
     }
 
     pub fn draw(self: *TabBar, shell: *Shell, x: f32, y: f32, width: f32) void {
+        const theme = shell.theme();
         // Draw tab bar background
-        shell.drawRect(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height), Color{ .r = 30, .g = 31, .b = 41 });
+        shell.drawRect(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height), theme.ui_bar_bg);
 
         if (width <= 0 or self.height <= 0) return;
 
@@ -69,15 +70,15 @@ pub const TabBar = struct {
 
             // Tab background
             const bg = if (is_active)
-                Color.bg
+                theme.background
             else
-                Color{ .r = 35, .g = 36, .b = 48 };
+                theme.ui_tab_inactive_bg;
             shell.drawRect(@intFromFloat(cursor_x), @intFromFloat(y), @intFromFloat(self.tab_width), @intFromFloat(self.height), bg);
 
             // Tab border
             if (is_active) {
                 const border_h: f32 = @max(1.0, shell.uiScaleFactor() * 2.0);
-                shell.drawRect(@intFromFloat(cursor_x), @intFromFloat(y + self.height - border_h), @intFromFloat(self.tab_width), @intFromFloat(border_h), Color.purple);
+                shell.drawRect(@intFromFloat(cursor_x), @intFromFloat(y + self.height - border_h), @intFromFloat(self.tab_width), @intFromFloat(border_h), theme.ui_accent);
             }
 
             // Tab title
@@ -86,7 +87,7 @@ pub const TabBar = struct {
 
             // Modified indicator
             if (tab.modified) {
-                shell.drawText("* ", title_x, title_y, Color.orange);
+                shell.drawText("* ", title_x, title_y, theme.ui_modified);
             }
 
             const prefix_width: f32 = if (tab.modified) shell.charWidth() * 2 else 0;
@@ -96,7 +97,7 @@ pub const TabBar = struct {
                 tab.title,
                 title_x + prefix_width,
                 title_y,
-                if (is_active) Color.fg else Color.comment,
+                if (is_active) theme.foreground else theme.comment_color,
                 title_max,
             );
             const in_tab = mouse.x >= cursor_x and mouse.x <= cursor_x + self.tab_width and

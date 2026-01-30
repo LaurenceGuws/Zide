@@ -28,9 +28,10 @@ pub const StatusBar = struct {
         col: usize,
         modified: bool,
     ) void {
+        const theme = shell.theme();
         const scale = shell.uiScaleFactor();
         // Background
-        shell.drawRect(0, @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height), Color{ .r = 30, .g = 31, .b = 41 });
+        shell.drawRect(0, @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height), theme.ui_bar_bg);
 
         // Line/column (reserve space on right)
         var pos_buf: [32]u8 = undefined;
@@ -52,15 +53,15 @@ pub const StatusBar = struct {
         const mouse = self.last_mouse;
         const pressed = self.mouse_down_left;
         const mode_hover = mouse.x >= 0 and mouse.x <= mode_width and mouse.y >= y and mouse.y <= y + self.height;
-        const mode_bg_final = if (mode_hover and pressed) Color{ .r = 58, .g = 60, .b = 78 } else if (mode_hover) Color.selection else mode_bg;
+        const mode_bg_final = if (mode_hover and pressed) theme.ui_pressed else if (mode_hover) theme.ui_hover else mode_bg;
         shell.drawRect(0, @intFromFloat(y), @intFromFloat(mode_width), @intFromFloat(self.height), mode_bg_final);
-        shell.drawText(mode, text_x, text_y, if (mode_hover) Color.fg else Color.black);
+        shell.drawText(mode, text_x, text_y, if (mode_hover) theme.foreground else Color.black);
 
         // File path
         var x: f32 = 88 * scale;
         if (file_path) |path| {
             const available = pos_start - 16 * scale - x;
-            const result = common.drawTruncatedText(shell, path, x, text_y, Color.fg, available);
+            const result = common.drawTruncatedText(shell, path, x, text_y, theme.foreground, available);
             const in_path = mouse.x >= x and mouse.x <= x + result.drawn_width and
                 mouse.y >= y and mouse.y <= y + self.height;
             if (result.truncated and in_path) {
@@ -74,15 +75,15 @@ pub const StatusBar = struct {
             const indicator = "[+]";
             const indicator_width = @as(f32, @floatFromInt(indicator.len)) * shell.charWidth();
             if (x + indicator_width <= pos_start - 8 * scale) {
-                shell.drawText(indicator, x, text_y, Color.orange);
+                shell.drawText(indicator, x, text_y, theme.ui_modified);
             }
         }
 
         const pos_hover = mouse.x >= pos_start and mouse.x <= pos_start + pos_width and mouse.y >= y and mouse.y <= y + self.height;
         if (pos_hover) {
-            const bg = if (pressed) Color{ .r = 58, .g = 60, .b = 78 } else Color.selection;
+            const bg = if (pressed) theme.ui_pressed else theme.ui_hover;
             shell.drawRect(@intFromFloat(pos_start - 4 * scale), @intFromFloat(y + 2 * scale), @intFromFloat(pos_width + 8 * scale), @intFromFloat(self.height - 4 * scale), bg);
         }
-        shell.drawText(pos_str, pos_start, text_y, if (pos_hover) Color.fg else Color.comment);
+        shell.drawText(pos_str, pos_start, text_y, if (pos_hover) theme.foreground else theme.comment_color);
     }
 };
