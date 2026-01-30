@@ -16,6 +16,7 @@ const window_init = @import("renderer/window_init.zig");
 const input_state = @import("renderer/input_state.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_input_events = @import("../platform/input_events.zig");
+const platform_mouse = @import("../platform/mouse_state.zig");
 const platform_window_events = @import("../platform/window_events.zig");
 const build_options = @import("build_options");
 const gl = @import("renderer/gl.zig");
@@ -1155,20 +1156,18 @@ pub const Renderer = struct {
     }
 
     pub fn getMousePos(self: *Renderer) MousePos {
-        const pos = self.getMousePosRaw();
-        return .{ .x = pos.x * self.mouse_scale.x, .y = pos.y * self.mouse_scale.y };
+        const pos = platform_mouse.getScaledPos(.{ .x = self.mouse_scale.x, .y = self.mouse_scale.y });
+        return .{ .x = pos.x, .y = pos.y };
     }
 
-    pub fn getMousePosScaled(self: *Renderer, scale: f32) MousePos {
-        const pos = self.getMousePosRaw();
-        return .{ .x = pos.x * scale, .y = pos.y * scale };
+    pub fn getMousePosScaled(_: *Renderer, scale: f32) MousePos {
+        const pos = platform_mouse.getScaledPosWithFactor(scale);
+        return .{ .x = pos.x, .y = pos.y };
     }
 
     pub fn getMousePosRaw(_: *Renderer) MousePos {
-        var x: c_int = 0;
-        var y: c_int = 0;
-        _ = sdl.SDL_GetMouseState(&x, &y);
-        return .{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
+        const pos = platform_mouse.getMousePosRaw();
+        return .{ .x = pos.x, .y = pos.y };
     }
 
     pub fn getDpiScale(self: *Renderer) MousePos {
@@ -1197,24 +1196,8 @@ pub const Renderer = struct {
     }
 
     fn updateMouseScale(self: *Renderer) void {
-        const window_size = platform_window.getWindowSize(self.window);
-        const drawable = platform_window.getDrawableSize(self.window);
-        var sx: f32 = if (window_size.w > 0) @as(f32, @floatFromInt(drawable.w)) / @as(f32, @floatFromInt(window_size.w)) else 1.0;
-        var sy: f32 = if (window_size.h > 0) @as(f32, @floatFromInt(drawable.h)) / @as(f32, @floatFromInt(window_size.h)) else 1.0;
-
-        if (compositor.isWayland()) {
-            // SDL already reports logical mouse coords; drawable/window ratio matches render scale.
-            // Avoid double-applying compositor scale here.
-        }
-
-        if (std.c.getenv("ZIDE_MOUSE_SCALE")) |raw| {
-            const s = std.mem.sliceTo(raw, 0);
-            const env_scale = std.fmt.parseFloat(f32, s) catch 1.0;
-            sx *= env_scale;
-            sy *= env_scale;
-        }
-
-        self.mouse_scale = .{ .x = sx, .y = sy };
+        const scale = platform_mouse.computeMouseScale(self.window);
+        self.mouse_scale = .{ .x = scale.x, .y = scale.y };
     }
 
     pub fn getRenderSize(self: *Renderer) MousePos {
