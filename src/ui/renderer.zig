@@ -18,6 +18,8 @@ const input_queue = @import("renderer/input_queue.zig");
 const scale_utils = @import("renderer/scale_utils.zig");
 const targets = @import("renderer/targets.zig");
 const text_draw = @import("renderer/text_draw.zig");
+const gl_resources = @import("renderer/gl_resources.zig");
+const draw_batch = @import("renderer/draw_batch.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_input_events = @import("../platform/input_events.zig");
 const platform_mouse = @import("../platform/mouse_state.zig");
@@ -376,15 +378,13 @@ pub const Renderer = struct {
         if (self.white_texture.id != 0) {
             gl.DeleteTextures(1, &self.white_texture.id);
         }
-        if (self.vbo != 0) {
-            gl.DeleteBuffers(1, &self.vbo);
-        }
-        if (self.vao != 0) {
-            gl.DeleteVertexArrays(1, &self.vao);
-        }
-        if (self.shader_program != 0) {
-            gl.DeleteProgram(self.shader_program);
-        }
+        gl_resources.destroy(.{
+            .shader_program = self.shader_program,
+            .vao = self.vao,
+            .vbo = self.vbo,
+            .uniform_proj = self.uniform_proj,
+            .uniform_tex = self.uniform_tex,
+        });
 
         sdl.SDL_StopTextInput();
         sdl.SDL_GL_DeleteContext(self.gl_context);
@@ -1283,11 +1283,11 @@ pub const Renderer = struct {
     }
 
     pub fn beginTerminalBatch(self: *Renderer) void {
-        draw_ops.beginTerminalBatch(self);
+        draw_batch.beginTerminalBatch(self);
     }
 
     pub fn flushTerminalBatch(self: *Renderer) void {
-        draw_ops.flushTerminalBatch(self);
+        draw_batch.flushTerminalBatch(self);
     }
 
     fn drawTextureRect(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
