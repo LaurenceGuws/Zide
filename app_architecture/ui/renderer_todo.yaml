@@ -68,6 +68,7 @@ renderer_todo:
       tasks:
         - id: R1-01
           title: "Define OS window/input abstraction (SDL-backed initially)"
+          status: done
           files_to_add:
             - src/platform/window.zig
             - src/platform/input.zig
