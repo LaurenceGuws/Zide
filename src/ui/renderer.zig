@@ -15,6 +15,7 @@ const time_utils = @import("renderer/time_utils.zig");
 const window_init = @import("renderer/window_init.zig");
 const input_state = @import("renderer/input_state.zig");
 const input_queue = @import("renderer/input_queue.zig");
+const scale_utils = @import("renderer/scale_utils.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_input_events = @import("../platform/input_events.zig");
 const platform_mouse = @import("../platform/mouse_state.zig");
@@ -418,28 +419,15 @@ pub const Renderer = struct {
     }
 
     fn queryUiScale(self: *Renderer) f32 {
-        var scale: f32 = 1.0;
         const dpi = self.getDpiScale();
-        scale = @max(dpi.x, dpi.y);
-
-        if (compositor.isWayland()) {
-            const now = getTime();
-            if (now - self.wayland_scale_last_update > 1.0) {
-                self.wayland_scale_cache = compositor.getWaylandScale(self.allocator);
-                self.wayland_scale_last_update = now;
-            }
-            if (self.wayland_scale_cache) |wl_scale| {
-                if (wl_scale > 0.0) scale = wl_scale;
-            }
-        }
-
-        if (std.c.getenv("ZIDE_UI_SCALE")) |raw| {
-            const s = std.mem.trim(u8, std.mem.span(raw), " \t\r\n");
-            const env_scale = std.fmt.parseFloat(f32, s) catch 1.0;
-            if (env_scale > 0.0) scale *= env_scale;
-        }
-
-        return if (scale > 0.1) scale else 1.0;
+        var wayland = scale_utils.WaylandScaleState{
+            .cache = self.wayland_scale_cache,
+            .last_update = self.wayland_scale_last_update,
+        };
+        const scale = scale_utils.queryUiScale(self.allocator, dpi, getTime(), &wayland);
+        self.wayland_scale_cache = wayland.cache;
+        self.wayland_scale_last_update = wayland.last_update;
+        return scale;
     }
 
     fn applyFontScale(self: *Renderer) !void {
@@ -447,18 +435,17 @@ pub const Renderer = struct {
     }
 
     pub fn queueUserZoom(self: *Renderer, delta: f32, now: f64) bool {
-        const next = std.math.clamp(self.user_zoom_target + delta, 0.5, 3.0);
-        if (std.math.approxEqAbs(f32, next, self.user_zoom_target, 0.0001)) return false;
-        self.user_zoom_target = next;
-        self.last_zoom_request_time = now;
-        return true;
+        const result = scale_utils.queueUserZoom(self.user_zoom_target, delta, now, 0.5, 3.0);
+        self.user_zoom_target = result.next_target;
+        self.last_zoom_request_time = result.request_time;
+        return result.changed;
     }
 
     pub fn resetUserZoomTarget(self: *Renderer, now: f64) bool {
-        if (std.math.approxEqAbs(f32, self.user_zoom_target, 1.0, 0.0001)) return false;
-        self.user_zoom_target = 1.0;
-        self.last_zoom_request_time = now;
-        return true;
+        const result = scale_utils.resetUserZoomTarget(self.user_zoom_target, now);
+        self.user_zoom_target = result.next_target;
+        self.last_zoom_request_time = result.request_time;
+        return result.changed;
     }
 
     pub fn refreshUiScale(self: *Renderer) !bool {
@@ -470,12 +457,19 @@ pub const Renderer = struct {
     }
 
     pub fn applyPendingZoom(self: *Renderer, now: f64) !bool {
-        if (std.math.approxEqAbs(f32, self.user_zoom_target, self.user_zoom, 0.0001)) return false;
-        if (now - self.last_zoom_request_time < 0.04) return false;
-        if (now - self.last_zoom_apply_time < 0.02) return false;
-        self.user_zoom = self.user_zoom_target;
+        const result = scale_utils.applyPendingZoom(
+            self.user_zoom,
+            self.user_zoom_target,
+            now,
+            self.last_zoom_request_time,
+            self.last_zoom_apply_time,
+            0.04,
+            0.02,
+        );
+        if (!result.changed) return false;
+        self.user_zoom = result.next_zoom;
         try self.applyFontScale();
-        self.last_zoom_apply_time = now;
+        self.last_zoom_apply_time = result.apply_time;
         return true;
     }
 
