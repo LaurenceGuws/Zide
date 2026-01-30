@@ -154,6 +154,20 @@ renderer_todo:
             - src/ui/renderer/scale_utils.zig
           files_to_edit:
             - src/ui/renderer.zig
+        - id: R0-19
+          title: "Extract render target helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/targets.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+        - id: R0-20
+          title: "Extract text draw helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/text_draw.zig
+          files_to_edit:
+            - src/ui/renderer.zig
 
     - name: "Phase 1 - OS abstraction surface"
       tasks:
