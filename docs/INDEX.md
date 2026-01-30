@@ -9,6 +9,7 @@ Quick map of where to look for common needs.
 
 ## Task tracking (source of truth)
 - `app_architecture/**/_todo.yaml` — active task lists and status.
+  - `app_architecture/ui/renderer_todo.yaml` — renderer modularization + OS abstraction.
 
 ## Architecture + design
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md` — renderer plan and per-OS journey.

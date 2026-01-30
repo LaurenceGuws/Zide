@@ -22,6 +22,7 @@ Status (2026-01-29)
 - Kitty image/placement view lists are built and sorted on the parse thread; renderer reuses the cached lists per frame.
 - Selection highlight spans are cached alongside the view snapshot to avoid per-frame selection range scans.
 - Kitty image uploads are now queued and uploaded in a per-frame budget to avoid large render-thread spikes.
+- Renderer modularization + OS abstraction work is tracked in `app_architecture/ui/renderer_todo.yaml`.
 
 Canonical references (do not diverge without a documented reason)
 - kitty: OpenGL renderer, glyph atlas, render loop discipline.

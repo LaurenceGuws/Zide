@@ -1,0 +1,110 @@
+renderer_todo:
+  scope:
+    description: "Modularize renderer + OS abstraction to prepare for Windows 11 build while keeping Linux SDL2+OpenGL stable."
+    priorities:
+      - "extraction-only refactors (no behavior change)"
+      - "clear OS boundary (window/input vs renderer backends)"
+      - "stable renderer interface for multi-backend targets"
+      - "minimal churn in UI widgets"
+  constraints:
+    - "Do not change behavior during extraction-only moves."
+    - "Keep diffs small and reviewable."
+    - "Run manual smoke checks after each extraction step."
+  entry_points:
+    - src/ui/renderer.zig
+    - src/app_shell.zig
+    - src/main.zig
+  references:
+    - app_architecture/ui/DEVELOPMENT_JOURNEY.md
+    - app_architecture/APP_LAYERING.md
+    - reference_repos/editors/lite-xl/README.md
+    - reference_repos/terminals/kitty/docs/overview.rst
+    - reference_repos/terminals/ghostty/README.md
+
+  phases:
+    - name: "Phase 0 - Renderer interface + module boundaries"
+      tasks:
+        - id: R0-01
+          title: "Define renderer interface module layout (backend-agnostic surface)"
+          files_to_add:
+            - src/ui/renderer/interface.zig
+            - src/ui/renderer/types.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+            - src/app_shell.zig
+          notes:
+            - "Keep public API identical while splitting implementation."
+        - id: R0-02
+          title: "Extract SDL input thread + queue"
+          files_to_add:
+            - src/ui/renderer/sdl_input.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+        - id: R0-03
+          title: "Extract GL init + render targets"
+          files_to_add:
+            - src/ui/renderer/gl_backend.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+        - id: R0-04
+          title: "Extract font lifecycle + atlas helpers"
+          files_to_add:
+            - src/ui/renderer/font_manager.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+        - id: R0-05
+          title: "Extract draw ops + batching"
+          files_to_add:
+            - src/ui/renderer/draw_ops.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+
+    - name: "Phase 1 - OS abstraction surface"
+      tasks:
+        - id: R1-01
+          title: "Define OS window/input abstraction (SDL-backed initially)"
+          files_to_add:
+            - src/platform/window.zig
+            - src/platform/input.zig
+          files_to_edit:
+            - src/app_shell.zig
+            - src/ui/renderer.zig
+        - id: R1-02
+          title: "Move SDL-specific window metrics + logging under platform/"
+          files_to_edit:
+            - src/ui/renderer.zig
+            - src/platform/window.zig
+
+    - name: "Phase 2 - Windows 11 prep"
+      tasks:
+        - id: R2-01
+          title: "Add Windows backend stubs (WGL/EGL selection)"
+          files_to_add:
+            - src/ui/renderer/backends/wgl.zig
+            - src/ui/renderer/backends/egl.zig
+          files_to_edit:
+            - src/ui/renderer/interface.zig
+            - src/ui/renderer/gl_backend.zig
+        - id: R2-02
+          title: "Build config switches for OS backend selection"
+          files_to_edit:
+            - build.zig
+            - src/ui/renderer.zig
+        - id: R2-03
+          title: "Windows smoke build (no runtime)"
+          files_to_edit:
+            - app_architecture/ui/renderer_todo.yaml
+          notes:
+            - "Record compiler errors and missing deps."
+
+    - name: "Phase 3 - macOS + Android stubs"
+      tasks:
+        - id: R3-01
+          title: "Metal backend stub"
+          files_to_add:
+            - src/ui/renderer/backends/metal.zig
+        - id: R3-02
+          title: "GLES backend stub"
+          files_to_add:
+            - src/ui/renderer/backends/gles.zig
+
