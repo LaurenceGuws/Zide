@@ -113,9 +113,11 @@ renderer_todo:
       tasks:
         - id: R3-01
           title: "Metal backend stub"
+          status: done
           files_to_add:
             - src/ui/renderer/backends/metal.zig
         - id: R3-02
           title: "GLES backend stub"
+          status: done
           files_to_add:
             - src/ui/renderer/backends/gles.zig
