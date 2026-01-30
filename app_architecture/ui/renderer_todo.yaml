@@ -147,6 +147,13 @@ renderer_todo:
             - src/ui/renderer/input_queue.zig
           files_to_edit:
             - src/ui/renderer.zig
+        - id: R0-18
+          title: "Extract UI scale helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/scale_utils.zig
+          files_to_edit:
+            - src/ui/renderer.zig
 
     - name: "Phase 1 - OS abstraction surface"
       tasks:
