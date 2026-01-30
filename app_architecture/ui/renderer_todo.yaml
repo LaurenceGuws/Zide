@@ -26,6 +26,7 @@ renderer_todo:
       tasks:
         - id: R0-01
           title: "Define renderer interface module layout (backend-agnostic surface)"
+          status: done
           files_to_add:
             - src/ui/renderer/interface.zig
             - src/ui/renderer/types.zig
@@ -107,4 +108,3 @@ renderer_todo:
           title: "GLES backend stub"
           files_to_add:
             - src/ui/renderer/backends/gles.zig
-

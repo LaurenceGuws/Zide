@@ -1,9 +1,10 @@
 const std = @import("std");
 const r = @import("ui/renderer.zig");
+const iface = @import("ui/renderer/interface.zig");
 
-pub const MousePos = r.MousePos;
-pub const Color = r.Color;
-pub const Theme = r.Theme;
+pub const MousePos = iface.MousePos;
+pub const Color = iface.Color;
+pub const Theme = iface.Theme;
 
 pub const MOUSE_LEFT = r.MOUSE_LEFT;
 pub const MOUSE_RIGHT = r.MOUSE_RIGHT;
