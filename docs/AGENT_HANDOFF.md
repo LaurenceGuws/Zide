@@ -16,15 +16,11 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 ## Handoff (High-Level)
 
 ### Current Focus
-- UI rendering journey: SDL2 window/input + OpenGL renderer implementation and stabilization on Linux. See `app_architecture/ui/DEVELOPMENT_JOURNEY.md`.
-- Terminal rendering performance (flicker + throughput regressions vs raylib baseline).
+- Renderer modularization + OS abstraction to prepare for Windows 11 builds. See `app_architecture/ui/renderer_todo.yaml`.
+- UI rendering journey: SDL2 window/input + OpenGL renderer stabilization on Linux. See `app_architecture/ui/DEVELOPMENT_JOURNEY.md`.
 
 ### Recent Changes (High-Level)
-- Replaced raylib wiring in the renderer with SDL2 + OpenGL and introduced stb_image for PNG decode.
-- Fixed terminal quit hang by making PTY shutdown non-blocking with timeout + SIGKILL fallback.
-- Removed legacy combo-repeat handling from input (raylib-era).
-- Fixed editor undo repeat loop by removing input-level undo grouping and filtering text events while modifiers are held.
-- Fixed editor cursor drift by rendering editor text with monospace advances.
+- Added renderer modularization plan in `app_architecture/ui/renderer_todo.yaml`.
 
 ### Constraints / Guardrails
 - Handoff docs are high-level only; progress tracking lives in todo + app_architecture docs.
@@ -33,6 +29,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 
 ### Where to Look for Details
 - UI rendering plan + per-OS journey: `app_architecture/ui/DEVELOPMENT_JOURNEY.md`
+- Renderer modularization + OS abstraction plan: `app_architecture/ui/renderer_todo.yaml`
 - Editor widget roadmap: `app_architecture/editor/editor_widget_todo.yaml`
 - Terminal roadmap: `app_architecture/terminal/*_todo.yaml`
 - Undo loop notes: `app_architecture/ui/DEVELOPMENT_JOURNEY.md` (known issue entry).
