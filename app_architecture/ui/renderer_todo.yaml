@@ -270,6 +270,27 @@ renderer_todo:
             - src/ui/renderer/mouse_wheel.zig
           files_to_edit:
             - src/ui/renderer.zig
+        - id: R0-35
+          title: "Extract input logging helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/input_logging.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+        - id: R0-36
+          title: "Extract window metrics state"
+          status: done
+          files_to_add:
+            - src/ui/renderer/window_metrics_state.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+        - id: R0-37
+          title: "Extract key queue helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/key_queue.zig
+          files_to_edit:
+            - src/ui/renderer.zig
 
     - name: "Phase 1 - OS abstraction surface"
       tasks:
