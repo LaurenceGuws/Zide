@@ -5,6 +5,7 @@ const iface = @import("renderer/interface.zig");
 const terminal_font_mod = @import("terminal_font.zig");
 const TerminalFont = terminal_font_mod.TerminalFont;
 const font_manager = @import("renderer/font_manager.zig");
+const draw_ops = @import("renderer/draw_ops.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
 const gl = @import("renderer/gl.zig");
 const sdl_input = @import("renderer/sdl_input.zig");
@@ -64,22 +65,8 @@ const KeyPress = struct {
 
 const RenderTarget = gl_backend.RenderTarget;
 
-const BatchDraw = struct {
-    texture_id: gl.GLuint,
-    start: usize,
-    count: usize,
-};
-
-const Vertex = packed struct {
-    x: f32,
-    y: f32,
-    u: f32,
-    v: f32,
-    r: f32,
-    g: f32,
-    b: f32,
-    a: f32,
-};
+const BatchDraw = draw_ops.BatchDraw;
+const Vertex = draw_ops.Vertex;
 
 pub const Renderer = struct {
     allocator: std.mem.Allocator,
@@ -1396,152 +1383,37 @@ pub fn refreshWindowMetrics(self: *Renderer, reason: []const u8) WindowMetrics {
     }
 
     pub fn beginTerminalBatch(self: *Renderer) void {
-        self.batch_vertices.clearRetainingCapacity();
-        self.batch_draws.clearRetainingCapacity();
+        draw_ops.beginTerminalBatch(self);
     }
 
     pub fn flushTerminalBatch(self: *Renderer) void {
-        const vertex_count = self.batch_vertices.items.len;
-        if (vertex_count == 0) return;
-        self.ensureVboCapacity(vertex_count);
-        gl.UseProgram(self.shader_program);
-        gl.BindVertexArray(self.vao);
-        gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, self.vbo);
-        gl.BufferSubData(
-            gl.c.GL_ARRAY_BUFFER,
-            0,
-            @as(gl.GLsizeiptr, @intCast(@sizeOf(Vertex) * vertex_count)),
-            self.batch_vertices.items.ptr,
-        );
-        for (self.batch_draws.items) |draw| {
-            if (draw.texture_id == 0) continue;
-            gl.ActiveTexture(gl.c.GL_TEXTURE0);
-            gl.BindTexture(gl.c.GL_TEXTURE_2D, draw.texture_id);
-            gl.DrawArrays(gl.c.GL_TRIANGLES, @intCast(draw.start), @intCast(draw.count));
-        }
+        draw_ops.flushTerminalBatch(self);
     }
 
     fn drawTextureRect(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
-        if (texture.id == 0 or texture.width <= 0 or texture.height <= 0) return;
-        gl.UseProgram(self.shader_program);
-        gl.BindVertexArray(self.vao);
-        gl.ActiveTexture(gl.c.GL_TEXTURE0);
-        gl.BindTexture(gl.c.GL_TEXTURE_2D, texture.id);
-
-        const tex_w = @as(f32, @floatFromInt(texture.width));
-        const tex_h = @as(f32, @floatFromInt(texture.height));
-        const u_min = src.x / tex_w;
-        const v_min = src.y / tex_h;
-        const u_max = (src.x + src.width) / tex_w;
-        const v_max = (src.y + src.height) / tex_h;
-
-        const r = @as(f32, @floatFromInt(color.r)) / 255.0;
-        const g = @as(f32, @floatFromInt(color.g)) / 255.0;
-        const b = @as(f32, @floatFromInt(color.b)) / 255.0;
-        const a = @as(f32, @floatFromInt(color.a)) / 255.0;
-
-        const x0 = dest.x;
-        const y0 = dest.y;
-        const x1 = dest.x + dest.width;
-        const y1 = dest.y + dest.height;
-
-        const verts = [_]Vertex{
-            .{ .x = x0, .y = y0, .u = u_min, .v = v_min, .r = r, .g = g, .b = b, .a = a },
-            .{ .x = x1, .y = y0, .u = u_max, .v = v_min, .r = r, .g = g, .b = b, .a = a },
-            .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a },
-            .{ .x = x0, .y = y0, .u = u_min, .v = v_min, .r = r, .g = g, .b = b, .a = a },
-            .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a },
-            .{ .x = x0, .y = y1, .u = u_min, .v = v_max, .r = r, .g = g, .b = b, .a = a },
-        };
-
-        gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, self.vbo);
-        gl.BufferSubData(
-            gl.c.GL_ARRAY_BUFFER,
-            0,
-            @as(gl.GLsizeiptr, @intCast(@sizeOf(Vertex) * 6)),
-            &verts,
-        );
-        gl.DrawArrays(gl.c.GL_TRIANGLES, 0, 6);
+        draw_ops.drawTextureRect(self, texture, src, dest, color);
     }
 
     fn ensureVboCapacity(self: *Renderer, vertex_count: usize) void {
-        if (vertex_count <= self.vbo_capacity_vertices) return;
-        var next_cap = self.vbo_capacity_vertices * 2;
-        if (next_cap < 6) next_cap = 6;
-        if (next_cap < vertex_count) next_cap = vertex_count;
-        gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, self.vbo);
-        gl.BufferData(
-            gl.c.GL_ARRAY_BUFFER,
-            @as(gl.GLsizeiptr, @intCast(@sizeOf(Vertex) * next_cap)),
-            null,
-            gl.c.GL_DYNAMIC_DRAW,
-        );
-        self.vbo_capacity_vertices = next_cap;
+        draw_ops.ensureVboCapacity(self, vertex_count);
     }
 
     fn addBatchQuad(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
-        if (texture.id == 0 or texture.width <= 0 or texture.height <= 0) return;
-        const tex_w = @as(f32, @floatFromInt(texture.width));
-        const tex_h = @as(f32, @floatFromInt(texture.height));
-        const u_min = src.x / tex_w;
-        const v_min = src.y / tex_h;
-        const u_max = (src.x + src.width) / tex_w;
-        const v_max = (src.y + src.height) / tex_h;
-
-        const r = @as(f32, @floatFromInt(color.r)) / 255.0;
-        const g = @as(f32, @floatFromInt(color.g)) / 255.0;
-        const b = @as(f32, @floatFromInt(color.b)) / 255.0;
-        const a = @as(f32, @floatFromInt(color.a)) / 255.0;
-
-        const x0 = dest.x;
-        const y0 = dest.y;
-        const x1 = dest.x + dest.width;
-        const y1 = dest.y + dest.height;
-
-        const base = self.batch_vertices.items.len;
-        const verts = [_]Vertex{
-            .{ .x = x0, .y = y0, .u = u_min, .v = v_min, .r = r, .g = g, .b = b, .a = a },
-            .{ .x = x1, .y = y0, .u = u_max, .v = v_min, .r = r, .g = g, .b = b, .a = a },
-            .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a },
-            .{ .x = x0, .y = y0, .u = u_min, .v = v_min, .r = r, .g = g, .b = b, .a = a },
-            .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a },
-            .{ .x = x0, .y = y1, .u = u_min, .v = v_max, .r = r, .g = g, .b = b, .a = a },
-        };
-        self.batch_vertices.appendSlice(self.allocator, &verts) catch return;
-        if (self.batch_draws.items.len > 0) {
-            const last_idx = self.batch_draws.items.len - 1;
-            if (self.batch_draws.items[last_idx].texture_id == texture.id) {
-                self.batch_draws.items[last_idx].count += 6;
-                return;
-            }
-        }
-        _ = self.batch_draws.append(self.allocator, .{
-            .texture_id = texture.id,
-            .start = base,
-            .count = 6,
-        }) catch {};
+        draw_ops.addBatchQuad(self, texture, src, dest, color);
     }
 
     pub fn addTerminalRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        if (w <= 0 or h <= 0) return;
-        const dest = types.Rect{
-            .x = @floatFromInt(x),
-            .y = @floatFromInt(y),
-            .width = @floatFromInt(w),
-            .height = @floatFromInt(h),
-        };
-        const src = types.Rect{ .x = 0, .y = 0, .width = 1, .height = 1 };
-        self.addBatchQuad(self.white_texture, src, dest, color.toRgba());
+        draw_ops.addTerminalRect(self, x, y, w, h, color.toRgba());
     }
 
     fn drawTextureBatchThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        renderer.addBatchQuad(texture, src, dest, color);
+        draw_ops.addBatchQuad(renderer, texture, src, dest, color);
     }
 
     fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        renderer.drawTextureRect(texture, src, dest, color);
+        draw_ops.drawTextureRect(renderer, texture, src, dest, color);
     }
 
     pub fn createTextureFromRgba(_: *Renderer, width: i32, height: i32, data: []const u8, filter: i32) ?types.Texture {
