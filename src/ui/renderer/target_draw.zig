@@ -1,4 +1,5 @@
 const gl = @import("gl.zig");
+const texture_draw = @import("texture_draw.zig");
 const types = @import("types.zig");
 
 pub fn drawTarget(
@@ -8,18 +9,8 @@ pub fn drawTarget(
     x: f32,
     y: f32,
 ) void {
-    const src = types.Rect{
-        .x = 0,
-        .y = @floatFromInt(target.height),
-        .width = @floatFromInt(target.width),
-        .height = -@as(f32, @floatFromInt(target.height)),
-    };
-    const dest = types.Rect{
-        .x = x,
-        .y = y,
-        .width = @floatFromInt(target.width),
-        .height = @floatFromInt(target.height),
-    };
+    const src = texture_draw.fullTextureSrcRect(target);
+    const dest = texture_draw.fullTextureDestRect(target, x, y);
     drawTextureRect(ctx, target, src, dest, types.Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 });
 }
 

@@ -26,6 +26,9 @@ const shape_utils = @import("renderer/shape_utils.zig");
 const shape_draw = @import("renderer/shape_draw.zig");
 const terminal_glyphs = @import("renderer/terminal_glyphs.zig");
 const clipboard_state = @import("renderer/clipboard_state.zig");
+const terminal_underline = @import("renderer/terminal_underline.zig");
+const mouse_state = @import("renderer/mouse_state.zig");
+const texture_draw = @import("renderer/texture_draw.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_input_events = @import("../platform/input_events.zig");
 const platform_mouse = @import("../platform/mouse_state.zig");
@@ -558,7 +561,7 @@ pub const Renderer = struct {
     pub fn drawRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         if (w <= 0 or h <= 0) return;
         const dest = shape_utils.rectFromInts(x, y, w, h);
-        const src = shape_utils.unitRect();
+        const src = texture_draw.unitSrcRect();
         self.drawTextureRect(self.white_texture, src, dest, color.toRgba());
     }
 
@@ -698,12 +701,13 @@ pub const Renderer = struct {
                 );
             }
             if (underline) {
-                const underline_y: i32 = snapInt(snapped_y + self.terminal_cell_height - 2);
-                self.drawRect(
+                terminal_underline.drawUnderline(
+                    drawRectThunk,
+                    self,
                     snapInt(snapped_x),
-                    underline_y,
+                    snapInt(snapped_y),
                     snapped_cell_w_i,
-                    2,
+                    snapped_cell_h_i,
                     underline_color,
                 );
             }
@@ -763,12 +767,13 @@ pub const Renderer = struct {
                 );
             }
             if (underline) {
-                const underline_y: i32 = snapInt(snapped_y + self.terminal_cell_height - 2);
-                self.addTerminalRect(
+                terminal_underline.drawUnderline(
+                    addTerminalRectThunk,
+                    self,
                     snapInt(snapped_x),
-                    underline_y,
+                    snapInt(snapped_y),
                     snapped_cell_w_i,
-                    2,
+                    snapped_cell_h_i,
                     underline_color,
                 );
             }
@@ -892,18 +897,15 @@ pub const Renderer = struct {
     }
 
     pub fn isMouseButtonPressed(self: *Renderer, button: i32) bool {
-        if (button < 0 or @as(usize, @intCast(button)) >= mouse_button_count) return false;
-        return self.mouse_pressed[@intCast(button)];
+        return mouse_state.isMouseButtonPressed(self.mouse_pressed[0..], button);
     }
 
     pub fn isMouseButtonDown(self: *Renderer, button: i32) bool {
-        if (button < 0 or @as(usize, @intCast(button)) >= mouse_button_count) return false;
-        return self.mouse_down[@intCast(button)];
+        return mouse_state.isMouseButtonDown(self.mouse_down[0..], button);
     }
 
     pub fn isMouseButtonReleased(self: *Renderer, button: i32) bool {
-        if (button < 0 or @as(usize, @intCast(button)) >= mouse_button_count) return false;
-        return self.mouse_released[@intCast(button)];
+        return mouse_state.isMouseButtonReleased(self.mouse_released[0..], button);
     }
 
     pub fn getMouseWheelMove(_: *Renderer) f32 {

@@ -1,5 +1,7 @@
 const std = @import("std");
 const gl = @import("gl.zig");
+const shape_utils = @import("shape_utils.zig");
+const texture_draw = @import("texture_draw.zig");
 const types = @import("types.zig");
 
 pub const BatchDraw = struct {
@@ -133,13 +135,8 @@ pub fn addBatchQuad(renderer: anytype, texture: types.Texture, src: types.Rect, 
 
 pub fn addTerminalRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
     if (w <= 0 or h <= 0) return;
-    const dest = types.Rect{
-        .x = @floatFromInt(x),
-        .y = @floatFromInt(y),
-        .width = @floatFromInt(w),
-        .height = @floatFromInt(h),
-    };
-    const src = types.Rect{ .x = 0, .y = 0, .width = 1, .height = 1 };
+    const dest = shape_utils.rectFromInts(x, y, w, h);
+    const src = texture_draw.unitSrcRect();
     addBatchQuad(renderer, renderer.white_texture, src, dest, color);
 }
 
@@ -157,5 +154,3 @@ pub fn ensureVboCapacity(renderer: anytype, vertex_count: usize) void {
     );
     renderer.vbo_capacity_vertices = next_cap;
 }
-
- 
