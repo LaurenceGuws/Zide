@@ -6,6 +6,7 @@ Goal
 
 Status (2026-01-29)
 - SDL2 window/input + OpenGL 3.3 renderer is now the active stack on Linux.
+- Known issue: runtime is currently picking up SDL3 (log shows SDL 3.x). We want SDL2 for parity; track in renderer plan.
 - Raylib has been removed from the build path; PNG decoding is handled via stb_image.
 - Fixed texture UV orientation: CPU textures use top-left UVs; FBO blits flip Y at draw time.
 - Wayland mouse scale uses SDL's drawable/window ratio only; avoid double-applying compositor scale.
