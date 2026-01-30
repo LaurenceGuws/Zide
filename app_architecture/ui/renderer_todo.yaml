@@ -101,10 +101,12 @@ renderer_todo:
             - src/ui/renderer.zig
         - id: R2-03
           title: "Windows smoke build (no runtime)"
+          status: blocked
           files_to_edit:
             - app_architecture/ui/renderer_todo.yaml
           notes:
             - "Record compiler errors and missing deps."
+            - "Windows smoke build (2026-01-30): missing freetype/harfbuzz/lua/SDL2 system libs for x86_64-windows-gnu."
 
     - name: "Phase 3 - macOS + Android stubs"
       tasks:
