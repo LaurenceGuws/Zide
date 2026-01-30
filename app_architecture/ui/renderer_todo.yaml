@@ -44,6 +44,7 @@ renderer_todo:
             - src/ui/renderer.zig
         - id: R0-03
           title: "Extract GL init + render targets"
+          status: done
           files_to_add:
             - src/ui/renderer/gl_backend.zig
           files_to_edit:
