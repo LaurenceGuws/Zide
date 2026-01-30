@@ -32,6 +32,9 @@ const texture_draw = @import("renderer/texture_draw.zig");
 const text_composition = @import("renderer/text_composition.zig");
 const window_flags = @import("renderer/window_flags.zig");
 const mouse_wheel = @import("renderer/mouse_wheel.zig");
+const input_logging = @import("renderer/input_logging.zig");
+const window_metrics_state = @import("renderer/window_metrics_state.zig");
+const key_queue = @import("renderer/key_queue.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_input_events = @import("../platform/input_events.zig");
 const platform_mouse = @import("../platform/mouse_state.zig");
@@ -496,12 +499,11 @@ pub const Renderer = struct {
     }
 
     pub fn beginFrame(self: *Renderer) void {
-        const window_size = platform_window.getWindowSize(self.window);
-        const drawable = platform_window.getDrawableSize(self.window);
-        self.width = window_size.w;
-        self.height = window_size.h;
-        self.render_width = drawable.w;
-        self.render_height = drawable.h;
+        const sizes = window_metrics_state.refresh(self.window);
+        self.width = sizes.width;
+        self.height = sizes.height;
+        self.render_width = sizes.render_width;
+        self.render_height = sizes.render_height;
 
         self.bindDefaultTarget();
         self.updateMouseScale();
@@ -824,8 +826,7 @@ pub const Renderer = struct {
     }
 
     pub fn getKeyPressed(self: *Renderer) ?KeyPress {
-        if (self.key_queue.items.len == 0) return null;
-        return self.key_queue.orderedRemove(0);
+        return key_queue.pop(&self.key_queue);
     }
 
     pub fn isKeyDown(self: *Renderer, key: i32) bool {
@@ -1039,7 +1040,6 @@ pub const Renderer = struct {
     fn pollInputEvents(self: *Renderer) void {
         const input_log = app_logger.logger("input.sdl");
         const window_log = app_logger.logger("sdl.window");
-        const ime_log = app_logger.logger("sdl.ime");
         const state = input_state.InputState{
             .key_down = self.key_down[0..],
             .key_pressed = self.key_pressed[0..],
@@ -1116,9 +1116,7 @@ pub const Renderer = struct {
                         self.allocator,
                     );
                     input_state.applyTextInputReset(state);
-                    if (input_log.enabled_file or input_log.enabled_console) {
-                        input_log.logf("textinput bytes={d}", .{text_len});
-                    }
+                    input_logging.logTextInput(text_len);
                 },
                 sdl.SDL_TEXTEDITING => {
                     const edit_info = platform_input_events.handleTextEditing(
@@ -1129,12 +1127,7 @@ pub const Renderer = struct {
                         &self.composing_active,
                         self.allocator,
                     );
-                    if (ime_log.enabled_file or ime_log.enabled_console) {
-                        ime_log.logf(
-                            "textediting bytes={d} cursor={d} selection={d}",
-                            .{ edit_info.bytes, edit_info.cursor, edit_info.selection_len },
-                        );
-                    }
+                    input_logging.logTextEditing(edit_info.bytes, edit_info.cursor, edit_info.selection_len);
                 },
                 sdl.SDL_MOUSEBUTTONDOWN => {
                     platform_input_events.handleMouseButtonDown(
