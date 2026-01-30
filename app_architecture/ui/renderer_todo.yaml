@@ -168,6 +168,21 @@ renderer_todo:
             - src/ui/renderer/text_draw.zig
           files_to_edit:
             - src/ui/renderer.zig
+        - id: R0-21
+          title: "Extract GL resource helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/gl_resources.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+            - src/ui/renderer/gl_backend.zig
+        - id: R0-22
+          title: "Extract draw batch helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/draw_batch.zig
+          files_to_edit:
+            - src/ui/renderer.zig
 
     - name: "Phase 1 - OS abstraction surface"
       tasks:

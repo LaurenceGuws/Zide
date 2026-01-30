@@ -1,4 +1,5 @@
 const gl = @import("gl.zig");
+const gl_resources = @import("gl_resources.zig");
 const types = @import("types.zig");
 
 pub const RenderTarget = struct {
@@ -49,7 +50,7 @@ pub fn initGlResources(renderer: anytype) !void {
     gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, renderer.vbo);
     gl.BufferData(
         gl.c.GL_ARRAY_BUFFER,
-        @as(gl.GLsizeiptr, @intCast(@sizeOf(@TypeOf(renderer.batch_vertices.items[0])) * 6)),
+        gl_resources.computeBufferBytes(@sizeOf(@TypeOf(renderer.batch_vertices.items[0])), 6),
         null,
         gl.c.GL_DYNAMIC_DRAW,
     );
@@ -139,10 +140,10 @@ pub fn updateProjection(renderer: anytype, width: i32, height: i32) void {
         const w = @as(f32, @floatFromInt(width));
         const h = @as(f32, @floatFromInt(height));
         const proj = [_]f32{
-            2.0 / w, 0, 0, 0,
-            0, -2.0 / h, 0, 0,
-            0, 0, 1, 0,
-            -1, 1, 0, 1,
+            2.0 / w, 0,        0, 0,
+            0,       -2.0 / h, 0, 0,
+            0,       0,        1, 0,
+            -1,      1,        0, 1,
         };
         gl.UseProgram(renderer.shader_program);
         gl.UniformMatrix4fv(renderer.uniform_proj, 1, gl.c.GL_FALSE, &proj);
