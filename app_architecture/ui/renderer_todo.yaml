@@ -63,6 +63,20 @@ renderer_todo:
             - src/ui/renderer/draw_ops.zig
           files_to_edit:
             - src/ui/renderer.zig
+        - id: R0-06
+          title: "Extract SDL input constants"
+          status: done
+          files_to_add:
+            - src/ui/renderer/input_constants.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+        - id: R0-07
+          title: "Extract clipboard helpers"
+          status: done
+          files_to_add:
+            - src/ui/renderer/clipboard.zig
+          files_to_edit:
+            - src/ui/renderer.zig
 
     - name: "Phase 1 - OS abstraction surface"
       tasks:
