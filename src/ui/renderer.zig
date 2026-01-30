@@ -29,6 +29,9 @@ const clipboard_state = @import("renderer/clipboard_state.zig");
 const terminal_underline = @import("renderer/terminal_underline.zig");
 const mouse_state = @import("renderer/mouse_state.zig");
 const texture_draw = @import("renderer/texture_draw.zig");
+const text_composition = @import("renderer/text_composition.zig");
+const window_flags = @import("renderer/window_flags.zig");
+const mouse_wheel = @import("renderer/mouse_wheel.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_input_events = @import("../platform/input_events.zig");
 const platform_mouse = @import("../platform/mouse_state.zig");
@@ -809,20 +812,15 @@ pub const Renderer = struct {
         return self.char_queue.orderedRemove(0);
     }
 
-    pub const TextComposition = struct {
-        text: []const u8,
-        cursor: i32,
-        selection_len: i32,
-        active: bool,
-    };
+    pub const TextComposition = text_composition.TextComposition;
 
     pub fn getTextComposition(self: *Renderer) TextComposition {
-        return .{
-            .text = self.composing_text.items,
-            .cursor = self.composing_cursor,
-            .selection_len = self.composing_selection_len,
-            .active = self.composing_active,
-        };
+        return text_composition.snapshot(
+            self.composing_text.items,
+            self.composing_cursor,
+            self.composing_selection_len,
+            self.composing_active,
+        );
     }
 
     pub fn getKeyPressed(self: *Renderer) ?KeyPress {
@@ -909,7 +907,7 @@ pub const Renderer = struct {
     }
 
     pub fn getMouseWheelMove(_: *Renderer) f32 {
-        return mouse_wheel_delta;
+        return mouse_wheel.get(&mouse_wheel_delta);
     }
 
     fn fontForSize(self: *Renderer, size: f32) ?*TerminalFont {
@@ -1060,6 +1058,7 @@ pub const Renderer = struct {
             .window_resized_flag = &self.window_resized_flag,
         };
         input_state.resetForFrame(state);
+        mouse_wheel.reset(&mouse_wheel_delta);
 
         const events = input_queue.drain(&self.sdl_input);
         for (events) |event| {
@@ -1069,11 +1068,7 @@ pub const Renderer = struct {
                 },
                 sdl.SDL_WINDOWEVENT => {
                     const evt = event.window.event;
-                    if (platform_window_events.isResizeEvent(evt)) {
-                        self.window_resized_flag = true;
-                    } else if (platform_window_events.isCloseEvent(evt)) {
-                        self.should_close_flag = true;
-                    }
+                    window_flags.handleWindowEvent(evt, &self.should_close_flag, &self.window_resized_flag);
                     if (window_log.enabled_file or window_log.enabled_console) {
                         window_log.logf(
                             "event={s} data1={d} data2={d}",
@@ -1156,7 +1151,7 @@ pub const Renderer = struct {
                     );
                 },
                 sdl.SDL_MOUSEWHEEL => {
-                    mouse_wheel_delta += platform_input_events.wheelDelta(&event);
+                    mouse_wheel.add(&mouse_wheel_delta, platform_input_events.wheelDelta(&event));
                 },
                 else => {},
             }
