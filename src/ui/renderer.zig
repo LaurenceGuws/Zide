@@ -11,6 +11,7 @@ const input_constants = @import("renderer/input_constants.zig");
 const clipboard = @import("renderer/clipboard.zig");
 const texture_utils = @import("renderer/texture_utils.zig");
 const platform_window = @import("../platform/window.zig");
+const platform_window_events = @import("../platform/window_events.zig");
 const build_options = @import("build_options");
 const gl = @import("renderer/gl.zig");
 const sdl_input = @import("renderer/sdl_input.zig");
@@ -32,29 +33,6 @@ pub const UNICODE_MONO_PATH = iface.UNICODE_MONO_PATH;
 pub const UNICODE_SANS_PATH = iface.UNICODE_SANS_PATH;
 pub const EMOJI_COLOR_FALLBACK_PATH = iface.EMOJI_COLOR_FALLBACK_PATH;
 pub const EMOJI_TEXT_FALLBACK_PATH = iface.EMOJI_TEXT_FALLBACK_PATH;
-
-fn windowEventName(event_id: u8) []const u8 {
-    return switch (event_id) {
-        sdl.SDL_WINDOWEVENT_SHOWN => "shown",
-        sdl.SDL_WINDOWEVENT_HIDDEN => "hidden",
-        sdl.SDL_WINDOWEVENT_EXPOSED => "exposed",
-        sdl.SDL_WINDOWEVENT_MOVED => "moved",
-        sdl.SDL_WINDOWEVENT_RESIZED => "resized",
-        sdl.SDL_WINDOWEVENT_SIZE_CHANGED => "size_changed",
-        sdl.SDL_WINDOWEVENT_MINIMIZED => "minimized",
-        sdl.SDL_WINDOWEVENT_MAXIMIZED => "maximized",
-        sdl.SDL_WINDOWEVENT_RESTORED => "restored",
-        sdl.SDL_WINDOWEVENT_ENTER => "enter",
-        sdl.SDL_WINDOWEVENT_LEAVE => "leave",
-        sdl.SDL_WINDOWEVENT_FOCUS_GAINED => "focus_gained",
-        sdl.SDL_WINDOWEVENT_FOCUS_LOST => "focus_lost",
-        sdl.SDL_WINDOWEVENT_CLOSE => "close",
-        sdl.SDL_WINDOWEVENT_TAKE_FOCUS => "take_focus",
-        sdl.SDL_WINDOWEVENT_HIT_TEST => "hit_test",
-        sdl.SDL_WINDOWEVENT_DISPLAY_CHANGED => "display_changed",
-        else => "unknown",
-    };
-}
 
 pub const Color = iface.Color;
 pub const MousePos = iface.MousePos;
@@ -896,7 +874,6 @@ pub const Renderer = struct {
         h: f32,
         color: Color,
     ) bool {
-
         const ix = @as(i32, @intFromFloat(x));
         const iy = @as(i32, @intFromFloat(y));
         const iw = @as(i32, @intFromFloat(w));
@@ -1239,18 +1216,18 @@ pub const Renderer = struct {
         return platform_window.getMonitorSize(self.window);
     }
 
-pub const WindowMetrics = platform_window.WindowMetrics;
+    pub const WindowMetrics = platform_window.WindowMetrics;
 
-pub fn refreshWindowMetrics(self: *Renderer, reason: []const u8) WindowMetrics {
-    const window_size = platform_window.getWindowSize(self.window);
-    const drawable = platform_window.getDrawableSize(self.window);
-    self.width = window_size.w;
-    self.height = window_size.h;
-    self.render_width = drawable.w;
-    self.render_height = drawable.h;
-    self.updateMouseScale();
-    return platform_window.collectWindowMetrics(self.window, reason);
-}
+    pub fn refreshWindowMetrics(self: *Renderer, reason: []const u8) WindowMetrics {
+        const window_size = platform_window.getWindowSize(self.window);
+        const drawable = platform_window.getDrawableSize(self.window);
+        self.width = window_size.w;
+        self.height = window_size.h;
+        self.render_width = drawable.w;
+        self.render_height = drawable.h;
+        self.updateMouseScale();
+        return platform_window.collectWindowMetrics(self.window, reason);
+    }
 
     fn updateMouseScale(self: *Renderer) void {
         const window_size = platform_window.getWindowSize(self.window);
@@ -1479,20 +1456,16 @@ pub fn refreshWindowMetrics(self: *Renderer, reason: []const u8) WindowMetrics {
                 },
                 sdl.SDL_WINDOWEVENT => {
                     const evt = event.window.event;
-                    if (evt == sdl.SDL_WINDOWEVENT_RESIZED or
-                        evt == sdl.SDL_WINDOWEVENT_SIZE_CHANGED or
-                        evt == sdl.SDL_WINDOWEVENT_MOVED or
-                        evt == sdl.SDL_WINDOWEVENT_DISPLAY_CHANGED)
-                    {
+                    if (platform_window_events.isResizeEvent(evt)) {
                         self.window_resized_flag = true;
-                    } else if (evt == sdl.SDL_WINDOWEVENT_CLOSE) {
+                    } else if (platform_window_events.isCloseEvent(evt)) {
                         self.should_close_flag = true;
                     }
                     if (window_log.enabled_file or window_log.enabled_console) {
                         window_log.logf(
                             "event={s} data1={d} data2={d}",
                             .{
-                                windowEventName(evt),
+                                platform_window_events.eventName(evt),
                                 @as(i32, @intCast(event.window.data1)),
                                 @as(i32, @intCast(event.window.data2)),
                             },
