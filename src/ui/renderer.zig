@@ -4,6 +4,7 @@ const editor_render = @import("../editor/render/renderer_ops.zig");
 const iface = @import("renderer/interface.zig");
 const terminal_font_mod = @import("terminal_font.zig");
 const TerminalFont = terminal_font_mod.TerminalFont;
+const font_manager = @import("renderer/font_manager.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
 const gl = @import("renderer/gl.zig");
 const sdl_input = @import("renderer/sdl_input.zig");
@@ -338,70 +339,15 @@ pub const Renderer = struct {
     }
 
     fn initFonts(self: *Renderer, size: f32) !void {
-        self.terminal_font = try TerminalFont.init(
-            self.allocator,
-            self.font_path,
-            size,
-            SYMBOLS_FALLBACK_PATH,
-            UNICODE_SYMBOLS2_PATH,
-            UNICODE_SYMBOLS_PATH,
-            UNICODE_MONO_PATH,
-            UNICODE_SANS_PATH,
-            EMOJI_COLOR_FALLBACK_PATH,
-            EMOJI_TEXT_FALLBACK_PATH,
-        );
-        self.terminal_font.setAtlasFilterPoint();
-        self.terminal_cell_width = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(self.terminal_font.cell_width)))));
-        self.terminal_cell_height = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(self.terminal_font.line_height)))));
-        self.char_width = self.terminal_cell_width;
-        self.char_height = self.terminal_cell_height;
-
-        self.icon_font = try TerminalFont.init(
-            self.allocator,
-            self.font_path,
-            size * 2.0,
-            SYMBOLS_FALLBACK_PATH,
-            UNICODE_SYMBOLS2_PATH,
-            UNICODE_SYMBOLS_PATH,
-            UNICODE_MONO_PATH,
-            UNICODE_SANS_PATH,
-            EMOJI_COLOR_FALLBACK_PATH,
-            EMOJI_TEXT_FALLBACK_PATH,
-        );
-        self.icon_font.setAtlasFilterPoint();
-        self.icon_font_size = size * 2.0;
-        self.icon_char_width = self.icon_font.cell_width;
-        self.icon_char_height = self.icon_font.line_height;
+        try font_manager.initFonts(self, size);
     }
 
     pub fn loadFont(self: *Renderer, path: [*:0]const u8, size: f32) void {
-        if (self.font_path_owned) |owned| {
-            self.allocator.free(owned);
-            self.font_path_owned = null;
-        }
-        self.font_path = path;
-        self.base_font_size = size;
-        self.applyFontScale() catch {};
+        font_manager.loadFont(self, path, size);
     }
 
     pub fn setFontConfig(self: *Renderer, path: ?[]const u8, size: ?f32) !void {
-        if (path) |raw| {
-            const owned = try self.allocator.alloc(u8, raw.len + 1);
-            std.mem.copyForwards(u8, owned[0..raw.len], raw);
-            owned[raw.len] = 0;
-            if (self.font_path_owned) |old| {
-                self.allocator.free(old);
-            }
-            self.font_path_owned = owned;
-            const ptr: [*:0]u8 = @ptrCast(owned.ptr);
-            self.font_path = ptr;
-        }
-        if (size) |value| {
-            if (value > 0.0) {
-                self.base_font_size = value;
-            }
-        }
-        try self.applyFontScale();
+        try font_manager.setFontConfig(self, path, size);
     }
 
     pub fn loadFontWithGlyphs(self: *Renderer, allocator: std.mem.Allocator, path: [*:0]const u8, size: f32) void {
@@ -435,17 +381,7 @@ pub const Renderer = struct {
     }
 
     fn applyFontScale(self: *Renderer) !void {
-        const size = self.base_font_size * self.ui_scale * self.user_zoom;
-        var font_it = self.font_cache.iterator();
-        while (font_it.next()) |entry| {
-            entry.value_ptr.*.deinit();
-            self.allocator.destroy(entry.value_ptr.*);
-        }
-        self.font_cache.clearRetainingCapacity();
-        self.terminal_font.deinit();
-        self.icon_font.deinit();
-        self.font_size = size;
-        try self.initFonts(size);
+        try font_manager.applyFontScale(self);
     }
 
     pub fn queueUserZoom(self: *Renderer, delta: f32, now: f64) bool {
@@ -1348,30 +1284,7 @@ pub fn refreshWindowMetrics(self: *Renderer, reason: []const u8) WindowMetrics {
     }
 
     fn fontForSize(self: *Renderer, size: f32) ?*TerminalFont {
-        if (std.math.approxEqAbs(f32, size, self.font_size, 0.01)) return &self.terminal_font;
-        if (std.math.approxEqAbs(f32, size, self.icon_font_size, 0.01)) return &self.icon_font;
-        const key: u32 = @intFromFloat(std.math.round(size));
-        if (self.font_cache.get(key)) |font_ptr| return font_ptr;
-
-        const font_ptr = self.allocator.create(TerminalFont) catch return null;
-        font_ptr.* = TerminalFont.init(
-            self.allocator,
-            FONT_PATH,
-            @floatFromInt(key),
-            SYMBOLS_FALLBACK_PATH,
-            UNICODE_SYMBOLS2_PATH,
-            UNICODE_SYMBOLS_PATH,
-            UNICODE_MONO_PATH,
-            UNICODE_SANS_PATH,
-            EMOJI_COLOR_FALLBACK_PATH,
-            EMOJI_TEXT_FALLBACK_PATH,
-        ) catch {
-            self.allocator.destroy(font_ptr);
-            return null;
-        };
-        font_ptr.setAtlasFilterPoint();
-        _ = self.font_cache.put(key, font_ptr) catch {};
-        return font_ptr;
+        return font_manager.fontForSize(self, size);
     }
 
     fn drawTextWithFont(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: Color) void {

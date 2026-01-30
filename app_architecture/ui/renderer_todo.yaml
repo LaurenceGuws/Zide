@@ -51,6 +51,7 @@ renderer_todo:
             - src/ui/renderer.zig
         - id: R0-04
           title: "Extract font lifecycle + atlas helpers"
+          status: done
           files_to_add:
             - src/ui/renderer/font_manager.zig
           files_to_edit:
