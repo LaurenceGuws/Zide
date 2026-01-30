@@ -16,6 +16,8 @@ const window_init = @import("renderer/window_init.zig");
 const input_state = @import("renderer/input_state.zig");
 const input_queue = @import("renderer/input_queue.zig");
 const scale_utils = @import("renderer/scale_utils.zig");
+const targets = @import("renderer/targets.zig");
+const text_draw = @import("renderer/text_draw.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_input_events = @import("../platform/input_events.zig");
 const platform_mouse = @import("../platform/mouse_state.zig");
@@ -155,7 +157,7 @@ const mouse_button_count: usize = 8;
 const input_queue_capacity: usize = 8192;
 const KeyPress = input_state.KeyPress;
 
-const RenderTarget = gl_backend.RenderTarget;
+const RenderTarget = targets.RenderTarget;
 
 const BatchDraw = draw_ops.BatchDraw;
 const Vertex = draw_ops.Vertex;
@@ -1224,111 +1226,60 @@ pub const Renderer = struct {
     }
 
     fn drawTextWithFont(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: Color) void {
-        if (text.len == 0) return;
-
-        var codepoints = std.ArrayList(u32).empty;
-        defer codepoints.deinit(self.allocator);
-        var cp_idx: usize = 0;
-        while (true) {
-            const cp = nextCodepointLossy(text, &cp_idx) orelse break;
-            _ = codepoints.append(self.allocator, cp) catch {};
-        }
-        if (codepoints.items.len == 0) return;
-
-        var cursor_x = x;
-        const draw = terminal_font_mod.DrawContext{
-            .ctx = self,
-            .drawTexture = drawTextureThunk,
-        };
-        var idx: usize = 0;
-        while (idx < codepoints.items.len) : (idx += 1) {
-            const cp = codepoints.items[idx];
-            const next = if (idx + 1 < codepoints.items.len) codepoints.items[idx + 1] else 0;
-            const followed_by_space = next == ' ';
-            font.drawGlyph(draw, cp, cursor_x, y, cell_w, cell_h, followed_by_space, color.toRgba());
-            const adv = font.glyphAdvance(cp) catch cell_w;
-            cursor_x += if (adv > 0) adv else cell_w;
-        }
+        text_draw.drawText(
+            self.allocator,
+            font,
+            self,
+            drawTextureThunk,
+            text,
+            x,
+            y,
+            cell_w,
+            cell_h,
+            color.toRgba(),
+            false,
+        );
     }
 
     fn drawTextWithFontMonospace(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: Color) void {
-        if (text.len == 0) return;
-
-        var codepoints = std.ArrayList(u32).empty;
-        defer codepoints.deinit(self.allocator);
-        var cp_idx: usize = 0;
-        while (true) {
-            const cp = nextCodepointLossy(text, &cp_idx) orelse break;
-            _ = codepoints.append(self.allocator, cp) catch {};
-        }
-        if (codepoints.items.len == 0) return;
-
-        var cursor_x = x;
-        const draw = terminal_font_mod.DrawContext{
-            .ctx = self,
-            .drawTexture = drawTextureThunk,
-        };
-        var idx: usize = 0;
-        while (idx < codepoints.items.len) : (idx += 1) {
-            const cp = codepoints.items[idx];
-            const next = if (idx + 1 < codepoints.items.len) codepoints.items[idx + 1] else 0;
-            const followed_by_space = next == ' ';
-            font.drawGlyph(draw, cp, cursor_x, y, cell_w, cell_h, followed_by_space, color.toRgba());
-            cursor_x += cell_w;
-        }
+        text_draw.drawText(
+            self.allocator,
+            font,
+            self,
+            drawTextureThunk,
+            text,
+            x,
+            y,
+            cell_w,
+            cell_h,
+            color.toRgba(),
+            true,
+        );
     }
 
     fn measureTextWidth(_: *Renderer, font: *TerminalFont, text: []const u8) f32 {
-        if (text.len == 0) return 0;
-        var width: f32 = 0;
-        var idx: usize = 0;
-        while (true) {
-            const cp = nextCodepointLossy(text, &idx) orelse break;
-            const adv = font.glyphAdvance(cp) catch font.cell_width;
-            width += if (adv > 0) adv else font.cell_width;
-        }
-        return width;
-    }
-
-    fn nextCodepointLossy(text: []const u8, idx: *usize) ?u32 {
-        if (idx.* >= text.len) return null;
-        const first = text[idx.*];
-        const seq_len = std.unicode.utf8ByteSequenceLength(first) catch {
-            idx.* += 1;
-            return 0xFFFD;
-        };
-        if (idx.* + seq_len > text.len) {
-            idx.* += 1;
-            return 0xFFFD;
-        }
-        const slice = text[idx.* .. idx.* + seq_len];
-        const cp = std.unicode.utf8Decode(slice) catch {
-            idx.* += 1;
-            return 0xFFFD;
-        };
-        idx.* += seq_len;
-        return cp;
+        return text_draw.measureTextWidth(font, text, font.cell_width);
     }
 
     fn bindDefaultTarget(self: *Renderer) void {
-        gl_backend.bindDefaultTarget(self);
+        targets.bindDefaultTarget(self);
     }
 
     fn beginRenderTarget(self: *Renderer, target: ?RenderTarget) bool {
-        return gl_backend.beginRenderTarget(self, target);
+        return targets.beginRenderTarget(self, target);
     }
 
     fn ensureRenderTarget(self: *Renderer, target: *?RenderTarget, width: i32, height: i32, filter: i32) bool {
         _ = self;
-        return gl_backend.ensureRenderTarget(target, width, height, filter);
+        return targets.ensureRenderTarget(target, width, height, filter);
     }
 
     fn destroyRenderTarget(_: *Renderer, target: *?RenderTarget) void {
-        gl_backend.destroyRenderTarget(target);
+        targets.destroyRenderTarget(target);
     }
 
     fn updateProjection(self: *Renderer, width: i32, height: i32) void {
-        gl_backend.updateProjection(self, width, height);
+        targets.updateProjection(self, width, height);
     }
 
     pub fn beginTerminalBatch(self: *Renderer) void {
