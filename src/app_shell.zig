@@ -104,9 +104,9 @@ pub const setSdlLogLevel = r.setSdlLogLevel;
 pub const pollInputEvents = input.pollInputEvents;
 pub const getTime = input.getTime;
 pub const waitTime = input.waitTime;
-pub const isWindowResized = window.isWindowResized;
-pub const getScreenWidth = window.getScreenWidth;
-pub const getScreenHeight = window.getScreenHeight;
+pub const isWindowResized = r.isWindowResized;
+pub const getScreenWidth = r.getScreenWidth;
+pub const getScreenHeight = r.getScreenHeight;
 pub const WindowMetrics = window.WindowMetrics;
 pub const TextComposition = input.TextComposition;
 
