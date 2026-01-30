@@ -10,6 +10,7 @@ const gl_backend = @import("renderer/gl_backend.zig");
 const input_constants = @import("renderer/input_constants.zig");
 const clipboard = @import("renderer/clipboard.zig");
 const texture_utils = @import("renderer/texture_utils.zig");
+const text_input = @import("renderer/text_input.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_window_events = @import("../platform/window_events.zig");
 const build_options = @import("build_options");
@@ -220,8 +221,7 @@ pub const Renderer = struct {
     batch_draws: std.ArrayList(BatchDraw),
     should_close_flag: bool,
     window_resized_flag: bool,
-    text_input_rect: sdl.SDL_Rect,
-    text_input_rect_valid: bool,
+    text_input_state: text_input.TextInputState,
 
     start_counter: u64,
     perf_freq: f64,
@@ -336,8 +336,7 @@ pub const Renderer = struct {
             .batch_draws = std.ArrayList(BatchDraw).empty,
             .should_close_flag = false,
             .window_resized_flag = false,
-            .text_input_rect = .{ .x = 0, .y = 0, .w = 0, .h = 0 },
-            .text_input_rect_valid = false,
+            .text_input_state = text_input.initState(),
             .start_counter = sdl.SDL_GetPerformanceCounter(),
             .perf_freq = @as(f64, @floatFromInt(sdl.SDL_GetPerformanceFrequency())),
         };
@@ -529,23 +528,7 @@ pub const Renderer = struct {
     }
 
     pub fn setTextInputRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
-        if (w <= 0 or h <= 0) return;
-        const rect = sdl.SDL_Rect{ .x = x, .y = y, .w = w, .h = h };
-        if (self.text_input_rect_valid and
-            rect.x == self.text_input_rect.x and
-            rect.y == self.text_input_rect.y and
-            rect.w == self.text_input_rect.w and
-            rect.h == self.text_input_rect.h)
-        {
-            return;
-        }
-        self.text_input_rect = rect;
-        self.text_input_rect_valid = true;
-        sdl.SDL_SetTextInputRect(&self.text_input_rect);
-        const log = app_logger.logger("sdl.ime");
-        if (log.enabled_file or log.enabled_console) {
-            log.logf("text_input_rect x={d} y={d} w={d} h={d}", .{ rect.x, rect.y, rect.w, rect.h });
-        }
+        text_input.setRect(&self.text_input_state, x, y, w, h);
     }
 
     pub fn ensureTerminalTexture(self: *Renderer, width: i32, height: i32) bool {
