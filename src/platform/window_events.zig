@@ -1,8 +1,10 @@
 const gl = @import("../ui/renderer/gl.zig");
+const sdl_api = @import("sdl_api.zig");
 
 const sdl = gl.c;
 
 pub fn eventName(event_id: u8) []const u8 {
+    if (sdl_api.is_sdl3) return "unknown";
     return switch (event_id) {
         sdl.SDL_WINDOWEVENT_SHOWN => "shown",
         sdl.SDL_WINDOWEVENT_HIDDEN => "hidden",
@@ -26,6 +28,7 @@ pub fn eventName(event_id: u8) []const u8 {
 }
 
 pub fn isResizeEvent(event_id: u8) bool {
+    if (sdl_api.is_sdl3) return false;
     return event_id == sdl.SDL_WINDOWEVENT_RESIZED or
         event_id == sdl.SDL_WINDOWEVENT_SIZE_CHANGED or
         event_id == sdl.SDL_WINDOWEVENT_MOVED or
@@ -33,5 +36,6 @@ pub fn isResizeEvent(event_id: u8) bool {
 }
 
 pub fn isCloseEvent(event_id: u8) bool {
+    if (sdl_api.is_sdl3) return false;
     return event_id == sdl.SDL_WINDOWEVENT_CLOSE;
 }

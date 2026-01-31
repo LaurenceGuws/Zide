@@ -1,4 +1,5 @@
 const gl = @import("../ui/renderer/gl.zig");
+const sdl_api = @import("sdl_api.zig");
 const std = @import("std");
 
 const sdl = gl.c;
@@ -30,9 +31,9 @@ pub fn handleKeyDown(
     key_queue: *std.ArrayList(KeyPress),
     allocator: std.mem.Allocator,
 ) KeyEventInfo {
-    const sc = @as(i32, @intCast(event.key.keysym.scancode));
-    const sym = @as(i32, @intCast(event.key.keysym.sym));
-    const repeat: u8 = @intCast(event.key.repeat);
+    const sc = sdl_api.keyScancode(event);
+    const sym = sdl_api.keySym(event);
+    const repeat: u8 = sdl_api.keyRepeat(event);
     var handled = false;
     if (sc >= 0 and @as(usize, @intCast(sc)) < key_down.len) {
         key_down[@intCast(sc)] = true;
@@ -55,8 +56,8 @@ pub fn handleKeyUp(
     key_down: []bool,
     key_released: []bool,
 ) KeyEventInfo {
-    const sc = @as(i32, @intCast(event.key.keysym.scancode));
-    const sym = @as(i32, @intCast(event.key.keysym.sym));
+    const sc = sdl_api.keyScancode(event);
+    const sym = sdl_api.keySym(event);
     var handled = false;
     if (sc >= 0 and @as(usize, @intCast(sc)) < key_down.len) {
         key_down[@intCast(sc)] = false;
@@ -91,7 +92,7 @@ pub fn handleMouseButtonUp(
 }
 
 pub fn wheelDelta(event: *const sdl.SDL_Event) f32 {
-    return @floatFromInt(event.wheel.y);
+    return sdl_api.wheelDelta(event);
 }
 
 pub fn handleTextInput(

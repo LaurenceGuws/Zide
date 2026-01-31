@@ -1,9 +1,9 @@
 const compositor = @import("compositor.zig");
-const gl = @import("../ui/renderer/gl.zig");
 const platform_window = @import("window.zig");
+const sdl_api = @import("sdl_api.zig");
 const std = @import("std");
 
-const sdl = gl.c;
+const sdl = sdl_api.c;
 
 pub const MouseScale = struct {
     x: f32,
@@ -18,7 +18,7 @@ pub const MousePos = struct {
 pub fn getMousePosRaw() MousePos {
     var x: c_int = 0;
     var y: c_int = 0;
-    _ = sdl.SDL_GetMouseState(&x, &y);
+    sdl_api.getMouseState(&x, &y);
     return .{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
 }
 

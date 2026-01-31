@@ -56,10 +56,10 @@ pub fn build(b: *std.Build) void {
         "renderer-backend",
         "Renderer backend (sdl_gl, wgl, egl)",
     ) orelse default_renderer_backend;
+    const sdl_version = b.option([]const u8, "sdl-version", "SDL version (sdl2, sdl3)") orelse "sdl2";
     const build_options = b.addOptions();
     build_options.addOption([]const u8, "renderer_backend", renderer_backend);
-
-    const sdl_version = b.option([]const u8, "sdl-version", "SDL version (sdl2, sdl3)") orelse "sdl2";
+    build_options.addOption([]const u8, "sdl_version", sdl_version);
     const use_vcpkg = b.option(bool, "use-vcpkg", "Use vcpkg for native dependencies") orelse false;
     const vcpkg_root = b.option([]const u8, "vcpkg-root", "Path to vcpkg root") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_ROOT") catch null;
     const vcpkg_triplet = b.option([]const u8, "vcpkg-triplet", "vcpkg triplet (e.g. x64-windows)") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_DEFAULT_TRIPLET") catch null;

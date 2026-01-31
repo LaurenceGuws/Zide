@@ -41,6 +41,7 @@ const platform_mouse = @import("../platform/mouse_state.zig");
 const platform_window_events = @import("../platform/window_events.zig");
 const build_options = @import("build_options");
 const gl = @import("renderer/gl.zig");
+const sdl_api = @import("../platform/sdl_api.zig");
 const sdl_input = @import("renderer/sdl_input.zig");
 const types = @import("renderer/types.zig");
 const app_logger = @import("../app_logger.zig");
@@ -169,7 +170,7 @@ fn parseRendererBackend(raw: []const u8) RendererBackend {
     return .sdl_gl;
 }
 
-const key_repeat_key_count: usize = @intCast(sdl.SDL_NUM_SCANCODES);
+const key_repeat_key_count: usize = sdl_api.scancode_count;
 const mouse_button_count: usize = 8;
 const input_queue_capacity: usize = 8192;
 const KeyPress = input_state.KeyPress;
@@ -267,7 +268,7 @@ pub const Renderer = struct {
         errdefer sdl.SDL_DestroyWindow(window);
 
         const gl_context = try window_init.createGlContext(window);
-        errdefer sdl.SDL_GL_DeleteContext(gl_context);
+        errdefer sdl_api.glDeleteContext(gl_context);
 
         try gl.load();
 
@@ -350,7 +351,7 @@ pub const Renderer = struct {
         try renderer.initGlResources();
         try renderer.initFonts(font_size);
 
-        sdl.SDL_StartTextInput();
+        sdl_api.startTextInput(window);
         try renderer.initInputThread();
 
         active_renderer = renderer;
@@ -401,8 +402,8 @@ pub const Renderer = struct {
             .uniform_tex = self.uniform_tex,
         });
 
-        sdl.SDL_StopTextInput();
-        sdl.SDL_GL_DeleteContext(self.gl_context);
+        sdl_api.stopTextInput(self.window);
+        sdl_api.glDeleteContext(self.gl_context);
         sdl.SDL_DestroyWindow(self.window);
         sdl.SDL_Quit();
 
@@ -520,7 +521,7 @@ pub const Renderer = struct {
     }
 
     pub fn endFrame(self: *Renderer) void {
-        sdl.SDL_GL_SwapWindow(self.window);
+        sdl_api.glSwapWindow(self.window);
     }
 
     pub fn setTextInputRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
@@ -1063,11 +1064,11 @@ pub const Renderer = struct {
         const events = input_queue.drain(&self.sdl_input);
         for (events) |event| {
             switch (event.type) {
-                sdl.SDL_QUIT => {
+                sdl_api.EVENT_QUIT => {
                     self.should_close_flag = true;
                 },
-                sdl.SDL_WINDOWEVENT => {
-                    const evt = event.window.event;
+                sdl_api.EVENT_WINDOW => {
+                    const evt = sdl_api.getWindowEventId(&event);
                     window_flags.handleWindowEvent(evt, &self.should_close_flag, &self.window_resized_flag);
                     if (window_log.enabled_file or window_log.enabled_console) {
                         window_log.logf(
@@ -1080,7 +1081,7 @@ pub const Renderer = struct {
                         );
                     }
                 },
-                sdl.SDL_KEYDOWN => {
+                sdl_api.EVENT_KEY_DOWN => {
                     const key_info = platform_input_events.handleKeyDown(
                         &event,
                         self.key_down[0..],
@@ -1096,7 +1097,7 @@ pub const Renderer = struct {
                         );
                     }
                 },
-                sdl.SDL_KEYUP => {
+                sdl_api.EVENT_KEY_UP => {
                     const key_info = platform_input_events.handleKeyUp(
                         &event,
                         self.key_down[0..],
@@ -1109,7 +1110,7 @@ pub const Renderer = struct {
                         );
                     }
                 },
-                sdl.SDL_TEXTINPUT => {
+                sdl_api.EVENT_TEXT_INPUT => {
                     const text_len = platform_input_events.handleTextInput(
                         &event,
                         &self.char_queue,
@@ -1118,7 +1119,7 @@ pub const Renderer = struct {
                     input_state.applyTextInputReset(state);
                     input_logging.logTextInput(text_len);
                 },
-                sdl.SDL_TEXTEDITING => {
+                sdl_api.EVENT_TEXT_EDITING => {
                     const edit_info = platform_input_events.handleTextEditing(
                         &event,
                         &self.composing_text,
@@ -1129,21 +1130,21 @@ pub const Renderer = struct {
                     );
                     input_logging.logTextEditing(edit_info.bytes, edit_info.cursor, edit_info.selection_len);
                 },
-                sdl.SDL_MOUSEBUTTONDOWN => {
+                sdl_api.EVENT_MOUSE_BUTTON_DOWN => {
                     platform_input_events.handleMouseButtonDown(
                         &event,
                         self.mouse_down[0..],
                         self.mouse_pressed[0..],
                     );
                 },
-                sdl.SDL_MOUSEBUTTONUP => {
+                sdl_api.EVENT_MOUSE_BUTTON_UP => {
                     platform_input_events.handleMouseButtonUp(
                         &event,
                         self.mouse_down[0..],
                         self.mouse_released[0..],
                     );
                 },
-                sdl.SDL_MOUSEWHEEL => {
+                sdl_api.EVENT_MOUSE_WHEEL => {
                     mouse_wheel.add(&mouse_wheel_delta, platform_input_events.wheelDelta(&event));
                 },
                 else => {},
@@ -1174,7 +1175,7 @@ pub fn getTime() f64 {
 }
 
 pub fn setSdlLogLevel(level: c_int) void {
-    _ = sdl.SDL_LogSetAllPriority(@intCast(level));
+    sdl_api.logSetAllPriority(@intCast(level));
 }
 
 pub fn isWindowResized() bool {
