@@ -26,6 +26,54 @@ pub const EVENT_MOUSE_BUTTON_DOWN: c_uint = if (is_sdl3) c.SDL_EVENT_MOUSE_BUTTO
 pub const EVENT_MOUSE_BUTTON_UP: c_uint = if (is_sdl3) c.SDL_EVENT_MOUSE_BUTTON_UP else c.SDL_MOUSEBUTTONUP;
 pub const EVENT_MOUSE_WHEEL: c_uint = if (is_sdl3) c.SDL_EVENT_MOUSE_WHEEL else c.SDL_MOUSEWHEEL;
 
+pub const TextInputLayout = struct {
+    size: usize,
+    offset_type: ?usize,
+    offset_reserved: ?usize,
+    offset_timestamp: ?usize,
+    offset_window_id: ?usize,
+    offset_text: ?usize,
+};
+
+pub const TextEditingLayout = struct {
+    size: usize,
+    offset_type: ?usize,
+    offset_reserved: ?usize,
+    offset_timestamp: ?usize,
+    offset_window_id: ?usize,
+    offset_text: ?usize,
+    offset_start: ?usize,
+    offset_length: ?usize,
+    offset_cursor: ?usize,
+    offset_selection_len: ?usize,
+};
+
+pub fn textInputLayout() TextInputLayout {
+    return .{
+        .size = @sizeOf(c.SDL_TextInputEvent),
+        .offset_type = fieldOffset(c.SDL_TextInputEvent, "type"),
+        .offset_reserved = fieldOffset(c.SDL_TextInputEvent, "reserved"),
+        .offset_timestamp = fieldOffset(c.SDL_TextInputEvent, "timestamp"),
+        .offset_window_id = fieldOffset(c.SDL_TextInputEvent, "windowID"),
+        .offset_text = fieldOffset(c.SDL_TextInputEvent, "text"),
+    };
+}
+
+pub fn textEditingLayout() TextEditingLayout {
+    return .{
+        .size = @sizeOf(c.SDL_TextEditingEvent),
+        .offset_type = fieldOffset(c.SDL_TextEditingEvent, "type"),
+        .offset_reserved = fieldOffset(c.SDL_TextEditingEvent, "reserved"),
+        .offset_timestamp = fieldOffset(c.SDL_TextEditingEvent, "timestamp"),
+        .offset_window_id = fieldOffset(c.SDL_TextEditingEvent, "windowID"),
+        .offset_text = fieldOffset(c.SDL_TextEditingEvent, "text"),
+        .offset_start = fieldOffset(c.SDL_TextEditingEvent, "start"),
+        .offset_length = fieldOffset(c.SDL_TextEditingEvent, "length"),
+        .offset_cursor = fieldOffset(c.SDL_TextEditingEvent, "cursor"),
+        .offset_selection_len = fieldOffset(c.SDL_TextEditingEvent, "selection_len"),
+    };
+}
+
 pub fn isWindowEventType(event_type: c_uint) bool {
     if (is_sdl3) {
         if (@hasDecl(c, "SDL_EVENT_WINDOW_SHOWN") and event_type == c.SDL_EVENT_WINDOW_SHOWN) return true;
@@ -115,6 +163,20 @@ pub fn isCloseEvent(event_type: c_uint, window_event_id: u8) bool {
         return @hasDecl(c, "SDL_EVENT_WINDOW_CLOSE_REQUESTED") and event_type == c.SDL_EVENT_WINDOW_CLOSE_REQUESTED;
     }
     return window_event_id == c.SDL_WINDOWEVENT_CLOSE;
+}
+
+pub fn isFocusGainedEvent(event_type: c_uint, window_event_id: u8) bool {
+    if (is_sdl3) {
+        return @hasDecl(c, "SDL_EVENT_WINDOW_FOCUS_GAINED") and event_type == c.SDL_EVENT_WINDOW_FOCUS_GAINED;
+    }
+    return window_event_id == c.SDL_WINDOWEVENT_FOCUS_GAINED;
+}
+
+pub fn isFocusLostEvent(event_type: c_uint, window_event_id: u8) bool {
+    if (is_sdl3) {
+        return @hasDecl(c, "SDL_EVENT_WINDOW_FOCUS_LOST") and event_type == c.SDL_EVENT_WINDOW_FOCUS_LOST;
+    }
+    return window_event_id == c.SDL_WINDOWEVENT_FOCUS_LOST;
 }
 
 pub fn windowEventData1(event: *const c.SDL_Event) i32 {
@@ -297,6 +359,10 @@ pub fn pollEvent(event: *c.SDL_Event) bool {
     return c.SDL_PollEvent(event) != 0;
 }
 
+pub fn sdlEventSize() usize {
+    return @sizeOf(c.SDL_Event);
+}
+
 pub fn getMouseState(x: *c_int, y: *c_int) void {
     if (is_sdl3) {
         var fx: f32 = 0;
@@ -371,6 +437,14 @@ pub fn textInputLen(event: *const c.SDL_Event) usize {
     return 0;
 }
 
+pub fn textInputPointer(event: *const c.SDL_Event) ?usize {
+    const text = event.text;
+    if (@hasField(@TypeOf(text), "text")) {
+        return pointerValue(text.text);
+    }
+    return null;
+}
+
 pub fn textEditingSpan(event: *const c.SDL_Event) []const u8 {
     const edit = event.edit;
     if (@hasField(@TypeOf(edit), "text")) {
@@ -391,6 +465,14 @@ pub fn textEditingLen(event: *const c.SDL_Event) usize {
         return textSpan(edit.text).len;
     }
     return 0;
+}
+
+pub fn textEditingPointer(event: *const c.SDL_Event) ?usize {
+    const edit = event.edit;
+    if (@hasField(@TypeOf(edit), "text")) {
+        return pointerValue(edit.text);
+    }
+    return null;
 }
 
 pub fn textEditingCursor(event: *const c.SDL_Event) i32 {
@@ -420,6 +502,20 @@ fn textSpan(field: anytype) []const u8 {
         .pointer => std.mem.span(field),
         .array => std.mem.span(@as([*:0]const u8, @ptrCast(&field))),
         else => "",
+    };
+}
+
+fn fieldOffset(comptime T: type, comptime field: []const u8) ?usize {
+    if (@hasField(T, field)) {
+        return @offsetOf(T, field);
+    }
+    return null;
+}
+
+fn pointerValue(field: anytype) ?usize {
+    return switch (@typeInfo(@TypeOf(field))) {
+        .pointer => @intFromPtr(field),
+        else => null,
     };
 }
 
