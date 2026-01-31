@@ -20,7 +20,7 @@ sdl3_migration:
   phase_0_build:
     - id: S0-01
       title: "Add build option: -Dsdl-version=(sdl2|sdl3)"
-      status: pending
+      status: done
       files_to_edit:
         - build.zig
     - id: S0-02
