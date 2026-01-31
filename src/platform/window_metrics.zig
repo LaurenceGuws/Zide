@@ -1,6 +1,7 @@
 const app_logger = @import("../app_logger.zig");
 const iface = @import("../ui/renderer/interface.zig");
 const gl = @import("../ui/renderer/gl.zig");
+const sdl_api = @import("sdl_api.zig");
 
 const sdl = gl.c;
 
@@ -32,14 +33,14 @@ pub const DrawableSize = struct {
 pub fn getWindowSize(window: *sdl.SDL_Window) WindowSize {
     var w: c_int = 0;
     var h: c_int = 0;
-    sdl.SDL_GetWindowSize(window, &w, &h);
+    sdl_api.getWindowSize(window, &w, &h);
     return .{ .w = w, .h = h };
 }
 
 pub fn getDrawableSize(window: *sdl.SDL_Window) DrawableSize {
     var w: c_int = 0;
     var h: c_int = 0;
-    sdl.SDL_GL_GetDrawableSize(window, &w, &h);
+    sdl_api.getDrawableSize(window, &w, &h);
     return .{ .w = w, .h = h };
 }
 
@@ -59,9 +60,9 @@ pub fn getScreenSize(window: *sdl.SDL_Window) iface.MousePos {
 }
 
 pub fn getMonitorSize(window: *sdl.SDL_Window) iface.MousePos {
-    const display = sdl.SDL_GetWindowDisplayIndex(window);
+    const display = sdl_api.getWindowDisplayIndex(window);
     var rect: sdl.SDL_Rect = undefined;
-    if (display >= 0 and sdl.SDL_GetDisplayBounds(display, &rect) == 0) {
+    if (display >= 0 and sdl_api.getDisplayBounds(display, &rect)) {
         return .{ .x = @floatFromInt(rect.w), .y = @floatFromInt(rect.h) };
     }
     return getScreenSize(window);
@@ -70,11 +71,11 @@ pub fn getMonitorSize(window: *sdl.SDL_Window) iface.MousePos {
 pub fn collectWindowMetrics(window: *sdl.SDL_Window, reason: []const u8) WindowMetrics {
     const window_size = getWindowSize(window);
     const drawable = getDrawableSize(window);
-    const display = sdl.SDL_GetWindowDisplayIndex(window);
+    const display = sdl_api.getWindowDisplayIndex(window);
     var rect: sdl.SDL_Rect = .{ .x = 0, .y = 0, .w = 0, .h = 0 };
     var display_w: i32 = 0;
     var display_h: i32 = 0;
-    if (display >= 0 and sdl.SDL_GetDisplayBounds(display, &rect) == 0) {
+    if (display >= 0 and sdl_api.getDisplayBounds(display, &rect)) {
         display_w = rect.w;
         display_h = rect.h;
     }
@@ -82,13 +83,13 @@ pub fn collectWindowMetrics(window: *sdl.SDL_Window, reason: []const u8) WindowM
     var ddpi: f32 = 0;
     var hdpi: f32 = 0;
     var vdpi: f32 = 0;
-    _ = sdl.SDL_GetDisplayDPI(display, &ddpi, &hdpi, &vdpi);
+    _ = sdl_api.getDisplayDpi(display, &ddpi, &hdpi, &vdpi);
     const dpi = getDpiScale(window);
 
     var refresh_hz: i32 = 0;
     var mode: sdl.SDL_DisplayMode = undefined;
-    if (display >= 0 and sdl.SDL_GetCurrentDisplayMode(display, &mode) == 0) {
-        refresh_hz = mode.refresh_rate;
+    if (display >= 0 and sdl_api.getCurrentDisplayMode(display, &mode)) {
+        refresh_hz = sdl_api.displayModeRefreshHz(&mode);
     }
 
     const log = app_logger.logger("sdl.window");

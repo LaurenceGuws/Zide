@@ -33,30 +33,28 @@ sdl3_migration:
   phase_1_shim:
     - id: S1-01
       title: "Create SDL shim module (SDL2-backed)"
-      status: pending
+      status: done
       files_to_add:
         - src/platform/sdl_api.zig
       files_to_edit:
         - src/ui/renderer/gl.zig
-        - src/ui/renderer.zig
     - id: S1-02
       title: "Route window creation + GL context through shim"
-      status: pending
+      status: done
       files_to_edit:
         - src/ui/renderer/window_init.zig
-        - src/ui/renderer.zig
 
   phase_2_events:
     - id: S2-01
       title: "Shim event structs/enums for window + input"
-      status: pending
+      status: done
       files_to_edit:
         - src/platform/input_events.zig
         - src/platform/window_events.zig
         - src/ui/renderer.zig
     - id: S2-02
       title: "Shim text input + text editing payloads"
-      status: pending
+      status: done
       files_to_edit:
         - src/platform/input_events.zig
         - src/ui/renderer.zig

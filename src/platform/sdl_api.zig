@@ -1,0 +1,278 @@
+const std = @import("std");
+const build_options = @import("build_options");
+
+pub const is_sdl3 = std.mem.eql(u8, build_options.sdl_version, "sdl3");
+
+pub const c = @cImport({
+    if (is_sdl3) {
+        @cInclude("SDL3/SDL.h");
+        @cInclude("SDL3/SDL_opengl.h");
+    } else {
+        @cInclude("SDL2/SDL.h");
+        @cInclude("SDL2/SDL_opengl.h");
+    }
+});
+
+pub const EVENT_QUIT: c_uint = if (is_sdl3) c.SDL_EVENT_QUIT else c.SDL_QUIT;
+pub const EVENT_WINDOW: c_uint = if (is_sdl3)
+    if (@hasDecl(c, "SDL_EVENT_WINDOW")) c.SDL_EVENT_WINDOW else c.SDL_EVENT_WINDOW_SHOWN
+else
+    c.SDL_WINDOWEVENT;
+pub const EVENT_KEY_DOWN: c_uint = if (is_sdl3) c.SDL_EVENT_KEY_DOWN else c.SDL_KEYDOWN;
+pub const EVENT_KEY_UP: c_uint = if (is_sdl3) c.SDL_EVENT_KEY_UP else c.SDL_KEYUP;
+pub const EVENT_TEXT_INPUT: c_uint = if (is_sdl3) c.SDL_EVENT_TEXT_INPUT else c.SDL_TEXTINPUT;
+pub const EVENT_TEXT_EDITING: c_uint = if (is_sdl3) c.SDL_EVENT_TEXT_EDITING else c.SDL_TEXTEDITING;
+pub const EVENT_MOUSE_BUTTON_DOWN: c_uint = if (is_sdl3) c.SDL_EVENT_MOUSE_BUTTON_DOWN else c.SDL_MOUSEBUTTONDOWN;
+pub const EVENT_MOUSE_BUTTON_UP: c_uint = if (is_sdl3) c.SDL_EVENT_MOUSE_BUTTON_UP else c.SDL_MOUSEBUTTONUP;
+pub const EVENT_MOUSE_WHEEL: c_uint = if (is_sdl3) c.SDL_EVENT_MOUSE_WHEEL else c.SDL_MOUSEWHEEL;
+
+pub fn setHint(name: [*:0]const u8, value: [*:0]const u8) void {
+    _ = c.SDL_SetHint(name, value);
+}
+
+pub fn init(flags: c_uint) bool {
+    if (is_sdl3) {
+        return c.SDL_Init(flags);
+    }
+    return c.SDL_Init(flags) == 0;
+}
+
+pub fn defaultInitFlags() c_uint {
+    if (is_sdl3) {
+        return @intCast(c.SDL_INIT_VIDEO | c.SDL_INIT_EVENTS);
+    }
+    return @intCast(c.SDL_INIT_VIDEO | c.SDL_INIT_TIMER);
+}
+
+pub fn quit() void {
+    c.SDL_Quit();
+}
+
+pub const GlAttr = if (is_sdl3) c.SDL_GLAttr else c.SDL_GLattr;
+
+pub fn glSetAttribute(attr: GlAttr, value: c_int) void {
+    _ = c.SDL_GL_SetAttribute(attr, value);
+}
+
+pub fn createWindow(title: [*:0]const u8, width: c_int, height: c_int) ?*c.SDL_Window {
+    const high_dpi = if (@hasDecl(c, "SDL_WINDOW_HIGH_PIXEL_DENSITY"))
+        @as(c_uint, @intCast(c.SDL_WINDOW_HIGH_PIXEL_DENSITY))
+    else if (@hasDecl(c, "SDL_WINDOW_ALLOW_HIGHDPI"))
+        @as(c_uint, @intCast(c.SDL_WINDOW_ALLOW_HIGHDPI))
+    else
+        0;
+    const base_flags: c_uint = @intCast(c.SDL_WINDOW_OPENGL | c.SDL_WINDOW_RESIZABLE);
+    const flags: c_uint = base_flags | high_dpi;
+    if (is_sdl3) {
+        return c.SDL_CreateWindow(title, width, height, flags);
+    }
+    return c.SDL_CreateWindow(
+        title,
+        c.SDL_WINDOWPOS_CENTERED,
+        c.SDL_WINDOWPOS_CENTERED,
+        width,
+        height,
+        flags,
+    );
+}
+
+pub fn destroyWindow(window: *c.SDL_Window) void {
+    c.SDL_DestroyWindow(window);
+}
+
+pub fn glCreateContext(window: *c.SDL_Window) ?c.SDL_GLContext {
+    return c.SDL_GL_CreateContext(window);
+}
+
+pub fn glDeleteContext(context: c.SDL_GLContext) void {
+    if (@hasDecl(c, "SDL_GL_DestroyContext")) {
+        _ = c.SDL_GL_DestroyContext(context);
+    } else {
+        c.SDL_GL_DeleteContext(context);
+    }
+}
+
+pub fn getWindowSize(window: *c.SDL_Window, w: *c_int, h: *c_int) void {
+    if (is_sdl3) {
+        _ = c.SDL_GetWindowSize(window, w, h);
+    } else {
+        c.SDL_GetWindowSize(window, w, h);
+    }
+}
+
+pub fn getDrawableSize(window: *c.SDL_Window, w: *c_int, h: *c_int) void {
+    if (@hasDecl(c, "SDL_GL_GetDrawableSize")) {
+        c.SDL_GL_GetDrawableSize(window, w, h);
+    } else if (@hasDecl(c, "SDL_GetWindowSizeInPixels")) {
+        _ = c.SDL_GetWindowSizeInPixels(window, w, h);
+    } else {
+        getWindowSize(window, w, h);
+    }
+}
+
+pub fn getWindowDisplayIndex(window: *c.SDL_Window) i32 {
+    if (@hasDecl(c, "SDL_GetDisplayForWindow")) {
+        return @intCast(c.SDL_GetDisplayForWindow(window));
+    }
+    return c.SDL_GetWindowDisplayIndex(window);
+}
+
+pub fn getDisplayBounds(display: i32, rect: *c.SDL_Rect) bool {
+    if (@hasDecl(c, "SDL_GetDisplayBounds")) {
+        if (is_sdl3) {
+            return c.SDL_GetDisplayBounds(@intCast(display), rect);
+        }
+        return c.SDL_GetDisplayBounds(display, rect) == 0;
+    }
+    return false;
+}
+
+pub fn getDisplayDpi(display: i32, ddpi: *f32, hdpi: *f32, vdpi: *f32) bool {
+    if (@hasDecl(c, "SDL_GetDisplayDPI")) {
+        if (is_sdl3) {
+            return c.SDL_GetDisplayDPI(@intCast(display), ddpi, hdpi, vdpi);
+        }
+        return c.SDL_GetDisplayDPI(display, ddpi, hdpi, vdpi) == 0;
+    }
+    return false;
+}
+
+pub fn getCurrentDisplayMode(display: i32, mode: *c.SDL_DisplayMode) bool {
+    if (@hasDecl(c, "SDL_GetCurrentDisplayMode")) {
+        if (is_sdl3) {
+            const mode_ptr = c.SDL_GetCurrentDisplayMode(@intCast(display));
+            if (mode_ptr == null) return false;
+            mode.* = mode_ptr.*;
+            return true;
+        }
+        return c.SDL_GetCurrentDisplayMode(display, mode) == 0;
+    }
+    return false;
+}
+
+pub fn startTextInput(window: ?*c.SDL_Window) void {
+    if (is_sdl3) {
+        _ = c.SDL_StartTextInput(window);
+    } else {
+        c.SDL_StartTextInput();
+    }
+}
+
+pub fn stopTextInput(window: ?*c.SDL_Window) void {
+    if (is_sdl3) {
+        _ = c.SDL_StopTextInput(window);
+    } else {
+        c.SDL_StopTextInput();
+    }
+}
+
+pub fn waitEventTimeout(event: *c.SDL_Event, timeout_ms: c_int) bool {
+    if (is_sdl3) {
+        return c.SDL_WaitEventTimeout(event, timeout_ms);
+    }
+    return c.SDL_WaitEventTimeout(event, timeout_ms) != 0;
+}
+
+pub fn pollEvent(event: *c.SDL_Event) bool {
+    if (is_sdl3) {
+        return c.SDL_PollEvent(event);
+    }
+    return c.SDL_PollEvent(event) != 0;
+}
+
+pub fn getMouseState(x: *c_int, y: *c_int) void {
+    if (is_sdl3) {
+        var fx: f32 = 0;
+        var fy: f32 = 0;
+        _ = c.SDL_GetMouseState(&fx, &fy);
+        x.* = @intFromFloat(fx);
+        y.* = @intFromFloat(fy);
+    } else {
+        _ = c.SDL_GetMouseState(x, y);
+    }
+}
+
+pub fn keyScancode(event: *const c.SDL_Event) i32 {
+    const key = event.key;
+    if (@hasField(@TypeOf(key), "keysym")) {
+        return @intCast(key.keysym.scancode);
+    }
+    if (@hasField(@TypeOf(key), "scancode")) {
+        return @intCast(key.scancode);
+    }
+    return -1;
+}
+
+pub fn keySym(event: *const c.SDL_Event) i32 {
+    const key = event.key;
+    if (@hasField(@TypeOf(key), "keysym")) {
+        return @intCast(key.keysym.sym);
+    }
+    if (@hasField(@TypeOf(key), "key")) {
+        return @intCast(key.key);
+    }
+    return 0;
+}
+
+pub fn keyRepeat(event: *const c.SDL_Event) u8 {
+    const key = event.key;
+    if (@hasField(@TypeOf(key), "repeat")) {
+        if (is_sdl3) {
+            return if (key.repeat) 1 else 0;
+        }
+        return @intCast(key.repeat);
+    }
+    return 0;
+}
+
+pub fn wheelDelta(event: *const c.SDL_Event) f32 {
+    if (is_sdl3) {
+        return @as(f32, event.wheel.y);
+    }
+    return @floatFromInt(event.wheel.y);
+}
+
+pub fn glMakeCurrent(window: *c.SDL_Window, context: c.SDL_GLContext) void {
+    _ = c.SDL_GL_MakeCurrent(window, context);
+}
+
+pub fn glSetSwapInterval(interval: c_int) void {
+    _ = c.SDL_GL_SetSwapInterval(interval);
+}
+
+pub fn glSwapWindow(window: *c.SDL_Window) void {
+    _ = c.SDL_GL_SwapWindow(window);
+}
+
+pub fn displayModeRefreshHz(mode: *const c.SDL_DisplayMode) i32 {
+    if (is_sdl3) {
+        return @intFromFloat(mode.refresh_rate);
+    }
+    return @intCast(mode.refresh_rate);
+}
+
+pub fn getWindowEventId(event: *const c.SDL_Event) u8 {
+    if (is_sdl3) {
+        return 0;
+    }
+    return event.window.event;
+}
+
+pub fn logSetAllPriority(priority: c.SDL_LogPriority) void {
+    if (@hasDecl(c, "SDL_SetLogPriorities")) {
+        _ = c.SDL_SetLogPriorities(priority);
+    } else {
+        _ = c.SDL_LogSetAllPriority(priority);
+    }
+}
+
+pub fn setTextInputRect(rect: *c.SDL_Rect) void {
+    if (@hasDecl(c, "SDL_SetTextInputRect")) {
+        _ = c.SDL_SetTextInputRect(rect);
+    }
+}
+
+pub const scancode_count: usize = if (is_sdl3)
+    if (@hasDecl(c, "SDL_SCANCODE_COUNT")) @intCast(c.SDL_SCANCODE_COUNT) else 512
+else
+    @intCast(c.SDL_NUM_SCANCODES);

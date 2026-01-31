@@ -1,5 +1,6 @@
 const std = @import("std");
 const gl = @import("gl.zig");
+const sdl_api = @import("../../platform/sdl_api.zig");
 
 const sdl = gl.c;
 
@@ -129,10 +130,10 @@ pub const SdlInput = struct {
 fn threadMain(self: *SdlInput) void {
     var event: sdl.SDL_Event = undefined;
     while (self.thread_running.load(.acquire)) {
-        if (sdl.SDL_WaitEventTimeout(&event, 8) != 0) {
+        if (sdl_api.waitEventTimeout(&event, 8)) {
             self.queue.push(event);
             self.wake();
-            while (sdl.SDL_PollEvent(&event) != 0) {
+            while (sdl_api.pollEvent(&event)) {
                 self.queue.push(event);
             }
             self.wake();

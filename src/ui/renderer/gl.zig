@@ -1,9 +1,7 @@
 const std = @import("std");
+const sdl_api = @import("../../platform/sdl_api.zig");
 
-pub const c = @cImport({
-    @cInclude("SDL2/SDL.h");
-    @cInclude("SDL2/SDL_opengl.h");
-});
+pub const c = sdl_api.c;
 
 pub const GLenum = c.GLenum;
 pub const GLuint = c.GLuint;
