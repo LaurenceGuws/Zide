@@ -227,17 +227,7 @@ pub const TerminalWidget = struct {
     ) void {
         const draw_start = app_shell.getTime();
         const r = shell.rendererPtr();
-        if (!self.session.tryLock()) {
-            r.drawRect(
-                @intFromFloat(x),
-                @intFromFloat(y),
-                @intFromFloat(width),
-                @intFromFloat(height),
-                r.theme.background,
-            );
-            r.drawTerminalTexture(x, y);
-            return;
-        }
+        self.session.lock();
         const sync_updates = self.session.syncUpdatesActive();
         if (sync_updates and self.session.view_cells.items.len > 0) {
             const view_cells = self.session.view_cells.items;
@@ -281,6 +271,10 @@ pub const TerminalWidget = struct {
         const selection = self.session.selectionState();
         const kitty_generation = snapshot.kitty_generation;
         var use_cached_view = false;
+
+        if (!snapshot.alt_active and (scroll_changed or self.session.view_cache_pending.load(.acquire))) {
+            self.session.updateViewCacheForScrollLocked();
+        }
 
         if (rows > 0 and cols > 0) {
             if (scroll_offset == 0) {
@@ -1196,6 +1190,7 @@ pub const TerminalWidget = struct {
         const end_line = total_lines - scroll_offset;
         const start_line = if (end_line > rows) end_line - rows else 0;
         const max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
+        const scroll_log = app_logger.logger("terminal.scroll");
 
         const r = shell.rendererPtr();
         self.updateHoverState(
@@ -1948,6 +1943,9 @@ pub const TerminalWidget = struct {
                 if (wheel_steps != 0) {
                     const delta: isize = @intCast(wheel_steps * 3);
                     self.session.scrollBy(delta);
+                    if (scroll_log.enabled_file or scroll_log.enabled_console) {
+                        scroll_log.logf("scroll wheel delta={d}", .{delta});
+                    }
                     handled = true;
                 }
             }
@@ -1970,6 +1968,9 @@ pub const TerminalWidget = struct {
                         1.0;
                     const thumb_y = scrollbar_y + available * ratio;
                     scroll_grab_offset.* = mouse.y - thumb_y;
+                    if (scroll_log.enabled_file or scroll_log.enabled_console) {
+                        scroll_log.logf("scrollbar press offset={d}", .{scroll_offset_local});
+                    }
                     handled = true;
                 }
             }
@@ -1987,6 +1988,9 @@ pub const TerminalWidget = struct {
                     const ratio = if (available > 0) (clamped_mouse - scrollbar_y) / available else 0;
                     const target_offset = @as(usize, @intFromFloat(@round(@as(f32, @floatFromInt(max_scroll_offset)) * (1.0 - ratio))));
                     self.session.setScrollOffset(target_offset);
+                    if (scroll_log.enabled_file or scroll_log.enabled_console) {
+                        scroll_log.logf("scrollbar drag offset={d} ratio={d:.3}", .{ target_offset, ratio });
+                    }
                     handled = true;
                 } else {
                     scroll_dragging.* = false;
