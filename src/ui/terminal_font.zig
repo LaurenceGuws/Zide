@@ -640,11 +640,7 @@ pub const TerminalFont = struct {
 
         const path = std.mem.sliceTo(@as([*:0]const u8, @ptrCast(file_ptr)), 0);
         if (self.system_faces.getEntry(path)) |entry| {
-            const owned_path = self.allocator.dupe(u8, entry.key_ptr.*) catch return null;
-            _ = self.system_fallback_by_cp.put(codepoint, owned_path) catch {
-                self.allocator.free(owned_path);
-                return null;
-            };
+            _ = self.system_fallback_by_cp.put(codepoint, @constCast(entry.key_ptr.*)) catch return null;
             return entry.value_ptr.*;
         }
 

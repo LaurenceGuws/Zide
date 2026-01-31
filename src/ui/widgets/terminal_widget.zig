@@ -421,6 +421,7 @@ pub const TerminalWidget = struct {
                 base_x_local: f32,
                 base_y_local: f32,
                 padding_x_i: i32,
+                draw_padding: bool,
             ) void {
                 const rr = renderer.rendererPtr();
                 const cell_w_i: i32 = @intFromFloat(std.math.round(rr.terminal_cell_width));
@@ -470,7 +471,7 @@ pub const TerminalWidget = struct {
                     }
                 }
 
-                if (padding_x_i > 0 and cols_count > 0) {
+                if (draw_padding and padding_x_i > 0 and cols_count > 0) {
                     const last_cell = row_cells[cols_count - 1];
                     const padding_bg = Color{
                         .r = last_cell.attrs.bg.r,
@@ -607,7 +608,7 @@ pub const TerminalWidget = struct {
                     r.addTerminalRect(0, 0, texture_w, texture_h, bg);
                     var row: usize = 0;
                     while (row < rows) : (row += 1) {
-                        drawRowBackgrounds(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i);
+                        drawRowBackgrounds(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, true);
                     }
                     r.flushTerminalBatch();
                     if (has_kitty) {
@@ -634,12 +635,13 @@ pub const TerminalWidget = struct {
                                 col_start = @min(@as(usize, self.session.view_dirty_cols_start.items[row]), cols - 1);
                                 col_end = @min(@as(usize, self.session.view_dirty_cols_end.items[row]), cols - 1);
                             }
-                            drawRowBackgrounds(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i);
+                            const draw_padding = col_end >= cols - 1;
+                            drawRowBackgrounds(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding);
                             if (row > 0) {
-                                drawRowBackgrounds(shell, view_cells, cols, row - 1, col_start, col_end, base_x_local, base_y_local, padding_x_i);
+                                drawRowBackgrounds(shell, view_cells, cols, row - 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding);
                             }
                             if (row + 1 < rows) {
-                                drawRowBackgrounds(shell, view_cells, cols, row + 1, col_start, col_end, base_x_local, base_y_local, padding_x_i);
+                                drawRowBackgrounds(shell, view_cells, cols, row + 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding);
                             }
                         }
                     }
