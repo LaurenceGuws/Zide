@@ -344,8 +344,8 @@ pub const Renderer = struct {
             .should_close_flag = false,
             .window_resized_flag = false,
             .text_input_state = text_input.initState(),
-            .start_counter = sdl.SDL_GetPerformanceCounter(),
-            .perf_freq = @as(f64, @floatFromInt(sdl.SDL_GetPerformanceFrequency())),
+            .start_counter = sdl_api.getPerformanceCounter(),
+            .perf_freq = @as(f64, @floatFromInt(sdl_api.getPerformanceFrequency())),
         };
 
         try renderer.initGlResources();

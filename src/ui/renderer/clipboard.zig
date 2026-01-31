@@ -1,18 +1,14 @@
 const std = @import("std");
-const gl = @import("gl.zig");
-const sdl = gl.c;
+const sdl_api = @import("../../platform/sdl_api.zig");
 
 pub fn setText(text: [*:0]const u8) void {
-    _ = sdl.SDL_SetClipboardText(text);
+    sdl_api.setClipboardText(text);
 }
 
-pub fn getText() ?[]u8 {
-    const ptr = sdl.SDL_GetClipboardText();
-    if (ptr == null) return null;
-    const slice = std.mem.span(ptr);
-    return slice;
+pub fn getText() ?[]const u8 {
+    return sdl_api.getClipboardText();
 }
 
-pub fn freeText(text: []u8) void {
-    sdl.SDL_free(@ptrCast(text.ptr));
+pub fn freeText(text: []const u8) void {
+    sdl_api.freeClipboardText(text);
 }

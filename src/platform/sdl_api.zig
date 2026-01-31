@@ -421,6 +421,27 @@ pub fn setTextInputRect(rect: *c.SDL_Rect) void {
     }
 }
 
+pub fn getPerformanceCounter() u64 {
+    return c.SDL_GetPerformanceCounter();
+}
+
+pub fn getPerformanceFrequency() u64 {
+    return c.SDL_GetPerformanceFrequency();
+}
+
+pub fn setClipboardText(text: [*:0]const u8) void {
+    _ = c.SDL_SetClipboardText(text);
+}
+
+pub fn getClipboardText() ?[]const u8 {
+    const ptr = c.SDL_GetClipboardText() orelse return null;
+    return std.mem.span(ptr);
+}
+
+pub fn freeClipboardText(text: []const u8) void {
+    c.SDL_free(@constCast(text.ptr));
+}
+
 pub const scancode_count: usize = if (is_sdl3)
     if (@hasDecl(c, "SDL_SCANCODE_COUNT")) @intCast(c.SDL_SCANCODE_COUNT) else 512
 else
