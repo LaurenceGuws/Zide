@@ -25,34 +25,26 @@ A modern, cross-platform IDE for Zig development, built entirely in Zig.
 
 ```bash
 # Arch Linux
-sudo pacman -S zig freetype2 harfbuzz sdl2 wayland wayland-protocols libxkbcommon mesa lua
-# SDL3 (optional)
-sudo pacman -S sdl3
+sudo pacman -S zig freetype2 harfbuzz sdl3 wayland wayland-protocols libxkbcommon mesa lua
 
 # Ubuntu/Debian
-sudo apt install zig libfreetype-dev libharfbuzz-dev libsdl2-dev libwayland-dev wayland-protocols libxkbcommon-dev libgl-dev libegl-dev liblua5.4-dev
-# SDL3 (optional)
-sudo apt install libsdl3-dev
+sudo apt install zig libfreetype-dev libharfbuzz-dev libsdl3-dev libwayland-dev wayland-protocols libxkbcommon-dev libgl-dev libegl-dev liblua5.4-dev
 
 # Fedora
-sudo dnf install zig freetype-devel harfbuzz-devel SDL2-devel wayland-devel wayland-protocols-devel libxkbcommon-devel mesa-libGL-devel mesa-libEGL-devel lua-devel
-# SDL3 (optional)
-sudo dnf install SDL3-devel
+sudo dnf install zig freetype-devel harfbuzz-devel SDL3-devel wayland-devel wayland-protocols-devel libxkbcommon-devel mesa-libGL-devel mesa-libEGL-devel lua-devel
 ```
 
 ### macOS
 
 ```bash
-brew install zig freetype harfbuzz sdl2
-# SDL3 (optional)
-brew install sdl3
+brew install zig freetype harfbuzz sdl3
 ```
 
 ### Windows
 
 - Install [Zig](https://ziglang.org/download/)
 - Visual Studio Build Tools (for MSVC linker)
-- SDL2 development libraries (SDL3 optional; vcpkg or MSYS2 recommended)
+- SDL3 development libraries (vcpkg or MSYS2 recommended)
 
 ## Bootstrap
 

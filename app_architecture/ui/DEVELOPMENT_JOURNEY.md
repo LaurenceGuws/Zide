@@ -5,15 +5,14 @@ Goal
 - Treat reference repos as canonical. We only diverge when required by Zide's code or to exceed the reference quality.
 
 Status (2026-01-29)
-- SDL2 window/input + OpenGL 3.3 renderer is now the active stack on Linux.
-- Known issue: runtime is currently picking up SDL3 (log shows SDL 3.x). We want SDL2 for parity; track in renderer plan.
+- SDL3 window/input + OpenGL 3.3 renderer is now the active stack on Linux.
 - Raylib has been removed from the build path; PNG decoding is handled via stb_image.
 - Fixed texture UV orientation: CPU textures use top-left UVs; FBO blits flip Y at draw time.
 - Wayland mouse scale uses SDL's drawable/window ratio only; avoid double-applying compositor scale.
 - Undo repeat loop fixed by removing input-level undo grouping and ignoring text events while ctrl/alt/super are held.
 - Key repeat now uses SDL's native key repeat events (no custom repeat timers) to align with terminal/editor input behavior.
-- SDL event polling now runs on a dedicated input thread with a lock-protected queue to decouple input latency from render work (aligned with kitty's IO loop and ghostty's thread-based event handling).
-- Idle sleep now waits on a condition variable signaled by the input thread to reduce input-to-frame latency when idle.
+- SDL event polling now runs on the main thread to match SDL3 thread-safety rules.
+- Idle sleep uses SDL_Delay; input polling happens each frame.
 - Added input latency logging (poll/build/update/draw timings) under `input.latency` for bottleneck tracing.
 - Added terminal perf logs: `terminal.parse` (parse_ms/bytes) and `terminal.draw` (draw_ms + grid size) to isolate input latency bottlenecks.
 - Parse loop now reduces work when input is pending, and perf logs are throttled to avoid spam.
@@ -24,7 +23,7 @@ Status (2026-01-29)
 - Selection highlight spans are cached alongside the view snapshot to avoid per-frame selection range scans.
 - Kitty image uploads are now queued and uploaded in a per-frame budget to avoid large render-thread spikes.
 - Renderer modularization + OS abstraction work is tracked in `app_architecture/ui/renderer_todo.yaml` (now boundary-focused, extraction complete).
-- SDL3 migration: SDL3 is now the default build; SDL2 remains available via `-Dsdl-version=sdl2` during validation.
+- SDL3 migration: SDL3-only build path; SDL2 fallback removed.
 - SDL3 terminal-only input now flows on Wayland when polling events on the main thread.
 - SDL3 input diagnostics log event counts, struct layout offsets, and text payload pointer addresses to validate event parsing.
 - Renderer cleanup continues: input constants, clipboard helpers, texture utilities, window event helpers, text input rect handling, timing helpers, input event helpers, SDL window/GL context init, input state helpers, mouse state helpers, window metrics helpers, input queue helpers, UI scale helpers, render target helpers, text draw helpers, GL resource helpers, draw batch helpers, target draw helpers, key state helpers, shape helpers, shape draw helpers, terminal glyph helpers, clipboard buffer helpers, terminal underline helpers, mouse button helpers, texture draw helpers, text composition helpers, window flag helpers, mouse wheel helpers, input logging helpers, window metrics state, and key queue helpers extracted into renderer/platform modules (see renderer_todo).
@@ -37,7 +36,7 @@ Canonical references (do not diverge without a documented reason)
   - reference_repos/terminals/ghostty/README.md
 - alacritty: OpenGL terminal renderer architecture.
   - reference_repos/terminals/alacritty/README.md
-- lite-xl: SDL2 window/input layer for a GUI editor.
+- lite-xl: SDL window/input layer for a GUI editor.
   - reference_repos/editors/lite-xl/README.md
 - zed: Metal on macOS, Vulkan on Linux (GPU-first UI framework).
   - reference_repos/editors/zed/docs/src/macos.md
@@ -50,10 +49,10 @@ Non-negotiable rules
 
 Architecture (modular, interface-driven)
 
-1) Windowing + input (SDL2)
-- SDL2 provides window creation, input, and platform glue.
+1) Windowing + input (SDL3)
+- SDL3 provides window creation, input, and platform glue.
 - This is directly aligned with lite-xl.
-- Android uses SDL2's Android backend (SDL handles the activity and surface lifecycle).
+- Android uses SDL's Android backend (SDL handles the activity and surface lifecycle).
 
 2) Renderer API (backend-agnostic)
 - The UI code talks to a small, stable renderer interface.
@@ -89,7 +88,7 @@ Rendering model (from kitty/alacritty)
 
 Module layout (target)
 - src/app_shell.zig
-  - SDL2 window and input, owns renderer instance
+  - SDL window and input, owns renderer instance
 - src/ui/renderer/
   - renderer.zig (backend-agnostic interface)
   - draw_list.zig (ops + batching format)
@@ -105,23 +104,23 @@ Module layout (target)
 
 Per-OS implementation plan (Linux first)
 
-Phase 1 - Linux (SDL2 + OpenGL)
-- Create SDL2 window and OpenGL context. (done)
+Phase 1 - Linux (SDL3 + OpenGL)
+- Create SDL window and OpenGL context. (done)
 - Implement the renderer interface with OpenGL 3.3. (done; immediate-mode quad pipeline)
 - Bring up text rendering with a GPU atlas (kitty/alacritty model). (done; FreeType + GL atlas)
 - Add SDL text composition (IME) handling + text input rect updates for editor/terminal. (done)
 - Draw list supports rects, text runs, and clip rects. (pending; immediate-mode for now)
 - Replace raylib usage in renderer only (no UI behavior changes). (done)
 
-Phase 2 - Windows 11 (SDL2 + OpenGL)
+Phase 2 - Windows 11 (SDL3 + OpenGL)
 - Use same OpenGL backend via WGL or EGL/ANGLE.
 - Validate input, DPI scaling, and swapchain behavior.
 
-Phase 3 - macOS (SDL2 + Metal)
+Phase 3 - macOS (SDL3 + Metal)
 - Add a Metal backend and keep the renderer interface identical.
 - Use CoreText only if required; otherwise keep FreeType/HarfBuzz.
 
-Phase 4 - Android (SDL2 + OpenGL ES)
+Phase 4 - Android (SDL3 + OpenGL ES)
 - GLES backend with the same draw list format.
 - Handle activity pause/resume, surface loss, and context recreation.
 
