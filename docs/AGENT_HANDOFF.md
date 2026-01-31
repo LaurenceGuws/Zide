@@ -16,7 +16,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 ## Handoff (High-Level)
 
 ### Current Focus
-- SDL3 migration behind build flag (`-Dsdl-version=sdl3`) with SDL2 as default. See `app_architecture/ui/sdl3_migration_todo.yaml`.
+- SDL3 migration: SDL3 is now the default build; SDL2 remains available via `-Dsdl-version=sdl2` during validation. See `app_architecture/ui/sdl3_migration_todo.yaml`.
 - SDL3 input parity: terminal-only mode on Wayland now delivers printable text when built with SDL3; continue validation + cleanup.
 
 ### Recent Changes (High-Level)
@@ -37,7 +37,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - Undo loop notes: `app_architecture/ui/DEVELOPMENT_JOURNEY.md` (known issue entry).
 
 ### Known Risk (High-Level)
-- SDL2 remains default until SDL3 validation is complete.
+- SDL2 remains available as a fallback while SDL3 validation completes.
 - Incremental highlight edits can still be fragile; see TS-04 notes in the todo.
 
 ### In-Progress (Uncommitted)
