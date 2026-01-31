@@ -151,7 +151,7 @@ pub fn sendKey(pty: *pty_mod.Pty, key: types.Key, mod: types.Modifier, key_mode_
 
 pub fn sendKeyAction(pty: *pty_mod.Pty, key: types.Key, mod: types.Modifier, key_mode_flags: u32, action: KeyAction) !bool {
     if (sendKeyWithProtocol(pty, key, mod, key_mode_flags, action)) return true;
-    if (action != .press) return false;
+    if (action == .release) return false;
     return sendKey(pty, key, mod, key_mode_flags);
 }
 
