@@ -50,6 +50,9 @@ const sdl = gl.c;
 
 var active_renderer: ?*Renderer = null;
 var mouse_wheel_delta: f32 = 0.0;
+var sdl3_textinput_layout_logged: bool = false;
+var sdl3_textediting_layout_logged: bool = false;
+var sdl_input_env_logged: bool = false;
 
 pub const FontFamily = iface.FontFamily;
 pub const FONT_FAMILY = iface.FONT_FAMILY;
@@ -365,7 +368,9 @@ pub const Renderer = struct {
     fn initInputThread(self: *Renderer) !void {
         try self.sdl_input.init(self.allocator, input_queue_capacity);
         errdefer self.sdl_input.deinit(self.allocator);
-        try self.sdl_input.startThread();
+        if (!sdl_api.is_sdl3) {
+            try self.sdl_input.startThread();
+        }
     }
 
     pub fn deinit(self: *Renderer) void {
@@ -1051,6 +1056,13 @@ pub const Renderer = struct {
     fn pollInputEvents(self: *Renderer) void {
         const input_log = app_logger.logger("input.sdl");
         const window_log = app_logger.logger("sdl.window");
+        if (!sdl_input_env_logged and (input_log.enabled_file or input_log.enabled_console)) {
+            input_log.logf(
+                "sdl build_version={s} is_sdl3={d} event_size={d}",
+                .{ build_options.sdl_version, @intFromBool(sdl_api.is_sdl3), sdl_api.sdlEventSize() },
+            );
+            sdl_input_env_logged = true;
+        }
         const state = input_state.InputState{
             .key_down = self.key_down[0..],
             .key_pressed = self.key_pressed[0..],
@@ -1071,109 +1083,204 @@ pub const Renderer = struct {
         input_state.resetForFrame(state);
         mouse_wheel.reset(&mouse_wheel_delta);
 
+        if (sdl_api.is_sdl3) {
+            var event: sdl.SDL_Event = undefined;
+            var event_count: usize = 0;
+            while (sdl_api.pollEvent(&event)) {
+                event_count += 1;
+                self.handleEvent(&event, input_log, window_log, state);
+            }
+            if ((input_log.enabled_file or input_log.enabled_console) and event_count > 0) {
+                input_log.logf("sdl3 polled events={d}", .{event_count});
+            }
+            return;
+        }
+
         const events = input_queue.drain(&self.sdl_input);
-        for (events) |event| {
-            switch (event.type) {
-                sdl_api.EVENT_QUIT => {
-                    self.should_close_flag = true;
-                },
-                sdl_api.EVENT_WINDOW => {
-                    const evt = sdl_api.getWindowEventId(&event);
+        for (events) |*event| {
+            self.handleEvent(event, input_log, window_log, state);
+        }
+    }
+
+    fn handleEvent(
+        self: *Renderer,
+        event: *const sdl.SDL_Event,
+        input_log: app_logger.Logger,
+        window_log: app_logger.Logger,
+        state: input_state.InputState,
+    ) void {
+        switch (event.type) {
+            sdl_api.EVENT_QUIT => {
+                self.should_close_flag = true;
+            },
+            sdl_api.EVENT_WINDOW => {
+                const evt = sdl_api.getWindowEventId(event);
+                window_flags.handleWindowEvent(event.type, evt, &self.should_close_flag, &self.window_resized_flag);
+                if (sdl_api.isFocusGainedEvent(event.type, evt)) {
+                    sdl_api.startTextInput(self.window);
+                    text_input.reapplyRect(&self.text_input_state, self.window);
+                }
+                if (sdl_api.isFocusLostEvent(event.type, evt)) {
+                    sdl_api.stopTextInput(self.window);
+                }
+                if (window_log.enabled_file or window_log.enabled_console) {
+                    window_log.logf(
+                        "event={s} data1={d} data2={d}",
+                        .{
+                            sdl_api.windowEventName(event.type, evt),
+                            sdl_api.windowEventData1(event),
+                            sdl_api.windowEventData2(event),
+                        },
+                    );
+                }
+            },
+            sdl_api.EVENT_KEY_DOWN => {
+                const key_info = platform_input_events.handleKeyDown(
+                    event,
+                    self.key_down[0..],
+                    self.key_pressed[0..],
+                    self.key_repeated[0..],
+                    &self.key_queue,
+                    self.allocator,
+                );
+                if (input_log.enabled_file or input_log.enabled_console) {
+                    input_log.logf(
+                        "keydown sc={d} sym={d} repeat={d}",
+                        .{ key_info.scancode, key_info.sym, key_info.repeat },
+                    );
+                }
+            },
+            sdl_api.EVENT_KEY_UP => {
+                const key_info = platform_input_events.handleKeyUp(
+                    event,
+                    self.key_down[0..],
+                    self.key_released[0..],
+                );
+                if (input_log.enabled_file or input_log.enabled_console) {
+                    input_log.logf(
+                        "keyup sc={d} sym={d}",
+                        .{ key_info.scancode, key_info.sym },
+                    );
+                }
+            },
+            sdl_api.EVENT_TEXT_INPUT => {
+                const text_len = platform_input_events.handleTextInput(
+                    event,
+                    &self.char_queue,
+                    self.allocator,
+                );
+                input_state.applyTextInputReset(state);
+                input_logging.logTextInput(text_len);
+                if (input_log.enabled_file or input_log.enabled_console) {
+                    input_log.logf("textinput type={d}", .{event.type});
+                }
+                if (sdl_api.is_sdl3 and !sdl3_textinput_layout_logged and (input_log.enabled_file or input_log.enabled_console)) {
+                    const layout = sdl_api.textInputLayout();
+                    input_logging.logTextInputLayout(
+                        layout.size,
+                        sdl_api.sdlEventSize(),
+                        layout.offset_type,
+                        layout.offset_reserved,
+                        layout.offset_timestamp,
+                        layout.offset_window_id,
+                        layout.offset_text,
+                    );
+                    input_logging.logEventBytes("textinput event", std.mem.asBytes(event));
+                    sdl3_textinput_layout_logged = true;
+                }
+                input_logging.logTextInputPointer(text_len, sdl_api.textInputPointer(event));
+                if (text_len > 0) {
+                    const text_field = event.text;
+                    const text = if (@hasField(@TypeOf(text_field), "text"))
+                        sdl_api.textSpanWithLen(text_field.text, text_len)
+                    else
+                        "";
+                    input_logging.logTextInputRaw(text);
+                }
+            },
+            sdl_api.EVENT_TEXT_EDITING => {
+                const edit_info = platform_input_events.handleTextEditing(
+                    event,
+                    &self.composing_text,
+                    &self.composing_cursor,
+                    &self.composing_selection_len,
+                    &self.composing_active,
+                    self.allocator,
+                );
+                input_logging.logTextEditing(edit_info.bytes, edit_info.cursor, edit_info.selection_len);
+                if (sdl_api.is_sdl3 and !sdl3_textediting_layout_logged and (input_log.enabled_file or input_log.enabled_console)) {
+                    const layout = sdl_api.textEditingLayout();
+                    input_logging.logTextEditingLayout(
+                        layout.size,
+                        sdl_api.sdlEventSize(),
+                        layout.offset_type,
+                        layout.offset_reserved,
+                        layout.offset_timestamp,
+                        layout.offset_window_id,
+                        layout.offset_text,
+                        layout.offset_start,
+                        layout.offset_length,
+                        layout.offset_cursor,
+                        layout.offset_selection_len,
+                    );
+                    input_logging.logEventBytes("textedit event", std.mem.asBytes(event));
+                    sdl3_textediting_layout_logged = true;
+                }
+                input_logging.logTextEditingPointer(
+                    edit_info.bytes,
+                    edit_info.cursor,
+                    edit_info.selection_len,
+                    sdl_api.textEditingPointer(event),
+                );
+                if (edit_info.bytes > 0) {
+                    const edit_field = event.edit;
+                    const text = if (@hasField(@TypeOf(edit_field), "text"))
+                        sdl_api.textSpanWithLen(edit_field.text, edit_info.bytes)
+                    else
+                        "";
+                    input_logging.logTextEditingRaw(text, edit_info.cursor, edit_info.selection_len);
+                }
+            },
+            sdl_api.EVENT_MOUSE_BUTTON_DOWN => {
+                platform_input_events.handleMouseButtonDown(
+                    event,
+                    self.mouse_down[0..],
+                    self.mouse_pressed[0..],
+                );
+            },
+            sdl_api.EVENT_MOUSE_BUTTON_UP => {
+                platform_input_events.handleMouseButtonUp(
+                    event,
+                    self.mouse_down[0..],
+                    self.mouse_released[0..],
+                );
+            },
+            sdl_api.EVENT_MOUSE_WHEEL => {
+                mouse_wheel.add(&mouse_wheel_delta, platform_input_events.wheelDelta(event));
+            },
+            else => {
+                if (sdl_api.isWindowEventType(event.type)) {
+                    const evt = sdl_api.getWindowEventId(event);
                     window_flags.handleWindowEvent(event.type, evt, &self.should_close_flag, &self.window_resized_flag);
+                    if (sdl_api.isFocusGainedEvent(event.type, evt)) {
+                        sdl_api.startTextInput(self.window);
+                        text_input.reapplyRect(&self.text_input_state, self.window);
+                    }
+                    if (sdl_api.isFocusLostEvent(event.type, evt)) {
+                        sdl_api.stopTextInput(self.window);
+                    }
                     if (window_log.enabled_file or window_log.enabled_console) {
                         window_log.logf(
                             "event={s} data1={d} data2={d}",
                             .{
                                 sdl_api.windowEventName(event.type, evt),
-                                sdl_api.windowEventData1(&event),
-                                sdl_api.windowEventData2(&event),
+                                sdl_api.windowEventData1(event),
+                                sdl_api.windowEventData2(event),
                             },
                         );
                     }
-                },
-                sdl_api.EVENT_KEY_DOWN => {
-                    const key_info = platform_input_events.handleKeyDown(
-                        &event,
-                        self.key_down[0..],
-                        self.key_pressed[0..],
-                        self.key_repeated[0..],
-                        &self.key_queue,
-                        self.allocator,
-                    );
-                    if (input_log.enabled_file or input_log.enabled_console) {
-                        input_log.logf(
-                            "keydown sc={d} sym={d} repeat={d}",
-                            .{ key_info.scancode, key_info.sym, key_info.repeat },
-                        );
-                    }
-                },
-                sdl_api.EVENT_KEY_UP => {
-                    const key_info = platform_input_events.handleKeyUp(
-                        &event,
-                        self.key_down[0..],
-                        self.key_released[0..],
-                    );
-                    if (input_log.enabled_file or input_log.enabled_console) {
-                        input_log.logf(
-                            "keyup sc={d} sym={d}",
-                            .{ key_info.scancode, key_info.sym },
-                        );
-                    }
-                },
-                sdl_api.EVENT_TEXT_INPUT => {
-                    const text_len = platform_input_events.handleTextInput(
-                        &event,
-                        &self.char_queue,
-                        self.allocator,
-                    );
-                    input_state.applyTextInputReset(state);
-                    input_logging.logTextInput(text_len);
-                },
-                sdl_api.EVENT_TEXT_EDITING => {
-                    const edit_info = platform_input_events.handleTextEditing(
-                        &event,
-                        &self.composing_text,
-                        &self.composing_cursor,
-                        &self.composing_selection_len,
-                        &self.composing_active,
-                        self.allocator,
-                    );
-                    input_logging.logTextEditing(edit_info.bytes, edit_info.cursor, edit_info.selection_len);
-                },
-                sdl_api.EVENT_MOUSE_BUTTON_DOWN => {
-                    platform_input_events.handleMouseButtonDown(
-                        &event,
-                        self.mouse_down[0..],
-                        self.mouse_pressed[0..],
-                    );
-                },
-                sdl_api.EVENT_MOUSE_BUTTON_UP => {
-                    platform_input_events.handleMouseButtonUp(
-                        &event,
-                        self.mouse_down[0..],
-                        self.mouse_released[0..],
-                    );
-                },
-                sdl_api.EVENT_MOUSE_WHEEL => {
-                    mouse_wheel.add(&mouse_wheel_delta, platform_input_events.wheelDelta(&event));
-                },
-                else => {
-                    if (sdl_api.isWindowEventType(event.type)) {
-                        const evt = sdl_api.getWindowEventId(&event);
-                        window_flags.handleWindowEvent(event.type, evt, &self.should_close_flag, &self.window_resized_flag);
-                        if (window_log.enabled_file or window_log.enabled_console) {
-                            window_log.logf(
-                                "event={s} data1={d} data2={d}",
-                                .{
-                                    sdl_api.windowEventName(event.type, evt),
-                                    sdl_api.windowEventData1(&event),
-                                    sdl_api.windowEventData2(&event),
-                                },
-                            );
-                        }
-                    }
-                },
-            }
+                }
+            },
         }
     }
 };
