@@ -360,22 +360,28 @@ terminal_widget_todo:
             - "Add resize/reflow fixtures: narrow->wide, wide->narrow, scrolled view."
             - "Added minimal narrow->wide scrollback reflow test in src/terminal_reflow_tests.zig."
             - "Added wide->narrow reflow + scrolled anchor fixtures in src/terminal_reflow_tests.zig."
+            - "Added bottom-anchor and scrolled selection fixtures in src/terminal_reflow_tests.zig."
 
     - name: "Phase 4 - Renderer Core"
       tasks:
         - id: P4-01
           title: "Background pass (solid rects per cell)"
+          status: done
           files_to_edit:
             - src/ui/renderer.zig
+            - src/ui/widgets/terminal_widget.zig
           refs:
             - reference_repos/terminals/alacritty/alacritty/src/renderer/rects.rs
             - reference_repos/terminals/foot/render.c
             - reference_repos/terminals/kitty/kitty/cell_fragment.glsl
             - reference_repos/rendering/pixman/pixman/pixman-combine32.c
+          notes:
+            - "Terminal widget now draws background rects in a dedicated batch before glyphs via addTerminalRect."
         - id: P4-02
           title: "Glyph atlas (GPU texture + LRU eviction)"
-          files_to_add:
-            - src/ui/glyph_atlas.zig
+          status: done
+          notes:
+            - "TerminalFont already maintains a GPU atlas with LRU eviction in src/ui/terminal_font.zig."
           refs:
             - reference_repos/terminals/alacritty/alacritty/src/renderer/text/atlas.rs
             - reference_repos/terminals/ghostty/src/font/Atlas.zig
@@ -383,13 +389,19 @@ terminal_widget_todo:
             - reference_repos/terminals/rio/frontends/rioterm/src/renderer/char_cache.rs
         - id: P4-03
           title: "Glyph cache / instance buffer"
+          status: done
           files_to_add:
             - src/ui/glyph_cache.zig
+          files_to_edit:
+            - src/ui/renderer.zig
+            - src/ui/widgets/terminal_widget.zig
           refs:
             - reference_repos/terminals/alacritty/alacritty/src/renderer/text/glyph_cache.rs
             - reference_repos/terminals/ghostty/src/font/sprite.zig
             - reference_repos/terminals/rio/frontends/rioterm/src/renderer/font_cache.rs
             - reference_repos/rendering/skia/src/text/gpu/TextBlob.h
+          notes:
+            - "Terminal glyphs now use a dedicated glyph cache batch to build quads and flush in a separate pass."
         - id: P4-04
           title: "Box drawing + special glyph fast path"
           files_to_edit:
