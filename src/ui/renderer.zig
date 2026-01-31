@@ -35,6 +35,7 @@ const mouse_wheel = @import("renderer/mouse_wheel.zig");
 const input_logging = @import("renderer/input_logging.zig");
 const window_metrics_state = @import("renderer/window_metrics_state.zig");
 const key_queue = @import("renderer/key_queue.zig");
+const glyph_cache = @import("glyph_cache.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_input_events = @import("../platform/input_events.zig");
 const platform_mouse = @import("../platform/mouse_state.zig");
@@ -249,6 +250,7 @@ pub const Renderer = struct {
     clipboard_buffer: std.ArrayList(u8),
     batch_vertices: std.ArrayList(Vertex),
     batch_draws: std.ArrayList(BatchDraw),
+    terminal_glyph_cache: glyph_cache.GlyphCache,
     should_close_flag: bool,
     window_resized_flag: bool,
     text_input_state: text_input.TextInputState,
@@ -351,6 +353,7 @@ pub const Renderer = struct {
             .clipboard_buffer = std.ArrayList(u8).empty,
             .batch_vertices = std.ArrayList(Vertex).empty,
             .batch_draws = std.ArrayList(BatchDraw).empty,
+            .terminal_glyph_cache = glyph_cache.GlyphCache.init(allocator),
             .should_close_flag = false,
             .window_resized_flag = false,
             .text_input_state = text_input.initState(),
@@ -398,6 +401,7 @@ pub const Renderer = struct {
         self.clipboard_buffer.deinit(self.allocator);
         self.batch_vertices.deinit(self.allocator);
         self.batch_draws.deinit(self.allocator);
+        self.terminal_glyph_cache.deinit();
 
         if (self.white_texture.id != 0) {
             gl.DeleteTextures(1, &self.white_texture.id);
@@ -824,7 +828,7 @@ pub const Renderer = struct {
             if (!self.drawTerminalBoxGlyphBatched(codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color)) {
                 const draw = terminal_font_mod.DrawContext{
                     .ctx = self,
-                    .drawTexture = drawTextureBatchThunk,
+                    .drawTexture = drawTextureGlyphCacheThunk,
                 };
                 self.terminal_font.drawGlyph(
                     draw,
@@ -839,7 +843,7 @@ pub const Renderer = struct {
             }
             if (underline) {
                 terminal_underline.drawUnderline(
-                    addTerminalRectThunk,
+                    addTerminalGlyphRectThunk,
                     self,
                     snapInt(snapped_x),
                     snapInt(snapped_y),
@@ -1049,6 +1053,14 @@ pub const Renderer = struct {
         draw_batch.flushTerminalBatch(self);
     }
 
+    pub fn beginTerminalGlyphBatch(self: *Renderer) void {
+        self.terminal_glyph_cache.begin();
+    }
+
+    pub fn flushTerminalGlyphBatch(self: *Renderer) void {
+        self.terminal_glyph_cache.flush(self);
+    }
+
     fn drawTextureRect(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
         draw_ops.drawTextureRect(self, texture, src, dest, color);
     }
@@ -1080,9 +1092,23 @@ pub const Renderer = struct {
         draw_ops.addTerminalRect(self, x, y, w, h, color.toRgba());
     }
 
+    pub fn addTerminalGlyphRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
+        self.terminal_glyph_cache.addRect(self.white_texture, x, y, w, h, color.toRgba());
+    }
+
     fn drawTextureBatchThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
         draw_ops.addBatchQuad(renderer, texture, src, dest, color);
+    }
+
+    fn drawTextureGlyphCacheThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
+        const renderer: *Renderer = @ptrCast(@alignCast(ctx));
+        renderer.terminal_glyph_cache.addQuad(texture, src, dest, color);
+    }
+
+    fn addTerminalGlyphRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
+        const renderer: *Renderer = @ptrCast(@alignCast(ctx));
+        renderer.addTerminalGlyphRect(x, y, w, h, color);
     }
 
     fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {

@@ -101,3 +101,51 @@ test "terminal reflow preserves scrolled anchor line" {
     const actual = firstCodepoint(session, start_line_after) orelse return error.MissingScrollback;
     try std.testing.expectEqual(expected, actual);
 }
+
+test "terminal reflow preserves bottom anchor when not scrolled" {
+    const allocator = std.testing.allocator;
+
+    var session = try term_mod.TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    term_mod.debugFeedBytes(session, "111111\n222222\n333333\n444444\n");
+
+    const snapshot_before = session.snapshot();
+    const last_row_start = (snapshot_before.rows - 1) * snapshot_before.cols;
+    const expected = snapshot_before.cells[last_row_start].codepoint;
+
+    try session.resize(2, 6);
+
+    const snapshot_after = session.snapshot();
+    const last_row_start_after = (snapshot_after.rows - 1) * snapshot_after.cols;
+    const actual = snapshot_after.cells[last_row_start_after].codepoint;
+    try std.testing.expectEqual(expected, actual);
+}
+
+test "terminal reflow keeps selection active when scrolled" {
+    const allocator = std.testing.allocator;
+
+    var session = try term_mod.TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    term_mod.debugFeedBytes(session, "AAAAAA\nBBBBBB\nCCCCCC\nDDDDDD\n");
+    session.scrollBy(2);
+
+    const snapshot_before = session.snapshot();
+    const total_lines_before = session.scrollbackCount() + snapshot_before.rows;
+    const start_line_before = total_lines_before - snapshot_before.rows - session.scrollOffset();
+    const select_row = start_line_before + 1;
+    session.startSelection(select_row, 1);
+    session.updateSelection(select_row, 2);
+    session.finishSelection();
+
+    try session.resize(2, 6);
+
+    if (session.selectionState()) |selection| {
+        try std.testing.expect(selection.active);
+        try std.testing.expectEqual(@as(usize, 1), selection.start.col);
+        try std.testing.expectEqual(@as(usize, 2), selection.end.col);
+    } else {
+        return error.MissingSelection;
+    }
+}

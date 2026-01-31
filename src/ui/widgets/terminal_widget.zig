@@ -614,12 +614,12 @@ pub const TerminalWidget = struct {
                         self.cleanupKittyTextures(self.kitty_images_view.items);
                         self.drawKittyImages(shell, base_x_local, base_y_local, false, start_line, rows, cols);
                     }
-                    r.beginTerminalBatch();
+                    r.beginTerminalGlyphBatch();
                     row = 0;
                     while (row < rows) : (row += 1) {
                         drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id);
                     }
-                    r.flushTerminalBatch();
+                    r.flushTerminalGlyphBatch();
                     if (has_kitty) {
                         self.drawKittyImages(shell, base_x_local, base_y_local, true, start_line, rows, cols);
                     }
@@ -644,7 +644,7 @@ pub const TerminalWidget = struct {
                         }
                     }
                     r.flushTerminalBatch();
-                    r.beginTerminalBatch();
+                    r.beginTerminalGlyphBatch();
                     row = 0;
                     while (row < rows) : (row += 1) {
                         if (row < view_dirty_rows.len and view_dirty_rows[row]) {
@@ -663,7 +663,7 @@ pub const TerminalWidget = struct {
                             }
                         }
                     }
-                    r.flushTerminalBatch();
+                    r.flushTerminalGlyphBatch();
                 }
                 r.endTerminalTexture();
                 if (kitty_changed) {
