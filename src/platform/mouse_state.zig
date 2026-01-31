@@ -16,10 +16,10 @@ pub const MousePos = struct {
 };
 
 pub fn getMousePosRaw() MousePos {
-    var x: c_int = 0;
-    var y: c_int = 0;
+    var x: f32 = 0;
+    var y: f32 = 0;
     sdl_api.getMouseState(&x, &y);
-    return .{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
+    return .{ .x = x, .y = y };
 }
 
 pub fn getScaledPos(scale: MouseScale) MousePos {
@@ -33,14 +33,14 @@ pub fn getScaledPosWithFactor(scale: f32) MousePos {
 }
 
 pub fn computeMouseScale(window: *sdl.SDL_Window) MouseScale {
-    if (sdl_api.is_sdl3) {
-        const density = sdl_api.getWindowPixelDensity(window);
-        if (density > 0.0) return .{ .x = density, .y = density };
+    var sx: f32 = 1.0;
+    var sy: f32 = 1.0;
+    if (!sdl_api.is_sdl3) {
+        const window_size = platform_window.getWindowSize(window);
+        const drawable = platform_window.getDrawableSize(window);
+        sx = if (window_size.w > 0) @as(f32, @floatFromInt(drawable.w)) / @as(f32, @floatFromInt(window_size.w)) else 1.0;
+        sy = if (window_size.h > 0) @as(f32, @floatFromInt(drawable.h)) / @as(f32, @floatFromInt(window_size.h)) else 1.0;
     }
-    const window_size = platform_window.getWindowSize(window);
-    const drawable = platform_window.getDrawableSize(window);
-    var sx: f32 = if (window_size.w > 0) @as(f32, @floatFromInt(drawable.w)) / @as(f32, @floatFromInt(window_size.w)) else 1.0;
-    var sy: f32 = if (window_size.h > 0) @as(f32, @floatFromInt(drawable.h)) / @as(f32, @floatFromInt(window_size.h)) else 1.0;
 
     if (compositor.isWayland()) {
         // SDL already reports logical mouse coords; drawable/window ratio matches render scale.
