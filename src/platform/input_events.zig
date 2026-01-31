@@ -100,7 +100,7 @@ pub fn handleTextInput(
     char_queue: *std.ArrayList(u32),
     allocator: std.mem.Allocator,
 ) usize {
-    const text = std.mem.span(@as([*:0]const u8, @ptrCast(&event.text.text)));
+    const text = sdl_api.textInputSpan(event);
     var it = std.unicode.Utf8View.initUnchecked(text).iterator();
     while (it.nextCodepoint()) |cp| {
         _ = char_queue.append(allocator, cp) catch {};
@@ -116,16 +116,18 @@ pub fn handleTextEditing(
     composing_active: *bool,
     allocator: std.mem.Allocator,
 ) TextEditInfo {
-    const text = std.mem.span(@as([*:0]const u8, @ptrCast(&event.edit.text)));
+    const text = sdl_api.textEditingSpan(event);
+    const cursor = sdl_api.textEditingCursor(event);
+    const selection_len = sdl_api.textEditingSelectionLen(event);
     composing_text.clearRetainingCapacity();
     _ = composing_text.appendSlice(allocator, text) catch {};
-    composing_cursor.* = event.edit.start;
-    composing_selection_len.* = event.edit.length;
+    composing_cursor.* = cursor;
+    composing_selection_len.* = selection_len;
     composing_active.* = text.len > 0;
     return .{
         .bytes = text.len,
-        .cursor = event.edit.start,
-        .selection_len = event.edit.length,
+        .cursor = cursor,
+        .selection_len = selection_len,
         .active = text.len > 0,
     };
 }
