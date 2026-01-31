@@ -120,6 +120,14 @@ pub const SdlInput = struct {
 
     pub fn drainEvents(self: *SdlInput) void {
         self.drain.clearRetainingCapacity();
+        if (!self.thread_running.load(.acquire)) {
+            var event: sdl.SDL_Event = undefined;
+            while (sdl_api.pollEvent(&event)) {
+                if (self.drain.items.len >= self.drain.capacity) break;
+                self.drain.appendAssumeCapacity(event);
+            }
+            return;
+        }
         self.queue.drain(&self.drain);
         if (self.drain.items.len > 0) {
             self.pending.store(false, .release);

@@ -78,6 +78,20 @@ sdl3_migration:
       status: done
       notes:
         - "Run on Linux first; keep SDL2 as fallback."
+        - "Use build/run: zig build -Dsdl-version=sdl3 run -- --mode terminal."
+    - id: S4-02
+      title: "Fix SDL3 text input pointer lifetime (process events immediately)"
+      status: done
+      files_to_edit:
+        - src/ui/renderer.zig
+        - src/ui/renderer/sdl_input.zig
+      notes:
+        - "SDL3 event polling now handled on the main thread; terminal-only text input flows on Wayland."
+    - id: S4-03
+      title: "Clean up temporary SDL3 input logging"
+      status: pending
+      notes:
+        - "Remove input.sdl/raw pointer logs once SDL3 text input is stable across Linux."
 
   phase_5_cleanup:
     - id: S5-01
