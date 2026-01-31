@@ -341,7 +341,7 @@ terminal_widget_todo:
             - "History view cache now tracks per-row wrap flags to rebuild logical lines across reflow."
         - id: S3R-03
           title: "Cursor + selection remap across reflow"
-          status: in_progress
+          status: done
           refs:
             - reference_repos/terminals/wezterm/term/src/screen.rs
             - reference_repos/terminals/kitty/kitty/vt-parser.c
@@ -349,6 +349,7 @@ terminal_widget_todo:
           notes:
             - "Map logical positions to new row/col after reflow; clear if unmappable."
             - "Reflow now pads logical line length to preserve cursor/selection column offsets in trailing blanks."
+            - "Added cursor/selection trailing-blank reflow test in src/terminal_reflow_tests.zig."
         - id: S3R-04
           title: "Scrollback correctness tests + harness"
           status: todo
@@ -358,6 +359,7 @@ terminal_widget_todo:
           notes:
             - "Add resize/reflow fixtures: narrow->wide, wide->narrow, scrolled view."
             - "Added minimal narrow->wide scrollback reflow test in src/terminal_reflow_tests.zig."
+            - "Added wide->narrow reflow + scrolled anchor fixtures in src/terminal_reflow_tests.zig."
 
     - name: "Phase 4 - Renderer Core"
       tasks:
