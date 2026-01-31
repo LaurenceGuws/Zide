@@ -335,6 +335,52 @@ pub fn wheelDelta(event: *const c.SDL_Event) f32 {
     return @floatFromInt(event.wheel.y);
 }
 
+pub fn textInputSpan(event: *const c.SDL_Event) []const u8 {
+    const text = event.text;
+    if (@hasField(@TypeOf(text), "text")) {
+        return textSpan(text.text);
+    }
+    return "";
+}
+
+pub fn textEditingSpan(event: *const c.SDL_Event) []const u8 {
+    const edit = event.edit;
+    if (@hasField(@TypeOf(edit), "text")) {
+        return textSpan(edit.text);
+    }
+    return "";
+}
+
+pub fn textEditingCursor(event: *const c.SDL_Event) i32 {
+    const edit = event.edit;
+    if (@hasField(@TypeOf(edit), "start")) {
+        return @intCast(edit.start);
+    }
+    if (@hasField(@TypeOf(edit), "cursor")) {
+        return @intCast(edit.cursor);
+    }
+    return 0;
+}
+
+pub fn textEditingSelectionLen(event: *const c.SDL_Event) i32 {
+    const edit = event.edit;
+    if (@hasField(@TypeOf(edit), "length")) {
+        return @intCast(edit.length);
+    }
+    if (@hasField(@TypeOf(edit), "selection_len")) {
+        return @intCast(edit.selection_len);
+    }
+    return 0;
+}
+
+fn textSpan(field: anytype) []const u8 {
+    return switch (@typeInfo(@TypeOf(field))) {
+        .pointer => std.mem.span(field),
+        .array => std.mem.span(@as([*:0]const u8, @ptrCast(&field))),
+        else => "",
+    };
+}
+
 pub fn glMakeCurrent(window: *c.SDL_Window, context: c.SDL_GLContext) void {
     _ = c.SDL_GL_MakeCurrent(window, context);
 }
