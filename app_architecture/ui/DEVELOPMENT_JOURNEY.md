@@ -23,7 +23,7 @@ Status (2026-01-29)
 - Kitty image/placement view lists are built and sorted on the parse thread; renderer reuses the cached lists per frame.
 - Selection highlight spans are cached alongside the view snapshot to avoid per-frame selection range scans.
 - Kitty image uploads are now queued and uploaded in a per-frame budget to avoid large render-thread spikes.
-- Renderer modularization + OS abstraction work is tracked in `app_architecture/ui/renderer_todo.yaml`.
+- Renderer modularization + OS abstraction work is tracked in `app_architecture/ui/renderer_todo.yaml` (now boundary-focused, extraction complete).
 - Renderer cleanup continues: input constants, clipboard helpers, texture utilities, window event helpers, text input rect handling, timing helpers, input event helpers, SDL window/GL context init, input state helpers, mouse state helpers, window metrics helpers, input queue helpers, UI scale helpers, render target helpers, text draw helpers, GL resource helpers, draw batch helpers, target draw helpers, key state helpers, shape helpers, shape draw helpers, terminal glyph helpers, clipboard buffer helpers, terminal underline helpers, mouse button helpers, texture draw helpers, text composition helpers, window flag helpers, mouse wheel helpers, input logging helpers, window metrics state, and key queue helpers extracted into renderer/platform modules (see renderer_todo).
 
 Canonical references (do not diverge without a documented reason)
