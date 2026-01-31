@@ -318,7 +318,7 @@ terminal_widget_todo:
       tasks:
         - id: S3R-01
           title: "Define scrollback model (line buffer + wrap metadata)"
-          status: todo
+          status: in_progress
           refs:
             - reference_repos/terminals/kitty/kitty/line-buf.h
             - reference_repos/terminals/ghostty/src/terminal/PageList.zig

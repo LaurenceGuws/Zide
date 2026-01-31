@@ -18,10 +18,12 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 ### Current Focus
 - SDL3 migration: SDL3-only build path; SDL2 fallback removed. See `app_architecture/ui/sdl3_migration_todo.yaml`.
 - SDL3 input parity: terminal-only mode on Wayland now delivers printable text when built with SDL3; continue validation + cleanup.
+- Terminal scrollback redesign: current resize/scrollback handling is inadequate; redesign is planned (see Phase 3.5 in `app_architecture/terminal/terminal_widget_todo.yaml`).
 
 ### Recent Changes (High-Level)
 - SDL3 shim + build flag wired; SDL3 compile + runtime smoke on Linux pass.
 - SDL3 window events and scaling fixes landed; SDL3 text input now flows in terminal-only on Wayland with SDL3 build.
+- Added a scrollback reflow redesign plan and updated terminal design notes to mirror kitty/ghostty/wezterm techniques.
 
 ### Constraints / Guardrails
 - Handoff docs are high-level only; progress tracking lives in todo + app_architecture docs.
@@ -34,15 +36,18 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - SDL3 migration tracker: `app_architecture/ui/sdl3_migration_todo.yaml`
 - Editor widget roadmap: `app_architecture/editor/editor_widget_todo.yaml`
 - Terminal roadmap: `app_architecture/terminal/*_todo.yaml`
+- Terminal design notes: `app_architecture/terminal/DESIGN.md`
 - Undo loop notes: `app_architecture/ui/DEVELOPMENT_JOURNEY.md` (known issue entry).
 
 ### Known Risk (High-Level)
 - SDL3 is the only build path; regressions must be addressed promptly.
 - Incremental highlight edits can still be fragile; see TS-04 notes in the todo.
+- Terminal scrollback resize is still flawed; avoid deep work in this area until the redesign is implemented.
 
 ### In-Progress (Uncommitted)
 - SDL3 input tracing + text input decoding changes (see `src/ui/renderer/input_logging.zig`, `src/platform/input_events.zig`, `src/platform/sdl_api.zig`).
 - Temporary logging enabled in `~/.config/zide/init.lua` (input.sdl) pending cleanup.
+ - No uncommitted code changes in the scrollback area; redesign is documented only.
 
 ### Checklist
 - `zig build test`
