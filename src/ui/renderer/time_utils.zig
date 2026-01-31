@@ -1,4 +1,5 @@
 const gl = @import("gl.zig");
+const sdl_api = @import("../../platform/sdl_api.zig");
 const sdl_input = @import("sdl_input.zig");
 const std = @import("std");
 
@@ -19,7 +20,7 @@ pub fn waitTime(seconds: f64, active_input: ?*sdl_input.SdlInput) void {
 
 pub fn getTime(start_counter: ?u64, perf_freq: ?f64) f64 {
     if (start_counter) |start| {
-        const counter = sdl.SDL_GetPerformanceCounter();
+        const counter = sdl_api.getPerformanceCounter();
         if (perf_freq) |freq| {
             if (freq <= 0) return 0.0;
             return @as(f64, @floatFromInt(counter - start)) / freq;
@@ -27,8 +28,8 @@ pub fn getTime(start_counter: ?u64, perf_freq: ?f64) f64 {
         return 0.0;
     }
 
-    const counter = sdl.SDL_GetPerformanceCounter();
-    const freq = sdl.SDL_GetPerformanceFrequency();
+    const counter = sdl_api.getPerformanceCounter();
+    const freq = sdl_api.getPerformanceFrequency();
     if (freq == 0) return 0.0;
     return @as(f64, @floatFromInt(counter)) / @as(f64, @floatFromInt(freq));
 }
