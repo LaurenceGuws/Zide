@@ -190,6 +190,8 @@ pub const Renderer = struct {
     render_height: i32,
     target_width: i32,
     target_height: i32,
+    target_pixel_width: i32,
+    target_pixel_height: i32,
 
     shader_program: gl.GLuint,
     vao: gl.GLuint,
@@ -292,6 +294,8 @@ pub const Renderer = struct {
             .render_height = drawable.h,
             .target_width = drawable.w,
             .target_height = drawable.h,
+            .target_pixel_width = drawable.w,
+            .target_pixel_height = drawable.h,
             .shader_program = 0,
             .vao = 0,
             .vbo = 0,
@@ -525,7 +529,7 @@ pub const Renderer = struct {
     }
 
     pub fn setTextInputRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
-        text_input.setRect(&self.text_input_state, x, y, w, h);
+        text_input.setRect(&self.text_input_state, self.window, x, y, w, h);
     }
 
     pub fn ensureTerminalTexture(self: *Renderer, width: i32, height: i32) bool {
@@ -618,7 +622,13 @@ pub const Renderer = struct {
 
     pub fn beginClip(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
         gl.Enable(gl.c.GL_SCISSOR_TEST);
-        gl.Scissor(x, self.target_height - (y + h), w, h);
+        const scale_x = @as(f32, @floatFromInt(self.target_pixel_width)) / @as(f32, @floatFromInt(self.target_width));
+        const scale_y = @as(f32, @floatFromInt(self.target_pixel_height)) / @as(f32, @floatFromInt(self.target_height));
+        const sx: i32 = @intFromFloat(@as(f32, @floatFromInt(x)) * scale_x);
+        const sy: i32 = @intFromFloat(@as(f32, @floatFromInt(self.target_height - (y + h))) * scale_y);
+        const sw: i32 = @intFromFloat(@as(f32, @floatFromInt(w)) * scale_x);
+        const sh: i32 = @intFromFloat(@as(f32, @floatFromInt(h)) * scale_y);
+        gl.Scissor(sx, sy, sw, sh);
     }
 
     pub fn endClip(_: *Renderer) void {

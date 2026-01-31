@@ -33,6 +33,10 @@ pub fn getScaledPosWithFactor(scale: f32) MousePos {
 }
 
 pub fn computeMouseScale(window: *sdl.SDL_Window) MouseScale {
+    if (sdl_api.is_sdl3) {
+        const density = sdl_api.getWindowPixelDensity(window);
+        if (density > 0.0) return .{ .x = density, .y = density };
+    }
     const window_size = platform_window.getWindowSize(window);
     const drawable = platform_window.getDrawableSize(window);
     var sx: f32 = if (window_size.w > 0) @as(f32, @floatFromInt(drawable.w)) / @as(f32, @floatFromInt(window_size.w)) else 1.0;

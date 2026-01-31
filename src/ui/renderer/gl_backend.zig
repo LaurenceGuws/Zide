@@ -88,12 +88,16 @@ pub fn initGlResources(renderer: anytype) !void {
 
 pub fn bindDefaultTarget(renderer: anytype) void {
     gl.BindFramebuffer(gl.c.GL_FRAMEBUFFER, 0);
-    updateProjection(renderer, renderer.render_width, renderer.render_height);
+    renderer.target_pixel_width = renderer.render_width;
+    renderer.target_pixel_height = renderer.render_height;
+    updateProjection(renderer, renderer.width, renderer.height);
 }
 
 pub fn beginRenderTarget(renderer: anytype, target: ?RenderTarget) bool {
     if (target) |t| {
         gl.BindFramebuffer(gl.c.GL_FRAMEBUFFER, t.fbo);
+        renderer.target_pixel_width = t.texture.width;
+        renderer.target_pixel_height = t.texture.height;
         updateProjection(renderer, t.texture.width, t.texture.height);
         return true;
     }
@@ -135,7 +139,9 @@ pub fn destroyRenderTarget(target: *?RenderTarget) void {
 pub fn updateProjection(renderer: anytype, width: i32, height: i32) void {
     renderer.target_width = width;
     renderer.target_height = height;
-    gl.Viewport(0, 0, width, height);
+    const viewport_w = if (renderer.target_pixel_width > 0) renderer.target_pixel_width else width;
+    const viewport_h = if (renderer.target_pixel_height > 0) renderer.target_pixel_height else height;
+    gl.Viewport(0, 0, viewport_w, viewport_h);
     if (renderer.uniform_proj >= 0) {
         const w = @as(f32, @floatFromInt(width));
         const h = @as(f32, @floatFromInt(height));

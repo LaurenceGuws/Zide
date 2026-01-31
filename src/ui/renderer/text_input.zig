@@ -16,7 +16,7 @@ pub fn initState() TextInputState {
     };
 }
 
-pub fn setRect(state: *TextInputState, x: i32, y: i32, w: i32, h: i32) void {
+pub fn setRect(state: *TextInputState, window: ?*sdl.SDL_Window, x: i32, y: i32, w: i32, h: i32) void {
     if (w <= 0 or h <= 0) return;
     const rect = sdl.SDL_Rect{ .x = x, .y = y, .w = w, .h = h };
     if (state.valid and
@@ -29,7 +29,7 @@ pub fn setRect(state: *TextInputState, x: i32, y: i32, w: i32, h: i32) void {
     }
     state.rect = rect;
     state.valid = true;
-    sdl_api.setTextInputRect(&state.rect);
+    sdl_api.setTextInputRect(window, &state.rect);
     const log = app_logger.logger("sdl.ime");
     if (log.enabled_file or log.enabled_console) {
         log.logf("text_input_rect x={d} y={d} w={d} h={d}", .{ rect.x, rect.y, rect.w, rect.h });
