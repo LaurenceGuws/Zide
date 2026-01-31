@@ -110,6 +110,32 @@ Planned redesign:
 - Reflow on column resize by merging wrapped rows into logical lines, then re-wrapping into the new width.
 - Preserve anchors: bottom when scrollback offset is 0, otherwise preserve top logical line and cursor/selection mapping.
 
+Scrollback redesign proposal (kitty/ghostty/wezterm inspired):
+- Data model: store scrollback as logical lines, not raw rows.
+  - Each logical line owns a list of cells plus a wrap flag indicating whether it continues.
+  - Maintain stable line ids (monotonic) so selections/anchors can persist across reflow.
+  - Keep a viewport pin (active/bottom vs pinned line) similar to ghostty's PageList pins.
+- Mapping strategy:
+  - For reflow, rebuild rows from logical lines using the new column width.
+  - Recompute viewport start by preserving the top logical line when scrolled, or bottom when at offset=0.
+  - Remap cursor to its logical position within a line; clamp if it falls outside.
+  - Remap selection by logical line id + column offset; clear only if line dropped.
+- Lifecycle on resize:
+  - Pre-prune trailing blank lines (wezterm) to avoid scrollback growth on repeated resize.
+  - Reflow only when columns change; row-only changes skip reflow and adjust viewport.
+  - Ensure active area is always fully populated (pad blank rows if necessary).
+- Storage approach:
+  - Ring buffer of logical lines (alacritty/xterm behavior), or paged list with pins (ghostty).
+  - Keep wrap metadata with the logical line, not in the grid.
+  - Track total rows for scrollbar + scroll offset calculations.
+- Compatibility rules:
+  - Alternate screen: no scrollback; resize uses truncation without reflow.
+  - Scroll regions: only full-screen scroll pushes into scrollback; regions remain in-grid.
+
+Why this approach:
+- Mirrors the reflow model in wezterm (rewrap_lines) and alacritty (resize reflow) while keeping kitty-style line semantics.
+- Stable logical line ids make scrollback anchors, cursor, and selection durable across reflow.
+
 Decision:
 - Grid model supports dirty‑row tracking and scrollback; treat it as the current baseline rather than a throwaway prototype.
 
