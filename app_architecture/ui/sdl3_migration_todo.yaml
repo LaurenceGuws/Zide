@@ -62,20 +62,20 @@ sdl3_migration:
   phase_3_sdl3_backend:
     - id: S3-01
       title: "Add SDL3 implementation inside shim"
-      status: pending
+      status: done
       files_to_edit:
         - src/platform/sdl_api.zig
         - build.zig
     - id: S3-02
       title: "SDL3 build smoke check (compile-only)"
-      status: pending
+      status: done
       notes:
         - "zig build -Dsdl-version=sdl3"
 
   phase_4_validation:
     - id: S4-01
       title: "Runtime smoke: window + input + text input"
-      status: pending
+      status: done
       notes:
         - "Run on Linux first; keep SDL2 as fallback."
 
