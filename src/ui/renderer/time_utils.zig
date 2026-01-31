@@ -1,19 +1,13 @@
 const gl = @import("gl.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
-const sdl_input = @import("sdl_input.zig");
 const std = @import("std");
 
 const sdl = gl.c;
 
-pub fn waitTime(seconds: f64, active_input: ?*sdl_input.SdlInput) void {
+pub fn waitTime(seconds: f64) void {
     if (seconds <= 0) return;
     const total_ns = @as(u64, @intFromFloat(seconds * std.time.ns_per_s));
     if (total_ns == 0) return;
-
-    if (active_input) |input| {
-        input.wait(seconds);
-        return;
-    }
     const ms = @as(u32, @intFromFloat(seconds * 1000.0));
     sdl.SDL_Delay(ms);
 }

@@ -2,7 +2,7 @@
   "name": "zide",
   "version-string": "0.0.0",
   "dependencies": [
-    "sdl2",
+    "sdl3",
     "freetype",
     "harfbuzz",
     "lua"

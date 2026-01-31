@@ -1,13 +1,13 @@
 sdl3_migration:
   scope:
-    description: "Add SDL3 build path behind a switch while keeping SDL2 as the baseline."
+    description: "Add SDL3 build path behind a switch, then make SDL3 the default."
     priorities:
       - "extraction-only refactors (no behavior change)"
-      - "keep SDL2 path stable and default"
-      - "shim layer to isolate SDL2/SDL3 API differences"
+      - "keep the fallback path stable"
+      - "shim layer to isolate SDL API differences"
       - "small, reviewable commits"
   constraints:
-    - "SDL2 remains default until SDL3 is verified on Linux."
+    - "SDL3 is default while validation completes."
     - "No behavior changes while wiring the shim."
     - "Keep logging output identical where possible."
 
@@ -19,7 +19,7 @@ sdl3_migration:
 
   phase_0_build:
     - id: S0-01
-      title: "Add build option: -Dsdl-version=(sdl2|sdl3)"
+      title: "Add SDL3 build path behind a switch"
       status: done
       files_to_edit:
         - build.zig
@@ -32,7 +32,7 @@ sdl3_migration:
 
   phase_1_shim:
     - id: S1-01
-      title: "Create SDL shim module (SDL2-backed)"
+      title: "Create SDL shim module"
       status: done
       files_to_add:
         - src/platform/sdl_api.zig
@@ -77,7 +77,7 @@ sdl3_migration:
       title: "Runtime smoke: window + input + text input"
       status: done
       notes:
-        - "Run on Linux first; keep SDL2 as fallback."
+        - "Run on Linux first; keep the fallback build available."
         - "Use build/run: zig build -Dsdl-version=sdl3 run -- --mode terminal."
     - id: S4-02
       title: "Fix SDL3 text input pointer lifetime (process events immediately)"
@@ -95,7 +95,7 @@ sdl3_migration:
 
   phase_5_cleanup:
     - id: S5-01
-      title: "Decide when to drop SDL2"
-      status: in_progress
+      title: "Decide when to drop the fallback build"
+      status: done
       notes:
-        - "Default SDL version flipped to SDL3; keep SDL2 as fallback during validation."
+        - "SDL2 fallback removed; SDL3-only build path now active."

@@ -4,14 +4,13 @@ This doc explains how to install Zide's native dependencies per OS, with a focus
 
 ## Overview
 Zide depends on the following native libraries:
-- SDL2 (windowing/input, default)
-- SDL3 (optional, behind build flag)
+- SDL3 (windowing/input)
 - FreeType (font rasterization)
 - HarfBuzz (text shaping)
 - Lua 5.4 (config scripting)
 - OpenGL (platform-specific)
 
-We default to SDL2 headers. You can opt into SDL3 with `zig build -Dsdl-version=sdl3`.
+SDL3 is the default build target.
 
 ## Recommended strategy
 - Linux/macOS: system packages for fast local dev.
@@ -30,10 +29,6 @@ This avoids vendoring large binaries early, while keeping Windows builds reprodu
 ```
 
 2) Install the required libraries (x64):
-```
- .\vcpkg.exe install sdl2 freetype harfbuzz lua --triplet x64-windows
-```
-For SDL3 builds:
 ```
  .\vcpkg.exe install sdl3 freetype harfbuzz lua --triplet x64-windows
 ```
@@ -64,7 +59,7 @@ If cross-compiling from Linux, you still need Windows libraries on disk. vcpkg c
 
 ## Linux
 Install the deps using your distro package manager:
-- SDL2 dev package
+- SDL3 dev package
 - FreeType dev package
 - HarfBuzz dev package
 - Lua 5.4 dev package
@@ -72,32 +67,19 @@ Install the deps using your distro package manager:
 
 Examples (Ubuntu):
 ```
- sudo apt install libsdl2-dev libfreetype6-dev libharfbuzz-dev liblua5.4-dev libgl1-mesa-dev
-```
-SDL3 (optional):
-```
- sudo apt install libsdl3-dev
+ sudo apt install libsdl3-dev libfreetype6-dev libharfbuzz-dev liblua5.4-dev libgl1-mesa-dev
 ```
 
 Examples (Arch):
 ```
- sudo pacman -S sdl2 freetype2 harfbuzz lua mesa
-```
-SDL3 (optional):
-```
- sudo pacman -S sdl3
+ sudo pacman -S sdl3 freetype2 harfbuzz lua mesa
 ```
 
 ## macOS
 Use Homebrew:
 ```
- brew install sdl2 freetype harfbuzz lua
-```
-SDL3 (optional):
-```
- brew install sdl3
+ brew install sdl3 freetype harfbuzz lua
 ```
 
 ## Notes
-- On Windows, SDL2 also provides the OpenGL import libs you need.
-- Use `zig build -Dsdl-version=sdl3` to opt into SDL3.
+- Use the same SDL3 version for headers and libraries to avoid ABI mismatches.

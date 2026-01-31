@@ -368,13 +368,9 @@ pub const Renderer = struct {
     fn initInputThread(self: *Renderer) !void {
         try self.sdl_input.init(self.allocator, input_queue_capacity);
         errdefer self.sdl_input.deinit(self.allocator);
-        if (!sdl_api.is_sdl3) {
-            try self.sdl_input.startThread();
-        }
     }
 
     pub fn deinit(self: *Renderer) void {
-        self.shutdownInputThread();
         self.destroyRenderTarget(&self.terminal_target);
         self.destroyRenderTarget(&self.editor_target);
 
@@ -421,7 +417,7 @@ pub const Renderer = struct {
     }
 
     fn shutdownInputThread(self: *Renderer) void {
-        self.sdl_input.stopThread();
+        _ = self;
     }
 
     fn initGlResources(self: *Renderer) !void {
@@ -1058,8 +1054,8 @@ pub const Renderer = struct {
         const window_log = app_logger.logger("sdl.window");
         if (!sdl_input_env_logged and (input_log.enabled_file or input_log.enabled_console)) {
             input_log.logf(
-                "sdl build_version={s} is_sdl3={d} event_size={d}",
-                .{ build_options.sdl_version, @intFromBool(sdl_api.is_sdl3), sdl_api.sdlEventSize() },
+                "sdl build_version=sdl3 is_sdl3={d} event_size={d}",
+                .{ @intFromBool(sdl_api.is_sdl3), sdl_api.sdlEventSize() },
             );
             sdl_input_env_logged = true;
         }
@@ -1293,9 +1289,10 @@ pub fn pollInputEvents() void {
 
 pub fn waitTime(seconds: f64) void {
     if (active_renderer) |renderer| {
-        time_utils.waitTime(seconds, &renderer.sdl_input);
+        _ = renderer;
+        time_utils.waitTime(seconds);
     } else {
-        time_utils.waitTime(seconds, null);
+        time_utils.waitTime(seconds);
     }
 }
 

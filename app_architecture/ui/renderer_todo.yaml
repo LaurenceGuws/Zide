@@ -1,6 +1,6 @@
 renderer_todo:
   scope:
-    description: "Renderer modularization + OS abstraction boundaries (Linux SDL2+OpenGL stable; Windows prep)."
+    description: "Renderer modularization + OS abstraction boundaries (Linux SDL3+OpenGL stable; Windows prep)."
     priorities:
       - "extraction-only refactors (no behavior change)"
       - "clear OS boundary (platform window/input vs renderer backend)"

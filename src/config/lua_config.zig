@@ -1,12 +1,14 @@
 const std = @import("std");
 const renderer = @import("../ui/renderer.zig");
+const sdl_api = @import("../platform/sdl_api.zig");
 
 const c = @cImport({
     @cInclude("lua.h");
     @cInclude("lauxlib.h");
     @cInclude("lualib.h");
-    @cInclude("SDL2/SDL.h");
 });
+
+const sdl = sdl_api.c;
 
 const Color = renderer.Color;
 const Theme = renderer.Theme;
@@ -509,14 +511,14 @@ fn parseSdlLogLevel(L: *c.lua_State, idx: c_int) ?c_int {
     var len: usize = 0;
     const ptr = c.lua_tolstring(L, idx, &len) orelse return null;
     const value = @as([*]const u8, @ptrCast(ptr))[0..len];
-    if (std.mem.eql(u8, value, "none")) return c.SDL_LOG_PRIORITY_CRITICAL;
-    if (std.mem.eql(u8, value, "critical")) return c.SDL_LOG_PRIORITY_CRITICAL;
-    if (std.mem.eql(u8, value, "error")) return c.SDL_LOG_PRIORITY_ERROR;
-    if (std.mem.eql(u8, value, "warning")) return c.SDL_LOG_PRIORITY_WARN;
-    if (std.mem.eql(u8, value, "warn")) return c.SDL_LOG_PRIORITY_WARN;
-    if (std.mem.eql(u8, value, "info")) return c.SDL_LOG_PRIORITY_INFO;
-    if (std.mem.eql(u8, value, "debug")) return c.SDL_LOG_PRIORITY_DEBUG;
-    if (std.mem.eql(u8, value, "trace")) return c.SDL_LOG_PRIORITY_VERBOSE;
+    if (std.mem.eql(u8, value, "none")) return sdl.SDL_LOG_PRIORITY_CRITICAL;
+    if (std.mem.eql(u8, value, "critical")) return sdl.SDL_LOG_PRIORITY_CRITICAL;
+    if (std.mem.eql(u8, value, "error")) return sdl.SDL_LOG_PRIORITY_ERROR;
+    if (std.mem.eql(u8, value, "warning")) return sdl.SDL_LOG_PRIORITY_WARN;
+    if (std.mem.eql(u8, value, "warn")) return sdl.SDL_LOG_PRIORITY_WARN;
+    if (std.mem.eql(u8, value, "info")) return sdl.SDL_LOG_PRIORITY_INFO;
+    if (std.mem.eql(u8, value, "debug")) return sdl.SDL_LOG_PRIORITY_DEBUG;
+    if (std.mem.eql(u8, value, "trace")) return sdl.SDL_LOG_PRIORITY_VERBOSE;
     return null;
 }
 

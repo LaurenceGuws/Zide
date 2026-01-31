@@ -3,7 +3,7 @@
 ## 2026-01-15 — Compositor-aware mouse scaling on Wayland
 
 **Context**
-Wayland fractional scaling (e.g., Hyprland scale 1.6) produces mismatched input coordinates when using raylib/GLFW. `GetWindowScaleDPI()` often reports 1.0, and `GetScreenWidth/Height` == `GetRenderWidth/Height`, so the usual `render/screen` correction cannot detect the scale. This is a legacy constraint until the SDL2-based UI stack described in `app_architecture/ui/DEVELOPMENT_JOURNEY.md` replaces raylib.
+Wayland fractional scaling (e.g., Hyprland scale 1.6) produces mismatched input coordinates when using raylib/GLFW. `GetWindowScaleDPI()` often reports 1.0, and `GetScreenWidth/Height` == `GetRenderWidth/Height`, so the usual `render/screen` correction cannot detect the scale. This is a legacy constraint until the SDL3-based UI stack described in `app_architecture/ui/DEVELOPMENT_JOURNEY.md` replaces raylib.
 
 **Decision**
 Add a compositor-aware scaling helper with a small abstraction layer. Start with:
@@ -18,7 +18,7 @@ Use this compositor-provided scale as the default mouse scale on Wayland. Keep `
 - Adds a small platform detection layer with clear fallbacks.
 
 **Status**
-- Resolved by the SDL2 + OpenGL renderer migration (January 28, 2026). The compositor-based scale fallback remains as a safety net for fractional Wayland setups.
+- Resolved by the SDL3 + OpenGL renderer migration (January 28, 2026). The compositor-based scale fallback remains as a safety net for fractional Wayland setups.
 
 ## 2026-01-15 — Terminal text rendering quality upgrade path
 
