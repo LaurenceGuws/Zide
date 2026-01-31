@@ -1,34 +1,52 @@
 const std = @import("std");
-const scrollback_mod = @import("scrollback.zig");
+const scrollback_buffer = @import("scrollback_buffer.zig");
+const app_logger = @import("../../app_logger.zig");
 const selection_mod = @import("selection.zig");
 const types = @import("types.zig");
 
-const Scrollback = scrollback_mod.Scrollback(types.Cell);
+const ScrollbackBuffer = scrollback_buffer.ScrollbackBuffer;
 
 pub const TerminalHistory = struct {
     allocator: std.mem.Allocator,
-    scrollback: Scrollback,
+    scrollback: ScrollbackBuffer,
     scrollback_offset: usize,
     saved_scrollback_offset: usize,
     selection: selection_mod.SelectionState,
+    view_cache: std.ArrayList(types.Cell),
+    view_wraps: std.ArrayList(bool),
+    view_rows: usize,
+    view_cols: u16,
+    scrollback_generation: u64,
+    view_generation: u64,
 
     pub fn init(allocator: std.mem.Allocator, max_rows: usize, cols: u16) !TerminalHistory {
-        const scrollback = try Scrollback.init(allocator, max_rows, cols);
+        _ = cols;
+        const scrollback = try ScrollbackBuffer.init(allocator, max_rows);
         return .{
             .allocator = allocator,
             .scrollback = scrollback,
             .scrollback_offset = 0,
             .saved_scrollback_offset = 0,
             .selection = selection_mod.SelectionState.init(),
+            .view_cache = std.ArrayList(types.Cell).empty,
+            .view_wraps = std.ArrayList(bool).empty,
+            .view_rows = 0,
+            .view_cols = 0,
+            .scrollback_generation = 0,
+            .view_generation = 0,
         };
     }
 
     pub fn deinit(self: *TerminalHistory) void {
         self.scrollback.deinit();
+        self.view_cache.deinit(self.allocator);
+        self.view_wraps.deinit(self.allocator);
     }
 
     pub fn resizePreserve(self: *TerminalHistory, cols: u16, default_cell: types.Cell) !void {
-        try self.scrollback.resizePreserve(cols, default_cell);
+        _ = self;
+        _ = cols;
+        _ = default_cell;
     }
 
     pub fn updateDefaultColors(
@@ -38,32 +56,119 @@ pub const TerminalHistory = struct {
         new_fg: types.Color,
         new_bg: types.Color,
     ) void {
-        for (self.scrollback.rows.items) |*cell| {
-            if (cell.attrs.fg.r == old_fg.r and
-                cell.attrs.fg.g == old_fg.g and
-                cell.attrs.fg.b == old_fg.b and
-                cell.attrs.fg.a == old_fg.a and
-                cell.attrs.bg.r == old_bg.r and
-                cell.attrs.bg.g == old_bg.g and
-                cell.attrs.bg.b == old_bg.b and
-                cell.attrs.bg.a == old_bg.a)
-            {
-                cell.attrs.fg = new_fg;
-                cell.attrs.bg = new_bg;
+        var idx: usize = 0;
+        while (idx < self.scrollback.count()) : (idx += 1) {
+            const line = self.scrollback.lineByIndexMut(idx) orelse continue;
+            for (line.cells) |*cell| {
+                if (cell.attrs.fg.r == old_fg.r and
+                    cell.attrs.fg.g == old_fg.g and
+                    cell.attrs.fg.b == old_fg.b and
+                    cell.attrs.fg.a == old_fg.a and
+                    cell.attrs.bg.r == old_bg.r and
+                    cell.attrs.bg.g == old_bg.g and
+                    cell.attrs.bg.b == old_bg.b and
+                    cell.attrs.bg.a == old_bg.a)
+                {
+                    cell.attrs.fg = new_fg;
+                    cell.attrs.bg = new_bg;
+                }
             }
         }
     }
 
-    pub fn pushRow(self: *TerminalHistory, row: []const types.Cell) void {
-        self.scrollback.pushRow(row);
+    pub fn ensureViewCache(self: *TerminalHistory, cols: u16, default_cell: types.Cell) void {
+        if (cols == 0) {
+            self.view_cache.clearRetainingCapacity();
+            self.view_wraps.clearRetainingCapacity();
+            self.view_rows = 0;
+            self.view_cols = 0;
+            self.view_generation = self.scrollback_generation;
+            return;
+        }
+        if (self.view_cols == cols and self.view_generation == self.scrollback_generation) return;
+
+        const log = app_logger.logger("terminal.scroll");
+        if (log.enabled_file or log.enabled_console) {
+            log.logf("scroll cache rebuild cols={d} lines={d} gen={d}", .{ cols, self.scrollback.count(), self.scrollback_generation });
+        }
+
+        self.view_cache.clearRetainingCapacity();
+        self.view_wraps.clearRetainingCapacity();
+        self.view_rows = 0;
+        self.view_cols = cols;
+
+        var idx: usize = 0;
+        while (idx < self.scrollback.count()) : (idx += 1) {
+            const line = self.scrollback.lineByIndex(idx) orelse continue;
+            const line_len = line.cells.len;
+            if (line_len == 0) {
+                _ = self.view_cache.resize(self.allocator, self.view_cache.items.len + @as(usize, cols)) catch {};
+                const start = self.view_cache.items.len - @as(usize, cols);
+                for (self.view_cache.items[start .. start + @as(usize, cols)]) |*cell| cell.* = default_cell;
+                _ = self.view_wraps.append(self.allocator, line.wrapped) catch {};
+                self.view_rows += 1;
+                continue;
+            }
+            var offset: usize = 0;
+            while (offset < line_len) : (offset += @as(usize, cols)) {
+                _ = self.view_cache.resize(self.allocator, self.view_cache.items.len + @as(usize, cols)) catch {};
+                const start = self.view_cache.items.len - @as(usize, cols);
+                for (self.view_cache.items[start .. start + @as(usize, cols)]) |*cell| cell.* = default_cell;
+                const remaining = line_len - offset;
+                const copy_len = if (remaining > @as(usize, cols)) @as(usize, cols) else remaining;
+                std.mem.copyForwards(types.Cell, self.view_cache.items[start .. start + copy_len], line.cells[offset .. offset + copy_len]);
+                const is_last = remaining <= @as(usize, cols);
+                _ = self.view_wraps.append(self.allocator, if (is_last) line.wrapped else true) catch {};
+                self.view_rows += 1;
+            }
+        }
+
+        self.view_generation = self.scrollback_generation;
+
+        if (log.enabled_file or log.enabled_console) {
+            log.logf("scroll cache rows={d} cells={d}", .{ self.view_rows, self.view_cache.items.len });
+        }
+    }
+
+    pub fn markScrollbackChanged(self: *TerminalHistory) void {
+        self.scrollback_generation +|= 1;
+    }
+
+    pub fn pushRow(self: *TerminalHistory, row: []const types.Cell, wrapped: bool) void {
+        _ = self.scrollback.pushLine(row, wrapped) catch {};
+        self.markScrollbackChanged();
     }
 
     pub fn scrollbackCount(self: *TerminalHistory) usize {
-        return self.scrollback.count();
+        return self.view_rows;
     }
 
     pub fn scrollbackRow(self: *TerminalHistory, index: usize) ?[]const types.Cell {
-        return self.scrollback.rowSlice(index);
+        const cols = @as(usize, self.view_cols);
+        if (cols == 0) return null;
+        const start = index * cols;
+        if (start + cols > self.view_cache.items.len) {
+            const log = app_logger.logger("terminal.scroll");
+            if (log.enabled_file or log.enabled_console) {
+                log.logf("scroll row miss index={d} start={d} cols={d} len={d}", .{ index, start, cols, self.view_cache.items.len });
+            }
+            return null;
+        }
+        return self.view_cache.items[start .. start + cols];
+    }
+
+    pub fn scrollbackRowWrapped(self: *TerminalHistory, index: usize) bool {
+        if (index >= self.view_wraps.items.len) return false;
+        return self.view_wraps.items[index];
+    }
+
+    pub fn scrollbackLineId(self: *TerminalHistory, index: usize) ?u64 {
+        const line = self.scrollback.lineByIndex(index) orelse return null;
+        return line.id;
+    }
+
+    pub fn scrollbackCapacity(self: *TerminalHistory) usize {
+        return self.scrollback.capacityLines();
     }
 
     pub fn scrollOffset(self: *TerminalHistory) usize {
@@ -72,7 +177,7 @@ pub const TerminalHistory = struct {
 
     pub fn maxScrollOffset(self: *TerminalHistory, rows: u16) usize {
         const visible = @as(usize, rows);
-        const total = self.scrollback.count() + visible;
+        const total = self.view_rows + visible;
         if (total <= visible) return 0;
         return total - visible;
     }
