@@ -314,6 +314,47 @@ terminal_widget_todo:
             - reference_repos/terminals/rio/rio-backend/src/selection.rs
             - reference_repos/backends/libtsm/src/tsm/tsm-selection.c
 
+    - name: "Phase 3.5 - Scrollback Reflow Redesign"
+      tasks:
+        - id: S3R-01
+          title: "Define scrollback model (line buffer + wrap metadata)"
+          status: todo
+          refs:
+            - reference_repos/terminals/kitty/kitty/line-buf.h
+            - reference_repos/terminals/ghostty/src/terminal/PageList.zig
+            - reference_repos/terminals/wezterm/term/src/screen.rs
+            - reference_repos/terminals/alacritty/alacritty_terminal/src/grid/resize.rs
+          notes:
+            - "Store logical-line boundaries and wrap flags; stable row indices for scrollback anchors."
+            - "Plan for bottom-anchored vs scroll-offset anchored views."
+        - id: S3R-02
+          title: "Implement reflow resize (logical lines -> rows)"
+          status: todo
+          refs:
+            - reference_repos/terminals/wezterm/term/src/screen.rs
+            - reference_repos/terminals/alacritty/alacritty_terminal/src/grid/resize.rs
+            - reference_repos/terminals/kitty/kitty/line-buf.h
+          notes:
+            - "Rewrap logical lines into new columns; preserve wide glyphs."
+            - "Keep view anchored (bottom if offset=0, otherwise preserve top logical line)."
+        - id: S3R-03
+          title: "Cursor + selection remap across reflow"
+          status: todo
+          refs:
+            - reference_repos/terminals/wezterm/term/src/screen.rs
+            - reference_repos/terminals/kitty/kitty/vt-parser.c
+            - reference_repos/terminals/ghostty/src/terminal/Selection.zig
+          notes:
+            - "Map logical positions to new row/col after reflow; clear if unmappable."
+        - id: S3R-04
+          title: "Scrollback correctness tests + harness"
+          status: todo
+          refs:
+            - reference_repos/terminals/alacritty/alacritty_terminal/tests/ref/
+            - reference_repos/terminals/xterm_snapshots/vttests/
+          notes:
+            - "Add resize/reflow fixtures: narrow->wide, wide->narrow, scrolled view."
+
     - name: "Phase 4 - Renderer Core"
       tasks:
         - id: P4-01
@@ -454,8 +495,7 @@ terminal_widget_todo:
             - reference_repos/terminals/wezterm/color-types/src/lib.rs
             - reference_repos/terminals/rio/rio-backend/src/config/colors/term.rs
         - id: P7-04
-          title: "Keyboard protocol extensions (CSI u, kitty)
-"
+          title: "Keyboard protocol extensions (CSI u, kitty)"
           files_to_edit:
             - src/terminal/input_keys.zig
           refs:

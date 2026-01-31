@@ -105,16 +105,27 @@ Notes:
 - Scrollback is currently appended only on full-screen scroll (scroll region must be full height).
 - Scrollback view supports wheel + drag via the terminal widget; no selection/copy yet.
 
+Planned redesign:
+- Replace the current row-only scrollback with a logical-line buffer that tracks wrap boundaries.
+- Reflow on column resize by merging wrapped rows into logical lines, then re-wrapping into the new width.
+- Preserve anchors: bottom when scrollback offset is 0, otherwise preserve top logical line and cursor/selection mapping.
+
 Decision:
 - Grid model supports dirty‑row tracking and scrollback; treat it as the current baseline rather than a throwaway prototype.
 
 Why:
 - Necessary for performance and correctness with real TUI apps.
 
+Why the redesign:
+- Current scrollback breaks on resize because it has no line wrap metadata.
+- Reference terminals (kitty/wezterm/alacritty/ghostty) model logical lines and reflow across width changes.
+
 Research notes:
 - Alacritty stores rows in a ring buffer with a movable zero index to make rotations O(1).
 - xterm keeps a fixed-size FIFO of saved lines and overwrites oldest entries as the buffer fills.
 - libtsm uses a power-of-two ring buffer and wraps with a start/used cursor.
+- wezterm rewraps by merging wrapped lines into logical lines, then splitting into new rows while remapping cursor.
+- alacritty reflows on column change and uses wrap flags to stitch lines together.
 
 ### Layer 5: Renderer Core
 
