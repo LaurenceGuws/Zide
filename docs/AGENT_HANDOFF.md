@@ -24,6 +24,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - SDL3 shim + build flag wired; SDL3 compile + runtime smoke on Linux pass.
 - SDL3 window events and scaling fixes landed; SDL3 text input now flows in terminal-only on Wayland with SDL3 build.
 - Added a scrollback reflow redesign plan and updated terminal design notes to mirror kitty/ghostty/wezterm techniques.
+ - Began scrollback model rework (LogicalLine + ScrollbackBuffer) and reflow resize wiring; scrollback rendering no longer drops during scroll interactions.
 
 ### Constraints / Guardrails
 - Handoff docs are high-level only; progress tracking lives in todo + app_architecture docs.
@@ -43,11 +44,18 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - SDL3 is the only build path; regressions must be addressed promptly.
 - Incremental highlight edits can still be fragile; see TS-04 notes in the todo.
 - Terminal scrollback resize is still flawed; avoid deep work in this area until the redesign is implemented.
+ - Scrollback view cache + reflow resizing are still in progress; expect instability during the redesign.
 
 ### In-Progress (Uncommitted)
 - SDL3 input tracing + text input decoding changes (see `src/ui/renderer/input_logging.zig`, `src/platform/input_events.zig`, `src/platform/sdl_api.zig`).
 - Temporary logging enabled in `~/.config/zide/init.lua` (input.sdl) pending cleanup.
- - No uncommitted code changes in the scrollback area; redesign is documented only.
+ - Scrollback rework in progress (uncommitted):
+   - `src/terminal/model/scrollback_buffer.zig` (new LogicalLine ring buffer)
+   - `src/terminal/model/history.zig` (rewrap cache + scrollback generation)
+   - `src/terminal/model/screen/grid.zig` (wrap flags)
+   - `src/terminal/model/screen/screen.zig` (wrap flags set/cleared)
+   - `src/terminal/core/terminal_session.zig` (reflow resize + scroll update path)
+ - Local debug logging enabled: `terminal.core`, `terminal.scroll` in `~/.config/zide/init.lua`.
 
 ### Checklist
 - `zig build test`

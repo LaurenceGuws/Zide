@@ -9,6 +9,7 @@ Purpose: this document tracks terminal architecture decisions and implementation
 - Terminal backend stub replaced by a working PTY + minimal VT pipeline.
 - Shell output renders with basic cursor movement, erase ops, and SGR (16/256/truecolor).
 - Scrollback ring buffer captures full‑screen scrolls and is exposed via a scrollbar + offset, plus a scrollback indicator.
+- Scrollback view cache is refreshed on wheel/scrollbar changes to keep visible rows in sync.
 - Alternate screen uses per-screen state (grid, cursor, scroll region, key mode stack, attrs); alt disables scrollback/selection and fully dirties on switch.
 - OSC parsing handles title (OSC 0/2), hyperlinks (OSC 8), clipboard write (OSC 52), and default fg/bg set + query (OSC 10/11). Queries for OSC 12/19 are answered.
 - Keyboard input supports CSI u/kitty protocol flags with per-screen stacks and modifier-aware encoding.
