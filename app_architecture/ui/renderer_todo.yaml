@@ -1,19 +1,21 @@
 renderer_todo:
   scope:
-    description: "Modularize renderer + OS abstraction to prepare for Windows 11 build while keeping Linux SDL2+OpenGL stable."
+    description: "Renderer modularization + OS abstraction boundaries (Linux SDL2+OpenGL stable; Windows prep)."
     priorities:
       - "extraction-only refactors (no behavior change)"
-      - "clear OS boundary (window/input vs renderer backends)"
+      - "clear OS boundary (platform window/input vs renderer backend)"
       - "stable renderer interface for multi-backend targets"
       - "minimal churn in UI widgets"
   constraints:
     - "Do not change behavior during extraction-only moves."
     - "Keep diffs small and reviewable."
     - "Run manual smoke checks after each extraction step."
+
   entry_points:
     - src/ui/renderer.zig
     - src/app_shell.zig
     - src/main.zig
+
   references:
     - app_architecture/ui/DEVELOPMENT_JOURNEY.md
     - app_architecture/APP_LAYERING.md
@@ -21,331 +23,72 @@ renderer_todo:
     - reference_repos/terminals/kitty/docs/overview.rst
     - reference_repos/terminals/ghostty/README.md
 
-  phases:
-    - name: "Phase 0 - Renderer interface + module boundaries"
-      tasks:
-        - id: R0-01
-          title: "Define renderer interface module layout (backend-agnostic surface)"
-          status: done
-          files_to_add:
-            - src/ui/renderer/interface.zig
-            - src/ui/renderer/types.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-            - src/app_shell.zig
-          notes:
-            - "Keep public API identical while splitting implementation."
-        - id: R0-02
-          title: "Extract SDL input thread + queue"
-          status: done
-          files_to_add:
-            - src/ui/renderer/sdl_input.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-03
-          title: "Extract GL init + render targets"
-          status: done
-          files_to_add:
-            - src/ui/renderer/gl_backend.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-04
-          title: "Extract font lifecycle + atlas helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/font_manager.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-05
-          title: "Extract draw ops + batching"
-          status: done
-          files_to_add:
-            - src/ui/renderer/draw_ops.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-06
-          title: "Extract SDL input constants"
-          status: done
-          files_to_add:
-            - src/ui/renderer/input_constants.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-07
-          title: "Extract clipboard helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/clipboard.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-08
-          title: "Extract texture helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/texture_utils.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-09
-          title: "Extract window event helpers"
-          status: done
-          files_to_add:
-            - src/platform/window_events.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-10
-          title: "Extract text input rect handling"
-          status: done
-          files_to_add:
-            - src/ui/renderer/text_input.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-11
-          title: "Extract timing helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/time_utils.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-12
-          title: "Extract input event helpers"
-          status: done
-          files_to_add:
-            - src/platform/input_events.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-13
-          title: "Extract SDL window + GL context init"
-          status: done
-          files_to_add:
-            - src/ui/renderer/window_init.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-14
-          title: "Extract input state helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/input_state.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-15
-          title: "Extract mouse state helpers"
-          status: done
-          files_to_add:
-            - src/platform/mouse_state.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-16
-          title: "Extract window metrics helpers"
-          status: done
-          files_to_add:
-            - src/platform/window_metrics.zig
-          files_to_edit:
-            - src/platform/window.zig
-        - id: R0-17
-          title: "Extract input queue helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/input_queue.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-18
-          title: "Extract UI scale helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/scale_utils.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-19
-          title: "Extract render target helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/targets.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-20
-          title: "Extract text draw helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/text_draw.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-21
-          title: "Extract GL resource helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/gl_resources.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-            - src/ui/renderer/gl_backend.zig
-        - id: R0-22
-          title: "Extract draw batch helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/draw_batch.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-23
-          title: "Extract target draw helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/target_draw.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-24
-          title: "Extract key state helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/key_state.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-25
-          title: "Extract shape helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/shape_utils.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-26
-          title: "Extract shape draw helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/shape_draw.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-27
-          title: "Extract terminal glyph helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/terminal_glyphs.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-28
-          title: "Extract clipboard buffer helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/clipboard_state.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-29
-          title: "Extract terminal underline helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/terminal_underline.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-30
-          title: "Extract mouse button helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/mouse_state.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-31
-          title: "Extract texture draw helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/texture_draw.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-            - src/ui/renderer/target_draw.zig
-            - src/ui/renderer/draw_ops.zig
-        - id: R0-32
-          title: "Extract text composition helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/text_composition.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-            - src/ui/renderer/input_state.zig
-        - id: R0-33
-          title: "Extract window flag helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/window_flags.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-34
-          title: "Extract mouse wheel helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/mouse_wheel.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-35
-          title: "Extract input logging helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/input_logging.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-36
-          title: "Extract window metrics state"
-          status: done
-          files_to_add:
-            - src/ui/renderer/window_metrics_state.zig
-          files_to_edit:
-            - src/ui/renderer.zig
-        - id: R0-37
-          title: "Extract key queue helpers"
-          status: done
-          files_to_add:
-            - src/ui/renderer/key_queue.zig
-          files_to_edit:
-            - src/ui/renderer.zig
+  boundaries:
+    renderer_core:
+      - "src/ui/renderer.zig: orchestration, state, public API"
+      - "src/ui/renderer/interface.zig: backend-agnostic surface"
+      - "src/ui/renderer/types.zig: shared renderer types"
 
-    - name: "Phase 1 - OS abstraction surface"
-      tasks:
-        - id: R1-01
-          title: "Define OS window/input abstraction (SDL-backed initially)"
-          status: done
-          files_to_add:
-            - src/platform/window.zig
-            - src/platform/input.zig
-          files_to_edit:
-            - src/app_shell.zig
-            - src/ui/renderer.zig
-        - id: R1-02
-          title: "Move SDL-specific window metrics + logging under platform/"
-          status: done
-          files_to_edit:
-            - src/ui/renderer.zig
-            - src/platform/window.zig
+    renderer_helpers:
+      gl_backend:
+        - src/ui/renderer/gl_backend.zig
+        - src/ui/renderer/gl_resources.zig
+        - src/ui/renderer/targets.zig
+      input:
+        - src/ui/renderer/sdl_input.zig
+        - src/ui/renderer/input_state.zig
+        - src/ui/renderer/input_queue.zig
+        - src/ui/renderer/input_logging.zig
+        - src/ui/renderer/key_state.zig
+        - src/ui/renderer/key_queue.zig
+        - src/ui/renderer/mouse_state.zig
+        - src/ui/renderer/mouse_wheel.zig
+        - src/ui/renderer/text_input.zig
+        - src/ui/renderer/text_composition.zig
+      window:
+        - src/ui/renderer/window_init.zig
+        - src/ui/renderer/window_flags.zig
+        - src/ui/renderer/window_metrics_state.zig
+      draw:
+        - src/ui/renderer/draw_ops.zig
+        - src/ui/renderer/draw_batch.zig
+        - src/ui/renderer/shape_utils.zig
+        - src/ui/renderer/shape_draw.zig
+        - src/ui/renderer/texture_draw.zig
+        - src/ui/renderer/target_draw.zig
+      text:
+        - src/ui/renderer/text_draw.zig
+        - src/ui/renderer/terminal_glyphs.zig
+        - src/ui/renderer/terminal_underline.zig
+      misc:
+        - src/ui/renderer/font_manager.zig
+        - src/ui/renderer/clipboard.zig
+        - src/ui/renderer/clipboard_state.zig
+        - src/ui/renderer/texture_utils.zig
+        - src/ui/renderer/scale_utils.zig
+        - src/ui/renderer/time_utils.zig
 
-    - name: "Phase 2 - Windows 11 prep"
-      tasks:
-        - id: R2-01
-          title: "Add Windows backend stubs (WGL/EGL selection)"
-          status: done
-          files_to_add:
-            - src/ui/renderer/backends/wgl.zig
-            - src/ui/renderer/backends/egl.zig
-          files_to_edit:
-            - src/ui/renderer/interface.zig
-            - src/ui/renderer/gl_backend.zig
-        - id: R2-02
-          title: "Build config switches for OS backend selection"
-          status: done
-          files_to_edit:
-            - build.zig
-            - src/ui/renderer.zig
-        - id: R2-03
-          title: "Windows smoke build (no runtime)"
-          status: blocked
-          files_to_edit:
-            - app_architecture/ui/renderer_todo.yaml
-          notes:
-            - "Record compiler errors and missing deps."
-            - "Windows smoke build (2026-01-30): missing freetype/harfbuzz/lua/SDL2 system libs for x86_64-windows-gnu."
-            - "Windows smoke build (2026-01-30): vcpkg env missing (VCPKG_ROOT/VCPKG_DEFAULT_TRIPLET), build aborted."
+    platform_surface:
+      - src/platform/window.zig
+      - src/platform/window_events.zig
+      - src/platform/window_metrics.zig
+      - src/platform/input.zig
+      - src/platform/input_events.zig
+      - src/platform/mouse_state.zig
 
-    - name: "Phase 3 - macOS + Android stubs"
-      tasks:
-        - id: R3-01
-          title: "Metal backend stub"
-          status: done
-          files_to_add:
-            - src/ui/renderer/backends/metal.zig
-        - id: R3-02
-          title: "GLES backend stub"
-          status: done
-          files_to_add:
-            - src/ui/renderer/backends/gles.zig
+    backend_stubs:
+      - src/ui/renderer/backends/wgl.zig
+      - src/ui/renderer/backends/egl.zig
+      - src/ui/renderer/backends/metal.zig
+      - src/ui/renderer/backends/gles.zig
+
+  status:
+    extraction_phase: complete
+    build:
+      last_check: "zig build (2026-01-31)"
+      status: pass
+
+  remaining_work:
+    - "Only extract when a renderer block grows beyond a single responsibility or crosses platform/renderer boundaries."
+    - "Add focused tests once a replay harness exists (see workflow constraints)."
+    - "Revisit Windows smoke build deps once vcpkg env is ready."
