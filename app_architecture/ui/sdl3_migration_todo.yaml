@@ -96,6 +96,6 @@ sdl3_migration:
   phase_5_cleanup:
     - id: S5-01
       title: "Decide when to drop SDL2"
-      status: pending
+      status: in_progress
       notes:
-        - "Only after SDL3 passes smoke checks and regressions are cleared."
+        - "Default SDL version flipped to SDL3; keep SDL2 as fallback during validation."

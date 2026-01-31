@@ -56,7 +56,7 @@ pub fn build(b: *std.Build) void {
         "renderer-backend",
         "Renderer backend (sdl_gl, wgl, egl)",
     ) orelse default_renderer_backend;
-    const sdl_version = b.option([]const u8, "sdl-version", "SDL version (sdl2, sdl3)") orelse "sdl2";
+    const sdl_version = b.option([]const u8, "sdl-version", "SDL version (sdl2, sdl3)") orelse "sdl3";
     const build_options = b.addOptions();
     build_options.addOption([]const u8, "renderer_backend", renderer_backend);
     build_options.addOption([]const u8, "sdl_version", sdl_version);
