@@ -556,6 +556,7 @@ terminal_widget_todo:
             - reference_repos/terminals/rio/rio-backend/src/simd_utf8.rs
         - id: P8-05
           title: "Batch terminal draw calls (glyphs + backgrounds)"
+          status: done
           files_to_edit:
             - src/ui/renderer.zig
             - src/ui/widgets/terminal_widget.zig
@@ -563,6 +564,8 @@ terminal_widget_todo:
             - reference_repos/terminals/kitty/kitty/text-cache.h
             - reference_repos/terminals/alacritty/alacritty/src/renderer/text/mod.rs
             - reference_repos/terminals/ghostty/src/terminal/render.zig
+          notes:
+            - "Terminal backgrounds already batch via addTerminalRect; glyphs now batch through GlyphCache."
         - id: P8-06
           title: "Honor dirty column bounds in partial redraw"
           files_to_edit:
