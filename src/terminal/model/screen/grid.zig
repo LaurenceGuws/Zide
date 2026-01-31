@@ -19,6 +19,7 @@ pub const TerminalGrid = struct {
     rows: u16,
     cols: u16,
     cells: std.ArrayList(types.Cell),
+    wrap_flags: std.ArrayList(bool),
     dirty_rows: std.ArrayList(bool),
     dirty_cols_start: std.ArrayList(u16),
     dirty_cols_end: std.ArrayList(u16),
@@ -27,16 +28,21 @@ pub const TerminalGrid = struct {
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16, default_cell: types.Cell) !TerminalGrid {
         var cells = std.ArrayList(types.Cell).empty;
+        var wrap_flags = std.ArrayList(bool).empty;
         var dirty_rows = std.ArrayList(bool).empty;
         var dirty_cols_start = std.ArrayList(u16).empty;
         var dirty_cols_end = std.ArrayList(u16).empty;
         const count = @as(usize, rows) * @as(usize, cols);
         try cells.resize(allocator, count);
+        try wrap_flags.resize(allocator, rows);
         try dirty_rows.resize(allocator, rows);
         try dirty_cols_start.resize(allocator, rows);
         try dirty_cols_end.resize(allocator, rows);
         for (cells.items) |*cell| {
             cell.* = default_cell;
+        }
+        for (wrap_flags.items) |*flag| {
+            flag.* = false;
         }
         for (dirty_rows.items) |*row_dirty| {
             row_dirty.* = true;
@@ -50,6 +56,7 @@ pub const TerminalGrid = struct {
             .rows = rows,
             .cols = cols,
             .cells = cells,
+            .wrap_flags = wrap_flags,
             .dirty_rows = dirty_rows,
             .dirty_cols_start = dirty_cols_start,
             .dirty_cols_end = dirty_cols_end,
@@ -65,6 +72,7 @@ pub const TerminalGrid = struct {
 
     pub fn deinit(self: *TerminalGrid) void {
         self.cells.deinit(self.allocator);
+        self.wrap_flags.deinit(self.allocator);
         self.dirty_rows.deinit(self.allocator);
         self.dirty_cols_start.deinit(self.allocator);
         self.dirty_cols_end.deinit(self.allocator);
@@ -75,19 +83,25 @@ pub const TerminalGrid = struct {
         const old_rows = self.rows;
         const old_cols = self.cols;
         const old_cells = self.cells;
+        const old_wraps = self.wrap_flags;
 
         var new_cells = std.ArrayList(types.Cell).empty;
+        var new_wraps = std.ArrayList(bool).empty;
         var new_dirty_rows = std.ArrayList(bool).empty;
         var new_dirty_cols_start = std.ArrayList(u16).empty;
         var new_dirty_cols_end = std.ArrayList(u16).empty;
         const count = @as(usize, rows) * @as(usize, cols);
         try new_cells.resize(self.allocator, count);
+        try new_wraps.resize(self.allocator, rows);
         try new_dirty_rows.resize(self.allocator, rows);
         try new_dirty_cols_start.resize(self.allocator, rows);
         try new_dirty_cols_end.resize(self.allocator, rows);
 
         for (new_cells.items) |*cell| {
             cell.* = default_cell;
+        }
+        for (new_wraps.items) |*flag| {
+            flag.* = false;
         }
 
         const copy_rows = @min(@as(usize, old_rows), @as(usize, rows));
@@ -102,6 +116,9 @@ pub const TerminalGrid = struct {
                     new_cells.items[new_start .. new_start + copy_cols],
                     old_cells.items[old_start .. old_start + copy_cols],
                 );
+                if (row < old_wraps.items.len) {
+                    new_wraps.items[row] = old_wraps.items[row];
+                }
             }
         }
 
@@ -114,16 +131,28 @@ pub const TerminalGrid = struct {
         }
 
         self.cells.deinit(self.allocator);
+        self.wrap_flags.deinit(self.allocator);
         self.dirty_rows.deinit(self.allocator);
         self.dirty_cols_start.deinit(self.allocator);
         self.dirty_cols_end.deinit(self.allocator);
         self.cells = new_cells;
+        self.wrap_flags = new_wraps;
         self.dirty_rows = new_dirty_rows;
         self.dirty_cols_start = new_dirty_cols_start;
         self.dirty_cols_end = new_dirty_cols_end;
         self.rows = rows;
         self.cols = cols;
         self.markDirtyAll();
+    }
+
+    pub fn setRowWrapped(self: *TerminalGrid, row: usize, wrapped: bool) void {
+        if (row >= self.wrap_flags.items.len) return;
+        self.wrap_flags.items[row] = wrapped;
+    }
+
+    pub fn rowWrapped(self: *const TerminalGrid, row: usize) bool {
+        if (row >= self.wrap_flags.items.len) return false;
+        return self.wrap_flags.items[row];
     }
 
     fn setAllDirtyRows(self: *TerminalGrid, value: bool) void {

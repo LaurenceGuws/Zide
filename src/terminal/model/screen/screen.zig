@@ -197,6 +197,7 @@ pub const Screen = struct {
 
         if (self.cursor.col + 1 >= cols) {
             self.wrap_next = true;
+            self.grid.setRowWrapped(row, true);
         } else {
             self.cursor.col += 1;
         }
@@ -263,6 +264,7 @@ pub const Screen = struct {
 
         if (run_len == remaining_cols) {
             self.wrap_next = true;
+            self.grid.setRowWrapped(row, true);
         } else {
             self.cursor.col += run_len;
         }
@@ -281,6 +283,7 @@ pub const Screen = struct {
         if (rows == 0 or cols == 0) return .done;
         if (self.cursor.row >= rows) return .done;
         if (self.wrap_next) {
+            self.grid.setRowWrapped(self.cursor.row, true);
             self.wrap_next = false;
             return .need_newline;
         }
@@ -481,6 +484,9 @@ pub const Screen = struct {
         for (self.grid.cells.items) |*cell| {
             cell.* = default_cell;
         }
+        for (self.grid.wrap_flags.items) |*flag| {
+            flag.* = false;
+        }
         self.grid.markDirtyAll();
     }
 
@@ -500,6 +506,10 @@ pub const Screen = struct {
                 if (row + 1 < rows) {
                     self.grid.markDirtyRange(row + 1, rows - 1, 0, cols - 1);
                 }
+                var r = row;
+                while (r < rows) : (r += 1) {
+                    self.grid.setRowWrapped(r, false);
+                }
             },
             1 => { // start to cursor
                 const end = row * cols + col + 1;
@@ -508,10 +518,17 @@ pub const Screen = struct {
                     self.grid.markDirtyRange(0, row - 1, 0, cols - 1);
                 }
                 self.grid.markDirtyRange(row, row, 0, col);
+                var r: usize = 0;
+                while (r <= row) : (r += 1) {
+                    self.grid.setRowWrapped(r, false);
+                }
             },
             2 => { // all
                 for (self.grid.cells.items) |*cell| cell.* = blank_cell;
                 self.grid.markDirtyAll();
+                for (self.grid.wrap_flags.items) |*flag| {
+                    flag.* = false;
+                }
             },
             else => {},
         }
@@ -539,6 +556,7 @@ pub const Screen = struct {
             },
             else => {},
         }
+        self.grid.setRowWrapped(self.cursor.row, false);
     }
 
     pub fn insertChars(self: *Screen, count: usize, blank_cell: types.Cell) void {
@@ -599,6 +617,15 @@ pub const Screen = struct {
             std.mem.copyBackwards(types.Cell, self.grid.cells.items[insert_at + n * cols .. region_end], self.grid.cells.items[insert_at .. insert_at + move_len]);
         }
         for (self.grid.cells.items[insert_at .. insert_at + n * cols]) |*cell| cell.* = blank_cell;
+        var row = self.scroll_bottom;
+        while (row >= self.cursor.row + n) : (row -= 1) {
+            self.grid.setRowWrapped(row, self.grid.rowWrapped(row - n));
+            if (row == 0) break;
+        }
+        row = self.cursor.row;
+        while (row < self.cursor.row + n and row <= self.scroll_bottom) : (row += 1) {
+            self.grid.setRowWrapped(row, false);
+        }
         self.grid.markDirtyRange(self.cursor.row, self.scroll_bottom, 0, cols - 1);
     }
 
@@ -615,6 +642,14 @@ pub const Screen = struct {
             std.mem.copyForwards(types.Cell, self.grid.cells.items[delete_at .. delete_at + move_len], self.grid.cells.items[delete_at + n * cols .. region_end]);
         }
         for (self.grid.cells.items[region_end - n * cols .. region_end]) |*cell| cell.* = blank_cell;
+        var row = self.cursor.row;
+        while (row + n <= self.scroll_bottom) : (row += 1) {
+            self.grid.setRowWrapped(row, self.grid.rowWrapped(row + n));
+        }
+        row = self.scroll_bottom + 1 - n;
+        while (row <= self.scroll_bottom) : (row += 1) {
+            self.grid.setRowWrapped(row, false);
+        }
         self.grid.markDirtyRange(self.cursor.row, self.scroll_bottom, 0, cols - 1);
     }
 
@@ -690,6 +725,18 @@ pub const Screen = struct {
             std.mem.copyForwards(types.Cell, self.grid.cells.items[region_start .. region_start + move_len], self.grid.cells.items[region_start + n * cols .. region_end]);
         }
         for (self.grid.cells.items[region_end - n * cols .. region_end]) |*cell| cell.* = blank_cell;
+        const start_row = self.scroll_top;
+        const end_row = self.scroll_bottom;
+        if (start_row <= end_row and n > 0) {
+            var row = start_row;
+            while (row + n <= end_row) : (row += 1) {
+                self.grid.setRowWrapped(row, self.grid.rowWrapped(row + n));
+            }
+            row = end_row + 1 - n;
+            while (row <= end_row) : (row += 1) {
+                self.grid.setRowWrapped(row, false);
+            }
+        }
         self.grid.markDirtyRange(self.scroll_top, self.scroll_bottom, 0, cols - 1);
     }
 
@@ -713,6 +760,19 @@ pub const Screen = struct {
             std.mem.copyBackwards(types.Cell, self.grid.cells.items[region_start + n * cols .. region_end], self.grid.cells.items[region_start .. region_start + move_len]);
         }
         for (self.grid.cells.items[region_start .. region_start + n * cols]) |*cell| cell.* = blank_cell;
+        const start_row = self.scroll_top;
+        const end_row = self.scroll_bottom;
+        if (start_row <= end_row and n > 0) {
+            var row = end_row;
+            while (row >= start_row + n) : (row -= 1) {
+                self.grid.setRowWrapped(row, self.grid.rowWrapped(row - n));
+                if (row == 0) break;
+            }
+            row = start_row;
+            while (row < start_row + n and row <= end_row) : (row += 1) {
+                self.grid.setRowWrapped(row, false);
+            }
+        }
         self.grid.markDirtyRange(self.scroll_top, self.scroll_bottom, 0, cols - 1);
     }
 
@@ -737,6 +797,15 @@ pub const Screen = struct {
         const row_start = (rows - 1) * cols;
         for (self.grid.cells.items[row_start .. row_start + cols]) |*cell| {
             cell.* = blank_cell;
+        }
+        if (rows > 1) {
+            var row: usize = 0;
+            while (row + 1 < rows) : (row += 1) {
+                self.grid.setRowWrapped(row, self.grid.rowWrapped(row + 1));
+            }
+        }
+        if (rows > 0) {
+            self.grid.setRowWrapped(rows - 1, false);
         }
         self.cursor.row = rows - 1;
         self.cursor.col = 0;
