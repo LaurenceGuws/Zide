@@ -14,6 +14,8 @@ pub const WindowMetrics = struct {
     display_w: i32,
     display_h: i32,
     dpi: iface.MousePos,
+    display_scale: f32,
+    pixel_density: f32,
     ddpi: f32,
     hdpi: f32,
     vdpi: f32,
@@ -46,6 +48,8 @@ pub fn getDrawableSize(window: *sdl.SDL_Window) DrawableSize {
 
 pub fn getDpiScale(window: *sdl.SDL_Window) iface.MousePos {
     if (sdl_api.is_sdl3) {
+        const display_scale = sdl_api.getWindowDisplayScale(window);
+        if (display_scale > 0.0) return .{ .x = display_scale, .y = display_scale };
         const density = sdl_api.getWindowPixelDensity(window);
         if (density > 0.0) return .{ .x = density, .y = density };
     }
@@ -56,6 +60,19 @@ pub fn getDpiScale(window: *sdl.SDL_Window) iface.MousePos {
         .x = @as(f32, @floatFromInt(drawable.w)) / @as(f32, @floatFromInt(window_size.w)),
         .y = @as(f32, @floatFromInt(drawable.h)) / @as(f32, @floatFromInt(window_size.h)),
     };
+}
+
+pub fn getRenderScale(window: *sdl.SDL_Window) f32 {
+    if (sdl_api.is_sdl3) {
+        const display_scale = sdl_api.getWindowDisplayScale(window);
+        if (display_scale > 0.0) return display_scale;
+        const density = sdl_api.getWindowPixelDensity(window);
+        if (density > 0.0) return density;
+    }
+    const window_size = getWindowSize(window);
+    const drawable = getDrawableSize(window);
+    if (window_size.w <= 0 or window_size.h <= 0) return 1.0;
+    return @as(f32, @floatFromInt(drawable.w)) / @as(f32, @floatFromInt(window_size.w));
 }
 
 pub fn getScreenSize(window: *sdl.SDL_Window) iface.MousePos {
@@ -89,6 +106,8 @@ pub fn collectWindowMetrics(window: *sdl.SDL_Window, reason: []const u8) WindowM
     var vdpi: f32 = 0;
     _ = sdl_api.getDisplayDpi(display, &ddpi, &hdpi, &vdpi);
     const dpi = getDpiScale(window);
+    const display_scale = sdl_api.getWindowDisplayScale(window);
+    const pixel_density = sdl_api.getWindowPixelDensity(window);
 
     var refresh_hz: i32 = 0;
     var mode: sdl.SDL_DisplayMode = undefined;
@@ -99,7 +118,7 @@ pub fn collectWindowMetrics(window: *sdl.SDL_Window, reason: []const u8) WindowM
     const log = app_logger.logger("sdl.window");
     if (log.enabled_file or log.enabled_console) {
         log.logf(
-            "metrics reason={s} window={d}x{d} drawable={d}x{d} display={d} bounds={d}x{d} dpi_scale={d:.3},{d:.3} dpi={d:.1}/{d:.1}/{d:.1} refresh_hz={d}",
+            "metrics reason={s} window={d}x{d} drawable={d}x{d} display={d} bounds={d}x{d} dpi_scale={d:.3},{d:.3} display_scale={d:.3} pixel_density={d:.3} dpi={d:.1}/{d:.1}/{d:.1} refresh_hz={d}",
             .{
                 reason,
                 window_size.w,
@@ -111,6 +130,8 @@ pub fn collectWindowMetrics(window: *sdl.SDL_Window, reason: []const u8) WindowM
                 display_h,
                 dpi.x,
                 dpi.y,
+                display_scale,
+                pixel_density,
                 ddpi,
                 hdpi,
                 vdpi,
@@ -128,6 +149,8 @@ pub fn collectWindowMetrics(window: *sdl.SDL_Window, reason: []const u8) WindowM
         .display_w = display_w,
         .display_h = display_h,
         .dpi = dpi,
+        .display_scale = display_scale,
+        .pixel_density = pixel_density,
         .ddpi = ddpi,
         .hdpi = hdpi,
         .vdpi = vdpi,

@@ -10,8 +10,8 @@ pub fn beginRenderTarget(renderer: anytype, target: ?RenderTarget) bool {
     return gl_backend.beginRenderTarget(renderer, target);
 }
 
-pub fn ensureRenderTarget(target: *?RenderTarget, width: i32, height: i32, filter: i32) bool {
-    return gl_backend.ensureRenderTarget(target, width, height, filter);
+pub fn ensureRenderTarget(target: *?RenderTarget, width: i32, height: i32, logical_width: i32, logical_height: i32, filter: i32) bool {
+    return gl_backend.ensureRenderTarget(target, width, height, logical_width, logical_height, filter);
 }
 
 pub fn destroyRenderTarget(target: *?RenderTarget) void {

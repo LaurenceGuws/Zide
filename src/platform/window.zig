@@ -18,6 +18,10 @@ pub fn getDpiScale(window: *sdl.SDL_Window) iface.MousePos {
     return window_metrics.getDpiScale(window);
 }
 
+pub fn getRenderScale(window: *sdl.SDL_Window) f32 {
+    return window_metrics.getRenderScale(window);
+}
+
 pub fn getScreenSize(window: *sdl.SDL_Window) iface.MousePos {
     return window_metrics.getScreenSize(window);
 }

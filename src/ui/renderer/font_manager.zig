@@ -4,10 +4,12 @@ const TerminalFont = terminal_font_mod.TerminalFont;
 const iface = @import("interface.zig");
 
 pub fn initFonts(renderer: anytype, size: f32) !void {
+    const render_scale = if (renderer.render_scale > 0.0) renderer.render_scale else 1.0;
+    const raster_size = size * render_scale;
     renderer.terminal_font = try TerminalFont.init(
         renderer.allocator,
         renderer.font_path,
-        size,
+        raster_size,
         iface.SYMBOLS_FALLBACK_PATH,
         iface.UNICODE_SYMBOLS2_PATH,
         iface.UNICODE_SYMBOLS_PATH,
@@ -16,16 +18,17 @@ pub fn initFonts(renderer: anytype, size: f32) !void {
         iface.EMOJI_COLOR_FALLBACK_PATH,
         iface.EMOJI_TEXT_FALLBACK_PATH,
     );
+    renderer.terminal_font.render_scale = render_scale;
     renderer.terminal_font.setAtlasFilterPoint();
-    renderer.terminal_cell_width = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(renderer.terminal_font.cell_width)))));
-    renderer.terminal_cell_height = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(renderer.terminal_font.line_height)))));
+    renderer.terminal_cell_width = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(renderer.terminal_font.cell_width / render_scale)))));
+    renderer.terminal_cell_height = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(renderer.terminal_font.line_height / render_scale)))));
     renderer.char_width = renderer.terminal_cell_width;
     renderer.char_height = renderer.terminal_cell_height;
 
     renderer.icon_font = try TerminalFont.init(
         renderer.allocator,
         renderer.font_path,
-        size * 2.0,
+        raster_size * 2.0,
         iface.SYMBOLS_FALLBACK_PATH,
         iface.UNICODE_SYMBOLS2_PATH,
         iface.UNICODE_SYMBOLS_PATH,
@@ -34,10 +37,11 @@ pub fn initFonts(renderer: anytype, size: f32) !void {
         iface.EMOJI_COLOR_FALLBACK_PATH,
         iface.EMOJI_TEXT_FALLBACK_PATH,
     );
+    renderer.icon_font.render_scale = render_scale;
     renderer.icon_font.setAtlasFilterPoint();
     renderer.icon_font_size = size * 2.0;
-    renderer.icon_char_width = renderer.icon_font.cell_width;
-    renderer.icon_char_height = renderer.icon_font.line_height;
+    renderer.icon_char_width = renderer.icon_font.cell_width / render_scale;
+    renderer.icon_char_height = renderer.icon_font.line_height / render_scale;
 }
 
 pub fn loadFont(renderer: anytype, path: [*:0]const u8, size: f32) void {
@@ -94,7 +98,7 @@ pub fn fontForSize(renderer: anytype, size: f32) ?*TerminalFont {
     font_ptr.* = TerminalFont.init(
         renderer.allocator,
         iface.FONT_PATH,
-        @floatFromInt(key),
+        @as(f32, @floatFromInt(key)) * renderer.render_scale,
         iface.SYMBOLS_FALLBACK_PATH,
         iface.UNICODE_SYMBOLS2_PATH,
         iface.UNICODE_SYMBOLS_PATH,
@@ -106,6 +110,7 @@ pub fn fontForSize(renderer: anytype, size: f32) ?*TerminalFont {
         renderer.allocator.destroy(font_ptr);
         return null;
     };
+    font_ptr.render_scale = renderer.render_scale;
     font_ptr.setAtlasFilterPoint();
     _ = renderer.font_cache.put(key, font_ptr) catch {};
     return font_ptr;

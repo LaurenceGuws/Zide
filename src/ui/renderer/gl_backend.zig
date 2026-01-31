@@ -5,6 +5,8 @@ const types = @import("types.zig");
 pub const RenderTarget = struct {
     texture: types.Texture,
     fbo: gl.GLuint,
+    logical_width: i32,
+    logical_height: i32,
 };
 
 pub fn initGlResources(renderer: anytype) !void {
@@ -98,16 +100,16 @@ pub fn beginRenderTarget(renderer: anytype, target: ?RenderTarget) bool {
         gl.BindFramebuffer(gl.c.GL_FRAMEBUFFER, t.fbo);
         renderer.target_pixel_width = t.texture.width;
         renderer.target_pixel_height = t.texture.height;
-        updateProjection(renderer, t.texture.width, t.texture.height);
+        updateProjection(renderer, t.logical_width, t.logical_height);
         return true;
     }
     return false;
 }
 
-pub fn ensureRenderTarget(target: *?RenderTarget, width: i32, height: i32, filter: i32) bool {
-    if (width <= 0 or height <= 0) return false;
+pub fn ensureRenderTarget(target: *?RenderTarget, width: i32, height: i32, logical_width: i32, logical_height: i32, filter: i32) bool {
+    if (width <= 0 or height <= 0 or logical_width <= 0 or logical_height <= 0) return false;
     if (target.*) |t| {
-        if (t.texture.width == width and t.texture.height == height) return false;
+        if (t.texture.width == width and t.texture.height == height and t.logical_width == logical_width and t.logical_height == logical_height) return false;
         destroyRenderTarget(target);
     }
 
@@ -124,7 +126,7 @@ pub fn ensureRenderTarget(target: *?RenderTarget, width: i32, height: i32, filte
         return false;
     }
 
-    target.* = .{ .texture = texture, .fbo = fbo };
+    target.* = .{ .texture = texture, .fbo = fbo, .logical_width = logical_width, .logical_height = logical_height };
     return true;
 }
 

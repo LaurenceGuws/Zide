@@ -95,6 +95,7 @@ pub const TerminalFont = struct {
     descent: f32,
     line_height: f32,
     cell_width: f32,
+    render_scale: f32,
     use_lcd: bool,
     overflow_policy: AllowSquareGlyphOverflow,
 
@@ -349,6 +350,7 @@ pub const TerminalFont = struct {
             .descent = descent_px,
             .line_height = if (line_height_px > 0) line_height_px else ascent_px + descent_px,
             .cell_width = if (cell_width_px > 0) cell_width_px else size * 0.6,
+            .render_scale = 1.0,
             .use_lcd = std.c.getenv("ZIDE_FONT_LCD") != null,
             .overflow_policy = blk: {
                 if (std.c.getenv("ZIDE_GLYPH_OVERFLOW")) |raw| {
@@ -418,10 +420,12 @@ pub const TerminalFont = struct {
     pub fn drawGlyph(self: *TerminalFont, draw: DrawContext, codepoint: u32, x: f32, y: f32, cell_width: f32, cell_height: f32, followed_by_space: bool, color: Rgba) void {
         if (codepoint == 0) return;
         const glyph = self.getGlyph(codepoint) catch return;
-        const baseline = y + self.ascent;
+        const render_scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
+        const inv_scale = 1.0 / render_scale;
+        const baseline = y + self.ascent * inv_scale;
 
-        const glyph_w = @as(f32, @floatFromInt(glyph.width));
-        const glyph_h = @as(f32, @floatFromInt(glyph.height));
+        const glyph_w = @as(f32, @floatFromInt(glyph.width)) * inv_scale;
+        const glyph_h = @as(f32, @floatFromInt(glyph.height)) * inv_scale;
 
         // Check if codepoint is in Private Use Area (PUA) or symbol ranges.
         // These are typically icons that should be allowed to overflow.
@@ -439,11 +443,12 @@ pub const TerminalFont = struct {
             .when_followed_by_space => followed_by_space,
         } else false;
 
-        const scale = if (!allow_width_overflow and glyph_w > cell_width and glyph_w > 0) cell_width / glyph_w else 1.0;
-        const scaled_w = glyph_w * scale;
-        const scaled_h = glyph_h * scale;
+        const overflow_scale = if (!allow_width_overflow and glyph_w > cell_width and glyph_w > 0) cell_width / glyph_w else 1.0;
+        const scaled_w = glyph_w * overflow_scale;
+        const scaled_h = glyph_h * overflow_scale;
 
-        const bearing = @as(f32, @floatFromInt(glyph.bearing_x));
+        const bearing = @as(f32, @floatFromInt(glyph.bearing_x)) * inv_scale;
+        const bearing_y = @as(f32, @floatFromInt(glyph.bearing_y)) * inv_scale;
 
         // For symbol/icon glyphs: center in cell with left bias to prevent right clipping.
         const draw_color = if (glyph.is_color)
@@ -452,8 +457,8 @@ pub const TerminalFont = struct {
             color;
 
         if (is_symbol_glyph) {
-            const draw_x = @max(x, x + bearing * scale);
-            const draw_y = baseline - @as(f32, @floatFromInt(glyph.bearing_y)) * scale;
+            const draw_x = @max(x, x + bearing * overflow_scale);
+            const draw_y = baseline - bearing_y * overflow_scale;
             const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
             const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y)))));
             const dest = Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
@@ -462,8 +467,8 @@ pub const TerminalFont = struct {
         }
 
         // Normal glyph: draw at bearing position, clamped to not go left of cell.
-        const draw_x = if (allow_width_overflow) x + bearing * scale else @max(x, x + bearing * scale);
-        const draw_y = baseline - @as(f32, @floatFromInt(glyph.bearing_y)) * scale;
+        const draw_x = if (allow_width_overflow) x + bearing * overflow_scale else @max(x, x + bearing * overflow_scale);
+        const draw_y = baseline - bearing_y * overflow_scale;
         const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
         const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y)))));
         const dest = Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
@@ -472,7 +477,8 @@ pub const TerminalFont = struct {
 
     pub fn glyphAdvance(self: *TerminalFont, codepoint: u32) GlyphError!f32 {
         const glyph = try self.getGlyph(codepoint);
-        return glyph.advance;
+        const render_scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
+        return glyph.advance / render_scale;
     }
 
     fn getGlyph(self: *TerminalFont, codepoint: u32) GlyphError!*Glyph {

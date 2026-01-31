@@ -1,4 +1,3 @@
-const compositor = @import("../../platform/compositor.zig");
 const iface = @import("interface.zig");
 const std = @import("std");
 
@@ -13,17 +12,11 @@ pub fn queryUiScale(
     now: f64,
     wayland: *WaylandScaleState,
 ) f32 {
-    var scale: f32 = @max(dpi.x, dpi.y);
-
-    if (compositor.isWayland()) {
-        if (now - wayland.last_update > 1.0) {
-            wayland.cache = compositor.getWaylandScale(allocator);
-            wayland.last_update = now;
-        }
-        if (wayland.cache) |wl_scale| {
-            if (wl_scale > 0.0) scale = wl_scale;
-        }
-    }
+    _ = allocator;
+    _ = dpi;
+    _ = now;
+    _ = wayland;
+    var scale: f32 = 1.0;
 
     if (std.c.getenv("ZIDE_UI_SCALE")) |raw| {
         const s = std.mem.trim(u8, std.mem.span(raw), " \t\r\n");

@@ -224,6 +224,7 @@ pub const Renderer = struct {
 
     theme: Theme,
     mouse_scale: MousePos,
+    render_scale: f32,
     user_zoom: f32,
     user_zoom_target: f32,
     ui_scale: f32,
@@ -286,6 +287,7 @@ pub const Renderer = struct {
         const base_font_size: f32 = 16.0;
         const ui_scale: f32 = 1.0;
         const font_size = base_font_size * ui_scale;
+        const render_scale = platform_window.getRenderScale(window);
 
         renderer.* = .{
             .allocator = allocator,
@@ -324,6 +326,7 @@ pub const Renderer = struct {
             .editor_target = null,
             .theme = .{},
             .mouse_scale = .{ .x = 1.0, .y = 1.0 },
+            .render_scale = render_scale,
             .user_zoom = 1.0,
             .user_zoom_target = 1.0,
             .ui_scale = ui_scale,
@@ -455,6 +458,7 @@ pub const Renderer = struct {
 
     fn applyFontScale(self: *Renderer) !void {
         try font_manager.applyFontScale(self);
+        text_input.reapplyRect(&self.text_input_state, self.window);
     }
 
     pub fn queueUserZoom(self: *Renderer, delta: f32, now: f64) bool {
@@ -473,8 +477,26 @@ pub const Renderer = struct {
 
     pub fn refreshUiScale(self: *Renderer) !bool {
         const next = self.queryUiScale();
-        if (std.math.approxEqAbs(f32, next, self.ui_scale, 0.0001)) return false;
+        const next_render = platform_window.getRenderScale(self.window);
+        const scale_changed = !std.math.approxEqAbs(f32, next, self.ui_scale, 0.0001);
+        const render_changed = !std.math.approxEqAbs(f32, next_render, self.render_scale, 0.0001);
+        if (!scale_changed and !render_changed) return false;
+        const log = app_logger.logger("ui.scale");
+        if (log.enabled_file or log.enabled_console) {
+            const layout_size = self.base_font_size * next * self.user_zoom;
+            const raster_size = layout_size * next_render;
+            log.logf("ui_scale window={d:.3} render={d:.3}->{d:.3} user_zoom={d:.3} font={d:.2}->{d:.2}", .{
+                next,
+                self.render_scale,
+                next_render,
+                self.user_zoom,
+                self.font_size,
+                layout_size,
+            });
+            log.logf("ui_scale layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
+        }
         self.ui_scale = next;
+        self.render_scale = next_render;
         try self.applyFontScale();
         return true;
     }
@@ -491,6 +513,19 @@ pub const Renderer = struct {
         );
         if (!result.changed) return false;
         self.user_zoom = result.next_zoom;
+        const log = app_logger.logger("ui.scale");
+        if (log.enabled_file or log.enabled_console) {
+            const layout_size = self.base_font_size * self.ui_scale * self.user_zoom;
+            const raster_size = layout_size * self.render_scale;
+            log.logf("ui_zoom window={d:.3} render={d:.3} user_zoom={d:.3} font={d:.2}->{d:.2}", .{
+                self.ui_scale,
+                self.render_scale,
+                self.user_zoom,
+                self.font_size,
+                layout_size,
+            });
+            log.logf("ui_zoom layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
+        }
         try self.applyFontScale();
         self.last_zoom_apply_time = result.apply_time;
         return true;
@@ -498,6 +533,10 @@ pub const Renderer = struct {
 
     pub fn uiScaleFactor(self: *const Renderer) f32 {
         return self.ui_scale * self.user_zoom;
+    }
+
+    pub fn renderScaleFactor(self: *const Renderer) f32 {
+        return self.render_scale;
     }
 
     pub fn shouldClose(self: *Renderer) bool {
@@ -534,11 +573,11 @@ pub const Renderer = struct {
     }
 
     pub fn ensureTerminalTexture(self: *Renderer, width: i32, height: i32) bool {
-        return self.ensureRenderTarget(&self.terminal_target, width, height, target_draw.nearestFilter());
+        return self.ensureRenderTargetScaled(&self.terminal_target, width, height, target_draw.nearestFilter());
     }
 
     pub fn ensureEditorTexture(self: *Renderer, width: i32, height: i32) bool {
-        return self.ensureRenderTarget(&self.editor_target, width, height, target_draw.nearestFilter());
+        return self.ensureRenderTargetScaled(&self.editor_target, width, height, target_draw.nearestFilter());
     }
 
     pub fn beginTerminalTexture(self: *Renderer) bool {
@@ -559,13 +598,27 @@ pub const Renderer = struct {
 
     pub fn drawTerminalTexture(self: *Renderer, x: f32, y: f32) void {
         if (self.terminal_target) |target| {
-            target_draw.drawTarget(drawTextureRectThunk, self, target.texture, x, y);
+            const src = texture_draw.fullTextureSrcRect(target.texture);
+            const dest = types.Rect{
+                .x = x,
+                .y = y,
+                .width = @floatFromInt(target.logical_width),
+                .height = @floatFromInt(target.logical_height),
+            };
+            self.drawTextureRect(target.texture, src, dest, Color.white.toRgba());
         }
     }
 
     pub fn drawEditorTexture(self: *Renderer, x: f32, y: f32) void {
         if (self.editor_target) |target| {
-            target_draw.drawTarget(drawTextureRectThunk, self, target.texture, x, y);
+            const src = texture_draw.fullTextureSrcRect(target.texture);
+            const dest = types.Rect{
+                .x = x,
+                .y = y,
+                .width = @floatFromInt(target.logical_width),
+                .height = @floatFromInt(target.logical_height),
+            };
+            self.drawTextureRect(target.texture, src, dest, Color.white.toRgba());
         }
     }
 
@@ -589,11 +642,11 @@ pub const Renderer = struct {
     }
 
     pub fn drawText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
-        self.drawTextWithFont(&self.terminal_font, self.terminal_font.cell_width, self.terminal_font.line_height, text, x, y, color);
+        self.drawTextWithFont(&self.terminal_font, self.terminal_cell_width, self.terminal_cell_height, text, x, y, color);
     }
 
     pub fn drawTextMonospace(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
-        self.drawTextWithFontMonospace(&self.terminal_font, self.terminal_font.cell_width, self.terminal_font.line_height, text, x, y, color);
+        self.drawTextWithFontMonospace(&self.terminal_font, self.terminal_cell_width, self.terminal_cell_height, text, x, y, color);
     }
 
     pub fn drawTextSized(self: *Renderer, text: []const u8, x: f32, y: f32, size: f32, color: Color) void {
@@ -601,11 +654,12 @@ pub const Renderer = struct {
             self.drawText(text, x, y, color);
             return;
         };
-        self.drawTextWithFont(font, font.cell_width, font.line_height, text, x, y, color);
+        const scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
+        self.drawTextWithFont(font, font.cell_width / scale, font.line_height / scale, text, x, y, color);
     }
 
     pub fn drawIconText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
-        self.drawTextWithFont(&self.icon_font, self.icon_font.cell_width, self.icon_font.line_height, text, x, y, color);
+        self.drawTextWithFont(&self.icon_font, self.icon_char_width, self.icon_char_height, text, x, y, color);
     }
 
     pub fn measureIconTextWidth(self: *Renderer, text: []const u8) f32 {
@@ -959,8 +1013,9 @@ pub const Renderer = struct {
         );
     }
 
-    fn measureTextWidth(_: *Renderer, font: *TerminalFont, text: []const u8) f32 {
-        return text_draw.measureTextWidth(font, text, font.cell_width);
+    fn measureTextWidth(self: *Renderer, font: *TerminalFont, text: []const u8) f32 {
+        const scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
+        return text_draw.measureTextWidth(font, text, font.cell_width / scale);
     }
 
     fn bindDefaultTarget(self: *Renderer) void {
@@ -971,9 +1026,11 @@ pub const Renderer = struct {
         return targets.beginRenderTarget(self, target);
     }
 
-    fn ensureRenderTarget(self: *Renderer, target: *?RenderTarget, width: i32, height: i32, filter: i32) bool {
-        _ = self;
-        return targets.ensureRenderTarget(target, width, height, filter);
+    fn ensureRenderTargetScaled(self: *Renderer, target: *?RenderTarget, logical_width: i32, logical_height: i32, filter: i32) bool {
+        const scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
+        const width = @max(1, @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(logical_width)) * scale))));
+        const height = @max(1, @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(logical_height)) * scale))));
+        return targets.ensureRenderTarget(target, width, height, logical_width, logical_height, filter);
     }
 
     fn destroyRenderTarget(_: *Renderer, target: *?RenderTarget) void {
