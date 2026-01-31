@@ -876,7 +876,7 @@ pub const Renderer = struct {
         h: f32,
         color: Color,
     ) bool {
-        return terminal_glyphs.drawBoxGlyphBatched(addTerminalRectThunk, self, codepoint, x, y, w, h, color);
+        return terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRectThunk, self, codepoint, x, y, w, h, color);
     }
 
     pub fn getCharPressed(self: *Renderer) ?u32 {
