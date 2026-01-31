@@ -1,0 +1,89 @@
+sdl3_migration:
+  scope:
+    description: "Add SDL3 build path behind a switch while keeping SDL2 as the baseline."
+    priorities:
+      - "extraction-only refactors (no behavior change)"
+      - "keep SDL2 path stable and default"
+      - "shim layer to isolate SDL2/SDL3 API differences"
+      - "small, reviewable commits"
+  constraints:
+    - "SDL2 remains default until SDL3 is verified on Linux."
+    - "No behavior changes while wiring the shim."
+    - "Keep logging output identical where possible."
+
+  entry_points:
+    - src/ui/renderer.zig
+    - src/platform/window.zig
+    - src/platform/input.zig
+    - build.zig
+
+  phase_0_build:
+    - id: S0-01
+      title: "Add build option: -Dsdl-version=(sdl2|sdl3)"
+      status: pending
+      files_to_edit:
+        - build.zig
+    - id: S0-02
+      title: "Document SDL3 install + build flag"
+      status: pending
+      files_to_edit:
+        - docs/DEPENDENCIES.md
+        - app_architecture/BOOTSTRAP.md
+
+  phase_1_shim:
+    - id: S1-01
+      title: "Create SDL shim module (SDL2-backed)"
+      status: pending
+      files_to_add:
+        - src/platform/sdl_api.zig
+      files_to_edit:
+        - src/ui/renderer/gl.zig
+        - src/ui/renderer.zig
+    - id: S1-02
+      title: "Route window creation + GL context through shim"
+      status: pending
+      files_to_edit:
+        - src/ui/renderer/window_init.zig
+        - src/ui/renderer.zig
+
+  phase_2_events:
+    - id: S2-01
+      title: "Shim event structs/enums for window + input"
+      status: pending
+      files_to_edit:
+        - src/platform/input_events.zig
+        - src/platform/window_events.zig
+        - src/ui/renderer.zig
+    - id: S2-02
+      title: "Shim text input + text editing payloads"
+      status: pending
+      files_to_edit:
+        - src/platform/input_events.zig
+        - src/ui/renderer.zig
+
+  phase_3_sdl3_backend:
+    - id: S3-01
+      title: "Add SDL3 implementation inside shim"
+      status: pending
+      files_to_edit:
+        - src/platform/sdl_api.zig
+        - build.zig
+    - id: S3-02
+      title: "SDL3 build smoke check (compile-only)"
+      status: pending
+      notes:
+        - "zig build -Dsdl-version=sdl3"
+
+  phase_4_validation:
+    - id: S4-01
+      title: "Runtime smoke: window + input + text input"
+      status: pending
+      notes:
+        - "Run on Linux first; keep SDL2 as fallback."
+
+  phase_5_cleanup:
+    - id: S5-01
+      title: "Decide when to drop SDL2"
+      status: pending
+      notes:
+        - "Only after SDL3 passes smoke checks and regressions are cleared."
