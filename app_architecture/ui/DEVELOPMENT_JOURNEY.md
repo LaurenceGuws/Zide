@@ -24,9 +24,8 @@ Status (2026-01-29)
 - Selection highlight spans are cached alongside the view snapshot to avoid per-frame selection range scans.
 - Kitty image uploads are now queued and uploaded in a per-frame budget to avoid large render-thread spikes.
 - Renderer modularization + OS abstraction work is tracked in `app_architecture/ui/renderer_todo.yaml` (now boundary-focused, extraction complete).
-- SDL3 migration: build flag + shim in place; SDL3 builds/run on Linux. Known issue: terminal-only mode on Wayland delivers `textinput raw_len=1 hex=aa` (printable text not flowing).
-- Suspected SDL3 cause: text input event payload is pointer-based and invalid after queueing; needs immediate handling on main thread (no event copy).
-- SDL3 input diagnostics now log event counts and text payload pointer addresses to verify lifetime + copy behavior during text input handling.
+- SDL3 migration: build flag + shim in place; SDL3 builds/run on Linux. Terminal-only input now flows on Wayland when built with `-Dsdl-version=sdl3` and polling events on the main thread.
+- SDL3 input diagnostics log event counts, struct layout offsets, and text payload pointer addresses to validate event parsing.
 - Renderer cleanup continues: input constants, clipboard helpers, texture utilities, window event helpers, text input rect handling, timing helpers, input event helpers, SDL window/GL context init, input state helpers, mouse state helpers, window metrics helpers, input queue helpers, UI scale helpers, render target helpers, text draw helpers, GL resource helpers, draw batch helpers, target draw helpers, key state helpers, shape helpers, shape draw helpers, terminal glyph helpers, clipboard buffer helpers, terminal underline helpers, mouse button helpers, texture draw helpers, text composition helpers, window flag helpers, mouse wheel helpers, input logging helpers, window metrics state, and key queue helpers extracted into renderer/platform modules (see renderer_todo).
 
 Canonical references (do not diverge without a documented reason)

@@ -35,3 +35,8 @@ pub fn setRect(state: *TextInputState, window: ?*sdl.SDL_Window, x: i32, y: i32,
         log.logf("text_input_rect x={d} y={d} w={d} h={d}", .{ rect.x, rect.y, rect.w, rect.h });
     }
 }
+
+pub fn reapplyRect(state: *TextInputState, window: ?*sdl.SDL_Window) void {
+    if (!state.valid) return;
+    sdl_api.setTextInputRect(window, &state.rect);
+}
