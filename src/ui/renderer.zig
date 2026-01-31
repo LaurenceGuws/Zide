@@ -1069,14 +1069,14 @@ pub const Renderer = struct {
                 },
                 sdl_api.EVENT_WINDOW => {
                     const evt = sdl_api.getWindowEventId(&event);
-                    window_flags.handleWindowEvent(evt, &self.should_close_flag, &self.window_resized_flag);
+                    window_flags.handleWindowEvent(event.type, evt, &self.should_close_flag, &self.window_resized_flag);
                     if (window_log.enabled_file or window_log.enabled_console) {
                         window_log.logf(
                             "event={s} data1={d} data2={d}",
                             .{
-                                platform_window_events.eventName(evt),
-                                @as(i32, @intCast(event.window.data1)),
-                                @as(i32, @intCast(event.window.data2)),
+                                sdl_api.windowEventName(event.type, evt),
+                                sdl_api.windowEventData1(&event),
+                                sdl_api.windowEventData2(&event),
                             },
                         );
                     }
@@ -1147,7 +1147,22 @@ pub const Renderer = struct {
                 sdl_api.EVENT_MOUSE_WHEEL => {
                     mouse_wheel.add(&mouse_wheel_delta, platform_input_events.wheelDelta(&event));
                 },
-                else => {},
+                else => {
+                    if (sdl_api.isWindowEventType(event.type)) {
+                        const evt = sdl_api.getWindowEventId(&event);
+                        window_flags.handleWindowEvent(event.type, evt, &self.should_close_flag, &self.window_resized_flag);
+                        if (window_log.enabled_file or window_log.enabled_console) {
+                            window_log.logf(
+                                "event={s} data1={d} data2={d}",
+                                .{
+                                    sdl_api.windowEventName(event.type, evt),
+                                    sdl_api.windowEventData1(&event),
+                                    sdl_api.windowEventData2(&event),
+                                },
+                            );
+                        }
+                    }
+                },
             }
         }
     }
