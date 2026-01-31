@@ -45,6 +45,10 @@ pub fn getDrawableSize(window: *sdl.SDL_Window) DrawableSize {
 }
 
 pub fn getDpiScale(window: *sdl.SDL_Window) iface.MousePos {
+    if (sdl_api.is_sdl3) {
+        const density = sdl_api.getWindowPixelDensity(window);
+        if (density > 0.0) return .{ .x = density, .y = density };
+    }
     const window_size = getWindowSize(window);
     const drawable = getDrawableSize(window);
     if (window_size.w <= 0 or window_size.h <= 0) return .{ .x = 1.0, .y = 1.0 };

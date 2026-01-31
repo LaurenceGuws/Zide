@@ -220,6 +220,20 @@ pub fn getWindowDisplayIndex(window: *c.SDL_Window) i32 {
     return c.SDL_GetWindowDisplayIndex(window);
 }
 
+pub fn getWindowDisplayScale(window: *c.SDL_Window) f32 {
+    if (@hasDecl(c, "SDL_GetWindowDisplayScale")) {
+        return c.SDL_GetWindowDisplayScale(window);
+    }
+    return 0.0;
+}
+
+pub fn getWindowPixelDensity(window: *c.SDL_Window) f32 {
+    if (@hasDecl(c, "SDL_GetWindowPixelDensity")) {
+        return c.SDL_GetWindowPixelDensity(window);
+    }
+    return 0.0;
+}
+
 pub fn getDisplayBounds(display: i32, rect: *c.SDL_Rect) bool {
     if (@hasDecl(c, "SDL_GetDisplayBounds")) {
         if (is_sdl3) {
@@ -343,12 +357,40 @@ pub fn textInputSpan(event: *const c.SDL_Event) []const u8 {
     return "";
 }
 
+pub fn textInputLen(event: *const c.SDL_Event) usize {
+    const text = event.text;
+    if (@hasField(@TypeOf(text), "text")) {
+        if (@hasField(@TypeOf(text), "text_len")) {
+            return @intCast(text.text_len);
+        }
+        if (@hasField(@TypeOf(text), "length")) {
+            return @intCast(text.length);
+        }
+        return textSpan(text.text).len;
+    }
+    return 0;
+}
+
 pub fn textEditingSpan(event: *const c.SDL_Event) []const u8 {
     const edit = event.edit;
     if (@hasField(@TypeOf(edit), "text")) {
         return textSpan(edit.text);
     }
     return "";
+}
+
+pub fn textEditingLen(event: *const c.SDL_Event) usize {
+    const edit = event.edit;
+    if (@hasField(@TypeOf(edit), "text")) {
+        if (@hasField(@TypeOf(edit), "text_len")) {
+            return @intCast(edit.text_len);
+        }
+        if (@hasField(@TypeOf(edit), "length")) {
+            return @intCast(edit.length);
+        }
+        return textSpan(edit.text).len;
+    }
+    return 0;
 }
 
 pub fn textEditingCursor(event: *const c.SDL_Event) i32 {
@@ -377,6 +419,14 @@ fn textSpan(field: anytype) []const u8 {
     return switch (@typeInfo(@TypeOf(field))) {
         .pointer => std.mem.span(field),
         .array => std.mem.span(@as([*:0]const u8, @ptrCast(&field))),
+        else => "",
+    };
+}
+
+pub fn textSpanWithLen(field: anytype, len: usize) []const u8 {
+    return switch (@typeInfo(@TypeOf(field))) {
+        .pointer => field[0..len],
+        .array => @as([*]const u8, @ptrCast(&field))[0..len],
         else => "",
     };
 }
@@ -415,8 +465,10 @@ pub fn logSetAllPriority(priority: c.SDL_LogPriority) void {
     }
 }
 
-pub fn setTextInputRect(rect: *c.SDL_Rect) void {
-    if (@hasDecl(c, "SDL_SetTextInputRect")) {
+pub fn setTextInputRect(window: ?*c.SDL_Window, rect: *c.SDL_Rect) void {
+    if (@hasDecl(c, "SDL_SetTextInputArea")) {
+        _ = c.SDL_SetTextInputArea(window, rect, 0);
+    } else if (@hasDecl(c, "SDL_SetTextInputRect")) {
         _ = c.SDL_SetTextInputRect(rect);
     }
 }
