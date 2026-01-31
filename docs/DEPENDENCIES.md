@@ -4,13 +4,14 @@ This doc explains how to install Zide's native dependencies per OS, with a focus
 
 ## Overview
 Zide depends on the following native libraries:
-- SDL2 (windowing/input)
+- SDL2 (windowing/input, default)
+- SDL3 (optional, behind build flag)
 - FreeType (font rasterization)
 - HarfBuzz (text shaping)
 - Lua 5.4 (config scripting)
 - OpenGL (platform-specific)
 
-We currently compile against SDL2 headers. The runtime may still pick up SDL3 if installed globally; this is tracked in `app_architecture/ui/DEVELOPMENT_JOURNEY.md` as a known issue.
+We default to SDL2 headers. You can opt into SDL3 with `zig build -Dsdl-version=sdl3`.
 
 ## Recommended strategy
 - Linux/macOS: system packages for fast local dev.
@@ -31,6 +32,10 @@ This avoids vendoring large binaries early, while keeping Windows builds reprodu
 2) Install the required libraries (x64):
 ```
  .\vcpkg.exe install sdl2 freetype harfbuzz lua --triplet x64-windows
+```
+For SDL3 builds:
+```
+ .\vcpkg.exe install sdl3 freetype harfbuzz lua --triplet x64-windows
 ```
 
 ### Configure build
@@ -69,10 +74,18 @@ Examples (Ubuntu):
 ```
  sudo apt install libsdl2-dev libfreetype6-dev libharfbuzz-dev liblua5.4-dev libgl1-mesa-dev
 ```
+SDL3 (optional):
+```
+ sudo apt install libsdl3-dev
+```
 
 Examples (Arch):
 ```
  sudo pacman -S sdl2 freetype2 harfbuzz lua mesa
+```
+SDL3 (optional):
+```
+ sudo pacman -S sdl3
 ```
 
 ## macOS
@@ -80,7 +93,11 @@ Use Homebrew:
 ```
  brew install sdl2 freetype harfbuzz lua
 ```
+SDL3 (optional):
+```
+ brew install sdl3
+```
 
 ## Notes
 - On Windows, SDL2 also provides the OpenGL import libs you need.
-- If you see SDL3 runtime logs, ensure SDL2 is ahead in PATH or remove SDL3 from the environment. We still compile against SDL2 headers.
+- Use `zig build -Dsdl-version=sdl3` to opt into SDL3.

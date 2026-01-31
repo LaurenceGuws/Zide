@@ -25,7 +25,7 @@ sdl3_migration:
         - build.zig
     - id: S0-02
       title: "Document SDL3 install + build flag"
-      status: pending
+      status: done
       files_to_edit:
         - docs/DEPENDENCIES.md
         - app_architecture/BOOTSTRAP.md
