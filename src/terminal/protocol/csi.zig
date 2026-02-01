@@ -250,6 +250,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             self.app_cursor_keys = true;
                             self.updateInputSnapshot();
                         },
+                        3 => self.setColumnMode132(true),
                         6 => self.activeScreen().*.setOriginMode(true),
                         25 => self.activeScreen().setCursorVisible(true),
                         7 => self.activeScreen().*.setAutowrap(true),
@@ -301,6 +302,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             self.app_cursor_keys = false;
                             self.updateInputSnapshot();
                         },
+                        3 => self.setColumnMode132(false),
                         6 => self.activeScreen().*.setOriginMode(false),
                         25 => self.activeScreen().setCursorVisible(false),
                         7 => self.activeScreen().*.setAutowrap(false),

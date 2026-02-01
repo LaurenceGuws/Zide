@@ -244,6 +244,7 @@ pub const TerminalSession = struct {
     io_buffer: std.ArrayList(u8),
     io_read_offset: usize,
     sync_updates_active: bool,
+    column_mode_132: bool,
     output_pending: std.atomic.Value(bool),
     output_generation: std.atomic.Value(u64),
     input_pressure: std.atomic.Value(bool),
@@ -333,6 +334,7 @@ pub const TerminalSession = struct {
             .io_buffer = .empty,
             .io_read_offset = 0,
             .sync_updates_active = false,
+            .column_mode_132 = false,
             .output_pending = std.atomic.Value(bool).init(false),
             .output_generation = std.atomic.Value(u64).init(0),
             .input_pressure = std.atomic.Value(bool).init(false),
@@ -980,6 +982,26 @@ pub const TerminalSession = struct {
 
     pub fn resize(self: *TerminalSession, rows: u16, cols: u16) !void {
         self.state_mutex.lock();
+        try self.resizeLocked(rows, cols);
+        const log = app_logger.logger("terminal.core");
+        log.logf("terminal resize rows={d} cols={d} scrollback_cols={d}", .{ rows, cols, self.primary.grid.cols });
+        log.logStdout("terminal resize rows={d} cols={d}", .{ rows, cols });
+        var pty = self.pty;
+        const cell_width = self.cell_width;
+        const cell_height = self.cell_height;
+        self.state_mutex.unlock();
+        if (pty) |*pty_ref| {
+            const size = PtySize{
+                .rows = rows,
+                .cols = cols,
+                .cell_width = cell_width,
+                .cell_height = cell_height,
+            };
+            try pty_ref.resize(size);
+        }
+    }
+
+    fn resizeLocked(self: *TerminalSession, rows: u16, cols: u16) !void {
         const old_cols: u16 = self.primary.grid.cols;
         const old_rows: u16 = self.primary.grid.rows;
         self.history.ensureViewCache(old_cols, self.primary.defaultCell());
@@ -1008,22 +1030,37 @@ pub const TerminalSession = struct {
             }
             self.clearSelection();
         }
+    }
 
-        const log = app_logger.logger("terminal.core");
-        log.logf("terminal resize rows={d} cols={d} scrollback_cols={d}", .{ rows, cols, self.primary.grid.cols });
-        log.logStdout("terminal resize rows={d} cols={d}", .{ rows, cols });
-        var pty = self.pty;
-        const cell_width = self.cell_width;
-        const cell_height = self.cell_height;
-        self.state_mutex.unlock();
-        if (pty) |*pty_ref| {
+    pub fn setColumnMode132(self: *TerminalSession, enabled: bool) void {
+        if (self.column_mode_132 == enabled) return;
+        self.column_mode_132 = enabled;
+        const rows = self.primary.grid.rows;
+        const cols: u16 = if (enabled) 132 else 80;
+        if (cols == self.primary.grid.cols) return;
+
+        self.resizeLocked(rows, cols) catch return;
+        self.primary.resetTabStops();
+        self.alt.resetTabStops();
+        self.primary.clear();
+        self.alt.clear();
+        self.primary.setCursor(0, 0);
+        self.alt.setCursor(0, 0);
+        if (rows > 0) {
+            self.primary.setScrollRegion(0, @as(usize, rows - 1));
+            self.alt.setScrollRegion(0, @as(usize, rows - 1));
+        }
+        _ = self.clear_generation.fetchAdd(1, .acq_rel);
+        self.force_full_damage.store(true, .release);
+
+        if (self.pty) |*pty_ref| {
             const size = PtySize{
                 .rows = rows,
                 .cols = cols,
-                .cell_width = cell_width,
-                .cell_height = cell_height,
+                .cell_width = self.cell_width,
+                .cell_height = self.cell_height,
             };
-            try pty_ref.resize(size);
+            _ = pty_ref.resize(size) catch {};
         }
     }
 

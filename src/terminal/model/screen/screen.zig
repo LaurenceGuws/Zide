@@ -355,6 +355,10 @@ pub const Screen = struct {
         self.tabstops.setAt(self.cursor.col);
     }
 
+    pub fn resetTabStops(self: *Screen) void {
+        self.tabstops.reset();
+    }
+
     pub fn clearAllTabs(self: *Screen) void {
         self.tabstops.clearAll();
     }
