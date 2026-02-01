@@ -70,6 +70,7 @@ const RenderCache = struct {
     selection_active: bool,
     sync_updates_active: bool,
     kitty_generation: u64,
+    clear_generation: u64,
 
     fn init() RenderCache {
         return .{
@@ -97,6 +98,7 @@ const RenderCache = struct {
             .selection_active = false,
             .sync_updates_active = false,
             .kitty_generation = 0,
+            .clear_generation = 0,
         };
     }
 
@@ -253,6 +255,8 @@ pub const TerminalSession = struct {
     view_cache_pending: std.atomic.Value(bool),
     view_cache_request_offset: std.atomic.Value(u64),
     alt_last_active: bool,
+    clear_generation: std.atomic.Value(u64),
+    force_full_damage: std.atomic.Value(bool),
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !*TerminalSession {
         const session = try allocator.create(TerminalSession);
@@ -340,6 +344,8 @@ pub const TerminalSession = struct {
             .view_cache_pending = std.atomic.Value(bool).init(false),
             .view_cache_request_offset = std.atomic.Value(u64).init(0),
             .alt_last_active = false,
+            .clear_generation = std.atomic.Value(u64).init(0),
+            .force_full_damage = std.atomic.Value(bool).init(false),
         };
         session.updateInputSnapshot();
         return session;
@@ -383,6 +389,8 @@ pub const TerminalSession = struct {
         const max_offset = if (total_lines > rows) total_lines - rows else 0;
         const clamped_offset = if (scroll_offset > max_offset) max_offset else scroll_offset;
         const kitty_generation = kitty_mod.kittyStateConst(self).generation;
+        const clear_generation = self.clear_generation.load(.acquire);
+        const force_full_damage = self.force_full_damage.swap(false, .acq_rel);
         const selection_active = !self.isAltActive() and self.history.selectionState() != null;
         const active_cache = &self.render_caches[active_index];
         if (active_cache.rows == rows and
@@ -391,9 +399,11 @@ pub const TerminalSession = struct {
             active_cache.total_lines == total_lines and
             active_cache.scroll_offset == clamped_offset and
             active_cache.generation == generation and
+            active_cache.clear_generation == clear_generation and
             active_cache.alt_active == self.isAltActive() and
             active_cache.sync_updates_active == self.sync_updates_active and
             active_cache.kitty_generation == kitty_generation and
+            !force_full_damage and
             view.dirty == .none and
             active_cache.dirty == .none and
             !selection_active and
@@ -418,11 +428,12 @@ pub const TerminalSession = struct {
             cache.cursor = view.cursor;
             cache.cursor_style = view.cursor_style;
             cache.cursor_visible = view.cursor_visible;
-            cache.dirty = view.dirty;
-            cache.damage = view.damage;
+            cache.dirty = .full;
+            cache.damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
             cache.alt_active = self.isAltActive();
             cache.selection_active = selection_active;
             cache.sync_updates_active = self.sync_updates_active;
+            cache.clear_generation = clear_generation;
             self.updateKittyViewNoLock(cache);
             self.render_cache_index.store(target_index, .release);
             return;
@@ -509,16 +520,30 @@ pub const TerminalSession = struct {
             }
             cache.selection_active = selection_active;
         }
-        if (view.dirty_rows.len == rows) {
+        const needs_full_damage = force_full_damage or
+            scroll_offset != 0 or
+            clear_generation != active_cache.clear_generation or
+            self.isAltActive() != active_cache.alt_active or
+            view.dirty == .full;
+
+        if (view.dirty_rows.len == rows and !needs_full_damage) {
             std.mem.copyForwards(bool, cache.dirty_rows.items, view.dirty_rows);
         } else {
             for (cache.dirty_rows.items) |*row_dirty| {
                 row_dirty.* = true;
             }
         }
-        if (view.dirty_cols_start.len == rows and view.dirty_cols_end.len == rows) {
+        if (view.dirty_cols_start.len == rows and view.dirty_cols_end.len == rows and !needs_full_damage) {
             std.mem.copyForwards(u16, cache.dirty_cols_start.items, view.dirty_cols_start);
             std.mem.copyForwards(u16, cache.dirty_cols_end.items, view.dirty_cols_end);
+            if (view.dirty == .partial and cols > 0) {
+                var row_idx: usize = 0;
+                while (row_idx < rows) : (row_idx += 1) {
+                    if (!cache.dirty_rows.items[row_idx]) continue;
+                    cache.dirty_cols_start.items[row_idx] = 0;
+                    cache.dirty_cols_end.items[row_idx] = @intCast(cols - 1);
+                }
+            }
         } else {
             for (cache.dirty_cols_start.items, cache.dirty_cols_end.items) |*col_start, *col_end| {
                 col_start.* = 0;
@@ -535,11 +560,15 @@ pub const TerminalSession = struct {
         cache.cursor = view.cursor;
         cache.cursor_style = view.cursor_style;
         cache.cursor_visible = view.cursor_visible;
-        cache.dirty = view.dirty;
-        cache.damage = view.damage;
+        cache.dirty = if (needs_full_damage) .full else view.dirty;
+        cache.damage = if (needs_full_damage)
+            .{ .start_row = 0, .end_row = if (rows > 0) rows - 1 else 0, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
+        else
+            view.damage;
         cache.alt_active = self.isAltActive();
         cache.selection_active = selection_active;
         cache.sync_updates_active = self.sync_updates_active;
+        cache.clear_generation = clear_generation;
         self.updateKittyViewNoLock(cache);
         self.render_cache_index.store(target_index, .release);
     }
@@ -713,6 +742,7 @@ pub const TerminalSession = struct {
             if (had_data) {
                 self.state_mutex.lock();
                 self.clearSelection();
+                self.force_full_damage.store(true, .release);
                 self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
                 self.state_mutex.unlock();
             }
@@ -766,6 +796,7 @@ pub const TerminalSession = struct {
             }
             if (had_data) {
                 self.clearSelection();
+                self.force_full_damage.store(true, .release);
                 self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
             }
             if (processed > 0 and self.alt_exit_pending.swap(false, .acq_rel)) {
@@ -1384,18 +1415,24 @@ pub const TerminalSession = struct {
         self.primary.clear();
         self.alt.clear();
         kitty_mod.clearKittyImages(self);
+        _ = self.clear_generation.fetchAdd(1, .acq_rel);
     }
 
     pub fn eraseDisplay(self: *TerminalSession, mode: i32) void {
         const screen = self.activeScreen();
         const blank_cell = screen.blankCell();
         screen.eraseDisplay(mode, blank_cell);
+        self.force_full_damage.store(true, .release);
+        if (mode == 2 or mode == 3) {
+            _ = self.clear_generation.fetchAdd(1, .acq_rel);
+        }
     }
 
     pub fn eraseLine(self: *TerminalSession, mode: i32) void {
         const screen = self.activeScreen();
         const blank_cell = screen.blankCell();
         screen.eraseLine(mode, blank_cell);
+        self.force_full_damage.store(true, .release);
     }
 
     pub fn insertChars(self: *TerminalSession, count: usize) void {
@@ -1463,8 +1500,10 @@ pub const TerminalSession = struct {
                 self.pushScrollbackRow(screen.scroll_top + row);
             }
             kitty_mod.updateKittyPlacementsForScroll(self);
+            _ = self.clear_generation.fetchAdd(1, .acq_rel);
         }
         screen.scrollRegionUpBy(n, blank_cell);
+        self.force_full_damage.store(true, .release);
         if (!self.isFullScrollRegion()) {
             kitty_mod.shiftKittyPlacementsUp(self, screen.scroll_top, screen.scroll_bottom, n);
         }
@@ -1479,6 +1518,8 @@ pub const TerminalSession = struct {
         const blank_cell = screen.blankCell();
         screen.scrollRegionDownBy(n, blank_cell);
         kitty_mod.shiftKittyPlacementsDown(self, screen.scroll_top, screen.scroll_bottom, n);
+        _ = self.clear_generation.fetchAdd(1, .acq_rel);
+        self.force_full_damage.store(true, .release);
     }
 
     fn applySgr(self: *TerminalSession, action: csi_mod.CsiAction) void {
@@ -1576,9 +1617,11 @@ pub const TerminalSession = struct {
         if (self.isFullScrollRegion()) {
             self.pushScrollbackRow(0);
             kitty_mod.updateKittyPlacementsForScroll(self);
+            _ = self.clear_generation.fetchAdd(1, .acq_rel);
         }
         const blank_cell = screen.blankCell();
         screen.scrollUp(blank_cell);
+        self.force_full_damage.store(true, .release);
         if (!self.isFullScrollRegion()) {
             kitty_mod.shiftKittyPlacementsUp(self, 0, rows - 1, 1);
         }
@@ -1784,6 +1827,9 @@ pub const TerminalSession = struct {
         if (!enabled) {
             self.activeScreen().markDirtyAll();
         }
+        self.force_full_damage.store(true, .release);
+        const offset: usize = self.history.scrollOffset();
+        self.updateViewCacheNoLock(self.output_generation.load(.acquire), offset);
     }
 
     pub fn takeOscClipboard(self: *TerminalSession) ?[]const u8 {
