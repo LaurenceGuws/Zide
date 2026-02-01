@@ -46,8 +46,6 @@ pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *sh
     }
 
     // Control keys
-    const ctrl = input_batch.mods.ctrl;
-
     if (input_batch.keyPressed(.enter)) {
         try widget.editor.insertNewline();
         handled = true;
@@ -92,18 +90,6 @@ pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *sh
         widget.ensureCursorVisible(shell, height);
         handled = true;
         app_logger.logger("editor.input").logf("key=end", .{});
-    } else if (ctrl and input_batch.keyPressed(.s)) {
-        try widget.editor.save();
-        handled = true;
-        app_logger.logger("editor.input").logf("key=ctrl+s", .{});
-    } else if (ctrl and (input_batch.keyPressed(.z) or input_batch.keyRepeated(.z))) {
-        _ = try widget.editor.undo();
-        handled = true;
-        app_logger.logger("editor.input").logf("key=ctrl+z", .{});
-    } else if (ctrl and (input_batch.keyPressed(.y) or input_batch.keyRepeated(.y))) {
-        _ = try widget.editor.redo();
-        handled = true;
-        app_logger.logger("editor.input").logf("key=ctrl+y", .{});
     }
 
     // Scroll handling

@@ -22,6 +22,9 @@ pub const ActionKind = enum {
     zoom_reset,
     new_editor,
     toggle_terminal,
+    save,
+    undo,
+    redo,
 };
 
 pub const InputAction = struct {
@@ -120,5 +123,8 @@ fn actionName(kind: ActionKind) []const u8 {
         .zoom_reset => "zoom_reset",
         .new_editor => "new_editor",
         .toggle_terminal => "toggle_terminal",
+        .save => "save",
+        .undo => "undo",
+        .redo => "redo",
     };
 }

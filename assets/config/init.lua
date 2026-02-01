@@ -102,6 +102,11 @@ return {
             { key = "zero", mods = { "ctrl" }, action = "zoom_reset" },
             { key = "grave", mods = { "ctrl" }, action = "toggle_terminal" },
         },
+        editor = {
+            { key = "s", mods = { "ctrl" }, action = "save" },
+            { key = "z", mods = { "ctrl" }, action = "undo", ["repeat"] = true },
+            { key = "y", mods = { "ctrl" }, action = "redo", ["repeat"] = true },
+        },
         terminal = {
             { key = "c", mods = { "ctrl", "shift" }, action = "copy" },
             { key = "v", mods = { "ctrl", "shift" }, action = "paste" },
