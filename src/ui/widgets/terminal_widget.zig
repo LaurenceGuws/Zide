@@ -1424,6 +1424,15 @@ pub const TerminalWidget = struct {
                         if (!report_text_enabled and isModifierKey(key)) {
                             continue;
                         }
+                        if (report_text_enabled) {
+                            if (key_encoder.baseCharForKey(key)) |base_char| {
+                                clearLiveState(self);
+                                try self.session.sendCharAction(base_char, mod, .release);
+                                handled = true;
+                                skip_chars = true;
+                                continue;
+                            }
+                        }
                         const handled_release = try applyTerminalKey(self, key, mod, .release);
                         if (handled_release) {
                             clearLiveState(self);
@@ -1437,15 +1446,19 @@ pub const TerminalWidget = struct {
                     }
                     const action: terminal_mod.KeyAction = if (event.key.repeated) .repeat else .press;
                     if (!report_text_enabled and isModifierKey(key)) {
-                        const handled_mod = try applyTerminalKey(self, key, mod, action);
-                        if (handled_mod) {
+                        continue;
+                    }
+                    if (report_text_enabled) {
+                        if (key_encoder.baseCharForKey(key)) |base_char| {
                             clearLiveState(self);
+                            try self.session.sendCharAction(base_char, mod, action);
                             markHandled(&handled_keys, &handled_key_count, key);
                             handled = true;
                             skip_chars = true;
+                            continue;
                         }
-                        continue;
                     }
+
                     const handled_key = try applyTerminalKey(self, key, mod, action);
 
                     if (handled_key) {
@@ -1456,7 +1469,7 @@ pub const TerminalWidget = struct {
                         continue;
                     }
 
-                    if (ctrl or alt) {
+                    if (!report_text_enabled and (ctrl or alt)) {
                         if (try key_encoder.sendCharForKey(self.session, key, mod, action, ctrl, alt)) {
                             clearLiveState(self);
                             markHandled(&handled_keys, &handled_key_count, key);
@@ -1480,7 +1493,7 @@ pub const TerminalWidget = struct {
                 }
             }
 
-            if (!skip_chars and !input_batch.mods.ctrl and !input_batch.mods.alt and !input_batch.mods.super) {
+            if (!skip_chars and !report_text_enabled and !input_batch.mods.ctrl and !input_batch.mods.alt and !input_batch.mods.super) {
                 for (input_batch.events.items) |event| {
                     if (event == .text) {
                         const char = event.text.codepoint;
