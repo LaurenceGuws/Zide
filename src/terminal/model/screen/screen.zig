@@ -378,13 +378,26 @@ pub const Screen = struct {
     }
 
     pub fn cursorUp(self: *Screen, delta: usize) void {
-        self.cursor.row = if (self.cursor.row > delta) self.cursor.row - delta else 0;
+        if (self.origin_mode) {
+            if (self.cursor.row > self.scroll_top + delta) {
+                self.cursor.row -= delta;
+            } else {
+                self.cursor.row = self.scroll_top;
+            }
+        } else {
+            self.cursor.row = if (self.cursor.row > delta) self.cursor.row - delta else 0;
+        }
         self.wrap_next = false;
     }
 
     pub fn cursorDown(self: *Screen, delta: usize) void {
-        const max_row = @as(usize, self.grid.rows - 1);
-        self.cursor.row = @min(max_row, self.cursor.row + delta);
+        if (self.origin_mode) {
+            const max_row = @min(@as(usize, self.grid.rows - 1), self.scroll_bottom);
+            self.cursor.row = @min(max_row, self.cursor.row + delta);
+        } else {
+            const max_row = @as(usize, self.grid.rows - 1);
+            self.cursor.row = @min(max_row, self.cursor.row + delta);
+        }
         self.wrap_next = false;
     }
 
@@ -400,14 +413,27 @@ pub const Screen = struct {
     }
 
     pub fn cursorNextLine(self: *Screen, delta: usize) void {
-        const max_row = @as(usize, self.grid.rows - 1);
-        self.cursor.row = @min(max_row, self.cursor.row + delta);
+        if (self.origin_mode) {
+            const max_row = @min(@as(usize, self.grid.rows - 1), self.scroll_bottom);
+            self.cursor.row = @min(max_row, self.cursor.row + delta);
+        } else {
+            const max_row = @as(usize, self.grid.rows - 1);
+            self.cursor.row = @min(max_row, self.cursor.row + delta);
+        }
         self.cursor.col = 0;
         self.wrap_next = false;
     }
 
     pub fn cursorPrevLine(self: *Screen, delta: usize) void {
-        self.cursor.row = if (self.cursor.row > delta) self.cursor.row - delta else 0;
+        if (self.origin_mode) {
+            if (self.cursor.row > self.scroll_top + delta) {
+                self.cursor.row -= delta;
+            } else {
+                self.cursor.row = self.scroll_top;
+            }
+        } else {
+            self.cursor.row = if (self.cursor.row > delta) self.cursor.row - delta else 0;
+        }
         self.cursor.col = 0;
         self.wrap_next = false;
     }
