@@ -106,6 +106,9 @@ return {
             { key = "s", mods = { "ctrl" }, action = "save" },
             { key = "z", mods = { "ctrl" }, action = "undo", ["repeat"] = true },
             { key = "y", mods = { "ctrl" }, action = "redo", ["repeat"] = true },
+            { key = "c", mods = { "ctrl" }, action = "copy" },
+            { key = "x", mods = { "ctrl" }, action = "cut" },
+            { key = "v", mods = { "ctrl" }, action = "paste" },
         },
         terminal = {
             { key = "c", mods = { "ctrl", "shift" }, action = "copy" },

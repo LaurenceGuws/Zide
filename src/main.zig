@@ -648,6 +648,39 @@ const AppState = struct {
             const editor = self.editors.items[editor_idx];
             for (self.input_router.actionsSlice()) |action| {
                 switch (action.kind) {
+                    .copy => {
+                        if (try editor.selectionTextAlloc()) |text| {
+                            defer self.allocator.free(text);
+                            const buf = try self.allocator.alloc(u8, text.len + 1);
+                            defer self.allocator.free(buf);
+                            std.mem.copyForwards(u8, buf[0..text.len], text);
+                            buf[text.len] = 0;
+                            const cstr: [*:0]const u8 = @ptrCast(buf.ptr);
+                            shell.setClipboardText(cstr);
+                            handled_shortcut = true;
+                        }
+                    },
+                    .cut => {
+                        if (try editor.selectionTextAlloc()) |text| {
+                            defer self.allocator.free(text);
+                            const buf = try self.allocator.alloc(u8, text.len + 1);
+                            defer self.allocator.free(buf);
+                            std.mem.copyForwards(u8, buf[0..text.len], text);
+                            buf[text.len] = 0;
+                            const cstr: [*:0]const u8 = @ptrCast(buf.ptr);
+                            shell.setClipboardText(cstr);
+                            try editor.deleteSelection();
+                            self.needs_redraw = true;
+                            handled_shortcut = true;
+                        }
+                    },
+                    .paste => {
+                        if (shell.getClipboardText()) |clip| {
+                            try editor.insertText(clip);
+                            self.needs_redraw = true;
+                            handled_shortcut = true;
+                        }
+                    },
                     .save => {
                         try editor.save();
                         self.needs_redraw = true;

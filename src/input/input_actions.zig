@@ -25,6 +25,7 @@ pub const ActionKind = enum {
     save,
     undo,
     redo,
+    cut,
 };
 
 pub const InputAction = struct {
@@ -126,5 +127,6 @@ fn actionName(kind: ActionKind) []const u8 {
         .save => "save",
         .undo => "undo",
         .redo => "redo",
+        .cut => "cut",
     };
 }
