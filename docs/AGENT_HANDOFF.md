@@ -18,13 +18,16 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 ### Current Focus
 - SDL3 migration: SDL3-only build path; SDL2 fallback removed. See `app_architecture/ui/sdl3_migration_todo.yaml`.
 - SDL3 input parity: terminal-only mode on Wayland now delivers printable text when built with SDL3; continue validation + cleanup.
+- Input routing + keybinds: shortcuts now live in `assets/config/init.lua` and route through the InputRouter (see `app_architecture/INPUT.md`).
 - Terminal scrollback redesign: current resize/scrollback handling is inadequate; redesign is planned (see Phase 3.5 in `app_architecture/terminal/terminal_widget_todo.yaml`).
 
 ### Recent Changes (High-Level)
 - SDL3 shim + build flag wired; SDL3 compile + runtime smoke on Linux pass.
 - SDL3 window events and scaling fixes landed; SDL3 text input now flows in terminal-only on Wayland with SDL3 build.
 - Added a scrollback reflow redesign plan and updated terminal design notes to mirror kitty/ghostty/wezterm techniques.
- - Began scrollback model rework (LogicalLine + ScrollbackBuffer) and reflow resize wiring; scrollback rendering no longer drops during scroll interactions.
+- Began scrollback model rework (LogicalLine + ScrollbackBuffer) and reflow resize wiring; scrollback rendering no longer drops during scroll interactions.
+- InputRouter + keybinds moved to `init.lua`; editor/terminal shortcuts now routed via actions.
+- Terminal key encoding extracted and protocol behaviors corrected (key releases, Ctrl combos).
 
 ### Constraints / Guardrails
 - Handoff docs are high-level only; progress tracking lives in todo + app_architecture docs.
@@ -47,15 +50,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
  - Scrollback view cache + reflow resizing are still in progress; expect instability during the redesign.
 
 ### In-Progress (Uncommitted)
-- SDL3 input tracing + text input decoding changes (see `src/ui/renderer/input_logging.zig`, `src/platform/input_events.zig`, `src/platform/sdl_api.zig`).
-- Temporary logging enabled in `~/.config/zide/init.lua` (input.sdl) pending cleanup.
- - Scrollback rework in progress (uncommitted):
-   - `src/terminal/model/scrollback_buffer.zig` (new LogicalLine ring buffer)
-   - `src/terminal/model/history.zig` (rewrap cache + scrollback generation)
-   - `src/terminal/model/screen/grid.zig` (wrap flags)
-   - `src/terminal/model/screen/screen.zig` (wrap flags set/cleared)
-   - `src/terminal/core/terminal_session.zig` (reflow resize + scroll update path)
- - Local debug logging enabled: `terminal.core`, `terminal.scroll` in `~/.config/zide/init.lua`.
+- None.
 
 ### Checklist
 - `zig build test`
