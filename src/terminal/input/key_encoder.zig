@@ -5,6 +5,12 @@ pub const TerminalSession = terminal_mod.TerminalSession;
 pub const Modifier = terminal_mod.Modifier;
 pub const KeyAction = terminal_mod.KeyAction;
 
+pub const key_mode_disambiguate: u32 = 1;
+pub const key_mode_report_all_event_types: u32 = 2;
+pub const key_mode_report_alternate_key: u32 = 4;
+pub const key_mode_report_text: u32 = 8;
+pub const key_mode_embed_text: u32 = 16;
+
 pub fn sendKeyAction(session: *TerminalSession, key: input_types.Key, key_mod: Modifier, action: KeyAction) !bool {
     switch (key) {
         .enter => {
@@ -165,6 +171,98 @@ pub fn sendKeyAction(session: *TerminalSession, key: input_types.Key, key_mod: M
         },
         else => return false,
     }
+}
+
+pub fn sendCharForKey(
+    session: *TerminalSession,
+    key: input_types.Key,
+    key_mod: Modifier,
+    action: KeyAction,
+    ctrl: bool,
+    alt: bool,
+) !bool {
+    if (!ctrl and !alt) return false;
+    const base_char = baseCharForKey(key) orelse return false;
+    if (ctrl and !ctrlAllowsChar(base_char)) return false;
+    try session.sendCharAction(base_char, key_mod, action);
+    return true;
+}
+
+pub fn baseCharForKey(key: input_types.Key) ?u32 {
+    return switch (key) {
+        .a => 'a',
+        .b => 'b',
+        .c => 'c',
+        .d => 'd',
+        .e => 'e',
+        .f => 'f',
+        .g => 'g',
+        .h => 'h',
+        .i => 'i',
+        .j => 'j',
+        .k => 'k',
+        .l => 'l',
+        .m => 'm',
+        .n => 'n',
+        .o => 'o',
+        .p => 'p',
+        .q => 'q',
+        .r => 'r',
+        .s => 's',
+        .t => 't',
+        .u => 'u',
+        .v => 'v',
+        .w => 'w',
+        .x => 'x',
+        .y => 'y',
+        .z => 'z',
+        .zero => '0',
+        .one => '1',
+        .two => '2',
+        .three => '3',
+        .four => '4',
+        .five => '5',
+        .six => '6',
+        .seven => '7',
+        .eight => '8',
+        .nine => '9',
+        .space => ' ',
+        .minus => '-',
+        .equal => '=',
+        .left_bracket => '[',
+        .right_bracket => ']',
+        .backslash => '\\',
+        .semicolon => ';',
+        .apostrophe => '\'',
+        .grave => '`',
+        .comma => ',',
+        .period => '.',
+        .slash => '/',
+        else => null,
+    };
+}
+
+pub fn ctrlAllowsChar(ch: u32) bool {
+    return switch (ch) {
+        'a'...'z', 'A'...'Z', '@', '[', '\\', ']', '^', '_', '?', ' ' => true,
+        else => false,
+    };
+}
+
+pub fn reportTextEnabled(flags: u32) bool {
+    return (flags & key_mode_report_text) != 0;
+}
+
+pub fn embedTextEnabled(flags: u32) bool {
+    return (flags & key_mode_embed_text) != 0;
+}
+
+pub fn reportAllEventTypes(flags: u32) bool {
+    return (flags & key_mode_report_all_event_types) != 0;
+}
+
+pub fn disambiguateEnabled(flags: u32) bool {
+    return (flags & key_mode_disambiguate) != 0;
 }
 
 pub fn isRepeatKey(key: input_types.Key) bool {

@@ -1359,8 +1359,7 @@ pub const TerminalWidget = struct {
             var skip_chars = false;
             const allow_terminal_key = !(builtin.target.os.tag == .macos and super);
             const key_mode_flags = self.session.keyModeFlagsValue();
-            const key_mode_report_text: u32 = 8;
-            const report_text_enabled = (key_mode_flags & key_mode_report_text) != 0;
+            const report_text_enabled = key_encoder.reportTextEnabled(key_mode_flags);
             const isModifierKey = struct {
                 fn apply(key: shared_types.input.Key) bool {
                     return switch (key) {
@@ -1382,69 +1381,6 @@ pub const TerminalWidget = struct {
                     if (widget.session.scrollOffset() > 0) {
                         widget.session.setScrollOffset(0);
                     }
-                }
-            }.apply;
-            const mapKeyToBaseChar = struct {
-                fn apply(key: shared_types.input.Key) u32 {
-                    return switch (key) {
-                        .a => 'a',
-                        .b => 'b',
-                        .c => 'c',
-                        .d => 'd',
-                        .e => 'e',
-                        .f => 'f',
-                        .g => 'g',
-                        .h => 'h',
-                        .i => 'i',
-                        .j => 'j',
-                        .k => 'k',
-                        .l => 'l',
-                        .m => 'm',
-                        .n => 'n',
-                        .o => 'o',
-                        .p => 'p',
-                        .q => 'q',
-                        .r => 'r',
-                        .s => 's',
-                        .t => 't',
-                        .u => 'u',
-                        .v => 'v',
-                        .w => 'w',
-                        .x => 'x',
-                        .y => 'y',
-                        .z => 'z',
-                        .zero => '0',
-                        .one => '1',
-                        .two => '2',
-                        .three => '3',
-                        .four => '4',
-                        .five => '5',
-                        .six => '6',
-                        .seven => '7',
-                        .eight => '8',
-                        .nine => '9',
-                        .space => ' ',
-                        .minus => '-',
-                        .equal => '=',
-                        .left_bracket => '[',
-                        .right_bracket => ']',
-                        .backslash => '\\',
-                        .semicolon => ';',
-                        .apostrophe => '\'',
-                        .grave => '`',
-                        .comma => ',',
-                        .period => '.',
-                        .slash => '/',
-                        else => 0,
-                    };
-                }
-            }.apply;
-            const isCtrlCharEligible = struct {
-                fn apply(ch: u32) bool {
-                    return switch (ch) {
-                        'a'...'z', 'A'...'Z', '@', '[', '\\', ']', '^', '_', '?', ' ' => true,
-                        else => false,
-                    };
                 }
             }.apply;
             const applyTerminalKey = struct {
@@ -1521,13 +1457,8 @@ pub const TerminalWidget = struct {
                     }
 
                     if (ctrl or alt) {
-                        const base_char = mapKeyToBaseChar(key);
-                        if (base_char != 0) {
-                            if (ctrl and !isCtrlCharEligible(base_char)) {
-                                continue;
-                            }
+                        if (try key_encoder.sendCharForKey(self.session, key, mod, action, ctrl, alt)) {
                             clearLiveState(self);
-                            try self.session.sendCharAction(base_char, mod, action);
                             markHandled(&handled_keys, &handled_key_count, key);
                             handled = true;
                             skip_chars = true;

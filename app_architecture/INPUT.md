@@ -43,3 +43,4 @@ References:
 - Ctrl/Alt modifiers no longer change control semantics based on Shift in terminal input.
 - Selection is no longer cleared by keyboard input; copy/paste combos suppress terminal key events.
 - InputRouter now detects Ctrl+Shift+C/V actions and routes them to focused terminal copy/paste.
+- Terminal key encoding lives in `src/terminal/input/key_encoder.zig` (including key_mode flag helpers).
