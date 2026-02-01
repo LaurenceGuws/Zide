@@ -178,7 +178,8 @@ pub fn sendChar(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, key_mode_flag
 
 pub fn sendCharAction(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, key_mode_flags: u32, action: KeyAction) !bool {
     if (char > 0x10FFFF or (char >= 0xD800 and char <= 0xDFFF)) return false;
-    if (key_mode_flags == 0 and (mod & types.VTERM_MOD_CTRL) != 0) {
+    const report_text = (key_mode_flags & key_mode_report_text) != 0;
+    if (!report_text and (mod & types.VTERM_MOD_CTRL) != 0) {
         if (ctrlChar(char)) |mapped| {
             if ((mod & types.VTERM_MOD_ALT) != 0) {
                 _ = try pty.write(&[_]u8{0x1b});
@@ -187,7 +188,7 @@ pub fn sendCharAction(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, key_mod
             return true;
         }
     }
-    if (key_mode_flags == 0 and (mod & types.VTERM_MOD_ALT) != 0) {
+    if (!report_text and (mod & types.VTERM_MOD_ALT) != 0) {
         _ = try pty.write(&[_]u8{0x1b});
     }
     if (sendCharWithProtocol(pty, char, mod, key_mode_flags, action)) return true;
