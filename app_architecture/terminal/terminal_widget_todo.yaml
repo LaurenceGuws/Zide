@@ -597,8 +597,10 @@ terminal_widget_todo:
             - "Hover underline now draws as a lightweight overlay pass without re-rendering the terminal texture."
         - id: P8-09
           title: "Skip view_cells rebuild when idle"
+          status: done
           files_to_edit:
             - src/ui/widgets/terminal_widget.zig
+            - src/terminal/core/terminal_session.zig
 
     - name: "Phase 9 - Tests + Fixtures"
       tasks:
