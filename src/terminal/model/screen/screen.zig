@@ -23,6 +23,7 @@ pub const Screen = struct {
     wrap_next: bool,
     auto_wrap: bool,
     origin_mode: bool,
+    newline_mode: bool,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16, default_attrs: types.CellAttrs) !Screen {
         const grid = try TerminalGrid.init(allocator, rows, cols, .{
@@ -46,6 +47,7 @@ pub const Screen = struct {
             .wrap_next = false,
             .auto_wrap = true,
             .origin_mode = false,
+            .newline_mode = false,
         };
     }
 
@@ -99,6 +101,7 @@ pub const Screen = struct {
         self.wrap_next = false;
         self.auto_wrap = true;
         self.origin_mode = false;
+        self.newline_mode = false;
         self.tabstops.reset();
     }
 
@@ -186,6 +189,10 @@ pub const Screen = struct {
         self.cursor.row = self.scroll_top;
         self.cursor.col = 0;
         self.wrap_next = false;
+    }
+
+    pub fn setNewlineMode(self: *Screen, enabled: bool) void {
+        self.newline_mode = enabled;
     }
 
     pub fn cellAtOr(self: *const Screen, row: usize, col: usize, default_cell: types.Cell) types.Cell {
@@ -435,7 +442,9 @@ pub const Screen = struct {
     pub fn newlineAction(self: *Screen) NewlineAction {
         if (self.cursor.row + 1 < @as(usize, self.grid.rows) and self.cursor.row != self.scroll_bottom) {
             self.cursor.row += 1;
-            self.cursor.col = 0;
+            if (self.newline_mode) {
+                self.cursor.col = 0;
+            }
             self.wrap_next = false;
             return .moved;
         }

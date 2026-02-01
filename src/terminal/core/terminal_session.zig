@@ -1348,9 +1348,17 @@ pub const TerminalSession = struct {
             },
             0x0A => { // LF
                 self.newline();
+                const log = app_logger.logger("terminal.trace.control");
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf("control=LF row={d} col={d}", .{ screen.cursor.row, screen.cursor.col });
+                }
             },
             0x0D => { // CR
                 screen.carriageReturn();
+                const log = app_logger.logger("terminal.trace.control");
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf("control=CR row={d} col={d}", .{ screen.cursor.row, screen.cursor.col });
+                }
             },
             0x0E => { // SO (Shift Out) -> G1
                 self.parser.gl_charset = self.parser.g1_charset;
@@ -1558,6 +1566,15 @@ pub const TerminalSession = struct {
             attrs.underline = true;
         } else {
             attrs.link_id = 0;
+        }
+        if (cp == 0x2502) {
+            const log = app_logger.logger("terminal.trace.scope");
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(
+                    "scope_glyph row={d} col={d} origin={any} scroll_top={d} scroll_bottom={d}",
+                    .{ screen.cursor.row, screen.cursor.col, screen.origin_mode, screen.scroll_top, screen.scroll_bottom },
+                );
+            }
         }
         screen.writeCodepoint(cp, attrs);
     }

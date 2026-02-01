@@ -20,6 +20,7 @@ These failures point to damage tracking that is too optimistic and not robust to
 - Origin mode (DECOM, CSI ? 6) and autowrap (CSI ? 7) semantics are being added; vttest still fails WRAP AROUND when cursor/clear/scroll interactions happen in rapid sequence.
 - Found a VT parser/handler mismatch: CSI params with a single value set `params[0]` but keep `count=0`, so ED/EL/DECSTBM were treating `CSI 2 J` as `CSI 0 J` (clear-from-cursor). This leaves stale lines when vttest expects full clear.
 - Audit note: scanned CSI handlers for direct `count` usage; only SGR and the shared `param_len` remain, so single-parameter CSI sequences are handled consistently now.
+- Newline mode fix: LF should not reset column unless SM 20 (LNM) is enabled. Added LNM tracking and a replay fixture to ensure LF preserves column by default.
 
 ## Reference Techniques
 
@@ -48,7 +49,8 @@ These failures point to damage tracking that is too optimistic and not robust to
 
 ## Todo
 
-- [ ] Audit all screen ops (`eraseDisplay`, scroll regions, scrollback pushes) for missing full-damage flags.
+- [x] Audit all screen ops (`eraseDisplay`, scroll regions, scrollback pushes) for missing full-damage flags.
+- Audit result: clear/scroll paths already set `force_full_damage` and/or `clear_generation`; insert/delete ops rely on grid dirty ranges and look consistent with partial redraw.
 - [ ] Add a view-cache invalidation path for clear/scroll events (generation bump or full-dirty flag).
 - [ ] Implement frame-based damage tracking (per-line bounds) and integrate with terminal widget partial redraw.
 - [ ] Add replay harness fixtures for `gping` and a minimal `nvim` overlay example.

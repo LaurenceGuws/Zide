@@ -296,7 +296,7 @@ pub const TerminalWidget = struct {
             hover_row != self.last_hover_row or
             hover_col != self.last_hover_col;
         if (hover_changed) {
-            const log = app_logger.logger("terminal.hover");
+            const log = app_logger.logger("terminal.ui.hover");
             log.logf("ctrl={any} row={d} col={d} link={d}", .{ ctrl, hover_row, hover_col, hover_link_id });
             self.hover_dirty = true;
         }
@@ -972,7 +972,7 @@ pub const TerminalWidget = struct {
             });
         }
 
-        const draw_log = app_logger.logger("terminal.draw");
+        const draw_log = app_logger.logger("terminal.ui.redraw");
         if (draw_log.enabled_file or draw_log.enabled_console) {
             const now = app_shell.getTime();
             const elapsed_ms = (now - draw_start) * 1000.0;
