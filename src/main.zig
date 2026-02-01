@@ -81,6 +81,7 @@ const AppState = struct {
     mode: []const u8,
     show_terminal: bool,
     terminal_height: f32,
+    terminal_blink_style: TerminalWidget.BlinkStyle,
 
     // Dirty tracking for efficient rendering
     needs_redraw: bool,
@@ -139,6 +140,7 @@ const AppState = struct {
                 .editor_font_size = null,
                 .terminal_font_path = null,
                 .terminal_font_size = null,
+                .terminal_blink_style = null,
                 .theme = null,
                 .keybinds = null,
             };
@@ -195,6 +197,11 @@ const AppState = struct {
         else
             0;
 
+        const terminal_blink_style: TerminalWidget.BlinkStyle = switch (config.terminal_blink_style orelse .kitty) {
+            .kitty => .kitty,
+            .off => .off,
+        };
+
         var grammar_manager = try grammar_manager_mod.GrammarManager.init(allocator);
         errdefer grammar_manager.deinit();
 
@@ -214,6 +221,7 @@ const AppState = struct {
             .mode = "NORMAL",
             .show_terminal = app_mode == .terminal,
             .terminal_height = 200,
+            .terminal_blink_style = terminal_blink_style,
             .needs_redraw = true,
             .idle_frames = 0,
             .last_mouse_pos = .{ .x = -1, .y = -1 },
@@ -359,7 +367,7 @@ const AppState = struct {
         );
         try term.start(null);
         try self.terminals.append(self.allocator, term);
-        try self.terminal_widgets.append(self.allocator, TerminalWidget.init(term));
+        try self.terminal_widgets.append(self.allocator, TerminalWidget.init(term, self.terminal_blink_style));
 
         self.show_terminal = true;
     }
@@ -1064,6 +1072,9 @@ const AppState = struct {
             const term_y_draw = layout.terminal.y + 2;
             const term_x = layout.terminal.x;
             const term_draw_height = @max(0, layout.terminal.height - 2);
+            if (term_widget.updateBlink(now)) {
+                self.needs_redraw = true;
+            }
             if (self.active_kind == .terminal) {
                 if (try term_widget.handleInput(
                     shell,

@@ -26,7 +26,13 @@ const KittyTexture = struct {
 
 /// Terminal widget for drawing a terminal view
 pub const TerminalWidget = struct {
+    pub const BlinkStyle = enum {
+        kitty,
+        off,
+    };
+
     session: *TerminalSession,
+    blink_style: BlinkStyle = .kitty,
     last_scroll_offset: usize = 0,
     kitty_images_view: std.ArrayList(KittyImage),
     kitty_placements_view: std.ArrayList(KittyPlacement),
@@ -41,10 +47,14 @@ pub const TerminalWidget = struct {
     hover_dirty: bool = false,
     pending_open_path: ?[]u8 = null,
     last_draw_log_time: f64 = 0,
+    blink_last_slow_on: bool = true,
+    blink_last_fast_on: bool = true,
+    blink_last_active: bool = false,
 
-    pub fn init(session: *TerminalSession) TerminalWidget {
+    pub fn init(session: *TerminalSession, blink_style: BlinkStyle) TerminalWidget {
         return .{
             .session = session,
+            .blink_style = blink_style,
             .last_scroll_offset = 0,
             .kitty_images_view = .empty,
             .kitty_placements_view = .empty,
@@ -58,7 +68,50 @@ pub const TerminalWidget = struct {
             .last_hover_ctrl = false,
             .pending_open_path = null,
             .last_draw_log_time = 0,
+            .blink_last_slow_on = true,
+            .blink_last_fast_on = true,
+            .blink_last_active = false,
         };
+    }
+
+    pub fn updateBlink(self: *TerminalWidget, now: f64) bool {
+        if (self.blink_style == .off) {
+            self.blink_last_active = false;
+            return false;
+        }
+        const cache = self.session.renderCache();
+        var has_slow = false;
+        var has_fast = false;
+        for (cache.cells.items) |cell| {
+            if (!cell.attrs.blink) continue;
+            if (cell.attrs.blink_fast) {
+                has_fast = true;
+            } else {
+                has_slow = true;
+            }
+            if (has_slow and has_fast) break;
+        }
+        if (!has_slow and !has_fast) {
+            self.blink_last_active = false;
+            return false;
+        }
+        const slow_on = @mod(now, 2.0) < 1.0;
+        const fast_on = @mod(now, 1.0) < 0.5;
+        var changed = false;
+        if (has_slow) {
+            if (!self.blink_last_active or slow_on != self.blink_last_slow_on) {
+                changed = true;
+            }
+            self.blink_last_slow_on = slow_on;
+        }
+        if (has_fast) {
+            if (!self.blink_last_active or fast_on != self.blink_last_fast_on) {
+                changed = true;
+            }
+            self.blink_last_fast_on = fast_on;
+        }
+        self.blink_last_active = true;
+        return changed;
     }
 
     pub fn deinit(self: *TerminalWidget) void {
@@ -320,6 +373,8 @@ pub const TerminalWidget = struct {
         const cache = self.session.renderCache();
         const sync_updates = cache.sync_updates_active;
         const screen_reverse = cache.screen_reverse;
+        const blink_style = self.blink_style;
+        const blink_time = app_shell.getTime();
         if (sync_updates and cache.cells.items.len > 0) {
             const view_cells = cache.cells.items;
             const bg_color = if (view_cells.len > 0) blk: {
@@ -360,6 +415,15 @@ pub const TerminalWidget = struct {
         const cursor_style = cache.cursor_style;
         const selection_active = cache.selection_active;
         const kitty_generation = cache.kitty_generation;
+        var has_blink = false;
+        if (blink_style != .off) {
+            for (cache.cells.items) |cell| {
+                if (cell.attrs.blink) {
+                    has_blink = true;
+                    break;
+                }
+            }
+        }
 
         if (!cache.alt_active and self.session.view_cache_pending.load(.acquire)) {
             self.session.updateViewCacheForScroll();
@@ -517,6 +581,8 @@ pub const TerminalWidget = struct {
                 padding_x_i: i32,
                 hover_link: u32,
                 screen_reverse_mode: bool,
+                blink_style_mode: BlinkStyle,
+                blink_time_s: f64,
             ) void {
                 _ = padding_x_i;
                 const rr = renderer.rendererPtr();
@@ -561,6 +627,16 @@ pub const TerminalWidget = struct {
                     }
 
                     const cell_reverse = cell.attrs.reverse != screen_reverse_mode;
+                    if (cell.attrs.blink and blink_style_mode != .off) {
+                        const period: f64 = if (cell.attrs.blink_fast) @as(f64, 0.5) else @as(f64, 1.0);
+                        const phase = @mod(blink_time_s, period * 2.0);
+                        if (phase >= period) {
+                            if (cell.width > 1) {
+                                col += cell_width_units - 1;
+                            }
+                            continue;
+                        }
+                    }
                     const followed_by_space = blk: {
                         const next_col = col + cell_width_units;
                         if (next_col < cols_count) {
@@ -601,7 +677,7 @@ pub const TerminalWidget = struct {
             const texture_h = @as(i32, @intFromFloat(@round(r.terminal_cell_height * @as(f32, @floatFromInt(rows)))));
             const recreated = r.ensureTerminalTexture(texture_w, texture_h);
             const kitty_changed = kitty_generation != self.last_kitty_generation;
-            const needs_full = recreated or cache.alt_active or cache.dirty == .full or scroll_changed or (cache.dirty != .none and scroll_offset > 0) or has_kitty or kitty_changed;
+            const needs_full = recreated or cache.alt_active or cache.dirty == .full or scroll_changed or (cache.dirty != .none and scroll_offset > 0) or has_kitty or kitty_changed or has_blink;
             const needs_partial = cache.dirty == .partial and !needs_full and scroll_offset == 0;
 
             if ((needs_full or needs_partial) and r.beginTerminalTexture()) {
@@ -636,7 +712,7 @@ pub const TerminalWidget = struct {
                     r.beginTerminalGlyphBatch();
                     row = 0;
                     while (row < rows) : (row += 1) {
-                        drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse);
+                        drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time);
                     }
                     r.flushTerminalGlyphBatch();
                     if (has_kitty) {
@@ -674,12 +750,12 @@ pub const TerminalWidget = struct {
                                 col_start = @min(@as(usize, cache.dirty_cols_start.items[row]), cols - 1);
                                 col_end = @min(@as(usize, cache.dirty_cols_end.items[row]), cols - 1);
                             }
-                            drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse);
+                            drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time);
                             if (row > 0) {
-                                drawRowGlyphs(shell, view_cells, cols, row - 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse);
+                                drawRowGlyphs(shell, view_cells, cols, row - 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time);
                             }
                             if (row + 1 < rows) {
-                                drawRowGlyphs(shell, view_cells, cols, row + 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse);
+                                drawRowGlyphs(shell, view_cells, cols, row + 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time);
                             }
                         }
                     }
