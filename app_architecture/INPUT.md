@@ -28,3 +28,9 @@ References:
 3) Implement KeyEncoder following VT/DEC + optional kitty protocol flags; ignore Shift for Ctrl control characters.
 4) Remove keyboard‑driven selection clearing; restrict selection clearing to explicit actions or content changes.
 5) Add focused widget ownership rules (terminal/editor) and regression tests for Ctrl+Shift+C and IME text input.
+
+## Recent Changes
+
+- Terminal now avoids synthesizing printable chars from key events; printable input comes from text events.
+- Ctrl/Alt modifiers no longer change control semantics based on Shift in terminal input.
+- Selection is no longer cleared by keyboard input; copy/paste combos suppress terminal key events.
