@@ -93,6 +93,7 @@ Current coverage:
 - Reset: `ESC c`
 - DSR/DA replies: `CSI n` (5/6) + `CSI c`
 - SGR: 16‑color + 256‑color + truecolor, bold/reverse; colon-separated SGR supported; params up to 16
+- Modes: DECCOLM 80/132 column, DECSCNM reverse video
 - OSC: `0/2` title, `7` cwd (parsed, not yet consumed), `8` hyperlinks, `52` clipboard write, `10/11` default fg/bg set + query, `12/19` query replies
 
 ### Layer 4: Screen Model (Grid + Scrollback)
@@ -246,7 +247,7 @@ Progress:
 - DSR/DA replies added for cursor position queries (Codex compatibility).
 - Default color queries (OSC 10/11) are answered; sets are applied to session defaults.
 - Synchronized updates (DECSET ?2026) now freeze terminal rendering until reset.
-- 80/132 column mode (DECCOLM, CSI ?3 h/l) now resizes the grid and clears the screen.
+- 80/132 column mode (DECCOLM, CSI ?3 h/l) now resizes the grid, clears the screen, and clears scrollback to avoid stale lines.
 
 Decision:
 - Track an alternate grid and per-screen cursor/scroll region state; swap on DECSET/DECRST.

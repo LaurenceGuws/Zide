@@ -69,6 +69,7 @@ const RenderCache = struct {
     alt_active: bool,
     selection_active: bool,
     sync_updates_active: bool,
+    screen_reverse: bool,
     kitty_generation: u64,
     clear_generation: u64,
 
@@ -97,6 +98,7 @@ const RenderCache = struct {
             .alt_active = false,
             .selection_active = false,
             .sync_updates_active = false,
+            .screen_reverse = false,
             .kitty_generation = 0,
             .clear_generation = 0,
         };
@@ -378,6 +380,7 @@ pub const TerminalSession = struct {
     fn updateViewCacheNoLock(self: *TerminalSession, generation: u64, scroll_offset: usize) void {
         const screen = self.activeScreenConst();
         const view = screen.snapshotView();
+        const screen_reverse = screen.screen_reverse;
         const rows = view.rows;
         const cols = view.cols;
         const active_index = self.render_cache_index.load(.acquire);
@@ -404,6 +407,7 @@ pub const TerminalSession = struct {
             active_cache.clear_generation == clear_generation and
             active_cache.alt_active == self.isAltActive() and
             active_cache.sync_updates_active == self.sync_updates_active and
+            active_cache.screen_reverse == screen_reverse and
             active_cache.kitty_generation == kitty_generation and
             !force_full_damage and
             view.dirty == .none and
@@ -435,6 +439,7 @@ pub const TerminalSession = struct {
             cache.alt_active = self.isAltActive();
             cache.selection_active = selection_active;
             cache.sync_updates_active = self.sync_updates_active;
+            cache.screen_reverse = screen_reverse;
             cache.clear_generation = clear_generation;
             self.updateKittyViewNoLock(cache);
             self.render_cache_index.store(target_index, .release);
@@ -526,6 +531,7 @@ pub const TerminalSession = struct {
             scroll_offset != 0 or
             clear_generation != active_cache.clear_generation or
             self.isAltActive() != active_cache.alt_active or
+            screen_reverse != active_cache.screen_reverse or
             view.dirty == .full;
 
         if (view.dirty_rows.len == rows and !needs_full_damage) {
@@ -570,6 +576,7 @@ pub const TerminalSession = struct {
         cache.alt_active = self.isAltActive();
         cache.selection_active = selection_active;
         cache.sync_updates_active = self.sync_updates_active;
+        cache.screen_reverse = screen_reverse;
         cache.clear_generation = clear_generation;
         self.updateKittyViewNoLock(cache);
         self.render_cache_index.store(target_index, .release);
@@ -1049,6 +1056,11 @@ pub const TerminalSession = struct {
         if (rows > 0) {
             self.primary.setScrollRegion(0, @as(usize, rows - 1));
             self.alt.setScrollRegion(0, @as(usize, rows - 1));
+        }
+        if (!self.isAltActive()) {
+            self.history.clear();
+            self.view_cache_request_offset.store(0, .release);
+            self.view_cache_pending.store(true, .release);
         }
         _ = self.clear_generation.fetchAdd(1, .acq_rel);
         self.force_full_damage.store(true, .release);
@@ -1872,6 +1884,7 @@ pub const TerminalSession = struct {
             .dirty = view.dirty,
             .damage = view.damage,
             .alt_active = alt_active,
+            .screen_reverse = screen.screen_reverse,
             .generation = self.output_generation.load(.acquire),
             .kitty_images = kitty.images.items,
             .kitty_placements = kitty.placements.items,

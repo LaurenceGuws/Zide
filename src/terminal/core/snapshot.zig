@@ -50,6 +50,7 @@ pub const TerminalSnapshot = struct {
     dirty: screen_mod.Dirty,
     damage: screen_mod.Damage,
     alt_active: bool,
+    screen_reverse: bool,
     generation: u64,
     kitty_images: []const KittyImage,
     kitty_placements: []const KittyPlacement,
@@ -101,6 +102,9 @@ pub fn encodeSnapshot(
         },
     );
     try appendLineFmt(&out, allocator, "alt: {d}", .{@intFromBool(snapshot.alt_active)});
+    if (snapshot.screen_reverse) {
+        try appendLineFmt(&out, allocator, "screen_reverse: {d}", .{@intFromBool(snapshot.screen_reverse)});
+    }
     try appendLineFmt(
         &out,
         allocator,
