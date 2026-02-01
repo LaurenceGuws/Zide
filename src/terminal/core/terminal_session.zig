@@ -1783,6 +1783,10 @@ pub const TerminalSession = struct {
         self.activeScreen().restoreCursor();
     }
 
+    pub fn setTabAtCursor(self: *TerminalSession) void {
+        self.activeScreen().setTabAtCursor();
+    }
+
     pub fn enterAltScreen(self: *TerminalSession, clear: bool, save_cursor: bool) void {
         if (self.isAltActive()) return;
         if (save_cursor) {
