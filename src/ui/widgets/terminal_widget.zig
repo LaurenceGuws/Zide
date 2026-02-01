@@ -778,6 +778,26 @@ pub const TerminalWidget = struct {
                 updated = true;
             }
 
+            if (rows > 0 and cols > 0) {
+                const bg = if (view_cells.len > 0) blk: {
+                    const cell = view_cells[0];
+                    const reversed = cell.attrs.reverse != screen_reverse;
+                    const base_bg = if (reversed) cell.attrs.fg else cell.attrs.bg;
+                    break :blk Color{
+                        .r = base_bg.r,
+                        .g = base_bg.g,
+                        .b = base_bg.b,
+                        .a = base_bg.a,
+                    };
+                } else r.theme.background;
+                r.drawRect(
+                    @intFromFloat(base_x),
+                    @intFromFloat(base_y),
+                    @intFromFloat(width),
+                    @intFromFloat(height),
+                    bg,
+                );
+            }
             r.drawTerminalTexture(base_x, base_y);
         }
         if (!has_kitty and self.kitty_textures.count() > 0) {
