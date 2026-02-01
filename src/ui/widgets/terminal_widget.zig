@@ -227,16 +227,15 @@ pub const TerminalWidget = struct {
     ) void {
         const draw_start = app_shell.getTime();
         const r = shell.rendererPtr();
-        self.session.lock();
-        const sync_updates = self.session.syncUpdatesActive();
-        if (sync_updates and self.session.view_cells.items.len > 0) {
-            const view_cells = self.session.view_cells.items;
+        const cache = self.session.renderCache();
+        const sync_updates = cache.sync_updates_active;
+        if (sync_updates and cache.cells.items.len > 0) {
+            const view_cells = cache.cells.items;
             const bg_color = if (view_cells.len > 0) Color{
                 .r = view_cells[0].attrs.bg.r,
                 .g = view_cells[0].attrs.bg.g,
                 .b = view_cells[0].attrs.bg.b,
             } else r.theme.background;
-            self.session.unlock();
             r.drawRect(
                 @intFromFloat(x),
                 @intFromFloat(y),
@@ -247,134 +246,48 @@ pub const TerminalWidget = struct {
             r.drawTerminalTexture(x, y);
             return;
         }
-        const snapshot = self.session.snapshot();
-        const alt_exit = self.session.alt_last_active and !snapshot.alt_active;
-        self.session.alt_last_active = snapshot.alt_active;
+        const alt_exit = self.session.alt_last_active and !cache.alt_active;
+        self.session.alt_last_active = cache.alt_active;
         const draw_start_time = if (alt_exit) app_shell.getTime() else 0;
-        const rows = snapshot.rows;
-        const cols = snapshot.cols;
-        const history_len = self.session.scrollbackCount();
-        const total_lines = history_len + rows;
-        var scroll_offset = self.session.scrollOffset();
+        const rows = cache.rows;
+        const cols = cache.cols;
+        const history_len = cache.history_len;
+        const total_lines = cache.total_lines;
+        const scroll_offset = cache.scroll_offset;
         const max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
-        if (scroll_offset > max_scroll_offset) {
-            self.session.setScrollOffset(max_scroll_offset);
-            scroll_offset = max_scroll_offset;
-        }
         const scroll_changed = scroll_offset != self.last_scroll_offset;
         self.last_scroll_offset = scroll_offset;
         const end_line = total_lines - scroll_offset;
         const start_line = if (end_line > rows) end_line - rows else 0;
-        const draw_cursor = scroll_offset == 0 and snapshot.cursor_visible;
-        const cursor = if (draw_cursor) snapshot.cursor else CursorPos{ .row = rows + 1, .col = cols + 1 };
-        const cursor_style = snapshot.cursor_style;
-        const selection = self.session.selectionState();
-        const kitty_generation = snapshot.kitty_generation;
-        var use_cached_view = false;
+        const draw_cursor = scroll_offset == 0 and cache.cursor_visible;
+        const cursor = if (draw_cursor) cache.cursor else CursorPos{ .row = rows + 1, .col = cols + 1 };
+        const cursor_style = cache.cursor_style;
+        const selection_active = cache.selection_active;
+        const kitty_generation = cache.kitty_generation;
 
-        if (!snapshot.alt_active and (scroll_changed or self.session.view_cache_pending.load(.acquire))) {
-            self.session.updateViewCacheForScrollLocked();
+        if (!cache.alt_active and self.session.view_cache_pending.load(.acquire)) {
+            self.session.updateViewCacheForScroll();
         }
 
         if (rows > 0 and cols > 0) {
-            if (scroll_offset == 0) {
-                const cache_gen = self.session.view_cache_generation.load(.acquire);
-                const cache_rows = self.session.view_cache_rows.load(.acquire);
-                const cache_cols = self.session.view_cache_cols.load(.acquire);
-                const cache_scroll = self.session.view_cache_scroll_offset.load(.acquire);
-                if (cache_gen == snapshot.generation and cache_rows == rows and cache_cols == cols and cache_scroll == scroll_offset) {
-                    const view_count = rows * cols;
-                    if (self.session.view_cells.items.len == view_count and
-                        self.session.view_dirty_rows.items.len == rows and
-                        self.session.view_dirty_cols_start.items.len == rows and
-                        self.session.view_dirty_cols_end.items.len == rows)
-                    {
-                        use_cached_view = true;
-                    }
-                }
-            } else {
-                const cache_gen = self.session.view_cache_generation.load(.acquire);
-                const cache_rows = self.session.view_cache_rows.load(.acquire);
-                const cache_cols = self.session.view_cache_cols.load(.acquire);
-                const cache_scroll = self.session.view_cache_scroll_offset.load(.acquire);
-                if (cache_gen == snapshot.generation and cache_rows == rows and cache_cols == cols and cache_scroll == scroll_offset) {
-                    const view_count = rows * cols;
-                    if (self.session.view_cells.items.len == view_count and
-                        self.session.view_dirty_rows.items.len == rows and
-                        self.session.view_dirty_cols_start.items.len == rows and
-                        self.session.view_dirty_cols_end.items.len == rows)
-                    {
-                        use_cached_view = true;
-                    }
-                }
-            }
-
-            const view_count = rows * cols;
-            if (!use_cached_view) {
-                _ = self.session.view_cells.resize(self.session.allocator, view_count) catch {};
-                _ = self.session.view_dirty_rows.resize(self.session.allocator, rows) catch {};
-                _ = self.session.view_dirty_cols_start.resize(self.session.allocator, rows) catch {};
-                _ = self.session.view_dirty_cols_end.resize(self.session.allocator, rows) catch {};
-
-                if (snapshot.dirty_rows.len == rows) {
-                    std.mem.copyForwards(bool, self.session.view_dirty_rows.items, snapshot.dirty_rows);
-                } else {
-                    for (self.session.view_dirty_rows.items) |*row_dirty| {
-                        row_dirty.* = true;
-                    }
-                }
-                if (snapshot.dirty_cols_start.len == rows and snapshot.dirty_cols_end.len == rows) {
-                    std.mem.copyForwards(u16, self.session.view_dirty_cols_start.items, snapshot.dirty_cols_start);
-                    std.mem.copyForwards(u16, self.session.view_dirty_cols_end.items, snapshot.dirty_cols_end);
-                } else {
-                    for (self.session.view_dirty_cols_start.items, self.session.view_dirty_cols_end.items) |*col_start, *col_end| {
-                        col_start.* = 0;
-                        col_end.* = if (cols > 0) @intCast(cols - 1) else 0;
-                    }
-                }
-
-                var row: usize = 0;
-                while (row < rows) : (row += 1) {
-                    const global_row = start_line + row;
-                    const row_start = row * cols;
-                    const row_dest = self.session.view_cells.items[row_start .. row_start + cols];
-                    if (global_row < history_len) {
-                        if (self.session.scrollbackRow(global_row)) |history_row| {
-                            std.mem.copyForwards(Cell, row_dest, history_row[0..cols]);
-                        } else {
-                            std.mem.copyForwards(Cell, row_dest, snapshot.cells[0..cols]);
-                        }
-                    } else {
-                        const grid_row = global_row - history_len;
-                        const src_start = grid_row * cols;
-                        std.mem.copyForwards(Cell, row_dest, snapshot.cells[src_start .. src_start + cols]);
-                    }
-                }
-            }
-
-            const session_images = self.session.kitty_view_images.items;
-            const session_placements = self.session.kitty_view_placements.items;
+            const session_images = cache.kitty_images.items;
+            const session_placements = cache.kitty_placements.items;
             _ = self.kitty_images_view.resize(self.session.allocator, session_images.len) catch {};
             _ = self.kitty_placements_view.resize(self.session.allocator, session_placements.len) catch {};
             std.mem.copyForwards(KittyImage, self.kitty_images_view.items, session_images);
             std.mem.copyForwards(KittyPlacement, self.kitty_placements_view.items, session_placements);
         } else {
-            self.session.view_cells.clearRetainingCapacity();
-            self.session.view_dirty_rows.clearRetainingCapacity();
-            self.session.view_dirty_cols_start.clearRetainingCapacity();
-            self.session.view_dirty_cols_end.clearRetainingCapacity();
             self.kitty_images_view.clearRetainingCapacity();
             self.kitty_placements_view.clearRetainingCapacity();
         }
-        self.session.unlock();
 
         if (self.kitty_images_view.items.len > 0) {
             self.primeKittyUploads();
             self.processPendingKittyUploads(shell);
         }
 
-        const view_cells = self.session.view_cells.items;
-        const view_dirty_rows = self.session.view_dirty_rows.items;
+        const view_cells = cache.cells.items;
+        const view_dirty_rows = cache.dirty_rows.items;
         const has_kitty = self.kitty_images_view.items.len > 0 and self.kitty_placements_view.items.len > 0;
         const bg_color = if (view_cells.len > 0) Color{
             .r = view_cells[0].attrs.bg.r,
@@ -588,8 +501,8 @@ pub const TerminalWidget = struct {
             const texture_h = @as(i32, @intFromFloat(@round(r.terminal_cell_height * @as(f32, @floatFromInt(rows)))));
             const recreated = r.ensureTerminalTexture(texture_w, texture_h);
             const kitty_changed = kitty_generation != self.last_kitty_generation;
-            const needs_full = recreated or snapshot.alt_active or snapshot.dirty == .full or scroll_changed or (snapshot.dirty != .none and scroll_offset > 0) or has_kitty or kitty_changed or hover_changed;
-            const needs_partial = snapshot.dirty == .partial and !needs_full and scroll_offset == 0;
+            const needs_full = recreated or cache.alt_active or cache.dirty == .full or scroll_changed or (cache.dirty != .none and scroll_offset > 0) or has_kitty or kitty_changed or hover_changed;
+            const needs_partial = cache.dirty == .partial and !needs_full and scroll_offset == 0;
 
             if ((needs_full or needs_partial) and r.beginTerminalTexture()) {
                 // Disable scissor while updating the offscreen texture.
@@ -631,9 +544,9 @@ pub const TerminalWidget = struct {
                         if (row < view_dirty_rows.len and view_dirty_rows[row]) {
                             var col_start: usize = 0;
                             var col_end: usize = cols - 1;
-                            if (row < self.session.view_dirty_cols_start.items.len and row < self.session.view_dirty_cols_end.items.len) {
-                                col_start = @min(@as(usize, self.session.view_dirty_cols_start.items[row]), cols - 1);
-                                col_end = @min(@as(usize, self.session.view_dirty_cols_end.items[row]), cols - 1);
+                            if (row < cache.dirty_cols_start.items.len and row < cache.dirty_cols_end.items.len) {
+                                col_start = @min(@as(usize, cache.dirty_cols_start.items[row]), cols - 1);
+                                col_end = @min(@as(usize, cache.dirty_cols_end.items[row]), cols - 1);
                             }
                             const draw_padding = col_end >= cols - 1;
                             drawRowBackgrounds(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding);
@@ -652,9 +565,9 @@ pub const TerminalWidget = struct {
                         if (row < view_dirty_rows.len and view_dirty_rows[row]) {
                             var col_start: usize = 0;
                             var col_end: usize = cols - 1;
-                            if (row < self.session.view_dirty_cols_start.items.len and row < self.session.view_dirty_cols_end.items.len) {
-                                col_start = @min(@as(usize, self.session.view_dirty_cols_start.items[row]), cols - 1);
-                                col_end = @min(@as(usize, self.session.view_dirty_cols_end.items[row]), cols - 1);
+                            if (row < cache.dirty_cols_start.items.len and row < cache.dirty_cols_end.items.len) {
+                                col_start = @min(@as(usize, cache.dirty_cols_start.items[row]), cols - 1);
+                                col_end = @min(@as(usize, cache.dirty_cols_end.items[row]), cols - 1);
                             }
                             drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
                             if (row > 0) {
@@ -690,8 +603,8 @@ pub const TerminalWidget = struct {
             self.cleanupKittyTextures(self.kitty_images_view.items);
         }
 
-        if (rows > 0 and cols > 0 and selection != null) {
-            const selection_rows = self.session.view_selection_rows.items;
+        if (rows > 0 and cols > 0 and selection_active) {
+            const selection_rows = cache.selection_rows.items;
             if (selection_rows.len == rows) {
                 const selection_color = Color{
                     .r = r.theme.selection.r,
@@ -707,8 +620,8 @@ pub const TerminalWidget = struct {
                 var row_idx: usize = 0;
                 while (row_idx < rows) : (row_idx += 1) {
                     if (!selection_rows[row_idx]) continue;
-                    const col_start = @as(usize, self.session.view_selection_cols_start.items[row_idx]);
-                    const col_end = @as(usize, self.session.view_selection_cols_end.items[row_idx]);
+                    const col_start = @as(usize, cache.selection_cols_start.items[row_idx]);
+                    const col_end = @as(usize, cache.selection_cols_end.items[row_idx]);
                     if (col_end < col_start or col_end >= cols) continue;
 
                     const rect_x = base_x_i + @as(i32, @intCast(col_start)) * cell_w_i;
@@ -913,10 +826,10 @@ pub const TerminalWidget = struct {
             );
         }
 
-        if (!sync_updates and (updated or snapshot.dirty == .none)) {
+        if (!sync_updates and (updated or cache.dirty == .none)) {
             if (self.session.tryLock()) {
                 const current_gen = self.session.currentGeneration();
-                if (current_gen == snapshot.generation) {
+                if (current_gen == cache.generation) {
                     self.session.clearDirty();
                 }
                 self.session.unlock();
