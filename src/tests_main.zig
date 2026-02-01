@@ -6,6 +6,7 @@ comptime {
     _ = @import("layout_tests.zig");
     _ = @import("terminal_reflow_tests.zig");
     _ = @import("terminal_key_encoder_tests.zig");
+    _ = @import("terminal_input_encoding_tests.zig");
     _ = @import("editor_clipboard_tests.zig");
     _ = @import("terminal_snapshot_tests.zig");
     _ = @import("widget_action_tests.zig");
