@@ -312,7 +312,6 @@ pub const TerminalWidget = struct {
         const scrollbar_x = x + width - scrollbar_w;
         const scrollbar_y = y;
         const scrollbar_h = height;
-        const hover_changed = self.hover_dirty;
         self.hover_dirty = false;
         const hover_link_id = if (self.last_hover_ctrl) self.last_hover_link_id else 0;
 
@@ -501,7 +500,7 @@ pub const TerminalWidget = struct {
             const texture_h = @as(i32, @intFromFloat(@round(r.terminal_cell_height * @as(f32, @floatFromInt(rows)))));
             const recreated = r.ensureTerminalTexture(texture_w, texture_h);
             const kitty_changed = kitty_generation != self.last_kitty_generation;
-            const needs_full = recreated or cache.alt_active or cache.dirty == .full or scroll_changed or (cache.dirty != .none and scroll_offset > 0) or has_kitty or kitty_changed or hover_changed;
+            const needs_full = recreated or cache.alt_active or cache.dirty == .full or scroll_changed or (cache.dirty != .none and scroll_offset > 0) or has_kitty or kitty_changed;
             const needs_partial = cache.dirty == .partial and !needs_full and scroll_offset == 0;
 
             if ((needs_full or needs_partial) and r.beginTerminalTexture()) {
@@ -636,6 +635,35 @@ pub const TerminalWidget = struct {
                         rect_h,
                         selection_color,
                     );
+                }
+            }
+        }
+
+        if (rows > 0 and cols > 0 and hover_link_id != 0 and view_cells.len >= rows * cols) {
+            const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
+            const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_height));
+            const base_x_i: i32 = @intFromFloat(std.math.round(base_x));
+            const base_y_i: i32 = @intFromFloat(std.math.round(base_y));
+            const underline_color = r.theme.link;
+
+            var row_idx: usize = 0;
+            while (row_idx < rows) : (row_idx += 1) {
+                var col_idx: usize = 0;
+                while (col_idx < cols) {
+                    const cell = view_cells[row_idx * cols + col_idx];
+                    if (cell.attrs.link_id != hover_link_id) {
+                        col_idx += 1;
+                        continue;
+                    }
+                    const start_col = col_idx;
+                    col_idx += 1;
+                    while (col_idx < cols and view_cells[row_idx * cols + col_idx].attrs.link_id == hover_link_id) {
+                        col_idx += 1;
+                    }
+                    const rect_x = base_x_i + @as(i32, @intCast(start_col)) * cell_w_i;
+                    const rect_y = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i + (cell_h_i - 2);
+                    const rect_w = cell_w_i * @as(i32, @intCast(col_idx - start_col));
+                    r.drawRect(rect_x, rect_y, rect_w, 2, underline_color);
                 }
             }
         }

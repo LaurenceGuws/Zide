@@ -588,10 +588,13 @@ terminal_widget_todo:
             - "Render cache now double-buffers view cells + dirty/selection/kitty data; draw reads without holding the session lock."
         - id: P8-08
           title: "Hover/link styling as overlay pass (avoid full redraw)"
+          status: done
           files_to_edit:
             - src/ui/widgets/terminal_widget.zig
           refs:
             - reference_repos/terminals/foot/render.c
+          notes:
+            - "Hover underline now draws as a lightweight overlay pass without re-rendering the terminal texture."
         - id: P8-09
           title: "Skip view_cells rebuild when idle"
           files_to_edit:
