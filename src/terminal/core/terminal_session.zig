@@ -1555,7 +1555,7 @@ pub const TerminalSession = struct {
         while (true) {
             switch (screen.prepareWrite()) {
                 .done => return,
-                .need_newline => self.newline(),
+                .need_wrap => self.wrapNewline(),
                 .proceed => break,
             }
         }
@@ -1600,8 +1600,8 @@ pub const TerminalSession = struct {
         while (i < bytes.len) {
             switch (screen.prepareWrite()) {
                 .done => break,
-                .need_newline => {
-                    self.newline();
+                .need_wrap => {
+                    self.wrapNewline();
                     continue;
                 },
                 .proceed => {},
@@ -1616,6 +1616,15 @@ pub const TerminalSession = struct {
     pub fn newline(self: *TerminalSession) void {
         const screen = self.activeScreen();
         switch (screen.newlineAction()) {
+            .moved => {},
+            .scroll_region => self.scrollRegionUp(1),
+            .scroll_full => self.scrollUp(),
+        }
+    }
+
+    pub fn wrapNewline(self: *TerminalSession) void {
+        const screen = self.activeScreen();
+        switch (screen.wrapNewlineAction()) {
             .moved => {},
             .scroll_region => self.scrollRegionUp(1),
             .scroll_full => self.scrollUp(),

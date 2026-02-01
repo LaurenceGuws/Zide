@@ -304,7 +304,7 @@ pub const Screen = struct {
 
     pub const WritePrep = enum {
         proceed,
-        need_newline,
+        need_wrap,
         done,
     };
 
@@ -323,7 +323,7 @@ pub const Screen = struct {
                         self.grid.markDirtyRange(self.cursor.row, self.cursor.row, 0, cols_local - 1);
                     }
                 }
-                return .need_newline;
+                return .need_wrap;
             }
         }
         if (self.cursor.col >= cols or self.cursor.row >= rows) return .done;
@@ -445,6 +445,21 @@ pub const Screen = struct {
             if (self.newline_mode) {
                 self.cursor.col = 0;
             }
+            self.wrap_next = false;
+            return .moved;
+        }
+        if (self.cursor.row == self.scroll_bottom) {
+            self.wrap_next = false;
+            return .scroll_region;
+        }
+        self.wrap_next = false;
+        return .scroll_full;
+    }
+
+    pub fn wrapNewlineAction(self: *Screen) NewlineAction {
+        if (self.cursor.row + 1 < @as(usize, self.grid.rows) and self.cursor.row != self.scroll_bottom) {
+            self.cursor.row += 1;
+            self.cursor.col = 0;
             self.wrap_next = false;
             return .moved;
         }
