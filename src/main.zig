@@ -643,6 +643,30 @@ const AppState = struct {
                 }
             }
         }
+        if (focus == .editor and self.editors.items.len > 0) {
+            const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
+            const editor = self.editors.items[editor_idx];
+            for (self.input_router.actionsSlice()) |action| {
+                switch (action.kind) {
+                    .save => {
+                        try editor.save();
+                        self.needs_redraw = true;
+                        handled_shortcut = true;
+                    },
+                    .undo => {
+                        _ = try editor.undo();
+                        self.needs_redraw = true;
+                        handled_shortcut = true;
+                    },
+                    .redo => {
+                        _ = try editor.redo();
+                        self.needs_redraw = true;
+                        handled_shortcut = true;
+                    },
+                    else => {},
+                }
+            }
+        }
         if (handled_shortcut) {
             self.metrics.noteInput(now);
         }
