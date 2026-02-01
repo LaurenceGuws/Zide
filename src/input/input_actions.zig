@@ -7,10 +7,21 @@ pub const FocusKind = enum {
     terminal,
 };
 
+pub const BindScope = enum {
+    global,
+    editor,
+    terminal,
+};
+
 pub const ActionKind = enum {
     none,
     copy,
     paste,
+    zoom_in,
+    zoom_out,
+    zoom_reset,
+    new_editor,
+    toggle_terminal,
 };
 
 pub const InputAction = struct {
@@ -18,19 +29,30 @@ pub const InputAction = struct {
     consumed: bool,
 };
 
+pub const BindSpec = struct {
+    scope: BindScope,
+    key: shared_types.input.Key,
+    mods: shared_types.input.Modifiers,
+    action: ActionKind,
+    repeat: bool,
+};
+
 pub const InputRouter = struct {
     allocator: std.mem.Allocator,
     actions: std.ArrayList(InputAction),
+    bindings: std.ArrayList(BindSpec),
 
     pub fn init(allocator: std.mem.Allocator) InputRouter {
         return .{
             .allocator = allocator,
             .actions = std.ArrayList(InputAction).empty,
+            .bindings = std.ArrayList(BindSpec).empty,
         };
     }
 
     pub fn deinit(self: *InputRouter) void {
         self.actions.deinit(self.allocator);
+        self.bindings.deinit(self.allocator);
     }
 
     pub fn clear(self: *InputRouter) void {
@@ -41,26 +63,31 @@ pub const InputRouter = struct {
         return self.actions.items;
     }
 
+    pub fn setBindings(self: *InputRouter, bindings: []const BindSpec) void {
+        self.bindings.clearRetainingCapacity();
+        _ = self.bindings.appendSlice(self.allocator, bindings) catch {};
+    }
+
     pub fn route(self: *InputRouter, batch: *shared_types.input.InputBatch, focus: FocusKind) void {
         self.clear();
         const log = app_logger.logger("input.router");
         var text_events: usize = 0;
-        for (batch.events.items) |event| {
-            switch (event) {
-                .key => |key_event| {
-                    if (!key_event.pressed) continue;
-                    const kind = matchShortcut(key_event.key, key_event.mods);
-                    _ = self.actions.append(self.allocator, .{ .kind = kind, .consumed = false }) catch {};
-                    if (kind != .none and (log.enabled_file or log.enabled_console)) {
-                        log.logf(
-                            "action={s} key={s} focus={s} shift={d} ctrl={d} alt={d} super={d}",
-                            .{ actionName(kind), @tagName(key_event.key), @tagName(focus), @intFromBool(key_event.mods.shift), @intFromBool(key_event.mods.ctrl), @intFromBool(key_event.mods.alt), @intFromBool(key_event.mods.super) },
-                        );
-                    }
-                },
-                .text => text_events += 1,
-                else => {},
+        for (self.bindings.items) |binding| {
+            if (!scopeMatches(binding.scope, focus)) continue;
+            if (!modsMatch(binding.mods, batch.mods)) continue;
+            const pressed = batch.keyPressed(binding.key);
+            const repeated = binding.repeat and batch.keyRepeated(binding.key);
+            if (!pressed and !repeated) continue;
+            _ = self.actions.append(self.allocator, .{ .kind = binding.action, .consumed = false }) catch {};
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(
+                    "action={s} key={s} scope={s} focus={s} shift={d} ctrl={d} alt={d} super={d} repeat={d}",
+                    .{ actionName(binding.action), @tagName(binding.key), @tagName(binding.scope), @tagName(focus), @intFromBool(binding.mods.shift), @intFromBool(binding.mods.ctrl), @intFromBool(binding.mods.alt), @intFromBool(binding.mods.super), @intFromBool(binding.repeat) },
+                );
             }
+        }
+        for (batch.events.items) |event| {
+            if (event == .text) text_events += 1;
         }
         if (text_events > 0 and (log.enabled_file or log.enabled_console)) {
             log.logf("text_input events={d}", .{text_events});
@@ -68,15 +95,19 @@ pub const InputRouter = struct {
     }
 };
 
-fn matchShortcut(key: shared_types.input.Key, mods: shared_types.input.Modifiers) ActionKind {
-    if (mods.ctrl and mods.shift) {
-        switch (key) {
-            .c => return .copy,
-            .v => return .paste,
-            else => {},
-        }
-    }
-    return .none;
+fn scopeMatches(scope: BindScope, focus: FocusKind) bool {
+    return switch (scope) {
+        .global => true,
+        .editor => focus == .editor,
+        .terminal => focus == .terminal,
+    };
+}
+
+fn modsMatch(expected: shared_types.input.Modifiers, actual: shared_types.input.Modifiers) bool {
+    return expected.shift == actual.shift and
+        expected.ctrl == actual.ctrl and
+        expected.alt == actual.alt and
+        expected.super == actual.super;
 }
 
 fn actionName(kind: ActionKind) []const u8 {
@@ -84,5 +115,10 @@ fn actionName(kind: ActionKind) []const u8 {
         .none => "none",
         .copy => "copy",
         .paste => "paste",
+        .zoom_in => "zoom_in",
+        .zoom_out => "zoom_out",
+        .zoom_reset => "zoom_reset",
+        .new_editor => "new_editor",
+        .toggle_terminal => "toggle_terminal",
     };
 }

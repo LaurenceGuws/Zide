@@ -1,6 +1,8 @@
 const std = @import("std");
 const renderer = @import("../ui/renderer.zig");
 const sdl_api = @import("../platform/sdl_api.zig");
+const input_actions = @import("../input/input_actions.zig");
+const input_types = @import("../types/input.zig");
 
 const c = @cImport({
     @cInclude("lua.h");
@@ -35,6 +37,7 @@ pub const Config = struct {
     terminal_font_path: ?[]u8,
     terminal_font_size: ?f32,
     theme: ?ThemeConfig,
+    keybinds: ?[]input_actions.BindSpec,
 };
 
 pub const ThemeConfig = struct {
@@ -87,6 +90,7 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
         .terminal_font_path = null,
         .terminal_font_size = null,
         .theme = null,
+        .keybinds = null,
     };
     if (fileExists("assets/config/init.lua")) {
         config = try loadConfigFromFile(allocator, "assets/config/init.lua");
@@ -128,6 +132,10 @@ pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
     if (config.terminal_font_path) |path| {
         allocator.free(path);
         config.terminal_font_path = null;
+    }
+    if (config.keybinds) |binds| {
+        allocator.free(binds);
+        config.keybinds = null;
     }
 }
 
@@ -182,6 +190,10 @@ fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) voi
             base.theme = overlay_theme;
         }
     }
+    if (overlay.keybinds) |binds| {
+        if (base.keybinds) |old| allocator.free(old);
+        base.keybinds = allocator.dupe(input_actions.BindSpec, binds) catch base.keybinds;
+    }
 }
 
 fn loadConfigFromFile(allocator: std.mem.Allocator, path: []const u8) LuaConfigError!Config {
@@ -215,6 +227,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             .terminal_font_path = null,
             .terminal_font_size = null,
             .theme = null,
+            .keybinds = null,
         };
     }
     if (!c.lua_istable(L, -1)) {
@@ -234,6 +247,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     var terminal_font_path: ?[]u8 = null;
     var terminal_font_size: ?f32 = null;
     var theme: ?ThemeConfig = null;
+    var keybinds: ?[]input_actions.BindSpec = null;
 
     _ = c.lua_getfield(L, -1, "log");
     if (c.lua_isstring(L, -1) != 0) {
@@ -343,6 +357,12 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     }
     c.lua_pop(L, 1);
 
+    _ = c.lua_getfield(L, -1, "keybinds");
+    if (c.lua_istable(L, -1)) {
+        keybinds = try parseKeybinds(allocator, L, -1);
+    }
+    c.lua_pop(L, 1);
+
     return .{
         .log_file_filter = log_file_filter,
         .log_console_filter = log_console_filter,
@@ -357,6 +377,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         .terminal_font_path = terminal_font_path,
         .terminal_font_size = terminal_font_size,
         .theme = theme,
+        .keybinds = keybinds,
     };
 }
 
@@ -381,6 +402,120 @@ fn parseFontTable(
         }
     }
     c.lua_pop(L, 1);
+}
+
+fn parseKeybinds(allocator: std.mem.Allocator, L: *c.lua_State, idx: c_int) LuaConfigError![]input_actions.BindSpec {
+    var out = std.ArrayList(input_actions.BindSpec).empty;
+    errdefer out.deinit(allocator);
+
+    try parseKeybindScope(allocator, L, idx, "global", .global, &out);
+    try parseKeybindScope(allocator, L, idx, "editor", .editor, &out);
+    try parseKeybindScope(allocator, L, idx, "terminal", .terminal, &out);
+
+    return out.toOwnedSlice(allocator);
+}
+
+fn parseKeybindScope(
+    allocator: std.mem.Allocator,
+    L: *c.lua_State,
+    idx: c_int,
+    field: [:0]const u8,
+    scope: input_actions.BindScope,
+    out: *std.ArrayList(input_actions.BindSpec),
+) LuaConfigError!void {
+    _ = c.lua_getfield(L, idx, field);
+    defer c.lua_pop(L, 1);
+    if (!c.lua_istable(L, -1)) return;
+    const len = c.lua_rawlen(L, -1);
+    var i: c_int = 1;
+    while (i <= @as(c_int, @intCast(len))) : (i += 1) {
+        _ = c.lua_rawgeti(L, -1, i);
+        defer c.lua_pop(L, 1);
+        if (!c.lua_istable(L, -1)) continue;
+
+        const key = parseKeyField(L, -1) orelse continue;
+        const mods = parseModsField(L, -1);
+        const action = parseActionField(L, -1) orelse continue;
+        const repeat = parseRepeatField(L, -1);
+
+        try out.append(allocator, .{
+            .scope = scope,
+            .key = key,
+            .mods = mods,
+            .action = action,
+            .repeat = repeat,
+        });
+    }
+}
+
+fn parseKeyField(L: *c.lua_State, idx: c_int) ?input_types.Key {
+    _ = c.lua_getfield(L, idx, "key");
+    defer c.lua_pop(L, 1);
+    if (c.lua_isstring(L, -1) == 0) return null;
+    var len: usize = 0;
+    const ptr = c.lua_tolstring(L, -1, &len) orelse return null;
+    const slice = @as([*]const u8, @ptrCast(ptr))[0..len];
+    return std.meta.stringToEnum(input_types.Key, slice);
+}
+
+fn parseModsField(L: *c.lua_State, idx: c_int) input_types.Modifiers {
+    var mods: input_types.Modifiers = .{};
+    _ = c.lua_getfield(L, idx, "mods");
+    defer c.lua_pop(L, 1);
+    if (c.lua_isstring(L, -1) != 0) {
+        if (readModString(L, -1)) |mod_flag| applyMod(&mods, mod_flag);
+        return mods;
+    }
+    if (!c.lua_istable(L, -1)) return mods;
+    const len = c.lua_rawlen(L, -1);
+    var i: c_int = 1;
+    while (i <= @as(c_int, @intCast(len))) : (i += 1) {
+        _ = c.lua_rawgeti(L, -1, i);
+        if (c.lua_isstring(L, -1) != 0) {
+            if (readModString(L, -1)) |mod_flag| applyMod(&mods, mod_flag);
+        }
+        c.lua_pop(L, 1);
+    }
+    return mods;
+}
+
+fn parseActionField(L: *c.lua_State, idx: c_int) ?input_actions.ActionKind {
+    _ = c.lua_getfield(L, idx, "action");
+    defer c.lua_pop(L, 1);
+    if (c.lua_isstring(L, -1) == 0) return null;
+    var len: usize = 0;
+    const ptr = c.lua_tolstring(L, -1, &len) orelse return null;
+    const slice = @as([*]const u8, @ptrCast(ptr))[0..len];
+    return std.meta.stringToEnum(input_actions.ActionKind, slice);
+}
+
+fn parseRepeatField(L: *c.lua_State, idx: c_int) bool {
+    _ = c.lua_getfield(L, idx, "repeat");
+    defer c.lua_pop(L, 1);
+    if (!c.lua_isboolean(L, -1)) return false;
+    return c.lua_toboolean(L, -1) != 0;
+}
+
+const ModFlag = enum { ctrl, shift, alt, super };
+
+fn readModString(L: *c.lua_State, idx: c_int) ?ModFlag {
+    var len: usize = 0;
+    const ptr = c.lua_tolstring(L, idx, &len) orelse return null;
+    const slice = @as([*]const u8, @ptrCast(ptr))[0..len];
+    if (std.mem.eql(u8, slice, "ctrl")) return .ctrl;
+    if (std.mem.eql(u8, slice, "shift")) return .shift;
+    if (std.mem.eql(u8, slice, "alt")) return .alt;
+    if (std.mem.eql(u8, slice, "super")) return .super;
+    return null;
+}
+
+fn applyMod(mods: *input_types.Modifiers, mod_flag: ModFlag) void {
+    switch (mod_flag) {
+        .ctrl => mods.ctrl = true,
+        .shift => mods.shift = true,
+        .alt => mods.alt = true,
+        .super => mods.super = true,
+    }
 }
 
 fn findUserConfigPath(allocator: std.mem.Allocator) LuaConfigError!?[]u8 {
