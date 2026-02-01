@@ -319,12 +319,18 @@ pub const TerminalWidget = struct {
         const r = shell.rendererPtr();
         const cache = self.session.renderCache();
         const sync_updates = cache.sync_updates_active;
+        const screen_reverse = cache.screen_reverse;
         if (sync_updates and cache.cells.items.len > 0) {
             const view_cells = cache.cells.items;
-            const bg_color = if (view_cells.len > 0) Color{
-                .r = view_cells[0].attrs.bg.r,
-                .g = view_cells[0].attrs.bg.g,
-                .b = view_cells[0].attrs.bg.b,
+            const bg_color = if (view_cells.len > 0) blk: {
+                const cell = view_cells[0];
+                const reversed = cell.attrs.reverse != screen_reverse;
+                const bg = if (reversed) cell.attrs.fg else cell.attrs.bg;
+                break :blk Color{
+                    .r = bg.r,
+                    .g = bg.g,
+                    .b = bg.b,
+                };
             } else r.theme.background;
             r.drawRect(
                 @intFromFloat(x),
@@ -424,6 +430,7 @@ pub const TerminalWidget = struct {
                 base_y_local: f32,
                 padding_x_i: i32,
                 draw_padding: bool,
+                screen_reverse_mode: bool,
             ) void {
                 const rr = renderer.rendererPtr();
                 const cell_w_i: i32 = @intFromFloat(std.math.round(rr.terminal_cell_width));
@@ -460,12 +467,13 @@ pub const TerminalWidget = struct {
                         fg = rr.theme.link;
                     }
 
+                    const cell_reverse = cell.attrs.reverse != screen_reverse_mode;
                     rr.addTerminalRect(
                         cell_x_i,
                         cell_y_i,
                         cell_w_i_scaled,
                         cell_h_i,
-                        if (cell.attrs.reverse) fg else bg,
+                        if (cell_reverse) fg else bg,
                     );
 
                     if (cell.width > 1) {
@@ -480,12 +488,13 @@ pub const TerminalWidget = struct {
                         .g = last_cell.attrs.bg.g,
                         .b = last_cell.attrs.bg.b,
                     };
+                    const padding_reverse = last_cell.attrs.reverse != screen_reverse_mode;
                     rr.addTerminalRect(
                         base_x_i + @as(i32, @intCast(cols_count)) * cell_w_i,
                         base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i,
                         padding_x_i,
                         cell_h_i,
-                        if (last_cell.attrs.reverse) Color{
+                        if (padding_reverse) Color{
                             .r = last_cell.attrs.fg.r,
                             .g = last_cell.attrs.fg.g,
                             .b = last_cell.attrs.fg.b,
@@ -507,6 +516,7 @@ pub const TerminalWidget = struct {
                 base_y_local: f32,
                 padding_x_i: i32,
                 hover_link: u32,
+                screen_reverse_mode: bool,
             ) void {
                 _ = padding_x_i;
                 const rr = renderer.rendererPtr();
@@ -550,6 +560,7 @@ pub const TerminalWidget = struct {
                         underline = cell.attrs.link_id == hover_link;
                     }
 
+                    const cell_reverse = cell.attrs.reverse != screen_reverse_mode;
                     const followed_by_space = blk: {
                         const next_col = col + cell_width_units;
                         if (next_col < cols_count) {
@@ -565,8 +576,8 @@ pub const TerminalWidget = struct {
                         @as(f32, @floatFromInt(cell_y_i)),
                         @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cell_width_units)))),
                         @as(f32, @floatFromInt(cell_h_i)),
-                        if (cell.attrs.reverse) bg else fg,
-                        if (cell.attrs.reverse) fg else bg,
+                        if (cell_reverse) bg else fg,
+                        if (cell_reverse) fg else bg,
                         underline_color,
                         cell.attrs.bold,
                         underline,
@@ -601,16 +612,21 @@ pub const TerminalWidget = struct {
                 const base_y_local: f32 = 0;
 
                 if (needs_full) {
-                    const bg = if (view_cells.len > 0) Color{
-                        .r = view_cells[0].attrs.bg.r,
-                        .g = view_cells[0].attrs.bg.g,
-                        .b = view_cells[0].attrs.bg.b,
+                    const bg = if (view_cells.len > 0) blk: {
+                        const cell = view_cells[0];
+                        const reversed = cell.attrs.reverse != screen_reverse;
+                        const base_bg = if (reversed) cell.attrs.fg else cell.attrs.bg;
+                        break :blk Color{
+                            .r = base_bg.r,
+                            .g = base_bg.g,
+                            .b = base_bg.b,
+                        };
                     } else r.theme.background;
                     r.beginTerminalBatch();
                     r.addTerminalRect(0, 0, texture_w, texture_h, bg);
                     var row: usize = 0;
                     while (row < rows) : (row += 1) {
-                        drawRowBackgrounds(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, true);
+                        drawRowBackgrounds(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, true, screen_reverse);
                     }
                     r.flushTerminalBatch();
                     if (has_kitty) {
@@ -620,7 +636,7 @@ pub const TerminalWidget = struct {
                     r.beginTerminalGlyphBatch();
                     row = 0;
                     while (row < rows) : (row += 1) {
-                        drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id);
+                        drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse);
                     }
                     r.flushTerminalGlyphBatch();
                     if (has_kitty) {
@@ -638,12 +654,12 @@ pub const TerminalWidget = struct {
                                 col_end = @min(@as(usize, cache.dirty_cols_end.items[row]), cols - 1);
                             }
                             const draw_padding = col_end >= cols - 1;
-                            drawRowBackgrounds(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding);
+                            drawRowBackgrounds(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding, screen_reverse);
                             if (row > 0) {
-                                drawRowBackgrounds(shell, view_cells, cols, row - 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding);
+                                drawRowBackgrounds(shell, view_cells, cols, row - 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding, screen_reverse);
                             }
                             if (row + 1 < rows) {
-                                drawRowBackgrounds(shell, view_cells, cols, row + 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding);
+                                drawRowBackgrounds(shell, view_cells, cols, row + 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding, screen_reverse);
                             }
                         }
                     }
@@ -658,12 +674,12 @@ pub const TerminalWidget = struct {
                                 col_start = @min(@as(usize, cache.dirty_cols_start.items[row]), cols - 1);
                                 col_end = @min(@as(usize, cache.dirty_cols_end.items[row]), cols - 1);
                             }
-                            drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
+                            drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse);
                             if (row > 0) {
-                                drawRowGlyphs(shell, view_cells, cols, row - 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
+                                drawRowGlyphs(shell, view_cells, cols, row - 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse);
                             }
                             if (row + 1 < rows) {
-                                drawRowGlyphs(shell, view_cells, cols, row + 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id);
+                                drawRowGlyphs(shell, view_cells, cols, row + 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse);
                             }
                         }
                     }
@@ -797,6 +813,7 @@ pub const TerminalWidget = struct {
                 underline = cell.attrs.link_id == hover_link_id;
             }
 
+            const cell_reverse = cell.attrs.reverse != screen_reverse;
             const followed_by_space = blk: {
                 const next_col = cursor.col + cell_width_units;
                 if (next_col < cols) {
@@ -815,8 +832,8 @@ pub const TerminalWidget = struct {
                         cell_y,
                         @as(f32, @floatFromInt(cursor_w_i)),
                         @as(f32, @floatFromInt(cell_h_i)),
-                        if (cell.attrs.reverse) bg else fg,
-                        if (cell.attrs.reverse) fg else bg,
+                        if (cell_reverse) bg else fg,
+                        if (cell_reverse) fg else bg,
                         underline_color,
                         cell.attrs.bold,
                         underline,

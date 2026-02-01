@@ -24,6 +24,7 @@ pub const Screen = struct {
     auto_wrap: bool,
     origin_mode: bool,
     newline_mode: bool,
+    screen_reverse: bool,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16, default_attrs: types.CellAttrs) !Screen {
         const grid = try TerminalGrid.init(allocator, rows, cols, .{
@@ -48,6 +49,7 @@ pub const Screen = struct {
             .auto_wrap = true,
             .origin_mode = false,
             .newline_mode = false,
+            .screen_reverse = false,
         };
     }
 
@@ -102,6 +104,7 @@ pub const Screen = struct {
         self.auto_wrap = true;
         self.origin_mode = false;
         self.newline_mode = false;
+        self.screen_reverse = false;
         self.tabstops.reset();
     }
 
@@ -193,6 +196,12 @@ pub const Screen = struct {
 
     pub fn setNewlineMode(self: *Screen, enabled: bool) void {
         self.newline_mode = enabled;
+    }
+
+    pub fn setScreenReverse(self: *Screen, enabled: bool) void {
+        if (self.screen_reverse == enabled) return;
+        self.screen_reverse = enabled;
+        self.grid.markDirtyAll();
     }
 
     pub fn cellAtOr(self: *const Screen, row: usize, col: usize, default_cell: types.Cell) types.Cell {

@@ -49,6 +49,18 @@ pub const TerminalHistory = struct {
         _ = default_cell;
     }
 
+    pub fn clear(self: *TerminalHistory) void {
+        self.scrollback.clear();
+        self.scrollback_generation +|= 1;
+        self.view_cache.clearRetainingCapacity();
+        self.view_wraps.clearRetainingCapacity();
+        self.view_rows = 0;
+        self.view_cols = 0;
+        self.view_generation = self.scrollback_generation;
+        self.scrollback_offset = 0;
+        self.saved_scrollback_offset = 0;
+    }
+
     pub fn updateDefaultColors(
         self: *TerminalHistory,
         old_fg: types.Color,
