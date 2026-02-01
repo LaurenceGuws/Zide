@@ -609,6 +609,8 @@ const AppState = struct {
         self.side_nav.updateInput(self.last_input);
         self.status_bar.updateInput(self.last_input);
         const now = app_shell.getTime();
+        const focus = if (self.app_mode == .terminal or self.active_kind == .terminal) input_actions.FocusKind.terminal else input_actions.FocusKind.editor;
+        self.input_router.route(input_batch, focus);
         if (try shell.applyPendingZoom(now)) {
             self.applyUiScale();
             try self.refreshTerminalSizing();

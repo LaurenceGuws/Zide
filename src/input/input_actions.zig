@@ -1,4 +1,10 @@
 const std = @import("std");
+const shared_types = @import("../types/mod.zig");
+
+pub const FocusKind = enum {
+    editor,
+    terminal,
+};
 
 pub const ActionKind = enum {
     none,
@@ -29,5 +35,11 @@ pub const InputRouter = struct {
 
     pub fn actionsSlice(self: *InputRouter) []const InputAction {
         return self.actions.items;
+    }
+
+    pub fn route(self: *InputRouter, batch: *shared_types.input.InputBatch, focus: FocusKind) void {
+        self.clear();
+        _ = batch;
+        _ = focus;
     }
 };
