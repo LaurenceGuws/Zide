@@ -22,6 +22,7 @@ const widgets = @import("ui/widgets.zig");
 const editor_draw = @import("ui/widgets/editor_widget_draw.zig");
 const layout_types = shared_types.layout;
 const input_builder = @import("input/input_builder.zig");
+const input_actions = @import("input/input_actions.zig");
 
 const Editor = editor_mod.Editor;
 const TerminalSession = terminal_mod.TerminalSession;
@@ -120,6 +121,7 @@ const AppState = struct {
     perf_logger: Logger,
     last_input: shared_types.input.InputSnapshot,
     app_mode: AppMode,
+    input_router: input_actions.InputRouter,
 
     pub fn init(allocator: std.mem.Allocator, app_mode: AppMode) !*AppState {
         var config = config_mod.loadConfig(allocator) catch |err| blk: {
@@ -127,19 +129,19 @@ const AppState = struct {
             break :blk config_mod.Config{
                 .log_file_filter = null,
                 .log_console_filter = null,
-            .sdl_log_level = null,
-            .editor_wrap = null,
-            .editor_highlight_budget = null,
-            .editor_width_budget = null,
-            .app_font_path = null,
-            .app_font_size = null,
-            .editor_font_path = null,
-            .editor_font_size = null,
-            .terminal_font_path = null,
-            .terminal_font_size = null,
-            .theme = null,
+                .sdl_log_level = null,
+                .editor_wrap = null,
+                .editor_highlight_budget = null,
+                .editor_width_budget = null,
+                .app_font_path = null,
+                .app_font_size = null,
+                .editor_font_path = null,
+                .editor_font_size = null,
+                .terminal_font_path = null,
+                .terminal_font_size = null,
+                .theme = null,
+            };
         };
-    };
         defer config_mod.freeConfig(allocator, &config);
 
         if (config.log_file_filter) |filter| {
@@ -249,6 +251,7 @@ const AppState = struct {
             .perf_logger = perf_log,
             .last_input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{}),
             .app_mode = app_mode,
+            .input_router = input_actions.InputRouter.init(allocator),
         };
         state.applyUiScale();
 
@@ -275,6 +278,7 @@ const AppState = struct {
         self.editor_render_cache.deinit();
         self.editor_cluster_cache.deinit();
         self.grammar_manager.deinit();
+        self.input_router.deinit();
         if (self.perf_file_path) |path| {
             self.allocator.free(path);
         }
