@@ -246,6 +246,7 @@ Progress:
 - DSR/DA replies added for cursor position queries (Codex compatibility).
 - Default color queries (OSC 10/11) are answered; sets are applied to session defaults.
 - Synchronized updates (DECSET ?2026) now freeze terminal rendering until reset.
+- 80/132 column mode (DECCOLM, CSI ?3 h/l) now resizes the grid and clears the screen.
 
 Decision:
 - Track an alternate grid and per-screen cursor/scroll region state; swap on DECSET/DECRST.
