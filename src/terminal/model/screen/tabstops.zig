@@ -36,6 +36,22 @@ pub const TabStops = struct {
         }
     }
 
+    pub fn setAt(self: *TabStops, col: usize) void {
+        if (col >= self.stops.items.len) return;
+        self.stops.items[col] = true;
+    }
+
+    pub fn clearAt(self: *TabStops, col: usize) void {
+        if (col >= self.stops.items.len) return;
+        self.stops.items[col] = false;
+    }
+
+    pub fn clearAll(self: *TabStops) void {
+        for (self.stops.items) |*stop| {
+            stop.* = false;
+        }
+    }
+
     pub fn next(self: *const TabStops, col: usize, max_col: usize) usize {
         if (self.stops.items.len == 0) return col;
         var idx = col + 1;

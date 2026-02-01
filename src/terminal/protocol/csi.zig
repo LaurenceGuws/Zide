@@ -162,6 +162,14 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 self.setCursorStyle(mode);
             }
         },
+        'g' => { // TBC
+            const mode = if (param_len > 0) p[0] else 0;
+            switch (mode) {
+                0 => screen.clearTabAtCursor(),
+                3 => screen.clearAllTabs(),
+                else => {},
+            }
+        },
         'n' => { // DSR
             const mode = if (param_len > 0) p[0] else 0;
             if (self.pty) |*pty| {

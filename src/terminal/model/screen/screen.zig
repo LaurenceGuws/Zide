@@ -347,6 +347,18 @@ pub const Screen = struct {
         self.wrap_next = false;
     }
 
+    pub fn clearTabAtCursor(self: *Screen) void {
+        self.tabstops.clearAt(self.cursor.col);
+    }
+
+    pub fn setTabAtCursor(self: *Screen) void {
+        self.tabstops.setAt(self.cursor.col);
+    }
+
+    pub fn clearAllTabs(self: *Screen) void {
+        self.tabstops.clearAll();
+    }
+
     pub fn carriageReturn(self: *Screen) void {
         self.cursor.col = 0;
         self.wrap_next = false;
