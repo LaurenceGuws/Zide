@@ -21,6 +21,7 @@ These failures point to damage tracking that is too optimistic and not robust to
 - Found a VT parser/handler mismatch: CSI params with a single value set `params[0]` but keep `count=0`, so ED/EL/DECSTBM were treating `CSI 2 J` as `CSI 0 J` (clear-from-cursor). This leaves stale lines when vttest expects full clear.
 - Audit note: scanned CSI handlers for direct `count` usage; only SGR and the shared `param_len` remain, so single-parameter CSI sequences are handled consistently now.
 - Newline mode fix: LF should not reset column unless SM 20 (LNM) is enabled. Added LNM tracking and a replay fixture to ensure LF preserves column by default.
+- Wrap fix: wrap-next now forces column reset on line advance regardless of LNM; added a replay fixture to cover multi-line star fills without blank rows.
 
 ## Reference Techniques
 
