@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const app_shell = @import("../../app_shell.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
+const key_encoder = @import("../../terminal/input/key_encoder.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 const gl = @import("../renderer/gl.zig");
@@ -1448,165 +1449,7 @@ pub const TerminalWidget = struct {
             }.apply;
             const applyTerminalKey = struct {
                 fn apply(widget: *TerminalWidget, key: shared_types.input.Key, key_mod: terminal_mod.Modifier, action: terminal_mod.KeyAction) !bool {
-                    switch (key) {
-                        .enter => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_ENTER, key_mod, action);
-                            return true;
-                        },
-                        .backspace => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_BACKSPACE, key_mod, action);
-                            return true;
-                        },
-                        .tab => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_TAB, key_mod, action);
-                            return true;
-                        },
-                        .escape => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_ESCAPE, key_mod, action);
-                            return true;
-                        },
-                        .up => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_UP, key_mod, action);
-                            return true;
-                        },
-                        .down => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_DOWN, key_mod, action);
-                            return true;
-                        },
-                        .left => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_LEFT, key_mod, action);
-                            return true;
-                        },
-                        .right => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_RIGHT, key_mod, action);
-                            return true;
-                        },
-                        .home => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_HOME, key_mod, action);
-                            return true;
-                        },
-                        .end => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_END, key_mod, action);
-                            return true;
-                        },
-                        .page_up => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_PAGEUP, key_mod, action);
-                            return true;
-                        },
-                        .page_down => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_PAGEDOWN, key_mod, action);
-                            return true;
-                        },
-                        .insert => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_INS, key_mod, action);
-                            return true;
-                        },
-                        .delete => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_DEL, key_mod, action);
-                            return true;
-                        },
-                        .kp_0 => {
-                            try widget.session.sendKeypadAction(terminal_mod.KeypadKey.kp0, key_mod, action);
-                            return true;
-                        },
-                        .kp_1 => {
-                            try widget.session.sendKeypadAction(terminal_mod.KeypadKey.kp1, key_mod, action);
-                            return true;
-                        },
-                        .kp_2 => {
-                            try widget.session.sendKeypadAction(terminal_mod.KeypadKey.kp2, key_mod, action);
-                            return true;
-                        },
-                        .kp_3 => {
-                            try widget.session.sendKeypadAction(terminal_mod.KeypadKey.kp3, key_mod, action);
-                            return true;
-                        },
-                        .kp_4 => {
-                            try widget.session.sendKeypadAction(terminal_mod.KeypadKey.kp4, key_mod, action);
-                            return true;
-                        },
-                        .kp_5 => {
-                            try widget.session.sendKeypadAction(terminal_mod.KeypadKey.kp5, key_mod, action);
-                            return true;
-                        },
-                        .kp_6 => {
-                            try widget.session.sendKeypadAction(terminal_mod.KeypadKey.kp6, key_mod, action);
-                            return true;
-                        },
-                        .kp_7 => {
-                            try widget.session.sendKeypadAction(terminal_mod.KeypadKey.kp7, key_mod, action);
-                            return true;
-                        },
-                        .kp_8 => {
-                            try widget.session.sendKeypadAction(terminal_mod.KeypadKey.kp8, key_mod, action);
-                            return true;
-                        },
-                        .kp_9 => {
-                            try widget.session.sendKeypadAction(terminal_mod.KeypadKey.kp9, key_mod, action);
-                            return true;
-                        },
-                        .kp_decimal => {
-                            try widget.session.sendKeypadAction(terminal_mod.KeypadKey.kp_decimal, key_mod, action);
-                            return true;
-                        },
-                        .kp_divide => {
-                            try widget.session.sendKeypadAction(terminal_mod.KeypadKey.kp_divide, key_mod, action);
-                            return true;
-                        },
-                        .kp_multiply => {
-                            try widget.session.sendKeypadAction(terminal_mod.KeypadKey.kp_multiply, key_mod, action);
-                            return true;
-                        },
-                        .kp_subtract => {
-                            try widget.session.sendKeypadAction(terminal_mod.KeypadKey.kp_subtract, key_mod, action);
-                            return true;
-                        },
-                        .kp_add => {
-                            try widget.session.sendKeypadAction(terminal_mod.KeypadKey.kp_add, key_mod, action);
-                            return true;
-                        },
-                        .kp_enter => {
-                            try widget.session.sendKeypadAction(terminal_mod.KeypadKey.kp_enter, key_mod, action);
-                            return true;
-                        },
-                        .kp_equal => {
-                            try widget.session.sendKeypadAction(terminal_mod.KeypadKey.kp_equal, key_mod, action);
-                            return true;
-                        },
-                        .left_shift => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_LEFT_SHIFT, key_mod, action);
-                            return true;
-                        },
-                        .right_shift => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_RIGHT_SHIFT, key_mod, action);
-                            return true;
-                        },
-                        .left_ctrl => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_LEFT_CTRL, key_mod, action);
-                            return true;
-                        },
-                        .right_ctrl => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_RIGHT_CTRL, key_mod, action);
-                            return true;
-                        },
-                        .left_alt => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_LEFT_ALT, key_mod, action);
-                            return true;
-                        },
-                        .right_alt => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_RIGHT_ALT, key_mod, action);
-                            return true;
-                        },
-                        .left_super => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_LEFT_SUPER, key_mod, action);
-                            return true;
-                        },
-                        .right_super => {
-                            try widget.session.sendKeyAction(terminal_mod.VTERM_KEY_RIGHT_SUPER, key_mod, action);
-                            return true;
-                        },
-                        else => return false,
-                    }
+                    return key_encoder.sendKeyAction(widget.session, key, key_mod, action);
                 }
             }.apply;
 
@@ -1629,45 +1472,9 @@ pub const TerminalWidget = struct {
                         return false;
                     }
                 }.apply;
-                const repeat_keys = [_]shared_types.input.Key{
-                    .enter,
-                    .backspace,
-                    .tab,
-                    .escape,
-                    .up,
-                    .down,
-                    .left,
-                    .right,
-                    .home,
-                    .end,
-                    .page_up,
-                    .page_down,
-                    .insert,
-                    .delete,
-                    .kp_0,
-                    .kp_1,
-                    .kp_2,
-                    .kp_3,
-                    .kp_4,
-                    .kp_5,
-                    .kp_6,
-                    .kp_7,
-                    .kp_8,
-                    .kp_9,
-                    .kp_decimal,
-                    .kp_divide,
-                    .kp_multiply,
-                    .kp_subtract,
-                    .kp_add,
-                    .kp_enter,
-                    .kp_equal,
-                };
                 const isRepeatKey = struct {
-                    fn apply(keys: []const shared_types.input.Key, key: shared_types.input.Key) bool {
-                        for (keys) |value| {
-                            if (value == key) return true;
-                        }
-                        return false;
+                    fn apply(key: shared_types.input.Key) bool {
+                        return key_encoder.isRepeatKey(key);
                     }
                 }.apply;
 
@@ -1689,7 +1496,7 @@ pub const TerminalWidget = struct {
                         }
                         continue;
                     }
-                    if (isRepeatKey(&repeat_keys, key) and event.key.pressed) {
+                    if (isRepeatKey(key) and event.key.pressed) {
                         continue;
                     }
                     const action: terminal_mod.KeyAction = if (event.key.repeated) .repeat else .press;
@@ -1728,7 +1535,7 @@ pub const TerminalWidget = struct {
                     }
                 }
 
-                for (repeat_keys) |key| {
+                for (key_encoder.repeat_keys) |key| {
                     if (wasHandled(&handled_keys, handled_key_count, key)) continue;
                     if (input_batch.keyReleased(key)) continue;
                     if (input_batch.keyPressed(key) or input_batch.keyRepeated(key)) {
