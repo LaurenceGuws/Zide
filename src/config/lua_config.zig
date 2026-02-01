@@ -3,6 +3,7 @@ const renderer = @import("../ui/renderer.zig");
 const sdl_api = @import("../platform/sdl_api.zig");
 const input_actions = @import("../input/input_actions.zig");
 const input_types = @import("../types/input.zig");
+const app_logger = @import("../app_logger.zig");
 
 const c = @cImport({
     @cInclude("lua.h");
@@ -423,6 +424,7 @@ fn parseKeybindScope(
     scope: input_actions.BindScope,
     out: *std.ArrayList(input_actions.BindSpec),
 ) LuaConfigError!void {
+    const log = app_logger.logger("config.keybinds");
     _ = c.lua_getfield(L, idx, field);
     defer c.lua_pop(L, 1);
     if (!c.lua_istable(L, -1)) return;
@@ -433,9 +435,19 @@ fn parseKeybindScope(
         defer c.lua_pop(L, 1);
         if (!c.lua_istable(L, -1)) continue;
 
-        const key = parseKeyField(L, -1) orelse continue;
+        const key = parseKeyField(L, -1) orelse {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf("skip keybind scope={s} index={d} reason=invalid_key", .{ field, i });
+            }
+            continue;
+        };
         const mods = parseModsField(L, -1);
-        const action = parseActionField(L, -1) orelse continue;
+        const action = parseActionField(L, -1) orelse {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf("skip keybind scope={s} index={d} reason=invalid_action", .{ field, i });
+            }
+            continue;
+        };
         const repeat = parseRepeatField(L, -1);
 
         try out.append(allocator, .{
