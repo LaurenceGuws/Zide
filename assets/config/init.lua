@@ -92,6 +92,9 @@ return {
     },
 
     -- Keybindings (keycode-based). Key names match `shared_types.input.Key` tags.
+    -- Example:
+    --   { key = "b", mods = { "ctrl" }, action = "toggle_terminal" }
+    -- Use ["repeat"] = true for repeatable actions (zoom, undo).
     keybinds = {
         global = {
             { key = "n", mods = { "ctrl" }, action = "new_editor" },

@@ -1,0 +1,36 @@
+const std = @import("std");
+const input_mod = @import("terminal/input/input.zig");
+const types = @import("terminal/model/types.zig");
+
+test "terminal input encodes arrow keys with modifiers" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 2; // key_mode_report_all_event_types
+    const none = types.VTERM_MOD_NONE;
+    const shift = types.VTERM_MOD_SHIFT;
+
+    const up = try input_mod.encodeKeyBytesForTest(allocator, types.VTERM_KEY_UP, none, flags);
+    defer allocator.free(up);
+    try std.testing.expectEqualStrings("\x1b[1A", up);
+
+    const up_shift = try input_mod.encodeKeyBytesForTest(allocator, types.VTERM_KEY_UP, shift, flags);
+    defer allocator.free(up_shift);
+    try std.testing.expectEqualStrings("\x1b[1;2A", up_shift);
+}
+
+test "terminal input encodes char with modifiers" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 2; // key_mode_report_all_event_types
+    const ctrl = types.VTERM_MOD_CTRL;
+
+    const seq = try input_mod.encodeCharBytesForTest(allocator, 'a', ctrl, flags);
+    defer allocator.free(seq);
+    try std.testing.expectEqualStrings("\x1b[97;5u", seq);
+}
+
+test "terminal input skips char encoding without report_all" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 0;
+    const seq = try input_mod.encodeCharBytesForTest(allocator, 'a', types.VTERM_MOD_NONE, flags);
+    defer allocator.free(seq);
+    try std.testing.expectEqual(@as(usize, 0), seq.len);
+}
