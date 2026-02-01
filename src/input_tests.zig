@@ -210,7 +210,7 @@ test "input replay updates terminal hover state" {
     var session = try terminal_mod.TerminalSession.init(allocator, 2, 3);
     defer session.deinit();
 
-    var widget = terminal_widget_mod.TerminalWidget.init(session);
+    var widget = terminal_widget_mod.TerminalWidget.init(session, .kitty);
     defer widget.deinit();
 
     var batch = shared_types.input.InputBatch.init(allocator);

@@ -256,9 +256,18 @@ fn appendAttrsRun(
     const bg = formatColorToken(&bg_buf, attrs.bg, base_default.bg);
     const ulc = formatColorToken(&ulc_buf, attrs.underline_color, base_default.fg);
     var line_buf: [256]u8 = undefined;
+    var blink_buf: [32]u8 = undefined;
+    const blink_label = if (attrs.blink)
+        std.fmt.bufPrint(
+            &blink_buf,
+            " blink={d} blink_fast={d}",
+            .{ @intFromBool(attrs.blink), @intFromBool(attrs.blink_fast) },
+        ) catch ""
+    else
+        "";
     const line = std.fmt.bufPrint(
         &line_buf,
-        "row{d}: cols {d}-{d} fg={s} bg={s} bold={d} rev={d} ul={d} ulc={s} link={d}",
+        "row{d}: cols {d}-{d} fg={s} bg={s} bold={d}{s} rev={d} ul={d} ulc={s} link={d}",
         .{
             row,
             start_col,
@@ -266,6 +275,7 @@ fn appendAttrsRun(
             fg,
             bg,
             @intFromBool(attrs.bold),
+            blink_label,
             @intFromBool(attrs.reverse),
             @intFromBool(attrs.underline),
             ulc,
@@ -302,6 +312,8 @@ fn attrsEqual(a: types.CellAttrs, b: types.CellAttrs) bool {
         a.bg.b == b.bg.b and
         a.bg.a == b.bg.a and
         a.bold == b.bold and
+        a.blink == b.blink and
+        a.blink_fast == b.blink_fast and
         a.reverse == b.reverse and
         a.underline == b.underline and
         a.underline_color.r == b.underline_color.r and

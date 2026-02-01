@@ -92,7 +92,7 @@ Current coverage:
 - Scroll region: `r`, `S`, `T`
 - Reset: `ESC c`
 - DSR/DA replies: `CSI n` (5/6) + `CSI c`
-- SGR: 16‑color + 256‑color + truecolor, bold/reverse; colon-separated SGR supported; params up to 16
+- SGR: 16‑color + 256‑color + truecolor, bold/reverse/blink; colon-separated SGR supported; params up to 16
 - Modes: DECCOLM 80/132 column, DECSCNM reverse video
 - OSC: `0/2` title, `7` cwd (parsed, not yet consumed), `8` hyperlinks, `52` clipboard write, `10/11` default fg/bg set + query, `12/19` query replies
 

@@ -37,8 +37,14 @@ pub const Config = struct {
     editor_font_size: ?f32,
     terminal_font_path: ?[]u8,
     terminal_font_size: ?f32,
+    terminal_blink_style: ?TerminalBlinkStyle,
     theme: ?ThemeConfig,
     keybinds: ?[]input_actions.BindSpec,
+};
+
+pub const TerminalBlinkStyle = enum {
+    kitty,
+    off,
 };
 
 pub const ThemeConfig = struct {
@@ -90,6 +96,7 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
         .editor_font_size = null,
         .terminal_font_path = null,
         .terminal_font_size = null,
+        .terminal_blink_style = null,
         .theme = null,
         .keybinds = null,
     };
@@ -182,6 +189,9 @@ fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) voi
     if (overlay.terminal_font_size != null) {
         base.terminal_font_size = overlay.terminal_font_size;
     }
+    if (overlay.terminal_blink_style != null) {
+        base.terminal_blink_style = overlay.terminal_blink_style;
+    }
     if (overlay.theme) |overlay_theme| {
         if (base.theme) |base_theme| {
             var merged = base_theme;
@@ -227,6 +237,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             .editor_font_size = null,
             .terminal_font_path = null,
             .terminal_font_size = null,
+            .terminal_blink_style = null,
             .theme = null,
             .keybinds = null,
         };
@@ -247,6 +258,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     var editor_font_size: ?f32 = null;
     var terminal_font_path: ?[]u8 = null;
     var terminal_font_size: ?f32 = null;
+    var terminal_blink_style: ?TerminalBlinkStyle = null;
     var theme: ?ThemeConfig = null;
     var keybinds: ?[]input_actions.BindSpec = null;
 
@@ -349,6 +361,14 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             parseFontTable(allocator, L, -1, &terminal_font_path, &terminal_font_size);
         }
         c.lua_pop(L, 1);
+
+        _ = c.lua_getfield(L, -1, "blink");
+        if (c.lua_isstring(L, -1) != 0) {
+            terminal_blink_style = parseTerminalBlink(L, -1);
+        } else if (c.lua_isboolean(L, -1)) {
+            terminal_blink_style = if (c.lua_toboolean(L, -1) != 0) .kitty else .off;
+        }
+        c.lua_pop(L, 1);
     }
     c.lua_pop(L, 1);
 
@@ -377,9 +397,19 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         .editor_font_size = editor_font_size,
         .terminal_font_path = terminal_font_path,
         .terminal_font_size = terminal_font_size,
+        .terminal_blink_style = terminal_blink_style,
         .theme = theme,
         .keybinds = keybinds,
     };
+}
+
+fn parseTerminalBlink(L: *c.lua_State, idx: c_int) ?TerminalBlinkStyle {
+    const value = luaStringToSlice(L, idx);
+    if (value.len == 0) return null;
+    if (std.mem.eql(u8, value, "kitty")) return .kitty;
+    if (std.mem.eql(u8, value, "off")) return .off;
+    if (std.mem.eql(u8, value, "ghostty")) return .off;
+    return null;
 }
 
 fn parseFontTable(
@@ -588,6 +618,12 @@ fn luaStringToOwned(allocator: std.mem.Allocator, L: *c.lua_State, idx: c_int) L
     const ptr = c.lua_tolstring(L, idx, &len) orelse return LuaConfigError.InvalidConfig;
     const slice = @as([*]const u8, @ptrCast(ptr))[0..len];
     return allocator.dupe(u8, slice);
+}
+
+fn luaStringToSlice(L: *c.lua_State, idx: c_int) []const u8 {
+    var len: usize = 0;
+    const ptr = c.lua_tolstring(L, idx, &len) orelse return "";
+    return @as([*]const u8, @ptrCast(ptr))[0..len];
 }
 
 fn luaStringListToOwned(allocator: std.mem.Allocator, L: *c.lua_State, idx: c_int) LuaConfigError![]u8 {

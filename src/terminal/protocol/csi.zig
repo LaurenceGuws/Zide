@@ -436,8 +436,20 @@ pub fn applySgr(self: anytype, action: parser_csi.CsiAction) void {
             1 => { // bold
                 screen.current_attrs.bold = true;
             },
+            5 => { // blink (slow)
+                screen.current_attrs.blink = true;
+                screen.current_attrs.blink_fast = false;
+            },
+            6 => { // blink (fast)
+                screen.current_attrs.blink = true;
+                screen.current_attrs.blink_fast = true;
+            },
             22 => { // normal intensity
                 screen.current_attrs.bold = false;
+            },
+            25 => { // blink off
+                screen.current_attrs.blink = false;
+                screen.current_attrs.blink_fast = false;
             },
             4 => { // underline
                 screen.current_attrs.underline = true;

@@ -89,6 +89,8 @@ return {
     terminal = {
         -- Optional override (same font as app/editor for now).
         -- font = { path = "/usr/share/fonts/...", size = 16 },
+        -- Blink style: "kitty" (default) or "off".
+        -- blink = "kitty",
     },
 
     -- Keybindings (keycode-based). Key names match `shared_types.input.Key` tags.
