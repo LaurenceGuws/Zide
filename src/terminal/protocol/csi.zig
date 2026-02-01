@@ -223,6 +223,16 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
             }
         },
         'h' => { // SM
+            if (!action.private) {
+                var idx: u8 = 0;
+                while (idx < param_len and idx < p.len) : (idx += 1) {
+                    const mode = p[idx];
+                    if (mode == 20) {
+                        self.activeScreen().*.setNewlineMode(true);
+                    }
+                }
+                return;
+            }
             if (action.leader == '?') {
                 var idx: u8 = 0;
                 while (idx < param_len and idx < p.len) : (idx += 1) {
@@ -264,6 +274,16 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
             }
         },
         'l' => { // RM
+            if (!action.private) {
+                var idx: u8 = 0;
+                while (idx < param_len and idx < p.len) : (idx += 1) {
+                    const mode = p[idx];
+                    if (mode == 20) {
+                        self.activeScreen().*.setNewlineMode(false);
+                    }
+                }
+                return;
+            }
             if (action.leader == '?') {
                 var idx: u8 = 0;
                 while (idx < param_len and idx < p.len) : (idx += 1) {
