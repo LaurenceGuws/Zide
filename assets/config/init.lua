@@ -90,4 +90,21 @@ return {
         -- Optional override (same font as app/editor for now).
         -- font = { path = "/usr/share/fonts/...", size = 16 },
     },
+
+    -- Keybindings (keycode-based). Key names match `shared_types.input.Key` tags.
+    keybinds = {
+        global = {
+            { key = "n", mods = { "ctrl" }, action = "new_editor" },
+            { key = "equal", mods = { "ctrl" }, action = "zoom_in", ["repeat"] = true },
+            { key = "kp_add", mods = { "ctrl" }, action = "zoom_in", ["repeat"] = true },
+            { key = "minus", mods = { "ctrl" }, action = "zoom_out", ["repeat"] = true },
+            { key = "kp_subtract", mods = { "ctrl" }, action = "zoom_out", ["repeat"] = true },
+            { key = "zero", mods = { "ctrl" }, action = "zoom_reset" },
+            { key = "grave", mods = { "ctrl" }, action = "toggle_terminal" },
+        },
+        terminal = {
+            { key = "c", mods = { "ctrl", "shift" }, action = "copy" },
+            { key = "v", mods = { "ctrl", "shift" }, action = "paste" },
+        },
+    },
 }

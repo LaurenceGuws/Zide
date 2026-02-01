@@ -84,6 +84,95 @@ pub const TerminalWidget = struct {
         return value;
     }
 
+    pub fn copySelectionToClipboard(self: *TerminalWidget, shell: *Shell) bool {
+        const selection = self.session.selectionState() orelse return false;
+        const sel_snapshot = self.session.snapshot();
+        const rows_snapshot = sel_snapshot.rows;
+        const cols_snapshot = sel_snapshot.cols;
+        const history = self.session.scrollbackCount();
+        const total_lines_copy = history + rows_snapshot;
+        if (rows_snapshot == 0 or cols_snapshot == 0 or total_lines_copy == 0) return false;
+
+        var start_sel = selection.start;
+        var end_sel = selection.end;
+        if (start_sel.row > end_sel.row or (start_sel.row == end_sel.row and start_sel.col > end_sel.col)) {
+            const tmp = start_sel;
+            start_sel = end_sel;
+            end_sel = tmp;
+        }
+        start_sel.row = @min(start_sel.row, total_lines_copy - 1);
+        end_sel.row = @min(end_sel.row, total_lines_copy - 1);
+        start_sel.col = @min(start_sel.col, cols_snapshot - 1);
+        end_sel.col = @min(end_sel.col, cols_snapshot - 1);
+
+        var text = std.ArrayList(u8).empty;
+        defer text.deinit(self.session.allocator);
+
+        var row_idx: usize = start_sel.row;
+        while (row_idx <= end_sel.row and row_idx < total_lines_copy) : (row_idx += 1) {
+            const row_cells = blk: {
+                if (row_idx < history) {
+                    if (self.session.scrollbackRow(row_idx)) |history_row| break :blk history_row;
+                }
+                const grid_row = row_idx - history;
+                const row_start = grid_row * cols_snapshot;
+                break :blk sel_snapshot.cells[row_start .. row_start + cols_snapshot];
+            };
+
+            const col_start = if (row_idx == start_sel.row) start_sel.col else 0;
+            const col_end = if (row_idx == end_sel.row) end_sel.col else cols_snapshot - 1;
+            var col_idx: usize = col_start;
+            while (col_idx <= col_end and col_idx < cols_snapshot) : (col_idx += 1) {
+                const cell = row_cells[col_idx];
+                if (cell.codepoint == 0) {
+                    text.append(self.session.allocator, ' ') catch return false;
+                    continue;
+                }
+                var buf: [4]u8 = undefined;
+                const len = std.unicode.utf8Encode(@intCast(cell.codepoint), &buf) catch 0;
+                if (len > 0) {
+                    text.appendSlice(self.session.allocator, buf[0..len]) catch return false;
+                }
+            }
+
+            while (text.items.len > 0 and text.items[text.items.len - 1] == ' ') {
+                _ = text.pop();
+            }
+
+            if (row_idx != end_sel.row) {
+                text.append(self.session.allocator, '\n') catch return false;
+            }
+        }
+
+        text.append(self.session.allocator, 0) catch return false;
+        const cstr: [*:0]const u8 = @ptrCast(text.items.ptr);
+        shell.setClipboardText(cstr);
+        return true;
+    }
+
+    pub fn pasteClipboardFromSystem(self: *TerminalWidget, shell: *Shell) bool {
+        const clip = shell.getClipboardText() orelse return false;
+        if (self.session.scrollOffset() > 0) {
+            self.session.setScrollOffset(0);
+        }
+        if (self.session.bracketedPasteEnabled()) {
+            self.session.sendText("\x1b[200~") catch return false;
+            var filtered = std.ArrayList(u8).empty;
+            defer filtered.deinit(self.session.allocator);
+            for (clip) |b| {
+                if (b == 0x1b or b == 0x03) continue;
+                filtered.append(self.session.allocator, b) catch return false;
+            }
+            if (filtered.items.len > 0) {
+                self.session.sendText(filtered.items) catch return false;
+            }
+            self.session.sendText("\x1b[201~") catch return false;
+        } else {
+            self.session.sendText(clip) catch return false;
+        }
+        return true;
+    }
+
     fn decodePercent(allocator: std.mem.Allocator, text: []const u8) ?[]u8 {
         if (text.len == 0) return allocator.dupe(u8, "") catch null;
         var out = std.ArrayList(u8).empty;
@@ -1106,6 +1195,7 @@ pub const TerminalWidget = struct {
         allow_input: bool,
         scroll_dragging: *bool,
         scroll_grab_offset: *f32,
+        suppress_shortcuts: bool,
         input_batch: *shared_types.input.InputBatch,
     ) !bool {
         var locked = self.session.tryLock();
@@ -1266,7 +1356,6 @@ pub const TerminalWidget = struct {
 
         if (allow_input) {
             var skip_chars = false;
-            var suppress_terminal_keys = false;
             const allow_terminal_key = !(builtin.target.os.tag == .macos and super);
             const key_mode_flags = self.session.keyModeFlagsValue();
             const key_mode_report_text: u32 = 8;
@@ -1346,6 +1435,14 @@ pub const TerminalWidget = struct {
                         .period => '.',
                         .slash => '/',
                         else => 0,
+                    };
+                }
+            }.apply;
+            const isCtrlCharEligible = struct {
+                fn apply(ch: u32) bool {
+                    return switch (ch) {
+                        'a'...'z', 'A'...'Z', '@', '[', '\\', ']', '^', '_', '?', ' ' => true,
+                        else => false,
                     };
                 }
             }.apply;
@@ -1513,102 +1610,6 @@ pub const TerminalWidget = struct {
                 }
             }.apply;
 
-            if (ctrl and shift and input_batch.keyPressed(.v) and in_terminal) {
-                suppress_terminal_keys = true;
-                if (shell.getClipboardText()) |clip| {
-                    clearLiveState(self);
-                    if (self.session.bracketedPasteEnabled()) {
-                        try self.session.sendText("\x1b[200~");
-                        var filtered = std.ArrayList(u8).empty;
-                        defer filtered.deinit(self.session.allocator);
-                        for (clip) |b| {
-                            if (b == 0x1b or b == 0x03) continue;
-                            try filtered.append(self.session.allocator, b);
-                        }
-                        if (filtered.items.len > 0) {
-                            try self.session.sendText(filtered.items);
-                        }
-                        try self.session.sendText("\x1b[201~");
-                    } else {
-                        try self.session.sendText(clip);
-                    }
-                    handled = true;
-                    skip_chars = true;
-                    suppress_terminal_keys = true;
-                }
-            }
-
-            if (ctrl and shift and input_batch.keyPressed(.c)) {
-                suppress_terminal_keys = true;
-                if (self.session.selectionState()) |selection| {
-                    const sel_snapshot = self.session.snapshot();
-                    const rows_snapshot = sel_snapshot.rows;
-                    const cols_snapshot = sel_snapshot.cols;
-                    const history = self.session.scrollbackCount();
-                    const total_lines_copy = history + rows_snapshot;
-                    if (rows_snapshot > 0 and cols_snapshot > 0 and total_lines_copy > 0) {
-                        var start_sel = selection.start;
-                        var end_sel = selection.end;
-                        if (start_sel.row > end_sel.row or (start_sel.row == end_sel.row and start_sel.col > end_sel.col)) {
-                            const tmp = start_sel;
-                            start_sel = end_sel;
-                            end_sel = tmp;
-                        }
-                        start_sel.row = @min(start_sel.row, total_lines_copy - 1);
-                        end_sel.row = @min(end_sel.row, total_lines_copy - 1);
-                        start_sel.col = @min(start_sel.col, cols_snapshot - 1);
-                        end_sel.col = @min(end_sel.col, cols_snapshot - 1);
-
-                        var text = std.ArrayList(u8).empty;
-                        defer text.deinit(self.session.allocator);
-
-                        var row_idx: usize = start_sel.row;
-                        while (row_idx <= end_sel.row and row_idx < total_lines_copy) : (row_idx += 1) {
-                            const row_cells = blk: {
-                                if (row_idx < history) {
-                                    if (self.session.scrollbackRow(row_idx)) |history_row| break :blk history_row;
-                                }
-                                const grid_row = row_idx - history;
-                                const row_start = grid_row * cols_snapshot;
-                                break :blk sel_snapshot.cells[row_start .. row_start + cols_snapshot];
-                            };
-
-                            const col_start = if (row_idx == start_sel.row) start_sel.col else 0;
-                            const col_end = if (row_idx == end_sel.row) end_sel.col else cols_snapshot - 1;
-                            var col_idx: usize = col_start;
-                            while (col_idx <= col_end and col_idx < cols_snapshot) : (col_idx += 1) {
-                                const cell = row_cells[col_idx];
-                                if (cell.codepoint == 0) {
-                                    _ = text.append(self.session.allocator, ' ') catch {};
-                                    continue;
-                                }
-                                var buf: [4]u8 = undefined;
-                                const len = std.unicode.utf8Encode(@intCast(cell.codepoint), &buf) catch 0;
-                                if (len > 0) {
-                                    _ = text.appendSlice(self.session.allocator, buf[0..len]) catch {};
-                                }
-                            }
-
-                            // Trim trailing spaces
-                            while (text.items.len > 0 and text.items[text.items.len - 1] == ' ') {
-                                _ = text.pop();
-                            }
-
-                            if (row_idx != end_sel.row) {
-                                _ = text.append(self.session.allocator, '\n') catch {};
-                            }
-                        }
-
-                        _ = text.append(self.session.allocator, 0) catch {};
-                        const cstr: [*:0]const u8 = @ptrCast(text.items.ptr);
-                        shell.setClipboardText(cstr);
-                        handled = true;
-                        skip_chars = true;
-                        suppress_terminal_keys = true;
-                    }
-                }
-            }
-
             if (allow_terminal_key) {
                 var handled_keys: [32]shared_types.input.Key = undefined;
                 var handled_key_count: usize = 0;
@@ -1673,7 +1674,7 @@ pub const TerminalWidget = struct {
                 for (input_batch.events.items) |event| {
                     if (event != .key) continue;
                     const key = event.key.key;
-                    if (suppress_terminal_keys and ctrl and shift and (key == .c or key == .v)) {
+                    if (suppress_shortcuts and ctrl and shift and (key == .c or key == .v)) {
                         continue;
                     }
                     if (!event.key.pressed) {
@@ -1715,6 +1716,9 @@ pub const TerminalWidget = struct {
                     if (ctrl or alt) {
                         const base_char = mapKeyToBaseChar(key);
                         if (base_char != 0) {
+                            if (ctrl and !isCtrlCharEligible(base_char)) {
+                                continue;
+                            }
                             clearLiveState(self);
                             try self.session.sendCharAction(base_char, mod, action);
                             markHandled(&handled_keys, &handled_key_count, key);
@@ -1738,7 +1742,7 @@ pub const TerminalWidget = struct {
                 }
             }
 
-            if (!skip_chars) {
+            if (!skip_chars and !input_batch.mods.ctrl and !input_batch.mods.alt and !input_batch.mods.super) {
                 for (input_batch.events.items) |event| {
                     if (event == .text) {
                         const char = event.text.codepoint;

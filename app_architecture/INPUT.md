@@ -21,6 +21,13 @@ References:
 - Printable characters are synthesized from key events with modifiers, which conflicts with standard terminal behavior and IME flows.
 - Modifier presses can clear selection or alter control semantics, breaking expected Ctrl/Shift combos.
 
+## Keybinds (Lua)
+
+- Keybinds live in `assets/config/init.lua` and user overrides in `~/.config/zide/init.lua` or `./.zide.lua`.
+- Bindings are keycode‑based and use `shared_types.input.Key` enum names (e.g. `equal`, `kp_add`, `grave`).
+- Modifiers are `ctrl`, `shift`, `alt`, `super` and are matched exactly.
+- Use `["repeat"] = true` in Lua to enable key repeat for a binding.
+
 ## Plan (Todo)
 
 1) Introduce an InputAction layer and routing table (global → focused → text) without behavior changes.
@@ -34,3 +41,4 @@ References:
 - Terminal now avoids synthesizing printable chars from key events; printable input comes from text events.
 - Ctrl/Alt modifiers no longer change control semantics based on Shift in terminal input.
 - Selection is no longer cleared by keyboard input; copy/paste combos suppress terminal key events.
+- InputRouter now detects Ctrl+Shift+C/V actions and routes them to focused terminal copy/paste.

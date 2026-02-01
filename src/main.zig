@@ -140,6 +140,7 @@ const AppState = struct {
                 .terminal_font_path = null,
                 .terminal_font_size = null,
                 .theme = null,
+                .keybinds = null,
             };
         };
         defer config_mod.freeConfig(allocator, &config);
@@ -253,6 +254,9 @@ const AppState = struct {
             .app_mode = app_mode,
             .input_router = input_actions.InputRouter.init(allocator),
         };
+        if (config.keybinds) |binds| {
+            state.input_router.setBindings(binds);
+        }
         state.applyUiScale();
 
         return state;
@@ -611,6 +615,37 @@ const AppState = struct {
         const now = app_shell.getTime();
         const focus = if (self.app_mode == .terminal or self.active_kind == .terminal) input_actions.FocusKind.terminal else input_actions.FocusKind.editor;
         self.input_router.route(input_batch, focus);
+        var suppress_terminal_shortcuts = false;
+        var handled_shortcut = false;
+        for (self.input_router.actionsSlice()) |action| {
+            if (focus != .terminal) continue;
+            switch (action.kind) {
+                .copy, .paste => suppress_terminal_shortcuts = true,
+                else => {},
+            }
+        }
+        if (focus == .terminal and (self.app_mode == .terminal or self.show_terminal) and self.terminals.items.len > 0) {
+            var term_widget = &self.terminal_widgets.items[0];
+            for (self.input_router.actionsSlice()) |action| {
+                switch (action.kind) {
+                    .copy => {
+                        if (term_widget.copySelectionToClipboard(shell)) {
+                            handled_shortcut = true;
+                        }
+                    },
+                    .paste => {
+                        if (term_widget.pasteClipboardFromSystem(shell)) {
+                            handled_shortcut = true;
+                            self.needs_redraw = true;
+                        }
+                    },
+                    else => {},
+                }
+            }
+        }
+        if (handled_shortcut) {
+            self.metrics.noteInput(now);
+        }
         if (try shell.applyPendingZoom(now)) {
             self.applyUiScale();
             try self.refreshTerminalSizing();
@@ -718,47 +753,54 @@ const AppState = struct {
             }
         }
 
-        const ctrl = input_batch.mods.ctrl;
-
-        // Global shortcuts
-        if (self.app_mode != .terminal and ctrl and input_batch.keyPressed(.n)) {
-            try self.newEditor();
-            self.needs_redraw = true;
-            self.metrics.noteInput(now);
-            return;
-        }
-
-        if (ctrl and (input_batch.keyPressed(.equal) or input_batch.keyPressed(.kp_add))) {
-            if (shell.queueUserZoom(0.1, now)) {
-                self.metrics.noteInput(now);
+        var handled_zoom = false;
+        for (self.input_router.actionsSlice()) |action| {
+            switch (action.kind) {
+                .new_editor => {
+                    if (self.app_mode != .terminal) {
+                        try self.newEditor();
+                        self.needs_redraw = true;
+                        self.metrics.noteInput(now);
+                        return;
+                    }
+                },
+                .zoom_in => {
+                    if (shell.queueUserZoom(0.1, now)) {
+                        self.metrics.noteInput(now);
+                    }
+                    handled_zoom = true;
+                },
+                .zoom_out => {
+                    if (shell.queueUserZoom(-0.1, now)) {
+                        self.metrics.noteInput(now);
+                    }
+                    handled_zoom = true;
+                },
+                .zoom_reset => {
+                    if (shell.resetUserZoomTarget(now)) {
+                        self.metrics.noteInput(now);
+                    }
+                    handled_zoom = true;
+                },
+                .toggle_terminal => {
+                    if (self.app_mode == .ide) {
+                        if (self.show_terminal) {
+                            self.show_terminal = false;
+                        } else {
+                            if (self.terminals.items.len == 0) {
+                                try self.newTerminal();
+                            }
+                            self.show_terminal = true;
+                        }
+                        self.needs_redraw = true;
+                        self.metrics.noteInput(now);
+                        return;
+                    }
+                },
+                else => {},
             }
-            return;
         }
-        if (ctrl and (input_batch.keyPressed(.minus) or input_batch.keyPressed(.kp_subtract))) {
-            if (shell.queueUserZoom(-0.1, now)) {
-                self.metrics.noteInput(now);
-            }
-            return;
-        }
-        if (ctrl and input_batch.keyPressed(.zero)) {
-            if (shell.resetUserZoomTarget(now)) {
-                self.metrics.noteInput(now);
-            }
-            return;
-        }
-
-        // Toggle terminal with Ctrl+`
-        if (self.app_mode == .ide and ctrl and input_batch.keyPressed(.grave)) {
-            if (self.show_terminal) {
-                self.show_terminal = false;
-            } else {
-                if (self.terminals.items.len == 0) {
-                    try self.newTerminal();
-                }
-                self.show_terminal = true;
-            }
-            self.needs_redraw = true;
-            self.metrics.noteInput(now);
+        if (handled_zoom) {
             return;
         }
 
@@ -975,6 +1017,7 @@ const AppState = struct {
                     true,
                     &self.terminal_scroll_dragging,
                     &self.terminal_scroll_grab_offset,
+                    suppress_terminal_shortcuts,
                     input_batch,
                 )) {
                     self.needs_redraw = true;
@@ -998,6 +1041,7 @@ const AppState = struct {
                     false,
                     &self.terminal_scroll_dragging,
                     &self.terminal_scroll_grab_offset,
+                    suppress_terminal_shortcuts,
                     input_batch,
                 )) {
                     self.needs_redraw = true;
