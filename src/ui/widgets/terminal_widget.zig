@@ -1266,6 +1266,7 @@ pub const TerminalWidget = struct {
 
         if (allow_input) {
             var skip_chars = false;
+            var suppress_terminal_keys = false;
             const allow_terminal_key = !(builtin.target.os.tag == .macos and super);
             const key_mode_flags = self.session.keyModeFlagsValue();
             const key_mode_report_text: u32 = 8;
@@ -1288,9 +1289,6 @@ pub const TerminalWidget = struct {
             }.apply;
             const clearLiveState = struct {
                 fn apply(widget: *TerminalWidget) void {
-                    if (widget.session.selectionState() != null) {
-                        widget.session.clearSelection();
-                    }
                     if (widget.session.scrollOffset() > 0) {
                         widget.session.setScrollOffset(0);
                     }
@@ -1516,6 +1514,7 @@ pub const TerminalWidget = struct {
             }.apply;
 
             if (ctrl and shift and input_batch.keyPressed(.v) and in_terminal) {
+                suppress_terminal_keys = true;
                 if (shell.getClipboardText()) |clip| {
                     clearLiveState(self);
                     if (self.session.bracketedPasteEnabled()) {
@@ -1535,10 +1534,12 @@ pub const TerminalWidget = struct {
                     }
                     handled = true;
                     skip_chars = true;
+                    suppress_terminal_keys = true;
                 }
             }
 
             if (ctrl and shift and input_batch.keyPressed(.c)) {
+                suppress_terminal_keys = true;
                 if (self.session.selectionState()) |selection| {
                     const sel_snapshot = self.session.snapshot();
                     const rows_snapshot = sel_snapshot.rows;
@@ -1603,6 +1604,7 @@ pub const TerminalWidget = struct {
                         shell.setClipboardText(cstr);
                         handled = true;
                         skip_chars = true;
+                        suppress_terminal_keys = true;
                     }
                 }
             }
@@ -1671,19 +1673,12 @@ pub const TerminalWidget = struct {
                 for (input_batch.events.items) |event| {
                     if (event != .key) continue;
                     const key = event.key.key;
+                    if (suppress_terminal_keys and ctrl and shift and (key == .c or key == .v)) {
+                        continue;
+                    }
                     if (!event.key.pressed) {
                         if (!report_text_enabled and isModifierKey(key)) {
                             continue;
-                        }
-                        if (report_text_enabled) {
-                            const base_char = mapKeyToBaseChar(key);
-                            if (base_char != 0) {
-                                clearLiveState(self);
-                                try self.session.sendCharAction(base_char, mod, .release);
-                                handled = true;
-                                skip_chars = true;
-                                continue;
-                            }
                         }
                         const handled_release = try applyTerminalKey(self, key, mod, .release);
                         if (handled_release) {
@@ -1707,17 +1702,6 @@ pub const TerminalWidget = struct {
                         }
                         continue;
                     }
-                    if (report_text_enabled) {
-                        const base_char = mapKeyToBaseChar(key);
-                        if (base_char != 0) {
-                            clearLiveState(self);
-                            try self.session.sendCharAction(base_char, mod, action);
-                            markHandled(&handled_keys, &handled_key_count, key);
-                            handled = true;
-                            skip_chars = true;
-                            continue;
-                        }
-                    }
                     const handled_key = try applyTerminalKey(self, key, mod, action);
 
                     if (handled_key) {
@@ -1728,62 +1712,11 @@ pub const TerminalWidget = struct {
                         continue;
                     }
 
-                    if (!report_text_enabled and (ctrl or alt)) {
-                        var maybe_char: u32 = 0;
-                        switch (key) {
-                            .a => maybe_char = if (shift) 'A' else 'a',
-                            .b => maybe_char = if (shift) 'B' else 'b',
-                            .c => maybe_char = if (shift) 'C' else 'c',
-                            .d => maybe_char = if (shift) 'D' else 'd',
-                            .e => maybe_char = if (shift) 'E' else 'e',
-                            .f => maybe_char = if (shift) 'F' else 'f',
-                            .g => maybe_char = if (shift) 'G' else 'g',
-                            .h => maybe_char = if (shift) 'H' else 'h',
-                            .i => maybe_char = if (shift) 'I' else 'i',
-                            .j => maybe_char = if (shift) 'J' else 'j',
-                            .k => maybe_char = if (shift) 'K' else 'k',
-                            .l => maybe_char = if (shift) 'L' else 'l',
-                            .m => maybe_char = if (shift) 'M' else 'm',
-                            .n => maybe_char = if (shift) 'N' else 'n',
-                            .o => maybe_char = if (shift) 'O' else 'o',
-                            .p => maybe_char = if (shift) 'P' else 'p',
-                            .q => maybe_char = if (shift) 'Q' else 'q',
-                            .r => maybe_char = if (shift) 'R' else 'r',
-                            .s => maybe_char = if (shift) 'S' else 's',
-                            .t => maybe_char = if (shift) 'T' else 't',
-                            .u => maybe_char = if (shift) 'U' else 'u',
-                            .v => maybe_char = if (shift) 'V' else 'v',
-                            .w => maybe_char = if (shift) 'W' else 'w',
-                            .x => maybe_char = if (shift) 'X' else 'x',
-                            .y => maybe_char = if (shift) 'Y' else 'y',
-                            .z => maybe_char = if (shift) 'Z' else 'z',
-                            .zero => maybe_char = if (shift) ')' else '0',
-                            .one => maybe_char = if (shift) '!' else '1',
-                            .two => maybe_char = if (shift) '@' else '2',
-                            .three => maybe_char = if (shift) '#' else '3',
-                            .four => maybe_char = if (shift) '$' else '4',
-                            .five => maybe_char = if (shift) '%' else '5',
-                            .six => maybe_char = if (shift) '^' else '6',
-                            .seven => maybe_char = if (shift) '&' else '7',
-                            .eight => maybe_char = if (shift) '*' else '8',
-                            .nine => maybe_char = if (shift) '(' else '9',
-                            .space => maybe_char = ' ',
-                            .minus => maybe_char = if (shift) '_' else '-',
-                            .equal => maybe_char = if (shift) '+' else '=',
-                            .left_bracket => maybe_char = if (shift) '{' else '[',
-                            .right_bracket => maybe_char = if (shift) '}' else ']',
-                            .backslash => maybe_char = if (shift) '|' else '\\',
-                            .semicolon => maybe_char = if (shift) ':' else ';',
-                            .apostrophe => maybe_char = if (shift) '"' else '\'',
-                            .grave => maybe_char = if (shift) '~' else '`',
-                            .comma => maybe_char = if (shift) '<' else ',',
-                            .period => maybe_char = if (shift) '>' else '.',
-                            .slash => maybe_char = if (shift) '?' else '/',
-                            else => {},
-                        }
-                        if (maybe_char != 0) {
+                    if (ctrl or alt) {
+                        const base_char = mapKeyToBaseChar(key);
+                        if (base_char != 0) {
                             clearLiveState(self);
-                            try self.session.sendChar(maybe_char, mod);
+                            try self.session.sendCharAction(base_char, mod, action);
                             markHandled(&handled_keys, &handled_key_count, key);
                             handled = true;
                             skip_chars = true;
@@ -1805,7 +1738,7 @@ pub const TerminalWidget = struct {
                 }
             }
 
-            if (!skip_chars and !report_text_enabled) {
+            if (!skip_chars) {
                 for (input_batch.events.items) |event| {
                     if (event == .text) {
                         const char = event.text.codepoint;
