@@ -22,3 +22,11 @@ test "terminal key encoder repeat keys" {
     try std.testing.expect(!key_encoder.isRepeatKey(.a));
     try std.testing.expect(!key_encoder.isRepeatKey(.space));
 }
+
+test "terminal key encoder key_mode flags" {
+    const flags: u32 = key_encoder.key_mode_report_text | key_encoder.key_mode_embed_text | key_encoder.key_mode_report_all_event_types;
+    try std.testing.expect(key_encoder.reportTextEnabled(flags));
+    try std.testing.expect(key_encoder.embedTextEnabled(flags));
+    try std.testing.expect(key_encoder.reportAllEventTypes(flags));
+    try std.testing.expect(!key_encoder.disambiguateEnabled(flags));
+}
