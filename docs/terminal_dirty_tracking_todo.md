@@ -17,6 +17,9 @@ These failures point to damage tracking that is too optimistic and not robust to
 - `TerminalSession.updateViewCacheNoLock` builds a view cache that merges scrollback + grid and uses dirty rows for partial redraws.
 - When applications clear the screen (CSI 2J) and redraw, we rely on dirty rows/cols to repaint, but the system can miss full invalidation.
 - Scrollback view cache (`TerminalHistory.ensureViewCache`) has its own generation and can be stale when full-screen redraws happen without scrollback changes.
+- Origin mode (DECOM, CSI ? 6) and autowrap (CSI ? 7) semantics are being added; vttest still fails WRAP AROUND when cursor/clear/scroll interactions happen in rapid sequence.
+- Found a VT parser/handler mismatch: CSI params with a single value set `params[0]` but keep `count=0`, so ED/EL/DECSTBM were treating `CSI 2 J` as `CSI 0 J` (clear-from-cursor). This leaves stale lines when vttest expects full clear.
+- Audit note: scanned CSI handlers for direct `count` usage; only SGR and the shared `param_len` remain, so single-parameter CSI sequences are handled consistently now.
 
 ## Reference Techniques
 
@@ -37,6 +40,7 @@ These failures point to damage tracking that is too optimistic and not robust to
 3) Make **scroll and clear operations** authoritative for damage:
    - Scroll region changes and `scrollRegionUp/Down` must mark full region dirty, not partial bounds.
    - `eraseDisplay` should mark full dirty for mode 2 and set a “clear generation” marker to force redraw.
+   - Sync updates (CSI ? 2026) should buffer rendering and force full redraw on disable.
 
 4) Add **replay fixtures** for full-screen TUIs:
    - Capture gping and nvim scope-plugin scenarios with the replay harness.
@@ -48,4 +52,5 @@ These failures point to damage tracking that is too optimistic and not robust to
 - [ ] Add a view-cache invalidation path for clear/scroll events (generation bump or full-dirty flag).
 - [ ] Implement frame-based damage tracking (per-line bounds) and integrate with terminal widget partial redraw.
 - [ ] Add replay harness fixtures for `gping` and a minimal `nvim` overlay example.
+- [ ] Add replay harness fixture for vttest WRAP AROUND mode test.
 - [ ] Add tests to assert no stale rows after clear+redraw cycles.

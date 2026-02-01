@@ -36,6 +36,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
     }
     const p = action.params;
     const count = action.count;
+    const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
     const get = struct {
         fn at(params: [parser_csi.max_params]i32, idx: u8, default: i32) i32 {
             return if (idx < parser_csi.max_params) params[idx] else default;
@@ -88,11 +89,11 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
             screen.cursorRowAbsolute(row_1);
         },
         'J' => { // ED
-            const mode = if (count > 0) p[0] else 0;
+            const mode = if (param_len > 0) p[0] else 0;
             self.eraseDisplay(mode);
         },
         'K' => { // EL
-            const mode = if (count > 0) p[0] else 0;
+            const mode = if (param_len > 0) p[0] else 0;
             self.eraseLine(mode);
         },
         '@' => { // ICH
@@ -124,8 +125,8 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
             self.scrollRegionDown(@intCast(n));
         },
         'r' => { // DECSTBM
-            const top_1 = if (count > 0 and p[0] > 0) p[0] else 1;
-            const bot_1 = if (count > 1 and p[1] > 0) p[1] else @as(i32, @intCast(screen.grid.rows));
+            const top_1 = if (param_len > 0 and p[0] > 0) p[0] else 1;
+            const bot_1 = if (param_len > 1 and p[1] > 0) p[1] else @as(i32, @intCast(screen.grid.rows));
             const top = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(@max(1, top_1) - 1)));
             const bot = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(@max(1, bot_1) - 1)));
             if (top <= bot) {
@@ -142,7 +143,6 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 self.restoreCursor();
                 return;
             }
-            const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
             const flags: u32 = if (param_len > 0) @intCast(@max(0, p[0])) else 0;
             const mode: u32 = if (param_len > 1) @intCast(@max(0, p[1])) else 1;
             switch (action.leader) {
@@ -158,13 +158,11 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
         },
         'q' => { // DECSCUSR
             if (action.leader == 0 and !action.private) {
-                const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
                 const mode = if (param_len > 0) p[0] else 0;
                 self.setCursorStyle(mode);
             }
         },
         'n' => { // DSR
-            const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
             const mode = if (param_len > 0) p[0] else 0;
             if (self.pty) |*pty| {
                 var buf: [32]u8 = undefined;
@@ -226,7 +224,6 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
         },
         'h' => { // SM
             if (action.leader == '?') {
-                const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
                 var idx: u8 = 0;
                 while (idx < param_len and idx < p.len) : (idx += 1) {
                     const mode = p[idx];
@@ -235,7 +232,9 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             self.app_cursor_keys = true;
                             self.updateInputSnapshot();
                         },
+                        6 => self.activeScreen().*.setOriginMode(true),
                         25 => self.activeScreen().setCursorVisible(true),
+                        7 => self.activeScreen().*.setAutowrap(true),
                         47 => self.enterAltScreen(false, false),
                         1047 => self.enterAltScreen(true, false),
                         1048 => self.saveCursor(),
@@ -266,7 +265,6 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
         },
         'l' => { // RM
             if (action.leader == '?') {
-                const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
                 var idx: u8 = 0;
                 while (idx < param_len and idx < p.len) : (idx += 1) {
                     const mode = p[idx];
@@ -275,7 +273,9 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             self.app_cursor_keys = false;
                             self.updateInputSnapshot();
                         },
+                        6 => self.activeScreen().*.setOriginMode(false),
                         25 => self.activeScreen().setCursorVisible(false),
+                        7 => self.activeScreen().*.setAutowrap(false),
                         47 => self.exitAltScreen(false),
                         1047 => self.exitAltScreen(false),
                         1048 => self.restoreCursor(),

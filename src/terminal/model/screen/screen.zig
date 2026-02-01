@@ -21,6 +21,8 @@ pub const Screen = struct {
     current_attrs: types.CellAttrs,
     default_attrs: types.CellAttrs,
     wrap_next: bool,
+    auto_wrap: bool,
+    origin_mode: bool,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16, default_attrs: types.CellAttrs) !Screen {
         const grid = try TerminalGrid.init(allocator, rows, cols, .{
@@ -42,6 +44,8 @@ pub const Screen = struct {
             .current_attrs = default_attrs,
             .default_attrs = default_attrs,
             .wrap_next = false,
+            .auto_wrap = true,
+            .origin_mode = false,
         };
     }
 
@@ -93,6 +97,8 @@ pub const Screen = struct {
         self.key_mode = KeyModeStack.init();
         self.current_attrs = self.default_attrs;
         self.wrap_next = false;
+        self.auto_wrap = true;
+        self.origin_mode = false;
         self.tabstops.reset();
     }
 
@@ -171,6 +177,17 @@ pub const Screen = struct {
         self.key_mode.setCurrent(updated);
     }
 
+    pub fn setAutowrap(self: *Screen, enabled: bool) void {
+        self.auto_wrap = enabled;
+    }
+
+    pub fn setOriginMode(self: *Screen, enabled: bool) void {
+        self.origin_mode = enabled;
+        self.cursor.row = self.scroll_top;
+        self.cursor.col = 0;
+        self.wrap_next = false;
+    }
+
     pub fn cellAtOr(self: *const Screen, row: usize, col: usize, default_cell: types.Cell) types.Cell {
         if (row >= @as(usize, self.grid.rows) or col >= @as(usize, self.grid.cols)) {
             return default_cell;
@@ -196,8 +213,10 @@ pub const Screen = struct {
         };
 
         if (self.cursor.col + 1 >= cols) {
-            self.wrap_next = true;
-            self.grid.setRowWrapped(row, true);
+            if (self.auto_wrap) {
+                self.wrap_next = true;
+                self.grid.setRowWrapped(row, true);
+            }
         } else {
             self.cursor.col += 1;
         }
@@ -263,8 +282,13 @@ pub const Screen = struct {
         self.grid.markDirtyRange(row, row, col, col + run_len - 1);
 
         if (run_len == remaining_cols) {
-            self.wrap_next = true;
-            self.grid.setRowWrapped(row, true);
+            if (cols > 0) {
+                self.cursor.col = cols - 1;
+            }
+            if (self.auto_wrap) {
+                self.wrap_next = true;
+                self.grid.setRowWrapped(row, true);
+            }
         } else {
             self.cursor.col += run_len;
         }
@@ -283,9 +307,17 @@ pub const Screen = struct {
         if (rows == 0 or cols == 0) return .done;
         if (self.cursor.row >= rows) return .done;
         if (self.wrap_next) {
-            self.grid.setRowWrapped(self.cursor.row, true);
             self.wrap_next = false;
-            return .need_newline;
+            if (self.auto_wrap) {
+                self.grid.setRowWrapped(self.cursor.row, true);
+                if (self.cursor.col == 0) {
+                    const cols_local = @as(usize, self.grid.cols);
+                    if (cols_local > 0) {
+                        self.grid.markDirtyRange(self.cursor.row, self.cursor.row, 0, cols_local - 1);
+                    }
+                }
+                return .need_newline;
+            }
         }
         if (self.cursor.col >= cols or self.cursor.row >= rows) return .done;
         return .proceed;
@@ -355,7 +387,14 @@ pub const Screen = struct {
     }
 
     pub fn cursorPosAbsolute(self: *Screen, row_1: i32, col_1: i32) void {
-        const row = @min(@as(usize, self.grid.rows - 1), @as(usize, @intCast(row_1 - 1)));
+        var row: usize = @intCast(@max(row_1 - 1, 0));
+        if (self.origin_mode) {
+            row = self.scroll_top + row;
+            const max_row = @min(@as(usize, self.grid.rows - 1), self.scroll_bottom);
+            if (row > max_row) row = max_row;
+        } else {
+            row = @min(@as(usize, self.grid.rows - 1), row);
+        }
         const col = @min(@as(usize, self.grid.cols - 1), @as(usize, @intCast(col_1 - 1)));
         self.cursor.row = row;
         self.cursor.col = col;
@@ -363,7 +402,14 @@ pub const Screen = struct {
     }
 
     pub fn cursorRowAbsolute(self: *Screen, row_1: i32) void {
-        const row = @min(@as(usize, self.grid.rows - 1), @as(usize, @intCast(row_1 - 1)));
+        var row: usize = @intCast(@max(row_1 - 1, 0));
+        if (self.origin_mode) {
+            row = self.scroll_top + row;
+            const max_row = @min(@as(usize, self.grid.rows - 1), self.scroll_bottom);
+            if (row > max_row) row = max_row;
+        } else {
+            row = @min(@as(usize, self.grid.rows - 1), row);
+        }
         self.cursor.row = row;
         self.wrap_next = false;
     }
@@ -373,10 +419,11 @@ pub const Screen = struct {
     }
 
     pub fn cursorReport(self: *const Screen) struct { row_1: usize, col_1: usize } {
-        return .{
-            .row_1 = self.cursor.row + 1,
-            .col_1 = self.cursor.col + 1,
-        };
+        const row_1 = if (self.origin_mode and self.cursor.row >= self.scroll_top)
+            (self.cursor.row - self.scroll_top) + 1
+        else
+            self.cursor.row + 1;
+        return .{ .row_1 = row_1, .col_1 = self.cursor.col + 1 };
     }
 
     pub const NewlineAction = enum {
@@ -496,10 +543,10 @@ pub const Screen = struct {
         if (rows == 0 or cols == 0) return;
         const row = self.cursor.row;
         const col = self.cursor.col;
-        if (row >= rows or col >= cols) return;
 
         switch (mode) {
             0 => { // cursor to end
+                if (row >= rows or col >= cols) return;
                 const start_idx = row * cols + col;
                 for (self.grid.cells.items[start_idx..]) |*cell| cell.* = blank_cell;
                 self.grid.markDirtyRange(row, row, col, cols - 1);
@@ -512,6 +559,7 @@ pub const Screen = struct {
                 }
             },
             1 => { // start to cursor
+                if (row >= rows or col >= cols) return;
                 const end = row * cols + col + 1;
                 for (self.grid.cells.items[0..end]) |*cell| cell.* = blank_cell;
                 if (row > 0) {
@@ -524,6 +572,13 @@ pub const Screen = struct {
                 }
             },
             2 => { // all
+                for (self.grid.cells.items) |*cell| cell.* = blank_cell;
+                self.grid.markDirtyAll();
+                for (self.grid.wrap_flags.items) |*flag| {
+                    flag.* = false;
+                }
+            },
+            3 => { // saved lines + all (treat as full clear)
                 for (self.grid.cells.items) |*cell| cell.* = blank_cell;
                 self.grid.markDirtyAll();
                 for (self.grid.wrap_flags.items) |*flag| {
@@ -854,4 +909,7 @@ pub fn mapDecSpecial(codepoint: u32) u32 {
         0x7E => 0x00B7, // ·
         else => codepoint,
     };
+}
+pub fn setAutowrap(self: *Screen, enabled: bool) void {
+    self.auto_wrap = enabled;
 }
