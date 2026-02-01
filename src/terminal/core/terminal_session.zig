@@ -20,6 +20,8 @@ const Dirty = screen_mod.Dirty;
 const Damage = screen_mod.Damage;
 const builtin = @import("builtin");
 const OscTerminator = parser_mod.OscTerminator;
+const Charset = parser_mod.Charset;
+const CharsetTarget = parser_mod.CharsetTarget;
 
 const dynamic_color_count: usize = 10;
 
@@ -39,6 +41,14 @@ const SemanticPromptState = struct {
     special_key: bool = false,
     click_events: bool = false,
     exit_code: ?u8 = null,
+};
+
+const SavedCharsetState = struct {
+    active: bool = false,
+    g0: Charset = .ascii,
+    g1: Charset = .ascii,
+    gl: Charset = .ascii,
+    target: CharsetTarget = .g0,
 };
 
 pub const KittyImageFormat = snapshot_mod.KittyImageFormat;
@@ -260,6 +270,7 @@ pub const TerminalSession = struct {
     alt_last_active: bool,
     clear_generation: std.atomic.Value(u64),
     force_full_damage: std.atomic.Value(bool),
+    saved_charset: SavedCharsetState,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !*TerminalSession {
         const session = try allocator.create(TerminalSession);
@@ -350,6 +361,7 @@ pub const TerminalSession = struct {
             .alt_last_active = false,
             .clear_generation = std.atomic.Value(u64).init(0),
             .force_full_damage = std.atomic.Value(bool).init(false),
+            .saved_charset = .{},
         };
         session.updateInputSnapshot();
         return session;
@@ -1464,6 +1476,7 @@ pub const TerminalSession = struct {
 
     pub fn resetState(self: *TerminalSession) void {
         self.parser.reset();
+        self.saved_charset = .{};
         self.primary.resetState();
         self.alt.resetState();
         self.input.resetMouse();
@@ -1846,6 +1859,13 @@ pub const TerminalSession = struct {
 
     pub fn saveCursor(self: *TerminalSession) void {
         self.activeScreen().saveCursor();
+        self.saved_charset = .{
+            .active = true,
+            .g0 = self.parser.g0_charset,
+            .g1 = self.parser.g1_charset,
+            .gl = self.parser.gl_charset,
+            .target = self.parser.charset_target,
+        };
     }
 
     pub fn setKeypadMode(self: *TerminalSession, enabled: bool) void {
@@ -1855,6 +1875,11 @@ pub const TerminalSession = struct {
 
     pub fn restoreCursor(self: *TerminalSession) void {
         self.activeScreen().restoreCursor();
+        if (!self.saved_charset.active) return;
+        self.parser.g0_charset = self.saved_charset.g0;
+        self.parser.g1_charset = self.saved_charset.g1;
+        self.parser.gl_charset = self.saved_charset.gl;
+        self.parser.charset_target = self.saved_charset.target;
     }
 
     pub fn setTabAtCursor(self: *TerminalSession) void {

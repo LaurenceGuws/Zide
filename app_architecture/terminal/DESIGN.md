@@ -252,7 +252,7 @@ Progress:
 Decision:
 - Track an alternate grid and per-screen cursor/scroll region state; swap on DECSET/DECRST.
 - Treat alt screen as no-scrollback and clear on ?1047/?1049 per xterm/VTE behavior.
-- Keep save/restore cursor per screen, including attributes.
+- Keep save/restore cursor per screen, including attributes and charset state (G0/G1/GL + target).
 - Decode OSC 52 payloads (base64) with size caps and defer clipboard integration to the UI layer.
 - Track OSC 8 hyperlink state and map it to underline + link color during render.
 
