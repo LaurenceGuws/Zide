@@ -382,6 +382,25 @@ pub const TerminalSession = struct {
         const total_lines = history_len + rows;
         const max_offset = if (total_lines > rows) total_lines - rows else 0;
         const clamped_offset = if (scroll_offset > max_offset) max_offset else scroll_offset;
+        const kitty_generation = kitty_mod.kittyStateConst(self).generation;
+        const selection_active = !self.isAltActive() and self.history.selectionState() != null;
+        const active_cache = &self.render_caches[active_index];
+        if (active_cache.rows == rows and
+            active_cache.cols == cols and
+            active_cache.history_len == history_len and
+            active_cache.total_lines == total_lines and
+            active_cache.scroll_offset == clamped_offset and
+            active_cache.generation == generation and
+            active_cache.alt_active == self.isAltActive() and
+            active_cache.sync_updates_active == self.sync_updates_active and
+            active_cache.kitty_generation == kitty_generation and
+            view.dirty == .none and
+            active_cache.dirty == .none and
+            !selection_active and
+            !active_cache.selection_active)
+        {
+            return;
+        }
         if (rows == 0 or cols == 0) {
             cache.cells.clearRetainingCapacity();
             cache.dirty_rows.clearRetainingCapacity();
@@ -402,7 +421,7 @@ pub const TerminalSession = struct {
             cache.dirty = view.dirty;
             cache.damage = view.damage;
             cache.alt_active = self.isAltActive();
-            cache.selection_active = false;
+            cache.selection_active = selection_active;
             cache.sync_updates_active = self.sync_updates_active;
             self.updateKittyViewNoLock(cache);
             self.render_cache_index.store(target_index, .release);
@@ -444,9 +463,9 @@ pub const TerminalSession = struct {
             for (cache.selection_rows.items) |*row_selected| {
                 row_selected.* = false;
             }
-            cache.selection_active = false;
+            cache.selection_active = selection_active;
         } else if (self.history.selectionState()) |selection| {
-            cache.selection_active = true;
+            cache.selection_active = selection_active;
             var start_sel = selection.start;
             var end_sel = selection.end;
             if (start_sel.row > end_sel.row or (start_sel.row == end_sel.row and start_sel.col > end_sel.col)) {
@@ -488,7 +507,7 @@ pub const TerminalSession = struct {
             for (cache.selection_rows.items) |*row_selected| {
                 row_selected.* = false;
             }
-            cache.selection_active = false;
+            cache.selection_active = selection_active;
         }
         if (view.dirty_rows.len == rows) {
             std.mem.copyForwards(bool, cache.dirty_rows.items, view.dirty_rows);
@@ -519,6 +538,7 @@ pub const TerminalSession = struct {
         cache.dirty = view.dirty;
         cache.damage = view.damage;
         cache.alt_active = self.isAltActive();
+        cache.selection_active = selection_active;
         cache.sync_updates_active = self.sync_updates_active;
         self.updateKittyViewNoLock(cache);
         self.render_cache_index.store(target_index, .release);
