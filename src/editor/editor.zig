@@ -660,6 +660,60 @@ pub const Editor = struct {
         }
     }
 
+    pub fn selectionTextAlloc(self: *Editor) !?[]u8 {
+        var selections = std.ArrayList(Selection).empty;
+        defer selections.deinit(self.allocator);
+
+        if (self.selection) |sel| {
+            try selections.append(self.allocator, sel.normalized());
+        }
+        if (self.selections.items.len > 0) {
+            for (self.selections.items) |sel| {
+                try selections.append(self.allocator, sel.normalized());
+            }
+        }
+        if (selections.items.len == 0) return null;
+
+        std.sort.block(Selection, selections.items, {}, struct {
+            fn lessThan(_: void, a: Selection, b: Selection) bool {
+                return a.start.offset < b.start.offset;
+            }
+        }.lessThan);
+
+        var merged = std.ArrayList(Selection).empty;
+        defer merged.deinit(self.allocator);
+        try merged.append(self.allocator, selections.items[0]);
+        for (selections.items[1..]) |sel| {
+            var last = &merged.items[merged.items.len - 1];
+            if (!sel.is_rectangular and !last.is_rectangular and sel.start.offset <= last.end.offset) {
+                if (sel.end.offset > last.end.offset) {
+                    last.end = sel.end;
+                }
+            } else {
+                try merged.append(self.allocator, sel);
+            }
+        }
+
+        var out = std.ArrayList(u8).empty;
+        errdefer out.deinit(self.allocator);
+        var idx: usize = 0;
+        while (idx < merged.items.len) : (idx += 1) {
+            const sel = merged.items[idx];
+            if (sel.isEmpty()) continue;
+            const norm = sel.normalized();
+            const len = norm.end.offset - norm.start.offset;
+            if (len == 0) continue;
+            const chunk = try self.buffer.readRangeAlloc(norm.start.offset, len);
+            defer self.allocator.free(chunk);
+            try out.appendSlice(self.allocator, chunk);
+            if (idx + 1 < merged.items.len) {
+                try out.append(self.allocator, '\n');
+            }
+        }
+
+        return try out.toOwnedSlice(self.allocator);
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Undo/Redo
     // ─────────────────────────────────────────────────────────────────────────

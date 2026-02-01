@@ -27,6 +27,7 @@ References:
 - Bindings are keycode‑based and use `shared_types.input.Key` enum names (e.g. `equal`, `kp_add`, `grave`).
 - Modifiers are `ctrl`, `shift`, `alt`, `super` and are matched exactly.
 - Use `["repeat"] = true` in Lua to enable key repeat for a binding.
+- Editor bindings now include copy/cut/paste (Ctrl+C/X/V) and route via the input router.
 
 ## Plan (Todo)
 
