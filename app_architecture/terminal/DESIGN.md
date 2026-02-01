@@ -15,6 +15,7 @@ Purpose: this document tracks terminal architecture decisions and implementation
 - Keyboard input supports CSI u/kitty protocol flags with per-screen stacks and modifier-aware encoding.
 - Legacy modifier combos now include full letter/number/punctuation mapping; macOS Command is reserved for app shortcuts.
 - Dirty-row tracking and render-texture caching are live; full VT coverage still missing.
+- Dirty tracking is still fragile in full-screen TUI apps (e.g., apps that clear and redraw without alt screen). We need a stronger damage/invalidations model.
 - CSI params support up to 16 entries and `:` separators for SGR sequences.
 - Default colors are configurable per session; erase/blank fills use current attributes so TUI background colors persist.
 
