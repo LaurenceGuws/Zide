@@ -1475,6 +1475,17 @@ pub const TerminalSession = struct {
         _ = self.clear_generation.fetchAdd(1, .acq_rel);
     }
 
+    pub fn reverseIndex(self: *TerminalSession) void {
+        const screen = self.activeScreen();
+        if (screen.cursor.row > screen.scroll_top) {
+            screen.cursorUp(1);
+            return;
+        }
+        if (screen.cursor.row == screen.scroll_top) {
+            self.scrollRegionDown(1);
+        }
+    }
+
     pub fn eraseDisplay(self: *TerminalSession, mode: i32) void {
         const screen = self.activeScreen();
         const blank_cell = screen.blankCell();
@@ -1546,6 +1557,13 @@ pub const TerminalSession = struct {
         const screen = self.activeScreen();
         log.logf("scroll region up count={d} top={d} bottom={d}", .{ count, screen.scroll_top, screen.scroll_bottom });
         log.logStdout("scroll region up count={d}", .{count});
+        const trace = app_logger.logger("terminal.trace.scroll");
+        if (trace.enabled_file or trace.enabled_console) {
+            trace.logf(
+                "scroll_up count={d} cursor={d},{d} origin={any} region={d}..{d}",
+                .{ count, screen.cursor.row, screen.cursor.col, screen.origin_mode, screen.scroll_top, screen.scroll_bottom },
+            );
+        }
         const cols = @as(usize, screen.grid.cols);
         if (cols == 0 or screen.grid.rows == 0) return;
         const n = @min(count, screen.scroll_bottom - screen.scroll_top + 1);
@@ -1568,6 +1586,13 @@ pub const TerminalSession = struct {
 
     pub fn scrollRegionDown(self: *TerminalSession, count: usize) void {
         const screen = self.activeScreen();
+        const trace = app_logger.logger("terminal.trace.scroll");
+        if (trace.enabled_file or trace.enabled_console) {
+            trace.logf(
+                "scroll_down count={d} cursor={d},{d} origin={any} region={d}..{d}",
+                .{ count, screen.cursor.row, screen.cursor.col, screen.origin_mode, screen.scroll_top, screen.scroll_bottom },
+            );
+        }
         const cols = @as(usize, screen.grid.cols);
         if (cols == 0 or screen.grid.rows == 0) return;
         const n = @min(count, screen.scroll_bottom - screen.scroll_top + 1);

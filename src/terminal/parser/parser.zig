@@ -129,6 +129,9 @@ pub const Parser = struct {
                 } else if (byte == 'H') {
                     session.setTabAtCursor();
                     self.esc_state = .ground;
+                } else if (byte == 'M') { // RI
+                    session.reverseIndex();
+                    self.esc_state = .ground;
                 } else if (byte == '=') {
                     session.setKeypadMode(true);
                     self.esc_state = .ground;
