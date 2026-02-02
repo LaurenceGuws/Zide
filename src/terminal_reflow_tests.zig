@@ -149,3 +149,18 @@ test "terminal reflow keeps selection active when scrolled" {
         return error.MissingSelection;
     }
 }
+
+test "terminal reflow keeps top content visible without scrollback" {
+    const allocator = std.testing.allocator;
+
+    var session = try term_mod.TerminalSession.init(allocator, 4, 8);
+    defer session.deinit();
+
+    term_mod.debugFeedBytes(session, "HELLO\n");
+
+    try session.resize(2, 10);
+
+    try std.testing.expectEqual(@as(usize, 0), session.scrollbackCount());
+    const snapshot = session.snapshot();
+    try std.testing.expectEqual(@as(u32, 'H'), snapshot.cells[0].codepoint);
+}
