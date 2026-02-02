@@ -1385,12 +1385,14 @@ pub const TerminalSession = struct {
             while (idx < line_len) {
                 var chunk_len = @min(new_cols_usize, line_len - idx);
                 if (chunk_len == new_cols_usize and idx + chunk_len < line_len) {
-                    const last_cell = all_cells.items[line_start + idx + chunk_len - 1];
-                    const next_cell = all_cells.items[line_start + idx + chunk_len];
-                    if (last_cell.width == 2 or next_cell.width == 0) {
-                        if (chunk_len > 1) {
+                    while (chunk_len > 1) {
+                        const last_cell = all_cells.items[line_start + idx + chunk_len - 1];
+                        const next_cell = all_cells.items[line_start + idx + chunk_len];
+                        if (last_cell.width == 2 or next_cell.width == 0) {
                             chunk_len -= 1;
+                            continue;
                         }
+                        break;
                     }
                 }
                 const row_start = rows_cells.items.len;
