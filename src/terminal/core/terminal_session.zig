@@ -1235,15 +1235,25 @@ pub const TerminalSession = struct {
             }
             var idx: usize = 0;
             const line_start = line_starts.items[li];
-            while (idx < line_len) : (idx += new_cols_usize) {
+            while (idx < line_len) {
+                var chunk_len = @min(new_cols_usize, line_len - idx);
+                if (chunk_len == new_cols_usize and idx + chunk_len < line_len) {
+                    const last_cell = all_cells.items[line_start + idx + chunk_len - 1];
+                    const next_cell = all_cells.items[line_start + idx + chunk_len];
+                    if (last_cell.width == 2 or next_cell.width == 0) {
+                        if (chunk_len > 1) {
+                            chunk_len -= 1;
+                        }
+                    }
+                }
                 const row_start = rows_cells.items.len;
                 try rows_cells.resize(allocator, row_start + new_cols_usize);
                 for (rows_cells.items[row_start .. row_start + new_cols_usize]) |*cell| cell.* = default_cell;
+                std.mem.copyForwards(Cell, rows_cells.items[row_start .. row_start + chunk_len], all_cells.items[line_start + idx .. line_start + idx + chunk_len]);
                 const remaining = line_len - idx;
-                const copy_len = if (remaining > new_cols_usize) new_cols_usize else remaining;
-                std.mem.copyForwards(Cell, rows_cells.items[row_start .. row_start + copy_len], all_cells.items[line_start + idx .. line_start + idx + copy_len]);
-                const is_last = remaining <= new_cols_usize;
+                const is_last = remaining <= chunk_len;
                 try rows_wraps.append(allocator, if (is_last) line_wrapped.items[li] else true);
+                idx += chunk_len;
             }
         }
 
@@ -1533,7 +1543,7 @@ pub const TerminalSession = struct {
         if (row >= @as(usize, screen.grid.rows)) return;
         const row_start = row * cols;
         const wrapped = screen.grid.rowWrapped(row);
-        self.history.pushRow(screen.grid.cells.items[row_start .. row_start + cols], wrapped);
+        self.history.pushRow(screen.grid.cells.items[row_start .. row_start + cols], wrapped, screen.defaultCell());
         self.kitty_primary.scrollback_total += 1;
         const log = app_logger.logger("terminal.core");
         log.logf("scrollback push row={d} total={d}", .{ row, self.history.scrollbackCount() });

@@ -44,9 +44,16 @@ pub const TerminalHistory = struct {
     }
 
     pub fn resizePreserve(self: *TerminalHistory, cols: u16, default_cell: types.Cell) !void {
-        _ = self;
-        _ = cols;
-        _ = default_cell;
+        if (cols == 0) {
+            self.view_cache.clearRetainingCapacity();
+            self.view_wraps.clearRetainingCapacity();
+            self.view_rows = 0;
+            self.view_cols = 0;
+            self.view_generation = self.scrollback_generation;
+            return;
+        }
+        self.view_generation = if (self.scrollback_generation > 0) self.scrollback_generation - 1 else 0;
+        self.ensureViewCache(cols, default_cell);
     }
 
     pub fn clear(self: *TerminalHistory) void {
@@ -146,8 +153,79 @@ pub const TerminalHistory = struct {
         self.scrollback_generation +|= 1;
     }
 
-    pub fn pushRow(self: *TerminalHistory, row: []const types.Cell, wrapped: bool) void {
-        _ = self.scrollback.pushLine(row, wrapped) catch {};
+    pub fn pushRow(self: *TerminalHistory, row: []const types.Cell, wrapped: bool, default_cell: types.Cell) void {
+        const row_len_full = row.len;
+        if (row_len_full == 0) return;
+
+        var append_to_last = false;
+        if (self.scrollback.count() > 0) {
+            if (self.scrollback.lineByIndex(self.scrollback.count() - 1)) |last_line| {
+                append_to_last = last_line.wrapped;
+            }
+        }
+
+        const keep_full = wrapped or append_to_last;
+        var row_len: usize = row_len_full;
+        if (!keep_full) {
+            var found = false;
+            var col: usize = row_len_full;
+            while (col > 0) {
+                col -= 1;
+                const cell = row[col];
+                const is_default = cell.codepoint == default_cell.codepoint and
+                    cell.width == default_cell.width and
+                    cell.attrs.fg.r == default_cell.attrs.fg.r and
+                    cell.attrs.fg.g == default_cell.attrs.fg.g and
+                    cell.attrs.fg.b == default_cell.attrs.fg.b and
+                    cell.attrs.fg.a == default_cell.attrs.fg.a and
+                    cell.attrs.bg.r == default_cell.attrs.bg.r and
+                    cell.attrs.bg.g == default_cell.attrs.bg.g and
+                    cell.attrs.bg.b == default_cell.attrs.bg.b and
+                    cell.attrs.bg.a == default_cell.attrs.bg.a and
+                    cell.attrs.bold == default_cell.attrs.bold and
+                    cell.attrs.reverse == default_cell.attrs.reverse and
+                    cell.attrs.underline == default_cell.attrs.underline and
+                    cell.attrs.underline_color.r == default_cell.attrs.underline_color.r and
+                    cell.attrs.underline_color.g == default_cell.attrs.underline_color.g and
+                    cell.attrs.underline_color.b == default_cell.attrs.underline_color.b and
+                    cell.attrs.underline_color.a == default_cell.attrs.underline_color.a and
+                    cell.attrs.link_id == default_cell.attrs.link_id;
+                if (!is_default) {
+                    row_len = col + 1;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                row_len = 0;
+            }
+        }
+
+        if (append_to_last) {
+            if (self.scrollback.lineByIndexMut(self.scrollback.count() - 1)) |last_line| {
+                if (row_len == 0) {
+                    last_line.wrapped = wrapped;
+                    self.markScrollbackChanged();
+                    return;
+                }
+
+                const old_len = last_line.cells.len;
+                const new_len = old_len + row_len;
+                const new_cells = self.allocator.realloc(last_line.cells, new_len) catch {
+                    last_line.wrapped = false;
+                    _ = self.scrollback.pushLine(row[0..row_len], wrapped) catch {};
+                    self.markScrollbackChanged();
+                    return;
+                };
+                last_line.cells = new_cells;
+                std.mem.copyForwards(types.Cell, last_line.cells[old_len .. old_len + row_len], row[0..row_len]);
+                last_line.wrapped = wrapped;
+                self.markScrollbackChanged();
+                return;
+            }
+        }
+
+        _ = self.scrollback.pushLine(row[0..row_len], wrapped) catch {};
         self.markScrollbackChanged();
     }
 
