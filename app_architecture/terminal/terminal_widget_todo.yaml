@@ -519,6 +519,18 @@ terminal_widget_todo:
           refs:
             - reference_repos/terminals/contour/docs/vt-extensions/csi-u-extended-keyboard-protocol.md
             - reference_repos/terminals/kitty/key_encoding.json
+        - id: P7-05
+          title: "DECCOLM 80/132 column semantics (no resize, clear/home on set)"
+          notes:
+            - "Current behavior: treat ?3h as clear+home only; ?3l does not resize."
+            - "Align with Kitty/Xterm behavior; keep grid width stable and avoid post-vttest shrink."
+          files_to_edit:
+            - src/terminal/core/terminal_session.zig
+            - src/terminal/model/screen/screen.zig
+          refs:
+            - reference_repos/terminals/kitty/kitty/screen.c
+            - reference_repos/terminals/xterm_snapshots/ctlseqs.txt
+            - reference_repos/terminals/ghostty/src/terminal/Terminal.zig
 
     - name: "Phase 8 - Performance + Polish"
       tasks:
