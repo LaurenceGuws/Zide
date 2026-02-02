@@ -1503,6 +1503,9 @@ pub const TerminalSession = struct {
                         new_start_line = adjusted;
                     }
                 }
+            } else if (keep_rows > visible_rows) {
+                const max_start = keep_rows - visible_rows;
+                new_start_line = @min(old_start_line, max_start);
             }
         }
         const new_total_lines = scrollback_rows + visible_rows;
