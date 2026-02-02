@@ -50,11 +50,8 @@ pub const TerminalWidget = struct {
     blink_last_slow_on: bool = true,
     blink_last_fast_on: bool = true,
     blink_last_active: bool = false,
-    row_hashes: std.ArrayList(u64),
-    row_hashes_next: std.ArrayList(u64),
-    row_dirty_compare: std.ArrayList(bool),
-    row_hash_rows: usize = 0,
-    row_hash_cols: usize = 0,
+    terminal_texture_ready: bool = false,
+    last_render_generation: u64 = 0,
 
     pub fn init(session: *TerminalSession, blink_style: BlinkStyle) TerminalWidget {
         return .{
@@ -76,11 +73,8 @@ pub const TerminalWidget = struct {
             .blink_last_slow_on = true,
             .blink_last_fast_on = true,
             .blink_last_active = false,
-            .row_hashes = .empty,
-            .row_hashes_next = .empty,
-            .row_dirty_compare = .empty,
-            .row_hash_rows = 0,
-            .row_hash_cols = 0,
+            .terminal_texture_ready = false,
+            .last_render_generation = 0,
         };
     }
 
@@ -140,70 +134,6 @@ pub const TerminalWidget = struct {
         self.kitty_pending_uploads_set.deinit();
         self.kitty_images_view.deinit(self.session.allocator);
         self.kitty_placements_view.deinit(self.session.allocator);
-        self.row_hashes.deinit(self.session.allocator);
-        self.row_hashes_next.deinit(self.session.allocator);
-        self.row_dirty_compare.deinit(self.session.allocator);
-    }
-
-    fn hashRow(cells: []const Cell) u64 {
-        var h: u64 = 1469598103934665603;
-        const prime: u64 = 1099511628211;
-        for (cells) |cell| {
-            h = (h ^ @as(u64, cell.codepoint)) *% prime;
-            h = (h ^ @as(u64, cell.width)) *% prime;
-            const attrs = cell.attrs;
-            h = (h ^ @as(u64, attrs.fg.r)) *% prime;
-            h = (h ^ @as(u64, attrs.fg.g)) *% prime;
-            h = (h ^ @as(u64, attrs.fg.b)) *% prime;
-            h = (h ^ @as(u64, attrs.fg.a)) *% prime;
-            h = (h ^ @as(u64, attrs.bg.r)) *% prime;
-            h = (h ^ @as(u64, attrs.bg.g)) *% prime;
-            h = (h ^ @as(u64, attrs.bg.b)) *% prime;
-            h = (h ^ @as(u64, attrs.bg.a)) *% prime;
-            h = (h ^ @as(u64, attrs.underline_color.r)) *% prime;
-            h = (h ^ @as(u64, attrs.underline_color.g)) *% prime;
-            h = (h ^ @as(u64, attrs.underline_color.b)) *% prime;
-            h = (h ^ @as(u64, attrs.underline_color.a)) *% prime;
-            h = (h ^ @as(u64, @intFromBool(attrs.bold))) *% prime;
-            h = (h ^ @as(u64, @intFromBool(attrs.blink))) *% prime;
-            h = (h ^ @as(u64, @intFromBool(attrs.blink_fast))) *% prime;
-            h = (h ^ @as(u64, @intFromBool(attrs.reverse))) *% prime;
-            h = (h ^ @as(u64, @intFromBool(attrs.underline))) *% prime;
-            h = (h ^ @as(u64, attrs.link_id)) *% prime;
-        }
-        return h;
-    }
-
-    fn ensureRowHashCache(self: *TerminalWidget, rows: usize, cols: usize) bool {
-        if (rows == 0 or cols == 0) {
-            self.row_hash_rows = 0;
-            self.row_hash_cols = 0;
-            self.row_hashes.clearRetainingCapacity();
-            self.row_hashes_next.clearRetainingCapacity();
-            self.row_dirty_compare.clearRetainingCapacity();
-            return false;
-        }
-        const same_dims = self.row_hash_rows == rows and self.row_hash_cols == cols;
-        if (!same_dims or self.row_hashes.items.len != rows or self.row_hashes_next.items.len != rows or self.row_dirty_compare.items.len != rows) {
-            self.row_hash_rows = rows;
-            self.row_hash_cols = cols;
-            _ = self.row_hashes.resize(self.session.allocator, rows) catch {};
-            _ = self.row_hashes_next.resize(self.session.allocator, rows) catch {};
-            _ = self.row_dirty_compare.resize(self.session.allocator, rows) catch {};
-            for (self.row_hashes.items) |*h| h.* = 0;
-            for (self.row_dirty_compare.items) |*dirty| dirty.* = true;
-            return false;
-        }
-        return true;
-    }
-
-    fn computeRowHashes(self: *TerminalWidget, view_cells: []const Cell, rows: usize, cols: usize) void {
-        var row: usize = 0;
-        while (row < rows) : (row += 1) {
-            const row_start = row * cols;
-            const row_cells = view_cells[row_start .. row_start + cols];
-            self.row_hashes_next.items[row] = hashRow(row_cells);
-        }
     }
 
     pub fn takePendingOpenPath(self: *TerminalWidget) ?[]u8 {
@@ -552,6 +482,9 @@ pub const TerminalWidget = struct {
         const rowSlice = struct {
             fn get(cells: []const Cell, cols_count: usize, row: usize) []const Cell {
                 const row_start = row * cols_count;
+                if (row_start + cols_count > cells.len) {
+                    return cells[0..0];
+                }
                 return cells[row_start .. row_start + cols_count];
             }
         }.get;
@@ -577,6 +510,7 @@ pub const TerminalWidget = struct {
                 const base_y_i: i32 = @intFromFloat(std.math.round(base_y_local));
 
                 const row_cells = rowSlice(snapshot_cells, cols_count, row_idx);
+                if (row_cells.len != cols_count) return;
                 const col_start = @min(col_start_in, cols_count - 1);
                 const col_end = @min(col_end_in, cols_count - 1);
                 if (col_start > col_end) return;
@@ -666,6 +600,7 @@ pub const TerminalWidget = struct {
                 const base_y_i: i32 = @intFromFloat(std.math.round(base_y_local));
 
                 const row_cells = rowSlice(snapshot_cells, cols_count, row_idx);
+                if (row_cells.len != cols_count) return;
                 const col_start = @min(col_start_in, cols_count - 1);
                 const col_end = @min(col_end_in, cols_count - 1);
                 if (col_start > col_end) return;
@@ -751,41 +686,15 @@ pub const TerminalWidget = struct {
             const texture_h = @as(i32, @intFromFloat(@round(r.terminal_cell_height * @as(f32, @floatFromInt(rows)))));
             const recreated = r.ensureTerminalTexture(texture_w, texture_h);
             const kitty_changed = kitty_generation != self.last_kitty_generation;
-            var needs_full = recreated or cache.alt_active or cache.dirty == .full or scroll_changed or (cache.dirty != .none and scroll_offset > 0) or has_kitty or kitty_changed or has_blink;
+            const gen_changed = cache.generation != self.last_render_generation;
+            var needs_full = recreated or gen_changed or cache.alt_active or cache.dirty == .full or scroll_changed or (cache.dirty != .none and scroll_offset > 0) or has_kitty or kitty_changed or has_blink;
             var needs_partial = cache.dirty == .partial and !needs_full and scroll_offset == 0;
-            var row_dirty_rows = view_dirty_rows;
-            var row_dirty_full_cols = false;
-            var partial_noop = false;
-
-            if ((needs_full or needs_partial) and rows > 0 and cols > 0 and view_cells.len >= rows * cols) {
-                const hash_ready = self.ensureRowHashCache(rows, cols);
-                if (!hash_ready) {
-                    needs_full = true;
-                    needs_partial = false;
-                }
-                self.computeRowHashes(view_cells, rows, cols);
-                if (needs_partial) {
-                    var any_changed = false;
-                    var row: usize = 0;
-                    while (row < rows) : (row += 1) {
-                        const changed = self.row_hashes_next.items[row] != self.row_hashes.items[row];
-                        self.row_dirty_compare.items[row] = changed;
-                        if (changed) {
-                            any_changed = true;
-                        }
-                    }
-                    if (!any_changed) {
-                        needs_partial = false;
-                        partial_noop = true;
-                    } else {
-                        row_dirty_rows = self.row_dirty_compare.items;
-                        row_dirty_full_cols = true;
-                    }
-                }
+            if (!self.terminal_texture_ready and rows > 0 and cols > 0) {
+                needs_full = true;
+                needs_partial = false;
             }
-            const begin_ok = (needs_full or needs_partial) and r.beginTerminalTexture();
 
-            if (begin_ok) {
+            if ((needs_full or needs_partial) and r.beginTerminalTexture()) {
                 // Disable scissor while updating the offscreen texture.
                 // The main draw pass will restore the clip for on-screen drawing.
                 r.endClip();
@@ -827,10 +736,10 @@ pub const TerminalWidget = struct {
                     r.beginTerminalBatch();
                     var row: usize = 0;
                     while (row < rows) : (row += 1) {
-                        if (row < row_dirty_rows.len and row_dirty_rows[row]) {
+                        if (row < view_dirty_rows.len and view_dirty_rows[row]) {
                             var col_start: usize = 0;
                             var col_end: usize = cols - 1;
-                            if (!row_dirty_full_cols and row < cache.dirty_cols_start.items.len and row < cache.dirty_cols_end.items.len) {
+                            if (row < cache.dirty_cols_start.items.len and row < cache.dirty_cols_end.items.len) {
                                 col_start = @min(@as(usize, cache.dirty_cols_start.items[row]), cols - 1);
                                 col_end = @min(@as(usize, cache.dirty_cols_end.items[row]), cols - 1);
                             }
@@ -848,10 +757,10 @@ pub const TerminalWidget = struct {
                     r.beginTerminalGlyphBatch();
                     row = 0;
                     while (row < rows) : (row += 1) {
-                        if (row < row_dirty_rows.len and row_dirty_rows[row]) {
+                        if (row < view_dirty_rows.len and view_dirty_rows[row]) {
                             var col_start: usize = 0;
                             var col_end: usize = cols - 1;
-                            if (!row_dirty_full_cols and row < cache.dirty_cols_start.items.len and row < cache.dirty_cols_end.items.len) {
+                            if (row < cache.dirty_cols_start.items.len and row < cache.dirty_cols_end.items.len) {
                                 col_start = @min(@as(usize, cache.dirty_cols_start.items[row]), cols - 1);
                                 col_end = @min(@as(usize, cache.dirty_cols_end.items[row]), cols - 1);
                             }
@@ -870,6 +779,8 @@ pub const TerminalWidget = struct {
                 if (kitty_changed) {
                     self.last_kitty_generation = kitty_generation;
                 }
+                self.terminal_texture_ready = true;
+                self.last_render_generation = cache.generation;
                 const base_x_i: i32 = @intFromFloat(std.math.round(base_x));
                 const base_y_i: i32 = @intFromFloat(std.math.round(base_y));
                 const clip_w_i: i32 = @min(@as(i32, @intFromFloat(std.math.round(width))), cell_w_i * @as(i32, @intCast(cols)));
@@ -881,20 +792,6 @@ pub const TerminalWidget = struct {
                     clip_h_i,
                 );
                 updated = true;
-            }
-            if (partial_noop) {
-                updated = true;
-            }
-            if (updated and rows > 0 and cols > 0 and view_cells.len >= rows * cols) {
-                if (needs_full) {
-                    std.mem.copyForwards(u64, self.row_hashes.items, self.row_hashes_next.items);
-                } else if (needs_partial and self.row_dirty_compare.items.len == rows and self.row_hashes.items.len == rows) {
-                    var row: usize = 0;
-                    while (row < rows) : (row += 1) {
-                        if (!self.row_dirty_compare.items[row]) continue;
-                        self.row_hashes.items[row] = self.row_hashes_next.items[row];
-                    }
-                }
             }
             if (rows > 0 and cols > 0) {
                 const bg = if (view_cells.len > 0) blk: {
