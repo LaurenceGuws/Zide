@@ -709,6 +709,24 @@ pub const TerminalSession = struct {
                 }
             }
         }
+
+        if (cache.dirty == .partial and cols > 0) {
+            var row_idx: usize = 0;
+            while (row_idx < rows) : (row_idx += 1) {
+                if (!cache.dirty_rows.items[row_idx]) continue;
+                const start_col = cache.dirty_cols_start.items[row_idx];
+                const end_col = cache.dirty_cols_end.items[row_idx];
+                if (start_col > 0) {
+                    cache.dirty_cols_start.items[row_idx] = start_col - 1;
+                    cache.damage.start_col = @min(cache.damage.start_col, @as(usize, start_col - 1));
+                }
+                const end_col_usize = @as(usize, end_col);
+                if (end_col_usize + 1 < cols) {
+                    cache.dirty_cols_end.items[row_idx] = @intCast(end_col_usize + 1);
+                    cache.damage.end_col = @max(cache.damage.end_col, end_col_usize + 1);
+                }
+            }
+        }
         cache.alt_active = self.isAltActive();
         cache.selection_active = selection_active;
         cache.sync_updates_active = self.sync_updates_active;
