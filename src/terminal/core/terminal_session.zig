@@ -1054,38 +1054,13 @@ pub const TerminalSession = struct {
     pub fn setColumnMode132(self: *TerminalSession, enabled: bool) void {
         if (self.column_mode_132 == enabled) return;
         self.column_mode_132 = enabled;
-        const rows = self.primary.grid.rows;
-        const cols: u16 = if (enabled) 132 else 80;
-        if (cols == self.primary.grid.cols) return;
-
-        self.resizeLocked(rows, cols) catch return;
-        self.primary.resetTabStops();
-        self.alt.resetTabStops();
+        if (!enabled) return;
         self.primary.clear();
         self.alt.clear();
         self.primary.setCursor(0, 0);
         self.alt.setCursor(0, 0);
-        if (rows > 0) {
-            self.primary.setScrollRegion(0, @as(usize, rows - 1));
-            self.alt.setScrollRegion(0, @as(usize, rows - 1));
-        }
-        if (!self.isAltActive()) {
-            self.history.clear();
-            self.view_cache_request_offset.store(0, .release);
-            self.view_cache_pending.store(true, .release);
-        }
         _ = self.clear_generation.fetchAdd(1, .acq_rel);
         self.force_full_damage.store(true, .release);
-
-        if (self.pty) |*pty_ref| {
-            const size = PtySize{
-                .rows = rows,
-                .cols = cols,
-                .cell_width = self.cell_width,
-                .cell_height = self.cell_height,
-            };
-            _ = pty_ref.resize(size) catch {};
-        }
     }
 
     const RowMapEntry = struct {
