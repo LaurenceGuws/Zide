@@ -83,6 +83,7 @@ const RenderCache = struct {
     screen_reverse: bool,
     kitty_generation: u64,
     clear_generation: u64,
+    viewport_shift_rows: i32,
 
     fn init() RenderCache {
         return .{
@@ -113,6 +114,7 @@ const RenderCache = struct {
             .screen_reverse = false,
             .kitty_generation = 0,
             .clear_generation = 0,
+            .viewport_shift_rows = 0,
         };
     }
 
@@ -486,6 +488,7 @@ pub const TerminalSession = struct {
             cache.sync_updates_active = self.sync_updates_active;
             cache.screen_reverse = screen_reverse;
             cache.clear_generation = clear_generation;
+            cache.viewport_shift_rows = 0;
             self.updateKittyViewNoLock(cache);
             self.render_cache_index.store(target_index, .release);
             return;
@@ -505,6 +508,15 @@ pub const TerminalSession = struct {
             total_lines - rows - clamped_offset
         else
             0;
+        var viewport_shift_rows: i32 = 0;
+        if (active_cache.rows == rows) {
+            const prev_end_line = if (active_cache.total_lines > active_cache.scroll_offset)
+                active_cache.total_lines - active_cache.scroll_offset
+            else
+                0;
+            const prev_start_line = if (prev_end_line > rows) prev_end_line - rows else 0;
+            viewport_shift_rows = @as(i32, @intCast(start_line)) - @as(i32, @intCast(prev_start_line));
+        }
         var row: usize = 0;
         while (row < rows) : (row += 1) {
             const global_row = start_line + row;
@@ -654,6 +666,7 @@ pub const TerminalSession = struct {
         cache.sync_updates_active = self.sync_updates_active;
         cache.screen_reverse = screen_reverse;
         cache.clear_generation = clear_generation;
+        cache.viewport_shift_rows = viewport_shift_rows;
         self.updateKittyViewNoLock(cache);
         self.render_cache_index.store(target_index, .release);
     }

@@ -409,6 +409,7 @@ pub const TerminalWidget = struct {
         const history_len = cache.history_len;
         const total_lines = cache.total_lines;
         const scroll_offset = cache.scroll_offset;
+        const viewport_shift_rows = cache.viewport_shift_rows;
         const max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
         const scroll_changed = scroll_offset != self.last_scroll_offset;
         self.last_scroll_offset = scroll_offset;
@@ -681,15 +682,31 @@ pub const TerminalWidget = struct {
         var updated = false;
         if (rows > 0 and cols > 0) {
             const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
+            const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_height));
             const padding_x_i: i32 = @max(2, @divTrunc(cell_w_i, 2));
             const texture_w = cell_w_i * @as(i32, @intCast(cols)) + padding_x_i;
-            const texture_h = @as(i32, @intFromFloat(@round(r.terminal_cell_height * @as(f32, @floatFromInt(rows)))));
+            const texture_h = cell_h_i * @as(i32, @intCast(rows));
             const recreated = r.ensureTerminalTexture(texture_w, texture_h);
             const kitty_changed = kitty_generation != self.last_kitty_generation;
             const gen_changed = cache.generation != self.last_render_generation;
             var needs_full = recreated or gen_changed or cache.alt_active or cache.dirty == .full or scroll_changed or (cache.dirty != .none and scroll_offset > 0) or has_kitty or kitty_changed or has_blink;
             var needs_partial = cache.dirty == .partial and !needs_full and scroll_offset == 0;
             if (!self.terminal_texture_ready and rows > 0 and cols > 0) {
+                needs_full = true;
+                needs_partial = false;
+            }
+            const shift_abs_i: i32 = if (viewport_shift_rows < 0) -viewport_shift_rows else viewport_shift_rows;
+            var shifted_rows: usize = 0;
+            if (viewport_shift_rows != 0 and scroll_offset == 0 and !needs_full and self.terminal_texture_ready and shift_abs_i > 0 and shift_abs_i < @as(i32, @intCast(rows))) {
+                const dy_pixels: i32 = -viewport_shift_rows * cell_h_i;
+                if (r.scrollTerminalTexture(0, dy_pixels)) {
+                    needs_partial = true;
+                    shifted_rows = @as(usize, @intCast(shift_abs_i));
+                } else {
+                    needs_full = true;
+                    needs_partial = false;
+                }
+            } else if (viewport_shift_rows != 0 and scroll_offset == 0 and shift_abs_i > 0) {
                 needs_full = true;
                 needs_partial = false;
             }
@@ -735,8 +752,10 @@ pub const TerminalWidget = struct {
                 } else if (needs_partial) {
                     r.beginTerminalBatch();
                     var row: usize = 0;
+                    const shift_up = viewport_shift_rows > 0;
                     while (row < rows) : (row += 1) {
-                        if (row < view_dirty_rows.len and view_dirty_rows[row]) {
+                        const is_shift_row = shifted_rows > 0 and (if (shift_up) row >= rows - shifted_rows else row < shifted_rows);
+                        if ((row < view_dirty_rows.len and view_dirty_rows[row]) or is_shift_row) {
                             var col_start: usize = 0;
                             var col_end: usize = cols - 1;
                             if (row < cache.dirty_cols_start.items.len and row < cache.dirty_cols_end.items.len) {
@@ -757,7 +776,8 @@ pub const TerminalWidget = struct {
                     r.beginTerminalGlyphBatch();
                     row = 0;
                     while (row < rows) : (row += 1) {
-                        if (row < view_dirty_rows.len and view_dirty_rows[row]) {
+                        const is_shift_row = shifted_rows > 0 and (if (shift_up) row >= rows - shifted_rows else row < shifted_rows);
+                        if ((row < view_dirty_rows.len and view_dirty_rows[row]) or is_shift_row) {
                             var col_start: usize = 0;
                             var col_end: usize = cols - 1;
                             if (row < cache.dirty_cols_start.items.len and row < cache.dirty_cols_end.items.len) {
