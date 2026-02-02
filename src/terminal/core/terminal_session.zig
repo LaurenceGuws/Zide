@@ -585,7 +585,6 @@ pub const TerminalSession = struct {
             }
             cache.selection_active = selection_active;
         }
-        const kitty_generation = kitty_mod.kittyStateConst(self).generation;
         const needs_full_damage = force_full_damage or
             rows != active_cache.rows or
             cols != active_cache.cols or
