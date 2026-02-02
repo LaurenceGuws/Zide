@@ -523,11 +523,13 @@ pub const TerminalSession = struct {
             }
         }
 
-        row = 0;
-        while (row < rows) : (row += 1) {
-            const row_start = row * cols;
-            const row_cells = cache.cells.items[row_start .. row_start + cols];
-            cache.row_hashes.items[row] = hashRow(row_cells);
+        if (needs_full_damage) {
+            row = 0;
+            while (row < rows) : (row += 1) {
+                const row_start = row * cols;
+                const row_cells = cache.cells.items[row_start .. row_start + cols];
+                cache.row_hashes.items[row] = hashRow(row_cells);
+            }
         }
 
         if (self.isAltActive()) {
@@ -631,7 +633,12 @@ pub const TerminalSession = struct {
             var any_dirty = false;
             var row_idx: usize = 0;
             while (row_idx < rows) : (row_idx += 1) {
-                const hash_changed = cache.row_hashes.items[row_idx] != active_cache.row_hashes.items[row_idx];
+                if (!cache.dirty_rows.items[row_idx]) continue;
+                const row_start = row_idx * cols;
+                const row_cells = cache.cells.items[row_start .. row_start + cols];
+                const hash_now = hashRow(row_cells);
+                cache.row_hashes.items[row_idx] = hash_now;
+                const hash_changed = hash_now != active_cache.row_hashes.items[row_idx];
                 cache.dirty_rows.items[row_idx] = hash_changed;
                 if (hash_changed) {
                     cache.dirty_cols_start.items[row_idx] = 0;
