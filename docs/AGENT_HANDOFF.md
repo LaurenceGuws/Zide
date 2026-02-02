@@ -16,18 +16,14 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 ## Handoff (High-Level)
 
 ### Current Focus
-- SDL3 migration: SDL3-only build path; SDL2 fallback removed. See `app_architecture/ui/sdl3_migration_todo.yaml`.
-- SDL3 input parity: terminal-only mode on Wayland now delivers printable text when built with SDL3; continue validation + cleanup.
-- Input routing + keybinds: shortcuts now live in `assets/config/init.lua` and route through the InputRouter (see `app_architecture/INPUT.md`).
-- Terminal scrollback redesign: current resize/scrollback handling is inadequate; redesign is planned (see Phase 3.5 in `app_architecture/terminal/terminal_widget_todo.yaml`).
+- Terminal correctness: VT protocol coverage for vttest/gping is the active focus (DECCOLM, blink, reverse video, cursor save/restore). See `app_architecture/terminal/DESIGN.md` + `app_architecture/terminal/terminal_widget_todo.yaml`.
+- Terminal scrollback redesign: current resize/scrollback handling is still inadequate; redesign is planned (Phase 3.5 in `app_architecture/terminal/terminal_widget_todo.yaml`).
+- SDL3 migration remains the baseline; keep parity stable while terminal changes land (see `app_architecture/ui/sdl3_migration_todo.yaml`).
 
 ### Recent Changes (High-Level)
-- SDL3 shim + build flag wired; SDL3 compile + runtime smoke on Linux pass.
-- SDL3 window events and scaling fixes landed; SDL3 text input now flows in terminal-only on Wayland with SDL3 build.
-- Added a scrollback reflow redesign plan and updated terminal design notes to mirror kitty/ghostty/wezterm techniques.
-- Began scrollback model rework (LogicalLine + ScrollbackBuffer) and reflow resize wiring; scrollback rendering no longer drops during scroll interactions.
-- InputRouter + keybinds moved to `init.lua`; editor/terminal shortcuts now routed via actions.
-- Terminal key encoding extracted and protocol behaviors corrected (key releases, Ctrl combos).
+- Terminal protocol fixes: save/restore cursor now preserves charset; reverse video, blink, and background fill improved; reverse index + origin mode fixes landed.
+- DECCOLM behavior aligned to Kitty-style clear+home on set, no resize (documented in terminal design + todo).
+- Logging tags expanded temporarily for protocol tracing; config was cleaned after capture.
 
 ### Constraints / Guardrails
 - Handoff docs are high-level only; progress tracking lives in todo + app_architecture docs.
@@ -47,6 +43,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - SDL3 is the only build path; regressions must be addressed promptly.
 - Incremental highlight edits can still be fragile; see TS-04 notes in the todo.
 - Terminal scrollback resize is still flawed; avoid deep work in this area until the redesign is implemented.
+ - Terminal DECCOLM semantics are partial (no resize); long-term fix deferred.
  - Scrollback view cache + reflow resizing are still in progress; expect instability during the redesign.
 
 ### In-Progress (Uncommitted)
