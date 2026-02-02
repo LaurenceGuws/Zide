@@ -63,6 +63,7 @@ const RenderCache = struct {
     selection_rows: std.ArrayList(bool),
     selection_cols_start: std.ArrayList(u16),
     selection_cols_end: std.ArrayList(u16),
+    row_hashes: std.ArrayList(u64),
     kitty_images: std.ArrayList(KittyImage),
     kitty_placements: std.ArrayList(KittyPlacement),
     rows: usize,
@@ -92,6 +93,7 @@ const RenderCache = struct {
             .selection_rows = std.ArrayList(bool).empty,
             .selection_cols_start = std.ArrayList(u16).empty,
             .selection_cols_end = std.ArrayList(u16).empty,
+            .row_hashes = std.ArrayList(u64).empty,
             .kitty_images = std.ArrayList(KittyImage).empty,
             .kitty_placements = std.ArrayList(KittyPlacement).empty,
             .rows = 0,
@@ -122,6 +124,7 @@ const RenderCache = struct {
         self.selection_rows.deinit(allocator);
         self.selection_cols_start.deinit(allocator);
         self.selection_cols_end.deinit(allocator);
+        self.row_hashes.deinit(allocator);
         self.kitty_images.deinit(allocator);
         self.kitty_placements.deinit(allocator);
     }
@@ -389,6 +392,35 @@ pub const TerminalSession = struct {
         self.input_snapshot.mouse_mode_sgr.store(self.input.mouse_mode_sgr, .release);
     }
 
+    fn hashRow(cells: []const Cell) u64 {
+        var h: u64 = 1469598103934665603;
+        const prime: u64 = 1099511628211;
+        for (cells) |cell| {
+            h = (h ^ @as(u64, cell.codepoint)) *% prime;
+            h = (h ^ @as(u64, cell.width)) *% prime;
+            const attrs = cell.attrs;
+            h = (h ^ @as(u64, attrs.fg.r)) *% prime;
+            h = (h ^ @as(u64, attrs.fg.g)) *% prime;
+            h = (h ^ @as(u64, attrs.fg.b)) *% prime;
+            h = (h ^ @as(u64, attrs.fg.a)) *% prime;
+            h = (h ^ @as(u64, attrs.bg.r)) *% prime;
+            h = (h ^ @as(u64, attrs.bg.g)) *% prime;
+            h = (h ^ @as(u64, attrs.bg.b)) *% prime;
+            h = (h ^ @as(u64, attrs.bg.a)) *% prime;
+            h = (h ^ @as(u64, attrs.underline_color.r)) *% prime;
+            h = (h ^ @as(u64, attrs.underline_color.g)) *% prime;
+            h = (h ^ @as(u64, attrs.underline_color.b)) *% prime;
+            h = (h ^ @as(u64, attrs.underline_color.a)) *% prime;
+            h = (h ^ @as(u64, @intFromBool(attrs.bold))) *% prime;
+            h = (h ^ @as(u64, @intFromBool(attrs.blink))) *% prime;
+            h = (h ^ @as(u64, @intFromBool(attrs.blink_fast))) *% prime;
+            h = (h ^ @as(u64, @intFromBool(attrs.reverse))) *% prime;
+            h = (h ^ @as(u64, @intFromBool(attrs.underline))) *% prime;
+            h = (h ^ @as(u64, attrs.link_id)) *% prime;
+        }
+        return h;
+    }
+
     fn updateViewCacheNoLock(self: *TerminalSession, generation: u64, scroll_offset: usize) void {
         const screen = self.activeScreenConst();
         const view = screen.snapshotView();
@@ -437,6 +469,7 @@ pub const TerminalSession = struct {
             cache.selection_rows.clearRetainingCapacity();
             cache.selection_cols_start.clearRetainingCapacity();
             cache.selection_cols_end.clearRetainingCapacity();
+            cache.row_hashes.clearRetainingCapacity();
             cache.rows = 0;
             cache.cols = 0;
             cache.history_len = history_len;
@@ -466,6 +499,7 @@ pub const TerminalSession = struct {
         _ = cache.selection_rows.resize(self.allocator, rows) catch {};
         _ = cache.selection_cols_start.resize(self.allocator, rows) catch {};
         _ = cache.selection_cols_end.resize(self.allocator, rows) catch {};
+        _ = cache.row_hashes.resize(self.allocator, rows) catch {};
 
         const start_line = if (total_lines > rows + clamped_offset)
             total_lines - rows - clamped_offset
@@ -487,6 +521,13 @@ pub const TerminalSession = struct {
                 const src_start = grid_row * cols;
                 std.mem.copyForwards(Cell, row_dest, view.cells[src_start .. src_start + cols]);
             }
+        }
+
+        row = 0;
+        while (row < rows) : (row += 1) {
+            const row_start = row * cols;
+            const row_cells = cache.cells.items[row_start .. row_start + cols];
+            cache.row_hashes.items[row] = hashRow(row_cells);
         }
 
         if (self.isAltActive()) {
@@ -585,6 +626,23 @@ pub const TerminalSession = struct {
             .{ .start_row = 0, .end_row = if (rows > 0) rows - 1 else 0, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
         else
             view.damage;
+
+        if (!needs_full_damage and view.dirty == .partial and active_cache.rows == rows and active_cache.cols == cols and active_cache.row_hashes.items.len == rows) {
+            var any_dirty = false;
+            var row_idx: usize = 0;
+            while (row_idx < rows) : (row_idx += 1) {
+                const hash_changed = cache.row_hashes.items[row_idx] != active_cache.row_hashes.items[row_idx];
+                cache.dirty_rows.items[row_idx] = hash_changed;
+                if (hash_changed) {
+                    cache.dirty_cols_start.items[row_idx] = 0;
+                    cache.dirty_cols_end.items[row_idx] = if (cols > 0) @intCast(cols - 1) else 0;
+                    any_dirty = true;
+                }
+            }
+            if (!any_dirty) {
+                cache.dirty = .none;
+            }
+        }
         cache.alt_active = self.isAltActive();
         cache.selection_active = selection_active;
         cache.sync_updates_active = self.sync_updates_active;
