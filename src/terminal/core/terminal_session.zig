@@ -585,11 +585,15 @@ pub const TerminalSession = struct {
             }
             cache.selection_active = selection_active;
         }
+        const kitty_generation = kitty_mod.kittyStateConst(self).generation;
         const needs_full_damage = force_full_damage or
-            scroll_offset != 0 or
+            rows != active_cache.rows or
+            cols != active_cache.cols or
+            scroll_offset != active_cache.scroll_offset or
             clear_generation != active_cache.clear_generation or
             self.isAltActive() != active_cache.alt_active or
             screen_reverse != active_cache.screen_reverse or
+            kitty_generation != active_cache.kitty_generation or
             view.dirty == .full;
         if (needs_full_damage) {
             row = 0;
