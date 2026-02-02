@@ -52,6 +52,9 @@ pub const TerminalWidget = struct {
     blink_last_active: bool = false,
     terminal_texture_ready: bool = false,
     last_render_generation: u64 = 0,
+    last_cell_w_i: i32 = 0,
+    last_cell_h_i: i32 = 0,
+    last_render_scale: f32 = 0,
 
     pub fn init(session: *TerminalSession, blink_style: BlinkStyle) TerminalWidget {
         return .{
@@ -75,6 +78,9 @@ pub const TerminalWidget = struct {
             .blink_last_active = false,
             .terminal_texture_ready = false,
             .last_render_generation = 0,
+            .last_cell_w_i = 0,
+            .last_cell_h_i = 0,
+            .last_render_scale = 0,
         };
     }
 
@@ -683,13 +689,15 @@ pub const TerminalWidget = struct {
         if (rows > 0 and cols > 0) {
             const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
             const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_height));
+            const cell_metrics_changed = cell_w_i != self.last_cell_w_i or cell_h_i != self.last_cell_h_i;
+            const render_scale_changed = r.render_scale != self.last_render_scale;
             const padding_x_i: i32 = @max(2, @divTrunc(cell_w_i, 2));
             const texture_w = cell_w_i * @as(i32, @intCast(cols)) + padding_x_i;
             const texture_h = cell_h_i * @as(i32, @intCast(rows));
             const recreated = r.ensureTerminalTexture(texture_w, texture_h);
             const kitty_changed = kitty_generation != self.last_kitty_generation;
             const gen_changed = cache.generation != self.last_render_generation;
-            var needs_full = recreated or gen_changed or cache.alt_active or cache.dirty == .full or scroll_changed or (cache.dirty != .none and scroll_offset > 0) or has_kitty or kitty_changed or has_blink;
+            var needs_full = recreated or gen_changed or cell_metrics_changed or render_scale_changed or cache.alt_active or cache.dirty == .full or scroll_changed or (cache.dirty != .none and scroll_offset > 0) or has_kitty or kitty_changed or has_blink;
             var needs_partial = cache.dirty == .partial and !needs_full and scroll_offset == 0;
             if (!self.terminal_texture_ready and rows > 0 and cols > 0) {
                 needs_full = true;
@@ -801,6 +809,9 @@ pub const TerminalWidget = struct {
                 }
                 self.terminal_texture_ready = true;
                 self.last_render_generation = cache.generation;
+                self.last_cell_w_i = cell_w_i;
+                self.last_cell_h_i = cell_h_i;
+                self.last_render_scale = r.render_scale;
                 const base_x_i: i32 = @intFromFloat(std.math.round(base_x));
                 const base_y_i: i32 = @intFromFloat(std.math.round(base_y));
                 const clip_w_i: i32 = @min(@as(i32, @intFromFloat(std.math.round(width))), cell_w_i * @as(i32, @intCast(cols)));

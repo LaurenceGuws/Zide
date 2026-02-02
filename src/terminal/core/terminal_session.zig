@@ -738,6 +738,7 @@ pub const TerminalSession = struct {
         cache.viewport_shift_rows = viewport_shift_rows;
         self.updateKittyViewNoLock(cache);
         self.render_cache_index.store(target_index, .release);
+
     }
 
     fn updateKittyViewNoLock(self: *TerminalSession, cache: *RenderCache) void {
@@ -1404,10 +1405,57 @@ pub const TerminalSession = struct {
         }
 
         const total_rows = rows_wraps.items.len;
+        var effective_total_rows = total_rows;
+        if (old_scroll_offset == 0 and old_history_len == 0 and total_rows > 0) {
+            const isDefaultCell = struct {
+                fn check(cell: Cell, default_cell_local: Cell) bool {
+                    return cell.codepoint == default_cell_local.codepoint and
+                        cell.width == default_cell_local.width and
+                        cell.attrs.fg.r == default_cell_local.attrs.fg.r and
+                        cell.attrs.fg.g == default_cell_local.attrs.fg.g and
+                        cell.attrs.fg.b == default_cell_local.attrs.fg.b and
+                        cell.attrs.fg.a == default_cell_local.attrs.fg.a and
+                        cell.attrs.bg.r == default_cell_local.attrs.bg.r and
+                        cell.attrs.bg.g == default_cell_local.attrs.bg.g and
+                        cell.attrs.bg.b == default_cell_local.attrs.bg.b and
+                        cell.attrs.bg.a == default_cell_local.attrs.bg.a and
+                        cell.attrs.bold == default_cell_local.attrs.bold and
+                        cell.attrs.reverse == default_cell_local.attrs.reverse and
+                        cell.attrs.underline == default_cell_local.attrs.underline and
+                        cell.attrs.underline_color.r == default_cell_local.attrs.underline_color.r and
+                        cell.attrs.underline_color.g == default_cell_local.attrs.underline_color.g and
+                        cell.attrs.underline_color.b == default_cell_local.attrs.underline_color.b and
+                        cell.attrs.underline_color.a == default_cell_local.attrs.underline_color.a and
+                        cell.attrs.link_id == default_cell_local.attrs.link_id;
+                }
+            }.check;
+
+            var idx: isize = @as(isize, @intCast(total_rows));
+            while (idx > 0) {
+                idx -= 1;
+                const row_idx = @as(usize, @intCast(idx));
+                const row_start = row_idx * new_cols_usize;
+                const row_cells = rows_cells.items[row_start .. row_start + new_cols_usize];
+                var non_blank = false;
+                for (row_cells) |cell| {
+                    if (!isDefaultCell(cell, default_cell)) {
+                        non_blank = true;
+                        break;
+                    }
+                }
+                if (non_blank) {
+                    effective_total_rows = row_idx + 1;
+                    break;
+                }
+                if (row_idx == 0) {
+                    effective_total_rows = 0;
+                }
+            }
+        }
         const max_scrollback = self.history.scrollbackCapacity();
         const visible_rows = @as(usize, rows);
-        const keep_rows = if (total_rows > max_scrollback + visible_rows) max_scrollback + visible_rows else total_rows;
-        const drop_rows = total_rows - keep_rows;
+        const keep_rows = if (effective_total_rows > max_scrollback + visible_rows) max_scrollback + visible_rows else effective_total_rows;
+        const drop_rows = effective_total_rows - keep_rows;
         const scrollback_rows = if (keep_rows > visible_rows) keep_rows - visible_rows else 0;
 
         var new_scrollback = try scrollback_buffer.ScrollbackBuffer.init(allocator, max_scrollback);
@@ -1470,6 +1518,7 @@ pub const TerminalSession = struct {
             self.view_cache_request_offset.store(@intCast(self.history.scrollback_offset), .release);
             self.view_cache_pending.store(true, .release);
             self.io_wait_cond.signal();
+            self.updateViewCacheForScrollLocked();
         }
         const max_offset = self.history.maxScrollOffset(rows);
         if (self.history.saved_scrollback_offset > max_offset) {
