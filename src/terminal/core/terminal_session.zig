@@ -523,15 +523,6 @@ pub const TerminalSession = struct {
             }
         }
 
-        if (needs_full_damage) {
-            row = 0;
-            while (row < rows) : (row += 1) {
-                const row_start = row * cols;
-                const row_cells = cache.cells.items[row_start .. row_start + cols];
-                cache.row_hashes.items[row] = hashRow(row_cells);
-            }
-        }
-
         if (self.isAltActive()) {
             for (cache.selection_rows.items) |*row_selected| {
                 row_selected.* = false;
@@ -588,6 +579,14 @@ pub const TerminalSession = struct {
             self.isAltActive() != active_cache.alt_active or
             screen_reverse != active_cache.screen_reverse or
             view.dirty == .full;
+        if (needs_full_damage) {
+            row = 0;
+            while (row < rows) : (row += 1) {
+                const row_start = row * cols;
+                const row_cells = cache.cells.items[row_start .. row_start + cols];
+                cache.row_hashes.items[row] = hashRow(row_cells);
+            }
+        }
 
         if (view.dirty_rows.len == rows and !needs_full_damage) {
             std.mem.copyForwards(bool, cache.dirty_rows.items, view.dirty_rows);
