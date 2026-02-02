@@ -48,6 +48,7 @@ pub var BindTexture: *const fn (GLenum, GLuint) callconv(.c) void = undefined;
 pub var TexParameteri: *const fn (GLenum, GLenum, GLint) callconv(.c) void = undefined;
 pub var TexImage2D: *const fn (GLenum, GLint, GLint, GLsizei, GLsizei, GLint, GLenum, GLenum, ?*const anyopaque) callconv(.c) void = undefined;
 pub var TexSubImage2D: *const fn (GLenum, GLint, GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, *const anyopaque) callconv(.c) void = undefined;
+pub var CopyTexSubImage2D: *const fn (GLenum, GLint, GLint, GLint, GLint, GLint, GLsizei, GLsizei) callconv(.c) void = undefined;
 pub var DeleteTextures: *const fn (GLsizei, *const GLuint) callconv(.c) void = undefined;
 pub var ActiveTexture: *const fn (GLenum) callconv(.c) void = undefined;
 pub var PixelStorei: *const fn (GLenum, GLint) callconv(.c) void = undefined;
@@ -108,6 +109,7 @@ pub fn load() !void {
     TexParameteri = try loadProc(@TypeOf(TexParameteri), "glTexParameteri");
     TexImage2D = try loadProc(@TypeOf(TexImage2D), "glTexImage2D");
     TexSubImage2D = try loadProc(@TypeOf(TexSubImage2D), "glTexSubImage2D");
+    CopyTexSubImage2D = try loadProc(@TypeOf(CopyTexSubImage2D), "glCopyTexSubImage2D");
     DeleteTextures = try loadProc(@TypeOf(DeleteTextures), "glDeleteTextures");
     ActiveTexture = try loadProc(@TypeOf(ActiveTexture), "glActiveTexture");
     PixelStorei = try loadProc(@TypeOf(PixelStorei), "glPixelStorei");

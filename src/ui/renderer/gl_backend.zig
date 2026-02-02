@@ -106,6 +106,32 @@ pub fn beginRenderTarget(renderer: anytype, target: ?RenderTarget) bool {
     return false;
 }
 
+pub fn scrollRenderTarget(renderer: anytype, target: ?RenderTarget, dx: i32, dy: i32, width: i32, height: i32) bool {
+    if (target == null) return false;
+    if (dx == 0 and dy == 0) return true;
+    const t = target.?;
+    if (width <= 0 or height <= 0) return false;
+    const abs_dx: i32 = if (dx < 0) -dx else dx;
+    const abs_dy: i32 = if (dy < 0) -dy else dy;
+    if (abs_dx >= width or abs_dy >= height) return false;
+
+    gl.BindFramebuffer(gl.c.GL_FRAMEBUFFER, t.fbo);
+    renderer.target_pixel_width = t.texture.width;
+    renderer.target_pixel_height = t.texture.height;
+    updateProjection(renderer, t.logical_width, t.logical_height);
+
+    const src_x: i32 = if (dx > 0) dx else 0;
+    const src_y: i32 = if (dy > 0) dy else 0;
+    const dst_x: i32 = if (dx > 0) 0 else -dx;
+    const dst_y: i32 = if (dy > 0) 0 else -dy;
+    const copy_w: i32 = width - abs_dx;
+    const copy_h: i32 = height - abs_dy;
+
+    gl.BindTexture(gl.c.GL_TEXTURE_2D, t.texture.id);
+    gl.CopyTexSubImage2D(gl.c.GL_TEXTURE_2D, 0, dst_x, dst_y, src_x, src_y, copy_w, copy_h);
+    return true;
+}
+
 pub fn ensureRenderTarget(target: *?RenderTarget, width: i32, height: i32, logical_width: i32, logical_height: i32, filter: i32) bool {
     if (width <= 0 or height <= 0 or logical_width <= 0 or logical_height <= 0) return false;
     if (target.*) |t| {

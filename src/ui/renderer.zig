@@ -613,6 +613,13 @@ pub const Renderer = struct {
         }
     }
 
+    pub fn scrollTerminalTexture(self: *Renderer, dx: i32, dy: i32) bool {
+        if (self.terminal_target) |target| {
+            return targets.scrollRenderTarget(self, self.terminal_target, dx, dy, target.logical_width, target.logical_height);
+        }
+        return false;
+    }
+
     pub fn drawEditorTexture(self: *Renderer, x: f32, y: f32) void {
         if (self.editor_target) |target| {
             const src = texture_draw.fullTextureSrcRect(target.texture);
