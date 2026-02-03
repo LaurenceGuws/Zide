@@ -656,6 +656,13 @@ const AppState = struct {
         var suppress_terminal_shortcuts = false;
         var handled_shortcut = false;
         for (self.input_router.actionsSlice()) |action| {
+            if (action.kind == .reload_config) {
+                try self.reloadConfig();
+                self.needs_redraw = true;
+                handled_shortcut = true;
+            }
+        }
+        for (self.input_router.actionsSlice()) |action| {
             if (focus != .terminal) continue;
             switch (action.kind) {
                 .copy, .paste => suppress_terminal_shortcuts = true,
@@ -1187,6 +1194,85 @@ const AppState = struct {
                 }
             }
         }
+    }
+
+    fn reloadConfig(self: *AppState) !void {
+        const log = app_logger.logger("config.reload");
+        var config = config_mod.loadConfig(self.allocator) catch |err| {
+            log.logf("reload failed: {any}", .{err});
+            return;
+        };
+        defer config_mod.freeConfig(self.allocator, &config);
+
+        if (config.log_file_filter) |filter| {
+            app_logger.setFileFilterString(filter) catch {};
+        }
+        if (config.log_console_filter) |filter| {
+            app_logger.setConsoleFilterString(filter) catch {};
+        }
+        if (config.sdl_log_level) |level| {
+            app_shell.setSdlLogLevel(level);
+        }
+        if (config.theme) |theme_config| {
+            var theme = self.shell.theme().*;
+            config_mod.applyThemeConfig(&theme, theme_config);
+            self.shell.setTheme(theme);
+        }
+
+        self.editor_wrap = config.editor_wrap orelse self.editor_wrap;
+        if (config.editor_highlight_budget != null) {
+            self.editor_highlight_budget = config.editor_highlight_budget;
+        }
+        if (config.editor_width_budget != null) {
+            self.editor_width_budget = config.editor_width_budget;
+        }
+
+        if (config.keybinds) |binds| {
+            self.input_router.setBindings(binds);
+        }
+
+        if (config.terminal_blink_style) |blink_style| {
+            self.terminal_blink_style = switch (blink_style) {
+                .kitty => .kitty,
+                .off => .off,
+            };
+            for (self.terminal_widgets.items) |*widget| {
+                widget.blink_style = self.terminal_blink_style;
+            }
+        }
+
+        if (config.terminal_cursor_shape != null or config.terminal_cursor_blink != null) {
+            var cursor_style = term_types.default_cursor_style;
+            if (config.terminal_cursor_shape) |shape| {
+                cursor_style.shape = shape;
+            }
+            if (config.terminal_cursor_blink) |blink| {
+                cursor_style.blink = blink;
+            }
+            self.terminal_cursor_style = cursor_style;
+            for (self.terminals.items) |term| {
+                term.primary.cursor_style = cursor_style;
+                term.alt.cursor_style = cursor_style;
+                term.force_full_damage.store(true, .release);
+                term.updateViewCacheForScroll();
+            }
+            self.needs_redraw = true;
+            log.logStdout("reload terminal cursor shape={s} blink={any}", .{ @tagName(cursor_style.shape), cursor_style.blink });
+        }
+
+        if (config.terminal_scrollback_rows != null) {
+            self.terminal_scrollback_rows = config.terminal_scrollback_rows;
+            log.logStdout("reload note: terminal scrollback cap applies to new sessions", .{});
+        }
+
+        if (config.app_font_path != null or config.app_font_size != null or
+            config.editor_font_path != null or config.editor_font_size != null or
+            config.terminal_font_path != null or config.terminal_font_size != null)
+        {
+            log.logStdout("reload note: font changes require restart", .{});
+        }
+
+        log.logStdout("config reloaded", .{});
     }
 
     fn draw(self: *AppState) void {
