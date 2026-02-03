@@ -50,6 +50,7 @@ pub const TerminalWidget = struct {
     blink_last_slow_on: bool = true,
     blink_last_fast_on: bool = true,
     blink_last_active: bool = false,
+    cursor_blink_pause_until: f64 = 0,
     terminal_texture_ready: bool = false,
     last_render_generation: u64 = 0,
     last_cell_w_i: i32 = 0,
@@ -122,6 +123,10 @@ pub const TerminalWidget = struct {
         }
         self.blink_last_active = true;
         return changed;
+    }
+
+    pub fn noteInput(self: *TerminalWidget, now: f64) void {
+        self.cursor_blink_pause_until = now + 0.4;
     }
 
     pub fn deinit(self: *TerminalWidget) void {
@@ -424,9 +429,16 @@ pub const TerminalWidget = struct {
         self.last_scroll_offset = scroll_offset;
         const end_line = total_lines - scroll_offset;
         const start_line = if (end_line > rows) end_line - rows else 0;
-        const draw_cursor = scroll_offset == 0 and cache.cursor_visible;
+        var draw_cursor = scroll_offset == 0 and cache.cursor_visible;
         const cursor = if (draw_cursor) cache.cursor else CursorPos{ .row = rows + 1, .col = cols + 1 };
         const cursor_style = cache.cursor_style;
+        if (draw_cursor and cursor_style.blink) {
+            if (blink_time >= self.cursor_blink_pause_until) {
+                const period: f64 = 0.5;
+                const phase = @mod(blink_time, period * 2.0);
+                draw_cursor = phase < period;
+            }
+        }
         const selection_active = cache.selection_active;
         const kitty_generation = cache.kitty_generation;
         var has_blink = false;

@@ -1,4 +1,5 @@
 -- Zide default config reference (loaded as system defaults).
+-- This file doubles as documentation; values here are active defaults.
 -- Copy it to ~/.config/zide/init.lua or ./.zide.lua to customize.
 
 return {
@@ -91,6 +92,12 @@ return {
         -- font = { path = "/usr/share/fonts/...", size = 16 },
         -- Blink style: "kitty" (default) or "off".
         -- blink = "kitty",
+        -- Scrollback line cap (min 100, max 100000). Invalid values warn and fall back to 1000.
+        scrollback = 1000,
+        -- Cursor configuration.
+        -- Valid shapes: "block", "underline", "bar". Blink is boolean.
+        -- Invalid values warn and fall back to block/true.
+        cursor = { shape = "block", blink = true },
     },
 
     -- Keybindings (keycode-based). Key names match `shared_types.input.Key` tags.
