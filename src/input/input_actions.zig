@@ -26,6 +26,7 @@ pub const ActionKind = enum {
     undo,
     redo,
     cut,
+    reload_config,
 };
 
 pub const InputAction = struct {
@@ -128,5 +129,6 @@ fn actionName(kind: ActionKind) []const u8 {
         .undo => "undo",
         .redo => "redo",
         .cut => "cut",
+        .reload_config => "reload_config",
     };
 }

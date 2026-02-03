@@ -106,6 +106,7 @@ return {
     -- Use ["repeat"] = true for repeatable actions (zoom, undo).
     keybinds = {
         global = {
+            -- Config hot reload.
             { key = "n", mods = { "ctrl" }, action = "new_editor" },
             { key = "equal", mods = { "ctrl" }, action = "zoom_in", ["repeat"] = true },
             { key = "kp_add", mods = { "ctrl" }, action = "zoom_in", ["repeat"] = true },
@@ -113,6 +114,7 @@ return {
             { key = "kp_subtract", mods = { "ctrl" }, action = "zoom_out", ["repeat"] = true },
             { key = "zero", mods = { "ctrl" }, action = "zoom_reset" },
             { key = "grave", mods = { "ctrl" }, action = "toggle_terminal" },
+            { key = "f5", mods = { "ctrl", "shift" }, action = "reload_config" },
         },
         editor = {
             { key = "s", mods = { "ctrl" }, action = "save" },
