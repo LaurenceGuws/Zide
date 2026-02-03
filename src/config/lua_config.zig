@@ -4,6 +4,7 @@ const sdl_api = @import("../platform/sdl_api.zig");
 const input_actions = @import("../input/input_actions.zig");
 const input_types = @import("../types/input.zig");
 const app_logger = @import("../app_logger.zig");
+const term_types = @import("../terminal/model/types.zig");
 
 const c = @cImport({
     @cInclude("lua.h");
@@ -38,6 +39,9 @@ pub const Config = struct {
     terminal_font_path: ?[]u8,
     terminal_font_size: ?f32,
     terminal_blink_style: ?TerminalBlinkStyle,
+    terminal_scrollback_rows: ?usize,
+    terminal_cursor_shape: ?term_types.CursorShape,
+    terminal_cursor_blink: ?bool,
     theme: ?ThemeConfig,
     keybinds: ?[]input_actions.BindSpec,
 };
@@ -46,6 +50,10 @@ pub const TerminalBlinkStyle = enum {
     kitty,
     off,
 };
+
+const terminal_scrollback_default: usize = 1000;
+const terminal_scrollback_min: usize = 100;
+const terminal_scrollback_max: usize = 100000;
 
 pub const ThemeConfig = struct {
     background: ?Color = null,
@@ -97,6 +105,9 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
         .terminal_font_path = null,
         .terminal_font_size = null,
         .terminal_blink_style = null,
+        .terminal_scrollback_rows = null,
+        .terminal_cursor_shape = null,
+        .terminal_cursor_blink = null,
         .theme = null,
         .keybinds = null,
     };
@@ -192,6 +203,15 @@ fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) voi
     if (overlay.terminal_blink_style != null) {
         base.terminal_blink_style = overlay.terminal_blink_style;
     }
+    if (overlay.terminal_scrollback_rows != null) {
+        base.terminal_scrollback_rows = overlay.terminal_scrollback_rows;
+    }
+    if (overlay.terminal_cursor_shape != null) {
+        base.terminal_cursor_shape = overlay.terminal_cursor_shape;
+    }
+    if (overlay.terminal_cursor_blink != null) {
+        base.terminal_cursor_blink = overlay.terminal_cursor_blink;
+    }
     if (overlay.theme) |overlay_theme| {
         if (base.theme) |base_theme| {
             var merged = base_theme;
@@ -238,6 +258,9 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             .terminal_font_path = null,
             .terminal_font_size = null,
             .terminal_blink_style = null,
+            .terminal_scrollback_rows = null,
+            .terminal_cursor_shape = null,
+            .terminal_cursor_blink = null,
             .theme = null,
             .keybinds = null,
         };
@@ -259,6 +282,9 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     var terminal_font_path: ?[]u8 = null;
     var terminal_font_size: ?f32 = null;
     var terminal_blink_style: ?TerminalBlinkStyle = null;
+    var terminal_scrollback_rows: ?usize = null;
+    var terminal_cursor_shape: ?term_types.CursorShape = null;
+    var terminal_cursor_blink: ?bool = null;
     var theme: ?ThemeConfig = null;
     var keybinds: ?[]input_actions.BindSpec = null;
 
@@ -369,6 +395,51 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             terminal_blink_style = if (c.lua_toboolean(L, -1) != 0) .kitty else .off;
         }
         c.lua_pop(L, 1);
+
+        _ = c.lua_getfield(L, -1, "scrollback");
+        if (c.lua_isnumber(L, -1) != 0) {
+            const value = c.lua_tointegerx(L, -1, null);
+            if (value < @as(isize, @intCast(terminal_scrollback_min)) or value > @as(isize, @intCast(terminal_scrollback_max))) {
+                std.debug.print("config warning: terminal.scrollback out of range, using {d}\n", .{terminal_scrollback_default});
+                terminal_scrollback_rows = terminal_scrollback_default;
+            } else {
+                terminal_scrollback_rows = @intCast(value);
+            }
+        } else if (!c.lua_isnil(L, -1)) {
+            std.debug.print("config warning: terminal.scrollback invalid, using {d}\n", .{terminal_scrollback_default});
+            terminal_scrollback_rows = terminal_scrollback_default;
+        }
+        c.lua_pop(L, 1);
+
+        _ = c.lua_getfield(L, -1, "cursor");
+        if (c.lua_istable(L, -1)) {
+            _ = c.lua_getfield(L, -1, "shape");
+            if (c.lua_isstring(L, -1) != 0) {
+                terminal_cursor_shape = parseCursorShape(L, -1);
+                if (terminal_cursor_shape == null) {
+                    std.debug.print("config warning: terminal.cursor.shape invalid, using block\n", .{});
+                    terminal_cursor_shape = .block;
+                }
+            } else if (!c.lua_isnil(L, -1)) {
+                std.debug.print("config warning: terminal.cursor.shape invalid, using block\n", .{});
+                terminal_cursor_shape = .block;
+            }
+            c.lua_pop(L, 1);
+
+            _ = c.lua_getfield(L, -1, "blink");
+            if (c.lua_isboolean(L, -1)) {
+                terminal_cursor_blink = c.lua_toboolean(L, -1) != 0;
+            } else if (!c.lua_isnil(L, -1)) {
+                std.debug.print("config warning: terminal.cursor.blink invalid, using true\n", .{});
+                terminal_cursor_blink = true;
+            }
+            c.lua_pop(L, 1);
+        } else if (!c.lua_isnil(L, -1)) {
+            std.debug.print("config warning: terminal.cursor invalid, using defaults\n", .{});
+            terminal_cursor_shape = .block;
+            terminal_cursor_blink = true;
+        }
+        c.lua_pop(L, 1);
     }
     c.lua_pop(L, 1);
 
@@ -398,6 +469,9 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         .terminal_font_path = terminal_font_path,
         .terminal_font_size = terminal_font_size,
         .terminal_blink_style = terminal_blink_style,
+        .terminal_scrollback_rows = terminal_scrollback_rows,
+        .terminal_cursor_shape = terminal_cursor_shape,
+        .terminal_cursor_blink = terminal_cursor_blink,
         .theme = theme,
         .keybinds = keybinds,
     };
@@ -409,6 +483,15 @@ fn parseTerminalBlink(L: *c.lua_State, idx: c_int) ?TerminalBlinkStyle {
     if (std.mem.eql(u8, value, "kitty")) return .kitty;
     if (std.mem.eql(u8, value, "off")) return .off;
     if (std.mem.eql(u8, value, "ghostty")) return .off;
+    return null;
+}
+
+fn parseCursorShape(L: *c.lua_State, idx: c_int) ?term_types.CursorShape {
+    const value = luaStringToSlice(L, idx);
+    if (value.len == 0) return null;
+    if (std.mem.eql(u8, value, "block")) return .block;
+    if (std.mem.eql(u8, value, "underline")) return .underline;
+    if (std.mem.eql(u8, value, "bar")) return .bar;
     return null;
 }
 

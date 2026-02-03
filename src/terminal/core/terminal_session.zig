@@ -277,14 +277,28 @@ pub const TerminalSession = struct {
     force_full_damage: std.atomic.Value(bool),
     saved_charset: SavedCharsetState,
 
+    pub const InitOptions = struct {
+        scrollback_rows: ?usize = null,
+        cursor_style: ?types.CursorStyle = null,
+    };
+
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16) !*TerminalSession {
+        return initWithOptions(allocator, rows, cols, .{});
+    }
+
+    pub fn initWithOptions(allocator: std.mem.Allocator, rows: u16, cols: u16, options: InitOptions) !*TerminalSession {
         const session = try allocator.create(TerminalSession);
         const default_attrs = types.defaultCell().attrs;
-        const primary = try Screen.init(allocator, rows, cols, default_attrs);
-        const alt = try Screen.init(allocator, rows, cols, default_attrs);
-        const history = try history_mod.TerminalHistory.init(allocator, default_scrollback_rows, cols);
+        var primary = try Screen.init(allocator, rows, cols, default_attrs);
+        var alt = try Screen.init(allocator, rows, cols, default_attrs);
+        if (options.cursor_style) |cursor_style| {
+            primary.cursor_style = cursor_style;
+            alt.cursor_style = cursor_style;
+        }
+        const scrollback_rows = options.scrollback_rows orelse default_scrollback_rows;
+        const history = try history_mod.TerminalHistory.init(allocator, scrollback_rows, cols);
         const log = app_logger.logger("terminal.core");
-        log.logf("terminal init rows={d} cols={d} scrollback_max={d}", .{ rows, cols, default_scrollback_rows });
+        log.logf("terminal init rows={d} cols={d} scrollback_max={d}", .{ rows, cols, scrollback_rows });
         log.logStdout("terminal init rows={d} cols={d}", .{ rows, cols });
         const palette_default = buildDefaultPalette();
         session.* = .{

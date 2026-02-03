@@ -82,6 +82,8 @@ const AppState = struct {
     show_terminal: bool,
     terminal_height: f32,
     terminal_blink_style: TerminalWidget.BlinkStyle,
+    terminal_cursor_style: ?term_types.CursorStyle,
+    terminal_scrollback_rows: ?usize,
 
     // Dirty tracking for efficient rendering
     needs_redraw: bool,
@@ -107,6 +109,8 @@ const AppState = struct {
     editor_cluster_cache: EditorClusterCache,
     editor_render_cache: EditorRenderCache,
     grammar_manager: grammar_manager_mod.GrammarManager,
+    last_cursor_blink_on: bool,
+    last_cursor_blink_armed: bool,
     frame_id: u64,
     metrics: Metrics,
     metrics_logger: Logger,
@@ -143,6 +147,9 @@ const AppState = struct {
                 .terminal_font_path = null,
                 .terminal_font_size = null,
                 .terminal_blink_style = null,
+                .terminal_scrollback_rows = null,
+                .terminal_cursor_shape = null,
+                .terminal_cursor_blink = null,
                 .theme = null,
                 .keybinds = null,
             };
@@ -203,6 +210,17 @@ const AppState = struct {
             .kitty => .kitty,
             .off => .off,
         };
+        var terminal_cursor_style: ?term_types.CursorStyle = null;
+        if (config.terminal_cursor_shape != null or config.terminal_cursor_blink != null) {
+            var cursor_style = term_types.default_cursor_style;
+            if (config.terminal_cursor_shape) |shape| {
+                cursor_style.shape = shape;
+            }
+            if (config.terminal_cursor_blink) |blink| {
+                cursor_style.blink = blink;
+            }
+            terminal_cursor_style = cursor_style;
+        }
 
         var grammar_manager = try grammar_manager_mod.GrammarManager.init(allocator);
         errdefer grammar_manager.deinit();
@@ -224,9 +242,13 @@ const AppState = struct {
             .show_terminal = app_mode == .terminal,
             .terminal_height = 200,
             .terminal_blink_style = terminal_blink_style,
+            .terminal_cursor_style = terminal_cursor_style,
+            .terminal_scrollback_rows = config.terminal_scrollback_rows,
             .needs_redraw = true,
             .idle_frames = 0,
             .last_mouse_pos = .{ .x = -1, .y = -1 },
+            .last_cursor_blink_on = true,
+            .last_cursor_blink_armed = false,
             .resizing_terminal = false,
             .resize_start_y = 0,
             .resize_start_height = 0,
@@ -343,6 +365,7 @@ const AppState = struct {
         const width = @as(f32, @floatFromInt(shell.width()));
         const height = @as(f32, @floatFromInt(shell.height()));
         const layout = self.computeLayout(width, height);
+
         if (self.app_mode == .terminal) {
             self.active_kind = .terminal;
         } else if (self.app_mode == .editor) {
@@ -352,7 +375,10 @@ const AppState = struct {
         const rows: u16 = @intCast(@max(24, @divFloor(@as(i32, @intFromFloat(layout.terminal.height)), @as(i32, @intFromFloat(shell.terminalCellHeight())))));
         const theme = shell.theme();
 
-        const term = try TerminalSession.init(self.allocator, rows, cols);
+        const term = try TerminalSession.initWithOptions(self.allocator, rows, cols, .{
+            .scrollback_rows = self.terminal_scrollback_rows,
+            .cursor_style = self.terminal_cursor_style,
+        });
         term.setDefaultColors(
             term_types.Color{
                 .r = theme.foreground.r,
@@ -638,6 +664,9 @@ const AppState = struct {
         }
         if (focus == .terminal and (self.app_mode == .terminal or self.show_terminal) and self.terminals.items.len > 0) {
             var term_widget = &self.terminal_widgets.items[0];
+            if (input_batch.events.items.len > 0) {
+                term_widget.noteInput(now);
+            }
             for (self.input_router.actionsSlice()) |action| {
                 switch (action.kind) {
                     .copy => {
@@ -735,6 +764,31 @@ const AppState = struct {
         const width = @as(f32, @floatFromInt(shell.width()));
         const height = @as(f32, @floatFromInt(shell.height()));
         const layout = self.computeLayout(width, height);
+
+        if (self.terminals.items.len > 0 and self.terminal_widgets.items.len > 0) {
+            const term_widget = &self.terminal_widgets.items[0];
+            const cache = term_widget.session.renderCache();
+            const blink_armed = cache.cursor_visible and cache.cursor_style.blink and cache.scroll_offset == 0;
+            if (blink_armed != self.last_cursor_blink_armed) {
+                self.last_cursor_blink_armed = blink_armed;
+                const cursor_log = app_logger.logger("terminal.cursor");
+                if (cursor_log.enabled_file or cursor_log.enabled_console) {
+                    cursor_log.logf(
+                        "cursor blink armed={any} visible={any} blink={any} scroll_offset={d}",
+                        .{ blink_armed, cache.cursor_visible, cache.cursor_style.blink, cache.scroll_offset },
+                    );
+                }
+            }
+            if (blink_armed) {
+                const period: f64 = 0.5;
+                const phase = @mod(now, period * 2.0);
+                const blink_on = phase < period;
+                if (blink_on != self.last_cursor_blink_on) {
+                    self.last_cursor_blink_on = blink_on;
+                    self.needs_redraw = true;
+                }
+            }
+        }
 
         if (self.window_resize_pending and (now - self.window_resize_last_time) >= 0.12) {
             self.window_resize_pending = false;
