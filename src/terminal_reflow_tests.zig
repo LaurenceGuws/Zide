@@ -257,6 +257,39 @@ test "terminal reflow remaps saved cursor" {
     try std.testing.expectEqual(@as(usize, 2), session.primary.saved_cursor.cursor.col);
 }
 
+test "terminal reflow preserves multi-row cell roots" {
+    const allocator = std.testing.allocator;
+
+    var session = try term_mod.TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const default_cell = session.primary.defaultCell();
+    const idx_root = 0 * 4 + 1;
+    const idx_cont = 1 * 4 + 1;
+    session.primary.grid.cells.items[idx_root] = .{
+        .codepoint = 'X',
+        .width = 1,
+        .height = 2,
+        .x = 0,
+        .y = 0,
+        .attrs = default_cell.attrs,
+    };
+    session.primary.grid.cells.items[idx_cont] = .{
+        .codepoint = 0,
+        .width = 1,
+        .height = 2,
+        .x = 0,
+        .y = 1,
+        .attrs = default_cell.attrs,
+    };
+
+    try session.resize(2, 3);
+
+    const snapshot = session.snapshot();
+    try std.testing.expectEqual(@as(u32, 'X'), snapshot.cells[0 * 3 + 1].codepoint);
+    try std.testing.expectEqual(@as(u8, 0), snapshot.cells[0 * 3 + 1].y);
+}
+
 test "terminal reflow keeps top content visible without scrollback" {
     const allocator = std.testing.allocator;
 
