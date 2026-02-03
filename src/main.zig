@@ -90,6 +90,8 @@ const AppState = struct {
     resizing_terminal: bool,
     resize_start_y: f32,
     resize_start_height: f32,
+    window_resize_pending: bool,
+    window_resize_last_time: f64,
     mouse_debug: bool,
     terminal_scroll_dragging: bool,
     terminal_scroll_grab_offset: f32,
@@ -228,6 +230,8 @@ const AppState = struct {
             .resizing_terminal = false,
             .resize_start_y = 0,
             .resize_start_height = 0,
+            .window_resize_pending = false,
+            .window_resize_last_time = 0,
             .mouse_debug = std.c.getenv("ZIDE_MOUSE_DEBUG") != null,
             .terminal_scroll_dragging = false,
             .terminal_scroll_grab_offset = 0,
@@ -723,11 +727,19 @@ const AppState = struct {
             if (try shell.refreshUiScale()) {
                 self.applyUiScale();
             }
+            self.window_resize_pending = true;
+            self.window_resize_last_time = now;
+            self.needs_redraw = true;
+        }
+
+        const width = @as(f32, @floatFromInt(shell.width()));
+        const height = @as(f32, @floatFromInt(shell.height()));
+        const layout = self.computeLayout(width, height);
+
+        if (self.window_resize_pending and (now - self.window_resize_last_time) >= 0.12) {
+            self.window_resize_pending = false;
             if (self.terminals.items.len > 0) {
                 const term = self.terminals.items[0];
-                const width = @as(f32, @floatFromInt(shell.width()));
-                const height = @as(f32, @floatFromInt(shell.height()));
-                const layout = self.computeLayout(width, height);
                 const effective_height = if (self.app_mode == .ide and !self.show_terminal) self.terminal_height else layout.terminal.height;
                 const cols: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(layout.terminal.width)), @as(i32, @intFromFloat(shell.terminalCellWidth())))));
                 const rows: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(effective_height)), @as(i32, @intFromFloat(shell.terminalCellHeight())))));
@@ -739,10 +751,6 @@ const AppState = struct {
             }
             self.needs_redraw = true;
         }
-
-        const width = @as(f32, @floatFromInt(shell.width()));
-        const height = @as(f32, @floatFromInt(shell.height()));
-        const layout = self.computeLayout(width, height);
 
         // Check for mouse activity (doesn't consume input)
         const mouse = input_batch.mouse_pos;
