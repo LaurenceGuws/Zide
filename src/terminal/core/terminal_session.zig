@@ -738,7 +738,6 @@ pub const TerminalSession = struct {
         cache.viewport_shift_rows = viewport_shift_rows;
         self.updateKittyViewNoLock(cache);
         self.render_cache_index.store(target_index, .release);
-
     }
 
     fn updateKittyViewNoLock(self: *TerminalSession, cache: *RenderCache) void {
@@ -909,7 +908,6 @@ pub const TerminalSession = struct {
 
             if (had_data) {
                 self.state_mutex.lock();
-                self.clearSelection();
                 self.force_full_damage.store(true, .release);
                 self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
                 self.state_mutex.unlock();
@@ -963,7 +961,6 @@ pub const TerminalSession = struct {
                 if (processed >= max_bytes_per_poll) break;
             }
             if (had_data) {
-                self.clearSelection();
                 self.force_full_damage.store(true, .release);
                 self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
             }
@@ -1194,7 +1191,6 @@ pub const TerminalSession = struct {
             } else {
                 self.setScrollOffset(self.history.scrollback_offset);
             }
-            self.clearSelection();
         }
     }
 
@@ -1237,6 +1233,32 @@ pub const TerminalSession = struct {
         old_cursor: CursorPos,
         old_selection: ?types.TerminalSelection,
     ) !void {
+        const reflow_log = app_logger.logger("terminal.reflow");
+        if (reflow_log.enabled_file or reflow_log.enabled_console) {
+            if (old_selection) |selection| {
+                reflow_log.logf("reflow start rows={d}->{d} cols={d}->{d} total_lines={d} scroll_offset={d} selection start={d},{d} end={d},{d}", .{
+                    old_rows,
+                    rows,
+                    old_cols,
+                    cols,
+                    old_total_lines,
+                    old_scroll_offset,
+                    selection.start.row,
+                    selection.start.col,
+                    selection.end.row,
+                    selection.end.col,
+                });
+            } else {
+                reflow_log.logf("reflow start rows={d}->{d} cols={d}->{d} total_lines={d} scroll_offset={d} selection=none", .{
+                    old_rows,
+                    rows,
+                    old_cols,
+                    cols,
+                    old_total_lines,
+                    old_scroll_offset,
+                });
+            }
+        }
         const allocator = self.allocator;
         const default_cell = self.primary.defaultCell();
         const old_cols_usize = @as(usize, old_cols);
@@ -1550,13 +1572,45 @@ pub const TerminalSession = struct {
                         self.history.selection.selection.selecting = selection.selecting;
                         self.history.selection.selection.start = .{ .row = new_start_row, .col = start_global.col };
                         self.history.selection.selection.end = .{ .row = new_end_row, .col = end_global.col };
+                        if (reflow_log.enabled_file or reflow_log.enabled_console) {
+                            reflow_log.logf("reflow selection remap start={d},{d} end={d},{d} -> start={d},{d} end={d},{d}", .{
+                                start_row,
+                                start_col,
+                                end_row,
+                                end_col,
+                                new_start_row,
+                                start_global.col,
+                                new_end_row,
+                                end_global.col,
+                            });
+                        }
                     } else {
+                        if (reflow_log.enabled_file or reflow_log.enabled_console) {
+                            reflow_log.logf("reflow selection dropped reason=drop_rows start_row={d} end_row={d} drop_rows={d}", .{
+                                start_global.row,
+                                end_global.row,
+                                drop_rows,
+                            });
+                        }
                         self.history.clearSelection();
                     }
                 } else {
+                    if (reflow_log.enabled_file or reflow_log.enabled_console) {
+                        reflow_log.logf("reflow selection dropped reason=map_failed start_line={d} end_line={d}", .{
+                            start_map.line_index,
+                            end_map.line_index,
+                        });
+                    }
                     self.history.clearSelection();
                 }
             } else {
+                if (reflow_log.enabled_file or reflow_log.enabled_console) {
+                    reflow_log.logf("reflow selection dropped reason=row_out_of_range start={d} end={d} row_map_len={d}", .{
+                        start_row,
+                        end_row,
+                        row_map.items.len,
+                    });
+                }
                 self.history.clearSelection();
             }
         } else {
@@ -2378,7 +2432,6 @@ fn parseThreadMain(session: *TerminalSession) void {
         if (had_data or pending_offset != null) {
             const target_offset = pending_offset orelse session.history.scrollOffset();
             session.state_mutex.lock();
-            session.clearSelection();
             session.updateViewCacheNoLock(session.output_generation.load(.acquire), target_offset);
             session.state_mutex.unlock();
             session.output_pending.store(true, .release);

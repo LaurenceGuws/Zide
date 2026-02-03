@@ -17,6 +17,7 @@ vendor/wayland-protocols/
 build/
 reference_repos
 zide.log
+/.zide.lua
 
 # Tree-sitter grammar pack tooling
 tools/grammar_packs/work/
