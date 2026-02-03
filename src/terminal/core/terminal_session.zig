@@ -1238,6 +1238,13 @@ pub const TerminalSession = struct {
         const old_cols_usize = @as(usize, old_cols);
         const new_cols_usize = @as(usize, cols);
         const old_history_len = self.history.scrollbackCount();
+        const old_saved_cursor = self.primary.saved_cursor;
+
+        const isBlankCell = struct {
+            fn check(cell: Cell) bool {
+                return cell.codepoint == 0 and cell.width == 1;
+            }
+        }.check;
 
         var row_map = std.ArrayList(RowMapEntry).empty;
         defer row_map.deinit(allocator);
@@ -1301,25 +1308,7 @@ pub const TerminalSession = struct {
                 while (col > 0) {
                     col -= 1;
                     const cell = row_cells[col];
-                    const is_default = cell.codepoint == default_cell.codepoint and
-                        cell.width == default_cell.width and
-                        cell.attrs.fg.r == default_cell.attrs.fg.r and
-                        cell.attrs.fg.g == default_cell.attrs.fg.g and
-                        cell.attrs.fg.b == default_cell.attrs.fg.b and
-                        cell.attrs.fg.a == default_cell.attrs.fg.a and
-                        cell.attrs.bg.r == default_cell.attrs.bg.r and
-                        cell.attrs.bg.g == default_cell.attrs.bg.g and
-                        cell.attrs.bg.b == default_cell.attrs.bg.b and
-                        cell.attrs.bg.a == default_cell.attrs.bg.a and
-                        cell.attrs.bold == default_cell.attrs.bold and
-                        cell.attrs.reverse == default_cell.attrs.reverse and
-                        cell.attrs.underline == default_cell.attrs.underline and
-                        cell.attrs.underline_color.r == default_cell.attrs.underline_color.r and
-                        cell.attrs.underline_color.g == default_cell.attrs.underline_color.g and
-                        cell.attrs.underline_color.b == default_cell.attrs.underline_color.b and
-                        cell.attrs.underline_color.a == default_cell.attrs.underline_color.a and
-                        cell.attrs.link_id == default_cell.attrs.link_id;
-                    if (!is_default) {
+                    if (!isBlankCell(cell)) {
                         row_len = col + 1;
                         break;
                     }
@@ -1404,30 +1393,7 @@ pub const TerminalSession = struct {
 
         const total_rows = rows_wraps.items.len;
         var effective_total_rows = total_rows;
-        if (old_scroll_offset == 0 and old_history_len == 0 and total_rows > 0) {
-            const isDefaultCell = struct {
-                fn check(cell: Cell, default_cell_local: Cell) bool {
-                    return cell.codepoint == default_cell_local.codepoint and
-                        cell.width == default_cell_local.width and
-                        cell.attrs.fg.r == default_cell_local.attrs.fg.r and
-                        cell.attrs.fg.g == default_cell_local.attrs.fg.g and
-                        cell.attrs.fg.b == default_cell_local.attrs.fg.b and
-                        cell.attrs.fg.a == default_cell_local.attrs.fg.a and
-                        cell.attrs.bg.r == default_cell_local.attrs.bg.r and
-                        cell.attrs.bg.g == default_cell_local.attrs.bg.g and
-                        cell.attrs.bg.b == default_cell_local.attrs.bg.b and
-                        cell.attrs.bg.a == default_cell_local.attrs.bg.a and
-                        cell.attrs.bold == default_cell_local.attrs.bold and
-                        cell.attrs.reverse == default_cell_local.attrs.reverse and
-                        cell.attrs.underline == default_cell_local.attrs.underline and
-                        cell.attrs.underline_color.r == default_cell_local.attrs.underline_color.r and
-                        cell.attrs.underline_color.g == default_cell_local.attrs.underline_color.g and
-                        cell.attrs.underline_color.b == default_cell_local.attrs.underline_color.b and
-                        cell.attrs.underline_color.a == default_cell_local.attrs.underline_color.a and
-                        cell.attrs.link_id == default_cell_local.attrs.link_id;
-                }
-            }.check;
-
+        if (total_rows > 0) {
             var idx: isize = @as(isize, @intCast(total_rows));
             while (idx > 0) {
                 idx -= 1;
@@ -1436,7 +1402,7 @@ pub const TerminalSession = struct {
                 const row_cells = rows_cells.items[row_start .. row_start + new_cols_usize];
                 var non_blank = false;
                 for (row_cells) |cell| {
-                    if (!isDefaultCell(cell, default_cell)) {
+                    if (!isBlankCell(cell)) {
                         non_blank = true;
                         break;
                     }
@@ -1568,6 +1534,31 @@ pub const TerminalSession = struct {
                 const clamped_row = if (screen_row >= visible_rows) visible_rows - 1 else screen_row;
                 const clamped_col = if (pos.col >= new_cols_usize) new_cols_usize - 1 else pos.col;
                 self.primary.setCursor(clamped_row, clamped_col);
+            }
+        }
+
+        if (old_saved_cursor.active) {
+            const saved_global_row = old_history_len + old_saved_cursor.cursor.row;
+            if (saved_global_row < row_map.items.len) {
+                const saved_map = row_map.items[saved_global_row];
+                const saved_pos = mapLogicalToGlobal(saved_map.line_index, saved_map.col_offset + old_saved_cursor.cursor.col, line_lengths.items, line_row_starts.items, new_cols_usize);
+                if (saved_pos) |pos| {
+                    const row_after_drop = if (pos.row >= drop_rows) pos.row - drop_rows else 0;
+                    const screen_row = if (row_after_drop >= scrollback_rows) row_after_drop - scrollback_rows else 0;
+                    const clamped_row = if (screen_row >= visible_rows) visible_rows - 1 else screen_row;
+                    const clamped_col = if (pos.col >= new_cols_usize) new_cols_usize - 1 else pos.col;
+                    self.primary.saved_cursor.cursor = .{ .row = clamped_row, .col = clamped_col };
+                } else if (rows > 0 and cols > 0) {
+                    self.primary.saved_cursor.cursor = .{
+                        .row = @min(old_saved_cursor.cursor.row, @as(usize, rows - 1)),
+                        .col = @min(old_saved_cursor.cursor.col, new_cols_usize - 1),
+                    };
+                }
+            } else if (rows > 0 and cols > 0) {
+                self.primary.saved_cursor.cursor = .{
+                    .row = @min(old_saved_cursor.cursor.row, @as(usize, rows - 1)),
+                    .col = @min(old_saved_cursor.cursor.col, new_cols_usize - 1),
+                };
             }
         }
 
