@@ -288,6 +288,7 @@ test "terminal reflow preserves multi-row cell roots" {
     const snapshot = session.snapshot();
     try std.testing.expectEqual(@as(u32, 'X'), snapshot.cells[0 * 3 + 1].codepoint);
     try std.testing.expectEqual(@as(u8, 0), snapshot.cells[0 * 3 + 1].y);
+    try std.testing.expectEqual(@as(u8, 1), snapshot.cells[1 * 3 + 1].y);
 }
 
 test "terminal reflow keeps top content visible without scrollback" {

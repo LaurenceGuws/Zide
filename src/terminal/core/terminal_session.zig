@@ -1391,6 +1391,36 @@ pub const TerminalSession = struct {
             }
         }
 
+        if (rows_cells.items.len > 0) {
+            const total_cell_rows = rows_cells.items.len / new_cols_usize;
+            var cell_idx: usize = 0;
+            while (cell_idx < rows_cells.items.len) : (cell_idx += 1) {
+                const cell = rows_cells.items[cell_idx];
+                if (cell.height <= 1 or cell.x != 0 or cell.y != 0) continue;
+                const row_idx = cell_idx / new_cols_usize;
+                const col_idx = cell_idx % new_cols_usize;
+                var dy: usize = 1;
+                while (dy < @as(usize, cell.height)) : (dy += 1) {
+                    const target_row = row_idx + dy;
+                    if (target_row >= total_cell_rows) break;
+                    var dx: usize = 0;
+                    while (dx < @as(usize, cell.width)) : (dx += 1) {
+                        const target_col = col_idx + dx;
+                        if (target_col >= new_cols_usize) break;
+                        const target_idx = target_row * new_cols_usize + target_col;
+                        rows_cells.items[target_idx] = .{
+                            .codepoint = 0,
+                            .width = cell.width,
+                            .height = cell.height,
+                            .x = @intCast(dx),
+                            .y = @intCast(dy),
+                            .attrs = cell.attrs,
+                        };
+                    }
+                }
+            }
+        }
+
         const total_rows = rows_wraps.items.len;
         var effective_total_rows = total_rows;
         if (total_rows > 0) {
