@@ -10,5 +10,6 @@ See `docs/INDEX.md` for the full doc map.
 High-level state:
 - Terminal correctness work is active: vttest/gping parity, DECCOLM behavior, and protocol edge cases.
 - SDL3 + OpenGL is the Linux baseline; keep SDL3 parity stable while terminal fixes land.
+- Logs are authoritative for debugging; the agent owns `./.zide.lua` to tune log tags without permission.
 
 If this file conflicts with the todo/app_architecture docs, treat it as stale and update/remove it.

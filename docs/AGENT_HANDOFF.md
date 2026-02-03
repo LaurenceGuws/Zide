@@ -29,6 +29,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - Handoff docs are high-level only; progress tracking lives in todo + app_architecture docs.
 - Follow layering rules and import checks (see `tools/app_import_check.zig`).
 - Default: no commits until the user approves after tests. If the user explicitly says to commit, treat that as approval.
+- Use logs as a primary source of truth when debugging; configure logging via `./.zide.lua` without asking for permission.
 
 ### Where to Look for Details
 - UI rendering plan + per-OS journey: `app_architecture/ui/DEVELOPMENT_JOURNEY.md`
