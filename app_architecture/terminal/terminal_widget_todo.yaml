@@ -339,7 +339,8 @@ terminal_widget_todo:
             - "Rewrap logical lines into new columns; preserve wide glyphs."
             - "Keep view anchored (bottom if offset=0, otherwise preserve top logical line)."
             - "History view cache now tracks per-row wrap flags to rebuild logical lines across reflow."
-            - "Kitty audit gaps: bottom blank trimming only when no scrollback/offset; saved cursor remap not implemented; multiline (vertical) cells not handled; trailing blank trim uses full default-cell equality (attrs) instead of char-only."
+            - "Kitty audit gaps: multiline (vertical) cells not handled."
+            - "Aligned blank trimming to Kitty (char-only) and trimmed bottom rows regardless of scrollback/offset; remapped saved cursor during reflow."
         - id: S3R-03
           title: "Cursor + selection remap across reflow"
           status: done

@@ -240,6 +240,23 @@ test "terminal selection survives output while scrolled" {
     }
 }
 
+test "terminal reflow remaps saved cursor" {
+    const allocator = std.testing.allocator;
+
+    var session = try term_mod.TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    term_mod.debugFeedBytes(session, "ABCDEFGH");
+    session.primary.setCursor(1, 1);
+    session.saveCursor();
+
+    try session.resize(2, 3);
+
+    try std.testing.expect(session.primary.saved_cursor.active);
+    try std.testing.expectEqual(@as(usize, 1), session.primary.saved_cursor.cursor.row);
+    try std.testing.expectEqual(@as(usize, 2), session.primary.saved_cursor.cursor.col);
+}
+
 test "terminal reflow keeps top content visible without scrollback" {
     const allocator = std.testing.allocator;
 
