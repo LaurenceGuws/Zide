@@ -1708,6 +1708,7 @@ pub const TerminalSession = struct {
         screen.eraseDisplay(mode, blank_cell);
         self.force_full_damage.store(true, .release);
         if (mode == 2 or mode == 3) {
+            self.clearSelection();
             _ = self.clear_generation.fetchAdd(1, .acq_rel);
         }
     }
