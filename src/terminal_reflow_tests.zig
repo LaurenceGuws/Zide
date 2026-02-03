@@ -211,6 +211,35 @@ test "terminal reflow expands scrollback when narrowing" {
     try std.testing.expect(scrollback_after >= scrollback_before);
 }
 
+test "terminal selection survives output while scrolled" {
+    const allocator = std.testing.allocator;
+
+    var session = try term_mod.TerminalSession.init(allocator, 2, 6);
+    defer session.deinit();
+
+    term_mod.debugFeedBytes(session, "AAAAAA\nBBBBBB\nCCCCCC\nDDDDDD\n");
+    session.scrollBy(2);
+
+    const snapshot_before = session.snapshot();
+    const total_lines_before = session.scrollbackCount() + snapshot_before.rows;
+    const start_line_before = total_lines_before - snapshot_before.rows - session.scrollOffset();
+    const select_row = start_line_before + 1;
+    session.startSelection(select_row, 1);
+    session.updateSelection(select_row, 4);
+    session.finishSelection();
+
+    term_mod.debugFeedBytes(session, "EEEEEE\n");
+
+    if (session.selectionState()) |selection| {
+        try std.testing.expect(selection.active);
+        try std.testing.expectEqual(select_row, selection.start.row);
+        try std.testing.expectEqual(@as(usize, 1), selection.start.col);
+        try std.testing.expectEqual(@as(usize, 4), selection.end.col);
+    } else {
+        return error.MissingSelection;
+    }
+}
+
 test "terminal reflow keeps top content visible without scrollback" {
     const allocator = std.testing.allocator;
 
