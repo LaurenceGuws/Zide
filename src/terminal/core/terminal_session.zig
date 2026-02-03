@@ -1242,7 +1242,7 @@ pub const TerminalSession = struct {
 
         const isBlankCell = struct {
             fn check(cell: Cell) bool {
-                return cell.codepoint == 0 and cell.width == 1;
+                return cell.codepoint == 0 and cell.width == 1 and cell.height == 1 and cell.x == 0 and cell.y == 0;
             }
         }.check;
 
@@ -1402,6 +1402,7 @@ pub const TerminalSession = struct {
                 const row_cells = rows_cells.items[row_start .. row_start + new_cols_usize];
                 var non_blank = false;
                 for (row_cells) |cell| {
+                    if (cell.y != 0) continue;
                     if (!isBlankCell(cell)) {
                         non_blank = true;
                         break;

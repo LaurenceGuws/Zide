@@ -23,9 +23,20 @@ pub const TerminalSelection = selection_mod.TerminalSelection;
 
 pub const Cell = struct {
     codepoint: u32,
-    width: u8,
+    width: u8 = 1,
+    height: u8 = 1,
+    x: u8 = 0,
+    y: u8 = 0,
     attrs: CellAttrs,
 };
+
+pub fn isCellContinuation(cell: Cell) bool {
+    return cell.x != 0 or cell.y != 0;
+}
+
+pub fn isMultiRowCellRoot(cell: Cell) bool {
+    return cell.height > 1 and cell.x == 0 and cell.y == 0;
+}
 
 pub const CellAttrs = struct {
     fg: Color,

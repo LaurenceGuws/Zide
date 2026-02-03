@@ -188,6 +188,9 @@ pub const TerminalWidget = struct {
             var col_idx: usize = col_start;
             while (col_idx <= col_end and col_idx < cols_snapshot) : (col_idx += 1) {
                 const cell = row_cells[col_idx];
+                if (cell.x != 0 or cell.y != 0) {
+                    continue;
+                }
                 if (cell.codepoint == 0) {
                     text.append(self.session.allocator, ' ') catch return false;
                     continue;
@@ -525,6 +528,9 @@ pub const TerminalWidget = struct {
                 var col: usize = col_start;
                 while (col <= col_end and col < cols_count) : (col += 1) {
                     const cell = row_cells[col];
+                    if (cell.x != 0 or cell.y != 0) {
+                        continue;
+                    }
                     const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
                     const cell_x_i = base_x_i + @as(i32, @intCast(col)) * cell_w_i;
                     const cell_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
@@ -615,6 +621,9 @@ pub const TerminalWidget = struct {
                 var col: usize = col_start;
                 while (col <= col_end and col < cols_count) : (col += 1) {
                     const cell = row_cells[col];
+                    if (cell.x != 0 or cell.y != 0) {
+                        continue;
+                    }
                     const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
                     const cell_x_i = base_x_i + @as(i32, @intCast(col)) * cell_w_i;
                     const cell_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;

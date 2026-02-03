@@ -341,6 +341,7 @@ terminal_widget_todo:
             - "History view cache now tracks per-row wrap flags to rebuild logical lines across reflow."
             - "Kitty audit gaps: multiline (vertical) cells not handled."
             - "Aligned blank trimming to Kitty (char-only) and trimmed bottom rows regardless of scrollback/offset; remapped saved cursor during reflow."
+            - "Current Cell model has only width (no vertical scale); multiline cells are not representable yet, so reflow gap is deferred until image/inline glyph model changes." 
         - id: S3R-03
           title: "Cursor + selection remap across reflow"
           status: done

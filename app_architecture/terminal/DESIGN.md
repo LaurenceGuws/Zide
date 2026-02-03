@@ -112,6 +112,7 @@ Planned redesign:
 - Replace the current row-only scrollback with a logical-line buffer that tracks wrap boundaries.
 - Reflow on column resize by merging wrapped rows into logical lines, then re-wrapping into the new width.
 - Preserve anchors: bottom when scrollback offset is 0, otherwise preserve top logical line and cursor/selection mapping.
+- Multi-row cells (kitty-style vertical scale) are not modeled yet; reflow currently ignores that class of data.
 
 Scrollback redesign proposal (kitty/ghostty/wezterm inspired):
 - Data model: store scrollback as logical lines, not raw rows.
@@ -155,6 +156,31 @@ Research notes:
 - libtsm uses a power-of-two ring buffer and wraps with a start/used cursor.
 - wezterm rewraps by merging wrapped lines into logical lines, then splitting into new rows while remapping cursor.
 - alacritty reflows on column change and uses wrap flags to stitch lines together.
+
+### Multi-row Cell Representation (Draft)
+
+Problem:
+- Kitty's rewrap handles multi-row (vertical scale) cells via `scale` and `is_multicell`. Our `Cell` model only carries width, so vertical-scale glyphs are currently not representable or preserved on reflow.
+
+Minimal model additions (proposed):
+- Add `height: u8` to `types.Cell` (default 1).
+- Add `x: u8` and `y: u8` offsets for multi-cell continuations (default 0).
+- Invariants: top-left cell has `x=0,y=0`, `width>=1`, `height>=1`. Continuations have `x>0` or `y>0` and `codepoint=0`.
+
+Reflow implications:
+- Treat any cell with `y>0` as a continuation when trimming lines.
+- When wrapping, avoid splitting multi-row cells across rows; move them to the next line if needed.
+- If `height > rows` or `width > cols`, drop the glyph and clear its coverage region.
+- Cursor/selection mapping should ignore `y>0` continuation rows for logical-line calculations.
+
+Rendering implications:
+- Only render the root (`x=0,y=0`) cell; continuation cells skip rendering.
+
+Implementation outline:
+1) Extend `types.Cell` with `height/x/y` defaults and update constructors.
+2) Add helper predicates (`isMultiRowRoot`, `isContinuation`).
+3) Adjust reflow logic to preserve multi-row cells (kitty-style).
+4) Add a dedicated reflow fixture covering a 2x1 cell.
 
 ### Layer 5: Renderer Core
 
