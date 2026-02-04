@@ -69,17 +69,19 @@ pub fn build(b: *std.Build) void {
     const build_options = b.addOptions();
     build_options.addOption([]const u8, "renderer_backend", renderer_backend);
 
+    // vcpkg support
+    //
     // Windows builds currently rely on vcpkg for SDL3 + text stack.
     // Default to enabled on Windows so `zig build` produces a runnable build
     // (assuming `vcpkg install` has been run).
-    const use_vcpkg_default = target_os == .windows;
-    const use_vcpkg = b.option(bool, "use-vcpkg", "Use vcpkg for native dependencies") orelse use_vcpkg_default;
+    const use_vcpkg_opt = b.option(bool, "use-vcpkg", "Use vcpkg for native dependencies");
+    const use_vcpkg = use_vcpkg_opt orelse (target_os == .windows);
     const vcpkg_root_opt = b.option([]const u8, "vcpkg-root", "Path to vcpkg root") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_ROOT") catch null;
     const vcpkg_triplet_opt = b.option([]const u8, "vcpkg-triplet", "vcpkg triplet (e.g. x64-windows)") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_DEFAULT_TRIPLET") catch null;
 
     // vcpkg can install dependencies in two common layouts:
-    // - Classic: <VCPKG_ROOT>/installed/<triplet>/{include,lib,...}
-    // - Manifest (recommended): <project>/vcpkg_installed/<triplet>/{include,lib,...}
+    // - Classic: <VCPKG_ROOT>/installed/<triplet>/{include,lib,bin,...}
+    // - Manifest (recommended): <project>/vcpkg_installed/<triplet>/{include,lib,bin,...}
     //
     // Prefer classic if it exists (and a root was provided), otherwise fall back
     // to manifest layout.
@@ -127,6 +129,8 @@ pub fn build(b: *std.Build) void {
                 @panic("use-vcpkg enabled, but vcpkg deps were not found. On Windows, run `vcpkg install --triplet x64-windows` in the repo root (manifest mode), or set VCPKG_ROOT / pass --vcpkg-root for classic mode.");
             }
         }
+    } else if (target_os == .windows) {
+        @panic("Windows builds require vcpkg. Install deps via manifest mode (./vcpkg_installed) or set VCPKG_ROOT + VCPKG_DEFAULT_TRIPLET, then re-run.");
     }
 
     // ─────────────────────────────────────────────────────────────────────────

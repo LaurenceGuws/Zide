@@ -304,6 +304,7 @@ fn oscCwdHostOk(self: anytype, host: []const u8) bool {
     _ = self;
     if (host.len == 0) return true;
     if (std.mem.eql(u8, host, "localhost")) return true;
+    if (builtin.target.os.tag == .windows) return false;
 
     if (builtin.target.os.tag == .windows) return false;
 

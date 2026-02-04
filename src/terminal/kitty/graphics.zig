@@ -563,6 +563,7 @@ fn readKittyFile(self: anytype, path: []const u8, size: u32, is_temporary: bool)
 fn readKittySharedMemory(self: anytype, name: []const u8, size: u32) ?[]u8 {
     if (builtin.target.os.tag == .windows) return null;
     if (!builtin.link_libc) return null;
+    if (builtin.target.os.tag == .windows) return null;
     var buf: [std.fs.max_path_bytes]u8 = undefined;
     const name_z = std.fmt.bufPrintZ(&buf, "{s}", .{name}) catch return null;
     const fd = std.c.shm_open(name_z, @as(c_int, @bitCast(std.c.O{ .ACCMODE = .RDONLY })), 0);
