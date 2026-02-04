@@ -58,9 +58,10 @@ pub fn build(b: *std.Build) void {
     ) orelse default_renderer_backend;
     const build_options = b.addOptions();
     build_options.addOption([]const u8, "renderer_backend", renderer_backend);
-    const use_vcpkg = b.option(bool, "use-vcpkg", "Use vcpkg for native dependencies") orelse false;
     const vcpkg_root = b.option([]const u8, "vcpkg-root", "Path to vcpkg root") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_ROOT") catch null;
     const vcpkg_triplet = b.option([]const u8, "vcpkg-triplet", "vcpkg triplet (e.g. x64-windows)") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_DEFAULT_TRIPLET") catch null;
+    const use_vcpkg_opt = b.option(bool, "use-vcpkg", "Use vcpkg for native dependencies");
+    const use_vcpkg = use_vcpkg_opt orelse (target_os == .windows and vcpkg_root != null and vcpkg_triplet != null);
     var vcpkg_include: ?[]const u8 = null;
     var vcpkg_lib: ?[]const u8 = null;
     if (use_vcpkg) {
@@ -69,6 +70,8 @@ pub fn build(b: *std.Build) void {
         }
         vcpkg_lib = b.pathJoin(&.{ vcpkg_root.?, "installed", vcpkg_triplet.?, "lib" });
         vcpkg_include = b.pathJoin(&.{ vcpkg_root.?, "installed", vcpkg_triplet.?, "include" });
+    } else if (target_os == .windows) {
+        @panic("Windows builds require vcpkg. Set VCPKG_ROOT and VCPKG_DEFAULT_TRIPLET, or pass -Duse-vcpkg=true -Dvcpkg-root=... -Dvcpkg-triplet=...");
     }
 
     // ─────────────────────────────────────────────────────────────────────────

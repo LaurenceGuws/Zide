@@ -14,7 +14,64 @@ pub const c = @cImport({
 
 const fc = if (builtin.target.os.tag == .linux) @cImport({
     @cInclude("fontconfig/fontconfig.h");
-}) else struct {};
+}) else struct {
+    pub const FcConfig = opaque {};
+    pub const FcPattern = opaque {};
+    pub const FcCharSet = opaque {};
+    pub const FcResult = enum(c_int) { FcResultMatch = 0 };
+    pub const FcResultMatch: FcResult = .FcResultMatch;
+    pub const FcChar8 = u8;
+    pub const FcMatchPattern: c_int = 0;
+    pub const FC_CHARSET: c_int = 0;
+    pub const FC_SCALABLE: c_int = 0;
+    pub const FC_FILE: c_int = 0;
+
+    pub fn FcInit() c_int {
+        return 0;
+    }
+
+    pub fn FcConfigGetCurrent() ?*FcConfig {
+        return null;
+    }
+
+    pub fn FcPatternCreate() ?*FcPattern {
+        return null;
+    }
+
+    pub fn FcPatternDestroy(_: ?*FcPattern) void {}
+
+    pub fn FcCharSetCreate() ?*FcCharSet {
+        return null;
+    }
+
+    pub fn FcCharSetDestroy(_: ?*FcCharSet) void {}
+
+    pub fn FcCharSetAddChar(_: ?*FcCharSet, _: u32) c_int {
+        return 0;
+    }
+
+    pub fn FcPatternAddCharSet(_: ?*FcPattern, _: c_int, _: ?*FcCharSet) c_int {
+        return 0;
+    }
+
+    pub fn FcPatternAddBool(_: ?*FcPattern, _: c_int, _: c_int) c_int {
+        return 0;
+    }
+
+    pub fn FcConfigSubstitute(_: ?*FcConfig, _: ?*FcPattern, _: c_int) c_int {
+        return 0;
+    }
+
+    pub fn FcDefaultSubstitute(_: ?*FcPattern) void {}
+
+    pub fn FcFontMatch(_: ?*FcConfig, _: ?*FcPattern, _: *FcResult) ?*FcPattern {
+        return null;
+    }
+
+    pub fn FcPatternGetString(_: ?*FcPattern, _: c_int, _: c_int, _: *[*c]FcChar8) FcResult {
+        return .FcResultMatch;
+    }
+};
 // TODO(macOS): Add CoreText-based fallback resolution for missing glyphs.
 // TODO(Windows): Add DirectWrite-based fallback resolution for missing glyphs.
 
