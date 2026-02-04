@@ -44,7 +44,35 @@ brew install zig freetype harfbuzz sdl3
 
 - Install [Zig](https://ziglang.org/download/)
 - Visual Studio Build Tools (for MSVC linker)
-- SDL3 development libraries (vcpkg or MSYS2 recommended)
+- SDL3 development libraries (vcpkg recommended)
+
+#### Windows (vcpkg)
+```powershell
+# Clone + bootstrap
+git clone https://github.com/microsoft/vcpkg C:\dev\vcpkg-win
+cd C:\dev\vcpkg-win
+.\bootstrap-vcpkg.bat
+
+# Install native deps
+.\vcpkg.exe install sdl3 freetype harfbuzz lua --triplet x64-windows
+
+# Build using vcpkg
+$env:VCPKG_ROOT="C:\dev\vcpkg-win"
+$env:VCPKG_DEFAULT_TRIPLET="x64-windows"
+zig build -Duse-vcpkg=true
+```
+
+If `VCPKG_ROOT` and `VCPKG_DEFAULT_TRIPLET` are set, Windows builds auto-enable vcpkg.
+
+If vcpkg fails with permission errors writing `buildtrees`, use a per-user buildtrees root:
+```powershell
+.\vcpkg.exe install sdl3 freetype harfbuzz lua --triplet x64-windows --x-buildtrees-root=C:\Users\Docker\vcpkg-buildtrees
+```
+
+Notes:
+- Fontconfig is Linux-only; Windows builds run without system font fallback.
+- Kitty shared-memory image loading is disabled on Windows.
+- Windows requires a working OpenGL 3.3 driver. If you see `MissingGlProc`, install GPU drivers or enable 3D acceleration in your VM.
 
 ## Bootstrap
 

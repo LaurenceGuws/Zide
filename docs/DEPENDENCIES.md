@@ -23,8 +23,8 @@ This avoids vendoring large binaries early, while keeping Windows builds reprodu
 ### Install vcpkg
 1) Clone vcpkg:
 ```
- git clone https://github.com/microsoft/vcpkg
- cd vcpkg
+ git clone https://github.com/microsoft/vcpkg C:\dev\vcpkg-win
+ cd C:\dev\vcpkg-win
  .\bootstrap-vcpkg.bat
 ```
 
@@ -60,8 +60,11 @@ Build with vcpkg enabled:
  zig build -Duse-vcpkg=true
 ```
 
-On Windows, `zig build` defaults to using vcpkg when the vcpkg manifest install
-directory (`./vcpkg_installed/`) is present.
+On Windows, the build expects vcpkg-provided deps and will look in either:
+- `./vcpkg_installed/<triplet>/` (manifest mode), or
+- `<VCPKG_ROOT>/installed/<triplet>/` (classic mode)
+
+If `VCPKG_ROOT` and `VCPKG_DEFAULT_TRIPLET` are set, the build can locate classic-mode deps without extra flags.
 
 On Windows, use the MSVC target when using the `x64-windows` triplet:
 ```
@@ -77,6 +80,14 @@ Then build on Windows:
 ```
  zig build
 ```
+
+### Troubleshooting (Windows)
+- If `vcpkg` reports `Unable to find a valid Visual Studio instance`, install **Visual Studio Build Tools 2022** with the **Desktop development with C++** workload.
+- If installs fail with `permission denied` while writing `buildtrees`, use a buildtrees folder inside your user profile:
+```
+ .\vcpkg.exe install sdl3 freetype harfbuzz lua --triplet x64-windows --x-buildtrees-root=C:\Users\Docker\vcpkg-buildtrees
+```
+- If an environment variable `VCPKG_ROOT` points at the VS install (`...\VC\vcpkg`), unset it or override with `-Dvcpkg-root=...` so Zig uses the intended vcpkg checkout.
 
 If cross-compiling from Linux, you still need Windows libraries on disk. vcpkg can build them, but you must also provide a Windows target toolchain.
 
