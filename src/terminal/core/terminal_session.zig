@@ -5,8 +5,6 @@ const history_mod = @import("../model/history.zig");
 const csi_mod = @import("../parser/csi.zig");
 const parser_mod = @import("../parser/parser.zig");
 const protocol_csi = @import("../protocol/csi.zig");
-const protocol_dcs_apc = @import("../protocol/dcs_apc.zig");
-const protocol_osc = @import("../protocol/osc.zig");
 const screen_mod = @import("../model/screen.zig");
 const render_cache_mod = @import("render_cache.zig");
 const snapshot_mod = @import("snapshot.zig");
@@ -20,6 +18,8 @@ const view_cache = @import("view_cache.zig");
 const resize_reflow = @import("resize_reflow.zig");
 const selection_mod = @import("selection.zig");
 const scrolling_mod = @import("scrolling.zig");
+const control_handlers = @import("control_handlers.zig");
+const parser_hooks = @import("parser_hooks.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
 const Screen = screen_mod.Screen;
@@ -594,56 +594,19 @@ pub const TerminalSession = struct {
     }
 
     pub fn handleControl(self: *TerminalSession, byte: u8) void {
-        const screen = self.activeScreen();
-        switch (byte) {
-            0x08 => { // BS
-                screen.backspace();
-            },
-            0x09 => { // TAB (every 8 columns)
-                screen.tab();
-            },
-            0x0A => { // LF
-                self.newline();
-                const log = app_logger.logger("terminal.trace.control");
-                if (log.enabled_file or log.enabled_console) {
-                    log.logf("control=LF row={d} col={d}", .{ screen.cursor.row, screen.cursor.col });
-                }
-            },
-            0x0D => { // CR
-                screen.carriageReturn();
-                const log = app_logger.logger("terminal.trace.control");
-                if (log.enabled_file or log.enabled_console) {
-                    log.logf("control=CR row={d} col={d}", .{ screen.cursor.row, screen.cursor.col });
-                }
-            },
-            0x0E => { // SO (Shift Out) -> G1
-                self.parser.gl_charset = self.parser.g1_charset;
-            },
-            0x0F => { // SI (Shift In) -> G0
-                self.parser.gl_charset = self.parser.g0_charset;
-            },
-            0x1B => { // ESC
-                self.parser.esc_state = .esc;
-                self.parser.stream.reset();
-                self.parser.csi.reset();
-                self.parser.osc_state = .idle;
-                self.parser.apc_state = .idle;
-                self.parser.dcs_state = .idle;
-            },
-            else => {},
-        }
+        control_handlers.handleControl(self, byte);
     }
 
     pub fn parseDcs(self: *TerminalSession, payload: []const u8) void {
-        protocol_dcs_apc.parseDcs(self, payload);
+        parser_hooks.parseDcs(self, payload);
     }
 
     pub fn parseApc(self: *TerminalSession, payload: []const u8) void {
-        protocol_dcs_apc.parseApc(self, payload);
+        parser_hooks.parseApc(self, payload);
     }
 
     pub fn parseOsc(self: *TerminalSession, payload: []const u8, terminator: OscTerminator) void {
-        protocol_osc.parseOsc(self, payload, terminator);
+        parser_hooks.parseOsc(self, payload, terminator);
     }
     pub fn appendHyperlink(self: *TerminalSession, uri: []const u8) ?u32 {
         if (uri.len == 0) return 0;
@@ -662,11 +625,11 @@ pub const TerminalSession = struct {
     }
 
     pub fn parseKittyGraphics(self: *TerminalSession, payload: []const u8) void {
-        kitty_mod.parseKittyGraphics(self, payload);
+        parser_hooks.parseKittyGraphics(self, payload);
     }
 
     pub fn handleCsi(self: *TerminalSession, action: csi_mod.CsiAction) void {
-        protocol_csi.handleCsi(self, action);
+        parser_hooks.handleCsi(self, action);
     }
 
     pub fn resetState(self: *TerminalSession) void {
@@ -684,14 +647,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn reverseIndex(self: *TerminalSession) void {
-        const screen = self.activeScreen();
-        if (screen.cursor.row > screen.scroll_top) {
-            screen.cursorUp(1);
-            return;
-        }
-        if (screen.cursor.row == screen.scroll_top) {
-            self.scrollRegionDown(1);
-        }
+        control_handlers.reverseIndex(self);
     }
 
     pub fn eraseDisplay(self: *TerminalSession, mode: i32) void {
@@ -759,96 +715,19 @@ pub const TerminalSession = struct {
     }
 
     pub fn handleCodepoint(self: *TerminalSession, codepoint: u32) void {
-        if (codepoint == 0) return;
-        if (codepoint > 0x10FFFF or (codepoint >= 0xD800 and codepoint <= 0xDFFF)) return;
-
-        var cp = codepoint;
-        if (self.parser.gl_charset == .dec_special) {
-            cp = screen_mod.mapDecSpecial(codepoint);
-        }
-
-        const screen = self.activeScreen();
-        const rows = @as(usize, screen.grid.rows);
-        const cols = @as(usize, screen.grid.cols);
-        if (rows == 0 or cols == 0) return;
-        if (screen.cursor.row >= rows) return;
-        while (true) {
-            switch (screen.prepareWrite()) {
-                .done => return,
-                .need_wrap => self.wrapNewline(),
-                .proceed => break,
-            }
-        }
-
-        var attrs = screen.current_attrs;
-        if (self.osc_hyperlink_active and self.current_hyperlink_id > 0) {
-            attrs.link_id = self.current_hyperlink_id;
-            attrs.underline = true;
-        } else {
-            attrs.link_id = 0;
-        }
-        if (cp == 0x2502) {
-            const log = app_logger.logger("terminal.trace.scope");
-            if (log.enabled_file or log.enabled_console) {
-                log.logf(
-                    "scope_glyph row={d} col={d} origin={any} scroll_top={d} scroll_bottom={d}",
-                    .{ screen.cursor.row, screen.cursor.col, screen.origin_mode, screen.scroll_top, screen.scroll_bottom },
-                );
-            }
-        }
-        screen.writeCodepoint(cp, attrs);
+        parser_hooks.handleCodepoint(self, codepoint);
     }
 
     pub fn handleAsciiSlice(self: *TerminalSession, bytes: []const u8) void {
-        if (bytes.len == 0) return;
-        const screen = self.activeScreen();
-        const rows = @as(usize, screen.grid.rows);
-        const cols = @as(usize, screen.grid.cols);
-        if (rows == 0 or cols == 0) return;
-        if (screen.cursor.row >= rows) return;
-
-        var attrs = screen.current_attrs;
-        if (self.osc_hyperlink_active and self.current_hyperlink_id > 0) {
-            attrs.link_id = self.current_hyperlink_id;
-            attrs.underline = true;
-        } else {
-            attrs.link_id = 0;
-        }
-        const use_dec_special = self.parser.gl_charset == .dec_special;
-
-        var i: usize = 0;
-        while (i < bytes.len) {
-            switch (screen.prepareWrite()) {
-                .done => break,
-                .need_wrap => {
-                    self.wrapNewline();
-                    continue;
-                },
-                .proceed => {},
-            }
-
-            const run_len = screen.writeAsciiRun(bytes[i..], attrs, use_dec_special);
-            if (run_len == 0) break;
-            i += run_len;
-        }
+        parser_hooks.handleAsciiSlice(self, bytes);
     }
 
     pub fn newline(self: *TerminalSession) void {
-        const screen = self.activeScreen();
-        switch (screen.newlineAction()) {
-            .moved => {},
-            .scroll_region => self.scrollRegionUp(1),
-            .scroll_full => self.scrollUp(),
-        }
+        control_handlers.newline(self);
     }
 
     pub fn wrapNewline(self: *TerminalSession) void {
-        const screen = self.activeScreen();
-        switch (screen.wrapNewlineAction()) {
-            .moved => {},
-            .scroll_region => self.scrollRegionUp(1),
-            .scroll_full => self.scrollUp(),
-        }
+        control_handlers.wrapNewline(self);
     }
 
     fn scrollUp(self: *TerminalSession) void {
