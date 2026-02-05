@@ -4,6 +4,7 @@ const osc_semantic = @import("../core/osc_semantic.zig");
 const osc_clipboard = @import("../core/osc_clipboard.zig");
 const osc_cwd = @import("../core/osc_cwd.zig");
 const osc_hyperlink = @import("../core/osc_hyperlink.zig");
+const osc_title = @import("../core/osc_title.zig");
 const parser_mod = @import("../parser/parser.zig");
 const app_logger = @import("../../app_logger.zig");
 
@@ -36,7 +37,7 @@ pub fn parseOsc(self: anytype, payload: []const u8, terminator: OscTerminator) v
     const text = payload[i..];
     switch (code) {
         0, 2 => {
-            setTitle(self, text);
+            osc_title.setTitle(self, text);
         },
         4 => palette_mod.handleOscPalette(self, text, terminator),
         10...19 => palette_mod.handleOscDynamicColor(self, @intCast(code), text, terminator),
@@ -59,12 +60,4 @@ pub fn parseOsc(self: anytype, payload: []const u8, terminator: OscTerminator) v
         },
         else => {},
     }
-}
-
-fn setTitle(self: anytype, text: []const u8) void {
-    self.title_buffer.clearRetainingCapacity();
-    const max_len: usize = 256;
-    const slice = if (text.len > max_len) text[0..max_len] else text;
-    _ = self.title_buffer.appendSlice(self.allocator, slice) catch return;
-    self.title = self.title_buffer.items;
 }
