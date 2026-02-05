@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const pty_mod = @import("../io/pty.zig");
 const types = @import("../model/types.zig");
+const mouse_report = @import("mouse_report.zig");
 
 pub const KeyAction = enum(u8) {
     press = 0,
@@ -56,7 +57,7 @@ pub const InputState = struct {
         const col = @min(event.col, @as(usize, cols - 1));
         const buttons_down = event.buttons_down;
         const buttons_active = buttons_down != 0;
-        const mod_bits = mouseModBits(event.mod);
+        const mod_bits = mouse_report.mouseModBits(event.mod);
 
         if (event.kind == .move) {
             if (!self.mouseMotionActive(buttons_active)) return false;
@@ -67,13 +68,13 @@ pub const InputState = struct {
 
         var button = event.button;
         if (event.kind == .move) {
-            button = mouseButtonFromMask(buttons_down);
+            button = mouse_report.mouseButtonFromMask(buttons_down);
         }
         if (event.kind == .release and !self.mouse_mode_sgr) {
             button = .none;
         }
 
-        const base_code = mouseButtonCode(button);
+        const base_code = mouse_report.mouseButtonCode(button);
         const motion_code: u8 = if (event.kind == .move) 32 else 0;
         const code = base_code + motion_code + mod_bits;
 
@@ -92,8 +93,8 @@ pub const InputState = struct {
             buf[1] = '[';
             buf[2] = 'M';
             buf[3] = @intCast(32 + code);
-            buf[4] = mouseEncodeCoordX10(col);
-            buf[5] = mouseEncodeCoordX10(row);
+            buf[4] = mouse_report.mouseEncodeCoordX10(col);
+            buf[5] = mouse_report.mouseEncodeCoordX10(row);
             _ = try pty.write(buf[0..6]);
         }
 
@@ -342,47 +343,11 @@ fn sendCharWithProtocol(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, flags
     return true;
 }
 
-fn mouseModBits(mod: types.Modifier) u8 {
-    var value: u8 = 0;
-    if ((mod & types.VTERM_MOD_SHIFT) != 0) value += 4;
-    if ((mod & types.VTERM_MOD_ALT) != 0) value += 8;
-    if ((mod & types.VTERM_MOD_CTRL) != 0) value += 16;
-    return value;
-}
-
-fn mouseButtonFromMask(mask: u8) types.MouseButton {
-    if ((mask & mouse_button_left_mask) != 0) return .left;
-    if ((mask & mouse_button_middle_mask) != 0) return .middle;
-    if ((mask & mouse_button_right_mask) != 0) return .right;
-    return .none;
-}
-
-fn mouseButtonCode(button: types.MouseButton) u8 {
-    return switch (button) {
-        .left => 0,
-        .middle => 1,
-        .right => 2,
-        .wheel_up => 64,
-        .wheel_down => 65,
-        .none => 3,
-    };
-}
-
-fn mouseEncodeCoordX10(value: usize) u8 {
-    const v = value + 1 + 32;
-    if (v > 255) return 0;
-    return @intCast(v);
-}
-
 const key_mode_disambiguate: u32 = 1;
 const key_mode_report_all_event_types: u32 = 2;
 const key_mode_report_alternate_key: u32 = 4;
 const key_mode_report_text: u32 = 8;
 const key_mode_embed_text: u32 = 16;
-const mouse_button_left_mask: u8 = 1;
-const mouse_button_middle_mask: u8 = 2;
-const mouse_button_right_mask: u8 = 4;
-
 fn supportsKeyEncoding(flags: u32) bool {
     if (flags == 0) return false;
     return true;
