@@ -1,0 +1,68 @@
+const std = @import("std");
+const pty_mod = @import("../io/pty.zig");
+const parser_mod = @import("../parser/parser.zig");
+const app_logger = @import("../../app_logger.zig");
+
+const Pty = pty_mod.Pty;
+const OscTerminator = parser_mod.OscTerminator;
+
+pub fn parseClipboard(self: anytype, text: []const u8, terminator: OscTerminator) void {
+    const split = std.mem.indexOfScalar(u8, text, ';') orelse return;
+    const selection = text[0..split];
+    const payload = text[split + 1 ..];
+    if (payload.len == 0) return;
+    if (!std.mem.containsAtLeast(u8, selection, 1, "c") and !std.mem.containsAtLeast(u8, selection, 1, "0")) {
+        return;
+    }
+    if (std.mem.eql(u8, payload, "?")) {
+        if (self.pty) |*pty| {
+            writeClipboardReply(self, pty, selection, terminator);
+        }
+        return;
+    }
+
+    const max_bytes: usize = 1024 * 1024;
+    if (payload.len > max_bytes * 2) return;
+
+    var decoded = std.ArrayList(u8).empty;
+    defer decoded.deinit(self.allocator);
+
+    const decoded_len = std.base64.standard.Decoder.calcSizeForSlice(payload) catch return;
+    if (decoded_len > max_bytes) return;
+    decoded.resize(self.allocator, decoded_len) catch return;
+    _ = std.base64.standard.Decoder.decode(decoded.items, payload) catch return;
+
+    self.osc_clipboard.clearRetainingCapacity();
+    _ = self.osc_clipboard.appendSlice(self.allocator, decoded.items) catch return;
+    _ = self.osc_clipboard.append(self.allocator, 0) catch return;
+    self.osc_clipboard_pending = true;
+}
+
+fn writeClipboardReply(self: anytype, pty: *Pty, selection: []const u8, terminator: OscTerminator) void {
+    const log = app_logger.logger("terminal.osc");
+    const end = if (terminator == .bel) "\x07" else "\x1b\\";
+    var data = self.osc_clipboard.items;
+    if (data.len > 0 and data[data.len - 1] == 0) {
+        data = data[0 .. data.len - 1];
+    }
+    const encoded_len = std.base64.standard.Encoder.calcSize(data.len);
+    var encoded = std.ArrayList(u8).empty;
+    defer encoded.deinit(self.allocator);
+    encoded.resize(self.allocator, encoded_len) catch return;
+    _ = std.base64.standard.Encoder.encode(encoded.items, data);
+
+    const seq_len = 4 + selection.len + 1 + encoded.items.len + end.len;
+    var seq = std.ArrayList(u8).empty;
+    defer seq.deinit(self.allocator);
+    seq.ensureTotalCapacity(self.allocator, seq_len) catch return;
+    _ = seq.appendSlice(self.allocator, "\x1b]52;") catch return;
+    _ = seq.appendSlice(self.allocator, selection) catch return;
+    _ = seq.append(self.allocator, ';') catch return;
+    _ = seq.appendSlice(self.allocator, encoded.items) catch return;
+    _ = seq.appendSlice(self.allocator, end) catch return;
+
+    if (log.enabled_file or log.enabled_console) {
+        log.logf("osc reply=\"{s}\"", .{seq.items});
+    }
+    _ = pty.write(seq.items) catch {};
+}

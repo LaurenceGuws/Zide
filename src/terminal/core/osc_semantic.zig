@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
+const osc_util = @import("osc_util.zig");
 
 pub fn parseSemanticPrompt(self: anytype, text: []const u8) void {
     if (text.len == 0) return;
@@ -69,25 +70,6 @@ pub fn parseUserVar(self: anytype, text: []const u8) void {
     }
 
     setUserVar(self, name, decoded.items);
-}
-
-pub fn decodeOscPercent(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) bool {
-    out.clearRetainingCapacity();
-    var i: usize = 0;
-    while (i < text.len) : (i += 1) {
-        const b = text[i];
-        if (b != '%') {
-            _ = out.append(allocator, b) catch return false;
-            continue;
-        }
-        if (i + 2 >= text.len) return false;
-        const hi = hexNibble(text[i + 1]) orelse return false;
-        const lo = hexNibble(text[i + 2]) orelse return false;
-        const value: u8 = @as(u8, (hi << 4) | lo);
-        _ = out.append(allocator, value) catch return false;
-        i += 2;
-    }
-    return true;
 }
 
 fn applySemanticPromptOptions(self: anytype, text: []const u8, allow_aid: bool) void {
@@ -174,7 +156,7 @@ fn setSemanticCmdline(self: anytype, value: []const u8) void {
 fn setSemanticCmdlineUrl(self: anytype, value: []const u8) void {
     var decoded = std.ArrayList(u8).empty;
     defer decoded.deinit(self.allocator);
-    if (!decodeOscPercent(self.allocator, &decoded, value)) {
+    if (!osc_util.decodeOscPercent(self.allocator, &decoded, value)) {
         self.semantic_cmdline_valid = false;
         return;
     }
@@ -210,13 +192,4 @@ fn setUserVar(self: anytype, name: []const u8, value: []const u8) void {
     } else {
         entry.value_ptr.* = value_owned;
     }
-}
-
-fn hexNibble(c: u8) ?u8 {
-    return switch (c) {
-        '0'...'9' => c - '0',
-        'a'...'f' => c - 'a' + 10,
-        'A'...'F' => c - 'A' + 10,
-        else => null,
-    };
 }
