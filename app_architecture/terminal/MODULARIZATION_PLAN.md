@@ -128,6 +128,8 @@ Progress:
 - Migration step: extracted terminal render cache to `src/terminal/core/render_cache.zig` (no behavior change).
 - Migration step: extracted palette + dynamic color handling to `src/terminal/core/palette.zig` (no behavior change).
 - Migration step: extracted OSC semantic prompt + user-var handling to `src/terminal/core/osc_semantic.zig` (no behavior change).
+- Migration step: extracted OSC clipboard handling to `src/terminal/core/osc_clipboard.zig` (no behavior change).
+- Migration step: extracted OSC CWD normalization + decode helpers to `src/terminal/core/osc_cwd.zig` and `src/terminal/core/osc_util.zig` (no behavior change).
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.
