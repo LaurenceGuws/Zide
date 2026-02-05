@@ -131,6 +131,7 @@ Progress:
 - Migration step: extracted OSC clipboard handling to `src/terminal/core/osc_clipboard.zig` (no behavior change).
 - Migration step: extracted OSC CWD normalization + decode helpers to `src/terminal/core/osc_cwd.zig` and `src/terminal/core/osc_util.zig` (no behavior change).
 - Migration step: extracted OSC hyperlink handling to `src/terminal/core/osc_hyperlink.zig` (no behavior change).
+- Migration step: extracted OSC title handling to `src/terminal/core/osc_title.zig` (no behavior change).
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.
