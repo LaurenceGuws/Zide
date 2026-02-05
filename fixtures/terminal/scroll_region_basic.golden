@@ -9,10 +9,10 @@ clipboard: ""
 selection: none
 grid:
 row0: "Z" . . . . . . . . . . .
-row1: "l" "i" "n" "e" "1" . . . . . . .
-row2: "l" "i" "n" "e" "2" . . . . . . .
-row3: "l" "i" "n" "e" "3" . . . . . . .
-row4: "l" "i" "n" "e" "4" . . . . . . .
+row1: . . . . . . . . . . . "n"
+row2: . . . . . . . . . . . "e"
+row3: . . . . . . . . . . . "4"
+row4: . . . . . . . . . . . .
 row5: . . . . . . . . . . . .
 attrs:
 row0: cols 0-11 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0

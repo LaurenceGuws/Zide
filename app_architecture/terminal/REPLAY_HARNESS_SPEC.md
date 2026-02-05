@@ -44,6 +44,18 @@ Encoder test flow:
 1) Call encoder with key/mod inputs.
 2) Emit encoded bytes string.
 
+## Updating Goldens
+
+Use the replay harness to refresh goldens from current behavior:
+
+```
+zig build test-terminal-replay -- --all --update-goldens
+```
+
+This writes `.golden` files under:
+- `fixtures/terminal/*.golden`
+- `fixtures/terminal/encoder/*.golden`
+
 ## Deterministic Snapshot String Format
 
 Header:

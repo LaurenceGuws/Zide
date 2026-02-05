@@ -54,6 +54,6 @@ These failures point to damage tracking that is too optimistic and not robust to
 - Audit result: clear/scroll paths already set `force_full_damage` and/or `clear_generation`; insert/delete ops rely on grid dirty ranges and look consistent with partial redraw.
 - [ ] Add a view-cache invalidation path for clear/scroll events (generation bump or full-dirty flag).
 - [ ] Implement frame-based damage tracking (per-line bounds) and integrate with terminal widget partial redraw.
-- [ ] Add replay harness fixtures for `gping` and a minimal `nvim` overlay example.
-- [ ] Add replay harness fixture for vttest WRAP AROUND mode test.
+- [x] Add replay harness fixtures for `gping` and a minimal `nvim` overlay example (`gping_redraw`, `nvim_overlay`).
+- [x] Add replay harness fixture for vttest WRAP AROUND mode test (`vttest_wraparound`).
 - [ ] Add tests to assert no stale rows after clear+redraw cycles.
