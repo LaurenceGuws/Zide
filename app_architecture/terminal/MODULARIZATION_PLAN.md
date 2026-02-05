@@ -134,6 +134,7 @@ Progress:
 - Migration step: extracted OSC title handling to `src/terminal/core/osc_title.zig` (no behavior change).
 - Migration step: extracted mouse reporting helpers to `src/terminal/input/mouse_report.zig` (no behavior change).
 - Migration step: extracted key encoding helpers to `src/terminal/input/key_encoding.zig` (no behavior change).
+- Migration step: extracted keypad mappings to `src/terminal/input/keypad.zig` (no behavior change).
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.
