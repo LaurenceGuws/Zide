@@ -1,6 +1,6 @@
 TERM_SNAPSHOT v1
 size: 4x8
-cursor: r=3 c=7 visible=1 style=block-blink
+cursor: r=2 c=5 visible=1 style=block-blink
 alt: 0
 scrollback: count=0 view_offset=0
 title: "Terminal"
@@ -8,9 +8,9 @@ cwd: ""
 clipboard: ""
 selection: none
 grid:
-row0: . . . . . . . "\\"
-row1: . . . . . . . "n"
-row2: . . . . . . . "|"
+row0: "\\" "x" "1" "b" "[" "2" ";" "4"
+row1: "H" "|" "\\" "n" "|" . . .
+row2: . . . . . . . .
 row3: . . . . . . . .
 attrs:
 row0: cols 0-7 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0

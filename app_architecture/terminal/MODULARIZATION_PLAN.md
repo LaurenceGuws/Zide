@@ -60,8 +60,8 @@ Before refactor, generate a feature list directly from current code:
 Capture this list in `app_architecture/terminal/FEATURE_INVENTORY.md`.
 
 ## Test-First Safety Net
-Approved fixture list (authoritative; 16 total):
-- VT replay fixtures (15):
+Approved fixture list (authoritative; 19 total):
+- VT replay fixtures (18):
   - cursor_moves_basic
   - erase_line_and_display
   - insert_delete_chars
@@ -77,6 +77,9 @@ Approved fixture list (authoritative; 16 total):
   - utf8_wide_and_combining
   - selection_basic_flow (harness API hooks)
   - kitty_store_place_delete
+  - gping_redraw
+  - nvim_overlay
+  - vttest_wraparound
 - Encoder unit test (1):
   - csi_u_encoder_bytes
 
@@ -121,6 +124,10 @@ Progress:
 - Completed step 9 (selection types/state in `terminal/model/selection.zig`).
 - Completed step 10 (terminal core now a thin orchestrator; screen helpers consolidated under `terminal/model/screen/` with facade).
 - Scrollback push ordering aligned with Ghostty/Kitty; `scrollback_push` golden updated.
+- Completed step 3 (feature inventory captured in `app_architecture/terminal/FEATURE_INVENTORY.md`).
+- Migration step: extracted terminal render cache to `src/terminal/core/render_cache.zig` (no behavior change).
+- Migration step: extracted palette + dynamic color handling to `src/terminal/core/palette.zig` (no behavior change).
+- Migration step: extracted OSC semantic prompt + user-var handling to `src/terminal/core/osc_semantic.zig` (no behavior change).
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.

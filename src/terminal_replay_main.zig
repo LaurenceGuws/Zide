@@ -32,6 +32,7 @@ pub fn main() !void {
 
     var mode: Mode = .none;
     var fixture_name: ?[]const u8 = null;
+    var update_goldens = false;
 
     while (args.next()) |arg| {
         if (std.mem.eql(u8, arg, "--list")) {
@@ -41,6 +42,8 @@ pub fn main() !void {
         } else if (std.mem.eql(u8, arg, "--fixture")) {
             fixture_name = args.next() orelse return error.MissingFixtureName;
             mode = .fixture;
+        } else if (std.mem.eql(u8, arg, "--update-goldens")) {
+            update_goldens = true;
         }
     }
 
@@ -72,17 +75,17 @@ pub fn main() !void {
         if (std.mem.startsWith(u8, name, "encoder:")) {
             const encoder_name = name["encoder:".len..];
             if (findFixture(encoder_fixtures, encoder_name)) |fixture| {
-                try runEncoderFixture(log, allocator, fixture);
+                try runEncoderFixture(log, allocator, fixture, update_goldens);
                 return;
             }
             return error.FixtureNotFound;
         }
         if (findFixture(vt_fixtures, name)) |fixture| {
-            try runVtFixture(log, allocator, fixture);
+            try runVtFixture(log, allocator, fixture, update_goldens);
             return;
         }
         if (findFixture(encoder_fixtures, name)) |fixture| {
-            try runEncoderFixture(log, allocator, fixture);
+            try runEncoderFixture(log, allocator, fixture, update_goldens);
             return;
         }
         return error.FixtureNotFound;
@@ -95,11 +98,11 @@ pub fn main() !void {
         }
         for (vt_fixtures) |*fixture| {
             log.logf("running fixture {s}", .{fixture.name});
-            try runVtFixture(log, allocator, fixture);
+            try runVtFixture(log, allocator, fixture, update_goldens);
         }
         for (encoder_fixtures) |*fixture| {
             log.logf("running fixture encoder:{s}", .{fixture.name});
-            try runEncoderFixture(log, allocator, fixture);
+            try runEncoderFixture(log, allocator, fixture, update_goldens);
         }
     }
 }
@@ -154,16 +157,32 @@ fn listFixtures(
     log.logf("fixtures: {s}", .{out.items});
 }
 
-fn runVtFixture(log: app_logger.Logger, allocator: std.mem.Allocator, fixture: *const harness.Fixture) !void {
+fn runVtFixture(
+    log: app_logger.Logger,
+    allocator: std.mem.Allocator,
+    fixture: *const harness.Fixture,
+    update_goldens: bool,
+) !void {
     const output = try harness.runFixture(allocator, fixture);
     defer allocator.free(output);
     const path = try writeOutputFile(allocator, fixture.name, false, output);
     defer allocator.free(path);
     log.logf("wrote {s}", .{path});
+    if (update_goldens) {
+        const golden_path = try writeGoldenFile(allocator, fixture.name, false, output);
+        defer allocator.free(golden_path);
+        log.logf("updated golden {s}", .{golden_path});
+        return;
+    }
     try compareGolden(fixture.name, fixture.golden, output);
 }
 
-fn runEncoderFixture(log: app_logger.Logger, allocator: std.mem.Allocator, fixture: *const harness.Fixture) !void {
+fn runEncoderFixture(
+    log: app_logger.Logger,
+    allocator: std.mem.Allocator,
+    fixture: *const harness.Fixture,
+    update_goldens: bool,
+) !void {
     const bytes = try harness.runEncoderFixture(allocator, fixture);
     defer allocator.free(bytes);
     const output = try formatEncoderOutput(allocator, bytes);
@@ -171,6 +190,12 @@ fn runEncoderFixture(log: app_logger.Logger, allocator: std.mem.Allocator, fixtu
     const path = try writeOutputFile(allocator, fixture.name, true, output);
     defer allocator.free(path);
     log.logf("wrote {s}", .{path});
+    if (update_goldens) {
+        const golden_path = try writeGoldenFile(allocator, fixture.name, true, output);
+        defer allocator.free(golden_path);
+        log.logf("updated golden {s}", .{golden_path});
+        return;
+    }
     try compareGolden(fixture.name, fixture.golden, output);
 }
 
@@ -209,6 +234,25 @@ fn writeOutputFile(
         try std.fmt.allocPrint(allocator, "encoder-{s}.out", .{name})
     else
         try std.fmt.allocPrint(allocator, "{s}.out", .{name});
+    defer allocator.free(file_name);
+    const full_path = try std.fs.path.join(allocator, &.{ dir_path, file_name });
+    var file = try std.fs.cwd().createFile(full_path, .{ .truncate = true });
+    defer file.close();
+    try file.writeAll(contents);
+    return full_path;
+}
+
+fn writeGoldenFile(
+    allocator: std.mem.Allocator,
+    name: []const u8,
+    is_encoder: bool,
+    contents: []const u8,
+) ![]u8 {
+    const dir_path = if (is_encoder)
+        "fixtures/terminal/encoder"
+    else
+        "fixtures/terminal";
+    const file_name = try std.fmt.allocPrint(allocator, "{s}.golden", .{name});
     defer allocator.free(file_name);
     const full_path = try std.fs.path.join(allocator, &.{ dir_path, file_name });
     var file = try std.fs.cwd().createFile(full_path, .{ .truncate = true });
