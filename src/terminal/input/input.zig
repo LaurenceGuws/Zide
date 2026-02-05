@@ -3,12 +3,9 @@ const builtin = @import("builtin");
 const pty_mod = @import("../io/pty.zig");
 const types = @import("../model/types.zig");
 const mouse_report = @import("mouse_report.zig");
+const key_encoding = @import("key_encoding.zig");
 
-pub const KeyAction = enum(u8) {
-    press = 0,
-    repeat = 1,
-    release = 2,
-};
+pub const KeyAction = key_encoding.KeyAction;
 
 pub const InputState = struct {
     mouse_mode_x10: bool,
@@ -179,7 +176,7 @@ pub fn sendChar(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, key_mode_flag
 
 pub fn sendCharAction(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, key_mode_flags: u32, action: KeyAction) !bool {
     if (char > 0x10FFFF or (char >= 0xD800 and char <= 0xDFFF)) return false;
-    const report_text = (key_mode_flags & key_mode_report_text) != 0;
+    const report_text = (key_mode_flags & key_encoding.key_mode_report_text) != 0;
     if (!report_text and (mod & types.VTERM_MOD_CTRL) != 0) {
         if (ctrlChar(char)) |mapped| {
             if ((mod & types.VTERM_MOD_ALT) != 0) {
@@ -264,11 +261,7 @@ fn ctrlChar(char: u32) ?u8 {
 }
 
 fn encodeModifier(mod: types.Modifier) u8 {
-    var value: u8 = 1;
-    if ((mod & types.VTERM_MOD_SHIFT) != 0) value += 1;
-    if ((mod & types.VTERM_MOD_ALT) != 0) value += 2;
-    if ((mod & types.VTERM_MOD_CTRL) != 0) value += 4;
-    return value;
+    return key_encoding.encodeModifier(mod);
 }
 
 fn sendCsiWithMod(pty: *pty_mod.Pty, prefix: []const u8, mod_code: u8, suffix: []const u8) bool {
@@ -283,31 +276,31 @@ fn sendCsiWithMod(pty: *pty_mod.Pty, prefix: []const u8, mod_code: u8, suffix: [
 
 fn sendKeyWithProtocol(pty: *pty_mod.Pty, key: types.Key, mod: types.Modifier, flags: u32, action: KeyAction) bool {
     if (flags == 0) return false;
-    if (!supportsKeyEncoding(flags)) return false;
+    if (!key_encoding.supportsKeyEncoding(flags)) return false;
 
-    const report_all = (flags & key_mode_report_all_event_types) != 0;
-    const disambiguate = (flags & key_mode_disambiguate) != 0;
-    const report_text = (flags & key_mode_report_text) != 0;
+    const report_all = (flags & key_encoding.key_mode_report_all_event_types) != 0;
+    const disambiguate = (flags & key_encoding.key_mode_disambiguate) != 0;
+    const report_text = (flags & key_encoding.key_mode_report_text) != 0;
     if (!report_all and !disambiguate and !report_text) {
         return false;
     }
 
     if (!report_all and action == .release) return false;
 
-    const mapping = kittyFunctionKeyMapping(key) orelse return false;
-    return sendKittyFunctionKey(pty, mapping.number, mapping.trailer, mod, action, flags);
+    const mapping = key_encoding.kittyFunctionKeyMapping(key) orelse return false;
+    return key_encoding.sendKittyFunctionKey(pty, mapping.number, mapping.trailer, mod, action, flags);
 }
 
 fn sendCharWithProtocol(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, flags: u32, action: KeyAction) bool {
     if (flags == 0) return false;
-    if (!supportsKeyEncoding(flags)) return false;
-    if ((flags & key_mode_report_text) == 0) return false;
-    if ((flags & key_mode_report_all_event_types) == 0 and action == .release) return false;
+    if (!key_encoding.supportsKeyEncoding(flags)) return false;
+    if ((flags & key_encoding.key_mode_report_text) == 0) return false;
+    if ((flags & key_encoding.key_mode_report_all_event_types) == 0 and action == .release) return false;
 
     var buf: [64]u8 = undefined;
-    const mod_value = kittyModValue(mod);
+    const mod_value = key_encoding.kittyModValue(mod);
     const has_mods = mod_value != 1;
-    const add_actions = (flags & key_mode_report_all_event_types) != 0 and action != .press;
+    const add_actions = (flags & key_encoding.key_mode_report_all_event_types) != 0 and action != .press;
     const second_field = has_mods or add_actions;
 
     var pos: usize = 0;
@@ -317,7 +310,7 @@ fn sendCharWithProtocol(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, flags
     pos += 1;
     const written_key = std.fmt.bufPrint(buf[pos..], "{d}", .{char}) catch return false;
     pos += written_key.len;
-    if (second_field or (flags & key_mode_embed_text) != 0) {
+    if (second_field or (flags & key_encoding.key_mode_embed_text) != 0) {
         buf[pos] = ';';
         pos += 1;
         if (has_mods) {
@@ -331,111 +324,13 @@ fn sendCharWithProtocol(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, flags
             pos += written_action.len;
         }
     }
-    if ((flags & key_mode_embed_text) != 0) {
+    if ((flags & key_encoding.key_mode_embed_text) != 0) {
         buf[pos] = ';';
         pos += 1;
         const written_text = std.fmt.bufPrint(buf[pos..], "{d}", .{char}) catch return false;
         pos += written_text.len;
     }
     buf[pos] = 'u';
-    pos += 1;
-    _ = pty.write(buf[0..pos]) catch return false;
-    return true;
-}
-
-const key_mode_disambiguate: u32 = 1;
-const key_mode_report_all_event_types: u32 = 2;
-const key_mode_report_alternate_key: u32 = 4;
-const key_mode_report_text: u32 = 8;
-const key_mode_embed_text: u32 = 16;
-fn supportsKeyEncoding(flags: u32) bool {
-    if (flags == 0) return false;
-    return true;
-}
-
-const KittyKeyMapping = struct {
-    number: u32,
-    trailer: u8,
-};
-
-fn kittyFunctionKeyMapping(key: types.Key) ?KittyKeyMapping {
-    return switch (key) {
-        types.VTERM_KEY_ESCAPE => .{ .number = 27, .trailer = 'u' },
-        types.VTERM_KEY_ENTER => .{ .number = 13, .trailer = 'u' },
-        types.VTERM_KEY_TAB => .{ .number = 9, .trailer = 'u' },
-        types.VTERM_KEY_BACKSPACE => .{ .number = 127, .trailer = 'u' },
-        types.VTERM_KEY_INS => .{ .number = 2, .trailer = '~' },
-        types.VTERM_KEY_DEL => .{ .number = 3, .trailer = '~' },
-        types.VTERM_KEY_LEFT => .{ .number = 1, .trailer = 'D' },
-        types.VTERM_KEY_RIGHT => .{ .number = 1, .trailer = 'C' },
-        types.VTERM_KEY_UP => .{ .number = 1, .trailer = 'A' },
-        types.VTERM_KEY_DOWN => .{ .number = 1, .trailer = 'B' },
-        types.VTERM_KEY_PAGEUP => .{ .number = 5, .trailer = '~' },
-        types.VTERM_KEY_PAGEDOWN => .{ .number = 6, .trailer = '~' },
-        types.VTERM_KEY_HOME => .{ .number = 1, .trailer = 'H' },
-        types.VTERM_KEY_END => .{ .number = 1, .trailer = 'F' },
-        types.VTERM_KEY_LEFT_SHIFT => .{ .number = 57441, .trailer = 'u' },
-        types.VTERM_KEY_LEFT_CTRL => .{ .number = 57442, .trailer = 'u' },
-        types.VTERM_KEY_LEFT_ALT => .{ .number = 57443, .trailer = 'u' },
-        types.VTERM_KEY_LEFT_SUPER => .{ .number = 57444, .trailer = 'u' },
-        types.VTERM_KEY_RIGHT_SHIFT => .{ .number = 57447, .trailer = 'u' },
-        types.VTERM_KEY_RIGHT_CTRL => .{ .number = 57448, .trailer = 'u' },
-        types.VTERM_KEY_RIGHT_ALT => .{ .number = 57449, .trailer = 'u' },
-        types.VTERM_KEY_RIGHT_SUPER => .{ .number = 57450, .trailer = 'u' },
-        else => null,
-    };
-}
-
-fn kittyModValue(mod: types.Modifier) u8 {
-    var value: u8 = 1;
-    if ((mod & types.VTERM_MOD_SHIFT) != 0) value += 1;
-    if ((mod & types.VTERM_MOD_ALT) != 0) value += 2;
-    if ((mod & types.VTERM_MOD_CTRL) != 0) value += 4;
-    return value;
-}
-
-fn sendKittyFunctionKey(
-    pty: *pty_mod.Pty,
-    key_number: u32,
-    trailer: u8,
-    mod: types.Modifier,
-    action: KeyAction,
-    flags: u32,
-) bool {
-    const report_all = (flags & key_mode_report_all_event_types) != 0;
-    const disambiguate = (flags & key_mode_disambiguate) != 0;
-    const report_text = (flags & key_mode_report_text) != 0;
-    if (!report_all and !disambiguate and !report_text) return false;
-    if (!report_all and action == .release) return false;
-
-    const mod_value = kittyModValue(mod);
-    const has_mods = mod_value != 1;
-    const add_actions = report_all and action != .press;
-    const second_field = has_mods or add_actions;
-
-    var buf: [64]u8 = undefined;
-    var pos: usize = 0;
-    buf[pos] = 0x1b;
-    pos += 1;
-    buf[pos] = '[';
-    pos += 1;
-    const written_key = std.fmt.bufPrint(buf[pos..], "{d}", .{key_number}) catch return false;
-    pos += written_key.len;
-    if (second_field) {
-        buf[pos] = ';';
-        pos += 1;
-        if (has_mods) {
-            const written_mod = std.fmt.bufPrint(buf[pos..], "{d}", .{mod_value}) catch return false;
-            pos += written_mod.len;
-        }
-        if (add_actions) {
-            buf[pos] = ':';
-            pos += 1;
-            const written_action = std.fmt.bufPrint(buf[pos..], "{d}", .{@intFromEnum(action) + 1}) catch return false;
-            pos += written_action.len;
-        }
-    }
-    buf[pos] = trailer;
     pos += 1;
     _ = pty.write(buf[0..pos]) catch return false;
     return true;
@@ -450,7 +345,7 @@ pub fn encodeKeyBytesForTest(
     if (!debugAccessAllowed()) @panic("encodeKeyBytesForTest is test-only");
     if (flags == 0) return allocator.alloc(u8, 0);
     const mod_code = encodeModifier(mod);
-    if ((flags & key_mode_report_all_event_types) == 0) {
+    if ((flags & key_encoding.key_mode_report_all_event_types) == 0) {
         if (key == types.VTERM_KEY_ENTER or key == types.VTERM_KEY_TAB or key == types.VTERM_KEY_BACKSPACE) {
             return allocator.alloc(u8, 0);
         }
@@ -479,7 +374,7 @@ pub fn encodeCharBytesForTest(
 ) ![]u8 {
     if (!debugAccessAllowed()) @panic("encodeCharBytesForTest is test-only");
     if (flags == 0) return allocator.alloc(u8, 0);
-    if (mod == types.VTERM_MOD_NONE and (flags & key_mode_report_all_event_types) == 0) {
+    if (mod == types.VTERM_MOD_NONE and (flags & key_encoding.key_mode_report_all_event_types) == 0) {
         return allocator.alloc(u8, 0);
     }
     const mod_code = encodeModifier(mod);
