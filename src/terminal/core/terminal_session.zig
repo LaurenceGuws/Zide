@@ -20,6 +20,8 @@ const selection_mod = @import("selection.zig");
 const scrolling_mod = @import("scrolling.zig");
 const control_handlers = @import("control_handlers.zig");
 const parser_hooks = @import("parser_hooks.zig");
+const input_modes = @import("input_modes.zig");
+const hyperlink_table = @import("hyperlink_table.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
 const Screen = screen_mod.Screen;
@@ -522,7 +524,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn appKeypadEnabled(self: *const TerminalSession) bool {
-        return self.input_snapshot.app_keypad.load(.acquire);
+        return input_modes.appKeypadEnabled(self);
     }
 
     pub fn sendChar(self: *TerminalSession, char: u32, mod: Modifier) !void {
@@ -609,19 +611,7 @@ pub const TerminalSession = struct {
         parser_hooks.parseOsc(self, payload, terminator);
     }
     pub fn appendHyperlink(self: *TerminalSession, uri: []const u8) ?u32 {
-        if (uri.len == 0) return 0;
-        if (self.hyperlink_table.items.len >= max_hyperlinks) {
-            for (self.hyperlink_table.items) |link| {
-                self.allocator.free(link.uri);
-            }
-            self.hyperlink_table.clearRetainingCapacity();
-        }
-        const duped = self.allocator.dupe(u8, uri) catch return null;
-        _ = self.hyperlink_table.append(self.allocator, .{ .uri = duped }) catch {
-            self.allocator.free(duped);
-            return null;
-        };
-        return @intCast(self.hyperlink_table.items.len);
+        return hyperlink_table.appendHyperlink(self, uri, max_hyperlinks);
     }
 
     pub fn parseKittyGraphics(self: *TerminalSession, payload: []const u8) void {
@@ -811,7 +801,7 @@ pub const TerminalSession = struct {
     }
 
     fn keyModeFlags(self: *TerminalSession) u32 {
-        return self.activeScreen().keyModeFlags();
+        return input_modes.keyModeFlags(self);
     }
 
     pub fn keyModeFlagsValue(self: *TerminalSession) u32 {
@@ -819,27 +809,19 @@ pub const TerminalSession = struct {
     }
 
     pub fn keyModePush(self: *TerminalSession, flags: u32) void {
-        self.activeScreen().keyModePush(flags);
-        self.updateInputSnapshot();
+        input_modes.keyModePush(self, flags);
     }
 
     pub fn keyModePop(self: *TerminalSession, count: usize) void {
-        self.activeScreen().keyModePop(count);
-        self.updateInputSnapshot();
+        input_modes.keyModePop(self, count);
     }
 
     pub fn keyModeModify(self: *TerminalSession, flags: u32, mode: u32) void {
-        self.activeScreen().keyModeModify(flags, mode);
-        self.updateInputSnapshot();
+        input_modes.keyModeModify(self, flags, mode);
     }
 
     pub fn keyModeQuery(self: *TerminalSession) void {
-        const flags = self.keyModeFlags();
-        if (self.pty) |*pty| {
-            var buf: [32]u8 = undefined;
-            const seq = std.fmt.bufPrint(&buf, "\x1b[?{d}u", .{flags}) catch return;
-            _ = pty.write(seq) catch {};
-        }
+        input_modes.keyModeQuery(self);
     }
 
     pub fn setCursorStyle(self: *TerminalSession, mode: i32) void {
@@ -858,8 +840,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn setKeypadMode(self: *TerminalSession, enabled: bool) void {
-        self.app_keypad = enabled;
-        self.updateInputSnapshot();
+        input_modes.setKeypadMode(self, enabled);
     }
 
     pub fn restoreCursor(self: *TerminalSession) void {
@@ -958,10 +939,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn hyperlinkUri(self: *const TerminalSession, link_id: u32) ?[]const u8 {
-        if (link_id == 0) return null;
-        const idx = link_id - 1;
-        if (idx >= self.hyperlink_table.items.len) return null;
-        return self.hyperlink_table.items[idx].uri;
+        return hyperlink_table.hyperlinkUri(self, link_id);
     }
 
     pub fn currentCwd(self: *const TerminalSession) []const u8 {
