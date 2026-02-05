@@ -1,10 +1,10 @@
 const std = @import("std");
-const palette_mod = @import("../core/palette.zig");
-const osc_semantic = @import("../core/osc_semantic.zig");
-const osc_clipboard = @import("../core/osc_clipboard.zig");
-const osc_cwd = @import("../core/osc_cwd.zig");
-const osc_hyperlink = @import("../core/osc_hyperlink.zig");
-const osc_title = @import("../core/osc_title.zig");
+const palette_mod = @import("palette.zig");
+const osc_semantic = @import("osc_semantic.zig");
+const osc_clipboard = @import("osc_clipboard.zig");
+const osc_cwd = @import("osc_cwd.zig");
+const osc_hyperlink = @import("osc_hyperlink.zig");
+const osc_title = @import("osc_title.zig");
 const parser_mod = @import("../parser/parser.zig");
 const app_logger = @import("../../app_logger.zig");
 

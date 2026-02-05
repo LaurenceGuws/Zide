@@ -126,12 +126,12 @@ Progress:
 - Scrollback push ordering aligned with Ghostty/Kitty; `scrollback_push` golden updated.
 - Completed step 3 (feature inventory captured in `app_architecture/terminal/FEATURE_INVENTORY.md`).
 - Migration step: extracted terminal render cache to `src/terminal/core/render_cache.zig` (no behavior change).
-- Migration step: extracted palette + dynamic color handling to `src/terminal/core/palette.zig` (no behavior change).
-- Migration step: extracted OSC semantic prompt + user-var handling to `src/terminal/core/osc_semantic.zig` (no behavior change).
-- Migration step: extracted OSC clipboard handling to `src/terminal/core/osc_clipboard.zig` (no behavior change).
-- Migration step: extracted OSC CWD normalization + decode helpers to `src/terminal/core/osc_cwd.zig` and `src/terminal/core/osc_util.zig` (no behavior change).
-- Migration step: extracted OSC hyperlink handling to `src/terminal/core/osc_hyperlink.zig` (no behavior change).
-- Migration step: extracted OSC title handling to `src/terminal/core/osc_title.zig` (no behavior change).
+- Migration step: extracted palette + dynamic color handling to `src/terminal/protocol/palette.zig` (no behavior change).
+- Migration step: extracted OSC semantic prompt + user-var handling to `src/terminal/protocol/osc_semantic.zig` (no behavior change).
+- Migration step: extracted OSC clipboard handling to `src/terminal/protocol/osc_clipboard.zig` (no behavior change).
+- Migration step: extracted OSC CWD normalization + decode helpers to `src/terminal/protocol/osc_cwd.zig` and `src/terminal/protocol/osc_util.zig` (no behavior change).
+- Migration step: extracted OSC hyperlink handling to `src/terminal/protocol/osc_hyperlink.zig` (no behavior change).
+- Migration step: extracted OSC title handling to `src/terminal/protocol/osc_title.zig` (no behavior change).
 - Migration step: extracted mouse reporting helpers to `src/terminal/input/mouse_report.zig` (no behavior change).
 - Migration step: extracted key encoding helpers to `src/terminal/input/key_encoding.zig` (no behavior change).
 - Migration step: extracted keypad mappings to `src/terminal/input/keypad.zig` (no behavior change).
@@ -145,6 +145,8 @@ Progress:
 - Migration step: extracted parser glue to `src/terminal/core/parser_hooks.zig` (no behavior change).
 - Migration step: extracted input mode helpers to `src/terminal/core/input_modes.zig` (no behavior change).
 - Migration step: extracted hyperlink table helpers to `src/terminal/core/hyperlink_table.zig` (no behavior change).
+- Migration step: extracted reset/save/restore helpers to `src/terminal/core/state_reset.zig` (no behavior change).
+- Migration step: extracted scrollback accessors to `src/terminal/core/scrollback_view.zig` (no behavior change).
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.
