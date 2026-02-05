@@ -16,14 +16,14 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 ## Handoff (High-Level)
 
 ### Current Focus
-- Terminal correctness: VT protocol coverage for vttest/gping is the active focus (DECCOLM, blink, reverse video, cursor save/restore). See `app_architecture/terminal/DESIGN.md` + `app_architecture/terminal/terminal_widget_todo.yaml`.
-- Terminal scrollback redesign: current resize/scrollback handling is still inadequate; redesign is planned (Phase 3.5 in `app_architecture/terminal/terminal_widget_todo.yaml`).
+- Terminal modularization: extraction-only refactors of `src/terminal/core/terminal_session.zig` and related helpers per `app_architecture/terminal/MODULARIZATION_PLAN.md`.
+- Terminal correctness fixtures are locked with replay goldens; keep replay harness green while extracting.
 - SDL3 migration remains the baseline; keep parity stable while terminal changes land (see `app_architecture/ui/sdl3_migration_todo.yaml`).
 
 ### Recent Changes (High-Level)
-- Terminal protocol fixes: save/restore cursor now preserves charset; reverse video, blink, and background fill improved; reverse index + origin mode fixes landed.
-- DECCOLM behavior aligned to Kitty-style clear+home on set, no resize (documented in terminal design + todo).
-- Logging tags expanded temporarily for protocol tracing; config was cleaned after capture.
+- Terminal replay harness now supports `--update-goldens` for snapshot refresh.
+- New replay fixtures for gping/nvim overlay + vttest wraparound; goldens updated.
+- Modularization extractions: render cache, palette/dynamic colors, OSC helpers (semantic, clipboard, CWD, hyperlink, title), input helpers (mouse, key encoding).
 
 ### Constraints / Guardrails
 - Handoff docs are high-level only; progress tracking lives in todo + app_architecture docs.
@@ -36,7 +36,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - Renderer modularization + OS abstraction plan: `app_architecture/ui/renderer_todo.yaml`
 - SDL3 migration tracker: `app_architecture/ui/sdl3_migration_todo.yaml`
 - Editor widget roadmap: `app_architecture/editor/editor_widget_todo.yaml`
-- Terminal roadmap: `app_architecture/terminal/*_todo.yaml`
+- Terminal roadmap + modularization: `app_architecture/terminal/MODULARIZATION_PLAN.md`
 - Terminal design notes: `app_architecture/terminal/DESIGN.md`
 - Undo loop notes: `app_architecture/ui/DEVELOPMENT_JOURNEY.md` (known issue entry).
 
