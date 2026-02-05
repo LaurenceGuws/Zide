@@ -34,6 +34,7 @@ Notes:
 - Populate test names as fixtures land in `src/terminal_tests.zig`.
 - Update this table with observed behavior once baseline fixtures exist.
 - Contracted behavior only after verified tests; do not assert guarantees early.
+- Implementation is now modularized across `src/terminal/core/*` helpers; API surface remains `TerminalSession`.
 
 Replay fixtures referenced above live under `fixtures/terminal` and are executed via `zig build test-terminal-replay`.
 

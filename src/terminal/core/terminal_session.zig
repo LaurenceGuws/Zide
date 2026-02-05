@@ -12,7 +12,7 @@ const types = @import("../model/types.zig");
 const app_logger = @import("../../app_logger.zig");
 const kitty_mod = @import("../kitty/graphics.zig");
 const semantic_prompt_mod = @import("semantic_prompt.zig");
-const palette_mod = @import("palette.zig");
+const palette_mod = @import("../protocol/palette.zig");
 const pty_io = @import("pty_io.zig");
 const view_cache = @import("view_cache.zig");
 const resize_reflow = @import("resize_reflow.zig");
@@ -22,6 +22,8 @@ const control_handlers = @import("control_handlers.zig");
 const parser_hooks = @import("parser_hooks.zig");
 const input_modes = @import("input_modes.zig");
 const hyperlink_table = @import("hyperlink_table.zig");
+const state_reset = @import("state_reset.zig");
+const scrollback_view = @import("scrollback_view.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
 const Screen = screen_mod.Screen;
@@ -623,17 +625,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn resetState(self: *TerminalSession) void {
-        self.parser.reset();
-        self.saved_charset = .{};
-        self.primary.resetState();
-        self.alt.resetState();
-        self.input.resetMouse();
-        self.current_hyperlink_id = 0;
-        self.app_keypad = false;
-        self.primary.clear();
-        self.alt.clear();
-        kitty_mod.clearKittyImages(self);
-        _ = self.clear_generation.fetchAdd(1, .acq_rel);
+        state_reset.resetState(self);
     }
 
     pub fn reverseIndex(self: *TerminalSession) void {
@@ -742,54 +734,23 @@ pub const TerminalSession = struct {
     }
 
     pub fn scrollbackCount(self: *TerminalSession) usize {
-        if (self.isAltActive()) return 0;
-        self.history.ensureViewCache(self.primary.grid.cols, self.primary.defaultCell());
-        return self.history.scrollbackCount();
+        return scrollback_view.scrollbackCount(self);
     }
 
     pub fn scrollbackRow(self: *TerminalSession, index: usize) ?[]const Cell {
-        if (self.isAltActive()) return null;
-        self.history.ensureViewCache(self.primary.grid.cols, self.primary.defaultCell());
-        return self.history.scrollbackRow(index);
+        return scrollback_view.scrollbackRow(self, index);
     }
 
     pub fn scrollOffset(self: *TerminalSession) usize {
-        if (self.isAltActive()) return 0;
-        return self.history.scrollOffset();
+        return scrollback_view.scrollOffset(self);
     }
 
     pub fn setScrollOffset(self: *TerminalSession, offset: usize) void {
-        if (self.isAltActive()) {
-            self.history.scrollback_offset = 0;
-            return;
-        }
-        self.history.ensureViewCache(self.primary.grid.cols, self.primary.defaultCell());
-        self.history.setScrollOffset(self.primary.grid.rows, offset);
-        self.primary.markDirtyAll();
-        self.view_cache_request_offset.store(@intCast(self.history.scrollOffset()), .release);
-        self.view_cache_pending.store(true, .release);
-        self.io_wait_cond.signal();
-        self.updateViewCacheForScroll();
-        const log = app_logger.logger("terminal.core");
-        const max_offset = self.history.maxScrollOffset(self.primary.grid.rows);
-        log.logf("set scroll offset={d} max={d}", .{ self.history.scrollOffset(), max_offset });
-        log.logStdout("set scroll offset={d} max={d}", .{ self.history.scrollOffset(), max_offset });
+        scrollback_view.setScrollOffset(self, offset);
     }
 
     pub fn scrollBy(self: *TerminalSession, delta: isize) void {
-        if (self.isAltActive()) return;
-        if (delta == 0) return;
-        self.history.ensureViewCache(self.primary.grid.cols, self.primary.defaultCell());
-        self.history.scrollBy(self.primary.grid.rows, delta);
-        self.primary.markDirtyAll();
-        self.view_cache_request_offset.store(@intCast(self.history.scrollOffset()), .release);
-        self.view_cache_pending.store(true, .release);
-        self.io_wait_cond.signal();
-        self.updateViewCacheForScroll();
-        const log = app_logger.logger("terminal.core");
-        const max_offset = self.history.maxScrollOffset(self.primary.grid.rows);
-        log.logf("scroll by delta={d} offset={d} max={d}", .{ delta, self.history.scrollOffset(), max_offset });
-        log.logStdout("scroll by delta={d} offset={d} max={d}", .{ delta, self.history.scrollOffset(), max_offset });
+        scrollback_view.scrollBy(self, delta);
     }
 
     pub fn updateViewCacheForScroll(self: *TerminalSession) void {
@@ -829,14 +790,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn saveCursor(self: *TerminalSession) void {
-        self.activeScreen().saveCursor();
-        self.saved_charset = .{
-            .active = true,
-            .g0 = self.parser.g0_charset,
-            .g1 = self.parser.g1_charset,
-            .gl = self.parser.gl_charset,
-            .target = self.parser.charset_target,
-        };
+        state_reset.saveCursor(self);
     }
 
     pub fn setKeypadMode(self: *TerminalSession, enabled: bool) void {
@@ -844,12 +798,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn restoreCursor(self: *TerminalSession) void {
-        self.activeScreen().restoreCursor();
-        if (!self.saved_charset.active) return;
-        self.parser.g0_charset = self.saved_charset.g0;
-        self.parser.g1_charset = self.saved_charset.g1;
-        self.parser.gl_charset = self.saved_charset.gl;
-        self.parser.charset_target = self.saved_charset.target;
+        state_reset.restoreCursor(self);
     }
 
     pub fn setTabAtCursor(self: *TerminalSession) void {
