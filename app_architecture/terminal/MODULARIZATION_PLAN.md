@@ -141,6 +141,8 @@ Progress:
 - Migration step: extracted resize + reflow logic to `src/terminal/core/resize_reflow.zig` (no behavior change).
 - Migration step: extracted scrolling helpers to `src/terminal/core/scrolling.zig` (no behavior change).
 - Migration step: extracted selection helpers to `src/terminal/core/selection.zig` (no behavior change).
+- Migration step: extracted control handlers to `src/terminal/core/control_handlers.zig` (no behavior change).
+- Migration step: extracted parser glue to `src/terminal/core/parser_hooks.zig` (no behavior change).
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.
