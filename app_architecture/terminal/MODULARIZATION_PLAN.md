@@ -139,6 +139,8 @@ Progress:
 - Migration step: extracted I/O thread helpers to `src/terminal/core/io_threads.zig` (no behavior change).
 - Migration step: extracted view cache pipeline to `src/terminal/core/view_cache.zig` (no behavior change).
 - Migration step: extracted resize + reflow logic to `src/terminal/core/resize_reflow.zig` (no behavior change).
+- Migration step: extracted scrolling helpers to `src/terminal/core/scrolling.zig` (no behavior change).
+- Migration step: extracted selection helpers to `src/terminal/core/selection.zig` (no behavior change).
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.

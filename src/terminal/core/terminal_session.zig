@@ -18,6 +18,8 @@ const palette_mod = @import("palette.zig");
 const pty_io = @import("pty_io.zig");
 const view_cache = @import("view_cache.zig");
 const resize_reflow = @import("resize_reflow.zig");
+const selection_mod = @import("selection.zig");
+const scrolling_mod = @import("scrolling.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
 const Screen = screen_mod.Screen;
@@ -740,75 +742,12 @@ pub const TerminalSession = struct {
         screen.deleteLines(count, blank_cell);
     }
 
-    fn isFullScrollRegion(self: *TerminalSession) bool {
-        return self.activeScreenConst().isFullScrollRegion();
-    }
-
-    fn pushScrollbackRow(self: *TerminalSession, row: usize) void {
-        if (self.isAltActive()) return;
-        const screen = &self.primary;
-        const cols = @as(usize, screen.grid.cols);
-        if (cols == 0 or screen.grid.rows == 0) return;
-        if (row >= @as(usize, screen.grid.rows)) return;
-        const row_start = row * cols;
-        const wrapped = screen.grid.rowWrapped(row);
-        self.history.pushRow(screen.grid.cells.items[row_start .. row_start + cols], wrapped, screen.defaultCell());
-        self.kitty_primary.scrollback_total += 1;
-        const log = app_logger.logger("terminal.core");
-        log.logf("scrollback push row={d} total={d}", .{ row, self.history.scrollbackCount() });
-        log.logStdout("scrollback push total={d}", .{self.history.scrollbackCount()});
-    }
-
     pub fn scrollRegionUp(self: *TerminalSession, count: usize) void {
-        const log = app_logger.logger("terminal.core");
-        const screen = self.activeScreen();
-        log.logf("scroll region up count={d} top={d} bottom={d}", .{ count, screen.scroll_top, screen.scroll_bottom });
-        log.logStdout("scroll region up count={d}", .{count});
-        const trace = app_logger.logger("terminal.trace.scroll");
-        if (trace.enabled_file or trace.enabled_console) {
-            trace.logf(
-                "scroll_up count={d} cursor={d},{d} origin={any} region={d}..{d}",
-                .{ count, screen.cursor.row, screen.cursor.col, screen.origin_mode, screen.scroll_top, screen.scroll_bottom },
-            );
-        }
-        const cols = @as(usize, screen.grid.cols);
-        if (cols == 0 or screen.grid.rows == 0) return;
-        const n = @min(count, screen.scroll_bottom - screen.scroll_top + 1);
-        if (n == 0) return;
-        const blank_cell = screen.blankCell();
-        if (self.isFullScrollRegion()) {
-            var row: usize = 0;
-            while (row < n) : (row += 1) {
-                self.pushScrollbackRow(screen.scroll_top + row);
-            }
-            kitty_mod.updateKittyPlacementsForScroll(self);
-            _ = self.clear_generation.fetchAdd(1, .acq_rel);
-        }
-        screen.scrollRegionUpBy(n, blank_cell);
-        self.force_full_damage.store(true, .release);
-        if (!self.isFullScrollRegion()) {
-            kitty_mod.shiftKittyPlacementsUp(self, screen.scroll_top, screen.scroll_bottom, n);
-        }
+        scrolling_mod.scrollRegionUp(self, count);
     }
 
     pub fn scrollRegionDown(self: *TerminalSession, count: usize) void {
-        const screen = self.activeScreen();
-        const trace = app_logger.logger("terminal.trace.scroll");
-        if (trace.enabled_file or trace.enabled_console) {
-            trace.logf(
-                "scroll_down count={d} cursor={d},{d} origin={any} region={d}..{d}",
-                .{ count, screen.cursor.row, screen.cursor.col, screen.origin_mode, screen.scroll_top, screen.scroll_bottom },
-            );
-        }
-        const cols = @as(usize, screen.grid.cols);
-        if (cols == 0 or screen.grid.rows == 0) return;
-        const n = @min(count, screen.scroll_bottom - screen.scroll_top + 1);
-        if (n == 0) return;
-        const blank_cell = screen.blankCell();
-        screen.scrollRegionDownBy(n, blank_cell);
-        kitty_mod.shiftKittyPlacementsDown(self, screen.scroll_top, screen.scroll_bottom, n);
-        _ = self.clear_generation.fetchAdd(1, .acq_rel);
-        self.force_full_damage.store(true, .release);
+        scrolling_mod.scrollRegionDown(self, count);
     }
 
     fn applySgr(self: *TerminalSession, action: csi_mod.CsiAction) void {
@@ -913,25 +852,7 @@ pub const TerminalSession = struct {
     }
 
     fn scrollUp(self: *TerminalSession) void {
-        const log = app_logger.logger("terminal.core");
-        const screen = self.activeScreen();
-        log.logf("scroll up rows={d} cols={d}", .{ screen.grid.rows, screen.grid.cols });
-        log.logStdout("scroll up rows={d} cols={d}", .{ screen.grid.rows, screen.grid.cols });
-        const cols = @as(usize, screen.grid.cols);
-        const rows = @as(usize, screen.grid.rows);
-        if (rows == 0 or cols == 0) return;
-
-        if (self.isFullScrollRegion()) {
-            self.pushScrollbackRow(0);
-            kitty_mod.updateKittyPlacementsForScroll(self);
-            _ = self.clear_generation.fetchAdd(1, .acq_rel);
-        }
-        const blank_cell = screen.blankCell();
-        screen.scrollUp(blank_cell);
-        self.force_full_damage.store(true, .release);
-        if (!self.isFullScrollRegion()) {
-            kitty_mod.shiftKittyPlacementsUp(self, 0, rows - 1, 1);
-        }
+        scrolling_mod.scrollUp(self);
     }
 
     pub fn getCell(self: *TerminalSession, row: usize, col: usize) Cell {
@@ -1173,39 +1094,23 @@ pub const TerminalSession = struct {
     }
 
     pub fn clearSelection(self: *TerminalSession) void {
-        self.history.clearSelection();
-        self.view_cache_request_offset.store(@intCast(self.history.scrollOffset()), .release);
-        self.view_cache_pending.store(true, .release);
-        self.io_wait_cond.signal();
+        selection_mod.clearSelection(self);
     }
 
     pub fn startSelection(self: *TerminalSession, row: usize, col: usize) void {
-        if (self.isAltActive()) return;
-        self.history.startSelection(row, col);
-        self.view_cache_request_offset.store(@intCast(self.history.scrollOffset()), .release);
-        self.view_cache_pending.store(true, .release);
-        self.io_wait_cond.signal();
+        selection_mod.startSelection(self, row, col);
     }
 
     pub fn updateSelection(self: *TerminalSession, row: usize, col: usize) void {
-        if (self.isAltActive()) return;
-        self.history.updateSelection(row, col);
-        self.view_cache_request_offset.store(@intCast(self.history.scrollOffset()), .release);
-        self.view_cache_pending.store(true, .release);
-        self.io_wait_cond.signal();
+        selection_mod.updateSelection(self, row, col);
     }
 
     pub fn finishSelection(self: *TerminalSession) void {
-        if (self.isAltActive()) return;
-        self.history.finishSelection();
-        self.view_cache_request_offset.store(@intCast(self.history.scrollOffset()), .release);
-        self.view_cache_pending.store(true, .release);
-        self.io_wait_cond.signal();
+        selection_mod.finishSelection(self);
     }
 
     pub fn selectionState(self: *TerminalSession) ?TerminalSelection {
-        if (self.isAltActive()) return null;
-        return self.history.selectionState();
+        return selection_mod.selectionState(self);
     }
 
     pub fn bracketedPasteEnabled(self: *TerminalSession) bool {
