@@ -28,7 +28,22 @@ This avoids vendoring large binaries early, while keeping Windows builds reprodu
  .\bootstrap-vcpkg.bat
 ```
 
-2) Install the required libraries (x64):
+Note: vcpkg relies on PowerShell (pwsh). If vcpkg fails with an error like
+"The cloud file provider is not running" for a path under
+`%USERPROFILE%\OneDrive\Documents\PowerShell\powershell.config.json`, either:
+- Start/sign-in to OneDrive (so the placeholder file becomes readable), or
+- Delete that `powershell.config.json` placeholder file.
+
+2) Install the required libraries (x64).
+
+Recommended (manifest mode, from the Zide repo root):
+```
+ C:\path\to\vcpkg\vcpkg.exe install --triplet x64-windows
+```
+
+This writes dependencies into `./vcpkg_installed/x64-windows/`.
+
+Classic mode (installs into `<VCPKG_ROOT>/installed/<triplet>/`) also works:
 ```
  .\vcpkg.exe install sdl3 freetype harfbuzz lua --triplet x64-windows
 ```
@@ -43,6 +58,11 @@ Recommended environment variables:
 Build with vcpkg enabled:
 ```
  zig build -Duse-vcpkg=true
+```
+
+On Windows, use the MSVC target when using the `x64-windows` triplet:
+```
+ zig build -Duse-vcpkg=true -Dvcpkg-triplet=x64-windows -Dtarget=x86_64-windows-msvc
 ```
 
 You can also pass paths explicitly:
