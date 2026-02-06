@@ -59,16 +59,50 @@ pub fn build(b: *std.Build) void {
     const build_options = b.addOptions();
     build_options.addOption([]const u8, "renderer_backend", renderer_backend);
     const use_vcpkg = b.option(bool, "use-vcpkg", "Use vcpkg for native dependencies") orelse false;
-    const vcpkg_root = b.option([]const u8, "vcpkg-root", "Path to vcpkg root") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_ROOT") catch null;
-    const vcpkg_triplet = b.option([]const u8, "vcpkg-triplet", "vcpkg triplet (e.g. x64-windows)") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_DEFAULT_TRIPLET") catch null;
+    const vcpkg_root_opt = b.option([]const u8, "vcpkg-root", "Path to vcpkg root") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_ROOT") catch null;
+    const vcpkg_triplet_opt = b.option([]const u8, "vcpkg-triplet", "vcpkg triplet (e.g. x64-windows)") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_DEFAULT_TRIPLET") catch null;
+
+    // vcpkg can install dependencies in two common layouts:
+    // - Classic: <VCPKG_ROOT>/installed/<triplet>/{include,lib,...}
+    // - Manifest (recommended): <project>/vcpkg_installed/<triplet>/{include,lib,...}
+    //
+    // Prefer classic if it exists (and a root was provided), otherwise fall back
+    // to manifest layout.
     var vcpkg_include: ?[]const u8 = null;
     var vcpkg_lib: ?[]const u8 = null;
     if (use_vcpkg) {
-        if (vcpkg_root == null or vcpkg_triplet == null) {
-            @panic("use-vcpkg requires VCPKG_ROOT and VCPKG_DEFAULT_TRIPLET (or --vcpkg-root/--vcpkg-triplet)");
+        const vcpkg_triplet = vcpkg_triplet_opt orelse switch (target_os) {
+            .windows => "x64-windows",
+            else => "x64-linux",
+        };
+
+        const manifest_lib = b.pathJoin(&.{ "vcpkg_installed", vcpkg_triplet, "lib" });
+        const manifest_include = b.pathJoin(&.{ "vcpkg_installed", vcpkg_triplet, "include" });
+
+        if (vcpkg_root_opt) |vcpkg_root| {
+            const classic_lib = b.pathJoin(&.{ vcpkg_root, "installed", vcpkg_triplet, "lib" });
+            const classic_include = b.pathJoin(&.{ vcpkg_root, "installed", vcpkg_triplet, "include" });
+
+            if (std.fs.cwd().access(classic_lib, .{})) |_| {
+                vcpkg_lib = classic_lib;
+                vcpkg_include = classic_include;
+            } else |_| {
+                // Fall back to manifest layout if present.
+                if (std.fs.cwd().access(manifest_lib, .{})) |_| {
+                    vcpkg_lib = manifest_lib;
+                    vcpkg_include = manifest_include;
+                } else |_| {
+                    @panic("use-vcpkg enabled, but could not find vcpkg libraries. Expected either <VCPKG_ROOT>/installed/<triplet>/lib or ./vcpkg_installed/<triplet>/lib");
+                }
+            }
+        } else {
+            if (std.fs.cwd().access(manifest_lib, .{})) |_| {
+                vcpkg_lib = manifest_lib;
+                vcpkg_include = manifest_include;
+            } else |_| {
+                @panic("use-vcpkg enabled, but VCPKG_ROOT was not set and ./vcpkg_installed was not found. Run vcpkg install in the project root, or pass --vcpkg-root");
+            }
         }
-        vcpkg_lib = b.pathJoin(&.{ vcpkg_root.?, "installed", vcpkg_triplet.?, "lib" });
-        vcpkg_include = b.pathJoin(&.{ vcpkg_root.?, "installed", vcpkg_triplet.?, "include" });
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -24,3 +24,6 @@ tools/grammar_packs/work/
 tools/grammar_packs/dist/
 tools/term_manual_test/terminal-doom
 zig-cache/terminal-replay
+
+# vcpkg (manifest-mode install directory)
+vcpkg_installed/
