@@ -1,7 +1,14 @@
 const std = @import("std");
+const builtin = @import("builtin");
 pub const is_sdl3 = true;
 
 pub const c = @cImport({
+    if (builtin.target.os.tag == .windows) {
+        // Work around Zig translate-c emitting a strong definition for
+        // `_Avx2WmemEnabledWeakValue` from the Windows UCRT `wchar.h`, which
+        // then duplicates the symbol from `libucrt` at link time.
+        @cDefine("_INC_WCHAR", "1");
+    }
     @cInclude("SDL3/SDL.h");
     @cInclude("SDL3/SDL_opengl.h");
 });

@@ -15,6 +15,8 @@ pub const c = @cImport({
 const fc = if (builtin.target.os.tag == .linux) @cImport({
     @cInclude("fontconfig/fontconfig.h");
 }) else struct {};
+
+const FcConfigPtr = if (builtin.target.os.tag == .linux) *fc.FcConfig else *anyopaque;
 // TODO(macOS): Add CoreText-based fallback resolution for missing glyphs.
 // TODO(Windows): Add DirectWrite-based fallback resolution for missing glyphs.
 
@@ -76,7 +78,7 @@ pub const TerminalFont = struct {
     emoji_color_hb_font: ?*c.hb_font_t,
     emoji_text_hb_font: ?*c.hb_font_t,
     fc_enabled: bool,
-    fc_config: ?*fc.FcConfig,
+    fc_config: ?FcConfigPtr,
     system_fallback_by_cp: std.AutoHashMap(u32, ?[]u8),
     system_faces: std.StringHashMapUnmanaged(FacePair),
     texture: Texture,
@@ -190,7 +192,7 @@ pub const TerminalFont = struct {
         const emoji_text_pair = loadFace(ft_library, emoji_text_path, size, "emoji_text", log, false);
 
         var fc_enabled = false;
-        var fc_config: ?*fc.FcConfig = null;
+        var fc_config: ?FcConfigPtr = null;
         if (builtin.target.os.tag == .linux) {
             if (fc.FcInit() != 0) {
                 fc_enabled = true;
@@ -600,6 +602,7 @@ pub const TerminalFont = struct {
     }
 
     fn systemFallback(self: *TerminalFont, codepoint: u32) ?FacePair {
+        if (builtin.target.os.tag != .linux) return null;
         if (!self.fc_enabled or self.fc_config == null) return null;
         if (self.system_fallback_by_cp.get(codepoint)) |cached| {
             if (cached) |path| {
