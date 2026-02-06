@@ -25,6 +25,7 @@ pub const Pty = struct {
         CreatePseudoConsoleFailed,
         CreateProcessFailed,
         ResizeFailed,
+        OutOfMemory,
     };
 
     const win32 = struct {
@@ -82,7 +83,12 @@ pub const Pty = struct {
         };
 
         const EXTENDED_STARTUPINFO_PRESENT: DWORD = 0x00080000;
+        const CREATE_UNICODE_ENVIRONMENT: DWORD = 0x00000400;
+        const STARTF_USESTDHANDLES: DWORD = 0x00000100;
         const PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE: usize = 0x00020016;
+
+        const HANDLE_FLAG_INHERIT: DWORD = 0x00000001;
+        const INVALID_HANDLE_VALUE: HANDLE = @ptrFromInt(@as(usize, @bitCast(@as(isize, -1))));
 
         extern "kernel32" fn CreatePipe(
             hReadPipe: *?HANDLE,
@@ -137,6 +143,8 @@ pub const Pty = struct {
 
         extern "kernel32" fn CloseHandle(hObject: HANDLE) callconv(.winapi) BOOL;
 
+        extern "kernel32" fn SetHandleInformation(hObject: HANDLE, dwMask: DWORD, dwFlags: DWORD) callconv(.winapi) BOOL;
+
         extern "kernel32" fn ReadFile(
             hFile: HANDLE,
             lpBuffer: [*]u8,
@@ -169,7 +177,7 @@ pub const Pty = struct {
         ) callconv(.winapi) BOOL;
     };
 
-    pub fn init(_: std.mem.Allocator, size: PtySize, shell: ?[:0]const u8) !Pty {
+    pub fn init(allocator: std.mem.Allocator, size: PtySize, shell: ?[:0]const u8) !Pty {
         var pty = Pty{
             .hpc = null,
             .input_read = null,
@@ -219,7 +227,17 @@ pub const Pty = struct {
             return Error.CreatePseudoConsoleFailed;
         }
 
-        try pty.spawn(shell);
+        // The pseudo console now owns these ends.
+        if (pty.input_read) |h| {
+            _ = win32.CloseHandle(h);
+            pty.input_read = null;
+        }
+        if (pty.output_write) |h| {
+            _ = win32.CloseHandle(h);
+            pty.output_write = null;
+        }
+
+        try pty.spawn(allocator, shell);
         return pty;
     }
 
@@ -249,15 +267,16 @@ pub const Pty = struct {
     }
 
     /// Spawn a shell process (cmd.exe or PowerShell)
-    pub fn spawn(self: *Pty, shell: ?[:0]const u8) !void {
-        _ = shell;
-
+    pub fn spawn(self: *Pty, allocator: std.mem.Allocator, shell: ?[:0]const u8) !void {
         // Prepare startup info with ConPTY
         var attr_list_size: usize = 0;
         _ = win32.InitializeProcThreadAttributeList(null, 1, 0, &attr_list_size);
 
-        var attr_list_buf: [1024]u8 align(8) = undefined;
-        const attr_list: *anyopaque = @ptrCast(&attr_list_buf);
+        // Allocate the required attribute list size.
+        if (attr_list_size == 0) return Error.CreateProcessFailed;
+        const attr_list_mem = allocator.alloc(u8, attr_list_size) catch return Error.OutOfMemory;
+        defer allocator.free(attr_list_mem);
+        const attr_list: *anyopaque = @ptrCast(attr_list_mem.ptr);
 
         if (win32.InitializeProcThreadAttributeList(attr_list, 1, 0, &attr_list_size) == 0) {
             return Error.CreateProcessFailed;
@@ -280,10 +299,20 @@ pub const Pty = struct {
         startup_info.StartupInfo.cb = @sizeOf(win32.STARTUPINFOEXW);
         startup_info.lpAttributeList = attr_list;
 
+        // Ensure the child doesn't inherit redirected stdio handles from the parent.
+        // This matches the approach in WezTerm/Alacritty and avoids a failure mode
+        // where output bypasses the ConPTY stream.
+        startup_info.StartupInfo.dwFlags |= win32.STARTF_USESTDHANDLES;
+        startup_info.StartupInfo.hStdInput = win32.INVALID_HANDLE_VALUE;
+        startup_info.StartupInfo.hStdOutput = win32.INVALID_HANDLE_VALUE;
+        startup_info.StartupInfo.hStdError = win32.INVALID_HANDLE_VALUE;
+
         var proc_info: win32.PROCESS_INFORMATION = undefined;
 
-        // Use cmd.exe as default shell
+        // Use cmd.exe as default shell (shell param is currently path-only).
+        // Note: CreateProcessW may modify this buffer, so it must be mutable.
         var cmd_line = [_:0]u16{ 'c', 'm', 'd', '.', 'e', 'x', 'e', 0 };
+        _ = shell;
 
         if (win32.CreateProcessW(
             null,
@@ -306,6 +335,12 @@ pub const Pty = struct {
             .dwProcessId = proc_info.dwProcessId,
             .dwThreadId = proc_info.dwThreadId,
         };
+
+        // Close the thread handle; we don't need it.
+        if (self.process_info.hThread) |h| {
+            _ = win32.CloseHandle(h);
+            self.process_info.hThread = null;
+        }
     }
 
     /// Read data from the PTY (non-blocking)
@@ -395,3 +430,34 @@ pub const Pty = struct {
         return self.output_read;
     }
 };
+
+test "windows conpty smoke" {
+    if (builtin.target.os.tag != .windows) return;
+
+    const allocator = std.testing.allocator;
+    var pty = try Pty.init(allocator, .{ .rows = 24, .cols = 80, .cell_width = 8, .cell_height = 16 }, null);
+    defer pty.deinit();
+
+    // Give cmd.exe a moment to start and print its banner/prompt.
+    var output = std.ArrayList(u8).empty;
+    defer output.deinit(allocator);
+
+    const marker = "ZIDE_PTY_OK";
+    _ = try pty.write("echo " ++ marker ++ "\r\n");
+    _ = try pty.write("exit\r\n");
+
+    const start_ms = std.time.milliTimestamp();
+    var buf: [4096]u8 = undefined;
+    while (std.time.milliTimestamp() - start_ms < 3000) {
+        if (!pty.waitForData(50)) continue;
+        const n_opt = try pty.read(&buf);
+        if (n_opt) |n| {
+            if (n == 0) break;
+            _ = try output.appendSlice(allocator, buf[0..n]);
+            if (std.mem.indexOf(u8, output.items, marker) != null) return;
+        }
+    }
+
+    std.debug.print("conpty output (truncated): {s}\n", .{output.items[0..@min(output.items.len, 1024)]});
+    try std.testing.expect(false);
+}
