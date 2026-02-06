@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const types = @import("../model/types.zig");
 const pty_mod = @import("../io/pty.zig"); // TODO(layering): consider routing PTY writes via core to avoid protocol->io coupling.
 const parser_mod = @import("../parser/parser.zig");
@@ -303,6 +304,8 @@ fn oscCwdHostOk(self: anytype, host: []const u8) bool {
     _ = self;
     if (host.len == 0) return true;
     if (std.mem.eql(u8, host, "localhost")) return true;
+
+    if (builtin.target.os.tag == .windows) return false;
 
     var buf: [std.posix.HOST_NAME_MAX]u8 = undefined;
     const local = std.posix.gethostname(&buf) catch return false;

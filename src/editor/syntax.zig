@@ -1690,7 +1690,7 @@ const QueryCache = struct {
             const log = app_logger.logger("editor.highlight");
             log.logf(
                 "query parse failed lang={s} name={s} error_type={d} error_offset={d}",
-                .{ language_name, query_name, @as(u32, error_type), error_offset },
+                .{ language_name, query_name, @as(u32, @intCast(error_type)), error_offset },
             );
             self.allocator.free(key);
             return error.InitFailed;
@@ -1780,7 +1780,7 @@ const InjectionQueryCache = struct {
             const log = app_logger.logger("editor.highlight");
             log.logf(
                 "injection query parse failed lang={s} error_type={d} error_offset={d}",
-                .{ language_name, @as(u32, error_type), error_offset },
+                .{ language_name, @as(u32, @intCast(error_type)), error_offset },
             );
             self.allocator.free(key);
             return error.InitFailed;
