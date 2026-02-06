@@ -1,7 +1,14 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 pub fn build(b: *std.Build) void {
-    const target = b.standardTargetOptions(.{});
+    const target = b.standardTargetOptions(.{
+        .default_target = if (builtin.os.tag == .windows) .{
+            .cpu_arch = .x86_64,
+            .os_tag = .windows,
+            .abi = .msvc,
+        } else .{},
+    });
     const optimize = b.standardOptimizeOption(.{});
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -58,7 +65,12 @@ pub fn build(b: *std.Build) void {
     ) orelse default_renderer_backend;
     const build_options = b.addOptions();
     build_options.addOption([]const u8, "renderer_backend", renderer_backend);
-    const use_vcpkg = b.option(bool, "use-vcpkg", "Use vcpkg for native dependencies") orelse false;
+
+    // Windows builds currently rely on vcpkg for SDL3 + text stack.
+    // Default to enabled on Windows so `zig build` produces a runnable build
+    // (assuming `vcpkg install` has been run).
+    const use_vcpkg_default = target_os == .windows;
+    const use_vcpkg = b.option(bool, "use-vcpkg", "Use vcpkg for native dependencies") orelse use_vcpkg_default;
     const vcpkg_root_opt = b.option([]const u8, "vcpkg-root", "Path to vcpkg root") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_ROOT") catch null;
     const vcpkg_triplet_opt = b.option([]const u8, "vcpkg-triplet", "vcpkg triplet (e.g. x64-windows)") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_DEFAULT_TRIPLET") catch null;
 
@@ -70,7 +82,11 @@ pub fn build(b: *std.Build) void {
     // to manifest layout.
     var vcpkg_include: ?[]const u8 = null;
     var vcpkg_lib: ?[]const u8 = null;
+    var vcpkg_bin: ?[]const u8 = null;
     if (use_vcpkg) {
+        if (target_os == .windows and target.result.cpu.arch != .x86_64) {
+            @panic("Windows builds are x86_64-only.");
+        }
         const vcpkg_triplet = vcpkg_triplet_opt orelse switch (target_os) {
             .windows => "x64-windows",
             else => "x64-linux",
@@ -78,19 +94,23 @@ pub fn build(b: *std.Build) void {
 
         const manifest_lib = b.pathJoin(&.{ "vcpkg_installed", vcpkg_triplet, "lib" });
         const manifest_include = b.pathJoin(&.{ "vcpkg_installed", vcpkg_triplet, "include" });
+        const manifest_bin = b.pathJoin(&.{ "vcpkg_installed", vcpkg_triplet, "bin" });
 
         if (vcpkg_root_opt) |vcpkg_root| {
             const classic_lib = b.pathJoin(&.{ vcpkg_root, "installed", vcpkg_triplet, "lib" });
             const classic_include = b.pathJoin(&.{ vcpkg_root, "installed", vcpkg_triplet, "include" });
+            const classic_bin = b.pathJoin(&.{ vcpkg_root, "installed", vcpkg_triplet, "bin" });
 
             if (std.fs.cwd().access(classic_lib, .{})) |_| {
                 vcpkg_lib = classic_lib;
                 vcpkg_include = classic_include;
+                vcpkg_bin = classic_bin;
             } else |_| {
                 // Fall back to manifest layout if present.
                 if (std.fs.cwd().access(manifest_lib, .{})) |_| {
                     vcpkg_lib = manifest_lib;
                     vcpkg_include = manifest_include;
+                    vcpkg_bin = manifest_bin;
                 } else |_| {
                     @panic("use-vcpkg enabled, but could not find vcpkg libraries. Expected either <VCPKG_ROOT>/installed/<triplet>/lib or ./vcpkg_installed/<triplet>/lib");
                 }
@@ -99,8 +119,9 @@ pub fn build(b: *std.Build) void {
             if (std.fs.cwd().access(manifest_lib, .{})) |_| {
                 vcpkg_lib = manifest_lib;
                 vcpkg_include = manifest_include;
+                vcpkg_bin = manifest_bin;
             } else |_| {
-                @panic("use-vcpkg enabled, but VCPKG_ROOT was not set and ./vcpkg_installed was not found. Run vcpkg install in the project root, or pass --vcpkg-root");
+                @panic("use-vcpkg enabled, but vcpkg deps were not found. On Windows, run `vcpkg install --triplet x64-windows` in the repo root (manifest mode), or set VCPKG_ROOT / pass --vcpkg-root for classic mode.");
             }
         }
     }
@@ -180,6 +201,34 @@ pub fn build(b: *std.Build) void {
     });
 
     b.installArtifact(exe);
+
+    // On Windows, vcpkg typically provides runtime deps as DLLs in
+    // <triplet>/bin. Copy them next to the installed exe so that launching
+    // `zig-out/bin/zide.exe` works without requiring manual PATH setup.
+    if (use_vcpkg and target_os == .windows and vcpkg_bin != null) {
+        const dlls = [_][]const u8{
+            "SDL3.dll",
+            "freetype.dll",
+            "harfbuzz.dll",
+            "harfbuzz-subset.dll",
+            "lua.dll",
+            "zlib1.dll",
+            "libpng16.dll",
+            "bz2.dll",
+            "brotlicommon.dll",
+            "brotlidec.dll",
+            "brotlienc.dll",
+        };
+        for (dlls) |dll| {
+            const src = b.pathJoin(&.{ vcpkg_bin.?, dll });
+            if (std.fs.cwd().access(src, .{})) |_| {
+                const install_dll = b.addInstallFile(.{ .cwd_relative = src }, b.fmt("bin/{s}", .{dll}));
+                b.getInstallStep().dependOn(&install_dll.step);
+            } else |_| {
+                // Some triplets/configurations may not ship all of these.
+            }
+        }
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Run step

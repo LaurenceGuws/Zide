@@ -60,6 +60,9 @@ Build with vcpkg enabled:
  zig build -Duse-vcpkg=true
 ```
 
+On Windows, `zig build` defaults to using vcpkg when the vcpkg manifest install
+directory (`./vcpkg_installed/`) is present.
+
 On Windows, use the MSVC target when using the `x64-windows` triplet:
 ```
  zig build -Duse-vcpkg=true -Dvcpkg-triplet=x64-windows -Dtarget=x86_64-windows-msvc
