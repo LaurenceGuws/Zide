@@ -136,6 +136,7 @@ windows_impl:
   phase_7_ci:
     - id: W7-01
       title: "Add Windows CI build/test job"
-      status: pending
+      status: done
       notes:
-        - "Cache vcpkg artifacts; run at least `zig build` + `zig build test` on windows-latest."
+        - "Added GitHub Actions workflow to run `zig build test` on windows-latest with vcpkg manifest install."
+        - "File: .github/workflows/ci.yml"
