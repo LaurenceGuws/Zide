@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 const Manifest = struct {
     version: []const u8,
@@ -158,14 +159,28 @@ fn runScript(
     const script_path = try std.fs.path.join(allocator, &.{ scripts_root, name });
     defer allocator.free(script_path);
 
-    var child = std.process.Child.init(&.{ script_path }, allocator);
+    // On Windows, shell scripts aren't directly executable. Prefer running via
+    // `bash` (Git Bash / MSYS2 / WSL bash on PATH).
+    var child = if (builtin.os.tag == .windows)
+        std.process.Child.init(&.{ "bash", name }, allocator)
+    else
+        std.process.Child.init(&.{script_path}, allocator);
     child.cwd = scripts_root;
     child.stdout_behavior = .Inherit;
     child.stderr_behavior = .Inherit;
     if (env_map) |map| {
         child.env_map = map;
     }
-    const result = try child.spawnAndWait();
+    const result = child.spawnAndWait() catch |err| {
+        if (builtin.os.tag == .windows and err == error.FileNotFound) {
+            std.debug.print(
+                "grammar-update: bash not found on PATH. On Windows, install Git Bash (recommended) or MSYS2/WSL, then re-run.\n",
+                .{},
+            );
+            return error.BashMissing;
+        }
+        return err;
+    };
     switch (result) {
         .Exited => |code| if (code != 0) return error.ScriptFailed,
         else => return error.ScriptFailed,
