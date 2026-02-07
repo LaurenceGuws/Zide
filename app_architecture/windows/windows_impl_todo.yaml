@@ -87,7 +87,8 @@ windows_impl:
       files_to_edit:
         - src/ui/renderer/backends/wgl.zig
       notes:
-        - "If SDL GL path stays canonical, delete/disable WGL/EGL stubs to avoid false promises."
+        - "Current decision: keep SDL-managed GL as canonical backend for now (cross-platform, already working)."
+        - "If a native WGL backend is still desired, define a backend interface and implement WglBackend to create context + swap; otherwise consider removing the WGL/EGL stubs and the build option values."
     - id: W2-03
       title: "Windows renderer smoke test: create window, draw a frame, present"
       status: pending

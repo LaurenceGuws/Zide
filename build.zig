@@ -60,7 +60,7 @@ pub fn build(b: *std.Build) void {
     const renderer_backend = b.option(
         []const u8,
         "renderer-backend",
-        "Renderer backend (sdl_gl, wgl, egl)",
+        "Renderer backend (only sdl_gl is implemented; wgl/egl are TODO)",
     ) orelse default_renderer_backend;
     const build_options = b.addOptions();
     build_options.addOption([]const u8, "renderer_backend", renderer_backend);
