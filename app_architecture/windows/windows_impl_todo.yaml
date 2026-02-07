@@ -117,12 +117,13 @@ windows_impl:
   phase_5_tooling:
     - id: W5-01
       title: "Make bootstrap + grammar pack scripts work on Windows (PowerShell or documented WSL requirement)"
-      status: pending
+      status: in_progress
       files_to_edit:
         - scripts/bootstrap.sh
         - src/tools/grammar_update.zig
       notes:
-        - "Currently grammar_update runs .sh scripts; only reference repo setup has a PowerShell script."
+        - "grammar_update: on Windows, run .sh scripts via `bash` if available (Git Bash / MSYS2 / WSL bash on PATH)."
+        - "Remaining: bootstrap script parity (PowerShell) or document required shell environment."
 
   phase_6_quality_of_life:
     - id: W6-01

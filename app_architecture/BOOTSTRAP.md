@@ -82,6 +82,10 @@ make build
 zig build grammar-update -- --skip-git --continue-on-error --jobs 8
 ```
 
+On Windows, `grammar-update` runs the pack build scripts via `bash` (Git Bash or
+MSYS2 recommended). If `bash` is not on PATH, use `--install-only` with a prebuilt
+`tools/grammar_packs/dist`, or run the scripts from WSL.
+
 If you want Android grammars, ensure an NDK is available:
 - `ANDROID_NDK_ROOT` or `ANDROID_SDK_ROOT` set, or
 - `~/.local/android-sdk/ndk/<version>`
