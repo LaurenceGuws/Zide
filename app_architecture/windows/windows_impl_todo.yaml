@@ -1,0 +1,136 @@
+windows_impl:
+  scope:
+    description: "Track outstanding Windows implementations for platform abstractions (build/run parity first, then quality + native integrations)."
+    priorities:
+      - "keep diffs small and reviewable"
+      - "Windows build/run smoke works end-to-end"
+      - "fill abstraction gaps (renderer backend, PTY, font fallback, signals)"
+      - "document drift fixes as soon as code contradicts docs"
+
+  entry_points:
+    - build.zig
+    - src/platform/*
+    - src/ui/renderer.zig
+    - src/ui/renderer/backends/*
+    - src/terminal/io/pty_windows.zig
+    - src/ui/terminal_font.zig
+
+  status:
+    baseline:
+      build_runnable_exe:
+        status: done
+        notes:
+          - "`zig build` produces a runnable `zig-out/bin/zide.exe` when vcpkg deps are installed; build copies vcpkg DLLs next to exe."
+          - "See commits: 5a1c272 (vcpkg manifest layout), 97510cc (runnable exe packaging)."
+      conpty_spawn_smoke:
+        status: done
+        notes:
+          - "Windows ConPTY spawns `cmd.exe` and passes a smoke test."
+          - "See commit: 875cf84."
+
+  phase_0_docs_and_baseline:
+    - id: W0-01
+      title: "Create Windows implementation tracker todo"
+      status: done
+      files_to_add:
+        - app_architecture/windows/windows_impl_todo.yaml
+    - id: W0-02
+      title: "Fix doc drift: terminal design should not claim ConPTY is a stub"
+      status: done
+      files_to_edit:
+        - app_architecture/terminal/DESIGN.md
+      notes:
+        - "Keep it factual: ConPTY exists + known gaps (shell selection, exit status, overlapped I/O)."
+
+  phase_1_terminal_pty_parity:
+    - id: W1-01
+      title: "Pty interface parity: implement pollExit/isAlive on Windows/Unix and wire TerminalSession.isAlive"
+      status: done
+      files_to_edit:
+        - src/terminal/io/pty_windows.zig
+        - src/terminal/io/pty_unix.zig
+        - src/terminal/io/pty_stub.zig
+        - src/terminal/core/terminal_session.zig
+      notes:
+        - "Added `isAlive()` to Unix/stub PTY implementations and implemented `TerminalSession.isAlive()` via PTY lifecycle."
+        - "Implemented `pollExit()` on Windows PTY (ConPTY child) for exit-code discovery."
+    - id: W1-02
+      title: "Windows ConPTY: honor configured shell path/command line"
+      status: done
+      files_to_edit:
+        - src/terminal/io/pty_windows.zig
+      notes:
+        - "Shell input honored; defaults to cmd.exe. Implements UTF-8 -> UTF-16 command line allocation for CreateProcessW with basic quoting."
+    - id: W1-03
+      title: "Windows ConPTY: graceful shutdown + exit status plumbing"
+      status: done
+      files_to_edit:
+        - src/terminal/io/pty_windows.zig
+        - src/terminal/core/terminal_session.zig
+      notes:
+        - "Graceful attempt implemented: close input_write + wait, then terminate after timeout."
+        - "Terminal session tracks child exit code and logs on exit (`terminal.pty`); `childExitCode()` exposes it."
+
+  phase_2_renderer_backend:
+    - id: W2-01
+      title: "Wire `-Drenderer-backend` to actual backend selection (or remove dead option)"
+      status: pending
+      files_to_edit:
+        - src/ui/renderer.zig
+        - build.zig
+      notes:
+        - "Today the option is parsed but not used; backend stubs exist but are not integrated."
+    - id: W2-02
+      title: "Implement Windows OpenGL context backend (WGL) OR decide to keep SDL-managed GL only"
+      status: pending
+      files_to_edit:
+        - src/ui/renderer/backends/wgl.zig
+      notes:
+        - "If SDL GL path stays canonical, delete/disable WGL/EGL stubs to avoid false promises."
+    - id: W2-03
+      title: "Windows renderer smoke test: create window, draw a frame, present"
+      status: pending
+      notes:
+        - "Manual: `zig build run -- --mode terminal` on Windows; validate input + DPI + present loop stability."
+
+  phase_3_font_fallback:
+    - id: W3-01
+      title: "Implement Windows system font fallback for missing glyphs (DirectWrite-based)"
+      status: pending
+      files_to_edit:
+        - src/ui/terminal_font.zig
+      notes:
+        - "Linux uses fontconfig; Windows should use DirectWrite font fallback resolution."
+
+  phase_4_process_signals:
+    - id: W4-01
+      title: "Implement Windows Ctrl+C/close handling (console control handler)"
+      status: pending
+      files_to_edit:
+        - src/main.zig
+      notes:
+        - "Decide whether Ctrl+C closes the app, forwards to PTY child, or both."
+
+  phase_5_tooling:
+    - id: W5-01
+      title: "Make bootstrap + grammar pack scripts work on Windows (PowerShell or documented WSL requirement)"
+      status: pending
+      files_to_edit:
+        - scripts/bootstrap.sh
+        - src/tools/grammar_update.zig
+      notes:
+        - "Currently grammar_update runs .sh scripts; only reference repo setup has a PowerShell script."
+
+  phase_6_quality_of_life:
+    - id: W6-01
+      title: "Native file dialogs on Windows (open/save)"
+      status: pending
+      notes:
+        - "Optional; defer until core platform abstractions are stable."
+
+  phase_7_ci:
+    - id: W7-01
+      title: "Add Windows CI build/test job"
+      status: pending
+      notes:
+        - "Cache vcpkg artifacts; run at least `zig build` + `zig build test` on windows-latest."

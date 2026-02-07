@@ -177,6 +177,9 @@ pub const Pty = struct {
         ) callconv(.winapi) BOOL;
     };
 
+    const WAIT_TIMEOUT: win32.DWORD = 258;
+    const STILL_ACTIVE: win32.DWORD = 259;
+
     pub fn init(allocator: std.mem.Allocator, size: PtySize, shell: ?[:0]const u8) !Pty {
         var pty = Pty{
             .hpc = null,
@@ -242,13 +245,24 @@ pub const Pty = struct {
     }
 
     pub fn deinit(self: *Pty) void {
-        // Terminate child process
-        if (self.process_info.hProcess) |h| {
-            _ = win32.TerminateProcess(h, 0);
+        // Attempt a graceful shutdown first by closing the input stream and
+        // waiting briefly. If the child does not exit, fall back to termination.
+        if (self.input_write) |h| {
             _ = win32.CloseHandle(h);
+            self.input_write = null;
+        }
+
+        if (self.process_info.hProcess) |h| {
+            if (!self.waitForExit(200)) {
+                _ = win32.TerminateProcess(h, 0);
+                _ = self.waitForExit(200);
+            }
+            _ = win32.CloseHandle(h);
+            self.process_info.hProcess = null;
         }
         if (self.process_info.hThread) |h| {
             _ = win32.CloseHandle(h);
+            self.process_info.hThread = null;
         }
 
         // Close ConPTY
@@ -257,6 +271,12 @@ pub const Pty = struct {
         }
 
         self.cleanupHandles();
+    }
+
+    fn waitForExit(self: *Pty, timeout_ms: win32.DWORD) bool {
+        const h = self.process_info.hProcess orelse return true;
+        const result = win32.WaitForSingleObject(h, timeout_ms);
+        return result != WAIT_TIMEOUT;
     }
 
     fn cleanupHandles(self: *Pty) void {
@@ -309,14 +329,34 @@ pub const Pty = struct {
 
         var proc_info: win32.PROCESS_INFORMATION = undefined;
 
-        // Use cmd.exe as default shell (shell param is currently path-only).
+        // Use cmd.exe as default shell.
+        // If `shell` is provided, treat it as a command line string (path-only is fine).
         // Note: CreateProcessW may modify this buffer, so it must be mutable.
-        var cmd_line = [_:0]u16{ 'c', 'm', 'd', '.', 'e', 'x', 'e', 0 };
-        _ = shell;
+        var default_cmd_line = [_:0]u16{ 'c', 'm', 'd', '.', 'e', 'x', 'e', 0 };
+
+        var cmd_line_owned: ?[:0]u16 = null;
+        defer if (cmd_line_owned) |buf| allocator.free(buf);
+
+        var cmd_line_ptr: win32.LPWSTR = @ptrCast(&default_cmd_line);
+        if (shell) |raw_shell| {
+            const shell_utf8 = std.mem.sliceTo(raw_shell, 0);
+
+            // Basic quoting for paths with spaces.
+            const needs_quotes = std.mem.indexOfScalar(u8, shell_utf8, ' ') != null;
+            const already_quoted = shell_utf8.len >= 2 and shell_utf8[0] == '"' and shell_utf8[shell_utf8.len - 1] == '"';
+            const cmd_utf8 = if (needs_quotes and !already_quoted)
+                try std.fmt.allocPrint(allocator, "\"{s}\"", .{shell_utf8})
+            else
+                try allocator.dupe(u8, shell_utf8);
+            defer allocator.free(cmd_utf8);
+
+            cmd_line_owned = try utf8ToUtf16LeZAlloc(allocator, cmd_utf8);
+            cmd_line_ptr = @ptrCast(cmd_line_owned.?.ptr);
+        }
 
         if (win32.CreateProcessW(
             null,
-            &cmd_line,
+            cmd_line_ptr,
             null,
             null,
             0,
@@ -341,6 +381,15 @@ pub const Pty = struct {
             _ = win32.CloseHandle(h);
             self.process_info.hThread = null;
         }
+    }
+
+    fn utf8ToUtf16LeZAlloc(allocator: std.mem.Allocator, s: []const u8) ![:0]u16 {
+        const tmp = try std.unicode.utf8ToUtf16LeAlloc(allocator, s);
+        defer allocator.free(tmp);
+        var buf = try allocator.alloc(u16, tmp.len + 1);
+        std.mem.copyForwards(u16, buf[0..tmp.len], tmp);
+        buf[tmp.len] = 0;
+        return buf[0..tmp.len :0];
     }
 
     /// Read data from the PTY (non-blocking)
@@ -404,9 +453,19 @@ pub const Pty = struct {
     pub fn isAlive(self: *Pty) bool {
         if (self.process_info.hProcess) |h| {
             const result = win32.WaitForSingleObject(h, 0);
-            return result == 258; // WAIT_TIMEOUT
+            return result == WAIT_TIMEOUT;
         }
         return false;
+    }
+
+    pub fn pollExit(self: *Pty) !?i32 {
+        const h = self.process_info.hProcess orelse return null;
+        var code: win32.DWORD = 0;
+        if (win32.GetExitCodeProcess(h, &code) == 0) {
+            return null;
+        }
+        if (code == STILL_ACTIVE) return null;
+        return @intCast(code);
     }
 
     pub fn hasData(self: *Pty) bool {

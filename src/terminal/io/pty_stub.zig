@@ -22,6 +22,10 @@ pub const Pty = struct {
         return null;
     }
 
+    pub fn isAlive(_: *Pty) bool {
+        return false;
+    }
+
     pub fn hasData(_: *Pty) bool {
         return false;
     }
