@@ -1033,7 +1033,7 @@ pub const TerminalFont = struct {
             &windows_dwrite.IID_IDWriteFactory,
             &factory_any,
         ) < 0) return null;
-        const factory: *windows_dwrite.IDWriteFactory = @ptrCast(factory_any.?);
+        const factory: *windows_dwrite.IDWriteFactory = @ptrCast(@alignCast(factory_any.?));
         defer _ = factory.vtbl.Release(factory);
 
         var collection: ?*windows_dwrite.IDWriteFontCollection = null;
@@ -1097,7 +1097,7 @@ pub const TerminalFont = struct {
                 const loader_unk: *windows_dwrite.IUnknown = @ptrCast(loader.?);
                 var local_any: ?*anyopaque = null;
                 if (loader_unk.vtbl.QueryInterface(loader_unk, &windows_dwrite.IID_IDWriteLocalFontFileLoader, &local_any) < 0) continue;
-                const local_loader: *windows_dwrite.IDWriteLocalFontFileLoader = @ptrCast(local_any.?);
+                const local_loader: *windows_dwrite.IDWriteLocalFontFileLoader = @ptrCast(@alignCast(local_any.?));
                 defer _ = local_loader.vtbl.Release(local_loader);
 
                 var path_len: windows_dwrite.UINT32 = 0;
