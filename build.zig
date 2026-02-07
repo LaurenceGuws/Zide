@@ -54,10 +54,9 @@ pub fn build(b: *std.Build) void {
     // Platform detection
     const target_os = target.result.os.tag;
 
-    const default_renderer_backend = switch (target_os) {
-        .windows => "wgl",
-        else => "sdl_gl",
-    };
+    // Renderer backends (wgl/egl) are tracked as TODOs; SDL-managed GL is the
+    // only implemented backend today across platforms.
+    const default_renderer_backend = "sdl_gl";
     const renderer_backend = b.option(
         []const u8,
         "renderer-backend",

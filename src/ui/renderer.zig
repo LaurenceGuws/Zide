@@ -13,6 +13,8 @@ const texture_utils = @import("renderer/texture_utils.zig");
 const text_input = @import("renderer/text_input.zig");
 const time_utils = @import("renderer/time_utils.zig");
 const window_init = @import("renderer/window_init.zig");
+const wgl_backend = @import("renderer/backends/wgl.zig");
+const egl_backend = @import("renderer/backends/egl.zig");
 const input_state = @import("renderer/input_state.zig");
 const input_queue = @import("renderer/input_queue.zig");
 const scale_utils = @import("renderer/scale_utils.zig");
@@ -279,6 +281,14 @@ pub const Renderer = struct {
     }
 
     pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8) !*Renderer {
+        // Keep backend selection honest: the build option is parsed at compile
+        // time and must map to real initialization paths.
+        switch (renderer_backend) {
+            .sdl_gl => {},
+            .wgl => try wgl_backend.WglBackend.init(),
+            .egl => try egl_backend.EglBackend.init(),
+        }
+
         try window_init.initSdl();
         errdefer sdl.SDL_Quit();
 
