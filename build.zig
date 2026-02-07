@@ -178,6 +178,7 @@ pub fn build(b: *std.Build) void {
     if (target_os == .windows) {
         exe.linkSystemLibrary("opengl32");
         exe.linkSystemLibrary("gdi32");
+        exe.linkSystemLibrary("comdlg32");
         exe.linkSystemLibrary("dwrite");
         exe.linkSystemLibrary("ole32");
         exe.linkSystemLibrary("winmm");
