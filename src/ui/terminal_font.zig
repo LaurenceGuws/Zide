@@ -48,6 +48,10 @@ pub const Glyph = struct {
 const FacePair = struct {
     face: ?c.FT_Face = null,
     hb: ?*c.hb_font_t = null,
+
+    // If a face was created via FT_New_Memory_Face, this buffer must stay alive
+    // until the face is destroyed.
+    owned_data: ?[]u8 = null,
 };
 
 const GlyphError = error{
@@ -387,6 +391,7 @@ pub const TerminalFont = struct {
         while (face_it.next()) |entry| {
             if (entry.value_ptr.*.hb) |hb| c.hb_font_destroy(hb);
             if (entry.value_ptr.*.face) |face| _ = c.FT_Done_Face(face);
+            if (entry.value_ptr.*.owned_data) |data| self.allocator.free(data);
             self.allocator.free(entry.key_ptr.*);
         }
         self.system_faces.deinit(self.allocator);
@@ -661,10 +666,16 @@ pub const TerminalFont = struct {
         const owned = self.allocator.dupe(u8, path) catch return null;
         errdefer self.allocator.free(owned);
 
-        var fb_face: c.FT_Face = null;
-        if (!ftNewFace(self, owned, &fb_face)) {
+        var fb_pair: FacePair = .{};
+        if (!ftNewFaceFromFile(self, owned, &fb_pair)) {
             _ = self.system_fallback_by_cp.put(codepoint, null) catch {};
             return null;
+        }
+        const fb_face = fb_pair.face.?;
+        errdefer {
+            if (fb_pair.hb) |hb| c.hb_font_destroy(hb);
+            if (fb_pair.face) |face| _ = c.FT_Done_Face(face);
+            if (fb_pair.owned_data) |data| self.allocator.free(data);
         }
         if (c.FT_Set_Pixel_Sizes(fb_face, 0, @intFromFloat(self.line_height)) != 0) {
             _ = c.FT_Done_Face(fb_face);
@@ -677,16 +688,17 @@ pub const TerminalFont = struct {
             return null;
         };
 
-        const pair = FacePair{ .face = fb_face, .hb = fb_hb };
-        self.system_faces.put(self.allocator, owned, pair) catch {
+        fb_pair.hb = fb_hb;
+        self.system_faces.put(self.allocator, owned, fb_pair) catch {
             c.hb_font_destroy(fb_hb);
             _ = c.FT_Done_Face(fb_face);
+            if (fb_pair.owned_data) |data| self.allocator.free(data);
             self.allocator.free(owned);
             _ = self.system_fallback_by_cp.put(codepoint, null) catch {};
             return null;
         };
         _ = self.system_fallback_by_cp.put(codepoint, owned) catch {};
-        result = pair;
+        result = fb_pair;
         return result;
     }
 
@@ -698,6 +710,30 @@ pub const TerminalFont = struct {
         std.mem.copyForwards(u8, tmp[0..path.len], path);
         tmp[path.len] = 0;
         return c.FT_New_Face(self.ft_library, tmp.ptr, 0, out_face) == 0;
+    }
+
+    fn ftNewFaceFromFile(self: *TerminalFont, path: []const u8, out_pair: *FacePair) bool {
+        var face: c.FT_Face = null;
+        if (!ftNewFace(self, path, &face)) return false;
+        out_pair.* = .{ .face = face, .hb = null, .owned_data = null };
+        return true;
+    }
+
+    fn ftNewFaceFromMemoryFile(self: *TerminalFont, path: []const u8, out_pair: *FacePair) bool {
+        // Load a file into memory and create a FreeType face from it. This is a
+        // fallback for paths that FreeType cannot open directly (encoding or
+        // sandbox constraints). The buffer must remain alive.
+        var file = std.fs.openFileAbsolute(path, .{}) catch return false;
+        defer file.close();
+        const bytes = file.readToEndAlloc(self.allocator, 32 * 1024 * 1024) catch return false;
+        errdefer self.allocator.free(bytes);
+        var face: c.FT_Face = null;
+        if (c.FT_New_Memory_Face(self.ft_library, bytes.ptr, @intCast(bytes.len), 0, &face) != 0) {
+            self.allocator.free(bytes);
+            return false;
+        }
+        out_pair.* = .{ .face = face, .hb = null, .owned_data = bytes };
+        return true;
     }
 
     fn windowsFontDir(allocator: std.mem.Allocator) ?[]u8 {
