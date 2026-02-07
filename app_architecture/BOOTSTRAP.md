@@ -60,6 +60,12 @@ make bootstrap
 ./scripts/bootstrap.sh
 ```
 
+On Windows:
+
+```powershell
+./scripts/bootstrap.ps1
+```
+
 Tree-sitter (runtime + Zig parser) and stb_image (PNG decode) are vendored under
 `vendor/`, so no extra bootstrap step is required. Grammar packs are built and
 installed via `zig build grammar-update`.
