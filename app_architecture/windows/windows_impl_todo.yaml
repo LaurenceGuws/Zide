@@ -129,9 +129,10 @@ windows_impl:
   phase_6_quality_of_life:
     - id: W6-01
       title: "Native file dialogs on Windows (open/save)"
-      status: pending
+      status: done
       notes:
-        - "Optional; defer until core platform abstractions are stable."
+        - "Implemented Windows open/save dialogs via comdlg32 (GetOpenFileNameW/GetSaveFileNameW)."
+        - "File: src/platform/file_dialog.zig"
 
   phase_7_ci:
     - id: W7-01
