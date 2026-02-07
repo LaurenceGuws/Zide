@@ -618,6 +618,16 @@ terminal_widget_todo:
             - src/ui/widgets/terminal_widget.zig
             - src/terminal/core/terminal_session.zig
 
+        - id: P8-10
+          title: "Ctrl+click terminal paths to open in editor"
+          status: done
+          files_to_edit:
+            - src/ui/widgets/terminal_widget.zig
+            - src/main.zig
+          notes:
+            - "If OSC 8 hyperlink points to a file path, Ctrl+click opens it in a new editor tab."
+            - "Also heuristically parses plain text tokens like path:line:col under the cursor and opens at location."
+
     - name: "Phase 9 - Tests + Fixtures"
       tasks:
         - id: P9-01
