@@ -4,6 +4,170 @@ const builtin = @import("builtin");
 const gl = @import("renderer/gl.zig");
 const types = @import("renderer/types.zig");
 
+var windows_com_initialized = std.atomic.Value(bool).init(false);
+
+const windows_dwrite = if (builtin.target.os.tag == .windows) struct {
+    const HRESULT = i32;
+    const ULONG = u32;
+    const UINT32 = u32;
+    const UINT16 = u16;
+    const BOOL = i32;
+
+    const GUID = extern struct {
+        Data1: u32,
+        Data2: u16,
+        Data3: u16,
+        Data4: [8]u8,
+    };
+
+    const IID_IDWriteFactory = GUID{
+        .Data1 = 0xB859EE5A,
+        .Data2 = 0xD838,
+        .Data3 = 0x4B5B,
+        .Data4 = .{ 0xA2, 0xE8, 0x1A, 0xDC, 0x7D, 0x93, 0xDB, 0x48 },
+    };
+    const IID_IDWriteLocalFontFileLoader = GUID{
+        .Data1 = 0xB2D9F3EC,
+        .Data2 = 0xC9FE,
+        .Data3 = 0x4A11,
+        .Data4 = .{ 0xA2, 0xEC, 0xD8, 0x62, 0x08, 0xF7, 0xC0, 0xA2 },
+    };
+
+    const IID_IUnknown = GUID{
+        .Data1 = 0x00000000,
+        .Data2 = 0x0000,
+        .Data3 = 0x0000,
+        .Data4 = .{ 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46 },
+    };
+
+    const IUnknown = extern struct {
+        vtbl: *const Vtbl,
+        const Vtbl = extern struct {
+            QueryInterface: *const fn (*IUnknown, *const GUID, *?*anyopaque) callconv(.winapi) HRESULT,
+            AddRef: *const fn (*IUnknown) callconv(.winapi) ULONG,
+            Release: *const fn (*IUnknown) callconv(.winapi) ULONG,
+        };
+    };
+
+    const IDWriteFontFileLoader = extern struct {
+        vtbl: *const IUnknown.Vtbl,
+    };
+
+    const IDWriteLocalFontFileLoader = extern struct {
+        vtbl: *const Vtbl,
+        const Vtbl = extern struct {
+            QueryInterface: *const fn (*IDWriteLocalFontFileLoader, *const GUID, *?*anyopaque) callconv(.winapi) HRESULT,
+            AddRef: *const fn (*IDWriteLocalFontFileLoader) callconv(.winapi) ULONG,
+            Release: *const fn (*IDWriteLocalFontFileLoader) callconv(.winapi) ULONG,
+            // IDWriteFontFileLoader methods
+            CreateStreamFromKey: *const fn (*IDWriteLocalFontFileLoader, *const anyopaque, UINT32, *?*anyopaque) callconv(.winapi) HRESULT,
+            // IDWriteLocalFontFileLoader methods
+            GetFilePathLengthFromKey: *const fn (*IDWriteLocalFontFileLoader, *const anyopaque, UINT32, *UINT32) callconv(.winapi) HRESULT,
+            GetFilePathFromKey: *const fn (*IDWriteLocalFontFileLoader, *const anyopaque, UINT32, [*]UINT16, UINT32) callconv(.winapi) HRESULT,
+            GetLastWriteTimeFromKey: *const fn (*IDWriteLocalFontFileLoader, *const anyopaque, UINT32, *u64) callconv(.winapi) HRESULT,
+        };
+    };
+
+    const IDWriteFontFile = extern struct {
+        vtbl: *const Vtbl,
+        const Vtbl = extern struct {
+            QueryInterface: *const fn (*IDWriteFontFile, *const GUID, *?*anyopaque) callconv(.winapi) HRESULT,
+            AddRef: *const fn (*IDWriteFontFile) callconv(.winapi) ULONG,
+            Release: *const fn (*IDWriteFontFile) callconv(.winapi) ULONG,
+            GetReferenceKey: *const fn (*IDWriteFontFile, *?*const anyopaque, *UINT32) callconv(.winapi) HRESULT,
+            GetLoader: *const fn (*IDWriteFontFile, *?*IDWriteFontFileLoader) callconv(.winapi) HRESULT,
+            Analyze: *const fn (*IDWriteFontFile, *BOOL, *u32, *u32, *BOOL) callconv(.winapi) HRESULT,
+        };
+    };
+
+    const IDWriteFontFace = extern struct {
+        vtbl: *const Vtbl,
+        const Vtbl = extern struct {
+            QueryInterface: *const fn (*IDWriteFontFace, *const GUID, *?*anyopaque) callconv(.winapi) HRESULT,
+            AddRef: *const fn (*IDWriteFontFace) callconv(.winapi) ULONG,
+            Release: *const fn (*IDWriteFontFace) callconv(.winapi) ULONG,
+            GetType: *const fn (*IDWriteFontFace) callconv(.winapi) u32,
+            GetFiles: *const fn (*IDWriteFontFace, *UINT32, ?[*]*IDWriteFontFile) callconv(.winapi) HRESULT,
+            GetIndex: *const fn (*IDWriteFontFace) callconv(.winapi) UINT32,
+            GetSimulations: *const fn (*IDWriteFontFace) callconv(.winapi) u32,
+            IsSymbolFont: *const fn (*IDWriteFontFace) callconv(.winapi) BOOL,
+            GetMetrics: *const fn (*IDWriteFontFace, *anyopaque) callconv(.winapi) void,
+            GetGlyphCount: *const fn (*IDWriteFontFace, *UINT16) callconv(.winapi) HRESULT,
+            GetDesignGlyphMetrics: *const fn (*IDWriteFontFace, *const UINT16, UINT32, *anyopaque, BOOL) callconv(.winapi) HRESULT,
+            GetGlyphIndices: *const fn (*IDWriteFontFace, *const UINT32, UINT32, *UINT16) callconv(.winapi) HRESULT,
+        };
+    };
+
+    const IDWriteFont = extern struct {
+        vtbl: *const Vtbl,
+        const Vtbl = extern struct {
+            QueryInterface: *const fn (*IDWriteFont, *const GUID, *?*anyopaque) callconv(.winapi) HRESULT,
+            AddRef: *const fn (*IDWriteFont) callconv(.winapi) ULONG,
+            Release: *const fn (*IDWriteFont) callconv(.winapi) ULONG,
+            GetFontFamily: *const fn (*IDWriteFont, *?*IDWriteFontFamily) callconv(.winapi) HRESULT,
+            GetWeight: *const fn (*IDWriteFont) callconv(.winapi) u32,
+            GetStretch: *const fn (*IDWriteFont) callconv(.winapi) u32,
+            GetStyle: *const fn (*IDWriteFont) callconv(.winapi) u32,
+            IsSymbolFont: *const fn (*IDWriteFont) callconv(.winapi) BOOL,
+            CreateFontFace: *const fn (*IDWriteFont, *?*IDWriteFontFace) callconv(.winapi) HRESULT,
+        };
+    };
+
+    const IDWriteFontFamily = extern struct {
+        vtbl: *const Vtbl,
+        const Vtbl = extern struct {
+            QueryInterface: *const fn (*IDWriteFontFamily, *const GUID, *?*anyopaque) callconv(.winapi) HRESULT,
+            AddRef: *const fn (*IDWriteFontFamily) callconv(.winapi) ULONG,
+            Release: *const fn (*IDWriteFontFamily) callconv(.winapi) ULONG,
+            GetFontCollection: *const fn (*IDWriteFontFamily, *?*IDWriteFontCollection) callconv(.winapi) HRESULT,
+            GetFontCount: *const fn (*IDWriteFontFamily, *UINT32) callconv(.winapi) HRESULT,
+            GetFont: *const fn (*IDWriteFontFamily, UINT32, *?*IDWriteFont) callconv(.winapi) HRESULT,
+        };
+    };
+
+    const IDWriteFontCollection = extern struct {
+        vtbl: *const Vtbl,
+        const Vtbl = extern struct {
+            QueryInterface: *const fn (*IDWriteFontCollection, *const GUID, *?*anyopaque) callconv(.winapi) HRESULT,
+            AddRef: *const fn (*IDWriteFontCollection) callconv(.winapi) ULONG,
+            Release: *const fn (*IDWriteFontCollection) callconv(.winapi) ULONG,
+            GetFontFamilyCount: *const fn (*IDWriteFontCollection) callconv(.winapi) UINT32,
+            GetFontFamily: *const fn (*IDWriteFontCollection, UINT32, *?*IDWriteFontFamily) callconv(.winapi) HRESULT,
+        };
+    };
+
+    const IDWriteFactory = extern struct {
+        vtbl: *const Vtbl,
+        const Vtbl = extern struct {
+            QueryInterface: *const fn (*IDWriteFactory, *const GUID, *?*anyopaque) callconv(.winapi) HRESULT,
+            AddRef: *const fn (*IDWriteFactory) callconv(.winapi) ULONG,
+            Release: *const fn (*IDWriteFactory) callconv(.winapi) ULONG,
+            GetSystemFontCollection: *const fn (*IDWriteFactory, *?*IDWriteFontCollection, BOOL) callconv(.winapi) HRESULT,
+        };
+    };
+
+    const DWRITE_FACTORY_TYPE_SHARED: u32 = 0;
+
+    extern "dwrite" fn DWriteCreateFactory(factory_type: u32, iid: *const GUID, out_factory: *?*anyopaque) callconv(.winapi) HRESULT;
+    extern "ole32" fn CoInitializeEx(reserved: ?*anyopaque, coinit: u32) callconv(.winapi) HRESULT;
+
+    const COINIT_MULTITHREADED: u32 = 0;
+    const RPC_E_CHANGED_MODE: HRESULT = @bitCast(@as(u32, 0x80010106));
+
+    fn release(ptr: anytype) void {
+        if (ptr) |p| {
+            const T = @TypeOf(p);
+            _ = T.vtbl.Release(p);
+        }
+    }
+
+    fn queryInterface(comptime T: type, unk: *IUnknown, iid: *const GUID) ?*T {
+        var out: ?*anyopaque = null;
+        if (unk.vtbl.QueryInterface(unk, iid, &out) < 0) return null;
+        return @ptrCast(out.?);
+    }
+} else struct {};
+
 pub const c = @cImport({
     @cInclude("ft2build.h");
     @cInclude("freetype/freetype.h");
@@ -770,14 +934,19 @@ pub const TerminalFont = struct {
             const owned = self.allocator.dupe(u8, path) catch continue;
             errdefer self.allocator.free(owned);
 
-            var fb_face: c.FT_Face = null;
-            if (!ftNewFace(self, owned, &fb_face)) {
+            var fb_pair: FacePair = .{};
+            if (!ftNewFaceFromFile(self, owned, &fb_pair) and !ftNewFaceFromMemoryFile(self, owned, &fb_pair)) {
                 continue;
             }
-            errdefer _ = c.FT_Done_Face(fb_face);
+            const fb_face = fb_pair.face.?;
+            errdefer {
+                if (fb_pair.hb) |hb| c.hb_font_destroy(hb);
+                if (fb_pair.face) |face| _ = c.FT_Done_Face(face);
+                if (fb_pair.owned_data) |data| self.allocator.free(data);
+            }
 
             if (c.FT_Get_Char_Index(fb_face, codepoint) == 0) {
-                _ = c.FT_Done_Face(fb_face);
+                // Not a match; cleanup via errdefer.
                 continue;
             }
 
@@ -787,19 +956,19 @@ pub const TerminalFont = struct {
             }
 
             const fb_hb = c.hb_ft_font_create(fb_face, null) orelse {
-                _ = c.FT_Done_Face(fb_face);
                 continue;
             };
 
-            const pair = FacePair{ .face = fb_face, .hb = fb_hb };
-            self.system_faces.put(self.allocator, owned, pair) catch {
+            fb_pair.hb = fb_hb;
+            self.system_faces.put(self.allocator, owned, fb_pair) catch {
                 c.hb_font_destroy(fb_hb);
                 _ = c.FT_Done_Face(fb_face);
+                if (fb_pair.owned_data) |data| self.allocator.free(data);
                 self.allocator.free(owned);
                 return null;
             };
             _ = self.system_fallback_by_cp.put(codepoint, owned) catch {};
-            return pair;
+            return fb_pair;
         }
 
         return null;
