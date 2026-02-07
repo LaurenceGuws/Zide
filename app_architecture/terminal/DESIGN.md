@@ -51,7 +51,7 @@ Why:
 ### Layer 2: PTY + IO
 
 Progress:
-- Implemented cross‑platform PTY API with Linux `openpty`, macOS login shell handling, and Windows ConPTY stub.
+- Implemented cross‑platform PTY API with Linux `openpty`, macOS login shell handling, and Windows ConPTY implementation (CreatePseudoConsole + CreateProcessW).
 - PTY output is piped into the VT stream; input is sent back to PTY.
 - PTY read thread now queues bytes; the main thread drains with a per-frame budget to avoid render starvation.
 - Drain budget scales up when backlog is large to keep cat/scrollback responsive.

@@ -276,6 +276,8 @@ pub const TerminalSession = struct {
     clear_generation: std.atomic.Value(u64),
     force_full_damage: std.atomic.Value(bool),
     saved_charset: SavedCharsetState,
+    child_exited: std.atomic.Value(bool),
+    child_exit_code: std.atomic.Value(i32),
 
     pub const InitOptions = struct {
         scrollback_rows: ?usize = null,
@@ -381,6 +383,8 @@ pub const TerminalSession = struct {
             .clear_generation = std.atomic.Value(u64).init(0),
             .force_full_damage = std.atomic.Value(bool).init(false),
             .saved_charset = .{},
+            .child_exited = std.atomic.Value(bool).init(false),
+            .child_exit_code = std.atomic.Value(i32).init(-1),
         };
         session.updateInputSnapshot();
         return session;
@@ -858,6 +862,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn poll(self: *TerminalSession) !void {
+        self.maybeUpdateChildExit();
         const input_pressure = self.input_pressure.load(.acquire);
         if (self.read_thread != null) {
             if (self.parse_thread != null) {
@@ -998,6 +1003,26 @@ pub const TerminalSession = struct {
             if (self.view_cache_pending.swap(false, .acq_rel)) {
                 const offset: usize = @intCast(self.view_cache_request_offset.load(.acquire));
                 self.updateViewCacheNoLock(self.output_generation.load(.acquire), offset);
+            }
+        }
+    }
+
+    pub fn childExitCode(self: *TerminalSession) ?i32 {
+        if (!self.child_exited.load(.acquire)) return null;
+        return self.child_exit_code.load(.acquire);
+    }
+
+    fn maybeUpdateChildExit(self: *TerminalSession) void {
+        if (self.child_exited.load(.acquire)) return;
+        if (self.pty) |*pty| {
+            if (pty.pollExit() catch null) |code| {
+                self.child_exit_code.store(code, .release);
+                self.child_exited.store(true, .release);
+
+                const log = app_logger.logger("terminal.pty");
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf("pty child exited code={d}", .{code});
+                }
             }
         }
     }
@@ -2247,7 +2272,9 @@ pub const TerminalSession = struct {
     }
 
     pub fn isAlive(self: *TerminalSession) bool {
-        _ = self;
+        if (self.pty) |*pty| {
+            return pty.isAlive();
+        }
         return false;
     }
 

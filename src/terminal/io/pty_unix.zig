@@ -125,6 +125,17 @@ pub const Pty = struct {
         return null;
     }
 
+    pub fn isAlive(self: *Pty) bool {
+        if (self.child_pid == null) return false;
+        const pid = self.child_pid.?;
+        _ = posix.kill(pid, 0) catch |err| switch (err) {
+            // Process exists but we don't have permission.
+            error.PermissionDenied => return true,
+            else => return false,
+        };
+        return true;
+    }
+
     pub fn hasData(self: *Pty) bool {
         var fds = [1]posix.pollfd{
             .{
@@ -196,7 +207,7 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
         posix.exit(127);
     }
 
-    const argv = [_:null]?[*:0]const u8{ shell_path.ptr };
+    const argv = [_:null]?[*:0]const u8{shell_path.ptr};
     _ = posix.execvpeZ(shell_path.ptr, &argv, envp) catch {};
     posix.exit(127);
 }
