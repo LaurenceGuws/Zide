@@ -381,6 +381,24 @@ const AppState = struct {
         self.active_kind = .editor;
     }
 
+    pub fn openFileAt(self: *AppState, path: []const u8, line_1: usize, col_1: ?usize) !void {
+        const editor = try Editor.init(self.allocator, &self.grammar_manager);
+        try editor.openFile(path);
+        try self.editors.append(self.allocator, editor);
+
+        const filename = std.fs.path.basename(path);
+        try self.tab_bar.addTab(filename, .editor);
+        self.active_tab = self.tab_bar.tabs.items.len - 1;
+        self.active_kind = .editor;
+
+        const line0 = if (line_1 > 0) line_1 - 1 else 0;
+        const col0 = if (col_1) |c1| (if (c1 > 0) c1 - 1 else 0) else 0;
+        const clamped_line = @min(line0, editor.lineCount() -| 1);
+        const line_len = editor.lineLen(clamped_line);
+        const clamped_col = @min(col0, line_len);
+        editor.setCursor(clamped_line, clamped_col);
+    }
+
     fn isProbablyTextFile(path: []const u8) bool {
         var file = if (std.fs.path.isAbsolute(path))
             std.fs.openFileAbsolute(path, .{ .mode = .read_only }) catch return false
@@ -1197,10 +1215,14 @@ const AppState = struct {
                     self.needs_redraw = true;
                     self.metrics.noteInput(now);
                 }
-                if (term_widget.takePendingOpenPath()) |path| {
-                    defer self.allocator.free(path);
-                    if (isProbablyTextFile(path)) {
-                        try self.openFile(path);
+                if (term_widget.takePendingOpenRequest()) |req| {
+                    defer self.allocator.free(req.path);
+                    if (isProbablyTextFile(req.path)) {
+                        if (req.line != null) {
+                            try self.openFileAt(req.path, req.line.?, req.col);
+                        } else {
+                            try self.openFile(req.path);
+                        }
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
                     }
@@ -1221,10 +1243,14 @@ const AppState = struct {
                     self.needs_redraw = true;
                     self.metrics.noteInput(now);
                 }
-                if (term_widget.takePendingOpenPath()) |path| {
-                    defer self.allocator.free(path);
-                    if (isProbablyTextFile(path)) {
-                        try self.openFile(path);
+                if (term_widget.takePendingOpenRequest()) |req| {
+                    defer self.allocator.free(req.path);
+                    if (isProbablyTextFile(req.path)) {
+                        if (req.line != null) {
+                            try self.openFileAt(req.path, req.line.?, req.col);
+                        } else {
+                            try self.openFile(req.path);
+                        }
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
                     }
