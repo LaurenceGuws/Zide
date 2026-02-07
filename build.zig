@@ -62,6 +62,10 @@ pub fn build(b: *std.Build) void {
         "renderer-backend",
         "Renderer backend (only sdl_gl is implemented; wgl/egl are TODO)",
     ) orelse default_renderer_backend;
+
+    if (!std.mem.eql(u8, renderer_backend, "sdl_gl")) {
+        std.debug.panic("renderer backend '{s}' is not implemented (use -Drenderer-backend=sdl_gl)", .{renderer_backend});
+    }
     const build_options = b.addOptions();
     build_options.addOption([]const u8, "renderer_backend", renderer_backend);
 
