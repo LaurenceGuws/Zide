@@ -87,7 +87,7 @@ const windows_dwrite = if (builtin.target.os.tag == .windows) struct {
             AddRef: *const fn (*IDWriteFontFace) callconv(.winapi) ULONG,
             Release: *const fn (*IDWriteFontFace) callconv(.winapi) ULONG,
             GetType: *const fn (*IDWriteFontFace) callconv(.winapi) u32,
-            GetFiles: *const fn (*IDWriteFontFace, *UINT32, ?[*]*IDWriteFontFile) callconv(.winapi) HRESULT,
+            GetFiles: *const fn (*IDWriteFontFace, *UINT32, ?[*]?*IDWriteFontFile) callconv(.winapi) HRESULT,
             GetIndex: *const fn (*IDWriteFontFace) callconv(.winapi) UINT32,
             GetSimulations: *const fn (*IDWriteFontFace) callconv(.winapi) u32,
             IsSymbolFont: *const fn (*IDWriteFontFace) callconv(.winapi) BOOL,
@@ -182,7 +182,7 @@ const fc = if (builtin.target.os.tag == .linux) @cImport({
 
 const FcConfigPtr = if (builtin.target.os.tag == .linux) *fc.FcConfig else *anyopaque;
 // TODO(macOS): Add CoreText-based fallback resolution for missing glyphs.
-// TODO(Windows): Add DirectWrite-based fallback resolution for missing glyphs.
+// TODO(Windows): Improve DirectWrite fallback performance (current implementation enumerates system fonts with caps and caches by codepoint).
 
 pub const AllowSquareGlyphOverflow = enum {
     never,
@@ -969,6 +969,150 @@ pub const TerminalFont = struct {
             };
             _ = self.system_fallback_by_cp.put(codepoint, owned) catch {};
             return fb_pair;
+        }
+
+        if (self.windowsDirectWriteResolveFontPath(codepoint)) |path_utf8| {
+            // If we've already loaded this face, reuse it.
+            if (self.system_faces.getEntry(path_utf8)) |entry| {
+                self.allocator.free(path_utf8);
+                _ = self.system_fallback_by_cp.put(codepoint, @constCast(entry.key_ptr.*)) catch {};
+                return entry.value_ptr.*;
+            }
+
+            // Take ownership of the returned path for cache keys.
+            const owned = path_utf8;
+            errdefer self.allocator.free(owned);
+
+            var fb_pair: FacePair = .{};
+            if (!ftNewFaceFromFile(self, owned, &fb_pair) and !ftNewFaceFromMemoryFile(self, owned, &fb_pair)) {
+                return null;
+            }
+            const fb_face = fb_pair.face.?;
+            errdefer {
+                if (fb_pair.hb) |hb| c.hb_font_destroy(hb);
+                if (fb_pair.face) |face| _ = c.FT_Done_Face(face);
+                if (fb_pair.owned_data) |data| self.allocator.free(data);
+            }
+
+            if (c.FT_Set_Pixel_Sizes(fb_face, 0, @intFromFloat(self.line_height)) != 0) {
+                return null;
+            }
+
+            const fb_hb = c.hb_ft_font_create(fb_face, null) orelse {
+                return null;
+            };
+            fb_pair.hb = fb_hb;
+            self.system_faces.put(self.allocator, owned, fb_pair) catch {
+                c.hb_font_destroy(fb_hb);
+                _ = c.FT_Done_Face(fb_face);
+                if (fb_pair.owned_data) |data| self.allocator.free(data);
+                return null;
+            };
+            _ = self.system_fallback_by_cp.put(codepoint, owned) catch {};
+            return fb_pair;
+        }
+
+        return null;
+    }
+
+    fn ensureWindowsComInit() bool {
+        if (windows_com_initialized.load(.acquire)) return true;
+        windows_com_initialized.store(true, .release);
+        const hr = windows_dwrite.CoInitializeEx(null, windows_dwrite.COINIT_MULTITHREADED);
+        if (hr >= 0 or hr == windows_dwrite.RPC_E_CHANGED_MODE) return true;
+        return false;
+    }
+
+    fn windowsDirectWriteResolveFontPath(self: *TerminalFont, codepoint: u32) ?[]u8 {
+        if (builtin.target.os.tag != .windows) return null;
+        if (!ensureWindowsComInit()) return null;
+
+        var factory_any: ?*anyopaque = null;
+        if (windows_dwrite.DWriteCreateFactory(
+            windows_dwrite.DWRITE_FACTORY_TYPE_SHARED,
+            &windows_dwrite.IID_IDWriteFactory,
+            &factory_any,
+        ) < 0) return null;
+        const factory: *windows_dwrite.IDWriteFactory = @ptrCast(factory_any.?);
+        defer _ = factory.vtbl.Release(factory);
+
+        var collection: ?*windows_dwrite.IDWriteFontCollection = null;
+        if (factory.vtbl.GetSystemFontCollection(factory, &collection, 0) < 0) return null;
+        defer _ = collection.?.vtbl.Release(collection.?);
+
+        const family_count = collection.?.vtbl.GetFontFamilyCount(collection.?);
+        const max_families: windows_dwrite.UINT32 = @min(family_count, 900);
+
+        var family_idx: windows_dwrite.UINT32 = 0;
+        while (family_idx < max_families) : (family_idx += 1) {
+            var family: ?*windows_dwrite.IDWriteFontFamily = null;
+            if (collection.?.vtbl.GetFontFamily(collection.?, family_idx, &family) < 0) continue;
+            defer _ = family.?.vtbl.Release(family.?);
+
+            var font_count: windows_dwrite.UINT32 = 0;
+            if (family.?.vtbl.GetFontCount(family.?, &font_count) < 0) continue;
+            const max_fonts: windows_dwrite.UINT32 = @min(font_count, 4);
+
+            var font_idx: windows_dwrite.UINT32 = 0;
+            while (font_idx < max_fonts) : (font_idx += 1) {
+                var font: ?*windows_dwrite.IDWriteFont = null;
+                if (family.?.vtbl.GetFont(family.?, font_idx, &font) < 0) continue;
+                defer _ = font.?.vtbl.Release(font.?);
+
+                var face: ?*windows_dwrite.IDWriteFontFace = null;
+                if (font.?.vtbl.CreateFontFace(font.?, &face) < 0) continue;
+                defer _ = face.?.vtbl.Release(face.?);
+
+                var cp: windows_dwrite.UINT32 = codepoint;
+                var glyph: windows_dwrite.UINT16 = 0;
+                if (face.?.vtbl.GetGlyphIndices(face.?, &cp, 1, &glyph) < 0) continue;
+                if (glyph == 0) continue;
+
+                // Resolve the local font file path.
+                var file_count: windows_dwrite.UINT32 = 0;
+                if (face.?.vtbl.GetFiles(face.?, &file_count, null) < 0) continue;
+                if (file_count == 0) continue;
+
+                const files = self.allocator.alloc(?*windows_dwrite.IDWriteFontFile, file_count) catch continue;
+                defer self.allocator.free(files);
+                @memset(files, null);
+                if (face.?.vtbl.GetFiles(face.?, &file_count, files.ptr) < 0) continue;
+
+                const file0 = files[0] orelse continue;
+                defer {
+                    for (files) |f_opt| {
+                        if (f_opt) |f| _ = f.vtbl.Release(f);
+                    }
+                }
+
+                var key_ptr: ?*const anyopaque = null;
+                var key_size: windows_dwrite.UINT32 = 0;
+                if (file0.vtbl.GetReferenceKey(file0, &key_ptr, &key_size) < 0) continue;
+                if (key_ptr == null or key_size == 0) continue;
+
+                var loader: ?*windows_dwrite.IDWriteFontFileLoader = null;
+                if (file0.vtbl.GetLoader(file0, &loader) < 0 or loader == null) continue;
+                defer _ = loader.?.vtbl.Release(@ptrCast(loader.?));
+
+                const loader_unk: *windows_dwrite.IUnknown = @ptrCast(loader.?);
+                var local_any: ?*anyopaque = null;
+                if (loader_unk.vtbl.QueryInterface(loader_unk, &windows_dwrite.IID_IDWriteLocalFontFileLoader, &local_any) < 0) continue;
+                const local_loader: *windows_dwrite.IDWriteLocalFontFileLoader = @ptrCast(local_any.?);
+                defer _ = local_loader.vtbl.Release(local_loader);
+
+                var path_len: windows_dwrite.UINT32 = 0;
+                if (local_loader.vtbl.GetFilePathLengthFromKey(local_loader, key_ptr.?, key_size, &path_len) < 0) continue;
+                if (path_len == 0) continue;
+
+                // +1 for null terminator.
+                var wbuf = self.allocator.alloc(u16, @intCast(path_len + 1)) catch continue;
+                defer self.allocator.free(wbuf);
+                if (local_loader.vtbl.GetFilePathFromKey(local_loader, key_ptr.?, key_size, wbuf.ptr, path_len + 1) < 0) continue;
+                wbuf[@intCast(path_len)] = 0;
+
+                const path_utf8 = std.unicode.utf16LeToUtf8Alloc(self.allocator, wbuf[0..@intCast(path_len)]) catch continue;
+                return path_utf8;
+            }
         }
 
         return null;
