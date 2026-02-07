@@ -74,12 +74,13 @@ windows_impl:
   phase_2_renderer_backend:
     - id: W2-01
       title: "Wire `-Drenderer-backend` to actual backend selection (or remove dead option)"
-      status: pending
+      status: done
       files_to_edit:
         - src/ui/renderer.zig
         - build.zig
       notes:
-        - "Today the option is parsed but not used; backend stubs exist but are not integrated."
+        - "Default renderer backend set to sdl_gl (implemented)."
+        - "If wgl/egl is selected, renderer init now routes through the backend init (currently returns BackendNotImplemented)."
     - id: W2-02
       title: "Implement Windows OpenGL context backend (WGL) OR decide to keep SDL-managed GL only"
       status: pending
