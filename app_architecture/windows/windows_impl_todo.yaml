@@ -98,11 +98,12 @@ windows_impl:
   phase_3_font_fallback:
     - id: W3-01
       title: "Implement Windows system font fallback for missing glyphs (DirectWrite-based)"
-      status: pending
+      status: in_progress
       files_to_edit:
         - src/ui/terminal_font.zig
       notes:
         - "Linux uses fontconfig; Windows should use DirectWrite font fallback resolution."
+        - "Interim: Windows fallback loads from %WINDIR%\\Fonts using a small set of well-known fonts (Segoe UI Emoji/Symbol/etc)."
 
   phase_4_process_signals:
     - id: W4-01

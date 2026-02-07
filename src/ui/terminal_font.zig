@@ -602,8 +602,9 @@ pub const TerminalFont = struct {
     }
 
     fn systemFallback(self: *TerminalFont, codepoint: u32) ?FacePair {
-        if (builtin.target.os.tag != .linux) return null;
-        if (!self.fc_enabled or self.fc_config == null) return null;
+        const os_tag = builtin.target.os.tag;
+        if (os_tag != .linux and os_tag != .windows) return null;
+
         if (self.system_fallback_by_cp.get(codepoint)) |cached| {
             if (cached) |path| {
                 if (self.system_faces.get(path)) |pair| return pair;
@@ -611,6 +612,16 @@ pub const TerminalFont = struct {
             }
             return null;
         }
+
+        if (os_tag == .windows) {
+            const pair = self.windowsSystemFallback(codepoint);
+            if (pair == null) {
+                _ = self.system_fallback_by_cp.put(codepoint, null) catch {};
+            }
+            return pair;
+        }
+
+        if (!self.fc_enabled or self.fc_config == null) return null;
 
         var result: ?FacePair = null;
         const pattern = fc.FcPatternCreate() orelse return null;
@@ -651,7 +662,7 @@ pub const TerminalFont = struct {
         errdefer self.allocator.free(owned);
 
         var fb_face: c.FT_Face = null;
-        if (c.FT_New_Face(self.ft_library, owned.ptr, 0, &fb_face) != 0) {
+        if (!ftNewFace(self, owned, &fb_face)) {
             _ = self.system_fallback_by_cp.put(codepoint, null) catch {};
             return null;
         }
@@ -677,6 +688,85 @@ pub const TerminalFont = struct {
         _ = self.system_fallback_by_cp.put(codepoint, owned) catch {};
         result = pair;
         return result;
+    }
+
+    fn ftNewFace(self: *TerminalFont, path: []const u8, out_face: *c.FT_Face) bool {
+        // FreeType expects a 0-terminated path. Avoid storing the terminator in
+        // the hash-map key by allocating a temporary sentinel buffer here.
+        var tmp = self.allocator.alloc(u8, path.len + 1) catch return false;
+        defer self.allocator.free(tmp);
+        std.mem.copyForwards(u8, tmp[0..path.len], path);
+        tmp[path.len] = 0;
+        return c.FT_New_Face(self.ft_library, tmp.ptr, 0, out_face) == 0;
+    }
+
+    fn windowsFontDir(allocator: std.mem.Allocator) ?[]u8 {
+        const windir = std.c.getenv("WINDIR") orelse return null;
+        const base = std.mem.sliceTo(windir, 0);
+        return std.fs.path.join(allocator, &.{ base, "Fonts" }) catch return null;
+    }
+
+    fn windowsSystemFallback(self: *TerminalFont, codepoint: u32) ?FacePair {
+        const font_dir = windowsFontDir(self.allocator) orelse return null;
+        defer self.allocator.free(font_dir);
+
+        // Prefer a small set of well-known Windows fonts first. This is a
+        // pragmatic fallback (DirectWrite-based matching is still TODO).
+        const candidates = [_][]const u8{
+            "seguiemj.ttf", // Segoe UI Emoji
+            "seguisym.ttf", // Segoe UI Symbol
+            "segoeui.ttf", // Segoe UI
+            "consola.ttf", // Consolas
+            "arial.ttf", // Arial
+            "times.ttf", // Times New Roman (some installs)
+        };
+
+        for (candidates) |file| {
+            const path = std.fs.path.join(self.allocator, &.{ font_dir, file }) catch continue;
+            defer self.allocator.free(path);
+
+            // If we've already loaded this face, reuse it.
+            if (self.system_faces.getEntry(path)) |entry| {
+                _ = self.system_fallback_by_cp.put(codepoint, @constCast(entry.key_ptr.*)) catch {};
+                return entry.value_ptr.*;
+            }
+
+            const owned = self.allocator.dupe(u8, path) catch continue;
+            errdefer self.allocator.free(owned);
+
+            var fb_face: c.FT_Face = null;
+            if (!ftNewFace(self, owned, &fb_face)) {
+                continue;
+            }
+            errdefer _ = c.FT_Done_Face(fb_face);
+
+            if (c.FT_Get_Char_Index(fb_face, codepoint) == 0) {
+                _ = c.FT_Done_Face(fb_face);
+                continue;
+            }
+
+            if (c.FT_Set_Pixel_Sizes(fb_face, 0, @intFromFloat(self.line_height)) != 0) {
+                _ = c.FT_Done_Face(fb_face);
+                continue;
+            }
+
+            const fb_hb = c.hb_ft_font_create(fb_face, null) orelse {
+                _ = c.FT_Done_Face(fb_face);
+                continue;
+            };
+
+            const pair = FacePair{ .face = fb_face, .hb = fb_hb };
+            self.system_faces.put(self.allocator, owned, pair) catch {
+                c.hb_font_destroy(fb_hb);
+                _ = c.FT_Done_Face(fb_face);
+                self.allocator.free(owned);
+                return null;
+            };
+            _ = self.system_fallback_by_cp.put(codepoint, owned) catch {};
+            return pair;
+        }
+
+        return null;
     }
 
     fn rasterizeGlyph(self: *TerminalFont, codepoint: u32, allow_compact: bool) GlyphError!void {
