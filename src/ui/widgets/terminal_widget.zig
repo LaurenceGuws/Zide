@@ -31,6 +31,12 @@ pub const TerminalWidget = struct {
         off,
     };
 
+    pub const PendingOpen = struct {
+        path: []u8,
+        line: ?usize = null, // 1-based
+        col: ?usize = null, // 1-based
+    };
+
     session: *TerminalSession,
     blink_style: BlinkStyle = .kitty,
     last_scroll_offset: usize = 0,
@@ -45,7 +51,7 @@ pub const TerminalWidget = struct {
     last_hover_col: isize = -1,
     last_hover_ctrl: bool = false,
     hover_dirty: bool = false,
-    pending_open_path: ?[]u8 = null,
+    pending_open: ?PendingOpen = null,
     last_draw_log_time: f64 = 0,
     blink_last_slow_on: bool = true,
     blink_last_fast_on: bool = true,
@@ -72,7 +78,7 @@ pub const TerminalWidget = struct {
             .last_hover_row = -1,
             .last_hover_col = -1,
             .last_hover_ctrl = false,
-            .pending_open_path = null,
+            .pending_open = null,
             .last_draw_log_time = 0,
             .blink_last_slow_on = true,
             .blink_last_fast_on = true,
@@ -130,9 +136,9 @@ pub const TerminalWidget = struct {
     }
 
     pub fn deinit(self: *TerminalWidget) void {
-        if (self.pending_open_path) |path| {
-            self.session.allocator.free(path);
-            self.pending_open_path = null;
+        if (self.pending_open) |req| {
+            self.session.allocator.free(req.path);
+            self.pending_open = null;
         }
         var it = self.kitty_textures.iterator();
         while (it.next()) |entry| {
@@ -147,9 +153,9 @@ pub const TerminalWidget = struct {
         self.kitty_placements_view.deinit(self.session.allocator);
     }
 
-    pub fn takePendingOpenPath(self: *TerminalWidget) ?[]u8 {
-        const value = self.pending_open_path;
-        self.pending_open_path = null;
+    pub fn takePendingOpenRequest(self: *TerminalWidget) ?PendingOpen {
+        const value = self.pending_open;
+        self.pending_open = null;
         return value;
     }
 
@@ -267,6 +273,11 @@ pub const TerminalWidget = struct {
     fn resolveLinkPath(self: *TerminalWidget, uri: []const u8) ?[]u8 {
         if (uri.len == 0) return null;
         const allocator = self.session.allocator;
+        if (builtin.os.tag == .windows) {
+            if (isWindowsAbsPath(uri)) {
+                return allocator.dupe(u8, uri) catch null;
+            }
+        }
         if (std.mem.startsWith(u8, uri, "file://")) {
             var rest = uri["file://".len..];
             if (rest.len == 0) return null;
@@ -279,7 +290,13 @@ pub const TerminalWidget = struct {
                     return null;
                 }
             }
-            return decodePercent(allocator, rest);
+            const decoded = decodePercent(allocator, rest) orelse return null;
+            if (builtin.os.tag == .windows) {
+                const normalized = normalizeWindowsFileUriPath(allocator, decoded) orelse decoded;
+                if (normalized.ptr != decoded.ptr) allocator.free(decoded);
+                return normalized;
+            }
+            return decoded;
         }
         if (uri[0] == '/') {
             return allocator.dupe(u8, uri) catch null;
@@ -287,6 +304,162 @@ pub const TerminalWidget = struct {
         const cwd = self.session.currentCwd();
         if (cwd.len == 0) return null;
         return std.fs.path.join(allocator, &.{ cwd, uri }) catch null;
+    }
+
+    fn isWindowsAbsPath(text: []const u8) bool {
+        if (text.len >= 3 and std.ascii.isAlphabetic(text[0]) and text[1] == ':' and (text[2] == '\\' or text[2] == '/')) return true;
+        if (text.len >= 2 and text[0] == '\\' and text[1] == '\\') return true; // UNC
+        return false;
+    }
+
+    fn normalizeWindowsFileUriPath(allocator: std.mem.Allocator, path: []const u8) ?[]u8 {
+        // Common patterns produced by file:// URIs:
+        // - /C:/foo/bar  -> C:/foo/bar
+        // - /c:/foo/bar  -> c:/foo/bar
+        if (path.len >= 4 and path[0] == '/' and std.ascii.isAlphabetic(path[1]) and path[2] == ':' and path[3] == '/') {
+            return allocator.dupe(u8, path[1..]) catch null;
+        }
+        return null;
+    }
+
+    fn rowCellsAtVisibleRow(
+        self: *TerminalWidget,
+        snapshot: terminal_mod.TerminalSnapshot,
+        history_len: usize,
+        start_line: usize,
+        rows: usize,
+        cols: usize,
+        row: usize,
+    ) ?[]const Cell {
+        if (rows == 0 or cols == 0) return null;
+        if (row >= rows) return null;
+        const global_row = start_line + row;
+        if (global_row < history_len) {
+            if (self.session.scrollbackRow(global_row)) |history_row| return history_row;
+            return null;
+        }
+        const grid_row = global_row - history_len;
+        if (grid_row < rows and snapshot.cells.len >= rows * cols) {
+            return snapshot.cells[grid_row * cols .. grid_row * cols + cols];
+        }
+        return null;
+    }
+
+    fn isTokenChar(cp: u32) bool {
+        if (cp < 128) {
+            const ch: u8 = @intCast(cp);
+            if (std.ascii.isAlphanumeric(ch)) return true;
+            return switch (ch) {
+                '/', '\\', '.', '_', '-', '+', ':', '@', '~', '%', '=', '#', '$' => true,
+                else => false,
+            };
+        }
+        return false;
+    }
+
+    fn extractTokenAtCol(self: *TerminalWidget, row_cells: []const Cell, col: usize) ?[]u8 {
+        if (col >= row_cells.len) return null;
+        if (row_cells[col].codepoint == 0) return null;
+        if (!isTokenChar(row_cells[col].codepoint)) return null;
+
+        var start: usize = col;
+        while (start > 0) {
+            const prev = row_cells[start - 1];
+            if (prev.codepoint == 0 or !isTokenChar(prev.codepoint)) break;
+            start -= 1;
+        }
+        var end: usize = col;
+        while (end + 1 < row_cells.len) {
+            const next = row_cells[end + 1];
+            if (next.codepoint == 0 or !isTokenChar(next.codepoint)) break;
+            end += 1;
+        }
+
+        var out = std.ArrayList(u8).empty;
+        errdefer out.deinit(self.session.allocator);
+        var i: usize = start;
+        while (i <= end and i < row_cells.len) : (i += 1) {
+            const cell = row_cells[i];
+            if (cell.x != 0 or cell.y != 0) continue;
+            if (cell.codepoint == 0) continue;
+            var buf: [4]u8 = undefined;
+            const n = std.unicode.utf8Encode(@intCast(cell.codepoint), &buf) catch 0;
+            if (n > 0) {
+                out.appendSlice(self.session.allocator, buf[0..n]) catch return null;
+            }
+        }
+        var token = out.toOwnedSlice(self.session.allocator) catch return null;
+
+        // Trim common punctuation around terminal paths.
+        while (token.len > 0) {
+            const c0 = token[0];
+            if (c0 == '(' or c0 == '[' or c0 == '{' or c0 == '<' or c0 == '"' or c0 == '\'' or c0 == '`') {
+                token = token[1..];
+                continue;
+            }
+            break;
+        }
+        while (token.len > 0) {
+            const c1 = token[token.len - 1];
+            if (c1 == ')' or c1 == ']' or c1 == '}' or c1 == '>' or c1 == ',' or c1 == ';' or c1 == '"' or c1 == '\'' or c1 == '`') {
+                token = token[0 .. token.len - 1];
+                continue;
+            }
+            break;
+        }
+        if (token.len == 0) return null;
+        return self.session.allocator.dupe(u8, token) catch null;
+    }
+
+    const ParsedPath = struct {
+        path: []const u8,
+        line: ?usize,
+        col: ?usize,
+    };
+
+    fn parsePathAndLocation(token: []const u8) ?ParsedPath {
+        if (token.len == 0) return null;
+        if (std.mem.indexOf(u8, token, "://") != null and !std.mem.startsWith(u8, token, "file://")) return null;
+
+        var base = token;
+        var line: ?usize = null;
+        var col: ?usize = null;
+
+        // Parse trailing :<num>[:<num>] without confusing drive letters.
+        var tmp = base;
+        if (std.mem.lastIndexOfScalar(u8, tmp, ':')) |idx2| {
+            const tail2 = tmp[idx2 + 1 ..];
+            if (tail2.len > 0 and allDigits(tail2)) {
+                const n2 = std.fmt.parseInt(usize, tail2, 10) catch null;
+                if (n2 != null) {
+                    tmp = tmp[0..idx2];
+                    if (std.mem.lastIndexOfScalar(u8, tmp, ':')) |idx1| {
+                        const tail1 = tmp[idx1 + 1 ..];
+                        if (tail1.len > 0 and allDigits(tail1)) {
+                            const n1 = std.fmt.parseInt(usize, tail1, 10) catch null;
+                            if (n1 != null) {
+                                base = tmp[0..idx1];
+                                line = n1.?;
+                                col = n2.?;
+                                return .{ .path = base, .line = line, .col = col };
+                            }
+                        }
+                    }
+                    base = tmp;
+                    line = n2.?;
+                    col = null;
+                }
+            }
+        }
+
+        return .{ .path = base, .line = line, .col = col };
+    }
+
+    fn allDigits(text: []const u8) bool {
+        for (text) |c| {
+            if (!std.ascii.isDigit(c)) return false;
+        }
+        return text.len > 0;
     }
 
     fn linkIdAtCell(
@@ -1446,16 +1619,51 @@ pub const TerminalWidget = struct {
                 const col = @as(usize, @intFromFloat((mouse.x - x) / shell.terminalCellWidth()));
                 const row = @as(usize, @intFromFloat((mouse.y - y) / shell.terminalCellHeight()));
                 if (row < rows and col < cols) {
+                    var opened = false;
                     const link_id = self.linkIdAtCell(snapshot, history_len, start_line, rows, cols, row, col);
                     if (link_id != 0) {
                         if (self.session.hyperlinkUri(link_id)) |link| {
                             if (self.resolveLinkPath(link)) |path| {
-                                if (self.pending_open_path) |old| {
-                                    self.session.allocator.free(old);
+                                if (self.pending_open) |old| {
+                                    self.session.allocator.free(old.path);
                                 }
-                                self.pending_open_path = path;
+                                self.pending_open = .{ .path = path };
                                 handled = true;
                                 skip_mouse_click = true;
+                                opened = true;
+                            }
+                        }
+                    }
+
+                    if (!opened) {
+                        if (self.rowCellsAtVisibleRow(snapshot, history_len, start_line, rows, cols, row)) |row_cells| {
+                            if (self.extractTokenAtCol(row_cells, col)) |token| {
+                                defer self.session.allocator.free(token);
+                                if (parsePathAndLocation(token)) |parsed| {
+                                    // Resolve to an absolute path when possible.
+                                    var resolved: ?[]u8 = null;
+                                    if (builtin.os.tag == .windows and isWindowsAbsPath(parsed.path)) {
+                                        resolved = self.session.allocator.dupe(u8, parsed.path) catch null;
+                                    } else if (std.mem.startsWith(u8, parsed.path, "file://") or parsed.path.len > 0 and parsed.path[0] == '/') {
+                                        resolved = self.resolveLinkPath(parsed.path);
+                                    } else {
+                                        const cwd = self.session.currentCwd();
+                                        if (cwd.len > 0) {
+                                            resolved = std.fs.path.join(self.session.allocator, &.{ cwd, parsed.path }) catch null;
+                                        } else {
+                                            resolved = self.session.allocator.dupe(u8, parsed.path) catch null;
+                                        }
+                                    }
+
+                                    if (resolved) |path| {
+                                        if (self.pending_open) |old| {
+                                            self.session.allocator.free(old.path);
+                                        }
+                                        self.pending_open = .{ .path = path, .line = parsed.line, .col = parsed.col };
+                                        handled = true;
+                                        skip_mouse_click = true;
+                                    }
+                                }
                             }
                         }
                     }
