@@ -107,11 +107,11 @@ windows_impl:
   phase_4_process_signals:
     - id: W4-01
       title: "Implement Windows Ctrl+C/close handling (console control handler)"
-      status: pending
+      status: done
       files_to_edit:
         - src/main.zig
       notes:
-        - "Decide whether Ctrl+C closes the app, forwards to PTY child, or both."
+        - "Installed `SetConsoleCtrlHandler` on Windows to set the existing `sigint_requested` flag used by the main loop to request close."
 
   phase_5_tooling:
     - id: W5-01
