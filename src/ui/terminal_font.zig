@@ -1017,9 +1017,11 @@ pub const TerminalFont = struct {
 
     fn ensureWindowsComInit() bool {
         if (windows_com_initialized.load(.acquire)) return true;
-        windows_com_initialized.store(true, .release);
         const hr = windows_dwrite.CoInitializeEx(null, windows_dwrite.COINIT_MULTITHREADED);
-        if (hr >= 0 or hr == windows_dwrite.RPC_E_CHANGED_MODE) return true;
+        if (hr >= 0 or hr == windows_dwrite.RPC_E_CHANGED_MODE) {
+            windows_com_initialized.store(true, .release);
+            return true;
+        }
         return false;
     }
 
@@ -1092,9 +1094,9 @@ pub const TerminalFont = struct {
 
                 var loader: ?*windows_dwrite.IDWriteFontFileLoader = null;
                 if (file0.vtbl.GetLoader(file0, &loader) < 0 or loader == null) continue;
-                defer _ = loader.?.vtbl.Release(@ptrCast(loader.?));
+                const loader_unk: *windows_dwrite.IUnknown = @ptrCast(@alignCast(loader.?));
+                defer _ = loader_unk.vtbl.Release(loader_unk);
 
-                const loader_unk: *windows_dwrite.IUnknown = @ptrCast(loader.?);
                 var local_any: ?*anyopaque = null;
                 if (loader_unk.vtbl.QueryInterface(loader_unk, &windows_dwrite.IID_IDWriteLocalFontFileLoader, &local_any) < 0) continue;
                 const local_loader: *windows_dwrite.IDWriteLocalFontFileLoader = @ptrCast(@alignCast(local_any.?));
