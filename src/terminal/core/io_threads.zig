@@ -98,7 +98,7 @@ pub fn parseThreadMain(session: anytype) void {
         if (queued_bytes == 0) {
             if (pending_offset) |offset| {
                 session.state_mutex.lock();
-                session.updateViewCacheNoLock(session.output_generation.load(.acquire), offset);
+                @import("view_cache.zig").updateViewCacheNoLock(session, session.output_generation.load(.acquire), offset);
                 session.state_mutex.unlock();
             }
             continue;
@@ -153,7 +153,7 @@ pub fn parseThreadMain(session: anytype) void {
         if (had_data or pending_offset != null) {
             const target_offset = pending_offset orelse session.history.scrollOffset();
             session.state_mutex.lock();
-            session.updateViewCacheNoLock(session.output_generation.load(.acquire), target_offset);
+            @import("view_cache.zig").updateViewCacheNoLock(session, session.output_generation.load(.acquire), target_offset);
             session.state_mutex.unlock();
             session.output_pending.store(true, .release);
         }

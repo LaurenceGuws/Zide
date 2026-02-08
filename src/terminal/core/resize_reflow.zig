@@ -51,7 +51,7 @@ fn resizeLocked(self: anytype, rows: u16, cols: u16) !void {
         if (cols != old_cols) {
             try self.history.resizePreserve(cols, self.primary.defaultCell());
         }
-        if (self.isAltActive()) {
+        if (self.active == .alt) {
             const max_offset = self.history.maxScrollOffset(self.primary.grid.rows);
             if (self.history.saved_scrollback_offset > max_offset) {
                 self.history.saved_scrollback_offset = max_offset;
@@ -361,7 +361,7 @@ fn reflowResizePrimary(
         new_scroll_offset = 0;
     }
 
-    if (self.isAltActive()) {
+    if (self.active == .alt) {
         self.history.scrollback_offset = 0;
     } else {
         self.history.scrollback_offset = new_scroll_offset;

@@ -1,4 +1,5 @@
 const types = @import("../model/types.zig");
+const input_mod = @import("input.zig");
 const input_types = @import("../../types/input.zig");
 
 pub const Modifier = types.Modifier;
@@ -68,71 +69,71 @@ pub fn sendKeyAction(session: anytype, key: input_types.Key, key_mod: Modifier, 
             return true;
         },
         .kp_0 => {
-            try session.sendKeypadAction(types.KeypadKey.kp0, key_mod, action);
+            try session.sendKeypadAction(input_mod.KeypadKey.kp0, key_mod, action);
             return true;
         },
         .kp_1 => {
-            try session.sendKeypadAction(types.KeypadKey.kp1, key_mod, action);
+            try session.sendKeypadAction(input_mod.KeypadKey.kp1, key_mod, action);
             return true;
         },
         .kp_2 => {
-            try session.sendKeypadAction(types.KeypadKey.kp2, key_mod, action);
+            try session.sendKeypadAction(input_mod.KeypadKey.kp2, key_mod, action);
             return true;
         },
         .kp_3 => {
-            try session.sendKeypadAction(types.KeypadKey.kp3, key_mod, action);
+            try session.sendKeypadAction(input_mod.KeypadKey.kp3, key_mod, action);
             return true;
         },
         .kp_4 => {
-            try session.sendKeypadAction(types.KeypadKey.kp4, key_mod, action);
+            try session.sendKeypadAction(input_mod.KeypadKey.kp4, key_mod, action);
             return true;
         },
         .kp_5 => {
-            try session.sendKeypadAction(types.KeypadKey.kp5, key_mod, action);
+            try session.sendKeypadAction(input_mod.KeypadKey.kp5, key_mod, action);
             return true;
         },
         .kp_6 => {
-            try session.sendKeypadAction(types.KeypadKey.kp6, key_mod, action);
+            try session.sendKeypadAction(input_mod.KeypadKey.kp6, key_mod, action);
             return true;
         },
         .kp_7 => {
-            try session.sendKeypadAction(types.KeypadKey.kp7, key_mod, action);
+            try session.sendKeypadAction(input_mod.KeypadKey.kp7, key_mod, action);
             return true;
         },
         .kp_8 => {
-            try session.sendKeypadAction(types.KeypadKey.kp8, key_mod, action);
+            try session.sendKeypadAction(input_mod.KeypadKey.kp8, key_mod, action);
             return true;
         },
         .kp_9 => {
-            try session.sendKeypadAction(types.KeypadKey.kp9, key_mod, action);
+            try session.sendKeypadAction(input_mod.KeypadKey.kp9, key_mod, action);
             return true;
         },
         .kp_decimal => {
-            try session.sendKeypadAction(types.KeypadKey.kp_decimal, key_mod, action);
+            try session.sendKeypadAction(input_mod.KeypadKey.kp_decimal, key_mod, action);
             return true;
         },
         .kp_divide => {
-            try session.sendKeypadAction(types.KeypadKey.kp_divide, key_mod, action);
+            try session.sendKeypadAction(input_mod.KeypadKey.kp_divide, key_mod, action);
             return true;
         },
         .kp_multiply => {
-            try session.sendKeypadAction(types.KeypadKey.kp_multiply, key_mod, action);
+            try session.sendKeypadAction(input_mod.KeypadKey.kp_multiply, key_mod, action);
             return true;
         },
         .kp_subtract => {
-            try session.sendKeypadAction(types.KeypadKey.kp_subtract, key_mod, action);
+            try session.sendKeypadAction(input_mod.KeypadKey.kp_subtract, key_mod, action);
             return true;
         },
         .kp_add => {
-            try session.sendKeypadAction(types.KeypadKey.kp_add, key_mod, action);
+            try session.sendKeypadAction(input_mod.KeypadKey.kp_add, key_mod, action);
             return true;
         },
         .kp_enter => {
-            try session.sendKeypadAction(types.KeypadKey.kp_enter, key_mod, action);
+            try session.sendKeypadAction(input_mod.KeypadKey.kp_enter, key_mod, action);
             return true;
         },
         .kp_equal => {
-            try session.sendKeypadAction(types.KeypadKey.kp_equal, key_mod, action);
+            try session.sendKeypadAction(input_mod.KeypadKey.kp_equal, key_mod, action);
             return true;
         },
         .left_shift => {
