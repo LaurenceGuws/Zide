@@ -165,7 +165,7 @@ ui_widget_modularization_todo:
 
         - id: UI-V-02
           title: "Run import checks after each phase"
-          status: todo
+          status: done
           commands:
             - zig build check-app-imports
             - zig build check-editor-imports
