@@ -35,6 +35,7 @@ pub const TextOp = struct {
     y: f32,
     text: []const u8,
     color: u32,
+    bg_color: u32,
 };
 
 pub const RectOp = struct {

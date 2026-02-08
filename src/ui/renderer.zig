@@ -743,14 +743,41 @@ pub const Renderer = struct {
     }
 
     pub fn drawText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
+        const prev = self.text_bg_rgba;
+        defer self.text_bg_rgba = prev;
+        self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
         self.drawTextWithFont(&self.terminal_font, self.terminal_cell_width, self.terminal_cell_height, text, x, y, color);
     }
 
     pub fn drawTextMonospace(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
+        const prev = self.text_bg_rgba;
+        defer self.text_bg_rgba = prev;
+        self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
         self.drawTextWithFontMonospace(&self.terminal_font, self.terminal_cell_width, self.terminal_cell_height, text, x, y, color);
     }
 
+    pub fn drawTextMonospaceOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
+        const prev = self.text_bg_rgba;
+        defer self.text_bg_rgba = prev;
+        var bg_rgba = bg.toRgba();
+        bg_rgba.a = 255;
+        self.text_bg_rgba = bg_rgba;
+        self.drawTextWithFontMonospace(&self.terminal_font, self.terminal_cell_width, self.terminal_cell_height, text, x, y, color);
+    }
+
+    pub fn drawTextOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
+        const prev = self.text_bg_rgba;
+        defer self.text_bg_rgba = prev;
+        var bg_rgba = bg.toRgba();
+        bg_rgba.a = 255;
+        self.text_bg_rgba = bg_rgba;
+        self.drawTextWithFont(&self.terminal_font, self.terminal_cell_width, self.terminal_cell_height, text, x, y, color);
+    }
+
     pub fn drawTextSized(self: *Renderer, text: []const u8, x: f32, y: f32, size: f32, color: Color) void {
+        const prev = self.text_bg_rgba;
+        defer self.text_bg_rgba = prev;
+        self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
         const font = self.fontForSize(size) orelse {
             self.drawText(text, x, y, color);
             return;
@@ -760,6 +787,9 @@ pub const Renderer = struct {
     }
 
     pub fn drawIconText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
+        const prev = self.text_bg_rgba;
+        defer self.text_bg_rgba = prev;
+        self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
         self.drawTextWithFont(&self.icon_font, self.icon_char_width, self.icon_char_height, text, x, y, color);
     }
 
@@ -1091,7 +1121,6 @@ pub const Renderer = struct {
     }
 
     fn drawTextWithFont(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: Color) void {
-        self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
         text_draw.drawText(
             self.allocator,
             font,
@@ -1108,7 +1137,6 @@ pub const Renderer = struct {
     }
 
     fn drawTextWithFontMonospace(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: Color) void {
-        self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
         text_draw.drawText(
             self.allocator,
             font,
