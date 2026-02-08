@@ -1,3 +1,4 @@
+const std = @import("std");
 const gl = @import("gl.zig");
 const gl_resources = @import("gl_resources.zig");
 const types = @import("types.zig");
@@ -30,11 +31,15 @@ pub fn initGlResources(renderer: anytype) !void {
         "out vec4 frag_color;\n" ++
         "uniform sampler2D u_tex;\n" ++
         "uniform int u_kind;\n" ++
+        "uniform float u_text_gamma;\n" ++
+        "uniform float u_text_contrast;\n" ++
         "void main() {\n" ++
         "    vec4 tex = texture(u_tex, v_uv);\n" ++
         "    if (u_kind == 1) {\n" ++
         "        // Font coverage atlas. Sample the mask and apply it as alpha.\n" ++
         "        float mask = tex.r;\n" ++
+        "        mask = pow(mask, u_text_gamma);\n" ++
+        "        mask = clamp(mask * u_text_contrast, 0.0, 1.0);\n" ++
         "        float a = mask * v_color.a;\n" ++
         "        frag_color = vec4(v_color.rgb, a);\n" ++
         "    } else {\n" ++
@@ -53,8 +58,16 @@ pub fn initGlResources(renderer: anytype) !void {
     renderer.uniform_proj = gl.GetUniformLocation(program, "u_proj");
     renderer.uniform_tex = gl.GetUniformLocation(program, "u_tex");
     renderer.uniform_kind = gl.GetUniformLocation(program, "u_kind");
+    renderer.uniform_text_gamma = gl.GetUniformLocation(program, "u_text_gamma");
+    renderer.uniform_text_contrast = gl.GetUniformLocation(program, "u_text_contrast");
     if (renderer.uniform_tex >= 0) gl.Uniform1i(renderer.uniform_tex, 0);
     if (renderer.uniform_kind >= 0) gl.Uniform1i(renderer.uniform_kind, 0);
+
+    // Coverage tuning (applies only to font coverage atlas).
+    const text_gamma = clampPositive(parseEnvF32("ZIDE_TEXT_GAMMA", 1.0), 1.0);
+    const text_contrast = clampPositive(parseEnvF32("ZIDE_TEXT_CONTRAST", 1.0), 1.0);
+    if (renderer.uniform_text_gamma >= 0) gl.Uniform1f(renderer.uniform_text_gamma, text_gamma);
+    if (renderer.uniform_text_contrast >= 0) gl.Uniform1f(renderer.uniform_text_contrast, text_contrast);
 
     gl.GenVertexArrays(1, &renderer.vao);
     gl.GenBuffers(1, &renderer.vbo);
@@ -96,6 +109,18 @@ pub fn initGlResources(renderer: anytype) !void {
 
     renderer.white_texture = createSolidTexture(1, 1, .{ 255, 255, 255, 255 });
     updateProjection(renderer, renderer.render_width, renderer.render_height);
+}
+
+fn parseEnvF32(env_key: [:0]const u8, default_value: f32) f32 {
+    const raw = std.c.getenv(env_key) orelse return default_value;
+    const slice = std.mem.sliceTo(raw, 0);
+    if (slice.len == 0) return default_value;
+    return std.fmt.parseFloat(f32, slice) catch default_value;
+}
+
+fn clampPositive(v: f32, fallback: f32) f32 {
+    if (std.math.isFinite(v) and v > 0.0) return v;
+    return fallback;
 }
 
 pub fn bindDefaultTarget(renderer: anytype) void {

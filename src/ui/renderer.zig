@@ -212,6 +212,8 @@ pub const Renderer = struct {
     uniform_proj: gl.GLint,
     uniform_tex: gl.GLint,
     uniform_kind: gl.GLint,
+    uniform_text_gamma: gl.GLint,
+    uniform_text_contrast: gl.GLint,
     white_texture: types.Texture,
 
     font_size: f32,
@@ -319,6 +321,8 @@ pub const Renderer = struct {
             .uniform_proj = -1,
             .uniform_tex = -1,
             .uniform_kind = -1,
+            .uniform_text_gamma = -1,
+            .uniform_text_contrast = -1,
             .white_texture = .{ .id = 0, .width = 0, .height = 0 },
             .font_size = font_size,
             .base_font_size = base_font_size,
