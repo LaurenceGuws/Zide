@@ -23,6 +23,7 @@ const editor_draw = @import("ui/widgets/editor_widget_draw.zig");
 const layout_types = shared_types.layout;
 const input_builder = @import("input/input_builder.zig");
 const input_actions = @import("input/input_actions.zig");
+const font_sample_view_mod = @import("ui/font_sample_view.zig");
 
 const Editor = editor_mod.Editor;
 const TerminalSession = terminal_mod.TerminalSession;
@@ -42,6 +43,7 @@ const AppMode = enum {
     ide,
     editor,
     terminal,
+    font_sample,
 };
 
 var sigint_requested = std.atomic.Value(bool).init(false);
@@ -166,6 +168,7 @@ const AppState = struct {
     last_input: shared_types.input.InputSnapshot,
     app_mode: AppMode,
     input_router: input_actions.InputRouter,
+    font_sample_view: ?font_sample_view_mod.FontSampleView,
 
     pub fn init(allocator: std.mem.Allocator, app_mode: AppMode) !*AppState {
         var config = config_mod.loadConfig(allocator) catch |err| blk: {
@@ -324,7 +327,11 @@ const AppState = struct {
             .last_input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{}),
             .app_mode = app_mode,
             .input_router = input_actions.InputRouter.init(allocator),
+            .font_sample_view = null,
         };
+        if (app_mode == .font_sample) {
+            state.font_sample_view = try font_sample_view_mod.FontSampleView.init(allocator, shell.rendererPtr());
+        }
         if (config.keybinds) |binds| {
             state.input_router.setBindings(binds);
         }
@@ -334,6 +341,9 @@ const AppState = struct {
     }
 
     pub fn deinit(self: *AppState) void {
+        if (self.font_sample_view) |*view| {
+            view.deinit();
+        }
         for (self.editors.items) |e| {
             e.deinit();
         }
@@ -538,6 +548,8 @@ const AppState = struct {
             if (self.terminals.items.len == 0) {
                 try self.newTerminal();
             }
+        } else if (self.app_mode == .font_sample) {
+            // No initial editor/terminal. The font sample view draws directly.
         } else {
             if (self.perf_mode and self.perf_file_path != null) {
                 try self.openFile(self.perf_file_path.?);
@@ -701,6 +713,14 @@ const AppState = struct {
         const shell = self.shell;
         const r = shell.rendererPtr();
         self.last_input = input_batch.snapshot();
+
+        if (self.app_mode == .font_sample) {
+            if (self.font_sample_view) |*view| {
+                if (view.update(r, self.last_input)) {
+                    self.needs_redraw = true;
+                }
+            }
+        }
         self.options_bar.updateInput(self.last_input);
         self.tab_bar.updateInput(self.last_input);
         self.side_nav.updateInput(self.last_input);
@@ -1343,6 +1363,14 @@ const AppState = struct {
 
         shell.beginFrame();
 
+        if (self.app_mode == .font_sample) {
+            if (self.font_sample_view) |*view| {
+                view.draw(shell);
+            }
+            shell.endFrame();
+            return;
+        }
+
         const width = @as(f32, @floatFromInt(shell.width()));
         const height = @as(f32, @floatFromInt(shell.height()));
         const layout = self.computeLayout(width, height);
@@ -1468,6 +1496,7 @@ fn modeFromArg(value: []const u8) ?AppMode {
     if (std.mem.eql(u8, value, "terminal")) return .terminal;
     if (std.mem.eql(u8, value, "editor")) return .editor;
     if (std.mem.eql(u8, value, "ide")) return .ide;
+    if (std.mem.eql(u8, value, "font") or std.mem.eql(u8, value, "fonts") or std.mem.eql(u8, value, "font-sample")) return .font_sample;
     return null;
 }
 
