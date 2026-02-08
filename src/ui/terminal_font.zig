@@ -176,6 +176,78 @@ pub const c = @cImport({
     @cInclude("harfbuzz/hb-ft.h");
 });
 
+const HintingMode = enum {
+    default,
+    none,
+    light,
+    normal,
+};
+
+// FreeType encodes the target render mode in bits 16..19 of the load flags.
+// The upstream macro is `FT_LOAD_TARGET_MODE` but it may import as a function.
+const ft_load_target_mode_mask: c_int = 0xF0000;
+
+fn parseHintingMode() HintingMode {
+    const raw = std.c.getenv("ZIDE_FONT_HINTING") orelse return .default;
+    const s = std.mem.sliceTo(raw, 0);
+    if (s.len == 0) return .default;
+    if (std.mem.eql(u8, s, "default")) return .default;
+    if (std.mem.eql(u8, s, "none")) return .none;
+    if (std.mem.eql(u8, s, "light")) return .light;
+    if (std.mem.eql(u8, s, "normal")) return .normal;
+    return .default;
+}
+
+fn parseEnvBool(env_key: [:0]const u8, default_value: bool) bool {
+    const raw = std.c.getenv(env_key) orelse return default_value;
+    const slice = std.mem.sliceTo(raw, 0);
+    if (slice.len == 0) return default_value;
+    if (std.mem.eql(u8, slice, "1")) return true;
+    if (std.mem.eql(u8, slice, "0")) return false;
+    if (std.mem.eql(u8, slice, "true")) return true;
+    if (std.mem.eql(u8, slice, "false")) return false;
+    return default_value;
+}
+
+fn computeFtLoadFlagsBase(use_lcd: bool) c_int {
+    var flags: c_int = c.FT_LOAD_DEFAULT;
+
+    const autohint = parseEnvBool("ZIDE_FONT_AUTOHINT", false);
+    if (autohint) flags |= c.FT_LOAD_FORCE_AUTOHINT;
+
+    const hinting = parseHintingMode();
+    switch (hinting) {
+        .default => {},
+        .none => {
+            flags |= c.FT_LOAD_NO_HINTING;
+            flags &= ~ft_load_target_mode_mask;
+        },
+        .light => {
+            flags &= ~ft_load_target_mode_mask;
+            flags |= c.FT_LOAD_TARGET_LIGHT;
+        },
+        .normal => {
+            flags &= ~ft_load_target_mode_mask;
+            flags |= c.FT_LOAD_TARGET_NORMAL;
+        },
+    }
+
+    if (use_lcd) {
+        flags &= ~ft_load_target_mode_mask;
+        flags |= c.FT_LOAD_TARGET_LCD;
+    }
+
+    return flags;
+}
+
+fn applyHbLoadFlags(hb_font: *c.hb_font_t, ft_load_flags: c_int) void {
+    // HarfBuzz should use the same load flags as rasterization for consistent
+    // advances and layout.
+    if (@hasDecl(c, "hb_ft_font_set_load_flags")) {
+        c.hb_ft_font_set_load_flags(hb_font, ft_load_flags);
+    }
+}
+
 const fc = if (builtin.target.os.tag == .linux) @cImport({
     @cInclude("fontconfig/fontconfig.h");
 }) else struct {
@@ -324,6 +396,7 @@ pub const TerminalFont = struct {
     descent: f32,
     line_height: f32,
     cell_width: f32,
+    ft_load_flags_base: c_int,
     render_scale: f32,
     use_lcd: bool,
     overflow_policy: AllowSquareGlyphOverflow,
@@ -352,6 +425,10 @@ pub const TerminalFont = struct {
         const hb_font = c.hb_ft_font_create(ft_face, null) orelse return error.HbInitFailed;
         errdefer c.hb_font_destroy(hb_font);
 
+        const use_lcd = std.c.getenv("ZIDE_FONT_LCD") != null;
+        const ft_load_flags_base = computeFtLoadFlagsBase(use_lcd);
+        applyHbLoadFlags(hb_font, ft_load_flags_base);
+
         const loadFace = struct {
             fn call(
                 library: c.FT_Library,
@@ -360,6 +437,7 @@ pub const TerminalFont = struct {
                 name: []const u8,
                 log: app_logger.Logger,
                 allow_fixed_size: bool,
+                hb_load_flags_base: c_int,
             ) FacePair {
                 if (fpath) |path_c| {
                     const path_str = std.mem.sliceTo(path_c, 0);
@@ -392,6 +470,7 @@ pub const TerminalFont = struct {
                         }
                         if (size_err == 0 or (allow_fixed_size and fb_face.*.num_fixed_sizes > 0)) {
                             if (c.hb_ft_font_create(fb_face, null)) |fb_hb| {
+                                applyHbLoadFlags(fb_hb, hb_load_flags_base);
                                 return .{ .face = fb_face, .hb = fb_hb };
                             }
                             if (log.enabled_file or log.enabled_console) {
@@ -410,13 +489,13 @@ pub const TerminalFont = struct {
         }.call;
 
         const log = app_logger.logger("terminal.font");
-        const symbols_pair = loadFace(ft_library, symbols_path, size, "symbols", log, false);
-        const unicode_symbols2_pair = loadFace(ft_library, unicode_symbols2_path, size, "unicode_symbols2", log, false);
-        const unicode_symbols_pair = loadFace(ft_library, unicode_symbols_path, size, "unicode_symbols", log, false);
-        const unicode_mono_pair = loadFace(ft_library, unicode_mono_path, size, "unicode_mono", log, false);
-        const unicode_sans_pair = loadFace(ft_library, unicode_sans_path, size, "unicode_sans", log, false);
-        const emoji_color_pair = loadFace(ft_library, emoji_color_path, size, "emoji_color", log, true);
-        const emoji_text_pair = loadFace(ft_library, emoji_text_path, size, "emoji_text", log, false);
+        const symbols_pair = loadFace(ft_library, symbols_path, size, "symbols", log, false, ft_load_flags_base);
+        const unicode_symbols2_pair = loadFace(ft_library, unicode_symbols2_path, size, "unicode_symbols2", log, false, ft_load_flags_base);
+        const unicode_symbols_pair = loadFace(ft_library, unicode_symbols_path, size, "unicode_symbols", log, false, ft_load_flags_base);
+        const unicode_mono_pair = loadFace(ft_library, unicode_mono_path, size, "unicode_mono", log, false, ft_load_flags_base);
+        const unicode_sans_pair = loadFace(ft_library, unicode_sans_path, size, "unicode_sans", log, false, ft_load_flags_base);
+        const emoji_color_pair = loadFace(ft_library, emoji_color_path, size, "emoji_color", log, true, ft_load_flags_base);
+        const emoji_text_pair = loadFace(ft_library, emoji_text_path, size, "emoji_text", log, false, ft_load_flags_base);
 
         var fc_enabled = false;
         var fc_config: ?FcConfigPtr = null;
@@ -507,7 +586,7 @@ pub const TerminalFont = struct {
             }
 
             // FreeType metrics for visual width (bitmap + bearing)
-            if (c.FT_Load_Char(ft_face, cp, c.FT_LOAD_DEFAULT) == 0) {
+            if (c.FT_Load_Char(ft_face, cp, ft_load_flags_base) == 0) {
                 const slot = ft_face.*.glyph;
                 const metric_w = @as(f32, @floatFromInt(slot.*.metrics.width >> 6));
                 const bearing = @as(f32, @floatFromInt(@max(0, slot.*.bitmap_left)));
@@ -584,8 +663,9 @@ pub const TerminalFont = struct {
             .descent = descent_px,
             .line_height = if (line_height_px > 0) line_height_px else ascent_px + descent_px,
             .cell_width = if (cell_width_px > 0) cell_width_px else size * 0.6,
+            .ft_load_flags_base = ft_load_flags_base,
             .render_scale = 1.0,
-            .use_lcd = std.c.getenv("ZIDE_FONT_LCD") != null,
+            .use_lcd = use_lcd,
             .overflow_policy = blk: {
                 if (std.c.getenv("ZIDE_GLYPH_OVERFLOW")) |raw| {
                     const s = std.mem.sliceTo(raw, 0);
@@ -739,6 +819,17 @@ pub const TerminalFont = struct {
 
     fn hasGlyph(face: c.FT_Face, codepoint: u32) bool {
         return c.FT_Get_Char_Index(face, codepoint) != 0;
+    }
+
+    fn ftLoadFlags(self: *const TerminalFont, want_color: bool) c_int {
+        var flags: c_int = self.ft_load_flags_base;
+        if (want_color) flags |= c.FT_LOAD_COLOR;
+        // If subpixel mode is enabled, only apply it to coverage glyphs.
+        if (self.use_lcd and !want_color) {
+            flags &= ~ft_load_target_mode_mask;
+            flags |= c.FT_LOAD_TARGET_LCD;
+        }
+        return flags;
     }
 
     fn preferSymbols(codepoint: u32) bool {
@@ -930,6 +1021,7 @@ pub const TerminalFont = struct {
             _ = self.system_fallback_by_cp.put(codepoint, null) catch {};
             return null;
         };
+        applyHbLoadFlags(fb_hb, self.ft_load_flags_base);
 
         fb_pair.hb = fb_hb;
         self.system_faces.put(self.allocator, owned, fb_pair) catch {
@@ -1037,6 +1129,7 @@ pub const TerminalFont = struct {
             const fb_hb = c.hb_ft_font_create(fb_face, null) orelse {
                 continue;
             };
+            applyHbLoadFlags(fb_hb, self.ft_load_flags_base);
 
             fb_pair.hb = fb_hb;
             self.system_faces.put(self.allocator, owned, fb_pair) catch {
@@ -1243,16 +1336,13 @@ pub const TerminalFont = struct {
         const is_color_face = c.FT_HAS_COLOR(face) or (self.emoji_color_ft_face != null and face == self.emoji_color_ft_face.?);
         const want_color = is_color_face;
         const load_flags: c_int = blk: {
-            var flags: c_int = c.FT_LOAD_DEFAULT;
-            if (want_color) flags |= c.FT_LOAD_COLOR;
-            if (self.use_lcd and !want_color) flags |= c.FT_LOAD_TARGET_LCD;
-            break :blk flags;
+            break :blk self.ftLoadFlags(want_color);
         };
         if (c.FT_Load_Glyph(face, glyph_id, load_flags) != 0) {
             if (self.emoji_color_ft_face != null and face == self.emoji_color_ft_face.? and self.emoji_text_ft_face != null and self.emoji_text_hb_font != null) {
                 face = self.emoji_text_ft_face.?;
                 hb_font = self.emoji_text_hb_font.?;
-                if (c.FT_Load_Glyph(face, glyph_id, c.FT_LOAD_DEFAULT) != 0) return error.FtLoadFailed;
+                if (c.FT_Load_Glyph(face, glyph_id, self.ftLoadFlags(false)) != 0) return error.FtLoadFailed;
             } else {
                 return error.FtLoadFailed;
             }
