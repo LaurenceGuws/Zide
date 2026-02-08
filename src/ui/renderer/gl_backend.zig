@@ -41,7 +41,8 @@ pub fn initGlResources(renderer: anytype) !void {
         "        mask = pow(mask, u_text_gamma);\n" ++
         "        mask = clamp(mask * u_text_contrast, 0.0, 1.0);\n" ++
         "        float a = mask * v_color.a;\n" ++
-        "        frag_color = vec4(v_color.rgb, a);\n" ++
+        "        // Premultiplied output for correct edge blending.\n" ++
+        "        frag_color = vec4(v_color.rgb * a, a);\n" ++
         "    } else {\n" ++
         "        frag_color = tex * v_color;\n" ++
         "    }\n" ++
