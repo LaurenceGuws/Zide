@@ -17,3 +17,15 @@ Capture command (example):
 Font columns in the view are fixed to:
 - JetBrainsMonoNerdFont-Regular.ttf
 - IosevkaTermNerdFont-Regular.ttf
+
+Current captures:
+- jbmono_iosevka_size12.ppm
+- jbmono_iosevka_size14.ppm
+- jbmono_iosevka_size16.ppm
+- jbmono_iosevka_size20.ppm
+
+Each capture includes multiple background bands to exercise background-aware
+correction:
+- normal background
+- selection background
+- cursor (inverted) background

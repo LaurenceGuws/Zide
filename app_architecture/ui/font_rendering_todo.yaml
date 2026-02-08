@@ -83,7 +83,7 @@ font_rendering_todo:
 
         - id: FR-0-02
           title: "Expand reference captures (sizes/backgrounds/strings)"
-          status: in_progress
+          status: done
           files_to_edit:
             - fixtures/ui/font_sample/README.txt
             - fixtures/ui/font_sample/*.ppm
