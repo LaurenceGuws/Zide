@@ -1,6 +1,6 @@
-const types = @import("../model/types.zig");
+const input_mod = @import("input.zig");
 
-pub fn keypadChar(key: types.KeypadKey) ?u32 {
+pub fn keypadChar(key: input_mod.KeypadKey) ?u32 {
     return switch (key) {
         .kp0 => '0',
         .kp1 => '1',
@@ -22,7 +22,7 @@ pub fn keypadChar(key: types.KeypadKey) ?u32 {
     };
 }
 
-pub fn keypadAppCode(key: types.KeypadKey) ?u8 {
+pub fn keypadAppCode(key: input_mod.KeypadKey) ?u8 {
     return switch (key) {
         .kp0 => 'p',
         .kp1 => 'q',

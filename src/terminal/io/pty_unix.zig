@@ -116,8 +116,8 @@ pub const Pty = struct {
             const res = posix.waitpid(pid, posix.W.NOHANG);
             if (res.pid != 0) {
                 self.child_pid = null;
-                if (res.status.exited()) {
-                    return @intCast(res.status.exitCode());
+                if (waitStatusExited(res.status)) {
+                    return @intCast(waitStatusExitCode(res.status));
                 }
                 return -1;
             }
@@ -160,6 +160,17 @@ pub const Pty = struct {
         return rc > 0 and (fds[0].revents & posix.POLL.IN) != 0;
     }
 };
+
+fn waitStatusExited(status: u32) bool {
+    // POSIX wait status encoding.
+    // Mirrors common WIFEXITED macro: true when signal bits are 0.
+    return (status & 0x7f) == 0;
+}
+
+fn waitStatusExitCode(status: u32) u8 {
+    // Mirrors WEXITSTATUS: high byte holds the exit code.
+    return @intCast((status >> 8) & 0xff);
+}
 
 fn setNonBlocking(fd: posix.fd_t) !void {
     const flags = posix.fcntl(fd, posix.F.GETFL, 0) catch 0;

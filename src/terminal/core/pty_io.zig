@@ -90,7 +90,7 @@ pub fn poll(self: anytype) !void {
         if (had_data) {
             self.state_mutex.lock();
             self.force_full_damage.store(true, .release);
-            self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
+            @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.history.scrollOffset());
             self.state_mutex.unlock();
         }
 
@@ -117,7 +117,7 @@ pub fn poll(self: anytype) !void {
         if (self.view_cache_pending.swap(false, .acq_rel)) {
             self.state_mutex.lock();
             const offset: usize = @intCast(self.view_cache_request_offset.load(.acquire));
-            self.updateViewCacheNoLock(self.output_generation.load(.acquire), offset);
+            @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), offset);
             self.state_mutex.unlock();
         }
         return;
@@ -143,7 +143,7 @@ pub fn poll(self: anytype) !void {
         }
         if (had_data) {
             self.force_full_damage.store(true, .release);
-            self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
+            @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.history.scrollOffset());
         }
         if (processed > 0 and self.alt_exit_pending.swap(false, .acq_rel)) {
             const elapsed_ms = @as(f64, @floatFromInt(std.time.milliTimestamp() - start_ms));
@@ -164,7 +164,7 @@ pub fn poll(self: anytype) !void {
         }
         if (self.view_cache_pending.swap(false, .acq_rel)) {
             const offset: usize = @intCast(self.view_cache_request_offset.load(.acquire));
-            self.updateViewCacheNoLock(self.output_generation.load(.acquire), offset);
+            @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), offset);
         }
     }
 }
