@@ -42,6 +42,8 @@ font_rendering_todo:
     debug_toggles_env:
       - "ZIDE_TERMINAL_UI_BENCH=1 (per-frame terminal draw timing)"
       - "ZIDE_FONT_LCD=1 (current LCD raster path; not a final solution)"
+      - "ZIDE_FONT_SAMPLE_SIZE=<float> (font sample mode initial size)"
+      - "ZIDE_FONT_SAMPLE_FRAMES=<n> (font sample mode auto-close after n frames; useful for smoke/CI)"
 
   phases:
     - name: "Phase 0 - Baseline + Repro Harness"
@@ -57,6 +59,7 @@ font_rendering_todo:
             - "Keep it dev-only or gated behind env var/flag."
             - "Implemented as a dedicated app mode: `zig build run -- --mode font-sample` (renders JetBrainsMono vs IosevkaTerm side-by-side)."
             - "Size control: set `ZIDE_FONT_SAMPLE_SIZE=<float>` and adjust interactively with +/- keys."
+            - "For a short smoke-run without interaction: `ZIDE_FONT_SAMPLE_FRAMES=3 zig build run -- --mode font-sample`."
 
         - id: FR-0-02
           title: "Record 'known bad' samples for IosevkaTerm (size list + strings)"
