@@ -65,7 +65,7 @@ return {
     },
 
     -- App shell configuration.
-    -- Note: editor + terminal currently share the same font stack.
+    -- Note: editor and terminal may use different font stacks.
     app = {
         font = {
             path = "assets/fonts/JetBrainsMonoNerdFont-Regular.ttf",

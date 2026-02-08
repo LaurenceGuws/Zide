@@ -1,6 +1,7 @@
 font_rendering_todo:
   scope:
-    description: "Make Zide's terminal/editor font rendering competitive with modern terminals (kitty/ghostty-tier): crisp at small sizes, consistent weight, correct blending, and robust across font families."
+    description: "Make Zide's editor + terminal text rendering competitive with modern terminals (kitty/ghostty-tier): crisp at small sizes, consistent weight, correct blending, robust across font families, and stable metrics."
+    note: "Editor and terminal do not need to share the same font stack; they optimize for different constraints."
     primary_fonts:
       - "assets/fonts/JetBrainsMonoNerdFont-Regular.ttf (currently acceptable with existing pipeline)"
       - "assets/fonts/IosevkaTermNerdFont-Regular.ttf (currently poor/unusable with existing pipeline)"
@@ -9,11 +10,14 @@ font_rendering_todo:
       - "hinting policy control (light/normal/none + autohint)"
       - "atlas formats match data (coverage vs color glyphs)"
       - "performance: keep glyph upload incremental + bounded per-frame"
+      - "terminal/editor splits are explicit and documented"
 
   context:
     reference_repos:
       - "kitty: reference_repos/terminals/kitty (freetype load flags + shader gamma tuning)"
       - "ghostty: reference_repos/terminals/ghostty (atlas split + linear blending + optional weight correction)"
+    architecture_doc:
+      - "app_architecture/ui/font_rendering_architecture.md"
     zide_code:
       - "glyph rasterization + atlas upload: src/ui/terminal_font.zig"
       - "renderer/blending + shader: src/ui/renderer/gl_backend.zig"
@@ -52,8 +56,18 @@ font_rendering_todo:
       - "config.font_rendering.text.linear_correction=true/false (linear correction; default true)"
 
   phases:
-    - name: "Phase 0 - Baseline + Repro Harness"
+    - name: "Phase 0 - Architecture + Fixture Authority"
       tasks:
+        - id: FR-0-00
+          title: "Document font rendering architecture and module contracts"
+          status: done
+          files_to_edit:
+            - app_architecture/ui/font_rendering_architecture.md
+            - app_architecture/ui/font_rendering_todo.yaml
+          notes:
+            - "Define shaping/raster/atlas/renderer responsibilities and conversion boundaries."
+            - "Explicitly allow editor and terminal font stacks to diverge."
+
         - id: FR-0-01
           title: "Add a deterministic font sample grid view (or screenshot-like buffer)"
           status: done
@@ -68,13 +82,17 @@ font_rendering_todo:
             - "For a short smoke-run without interaction: `ZIDE_FONT_SAMPLE_FRAMES=3 zig build run -- --mode font-sample`."
 
         - id: FR-0-02
-          title: "Record 'known bad' samples for IosevkaTerm (size list + strings)"
+          title: "Expand reference captures (sizes/backgrounds/strings)"
           status: in_progress
           files_to_edit:
-            - app_architecture/ui/font_rendering_todo.yaml
+            - fixtures/ui/font_sample/README.txt
+            - fixtures/ui/font_sample/*.ppm
           notes:
-            - "Include: ASCII, thin stems, box drawing, Nerd Font icons, combining marks, and a few ligature sequences."
-            - "Reference captures live under fixtures/ui/font_sample (PPM screenshots from --mode font-sample)."
+            - "Not called goldens yet. Used to catch obvious regressions while iterating."
+            - "Use JetBrainsMonoNerdFont + IosevkaTermNerdFont."
+            - "Sizes: 12/14/16/20."
+            - "Backgrounds: normal bg, selection bg, inverted cursor cell."
+            - "Strings: ASCII stems, punctuation, box drawing, braille, combining marks, Nerd Font icons, emoji sequences."
 
     - name: "Phase 1 - Correct Blending Pipeline (ghostty-style)"
       tasks:
@@ -89,13 +107,13 @@ font_rendering_todo:
 
         - id: FR-1-02
           title: "Add glyph/text shader path that supports linear blending + fallback"
-          status: in_progress
+          status: done
           files_to_edit:
             - src/ui/renderer/gl_backend.zig
           notes:
             - "Model after ghostty: reference_repos/terminals/ghostty/src/renderer/shaders/glsl/cell_text.f.glsl and common.glsl."
             - "If we can't rely on an sRGB framebuffer, unlinearize in shader for compatibility."
-            - "Partial: added a texture-kind uniform to support a coverage atlas (no linear blending yet)."
+            - "Implemented linear offscreen rendering + explicit present conversion; includes optional luminance correction."
 
         - id: FR-1-03
           title: "Remove CPU-side gamma baking during glyph upload"
@@ -118,7 +136,7 @@ font_rendering_todo:
       tasks:
         - id: FR-2-01
           title: "Introduce configurable hinting policy (none/light/normal + autohint)"
-          status: in_progress
+          status: done
           files_to_edit:
             - src/ui/terminal_font.zig
           notes:
@@ -127,13 +145,37 @@ font_rendering_todo:
 
         - id: FR-2-02
           title: "Set HarfBuzz FT load flags to match rasterization"
-          status: todo
+          status: done
           files_to_edit:
             - src/ui/terminal_font.zig
           notes:
             - "Use hb_ft_font_set_load_flags(...) like kitty does so shaping/metrics align with render."
 
-    - name: "Phase 3 - LCD/Subpixel (optional, only after linear blending is correct)"
+    - name: "Phase 3 - Terminal Shaping (run-based)"
+      tasks:
+        - id: FR-3-01
+          title: "Implement run-based shaping for terminal lines"
+          status: todo
+          files_to_edit:
+            - src/ui/terminal_font.zig
+            - src/ui/widgets/terminal_widget_draw.zig
+          notes:
+            - "Move beyond per-codepoint shaping; shape runs and map results back to the monospace grid."
+            - "Must preserve stable cell metrics; fallbacks must not poison cell width."
+
+    - name: "Phase 4 - Editor Text Pipeline Parity"
+      tasks:
+        - id: FR-4-01
+          title: "Background-aware correction under selections/highlights"
+          status: todo
+          files_to_edit:
+            - src/ui/renderer.zig
+            - src/ui/renderer/text_draw.zig
+          notes:
+            - "Editor must supply bg color for text draws (selection, current line, etc.)."
+            - "Goal: editor text matches terminal quality under overlays."
+
+    - name: "Phase 5 - LCD/Subpixel (optional, only after linear blending is correct)"
       tasks:
         - id: FR-3-01
           title: "Evaluate LCD/subpixel AA with correct color pipeline"
@@ -144,7 +186,7 @@ font_rendering_todo:
           notes:
             - "Treat as opt-in; behavior varies by subpixel layout and can regress on some displays."
 
-    - name: "Phase 4 - Verification"
+    - name: "Phase 6 - Verification"
       tasks:
         - id: FR-V-01
           title: "Run smoke: terminal mode + default run"
