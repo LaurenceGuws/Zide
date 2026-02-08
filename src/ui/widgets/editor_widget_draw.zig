@@ -224,6 +224,21 @@ fn addTextSliceOpsWithSelectionBg(
     return ok;
 }
 
+fn selectionOverlapBg(
+    slice_start: usize,
+    slice_end: usize,
+    base_bg: anytype,
+    selection_bg: anytype,
+    sel_ranges: []const ByteRange,
+) @TypeOf(base_bg) {
+    for (sel_ranges) |sr| {
+        if (sr.end <= slice_start) continue;
+        if (sr.start >= slice_end) break;
+        return selection_bg;
+    }
+    return base_bg;
+}
+
 fn drawTextSliceWithSelectionBg(
     r: anytype,
     text_start_x: f32,
@@ -308,22 +323,37 @@ fn appendHighlightedLineSegmentOps(
         }
         const slice_start = start;
         const slice_end = end;
-        const color = colorForToken(r, token.kind);
+        const conceal_text: ?[]const u8 = if (token.conceal != null or token.conceal_lines)
+            token.conceal orelse ""
+        else
+            null;
+        var color = colorForToken(r, token.kind);
+        if (token.url != null) {
+            color = r.theme.link;
+        }
         logHighlightSlice(log, token.kind, line_start + slice_start, line_start + slice_end, color);
-        ok = ok and addTextSliceOpsWithSelectionBg(
-            list,
-            r,
-            text_x,
-            y,
-            line_text,
-            seg_start_byte,
-            slice_start,
-            slice_end,
-            color,
-            base_bg,
-            selection_bg,
-            sel_ranges,
-        );
+        if (conceal_text) |ctext| {
+            if (ctext.len > 0) {
+                const bg = selectionOverlapBg(slice_start, slice_end, base_bg, selection_bg, sel_ranges);
+                const x = text_x + @as(f32, @floatFromInt(slice_start - seg_start)) * r.char_width;
+                ok = ok and addTextOpBg(list, x, y, ctext, color, bg);
+            }
+        } else {
+            ok = ok and addTextSliceOpsWithSelectionBg(
+                list,
+                r,
+                text_x,
+                y,
+                line_text,
+                seg_start_byte,
+                slice_start,
+                slice_end,
+                color,
+                base_bg,
+                selection_bg,
+                sel_ranges,
+            );
+        }
         if (end > cursor) {
             cursor = end;
         }
@@ -1464,7 +1494,8 @@ fn drawHighlightedLineSegment(
         logHighlightSlice(log, token.kind, line_start + slice_start, line_start + slice_end, color);
         if (conceal_text) |text| {
             if (text.len > 0) {
-                r.drawTextMonospaceOnBg(text, x, y, color, base_bg);
+                const bg = selectionOverlapBg(slice_start, slice_end, base_bg, selection_bg, sel_ranges);
+                r.drawTextMonospaceOnBg(text, x, y, color, bg);
             }
         } else {
             drawTextSliceWithSelectionBg(
