@@ -3,8 +3,10 @@ const app_shell = @import("../../app_shell.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
+const time_utils = @import("../renderer/time_utils.zig");
 
 const hover_mod = @import("terminal_widget_hover.zig");
+const kitty_mod = @import("terminal_widget_kitty.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
@@ -91,9 +93,10 @@ pub fn draw(
 
     self.kitty.updateViews(self.session.allocator, rows, cols, cache.kitty_images.items, cache.kitty_placements.items);
 
+    var upload_stats: kitty_mod.KittyState.UploadStats = .{};
     if (self.kitty.images_view.items.len > 0) {
         self.kitty.primeUploads(self.session.allocator);
-        self.kitty.processPendingUploads(shell);
+        upload_stats = self.kitty.processPendingUploads(shell);
     }
 
     const view_cells = cache.cells.items;
@@ -756,7 +759,7 @@ pub fn draw(
     const draw_log = app_logger.logger("terminal.ui.redraw");
     if (draw_log.enabled_file or draw_log.enabled_console) {
         const now = app_shell.getTime();
-        const elapsed_ms = (now - draw_start) * 1000.0;
+        const elapsed_ms = time_utils.secondsToMs(now - draw_start);
         const has_kitty_images = self.kitty.images_view.items.len > 0;
         if ((elapsed_ms >= 4.0 or has_kitty_images) and (now - self.last_draw_log_time) >= 0.1) {
             self.last_draw_log_time = now;
@@ -772,6 +775,21 @@ pub fn draw(
                     self.kitty.placements_view.items.len,
                 },
             );
+        }
+    }
+
+    if (self.bench_enabled) {
+        const bench_log = app_logger.logger("terminal.ui.bench");
+        if (bench_log.enabled_file or bench_log.enabled_console) {
+            const now = app_shell.getTime();
+            const elapsed_ms = time_utils.secondsToMs(now - draw_start);
+            if ((now - self.last_bench_log_time) >= 0.1) {
+                self.last_bench_log_time = now;
+                bench_log.logf(
+                    "draw_ms={d:.2} rows={d} cols={d} upload_images={d} upload_bytes={d}",
+                    .{ elapsed_ms, rows, cols, upload_stats.images, upload_stats.bytes },
+                );
+            }
         }
     }
 }

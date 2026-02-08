@@ -12,6 +12,10 @@ pub fn waitTime(seconds: f64) void {
     sdl.SDL_Delay(ms);
 }
 
+pub fn secondsToMs(seconds: f64) f64 {
+    return seconds * 1000.0;
+}
+
 pub fn getTime(start_counter: ?u64, perf_freq: ?f64) f64 {
     if (start_counter) |start| {
         const counter = sdl_api.getPerformanceCounter();
