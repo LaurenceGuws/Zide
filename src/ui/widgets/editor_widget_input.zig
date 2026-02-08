@@ -225,8 +225,8 @@ pub fn handleVerticalScrollbarInput(
     const min_thumb_h: f32 = 32 * scale;
     const thumb = common.computeScrollbarThumb(scrollbar_y, scrollbar_h, visible_lines, total_lines, min_thumb_h, ratio);
 
-    const over_track = mouse.x >= scrollbar_x and mouse.x <= scrollbar_x + scrollbar_w and mouse.y >= scrollbar_y and mouse.y <= scrollbar_y + scrollbar_h;
-    const over_thumb = mouse.x >= scrollbar_x and mouse.x <= scrollbar_x + scrollbar_w and mouse.y >= thumb.thumb_y and mouse.y <= thumb.thumb_y + thumb.thumb_h;
+    const over_track = common.pointInRect(mouse.x, mouse.y, scrollbar_x, scrollbar_y, scrollbar_w, scrollbar_h);
+    const over_thumb = common.pointInRect(mouse.x, mouse.y, scrollbar_x, thumb.thumb_y, scrollbar_w, thumb.thumb_h);
 
     const mouse_down = input_batch.mouseDown(.left);
     const mouse_pressed = input_batch.mousePressed(.left);
