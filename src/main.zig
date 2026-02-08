@@ -169,6 +169,7 @@ const AppState = struct {
     app_mode: AppMode,
     input_router: input_actions.InputRouter,
     font_sample_view: ?font_sample_view_mod.FontSampleView,
+    font_sample_auto_close_frames: u64,
 
     pub fn init(allocator: std.mem.Allocator, app_mode: AppMode) !*AppState {
         var config = config_mod.loadConfig(allocator) catch |err| blk: {
@@ -328,6 +329,10 @@ const AppState = struct {
             .app_mode = app_mode,
             .input_router = input_actions.InputRouter.init(allocator),
             .font_sample_view = null,
+            .font_sample_auto_close_frames = if (app_mode == .font_sample)
+                parseEnvU64("ZIDE_FONT_SAMPLE_FRAMES", 0)
+            else
+                0,
         };
         if (app_mode == .font_sample) {
             state.font_sample_view = try font_sample_view_mod.FontSampleView.init(allocator, shell.rendererPtr());
@@ -510,6 +515,17 @@ const AppState = struct {
                 };
             },
             .editor => {
+                return .{
+                    .window = .{ .x = 0, .y = 0, .width = width, .height = height },
+                    .options_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                    .tab_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                    .side_nav = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                    .editor = .{ .x = 0, .y = 0, .width = width, .height = height },
+                    .terminal = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                    .status_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                };
+            },
+            .font_sample => {
                 return .{
                     .window = .{ .x = 0, .y = 0, .width = width, .height = height },
                     .options_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
@@ -715,8 +731,13 @@ const AppState = struct {
         self.last_input = input_batch.snapshot();
 
         if (self.app_mode == .font_sample) {
+            if (self.font_sample_auto_close_frames > 0 and self.frame_id >= self.font_sample_auto_close_frames) {
+                shell.requestClose();
+                self.needs_redraw = true;
+                return;
+            }
             if (self.font_sample_view) |*view| {
-                if (view.update(r, self.last_input)) {
+                if (view.update(r, input_batch)) {
                     self.needs_redraw = true;
                 }
             }
