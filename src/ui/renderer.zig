@@ -587,8 +587,10 @@ pub const Renderer = struct {
         sdl_api.glSwapWindow(self.window);
     }
 
-    pub fn dumpScreenshotPpm(self: *Renderer, path: []const u8) !void {
-        try screenshot.dumpFramebufferPpm(self.allocator, self.target_pixel_width, self.target_pixel_height, path);
+    pub fn dumpWindowScreenshotPpm(self: *Renderer, path: []const u8) !void {
+        // Ensure we're reading back the window framebuffer at the window pixel size.
+        self.bindDefaultTarget();
+        try screenshot.dumpFramebufferPpm(self.allocator, self.render_width, self.render_height, path);
     }
 
     pub fn setTextInputRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {

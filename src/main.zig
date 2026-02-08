@@ -170,6 +170,8 @@ const AppState = struct {
     input_router: input_actions.InputRouter,
     font_sample_view: ?font_sample_view_mod.FontSampleView,
     font_sample_auto_close_frames: u64,
+    font_sample_close_pending: bool,
+    font_sample_screenshot_path: ?[]const u8,
 
     pub fn init(allocator: std.mem.Allocator, app_mode: AppMode) !*AppState {
         var config = config_mod.loadConfig(allocator) catch |err| blk: {
@@ -333,6 +335,8 @@ const AppState = struct {
                 parseEnvU64("ZIDE_FONT_SAMPLE_FRAMES", 0)
             else
                 0,
+            .font_sample_close_pending = false,
+            .font_sample_screenshot_path = if (app_mode == .font_sample) envSlice("ZIDE_FONT_SAMPLE_SCREENSHOT") else null,
         };
         if (app_mode == .font_sample) {
             state.font_sample_view = try font_sample_view_mod.FontSampleView.init(allocator, shell.rendererPtr());
@@ -732,10 +736,7 @@ const AppState = struct {
 
         if (self.app_mode == .font_sample) {
             if (self.font_sample_auto_close_frames > 0 and self.frame_id >= self.font_sample_auto_close_frames) {
-                if (envSlice("ZIDE_FONT_SAMPLE_SCREENSHOT")) |path| {
-                    r.dumpScreenshotPpm(path) catch {};
-                }
-                shell.requestClose();
+                self.font_sample_close_pending = true;
                 self.needs_redraw = true;
                 return;
             }
@@ -1390,6 +1391,13 @@ const AppState = struct {
         if (self.app_mode == .font_sample) {
             if (self.font_sample_view) |*view| {
                 view.draw(shell);
+            }
+            if (self.font_sample_close_pending) {
+                if (self.font_sample_screenshot_path) |path| {
+                    shell.rendererPtr().dumpWindowScreenshotPpm(path) catch {};
+                }
+                shell.requestClose();
+                self.font_sample_close_pending = false;
             }
             shell.endFrame();
             return;
