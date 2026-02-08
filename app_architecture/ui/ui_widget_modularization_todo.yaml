@@ -156,12 +156,13 @@ ui_widget_modularization_todo:
       tasks:
         - id: UI-V-01
           title: "Build + run smoke after each extraction"
-          status: todo
+          status: done
           commands:
             - zig build run -- --mode terminal
             - zig build run
           notes:
             - "Terminal mode validates TerminalWidget wiring. Default run validates app composition." 
+            - "Ran both commands locally (short smoke; window loop ran until timeout)."
 
         - id: UI-V-02
           title: "Run import checks after each phase"
