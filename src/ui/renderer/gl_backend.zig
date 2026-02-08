@@ -29,9 +29,17 @@ pub fn initGlResources(renderer: anytype) !void {
         "in vec4 v_color;\n" ++
         "out vec4 frag_color;\n" ++
         "uniform sampler2D u_tex;\n" ++
+        "uniform int u_kind;\n" ++
         "void main() {\n" ++
         "    vec4 tex = texture(u_tex, v_uv);\n" ++
-        "    frag_color = tex * v_color;\n" ++
+        "    if (u_kind == 1) {\n" ++
+        "        // Font coverage atlas. Sample the mask and apply it as alpha.\n" ++
+        "        float mask = tex.r;\n" ++
+        "        float a = mask * v_color.a;\n" ++
+        "        frag_color = vec4(v_color.rgb, a);\n" ++
+        "    } else {\n" ++
+        "        frag_color = tex * v_color;\n" ++
+        "    }\n" ++
         "}\n";
 
     const vert = try compileShader(gl.c.GL_VERTEX_SHADER, vertex_src);
@@ -44,7 +52,9 @@ pub fn initGlResources(renderer: anytype) !void {
 
     renderer.uniform_proj = gl.GetUniformLocation(program, "u_proj");
     renderer.uniform_tex = gl.GetUniformLocation(program, "u_tex");
+    renderer.uniform_kind = gl.GetUniformLocation(program, "u_kind");
     if (renderer.uniform_tex >= 0) gl.Uniform1i(renderer.uniform_tex, 0);
+    if (renderer.uniform_kind >= 0) gl.Uniform1i(renderer.uniform_kind, 0);
 
     gl.GenVertexArrays(1, &renderer.vao);
     gl.GenBuffers(1, &renderer.vbo);

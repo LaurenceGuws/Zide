@@ -211,6 +211,7 @@ pub const Renderer = struct {
     vbo_capacity_vertices: usize,
     uniform_proj: gl.GLint,
     uniform_tex: gl.GLint,
+    uniform_kind: gl.GLint,
     white_texture: types.Texture,
 
     font_size: f32,
@@ -317,6 +318,7 @@ pub const Renderer = struct {
             .vbo_capacity_vertices = 0,
             .uniform_proj = -1,
             .uniform_tex = -1,
+            .uniform_kind = -1,
             .white_texture = .{ .id = 0, .width = 0, .height = 0 },
             .font_size = font_size,
             .base_font_size = base_font_size,
@@ -1077,12 +1079,12 @@ pub const Renderer = struct {
     }
 
     fn drawTextureRect(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
-        draw_ops.drawTextureRect(self, texture, src, dest, color);
+        draw_ops.drawTextureRect(self, texture, src, dest, color, .rgba);
     }
 
-    fn drawTextureRectThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
+    fn drawTextureRectThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         const self: *Renderer = @ptrCast(@alignCast(ctx));
-        self.drawTextureRect(texture, src, dest, color);
+        draw_ops.drawTextureRect(self, texture, src, dest, color, kind);
     }
 
     fn drawRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
@@ -1100,7 +1102,7 @@ pub const Renderer = struct {
     }
 
     fn addBatchQuad(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
-        draw_ops.addBatchQuad(self, texture, src, dest, color);
+        draw_ops.addBatchQuad(self, texture, src, dest, color, .rgba);
     }
 
     pub fn addTerminalRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
@@ -1111,14 +1113,14 @@ pub const Renderer = struct {
         self.terminal_glyph_cache.addRect(self.white_texture, x, y, w, h, color.toRgba());
     }
 
-    fn drawTextureBatchThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
+    fn drawTextureBatchThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        draw_ops.addBatchQuad(renderer, texture, src, dest, color);
+        draw_ops.addBatchQuad(renderer, texture, src, dest, color, kind);
     }
 
-    fn drawTextureGlyphCacheThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
+    fn drawTextureGlyphCacheThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        renderer.terminal_glyph_cache.addQuad(texture, src, dest, color);
+        renderer.terminal_glyph_cache.addQuad(texture, src, dest, color, kind);
     }
 
     fn addTerminalGlyphRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
@@ -1126,9 +1128,9 @@ pub const Renderer = struct {
         renderer.addTerminalGlyphRect(x, y, w, h, color);
     }
 
-    fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
+    fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        draw_ops.drawTextureRect(renderer, texture, src, dest, color);
+        draw_ops.drawTextureRect(renderer, texture, src, dest, color, kind);
     }
 
     pub fn createTextureFromRgba(_: *Renderer, width: i32, height: i32, data: []const u8, filter: i32) ?types.Texture {

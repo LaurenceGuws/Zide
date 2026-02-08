@@ -31,7 +31,7 @@ pub const GlyphCache = struct {
         self.draws.clearRetainingCapacity();
     }
 
-    pub fn addQuad(self: *GlyphCache, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
+    pub fn addQuad(self: *GlyphCache, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         if (texture.id == 0 or texture.width <= 0 or texture.height <= 0) return;
         const tex_w = @as(f32, @floatFromInt(texture.width));
         const tex_h = @as(f32, @floatFromInt(texture.height));
@@ -62,13 +62,14 @@ pub const GlyphCache = struct {
         self.vertices.appendSlice(self.allocator, &verts) catch return;
         if (self.draws.items.len > 0) {
             const last_idx = self.draws.items.len - 1;
-            if (self.draws.items[last_idx].texture_id == texture.id) {
+            if (self.draws.items[last_idx].texture_id == texture.id and self.draws.items[last_idx].kind == kind) {
                 self.draws.items[last_idx].count += 6;
                 return;
             }
         }
         _ = self.draws.append(self.allocator, .{
             .texture_id = texture.id,
+            .kind = kind,
             .start = base,
             .count = 6,
         }) catch {};
@@ -78,7 +79,7 @@ pub const GlyphCache = struct {
         if (w <= 0 or h <= 0) return;
         const dest = shape_utils.rectFromInts(x, y, w, h);
         const src = texture_draw.unitSrcRect();
-        self.addQuad(white_texture, src, dest, color);
+        self.addQuad(white_texture, src, dest, color, .rgba);
     }
 
     pub fn flush(self: *GlyphCache, renderer: anytype) void {
@@ -98,6 +99,7 @@ pub const GlyphCache = struct {
             if (draw.texture_id == 0) continue;
             gl.ActiveTexture(gl.c.GL_TEXTURE0);
             gl.BindTexture(gl.c.GL_TEXTURE_2D, draw.texture_id);
+            if (renderer.uniform_kind >= 0) gl.Uniform1i(renderer.uniform_kind, @intFromEnum(draw.kind));
             gl.DrawArrays(gl.c.GL_TRIANGLES, @intCast(draw.start), @intCast(draw.count));
         }
     }

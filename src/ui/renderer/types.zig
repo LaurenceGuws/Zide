@@ -13,6 +13,11 @@ pub const Texture = struct {
     height: i32,
 };
 
+pub const TextureKind = enum(u8) {
+    rgba = 0,
+    font_coverage = 1,
+};
+
 pub const Rgba = extern struct {
     r: u8,
     g: u8,

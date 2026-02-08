@@ -8,7 +8,7 @@ pub fn drawText(
     allocator: std.mem.Allocator,
     font: *TerminalFont,
     ctx: *anyopaque,
-    drawTexture: *const fn (ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void,
+    drawTexture: *const fn (ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void,
     text: []const u8,
     x: f32,
     y: f32,
