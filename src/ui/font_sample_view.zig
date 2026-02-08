@@ -40,6 +40,7 @@ pub const FontSampleView = struct {
             iface.UNICODE_SANS_PATH,
             iface.EMOJI_COLOR_FALLBACK_PATH,
             iface.EMOJI_TEXT_FALLBACK_PATH,
+            renderer.font_rendering,
         );
         errdefer left.deinit();
         left.render_scale = render_scale;
@@ -56,6 +57,7 @@ pub const FontSampleView = struct {
             iface.UNICODE_SANS_PATH,
             iface.EMOJI_COLOR_FALLBACK_PATH,
             iface.EMOJI_TEXT_FALLBACK_PATH,
+            renderer.font_rendering,
         );
         errdefer right.deinit();
         right.render_scale = render_scale;
@@ -105,6 +107,7 @@ pub const FontSampleView = struct {
             iface.UNICODE_SANS_PATH,
             iface.EMOJI_COLOR_FALLBACK_PATH,
             iface.EMOJI_TEXT_FALLBACK_PATH,
+            renderer.font_rendering,
         ) catch return false;
         errdefer new_left.deinit();
         new_left.render_scale = render_scale;
@@ -121,6 +124,7 @@ pub const FontSampleView = struct {
             iface.UNICODE_SANS_PATH,
             iface.EMOJI_COLOR_FALLBACK_PATH,
             iface.EMOJI_TEXT_FALLBACK_PATH,
+            renderer.font_rendering,
         ) catch {
             new_left.deinit();
             return false;

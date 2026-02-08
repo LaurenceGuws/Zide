@@ -42,8 +42,28 @@ pub const Config = struct {
     terminal_scrollback_rows: ?usize,
     terminal_cursor_shape: ?term_types.CursorShape,
     terminal_cursor_blink: ?bool,
+    font_lcd: ?bool,
+    font_hinting: ?FontHinting,
+    font_autohint: ?bool,
+    font_glyph_overflow: ?GlyphOverflowPolicy,
+    text_gamma: ?f32,
+    text_contrast: ?f32,
+    text_linear_correction: ?bool,
     theme: ?ThemeConfig,
     keybinds: ?[]input_actions.BindSpec,
+};
+
+pub const FontHinting = enum {
+    default,
+    none,
+    light,
+    normal,
+};
+
+pub const GlyphOverflowPolicy = enum {
+    when_followed_by_space,
+    never,
+    always,
 };
 
 pub const TerminalBlinkStyle = enum {
@@ -108,6 +128,13 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
         .terminal_scrollback_rows = null,
         .terminal_cursor_shape = null,
         .terminal_cursor_blink = null,
+        .font_lcd = null,
+        .font_hinting = null,
+        .font_autohint = null,
+        .font_glyph_overflow = null,
+        .text_gamma = null,
+        .text_contrast = null,
+        .text_linear_correction = null,
         .theme = null,
         .keybinds = null,
     };
@@ -156,6 +183,14 @@ pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
         allocator.free(binds);
         config.keybinds = null;
     }
+
+    config.font_lcd = null;
+    config.font_hinting = null;
+    config.font_autohint = null;
+    config.font_glyph_overflow = null;
+    config.text_gamma = null;
+    config.text_contrast = null;
+    config.text_linear_correction = null;
 }
 
 fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) void {
@@ -212,6 +247,27 @@ fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) voi
     if (overlay.terminal_cursor_blink != null) {
         base.terminal_cursor_blink = overlay.terminal_cursor_blink;
     }
+    if (overlay.font_lcd != null) {
+        base.font_lcd = overlay.font_lcd;
+    }
+    if (overlay.font_hinting != null) {
+        base.font_hinting = overlay.font_hinting;
+    }
+    if (overlay.font_autohint != null) {
+        base.font_autohint = overlay.font_autohint;
+    }
+    if (overlay.font_glyph_overflow != null) {
+        base.font_glyph_overflow = overlay.font_glyph_overflow;
+    }
+    if (overlay.text_gamma != null) {
+        base.text_gamma = overlay.text_gamma;
+    }
+    if (overlay.text_contrast != null) {
+        base.text_contrast = overlay.text_contrast;
+    }
+    if (overlay.text_linear_correction != null) {
+        base.text_linear_correction = overlay.text_linear_correction;
+    }
     if (overlay.theme) |overlay_theme| {
         if (base.theme) |base_theme| {
             var merged = base_theme;
@@ -261,6 +317,13 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             .terminal_scrollback_rows = null,
             .terminal_cursor_shape = null,
             .terminal_cursor_blink = null,
+            .font_lcd = null,
+            .font_hinting = null,
+            .font_autohint = null,
+            .font_glyph_overflow = null,
+            .text_gamma = null,
+            .text_contrast = null,
+            .text_linear_correction = null,
             .theme = null,
             .keybinds = null,
         };
@@ -285,6 +348,13 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     var terminal_scrollback_rows: ?usize = null;
     var terminal_cursor_shape: ?term_types.CursorShape = null;
     var terminal_cursor_blink: ?bool = null;
+    var font_lcd: ?bool = null;
+    var font_hinting: ?FontHinting = null;
+    var font_autohint: ?bool = null;
+    var font_glyph_overflow: ?GlyphOverflowPolicy = null;
+    var text_gamma: ?f32 = null;
+    var text_contrast: ?f32 = null;
+    var text_linear_correction: ?bool = null;
     var theme: ?ThemeConfig = null;
     var keybinds: ?[]input_actions.BindSpec = null;
 
@@ -443,6 +513,58 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     }
     c.lua_pop(L, 1);
 
+    _ = c.lua_getfield(L, -1, "font_rendering");
+    if (c.lua_istable(L, -1)) {
+        _ = c.lua_getfield(L, -1, "lcd");
+        if (c.lua_isboolean(L, -1)) {
+            font_lcd = c.lua_toboolean(L, -1) != 0;
+        }
+        c.lua_pop(L, 1);
+
+        _ = c.lua_getfield(L, -1, "hinting");
+        if (c.lua_isstring(L, -1) != 0) {
+            font_hinting = parseFontHinting(L, -1);
+        }
+        c.lua_pop(L, 1);
+
+        _ = c.lua_getfield(L, -1, "autohint");
+        if (c.lua_isboolean(L, -1)) {
+            font_autohint = c.lua_toboolean(L, -1) != 0;
+        }
+        c.lua_pop(L, 1);
+
+        _ = c.lua_getfield(L, -1, "glyph_overflow");
+        if (c.lua_isstring(L, -1) != 0) {
+            font_glyph_overflow = parseGlyphOverflowPolicy(L, -1);
+        }
+        c.lua_pop(L, 1);
+
+        _ = c.lua_getfield(L, -1, "text");
+        if (c.lua_istable(L, -1)) {
+            _ = c.lua_getfield(L, -1, "gamma");
+            if (c.lua_isnumber(L, -1) != 0) {
+                const v = c.lua_tonumberx(L, -1, null);
+                if (v > 0) text_gamma = @floatCast(v);
+            }
+            c.lua_pop(L, 1);
+
+            _ = c.lua_getfield(L, -1, "contrast");
+            if (c.lua_isnumber(L, -1) != 0) {
+                const v = c.lua_tonumberx(L, -1, null);
+                if (v > 0) text_contrast = @floatCast(v);
+            }
+            c.lua_pop(L, 1);
+
+            _ = c.lua_getfield(L, -1, "linear_correction");
+            if (c.lua_isboolean(L, -1)) {
+                text_linear_correction = c.lua_toboolean(L, -1) != 0;
+            }
+            c.lua_pop(L, 1);
+        }
+        c.lua_pop(L, 1);
+    }
+    c.lua_pop(L, 1);
+
     _ = c.lua_getfield(L, -1, "theme");
     if (c.lua_istable(L, -1)) {
         theme = try parseThemeFromTable(L, -1);
@@ -472,9 +594,35 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         .terminal_scrollback_rows = terminal_scrollback_rows,
         .terminal_cursor_shape = terminal_cursor_shape,
         .terminal_cursor_blink = terminal_cursor_blink,
+        .font_lcd = font_lcd,
+        .font_hinting = font_hinting,
+        .font_autohint = font_autohint,
+        .font_glyph_overflow = font_glyph_overflow,
+        .text_gamma = text_gamma,
+        .text_contrast = text_contrast,
+        .text_linear_correction = text_linear_correction,
         .theme = theme,
         .keybinds = keybinds,
     };
+}
+
+fn parseFontHinting(L: *c.lua_State, idx: c_int) ?FontHinting {
+    const value = luaStringToSlice(L, idx);
+    if (value.len == 0) return null;
+    if (std.mem.eql(u8, value, "default")) return .default;
+    if (std.mem.eql(u8, value, "none")) return .none;
+    if (std.mem.eql(u8, value, "light")) return .light;
+    if (std.mem.eql(u8, value, "normal")) return .normal;
+    return null;
+}
+
+fn parseGlyphOverflowPolicy(L: *c.lua_State, idx: c_int) ?GlyphOverflowPolicy {
+    const value = luaStringToSlice(L, idx);
+    if (value.len == 0) return null;
+    if (std.mem.eql(u8, value, "when_followed_by_space")) return .when_followed_by_space;
+    if (std.mem.eql(u8, value, "never")) return .never;
+    if (std.mem.eql(u8, value, "always")) return .always;
+    return null;
 }
 
 fn parseTerminalBlink(L: *c.lua_State, idx: c_int) ?TerminalBlinkStyle {

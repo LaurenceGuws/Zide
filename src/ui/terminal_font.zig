@@ -176,47 +176,30 @@ pub const c = @cImport({
     @cInclude("harfbuzz/hb-ft.h");
 });
 
-const HintingMode = enum {
+pub const HintingMode = enum {
     default,
     none,
     light,
     normal,
 };
 
+pub const RenderingOptions = struct {
+    lcd: bool = false,
+    hinting: HintingMode = .default,
+    autohint: bool = false,
+    glyph_overflow: AllowSquareGlyphOverflow = .when_followed_by_space,
+};
+
 // FreeType encodes the target render mode in bits 16..19 of the load flags.
 // The upstream macro is `FT_LOAD_TARGET_MODE` but it may import as a function.
 const ft_load_target_mode_mask: c_int = 0xF0000;
 
-fn parseHintingMode() HintingMode {
-    const raw = std.c.getenv("ZIDE_FONT_HINTING") orelse return .default;
-    const s = std.mem.sliceTo(raw, 0);
-    if (s.len == 0) return .default;
-    if (std.mem.eql(u8, s, "default")) return .default;
-    if (std.mem.eql(u8, s, "none")) return .none;
-    if (std.mem.eql(u8, s, "light")) return .light;
-    if (std.mem.eql(u8, s, "normal")) return .normal;
-    return .default;
-}
-
-fn parseEnvBool(env_key: [:0]const u8, default_value: bool) bool {
-    const raw = std.c.getenv(env_key) orelse return default_value;
-    const slice = std.mem.sliceTo(raw, 0);
-    if (slice.len == 0) return default_value;
-    if (std.mem.eql(u8, slice, "1")) return true;
-    if (std.mem.eql(u8, slice, "0")) return false;
-    if (std.mem.eql(u8, slice, "true")) return true;
-    if (std.mem.eql(u8, slice, "false")) return false;
-    return default_value;
-}
-
-fn computeFtLoadFlagsBase(use_lcd: bool) c_int {
+fn computeFtLoadFlagsBase(opts: RenderingOptions) c_int {
     var flags: c_int = c.FT_LOAD_DEFAULT;
 
-    const autohint = parseEnvBool("ZIDE_FONT_AUTOHINT", false);
-    if (autohint) flags |= c.FT_LOAD_FORCE_AUTOHINT;
+    if (opts.autohint) flags |= c.FT_LOAD_FORCE_AUTOHINT;
 
-    const hinting = parseHintingMode();
-    switch (hinting) {
+    switch (opts.hinting) {
         .default => {},
         .none => {
             flags |= c.FT_LOAD_NO_HINTING;
@@ -232,7 +215,7 @@ fn computeFtLoadFlagsBase(use_lcd: bool) c_int {
         },
     }
 
-    if (use_lcd) {
+    if (opts.lcd) {
         flags &= ~ft_load_target_mode_mask;
         flags |= c.FT_LOAD_TARGET_LCD;
     }
@@ -412,6 +395,7 @@ pub const TerminalFont = struct {
         unicode_sans_path: ?[*:0]const u8,
         emoji_color_path: ?[*:0]const u8,
         emoji_text_path: ?[*:0]const u8,
+        opts: RenderingOptions,
     ) !TerminalFont {
         var ft_library: c.FT_Library = null;
         if (c.FT_Init_FreeType(&ft_library) != 0) return error.FtInitFailed;
@@ -425,8 +409,7 @@ pub const TerminalFont = struct {
         const hb_font = c.hb_ft_font_create(ft_face, null) orelse return error.HbInitFailed;
         errdefer c.hb_font_destroy(hb_font);
 
-        const use_lcd = std.c.getenv("ZIDE_FONT_LCD") != null;
-        const ft_load_flags_base = computeFtLoadFlagsBase(use_lcd);
+        const ft_load_flags_base = computeFtLoadFlagsBase(opts);
         applyHbLoadFlags(hb_font, ft_load_flags_base);
 
         const loadFace = struct {
@@ -665,15 +648,8 @@ pub const TerminalFont = struct {
             .cell_width = if (cell_width_px > 0) cell_width_px else size * 0.6,
             .ft_load_flags_base = ft_load_flags_base,
             .render_scale = 1.0,
-            .use_lcd = use_lcd,
-            .overflow_policy = blk: {
-                if (std.c.getenv("ZIDE_GLYPH_OVERFLOW")) |raw| {
-                    const s = std.mem.sliceTo(raw, 0);
-                    if (std.mem.eql(u8, s, "never")) break :blk .never;
-                    if (std.mem.eql(u8, s, "always")) break :blk .always;
-                }
-                break :blk .when_followed_by_space;
-            },
+            .use_lcd = opts.lcd,
+            .overflow_policy = opts.glyph_overflow,
         };
     }
 

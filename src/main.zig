@@ -9,6 +9,7 @@ const editor_render_cache_mod = @import("editor/render/cache.zig");
 const grammar_manager_mod = @import("editor/grammar_manager.zig");
 const app_logger = @import("app_logger.zig");
 const config_mod = @import("config/lua_config.zig");
+const terminal_font_mod = @import("ui/terminal_font.zig");
 
 // Terminal modules
 const terminal_mod = @import("terminal/core/terminal.zig");
@@ -193,6 +194,13 @@ const AppState = struct {
                 .terminal_scrollback_rows = null,
                 .terminal_cursor_shape = null,
                 .terminal_cursor_blink = null,
+                .font_lcd = null,
+                .font_hinting = null,
+                .font_autohint = null,
+                .font_glyph_overflow = null,
+                .text_gamma = null,
+                .text_contrast = null,
+                .text_linear_correction = null,
                 .theme = null,
                 .keybinds = null,
             };
@@ -213,6 +221,28 @@ const AppState = struct {
 
         const shell = try Shell.init(allocator, 1280, 720, "Zide - Zig IDE");
         errdefer shell.deinit(allocator);
+
+        // Apply font rendering knobs before (re)loading fonts.
+        var font_opts: terminal_font_mod.RenderingOptions = .{};
+        if (config.font_lcd) |v| font_opts.lcd = v;
+        if (config.font_autohint) |v| font_opts.autohint = v;
+        if (config.font_hinting) |mode| {
+            font_opts.hinting = switch (mode) {
+                .default => .default,
+                .none => .none,
+                .light => .light,
+                .normal => .normal,
+            };
+        }
+        if (config.font_glyph_overflow) |policy| {
+            font_opts.glyph_overflow = switch (policy) {
+                .when_followed_by_space => .when_followed_by_space,
+                .never => .never,
+                .always => .always,
+            };
+        }
+        shell.rendererPtr().setFontRenderingOptions(font_opts);
+        shell.rendererPtr().setTextRenderingConfig(config.text_gamma, config.text_contrast, config.text_linear_correction);
         if (config.app_font_path != null or config.app_font_size != null or
             config.editor_font_path != null or config.editor_font_size != null or
             config.terminal_font_path != null or config.terminal_font_size != null)

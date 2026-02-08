@@ -125,22 +125,17 @@ pub fn initGlResources(renderer: anytype) !void {
     renderer.uniform_tex = gl.GetUniformLocation(program, "u_tex");
     renderer.uniform_kind = gl.GetUniformLocation(program, "u_kind");
     renderer.uniform_dst_linear = gl.GetUniformLocation(program, "u_dst_linear");
-    const uniform_linear_correction = gl.GetUniformLocation(program, "u_linear_correction");
+    renderer.uniform_linear_correction = gl.GetUniformLocation(program, "u_linear_correction");
     renderer.uniform_text_gamma = gl.GetUniformLocation(program, "u_text_gamma");
     renderer.uniform_text_contrast = gl.GetUniformLocation(program, "u_text_contrast");
     if (renderer.uniform_tex >= 0) gl.Uniform1i(renderer.uniform_tex, 0);
     if (renderer.uniform_kind >= 0) gl.Uniform1i(renderer.uniform_kind, 0);
     if (renderer.uniform_dst_linear >= 0) gl.Uniform1i(renderer.uniform_dst_linear, 0);
-    if (uniform_linear_correction >= 0) {
-        const enabled = parseEnvBool("ZIDE_TEXT_LINEAR_CORRECTION", true);
-        gl.Uniform1i(uniform_linear_correction, if (enabled) 1 else 0);
-    }
+    if (renderer.uniform_linear_correction >= 0) gl.Uniform1i(renderer.uniform_linear_correction, if (renderer.text_linear_correction) 1 else 0);
 
     // Coverage tuning (applies only to font coverage atlas).
-    const text_gamma = clampPositive(parseEnvF32("ZIDE_TEXT_GAMMA", 1.0), 1.0);
-    const text_contrast = clampPositive(parseEnvF32("ZIDE_TEXT_CONTRAST", 1.0), 1.0);
-    if (renderer.uniform_text_gamma >= 0) gl.Uniform1f(renderer.uniform_text_gamma, text_gamma);
-    if (renderer.uniform_text_contrast >= 0) gl.Uniform1f(renderer.uniform_text_contrast, text_contrast);
+    if (renderer.uniform_text_gamma >= 0) gl.Uniform1f(renderer.uniform_text_gamma, clampPositive(renderer.text_gamma, 1.0));
+    if (renderer.uniform_text_contrast >= 0) gl.Uniform1f(renderer.uniform_text_contrast, clampPositive(renderer.text_contrast, 1.0));
 
     gl.GenVertexArrays(1, &renderer.vao);
     gl.GenBuffers(1, &renderer.vbo);
@@ -192,24 +187,6 @@ pub fn initGlResources(renderer: anytype) !void {
 
     renderer.white_texture = createSolidTexture(1, 1, .{ 255, 255, 255, 255 });
     updateProjection(renderer, renderer.render_width, renderer.render_height);
-}
-
-fn parseEnvF32(env_key: [:0]const u8, default_value: f32) f32 {
-    const raw = std.c.getenv(env_key) orelse return default_value;
-    const slice = std.mem.sliceTo(raw, 0);
-    if (slice.len == 0) return default_value;
-    return std.fmt.parseFloat(f32, slice) catch default_value;
-}
-
-fn parseEnvBool(env_key: [:0]const u8, default_value: bool) bool {
-    const raw = std.c.getenv(env_key) orelse return default_value;
-    const slice = std.mem.sliceTo(raw, 0);
-    if (slice.len == 0) return default_value;
-    if (std.mem.eql(u8, slice, "1")) return true;
-    if (std.mem.eql(u8, slice, "0")) return false;
-    if (std.mem.eql(u8, slice, "true")) return true;
-    if (std.mem.eql(u8, slice, "false")) return false;
-    return default_value;
 }
 
 fn clampPositive(v: f32, fallback: f32) f32 {
