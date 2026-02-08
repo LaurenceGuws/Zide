@@ -45,6 +45,7 @@ pub fn flushTerminalBatch(renderer: anytype) void {
         gl.ActiveTexture(gl.c.GL_TEXTURE0);
         gl.BindTexture(gl.c.GL_TEXTURE_2D, draw.texture_id);
         if (renderer.uniform_kind >= 0) gl.Uniform1i(renderer.uniform_kind, @intFromEnum(draw.kind));
+        applyBlendForKind(draw.kind);
         gl.DrawArrays(gl.c.GL_TRIANGLES, @intCast(draw.start), @intCast(draw.count));
     }
 }
@@ -56,6 +57,7 @@ pub fn drawTextureRect(renderer: anytype, texture: types.Texture, src: types.Rec
     gl.ActiveTexture(gl.c.GL_TEXTURE0);
     gl.BindTexture(gl.c.GL_TEXTURE_2D, texture.id);
     if (renderer.uniform_kind >= 0) gl.Uniform1i(renderer.uniform_kind, @intFromEnum(kind));
+    applyBlendForKind(kind);
 
     const tex_w = @as(f32, @floatFromInt(texture.width));
     const tex_h = @as(f32, @floatFromInt(texture.height));
@@ -91,6 +93,13 @@ pub fn drawTextureRect(renderer: anytype, texture: types.Texture, src: types.Rec
         &verts,
     );
     gl.DrawArrays(gl.c.GL_TRIANGLES, 0, 6);
+}
+
+fn applyBlendForKind(kind: types.TextureKind) void {
+    switch (kind) {
+        .font_coverage => gl.BlendFunc(gl.c.GL_ONE, gl.c.GL_ONE_MINUS_SRC_ALPHA),
+        .rgba => gl.BlendFunc(gl.c.GL_SRC_ALPHA, gl.c.GL_ONE_MINUS_SRC_ALPHA),
+    }
 }
 
 pub fn addBatchQuad(renderer: anytype, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {

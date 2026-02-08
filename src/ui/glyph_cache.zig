@@ -100,7 +100,15 @@ pub const GlyphCache = struct {
             gl.ActiveTexture(gl.c.GL_TEXTURE0);
             gl.BindTexture(gl.c.GL_TEXTURE_2D, draw.texture_id);
             if (renderer.uniform_kind >= 0) gl.Uniform1i(renderer.uniform_kind, @intFromEnum(draw.kind));
+            applyBlendForKind(draw.kind);
             gl.DrawArrays(gl.c.GL_TRIANGLES, @intCast(draw.start), @intCast(draw.count));
         }
     }
 };
+
+fn applyBlendForKind(kind: types.TextureKind) void {
+    switch (kind) {
+        .font_coverage => gl.BlendFunc(gl.c.GL_ONE, gl.c.GL_ONE_MINUS_SRC_ALPHA),
+        .rgba => gl.BlendFunc(gl.c.GL_SRC_ALPHA, gl.c.GL_ONE_MINUS_SRC_ALPHA),
+    }
+}
