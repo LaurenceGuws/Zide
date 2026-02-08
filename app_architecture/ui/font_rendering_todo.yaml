@@ -44,6 +44,8 @@ font_rendering_todo:
       - "ZIDE_FONT_LCD=1 (current LCD raster path; not a final solution)"
       - "ZIDE_FONT_SAMPLE_SIZE=<float> (font sample mode initial size)"
       - "ZIDE_FONT_SAMPLE_FRAMES=<n> (font sample mode auto-close after n frames; useful for smoke/CI)"
+      - "ZIDE_TEXT_GAMMA=<float> (coverage gamma for font coverage atlas; 1.0 default)"
+      - "ZIDE_TEXT_CONTRAST=<float> (coverage contrast multiplier; 1.0 default)"
 
   phases:
     - name: "Phase 0 - Baseline + Repro Harness"
