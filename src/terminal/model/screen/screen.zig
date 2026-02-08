@@ -222,8 +222,26 @@ pub const Screen = struct {
         const col = self.cursor.col;
         const idx = row * cols + col;
         if (idx >= self.grid.cells.items.len) return;
+
+        if (isCombiningMark(cp)) {
+            if (col == 0) return;
+            const prev_idx = idx - 1;
+            if (prev_idx >= self.grid.cells.items.len) return;
+            var prev = self.grid.cells.items[prev_idx];
+            if (prev.codepoint == 0) return;
+            if (prev.combining_len < prev.combining.len) {
+                prev.combining[prev.combining_len] = cp;
+                prev.combining_len += 1;
+                self.grid.cells.items[prev_idx] = prev;
+                self.grid.markDirtyRange(row, row, col - 1, col - 1);
+            }
+            return;
+        }
+
         self.grid.cells.items[idx] = types.Cell{
             .codepoint = cp,
+            .combining_len = 0,
+            .combining = .{ 0, 0 },
             .width = 1,
             .attrs = attrs,
         };
@@ -237,6 +255,14 @@ pub const Screen = struct {
             self.cursor.col += 1;
         }
         self.grid.markDirtyRange(row, row, col, col);
+    }
+
+    fn isCombiningMark(codepoint: u32) bool {
+        return (codepoint >= 0x0300 and codepoint <= 0x036F) or
+            (codepoint >= 0x1AB0 and codepoint <= 0x1AFF) or
+            (codepoint >= 0x1DC0 and codepoint <= 0x1DFF) or
+            (codepoint >= 0x20D0 and codepoint <= 0x20FF) or
+            (codepoint >= 0xFE20 and codepoint <= 0xFE2F);
     }
 
     pub fn writeAsciiRun(self: *Screen, bytes: []const u8, attrs: types.CellAttrs, use_dec_special: bool) usize {
@@ -260,6 +286,8 @@ pub const Screen = struct {
                 const cp = mapDecSpecial(b);
                 const cell = types.Cell{
                     .codepoint = cp,
+                    .combining_len = 0,
+                    .combining = .{ 0, 0 },
                     .width = 1,
                     .attrs = attrs,
                 };
@@ -281,6 +309,8 @@ pub const Screen = struct {
                 while (j + same_len < run_len and bytes[j + same_len] == b) : (same_len += 1) {}
                 const cell = types.Cell{
                     .codepoint = b,
+                    .combining_len = 0,
+                    .combining = .{ 0, 0 },
                     .width = 1,
                     .attrs = attrs,
                 };

@@ -341,6 +341,13 @@ fn hashRow(cells: []const Cell) u64 {
     const prime: u64 = 1099511628211;
     for (cells) |cell| {
         h = (h ^ @as(u64, cell.codepoint)) *% prime;
+        h = (h ^ @as(u64, cell.combining_len)) *% prime;
+        if (cell.combining_len > 0) {
+            var i: usize = 0;
+            while (i < cell.combining_len and i < cell.combining.len) : (i += 1) {
+                h = (h ^ @as(u64, cell.combining[i])) *% prime;
+            }
+        }
         h = (h ^ @as(u64, cell.width)) *% prime;
         const attrs = cell.attrs;
         h = (h ^ @as(u64, attrs.fg.r)) *% prime;
