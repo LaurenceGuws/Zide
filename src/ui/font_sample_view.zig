@@ -144,7 +144,25 @@ pub const FontSampleView = struct {
         const h = @as(f32, @floatFromInt(shell.height()));
         if (w <= 0 or h <= 0) return;
 
+        // Render into the offscreen target so we can do linear blending in a
+        // controlled way (target is linear; presentation converts to sRGB).
+        if (r.ensureEditorTexture(@intFromFloat(w), @intFromFloat(h))) {
+            if (r.beginEditorTexture()) {
+                r.clearToThemeBackground();
+                drawContents(self, r, theme, w, h);
+                r.endEditorTexture();
+                r.drawEditorTexture(0, 0);
+                return;
+            }
+        }
+
+        // Fallback: draw directly to the window.
         r.drawRect(0, 0, @intFromFloat(w), @intFromFloat(h), theme.background);
+        drawContents(self, r, theme, w, h);
+    }
+
+    fn drawContents(self: *FontSampleView, r: *Renderer, theme: *const app_shell.Theme, w: f32, h: f32) void {
+        _ = h;
 
         const padding: f32 = 16;
         const header_y: f32 = padding;

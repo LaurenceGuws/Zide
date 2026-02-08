@@ -109,6 +109,7 @@ pub const GlyphCache = struct {
 fn applyBlendForKind(kind: types.TextureKind) void {
     switch (kind) {
         .font_coverage => gl.BlendFunc(gl.c.GL_ONE, gl.c.GL_ONE_MINUS_SRC_ALPHA),
+        .linear_premul => gl.BlendFunc(gl.c.GL_ONE, gl.c.GL_ONE_MINUS_SRC_ALPHA),
         .rgba => gl.BlendFunc(gl.c.GL_SRC_ALPHA, gl.c.GL_ONE_MINUS_SRC_ALPHA),
     }
 }

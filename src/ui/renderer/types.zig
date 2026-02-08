@@ -16,6 +16,7 @@ pub const Texture = struct {
 pub const TextureKind = enum(u8) {
     rgba = 0,
     font_coverage = 1,
+    linear_premul = 2,
 };
 
 pub const Rgba = extern struct {

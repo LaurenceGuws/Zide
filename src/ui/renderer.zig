@@ -215,6 +215,8 @@ pub const Renderer = struct {
     uniform_kind: gl.GLint,
     uniform_text_gamma: gl.GLint,
     uniform_text_contrast: gl.GLint,
+    uniform_dst_linear: gl.GLint,
+    dst_linear_active: bool,
     white_texture: types.Texture,
 
     font_size: f32,
@@ -324,6 +326,8 @@ pub const Renderer = struct {
             .uniform_kind = -1,
             .uniform_text_gamma = -1,
             .uniform_text_contrast = -1,
+            .uniform_dst_linear = -1,
+            .dst_linear_active = false,
             .white_texture = .{ .id = 0, .width = 0, .height = 0 },
             .font_size = font_size,
             .base_font_size = base_font_size,
@@ -590,7 +594,28 @@ pub const Renderer = struct {
     pub fn dumpWindowScreenshotPpm(self: *Renderer, path: []const u8) !void {
         // Ensure we're reading back the window framebuffer at the window pixel size.
         self.bindDefaultTarget();
-        try screenshot.dumpFramebufferPpm(self.allocator, self.render_width, self.render_height, path);
+        // Downscale to logical window size to keep captures stable across DPI/render scale.
+        try screenshot.dumpFramebufferPpmScaled(self.allocator, self.render_width, self.render_height, self.width, self.height, path);
+    }
+
+    pub fn clearToThemeBackground(self: *Renderer) void {
+        const bg = self.theme.background.toRgba();
+        var rr = @as(f32, @floatFromInt(bg.r)) / 255.0;
+        var gg = @as(f32, @floatFromInt(bg.g)) / 255.0;
+        var bb = @as(f32, @floatFromInt(bg.b)) / 255.0;
+        const aa = @as(f32, @floatFromInt(bg.a)) / 255.0;
+        if (self.dst_linear_active) {
+            rr = srgbToLinear(rr);
+            gg = srgbToLinear(gg);
+            bb = srgbToLinear(bb);
+        }
+        gl.ClearColor(rr, gg, bb, aa);
+        gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
+    }
+
+    fn srgbToLinear(c: f32) f32 {
+        if (c <= 0.04045) return c / 12.92;
+        return std.math.pow(f32, (c + 0.055) / 1.055, 2.4);
     }
 
     pub fn setTextInputRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
@@ -630,7 +655,7 @@ pub const Renderer = struct {
                 .width = @floatFromInt(target.logical_width),
                 .height = @floatFromInt(target.logical_height),
             };
-            self.drawTextureRect(target.texture, src, dest, Color.white.toRgba());
+            draw_ops.drawTextureRect(self, target.texture, src, dest, Color.white.toRgba(), .linear_premul);
         }
     }
 
@@ -650,7 +675,7 @@ pub const Renderer = struct {
                 .width = @floatFromInt(target.logical_width),
                 .height = @floatFromInt(target.logical_height),
             };
-            self.drawTextureRect(target.texture, src, dest, Color.white.toRgba());
+            draw_ops.drawTextureRect(self, target.texture, src, dest, Color.white.toRgba(), .linear_premul);
         }
     }
 
@@ -1051,11 +1076,14 @@ pub const Renderer = struct {
     }
 
     fn bindDefaultTarget(self: *Renderer) void {
+        self.dst_linear_active = false;
         targets.bindDefaultTarget(self);
     }
 
     fn beginRenderTarget(self: *Renderer, target: ?RenderTarget) bool {
-        return targets.beginRenderTarget(self, target);
+        const ok = targets.beginRenderTarget(self, target);
+        if (ok) self.dst_linear_active = true;
+        return ok;
     }
 
     fn ensureRenderTargetScaled(self: *Renderer, target: *?RenderTarget, logical_width: i32, logical_height: i32, filter: i32) bool {

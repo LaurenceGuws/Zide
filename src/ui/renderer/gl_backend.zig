@@ -31,8 +31,27 @@ pub fn initGlResources(renderer: anytype) !void {
         "out vec4 frag_color;\n" ++
         "uniform sampler2D u_tex;\n" ++
         "uniform int u_kind;\n" ++
+        "uniform int u_dst_linear;\n" ++
         "uniform float u_text_gamma;\n" ++
         "uniform float u_text_contrast;\n" ++
+        "vec3 srgb_to_linear(vec3 c) {\n" ++
+        "    bvec3 cutoff = lessThanEqual(c, vec3(0.04045));\n" ++
+        "    vec3 higher = pow((c + vec3(0.055)) / vec3(1.055), vec3(2.4));\n" ++
+        "    vec3 lower = c / vec3(12.92);\n" ++
+        "    return mix(higher, lower, cutoff);\n" ++
+        "}\n" ++
+        "vec3 linear_to_srgb(vec3 c) {\n" ++
+        "    bvec3 cutoff = lessThanEqual(c, vec3(0.0031308));\n" ++
+        "    vec3 higher = pow(c, vec3(1.0 / 2.4)) * vec3(1.055) - vec3(0.055);\n" ++
+        "    vec3 lower = c * vec3(12.92);\n" ++
+        "    return mix(higher, lower, cutoff);\n" ++
+        "}\n" ++
+        "vec4 unlinearize_premul(vec4 c) {\n" ++
+        "    if (c.a <= 0.0) return vec4(0.0);\n" ++
+        "    vec3 rgb = c.rgb / vec3(c.a);\n" ++
+        "    rgb = linear_to_srgb(rgb);\n" ++
+        "    return vec4(rgb * c.a, c.a);\n" ++
+        "}\n" ++
         "void main() {\n" ++
         "    vec4 tex = texture(u_tex, v_uv);\n" ++
         "    if (u_kind == 1) {\n" ++
@@ -40,11 +59,33 @@ pub fn initGlResources(renderer: anytype) !void {
         "        float mask = tex.r;\n" ++
         "        mask = pow(mask, u_text_gamma);\n" ++
         "        mask = clamp(mask * u_text_contrast, 0.0, 1.0);\n" ++
+        "        vec4 color = v_color;\n" ++
+        "        if (u_dst_linear != 0) {\n" ++
+        "            color.rgb = srgb_to_linear(color.rgb);\n" ++
+        "        }\n" ++
         "        float a = mask * v_color.a;\n" ++
         "        // Premultiplied output for correct edge blending.\n" ++
-        "        frag_color = vec4(v_color.rgb * a, a);\n" ++
+        "        vec4 outc = vec4(color.rgb * a, a);\n" ++
+        "        if (u_dst_linear == 0) {\n" ++
+        "            outc = unlinearize_premul(outc);\n" ++
+        "        }\n" ++
+        "        frag_color = outc;\n" ++
+        "    } else if (u_kind == 2) {\n" ++
+        "        // Linear premultiplied source (e.g. offscreen targets).\n" ++
+        "        vec4 outc = tex;\n" ++
+        "        if (u_dst_linear == 0) {\n" ++
+        "            outc = unlinearize_premul(outc);\n" ++
+        "        }\n" ++
+        "        frag_color = outc;\n" ++
         "    } else {\n" ++
-        "        frag_color = tex * v_color;\n" ++
+        "        if (u_dst_linear != 0) {\n" ++
+        "            vec4 col = v_color;\n" ++
+        "            col.rgb = srgb_to_linear(col.rgb);\n" ++
+        "            tex.rgb = srgb_to_linear(tex.rgb);\n" ++
+        "            frag_color = tex * col;\n" ++
+        "        } else {\n" ++
+        "            frag_color = tex * v_color;\n" ++
+        "        }\n" ++
         "    }\n" ++
         "}\n";
 
@@ -59,10 +100,12 @@ pub fn initGlResources(renderer: anytype) !void {
     renderer.uniform_proj = gl.GetUniformLocation(program, "u_proj");
     renderer.uniform_tex = gl.GetUniformLocation(program, "u_tex");
     renderer.uniform_kind = gl.GetUniformLocation(program, "u_kind");
+    renderer.uniform_dst_linear = gl.GetUniformLocation(program, "u_dst_linear");
     renderer.uniform_text_gamma = gl.GetUniformLocation(program, "u_text_gamma");
     renderer.uniform_text_contrast = gl.GetUniformLocation(program, "u_text_contrast");
     if (renderer.uniform_tex >= 0) gl.Uniform1i(renderer.uniform_tex, 0);
     if (renderer.uniform_kind >= 0) gl.Uniform1i(renderer.uniform_kind, 0);
+    if (renderer.uniform_dst_linear >= 0) gl.Uniform1i(renderer.uniform_dst_linear, 0);
 
     // Coverage tuning (applies only to font coverage atlas).
     const text_gamma = clampPositive(parseEnvF32("ZIDE_TEXT_GAMMA", 1.0), 1.0);
@@ -129,6 +172,10 @@ pub fn bindDefaultTarget(renderer: anytype) void {
     renderer.target_pixel_width = renderer.render_width;
     renderer.target_pixel_height = renderer.render_height;
     updateProjection(renderer, renderer.width, renderer.height);
+    if (renderer.uniform_dst_linear >= 0) {
+        gl.UseProgram(renderer.shader_program);
+        gl.Uniform1i(renderer.uniform_dst_linear, 0);
+    }
 }
 
 pub fn beginRenderTarget(renderer: anytype, target: ?RenderTarget) bool {
@@ -137,6 +184,10 @@ pub fn beginRenderTarget(renderer: anytype, target: ?RenderTarget) bool {
         renderer.target_pixel_width = t.texture.width;
         renderer.target_pixel_height = t.texture.height;
         updateProjection(renderer, t.logical_width, t.logical_height);
+        if (renderer.uniform_dst_linear >= 0) {
+            gl.UseProgram(renderer.shader_program);
+            gl.Uniform1i(renderer.uniform_dst_linear, 1);
+        }
         return true;
     }
     return false;
