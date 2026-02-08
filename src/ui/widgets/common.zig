@@ -16,6 +16,22 @@ pub const Tooltip = struct {
     y: f32,
 };
 
+pub const ScrollbarThumb = struct {
+    thumb_h: f32,
+    available: f32,
+    thumb_y: f32,
+};
+
+pub fn computeScrollbarThumb(scrollbar_y: f32, track_h: f32, visible_lines: usize, total_lines: usize, min_thumb_h: f32, ratio: f32) ScrollbarThumb {
+    const thumb_h = if (total_lines > visible_lines)
+        @max(min_thumb_h, track_h * (@as(f32, @floatFromInt(visible_lines)) / @as(f32, @floatFromInt(total_lines))))
+    else
+        track_h;
+    const available = @max(@as(f32, 1), track_h - thumb_h);
+    const thumb_y = scrollbar_y + available * ratio;
+    return .{ .thumb_h = thumb_h, .available = available, .thumb_y = thumb_y };
+}
+
 pub fn drawTruncatedText(shell: *Shell, text: []const u8, x: f32, y: f32, color: Color, max_width: f32) TruncResult {
     if (max_width <= 0 or text.len == 0) {
         return .{ .drawn_width = 0, .truncated = text.len > 0, .drawn_len = 0 };

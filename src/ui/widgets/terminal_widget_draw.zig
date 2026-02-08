@@ -4,6 +4,7 @@ const terminal_mod = @import("../../terminal/core/terminal.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 const time_utils = @import("../renderer/time_utils.zig");
+const common = @import("common.zig");
 
 const hover_mod = @import("terminal_widget_hover.zig");
 const kitty_mod = @import("terminal_widget_kitty.zig");
@@ -665,16 +666,11 @@ pub fn draw(
     if (height > 0 and width > 0) {
         const track_h = scrollbar_h;
         const min_thumb_h: f32 = 18;
-        const thumb_h = if (total_lines > rows)
-            @max(min_thumb_h, track_h * (@as(f32, @floatFromInt(rows)) / @as(f32, @floatFromInt(total_lines))))
-        else
-            track_h;
-        const available = @max(@as(f32, 1), track_h - thumb_h);
         const ratio = if (max_scroll_offset > 0)
             @as(f32, @floatFromInt(max_scroll_offset - scroll_offset)) / @as(f32, @floatFromInt(max_scroll_offset))
         else
             1.0;
-        const thumb_y = scrollbar_y + available * ratio;
+        const thumb = common.computeScrollbarThumb(scrollbar_y, track_h, rows, total_lines, min_thumb_h, ratio);
 
         r.drawRect(
             @intFromFloat(scrollbar_x),
@@ -685,9 +681,9 @@ pub fn draw(
         );
         r.drawRect(
             @intFromFloat(scrollbar_x + 2),
-            @intFromFloat(thumb_y),
+            @intFromFloat(thumb.thumb_y),
             @intFromFloat(scrollbar_w - 4),
-            @intFromFloat(thumb_h),
+            @intFromFloat(thumb.thumb_h),
             r.theme.selection,
         );
 
