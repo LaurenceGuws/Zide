@@ -36,6 +36,7 @@ pub fn initGlResources(renderer: anytype) !void {
         "uniform sampler2D u_tex;\n" ++
         "uniform int u_kind;\n" ++
         "uniform int u_dst_linear;\n" ++
+        "uniform int u_linear_correction;\n" ++
         "uniform float u_text_gamma;\n" ++
         "uniform float u_text_contrast;\n" ++
         "vec3 srgb_to_linear(vec3 c) {\n" ++
@@ -49,6 +50,15 @@ pub fn initGlResources(renderer: anytype) !void {
         "    vec3 higher = pow(c, vec3(1.0 / 2.4)) * vec3(1.055) - vec3(0.055);\n" ++
         "    vec3 lower = c * vec3(12.92);\n" ++
         "    return mix(higher, lower, cutoff);\n" ++
+        "}\n" ++
+        "float luminance(vec3 c) {\n" ++
+        "    return dot(c, vec3(0.2126, 0.7152, 0.0722));\n" ++
+        "}\n" ++
+        "float linear_to_srgb_1(float v) {\n" ++
+        "    return v <= 0.0031308 ? v * 12.92 : pow(v, 1.0 / 2.4) * 1.055 - 0.055;\n" ++
+        "}\n" ++
+        "float srgb_to_linear_1(float v) {\n" ++
+        "    return v <= 0.04045 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4);\n" ++
         "}\n" ++
         "vec4 unlinearize_premul(vec4 c) {\n" ++
         "    if (c.a <= 0.0) return vec4(0.0);\n" ++
@@ -64,10 +74,20 @@ pub fn initGlResources(renderer: anytype) !void {
         "        mask = pow(mask, u_text_gamma);\n" ++
         "        mask = clamp(mask * u_text_contrast, 0.0, 1.0);\n" ++
         "        vec4 color = v_color;\n" ++
+        "        float cov = mask;\n" ++
         "        if (u_dst_linear != 0) {\n" ++
         "            color.rgb = srgb_to_linear(color.rgb);\n" ++
         "        }\n" ++
-        "        float a = mask * v_color.a;\n" ++
+        "        if (u_dst_linear != 0 && u_linear_correction != 0 && v_bg_color.a > 0.0) {\n" ++
+        "            vec3 bg = srgb_to_linear(v_bg_color.rgb);\n" ++
+        "            float fg_l = luminance(color.rgb);\n" ++
+        "            float bg_l = luminance(bg);\n" ++
+        "            if (abs(fg_l - bg_l) > 0.001) {\n" ++
+        "                float blend_l = srgb_to_linear_1(linear_to_srgb_1(fg_l) * cov + linear_to_srgb_1(bg_l) * (1.0 - cov));\n" ++
+        "                cov = clamp((blend_l - bg_l) / (fg_l - bg_l), 0.0, 1.0);\n" ++
+        "            }\n" ++
+        "        }\n" ++
+        "        float a = cov * v_color.a;\n" ++
         "        // Premultiplied output for correct edge blending.\n" ++
         "        vec4 outc = vec4(color.rgb * a, a);\n" ++
         "        if (u_dst_linear == 0) {\n" ++
@@ -105,11 +125,16 @@ pub fn initGlResources(renderer: anytype) !void {
     renderer.uniform_tex = gl.GetUniformLocation(program, "u_tex");
     renderer.uniform_kind = gl.GetUniformLocation(program, "u_kind");
     renderer.uniform_dst_linear = gl.GetUniformLocation(program, "u_dst_linear");
+    const uniform_linear_correction = gl.GetUniformLocation(program, "u_linear_correction");
     renderer.uniform_text_gamma = gl.GetUniformLocation(program, "u_text_gamma");
     renderer.uniform_text_contrast = gl.GetUniformLocation(program, "u_text_contrast");
     if (renderer.uniform_tex >= 0) gl.Uniform1i(renderer.uniform_tex, 0);
     if (renderer.uniform_kind >= 0) gl.Uniform1i(renderer.uniform_kind, 0);
     if (renderer.uniform_dst_linear >= 0) gl.Uniform1i(renderer.uniform_dst_linear, 0);
+    if (uniform_linear_correction >= 0) {
+        const enabled = parseEnvBool("ZIDE_TEXT_LINEAR_CORRECTION", false);
+        gl.Uniform1i(uniform_linear_correction, if (enabled) 1 else 0);
+    }
 
     // Coverage tuning (applies only to font coverage atlas).
     const text_gamma = clampPositive(parseEnvF32("ZIDE_TEXT_GAMMA", 1.0), 1.0);
@@ -174,6 +199,17 @@ fn parseEnvF32(env_key: [:0]const u8, default_value: f32) f32 {
     const slice = std.mem.sliceTo(raw, 0);
     if (slice.len == 0) return default_value;
     return std.fmt.parseFloat(f32, slice) catch default_value;
+}
+
+fn parseEnvBool(env_key: [:0]const u8, default_value: bool) bool {
+    const raw = std.c.getenv(env_key) orelse return default_value;
+    const slice = std.mem.sliceTo(raw, 0);
+    if (slice.len == 0) return default_value;
+    if (std.mem.eql(u8, slice, "1")) return true;
+    if (std.mem.eql(u8, slice, "0")) return false;
+    if (std.mem.eql(u8, slice, "true")) return true;
+    if (std.mem.eql(u8, slice, "false")) return false;
+    return default_value;
 }
 
 fn clampPositive(v: f32, fallback: f32) f32 {
