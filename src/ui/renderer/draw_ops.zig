@@ -20,6 +20,10 @@ pub const Vertex = packed struct {
     g: f32,
     b: f32,
     a: f32,
+    br: f32,
+    bg: f32,
+    bb: f32,
+    ba: f32,
 };
 
 pub fn beginTerminalBatch(renderer: anytype) void {
@@ -50,7 +54,7 @@ pub fn flushTerminalBatch(renderer: anytype) void {
     }
 }
 
-pub fn drawTextureRect(renderer: anytype, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
+pub fn drawTextureRect(renderer: anytype, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, bg_color: types.Rgba, kind: types.TextureKind) void {
     if (texture.id == 0 or texture.width <= 0 or texture.height <= 0) return;
     gl.UseProgram(renderer.shader_program);
     gl.BindVertexArray(renderer.vao);
@@ -71,18 +75,23 @@ pub fn drawTextureRect(renderer: anytype, texture: types.Texture, src: types.Rec
     const b = @as(f32, @floatFromInt(color.b)) / 255.0;
     const a = @as(f32, @floatFromInt(color.a)) / 255.0;
 
+    const br = @as(f32, @floatFromInt(bg_color.r)) / 255.0;
+    const bg = @as(f32, @floatFromInt(bg_color.g)) / 255.0;
+    const bb = @as(f32, @floatFromInt(bg_color.b)) / 255.0;
+    const ba = @as(f32, @floatFromInt(bg_color.a)) / 255.0;
+
     const x0 = dest.x;
     const y0 = dest.y;
     const x1 = dest.x + dest.width;
     const y1 = dest.y + dest.height;
 
     const verts = [_]Vertex{
-        .{ .x = x0, .y = y0, .u = u_min, .v = v_min, .r = r, .g = g, .b = b, .a = a },
-        .{ .x = x1, .y = y0, .u = u_max, .v = v_min, .r = r, .g = g, .b = b, .a = a },
-        .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a },
-        .{ .x = x0, .y = y0, .u = u_min, .v = v_min, .r = r, .g = g, .b = b, .a = a },
-        .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a },
-        .{ .x = x0, .y = y1, .u = u_min, .v = v_max, .r = r, .g = g, .b = b, .a = a },
+        .{ .x = x0, .y = y0, .u = u_min, .v = v_min, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
+        .{ .x = x1, .y = y0, .u = u_max, .v = v_min, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
+        .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
+        .{ .x = x0, .y = y0, .u = u_min, .v = v_min, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
+        .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
+        .{ .x = x0, .y = y1, .u = u_min, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
     };
 
     gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, renderer.vbo);
@@ -103,7 +112,7 @@ fn applyBlendForKind(kind: types.TextureKind) void {
     }
 }
 
-pub fn addBatchQuad(renderer: anytype, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
+pub fn addBatchQuad(renderer: anytype, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, bg_color: types.Rgba, kind: types.TextureKind) void {
     if (texture.id == 0 or texture.width <= 0 or texture.height <= 0) return;
     const tex_w = @as(f32, @floatFromInt(texture.width));
     const tex_h = @as(f32, @floatFromInt(texture.height));
@@ -117,6 +126,11 @@ pub fn addBatchQuad(renderer: anytype, texture: types.Texture, src: types.Rect, 
     const b = @as(f32, @floatFromInt(color.b)) / 255.0;
     const a = @as(f32, @floatFromInt(color.a)) / 255.0;
 
+    const br = @as(f32, @floatFromInt(bg_color.r)) / 255.0;
+    const bg = @as(f32, @floatFromInt(bg_color.g)) / 255.0;
+    const bb = @as(f32, @floatFromInt(bg_color.b)) / 255.0;
+    const ba = @as(f32, @floatFromInt(bg_color.a)) / 255.0;
+
     const x0 = dest.x;
     const y0 = dest.y;
     const x1 = dest.x + dest.width;
@@ -124,12 +138,12 @@ pub fn addBatchQuad(renderer: anytype, texture: types.Texture, src: types.Rect, 
 
     const base = renderer.batch_vertices.items.len;
     const verts = [_]Vertex{
-        .{ .x = x0, .y = y0, .u = u_min, .v = v_min, .r = r, .g = g, .b = b, .a = a },
-        .{ .x = x1, .y = y0, .u = u_max, .v = v_min, .r = r, .g = g, .b = b, .a = a },
-        .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a },
-        .{ .x = x0, .y = y0, .u = u_min, .v = v_min, .r = r, .g = g, .b = b, .a = a },
-        .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a },
-        .{ .x = x0, .y = y1, .u = u_min, .v = v_max, .r = r, .g = g, .b = b, .a = a },
+        .{ .x = x0, .y = y0, .u = u_min, .v = v_min, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
+        .{ .x = x1, .y = y0, .u = u_max, .v = v_min, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
+        .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
+        .{ .x = x0, .y = y0, .u = u_min, .v = v_min, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
+        .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
+        .{ .x = x0, .y = y1, .u = u_min, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
     };
     renderer.batch_vertices.appendSlice(renderer.allocator, &verts) catch return;
     if (renderer.batch_draws.items.len > 0) {
@@ -151,7 +165,7 @@ pub fn addTerminalRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color:
     if (w <= 0 or h <= 0) return;
     const dest = shape_utils.rectFromInts(x, y, w, h);
     const src = texture_draw.unitSrcRect();
-    addBatchQuad(renderer, renderer.white_texture, src, dest, color, .rgba);
+    addBatchQuad(renderer, renderer.white_texture, src, dest, color, types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);
 }
 
 pub fn ensureVboCapacity(renderer: anytype, vertex_count: usize) void {

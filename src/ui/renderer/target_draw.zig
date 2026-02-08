@@ -11,7 +11,15 @@ pub fn drawTarget(
 ) void {
     const src = texture_draw.fullTextureSrcRect(target);
     const dest = texture_draw.fullTextureDestRect(target, x, y);
-    drawTextureRect(ctx, target, src, dest, types.Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 }, .rgba);
+    drawTextureRect(
+        ctx,
+        target,
+        src,
+        dest,
+        types.Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 },
+        types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 },
+        .rgba,
+    );
 }
 
 pub fn nearestFilter() i32 {
