@@ -35,6 +35,7 @@ const mouse_wheel = @import("renderer/mouse_wheel.zig");
 const input_logging = @import("renderer/input_logging.zig");
 const window_metrics_state = @import("renderer/window_metrics_state.zig");
 const key_queue = @import("renderer/key_queue.zig");
+const screenshot = @import("renderer/screenshot.zig");
 const glyph_cache = @import("glyph_cache.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_input_events = @import("../platform/input_events.zig");
@@ -584,6 +585,10 @@ pub const Renderer = struct {
 
     pub fn endFrame(self: *Renderer) void {
         sdl_api.glSwapWindow(self.window);
+    }
+
+    pub fn dumpScreenshotPpm(self: *Renderer, path: []const u8) !void {
+        try screenshot.dumpFramebufferPpm(self.allocator, self.target_pixel_width, self.target_pixel_height, path);
     }
 
     pub fn setTextInputRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {

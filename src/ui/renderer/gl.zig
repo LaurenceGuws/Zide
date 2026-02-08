@@ -69,6 +69,7 @@ pub var Viewport: *const fn (GLint, GLint, GLsizei, GLsizei) callconv(.c) void =
 pub var Scissor: *const fn (GLint, GLint, GLsizei, GLsizei) callconv(.c) void = undefined;
 pub var ClearColor: *const fn (GLfloat, GLfloat, GLfloat, GLfloat) callconv(.c) void = undefined;
 pub var Clear: *const fn (GLenum) callconv(.c) void = undefined;
+pub var ReadPixels: *const fn (GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, *anyopaque) callconv(.c) void = undefined;
 pub var DrawArrays: *const fn (GLenum, GLint, GLsizei) callconv(.c) void = undefined;
 
 var loaded: bool = false;
@@ -131,6 +132,7 @@ pub fn load() !void {
     Scissor = try loadProc(@TypeOf(Scissor), "glScissor");
     ClearColor = try loadProc(@TypeOf(ClearColor), "glClearColor");
     Clear = try loadProc(@TypeOf(Clear), "glClear");
+    ReadPixels = try loadProc(@TypeOf(ReadPixels), "glReadPixels");
     DrawArrays = try loadProc(@TypeOf(DrawArrays), "glDrawArrays");
 
     loaded = true;

@@ -732,6 +732,9 @@ const AppState = struct {
 
         if (self.app_mode == .font_sample) {
             if (self.font_sample_auto_close_frames > 0 and self.frame_id >= self.font_sample_auto_close_frames) {
+                if (envSlice("ZIDE_FONT_SAMPLE_SCREENSHOT")) |path| {
+                    r.dumpScreenshotPpm(path) catch {};
+                }
                 shell.requestClose();
                 self.needs_redraw = true;
                 return;
@@ -1526,6 +1529,13 @@ fn parseEnvU64(env_key: [:0]const u8, default_value: u64) u64 {
     const slice = std.mem.sliceTo(raw, 0);
     if (slice.len == 0) return default_value;
     return std.fmt.parseInt(u64, slice, 10) catch default_value;
+}
+
+fn envSlice(env_key: [:0]const u8) ?[]const u8 {
+    const raw = std.c.getenv(env_key) orelse return null;
+    const slice = std.mem.sliceTo(raw, 0);
+    if (slice.len == 0) return null;
+    return slice;
 }
 
 // Tests
