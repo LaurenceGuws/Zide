@@ -146,11 +146,12 @@ ui_widget_modularization_todo:
 
         - id: UI-W-02
           title: "Consolidate small shared helpers (hit-testing, cell math, DPI)"
-          status: todo
+          status: done
           files_to_edit:
             - src/ui/widgets/common.zig
           notes:
             - "Avoid cross-widget copy/paste. Keep helpers UI-only (no terminal core imports)."
+            - "Added shared helpers: computeScrollbarThumb(...) + pointInRect(...); applied to TerminalWidget + EditorWidget." 
 
     - name: "Phase 4 - Verification"
       tasks:
