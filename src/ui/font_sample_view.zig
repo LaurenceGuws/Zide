@@ -204,9 +204,9 @@ pub const FontSampleView = struct {
         text_draw.drawText(allocator, font, draw_ctx.ctx, draw_ctx.drawTexture, text, x, y, font.cell_width / scale, font.line_height / scale, color.toRgba(), true);
     }
 
-    fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
+    fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        draw_ops.drawTextureRect(renderer, texture, src, dest, color);
+        draw_ops.drawTextureRect(renderer, texture, src, dest, color, kind);
     }
 
     fn parseEnvF32(env_key: [:0]const u8, default_value: f32) f32 {

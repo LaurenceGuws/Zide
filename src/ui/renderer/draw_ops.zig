@@ -6,6 +6,7 @@ const types = @import("types.zig");
 
 pub const BatchDraw = struct {
     texture_id: gl.GLuint,
+    kind: types.TextureKind,
     start: usize,
     count: usize,
 };
@@ -43,16 +44,18 @@ pub fn flushTerminalBatch(renderer: anytype) void {
         if (draw.texture_id == 0) continue;
         gl.ActiveTexture(gl.c.GL_TEXTURE0);
         gl.BindTexture(gl.c.GL_TEXTURE_2D, draw.texture_id);
+        if (renderer.uniform_kind >= 0) gl.Uniform1i(renderer.uniform_kind, @intFromEnum(draw.kind));
         gl.DrawArrays(gl.c.GL_TRIANGLES, @intCast(draw.start), @intCast(draw.count));
     }
 }
 
-pub fn drawTextureRect(renderer: anytype, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
+pub fn drawTextureRect(renderer: anytype, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
     if (texture.id == 0 or texture.width <= 0 or texture.height <= 0) return;
     gl.UseProgram(renderer.shader_program);
     gl.BindVertexArray(renderer.vao);
     gl.ActiveTexture(gl.c.GL_TEXTURE0);
     gl.BindTexture(gl.c.GL_TEXTURE_2D, texture.id);
+    if (renderer.uniform_kind >= 0) gl.Uniform1i(renderer.uniform_kind, @intFromEnum(kind));
 
     const tex_w = @as(f32, @floatFromInt(texture.width));
     const tex_h = @as(f32, @floatFromInt(texture.height));
@@ -90,7 +93,7 @@ pub fn drawTextureRect(renderer: anytype, texture: types.Texture, src: types.Rec
     gl.DrawArrays(gl.c.GL_TRIANGLES, 0, 6);
 }
 
-pub fn addBatchQuad(renderer: anytype, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
+pub fn addBatchQuad(renderer: anytype, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
     if (texture.id == 0 or texture.width <= 0 or texture.height <= 0) return;
     const tex_w = @as(f32, @floatFromInt(texture.width));
     const tex_h = @as(f32, @floatFromInt(texture.height));
@@ -121,13 +124,14 @@ pub fn addBatchQuad(renderer: anytype, texture: types.Texture, src: types.Rect, 
     renderer.batch_vertices.appendSlice(renderer.allocator, &verts) catch return;
     if (renderer.batch_draws.items.len > 0) {
         const last_idx = renderer.batch_draws.items.len - 1;
-        if (renderer.batch_draws.items[last_idx].texture_id == texture.id) {
+        if (renderer.batch_draws.items[last_idx].texture_id == texture.id and renderer.batch_draws.items[last_idx].kind == kind) {
             renderer.batch_draws.items[last_idx].count += 6;
             return;
         }
     }
     _ = renderer.batch_draws.append(renderer.allocator, .{
         .texture_id = texture.id,
+        .kind = kind,
         .start = base,
         .count = 6,
     }) catch {};
@@ -137,7 +141,7 @@ pub fn addTerminalRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color:
     if (w <= 0 or h <= 0) return;
     const dest = shape_utils.rectFromInts(x, y, w, h);
     const src = texture_draw.unitSrcRect();
-    addBatchQuad(renderer, renderer.white_texture, src, dest, color);
+    addBatchQuad(renderer, renderer.white_texture, src, dest, color, .rgba);
 }
 
 pub fn ensureVboCapacity(renderer: anytype, vertex_count: usize) void {
