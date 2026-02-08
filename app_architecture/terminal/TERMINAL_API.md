@@ -4,7 +4,7 @@ Date: 2026-01-24
 
 Purpose: define stable API contracts for the terminal surface to prevent accidental behavior drift during modularization.
 
-Status: pre-refactor. Treat behaviors as hypotheses unless verified by baseline fixtures.
+Status: post-modularization. Treat behaviors as hypotheses unless verified by baseline fixtures.
 
 ## Contract Table
 
@@ -31,7 +31,7 @@ Status: pre-refactor. Treat behaviors as hypotheses unless verified by baseline 
 | TerminalSession.lock/unlock | - | void | n/a | to be verified | to be verified | pending |
 
 Notes:
-- Populate test names as fixtures land in `src/terminal_tests.zig`.
+- Populate test names as fixtures and unit tests land in `fixtures/terminal` and `src/terminal_*_tests.zig`.
 - Update this table with observed behavior once baseline fixtures exist.
 - Contracted behavior only after verified tests; do not assert guarantees early.
 - Implementation is now modularized across `src/terminal/core/*` helpers; API surface remains `TerminalSession`.

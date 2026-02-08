@@ -29,7 +29,7 @@ Goal: split the terminal implementation into clear layers with a stable API surf
    - `src/terminal/protocol/osc.zig`
    - `src/terminal/protocol/dcs_apc.zig`
 7) Kitty Graphics: `src/terminal/kitty/graphics.zig`
-8) Input Encoding: `src/terminal/input/encoder.zig` (CSI u/kitty mapping)
+8) Input Encoding: `src/terminal/input/key_encoder.zig` + `src/terminal/input/key_encoding.zig` (CSI u/kitty mapping)
 
 ## Stable API Surface (public)
 `TerminalSession` should expose only:
@@ -163,7 +163,7 @@ Progress:
 - Extraction-only constraint: no renaming of public symbols, no logic changes, no behavior-motivated simplifications, no "while we're here" cleanups.
 
 ## Decisions Locked
-- Approved fixture list (16 total) is authoritative.
+- Approved fixture list (19 total) is authoritative.
 - Replay harness snapshot format is fixed by the approved outline.
 - Tests + goldens gate all refactors.
 - Extraction-only means no renames, no cleanup, no behavior changes.

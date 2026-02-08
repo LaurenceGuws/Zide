@@ -222,7 +222,8 @@ Progress:
 
 Decision:
 - Linux: use fontconfig to resolve missing glyphs across installed fonts; cache resolved faces for reuse.
-- macOS/Windows: TODO for CoreText/DirectWrite fallback to match Linux behavior.
+- macOS: TODO for CoreText-based fallback to match Linux behavior.
+- Windows: DirectWrite-based fallback resolver is implemented (see `src/ui/terminal_font.zig`).
 - Keep embedded fallback fonts optional to avoid bundling large font sets by default.
 
 Why:
@@ -296,8 +297,8 @@ Research notes:
 Known gaps (as of 2026-01-28):
 - Kitty graphics protocol is still partial (see IMG-01 in `app_architecture/terminal/protocol_todo.yaml`).
 - Terminfo feature parity sweep is pending (TERM-01).
-- Tests + fixtures are not implemented yet (see Layer 10).
-- Cross-platform font fallback (macOS/Windows) is still TODO.
+- Replay harness + fixtures exist and gate refactors (see Layer 10; run `zig build test-terminal-replay -- --all`).
+- Cross-platform font fallback: macOS is still TODO; Windows has a DirectWrite-based resolver.
 
 ### Layer 9: Performance + Polish
 
@@ -337,19 +338,25 @@ Planned improvements (2026-01-28):
 ### Layer 10: Tests + Fixtures
 
 Progress:
-- Not implemented.
+
+- Implemented VT replay harness + deterministic snapshot goldens.
+- Fixtures live under `fixtures/terminal` and are executed via `zig build test-terminal-replay`.
+- Encoder fixtures live under `fixtures/terminal/encoder`.
 
 Decision:
-- TBD.
+
+- Replay goldens are regression authority for extraction-only refactors.
+- Snapshot encoding format is versioned (`TERM_SNAPSHOT v1`) and must remain stable.
 
 Why:
-- TBD.
+
+- The terminal code is performance-sensitive and large; goldens prevent accidental semantic drift while extracting.
 
 ## Immediate next steps
 
-1) Implement the terminal replay harness + goldens (Layer 10; see `app_architecture/terminal/REPLAY_HARNESS_SPEC.md`).
+1) Keep the replay harness green and add fixtures when fixing regressions (`zig build test-terminal-replay -- --all`).
 2) Finish kitty graphics protocol completeness (IMG-01 plan).
-3) Improve font fallback and rasterization quality (multi-font chain + LCD/grayscale).
+3) Improve cross-platform font fallback and rasterization quality (multi-font chain + LCD/grayscale).
 
 ## Related docs
 

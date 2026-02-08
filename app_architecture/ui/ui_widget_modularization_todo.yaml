@@ -1,0 +1,156 @@
+ui_widget_modularization_todo:
+  scope:
+    description: "Modularize Zide UI widgets into small, testable units while preserving behavior and keeping the SDL3 renderer path stable."
+    priorities:
+      - "keep hot paths allocation-light (frame budget friendly)"
+      - "reduce single-file widgets to clear submodules"
+      - "preserve existing look/interaction; extraction-only by default"
+      - "enforce import/layering constraints via existing checks"
+
+  context:
+    notes:
+      - "Terminal backend modularization is tracked separately under app_architecture/terminal/* and is already largely complete."
+      - "Renderer work is tracked under app_architecture/ui/renderer_todo.yaml."
+      - "SDL3 migration work is tracked under app_architecture/ui/sdl3_migration_todo.yaml."
+
+  zide_integration:
+    entry_points:
+      - src/main.zig
+      - src/ui/widgets.zig
+      - src/ui/renderer.zig
+      - src/ui/widgets/terminal_widget.zig
+      - src/ui/widgets/editor_widget.zig
+
+  conventions:
+    widget_pattern:
+      - "Keep <name>_widget.zig as the orchestrator (state + wiring)."
+      - "Prefer splitting into <name>_widget_draw.zig and <name>_widget_input.zig when a widget exceeds ~800 LOC."
+      - "Put reusable helpers in src/ui/widgets/common.zig or a new focused file under src/ui/widgets/*.zig."
+    guardrails:
+      - "Default mode is extraction-only: no behavior changes while splitting files."
+      - "Avoid new allocations in per-frame draw paths; preallocate + retain capacity."
+      - "Use existing layering checks: zig build check-app-imports, zig build check-editor-imports, zig build check-input-imports."
+
+  phases:
+    - name: "Phase 0 - Baseline + Contracts"
+      tasks:
+        - id: UI-0-01
+          title: "Document widget API shape (init/deinit, handleInput, draw, take actions)"
+          status: todo
+          files_to_edit:
+            - app_architecture/ui/ui_widget_modularization_todo.yaml
+          notes:
+            - "Capture de-facto conventions already used by EditorWidget + TerminalWidget so new widgets are consistent."
+
+        - id: UI-0-02
+          title: "Add UI layering notes to app import rules (no new check target)"
+          status: todo
+          files_to_edit:
+            - app_architecture/ui/DEVELOPMENT_JOURNEY.md
+          notes:
+            - "Prefer documenting what check-app-imports enforces rather than adding a new build step." 
+
+    - name: "Phase 1 - Terminal Widget Split (UI-side)"
+      tasks:
+        - id: UI-TW-01
+          title: "Extract ctrl+click open logic from terminal_widget"
+          status: todo
+          files_to_edit:
+            - src/ui/widgets/terminal_widget.zig
+          files_to_add:
+            - src/ui/widgets/terminal_widget_open.zig
+          notes:
+            - "Move: token extraction + parsePathAndLocation + PendingOpen plumbing helpers."
+            - "Keep behavior identical to current P8-10 implementation in terminal_widget_todo." 
+
+        - id: UI-TW-02
+          title: "Extract kitty image upload + texture cache"
+          status: todo
+          files_to_edit:
+            - src/ui/widgets/terminal_widget.zig
+          files_to_add:
+            - src/ui/widgets/terminal_widget_kitty.zig
+          notes:
+            - "Move: kitty_textures, pending upload set/list, GL texture lifetime."
+            - "Keep renderer-facing structs (Texture, GL calls) local to this module."
+
+        - id: UI-TW-03
+          title: "Extract hover/link underline overlay path"
+          status: todo
+          files_to_edit:
+            - src/ui/widgets/terminal_widget.zig
+          files_to_add:
+            - src/ui/widgets/terminal_widget_hover.zig
+          notes:
+            - "Move: hover state tracking, linkIdAtCell + underline draw decisions."
+            - "Keep the existing no-full-redraw overlay pass behavior." 
+
+        - id: UI-TW-04
+          title: "Split terminal widget into draw vs input modules"
+          status: todo
+          files_to_edit:
+            - src/ui/widgets/terminal_widget.zig
+          files_to_add:
+            - src/ui/widgets/terminal_widget_draw.zig
+            - src/ui/widgets/terminal_widget_input.zig
+          notes:
+            - "Mirror the pattern already used by EditorWidget (editor_widget_draw.zig / editor_widget_input.zig)."
+            - "Goal: terminal_widget.zig becomes a thin orchestrator (ideally <500 LOC)."
+
+        - id: UI-TW-05
+          title: "Add terminal widget micro-bench hooks (draw time + uploads)"
+          status: todo
+          files_to_edit:
+            - src/ui/widgets/terminal_widget.zig
+            - src/ui/renderer/time_utils.zig
+          notes:
+            - "Keep disabled by default; log via app_logger when enabled." 
+
+    - name: "Phase 2 - Editor Widget Followups"
+      tasks:
+        - id: UI-EW-01
+          title: "Confirm editor widget already split (draw/input) and keep stable"
+          status: done
+          files:
+            - src/ui/widgets/editor_widget.zig
+            - src/ui/widgets/editor_widget_draw.zig
+            - src/ui/widgets/editor_widget_input.zig
+          notes:
+            - "This is the reference pattern for TerminalWidget splitting." 
+
+    - name: "Phase 3 - Widgets Registry + Shared UI Helpers"
+      tasks:
+        - id: UI-W-01
+          title: "Make src/ui/widgets.zig a thin registry (no large logic blocks)"
+          status: todo
+          files_to_edit:
+            - src/ui/widgets.zig
+          notes:
+            - "Move non-registry logic into src/ui/widgets/common.zig or a dedicated module." 
+
+        - id: UI-W-02
+          title: "Consolidate small shared helpers (hit-testing, cell math, DPI)"
+          status: todo
+          files_to_edit:
+            - src/ui/widgets/common.zig
+          notes:
+            - "Avoid cross-widget copy/paste. Keep helpers UI-only (no terminal core imports)."
+
+    - name: "Phase 4 - Verification"
+      tasks:
+        - id: UI-V-01
+          title: "Build + run smoke after each extraction"
+          status: todo
+          commands:
+            - zig build run -- --mode terminal
+            - zig build run
+          notes:
+            - "Terminal mode validates TerminalWidget wiring. Default run validates app composition." 
+
+        - id: UI-V-02
+          title: "Run import checks after each phase"
+          status: todo
+          commands:
+            - zig build check-app-imports
+            - zig build check-editor-imports
+            - zig build check-input-imports

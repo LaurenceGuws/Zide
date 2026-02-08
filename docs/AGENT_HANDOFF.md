@@ -16,14 +16,19 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 ## Handoff (High-Level)
 
 ### Current Focus
-- Terminal modularization: extraction-only refactors of `src/terminal/core/terminal_session.zig` and related helpers per `app_architecture/terminal/MODULARIZATION_PLAN.md`.
-- Terminal correctness fixtures are locked with replay goldens; keep replay harness green while extracting.
-- SDL3 migration remains the baseline; keep parity stable while terminal changes land (see `app_architecture/ui/sdl3_migration_todo.yaml`).
+- UI widget modularization: extraction-only splits of large UI widgets into small UI-only modules.
+  - Primary target: split `src/ui/widgets/terminal_widget.zig` (currently ~2k LOC) into `*_draw.zig`, `*_input.zig`, and focused helpers.
+  - Source of truth: `app_architecture/ui/ui_widget_modularization_todo.yaml`
+- Terminal backend modularization is largely complete; still keep replay harness green when touching terminal code.
+  - Terminal plan: `app_architecture/terminal/MODULARIZATION_PLAN.md`
+  - Run: `zig build test-terminal-replay -- --all`
+- SDL3 migration remains the baseline; keep parity stable while UI changes land (see `app_architecture/ui/sdl3_migration_todo.yaml`).
 
 ### Recent Changes (High-Level)
 - Terminal replay harness now supports `--update-goldens` for snapshot refresh.
 - New replay fixtures for gping/nvim overlay + vttest wraparound; goldens updated.
 - Modularization extractions: render cache, palette/dynamic colors, OSC helpers (semantic, clipboard, CWD, hyperlink, title), input helpers (mouse, key encoding).
+- Added UI widget modularization todo to guide widget-level extraction work (TerminalWidget UI-side split).
 
 ### Constraints / Guardrails
 - Handoff docs are high-level only; progress tracking lives in todo + app_architecture docs.
@@ -35,6 +40,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - UI rendering plan + per-OS journey: `app_architecture/ui/DEVELOPMENT_JOURNEY.md`
 - Renderer modularization + OS abstraction plan: `app_architecture/ui/renderer_todo.yaml`
 - SDL3 migration tracker: `app_architecture/ui/sdl3_migration_todo.yaml`
+- UI widget modularization plan: `app_architecture/ui/ui_widget_modularization_todo.yaml`
 - Editor widget roadmap: `app_architecture/editor/editor_widget_todo.yaml`
 - Terminal roadmap + modularization: `app_architecture/terminal/MODULARIZATION_PLAN.md`
 - Terminal design notes: `app_architecture/terminal/DESIGN.md`
@@ -48,7 +54,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
  - Scrollback view cache + reflow resizing are still in progress; expect instability during the redesign.
 
 ### In-Progress (Uncommitted)
-- None.
+- Docs updated to shift current focus to UI widget modularization; pending commit.
 
 ### Checklist
 - `zig build test`

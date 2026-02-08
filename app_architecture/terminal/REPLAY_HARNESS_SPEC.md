@@ -68,14 +68,15 @@ scrollback: count=<N> view_offset=<offset>
 title: "<title_or_empty>"
 cwd: "<cwd_or_empty>"
 clipboard: "<base64_or_empty>"
+selection: <none|range>
 ```
 
 Grid encoding (viewport):
-- Blank cell: use `·` (or another fixed ASCII-safe marker, but keep it consistent).
-- Normal cell: UTF-8 char as stored.
+- Blank cell: use `.` (fixed marker).
+- Normal cell: quoted UTF-8 glyph, e.g. `"A"`.
 - Wide char: two cells:
-  - first cell contains glyph
-  - second cell contains WIDE_FOLLOW marker (fixed, e.g. `→` or `#`)
+  - first cell contains the quoted glyph
+  - second cell contains the WIDE_FOLLOW marker `^`
 - Combining mark: represent as base+combining if stored in same cell; otherwise use a fixed combining marker (deterministic rule).
 
 Attributes encoding (deterministic):

@@ -84,7 +84,7 @@ Enforcement:
 Shared types entry point:
 - `src/types/mod.zig` re-exports shared input/actions/layout/snapshot types.
 - `EditorSnapshot.text_owned` indicates whether `text` must be freed by the caller.
-- Terminal snapshot adapter currently maps rows/cols/cursor only (cells remain empty).
+- Terminal snapshots and render caches carry full grid state; widgets should treat these as immutable, per-frame view data.
 - `InputBatch` now captures per-frame key/mouse state + text events and is used by main + widgets.
 - Terminal hover state is updated during input handling; draw reads cached hover info.
 - Top bars (options/tab/side/status) update hover state during input; draw uses cached state.
