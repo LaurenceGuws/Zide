@@ -16,18 +16,22 @@ pub fn initGlResources(renderer: anytype) !void {
         "layout (location = 0) in vec2 a_pos;\n" ++
         "layout (location = 1) in vec2 a_uv;\n" ++
         "layout (location = 2) in vec4 a_color;\n" ++
+        "layout (location = 3) in vec4 a_bg_color;\n" ++
         "out vec2 v_uv;\n" ++
         "out vec4 v_color;\n" ++
+        "out vec4 v_bg_color;\n" ++
         "uniform mat4 u_proj;\n" ++
         "void main() {\n" ++
         "    v_uv = a_uv;\n" ++
         "    v_color = a_color;\n" ++
+        "    v_bg_color = a_bg_color;\n" ++
         "    gl_Position = u_proj * vec4(a_pos, 0.0, 1.0);\n" ++
         "}\n";
     const fragment_src =
         "#version 330 core\n" ++
         "in vec2 v_uv;\n" ++
         "in vec4 v_color;\n" ++
+        "in vec4 v_bg_color;\n" ++
         "out vec4 frag_color;\n" ++
         "uniform sampler2D u_tex;\n" ++
         "uniform int u_kind;\n" ++
@@ -144,6 +148,16 @@ pub fn initGlResources(renderer: anytype) !void {
         gl.c.GL_FALSE,
         @sizeOf(@TypeOf(renderer.batch_vertices.items[0])),
         @ptrFromInt(4 * @sizeOf(f32)),
+    );
+
+    gl.EnableVertexAttribArray(3);
+    gl.VertexAttribPointer(
+        3,
+        4,
+        gl.c.GL_FLOAT,
+        gl.c.GL_FALSE,
+        @sizeOf(@TypeOf(renderer.batch_vertices.items[0])),
+        @ptrFromInt(8 * @sizeOf(f32)),
     );
 
     gl.Enable(gl.c.GL_BLEND);

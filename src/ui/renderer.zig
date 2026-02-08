@@ -219,6 +219,10 @@ pub const Renderer = struct {
     dst_linear_active: bool,
     white_texture: types.Texture,
 
+    // Text background behind glyphs (used for optional linear correction).
+    // Default is alpha=0, which disables correction in the shader.
+    text_bg_rgba: types.Rgba,
+
     font_size: f32,
     base_font_size: f32,
     char_width: f32,
@@ -329,6 +333,7 @@ pub const Renderer = struct {
             .uniform_dst_linear = -1,
             .dst_linear_active = false,
             .white_texture = .{ .id = 0, .width = 0, .height = 0 },
+            .text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 },
             .font_size = font_size,
             .base_font_size = base_font_size,
             .char_width = font_size * 0.6,
@@ -655,7 +660,7 @@ pub const Renderer = struct {
                 .width = @floatFromInt(target.logical_width),
                 .height = @floatFromInt(target.logical_height),
             };
-            draw_ops.drawTextureRect(self, target.texture, src, dest, Color.white.toRgba(), .linear_premul);
+            draw_ops.drawTextureRect(self, target.texture, src, dest, Color.white.toRgba(), types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .linear_premul);
         }
     }
 
@@ -675,7 +680,7 @@ pub const Renderer = struct {
                 .width = @floatFromInt(target.logical_width),
                 .height = @floatFromInt(target.logical_height),
             };
-            draw_ops.drawTextureRect(self, target.texture, src, dest, Color.white.toRgba(), .linear_premul);
+            draw_ops.drawTextureRect(self, target.texture, src, dest, Color.white.toRgba(), types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .linear_premul);
         }
     }
 
@@ -1118,12 +1123,12 @@ pub const Renderer = struct {
     }
 
     fn drawTextureRect(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
-        draw_ops.drawTextureRect(self, texture, src, dest, color, .rgba);
+        draw_ops.drawTextureRect(self, texture, src, dest, color, types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);
     }
 
     fn drawTextureRectThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         const self: *Renderer = @ptrCast(@alignCast(ctx));
-        draw_ops.drawTextureRect(self, texture, src, dest, color, kind);
+        draw_ops.drawTextureRect(self, texture, src, dest, color, self.text_bg_rgba, kind);
     }
 
     fn drawRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
@@ -1141,7 +1146,7 @@ pub const Renderer = struct {
     }
 
     fn addBatchQuad(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
-        draw_ops.addBatchQuad(self, texture, src, dest, color, .rgba);
+        draw_ops.addBatchQuad(self, texture, src, dest, color, types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);
     }
 
     pub fn addTerminalRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
@@ -1154,12 +1159,12 @@ pub const Renderer = struct {
 
     fn drawTextureBatchThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        draw_ops.addBatchQuad(renderer, texture, src, dest, color, kind);
+        draw_ops.addBatchQuad(renderer, texture, src, dest, color, renderer.text_bg_rgba, kind);
     }
 
     fn drawTextureGlyphCacheThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        renderer.terminal_glyph_cache.addQuad(texture, src, dest, color, kind);
+        renderer.terminal_glyph_cache.addQuad(texture, src, dest, color, renderer.text_bg_rgba, kind);
     }
 
     fn addTerminalGlyphRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
@@ -1169,7 +1174,7 @@ pub const Renderer = struct {
 
     fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        draw_ops.drawTextureRect(renderer, texture, src, dest, color, kind);
+        draw_ops.drawTextureRect(renderer, texture, src, dest, color, renderer.text_bg_rgba, kind);
     }
 
     pub fn createTextureFromRgba(_: *Renderer, width: i32, height: i32, data: []const u8, filter: i32) ?types.Texture {
