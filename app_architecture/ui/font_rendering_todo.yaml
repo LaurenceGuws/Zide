@@ -73,7 +73,7 @@ font_rendering_todo:
       tasks:
         - id: FR-1-01
           title: "Split terminal font atlas into coverage vs color"
-          status: todo
+          status: done
           files_to_edit:
             - src/ui/terminal_font.zig
           notes:
@@ -82,16 +82,17 @@ font_rendering_todo:
 
         - id: FR-1-02
           title: "Add glyph/text shader path that supports linear blending + fallback"
-          status: todo
+          status: in_progress
           files_to_edit:
             - src/ui/renderer/gl_backend.zig
           notes:
             - "Model after ghostty: reference_repos/terminals/ghostty/src/renderer/shaders/glsl/cell_text.f.glsl and common.glsl."
             - "If we can't rely on an sRGB framebuffer, unlinearize in shader for compatibility."
+            - "Partial: added a texture-kind uniform to support a coverage atlas (no linear blending yet)."
 
         - id: FR-1-03
           title: "Remove CPU-side gamma baking during glyph upload"
-          status: todo
+          status: done
           files_to_edit:
             - src/ui/terminal_font.zig
           notes:
