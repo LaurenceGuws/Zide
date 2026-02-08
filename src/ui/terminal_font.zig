@@ -249,11 +249,12 @@ pub const AllowSquareGlyphOverflow = enum {
 
 pub const Rect = types.Rect;
 pub const Texture = types.Texture;
+pub const TextureKind = types.TextureKind;
 pub const Rgba = types.Rgba;
 
 pub const DrawContext = struct {
     ctx: *anyopaque,
-    drawTexture: *const fn (ctx: *anyopaque, texture: Texture, src: Rect, dest: Rect, color: Rgba) void,
+    drawTexture: *const fn (ctx: *anyopaque, texture: Texture, src: Rect, dest: Rect, color: Rgba, kind: TextureKind) void,
 };
 
 pub const Glyph = struct {
@@ -306,7 +307,8 @@ pub const TerminalFont = struct {
     fc_config: ?FcConfigPtr,
     system_fallback_by_cp: std.AutoHashMap(u32, ?[]u8),
     system_faces: std.StringHashMapUnmanaged(FacePair),
-    texture: Texture,
+    coverage_texture: Texture,
+    color_texture: Texture,
     atlas_width: i32,
     atlas_height: i32,
     pen_x: i32,
@@ -532,11 +534,17 @@ pub const TerminalFont = struct {
         const atlas_height: i32 = 2048;
         const padding: i32 = 1;
 
-        const zero_len: usize = @as(usize, @intCast(atlas_width * atlas_height * 4));
-        const zero_buf = allocator.alloc(u8, zero_len) catch return error.OutOfMemory;
-        defer allocator.free(zero_buf);
-        @memset(zero_buf, 0);
-        const texture = createTexture(atlas_width, atlas_height, zero_buf);
+        const zero_cov_len: usize = @as(usize, @intCast(atlas_width * atlas_height));
+        const zero_cov_buf = allocator.alloc(u8, zero_cov_len) catch return error.OutOfMemory;
+        defer allocator.free(zero_cov_buf);
+        @memset(zero_cov_buf, 0);
+        const coverage_texture = createTextureR8(atlas_width, atlas_height, zero_cov_buf);
+
+        const zero_col_len: usize = @as(usize, @intCast(atlas_width * atlas_height * 4));
+        const zero_col_buf = allocator.alloc(u8, zero_col_len) catch return error.OutOfMemory;
+        defer allocator.free(zero_col_buf);
+        @memset(zero_col_buf, 0);
+        const color_texture = createTexture(atlas_width, atlas_height, zero_col_buf);
 
         return .{
             .allocator = allocator,
@@ -561,7 +569,8 @@ pub const TerminalFont = struct {
             .fc_config = fc_config,
             .system_fallback_by_cp = std.AutoHashMap(u32, ?[]u8).init(allocator),
             .system_faces = .{},
-            .texture = texture,
+            .coverage_texture = coverage_texture,
+            .color_texture = color_texture,
             .atlas_width = atlas_width,
             .atlas_height = atlas_height,
             .pen_x = padding,
@@ -617,9 +626,8 @@ pub const TerminalFont = struct {
         }
         self.system_faces.deinit(self.allocator);
 
-        if (self.texture.id != 0) {
-            gl.DeleteTextures(1, &self.texture.id);
-        }
+        if (self.coverage_texture.id != 0) gl.DeleteTextures(1, &self.coverage_texture.id);
+        if (self.color_texture.id != 0) gl.DeleteTextures(1, &self.color_texture.id);
         if (self.symbols_hb_font) |fb_hb| c.hb_font_destroy(fb_hb);
         if (self.symbols_ft_face) |fb_face| _ = c.FT_Done_Face(fb_face);
         if (self.unicode_symbols2_hb_font) |fb_hb| c.hb_font_destroy(fb_hb);
@@ -640,9 +648,16 @@ pub const TerminalFont = struct {
     }
 
     pub fn setAtlasFilterPoint(self: *TerminalFont) void {
-        gl.BindTexture(gl.c.GL_TEXTURE_2D, self.texture.id);
-        gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MIN_FILTER, gl.c.GL_NEAREST);
-        gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MAG_FILTER, gl.c.GL_NEAREST);
+        if (self.coverage_texture.id != 0) {
+            gl.BindTexture(gl.c.GL_TEXTURE_2D, self.coverage_texture.id);
+            gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MIN_FILTER, gl.c.GL_NEAREST);
+            gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MAG_FILTER, gl.c.GL_NEAREST);
+        }
+        if (self.color_texture.id != 0) {
+            gl.BindTexture(gl.c.GL_TEXTURE_2D, self.color_texture.id);
+            gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MIN_FILTER, gl.c.GL_NEAREST);
+            gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MAG_FILTER, gl.c.GL_NEAREST);
+        }
     }
 
     pub fn drawGlyph(self: *TerminalFont, draw: DrawContext, codepoint: u32, x: f32, y: f32, cell_width: f32, cell_height: f32, followed_by_space: bool, color: Rgba) void {
@@ -690,7 +705,11 @@ pub const TerminalFont = struct {
             const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
             const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y)))));
             const dest = Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
-            draw.drawTexture(draw.ctx, self.texture, glyph.rect, dest, draw_color);
+            if (glyph.is_color) {
+                draw.drawTexture(draw.ctx, self.color_texture, glyph.rect, dest, draw_color, .rgba);
+            } else {
+                draw.drawTexture(draw.ctx, self.coverage_texture, glyph.rect, dest, draw_color, .font_coverage);
+            }
             return;
         }
 
@@ -700,7 +719,11 @@ pub const TerminalFont = struct {
         const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
         const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y)))));
         const dest = Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
-        draw.drawTexture(draw.ctx, self.texture, glyph.rect, dest, draw_color);
+        if (glyph.is_color) {
+            draw.drawTexture(draw.ctx, self.color_texture, glyph.rect, dest, draw_color, .rgba);
+        } else {
+            draw.drawTexture(draw.ctx, self.coverage_texture, glyph.rect, dest, draw_color, .font_coverage);
+        }
     }
 
     pub fn glyphAdvance(self: *TerminalFont, codepoint: u32) GlyphError!f32 {
@@ -1267,7 +1290,8 @@ pub const TerminalFont = struct {
             }
 
             const pixel_count = @as(usize, @intCast(width * height));
-            const needed = pixel_count * 4;
+            const is_color_bitmap = bitmap.pixel_mode == c.FT_PIXEL_MODE_BGRA;
+            const needed = if (is_color_bitmap) pixel_count * 4 else pixel_count;
             if (needed > self.upload_buffer_capacity) {
                 if (self.upload_buffer_capacity > 0) {
                     self.allocator.free(self.upload_buffer);
@@ -1275,51 +1299,37 @@ pub const TerminalFont = struct {
                 self.upload_buffer = try self.allocator.alloc(u8, needed);
                 self.upload_buffer_capacity = needed;
             }
-            const rgba = self.upload_buffer[0..needed];
+            const upload = self.upload_buffer[0..needed];
 
             var y: i32 = 0;
             while (y < height) : (y += 1) {
                 var x: i32 = 0;
                 while (x < width) : (x += 1) {
-                    var r: u8 = 0;
-                    var g: u8 = 0;
-                    var b: u8 = 0;
-                    var a: u8 = 0;
-                    if (bitmap.pixel_mode == c.FT_PIXEL_MODE_BGRA) {
+                    if (is_color_bitmap) {
                         const base = @as(usize, @intCast(y * @as(i32, @intCast(bitmap.pitch)) + x * 4));
-                        b = bitmap.buffer[base + 0];
-                        g = bitmap.buffer[base + 1];
-                        r = bitmap.buffer[base + 2];
-                        a = bitmap.buffer[base + 3];
-                    } else if (bitmap.pixel_mode == c.FT_PIXEL_MODE_LCD) {
-                        const base = @as(usize, @intCast(y * @as(i32, @intCast(bitmap.pitch)) + x * 3));
-                        r = bitmap.buffer[base + 0];
-                        g = bitmap.buffer[base + 1];
-                        b = bitmap.buffer[base + 2];
-                        a = @max(r, @max(g, b));
+                        const b = bitmap.buffer[base + 0];
+                        const g = bitmap.buffer[base + 1];
+                        const r = bitmap.buffer[base + 2];
+                        const a = bitmap.buffer[base + 3];
+                        const dst_idx = @as(usize, @intCast((y * width + x) * 4));
+                        upload[dst_idx] = r;
+                        upload[dst_idx + 1] = g;
+                        upload[dst_idx + 2] = b;
+                        upload[dst_idx + 3] = a;
                     } else {
-                        const src_idx = @as(usize, @intCast(y * @as(i32, @intCast(bitmap.pitch)) + x));
-                        a = bitmap.buffer[src_idx];
-                        r = a;
-                        g = a;
-                        b = a;
-                    }
-                    const dst_idx = @as(usize, @intCast((y * width + x) * 4));
-                    if (bitmap.pixel_mode == c.FT_PIXEL_MODE_BGRA) {
-                        rgba[dst_idx] = r;
-                        rgba[dst_idx + 1] = g;
-                        rgba[dst_idx + 2] = b;
-                        rgba[dst_idx + 3] = a;
-                    } else {
-                        const gamma = 1.0 / 2.2;
-                        const rf = std.math.pow(f32, @as(f32, @floatFromInt(r)) / 255.0, gamma);
-                        const gf = std.math.pow(f32, @as(f32, @floatFromInt(g)) / 255.0, gamma);
-                        const bf = std.math.pow(f32, @as(f32, @floatFromInt(b)) / 255.0, gamma);
-                        const af = std.math.pow(f32, @as(f32, @floatFromInt(a)) / 255.0, gamma);
-                        rgba[dst_idx] = @intFromFloat(@min(255.0, rf * 255.0));
-                        rgba[dst_idx + 1] = @intFromFloat(@min(255.0, gf * 255.0));
-                        rgba[dst_idx + 2] = @intFromFloat(@min(255.0, bf * 255.0));
-                        rgba[dst_idx + 3] = @intFromFloat(@min(255.0, af * 255.0));
+                        var a: u8 = 0;
+                        if (bitmap.pixel_mode == c.FT_PIXEL_MODE_LCD) {
+                            const base = @as(usize, @intCast(y * @as(i32, @intCast(bitmap.pitch)) + x * 3));
+                            const r = bitmap.buffer[base + 0];
+                            const g = bitmap.buffer[base + 1];
+                            const b = bitmap.buffer[base + 2];
+                            a = @max(r, @max(g, b));
+                        } else {
+                            const src_idx = @as(usize, @intCast(y * @as(i32, @intCast(bitmap.pitch)) + x));
+                            a = bitmap.buffer[src_idx];
+                        }
+                        const dst_idx = @as(usize, @intCast(y * width + x));
+                        upload[dst_idx] = a;
                     }
                 }
             }
@@ -1330,7 +1340,11 @@ pub const TerminalFont = struct {
                 .width = @floatFromInt(width),
                 .height = @floatFromInt(height),
             };
-            updateTextureRegion(self.texture, rec, rgba);
+            if (is_color_bitmap) {
+                updateTextureRegion(self.color_texture, rec, upload);
+            } else {
+                updateTextureRegionR8(self.coverage_texture, rec, upload);
+            }
 
             if (height > self.row_h) self.row_h = height;
             const advance = @as(f32, @floatFromInt(positions[0].x_advance)) / 64.0;
@@ -1341,7 +1355,7 @@ pub const TerminalFont = struct {
                 .advance = if (advance > 0) advance else @as(f32, @floatFromInt(slot.*.advance.x)) / 64.0,
                 .width = width,
                 .height = height,
-                .is_color = bitmap.pixel_mode == c.FT_PIXEL_MODE_BGRA,
+                .is_color = is_color_bitmap,
             };
             if (self.max_glyphs > 0 and self.glyphs.count() >= self.max_glyphs) {
                 if (self.glyph_order.items.len > 0) {
@@ -1386,14 +1400,20 @@ pub const TerminalFont = struct {
         self.pen_y = self.padding;
         self.row_h = 0;
 
-        if (self.texture.id != 0) {
-            gl.DeleteTextures(1, &self.texture.id);
-        }
-        const zero_len: usize = @as(usize, @intCast(self.atlas_width * self.atlas_height * 4));
-        const zero_buf = self.allocator.alloc(u8, zero_len) catch return error.OutOfMemory;
-        defer self.allocator.free(zero_buf);
-        @memset(zero_buf, 0);
-        self.texture = createTexture(self.atlas_width, self.atlas_height, zero_buf);
+        if (self.coverage_texture.id != 0) gl.DeleteTextures(1, &self.coverage_texture.id);
+        if (self.color_texture.id != 0) gl.DeleteTextures(1, &self.color_texture.id);
+
+        const zero_cov_len: usize = @as(usize, @intCast(self.atlas_width * self.atlas_height));
+        const zero_cov_buf = self.allocator.alloc(u8, zero_cov_len) catch return error.OutOfMemory;
+        defer self.allocator.free(zero_cov_buf);
+        @memset(zero_cov_buf, 0);
+        self.coverage_texture = createTextureR8(self.atlas_width, self.atlas_height, zero_cov_buf);
+
+        const zero_col_len: usize = @as(usize, @intCast(self.atlas_width * self.atlas_height * 4));
+        const zero_col_buf = self.allocator.alloc(u8, zero_col_len) catch return error.OutOfMemory;
+        defer self.allocator.free(zero_col_buf);
+        @memset(zero_col_buf, 0);
+        self.color_texture = createTexture(self.atlas_width, self.atlas_height, zero_col_buf);
 
         const count = old_order.items.len;
         var kept: usize = 0;
@@ -1430,6 +1450,29 @@ fn createTexture(width: i32, height: i32, data: []const u8) Texture {
     return .{ .id = id, .width = width, .height = height };
 }
 
+fn createTextureR8(width: i32, height: i32, data: []const u8) Texture {
+    var id: gl.GLuint = 0;
+    gl.GenTextures(1, &id);
+    gl.BindTexture(gl.c.GL_TEXTURE_2D, id);
+    gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MIN_FILTER, gl.c.GL_NEAREST);
+    gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MAG_FILTER, gl.c.GL_NEAREST);
+    gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_WRAP_S, gl.c.GL_CLAMP_TO_EDGE);
+    gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_WRAP_T, gl.c.GL_CLAMP_TO_EDGE);
+    gl.PixelStorei(gl.c.GL_UNPACK_ALIGNMENT, 1);
+    gl.TexImage2D(
+        gl.c.GL_TEXTURE_2D,
+        0,
+        gl.c.GL_R8,
+        width,
+        height,
+        0,
+        gl.c.GL_RED,
+        gl.c.GL_UNSIGNED_BYTE,
+        data.ptr,
+    );
+    return .{ .id = id, .width = width, .height = height };
+}
+
 fn updateTextureRegion(texture: Texture, rect: Rect, data: []const u8) void {
     const w: i32 = @intFromFloat(rect.width);
     const h: i32 = @intFromFloat(rect.height);
@@ -1444,6 +1487,25 @@ fn updateTextureRegion(texture: Texture, rect: Rect, data: []const u8) void {
         w,
         h,
         gl.c.GL_RGBA,
+        gl.c.GL_UNSIGNED_BYTE,
+        data.ptr,
+    );
+}
+
+fn updateTextureRegionR8(texture: Texture, rect: Rect, data: []const u8) void {
+    const w: i32 = @intFromFloat(rect.width);
+    const h: i32 = @intFromFloat(rect.height);
+    if (w <= 0 or h <= 0) return;
+    gl.BindTexture(gl.c.GL_TEXTURE_2D, texture.id);
+    gl.PixelStorei(gl.c.GL_UNPACK_ALIGNMENT, 1);
+    gl.TexSubImage2D(
+        gl.c.GL_TEXTURE_2D,
+        0,
+        @intFromFloat(rect.x),
+        @intFromFloat(rect.y),
+        w,
+        h,
+        gl.c.GL_RED,
         gl.c.GL_UNSIGNED_BYTE,
         data.ptr,
     );
