@@ -26,6 +26,21 @@ ui_widget_modularization_todo:
       - "Keep <name>_widget.zig as the orchestrator (state + wiring)."
       - "Prefer splitting into <name>_widget_draw.zig and <name>_widget_input.zig when a widget exceeds ~800 LOC."
       - "Put reusable helpers in src/ui/widgets/common.zig or a new focused file under src/ui/widgets/*.zig."
+    widget_api_shape:
+      notes:
+        - "Widgets are UI-only orchestration objects (small amounts of UI state + wiring)."
+        - "Core app logic owns long-lived sessions (Editor/Terminal); widgets render from snapshots and emit action intents."
+      lifecycle:
+        - "init(...) -> Widget: returns a fully-formed widget value; keep allocations out of hot draw paths."
+        - "deinit(self): frees UI-side caches/resources owned by the widget (e.g. GL textures, cached lists)."
+      input:
+        - "handleInput(self, shell, ..., input_batch) -> !bool: consumes per-frame input and returns whether anything was handled."
+        - "When a widget needs to trigger an app action (open file, etc.), it stores a pending request and exposes a take* method."
+      draw:
+        - "draw(self, shell, x, y, width, height, input_snapshot): draws using renderer + snapshot-derived view data; avoid per-frame allocations."
+        - "Any hover state used by draw is computed during input handling and cached on the widget (draw reads cached state)."
+      actions:
+        - "takePendingOpenRequest()/take*: transfers ownership of any allocated payload to the caller; widget clears its pending state."
     guardrails:
       - "Default mode is extraction-only: no behavior changes while splitting files."
       - "Avoid new allocations in per-frame draw paths; preallocate + retain capacity."
@@ -36,7 +51,7 @@ ui_widget_modularization_todo:
       tasks:
         - id: UI-0-01
           title: "Document widget API shape (init/deinit, handleInput, draw, take actions)"
-          status: todo
+          status: done
           files_to_edit:
             - app_architecture/ui/ui_widget_modularization_todo.yaml
           notes:
@@ -44,7 +59,7 @@ ui_widget_modularization_todo:
 
         - id: UI-0-02
           title: "Add UI layering notes to app import rules (no new check target)"
-          status: todo
+          status: done
           files_to_edit:
             - app_architecture/ui/DEVELOPMENT_JOURNEY.md
           notes:
@@ -54,7 +69,7 @@ ui_widget_modularization_todo:
       tasks:
         - id: UI-TW-01
           title: "Extract ctrl+click open logic from terminal_widget"
-          status: todo
+          status: done
           files_to_edit:
             - src/ui/widgets/terminal_widget.zig
           files_to_add:
@@ -65,7 +80,7 @@ ui_widget_modularization_todo:
 
         - id: UI-TW-02
           title: "Extract kitty image upload + texture cache"
-          status: todo
+          status: done
           files_to_edit:
             - src/ui/widgets/terminal_widget.zig
           files_to_add:
@@ -76,7 +91,7 @@ ui_widget_modularization_todo:
 
         - id: UI-TW-03
           title: "Extract hover/link underline overlay path"
-          status: todo
+          status: done
           files_to_edit:
             - src/ui/widgets/terminal_widget.zig
           files_to_add:
@@ -87,7 +102,7 @@ ui_widget_modularization_todo:
 
         - id: UI-TW-04
           title: "Split terminal widget into draw vs input modules"
-          status: todo
+          status: done
           files_to_edit:
             - src/ui/widgets/terminal_widget.zig
           files_to_add:
