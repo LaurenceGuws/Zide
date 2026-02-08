@@ -485,13 +485,13 @@ pub const TerminalFont = struct {
         const descent_raw = @as(f32, @floatFromInt(@abs(metrics.descender >> 6)));
         const line_height_raw = @as(f32, @floatFromInt(metrics.height >> 6));
 
-        // Use typical ASCII glyphs to avoid oversized cell widths.
+        // Derive a reasonable monospace cell width from representative ASCII.
+        // Some fonts (especially Nerd Font builds) can report a very large
+        // `max_advance` due to extra-wide symbols; using it directly causes
+        // gaps/cursor width regressions.
         var cell_width: f32 = 0;
         const max_advance = @as(f32, @floatFromInt(metrics.max_advance >> 6));
-        if (max_advance > 0) {
-            cell_width = max_advance;
-        }
-        const samples = [_]u32{ 'M', 'W', 'd' };
+        const samples = [_]u32{ '0', ' ', 'M', 'W', 'i', 'n' };
         for (samples) |cp| {
             // HarfBuzz advance
             const buffer = c.hb_buffer_create();
@@ -518,9 +518,7 @@ pub const TerminalFont = struct {
             }
         }
 
-        if (cell_width <= 0) {
-            cell_width = max_advance;
-        }
+        if (cell_width <= 0) cell_width = max_advance;
         if (cell_width <= 0) {
             cell_width = size * 0.6;
         }
