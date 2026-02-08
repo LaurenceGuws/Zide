@@ -920,6 +920,157 @@ pub const Renderer = struct {
         }
     }
 
+    pub fn drawTerminalCellGrapheme(
+        self: *Renderer,
+        base: u32,
+        combining: []const u32,
+        x: f32,
+        y: f32,
+        cell_width: f32,
+        cell_height: f32,
+        fg: Color,
+        bg: Color,
+        underline_color: Color,
+        bold: bool,
+        underline: bool,
+        is_cursor: bool,
+        followed_by_space: bool,
+        draw_bg: bool,
+    ) void {
+        if (combining.len == 0) {
+            self.drawTerminalCell(base, x, y, cell_width, cell_height, fg, bg, underline_color, bold, underline, is_cursor, followed_by_space, draw_bg);
+            return;
+        }
+
+        const snapped_x = snapFloat(x);
+        const snapped_y = snapFloat(y);
+        const snapped_cell_width = snapFloat(cell_width);
+        const snapped_cell_height = snapFloat(cell_height);
+        const snapped_cell_w_i = snapInt(self.terminal_cell_width);
+        const snapped_cell_h_i = snapInt(self.terminal_cell_height);
+
+        if (draw_bg) {
+            self.drawRect(
+                snapInt(snapped_x),
+                snapInt(snapped_y),
+                snapped_cell_w_i,
+                snapped_cell_h_i,
+                if (is_cursor) fg else bg,
+            );
+        }
+
+        if (base != 0) {
+            const text_color = if (is_cursor) bg else fg;
+            const draw = terminal_font_mod.DrawContext{ .ctx = self, .drawTexture = drawTextureThunk };
+            const behind = if (is_cursor) fg else bg;
+            var behind_rgba = behind.toRgba();
+            behind_rgba.a = 255;
+            self.text_bg_rgba = behind_rgba;
+
+            // Box glyphs are single-codepoint only.
+            if (!self.drawTerminalBoxGlyph(base, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color)) {
+                self.terminal_font.drawGrapheme(
+                    draw,
+                    base,
+                    combining,
+                    snapped_x,
+                    snapped_y,
+                    snapped_cell_width,
+                    snapped_cell_height,
+                    followed_by_space,
+                    text_color.toRgba(),
+                );
+            }
+
+            if (underline) {
+                terminal_underline.drawUnderline(
+                    drawRectThunk,
+                    self,
+                    snapInt(snapped_x),
+                    snapInt(snapped_y),
+                    snapped_cell_w_i,
+                    snapped_cell_h_i,
+                    underline_color,
+                );
+            }
+        }
+    }
+
+    pub fn drawTerminalCellGraphemeBatched(
+        self: *Renderer,
+        base: u32,
+        combining: []const u32,
+        x: f32,
+        y: f32,
+        cell_width: f32,
+        cell_height: f32,
+        fg: Color,
+        bg: Color,
+        underline_color: Color,
+        bold: bool,
+        underline: bool,
+        is_cursor: bool,
+        followed_by_space: bool,
+        draw_bg: bool,
+    ) void {
+        if (combining.len == 0) {
+            self.drawTerminalCellBatched(base, x, y, cell_width, cell_height, fg, bg, underline_color, bold, underline, is_cursor, followed_by_space, draw_bg);
+            return;
+        }
+
+        const snapped_x = snapFloat(x);
+        const snapped_y = snapFloat(y);
+        const snapped_cell_width = snapFloat(cell_width);
+        const snapped_cell_height = snapFloat(cell_height);
+        const snapped_cell_w_i = snapInt(self.terminal_cell_width);
+        const snapped_cell_h_i = snapInt(self.terminal_cell_height);
+
+        if (draw_bg) {
+            self.addTerminalRect(
+                snapInt(snapped_x),
+                snapInt(snapped_y),
+                snapped_cell_w_i,
+                snapped_cell_h_i,
+                if (is_cursor) fg else bg,
+            );
+        }
+
+        if (base != 0) {
+            const text_color = if (is_cursor) bg else fg;
+            const draw = terminal_font_mod.DrawContext{ .ctx = self, .drawTexture = drawTextureGlyphCacheThunk };
+            const behind = if (is_cursor) fg else bg;
+            var behind_rgba = behind.toRgba();
+            behind_rgba.a = 255;
+            self.text_bg_rgba = behind_rgba;
+
+            if (!self.drawTerminalBoxGlyphBatched(base, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color)) {
+                self.terminal_font.drawGrapheme(
+                    draw,
+                    base,
+                    combining,
+                    snapped_x,
+                    snapped_y,
+                    snapped_cell_width,
+                    snapped_cell_height,
+                    followed_by_space,
+                    text_color.toRgba(),
+                );
+            }
+
+            if (underline) {
+                terminal_underline.drawUnderline(
+                    addTerminalGlyphRectThunk,
+                    self,
+                    snapInt(snapped_x),
+                    snapInt(snapped_y),
+                    snapped_cell_w_i,
+                    snapped_cell_h_i,
+                    underline_color,
+                );
+            }
+        }
+    }
+
     pub fn drawTerminalCellBatched(
         self: *Renderer,
         codepoint: u32,

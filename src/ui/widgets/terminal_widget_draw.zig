@@ -313,21 +313,40 @@ pub fn draw(
                     break :blk true;
                 };
 
-                rr.drawTerminalCellBatched(
-                    cell.codepoint,
-                    @as(f32, @floatFromInt(cell_x_i)),
-                    @as(f32, @floatFromInt(cell_y_i)),
-                    @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cell_width_units)))),
-                    @as(f32, @floatFromInt(cell_h_i)),
-                    if (cell_reverse) bg else fg,
-                    if (cell_reverse) fg else bg,
-                    underline_color,
-                    cell.attrs.bold,
-                    underline,
-                    false,
-                    followed_by_space,
-                    false,
-                );
+                if (cell.combining_len > 0) {
+                    rr.drawTerminalCellGraphemeBatched(
+                        cell.codepoint,
+                        cell.combining[0..@intCast(cell.combining_len)],
+                        @as(f32, @floatFromInt(cell_x_i)),
+                        @as(f32, @floatFromInt(cell_y_i)),
+                        @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cell_width_units)))),
+                        @as(f32, @floatFromInt(cell_h_i)),
+                        if (cell_reverse) bg else fg,
+                        if (cell_reverse) fg else bg,
+                        underline_color,
+                        cell.attrs.bold,
+                        underline,
+                        false,
+                        followed_by_space,
+                        false,
+                    );
+                } else {
+                    rr.drawTerminalCellBatched(
+                        cell.codepoint,
+                        @as(f32, @floatFromInt(cell_x_i)),
+                        @as(f32, @floatFromInt(cell_y_i)),
+                        @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cell_width_units)))),
+                        @as(f32, @floatFromInt(cell_h_i)),
+                        if (cell_reverse) bg else fg,
+                        if (cell_reverse) fg else bg,
+                        underline_color,
+                        cell.attrs.bold,
+                        underline,
+                        false,
+                        followed_by_space,
+                        false,
+                    );
+                }
 
                 if (cell.width > 1) {
                     col += cell_width_units - 1;
@@ -593,21 +612,40 @@ pub fn draw(
             const cursor_w_i: i32 = cell_w_i * @as(i32, @intCast(cell_width_units));
             switch (cursor_style.shape) {
                 .block => {
-                    r.drawTerminalCell(
-                        cell.codepoint,
-                        cell_x,
-                        cell_y,
-                        @as(f32, @floatFromInt(cursor_w_i)),
-                        @as(f32, @floatFromInt(cell_h_i)),
-                        if (cell_reverse) bg else fg,
-                        if (cell_reverse) fg else bg,
-                        underline_color,
-                        cell.attrs.bold,
-                        underline,
-                        true,
-                        followed_by_space,
-                        true,
-                    );
+                    if (cell.combining_len > 0) {
+                        r.drawTerminalCellGrapheme(
+                            cell.codepoint,
+                            cell.combining[0..@intCast(cell.combining_len)],
+                            cell_x,
+                            cell_y,
+                            @as(f32, @floatFromInt(cursor_w_i)),
+                            @as(f32, @floatFromInt(cell_h_i)),
+                            if (cell_reverse) bg else fg,
+                            if (cell_reverse) fg else bg,
+                            underline_color,
+                            cell.attrs.bold,
+                            underline,
+                            true,
+                            followed_by_space,
+                            true,
+                        );
+                    } else {
+                        r.drawTerminalCell(
+                            cell.codepoint,
+                            cell_x,
+                            cell_y,
+                            @as(f32, @floatFromInt(cursor_w_i)),
+                            @as(f32, @floatFromInt(cell_h_i)),
+                            if (cell_reverse) bg else fg,
+                            if (cell_reverse) fg else bg,
+                            underline_color,
+                            cell.attrs.bold,
+                            underline,
+                            true,
+                            followed_by_space,
+                            true,
+                        );
+                    }
                 },
                 .underline => {
                     r.drawRect(cell_x_i, cell_y_i + cell_h_i - 2, cursor_w_i, 2, r.theme.cursor);
