@@ -137,11 +137,12 @@ ui_widget_modularization_todo:
       tasks:
         - id: UI-W-01
           title: "Make src/ui/widgets.zig a thin registry (no large logic blocks)"
-          status: todo
+          status: done
           files_to_edit:
             - src/ui/widgets.zig
           notes:
             - "Move non-registry logic into src/ui/widgets/common.zig or a dedicated module." 
+            - "Verified: src/ui/widgets.zig is already a pure re-export registry."
 
         - id: UI-W-02
           title: "Consolidate small shared helpers (hit-testing, cell math, DPI)"
