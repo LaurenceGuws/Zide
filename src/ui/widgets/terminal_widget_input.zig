@@ -9,6 +9,7 @@ const shared_types = @import("../../types/mod.zig");
 
 const open_mod = @import("terminal_widget_open.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
+const common = @import("common.zig");
 
 const Shell = app_shell.Shell;
 
@@ -419,18 +420,13 @@ pub fn handleInput(
                 scroll_dragging.* = true;
                 const track_h = scrollbar_h;
                 const min_thumb_h: f32 = 18;
-                const thumb_h = if (total_lines > rows)
-                    @max(min_thumb_h, track_h * (@as(f32, @floatFromInt(rows)) / @as(f32, @floatFromInt(total_lines))))
-                else
-                    track_h;
-                const available = @max(@as(f32, 1), track_h - thumb_h);
                 const scroll_offset_local = self.session.scrollOffset();
                 const ratio = if (max_scroll_offset > 0)
                     @as(f32, @floatFromInt(max_scroll_offset - scroll_offset_local)) / @as(f32, @floatFromInt(max_scroll_offset))
                 else
                     1.0;
-                const thumb_y = scrollbar_y + available * ratio;
-                scroll_grab_offset.* = mouse.y - thumb_y;
+                const thumb = common.computeScrollbarThumb(scrollbar_y, track_h, rows, total_lines, min_thumb_h, ratio);
+                scroll_grab_offset.* = mouse.y - thumb.thumb_y;
                 if (scroll_log.enabled_file or scroll_log.enabled_console) {
                     scroll_log.logf("scrollbar press offset={d}", .{scroll_offset_local});
                 }
@@ -442,11 +438,8 @@ pub fn handleInput(
             if (input_batch.mouseDown(.left)) {
                 const track_h = scrollbar_h;
                 const min_thumb_h: f32 = 18;
-                const thumb_h = if (total_lines > rows)
-                    @max(min_thumb_h, track_h * (@as(f32, @floatFromInt(rows)) / @as(f32, @floatFromInt(total_lines))))
-                else
-                    track_h;
-                const available = @max(@as(f32, 1), track_h - thumb_h);
+                const thumb = common.computeScrollbarThumb(scrollbar_y, track_h, rows, total_lines, min_thumb_h, 0.0);
+                const available = thumb.available;
                 const clamped_mouse = @min(@max(mouse.y - scroll_grab_offset.*, scrollbar_y), scrollbar_y + available);
                 const ratio = if (available > 0) (clamped_mouse - scrollbar_y) / available else 0;
                 const target_offset = @as(usize, @intFromFloat(@round(@as(f32, @floatFromInt(max_scroll_offset)) * (1.0 - ratio))));
