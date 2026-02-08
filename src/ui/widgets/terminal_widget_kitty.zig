@@ -26,6 +26,11 @@ pub const KittyState = struct {
     pending_uploads_set: std.AutoHashMap(u32, void),
     last_generation: u64 = 0,
 
+    pub const UploadStats = struct {
+        images: usize = 0,
+        bytes: usize = 0,
+    };
+
     pub fn init(allocator: std.mem.Allocator) KittyState {
         return .{
             .images_view = .empty,
@@ -164,11 +169,12 @@ pub const KittyState = struct {
         }
     }
 
-    pub fn processPendingUploads(self: *KittyState, shell: *Shell) void {
-        if (self.pending_uploads.items.len == 0) return;
+    pub fn processPendingUploads(self: *KittyState, shell: *Shell) UploadStats {
+        if (self.pending_uploads.items.len == 0) return .{};
         const renderer = shell.rendererPtr();
         const max_bytes: usize = 2 * 1024 * 1024;
         var used_bytes: usize = 0;
+        var uploaded_images: usize = 0;
 
         while (self.pending_uploads.items.len > 0) {
             const image_id = self.pending_uploads.items[0];
@@ -192,10 +198,13 @@ pub const KittyState = struct {
 
             if (self.uploadTexture(renderer, image)) {
                 used_bytes += image_bytes;
+                uploaded_images += 1;
             }
             _ = self.pending_uploads_set.remove(image_id);
             _ = self.pending_uploads.swapRemove(0);
         }
+
+        return .{ .images = uploaded_images, .bytes = used_bytes };
     }
 
     pub fn ensureTexture(self: *KittyState, allocator: std.mem.Allocator, image: KittyImage) ?KittyTexture {

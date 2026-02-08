@@ -114,7 +114,7 @@ ui_widget_modularization_todo:
 
         - id: UI-TW-05
           title: "Add terminal widget micro-bench hooks (draw time + uploads)"
-          status: todo
+          status: done
           files_to_edit:
             - src/ui/widgets/terminal_widget.zig
             - src/ui/renderer/time_utils.zig
