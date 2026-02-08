@@ -48,13 +48,15 @@ font_rendering_todo:
       tasks:
         - id: FR-0-01
           title: "Add a deterministic font sample grid view (or screenshot-like buffer)"
-          status: todo
+          status: done
           files_to_edit:
-            - src/ui/renderer.zig
-            - src/ui/renderer/text_draw.zig
+            - src/main.zig
+            - src/ui/font_sample_view.zig
           notes:
             - "Goal: A/B compare JetBrainsMono vs IosevkaTerm at multiple sizes without manual terminal interaction."
             - "Keep it dev-only or gated behind env var/flag."
+            - "Implemented as a dedicated app mode: `zig build run -- --mode font-sample` (renders JetBrainsMono vs IosevkaTerm side-by-side)."
+            - "Size control: set `ZIDE_FONT_SAMPLE_SIZE=<float>` and adjust interactively with +/- keys."
 
         - id: FR-0-02
           title: "Record 'known bad' samples for IosevkaTerm (size list + strings)"
