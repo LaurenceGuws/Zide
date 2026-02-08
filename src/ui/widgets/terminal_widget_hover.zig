@@ -2,6 +2,7 @@ const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
+const common = @import("common.zig");
 
 const TerminalSession = terminal_mod.TerminalSession;
 const Cell = terminal_mod.Cell;
@@ -42,7 +43,7 @@ pub fn updateHoverState(
     var hover_col: isize = -1;
     var hover_link_id: u32 = 0;
     if (rows > 0 and cols > 0) {
-        const in_terminal = mouse.x >= x and mouse.x <= x + width and mouse.y >= y and mouse.y <= y + height;
+        const in_terminal = common.pointInRect(mouse.x, mouse.y, x, y, width, height);
         const in_cells = in_terminal and mouse.x < scrollbar_x;
         if (in_cells and cell_width > 0 and cell_height > 0) {
             const base_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(x)))));

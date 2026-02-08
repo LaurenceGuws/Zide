@@ -37,7 +37,7 @@ pub fn handleInput(
     defer if (locked) self.session.unlock();
     var handled = false;
     const mouse = input_batch.mouse_pos;
-    const in_terminal = mouse.x >= x and mouse.x <= x + width and mouse.y >= y and mouse.y <= y + height;
+    const in_terminal = common.pointInRect(mouse.x, mouse.y, x, y, width, height);
     const scrollbar_w: f32 = 10;
     const scrollbar_x = x + width - scrollbar_w;
     const scrollbar_y = y;
@@ -414,7 +414,7 @@ pub fn handleInput(
             }
         }
 
-        const mouse_on_scrollbar = mouse.x >= scrollbar_x and mouse.x <= scrollbar_x + scrollbar_w and mouse.y >= scrollbar_y and mouse.y <= scrollbar_y + scrollbar_h;
+        const mouse_on_scrollbar = common.pointInRect(mouse.x, mouse.y, scrollbar_x, scrollbar_y, scrollbar_w, scrollbar_h);
         if (!mouse_reporting and in_terminal and mouse_on_scrollbar) {
             if (input_batch.mousePressed(.left)) {
                 scroll_dragging.* = true;

@@ -22,6 +22,10 @@ pub const ScrollbarThumb = struct {
     thumb_y: f32,
 };
 
+pub fn pointInRect(px: f32, py: f32, x: f32, y: f32, w: f32, h: f32) bool {
+    return px >= x and px <= x + w and py >= y and py <= y + h;
+}
+
 pub fn computeScrollbarThumb(scrollbar_y: f32, track_h: f32, visible_lines: usize, total_lines: usize, min_thumb_h: f32, ratio: f32) ScrollbarThumb {
     const thumb_h = if (total_lines > visible_lines)
         @max(min_thumb_h, track_h * (@as(f32, @floatFromInt(visible_lines)) / @as(f32, @floatFromInt(total_lines))))
