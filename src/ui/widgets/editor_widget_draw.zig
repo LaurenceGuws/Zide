@@ -6,6 +6,7 @@ const metrics_mod = @import("../../editor/view/metrics.zig");
 const cache_mod = @import("../../editor/render/cache.zig");
 const draw_list_mod = @import("../../editor/render/draw_list.zig");
 const app_logger = @import("../../app_logger.zig");
+const common = @import("common.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
 const TokenKind = syntax_mod.TokenKind;
@@ -515,7 +516,7 @@ pub fn drawCached(
             cache.wrapLineCount(line_idx, cols, line_width) orelse layout_mod.visualLineCountForWidth(cols, line_width)
         else
             1;
-        
+
         const seg_start_idx = if (widget.wrap_enabled and line_idx == start_line) @min(start_seg, total_visual_lines) else 0;
 
         var cursor_col_vis: usize = 0;
@@ -1049,14 +1050,12 @@ fn drawVerticalScrollbar(
         widget.editor.scroll_line = max_scroll;
     }
 
-    const min_thumb_h: f32 = 32 * scale;
-    const thumb_h = @max(min_thumb_h, scrollbar_h * (@as(f32, @floatFromInt(visible_lines)) / @as(f32, @floatFromInt(total_lines))));
-    const available = @max(@as(f32, 1), scrollbar_h - thumb_h);
     const ratio = if (max_scroll > 0)
         @as(f32, @floatFromInt(widget.editor.scroll_line)) / @as(f32, @floatFromInt(max_scroll))
     else
         0.0;
-    const thumb_y = scrollbar_y + available * ratio;
+    const min_thumb_h: f32 = 32 * scale;
+    const thumb = common.computeScrollbarThumb(scrollbar_y, scrollbar_h, visible_lines, total_lines, min_thumb_h, ratio);
 
     if (list) |ops| {
         _ = addRectOp(ops, scrollbar_x, scrollbar_y, scrollbar_w, scrollbar_h, r.theme.line_number_bg);
@@ -1071,13 +1070,13 @@ fn drawVerticalScrollbar(
     }
     const inset: f32 = @max(1, 2 * scale);
     if (list) |ops| {
-        _ = addRectOp(ops, scrollbar_x + inset, thumb_y, scrollbar_w - inset * 2, thumb_h, r.theme.selection);
+        _ = addRectOp(ops, scrollbar_x + inset, thumb.thumb_y, scrollbar_w - inset * 2, thumb.thumb_h, r.theme.selection);
     } else {
         r.drawRect(
             @intFromFloat(scrollbar_x + inset),
-            @intFromFloat(thumb_y),
+            @intFromFloat(thumb.thumb_y),
             @intFromFloat(scrollbar_w - inset * 2),
-            @intFromFloat(thumb_h),
+            @intFromFloat(thumb.thumb_h),
             r.theme.selection,
         );
     }
