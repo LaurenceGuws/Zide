@@ -6,12 +6,15 @@ This file is intentionally high-level. Detailed progress and research live in:
 - `app_architecture/ui/renderer_todo.yaml`
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md`
 - `app_architecture/ui/ui_widget_modularization_todo.yaml`
+- `app_architecture/ui/font_rendering_todo.yaml`
 See `docs/INDEX.md` for the full doc map.
 
 High-level state:
-- UI widget modularization is the current focus: split large UI widgets into small UI-only modules while preserving behavior.
+- Font rendering strategy is the current focus: close the quality gap vs kitty/ghostty (especially for IosevkaTerm).
+  - Plan/todo: `app_architecture/ui/font_rendering_todo.yaml`
+  - Primary Zide files: `src/ui/terminal_font.zig`, `src/ui/renderer/gl_backend.zig`
+- UI widget modularization remains an active maintenance track; TerminalWidget has been split and should stay stable.
   - Plan/todo: `app_architecture/ui/ui_widget_modularization_todo.yaml`
-  - Primary target: `src/ui/widgets/terminal_widget.zig` (currently ~2k LOC)
 - Terminal backend modularization is largely complete, but terminal changes should still keep the replay harness green.
   - Terminal plan: `app_architecture/terminal/MODULARIZATION_PLAN.md`
   - Run: `zig build test-terminal-replay -- --all`

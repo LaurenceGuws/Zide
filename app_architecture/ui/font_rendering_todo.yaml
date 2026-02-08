@@ -1,0 +1,146 @@
+font_rendering_todo:
+  scope:
+    description: "Make Zide's terminal/editor font rendering competitive with modern terminals (kitty/ghostty-tier): crisp at small sizes, consistent weight, correct blending, and robust across font families."
+    primary_fonts:
+      - "assets/fonts/JetBrainsMonoNerdFont-Regular.ttf (currently acceptable with existing pipeline)"
+      - "assets/fonts/IosevkaTermNerdFont-Regular.ttf (currently poor/unusable with existing pipeline)"
+    priorities:
+      - "correct color pipeline (linear blending + predictable gamma)"
+      - "hinting policy control (light/normal/none + autohint)"
+      - "atlas formats match data (coverage vs color glyphs)"
+      - "performance: keep glyph upload incremental + bounded per-frame"
+
+  context:
+    reference_repos:
+      - "kitty: reference_repos/terminals/kitty (freetype load flags + shader gamma tuning)"
+      - "ghostty: reference_repos/terminals/ghostty (atlas split + linear blending + optional weight correction)"
+    zide_code:
+      - "glyph rasterization + atlas upload: src/ui/terminal_font.zig"
+      - "renderer/blending + shader: src/ui/renderer/gl_backend.zig"
+      - "font init + scale: src/ui/renderer/font_manager.zig"
+      - "text helpers (non-terminal UI): src/ui/renderer/text_draw.zig"
+    known_current_gaps:
+      - "We upload grayscale glyphs into an RGBA8 atlas and do a per-pixel gamma transform in CPU (pow(., 1/2.2))."
+      - "We blend in the default GL pipeline (SRC_ALPHA, ONE_MINUS_SRC_ALPHA) with a trivial shader; no sRGB/linear strategy."
+      - "Hinting is not user-configurable (beyond LCD target) and HarfBuzz FT load flags are not set to match rasterization."
+
+  constraints:
+    - "This work changes rendering behavior; introduce a repeatable visual/metric harness before large changes."
+    - "SDL3/OpenGL path is the current baseline; keep builds/tests green throughout."
+    - "Avoid platform-specific rabbit holes early; get Linux OpenGL path correct first, then expand."
+
+  commands:
+    always:
+      - zig build
+      - zig build test
+      - zig build check-app-imports
+      - zig build check-input-imports
+      - zig build check-editor-imports
+    smoke:
+      - zig build run -- --mode terminal
+      - zig build run
+    debug_toggles_env:
+      - "ZIDE_TERMINAL_UI_BENCH=1 (per-frame terminal draw timing)"
+      - "ZIDE_FONT_LCD=1 (current LCD raster path; not a final solution)"
+
+  phases:
+    - name: "Phase 0 - Baseline + Repro Harness"
+      tasks:
+        - id: FR-0-01
+          title: "Add a deterministic font sample grid view (or screenshot-like buffer)"
+          status: todo
+          files_to_edit:
+            - src/ui/renderer.zig
+            - src/ui/renderer/text_draw.zig
+          notes:
+            - "Goal: A/B compare JetBrainsMono vs IosevkaTerm at multiple sizes without manual terminal interaction."
+            - "Keep it dev-only or gated behind env var/flag."
+
+        - id: FR-0-02
+          title: "Record 'known bad' samples for IosevkaTerm (size list + strings)"
+          status: todo
+          files_to_edit:
+            - app_architecture/ui/font_rendering_todo.yaml
+          notes:
+            - "Include: ASCII, thin stems, box drawing, Nerd Font icons, combining marks, and a few ligature sequences."
+
+    - name: "Phase 1 - Correct Blending Pipeline (ghostty-style)"
+      tasks:
+        - id: FR-1-01
+          title: "Split terminal font atlas into coverage vs color"
+          status: todo
+          files_to_edit:
+            - src/ui/terminal_font.zig
+          notes:
+            - "Coverage atlas: 8-bit single channel (coverage/mask only)."
+            - "Color atlas: RGBA8 premultiplied for emoji/color glyphs."
+
+        - id: FR-1-02
+          title: "Add glyph/text shader path that supports linear blending + fallback"
+          status: todo
+          files_to_edit:
+            - src/ui/renderer/gl_backend.zig
+          notes:
+            - "Model after ghostty: reference_repos/terminals/ghostty/src/renderer/shaders/glsl/cell_text.f.glsl and common.glsl."
+            - "If we can't rely on an sRGB framebuffer, unlinearize in shader for compatibility."
+
+        - id: FR-1-03
+          title: "Remove CPU-side gamma baking during glyph upload"
+          status: todo
+          files_to_edit:
+            - src/ui/terminal_font.zig
+          notes:
+            - "Coverage stays linear; appearance tuning belongs in the shader pipeline."
+
+        - id: FR-1-04
+          title: "Add a text weight/gamma tuning knob"
+          status: todo
+          files_to_edit:
+            - src/ui/renderer/gl_backend.zig
+          notes:
+            - "Kitty uses text_gamma_adjustment; ghostty uses optional linear correction."
+            - "Start with one option, wire it through, then iterate."
+
+    - name: "Phase 2 - Hinting + Shaping Consistency (kitty-style controls)"
+      tasks:
+        - id: FR-2-01
+          title: "Introduce configurable hinting policy (none/light/normal + autohint)"
+          status: todo
+          files_to_edit:
+            - src/ui/terminal_font.zig
+          notes:
+            - "Map to FT_LOAD_TARGET_LIGHT/NORMAL and FT_LOAD_NO_HINTING."
+
+        - id: FR-2-02
+          title: "Set HarfBuzz FT load flags to match rasterization"
+          status: todo
+          files_to_edit:
+            - src/ui/terminal_font.zig
+          notes:
+            - "Use hb_ft_font_set_load_flags(...) like kitty does so shaping/metrics align with render."
+
+    - name: "Phase 3 - LCD/Subpixel (optional, only after linear blending is correct)"
+      tasks:
+        - id: FR-3-01
+          title: "Evaluate LCD/subpixel AA with correct color pipeline"
+          status: todo
+          files_to_edit:
+            - src/ui/terminal_font.zig
+            - src/ui/renderer/gl_backend.zig
+          notes:
+            - "Treat as opt-in; behavior varies by subpixel layout and can regress on some displays."
+
+    - name: "Phase 4 - Verification"
+      tasks:
+        - id: FR-V-01
+          title: "Run smoke: terminal mode + default run"
+          status: todo
+          commands:
+            - zig build run -- --mode terminal
+            - zig build run
+
+        - id: FR-V-02
+          title: "Regression check: font sample grid screenshot/buffer compare"
+          status: todo
+          notes:
+            - "Once FR-0-01 exists, gate larger refactors behind it."
