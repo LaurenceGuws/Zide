@@ -885,7 +885,8 @@ pub const TerminalFont = struct {
         }
 
         const owned = self.allocator.dupe(u8, path) catch return null;
-        errdefer self.allocator.free(owned);
+        var keep_owned = false;
+        defer if (!keep_owned) self.allocator.free(owned);
 
         var fb_pair: FacePair = .{};
         if (!ftNewFaceFromFile(self, owned, &fb_pair)) {
@@ -914,10 +915,10 @@ pub const TerminalFont = struct {
             c.hb_font_destroy(fb_hb);
             _ = c.FT_Done_Face(fb_face);
             if (fb_pair.owned_data) |data| self.allocator.free(data);
-            self.allocator.free(owned);
             _ = self.system_fallback_by_cp.put(codepoint, null) catch {};
             return null;
         };
+        keep_owned = true;
         _ = self.system_fallback_by_cp.put(codepoint, owned) catch {};
         result = fb_pair;
         return result;
