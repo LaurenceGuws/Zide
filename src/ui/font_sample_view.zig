@@ -164,6 +164,10 @@ pub const FontSampleView = struct {
     fn drawContents(self: *FontSampleView, r: *Renderer, theme: *const app_shell.Theme, w: f32, h: f32) void {
         _ = h;
 
+        var bg = theme.background.toRgba();
+        bg.a = 255;
+        r.text_bg_rgba = bg;
+
         const padding: f32 = 16;
         const header_y: f32 = padding;
         const col_gap: f32 = 18;
@@ -182,6 +186,8 @@ pub const FontSampleView = struct {
 
         drawColumn(self, r, left_x, content_y, col_w, self.left_name, &self.left);
         drawColumn(self, r, right_x, content_y, col_w, self.right_name, &self.right);
+
+        r.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
     }
 
     fn drawColumn(self: *FontSampleView, r: *Renderer, x: f32, y: f32, w: f32, name: []const u8, font: *TerminalFont) void {

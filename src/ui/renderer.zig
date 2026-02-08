@@ -578,6 +578,9 @@ pub const Renderer = struct {
         self.render_width = sizes.render_width;
         self.render_height = sizes.render_height;
 
+        // Avoid leaking background context across different text draws.
+        self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
+
         self.bindDefaultTarget();
         self.updateMouseScale();
         gl.Disable(gl.c.GL_SCISSOR_TEST);
@@ -821,6 +824,10 @@ pub const Renderer = struct {
                 .ctx = self,
                 .drawTexture = drawTextureThunk,
             };
+            const behind = if (is_cursor) fg else bg;
+            var behind_rgba = behind.toRgba();
+            behind_rgba.a = 255;
+            self.text_bg_rgba = behind_rgba;
             if (!self.drawTerminalBoxGlyph(codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color)) {
                 self.terminal_font.drawGlyph(
                     draw,
@@ -888,6 +895,10 @@ pub const Renderer = struct {
                     .ctx = self,
                     .drawTexture = drawTextureGlyphCacheThunk,
                 };
+                const behind = if (is_cursor) fg else bg;
+                var behind_rgba = behind.toRgba();
+                behind_rgba.a = 255;
+                self.text_bg_rgba = behind_rgba;
                 self.terminal_font.drawGlyph(
                     draw,
                     codepoint,
@@ -1044,6 +1055,7 @@ pub const Renderer = struct {
     }
 
     fn drawTextWithFont(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: Color) void {
+        self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
         text_draw.drawText(
             self.allocator,
             font,
@@ -1060,6 +1072,7 @@ pub const Renderer = struct {
     }
 
     fn drawTextWithFontMonospace(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: Color) void {
+        self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
         text_draw.drawText(
             self.allocator,
             font,
