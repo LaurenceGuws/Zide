@@ -191,6 +191,12 @@ fn appendCellToken(out: *std.ArrayList(u8), allocator: std.mem.Allocator, cell: 
     }
     try out.append(allocator, '"');
     try appendCodepoint(out, allocator, cell.codepoint);
+    if (cell.combining_len > 0) {
+        var i: usize = 0;
+        while (i < cell.combining_len and i < cell.combining.len) : (i += 1) {
+            try appendCodepoint(out, allocator, cell.combining[i]);
+        }
+    }
     try out.append(allocator, '"');
 }
 
