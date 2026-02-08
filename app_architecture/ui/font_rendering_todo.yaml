@@ -153,6 +153,19 @@ font_rendering_todo:
 
     - name: "Phase 3 - Terminal Shaping (run-based)"
       tasks:
+        - id: FR-3-00
+          title: "Support combining marks as grapheme clusters in terminal cells"
+          status: in_progress
+          files_to_edit:
+            - src/terminal/model/screen/screen.zig
+            - src/terminal/model/types.zig
+            - src/ui/widgets/terminal_widget_draw.zig
+            - src/ui/terminal_font.zig
+          notes:
+            - "Combining marks should attach to the previous cell (no cursor advance)."
+            - "Renderer should shape the cluster and draw with correct offsets in linear pipeline."
+            - "Include in view-cache hashes + snapshot debug output."
+
         - id: FR-3-01
           title: "Implement run-based shaping for terminal lines"
           status: todo
