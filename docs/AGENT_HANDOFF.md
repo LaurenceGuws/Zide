@@ -32,6 +32,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - New replay fixtures for gping/nvim overlay + vttest wraparound; goldens updated.
 - Modularization extractions: render cache, palette/dynamic colors, OSC helpers (semantic, clipboard, CWD, hyperlink, title), input helpers (mouse, key encoding).
 - Added UI widget modularization todo to guide widget-level extraction work (TerminalWidget UI-side split).
+- Added a font comparison harness mode: `zig build run -- --mode font-sample` (JetBrainsMono vs IosevkaTerm side-by-side).
 
 ### Constraints / Guardrails
 - Handoff docs are high-level only; progress tracking lives in todo + app_architecture docs.
