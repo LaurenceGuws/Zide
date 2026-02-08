@@ -17,6 +17,7 @@ pub fn initFonts(renderer: anytype, size: f32) !void {
         iface.UNICODE_SANS_PATH,
         iface.EMOJI_COLOR_FALLBACK_PATH,
         iface.EMOJI_TEXT_FALLBACK_PATH,
+        renderer.font_rendering,
     );
     renderer.terminal_font.render_scale = render_scale;
     renderer.terminal_font.setAtlasFilterPoint();
@@ -36,6 +37,7 @@ pub fn initFonts(renderer: anytype, size: f32) !void {
         iface.UNICODE_SANS_PATH,
         iface.EMOJI_COLOR_FALLBACK_PATH,
         iface.EMOJI_TEXT_FALLBACK_PATH,
+        renderer.font_rendering,
     );
     renderer.icon_font.render_scale = render_scale;
     renderer.icon_font.setAtlasFilterPoint();
@@ -106,6 +108,7 @@ pub fn fontForSize(renderer: anytype, size: f32) ?*TerminalFont {
         iface.UNICODE_SANS_PATH,
         iface.EMOJI_COLOR_FALLBACK_PATH,
         iface.EMOJI_TEXT_FALLBACK_PATH,
+        renderer.font_rendering,
     ) catch {
         renderer.allocator.destroy(font_ptr);
         return null;

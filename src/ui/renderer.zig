@@ -4,6 +4,7 @@ const editor_render = @import("../editor/render/renderer_ops.zig");
 const iface = @import("renderer/interface.zig");
 const terminal_font_mod = @import("terminal_font.zig");
 const TerminalFont = terminal_font_mod.TerminalFont;
+const FontRenderingOptions = terminal_font_mod.RenderingOptions;
 const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
@@ -216,8 +217,13 @@ pub const Renderer = struct {
     uniform_text_gamma: gl.GLint,
     uniform_text_contrast: gl.GLint,
     uniform_dst_linear: gl.GLint,
+    uniform_linear_correction: gl.GLint,
     dst_linear_active: bool,
     white_texture: types.Texture,
+
+    text_gamma: f32,
+    text_contrast: f32,
+    text_linear_correction: bool,
 
     // Text background behind glyphs (used for optional linear correction).
     // Default is alpha=0, which disables correction in the shader.
@@ -234,6 +240,7 @@ pub const Renderer = struct {
     terminal_cell_width: f32,
     terminal_cell_height: f32,
     terminal_font: TerminalFont,
+    font_rendering: FontRenderingOptions,
     font_cache: std.AutoHashMap(u32, *TerminalFont),
     font_path: [*:0]const u8,
     font_path_owned: ?[]u8,
@@ -331,8 +338,12 @@ pub const Renderer = struct {
             .uniform_text_gamma = -1,
             .uniform_text_contrast = -1,
             .uniform_dst_linear = -1,
+            .uniform_linear_correction = -1,
             .dst_linear_active = false,
             .white_texture = .{ .id = 0, .width = 0, .height = 0 },
+            .text_gamma = 1.0,
+            .text_contrast = 1.0,
+            .text_linear_correction = true,
             .text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 },
             .font_size = font_size,
             .base_font_size = base_font_size,
@@ -345,6 +356,7 @@ pub const Renderer = struct {
             .terminal_cell_width = font_size * 0.6,
             .terminal_cell_height = font_size * 1.2,
             .terminal_font = undefined,
+            .font_rendering = .{},
             .font_cache = std.AutoHashMap(u32, *TerminalFont).init(allocator),
             .font_path = FONT_PATH,
             .font_path_owned = null,
@@ -465,6 +477,30 @@ pub const Renderer = struct {
 
     pub fn setFontConfig(self: *Renderer, path: ?[]const u8, size: ?f32) !void {
         try font_manager.setFontConfig(self, path, size);
+    }
+
+    pub fn setFontRenderingOptions(self: *Renderer, opts: FontRenderingOptions) void {
+        self.font_rendering = opts;
+    }
+
+    pub fn setTextRenderingConfig(self: *Renderer, gamma: ?f32, contrast: ?f32, linear_correction: ?bool) void {
+        if (gamma) |v| {
+            if (v > 0) self.text_gamma = v;
+        }
+        if (contrast) |v| {
+            if (v > 0) self.text_contrast = v;
+        }
+        if (linear_correction) |v| {
+            self.text_linear_correction = v;
+        }
+
+        // Update shader uniforms if GL is initialized.
+        if (self.shader_program != 0) {
+            gl.UseProgram(self.shader_program);
+            if (self.uniform_text_gamma >= 0) gl.Uniform1f(self.uniform_text_gamma, self.text_gamma);
+            if (self.uniform_text_contrast >= 0) gl.Uniform1f(self.uniform_text_contrast, self.text_contrast);
+            if (self.uniform_linear_correction >= 0) gl.Uniform1i(self.uniform_linear_correction, if (self.text_linear_correction) 1 else 0);
+        }
     }
 
     pub fn loadFontWithGlyphs(self: *Renderer, allocator: std.mem.Allocator, path: [*:0]const u8, size: f32) void {
