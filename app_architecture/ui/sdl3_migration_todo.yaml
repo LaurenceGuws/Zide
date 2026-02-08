@@ -70,15 +70,16 @@ sdl3_migration:
       title: "SDL3 build smoke check (compile-only)"
       status: done
       notes:
-        - "zig build -Dsdl-version=sdl3"
+        - "zig build"
+        - "Note: the -Dsdl-version switch was removed; SDL3 is the only build path."
 
   phase_4_validation:
     - id: S4-01
       title: "Runtime smoke: window + input + text input"
       status: done
       notes:
-        - "Run on Linux first; keep the fallback build available."
-        - "Use build/run: zig build -Dsdl-version=sdl3 run -- --mode terminal."
+        - "Run on Linux first."
+        - "Use build/run: zig build run -- --mode terminal"
     - id: S4-02
       title: "Fix SDL3 text input pointer lifetime (process events immediately)"
       status: done

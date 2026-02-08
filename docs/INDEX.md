@@ -10,12 +10,15 @@ Quick map of where to look for common needs.
 ## Task tracking (source of truth)
 - `app_architecture/**/_todo.yaml` — active task lists and status.
   - `app_architecture/ui/renderer_todo.yaml` — renderer modularization + OS abstraction.
+  - `app_architecture/ui/ui_widget_modularization_todo.yaml` — UI widget modularization (TerminalWidget/UI splits).
+  - `app_architecture/ui/sdl3_migration_todo.yaml` — SDL3 migration tracker.
 
 ## Architecture + design
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md` — renderer plan and per-OS journey.
 - `app_architecture/APP_LAYERING.md` — module boundaries and import rules.
 - `app_architecture/editor/DESIGN.md` — editor architecture + references.
 - `app_architecture/terminal/DESIGN.md` — terminal architecture + decisions.
+- `app_architecture/terminal/DAMAGE_TRACKING.md` — terminal damage/dirty tracking notes + todo.
 - `app_architecture/DECISIONS.md` — decision log.
 - `app_architecture/ENGINEERING.md` — engineering guidelines (ownership, threading, FFI).
 - `app_architecture/PLANNING.md` — active plans with status.

@@ -15,7 +15,7 @@ We design every piece with embedded-style resource constraints in mind. That mea
 ```bash
 # Install system dependencies (see app_architecture/BOOTSTRAP.md for other distros)
 # Arch Linux:
-sudo pacman -S zig freetype2 harfbuzz wayland wayland-protocols libxkbcommon mesa
+sudo pacman -S zig sdl3 freetype2 harfbuzz lua wayland wayland-protocols libxkbcommon mesa
 
 # Bootstrap and build
 make bootstrap
@@ -29,7 +29,7 @@ zig build run
 - Tree-sitter syntax highlighting (dynamic grammar packs)
 - Rope text buffer with undo/redo
 - Low CPU usage when idle (<1%)
- - Cross-platform roadmap (Linux first; macOS/Windows planned)
+- Cross-platform roadmap (Linux first; macOS/Windows planned)
 
 ## Documentation
 

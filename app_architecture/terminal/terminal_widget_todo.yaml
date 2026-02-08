@@ -1,6 +1,8 @@
 terminal_widget_todo:
   scope:
     description: "Build a best-in-class terminal widget embedded in Zide (Linux first, Win/mac later)."
+    notes:
+      - "This file contains some historical planned paths. Current terminal module layout lives under src/terminal/{core,model,parser,protocol,io,input,kitty}."
     priorities:
       - "fast path for ASCII monospace"
       - "excellent font rendering + shaping"
@@ -13,7 +15,7 @@ terminal_widget_todo:
       - src/ui/widgets.zig
       - src/ui/renderer.zig
       - src/ui/terminal_font.zig
-      - src/terminal/terminal.zig
+      - src/terminal/core/terminal.zig
   reference_maps:
     terminals:
       ghostty:
@@ -164,7 +166,7 @@ terminal_widget_todo:
         - id: P0-01
           title: "Define terminal snapshot API (renderer consumes immutable grid state)"
           files_to_edit:
-            - src/terminal/terminal.zig
+            - src/terminal/core/terminal.zig
             - src/ui/widgets.zig
           refs:
             - reference_repos/terminals/ghostty/src/terminal/Screen.zig
@@ -205,7 +207,7 @@ terminal_widget_todo:
         - id: P1-01
           title: "Linux PTY abstraction with non-blocking reads"
           files_to_add:
-            - src/terminal/pty_unix.zig
+            - src/terminal/io/pty_unix.zig
           refs:
             - reference_repos/terminals/alacritty/alacritty_terminal/src/tty/unix.rs
             - reference_repos/terminals/foot/slave.c
@@ -215,8 +217,7 @@ terminal_widget_todo:
         - id: P1-02
           title: "Windows ConPTY + macOS PTY stubs (compile-time switches)"
           files_to_add:
-            - src/terminal/pty_windows.zig
-            - src/terminal/pty_macos.zig
+            - src/terminal/io/pty_windows.zig
           refs:
             - reference_repos/terminals/alacritty/alacritty_terminal/src/tty/windows/conpty.rs
             - reference_repos/terminals/wezterm/termwiz/src/terminal/windows.rs
@@ -246,7 +247,7 @@ terminal_widget_todo:
         - id: P2-02
           title: "CSI parser (cursor move, erase, scroll, insert/delete)"
           files_to_add:
-            - src/terminal/csi.zig
+            - src/terminal/parser/csi.zig
           refs:
             - reference_repos/terminals/ghostty/src/terminal/csi.zig
             - reference_repos/terminals/foot/csi.c
@@ -256,7 +257,7 @@ terminal_widget_todo:
         - id: P2-03
           title: "SGR (colors, bold, underline, reverse)"
           files_to_add:
-            - src/terminal/sgr.zig
+            - src/terminal/protocol/csi.zig
           refs:
             - reference_repos/terminals/ghostty/src/terminal/sgr.zig
             - reference_repos/terminals/wezterm/term/src/terminalstate/performer.rs
@@ -265,7 +266,7 @@ terminal_widget_todo:
         - id: P2-04
           title: "OSC basics (title, clipboard, hyperlinks)"
           files_to_add:
-            - src/terminal/osc.zig
+            - src/terminal/protocol/osc.zig
           refs:
             - reference_repos/terminals/ghostty/src/terminal/osc/parsers.zig
             - reference_repos/terminals/ghostty/src/terminal/osc/encoding.zig
@@ -503,7 +504,7 @@ terminal_widget_todo:
         - id: P7-02
           title: "Hyperlinks + OSC 8"
           files_to_edit:
-            - src/terminal/osc.zig
+            - src/terminal/protocol/osc.zig
           refs:
             - reference_repos/terminals/ghostty/src/terminal/osc/parsers/hyperlink.zig
             - reference_repos/terminals/alacritty/alacritty_terminal/tests/ref/hyperlinks/

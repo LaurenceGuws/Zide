@@ -62,7 +62,11 @@ $env:VCPKG_DEFAULT_TRIPLET="x64-windows"
 zig build -Duse-vcpkg=true
 ```
 
-If `VCPKG_ROOT` and `VCPKG_DEFAULT_TRIPLET` are set, Windows builds auto-enable vcpkg.
+On Windows, builds rely on vcpkg-provided deps and will search for installs in either:
+- `./vcpkg_installed/<triplet>/` (manifest mode), or
+- `<VCPKG_ROOT>/installed/<triplet>/` (classic mode)
+
+If `VCPKG_ROOT` and `VCPKG_DEFAULT_TRIPLET` are set, classic-mode deps can be found without extra flags.
 
 If vcpkg fails with permission errors writing `buildtrees`, use a per-user buildtrees root:
 ```powershell
@@ -70,7 +74,7 @@ If vcpkg fails with permission errors writing `buildtrees`, use a per-user build
 ```
 
 Notes:
-- Fontconfig is Linux-only; Windows builds run without system font fallback.
+- Fontconfig is Linux-only; Windows uses a DirectWrite-based fallback resolver in `src/ui/terminal_font.zig`.
 - Kitty shared-memory image loading is disabled on Windows.
 - Windows requires a working OpenGL 3.3 driver. If you see `MissingGlProc`, install GPU drivers or enable 3D acceleration in your VM.
 
