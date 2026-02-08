@@ -11,6 +11,7 @@ Quick map of where to look for common needs.
 - `app_architecture/**/_todo.yaml` — active task lists and status.
   - `app_architecture/ui/renderer_todo.yaml` — renderer modularization + OS abstraction.
   - `app_architecture/ui/ui_widget_modularization_todo.yaml` — UI widget modularization (TerminalWidget/UI splits).
+  - `app_architecture/ui/font_rendering_todo.yaml` — font rendering strategy + implementation plan (kitty/ghostty-tier goals).
   - `app_architecture/ui/sdl3_migration_todo.yaml` — SDL3 migration tracker.
 
 ## Architecture + design

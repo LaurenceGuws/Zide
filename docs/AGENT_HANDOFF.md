@@ -16,9 +16,12 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 ## Handoff (High-Level)
 
 ### Current Focus
-- UI widget modularization: extraction-only splits of large UI widgets into small UI-only modules.
-  - Primary target: split `src/ui/widgets/terminal_widget.zig` (currently ~2k LOC) into `*_draw.zig`, `*_input.zig`, and focused helpers.
-  - Source of truth: `app_architecture/ui/ui_widget_modularization_todo.yaml`
+- Font rendering strategy (terminal + editor): make our text rendering competitive with kitty/ghostty-tier quality.
+  - Primary pain point: `assets/fonts/IosevkaTermNerdFont-Regular.ttf` is currently not usable while JetBrainsMono looks acceptable.
+  - Source of truth: `app_architecture/ui/font_rendering_todo.yaml`
+  - Key files: `src/ui/terminal_font.zig`, `src/ui/renderer/gl_backend.zig`, `src/ui/renderer/font_manager.zig`
+- UI widget modularization is largely complete for TerminalWidget; keep using the established split pattern.
+  - Plan/todo: `app_architecture/ui/ui_widget_modularization_todo.yaml`
 - Terminal backend modularization is largely complete; still keep replay harness green when touching terminal code.
   - Terminal plan: `app_architecture/terminal/MODULARIZATION_PLAN.md`
   - Run: `zig build test-terminal-replay -- --all`
@@ -40,6 +43,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - UI rendering plan + per-OS journey: `app_architecture/ui/DEVELOPMENT_JOURNEY.md`
 - Renderer modularization + OS abstraction plan: `app_architecture/ui/renderer_todo.yaml`
 - SDL3 migration tracker: `app_architecture/ui/sdl3_migration_todo.yaml`
+- Font rendering improvement plan: `app_architecture/ui/font_rendering_todo.yaml`
 - UI widget modularization plan: `app_architecture/ui/ui_widget_modularization_todo.yaml`
 - Editor widget roadmap: `app_architecture/editor/editor_widget_todo.yaml`
 - Terminal roadmap + modularization: `app_architecture/terminal/MODULARIZATION_PLAN.md`
@@ -54,7 +58,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
  - Scrollback view cache + reflow resizing are still in progress; expect instability during the redesign.
 
 ### In-Progress (Uncommitted)
-- Docs updated to shift current focus to UI widget modularization; pending commit.
+- None tracked at handoff level. Use the relevant todo file(s) for progress.
 
 ### Checklist
 - `zig build test`
