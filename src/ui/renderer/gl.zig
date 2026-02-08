@@ -29,6 +29,7 @@ pub var UseProgram: *const fn (GLuint) callconv(.c) void = undefined;
 pub var DeleteProgram: *const fn (GLuint) callconv(.c) void = undefined;
 pub var GetUniformLocation: *const fn (GLuint, [*:0]const GLchar) callconv(.c) GLint = undefined;
 pub var Uniform1i: *const fn (GLint, GLint) callconv(.c) void = undefined;
+pub var Uniform1f: *const fn (GLint, GLfloat) callconv(.c) void = undefined;
 pub var Uniform4f: *const fn (GLint, GLfloat, GLfloat, GLfloat, GLfloat) callconv(.c) void = undefined;
 pub var UniformMatrix4fv: *const fn (GLint, GLsizei, GLboolean, [*]const GLfloat) callconv(.c) void = undefined;
 
@@ -90,6 +91,7 @@ pub fn load() !void {
     DeleteProgram = try loadProc(@TypeOf(DeleteProgram), "glDeleteProgram");
     GetUniformLocation = try loadProc(@TypeOf(GetUniformLocation), "glGetUniformLocation");
     Uniform1i = try loadProc(@TypeOf(Uniform1i), "glUniform1i");
+    Uniform1f = try loadProc(@TypeOf(Uniform1f), "glUniform1f");
     Uniform4f = try loadProc(@TypeOf(Uniform4f), "glUniform4f");
     UniformMatrix4fv = try loadProc(@TypeOf(UniformMatrix4fv), "glUniformMatrix4fv");
 
