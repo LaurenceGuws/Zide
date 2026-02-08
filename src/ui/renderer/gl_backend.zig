@@ -132,7 +132,7 @@ pub fn initGlResources(renderer: anytype) !void {
     if (renderer.uniform_kind >= 0) gl.Uniform1i(renderer.uniform_kind, 0);
     if (renderer.uniform_dst_linear >= 0) gl.Uniform1i(renderer.uniform_dst_linear, 0);
     if (uniform_linear_correction >= 0) {
-        const enabled = parseEnvBool("ZIDE_TEXT_LINEAR_CORRECTION", false);
+        const enabled = parseEnvBool("ZIDE_TEXT_LINEAR_CORRECTION", true);
         gl.Uniform1i(uniform_linear_correction, if (enabled) 1 else 0);
     }
 

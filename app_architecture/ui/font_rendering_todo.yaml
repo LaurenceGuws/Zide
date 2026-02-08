@@ -47,6 +47,7 @@ font_rendering_todo:
       - "ZIDE_FONT_SAMPLE_SCREENSHOT=<path> (write a .ppm screenshot on auto-close in font sample mode)"
       - "ZIDE_TEXT_GAMMA=<float> (coverage gamma for font coverage atlas; 1.0 default)"
       - "ZIDE_TEXT_CONTRAST=<float> (coverage contrast multiplier; 1.0 default)"
+      - "ZIDE_TEXT_LINEAR_CORRECTION=0/1 (luminance-based correction for linear blending; default 1)"
 
   phases:
     - name: "Phase 0 - Baseline + Repro Harness"
