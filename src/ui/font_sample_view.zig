@@ -166,21 +166,14 @@ pub const FontSampleView = struct {
     }
 
     fn drawContents(self: *FontSampleView, r: *Renderer, theme: *const app_shell.Theme, w: f32, h: f32) void {
-        _ = h;
-
-        var bg = theme.background.toRgba();
-        bg.a = 255;
-        r.text_bg_rgba = bg;
-
         const padding: f32 = 16;
         const header_y: f32 = padding;
         const col_gap: f32 = 18;
         const col_w: f32 = @max(0, (w - padding * 2 - col_gap) * 0.5);
         const left_x: f32 = padding;
         const right_x: f32 = padding + col_w + col_gap;
-        const content_y: f32 = header_y + r.char_height * 2.2;
 
-        var title_buf: [128]u8 = undefined;
+        var title_buf: [160]u8 = undefined;
         const title = std.fmt.bufPrint(
             &title_buf,
             "Font Sample (size={d:.1})  keys: +/-",
@@ -188,13 +181,56 @@ pub const FontSampleView = struct {
         ) catch "Font Sample";
         r.drawText(title, padding, header_y, theme.foreground);
 
-        drawColumn(self, r, left_x, content_y, col_w, self.left_name, &self.left);
-        drawColumn(self, r, right_x, content_y, col_w, self.right_name, &self.right);
+        const section_gap: f32 = 10;
+        var y_cursor: f32 = header_y + r.char_height * 1.8;
 
+        y_cursor = drawSection(self, r, theme, w, left_x, right_x, y_cursor, col_w, "normal", theme.background, theme.foreground);
+        y_cursor += section_gap;
+        y_cursor = drawSection(self, r, theme, w, left_x, right_x, y_cursor, col_w, "selection", theme.selection, theme.foreground);
+        y_cursor += section_gap;
+        _ = drawSection(self, r, theme, w, left_x, right_x, y_cursor, col_w, "cursor", theme.cursor, theme.background);
+
+        _ = h;
+    }
+
+    fn drawSection(
+        self: *FontSampleView,
+        r: *Renderer,
+        theme: *const app_shell.Theme,
+        w: f32,
+        left_x: f32,
+        right_x: f32,
+        y: f32,
+        col_w: f32,
+        label: []const u8,
+        bg: Color,
+        fg: Color,
+    ) f32 {
+        const section_pad_y: f32 = 8;
+        const line_h = self.left.line_height / (if (r.render_scale > 0.0) r.render_scale else 1.0);
+        const lines = sampleLines();
+        const content_h: f32 = @as(f32, @floatFromInt(lines.len)) * line_h;
+        const section_h: f32 = r.char_height + section_pad_y + content_h + section_pad_y;
+        const content_y: f32 = y + r.char_height + section_pad_y;
+
+        r.drawRect(0, @intFromFloat(y), @intFromFloat(w), @intFromFloat(section_h), bg);
+        r.drawText(label, 16, y, theme.foreground);
+
+        var bg_rgba = bg.toRgba();
+        bg_rgba.a = 255;
+        r.text_bg_rgba = bg_rgba;
+        drawColumnWithColor(self, r, left_x, content_y, col_w, self.left_name, &self.left, fg);
+        drawColumnWithColor(self, r, right_x, content_y, col_w, self.right_name, &self.right, fg);
         r.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
+
+        return y + section_h;
     }
 
     fn drawColumn(self: *FontSampleView, r: *Renderer, x: f32, y: f32, w: f32, name: []const u8, font: *TerminalFont) void {
+        drawColumnWithColor(self, r, x, y, w, name, font, Color.white);
+    }
+
+    fn drawColumnWithColor(self: *FontSampleView, r: *Renderer, x: f32, y: f32, w: f32, name: []const u8, font: *TerminalFont, fg: Color) void {
         _ = w;
         const theme = r.theme;
         const scale = if (r.render_scale > 0.0) r.render_scale else 1.0;
@@ -214,7 +250,7 @@ pub const FontSampleView = struct {
         var row: usize = 0;
         while (row < lines.len) : (row += 1) {
             const text = lines[row];
-            drawTextWithFont(r, self.allocator, font, text, x, start_y + @as(f32, @floatFromInt(row)) * line_h, Color.white);
+            drawTextWithFont(r, self.allocator, font, text, x, start_y + @as(f32, @floatFromInt(row)) * line_h, fg);
         }
     }
 
