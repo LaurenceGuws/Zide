@@ -24,7 +24,7 @@ font_rendering_todo:
       - "font init + scale: src/ui/renderer/font_manager.zig"
       - "text helpers (non-terminal UI): src/ui/renderer/text_draw.zig"
     known_current_gaps:
-      - "Terminal run-based shaping is not implemented yet (FR-3-01); most terminal rendering still operates per cell."
+      - "Terminal run-based shaping is implemented (FR-3-01). Remaining work is verification + edge-case mapping (clusters spanning cells, fallback boundaries, and width policy)."
       - "Combining marks are supported but currently capped (cell stores 2 combining codepoints; FR-3-00)."
       - "Double-width glyph layout (wcwidth/east-asian-width policy) is not explicitly implemented in the model/render pipeline."
       - "LCD/subpixel AA is not a final solution and remains opt-in/experimental."
@@ -206,13 +206,16 @@ font_rendering_todo:
       tasks:
         - id: FR-V-01
           title: "Run smoke: terminal mode + default run"
-          status: todo
+          status: done
           commands:
             - zig build run -- --mode terminal
             - zig build run
+          notes:
+            - "Smoke-run verified via short `timeout` runs (no crash on startup)."
 
         - id: FR-V-02
           title: "Regression check: font sample grid screenshot/buffer compare"
-          status: todo
+          status: in_progress
           notes:
             - "Once FR-0-01 exists, gate larger refactors behind it."
+            - "Generated an ad-hoc screenshot via: ZIDE_FONT_SAMPLE_FRAMES=3 ZIDE_FONT_SAMPLE_SCREENSHOT=zig-cache/font_sample.ppm zig build run -- --mode font-sample"
