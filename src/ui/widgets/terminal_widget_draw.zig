@@ -5,6 +5,10 @@ const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 const time_utils = @import("../renderer/time_utils.zig");
 const common = @import("common.zig");
+const renderer_mod = @import("../renderer.zig");
+const terminal_font_mod = @import("../terminal_font.zig");
+const terminal_glyphs = @import("../renderer/terminal_glyphs.zig");
+const terminal_underline = @import("../renderer/terminal_underline.zig");
 
 const hover_mod = @import("terminal_widget_hover.zig");
 const kitty_mod = @import("terminal_widget_kitty.zig");
@@ -13,6 +17,15 @@ const Shell = app_shell.Shell;
 const Color = app_shell.Color;
 const CursorPos = terminal_mod.CursorPos;
 const Cell = terminal_mod.Cell;
+
+const TerminalFont = terminal_font_mod.TerminalFont;
+const hb = terminal_font_mod.c;
+const DrawContext = terminal_font_mod.DrawContext;
+const Rect = terminal_font_mod.Rect;
+const Texture = terminal_font_mod.Texture;
+const TextureKind = terminal_font_mod.TextureKind;
+const Rgba = terminal_font_mod.Rgba;
+const Renderer = renderer_mod.Renderer;
 
 pub fn draw(
     self: anytype,
@@ -260,97 +273,274 @@ pub fn draw(
             const col_end = @min(col_end_in, cols_count - 1);
             if (col_start > col_end) return;
 
+            const features = terminalShapeFeatures();
+            const draw_ctx = DrawContext{ .ctx = rr, .drawTexture = drawTextureGlyphCache };
+
             var col: usize = col_start;
-            while (col <= col_end and col < cols_count) : (col += 1) {
-                const cell = row_cells[col];
-                if (cell.x != 0 or cell.y != 0) {
+            while (col <= col_end and col < cols_count) {
+                const cell0 = row_cells[col];
+                if (cell0.x != 0 or cell0.y != 0) {
+                    col += 1;
                     continue;
                 }
-                const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
-                const cell_x_i = base_x_i + @as(i32, @intCast(col)) * cell_w_i;
-                const cell_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
+                const span_choice = rr.terminal_font.pickFontForCodepoint(cell0.codepoint);
+                const span_hb_font = span_choice.hb_font;
+                const span_start_col = col;
 
-                const fg = Color{
-                    .r = cell.attrs.fg.r,
-                    .g = cell.attrs.fg.g,
-                    .b = cell.attrs.fg.b,
-                    .a = cell.attrs.fg.a,
-                };
-                const bg = Color{
-                    .r = cell.attrs.bg.r,
-                    .g = cell.attrs.bg.g,
-                    .b = cell.attrs.bg.b,
-                    .a = cell.attrs.bg.a,
-                };
-                const underline_color = Color{
-                    .r = cell.attrs.underline_color.r,
-                    .g = cell.attrs.underline_color.g,
-                    .b = cell.attrs.underline_color.b,
-                    .a = cell.attrs.underline_color.a,
-                };
-                var underline = cell.attrs.underline;
-                if (cell.attrs.link_id != 0) {
-                    underline = cell.attrs.link_id == hover_link;
-                }
-
-                const cell_reverse = cell.attrs.reverse != screen_reverse_mode;
-                if (cell.attrs.blink and blink_style_mode != BlinkStyleT.off) {
-                    const period: f64 = if (cell.attrs.blink_fast) @as(f64, 0.5) else @as(f64, 1.0);
-                    const phase = @mod(blink_time_s, period * 2.0);
-                    if (phase >= period) {
-                        if (cell.width > 1) {
-                            col += cell_width_units - 1;
-                        }
+                var scan_col: usize = col;
+                while (scan_col <= col_end and scan_col < cols_count) {
+                    const ccell = row_cells[scan_col];
+                    if (ccell.x != 0 or ccell.y != 0) {
+                        scan_col += 1;
                         continue;
                     }
+                    const cwidth_units = @as(usize, @max(@as(u8, 1), ccell.width));
+                    const choice = rr.terminal_font.pickFontForCodepoint(ccell.codepoint);
+                    if (choice.hb_font != span_hb_font) break;
+                    scan_col += cwidth_units;
                 }
-                const followed_by_space = blk: {
-                    const next_col = col + cell_width_units;
-                    if (next_col < cols_count) {
-                        const next_cell = row_cells[next_col];
-                        break :blk next_cell.codepoint == ' ' or next_cell.codepoint == 0;
+                const span_end_excl = @min(scan_col, col_end + 1);
+                const span_cols = span_end_excl - span_start_col;
+
+                const buffer = hb.hb_buffer_create();
+                defer hb.hb_buffer_destroy(buffer);
+                var cc: usize = span_start_col;
+                while (cc < span_end_excl and cc < cols_count) {
+                    const ccell = row_cells[cc];
+                    if (ccell.x != 0 or ccell.y != 0) {
+                        cc += 1;
+                        continue;
                     }
-                    break :blk true;
+                    const cwidth_units = @as(usize, @max(@as(u8, 1), ccell.width));
+                    const cluster: u32 = @intCast(cc - span_start_col);
+                    const cp_base: u32 = if (ccell.codepoint == 0) ' ' else ccell.codepoint;
+                    hb.hb_buffer_add(buffer, cp_base, cluster);
+                    if (ccell.combining_len > 0) {
+                        var j: usize = 0;
+                        while (j < @as(usize, @intCast(ccell.combining_len)) and j < ccell.combining.len) : (j += 1) {
+                            hb.hb_buffer_add(buffer, ccell.combining[j], cluster);
+                        }
+                    }
+                    cc += cwidth_units;
+                }
+                hb.hb_buffer_guess_segment_properties(buffer);
+                hb.hb_shape(span_hb_font, buffer, features[0..].ptr, @intCast(features.len));
+
+                // Underlines are per-cell, not per glyph.
+                cc = span_start_col;
+                while (cc < span_end_excl and cc < cols_count) {
+                    const ccell = row_cells[cc];
+                    if (ccell.x != 0 or ccell.y != 0) {
+                        cc += 1;
+                        continue;
+                    }
+                    const cwidth_units = @as(usize, @max(@as(u8, 1), ccell.width));
+                    const cell_x_i = base_x_i + @as(i32, @intCast(cc)) * cell_w_i;
+                    const cell_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
+                    const underline_color = Color{ .r = ccell.attrs.underline_color.r, .g = ccell.attrs.underline_color.g, .b = ccell.attrs.underline_color.b, .a = ccell.attrs.underline_color.a };
+                    var underline = ccell.attrs.underline;
+                    if (ccell.attrs.link_id != 0) {
+                        underline = ccell.attrs.link_id == hover_link;
+                    }
+                    if (ccell.attrs.blink and blink_style_mode != BlinkStyleT.off) {
+                        const period: f64 = if (ccell.attrs.blink_fast) @as(f64, 0.5) else @as(f64, 1.0);
+                        const phase = @mod(blink_time_s, period * 2.0);
+                        if (phase >= period) {
+                            cc += cwidth_units;
+                            continue;
+                        }
+                    }
+                    if (underline and ccell.codepoint != 0) {
+                        terminal_underline.drawUnderline(
+                            addTerminalGlyphRect,
+                            rr,
+                            cell_x_i,
+                            cell_y_i,
+                            cell_w_i * @as(i32, @intCast(cwidth_units)),
+                            cell_h_i,
+                            underline_color,
+                        );
+                    }
+                    cc += cwidth_units;
+                }
+
+                // Map HarfBuzz output back to the monospace grid by resetting pen position per cell.
+                rr.terminal_shape_first_pen_set.items.len = 0;
+                rr.terminal_shape_first_pen.items.len = 0;
+
+                rr.terminal_shape_first_pen_set.ensureTotalCapacity(rr.allocator, span_cols) catch {
+                    col = span_end_excl;
+                    continue;
                 };
+                rr.terminal_shape_first_pen.ensureTotalCapacity(rr.allocator, span_cols) catch {
+                    col = span_end_excl;
+                    continue;
+                };
+                rr.terminal_shape_first_pen_set.items.len = span_cols;
+                rr.terminal_shape_first_pen.items.len = span_cols;
+                @memset(rr.terminal_shape_first_pen_set.items, false);
+                @memset(rr.terminal_shape_first_pen.items, 0);
 
-                if (cell.combining_len > 0) {
-                    rr.drawTerminalCellGraphemeBatched(
+                var length: c_uint = 0;
+                const infos = hb.hb_buffer_get_glyph_infos(buffer, &length);
+                const positions = hb.hb_buffer_get_glyph_positions(buffer, &length);
+                if (length == 0) {
+                    // Fallback: if shaping produces no glyphs, draw per-cell.
+                    var fb_col: usize = span_start_col;
+                    while (fb_col < span_end_excl and fb_col < cols_count) {
+                        const cell = row_cells[fb_col];
+                        if (cell.x != 0 or cell.y != 0) {
+                            fb_col += 1;
+                            continue;
+                        }
+                        const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
+                        const cell_x_i = base_x_i + @as(i32, @intCast(fb_col)) * cell_w_i;
+                        const cell_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
+
+                        const fg = Color{ .r = cell.attrs.fg.r, .g = cell.attrs.fg.g, .b = cell.attrs.fg.b, .a = cell.attrs.fg.a };
+                        const bg = Color{ .r = cell.attrs.bg.r, .g = cell.attrs.bg.g, .b = cell.attrs.bg.b, .a = cell.attrs.bg.a };
+                        const underline_color = Color{ .r = cell.attrs.underline_color.r, .g = cell.attrs.underline_color.g, .b = cell.attrs.underline_color.b, .a = cell.attrs.underline_color.a };
+
+                        const cell_reverse = cell.attrs.reverse != screen_reverse_mode;
+                        if (cell.attrs.blink and blink_style_mode != BlinkStyleT.off) {
+                            const period: f64 = if (cell.attrs.blink_fast) @as(f64, 0.5) else @as(f64, 1.0);
+                            const phase = @mod(blink_time_s, period * 2.0);
+                            if (phase >= period) {
+                                fb_col += cell_width_units;
+                                continue;
+                            }
+                        }
+                        const followed_by_space = blk: {
+                            const next_col = fb_col + cell_width_units;
+                            if (next_col < cols_count) {
+                                const next_cell = row_cells[next_col];
+                                break :blk next_cell.codepoint == ' ' or next_cell.codepoint == 0;
+                            }
+                            break :blk true;
+                        };
+
+                        // Underlines already drawn above for this span.
+                        if (cell.combining_len > 0) {
+                            rr.drawTerminalCellGraphemeBatched(
+                                cell.codepoint,
+                                cell.combining[0..@intCast(cell.combining_len)],
+                                @as(f32, @floatFromInt(cell_x_i)),
+                                @as(f32, @floatFromInt(cell_y_i)),
+                                @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cell_width_units)))),
+                                @as(f32, @floatFromInt(cell_h_i)),
+                                if (cell_reverse) bg else fg,
+                                if (cell_reverse) fg else bg,
+                                underline_color,
+                                cell.attrs.bold,
+                                false,
+                                false,
+                                followed_by_space,
+                                false,
+                            );
+                        } else {
+                            rr.drawTerminalCellBatched(
+                                cell.codepoint,
+                                @as(f32, @floatFromInt(cell_x_i)),
+                                @as(f32, @floatFromInt(cell_y_i)),
+                                @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cell_width_units)))),
+                                @as(f32, @floatFromInt(cell_h_i)),
+                                if (cell_reverse) bg else fg,
+                                if (cell_reverse) fg else bg,
+                                underline_color,
+                                cell.attrs.bold,
+                                false,
+                                false,
+                                followed_by_space,
+                                false,
+                            );
+                        }
+
+                        fb_col += cell_width_units;
+                    }
+                    col = span_end_excl;
+                    continue;
+                }
+
+                const glyph_len: usize = @intCast(length);
+                const render_scale = if (rr.terminal_font.render_scale > 0.0) rr.terminal_font.render_scale else 1.0;
+                const inv_scale = 1.0 / render_scale;
+                var pen_x: f32 = 0;
+                var i: usize = 0;
+                while (i < glyph_len) : (i += 1) {
+                    const cluster_rel_u32: u32 = infos[i].cluster;
+                    const pen_before = pen_x;
+                    pen_x += (@as(f32, @floatFromInt(positions[i].x_advance)) / 64.0) * inv_scale;
+
+                    if (cluster_rel_u32 >= span_cols) continue;
+                    const cluster_rel: usize = @intCast(cluster_rel_u32);
+                    const abs_col = span_start_col + cluster_rel;
+                    if (abs_col >= cols_count) continue;
+                    const cell = row_cells[abs_col];
+                    if (cell.x != 0 or cell.y != 0) continue;
+
+                    const width_units = @as(usize, @max(@as(u8, 1), cell.width));
+                    const cell_x_i = base_x_i + @as(i32, @intCast(abs_col)) * cell_w_i;
+                    const cell_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
+                    const cell_x = @as(f32, @floatFromInt(cell_x_i));
+                    const cell_y = @as(f32, @floatFromInt(cell_y_i));
+                    const cell_w = @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(width_units))));
+                    const cell_h = @as(f32, @floatFromInt(cell_h_i));
+
+                    if (!rr.terminal_shape_first_pen_set.items[cluster_rel]) {
+                        rr.terminal_shape_first_pen_set.items[cluster_rel] = true;
+                        rr.terminal_shape_first_pen.items[cluster_rel] = pen_before;
+                    }
+                    const pen_rel = pen_before - rr.terminal_shape_first_pen.items[cluster_rel];
+
+                    if (cell.attrs.blink and blink_style_mode != BlinkStyleT.off) {
+                        const period: f64 = if (cell.attrs.blink_fast) @as(f64, 0.5) else @as(f64, 1.0);
+                        const phase = @mod(blink_time_s, period * 2.0);
+                        if (phase >= period) continue;
+                    }
+
+                    const followed_by_space = blk: {
+                        const next_col = abs_col + width_units;
+                        if (next_col < cols_count) {
+                            const next_cell = row_cells[next_col];
+                            break :blk next_cell.codepoint == ' ' or next_cell.codepoint == 0;
+                        }
+                        break :blk true;
+                    };
+
+                    const fg = Color{ .r = cell.attrs.fg.r, .g = cell.attrs.fg.g, .b = cell.attrs.fg.b, .a = cell.attrs.fg.a };
+                    const bg = Color{ .r = cell.attrs.bg.r, .g = cell.attrs.bg.g, .b = cell.attrs.bg.b, .a = cell.attrs.bg.a };
+                    const cell_reverse = cell.attrs.reverse != screen_reverse_mode;
+                    const fg_draw = if (cell_reverse) bg else fg;
+                    const bg_draw = if (cell_reverse) fg else bg;
+                    var behind_rgba = bg_draw.toRgba();
+                    behind_rgba.a = 255;
+                    rr.text_bg_rgba = behind_rgba;
+
+                    if (cell.codepoint == 0) continue;
+                    if (cell.combining_len == 0 and isTerminalBoxGlyph(cell.codepoint)) {
+                        _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, cell_x, cell_y, cell_w, cell_h, fg_draw);
+                        continue;
+                    }
+
+                    drawShapedGlyph(
+                        &rr.terminal_font,
+                        draw_ctx,
+                        span_choice.face,
+                        span_choice.want_color,
                         cell.codepoint,
-                        cell.combining[0..@intCast(cell.combining_len)],
-                        @as(f32, @floatFromInt(cell_x_i)),
-                        @as(f32, @floatFromInt(cell_y_i)),
-                        @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cell_width_units)))),
-                        @as(f32, @floatFromInt(cell_h_i)),
-                        if (cell_reverse) bg else fg,
-                        if (cell_reverse) fg else bg,
-                        underline_color,
-                        cell.attrs.bold,
-                        underline,
-                        false,
+                        infos[i].codepoint,
+                        positions[i],
+                        pen_rel,
+                        cell_x,
+                        cell_y,
+                        cell_w,
+                        cell_h,
                         followed_by_space,
-                        false,
-                    );
-                } else {
-                    rr.drawTerminalCellBatched(
-                        cell.codepoint,
-                        @as(f32, @floatFromInt(cell_x_i)),
-                        @as(f32, @floatFromInt(cell_y_i)),
-                        @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cell_width_units)))),
-                        @as(f32, @floatFromInt(cell_h_i)),
-                        if (cell_reverse) bg else fg,
-                        if (cell_reverse) fg else bg,
-                        underline_color,
-                        cell.attrs.bold,
-                        underline,
-                        false,
-                        followed_by_space,
-                        false,
+                        fg_draw.toRgba(),
                     );
                 }
 
-                if (cell.width > 1) {
-                    col += cell_width_units - 1;
-                }
+                col = span_end_excl;
             }
         }
     }.render;
@@ -825,5 +1015,127 @@ pub fn draw(
                 );
             }
         }
+    }
+}
+
+fn drawTextureGlyphCache(ctx: *anyopaque, texture: Texture, src: Rect, dest: Rect, color: Rgba, kind: TextureKind) void {
+    const rr: *Renderer = @ptrCast(@alignCast(ctx));
+    rr.terminal_glyph_cache.addQuad(texture, src, dest, color, rr.text_bg_rgba, kind);
+}
+
+fn addTerminalGlyphRect(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
+    const rr: *Renderer = @ptrCast(@alignCast(ctx));
+    rr.addTerminalGlyphRect(x, y, w, h, color);
+}
+
+fn hbTag(a: u8, b: u8, cch: u8, d: u8) u32 {
+    return (@as(u32, a) << 24) | (@as(u32, b) << 16) | (@as(u32, cch) << 8) | @as(u32, d);
+}
+
+const hb_feature_all: u32 = 0xFFFFFFFF;
+
+fn terminalShapeFeatures() [5]hb.hb_feature_t {
+    return .{
+        .{ .tag = hbTag('l', 'i', 'g', 'a'), .value = 0, .start = 0, .end = hb_feature_all },
+        .{ .tag = hbTag('c', 'l', 'i', 'g'), .value = 0, .start = 0, .end = hb_feature_all },
+        .{ .tag = hbTag('d', 'l', 'i', 'g'), .value = 0, .start = 0, .end = hb_feature_all },
+        .{ .tag = hbTag('h', 'l', 'i', 'g'), .value = 0, .start = 0, .end = hb_feature_all },
+        .{ .tag = hbTag('c', 'a', 'l', 't'), .value = 0, .start = 0, .end = hb_feature_all },
+    };
+}
+
+fn isTerminalBoxGlyph(codepoint: u32) bool {
+    return switch (codepoint) {
+        0x2500,
+        0x2501,
+        0x2502,
+        0x2503,
+        0x256d,
+        0x256e,
+        0x256f,
+        0x2570,
+        0x250c,
+        0x2510,
+        0x2514,
+        0x2518,
+        0x2574,
+        0x2575,
+        0x2576,
+        0x2577,
+        0x251c,
+        0x2524,
+        0x252c,
+        0x2534,
+        0x253c,
+        0x2580,
+        0x2584,
+        0x2588,
+        => true,
+        else => false,
+    };
+}
+
+fn drawShapedGlyph(
+    font: *TerminalFont,
+    ctx_draw: DrawContext,
+    face: hb.FT_Face,
+    want_color: bool,
+    base_codepoint: u32,
+    glyph_id: u32,
+    hb_pos: hb.hb_glyph_position_t,
+    pen_x_rel: f32,
+    x: f32,
+    y: f32,
+    cell_width: f32,
+    cell_height: f32,
+    followed_by_space: bool,
+    color: Rgba,
+) void {
+    const glyph = font.getGlyphById(face, glyph_id, want_color, hb_pos.x_advance) catch return;
+    const render_scale = if (font.render_scale > 0.0) font.render_scale else 1.0;
+    const inv_scale = 1.0 / render_scale;
+    const baseline = y + font.ascent * inv_scale;
+
+    const gx_off = (@as(f32, @floatFromInt(hb_pos.x_offset)) / 64.0) * inv_scale;
+    const gy_off = (@as(f32, @floatFromInt(hb_pos.y_offset)) / 64.0) * inv_scale;
+    const origin_x = x + pen_x_rel + gx_off;
+
+    const glyph_w = @as(f32, @floatFromInt(glyph.width)) * inv_scale;
+    const glyph_h = @as(f32, @floatFromInt(glyph.height)) * inv_scale;
+    const bearing_x = @as(f32, @floatFromInt(glyph.bearing_x)) * inv_scale;
+    const bearing_y = @as(f32, @floatFromInt(glyph.bearing_y)) * inv_scale;
+
+    const is_symbol_glyph = (base_codepoint >= 0xE000 and base_codepoint <= 0xF8FF) or
+        (base_codepoint >= 0xF0000 and base_codepoint <= 0xFFFFD) or
+        (base_codepoint >= 0x100000 and base_codepoint <= 0x10FFFD) or
+        (base_codepoint >= 0x2700 and base_codepoint <= 0x27BF) or
+        (base_codepoint >= 0x2600 and base_codepoint <= 0x26FF);
+
+    const aspect = if (cell_height > 0) glyph_w / cell_height else 0.0;
+    const is_square_or_wide = aspect >= 0.7;
+    const allow_width_overflow = if (is_symbol_glyph) true else if (is_square_or_wide) switch (font.overflow_policy) {
+        .never => false,
+        .always => true,
+        .when_followed_by_space => followed_by_space,
+    } else false;
+
+    const overflow_scale = if (!allow_width_overflow and glyph_w > cell_width and glyph_w > 0) cell_width / glyph_w else 1.0;
+    const scaled_w = glyph_w * overflow_scale;
+    const scaled_h = glyph_h * overflow_scale;
+
+    const draw_x = if (allow_width_overflow) origin_x + bearing_x * overflow_scale else @max(x, origin_x + bearing_x * overflow_scale);
+    const draw_y = (baseline - bearing_y * overflow_scale) - gy_off;
+    const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
+    const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y)))));
+    const dest = terminal_font_mod.Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
+
+    const draw_color = if (glyph.is_color)
+        Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 }
+    else
+        color;
+    if (glyph.is_color) {
+        ctx_draw.drawTexture(ctx_draw.ctx, font.color_texture, glyph.rect, dest, draw_color, .rgba);
+    } else {
+        ctx_draw.drawTexture(ctx_draw.ctx, font.coverage_texture, glyph.rect, dest, draw_color, .font_coverage);
     }
 }

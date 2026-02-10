@@ -276,6 +276,10 @@ pub const Renderer = struct {
     batch_vertices: std.ArrayList(Vertex),
     batch_draws: std.ArrayList(BatchDraw),
     terminal_glyph_cache: glyph_cache.GlyphCache,
+
+    // Terminal run-based shaping scratch buffers.
+    terminal_shape_first_pen: std.ArrayListUnmanaged(f32),
+    terminal_shape_first_pen_set: std.ArrayListUnmanaged(bool),
     should_close_flag: bool,
     window_resized_flag: bool,
     text_input_state: text_input.TextInputState,
@@ -390,6 +394,8 @@ pub const Renderer = struct {
             .batch_vertices = std.ArrayList(Vertex).empty,
             .batch_draws = std.ArrayList(BatchDraw).empty,
             .terminal_glyph_cache = glyph_cache.GlyphCache.init(allocator),
+            .terminal_shape_first_pen = .{},
+            .terminal_shape_first_pen_set = .{},
             .should_close_flag = false,
             .window_resized_flag = false,
             .text_input_state = text_input.initState(),
@@ -438,6 +444,9 @@ pub const Renderer = struct {
         self.batch_vertices.deinit(self.allocator);
         self.batch_draws.deinit(self.allocator);
         self.terminal_glyph_cache.deinit();
+
+        self.terminal_shape_first_pen.deinit(self.allocator);
+        self.terminal_shape_first_pen_set.deinit(self.allocator);
 
         if (self.white_texture.id != 0) {
             gl.DeleteTextures(1, &self.white_texture.id);

@@ -169,13 +169,14 @@ font_rendering_todo:
 
         - id: FR-3-01
           title: "Implement run-based shaping for terminal lines"
-          status: todo
+          status: done
           files_to_edit:
             - src/ui/terminal_font.zig
             - src/ui/widgets/terminal_widget_draw.zig
           notes:
             - "Move beyond per-codepoint shaping; shape runs and map results back to the monospace grid."
             - "Must preserve stable cell metrics; fallbacks must not poison cell width."
+            - "Terminal shaping disables common ligature features (liga/clig/dlig/hlig/calt) to avoid multi-cell ligatures breaking the grid."
 
     - name: "Phase 4 - Editor Text Pipeline Parity"
       tasks:

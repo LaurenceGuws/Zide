@@ -390,6 +390,12 @@ pub const TerminalFont = struct {
     use_lcd: bool,
     overflow_policy: AllowSquareGlyphOverflow,
 
+    pub const FontChoice = struct {
+        face: c.FT_Face,
+        hb_font: *c.hb_font_t,
+        want_color: bool,
+    };
+
     pub fn init(
         allocator: std.mem.Allocator,
         path: [*:0]const u8,
@@ -711,6 +717,47 @@ pub const TerminalFont = struct {
         if (self.glyphs.getPtr(key)) |glyph| return glyph;
         try self.rasterizeGlyphKey(key, hb_x_advance, true);
         return self.glyphs.getPtr(key).?;
+    }
+
+    pub fn getGlyphById(self: *TerminalFont, face: c.FT_Face, glyph_id: u32, want_color: bool, hb_x_advance: c_int) GlyphError!*Glyph {
+        const key = GlyphKey{ .face = face, .glyph_id = glyph_id, .want_color = want_color };
+        return self.getGlyphByKey(key, hb_x_advance);
+    }
+
+    pub fn pickFontForCodepoint(self: *TerminalFont, codepoint_in: u32) FontChoice {
+        var codepoint = codepoint_in;
+        if (codepoint == 0) codepoint = ' ';
+
+        var face = self.ft_face;
+        var hb_font = self.hb_font;
+        const preferred = self.pickPreferred(codepoint);
+        if (preferred.face) |p_face| {
+            if (preferred.hb) |p_hb| {
+                face = p_face;
+                hb_font = p_hb;
+            }
+        } else if (!hasGlyph(face, codepoint)) {
+            const fallback = self.pickFallback(codepoint);
+            if (fallback.face) |fb_face| {
+                if (fallback.hb) |fb_hb| {
+                    face = fb_face;
+                    hb_font = fb_hb;
+                }
+            }
+            if (!hasGlyph(face, codepoint)) {
+                if (self.systemFallback(codepoint)) |pair| {
+                    if (pair.face) |sf_face| {
+                        if (pair.hb) |sf_hb| {
+                            face = sf_face;
+                            hb_font = sf_hb;
+                        }
+                    }
+                }
+            }
+        }
+
+        const is_color_face = c.FT_HAS_COLOR(face) or (self.emoji_color_ft_face != null and face == self.emoji_color_ft_face.?);
+        return .{ .face = face, .hb_font = hb_font, .want_color = is_color_face };
     }
 
     pub fn setAtlasFilterPoint(self: *TerminalFont) void {
