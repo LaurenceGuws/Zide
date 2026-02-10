@@ -4,7 +4,7 @@ font_rendering_todo:
     note: "Editor and terminal do not need to share the same font stack; they optimize for different constraints."
     primary_fonts:
       - "assets/fonts/JetBrainsMonoNerdFont-Regular.ttf (currently acceptable with existing pipeline)"
-      - "assets/fonts/IosevkaTermNerdFont-Regular.ttf (currently poor/unusable with existing pipeline)"
+      - "assets/fonts/IosevkaTermNerdFont-Regular.ttf (primary stress font; still under iteration)"
     priorities:
       - "correct color pipeline (linear blending + predictable gamma)"
       - "hinting policy control (light/normal/none + autohint)"
@@ -24,9 +24,10 @@ font_rendering_todo:
       - "font init + scale: src/ui/renderer/font_manager.zig"
       - "text helpers (non-terminal UI): src/ui/renderer/text_draw.zig"
     known_current_gaps:
-      - "We upload grayscale glyphs into an RGBA8 atlas and do a per-pixel gamma transform in CPU (pow(., 1/2.2))."
-      - "We blend in the default GL pipeline (SRC_ALPHA, ONE_MINUS_SRC_ALPHA) with a trivial shader; no sRGB/linear strategy."
-      - "Hinting is not user-configurable (beyond LCD target) and HarfBuzz FT load flags are not set to match rasterization."
+      - "Terminal run-based shaping is not implemented yet (FR-3-01); most terminal rendering still operates per cell."
+      - "Combining marks are supported but currently capped (cell stores 2 combining codepoints; FR-3-00)."
+      - "Double-width glyph layout (wcwidth/east-asian-width policy) is not explicitly implemented in the model/render pipeline."
+      - "LCD/subpixel AA is not a final solution and remains opt-in/experimental."
 
   constraints:
     - "This work changes rendering behavior; introduce a repeatable visual/metric harness before large changes."
@@ -155,7 +156,7 @@ font_rendering_todo:
       tasks:
         - id: FR-3-00
           title: "Support combining marks as grapheme clusters in terminal cells"
-          status: in_progress
+          status: done
           files_to_edit:
             - src/terminal/model/screen/screen.zig
             - src/terminal/model/types.zig
