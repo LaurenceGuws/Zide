@@ -1119,7 +1119,12 @@ fn drawShapedGlyph(
         .when_followed_by_space => followed_by_space,
     } else false;
 
-    const overflow_scale = if (!allow_width_overflow and glyph_w > cell_width and glyph_w > 0) cell_width / glyph_w else 1.0;
+    // Only apply width-fit scaling for square/wide glyphs (icons, box-ish symbols).
+    // Scaling normal text glyphs to fit the cell can cause visible baseline jitter at
+    // certain fractional scales.
+    const overflow_eps: f32 = 0.25;
+    const should_fit = (!allow_width_overflow) and is_square_or_wide;
+    const overflow_scale = if (should_fit and glyph_w > cell_width + overflow_eps and glyph_w > 0) cell_width / glyph_w else 1.0;
     const scaled_w = glyph_w * overflow_scale;
     const scaled_h = glyph_h * overflow_scale;
 
