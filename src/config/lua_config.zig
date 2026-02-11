@@ -37,6 +37,7 @@ pub const Config = struct {
     editor_font_path: ?[]u8,
     editor_font_size: ?f32,
     editor_font_features: ?[]u8,
+    editor_disable_ligatures: ?TerminalDisableLigaturesStrategy,
     terminal_font_path: ?[]u8,
     terminal_font_size: ?f32,
     terminal_blink_style: ?TerminalBlinkStyle,
@@ -132,6 +133,7 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
         .editor_font_path = null,
         .editor_font_size = null,
         .editor_font_features = null,
+        .editor_disable_ligatures = null,
         .terminal_font_path = null,
         .terminal_font_size = null,
         .terminal_blink_style = null,
@@ -252,6 +254,9 @@ fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) voi
         if (base.editor_font_features) |old| allocator.free(old);
         base.editor_font_features = allocator.dupe(u8, features) catch base.editor_font_features;
     }
+    if (overlay.editor_disable_ligatures != null) {
+        base.editor_disable_ligatures = overlay.editor_disable_ligatures;
+    }
     if (overlay.terminal_font_path) |path| {
         if (base.terminal_font_path) |old| allocator.free(old);
         base.terminal_font_path = allocator.dupe(u8, path) catch base.terminal_font_path;
@@ -343,6 +348,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             .editor_font_path = null,
             .editor_font_size = null,
             .editor_font_features = null,
+            .editor_disable_ligatures = null,
             .terminal_font_path = null,
             .terminal_font_size = null,
             .terminal_blink_style = null,
@@ -377,6 +383,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     var editor_font_path: ?[]u8 = null;
     var editor_font_size: ?f32 = null;
     var editor_font_features: ?[]u8 = null;
+    var editor_disable_ligatures: ?TerminalDisableLigaturesStrategy = null;
     var terminal_font_path: ?[]u8 = null;
     var terminal_font_size: ?f32 = null;
     var terminal_blink_style: ?TerminalBlinkStyle = null;
@@ -446,6 +453,12 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             editor_font_features = try luaStringToOwned(allocator, L, -1);
         } else if (c.lua_istable(L, -1)) {
             editor_font_features = try luaStringListToOwned(allocator, L, -1);
+        }
+        c.lua_pop(L, 1);
+
+        _ = c.lua_getfield(L, -1, "disable_ligatures");
+        if (c.lua_isstring(L, -1) != 0) {
+            editor_disable_ligatures = parseTerminalDisableLigatures(L, -1);
         }
         c.lua_pop(L, 1);
 
@@ -648,6 +661,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         .editor_font_path = editor_font_path,
         .editor_font_size = editor_font_size,
         .editor_font_features = editor_font_features,
+        .editor_disable_ligatures = editor_disable_ligatures,
         .terminal_font_path = terminal_font_path,
         .terminal_font_size = terminal_font_size,
         .terminal_blink_style = terminal_blink_style,

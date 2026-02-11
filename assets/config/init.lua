@@ -102,6 +102,11 @@ return {
     editor = {
         -- Soft wrap long lines.
         wrap = false,
+        -- Ligature strategy (matches terminal semantics):
+        --   "never"  = never disable ligatures (default)
+        --   "cursor" = disable programming ligatures under cursor segment
+        --   "always" = always disable programming ligatures
+        disable_ligatures = "never",
         -- Optional editor-specific shaping features (falls back to terminal.font_features when unset).
         -- Examples:
         -- font_features = "+calt"

@@ -34,13 +34,13 @@ fn addRectOp(list: *EditorDrawList, x: f32, y: f32, w: f32, h: f32, color: anyty
     return true;
 }
 
-fn addTextOp(list: *EditorDrawList, x: f32, y: f32, text: []const u8, color: anytype) bool {
-    list.add(.{ .text = TextOp{ .x = x, .y = y, .text = text, .color = packColor(color), .bg_color = 0 } }) catch return false;
+fn addTextOp(list: *EditorDrawList, x: f32, y: f32, text: []const u8, color: anytype, disable_programming_ligatures: bool) bool {
+    list.add(.{ .text = TextOp{ .x = x, .y = y, .text = text, .color = packColor(color), .bg_color = 0, .disable_programming_ligatures = disable_programming_ligatures } }) catch return false;
     return true;
 }
 
-fn addTextOpBg(list: *EditorDrawList, x: f32, y: f32, text: []const u8, color: anytype, bg: anytype) bool {
-    list.add(.{ .text = TextOp{ .x = x, .y = y, .text = text, .color = packColor(color), .bg_color = packColor(bg) } }) catch return false;
+fn addTextOpBg(list: *EditorDrawList, x: f32, y: f32, text: []const u8, color: anytype, bg: anytype, disable_programming_ligatures: bool) bool {
+    list.add(.{ .text = TextOp{ .x = x, .y = y, .text = text, .color = packColor(color), .bg_color = packColor(bg), .disable_programming_ligatures = disable_programming_ligatures } }) catch return false;
     return true;
 }
 
@@ -66,9 +66,9 @@ fn flushDrawList(list: *EditorDrawList, r: anytype) void {
                 const fg = unpackColor(ColorType, text.color);
                 const bg = unpackColor(ColorType, text.bg_color);
                 if (bg.a != 0) {
-                    r.drawTextMonospaceOnBg(text.text, text.x, text.y, fg, bg);
+                    r.drawTextMonospaceOnBgPolicy(text.text, text.x, text.y, fg, bg, text.disable_programming_ligatures);
                 } else {
-                    r.drawTextMonospace(text.text, text.x, text.y, fg);
+                    r.drawTextMonospacePolicy(text.text, text.x, text.y, fg, text.disable_programming_ligatures);
                 }
             },
             .cursor => |cursor| {
@@ -120,7 +120,7 @@ fn addEditorLineBaseOps(
     const pad = 4 * r.uiScaleFactor();
     const line_color = if (is_current) r.theme.foreground else r.theme.line_number;
     const line_bg = if (is_current) r.theme.current_line else r.theme.line_number_bg;
-    ok = ok and addTextOpBg(list, x + pad, y, num_str, line_color, line_bg);
+    ok = ok and addTextOpBg(list, x + pad, y, num_str, line_color, line_bg, false);
     return ok;
 }
 
@@ -195,6 +195,7 @@ fn addTextSliceOpsWithSelectionBg(
     base_bg: anytype,
     selection_bg: anytype,
     sel_ranges: []const ByteRange,
+    disable_programming_ligatures: bool,
 ) bool {
     if (slice_end <= slice_start) return true;
     var ok = true;
@@ -206,20 +207,20 @@ fn addTextSliceOpsWithSelectionBg(
             const a0 = cursor;
             const a1 = @min(sr.start, slice_end);
             const x = text_start_x + @as(f32, @floatFromInt(a0 - seg_start_byte)) * r.char_width;
-            ok = ok and addTextOpBg(list, x, y, line_text[a0..a1], fg, base_bg);
+            ok = ok and addTextOpBg(list, x, y, line_text[a0..a1], fg, base_bg, disable_programming_ligatures);
         }
         const b0 = @max(cursor, sr.start);
         const b1 = @min(slice_end, sr.end);
         if (b1 > b0) {
             const x = text_start_x + @as(f32, @floatFromInt(b0 - seg_start_byte)) * r.char_width;
-            ok = ok and addTextOpBg(list, x, y, line_text[b0..b1], fg, selection_bg);
+            ok = ok and addTextOpBg(list, x, y, line_text[b0..b1], fg, selection_bg, disable_programming_ligatures);
             cursor = b1;
         }
         if (cursor >= slice_end) break;
     }
     if (cursor < slice_end) {
         const x = text_start_x + @as(f32, @floatFromInt(cursor - seg_start_byte)) * r.char_width;
-        ok = ok and addTextOpBg(list, x, y, line_text[cursor..slice_end], fg, base_bg);
+        ok = ok and addTextOpBg(list, x, y, line_text[cursor..slice_end], fg, base_bg, disable_programming_ligatures);
     }
     return ok;
 }
@@ -251,6 +252,7 @@ fn drawTextSliceWithSelectionBg(
     base_bg: anytype,
     selection_bg: anytype,
     sel_ranges: []const ByteRange,
+    disable_programming_ligatures: bool,
 ) void {
     if (slice_end <= slice_start) return;
     var cursor = slice_start;
@@ -261,20 +263,20 @@ fn drawTextSliceWithSelectionBg(
             const a0 = cursor;
             const a1 = @min(sr.start, slice_end);
             const x = text_start_x + @as(f32, @floatFromInt(a0 - seg_start_byte)) * r.char_width;
-            r.drawTextMonospaceOnBg(line_text[a0..a1], x, y, fg, base_bg);
+            r.drawTextMonospaceOnBgPolicy(line_text[a0..a1], x, y, fg, base_bg, disable_programming_ligatures);
         }
         const b0 = @max(cursor, sr.start);
         const b1 = @min(slice_end, sr.end);
         if (b1 > b0) {
             const x = text_start_x + @as(f32, @floatFromInt(b0 - seg_start_byte)) * r.char_width;
-            r.drawTextMonospaceOnBg(line_text[b0..b1], x, y, fg, selection_bg);
+            r.drawTextMonospaceOnBgPolicy(line_text[b0..b1], x, y, fg, selection_bg, disable_programming_ligatures);
             cursor = b1;
         }
         if (cursor >= slice_end) break;
     }
     if (cursor < slice_end) {
         const x = text_start_x + @as(f32, @floatFromInt(cursor - seg_start_byte)) * r.char_width;
-        r.drawTextMonospaceOnBg(line_text[cursor..slice_end], x, y, fg, base_bg);
+        r.drawTextMonospaceOnBgPolicy(line_text[cursor..slice_end], x, y, fg, base_bg, disable_programming_ligatures);
     }
 }
 
@@ -292,6 +294,7 @@ fn appendHighlightedLineSegmentOps(
     selection_bg: anytype,
     seg_start_byte: usize,
     sel_ranges: []const ByteRange,
+    disable_programming_ligatures: bool,
 ) bool {
     if (seg_start >= seg_end or line_text.len == 0) return true;
 
@@ -319,6 +322,7 @@ fn appendHighlightedLineSegmentOps(
                 base_bg,
                 selection_bg,
                 sel_ranges,
+                disable_programming_ligatures,
             );
         }
         const slice_start = start;
@@ -336,7 +340,7 @@ fn appendHighlightedLineSegmentOps(
             if (ctext.len > 0) {
                 const bg = selectionOverlapBg(slice_start, slice_end, base_bg, selection_bg, sel_ranges);
                 const x = text_x + @as(f32, @floatFromInt(slice_start - seg_start)) * r.char_width;
-                ok = ok and addTextOpBg(list, x, y, ctext, color, bg);
+                ok = ok and addTextOpBg(list, x, y, ctext, color, bg, disable_programming_ligatures);
             }
         } else {
             ok = ok and addTextSliceOpsWithSelectionBg(
@@ -352,6 +356,7 @@ fn appendHighlightedLineSegmentOps(
                 base_bg,
                 selection_bg,
                 sel_ranges,
+                disable_programming_ligatures,
             );
         }
         if (end > cursor) {
@@ -374,6 +379,7 @@ fn appendHighlightedLineSegmentOps(
             base_bg,
             selection_bg,
             sel_ranges,
+            disable_programming_ligatures,
         );
     }
 
@@ -523,6 +529,11 @@ pub fn draw(
             const seg_y = y + @as(f32, @floatFromInt(visual_row)) * r.char_height;
             const seg_start_byte = selection_mod.byteIndexForVisualColumn(line_text, seg_start_col, cluster_slice);
             const seg_end_byte = selection_mod.byteIndexForVisualColumn(line_text, seg_end_col, cluster_slice);
+            const disable_programming_ligatures = switch (r.editor_disable_ligatures) {
+                .never => false,
+                .always => true,
+                .cursor => is_current and seg == cursor_seg,
+            };
 
             if (seg == seg_start_idx) {
                 r.drawEditorLineBase(line_idx, seg_y, x, widget.gutter_width, width, is_current);
@@ -591,6 +602,7 @@ pub fn draw(
                     base_bg,
                     r.theme.selection,
                     sel_bytes[0..sel_count],
+                    disable_programming_ligatures,
                 );
             } else {
                 drawHighlightedLineSegment(
@@ -605,6 +617,7 @@ pub fn draw(
                     base_bg,
                     r.theme.selection,
                     sel_bytes[0..sel_count],
+                    disable_programming_ligatures,
                 );
             }
 
@@ -788,6 +801,11 @@ pub fn drawCached(
             const seg_y = origin_y + @as(f32, @floatFromInt(visual_row)) * r.char_height;
             const seg_start_byte = selection_mod.byteIndexForVisualColumn(line_text, seg_start_col, cluster_slice);
             const seg_end_byte = selection_mod.byteIndexForVisualColumn(line_text, seg_end_col, cluster_slice);
+            const disable_programming_ligatures = switch (r.editor_disable_ligatures) {
+                .never => false,
+                .always => true,
+                .cursor => is_current and seg == cursor_seg,
+            };
 
             const seg_hash = hashSegment(
                 line_text,
@@ -880,6 +898,7 @@ pub fn drawCached(
                             base_bg,
                             r.theme.selection,
                             sel_bytes[0..sel_count],
+                            disable_programming_ligatures,
                         );
                     } else {
                         list_ok = list_ok and appendHighlightedLineSegmentOps(
@@ -896,6 +915,7 @@ pub fn drawCached(
                             r.theme.selection,
                             seg_start_byte,
                             sel_bytes[0..sel_count],
+                            disable_programming_ligatures,
                         );
                     }
 
@@ -964,22 +984,22 @@ pub fn drawCached(
                         if (tokens.len == 0) {
                             const seg_base_bg = base_bg;
                             if (sel_count == 0) {
-                                r.drawTextMonospaceOnBg(line_text[seg_start_byte..seg_end_byte], text_start_x, seg_y, r.theme.foreground, seg_base_bg);
+                                r.drawTextMonospaceOnBgPolicy(line_text[seg_start_byte..seg_end_byte], text_start_x, seg_y, r.theme.foreground, seg_base_bg, disable_programming_ligatures);
                             } else {
                                 // Draw unselected/selected parts separately for correct correction.
                                 var cursor_b: usize = seg_start_byte;
                                 for (sel_bytes[0..sel_count]) |sr| {
                                     if (sr.start > cursor_b) {
                                         const x0 = text_start_x + @as(f32, @floatFromInt(cursor_b - seg_start_byte)) * r.char_width;
-                                        r.drawTextMonospaceOnBg(line_text[cursor_b..sr.start], x0, seg_y, r.theme.foreground, seg_base_bg);
+                                        r.drawTextMonospaceOnBgPolicy(line_text[cursor_b..sr.start], x0, seg_y, r.theme.foreground, seg_base_bg, disable_programming_ligatures);
                                     }
                                     const x1 = text_start_x + @as(f32, @floatFromInt(sr.start - seg_start_byte)) * r.char_width;
-                                    r.drawTextMonospaceOnBg(line_text[sr.start..sr.end], x1, seg_y, r.theme.foreground, r.theme.selection);
+                                    r.drawTextMonospaceOnBgPolicy(line_text[sr.start..sr.end], x1, seg_y, r.theme.foreground, r.theme.selection, disable_programming_ligatures);
                                     cursor_b = sr.end;
                                 }
                                 if (cursor_b < seg_end_byte) {
                                     const x2 = text_start_x + @as(f32, @floatFromInt(cursor_b - seg_start_byte)) * r.char_width;
-                                    r.drawTextMonospaceOnBg(line_text[cursor_b..seg_end_byte], x2, seg_y, r.theme.foreground, seg_base_bg);
+                                    r.drawTextMonospaceOnBgPolicy(line_text[cursor_b..seg_end_byte], x2, seg_y, r.theme.foreground, seg_base_bg, disable_programming_ligatures);
                                 }
                             }
                         } else {
@@ -995,6 +1015,7 @@ pub fn drawCached(
                                 base_bg,
                                 r.theme.selection,
                                 sel_bytes[0..sel_count],
+                                disable_programming_ligatures,
                             );
                         }
 
@@ -1454,6 +1475,7 @@ fn drawHighlightedLineSegment(
     base_bg: anytype,
     selection_bg: anytype,
     sel_ranges: []const ByteRange,
+    disable_programming_ligatures: bool,
 ) void {
     if (seg_start >= seg_end or line_text.len == 0) return;
 
@@ -1478,6 +1500,7 @@ fn drawHighlightedLineSegment(
                 base_bg,
                 selection_bg,
                 sel_ranges,
+                disable_programming_ligatures,
             );
         }
         const slice_start = start;
@@ -1495,7 +1518,7 @@ fn drawHighlightedLineSegment(
         if (conceal_text) |text| {
             if (text.len > 0) {
                 const bg = selectionOverlapBg(slice_start, slice_end, base_bg, selection_bg, sel_ranges);
-                r.drawTextMonospaceOnBg(text, x, y, color, bg);
+                r.drawTextMonospaceOnBgPolicy(text, x, y, color, bg, disable_programming_ligatures);
             }
         } else {
             drawTextSliceWithSelectionBg(
@@ -1510,6 +1533,7 @@ fn drawHighlightedLineSegment(
                 base_bg,
                 selection_bg,
                 sel_ranges,
+                disable_programming_ligatures,
             );
         }
         if (end > cursor) {
@@ -1531,6 +1555,7 @@ fn drawHighlightedLineSegment(
             base_bg,
             selection_bg,
             sel_ranges,
+            disable_programming_ligatures,
         );
     }
 }
