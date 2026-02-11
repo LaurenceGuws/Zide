@@ -49,6 +49,57 @@ fn addCursorOp(list: *EditorDrawList, x: f32, y: f32, h: f32, color: anytype) bo
     return true;
 }
 
+fn selectionStateHash(editor: anytype) u64 {
+    var h: u64 = 1469598103934665603;
+    h ^= @as(u64, editor.cursor.offset);
+    h *%= 1099511628211;
+    if (editor.selection) |sel| {
+        h ^= @as(u64, sel.start.offset);
+        h *%= 1099511628211;
+        h ^= @as(u64, sel.end.offset);
+        h *%= 1099511628211;
+    }
+    h ^= @as(u64, editor.selections.items.len);
+    h *%= 1099511628211;
+    for (editor.selections.items) |sel| {
+        h ^= @as(u64, sel.start.offset);
+        h *%= 1099511628211;
+        h ^= @as(u64, sel.end.offset);
+        h *%= 1099511628211;
+    }
+    return h;
+}
+
+const RowBand = struct {
+    y_i: i32,
+    h_i: i32,
+    y_f: f32,
+    h_f: f32,
+};
+
+fn rowBandForRow(base_y: f32, row: usize, h: f32) RowBand {
+    const top_f = base_y + @as(f32, @floatFromInt(row)) * h;
+    const bottom_f = base_y + @as(f32, @floatFromInt(row + 1)) * h;
+    const top = @as(i32, @intFromFloat(std.math.round(top_f)));
+    const bottom = @as(i32, @intFromFloat(std.math.round(bottom_f)));
+    const hi = @max(1, bottom - top);
+    return .{
+        .y_i = top,
+        .h_i = hi,
+        .y_f = @floatFromInt(top),
+        .h_f = @floatFromInt(hi),
+    };
+}
+
+fn selectionBandForRowBand(band: RowBand) RowBand {
+    return .{
+        .y_i = band.y_i,
+        .h_i = band.h_i + 1,
+        .y_f = band.y_f,
+        .h_f = band.h_f + 1.0,
+    };
+}
+
 fn flushDrawList(list: *EditorDrawList, r: anytype) void {
     const ColorType = @TypeOf(r.theme.foreground);
     for (list.ops.items) |op| {
@@ -525,8 +576,10 @@ pub fn draw(
         while (seg < total_visual_lines and visual_row < visible_lines) : (seg += 1) {
             const seg_start_col = if (widget.wrap_enabled) seg * cols else widget.editor.scroll_col;
             const seg_end_col = if (widget.wrap_enabled) @min(line_width, seg_start_col + cols) else @min(line_width, seg_start_col + cols);
-            if (seg_start_col >= seg_end_col and range_count == 0) continue;
+            // Keep processing empty segments so cached selection overlays are
+            // always cleared correctly after deselect/collapse.
             const seg_y = y + @as(f32, @floatFromInt(visual_row)) * r.char_height;
+            const seg_band = rowBandForRow(y, visual_row, r.char_height);
             const seg_start_byte = selection_mod.byteIndexForVisualColumn(line_text, seg_start_col, cluster_slice);
             const seg_end_byte = selection_mod.byteIndexForVisualColumn(line_text, seg_end_col, cluster_slice);
             const disable_programming_ligatures = switch (r.editor_disable_ligatures) {
@@ -540,21 +593,22 @@ pub fn draw(
             } else if (is_current) {
                 r.drawRect(
                     @intFromFloat(x),
-                    @intFromFloat(seg_y),
+                    seg_band.y_i,
                     @intFromFloat(widget.gutter_width),
-                    @intFromFloat(r.char_height),
+                    seg_band.h_i,
                     r.theme.current_line,
                 );
                 r.drawRect(
                     @intFromFloat(x + widget.gutter_width),
-                    @intFromFloat(seg_y),
+                    seg_band.y_i,
                     @intFromFloat(width - widget.gutter_width),
-                    @intFromFloat(r.char_height),
+                    seg_band.h_i,
                     r.theme.current_line,
                 );
             }
 
             if (range_count > 0) {
+                const sel_band = selectionBandForRowBand(seg_band);
                 var r_i: usize = 0;
                 while (r_i < range_count) : (r_i += 1) {
                     const range = ranges[r_i];
@@ -565,9 +619,9 @@ pub fn draw(
                     const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r.char_width;
                     r.drawRect(
                         @intFromFloat(sel_x),
-                        @intFromFloat(seg_y),
+                        sel_band.y_i,
                         @intFromFloat(sel_w),
-                        @intFromFloat(r.char_height),
+                        sel_band.h_i,
                         r.theme.selection,
                     );
                 }
@@ -717,6 +771,7 @@ pub fn drawCached(
         widget.editor.scroll_line,
         widget.editor.scroll_row_offset,
         widget.editor.scroll_col,
+        selectionStateHash(widget.editor),
     );
     if (texture_changed) force_redraw = true;
 
@@ -797,8 +852,10 @@ pub fn drawCached(
         while (seg < total_visual_lines and visual_row < visible_lines) : (seg += 1) {
             const seg_start_col = if (widget.wrap_enabled) seg * cols else widget.editor.scroll_col;
             const seg_end_col = if (widget.wrap_enabled) @min(line_width, seg_start_col + cols) else @min(line_width, seg_start_col + cols);
-            if (seg_start_col >= seg_end_col and range_count == 0) continue;
+            // Keep processing empty segments so cached selection overlays are
+            // always cleared correctly after deselect/collapse.
             const seg_y = origin_y + @as(f32, @floatFromInt(visual_row)) * r.char_height;
+            const seg_band = rowBandForRow(origin_y, visual_row, r.char_height);
             const seg_start_byte = selection_mod.byteIndexForVisualColumn(line_text, seg_start_col, cluster_slice);
             const seg_end_byte = selection_mod.byteIndexForVisualColumn(line_text, seg_end_col, cluster_slice);
             const disable_programming_ligatures = switch (r.editor_disable_ligatures) {
@@ -825,16 +882,17 @@ pub fn drawCached(
             if (force_redraw or dirty) {
                 any_dirty = true;
                 if (r.beginEditorTexture()) {
+                    const clip_h = @min(seg_band.h_i + 1, @as(i32, @intFromFloat(height)) - seg_band.y_i);
                     r.beginClip(
                         @intFromFloat(origin_x),
-                        @intFromFloat(seg_y),
+                        seg_band.y_i,
                         @intFromFloat(width),
-                        @intFromFloat(r.char_height),
+                        @max(1, clip_h),
                     );
                     draw_list.clear();
                     var list_ok = true;
-                    list_ok = list_ok and addRectOp(draw_list, origin_x, seg_y, width, r.char_height, r.theme.background);
-                    list_ok = list_ok and addRectOp(draw_list, origin_x, seg_y, widget.gutter_width, r.char_height, r.theme.line_number_bg);
+                    list_ok = list_ok and addRectOp(draw_list, origin_x, seg_band.y_f, width, seg_band.h_f, r.theme.background);
+                    list_ok = list_ok and addRectOp(draw_list, origin_x, seg_band.y_f, widget.gutter_width, seg_band.h_f, r.theme.line_number_bg);
 
                     if (seg == seg_start_idx) {
                         var num_buf: [16]u8 = undefined;
@@ -850,11 +908,12 @@ pub fn drawCached(
                             &num_buf,
                         );
                     } else if (is_current) {
-                        list_ok = list_ok and addRectOp(draw_list, origin_x, seg_y, widget.gutter_width, r.char_height, r.theme.current_line);
-                        list_ok = list_ok and addRectOp(draw_list, origin_x + widget.gutter_width, seg_y, width - widget.gutter_width, r.char_height, r.theme.current_line);
+                        list_ok = list_ok and addRectOp(draw_list, origin_x, seg_band.y_f, widget.gutter_width, seg_band.h_f, r.theme.current_line);
+                        list_ok = list_ok and addRectOp(draw_list, origin_x + widget.gutter_width, seg_band.y_f, width - widget.gutter_width, seg_band.h_f, r.theme.current_line);
                     }
 
                     if (range_count > 0) {
+                        const sel_band = selectionBandForRowBand(seg_band);
                         var r_i: usize = 0;
                         while (r_i < range_count) : (r_i += 1) {
                             const range = ranges[r_i];
@@ -863,7 +922,7 @@ pub fn drawCached(
                             if (sel_end <= sel_start) continue;
                             const sel_x = origin_x + widget.gutter_width + 8 * r.uiScaleFactor() + @as(f32, @floatFromInt(sel_start - seg_start_col)) * r.char_width;
                             const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r.char_width;
-                            list_ok = list_ok and addRectOp(draw_list, sel_x, seg_y, sel_w, r.char_height, r.theme.selection);
+                            list_ok = list_ok and addRectOp(draw_list, sel_x, sel_band.y_f, sel_w, sel_band.h_f, r.theme.selection);
                         }
                     }
 
@@ -930,16 +989,16 @@ pub fn drawCached(
                     } else {
                         r.drawRect(
                             @intFromFloat(origin_x),
-                            @intFromFloat(seg_y),
+                            seg_band.y_i,
                             @intFromFloat(width),
-                            @intFromFloat(r.char_height),
+                            seg_band.h_i,
                             r.theme.background,
                         );
                         r.drawRect(
                             @intFromFloat(origin_x),
-                            @intFromFloat(seg_y),
+                            seg_band.y_i,
                             @intFromFloat(widget.gutter_width),
-                            @intFromFloat(r.char_height),
+                            seg_band.h_i,
                             r.theme.line_number_bg,
                         );
 
@@ -948,21 +1007,22 @@ pub fn drawCached(
                         } else if (is_current) {
                             r.drawRect(
                                 @intFromFloat(origin_x),
-                                @intFromFloat(seg_y),
+                                seg_band.y_i,
                                 @intFromFloat(widget.gutter_width),
-                                @intFromFloat(r.char_height),
+                                seg_band.h_i,
                                 r.theme.current_line,
                             );
                             r.drawRect(
                                 @intFromFloat(origin_x + widget.gutter_width),
-                                @intFromFloat(seg_y),
+                                seg_band.y_i,
                                 @intFromFloat(width - widget.gutter_width),
-                                @intFromFloat(r.char_height),
+                                seg_band.h_i,
                                 r.theme.current_line,
                             );
                         }
 
                         if (range_count > 0) {
+                            const sel_band = selectionBandForRowBand(seg_band);
                             var r_i: usize = 0;
                             while (r_i < range_count) : (r_i += 1) {
                                 const range = ranges[r_i];
@@ -973,9 +1033,9 @@ pub fn drawCached(
                                 const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r.char_width;
                                 r.drawRect(
                                     @intFromFloat(sel_x),
-                                    @intFromFloat(seg_y),
+                                    sel_band.y_i,
                                     @intFromFloat(sel_w),
-                                    @intFromFloat(r.char_height),
+                                    sel_band.h_i,
                                     r.theme.selection,
                                 );
                             }

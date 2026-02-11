@@ -21,6 +21,7 @@ pub const EditorRenderCache = struct {
     last_scroll_line: usize,
     last_scroll_row_offset: usize,
     last_scroll_col: usize,
+    last_selection_hash: u64,
     last_scroll_hash: u64,
     frame_id: u64,
     highlight_work_start: usize,
@@ -57,6 +58,7 @@ pub const EditorRenderCache = struct {
             .last_scroll_line = 0,
             .last_scroll_row_offset = 0,
             .last_scroll_col = 0,
+            .last_selection_hash = 0,
             .last_scroll_hash = 0,
             .frame_id = 0,
             .highlight_work_start = 0,
@@ -98,9 +100,10 @@ pub const EditorRenderCache = struct {
         scroll_line: usize,
         scroll_row_offset: usize,
         scroll_col: usize,
+        selection_hash: u64,
     ) bool {
         self.frame_id = frame_id;
-        const line_cache_dirty = cols != self.last_cols or wrap_enabled != self.last_wrap or width != self.last_width or height != self.last_height or change_tick != self.last_change_tick or scroll_line != self.last_scroll_line or scroll_row_offset != self.last_scroll_row_offset or scroll_col != self.last_scroll_col;
+        const line_cache_dirty = cols != self.last_cols or wrap_enabled != self.last_wrap or width != self.last_width or height != self.last_height or change_tick != self.last_change_tick or scroll_line != self.last_scroll_line or scroll_row_offset != self.last_scroll_row_offset or scroll_col != self.last_scroll_col or selection_hash != self.last_selection_hash;
         const highlight_dirty = highlight_epoch != self.last_highlight_epoch;
         const full_redraw = line_cache_dirty or highlight_dirty;
         if (line_cache_dirty) {
@@ -126,6 +129,7 @@ pub const EditorRenderCache = struct {
         self.last_scroll_line = scroll_line;
         self.last_scroll_row_offset = scroll_row_offset;
         self.last_scroll_col = scroll_col;
+        self.last_selection_hash = selection_hash;
         return full_redraw;
     }
 
