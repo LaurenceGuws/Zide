@@ -39,6 +39,8 @@ pub const Config = struct {
     terminal_font_path: ?[]u8,
     terminal_font_size: ?f32,
     terminal_blink_style: ?TerminalBlinkStyle,
+    terminal_disable_ligatures: ?TerminalDisableLigaturesStrategy,
+    terminal_font_features: ?[]u8,
     terminal_scrollback_rows: ?usize,
     terminal_cursor_shape: ?term_types.CursorShape,
     terminal_cursor_blink: ?bool,
@@ -69,6 +71,12 @@ pub const GlyphOverflowPolicy = enum {
 pub const TerminalBlinkStyle = enum {
     kitty,
     off,
+};
+
+pub const TerminalDisableLigaturesStrategy = enum {
+    never,
+    cursor,
+    always,
 };
 
 const terminal_scrollback_default: usize = 1000;
@@ -125,6 +133,8 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
         .terminal_font_path = null,
         .terminal_font_size = null,
         .terminal_blink_style = null,
+        .terminal_disable_ligatures = null,
+        .terminal_font_features = null,
         .terminal_scrollback_rows = null,
         .terminal_cursor_shape = null,
         .terminal_cursor_blink = null,
@@ -178,6 +188,10 @@ pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
     if (config.terminal_font_path) |path| {
         allocator.free(path);
         config.terminal_font_path = null;
+    }
+    if (config.terminal_font_features) |features| {
+        allocator.free(features);
+        config.terminal_font_features = null;
     }
     if (config.keybinds) |binds| {
         allocator.free(binds);
@@ -237,6 +251,13 @@ fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) voi
     }
     if (overlay.terminal_blink_style != null) {
         base.terminal_blink_style = overlay.terminal_blink_style;
+    }
+    if (overlay.terminal_disable_ligatures != null) {
+        base.terminal_disable_ligatures = overlay.terminal_disable_ligatures;
+    }
+    if (overlay.terminal_font_features) |features| {
+        if (base.terminal_font_features) |old| allocator.free(old);
+        base.terminal_font_features = allocator.dupe(u8, features) catch base.terminal_font_features;
     }
     if (overlay.terminal_scrollback_rows != null) {
         base.terminal_scrollback_rows = overlay.terminal_scrollback_rows;
@@ -314,6 +335,8 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             .terminal_font_path = null,
             .terminal_font_size = null,
             .terminal_blink_style = null,
+            .terminal_disable_ligatures = null,
+            .terminal_font_features = null,
             .terminal_scrollback_rows = null,
             .terminal_cursor_shape = null,
             .terminal_cursor_blink = null,
@@ -345,6 +368,8 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     var terminal_font_path: ?[]u8 = null;
     var terminal_font_size: ?f32 = null;
     var terminal_blink_style: ?TerminalBlinkStyle = null;
+    var terminal_disable_ligatures: ?TerminalDisableLigaturesStrategy = null;
+    var terminal_font_features: ?[]u8 = null;
     var terminal_scrollback_rows: ?usize = null;
     var terminal_cursor_shape: ?term_types.CursorShape = null;
     var terminal_cursor_blink: ?bool = null;
@@ -463,6 +488,20 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             terminal_blink_style = parseTerminalBlink(L, -1);
         } else if (c.lua_isboolean(L, -1)) {
             terminal_blink_style = if (c.lua_toboolean(L, -1) != 0) .kitty else .off;
+        }
+        c.lua_pop(L, 1);
+
+        _ = c.lua_getfield(L, -1, "disable_ligatures");
+        if (c.lua_isstring(L, -1) != 0) {
+            terminal_disable_ligatures = parseTerminalDisableLigatures(L, -1);
+        }
+        c.lua_pop(L, 1);
+
+        _ = c.lua_getfield(L, -1, "font_features");
+        if (c.lua_isstring(L, -1) != 0) {
+            terminal_font_features = try luaStringToOwned(allocator, L, -1);
+        } else if (c.lua_istable(L, -1)) {
+            terminal_font_features = try luaStringListToOwned(allocator, L, -1);
         }
         c.lua_pop(L, 1);
 
@@ -591,6 +630,8 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         .terminal_font_path = terminal_font_path,
         .terminal_font_size = terminal_font_size,
         .terminal_blink_style = terminal_blink_style,
+        .terminal_disable_ligatures = terminal_disable_ligatures,
+        .terminal_font_features = terminal_font_features,
         .terminal_scrollback_rows = terminal_scrollback_rows,
         .terminal_cursor_shape = terminal_cursor_shape,
         .terminal_cursor_blink = terminal_cursor_blink,
@@ -631,6 +672,15 @@ fn parseTerminalBlink(L: *c.lua_State, idx: c_int) ?TerminalBlinkStyle {
     if (std.mem.eql(u8, value, "kitty")) return .kitty;
     if (std.mem.eql(u8, value, "off")) return .off;
     if (std.mem.eql(u8, value, "ghostty")) return .off;
+    return null;
+}
+
+fn parseTerminalDisableLigatures(L: *c.lua_State, idx: c_int) ?TerminalDisableLigaturesStrategy {
+    const value = luaStringToSlice(L, idx);
+    if (value.len == 0) return null;
+    if (std.mem.eql(u8, value, "never")) return .never;
+    if (std.mem.eql(u8, value, "cursor")) return .cursor;
+    if (std.mem.eql(u8, value, "always")) return .always;
     return null;
 }
 

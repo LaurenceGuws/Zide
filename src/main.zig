@@ -191,6 +191,8 @@ const AppState = struct {
                 .terminal_font_path = null,
                 .terminal_font_size = null,
                 .terminal_blink_style = null,
+                .terminal_disable_ligatures = null,
+                .terminal_font_features = null,
                 .terminal_scrollback_rows = null,
                 .terminal_cursor_shape = null,
                 .terminal_cursor_blink = null,
@@ -243,6 +245,14 @@ const AppState = struct {
         }
         shell.rendererPtr().setFontRenderingOptions(font_opts);
         shell.rendererPtr().setTextRenderingConfig(config.text_gamma, config.text_contrast, config.text_linear_correction);
+        shell.rendererPtr().setTerminalLigatureConfig(
+            if (config.terminal_disable_ligatures) |v| switch (v) {
+                .never => .never,
+                .cursor => .cursor,
+                .always => .always,
+            } else null,
+            config.terminal_font_features,
+        );
         if (config.app_font_path != null or config.app_font_size != null or
             config.editor_font_path != null or config.editor_font_size != null or
             config.terminal_font_path != null or config.terminal_font_size != null)
@@ -1441,6 +1451,22 @@ const AppState = struct {
             for (self.terminal_widgets.items) |*widget| {
                 widget.blink_style = self.terminal_blink_style;
             }
+        }
+
+        if (config.terminal_disable_ligatures != null or config.terminal_font_features != null) {
+            self.shell.rendererPtr().setTerminalLigatureConfig(
+                if (config.terminal_disable_ligatures) |v| switch (v) {
+                    .never => .never,
+                    .cursor => .cursor,
+                    .always => .always,
+                } else null,
+                config.terminal_font_features,
+            );
+            self.needs_redraw = true;
+            log.logStdout("reload terminal ligatures strategy={s} features={s}", .{
+                if (config.terminal_disable_ligatures) |v| @tagName(v) else "(unchanged)",
+                config.terminal_font_features orelse "(unchanged)",
+            });
         }
 
         if (config.terminal_cursor_shape != null or config.terminal_cursor_blink != null) {

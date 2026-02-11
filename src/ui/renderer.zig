@@ -5,6 +5,7 @@ const iface = @import("renderer/interface.zig");
 const terminal_font_mod = @import("terminal_font.zig");
 const TerminalFont = terminal_font_mod.TerminalFont;
 const FontRenderingOptions = terminal_font_mod.RenderingOptions;
+const hb = terminal_font_mod.c;
 const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
@@ -71,6 +72,11 @@ pub const EMOJI_TEXT_FALLBACK_PATH = iface.EMOJI_TEXT_FALLBACK_PATH;
 pub const Color = iface.Color;
 pub const MousePos = iface.MousePos;
 pub const Theme = iface.Theme;
+pub const TerminalDisableLigaturesStrategy = enum {
+    never,
+    cursor,
+    always,
+};
 pub const KEY_ENTER = input_constants.KEY_ENTER;
 pub const KEY_BACKSPACE = input_constants.KEY_BACKSPACE;
 pub const KEY_DELETE = input_constants.KEY_DELETE;
@@ -240,6 +246,9 @@ pub const Renderer = struct {
     terminal_cell_width: f32,
     terminal_cell_height: f32,
     terminal_font: TerminalFont,
+    terminal_disable_ligatures: TerminalDisableLigaturesStrategy,
+    terminal_font_features_raw: ?[]u8,
+    terminal_font_features: std.ArrayListUnmanaged(hb.hb_feature_t),
     font_rendering: FontRenderingOptions,
     font_cache: std.AutoHashMap(u32, *TerminalFont),
     font_path: [*:0]const u8,
@@ -360,6 +369,9 @@ pub const Renderer = struct {
             .terminal_cell_width = font_size * 0.6,
             .terminal_cell_height = font_size * 1.2,
             .terminal_font = undefined,
+            .terminal_disable_ligatures = .never,
+            .terminal_font_features_raw = null,
+            .terminal_font_features = .{},
             .font_rendering = .{},
             .font_cache = std.AutoHashMap(u32, *TerminalFont).init(allocator),
             .font_path = FONT_PATH,
@@ -431,6 +443,11 @@ pub const Renderer = struct {
 
         self.terminal_font.deinit();
         self.icon_font.deinit();
+        if (self.terminal_font_features_raw) |owned| {
+            self.allocator.free(owned);
+            self.terminal_font_features_raw = null;
+        }
+        self.terminal_font_features.deinit(self.allocator);
         if (self.font_path_owned) |owned| {
             self.allocator.free(owned);
             self.font_path_owned = null;
@@ -509,6 +526,34 @@ pub const Renderer = struct {
             if (self.uniform_text_gamma >= 0) gl.Uniform1f(self.uniform_text_gamma, self.text_gamma);
             if (self.uniform_text_contrast >= 0) gl.Uniform1f(self.uniform_text_contrast, self.text_contrast);
             if (self.uniform_linear_correction >= 0) gl.Uniform1i(self.uniform_linear_correction, if (self.text_linear_correction) 1 else 0);
+        }
+    }
+
+    pub fn setTerminalLigatureConfig(self: *Renderer, strategy: ?TerminalDisableLigaturesStrategy, features_raw: ?[]const u8) void {
+        if (strategy) |s| {
+            self.terminal_disable_ligatures = s;
+        }
+        if (features_raw) |raw| {
+            if (self.terminal_font_features_raw) |owned| {
+                self.allocator.free(owned);
+                self.terminal_font_features_raw = null;
+            }
+            self.terminal_font_features_raw = self.allocator.dupe(u8, raw) catch null;
+            self.rebuildTerminalFontFeatures();
+        }
+    }
+
+    fn rebuildTerminalFontFeatures(self: *Renderer) void {
+        self.terminal_font_features.items.len = 0;
+        const raw = self.terminal_font_features_raw orelse return;
+        var it = std.mem.splitScalar(u8, raw, ',');
+        while (it.next()) |piece| {
+            const token = std.mem.trim(u8, piece, " \t\r\n");
+            if (token.len == 0) continue;
+            var feature: hb.hb_feature_t = undefined;
+            if (hb.hb_feature_from_string(token.ptr, @intCast(token.len), &feature) != 0) {
+                self.terminal_font_features.append(self.allocator, feature) catch return;
+            }
         }
     }
 
@@ -1299,8 +1344,9 @@ pub const Renderer = struct {
         return mouse_state.isMouseButtonReleased(self.mouse_released[0..], button);
     }
 
-    pub fn getMouseWheelMove(_: *Renderer) f32 {
-        return mouse_wheel.get(&mouse_wheel_delta);
+    pub fn getMouseWheelMove(self: *Renderer) f32 {
+        _ = self;
+        return mouse_wheel_delta;
     }
 
     fn fontForSize(self: *Renderer, size: f32) ?*TerminalFont {
