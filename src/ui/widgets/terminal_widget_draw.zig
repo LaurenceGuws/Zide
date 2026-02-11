@@ -304,15 +304,21 @@ pub fn draw(
                 const span_start_col = col;
 
                 var scan_col: usize = col;
+                var prev_root_col: usize = col;
                 while (scan_col <= col_end and scan_col < cols_count) {
                     const ccell = row_cells[scan_col];
                     if (ccell.x != 0 or ccell.y != 0) {
                         scan_col += 1;
                         continue;
                     }
+                    if (scan_col > span_start_col) {
+                        const prev_cell = row_cells[prev_root_col];
+                        if (!sameAttrsForShapingRun(prev_cell.attrs, ccell.attrs)) break;
+                    }
                     const cwidth_units = @as(usize, @max(@as(u8, 1), ccell.width));
                     const choice = rr.terminal_font.pickFontForCodepoint(ccell.codepoint);
                     if (choice.hb_font != span_hb_font) break;
+                    prev_root_col = scan_col;
                     scan_col += cwidth_units;
                 }
                 var span_end_excl = @min(scan_col, col_end + 1);
@@ -1094,6 +1100,23 @@ fn collectTerminalShapeFeatures(rr: *Renderer, disable_programming_ligatures: bo
         });
     }
     return len;
+}
+
+fn sameColor(a: terminal_mod.Color, b: terminal_mod.Color) bool {
+    return a.r == b.r and a.g == b.g and a.b == b.b and a.a == b.a;
+}
+
+fn sameAttrsForShapingRun(a: terminal_mod.CellAttrs, b: terminal_mod.CellAttrs) bool {
+    // Follow ghostty-like convention: allow background differences without
+    // forcing a shaping split; other style changes should split.
+    return sameColor(a.fg, b.fg) and
+        a.bold == b.bold and
+        a.blink == b.blink and
+        a.blink_fast == b.blink_fast and
+        a.reverse == b.reverse and
+        a.underline == b.underline and
+        sameColor(a.underline_color, b.underline_color) and
+        a.link_id == b.link_id;
 }
 
 fn isTerminalBoxGlyph(codepoint: u32) bool {

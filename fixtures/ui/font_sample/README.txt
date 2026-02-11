@@ -29,3 +29,19 @@ correction:
 - normal background
 - selection background
 - cursor (inverted) background
+
+Ligature coverage in font-sample lines includes:
+- ->  ~>  =>  ==  ===  !=  !==  <=  >=  <=>
+- mixed operator chains (for run-splitting regressions)
+
+Cursor-over ligature checks (terminal mode):
+
+  zig build run -- --mode terminal
+
+In .zide.lua, test these strategies:
+- terminal.disable_ligatures = "never"
+- terminal.disable_ligatures = "cursor"
+- terminal.disable_ligatures = "always"
+
+Then type/sample a ligature-heavy line (for example: `-> ~> => === != <= >=`)
+and move the cursor through each symbol pair to validate cursor-split behavior.
