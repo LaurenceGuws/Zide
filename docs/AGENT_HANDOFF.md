@@ -43,6 +43,8 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - Editor parity: selection/current-line/gutter now supply per-text background so correction stays stable.
 - Terminal correctness: combining marks attach to prior cell; renderer can draw a shaped grapheme cluster for a cell.
 - Fixture authority expanded: `fixtures/ui/font_sample/jbmono_iosevka_size{12,14,16,20}.ppm` include multiple background bands.
+- Terminal + editor now support first-class ligature shaping with config controls (`terminal.disable_ligatures`, `terminal.font_features`, `editor.disable_ligatures`, `editor.font_features`).
+- Editor multiline selection overlay seams were fixed and deselect cleanup now invalidates cached overlays correctly.
 
 ### Constraints / Guardrails
 - Handoff docs are high-level only; progress tracking lives in todo + app_architecture docs.

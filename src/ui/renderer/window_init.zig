@@ -1,12 +1,21 @@
 const gl = @import("gl.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
+const std = @import("std");
 
 const sdl = gl.c;
 
 pub fn initSdl() !void {
-    sdl_api.setHint("SDL_APP_NAME", "Zide");
-    sdl_api.setHint("SDL_AUDIO_DEVICE_APP_NAME", "Zide");
-    sdl_api.setHint("SDL_APP_ID", "com.zide.ide");
+    if (std.c.getenv("SDL_APP_NAME")) |name| {
+        sdl_api.setHint("SDL_APP_NAME", name);
+        sdl_api.setHint("SDL_AUDIO_DEVICE_APP_NAME", name);
+    } else {
+        sdl_api.setHint("SDL_APP_NAME", "Zide");
+        sdl_api.setHint("SDL_AUDIO_DEVICE_APP_NAME", "Zide");
+    }
+
+    if (std.c.getenv("SDL_APP_ID") == null) {
+        sdl_api.setHint("SDL_APP_ID", "com.zide.ide");
+    }
     if (!sdl_api.init(sdl_api.defaultInitFlags())) {
         return error.SdlInitFailed;
     }
