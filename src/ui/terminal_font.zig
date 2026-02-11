@@ -821,7 +821,7 @@ pub const TerminalFont = struct {
             const draw_x = @max(x, x + bearing * overflow_scale);
             const draw_y = baseline - bearing_y * overflow_scale;
             const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
-            const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y)))));
+            const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(@floor(draw_y)))));
             const dest = Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
             if (glyph.is_color) {
                 draw.drawTexture(draw.ctx, self.color_texture, glyph.rect, dest, draw_color, .rgba);
@@ -835,7 +835,7 @@ pub const TerminalFont = struct {
         const draw_x = if (allow_width_overflow) x + bearing * overflow_scale else @max(x, x + bearing * overflow_scale);
         const draw_y = baseline - bearing_y * overflow_scale;
         const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
-        const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y)))));
+        const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(@floor(draw_y)))));
         const dest = Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
         if (glyph.is_color) {
             draw.drawTexture(draw.ctx, self.color_texture, glyph.rect, dest, draw_color, .rgba);
@@ -947,7 +947,7 @@ pub const TerminalFont = struct {
             const draw_y = (baseline - bearing_y * overflow_scale) - gy_off;
 
             const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
-            const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y)))));
+            const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(@floor(draw_y)))));
             const dest = Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
 
             const draw_color = if (glyph.is_color)

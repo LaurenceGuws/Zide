@@ -1018,6 +1018,7 @@ const AppState = struct {
         }
 
         var handled_zoom = false;
+        const zoom_log = app_logger.logger("ui.zoom.shortcut");
         for (self.input_router.actionsSlice()) |action| {
             switch (action.kind) {
                 .new_editor => {
@@ -1029,20 +1030,83 @@ const AppState = struct {
                     }
                 },
                 .zoom_in => {
-                    if (shell.queueUserZoom(0.1, now)) {
+                    const prev_zoom = shell.userZoomFactor();
+                    const prev_target = shell.userZoomTargetFactor();
+                    const changed = shell.queueUserZoom(0.1, now);
+                    if (changed) {
                         self.metrics.noteInput(now);
+                    }
+                    if (zoom_log.enabled_file or zoom_log.enabled_console) {
+                        zoom_log.logf(
+                            "action=zoom_in changed={d} zoom={d:.3}->{d:.3} target={d:.3}->{d:.3} base_font={d:.2} layout_font={d:.2} ui_scale={d:.3} render_scale={d:.3} term_cell={d:.2}x{d:.2}",
+                            .{
+                                @intFromBool(changed),
+                                prev_zoom,
+                                shell.userZoomFactor(),
+                                prev_target,
+                                shell.userZoomTargetFactor(),
+                                shell.baseFontSize(),
+                                shell.fontSize(),
+                                shell.uiScaleFactor(),
+                                shell.renderScaleFactor(),
+                                shell.terminalCellWidth(),
+                                shell.terminalCellHeight(),
+                            },
+                        );
                     }
                     handled_zoom = true;
                 },
                 .zoom_out => {
-                    if (shell.queueUserZoom(-0.1, now)) {
+                    const prev_zoom = shell.userZoomFactor();
+                    const prev_target = shell.userZoomTargetFactor();
+                    const changed = shell.queueUserZoom(-0.1, now);
+                    if (changed) {
                         self.metrics.noteInput(now);
+                    }
+                    if (zoom_log.enabled_file or zoom_log.enabled_console) {
+                        zoom_log.logf(
+                            "action=zoom_out changed={d} zoom={d:.3}->{d:.3} target={d:.3}->{d:.3} base_font={d:.2} layout_font={d:.2} ui_scale={d:.3} render_scale={d:.3} term_cell={d:.2}x{d:.2}",
+                            .{
+                                @intFromBool(changed),
+                                prev_zoom,
+                                shell.userZoomFactor(),
+                                prev_target,
+                                shell.userZoomTargetFactor(),
+                                shell.baseFontSize(),
+                                shell.fontSize(),
+                                shell.uiScaleFactor(),
+                                shell.renderScaleFactor(),
+                                shell.terminalCellWidth(),
+                                shell.terminalCellHeight(),
+                            },
+                        );
                     }
                     handled_zoom = true;
                 },
                 .zoom_reset => {
-                    if (shell.resetUserZoomTarget(now)) {
+                    const prev_zoom = shell.userZoomFactor();
+                    const prev_target = shell.userZoomTargetFactor();
+                    const changed = shell.resetUserZoomTarget(now);
+                    if (changed) {
                         self.metrics.noteInput(now);
+                    }
+                    if (zoom_log.enabled_file or zoom_log.enabled_console) {
+                        zoom_log.logf(
+                            "action=zoom_reset changed={d} zoom={d:.3}->{d:.3} target={d:.3}->{d:.3} base_font={d:.2} layout_font={d:.2} ui_scale={d:.3} render_scale={d:.3} term_cell={d:.2}x{d:.2}",
+                            .{
+                                @intFromBool(changed),
+                                prev_zoom,
+                                shell.userZoomFactor(),
+                                prev_target,
+                                shell.userZoomTargetFactor(),
+                                shell.baseFontSize(),
+                                shell.fontSize(),
+                                shell.uiScaleFactor(),
+                                shell.renderScaleFactor(),
+                                shell.terminalCellWidth(),
+                                shell.terminalCellHeight(),
+                            },
+                        );
                     }
                     handled_zoom = true;
                 },
