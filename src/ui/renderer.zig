@@ -1370,19 +1370,134 @@ pub const Renderer = struct {
     }
 
     fn drawTextWithFontMonospace(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: Color) void {
-        text_draw.drawText(
-            self.allocator,
-            font,
-            self,
-            drawTextureThunk,
-            text,
-            x,
-            y,
-            cell_w,
-            cell_h,
-            color.toRgba(),
-            true,
-        );
+        if (self.drawTextWithFontMonospaceShaped(font, cell_w, cell_h, text, x, y, color.toRgba())) {
+            return;
+        }
+        text_draw.drawText(self.allocator, font, self, drawTextureThunk, text, x, y, cell_w, cell_h, color.toRgba(), true);
+    }
+
+    fn drawTextWithFontMonospaceShaped(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: types.Rgba) bool {
+        if (text.len == 0) return true;
+
+        var codepoints = std.ArrayList(u32).empty;
+        defer codepoints.deinit(self.allocator);
+        var idx: usize = 0;
+        while (idx < text.len) {
+            const first = text[idx];
+            const seq_len = std.unicode.utf8ByteSequenceLength(first) catch {
+                idx += 1;
+                codepoints.append(self.allocator, 0xFFFD) catch return false;
+                continue;
+            };
+            if (idx + seq_len > text.len) {
+                idx += 1;
+                codepoints.append(self.allocator, 0xFFFD) catch return false;
+                continue;
+            }
+            const slice = text[idx .. idx + seq_len];
+            const cp = std.unicode.utf8Decode(slice) catch 0xFFFD;
+            codepoints.append(self.allocator, cp) catch return false;
+            idx += seq_len;
+        }
+        if (codepoints.items.len == 0) return true;
+
+        var span_start: usize = 0;
+        while (span_start < codepoints.items.len) {
+            const start_choice = font.pickFontForCodepoint(codepoints.items[span_start]);
+            const span_hb_font = start_choice.hb_font;
+            var span_end = span_start + 1;
+            while (span_end < codepoints.items.len) : (span_end += 1) {
+                const choice = font.pickFontForCodepoint(codepoints.items[span_end]);
+                if (choice.hb_font != span_hb_font) break;
+            }
+
+            const buffer = hb.hb_buffer_create();
+            defer hb.hb_buffer_destroy(buffer);
+
+            var cp_i = span_start;
+            while (cp_i < span_end) : (cp_i += 1) {
+                const cp = if (codepoints.items[cp_i] == 0) @as(u32, ' ') else codepoints.items[cp_i];
+                hb.hb_buffer_add(buffer, cp, @intCast(cp_i - span_start));
+            }
+            hb.hb_buffer_guess_segment_properties(buffer);
+            hb.hb_shape(
+                span_hb_font,
+                buffer,
+                if (self.terminal_font_features.items.len > 0) self.terminal_font_features.items.ptr else null,
+                @intCast(self.terminal_font_features.items.len),
+            );
+
+            var length: c_uint = 0;
+            const infos = hb.hb_buffer_get_glyph_infos(buffer, &length);
+            const positions = hb.hb_buffer_get_glyph_positions(buffer, &length);
+            if (length == 0) {
+                var fallback_x = x + @as(f32, @floatFromInt(span_start)) * cell_w;
+                var j = span_start;
+                while (j < span_end) : (j += 1) {
+                    const cp = codepoints.items[j];
+                    font.drawGlyph(.{ .ctx = self, .drawTexture = drawTextureThunk }, cp, fallback_x, y, cell_w, cell_h, false, color);
+                    fallback_x += cell_w;
+                }
+                span_start = span_end;
+                continue;
+            }
+
+            const span_len = span_end - span_start;
+            self.terminal_shape_first_pen_set.items.len = 0;
+            self.terminal_shape_first_pen.items.len = 0;
+            self.terminal_shape_first_pen_set.ensureTotalCapacity(self.allocator, span_len) catch return false;
+            self.terminal_shape_first_pen.ensureTotalCapacity(self.allocator, span_len) catch return false;
+            self.terminal_shape_first_pen_set.items.len = span_len;
+            self.terminal_shape_first_pen.items.len = span_len;
+            @memset(self.terminal_shape_first_pen_set.items, false);
+            @memset(self.terminal_shape_first_pen.items, 0);
+
+            const glyph_len: usize = @intCast(length);
+            const render_scale = if (font.render_scale > 0.0) font.render_scale else 1.0;
+            const inv_scale = 1.0 / render_scale;
+            var pen_x: f32 = 0;
+            var gi: usize = 0;
+            while (gi < glyph_len) : (gi += 1) {
+                const cluster_u32 = infos[gi].cluster;
+                const pen_before = pen_x;
+                pen_x += (@as(f32, @floatFromInt(positions[gi].x_advance)) / 64.0) * inv_scale;
+                if (cluster_u32 >= span_len) continue;
+                const cluster: usize = @intCast(cluster_u32);
+
+                if (!self.terminal_shape_first_pen_set.items[cluster]) {
+                    self.terminal_shape_first_pen_set.items[cluster] = true;
+                    self.terminal_shape_first_pen.items[cluster] = pen_before;
+                }
+                const pen_rel = pen_before - self.terminal_shape_first_pen.items[cluster];
+
+                const glyph = font.getGlyphById(start_choice.face, infos[gi].codepoint, start_choice.want_color, positions[gi].x_advance) catch continue;
+                const cell_x = x + @as(f32, @floatFromInt(span_start + cluster)) * cell_w;
+                const baseline = y + font.ascent * inv_scale;
+                const gx_off = (@as(f32, @floatFromInt(positions[gi].x_offset)) / 64.0) * inv_scale;
+                const gy_off = (@as(f32, @floatFromInt(positions[gi].y_offset)) / 64.0) * inv_scale;
+                const draw_x = cell_x + pen_rel + gx_off + @as(f32, @floatFromInt(glyph.bearing_x)) * inv_scale;
+                const draw_y = (baseline - @as(f32, @floatFromInt(glyph.bearing_y)) * inv_scale) - gy_off;
+
+                const dest: types.Rect = .{
+                    .x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x))))),
+                    .y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(@floor(draw_y))))),
+                    .width = @as(f32, @floatFromInt(glyph.width)) * inv_scale,
+                    .height = @as(f32, @floatFromInt(glyph.height)) * inv_scale,
+                };
+                const draw_color = if (glyph.is_color)
+                    types.Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 }
+                else
+                    color;
+                if (glyph.is_color) {
+                    drawTextureThunk(self, font.color_texture, glyph.rect, dest, draw_color, .rgba);
+                } else {
+                    drawTextureThunk(self, font.coverage_texture, glyph.rect, dest, draw_color, .font_coverage);
+                }
+            }
+
+            span_start = span_end;
+        }
+        return true;
     }
 
     fn measureTextWidth(self: *Renderer, font: *TerminalFont, text: []const u8) f32 {
