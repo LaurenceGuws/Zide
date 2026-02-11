@@ -174,8 +174,13 @@ pub const Editor = struct {
             count = clusters.len;
         } else {
             var it = std.unicode.Utf8View.initUnchecked(line_text).iterator();
-            while (it.nextCodepointSlice()) |_| {
-                count += 1;
+            while (it.nextCodepointSlice()) |slice| {
+                const cp = std.unicode.utf8Decode(slice) catch 0xFFFD;
+                if (cp == '\t') {
+                    count += self.tab_width - (count % self.tab_width);
+                } else {
+                    count += 1;
+                }
             }
         }
         self.line_width_cache.put(line_idx, count) catch {};

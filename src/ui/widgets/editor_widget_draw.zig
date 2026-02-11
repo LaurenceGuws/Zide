@@ -177,6 +177,48 @@ fn addEditorLineBaseOps(
 
 const ByteRange = struct { start: usize, end: usize };
 
+fn xForByteOffset(
+    r: anytype,
+    line_text: []const u8,
+    seg_start_byte: usize,
+    seg_start_vis: usize,
+    byte_index: usize,
+    text_x: f32,
+) f32 {
+    const target = @min(byte_index, line_text.len);
+    if (target <= seg_start_byte) return text_x;
+
+    var idx = seg_start_byte;
+    var vis = seg_start_vis;
+    while (idx < target) {
+        const first = line_text[idx];
+        if (first == '\t') {
+            const tab_width: usize = 4;
+            vis += tab_width - (vis % tab_width);
+            idx += 1;
+            continue;
+        }
+        if (first < 0x80) {
+            vis += 1;
+            idx += 1;
+            continue;
+        }
+        const seq_len = std.unicode.utf8ByteSequenceLength(first) catch {
+            vis += 1;
+            idx += 1;
+            continue;
+        };
+        if (idx + seq_len > line_text.len) {
+            vis += 1;
+            idx += 1;
+            continue;
+        }
+        vis += 1;
+        idx += seq_len;
+    }
+    return text_x + @as(f32, @floatFromInt(vis - seg_start_vis)) * r.char_width;
+}
+
 fn buildSelectionByteRanges(
     line_text: []const u8,
     cluster_slice: ?[]const u32,
@@ -240,6 +282,7 @@ fn addTextSliceOpsWithSelectionBg(
     y: f32,
     line_text: []const u8,
     seg_start_byte: usize,
+    seg_start_vis: usize,
     slice_start: usize,
     slice_end: usize,
     fg: anytype,
@@ -257,20 +300,20 @@ fn addTextSliceOpsWithSelectionBg(
         if (sr.start > cursor) {
             const a0 = cursor;
             const a1 = @min(sr.start, slice_end);
-            const x = text_start_x + @as(f32, @floatFromInt(a0 - seg_start_byte)) * r.char_width;
+            const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, a0, text_start_x);
             ok = ok and addTextOpBg(list, x, y, line_text[a0..a1], fg, base_bg, disable_programming_ligatures);
         }
         const b0 = @max(cursor, sr.start);
         const b1 = @min(slice_end, sr.end);
         if (b1 > b0) {
-            const x = text_start_x + @as(f32, @floatFromInt(b0 - seg_start_byte)) * r.char_width;
+            const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, b0, text_start_x);
             ok = ok and addTextOpBg(list, x, y, line_text[b0..b1], fg, selection_bg, disable_programming_ligatures);
             cursor = b1;
         }
         if (cursor >= slice_end) break;
     }
     if (cursor < slice_end) {
-        const x = text_start_x + @as(f32, @floatFromInt(cursor - seg_start_byte)) * r.char_width;
+        const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, cursor, text_start_x);
         ok = ok and addTextOpBg(list, x, y, line_text[cursor..slice_end], fg, base_bg, disable_programming_ligatures);
     }
     return ok;
@@ -297,6 +340,7 @@ fn drawTextSliceWithSelectionBg(
     y: f32,
     line_text: []const u8,
     seg_start_byte: usize,
+    seg_start_vis: usize,
     slice_start: usize,
     slice_end: usize,
     fg: anytype,
@@ -313,20 +357,20 @@ fn drawTextSliceWithSelectionBg(
         if (sr.start > cursor) {
             const a0 = cursor;
             const a1 = @min(sr.start, slice_end);
-            const x = text_start_x + @as(f32, @floatFromInt(a0 - seg_start_byte)) * r.char_width;
+            const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, a0, text_start_x);
             r.drawTextMonospaceOnBgPolicy(line_text[a0..a1], x, y, fg, base_bg, disable_programming_ligatures);
         }
         const b0 = @max(cursor, sr.start);
         const b1 = @min(slice_end, sr.end);
         if (b1 > b0) {
-            const x = text_start_x + @as(f32, @floatFromInt(b0 - seg_start_byte)) * r.char_width;
+            const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, b0, text_start_x);
             r.drawTextMonospaceOnBgPolicy(line_text[b0..b1], x, y, fg, selection_bg, disable_programming_ligatures);
             cursor = b1;
         }
         if (cursor >= slice_end) break;
     }
     if (cursor < slice_end) {
-        const x = text_start_x + @as(f32, @floatFromInt(cursor - seg_start_byte)) * r.char_width;
+        const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, cursor, text_start_x);
         r.drawTextMonospaceOnBgPolicy(line_text[cursor..slice_end], x, y, fg, base_bg, disable_programming_ligatures);
     }
 }
@@ -340,6 +384,7 @@ fn appendHighlightedLineSegmentOps(
     line_start: usize,
     seg_start: usize,
     seg_end: usize,
+    seg_start_vis: usize,
     tokens: []HighlightToken,
     base_bg: anytype,
     selection_bg: anytype,
@@ -367,6 +412,7 @@ fn appendHighlightedLineSegmentOps(
                 y,
                 line_text,
                 seg_start_byte,
+                seg_start_vis,
                 slice_start,
                 slice_end,
                 r.theme.foreground,
@@ -390,7 +436,7 @@ fn appendHighlightedLineSegmentOps(
         if (conceal_text) |ctext| {
             if (ctext.len > 0) {
                 const bg = selectionOverlapBg(slice_start, slice_end, base_bg, selection_bg, sel_ranges);
-                const x = text_x + @as(f32, @floatFromInt(slice_start - seg_start)) * r.char_width;
+                const x = xForByteOffset(r, line_text, seg_start, seg_start_vis, slice_start, text_x);
                 ok = ok and addTextOpBg(list, x, y, ctext, color, bg, disable_programming_ligatures);
             }
         } else {
@@ -401,6 +447,7 @@ fn appendHighlightedLineSegmentOps(
                 y,
                 line_text,
                 seg_start_byte,
+                seg_start_vis,
                 slice_start,
                 slice_end,
                 color,
@@ -424,6 +471,7 @@ fn appendHighlightedLineSegmentOps(
             y,
             line_text,
             seg_start_byte,
+            seg_start_vis,
             slice_start,
             seg_end,
             r.theme.foreground,
@@ -650,6 +698,7 @@ pub fn draw(
                     seg_y,
                     line_text,
                     seg_start_byte,
+                    seg_start_col,
                     seg_start_byte,
                     seg_end_byte,
                     r.theme.foreground,
@@ -667,6 +716,7 @@ pub fn draw(
                     line_start,
                     seg_start_byte,
                     seg_end_byte,
+                    seg_start_col,
                     tokens,
                     base_bg,
                     r.theme.selection,
@@ -951,6 +1001,7 @@ pub fn drawCached(
                             seg_y,
                             line_text,
                             seg_start_byte,
+                            seg_start_col,
                             seg_start_byte,
                             seg_end_byte,
                             r.theme.foreground,
@@ -969,6 +1020,7 @@ pub fn drawCached(
                             line_start,
                             seg_start_byte,
                             seg_end_byte,
+                            seg_start_col,
                             tokens,
                             base_bg,
                             r.theme.selection,
@@ -1050,15 +1102,15 @@ pub fn drawCached(
                                 var cursor_b: usize = seg_start_byte;
                                 for (sel_bytes[0..sel_count]) |sr| {
                                     if (sr.start > cursor_b) {
-                                        const x0 = text_start_x + @as(f32, @floatFromInt(cursor_b - seg_start_byte)) * r.char_width;
+                                        const x0 = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, cursor_b, text_start_x);
                                         r.drawTextMonospaceOnBgPolicy(line_text[cursor_b..sr.start], x0, seg_y, r.theme.foreground, seg_base_bg, disable_programming_ligatures);
                                     }
-                                    const x1 = text_start_x + @as(f32, @floatFromInt(sr.start - seg_start_byte)) * r.char_width;
+                                    const x1 = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, sr.start, text_start_x);
                                     r.drawTextMonospaceOnBgPolicy(line_text[sr.start..sr.end], x1, seg_y, r.theme.foreground, r.theme.selection, disable_programming_ligatures);
                                     cursor_b = sr.end;
                                 }
                                 if (cursor_b < seg_end_byte) {
-                                    const x2 = text_start_x + @as(f32, @floatFromInt(cursor_b - seg_start_byte)) * r.char_width;
+                                    const x2 = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, cursor_b, text_start_x);
                                     r.drawTextMonospaceOnBgPolicy(line_text[cursor_b..seg_end_byte], x2, seg_y, r.theme.foreground, seg_base_bg, disable_programming_ligatures);
                                 }
                             }
@@ -1071,6 +1123,7 @@ pub fn drawCached(
                                 line_start,
                                 seg_start_byte,
                                 seg_end_byte,
+                                seg_start_col,
                                 tokens,
                                 base_bg,
                                 r.theme.selection,
@@ -1531,6 +1584,7 @@ fn drawHighlightedLineSegment(
     line_start: usize,
     seg_start: usize,
     seg_end: usize,
+    seg_start_vis: usize,
     tokens: []HighlightToken,
     base_bg: anytype,
     selection_bg: anytype,
@@ -1554,6 +1608,7 @@ fn drawHighlightedLineSegment(
                 y,
                 line_text,
                 seg_start,
+                seg_start_vis,
                 slice_start,
                 slice_end,
                 r.theme.foreground,
@@ -1565,7 +1620,7 @@ fn drawHighlightedLineSegment(
         }
         const slice_start = start;
         const slice_end = end;
-        const x = text_x + @as(f32, @floatFromInt(slice_start - seg_start)) * r.char_width;
+        const x = xForByteOffset(r, line_text, seg_start, seg_start_vis, slice_start, text_x);
         const conceal_text: ?[]const u8 = if (token.conceal != null or token.conceal_lines)
             token.conceal orelse ""
         else
@@ -1587,6 +1642,7 @@ fn drawHighlightedLineSegment(
                 y,
                 line_text,
                 seg_start,
+                seg_start_vis,
                 slice_start,
                 slice_end,
                 color,
@@ -1609,6 +1665,7 @@ fn drawHighlightedLineSegment(
             y,
             line_text,
             seg_start,
+            seg_start_vis,
             slice_start,
             seg_end,
             r.theme.foreground,
