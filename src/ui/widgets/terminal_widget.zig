@@ -179,6 +179,16 @@ pub const TerminalWidget = struct {
                 if (len > 0) {
                     text.appendSlice(self.session.allocator, buf[0..len]) catch return false;
                 }
+                if (cell.combining_len > 0) {
+                    var ci: usize = 0;
+                    while (ci < @as(usize, @intCast(cell.combining_len)) and ci < cell.combining.len) : (ci += 1) {
+                        const cp = cell.combining[ci];
+                        const c_len = std.unicode.utf8Encode(@intCast(cp), &buf) catch 0;
+                        if (c_len > 0) {
+                            text.appendSlice(self.session.allocator, buf[0..c_len]) catch return false;
+                        }
+                    }
+                }
             }
 
             while (text.items.len > 0 and text.items[text.items.len - 1] == ' ') {

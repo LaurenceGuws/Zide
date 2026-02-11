@@ -98,7 +98,7 @@ terminal_ligatures_todo:
 
         - id: TL-2-02
           title: "Implement cursor-aware run splitting strategy"
-          status: in_progress
+          status: done
           files_to_edit:
             - src/ui/widgets/terminal_widget_draw.zig
             - src/terminal/model/screen/screen.zig
@@ -109,12 +109,13 @@ terminal_ligatures_todo:
 
         - id: TL-2-03
           title: "Preserve style boundaries while ligatures are enabled"
-          status: todo
+          status: done
           files_to_edit:
             - src/ui/widgets/terminal_widget_draw.zig
           notes:
             - "A ligature must not cross style boundaries that would cause wrong coloring."
             - "Keep selection/underline behavior coherent for multi-cell glyph clusters."
+            - "Implemented run split on non-background style changes (fg/bold/blink/reverse/underline/link/underline_color)."
 
     - name: "Phase 3 - Rendering + Interaction Correctness"
       tasks:
@@ -129,19 +130,20 @@ terminal_ligatures_todo:
 
         - id: TL-3-02
           title: "Clipboard and selection audit for ligature runs"
-          status: todo
+          status: in_progress
           files_to_edit:
             - src/ui/widgets/terminal_widget_input.zig
             - src/terminal/core/selection.zig
           notes:
             - "Copied text must remain source codepoints, not shaped glyph artifacts."
             - "Double-click/word-select should behave predictably near ligature clusters."
+            - "Selection copy path now emits combining codepoints after base codepoints to preserve source text clusters."
 
     - name: "Phase 4 - Fixtures, Perf, and Rollout"
       tasks:
         - id: TL-4-01
           title: "Add ligature fixture strings and screenshots"
-          status: todo
+          status: in_progress
           files_to_edit:
             - src/ui/font_sample_view.zig
             - fixtures/ui/font_sample/README.txt
@@ -149,6 +151,7 @@ terminal_ligatures_todo:
           notes:
             - "Include ->, ~>, =>, ==, ===, !=, !==, <=, >=, <=>, and mixed-style boundary probes."
             - "Capture both cursor-over and cursor-away cases for strategy validation."
+            - "Added ligature-heavy lines to font sample view and documented cursor-over terminal checks in fixtures/ui/font_sample/README.txt."
 
         - id: TL-4-02
           title: "Add terminal replay/smoke verification checklist"

@@ -320,6 +320,8 @@ pub const FontSampleView = struct {
             "The quick brown fox jumps over the lazy dog 0123456789",
             "iiii llll | ||  ..,,;;::  '" ++ "\"" ++ "`",
             "mwMW  O0oO  1Il|  {}[]()  <>  == != <= >=",
+            "Ligatures: ->  ~>  =>  ==  ===  !=  !==  <=  >=  <=>",
+            "Mixed operators: >>= <<== && || :: .. ... |> <|",
             "Box: \u{2500}\u{2502}\u{250c}\u{2510}\u{2514}\u{2518}  Braille: \u{28ff}",
             "Powerline: \u{e0b0}\u{e0b1}\u{e0b2}\u{e0b3}  Nerd: \u{f120}",
             "Combining: e\u{0301} a\u{0308} n\u{0303}  Emoji: \u{1f600}",
