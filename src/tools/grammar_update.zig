@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const grammar_fetch = @import("grammar_fetch.zig");
 
 const Manifest = struct {
     version: []const u8,
@@ -18,6 +19,7 @@ const Mode = struct {
     skip_sync: bool = false,
     skip_fetch: bool = false,
     continue_on_error: bool = false,
+    git_missing_only: bool = false,
 };
 
 pub fn main() !void {
@@ -55,6 +57,8 @@ pub fn main() !void {
             mode.skip_fetch = true;
         } else if (std.mem.eql(u8, arg, "--continue-on-error")) {
             mode.continue_on_error = true;
+        } else if (std.mem.eql(u8, arg, "--git-missing-only")) {
+            mode.git_missing_only = true;
         } else if (std.mem.eql(u8, arg, "--targets") and i + 1 < args.len) {
             i += 1;
             targets = args[i];
@@ -107,9 +111,10 @@ fn printUsage() void {
         \\  --skip-fetch      Skip git clone/fetch of grammar repos
         \\  --skip-git        Skip sync + fetch steps
         \\  --continue-on-error  Continue building if a grammar fails
+        \\  --git-missing-only   During fetch, only clone missing grammars (skip updates)
         \\  --targets <list>  Comma list of targets (os/arch) to build
         \\  --skip-targets <list> Comma list of targets (os/arch) to skip
-        \\  --jobs <n>        Parallel build jobs for grammar packs
+        \\  --jobs <n>        Parallel jobs for git fetch + grammar pack builds
         \\  --dist <path>     Override dist directory (default tools/grammar_packs/dist)
         \\  --cache-root <path> Override cache root (default ~/.config/zide/grammars)
         \\  --help            Show this help
@@ -132,7 +137,8 @@ fn runBuildScripts(
         try runScript(allocator, scripts_root, "sync_from_nvim.sh", null);
     }
     if (!mode.skip_fetch) {
-        try runScript(allocator, scripts_root, "fetch_grammars.sh", null);
+        const git_jobs = try parseJobs(jobs);
+        try grammar_fetch.fetchGrammars(allocator, scripts_root, git_jobs, mode.git_missing_only);
     }
 
     var env_map = try std.process.getEnvMap(allocator);
@@ -148,6 +154,14 @@ fn runBuildScripts(
         try env_map.put("ZIDE_GRAMMAR_JOBS", value);
     }
     try runScript(allocator, scripts_root, "build_all.sh", &env_map);
+}
+
+fn parseJobs(jobs: ?[]const u8) !usize {
+    if (jobs) |value| {
+        const parsed = try std.fmt.parseInt(usize, value, 10);
+        return @max(parsed, 1);
+    }
+    return 1;
 }
 
 fn runScript(
