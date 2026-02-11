@@ -1424,15 +1424,28 @@ pub const Renderer = struct {
         return font_manager.fontForSize(self, size);
     }
 
+    const TextOrigin = struct {
+        x: f32,
+        y: f32,
+    };
+
+    fn snapTextOrigin(x: f32, y: f32) TextOrigin {
+        return .{
+            .x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(x))))),
+            .y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(@floor(y))))),
+        };
+    }
+
     fn drawTextWithFont(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: Color) void {
+        const origin = snapTextOrigin(x, y);
         text_draw.drawText(
             self.allocator,
             font,
             self,
             drawTextureThunk,
             text,
-            x,
-            y,
+            origin.x,
+            origin.y,
             cell_w,
             cell_h,
             color.toRgba(),
@@ -1441,10 +1454,11 @@ pub const Renderer = struct {
     }
 
     fn drawTextWithFontMonospace(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool) void {
-        if (self.drawTextWithFontMonospaceShaped(font, cell_w, cell_h, text, x, y, color.toRgba(), disable_programming_ligatures)) {
+        const origin = snapTextOrigin(x, y);
+        if (self.drawTextWithFontMonospaceShaped(font, cell_w, cell_h, text, origin.x, origin.y, color.toRgba(), disable_programming_ligatures)) {
             return;
         }
-        text_draw.drawText(self.allocator, font, self, drawTextureThunk, text, x, y, cell_w, cell_h, color.toRgba(), true);
+        text_draw.drawText(self.allocator, font, self, drawTextureThunk, text, origin.x, origin.y, cell_w, cell_h, color.toRgba(), true);
     }
 
     fn drawTextWithFontMonospaceShaped(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: types.Rgba, disable_programming_ligatures: bool) bool {
