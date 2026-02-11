@@ -25,6 +25,7 @@ font_rendering_todo:
       - "text helpers (non-terminal UI): src/ui/renderer/text_draw.zig"
     known_current_gaps:
       - "Terminal run-based shaping is implemented (FR-3-01). Remaining work is verification + edge-case mapping (clusters spanning cells, fallback boundaries, and width policy)."
+      - "First-class programming ligatures are tracked in app_architecture/ui/terminal_ligatures_todo.yaml."
       - "Combining marks are supported but currently capped (cell stores 2 combining codepoints; FR-3-00)."
       - "Double-width glyph layout (wcwidth/east-asian-width policy) is not explicitly implemented in the model/render pipeline."
       - "LCD/subpixel AA is not a final solution and remains opt-in/experimental."

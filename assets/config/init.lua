@@ -115,6 +115,20 @@ return {
     terminal = {
         -- Optional override (same font as app/editor for now).
         -- font = { path = "/usr/share/fonts/...", size = 16 },
+
+        -- Ligature strategy (kitty-style semantics):
+        --   "never"  = never disable ligatures (default)
+        --   "cursor" = disable programming ligatures under cursor
+        --   "always" = always disable programming ligatures
+        disable_ligatures = "never",
+
+        -- Extra OpenType features passed to HarfBuzz for terminal shaping.
+        -- String or string-list table. Examples:
+        --   font_features = "-calt"
+        --   font_features = "-calt,-liga,-dlig"
+        --   font_features = { "+calt", "-liga" }
+        -- font_features = "+calt",
+
         -- Blink style: "kitty" (default) or "off".
         -- blink = "kitty",
         -- Scrollback line cap (min 100, max 100000). Invalid values warn and fall back to 1000.

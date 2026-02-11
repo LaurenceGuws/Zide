@@ -26,6 +26,7 @@ const Texture = terminal_font_mod.Texture;
 const TextureKind = terminal_font_mod.TextureKind;
 const Rgba = terminal_font_mod.Rgba;
 const Renderer = renderer_mod.Renderer;
+const TerminalDisableLigaturesStrategy = renderer_mod.TerminalDisableLigaturesStrategy;
 
 var jitter_debug_enabled_cache: ?bool = null;
 
@@ -259,6 +260,9 @@ pub fn draw(
             screen_reverse_mode: bool,
             blink_style_mode: anytype,
             blink_time_s: f64,
+            draw_cursor_mode: bool,
+            cursor_pos: CursorPos,
+            ligature_strategy: TerminalDisableLigaturesStrategy,
         ) void {
             _ = padding_x_i;
             const BlinkStyleT = @TypeOf(blink_style_mode);
@@ -275,8 +279,18 @@ pub fn draw(
             const col_end = @min(col_end_in, cols_count - 1);
             if (col_start > col_end) return;
 
-            const features = terminalShapeFeatures();
             const draw_ctx = DrawContext{ .ctx = rr, .drawTexture = drawTextureGlyphCache };
+
+            const cursor_row_active = ligature_strategy == .cursor and draw_cursor_mode and row_idx == cursor_pos.row and cursor_pos.col < cols_count;
+            const cursor_split_col: usize = if (cursor_row_active) blk: {
+                const cursor_cell = row_cells[cursor_pos.col];
+                break :blk if (cursor_cell.x > 0) cursor_pos.col - @as(usize, @intCast(cursor_cell.x)) else cursor_pos.col;
+            } else 0;
+            const cursor_split_end: usize = if (cursor_row_active) blk: {
+                const split_cell = row_cells[cursor_split_col];
+                const span_w = @as(usize, @max(@as(u8, 1), split_cell.width));
+                break :blk @min(cols_count, cursor_split_col + span_w);
+            } else 0;
 
             var col: usize = col_start;
             while (col <= col_end and col < cols_count) {
@@ -301,8 +315,27 @@ pub fn draw(
                     if (choice.hb_font != span_hb_font) break;
                     scan_col += cwidth_units;
                 }
-                const span_end_excl = @min(scan_col, col_end + 1);
+                var span_end_excl = @min(scan_col, col_end + 1);
+                if (cursor_row_active) {
+                    if (span_start_col < cursor_split_col and span_end_excl > cursor_split_col) {
+                        span_end_excl = cursor_split_col;
+                    } else if (span_start_col == cursor_split_col and span_end_excl > cursor_split_end) {
+                        span_end_excl = cursor_split_end;
+                    }
+                }
+                if (span_end_excl <= span_start_col) {
+                    const advance = @as(usize, @max(@as(u8, 1), row_cells[span_start_col].width));
+                    span_end_excl = @min(col_end + 1, span_start_col + advance);
+                }
                 const span_cols = span_end_excl - span_start_col;
+
+                const disable_programming_ligatures = switch (ligature_strategy) {
+                    .never => false,
+                    .always => true,
+                    .cursor => cursor_row_active and span_start_col == cursor_split_col,
+                };
+                var shape_features_buf: [16]hb.hb_feature_t = undefined;
+                const shape_features_len = collectTerminalShapeFeatures(rr, disable_programming_ligatures, shape_features_buf[0..]);
 
                 const buffer = hb.hb_buffer_create();
                 defer hb.hb_buffer_destroy(buffer);
@@ -326,7 +359,12 @@ pub fn draw(
                     cc += cwidth_units;
                 }
                 hb.hb_buffer_guess_segment_properties(buffer);
-                hb.hb_shape(span_hb_font, buffer, features[0..].ptr, @intCast(features.len));
+                hb.hb_shape(
+                    span_hb_font,
+                    buffer,
+                    if (shape_features_len > 0) shape_features_buf[0..].ptr else null,
+                    @intCast(shape_features_len),
+                );
 
                 // Underlines are per-cell, not per glyph.
                 cc = span_start_col;
@@ -613,7 +651,7 @@ pub fn draw(
                 r.beginTerminalGlyphBatch();
                 row = 0;
                 while (row < rows) : (row += 1) {
-                    drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time);
+                    drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures);
                 }
                 r.flushTerminalGlyphBatch();
                 if (has_kitty) {
@@ -654,12 +692,12 @@ pub fn draw(
                             col_start = @min(@as(usize, cache.dirty_cols_start.items[row]), cols - 1);
                             col_end = @min(@as(usize, cache.dirty_cols_end.items[row]), cols - 1);
                         }
-                        drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time);
+                        drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures);
                         if (row > 0) {
-                            drawRowGlyphs(shell, view_cells, cols, row - 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time);
+                            drawRowGlyphs(shell, view_cells, cols, row - 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures);
                         }
                         if (row + 1 < rows) {
-                            drawRowGlyphs(shell, view_cells, cols, row + 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time);
+                            drawRowGlyphs(shell, view_cells, cols, row + 1, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.terminal_disable_ligatures);
                         }
                     }
                 }
@@ -1036,14 +1074,26 @@ fn hbTag(a: u8, b: u8, cch: u8, d: u8) u32 {
 
 const hb_feature_all: u32 = 0xFFFFFFFF;
 
-fn terminalShapeFeatures() [5]hb.hb_feature_t {
-    return .{
-        .{ .tag = hbTag('l', 'i', 'g', 'a'), .value = 0, .start = 0, .end = hb_feature_all },
-        .{ .tag = hbTag('c', 'l', 'i', 'g'), .value = 0, .start = 0, .end = hb_feature_all },
-        .{ .tag = hbTag('d', 'l', 'i', 'g'), .value = 0, .start = 0, .end = hb_feature_all },
-        .{ .tag = hbTag('h', 'l', 'i', 'g'), .value = 0, .start = 0, .end = hb_feature_all },
-        .{ .tag = hbTag('c', 'a', 'l', 't'), .value = 0, .start = 0, .end = hb_feature_all },
-    };
+fn appendShapeFeature(features: []hb.hb_feature_t, len: *usize, feature: hb.hb_feature_t) void {
+    if (len.* >= features.len) return;
+    features[len.*] = feature;
+    len.* += 1;
+}
+
+fn collectTerminalShapeFeatures(rr: *Renderer, disable_programming_ligatures: bool, out: []hb.hb_feature_t) usize {
+    var len: usize = 0;
+    for (rr.terminal_font_features.items) |f| {
+        appendShapeFeature(out, &len, f);
+    }
+    if (disable_programming_ligatures) {
+        appendShapeFeature(out, &len, .{
+            .tag = hbTag('c', 'a', 'l', 't'),
+            .value = 0,
+            .start = 0,
+            .end = hb_feature_all,
+        });
+    }
+    return len;
 }
 
 fn isTerminalBoxGlyph(codepoint: u32) bool {
