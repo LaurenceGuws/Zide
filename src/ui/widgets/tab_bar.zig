@@ -17,7 +17,7 @@ pub const TabBar = struct {
     last_mouse: shared_types.input.MousePos,
 
     pub const Tab = struct {
-        title: []const u8,
+        title: []u8,
         kind: Kind,
         modified: bool,
 
@@ -37,12 +37,17 @@ pub const TabBar = struct {
     }
 
     pub fn deinit(self: *TabBar) void {
+        for (self.tabs.items) |tab| {
+            self.allocator.free(tab.title);
+        }
         self.tabs.deinit(self.allocator);
     }
 
     pub fn addTab(self: *TabBar, title: []const u8, kind: Tab.Kind) !void {
+        const owned_title = try self.allocator.dupe(u8, title);
+        errdefer self.allocator.free(owned_title);
         try self.tabs.append(self.allocator, .{
-            .title = title,
+            .title = owned_title,
             .kind = kind,
             .modified = false,
         });
@@ -52,12 +57,12 @@ pub const TabBar = struct {
         self.last_mouse = input.mouse_pos;
     }
 
-    pub fn draw(self: *TabBar, shell: *Shell, x: f32, y: f32, width: f32) void {
+    pub fn draw(self: *TabBar, shell: *Shell, x: f32, y: f32, width: f32) ?Tooltip {
         const theme = shell.theme();
         // Draw tab bar background
         shell.drawRect(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height), theme.ui_bar_bg);
 
-        if (width <= 0 or self.height <= 0) return;
+        if (width <= 0 or self.height <= 0) return null;
 
         shell.beginClip(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height));
 
@@ -110,10 +115,7 @@ pub const TabBar = struct {
         }
 
         shell.endClip();
-
-        if (tooltip) |tip| {
-            common.drawTooltip(shell, tip.text, tip.x, tip.y);
-        }
+        return tooltip;
     }
 
     pub fn handleClick(self: *TabBar, x: f32, y: f32, bar_x: f32, bar_y: f32) bool {
