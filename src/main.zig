@@ -20,6 +20,7 @@ const shared_types = @import("types/mod.zig");
 // UI modules
 const app_shell = @import("app_shell.zig");
 const widgets = @import("ui/widgets.zig");
+const widgets_common = @import("ui/widgets/common.zig");
 const editor_draw = @import("ui/widgets/editor_widget_draw.zig");
 const layout_types = shared_types.layout;
 const input_builder = @import("input/input_builder.zig");
@@ -489,7 +490,6 @@ const AppState = struct {
         const width = @as(f32, @floatFromInt(shell.width()));
         const height = @as(f32, @floatFromInt(shell.height()));
         const layout = self.computeLayout(width, height);
-
         if (self.app_mode == .terminal) {
             self.active_kind = .terminal;
         } else if (self.app_mode == .editor) {
@@ -1552,13 +1552,14 @@ const AppState = struct {
         const width = @as(f32, @floatFromInt(shell.width()));
         const height = @as(f32, @floatFromInt(shell.height()));
         const layout = self.computeLayout(width, height);
+        var tab_tooltip: ?widgets_common.Tooltip = null;
 
         if (self.app_mode == .ide) {
             // Draw options bar
             self.options_bar.draw(shell, layout.window.width);
 
             // Draw tab bar
-            self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
+            tab_tooltip = self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
         }
 
         // Draw editor
@@ -1622,6 +1623,10 @@ const AppState = struct {
                 editor.cursor.col,
                 editor.modified,
             );
+        }
+
+        if (tab_tooltip) |tip| {
+            widgets_common.drawTooltip(shell, tip.text, tip.x, tip.y);
         }
 
         shell.endFrame();
