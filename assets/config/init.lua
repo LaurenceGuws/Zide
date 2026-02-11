@@ -11,10 +11,11 @@ return {
     --   log = { file = { ... }, console = { ... } }
     -- If file/console are not set, enable is used for both.
     log = {
-        enable = { "app.core", "terminal.core", "terminal.font.jitter", "ui.zoom.shortcut" },
+        enable = { "app.core", "terminal.core", "ui.zoom.shortcut" },
         -- file = { "terminal.metrics" },
         -- console = { "app.core" },
     },
+    -- terminal.font.jitter is gated by env: ZIDE_TERMINAL_FONT_JITTER=1
 
     -- SDL logging configuration.
     -- log_level options: "none", "critical", "error", "warning", "warn", "info", "debug", "trace"

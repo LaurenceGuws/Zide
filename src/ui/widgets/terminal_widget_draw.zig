@@ -27,6 +27,8 @@ const TextureKind = terminal_font_mod.TextureKind;
 const Rgba = terminal_font_mod.Rgba;
 const Renderer = renderer_mod.Renderer;
 
+var jitter_debug_enabled_cache: ?bool = null;
+
 pub fn draw(
     self: anytype,
     shell: *Shell,
@@ -1134,7 +1136,7 @@ fn drawShapedGlyph(
     const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(@floor(draw_y)))));
 
     const jitter_log = app_logger.logger("terminal.font.jitter");
-    if (jitter_log.enabled_file or jitter_log.enabled_console) {
+    if ((jitter_log.enabled_file or jitter_log.enabled_console) and jitterDebugEnabled()) {
         const did_fit_scale = @abs(overflow_scale - 1.0) > 0.001;
         const has_y_offset = hb_pos.y_offset != 0;
         const y_snap_error = draw_y - snapped_y;
@@ -1173,4 +1175,28 @@ fn drawShapedGlyph(
     } else {
         ctx_draw.drawTexture(ctx_draw.ctx, font.coverage_texture, glyph.rect, dest, draw_color, .font_coverage);
     }
+}
+
+fn jitterDebugEnabled() bool {
+    if (jitter_debug_enabled_cache) |cached| return cached;
+    const raw = std.c.getenv("ZIDE_TERMINAL_FONT_JITTER");
+    if (raw == null) {
+        jitter_debug_enabled_cache = false;
+        return false;
+    }
+    const value = std.mem.sliceTo(raw.?, 0);
+    if (value.len == 0) {
+        jitter_debug_enabled_cache = true;
+        return true;
+    }
+    if (std.ascii.eqlIgnoreCase(value, "0") or
+        std.ascii.eqlIgnoreCase(value, "false") or
+        std.ascii.eqlIgnoreCase(value, "off") or
+        std.ascii.eqlIgnoreCase(value, "no"))
+    {
+        jitter_debug_enabled_cache = false;
+        return false;
+    }
+    jitter_debug_enabled_cache = true;
+    return true;
 }
