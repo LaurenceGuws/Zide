@@ -188,6 +188,7 @@ const AppState = struct {
                 .app_font_size = null,
                 .editor_font_path = null,
                 .editor_font_size = null,
+                .editor_font_features = null,
                 .terminal_font_path = null,
                 .terminal_font_size = null,
                 .terminal_blink_style = null,
@@ -253,6 +254,7 @@ const AppState = struct {
             } else null,
             config.terminal_font_features,
         );
+        shell.rendererPtr().setEditorLigatureConfig(config.editor_font_features);
         if (config.app_font_path != null or config.app_font_size != null or
             config.editor_font_path != null or config.editor_font_size != null or
             config.terminal_font_path != null or config.terminal_font_size != null)
@@ -1467,6 +1469,12 @@ const AppState = struct {
                 if (config.terminal_disable_ligatures) |v| @tagName(v) else "(unchanged)",
                 config.terminal_font_features orelse "(unchanged)",
             });
+        }
+
+        if (config.editor_font_features != null) {
+            self.shell.rendererPtr().setEditorLigatureConfig(config.editor_font_features);
+            self.needs_redraw = true;
+            log.logStdout("reload editor.font_features={s}", .{config.editor_font_features.?});
         }
 
         if (config.terminal_cursor_shape != null or config.terminal_cursor_blink != null) {

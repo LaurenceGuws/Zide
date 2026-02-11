@@ -341,7 +341,7 @@ pub fn draw(
                     .cursor => cursor_row_active and span_start_col == cursor_split_col,
                 };
                 var shape_features_buf: [16]hb.hb_feature_t = undefined;
-                const shape_features_len = collectTerminalShapeFeatures(rr, disable_programming_ligatures, shape_features_buf[0..]);
+                const shape_features_len = rr.collectShapeFeatures(.terminal, disable_programming_ligatures, shape_features_buf[0..]);
 
                 const buffer = hb.hb_buffer_create();
                 defer hb.hb_buffer_destroy(buffer);
@@ -1072,34 +1072,6 @@ fn drawTextureGlyphCache(ctx: *anyopaque, texture: Texture, src: Rect, dest: Rec
 fn addTerminalGlyphRect(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
     const rr: *Renderer = @ptrCast(@alignCast(ctx));
     rr.addTerminalGlyphRect(x, y, w, h, color);
-}
-
-fn hbTag(a: u8, b: u8, cch: u8, d: u8) u32 {
-    return (@as(u32, a) << 24) | (@as(u32, b) << 16) | (@as(u32, cch) << 8) | @as(u32, d);
-}
-
-const hb_feature_all: u32 = 0xFFFFFFFF;
-
-fn appendShapeFeature(features: []hb.hb_feature_t, len: *usize, feature: hb.hb_feature_t) void {
-    if (len.* >= features.len) return;
-    features[len.*] = feature;
-    len.* += 1;
-}
-
-fn collectTerminalShapeFeatures(rr: *Renderer, disable_programming_ligatures: bool, out: []hb.hb_feature_t) usize {
-    var len: usize = 0;
-    for (rr.terminal_font_features.items) |f| {
-        appendShapeFeature(out, &len, f);
-    }
-    if (disable_programming_ligatures) {
-        appendShapeFeature(out, &len, .{
-            .tag = hbTag('c', 'a', 'l', 't'),
-            .value = 0,
-            .start = 0,
-            .end = hb_feature_all,
-        });
-    }
-    return len;
 }
 
 fn sameColor(a: terminal_mod.Color, b: terminal_mod.Color) bool {

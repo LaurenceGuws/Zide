@@ -36,6 +36,7 @@ pub const Config = struct {
     app_font_size: ?f32,
     editor_font_path: ?[]u8,
     editor_font_size: ?f32,
+    editor_font_features: ?[]u8,
     terminal_font_path: ?[]u8,
     terminal_font_size: ?f32,
     terminal_blink_style: ?TerminalBlinkStyle,
@@ -130,6 +131,7 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
         .app_font_size = null,
         .editor_font_path = null,
         .editor_font_size = null,
+        .editor_font_features = null,
         .terminal_font_path = null,
         .terminal_font_size = null,
         .terminal_blink_style = null,
@@ -184,6 +186,10 @@ pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
     if (config.editor_font_path) |path| {
         allocator.free(path);
         config.editor_font_path = null;
+    }
+    if (config.editor_font_features) |features| {
+        allocator.free(features);
+        config.editor_font_features = null;
     }
     if (config.terminal_font_path) |path| {
         allocator.free(path);
@@ -241,6 +247,10 @@ fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) voi
     }
     if (overlay.editor_font_size != null) {
         base.editor_font_size = overlay.editor_font_size;
+    }
+    if (overlay.editor_font_features) |features| {
+        if (base.editor_font_features) |old| allocator.free(old);
+        base.editor_font_features = allocator.dupe(u8, features) catch base.editor_font_features;
     }
     if (overlay.terminal_font_path) |path| {
         if (base.terminal_font_path) |old| allocator.free(old);
@@ -332,6 +342,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             .app_font_size = null,
             .editor_font_path = null,
             .editor_font_size = null,
+            .editor_font_features = null,
             .terminal_font_path = null,
             .terminal_font_size = null,
             .terminal_blink_style = null,
@@ -365,6 +376,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     var app_font_size: ?f32 = null;
     var editor_font_path: ?[]u8 = null;
     var editor_font_size: ?f32 = null;
+    var editor_font_features: ?[]u8 = null;
     var terminal_font_path: ?[]u8 = null;
     var terminal_font_size: ?f32 = null;
     var terminal_blink_style: ?TerminalBlinkStyle = null;
@@ -426,6 +438,14 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             editor_font_path = try luaStringToOwned(allocator, L, -1);
         } else if (c.lua_istable(L, -1)) {
             parseFontTable(allocator, L, -1, &editor_font_path, &editor_font_size);
+        }
+        c.lua_pop(L, 1);
+
+        _ = c.lua_getfield(L, -1, "font_features");
+        if (c.lua_isstring(L, -1) != 0) {
+            editor_font_features = try luaStringToOwned(allocator, L, -1);
+        } else if (c.lua_istable(L, -1)) {
+            editor_font_features = try luaStringListToOwned(allocator, L, -1);
         }
         c.lua_pop(L, 1);
 
@@ -627,6 +647,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         .app_font_size = app_font_size,
         .editor_font_path = editor_font_path,
         .editor_font_size = editor_font_size,
+        .editor_font_features = editor_font_features,
         .terminal_font_path = terminal_font_path,
         .terminal_font_size = terminal_font_size,
         .terminal_blink_style = terminal_blink_style,

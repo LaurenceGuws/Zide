@@ -102,6 +102,12 @@ return {
     editor = {
         -- Soft wrap long lines.
         wrap = false,
+        -- Optional editor-specific shaping features (falls back to terminal.font_features when unset).
+        -- Examples:
+        -- font_features = "+calt"
+        -- font_features = "-calt,-liga"
+        -- font_features = { "+calt", "-liga" }
+        -- font_features = "+calt",
         -- Render work budgets (lines per frame). Set to 0 to disable precompute.
         render = {
             -- highlight_budget = 120,

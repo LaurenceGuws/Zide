@@ -77,6 +77,11 @@ pub const TerminalDisableLigaturesStrategy = enum {
     cursor,
     always,
 };
+
+pub const ShapeFeatureDomain = enum {
+    terminal,
+    editor,
+};
 pub const KEY_ENTER = input_constants.KEY_ENTER;
 pub const KEY_BACKSPACE = input_constants.KEY_BACKSPACE;
 pub const KEY_DELETE = input_constants.KEY_DELETE;
@@ -249,6 +254,8 @@ pub const Renderer = struct {
     terminal_disable_ligatures: TerminalDisableLigaturesStrategy,
     terminal_font_features_raw: ?[]u8,
     terminal_font_features: std.ArrayListUnmanaged(hb.hb_feature_t),
+    editor_font_features_raw: ?[]u8,
+    editor_font_features: std.ArrayListUnmanaged(hb.hb_feature_t),
     font_rendering: FontRenderingOptions,
     font_cache: std.AutoHashMap(u32, *TerminalFont),
     font_path: [*:0]const u8,
@@ -372,6 +379,8 @@ pub const Renderer = struct {
             .terminal_disable_ligatures = .never,
             .terminal_font_features_raw = null,
             .terminal_font_features = .{},
+            .editor_font_features_raw = null,
+            .editor_font_features = .{},
             .font_rendering = .{},
             .font_cache = std.AutoHashMap(u32, *TerminalFont).init(allocator),
             .font_path = FONT_PATH,
@@ -448,6 +457,11 @@ pub const Renderer = struct {
             self.terminal_font_features_raw = null;
         }
         self.terminal_font_features.deinit(self.allocator);
+        if (self.editor_font_features_raw) |owned| {
+            self.allocator.free(owned);
+            self.editor_font_features_raw = null;
+        }
+        self.editor_font_features.deinit(self.allocator);
         if (self.font_path_owned) |owned| {
             self.allocator.free(owned);
             self.font_path_owned = null;
@@ -534,27 +548,71 @@ pub const Renderer = struct {
             self.terminal_disable_ligatures = s;
         }
         if (features_raw) |raw| {
-            if (self.terminal_font_features_raw) |owned| {
-                self.allocator.free(owned);
-                self.terminal_font_features_raw = null;
-            }
-            self.terminal_font_features_raw = self.allocator.dupe(u8, raw) catch null;
-            self.rebuildTerminalFontFeatures();
+            self.setFontFeatureListRaw(&self.terminal_font_features_raw, &self.terminal_font_features, raw);
         }
     }
 
-    fn rebuildTerminalFontFeatures(self: *Renderer) void {
-        self.terminal_font_features.items.len = 0;
-        const raw = self.terminal_font_features_raw orelse return;
+    pub fn setEditorLigatureConfig(self: *Renderer, features_raw: ?[]const u8) void {
+        if (features_raw) |raw| {
+            self.setFontFeatureListRaw(&self.editor_font_features_raw, &self.editor_font_features, raw);
+        }
+    }
+
+    fn setFontFeatureListRaw(self: *Renderer, raw_slot: *?[]u8, list: *std.ArrayListUnmanaged(hb.hb_feature_t), raw: []const u8) void {
+        if (raw_slot.*) |owned| {
+            self.allocator.free(owned);
+            raw_slot.* = null;
+        }
+        raw_slot.* = self.allocator.dupe(u8, raw) catch null;
+        self.rebuildFontFeaturesList(raw_slot.*, list);
+    }
+
+    fn rebuildFontFeaturesList(self: *Renderer, raw_opt: ?[]u8, list: *std.ArrayListUnmanaged(hb.hb_feature_t)) void {
+        list.items.len = 0;
+        const raw = raw_opt orelse return;
         var it = std.mem.splitScalar(u8, raw, ',');
         while (it.next()) |piece| {
             const token = std.mem.trim(u8, piece, " \t\r\n");
             if (token.len == 0) continue;
             var feature: hb.hb_feature_t = undefined;
             if (hb.hb_feature_from_string(token.ptr, @intCast(token.len), &feature) != 0) {
-                self.terminal_font_features.append(self.allocator, feature) catch return;
+                list.append(self.allocator, feature) catch return;
             }
         }
+    }
+
+    fn hbTag(a: u8, b: u8, cch: u8, d: u8) u32 {
+        return (@as(u32, a) << 24) | (@as(u32, b) << 16) | (@as(u32, cch) << 8) | @as(u32, d);
+    }
+
+    const hb_feature_all: u32 = 0xFFFFFFFF;
+
+    pub fn collectShapeFeatures(self: *Renderer, domain: ShapeFeatureDomain, disable_programming_ligatures: bool, out: []hb.hb_feature_t) usize {
+        var len: usize = 0;
+        const base = switch (domain) {
+            .terminal => self.terminal_font_features.items,
+            .editor => if (self.editor_font_features_raw != null)
+                self.editor_font_features.items
+            else
+                self.terminal_font_features.items,
+        };
+
+        for (base) |f| {
+            if (len >= out.len) break;
+            out[len] = f;
+            len += 1;
+        }
+
+        if (disable_programming_ligatures and len < out.len) {
+            out[len] = .{
+                .tag = hbTag('c', 'a', 'l', 't'),
+                .value = 0,
+                .start = 0,
+                .end = hb_feature_all,
+            };
+            len += 1;
+        }
+        return len;
     }
 
     pub fn loadFontWithGlyphs(self: *Renderer, allocator: std.mem.Allocator, path: [*:0]const u8, size: f32) void {
@@ -1420,11 +1478,13 @@ pub const Renderer = struct {
                 hb.hb_buffer_add(buffer, cp, @intCast(cp_i - span_start));
             }
             hb.hb_buffer_guess_segment_properties(buffer);
+            var shape_features_buf: [16]hb.hb_feature_t = undefined;
+            const shape_features_len = self.collectShapeFeatures(.editor, false, shape_features_buf[0..]);
             hb.hb_shape(
                 span_hb_font,
                 buffer,
-                if (self.terminal_font_features.items.len > 0) self.terminal_font_features.items.ptr else null,
-                @intCast(self.terminal_font_features.items.len),
+                if (shape_features_len > 0) shape_features_buf[0..].ptr else null,
+                @intCast(shape_features_len),
             );
 
             var length: c_uint = 0;

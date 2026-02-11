@@ -127,3 +127,25 @@ test "utf8 column mapping" {
     try std.testing.expectEqual(@as(usize, s.len), utf8ByteIndexForColumn(s, 4));
     try std.testing.expectEqual(@as(usize, s.len), utf8ByteIndexForColumn(s, 5));
 }
+
+test "ligature-like ascii cursor mapping remains stable" {
+    const s = "a->b ~> c === d != e <= f >= g <=> h";
+    var i: usize = 0;
+    while (i <= s.len) : (i += 1) {
+        const col = visualColumnForByteIndex(s, i, null);
+        const back = byteIndexForVisualColumn(s, col, null);
+        try std.testing.expectEqual(i, back);
+    }
+}
+
+test "selection range mapping around operator chains" {
+    const s = "fn x() { return a->b ~= c; }";
+    const start = 16; // points to 'a'
+    const end = 22; // points after 'c'
+    const start_col = visualColumnForByteIndex(s, start, null);
+    const end_col = visualColumnForByteIndex(s, end, null);
+    try std.testing.expectEqual(@as(usize, 16), start_col);
+    try std.testing.expectEqual(@as(usize, 22), end_col);
+    try std.testing.expectEqual(start, byteIndexForVisualColumn(s, start_col, null));
+    try std.testing.expectEqual(end, byteIndexForVisualColumn(s, end_col, null));
+}
