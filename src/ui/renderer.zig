@@ -600,6 +600,21 @@ pub const Renderer = struct {
             log.logf("ui_zoom layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
         }
         try self.applyFontScale();
+        if (log.enabled_file or log.enabled_console) {
+            log.logf(
+                "ui_zoom_effective base={d:.2} ui={d:.3} zoom={d:.3} target={d:.3} render={d:.3} font={d:.2} term_cell={d:.2}x{d:.2}",
+                .{
+                    self.base_font_size,
+                    self.ui_scale,
+                    self.user_zoom,
+                    self.user_zoom_target,
+                    self.render_scale,
+                    self.font_size,
+                    self.terminal_cell_width,
+                    self.terminal_cell_height,
+                },
+            );
+        }
         self.last_zoom_apply_time = result.apply_time;
         return true;
     }

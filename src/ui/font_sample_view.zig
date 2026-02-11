@@ -209,7 +209,7 @@ pub const FontSampleView = struct {
         const section_pad_y: f32 = 8;
         const line_h = self.left.line_height / (if (r.render_scale > 0.0) r.render_scale else 1.0);
         const lines = sampleLines();
-        const content_h: f32 = @as(f32, @floatFromInt(lines.len)) * line_h;
+        const content_h: f32 = @as(f32, @floatFromInt(lines.len)) * line_h + baselineStressHeight(line_h);
         const section_h: f32 = r.char_height + section_pad_y + content_h + section_pad_y;
         const content_y: f32 = y + r.char_height + section_pad_y;
 
@@ -252,6 +252,19 @@ pub const FontSampleView = struct {
             const text = lines[row];
             drawTextWithFont(r, self.allocator, font, text, x, start_y + @as(f32, @floatFromInt(row)) * line_h, fg);
         }
+
+        var stress_y = start_y + @as(f32, @floatFromInt(lines.len)) * line_h + line_h * 0.5;
+        r.drawText("baseline zoom stress: x0.9 x1.0 x1.1", x, stress_y, theme.line_number);
+        stress_y += line_h;
+
+        const stress_text = "Baseline probe: iiii llll zzzz vava mMwW 1Il|";
+        const zooms = [_]f32{ 0.9, 1.0, 1.1 };
+        for (zooms, 0..) |zoom, idx| {
+            drawTextWithFontZoom(r, self.allocator, font, stress_text, x, stress_y, fg, zoom);
+            if (idx + 1 < zooms.len) {
+                stress_y += line_h * zoom + line_h * 0.1;
+            }
+        }
     }
 
     fn drawTextWithFont(
@@ -266,6 +279,28 @@ pub const FontSampleView = struct {
         const draw_ctx = terminal_font_mod.DrawContext{ .ctx = r, .drawTexture = drawTextureThunk };
         const scale = if (r.render_scale > 0.0) r.render_scale else 1.0;
         text_draw.drawText(allocator, font, draw_ctx.ctx, draw_ctx.drawTexture, text, x, y, font.cell_width / scale, font.line_height / scale, color.toRgba(), true);
+    }
+
+    fn drawTextWithFontZoom(
+        r: *Renderer,
+        allocator: std.mem.Allocator,
+        font: *TerminalFont,
+        text: []const u8,
+        x: f32,
+        y: f32,
+        color: Color,
+        zoom: f32,
+    ) void {
+        const draw_ctx = terminal_font_mod.DrawContext{ .ctx = r, .drawTexture = drawTextureThunk };
+        const scale = if (r.render_scale > 0.0) r.render_scale else 1.0;
+        const cell_w = (font.cell_width / scale) * zoom;
+        const cell_h = (font.line_height / scale) * zoom;
+        text_draw.drawText(allocator, font, draw_ctx.ctx, draw_ctx.drawTexture, text, x, y, cell_w, cell_h, color.toRgba(), true);
+    }
+
+    fn baselineStressHeight(line_h: f32) f32 {
+        // 1 label + 3 zoomed lines + spacing
+        return line_h * 4.8;
     }
 
     fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
