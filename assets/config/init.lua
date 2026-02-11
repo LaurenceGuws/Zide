@@ -5,13 +5,13 @@
 return {
     -- Logging configuration.
     -- Options:
-    --   log = "all" / "none" / "app.core,editor.core,editor.input,editor.highlight,terminal.core,terminal.metrics,terminal.alt,terminal.font,terminal.io,terminal.csi,terminal.sgr,terminal.osc,terminal.replay" (comma-separated)
+    --   log = "all" / "none" / "app.core,editor.core,editor.input,editor.highlight,terminal.core,terminal.metrics,terminal.alt,terminal.font,terminal.font.jitter,ui.zoom.shortcut,terminal.io,terminal.csi,terminal.sgr,terminal.osc,terminal.replay" (comma-separated)
     --   log = "all" / "none" / "... ,editor.perf" for file load + rope init timings
-    --   log = { enable = { "app.core", "editor.core", "editor.input", "editor.highlight", "terminal.core", "terminal.metrics", "terminal.alt", "terminal.font", "terminal.io", "terminal.csi", "terminal.sgr", "terminal.osc", "terminal.replay" } }
+    --   log = { enable = { "app.core", "editor.core", "editor.input", "editor.highlight", "terminal.core", "terminal.metrics", "terminal.alt", "terminal.font", "terminal.font.jitter", "ui.zoom.shortcut", "terminal.io", "terminal.csi", "terminal.sgr", "terminal.osc", "terminal.replay" } }
     --   log = { file = { ... }, console = { ... } }
     -- If file/console are not set, enable is used for both.
     log = {
-        enable = { "app.core", "terminal.core" },
+        enable = { "app.core", "terminal.core", "terminal.font.jitter", "ui.zoom.shortcut" },
         -- file = { "terminal.metrics" },
         -- console = { "app.core" },
     },

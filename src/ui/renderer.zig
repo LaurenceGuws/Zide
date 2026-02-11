@@ -608,6 +608,18 @@ pub const Renderer = struct {
         return self.ui_scale * self.user_zoom;
     }
 
+    pub fn userZoomFactor(self: *const Renderer) f32 {
+        return self.user_zoom;
+    }
+
+    pub fn userZoomTargetFactor(self: *const Renderer) f32 {
+        return self.user_zoom_target;
+    }
+
+    pub fn baseFontSize(self: *const Renderer) f32 {
+        return self.base_font_size;
+    }
+
     pub fn renderScaleFactor(self: *const Renderer) f32 {
         return self.render_scale;
     }

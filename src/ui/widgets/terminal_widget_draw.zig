@@ -1131,7 +1131,37 @@ fn drawShapedGlyph(
     const draw_x = if (allow_width_overflow) origin_x + bearing_x * overflow_scale else @max(x, origin_x + bearing_x * overflow_scale);
     const draw_y = (baseline - bearing_y * overflow_scale) - gy_off;
     const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
-    const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_y)))));
+    const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(@floor(draw_y)))));
+
+    const jitter_log = app_logger.logger("terminal.font.jitter");
+    if (jitter_log.enabled_file or jitter_log.enabled_console) {
+        const did_fit_scale = @abs(overflow_scale - 1.0) > 0.001;
+        const has_y_offset = hb_pos.y_offset != 0;
+        const y_snap_error = draw_y - snapped_y;
+        const large_y_snap = @abs(y_snap_error) >= 0.45;
+        if (did_fit_scale or has_y_offset or large_y_snap) {
+            jitter_log.logf(
+                "cp=U+{X:0>4} gid={d} x={d:.2} y={d:.2} cell_w={d:.2} glyph_w={d:.2} bearing_y={d:.2} y_off_26_6={d} draw_y={d:.3} snap_y={d:.3} snap_err={d:.3} scale={d:.4} fit={d} square_or_wide={d}",
+                .{
+                    base_codepoint,
+                    glyph_id,
+                    x,
+                    y,
+                    cell_width,
+                    glyph_w,
+                    bearing_y,
+                    hb_pos.y_offset,
+                    draw_y,
+                    snapped_y,
+                    y_snap_error,
+                    overflow_scale,
+                    @intFromBool(did_fit_scale),
+                    @intFromBool(is_square_or_wide),
+                },
+            );
+        }
+    }
+
     const dest = terminal_font_mod.Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
 
     const draw_color = if (glyph.is_color)

@@ -203,6 +203,22 @@ pub const Shell = struct {
         return self.renderer.font_size;
     }
 
+    pub fn baseFontSize(self: *Shell) f32 {
+        return self.renderer.baseFontSize();
+    }
+
+    pub fn userZoomFactor(self: *Shell) f32 {
+        return self.renderer.userZoomFactor();
+    }
+
+    pub fn userZoomTargetFactor(self: *Shell) f32 {
+        return self.renderer.userZoomTargetFactor();
+    }
+
+    pub fn renderScaleFactor(self: *Shell) f32 {
+        return self.renderer.renderScaleFactor();
+    }
+
     pub fn terminalCellWidth(self: *Shell) f32 {
         return self.renderer.terminal_cell_width;
     }
