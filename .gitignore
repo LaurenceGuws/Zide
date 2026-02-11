@@ -27,3 +27,4 @@ zig-cache/terminal-replay
 
 # vcpkg (manifest-mode install directory)
 vcpkg_installed/
+/zig-cache
