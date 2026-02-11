@@ -94,7 +94,8 @@ fn utf8ColumnForByteIndex(line_text: []const u8, byte_index: usize) usize {
         const next_idx = idx + slice.len;
         if (target < next_idx) return col;
         idx = next_idx;
-        col += 1;
+        const cp = std.unicode.utf8Decode(slice) catch 0xFFFD;
+        col += cellWidthForCodepoint(cp, col);
     }
     return col;
 }
@@ -106,10 +107,21 @@ fn utf8ByteIndexForColumn(line_text: []const u8, column: usize) usize {
     var idx: usize = 0;
     while (it.nextCodepointSlice()) |slice| {
         if (col >= column) return idx;
+        const cp = std.unicode.utf8Decode(slice) catch 0xFFFD;
+        const width = cellWidthForCodepoint(cp, col);
+        if (col + width > column) return idx;
         idx += slice.len;
-        col += 1;
+        col += width;
     }
     return line_text.len;
+}
+
+fn cellWidthForCodepoint(cp: u21, col: usize) usize {
+    if (cp == '\t') {
+        const tab_width: usize = 4;
+        return tab_width - (col % tab_width);
+    }
+    return 1;
 }
 
 test "utf8 column mapping" {
@@ -148,4 +160,14 @@ test "selection range mapping around operator chains" {
     try std.testing.expectEqual(@as(usize, 22), end_col);
     try std.testing.expectEqual(start, byteIndexForVisualColumn(s, start_col, null));
     try std.testing.expectEqual(end, byteIndexForVisualColumn(s, end_col, null));
+}
+
+test "tab expansion visual columns" {
+    const s = "\tfoo";
+    try std.testing.expectEqual(@as(usize, 0), utf8ColumnForByteIndex(s, 0));
+    try std.testing.expectEqual(@as(usize, 4), utf8ColumnForByteIndex(s, 1));
+    try std.testing.expectEqual(@as(usize, 5), utf8ColumnForByteIndex(s, 2));
+    try std.testing.expectEqual(@as(usize, 0), utf8ByteIndexForColumn(s, 0));
+    try std.testing.expectEqual(@as(usize, 0), utf8ByteIndexForColumn(s, 3));
+    try std.testing.expectEqual(@as(usize, 1), utf8ByteIndexForColumn(s, 4));
 }

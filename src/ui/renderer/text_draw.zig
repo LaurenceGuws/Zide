@@ -29,6 +29,7 @@ pub fn drawText(
     if (codepoints.items.len == 0) return;
 
     var cursor_x = x;
+    var visual_col: usize = 0;
     const draw = terminal_font_mod.DrawContext{
         .ctx = ctx,
         .drawTexture = drawTexture,
@@ -36,10 +37,21 @@ pub fn drawText(
     var idx: usize = 0;
     while (idx < codepoints.items.len) : (idx += 1) {
         const cp = codepoints.items[idx];
+        if (cp == '\t') {
+            if (monospace) {
+                const tab_width: usize = 4;
+                visual_col += tab_width - (visual_col % tab_width);
+                cursor_x = x + @as(f32, @floatFromInt(visual_col)) * cell_w;
+            } else {
+                cursor_x += cell_w * 4.0;
+            }
+            continue;
+        }
         const next = if (idx + 1 < codepoints.items.len) codepoints.items[idx + 1] else 0;
         const followed_by_space = next == ' ';
         font.drawGlyph(draw, cp, cursor_x, y, cell_w, cell_h, followed_by_space, color);
         if (monospace) {
+            visual_col += 1;
             cursor_x += cell_w;
         } else {
             const adv = font.glyphAdvance(cp) catch cell_w;
@@ -54,6 +66,10 @@ pub fn measureTextWidth(font: *TerminalFont, text: []const u8, fallback_cell_w: 
     var idx: usize = 0;
     while (true) {
         const cp = nextCodepointLossy(text, &idx) orelse break;
+        if (cp == '\t') {
+            width += fallback_cell_w * 4.0;
+            continue;
+        }
         const adv = font.glyphAdvance(cp) catch fallback_cell_w;
         width += if (adv > 0) adv else fallback_cell_w;
     }
