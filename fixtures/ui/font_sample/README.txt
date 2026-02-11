@@ -45,3 +45,26 @@ In .zide.lua, test these strategies:
 
 Then type/sample a ligature-heavy line (for example: `-> ~> => === != <= >=`)
 and move the cursor through each symbol pair to validate cursor-split behavior.
+
+Editor ligature regression captures (recommended matrix):
+
+1) Default ligatures:
+   - editor.disable_ligatures = "never"
+   - editor.font_features unset
+
+2) Explicit programming-ligature off:
+   - editor.font_features = "-calt"
+
+3) Cursor strategy:
+   - editor.disable_ligatures = "cursor"
+
+For each mode, capture:
+
+  ZIDE_FONT_SAMPLE_FRAMES=2 \
+  ZIDE_FONT_SAMPLE_SCREENSHOT=fixtures/ui/font_sample/editor_ligature_<mode>.ppm \
+  zig build run -- --mode font-sample
+
+Suggested filenames:
+- editor_ligature_default.ppm
+- editor_ligature_no_calt.ppm
+- editor_ligature_cursor.ppm

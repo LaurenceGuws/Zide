@@ -254,6 +254,7 @@ pub const Renderer = struct {
     terminal_disable_ligatures: TerminalDisableLigaturesStrategy,
     terminal_font_features_raw: ?[]u8,
     terminal_font_features: std.ArrayListUnmanaged(hb.hb_feature_t),
+    editor_disable_ligatures: TerminalDisableLigaturesStrategy,
     editor_font_features_raw: ?[]u8,
     editor_font_features: std.ArrayListUnmanaged(hb.hb_feature_t),
     font_rendering: FontRenderingOptions,
@@ -379,6 +380,7 @@ pub const Renderer = struct {
             .terminal_disable_ligatures = .never,
             .terminal_font_features_raw = null,
             .terminal_font_features = .{},
+            .editor_disable_ligatures = .never,
             .editor_font_features_raw = null,
             .editor_font_features = .{},
             .font_rendering = .{},
@@ -552,7 +554,10 @@ pub const Renderer = struct {
         }
     }
 
-    pub fn setEditorLigatureConfig(self: *Renderer, features_raw: ?[]const u8) void {
+    pub fn setEditorLigatureConfig(self: *Renderer, strategy: ?TerminalDisableLigaturesStrategy, features_raw: ?[]const u8) void {
+        if (strategy) |s| {
+            self.editor_disable_ligatures = s;
+        }
         if (features_raw) |raw| {
             self.setFontFeatureListRaw(&self.editor_font_features_raw, &self.editor_font_features, raw);
         }
@@ -889,19 +894,27 @@ pub const Renderer = struct {
     }
 
     pub fn drawTextMonospace(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
+        self.drawTextMonospacePolicy(text, x, y, color, false);
+    }
+
+    pub fn drawTextMonospacePolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool) void {
         const prev = self.text_bg_rgba;
         defer self.text_bg_rgba = prev;
         self.text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
-        self.drawTextWithFontMonospace(&self.terminal_font, self.terminal_cell_width, self.terminal_cell_height, text, x, y, color);
+        self.drawTextWithFontMonospace(&self.terminal_font, self.terminal_cell_width, self.terminal_cell_height, text, x, y, color, disable_programming_ligatures);
     }
 
     pub fn drawTextMonospaceOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
+        self.drawTextMonospaceOnBgPolicy(text, x, y, color, bg, false);
+    }
+
+    pub fn drawTextMonospaceOnBgPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color, disable_programming_ligatures: bool) void {
         const prev = self.text_bg_rgba;
         defer self.text_bg_rgba = prev;
         var bg_rgba = bg.toRgba();
         bg_rgba.a = 255;
         self.text_bg_rgba = bg_rgba;
-        self.drawTextWithFontMonospace(&self.terminal_font, self.terminal_cell_width, self.terminal_cell_height, text, x, y, color);
+        self.drawTextWithFontMonospace(&self.terminal_font, self.terminal_cell_width, self.terminal_cell_height, text, x, y, color, disable_programming_ligatures);
     }
 
     pub fn drawTextOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
@@ -1427,15 +1440,21 @@ pub const Renderer = struct {
         );
     }
 
-    fn drawTextWithFontMonospace(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: Color) void {
-        if (self.drawTextWithFontMonospaceShaped(font, cell_w, cell_h, text, x, y, color.toRgba())) {
+    fn drawTextWithFontMonospace(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool) void {
+        if (self.drawTextWithFontMonospaceShaped(font, cell_w, cell_h, text, x, y, color.toRgba(), disable_programming_ligatures)) {
             return;
         }
         text_draw.drawText(self.allocator, font, self, drawTextureThunk, text, x, y, cell_w, cell_h, color.toRgba(), true);
     }
 
-    fn drawTextWithFontMonospaceShaped(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: types.Rgba) bool {
+    fn drawTextWithFontMonospaceShaped(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: types.Rgba, disable_programming_ligatures: bool) bool {
         if (text.len == 0) return true;
+
+        if (!textLikelyNeedsShaping(text)) {
+            var fast_features_buf: [16]hb.hb_feature_t = undefined;
+            const fast_features_len = self.collectShapeFeatures(.editor, disable_programming_ligatures, fast_features_buf[0..]);
+            if (fast_features_len == 0) return false;
+        }
 
         var codepoints = std.ArrayList(u32).empty;
         defer codepoints.deinit(self.allocator);
@@ -1479,7 +1498,7 @@ pub const Renderer = struct {
             }
             hb.hb_buffer_guess_segment_properties(buffer);
             var shape_features_buf: [16]hb.hb_feature_t = undefined;
-            const shape_features_len = self.collectShapeFeatures(.editor, false, shape_features_buf[0..]);
+            const shape_features_len = self.collectShapeFeatures(.editor, disable_programming_ligatures, shape_features_buf[0..]);
             hb.hb_shape(
                 span_hb_font,
                 buffer,
@@ -1558,6 +1577,19 @@ pub const Renderer = struct {
             span_start = span_end;
         }
         return true;
+    }
+
+    fn textLikelyNeedsShaping(text: []const u8) bool {
+        // Fast path for common plain ASCII identifiers/words.
+        // If text only contains simple alnum/space/underscore chars,
+        // skip HarfBuzz shaping when no explicit features are active.
+        for (text) |b| {
+            if (b >= 0x80) return true;
+            const is_alnum = (b >= 'a' and b <= 'z') or (b >= 'A' and b <= 'Z') or (b >= '0' and b <= '9');
+            const is_simple = is_alnum or b == ' ' or b == '_' or b == '\t';
+            if (!is_simple) return true;
+        }
+        return false;
     }
 
     fn measureTextWidth(self: *Renderer, font: *TerminalFont, text: []const u8) f32 {

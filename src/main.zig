@@ -189,6 +189,7 @@ const AppState = struct {
                 .editor_font_path = null,
                 .editor_font_size = null,
                 .editor_font_features = null,
+                .editor_disable_ligatures = null,
                 .terminal_font_path = null,
                 .terminal_font_size = null,
                 .terminal_blink_style = null,
@@ -254,7 +255,14 @@ const AppState = struct {
             } else null,
             config.terminal_font_features,
         );
-        shell.rendererPtr().setEditorLigatureConfig(config.editor_font_features);
+        shell.rendererPtr().setEditorLigatureConfig(
+            if (config.editor_disable_ligatures) |v| switch (v) {
+                .never => .never,
+                .cursor => .cursor,
+                .always => .always,
+            } else null,
+            config.editor_font_features,
+        );
         if (config.app_font_path != null or config.app_font_size != null or
             config.editor_font_path != null or config.editor_font_size != null or
             config.terminal_font_path != null or config.terminal_font_size != null)
@@ -1471,10 +1479,20 @@ const AppState = struct {
             });
         }
 
-        if (config.editor_font_features != null) {
-            self.shell.rendererPtr().setEditorLigatureConfig(config.editor_font_features);
+        if (config.editor_disable_ligatures != null or config.editor_font_features != null) {
+            self.shell.rendererPtr().setEditorLigatureConfig(
+                if (config.editor_disable_ligatures) |v| switch (v) {
+                    .never => .never,
+                    .cursor => .cursor,
+                    .always => .always,
+                } else null,
+                config.editor_font_features,
+            );
             self.needs_redraw = true;
-            log.logStdout("reload editor.font_features={s}", .{config.editor_font_features.?});
+            log.logStdout("reload editor.disable_ligatures={s} editor.font_features={s}", .{
+                if (config.editor_disable_ligatures) |v| @tagName(v) else "(unchanged)",
+                config.editor_font_features orelse "(unchanged)",
+            });
         }
 
         if (config.terminal_cursor_shape != null or config.terminal_cursor_blink != null) {
