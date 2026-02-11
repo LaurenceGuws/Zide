@@ -50,6 +50,25 @@ Overrides:
 - `~/.config/zide/syntax.lua` (user)
 - `.zide/syntax.lua` (project)
 
+## Linux Dev Channels
+
+For local Linux testing, you can install two launcher channels:
+
+- `zide-stable` (release build + color icon)
+- `zide-test` (dev build + gray icon)
+
+Commands:
+
+```bash
+scripts/dev/deploy_linux_channel.sh stable
+scripts/dev/deploy_linux_channel.sh test
+
+# or both
+scripts/dev/deploy_linux_channels.sh
+```
+
+This is a dev tool workflow (local installs under `~/.local`), not release packaging.
+
 ## Dependencies
 
 - Vendored: tree-sitter (runtime + Zig parser), stb_image (PNG decode).

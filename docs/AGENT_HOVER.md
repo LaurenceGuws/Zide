@@ -28,5 +28,7 @@ Recent notable additions:
 - Luminance-based linear correction (ghostty-style), with per-glyph background plumbed for terminal and editor.
 - FreeType hinting/autohint knobs moved into Lua config (`assets/config/init.lua`).
 - Terminal combining marks supported as grapheme clusters (cell stores combining marks; renderer draws shaped cluster).
+- Terminal + editor ligature shaping enabled with kitty/ghostty-style controls via Lua config.
+- Editor selection overlay rendering/caching stabilized (no known multiline seam issue at handoff level).
 
 If this file conflicts with the todo/app_architecture docs, treat it as stale and update/remove it.
