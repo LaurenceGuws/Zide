@@ -131,3 +131,13 @@ Troubleshooting mismatches:
 - Use generated artifacts for inspection:
   - default compare: `zig-cache/font_sample_compare/`
   - LCD experiment: `zig-cache/font_sample_lcd/`
+
+Baseline flip handling:
+- If `tools/font_sample_compare.sh --strict-header` fails after intentional
+  rendering/capture pipeline changes, refresh fixtures with:
+  `tools/font_sample_compare.sh --update-fixtures --strict-header`
+- Only do this after the change is documented in
+  `app_architecture/ui/font_rendering_todo.yaml` and approved.
+- After refresh, rerun:
+  - `tools/font_sample_compare.sh --strict-header`
+  - `tools/font_sample_validate_ppm.sh`
