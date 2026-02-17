@@ -16,6 +16,19 @@ mkdir -p "$OUT_DIR"
 FRAMES="${ZIDE_FONT_SAMPLE_FRAMES:-2}"
 MISMATCH=0
 
+checksum_file() {
+  local file="$1"
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$file" | awk '{print $1}'
+    return
+  fi
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$file" | awk '{print $1}'
+    return
+  fi
+  echo "unavailable"
+}
+
 for size in "${SIZES[@]}"; do
   fixture="fixtures/ui/font_sample/jbmono_iosevka_size${size}.ppm"
   output="${OUT_DIR}/size${size}.ppm"
@@ -36,6 +49,14 @@ for size in "${SIZES[@]}"; do
     echo "match: ${fixture}"
   else
     echo "mismatch: ${fixture} vs ${output}"
+    first_diff="$(cmp -l "$fixture" "$output" | head -n1 || true)"
+    if [[ -n "$first_diff" ]]; then
+      echo "  first byte diff: ${first_diff}"
+    fi
+    fixture_sum="$(checksum_file "$fixture")"
+    output_sum="$(checksum_file "$output")"
+    echo "  fixture sha256: ${fixture_sum}"
+    echo "  output  sha256: ${output_sum}"
     MISMATCH=1
   fi
 done
