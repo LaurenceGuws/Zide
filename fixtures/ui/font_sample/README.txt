@@ -29,6 +29,10 @@ LCD experiment captures (does not update fixtures):
 
   tools/font_sample_capture_lcd.sh
 
+LCD compare summary report:
+
+  tools/font_sample_lcd_report.sh
+
 Artifacts are written to:
 
   zig-cache/font_sample_lcd/
