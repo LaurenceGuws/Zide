@@ -91,6 +91,9 @@ Terminal/editor font stacks are configured independently under:
 - `editor.font`
 - `terminal.font`
 
+For experiments, `ZIDE_FONT_RENDERING_LCD=1|0` can override LCD mode at
+runtime without editing Lua config files.
+
 ## Verification Fixtures
 
 Reference captures live under `fixtures/ui/font_sample/` as PPM files. They are
