@@ -56,6 +56,7 @@ font_rendering_todo:
       - "config.font_rendering.text.gamma=<float> (coverage gamma; default 1.0)"
       - "config.font_rendering.text.contrast=<float> (coverage contrast; default 1.0)"
       - "config.font_rendering.text.linear_correction=true/false (linear correction; default true)"
+      - "ZIDE_FONT_RENDERING_LCD=1|0 (env override for quick LCD experiment without editing Lua config)"
 
   phases:
     - name: "Phase 0 - Architecture + Fixture Authority"
@@ -198,12 +199,15 @@ font_rendering_todo:
       tasks:
         - id: FR-3-01
           title: "Evaluate LCD/subpixel AA with correct color pipeline"
-          status: todo
+          status: in_progress
           files_to_edit:
             - src/ui/terminal_font.zig
             - src/ui/renderer/gl_backend.zig
+            - src/main.zig
+            - tools/font_sample_capture_lcd.sh
           notes:
             - "Treat as opt-in; behavior varies by subpixel layout and can regress on some displays."
+            - "Added env override (`ZIDE_FONT_RENDERING_LCD`) and capture helper (`tools/font_sample_capture_lcd.sh`) to build repeatable LCD-vs-default comparisons."
 
     - name: "Phase 6 - Verification"
       tasks:

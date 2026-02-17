@@ -15,6 +15,14 @@ Artifacts are written to:
 
   zig-cache/font_sample_compare/
 
+LCD experiment captures (does not update fixtures):
+
+  tools/font_sample_capture_lcd.sh
+
+Artifacts are written to:
+
+  zig-cache/font_sample_lcd/
+
 Capture command (example):
 
   ZIDE_TEXT_GAMMA=1.0 ZIDE_TEXT_CONTRAST=1.0 \

@@ -230,6 +230,7 @@ const AppState = struct {
         // Apply font rendering knobs before (re)loading fonts.
         var font_opts: terminal_font_mod.RenderingOptions = .{};
         if (config.font_lcd) |v| font_opts.lcd = v;
+        if (parseEnvBool("ZIDE_FONT_RENDERING_LCD")) |v| font_opts.lcd = v;
         if (config.font_autohint) |v| font_opts.autohint = v;
         if (config.font_hinting) |mode| {
             font_opts.hinting = switch (mode) {
@@ -1688,6 +1689,15 @@ fn parseEnvU64(env_key: [:0]const u8, default_value: u64) u64 {
     const slice = std.mem.sliceTo(raw, 0);
     if (slice.len == 0) return default_value;
     return std.fmt.parseInt(u64, slice, 10) catch default_value;
+}
+
+fn parseEnvBool(env_key: [:0]const u8) ?bool {
+    const raw = std.c.getenv(env_key) orelse return null;
+    const slice = std.mem.sliceTo(raw, 0);
+    if (slice.len == 0) return null;
+    if (std.mem.eql(u8, slice, "1") or std.ascii.eqlIgnoreCase(slice, "true") or std.ascii.eqlIgnoreCase(slice, "yes") or std.ascii.eqlIgnoreCase(slice, "on")) return true;
+    if (std.mem.eql(u8, slice, "0") or std.ascii.eqlIgnoreCase(slice, "false") or std.ascii.eqlIgnoreCase(slice, "no") or std.ascii.eqlIgnoreCase(slice, "off")) return false;
+    return null;
 }
 
 fn envSlice(env_key: [:0]const u8) ?[]const u8 {
