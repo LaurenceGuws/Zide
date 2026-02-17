@@ -25,3 +25,31 @@ pub const Rgba = extern struct {
     b: u8,
     a: u8,
 };
+
+pub const SpecialGlyphVariant = enum(u8) {
+    generic = 0,
+    powerline = 1,
+    shade = 2,
+    box = 3,
+    braille = 4,
+    branch = 5,
+    legacy = 6,
+};
+
+pub const SpecialGlyphSpriteKey = struct {
+    codepoint: u32,
+    cell_w_px: u16,
+    cell_h_px: u16,
+    // Quantized render scale so cache keys remain stable and hashable.
+    render_scale_milli: u16,
+    variant: SpecialGlyphVariant,
+};
+
+pub const SpecialGlyphSprite = struct {
+    rect: Rect,
+    bearing_x: i32,
+    bearing_y: i32,
+    advance: f32,
+    width: i32,
+    height: i32,
+};

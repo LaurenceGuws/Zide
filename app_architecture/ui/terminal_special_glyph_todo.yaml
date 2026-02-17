@@ -85,28 +85,32 @@ terminal_special_glyph_todo:
       tasks:
         - id: TSG-1-01
           title: "Introduce special glyph sprite cache type + keys"
-          status: pending
+          status: in_progress
           files_to_edit:
             - "src/ui/terminal_font.zig"
             - "src/ui/renderer/types.zig"
           notes:
             - "Cache key must include codepoint, cell_w_px, cell_h_px, render_scale, variant id."
+            - "Current state: key/value types and TerminalFont cache scaffolding are in place; draw-path integration is pending."
         - id: TSG-1-02
           title: "Add coverage atlas upload path for precomputed sprite masks"
-          status: pending
+          status: in_progress
           files_to_edit:
             - "src/ui/terminal_font.zig"
             - "src/ui/renderer/gl_backend.zig"
           notes:
             - "Reuse coverage texture path (font_coverage) rather than RGBA workaround."
+            - "Current state: special glyph masks now rasterize and upload into TerminalFont coverage atlas, with on-demand cache population during terminal draw."
+            - "Remaining: move generation quality from interim procedural path to final sprite-mask generator and add eviction/compaction policy for sprite entries."
         - id: TSG-1-03
           title: "Integrate sprite draw dispatch in terminal widget path"
-          status: pending
+          status: in_progress
           files_to_edit:
             - "src/ui/widgets/terminal_widget_draw.zig"
             - "src/ui/renderer/terminal_glyphs.zig"
           notes:
             - "Dispatch should prefer sprite cache for configured special ranges."
+            - "Current state: terminal draw now checks sprite cache/create path first for classified special glyphs, then falls back to existing box/shaped paths."
 
     - name: "TSG-2 Powerline First (Kitty/Ghostty parity anchor)"
       tasks:
@@ -120,6 +124,7 @@ terminal_special_glyph_todo:
             - "Model geometry on kitty `render_box_char` + ghostty `draw/powerline.zig`."
             - "Raster at oversampled resolution; downsample into coverage mask."
             - "Current state: iterative procedural AA path exists in src/ui/renderer/terminal_glyphs.zig and is wired from src/ui/widgets/terminal_widget_draw.zig, but output is still visually unacceptable."
+            - "2026-02-17: special sprite masks now rasterize at render-scale resolution (`logical cell * render_scale`) to match normal text glyph effective resolution; re-verify `   ` quality before additional geometry changes."
             - "Exit this task only after separator quality is accepted; otherwise continue to sprite-mask cache implementation."
         - id: TSG-2-02
           title: "Expand to full powerline set used by references"
@@ -138,6 +143,27 @@ terminal_special_glyph_todo:
           notes:
             - "Lock separators to cell joins while preserving AA edges."
             - "Current state: horizontal seam gap regression is improved, but line quality remains below target."
+        - id: TSG-2-04
+          title: "Prototype dedicated analytic/vector stroke+fill path for powerline separators"
+          status: pending
+          files_to_edit:
+            - "src/ui/renderer/terminal_glyphs.zig"
+            - "src/ui/terminal_font.zig"
+            - "src/ui/widgets/terminal_widget_draw.zig"
+          notes:
+            - "Use ghostty/kitty-style geometry rules (path fill for ` `, stroked paths for ` `) instead of current per-pixel procedural approximation."
+            - "Generate analytic coverage masks from exact geometry, then cache as sprites in coverage atlas."
+            - "Success bar: repeated separators (``) are consistent and visually close to normal glyph smoothness."
+        - id: TSG-2-05
+          title: "Prototype real font-outline raster path for powerline codepoints"
+          status: pending
+          files_to_edit:
+            - "src/ui/terminal_font.zig"
+            - "src/ui/widgets/terminal_widget_draw.zig"
+          notes:
+            - "Route `U+E0B0..U+E0B3` through FreeType outline raster (selected face) and cache resulting masks as special sprites."
+            - "Compare quality/consistency against analytic path and choose one as canonical."
+            - "If outline raster wins, keep analytic path as fallback when outlines are missing/unsuitable."
 
     - name: "TSG-3 Blocks/Shades/Box Continuity"
       tasks:

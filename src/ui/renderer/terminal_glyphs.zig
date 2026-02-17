@@ -1,4 +1,6 @@
+const std = @import("std");
 const iface = @import("interface.zig");
+const types = @import("types.zig");
 
 const Color = iface.Color;
 
@@ -8,6 +10,86 @@ const PowerlineMode = enum {
     filled_left, // 
     thin_left, // 
 };
+
+pub fn specialVariantForCodepoint(codepoint: u32) ?types.SpecialGlyphVariant {
+    if (codepoint == 0xE0B0 or codepoint == 0xE0B1 or codepoint == 0xE0B2 or codepoint == 0xE0B3) {
+        return .powerline;
+    }
+    if (codepoint == 0x2591 or codepoint == 0x2592 or codepoint == 0x2593) {
+        return .shade;
+    }
+    if (codepoint >= 0x2500 and codepoint <= 0x259F) {
+        return .box;
+    }
+    if (codepoint >= 0x2800 and codepoint <= 0x28FF) {
+        return .braille;
+    }
+    if (codepoint >= 0xF5D0 and codepoint <= 0xF60D) {
+        return .branch;
+    }
+    if ((codepoint >= 0x1CD00 and codepoint <= 0x1CDE5) or
+        (codepoint >= 0x1FB00 and codepoint <= 0x1FBAF) or
+        codepoint == 0x1FBE6 or
+        codepoint == 0x1FBE7)
+    {
+        return .legacy;
+    }
+    return null;
+}
+
+pub fn rasterizeSpecialGlyphCoverage(
+    codepoint: u32,
+    width: i32,
+    height: i32,
+    out_alpha: []u8,
+) bool {
+    if (width <= 0 or height <= 0) return false;
+    const expected_len: usize = @intCast(width * height);
+    if (out_alpha.len < expected_len) return false;
+    @memset(out_alpha[0..expected_len], 0);
+
+    const Ctx = struct {
+        width: i32,
+        height: i32,
+        alpha: []u8,
+    };
+    var ctx = Ctx{
+        .width = width,
+        .height = height,
+        .alpha = out_alpha[0..expected_len],
+    };
+
+    const drawToCoverage = struct {
+        fn call(raw_ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
+            const cctx: *Ctx = @ptrCast(@alignCast(raw_ctx));
+            if (w <= 0 or h <= 0) return;
+            const x0 = @max(0, x);
+            const y0 = @max(0, y);
+            const x1 = @min(cctx.width, x + w);
+            const y1 = @min(cctx.height, y + h);
+            if (x1 <= x0 or y1 <= y0) return;
+            var py = y0;
+            while (py < y1) : (py += 1) {
+                var px = x0;
+                while (px < x1) : (px += 1) {
+                    const idx: usize = @intCast(py * cctx.width + px);
+                    if (color.a > cctx.alpha[idx]) cctx.alpha[idx] = color.a;
+                }
+            }
+        }
+    }.call;
+
+    return drawBoxGlyph(
+        drawToCoverage,
+        &ctx,
+        codepoint,
+        0.0,
+        0.0,
+        @floatFromInt(width),
+        @floatFromInt(height),
+        Color{ .r = 255, .g = 255, .b = 255, .a = 255 },
+    );
+}
 
 fn edge(ax: f32, ay: f32, bx: f32, by: f32, px: f32, py: f32) f32 {
     return (px - ax) * (by - ay) - (py - ay) * (bx - ax);
@@ -51,24 +133,66 @@ fn distToSegmentSquared(px: f32, py: f32, ax: f32, ay: f32, bx: f32, by: f32) f3
     return dx * dx + dy * dy;
 }
 
+fn insideStrokeExtended(
+    px: f32,
+    py: f32,
+    ax: f32,
+    ay: f32,
+    bx: f32,
+    by: f32,
+    half_w: f32,
+) bool {
+    const vx = bx - ax;
+    const vy = by - ay;
+    const v2 = vx * vx + vy * vy;
+    if (v2 <= 0.0001) return false;
+
+    const vlen = std.math.sqrt(v2);
+    const ux = vx / vlen;
+    const uy = vy / vlen;
+
+    // Extend both ends along the line direction by half-width, matching
+    // square-cap behavior and preventing endpoint clipping at cell boundaries.
+    const sx = ax - ux * half_w;
+    const sy = ay - uy * half_w;
+    const ex = bx + ux * half_w;
+    const ey = by + uy * half_w;
+
+    const evx = ex - sx;
+    const evy = ey - sy;
+    const ev2 = evx * evx + evy * evy;
+    if (ev2 <= 0.0001) return false;
+
+    const wx = px - sx;
+    const wy = py - sy;
+    const t = (wx * evx + wy * evy) / ev2;
+    if (t < 0.0 or t > 1.0) return false;
+
+    const qx = sx + t * evx;
+    const qy = sy + t * evy;
+    const dx = px - qx;
+    const dy = py - qy;
+    return (dx * dx + dy * dy) <= (half_w * half_w);
+}
+
 fn powerlineInside(mode: PowerlineMode, iw: f32, ih: f32, x: f32, y: f32) bool {
     const mid_y = ih * 0.5;
     return switch (mode) {
         .filled_right => insideTriangle(x, y, 0.0, 0.0, iw, mid_y, 0.0, ih),
         .filled_left => insideTriangle(x, y, iw, 0.0, 0.0, mid_y, iw, ih),
         .thin_right => blk: {
-            const stroke = @max(1.0, ih * 0.08);
-            const r2 = (stroke * 0.5) * (stroke * 0.5);
-            const d0 = distToSegmentSquared(x, y, 0.0, 0.0, iw, mid_y);
-            const d1 = distToSegmentSquared(x, y, 0.0, ih, iw, mid_y);
-            break :blk d0 <= r2 or d1 <= r2;
+            // Keep thin separator thickness stable across nearby zoom steps.
+            // Quantizing thickness avoids visible thick/thin wobble.
+            const stroke = @max(1.0, @round(ih / 16.0));
+            const half_w = stroke * 0.5;
+            break :blk insideStrokeExtended(x, y, 0.0, 0.0, iw, mid_y, half_w) or
+                insideStrokeExtended(x, y, 0.0, ih, iw, mid_y, half_w);
         },
         .thin_left => blk: {
-            const stroke = @max(1.0, ih * 0.08);
-            const r2 = (stroke * 0.5) * (stroke * 0.5);
-            const d0 = distToSegmentSquared(x, y, iw, 0.0, 0.0, mid_y);
-            const d1 = distToSegmentSquared(x, y, iw, ih, 0.0, mid_y);
-            break :blk d0 <= r2 or d1 <= r2;
+            const stroke = @max(1.0, @round(ih / 16.0));
+            const half_w = stroke * 0.5;
+            break :blk insideStrokeExtended(x, y, iw, 0.0, 0.0, mid_y, half_w) or
+                insideStrokeExtended(x, y, iw, ih, 0.0, mid_y, half_w);
         },
     };
 }
@@ -83,7 +207,12 @@ fn drawPowerlineGlyphAA(
     ih: i32,
     color: Color,
 ) void {
-    const ss: i32 = 6;
+    // High-quality supersampling for diagonal separators.
+    // Cached sprite generation amortizes this cost.
+    const ss: i32 = switch (mode) {
+        .thin_right, .thin_left => 14,
+        .filled_right, .filled_left => 10,
+    };
     const samples = ss * ss;
     const fw = @as(f32, @floatFromInt(iw));
     const fh = @as(f32, @floatFromInt(ih));
