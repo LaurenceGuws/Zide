@@ -12,10 +12,16 @@ pub fn drawBoxGlyph(
     h: f32,
     color: Color,
 ) bool {
-    const ix = @as(i32, @intFromFloat(x));
-    const iy = @as(i32, @intFromFloat(y));
-    const iw = @as(i32, @intFromFloat(w));
-    const ih = @as(i32, @intFromFloat(h));
+    // Use edge-based quantization so adjacent fractional cells share boundaries
+    // without seam gaps (common under fractional DPI/zoom).
+    const left = @as(i32, @intFromFloat(@floor(x)));
+    const top = @as(i32, @intFromFloat(@floor(y)));
+    const right = @as(i32, @intFromFloat(@ceil(x + w)));
+    const bottom = @as(i32, @intFromFloat(@ceil(y + h)));
+    const ix = left;
+    const iy = top;
+    const iw = @max(1, right - left);
+    const ih = @max(1, bottom - top);
     const mid_x = ix + @divTrunc(iw, 2);
     const mid_y = iy + @divTrunc(ih, 2);
     const thin: i32 = 1;

@@ -52,6 +52,8 @@ pub fn handleInput(
     const end_line = total_lines - scroll_offset;
     const start_line = if (end_line > rows) end_line - rows else 0;
     const max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
+    const cache = self.session.renderCache();
+    const show_scrollbar = !cache.alt_active and !self.session.mouseReportingEnabled() and total_lines > rows;
     const scroll_log = app_logger.logger("terminal.scroll");
 
     const r = shell.rendererPtr();
@@ -414,7 +416,7 @@ pub fn handleInput(
             }
         }
 
-        const mouse_on_scrollbar = common.pointInRect(mouse.x, mouse.y, scrollbar_x, scrollbar_y, scrollbar_w, scrollbar_h);
+        const mouse_on_scrollbar = show_scrollbar and common.pointInRect(mouse.x, mouse.y, scrollbar_x, scrollbar_y, scrollbar_w, scrollbar_h);
         if (!mouse_reporting and in_terminal and mouse_on_scrollbar) {
             if (input_batch.mousePressed(.left)) {
                 scroll_dragging.* = true;
