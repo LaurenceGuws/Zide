@@ -41,6 +41,14 @@ CSV output:
 
   tools/font_sample_lcd_report.sh --csv
 
+JSON output:
+
+  tools/font_sample_lcd_report.sh --json
+
+PPM sanity validation:
+
+  tools/font_sample_validate_ppm.sh
+
 Artifacts are written to:
 
   zig-cache/font_sample_lcd/
