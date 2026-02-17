@@ -25,3 +25,7 @@ jobs:
 
       - name: Build + Test
         run: zig build test
+
+      - name: Font Sample Fixture Compare
+        shell: bash
+        run: tools/font_sample_compare.sh
