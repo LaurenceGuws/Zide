@@ -4,7 +4,37 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-STAMP="${1:-$(date +%F)}"
+STAMP=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --stamp)
+      if [[ $# -lt 2 ]]; then
+        echo "error: --stamp requires a value" >&2
+        exit 2
+      fi
+      STAMP="$2"
+      shift 2
+      ;;
+    --help|-h)
+      echo "usage: tools/font_sample_lcd_snapshot.sh [--stamp YYYY-MM-DD] [stamp]"
+      exit 0
+      ;;
+    *)
+      if [[ -z "$STAMP" ]]; then
+        STAMP="$1"
+      else
+        echo "error: unexpected argument: $1" >&2
+        exit 2
+      fi
+      shift
+      ;;
+  esac
+done
+
+if [[ -z "$STAMP" ]]; then
+  STAMP="$(date +%F)"
+fi
+
 SNAP_DIR="app_architecture/ui/font_sample_lcd_snapshots/${STAMP}"
 mkdir -p "${SNAP_DIR}"
 

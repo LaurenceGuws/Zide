@@ -14,6 +14,12 @@ Or with an explicit stamp:
 tools/font_sample_lcd_snapshot.sh 2026-02-17
 ```
 
+or:
+
+```bash
+tools/font_sample_lcd_snapshot.sh --stamp 2026-02-17
+```
+
 Per snapshot folder (`YYYY-MM-DD`), the expected files are:
 
 - `lcd_report.txt`
@@ -21,3 +27,9 @@ Per snapshot folder (`YYYY-MM-DD`), the expected files are:
 - `lcd_report.json`
 - `ppm_validate.txt`
 - `README.txt`
+
+Retention guidance:
+
+- Keep at least the latest 5 snapshot folders.
+- If snapshots accumulate, remove the oldest after preserving any milestone
+  snapshot referenced by `app_architecture/ui/font_rendering_todo.yaml`.

@@ -43,6 +43,8 @@ mkdir -p "$(dirname "${LOCK_FILE}")"
 if command -v flock >/dev/null 2>&1; then
   exec 9>"${LOCK_FILE}"
   flock 9
+else
+  echo "warning: flock not found; font-sample runs are not serialized" >&2
 fi
 
 checksum_file() {
