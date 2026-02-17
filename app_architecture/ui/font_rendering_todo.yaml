@@ -53,6 +53,7 @@ font_rendering_todo:
       - "ZIDE_FONT_SAMPLE_SIZE=<float> (font sample mode initial size)"
       - "ZIDE_FONT_SAMPLE_FRAMES=<n> (font sample mode auto-close after n frames; useful for smoke/CI)"
       - "ZIDE_FONT_SAMPLE_SCREENSHOT=<path> (write a .ppm screenshot on auto-close in font sample mode)"
+      - "ZIDE_FONT_SAMPLE_SCREENSHOT_WIDTH=<int>, ZIDE_FONT_SAMPLE_SCREENSHOT_HEIGHT=<int> (force screenshot output dimensions for deterministic capture)"
       - "config.font_rendering.text.gamma=<float> (coverage gamma; default 1.0)"
       - "config.font_rendering.text.contrast=<float> (coverage contrast; default 1.0)"
       - "config.font_rendering.text.linear_correction=true/false (linear correction; default true)"
@@ -208,6 +209,8 @@ font_rendering_todo:
           notes:
             - "Treat as opt-in; behavior varies by subpixel layout and can regress on some displays."
             - "Added env override (`ZIDE_FONT_RENDERING_LCD`) and capture helper (`tools/font_sample_capture_lcd.sh`) to build repeatable LCD-vs-default comparisons."
+            - "Initial Linux SDL3/OpenGL checksum sweep (2026-02-17): LCD captures differ from default for all sizes 12/14/16/20, confirming the override is active and visually meaningful."
+            - "Current decision: keep LCD off by default; continue as experiment-only until visual QA confirms acceptable behavior across displays/subpixel layouts."
 
     - name: "Phase 6 - Verification"
       tasks:
@@ -229,3 +232,5 @@ font_rendering_todo:
             - "Once FR-0-01 exists, gate larger refactors behind it."
             - "Automated compare now runs fixture captures for sizes 12/14/16/20 and byte-compares against fixtures/ui/font_sample/*.ppm."
             - "Outputs are written to zig-cache/font_sample_compare/ for mismatch inspection."
+            - "Compare/capture scripts now pin window size to fixture PPM dimensions to reduce compositor/window-restore drift."
+            - "Fixture set refreshed on 2026-02-17 after adding forced screenshot output dimensions for deterministic captures."
