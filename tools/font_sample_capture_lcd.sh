@@ -14,6 +14,13 @@ OUT_DIR="$ROOT_DIR/zig-cache/font_sample_lcd"
 mkdir -p "$OUT_DIR"
 
 FRAMES="${ZIDE_FONT_SAMPLE_FRAMES:-2}"
+LOCK_FILE="${ROOT_DIR}/zig-cache/font_sample.lock"
+mkdir -p "$(dirname "${LOCK_FILE}")"
+
+if command -v flock >/dev/null 2>&1; then
+  exec 9>"${LOCK_FILE}"
+  flock 9
+fi
 
 for size in "${SIZES[@]}"; do
   output="${OUT_DIR}/jbmono_iosevka_lcd_size${size}.ppm"
