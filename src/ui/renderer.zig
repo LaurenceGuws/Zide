@@ -786,6 +786,16 @@ pub const Renderer = struct {
         try screenshot.dumpFramebufferPpmScaled(self.allocator, self.render_width, self.render_height, self.width, self.height, path);
     }
 
+    pub fn dumpWindowScreenshotPpmSized(self: *Renderer, path: []const u8, out_width: i32, out_height: i32) !void {
+        if (out_width <= 0 or out_height <= 0) {
+            try self.dumpWindowScreenshotPpm(path);
+            return;
+        }
+        // Ensure we're reading back the window framebuffer at the window pixel size.
+        self.bindDefaultTarget();
+        try screenshot.dumpFramebufferPpmScaled(self.allocator, self.render_width, self.render_height, out_width, out_height, path);
+    }
+
     pub fn clearToThemeBackground(self: *Renderer) void {
         const bg = self.theme.background.toRgba();
         var rr = @as(f32, @floatFromInt(bg.r)) / 255.0;

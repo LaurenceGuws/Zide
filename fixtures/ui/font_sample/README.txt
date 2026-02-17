@@ -19,6 +19,12 @@ Artifacts are written to:
 
   zig-cache/font_sample_compare/
 
+The compare script pins window size to each fixture's PPM dimensions via:
+- `ZIDE_WINDOW_WIDTH`
+- `ZIDE_WINDOW_HEIGHT`
+- `ZIDE_FONT_SAMPLE_SCREENSHOT_WIDTH`
+- `ZIDE_FONT_SAMPLE_SCREENSHOT_HEIGHT`
+
 LCD experiment captures (does not update fixtures):
 
   tools/font_sample_capture_lcd.sh
@@ -26,6 +32,10 @@ LCD experiment captures (does not update fixtures):
 Artifacts are written to:
 
   zig-cache/font_sample_lcd/
+
+Initial LCD sweep note (2026-02-17):
+- Captured sizes 12/14/16/20 with `tools/font_sample_capture_lcd.sh`.
+- All LCD captures differ from default fixture captures (expected for this experiment path).
 
 Capture command (example):
 
@@ -88,3 +98,16 @@ Suggested filenames:
 - editor_ligature_default.ppm
 - editor_ligature_no_calt.ppm
 - editor_ligature_cursor.ppm
+
+Troubleshooting mismatches:
+- Run font-sample commands serially; avoid launching multiple font-sample runs at once.
+- Ensure font files exist and are the expected ones:
+  - assets/fonts/JetBrainsMonoNerdFont-Regular.ttf
+  - assets/fonts/IosevkaTermNerdFont-Regular.ttf
+- Check for config/env overrides that affect rendering:
+  - `.zide.lua` and user config `init.lua`
+  - `ZIDE_FONT_RENDERING_LCD`, `ZIDE_FONT_SAMPLE_SIZE`, `ZIDE_FONT_SAMPLE_FRAMES`
+  - `ZIDE_WINDOW_WIDTH`, `ZIDE_WINDOW_HEIGHT`
+- Use generated artifacts for inspection:
+  - default compare: `zig-cache/font_sample_compare/`
+  - LCD experiment: `zig-cache/font_sample_lcd/`

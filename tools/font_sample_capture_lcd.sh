@@ -22,12 +22,27 @@ if command -v flock >/dev/null 2>&1; then
   flock 9
 fi
 
+ppm_dimensions() {
+  local file="$1"
+  awk 'NR==2 { print $1, $2; exit }' "$file"
+}
+
 for size in "${SIZES[@]}"; do
+  fixture="fixtures/ui/font_sample/jbmono_iosevka_size${size}.ppm"
   output="${OUT_DIR}/jbmono_iosevka_lcd_size${size}.ppm"
+  fixture_w=1280
+  fixture_h=720
+  if [[ -f "$fixture" ]]; then
+    read -r fixture_w fixture_h <<<"$(ppm_dimensions "$fixture")"
+  fi
   echo "capturing lcd-on size ${size} -> ${output}"
   ZIDE_FONT_RENDERING_LCD=1 \
   ZIDE_FONT_SAMPLE_SIZE="${size}" \
   ZIDE_FONT_SAMPLE_FRAMES="${FRAMES}" \
+  ZIDE_WINDOW_WIDTH="${fixture_w}" \
+  ZIDE_WINDOW_HEIGHT="${fixture_h}" \
+  ZIDE_FONT_SAMPLE_SCREENSHOT_WIDTH="${fixture_w}" \
+  ZIDE_FONT_SAMPLE_SCREENSHOT_HEIGHT="${fixture_h}" \
   ZIDE_FONT_SAMPLE_SCREENSHOT="${output}" \
   zig build run -- --mode font-sample >/dev/null
 done

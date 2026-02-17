@@ -224,7 +224,9 @@ const AppState = struct {
             app_shell.setSdlLogLevel(level);
         }
 
-        const shell = try Shell.init(allocator, 1280, 720, "Zide - Zig IDE");
+        const window_width = parseEnvI32("ZIDE_WINDOW_WIDTH", 1280);
+        const window_height = parseEnvI32("ZIDE_WINDOW_HEIGHT", 720);
+        const shell = try Shell.init(allocator, window_width, window_height, "Zide - Zig IDE");
         errdefer shell.deinit(allocator);
 
         // Apply font rendering knobs before (re)loading fonts.
@@ -1541,7 +1543,13 @@ const AppState = struct {
             }
             if (self.font_sample_close_pending) {
                 if (self.font_sample_screenshot_path) |path| {
-                    shell.rendererPtr().dumpWindowScreenshotPpm(path) catch {};
+                    const screenshot_w = parseEnvI32("ZIDE_FONT_SAMPLE_SCREENSHOT_WIDTH", 0);
+                    const screenshot_h = parseEnvI32("ZIDE_FONT_SAMPLE_SCREENSHOT_HEIGHT", 0);
+                    if (screenshot_w > 0 and screenshot_h > 0) {
+                        shell.rendererPtr().dumpWindowScreenshotPpmSized(path, screenshot_w, screenshot_h) catch {};
+                    } else {
+                        shell.rendererPtr().dumpWindowScreenshotPpm(path) catch {};
+                    }
                 }
                 shell.requestClose();
                 self.font_sample_close_pending = false;
@@ -1689,6 +1697,14 @@ fn parseEnvU64(env_key: [:0]const u8, default_value: u64) u64 {
     const slice = std.mem.sliceTo(raw, 0);
     if (slice.len == 0) return default_value;
     return std.fmt.parseInt(u64, slice, 10) catch default_value;
+}
+
+fn parseEnvI32(env_key: [:0]const u8, default_value: i32) i32 {
+    const raw = std.c.getenv(env_key) orelse return default_value;
+    const slice = std.mem.sliceTo(raw, 0);
+    if (slice.len == 0) return default_value;
+    const parsed = std.fmt.parseInt(i32, slice, 10) catch return default_value;
+    return if (parsed > 0) parsed else default_value;
 }
 
 fn parseEnvBool(env_key: [:0]const u8) ?bool {

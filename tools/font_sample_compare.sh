@@ -53,13 +53,27 @@ checksum_file() {
   echo "unavailable"
 }
 
+ppm_dimensions() {
+  local file="$1"
+  awk 'NR==2 { print $1, $2; exit }' "$file"
+}
+
 for size in "${SIZES[@]}"; do
   fixture="fixtures/ui/font_sample/jbmono_iosevka_size${size}.ppm"
   output="${OUT_DIR}/size${size}.ppm"
 
   echo "capturing size ${size}..."
+  fixture_w=1280
+  fixture_h=720
+  if [[ -f "$fixture" ]]; then
+    read -r fixture_w fixture_h <<<"$(ppm_dimensions "$fixture")"
+  fi
   ZIDE_FONT_SAMPLE_SIZE="${size}" \
   ZIDE_FONT_SAMPLE_FRAMES="${FRAMES}" \
+  ZIDE_WINDOW_WIDTH="${fixture_w}" \
+  ZIDE_WINDOW_HEIGHT="${fixture_h}" \
+  ZIDE_FONT_SAMPLE_SCREENSHOT_WIDTH="${fixture_w}" \
+  ZIDE_FONT_SAMPLE_SCREENSHOT_HEIGHT="${fixture_h}" \
   ZIDE_FONT_SAMPLE_SCREENSHOT="${output}" \
   zig build run -- --mode font-sample >/dev/null
 
