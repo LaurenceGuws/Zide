@@ -32,6 +32,13 @@ mkdir -p "$OUT_DIR"
 
 FRAMES="${ZIDE_FONT_SAMPLE_FRAMES:-2}"
 MISMATCH=0
+LOCK_FILE="${ROOT_DIR}/zig-cache/font_sample.lock"
+mkdir -p "$(dirname "${LOCK_FILE}")"
+
+if command -v flock >/dev/null 2>&1; then
+  exec 9>"${LOCK_FILE}"
+  flock 9
+fi
 
 checksum_file() {
   local file="$1"
