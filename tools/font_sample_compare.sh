@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 UPDATE_FIXTURES=0
+STRICT_HEADER=0
 SIZES=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -12,8 +13,12 @@ while [[ $# -gt 0 ]]; do
       UPDATE_FIXTURES=1
       shift
       ;;
+    --strict-header)
+      STRICT_HEADER=1
+      shift
+      ;;
     --help|-h)
-      echo "usage: tools/font_sample_compare.sh [--update-fixtures] [size ...]"
+      echo "usage: tools/font_sample_compare.sh [--update-fixtures] [--strict-header] [size ...]"
       exit 0
       ;;
     *)
@@ -58,6 +63,11 @@ ppm_dimensions() {
   awk 'NR==2 { print $1, $2; exit }' "$file"
 }
 
+ppm_maxval() {
+  local file="$1"
+  awk 'NR==3 { print $1; exit }' "$file"
+}
+
 for size in "${SIZES[@]}"; do
   fixture="fixtures/ui/font_sample/jbmono_iosevka_size${size}.ppm"
   output="${OUT_DIR}/size${size}.ppm"
@@ -86,6 +96,20 @@ for size in "${SIZES[@]}"; do
     echo "missing fixture: $fixture"
     MISMATCH=1
     continue
+  fi
+
+  if [[ "$STRICT_HEADER" -eq 1 ]]; then
+    read -r out_w out_h <<<"$(ppm_dimensions "$output")"
+    read -r fix_w fix_h <<<"$(ppm_dimensions "$fixture")"
+    out_max="$(ppm_maxval "$output")"
+    fix_max="$(ppm_maxval "$fixture")"
+    if [[ "$out_w" != "$fix_w" || "$out_h" != "$fix_h" || "$out_max" != "$fix_max" ]]; then
+      echo "header mismatch: ${fixture} vs ${output}"
+      echo "  fixture header: ${fix_w} ${fix_h} max=${fix_max}"
+      echo "  output  header: ${out_w} ${out_h} max=${out_max}"
+      MISMATCH=1
+      continue
+    fi
   fi
 
   if cmp -s "$fixture" "$output"; then

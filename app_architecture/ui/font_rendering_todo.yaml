@@ -229,6 +229,7 @@ font_rendering_todo:
           status: done
           commands:
             - tools/font_sample_compare.sh
+            - tools/font_sample_compare.sh --strict-header
           notes:
             - "Once FR-0-01 exists, gate larger refactors behind it."
             - "Automated compare now runs fixture captures for sizes 12/14/16/20 and byte-compares against fixtures/ui/font_sample/*.ppm."
