@@ -1,0 +1,6 @@
+[
+  {"size":12,"equal":"no","default_sha256":"693807aacf769336262c45ff7302e910ffa042ee506deeec7dcf02ea6793f393","lcd_sha256":"574d913641f53731b05d68171964dd66f546f1cdb3d260c970d43d895bf9bede"},
+  {"size":14,"equal":"no","default_sha256":"88a1b54f469ecfeb84b4fe11bb7c6e262a303b07633b3842cd914ee35e3fe034","lcd_sha256":"61b8af5d3a23f4a827e71cac2c84c3bfd549f0bd36f3909bddd697bd84bd74cc"},
+  {"size":16,"equal":"no","default_sha256":"cc3acb8b11b838cd34ca1f87b01e4f42c5d707b131e8c7fcbc66563f9d0a06d3","lcd_sha256":"8b122a31649b9ba733012ec40852f976d6cb53618521ad7965d7ff0582503288"},
+  {"size":20,"equal":"no","default_sha256":"216daaf8fea358b80afdb6edb166e5f21db8c9e3a30905f454b32234a440aa8f","lcd_sha256":"dde9af6f7574f5927e774d53eb922867dddc6fb7be2d567f4b6228595b3eaa5f"}
+]

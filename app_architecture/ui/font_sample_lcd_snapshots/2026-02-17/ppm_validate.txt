@@ -1,0 +1,5 @@
+ok: fixtures/ui/font_sample/jbmono_iosevka_size12.ppm (1193x1302)
+ok: fixtures/ui/font_sample/jbmono_iosevka_size14.ppm (1193x1302)
+ok: fixtures/ui/font_sample/jbmono_iosevka_size16.ppm (1193x1302)
+ok: fixtures/ui/font_sample/jbmono_iosevka_size20.ppm (1193x1302)
+ppm validation passed
