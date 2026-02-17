@@ -498,8 +498,9 @@ const AppState = struct {
         } else if (self.app_mode == .editor) {
             self.active_kind = .editor;
         }
-        const cols: u16 = @intCast(@max(80, @divFloor(@as(i32, @intFromFloat(layout.terminal.width)), @as(i32, @intFromFloat(shell.terminalCellWidth())))));
-        const rows: u16 = @intCast(@max(24, @divFloor(@as(i32, @intFromFloat(layout.terminal.height)), @as(i32, @intFromFloat(shell.terminalCellHeight())))));
+        const initial_grid = self.terminalGridSize(layout.terminal.width, layout.terminal.height, 80, 24);
+        const cols: u16 = initial_grid.cols;
+        const rows: u16 = initial_grid.rows;
         const theme = shell.theme();
 
         const term = try TerminalSession.initWithOptions(self.allocator, rows, cols, .{
@@ -539,6 +540,18 @@ const AppState = struct {
         self.side_nav.width = 52 * scale;
     }
 
+    fn terminalGridSize(self: *AppState, terminal_width: f32, terminal_height: f32, min_cols: u16, min_rows: u16) struct { cols: u16, rows: u16 } {
+        // Match terminal widget packing, which uses rounded logical cell steps
+        // for row/column placement in offscreen texture updates.
+        const cell_w = @as(f32, @floatFromInt(@max(1, @as(i32, @intFromFloat(std.math.round(self.shell.terminalCellWidth()))))));
+        const cell_h = @as(f32, @floatFromInt(@max(1, @as(i32, @intFromFloat(std.math.round(self.shell.terminalCellHeight()))))));
+        const cols_f = std.math.floor(@max(0.0, terminal_width) / cell_w);
+        const rows_f = std.math.floor(@max(0.0, terminal_height) / cell_h);
+        const cols_u: u16 = @intFromFloat(@max(@as(f32, @floatFromInt(min_cols)), cols_f));
+        const rows_u: u16 = @intFromFloat(@max(@as(f32, @floatFromInt(min_rows)), rows_f));
+        return .{ .cols = cols_u, .rows = rows_u };
+    }
+
     fn refreshTerminalSizing(self: *AppState) !void {
         if (self.terminals.items.len == 0) return;
         const shell = self.shell;
@@ -546,8 +559,9 @@ const AppState = struct {
         const height = @as(f32, @floatFromInt(shell.height()));
         const layout = self.computeLayout(width, height);
         const effective_height = if (self.app_mode == .ide and !self.show_terminal) self.terminal_height else layout.terminal.height;
-        const cols: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(layout.terminal.width)), @as(i32, @intFromFloat(shell.terminalCellWidth())))));
-        const rows: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(effective_height)), @as(i32, @intFromFloat(shell.terminalCellHeight())))));
+        const grid = self.terminalGridSize(layout.terminal.width, effective_height, 1, 1);
+        const cols: u16 = grid.cols;
+        const rows: u16 = grid.rows;
         for (self.terminals.items) |term| {
             term.setCellSize(
                 @intFromFloat(shell.terminalCellWidth()),
@@ -955,8 +969,9 @@ const AppState = struct {
             if (self.terminals.items.len > 0) {
                 const term = self.terminals.items[0];
                 const effective_height = if (self.app_mode == .ide and !self.show_terminal) self.terminal_height else layout.terminal.height;
-                const cols: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(layout.terminal.width)), @as(i32, @intFromFloat(shell.terminalCellWidth())))));
-                const rows: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(effective_height)), @as(i32, @intFromFloat(shell.terminalCellHeight())))));
+                const grid = self.terminalGridSize(layout.terminal.width, effective_height, 1, 1);
+                const cols: u16 = grid.cols;
+                const rows: u16 = grid.rows;
                 term.setCellSize(
                     @intFromFloat(shell.terminalCellWidth()),
                     @intFromFloat(shell.terminalCellHeight()),
@@ -1024,8 +1039,9 @@ const AppState = struct {
                     self.terminal_height = new_height;
                     if (self.terminals.items.len > 0) {
                         const term = self.terminals.items[0];
-                        const cols: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(layout.terminal.width)), @as(i32, @intFromFloat(shell.terminalCellWidth())))));
-                        const rows: u16 = @intCast(@max(1, @divFloor(@as(i32, @intFromFloat(self.terminal_height)), @as(i32, @intFromFloat(shell.terminalCellHeight())))));
+                        const grid = self.terminalGridSize(layout.terminal.width, self.terminal_height, 1, 1);
+                        const cols: u16 = grid.cols;
+                        const rows: u16 = grid.rows;
                         term.setCellSize(
                             @intFromFloat(shell.terminalCellWidth()),
                             @intFromFloat(shell.terminalCellHeight()),

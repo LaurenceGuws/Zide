@@ -147,6 +147,7 @@ pub fn draw(
     const scrollbar_x = x + width - scrollbar_w;
     const scrollbar_y = y;
     const scrollbar_h = height;
+    const show_scrollbar = !cache.alt_active and !self.session.mouseReportingEnabled() and total_lines > rows;
     self.hover.dirty = false;
     const hover_link_id = hover_mod.hoverLinkId(&self.hover);
 
@@ -445,8 +446,8 @@ pub fn draw(
                             continue;
                         }
                         const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
-                        const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(fb_col)))) * rr.terminal_cell_width;
-                        const cell_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * rr.terminal_cell_height;
+                        const cell_x_i = base_x_i + @as(i32, @intCast(fb_col)) * cell_w_i;
+                        const cell_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
 
                         const fg = Color{ .r = cell.attrs.fg.r, .g = cell.attrs.fg.g, .b = cell.attrs.fg.b, .a = cell.attrs.fg.a };
                         const bg = Color{ .r = cell.attrs.bg.r, .g = cell.attrs.bg.g, .b = cell.attrs.bg.b, .a = cell.attrs.bg.a };
@@ -475,10 +476,10 @@ pub fn draw(
                             rr.drawTerminalCellGraphemeBatched(
                                 cell.codepoint,
                                 cell.combining[0..@intCast(cell.combining_len)],
-                                cell_x,
-                                cell_y,
-                                rr.terminal_cell_width * @as(f32, @floatFromInt(@as(i32, @intCast(cell_width_units)))),
-                                rr.terminal_cell_height,
+                                @as(f32, @floatFromInt(cell_x_i)),
+                                @as(f32, @floatFromInt(cell_y_i)),
+                                @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cell_width_units)))),
+                                @as(f32, @floatFromInt(cell_h_i)),
                                 if (cell_reverse) bg else fg,
                                 if (cell_reverse) fg else bg,
                                 underline_color,
@@ -491,10 +492,10 @@ pub fn draw(
                         } else {
                             rr.drawTerminalCellBatched(
                                 cell.codepoint,
-                                cell_x,
-                                cell_y,
-                                rr.terminal_cell_width * @as(f32, @floatFromInt(@as(i32, @intCast(cell_width_units)))),
-                                rr.terminal_cell_height,
+                                @as(f32, @floatFromInt(cell_x_i)),
+                                @as(f32, @floatFromInt(cell_y_i)),
+                                @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cell_width_units)))),
+                                @as(f32, @floatFromInt(cell_h_i)),
                                 if (cell_reverse) bg else fg,
                                 if (cell_reverse) fg else bg,
                                 underline_color,
@@ -530,10 +531,12 @@ pub fn draw(
                     if (cell.x != 0 or cell.y != 0) continue;
 
                     const width_units = @as(usize, @max(@as(u8, 1), cell.width));
-                    const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(abs_col)))) * rr.terminal_cell_width;
-                    const cell_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * rr.terminal_cell_height;
-                    const cell_w = rr.terminal_cell_width * @as(f32, @floatFromInt(@as(i32, @intCast(width_units))));
-                    const cell_h = rr.terminal_cell_height;
+                    const cell_x_i = base_x_i + @as(i32, @intCast(abs_col)) * cell_w_i;
+                    const cell_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
+                    const cell_x = @as(f32, @floatFromInt(cell_x_i));
+                    const cell_y = @as(f32, @floatFromInt(cell_y_i));
+                    const cell_w = @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(width_units))));
+                    const cell_h = @as(f32, @floatFromInt(cell_h_i));
 
                     if (!rr.terminal_shape_first_pen_set.items[cluster_rel]) {
                         rr.terminal_shape_first_pen_set.items[cluster_rel] = true;
@@ -567,7 +570,20 @@ pub fn draw(
 
                     if (cell.codepoint == 0) continue;
                     if (cell.combining_len == 0 and isTerminalBoxGlyph(cell.codepoint)) {
-                        _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, cell_x, cell_y, cell_w, cell_h, fg_draw);
+                        const box_x_i = base_x_i + @as(i32, @intCast(abs_col)) * cell_w_i;
+                        const box_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
+                        const box_w_i = cell_w_i * @as(i32, @intCast(width_units));
+                        const box_h_i = cell_h_i;
+                        _ = terminal_glyphs.drawBoxGlyphBatched(
+                            addTerminalGlyphRect,
+                            rr,
+                            cell.codepoint,
+                            @as(f32, @floatFromInt(box_x_i)),
+                            @as(f32, @floatFromInt(box_y_i)),
+                            @as(f32, @floatFromInt(box_w_i)),
+                            @as(f32, @floatFromInt(box_h_i)),
+                            fg_draw,
+                        );
                         continue;
                     }
 
@@ -940,7 +956,7 @@ pub fn draw(
         }
     }
 
-    if (height > 0 and width > 0) {
+    if (show_scrollbar and height > 0 and width > 0) {
         const track_h = scrollbar_h;
         const min_thumb_h: f32 = 18;
         const ratio = if (max_scroll_offset > 0)
