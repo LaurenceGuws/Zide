@@ -53,7 +53,9 @@ Snapshot utilities:
 
   tools/font_sample_lcd_snapshot.sh --dry-run
   tools/font_sample_lcd_snapshot.sh --stamp 2026-02-17
+  tools/font_sample_lcd_snapshot.sh --stamp 2026-02-17 --no-capture
   tools/font_sample_lcd_snapshot_check.sh
+  tools/font_sample_lcd_snapshot_check.sh --latest
 
 Artifacts are written to:
 
@@ -127,6 +129,7 @@ Suggested filenames:
 
 Troubleshooting mismatches:
 - Run font-sample commands serially; avoid launching multiple font-sample runs at once.
+- For stable baselines, do not run snapshot generation and strict compare in parallel.
 - Ensure font files exist and are the expected ones:
   - assets/fonts/JetBrainsMonoNerdFont-Regular.ttf
   - assets/fonts/IosevkaTermNerdFont-Regular.ttf

@@ -26,10 +26,22 @@ Preview planned outputs only:
 tools/font_sample_lcd_snapshot.sh --dry-run
 ```
 
+Skip capture and refresh reports from existing LCD captures:
+
+```bash
+tools/font_sample_lcd_snapshot.sh --stamp 2026-02-17 --no-capture
+```
+
 Validate all dated snapshots:
 
 ```bash
 tools/font_sample_lcd_snapshot_check.sh
+```
+
+Validate only the newest snapshot:
+
+```bash
+tools/font_sample_lcd_snapshot_check.sh --latest
 ```
 
 Per snapshot folder (`YYYY-MM-DD`), the expected files are:
