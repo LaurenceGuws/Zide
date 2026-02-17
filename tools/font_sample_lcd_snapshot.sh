@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 STAMP=""
+DRY_RUN=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --stamp)
@@ -15,8 +16,12 @@ while [[ $# -gt 0 ]]; do
       STAMP="$2"
       shift 2
       ;;
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
     --help|-h)
-      echo "usage: tools/font_sample_lcd_snapshot.sh [--stamp YYYY-MM-DD] [stamp]"
+      echo "usage: tools/font_sample_lcd_snapshot.sh [--stamp YYYY-MM-DD] [--dry-run] [stamp]"
       exit 0
       ;;
     *)
@@ -36,6 +41,37 @@ if [[ -z "$STAMP" ]]; then
 fi
 
 SNAP_DIR="app_architecture/ui/font_sample_lcd_snapshots/${STAMP}"
+
+checksum_file() {
+  local file="$1"
+  if [[ ! -f "$file" ]]; then
+    echo "missing"
+    return
+  fi
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$file" | awk '{print $1}'
+    return
+  fi
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$file" | awk '{print $1}'
+    return
+  fi
+  echo "unavailable"
+}
+
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  echo "dry-run: no files will be written"
+  echo "snapshot dir: ${SNAP_DIR}"
+  echo "would run: tools/font_sample_capture_lcd.sh"
+  echo "would write:"
+  echo "  - ${SNAP_DIR}/lcd_report.txt"
+  echo "  - ${SNAP_DIR}/lcd_report.csv"
+  echo "  - ${SNAP_DIR}/lcd_report.json"
+  echo "  - ${SNAP_DIR}/ppm_validate.txt"
+  echo "  - ${SNAP_DIR}/README.txt"
+  exit 0
+fi
+
 mkdir -p "${SNAP_DIR}"
 
 echo "capturing LCD fixtures..."
@@ -49,10 +85,19 @@ tools/font_sample_lcd_report.sh --json > "${SNAP_DIR}/lcd_report.json"
 echo "validating default fixture PPMs..."
 tools/font_sample_validate_ppm.sh > "${SNAP_DIR}/ppm_validate.txt"
 
+host_name="$(hostname 2>/dev/null || echo unknown)"
+renderer_backend="sdl_gl"
+font_config_digest="$(checksum_file assets/config/init.lua)"
+project_config_digest="$(checksum_file .zide.lua)"
+
 {
   echo "stamp=${STAMP}"
   echo "created_at_utc=$(date -u +%FT%TZ)"
-  echo "command=tools/font_sample_lcd_snapshot.sh ${STAMP}"
+  echo "host=${host_name}"
+  echo "renderer_backend=${renderer_backend}"
+  echo "font_config_digest=${font_config_digest}"
+  echo "project_config_digest=${project_config_digest}"
+  echo "command=tools/font_sample_lcd_snapshot.sh --stamp ${STAMP}"
   echo "artifacts="
   echo "  - ${SNAP_DIR}/lcd_report.txt"
   echo "  - ${SNAP_DIR}/lcd_report.csv"

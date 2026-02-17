@@ -20,6 +20,18 @@ or:
 tools/font_sample_lcd_snapshot.sh --stamp 2026-02-17
 ```
 
+Preview planned outputs only:
+
+```bash
+tools/font_sample_lcd_snapshot.sh --dry-run
+```
+
+Validate all dated snapshots:
+
+```bash
+tools/font_sample_lcd_snapshot_check.sh
+```
+
 Per snapshot folder (`YYYY-MM-DD`), the expected files are:
 
 - `lcd_report.txt`
@@ -27,6 +39,12 @@ Per snapshot folder (`YYYY-MM-DD`), the expected files are:
 - `lcd_report.json`
 - `ppm_validate.txt`
 - `README.txt`
+
+Snapshot `README.txt` metadata includes:
+- host
+- renderer backend
+- font config digest (`assets/config/init.lua`)
+- project config digest (`.zide.lua`, or `missing`)
 
 Retention guidance:
 

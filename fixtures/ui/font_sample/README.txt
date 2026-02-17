@@ -49,6 +49,12 @@ PPM sanity validation:
 
   tools/font_sample_validate_ppm.sh
 
+Snapshot utilities:
+
+  tools/font_sample_lcd_snapshot.sh --dry-run
+  tools/font_sample_lcd_snapshot.sh --stamp 2026-02-17
+  tools/font_sample_lcd_snapshot_check.sh
+
 Artifacts are written to:
 
   zig-cache/font_sample_lcd/
