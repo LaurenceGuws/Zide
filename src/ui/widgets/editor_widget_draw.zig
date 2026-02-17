@@ -1523,59 +1523,6 @@ fn drawVerticalScrollbar(
     }
 }
 
-fn drawHighlightedLineText(
-    r: anytype,
-    line_text: []const u8,
-    y: f32,
-    text_x: f32,
-    line_start: usize,
-    line_end: usize,
-    tokens: []HighlightToken,
-) void {
-    if (line_text.len == 0) return;
-    if (tokens.len == 0) return;
-
-    var cursor = line_start;
-    for (tokens) |token| {
-        if (token.end <= line_start or token.start >= line_end) continue;
-        const start = @max(token.start, line_start);
-        const end = @min(token.end, line_end);
-        if (start > cursor) {
-            const slice_start = cursor - line_start;
-            const slice_end = start - line_start;
-            const x = text_x + @as(f32, @floatFromInt(slice_start)) * r.char_width;
-            r.drawTextMonospace(line_text[slice_start..slice_end], x, y, r.theme.foreground);
-        }
-        const slice_start = start - line_start;
-        const slice_end = end - line_start;
-        const x = text_x + @as(f32, @floatFromInt(slice_start)) * r.char_width;
-        const conceal_text: ?[]const u8 = if (token.conceal != null or token.conceal_lines)
-            token.conceal orelse ""
-        else
-            null;
-        var color = colorForToken(r, token.kind);
-        if (token.url != null) {
-            color = r.theme.link;
-        }
-        if (conceal_text) |text| {
-            if (text.len > 0) {
-                r.drawTextMonospace(text, x, y, color);
-            }
-        } else {
-            r.drawTextMonospace(line_text[slice_start..slice_end], x, y, color);
-        }
-        if (end > cursor) {
-            cursor = end;
-        }
-    }
-
-    if (cursor < line_end) {
-        const slice_start = cursor - line_start;
-        const x = text_x + @as(f32, @floatFromInt(slice_start)) * r.char_width;
-        r.drawTextMonospace(line_text[slice_start..], x, y, r.theme.foreground);
-    }
-}
-
 fn drawHighlightedLineSegment(
     r: anytype,
     line_text: []const u8,

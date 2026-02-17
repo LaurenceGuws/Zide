@@ -7,6 +7,14 @@ These images come from the built-in font sample mode:
 They are intended to catch obvious regressions while we redesign the font
 pipeline (atlas formats, blending, gamma handling, hinting, etc.).
 
+Deterministic fixture compare (sizes 12/14/16/20):
+
+  tools/font_sample_compare.sh
+
+Artifacts are written to:
+
+  zig-cache/font_sample_compare/
+
 Capture command (example):
 
   ZIDE_TEXT_GAMMA=1.0 ZIDE_TEXT_CONTRAST=1.0 \
