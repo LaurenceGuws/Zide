@@ -19,8 +19,9 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - Font rendering strategy (terminal + editor): make our text rendering competitive with kitty/ghostty-tier quality.
   - Primary stress font: `assets/fonts/IosevkaTermNerdFont-Regular.ttf` (still under iteration); JetBrainsMono is the secondary sanity font.
   - Source of truth: `app_architecture/ui/font_rendering_todo.yaml`
-  - Key files: `src/ui/terminal_font.zig`, `src/ui/renderer/gl_backend.zig`, `src/ui/renderer/font_manager.zig`
+  - Key files: `src/ui/terminal_font.zig`, `src/ui/renderer/gl_backend.zig`, `src/ui/renderer/font_manager.zig`, `src/ui/renderer/terminal_glyphs.zig`, `src/ui/widgets/terminal_widget_draw.zig`
   - Architecture doc: `app_architecture/ui/font_rendering_architecture.md`
+  - Special-glyph docs: `app_architecture/ui/terminal_special_glyph_coverage.md`, `app_architecture/ui/terminal_special_glyph_todo.yaml`
   - Regression signals (not called goldens yet): `fixtures/ui/font_sample/`
 - UI widget modularization is largely complete for TerminalWidget; keep using the established split pattern.
   - Plan/todo: `app_architecture/ui/ui_widget_modularization_todo.yaml`
@@ -45,6 +46,8 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - Fixture authority expanded: `fixtures/ui/font_sample/jbmono_iosevka_size{12,14,16,20}.ppm` include multiple background bands.
 - Terminal + editor now support first-class ligature shaping with config controls (`terminal.disable_ligatures`, `terminal.font_features`, `editor.disable_ligatures`, `editor.font_features`).
 - Editor multiline selection overlay seams were fixed and deselect cleanup now invalidates cached overlays correctly.
+- Terminal draw now locks the session cache during render to avoid stale view-cache reads during rapid zoom/resize.
+- Special-glyph rendering work is in active iteration for powerline separators (`   `) and is not quality-complete yet.
 
 ### Constraints / Guardrails
 - Handoff docs are high-level only; progress tracking lives in todo + app_architecture docs.
@@ -58,6 +61,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - SDL3 migration tracker: `app_architecture/ui/sdl3_migration_todo.yaml`
 - Font rendering improvement plan: `app_architecture/ui/font_rendering_todo.yaml`
 - Font rendering architecture: `app_architecture/ui/font_rendering_architecture.md`
+- Special glyph coverage + execution plan: `app_architecture/ui/terminal_special_glyph_coverage.md`, `app_architecture/ui/terminal_special_glyph_todo.yaml`
 - Font sample fixtures: `fixtures/ui/font_sample/README.txt`
 - UI widget modularization plan: `app_architecture/ui/ui_widget_modularization_todo.yaml`
 - Editor widget roadmap: `app_architecture/editor/editor_widget_todo.yaml`
@@ -73,7 +77,8 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
  - Scrollback view cache + reflow resizing are still in progress; expect instability during the redesign.
 
 ### In-Progress (Uncommitted)
-- None tracked at handoff level. Use the relevant todo file(s) for progress.
+- Terminal special-glyph powerline experiments are currently in progress in `src/ui/renderer/terminal_glyphs.zig` and `src/ui/widgets/terminal_widget_draw.zig`.
+- Docs were expanded with dedicated special-glyph coverage + todo files; keep those in sync with code status while iterating.
 
 ### Checklist
 - `zig build test`

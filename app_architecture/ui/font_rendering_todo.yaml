@@ -18,6 +18,8 @@ font_rendering_todo:
       - "ghostty: reference_repos/terminals/ghostty (atlas split + linear blending + optional weight correction)"
     architecture_doc:
       - "app_architecture/ui/font_rendering_architecture.md"
+      - "app_architecture/ui/terminal_special_glyph_coverage.md"
+      - "app_architecture/ui/terminal_special_glyph_todo.yaml"
     zide_code:
       - "glyph rasterization + atlas upload: src/ui/terminal_font.zig"
       - "renderer/blending + shader: src/ui/renderer/gl_backend.zig"
@@ -31,6 +33,8 @@ font_rendering_todo:
       - "LCD/subpixel AA is not a final solution and remains opt-in/experimental."
       - "If baseline wobble appears at specific zoom levels, verify glyph Y snapping uses rounded baseline placement (not floor-biased placement)."
       - "Terminal baseline placement now follows ghostty-style centered cell-baseline math; remaining work is quantitative QA across fractional render scales (for example 1.25/1.5/1.6/1.75) and shaped-run edge cases."
+      - "Terminal special glyph sprite parity (powerline/shade/box legacy ranges) is not complete yet; current powerline separator handling is experimental and not quality-accepted. Use app_architecture/ui/terminal_special_glyph_coverage.md as the source checklist."
+      - "Execution plan for special-glyph pipeline rewrite lives in app_architecture/ui/terminal_special_glyph_todo.yaml."
 
   constraints:
     - "This work changes rendering behavior; introduce a repeatable visual/metric harness before large changes."
@@ -200,7 +204,7 @@ font_rendering_todo:
 
     - name: "Phase 5 - LCD/Subpixel (optional, only after linear blending is correct)"
       tasks:
-        - id: FR-3-01
+        - id: FR-5-01
           title: "Evaluate LCD/subpixel AA with correct color pipeline"
           status: in_progress
           files_to_edit:
