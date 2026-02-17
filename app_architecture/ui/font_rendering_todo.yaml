@@ -211,6 +211,7 @@ font_rendering_todo:
             - "Added env override (`ZIDE_FONT_RENDERING_LCD`) and capture helper (`tools/font_sample_capture_lcd.sh`) to build repeatable LCD-vs-default comparisons."
             - "Added `tools/font_sample_lcd_report.sh` to summarize default-vs-LCD equality/checksums per size."
             - "Added `tools/font_sample_lcd_snapshot.sh` for dated LCD experiment snapshots under app_architecture/ui/font_sample_lcd_snapshots/."
+            - "Snapshot workflow now supports --dry-run and includes metadata (host/backend/config digests); integrity can be verified with tools/font_sample_lcd_snapshot_check.sh."
             - "Initial Linux SDL3/OpenGL checksum sweep (2026-02-17): LCD captures differ from default for all sizes 12/14/16/20, confirming the override is active and visually meaningful."
             - "Current decision: keep LCD off by default; continue as experiment-only until visual QA confirms acceptable behavior across displays/subpixel layouts."
             - "Exit criteria checklist:"
