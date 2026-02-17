@@ -21,8 +21,10 @@ pub fn initFonts(renderer: anytype, size: f32) !void {
     );
     renderer.terminal_font.render_scale = render_scale;
     renderer.terminal_font.setAtlasFilterPoint();
-    renderer.terminal_cell_width = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(renderer.terminal_font.cell_width / render_scale)))));
-    renderer.terminal_cell_height = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(renderer.terminal_font.line_height / render_scale)))));
+    // Keep logical cell metrics in render-scale units so zoom changes do not
+    // oscillate spacing due to extra whole-pixel quantization in layout space.
+    renderer.terminal_cell_width = renderer.terminal_font.cell_width / render_scale;
+    renderer.terminal_cell_height = renderer.terminal_font.line_height / render_scale;
     renderer.char_width = renderer.terminal_cell_width;
     renderer.char_height = renderer.terminal_cell_height;
 

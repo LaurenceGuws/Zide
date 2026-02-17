@@ -445,8 +445,8 @@ pub fn draw(
                             continue;
                         }
                         const cell_width_units = @as(usize, @max(@as(u8, 1), cell.width));
-                        const cell_x_i = base_x_i + @as(i32, @intCast(fb_col)) * cell_w_i;
-                        const cell_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
+                        const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(fb_col)))) * rr.terminal_cell_width;
+                        const cell_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * rr.terminal_cell_height;
 
                         const fg = Color{ .r = cell.attrs.fg.r, .g = cell.attrs.fg.g, .b = cell.attrs.fg.b, .a = cell.attrs.fg.a };
                         const bg = Color{ .r = cell.attrs.bg.r, .g = cell.attrs.bg.g, .b = cell.attrs.bg.b, .a = cell.attrs.bg.a };
@@ -475,10 +475,10 @@ pub fn draw(
                             rr.drawTerminalCellGraphemeBatched(
                                 cell.codepoint,
                                 cell.combining[0..@intCast(cell.combining_len)],
-                                @as(f32, @floatFromInt(cell_x_i)),
-                                @as(f32, @floatFromInt(cell_y_i)),
-                                @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cell_width_units)))),
-                                @as(f32, @floatFromInt(cell_h_i)),
+                                cell_x,
+                                cell_y,
+                                rr.terminal_cell_width * @as(f32, @floatFromInt(@as(i32, @intCast(cell_width_units)))),
+                                rr.terminal_cell_height,
                                 if (cell_reverse) bg else fg,
                                 if (cell_reverse) fg else bg,
                                 underline_color,
@@ -491,10 +491,10 @@ pub fn draw(
                         } else {
                             rr.drawTerminalCellBatched(
                                 cell.codepoint,
-                                @as(f32, @floatFromInt(cell_x_i)),
-                                @as(f32, @floatFromInt(cell_y_i)),
-                                @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cell_width_units)))),
-                                @as(f32, @floatFromInt(cell_h_i)),
+                                cell_x,
+                                cell_y,
+                                rr.terminal_cell_width * @as(f32, @floatFromInt(@as(i32, @intCast(cell_width_units)))),
+                                rr.terminal_cell_height,
                                 if (cell_reverse) bg else fg,
                                 if (cell_reverse) fg else bg,
                                 underline_color,
@@ -530,12 +530,10 @@ pub fn draw(
                     if (cell.x != 0 or cell.y != 0) continue;
 
                     const width_units = @as(usize, @max(@as(u8, 1), cell.width));
-                    const cell_x_i = base_x_i + @as(i32, @intCast(abs_col)) * cell_w_i;
-                    const cell_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
-                    const cell_x = @as(f32, @floatFromInt(cell_x_i));
-                    const cell_y = @as(f32, @floatFromInt(cell_y_i));
-                    const cell_w = @as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(width_units))));
-                    const cell_h = @as(f32, @floatFromInt(cell_h_i));
+                    const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(abs_col)))) * rr.terminal_cell_width;
+                    const cell_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * rr.terminal_cell_height;
+                    const cell_w = rr.terminal_cell_width * @as(f32, @floatFromInt(@as(i32, @intCast(width_units))));
+                    const cell_h = rr.terminal_cell_height;
 
                     if (!rr.terminal_shape_first_pen_set.items[cluster_rel]) {
                         rr.terminal_shape_first_pen_set.items[cluster_rel] = true;
