@@ -46,7 +46,11 @@ pub fn draw(
 ) void {
     const draw_start = app_shell.getTime();
     const r = shell.rendererPtr();
-    const cache = self.session.renderCache();
+    var cache = self.session.renderCache();
+    if (!cache.alt_active and self.session.view_cache_pending.load(.acquire)) {
+        self.session.updateViewCacheForScroll();
+        cache = self.session.renderCache();
+    }
     const sync_updates = cache.sync_updates_active;
     const screen_reverse = cache.screen_reverse;
     const blink_style = self.blink_style;
@@ -107,10 +111,6 @@ pub fn draw(
                 break;
             }
         }
-    }
-
-    if (!cache.alt_active and self.session.view_cache_pending.load(.acquire)) {
-        self.session.updateViewCacheForScroll();
     }
 
     self.kitty.updateViews(self.session.allocator, rows, cols, cache.kitty_images.items, cache.kitty_placements.items);
@@ -526,7 +526,7 @@ pub fn draw(
                     if (cluster_rel_u32 >= span_cols) continue;
                     const cluster_rel: usize = @intCast(cluster_rel_u32);
                     const abs_col = span_start_col + cluster_rel;
-                    if (abs_col >= cols_count) continue;
+                    if (abs_col >= row_cells.len) continue;
                     const cell = row_cells[abs_col];
                     if (cell.x != 0 or cell.y != 0) continue;
 
@@ -552,7 +552,7 @@ pub fn draw(
 
                     const followed_by_space = blk: {
                         const next_col = abs_col + width_units;
-                        if (next_col < cols_count) {
+                        if (next_col < row_cells.len) {
                             const next_cell = row_cells[next_col];
                             break :blk next_cell.codepoint == ' ' or next_cell.codepoint == 0;
                         }
