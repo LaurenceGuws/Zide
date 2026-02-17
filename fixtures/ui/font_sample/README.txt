@@ -11,6 +11,10 @@ Deterministic fixture compare (sizes 12/14/16/20):
 
   tools/font_sample_compare.sh
 
+Strict header guard (dimensions/maxval):
+
+  tools/font_sample_compare.sh --strict-header
+
 Refresh fixtures explicitly (opt-in):
 
   tools/font_sample_compare.sh --update-fixtures
@@ -32,6 +36,10 @@ LCD experiment captures (does not update fixtures):
 LCD compare summary report:
 
   tools/font_sample_lcd_report.sh
+
+CSV output:
+
+  tools/font_sample_lcd_report.sh --csv
 
 Artifacts are written to:
 

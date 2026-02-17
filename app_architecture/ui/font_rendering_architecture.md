@@ -123,3 +123,20 @@ correction) with confidence.
     `zig-cache/font_sample_compare/`;
   - if approved, copy updated captures into `fixtures/ui/font_sample/`;
   - rerun `tools/font_sample_compare.sh` to confirm the repository is green.
+
+## Phase 5 Findings
+
+Current LCD experiment status (as of 2026-02-17):
+- Capture workflow:
+  - `tools/font_sample_capture_lcd.sh`
+  - `tools/font_sample_lcd_report.sh`
+- On Linux SDL3/OpenGL, default vs LCD captures differ for all tracked sizes
+  (12/14/16/20), confirming the opt-in LCD path is active.
+- Default policy remains unchanged: LCD stays off by default.
+
+Acceptance criteria before enabling LCD by default:
+- Visual QA sign-off for IosevkaTerm and JetBrainsMono at 12/14/16/20 on at
+  least one standard RGB layout display.
+- No obvious color fringing regressions in terminal/editor overlays.
+- `tools/font_sample_compare.sh --strict-header` remains green for default
+  captures and LCD experiment reports remain reproducible.
