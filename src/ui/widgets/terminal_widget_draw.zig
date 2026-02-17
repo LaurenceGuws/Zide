@@ -44,11 +44,14 @@ pub fn draw(
     height: f32,
     input: shared_types.input.InputSnapshot,
 ) void {
+    self.session.lock();
+    defer self.session.unlock();
+
     const draw_start = app_shell.getTime();
     const r = shell.rendererPtr();
     var cache = self.session.renderCache();
     if (!cache.alt_active and self.session.view_cache_pending.load(.acquire)) {
-        self.session.updateViewCacheForScroll();
+        self.session.updateViewCacheForScrollLocked();
         cache = self.session.renderCache();
     }
     const sync_updates = cache.sync_updates_active;
@@ -1018,12 +1021,9 @@ pub fn draw(
     }
 
     if (!sync_updates and (updated or cache.dirty == .none)) {
-        if (self.session.tryLock()) {
-            const current_gen = self.session.currentGeneration();
-            if (current_gen == cache.generation) {
-                self.session.clearDirty();
-            }
-            self.session.unlock();
+        const current_gen = self.session.currentGeneration();
+        if (current_gen == cache.generation) {
+            self.session.clearDirty();
         }
     }
 
@@ -1136,9 +1136,19 @@ fn isTerminalBoxGlyph(codepoint: u32) bool {
         0x2580,
         0x2584,
         0x2588,
+        0xE0B0,
+        0xE0B1,
+        0xE0B2,
+        0xE0B3,
         => true,
         else => false,
     };
+}
+
+fn isPowerlineGlyph(codepoint: u32) bool {
+    return (codepoint >= 0xE0B0 and codepoint <= 0xE0BF) or
+        codepoint == 0xE0D6 or
+        codepoint == 0xE0D7;
 }
 
 fn drawShapedGlyph(
@@ -1176,6 +1186,7 @@ fn drawShapedGlyph(
         (base_codepoint >= 0x100000 and base_codepoint <= 0x10FFFD) or
         (base_codepoint >= 0x2700 and base_codepoint <= 0x27BF) or
         (base_codepoint >= 0x2600 and base_codepoint <= 0x26FF);
+    const is_powerline = isPowerlineGlyph(base_codepoint);
 
     const aspect = if (cell_height > 0) glyph_w / cell_height else 0.0;
     const is_square_or_wide = aspect >= 0.7;
@@ -1228,7 +1239,18 @@ fn drawShapedGlyph(
         }
     }
 
-    const dest = terminal_font_mod.Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
+    const dest = if (is_powerline) blk: {
+        // Powerline separators should lock horizontally to cell edges. Using
+        // font side bearings can cause zoom-dependent seams between cells.
+        const cell_left = snapToDevicePixel(x, render_scale);
+        const cell_right = snapToDevicePixel(x + cell_width, render_scale);
+        break :blk terminal_font_mod.Rect{
+            .x = cell_left,
+            .y = snapped_y,
+            .width = @max(inv_scale, cell_right - cell_left),
+            .height = scaled_h,
+        };
+    } else terminal_font_mod.Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
 
     const draw_color = if (glyph.is_color)
         Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 }

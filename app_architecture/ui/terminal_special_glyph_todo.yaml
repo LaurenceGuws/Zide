@@ -1,0 +1,214 @@
+terminal_special_glyph_todo:
+  scope:
+    description: "Implement a high-quality terminal special-glyph pipeline (kitty/ghostty style) for powerline, shades, box, braille, branch, and legacy symbols."
+    goal: "Perceptually stable and crisp glyph rendering across zoom + fractional DPI, with no seams/wobble/pixel stair-stepping regressions."
+    out_of_scope:
+      - "General text shaping/raster changes for non-special glyphs."
+      - "Platform-specific renderer divergences before Linux/OpenGL quality is locked."
+
+  source_of_truth:
+    coverage_matrix: "app_architecture/ui/terminal_special_glyph_coverage.md"
+    primary_todo: "app_architecture/ui/font_rendering_todo.yaml"
+
+  references:
+    zide:
+      - "special glyph draw hooks: src/ui/widgets/terminal_widget_draw.zig"
+      - "current procedural special glyph path: src/ui/renderer/terminal_glyphs.zig"
+      - "glyph atlas/raster model: src/ui/terminal_font.zig"
+      - "terminal glyph batch + coverage rendering: src/ui/renderer.zig"
+      - "GL coverage/color pipelines: src/ui/renderer/gl_backend.zig"
+      - "font scaling + render-scale coupling: src/ui/renderer/font_manager.zig"
+      - "font sample harness for visual captures: src/ui/font_sample_view.zig"
+    kitty:
+      - "BOX_FONT routing ranges: reference_repos/terminals/kitty/kitty/fonts.c:733"
+      - "box/powerline/symbol raster entry: reference_repos/terminals/kitty/kitty/decorations.c:1538"
+      - "sprite upload flow: reference_repos/terminals/kitty/kitty/fonts.c"
+    ghostty:
+      - "sprite face dispatcher: reference_repos/terminals/ghostty/src/font/sprite/Face.zig"
+      - "powerline geometry: reference_repos/terminals/ghostty/src/font/sprite/draw/powerline.zig"
+      - "box/block/braille/branch/symbol modules: reference_repos/terminals/ghostty/src/font/sprite/draw/*.zig"
+
+  constraints:
+    - "No per-frame procedural re-raster for special glyphs once sprite pipeline lands."
+    - "No fixed-size seed assumptions; cache key must include effective cell metrics."
+    - "No visual regressions in terminal/editor/app baseline text while special pipeline changes land."
+    - "Do not widen scope to full renderer rewrite until sprite pipeline baseline is measured."
+
+  commands:
+    always:
+      - "zig build"
+      - "zig build test"
+      - "zig build check-app-imports"
+      - "zig build check-input-imports"
+      - "zig build check-editor-imports"
+    smoke:
+      - "zig build run -- --mode terminal"
+    targeted_manual:
+      - "btop + nvim + doom-tui zoom sweep at render_scale=1.6"
+      - "repeat zoom in/out loops over separator-heavy prompts/status bars"
+
+  acceptance_criteria:
+    visual:
+      - "No visible seams for `   ` across zoom 0.5..1.6 at render scales 1.25/1.5/1.6/1.75."
+      - "No row-to-row width oscillation artifacts while zooming."
+      - "No thick/thin flicker for separator diagonals between adjacent zoom steps."
+      - "`░▒▓` density remains visually monotonic and stable at small sizes."
+    correctness:
+      - "Special glyphs remain cell-bounded per width semantics (no accidental overflow into neighbors)."
+      - "No regressions in cursor/selection/underline composition."
+      - "No terminal resize crash or stale-cache read during zoom."
+    perf:
+      - "No major redraw regression relative to current terminal baseline for static frames."
+      - "Sprite generation amortized by cache; avoid repeated per-frame expensive raster."
+
+  phases:
+    - name: "TSG-0 Baseline + Fixtures"
+      tasks:
+        - id: TSG-0-01
+          title: "Lock separator-focused fixture strings + capture matrix"
+          status: pending
+          files_to_edit:
+            - "fixtures/ui/font_sample/README.txt"
+            - "src/ui/font_sample_view.zig"
+          notes:
+            - "Add dedicated rows for `   ` and mixed statusline examples."
+            - "Capture against render_scale set including 1.6 and zoom ladder."
+        - id: TSG-0-02
+          title: "Add manual QA script/checklist for terminal zoom sweeps"
+          status: pending
+          files_to_edit:
+            - "app_architecture/ui/terminal_special_glyph_coverage.md"
+          notes:
+            - "Define reproducible btop/nvim/doom-tui scenarios and expected outcomes."
+
+    - name: "TSG-1 Sprite Pipeline Skeleton"
+      tasks:
+        - id: TSG-1-01
+          title: "Introduce special glyph sprite cache type + keys"
+          status: pending
+          files_to_edit:
+            - "src/ui/terminal_font.zig"
+            - "src/ui/renderer/types.zig"
+          notes:
+            - "Cache key must include codepoint, cell_w_px, cell_h_px, render_scale, variant id."
+        - id: TSG-1-02
+          title: "Add coverage atlas upload path for precomputed sprite masks"
+          status: pending
+          files_to_edit:
+            - "src/ui/terminal_font.zig"
+            - "src/ui/renderer/gl_backend.zig"
+          notes:
+            - "Reuse coverage texture path (font_coverage) rather than RGBA workaround."
+        - id: TSG-1-03
+          title: "Integrate sprite draw dispatch in terminal widget path"
+          status: pending
+          files_to_edit:
+            - "src/ui/widgets/terminal_widget_draw.zig"
+            - "src/ui/renderer/terminal_glyphs.zig"
+          notes:
+            - "Dispatch should prefer sprite cache for configured special ranges."
+
+    - name: "TSG-2 Powerline First (Kitty/Ghostty parity anchor)"
+      tasks:
+        - id: TSG-2-01
+          title: "Implement geometric raster for `U+E0B0..U+E0B3` using high-res offscreen masks"
+          status: in_progress
+          files_to_edit:
+            - "src/ui/renderer/terminal_glyphs.zig"
+            - "src/ui/terminal_font.zig"
+          notes:
+            - "Model geometry on kitty `render_box_char` + ghostty `draw/powerline.zig`."
+            - "Raster at oversampled resolution; downsample into coverage mask."
+            - "Current state: iterative procedural AA path exists in src/ui/renderer/terminal_glyphs.zig and is wired from src/ui/widgets/terminal_widget_draw.zig, but output is still visually unacceptable."
+            - "Exit this task only after separator quality is accepted; otherwise continue to sprite-mask cache implementation."
+        - id: TSG-2-02
+          title: "Expand to full powerline set used by references"
+          status: in_progress
+          files_to_edit:
+            - "src/ui/renderer/terminal_glyphs.zig"
+            - "src/ui/widgets/terminal_widget_draw.zig"
+          notes:
+            - "Include `U+E0B0..U+E0BF`, `U+E0D2`, `U+E0D4`, `U+E0D6..U+E0D7`."
+            - "Current state: only `U+E0B0..U+E0B3` is experimentally routed; all remaining powerline targets are pending."
+        - id: TSG-2-03
+          title: "Add seam and stroke-thickness invariants"
+          status: in_progress
+          files_to_edit:
+            - "src/ui/widgets/terminal_widget_draw.zig"
+          notes:
+            - "Lock separators to cell joins while preserving AA edges."
+            - "Current state: horizontal seam gap regression is improved, but line quality remains below target."
+
+    - name: "TSG-3 Blocks/Shades/Box Continuity"
+      tasks:
+        - id: TSG-3-01
+          title: "Move `░▒▓` to sprite masks with density-consistent patterns"
+          status: pending
+          files_to_edit:
+            - "src/ui/renderer/terminal_glyphs.zig"
+          notes:
+            - "Avoid ad-hoc dither drift across sizes; use deterministic pattern mapping."
+        - id: TSG-3-02
+          title: "Migrate core box/block range to sprite path incrementally"
+          status: pending
+          files_to_edit:
+            - "src/ui/renderer/terminal_glyphs.zig"
+            - "src/ui/widgets/terminal_widget_draw.zig"
+          notes:
+            - "Prioritize `U+2500..U+257F` then `U+2580..U+259F`."
+
+    - name: "TSG-4 Extended Symbol Parity"
+      tasks:
+        - id: TSG-4-01
+          title: "Braille parity pass"
+          status: pending
+          files_to_edit:
+            - "src/ui/renderer/terminal_glyphs.zig"
+          notes:
+            - "Target `U+2800..U+28FF`."
+        - id: TSG-4-02
+          title: "Branch drawing parity pass"
+          status: pending
+          files_to_edit:
+            - "src/ui/renderer/terminal_glyphs.zig"
+          notes:
+            - "Target `U+F5D0..U+F60D`."
+        - id: TSG-4-03
+          title: "Legacy computing + octants parity pass"
+          status: pending
+          files_to_edit:
+            - "src/ui/renderer/terminal_glyphs.zig"
+          notes:
+            - "Target ranges listed in coverage matrix."
+
+    - name: "TSG-5 Verification + Hardening"
+      tasks:
+        - id: TSG-5-01
+          title: "Automate special-glyph visual snapshots"
+          status: pending
+          files_to_edit:
+            - "tools/font_sample_compare.sh"
+            - "fixtures/ui/font_sample/"
+          notes:
+            - "Include zoom/render-scale matrix and separator-heavy strings."
+        - id: TSG-5-02
+          title: "Stress test resize/zoom cache safety"
+          status: pending
+          files_to_edit:
+            - "src/ui/widgets/terminal_widget_draw.zig"
+            - "src/terminal/core/view_cache.zig"
+          notes:
+            - "Guard against stale cache access during rapid zoom and resize."
+        - id: TSG-5-03
+          title: "Document final architecture + maintenance rules"
+          status: pending
+          files_to_edit:
+            - "app_architecture/ui/font_rendering_architecture.md"
+            - "app_architecture/ui/terminal_special_glyph_coverage.md"
+          notes:
+            - "Define when to add new glyphs to sprite path and how to validate."
+
+  execution_order:
+    - "Ship TSG-1 skeleton before adding new glyph ranges."
+    - "Complete TSG-2 powerline quality before moving to shades/box."
+    - "Run TSG-5 checks before marking any range complete in coverage matrix."

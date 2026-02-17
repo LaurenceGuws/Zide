@@ -409,12 +409,15 @@ terminal_widget_todo:
             - "Terminal glyphs now use a dedicated glyph cache batch to build quads and flush in a separate pass."
         - id: P4-04
           title: "Box drawing + special glyph fast path"
+          status: superseded
           files_to_edit:
             - src/ui/renderer.zig
           refs:
             - reference_repos/terminals/foot/box-drawing.c
             - reference_repos/terminals/ghostty/src/font/sprite/draw/box.zig
             - reference_repos/terminals/xterm_snapshots/box*.c
+          notes:
+            - "Superseded by dedicated UI plan in app_architecture/ui/terminal_special_glyph_todo.yaml to avoid split ownership."
 
     - name: "Phase 5 - Font + Shaping"
       tasks:
