@@ -29,6 +29,8 @@ font_rendering_todo:
       - "Combining marks are supported but currently capped (cell stores 2 combining codepoints; FR-3-00)."
       - "Double-width glyph layout (wcwidth/east-asian-width policy) is not explicitly implemented in the model/render pipeline."
       - "LCD/subpixel AA is not a final solution and remains opt-in/experimental."
+      - "If baseline wobble appears at specific zoom levels, verify glyph Y snapping uses rounded baseline placement (not floor-biased placement)."
+      - "Terminal baseline placement now follows ghostty-style centered cell-baseline math; remaining work is quantitative QA across fractional render scales (for example 1.25/1.5/1.6/1.75) and shaped-run edge cases."
 
   constraints:
     - "This work changes rendering behavior; introduce a repeatable visual/metric harness before large changes."
