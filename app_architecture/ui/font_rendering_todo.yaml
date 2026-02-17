@@ -212,6 +212,10 @@ font_rendering_todo:
             - "Added `tools/font_sample_lcd_report.sh` to summarize default-vs-LCD equality/checksums per size."
             - "Initial Linux SDL3/OpenGL checksum sweep (2026-02-17): LCD captures differ from default for all sizes 12/14/16/20, confirming the override is active and visually meaningful."
             - "Current decision: keep LCD off by default; continue as experiment-only until visual QA confirms acceptable behavior across displays/subpixel layouts."
+            - "Exit criteria checklist:"
+            - "- visual QA sign-off for IosevkaTerm + JetBrainsMono at 12/14/16/20"
+            - "- no obvious color fringing under selections/cursor inversion/gutter overlays"
+            - "- repeatable LCD reports via tools/font_sample_lcd_report.sh (--csv/--json) across baseline runs"
 
     - name: "Phase 6 - Verification"
       tasks:
@@ -230,6 +234,7 @@ font_rendering_todo:
           commands:
             - tools/font_sample_compare.sh
             - tools/font_sample_compare.sh --strict-header
+            - tools/font_sample_validate_ppm.sh
           notes:
             - "Once FR-0-01 exists, gate larger refactors behind it."
             - "Automated compare now runs fixture captures for sizes 12/14/16/20 and byte-compares against fixtures/ui/font_sample/*.ppm."
