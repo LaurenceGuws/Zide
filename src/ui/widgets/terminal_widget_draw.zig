@@ -572,6 +572,47 @@ pub fn draw(
                     rr.text_bg_rgba = behind_rgba;
 
                     if (cell.codepoint == 0) continue;
+                    if (cell.combining_len == 0) {
+                        const box_x_i = base_x_i + @as(i32, @intCast(abs_col)) * cell_w_i;
+                        const box_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;
+                        const box_w_i = cell_w_i * @as(i32, @intCast(width_units));
+                        const box_h_i = cell_h_i;
+                        if (terminal_glyphs.specialVariantForCodepoint(cell.codepoint)) |variant| {
+                            const sprite_key = rr.terminal_font.specialGlyphSpriteKey(
+                                cell.codepoint,
+                                box_w_i,
+                                box_h_i,
+                                variant,
+                            );
+                            const sprite = rr.terminal_font.getSpecialGlyphSprite(sprite_key) orelse rr.terminal_font.getOrCreateSpecialGlyphSprite(
+                                cell.codepoint,
+                                box_w_i,
+                                box_h_i,
+                                variant,
+                            );
+                            if (sprite) |sp| {
+                                const x0 = snapToDevicePixel(@as(f32, @floatFromInt(box_x_i)), render_scale);
+                                const y0 = snapToDevicePixel(@as(f32, @floatFromInt(box_y_i)), render_scale);
+                                const x1 = snapToDevicePixel(@as(f32, @floatFromInt(box_x_i + box_w_i)), render_scale);
+                                const y1 = snapToDevicePixel(@as(f32, @floatFromInt(box_y_i + box_h_i)), render_scale);
+                                const dest = terminal_font_mod.Rect{
+                                    .x = x0,
+                                    .y = y0,
+                                    .width = @max(1.0 / render_scale, x1 - x0),
+                                    .height = @max(1.0 / render_scale, y1 - y0),
+                                };
+                                rr.terminal_glyph_cache.addQuad(
+                                    rr.terminal_font.coverage_texture,
+                                    sp.rect,
+                                    dest,
+                                    fg_draw.toRgba(),
+                                    rr.text_bg_rgba,
+                                    .font_coverage,
+                                );
+                                continue;
+                            }
+                        }
+                    }
                     if (cell.combining_len == 0 and isTerminalBoxGlyph(cell.codepoint)) {
                         const box_x_i = base_x_i + @as(i32, @intCast(abs_col)) * cell_w_i;
                         const box_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;

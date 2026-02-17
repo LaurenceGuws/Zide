@@ -3,6 +3,7 @@ const app_logger = @import("../app_logger.zig");
 const builtin = @import("builtin");
 const gl = @import("renderer/gl.zig");
 const types = @import("renderer/types.zig");
+const terminal_glyphs = @import("renderer/terminal_glyphs.zig");
 
 var windows_com_initialized = std.atomic.Value(bool).init(false);
 
@@ -322,6 +323,10 @@ pub const Glyph = struct {
     is_color: bool,
 };
 
+pub const SpecialGlyphSpriteKey = types.SpecialGlyphSpriteKey;
+pub const SpecialGlyphVariant = types.SpecialGlyphVariant;
+pub const SpecialGlyphSprite = types.SpecialGlyphSprite;
+
 const FacePair = struct {
     face: ?c.FT_Face = null,
     hb: ?*c.hb_font_t = null,
@@ -378,6 +383,7 @@ pub const TerminalFont = struct {
     padding: i32,
     glyphs: std.AutoHashMap(GlyphKey, Glyph),
     glyph_order: std.ArrayList(GlyphKey),
+    special_glyph_sprites: std.AutoHashMap(SpecialGlyphSpriteKey, SpecialGlyphSprite),
     max_glyphs: usize,
     upload_buffer: []u8,
     upload_buffer_capacity: usize,
@@ -664,6 +670,7 @@ pub const TerminalFont = struct {
             .padding = padding,
             .glyphs = std.AutoHashMap(GlyphKey, Glyph).init(allocator),
             .glyph_order = .empty,
+            .special_glyph_sprites = std.AutoHashMap(SpecialGlyphSpriteKey, SpecialGlyphSprite).init(allocator),
             .max_glyphs = 2048,
             .upload_buffer = &[_]u8{},
             .upload_buffer_capacity = 0,
@@ -682,6 +689,7 @@ pub const TerminalFont = struct {
     pub fn deinit(self: *TerminalFont) void {
         self.glyphs.deinit();
         self.glyph_order.deinit(self.allocator);
+        self.special_glyph_sprites.deinit();
         if (self.upload_buffer_capacity > 0) {
             self.allocator.free(self.upload_buffer);
         }
@@ -790,6 +798,110 @@ pub const TerminalFont = struct {
     fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
         const scale = if (render_scale > 0.0) render_scale else 1.0;
         return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
+    }
+
+    pub fn specialGlyphSpriteKey(
+        self: *const TerminalFont,
+        codepoint: u32,
+        cell_w_px: i32,
+        cell_h_px: i32,
+        variant: SpecialGlyphVariant,
+    ) SpecialGlyphSpriteKey {
+        const rs = if (self.render_scale > 0.0) self.render_scale else 1.0;
+        const rs_milli_f = std.math.round(rs * 1000.0);
+        const rs_milli_i: i32 = @intFromFloat(rs_milli_f);
+        const rs_milli_u16: u16 = @intCast(@max(0, @min(@as(i32, std.math.maxInt(u16)), rs_milli_i)));
+        const cw_u16: u16 = @intCast(@max(0, @min(@as(i32, std.math.maxInt(u16)), cell_w_px)));
+        const ch_u16: u16 = @intCast(@max(0, @min(@as(i32, std.math.maxInt(u16)), cell_h_px)));
+        return .{
+            .codepoint = codepoint,
+            .cell_w_px = cw_u16,
+            .cell_h_px = ch_u16,
+            .render_scale_milli = rs_milli_u16,
+            .variant = variant,
+        };
+    }
+
+    pub fn getSpecialGlyphSprite(
+        self: *TerminalFont,
+        key: SpecialGlyphSpriteKey,
+    ) ?*SpecialGlyphSprite {
+        return self.special_glyph_sprites.getPtr(key);
+    }
+
+    pub fn putSpecialGlyphSprite(
+        self: *TerminalFont,
+        key: SpecialGlyphSpriteKey,
+        sprite: SpecialGlyphSprite,
+    ) !void {
+        try self.special_glyph_sprites.put(key, sprite);
+    }
+
+    pub fn getOrCreateSpecialGlyphSprite(
+        self: *TerminalFont,
+        codepoint: u32,
+        cell_w_px: i32,
+        cell_h_px: i32,
+        variant: SpecialGlyphVariant,
+    ) ?*SpecialGlyphSprite {
+        if (cell_w_px <= 0 or cell_h_px <= 0) return null;
+        const key = self.specialGlyphSpriteKey(codepoint, cell_w_px, cell_h_px, variant);
+        if (self.special_glyph_sprites.getPtr(key)) |existing| return existing;
+
+        const rs = if (self.render_scale > 0.0) self.render_scale else 1.0;
+        const width = @max(1, @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(cell_w_px)) * rs))));
+        const height = @max(1, @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(cell_h_px)) * rs))));
+        const needed: usize = @intCast(width * height);
+        if (needed == 0) return null;
+        if (needed > self.upload_buffer_capacity) {
+            if (self.upload_buffer_capacity > 0) {
+                self.allocator.free(self.upload_buffer);
+            }
+            self.upload_buffer = self.allocator.alloc(u8, needed) catch return null;
+            self.upload_buffer_capacity = needed;
+        }
+        const mask = self.upload_buffer[0..needed];
+        if (!terminal_glyphs.rasterizeSpecialGlyphCoverage(codepoint, width, height, mask)) return null;
+
+        var non_zero = false;
+        for (mask) |a| {
+            if (a != 0) {
+                non_zero = true;
+                break;
+            }
+        }
+        if (!non_zero) return null;
+
+        if (self.pen_x + width + self.padding > self.atlas_width) {
+            self.pen_x = self.padding;
+            self.pen_y += self.row_h + self.padding;
+            self.row_h = 0;
+        }
+        if (self.pen_y + height + self.padding > self.atlas_height) {
+            return null;
+        }
+
+        const rec = Rect{
+            .x = @floatFromInt(self.pen_x),
+            .y = @floatFromInt(self.pen_y),
+            .width = @floatFromInt(width),
+            .height = @floatFromInt(height),
+        };
+        updateTextureRegionR8(self.coverage_texture, rec, mask);
+
+        if (height > self.row_h) self.row_h = height;
+        self.pen_x += width + self.padding;
+
+        const sprite = SpecialGlyphSprite{
+            .rect = rec,
+            .bearing_x = 0,
+            .bearing_y = height,
+            .advance = @floatFromInt(cell_w_px),
+            .width = width,
+            .height = height,
+        };
+        self.special_glyph_sprites.put(key, sprite) catch return null;
+        return self.special_glyph_sprites.getPtr(key);
     }
 
     pub fn drawGlyph(self: *TerminalFont, draw: DrawContext, codepoint: u32, x: f32, y: f32, cell_width: f32, cell_height: f32, followed_by_space: bool, color: Rgba) void {
@@ -1665,6 +1777,7 @@ pub const TerminalFont = struct {
 
         self.glyphs.clearRetainingCapacity();
         self.glyph_order.clearRetainingCapacity();
+        self.special_glyph_sprites.clearRetainingCapacity();
 
         self.pen_x = self.padding;
         self.pen_y = self.padding;
