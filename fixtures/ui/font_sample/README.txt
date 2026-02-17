@@ -11,6 +11,10 @@ Deterministic fixture compare (sizes 12/14/16/20):
 
   tools/font_sample_compare.sh
 
+Refresh fixtures explicitly (opt-in):
+
+  tools/font_sample_compare.sh --update-fixtures
+
 Artifacts are written to:
 
   zig-cache/font_sample_compare/
