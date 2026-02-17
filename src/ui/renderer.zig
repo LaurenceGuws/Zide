@@ -312,6 +312,11 @@ pub const Renderer = struct {
         return @as(f32, @floatFromInt(snapInt(value)));
     }
 
+    fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
+        const scale = if (render_scale > 0.0) render_scale else 1.0;
+        return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
+    }
+
     pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8) !*Renderer {
         try window_init.initSdl();
         errdefer sdl.SDL_Quit();
@@ -1028,12 +1033,12 @@ pub const Renderer = struct {
         followed_by_space: bool,
         draw_bg: bool,
     ) void {
-        const snapped_x = snapFloat(x);
-        const snapped_y = snapFloat(y);
-        const snapped_cell_width = snapFloat(cell_width);
-        const snapped_cell_height = snapFloat(cell_height);
-        const snapped_cell_w_i = snapInt(self.terminal_cell_width);
-        const snapped_cell_h_i = snapInt(self.terminal_cell_height);
+        const snapped_x = snapToDevicePixel(x, self.render_scale);
+        const snapped_y = snapToDevicePixel(y, self.render_scale);
+        const snapped_cell_width = snapToDevicePixel(cell_width, self.render_scale);
+        const snapped_cell_height = snapToDevicePixel(cell_height, self.render_scale);
+        const snapped_cell_w_i = snapInt(snapped_cell_width);
+        const snapped_cell_h_i = snapInt(snapped_cell_height);
 
         if (draw_bg) {
             self.drawRect(
@@ -1104,12 +1109,12 @@ pub const Renderer = struct {
             return;
         }
 
-        const snapped_x = snapFloat(x);
-        const snapped_y = snapFloat(y);
-        const snapped_cell_width = snapFloat(cell_width);
-        const snapped_cell_height = snapFloat(cell_height);
-        const snapped_cell_w_i = snapInt(self.terminal_cell_width);
-        const snapped_cell_h_i = snapInt(self.terminal_cell_height);
+        const snapped_x = snapToDevicePixel(x, self.render_scale);
+        const snapped_y = snapToDevicePixel(y, self.render_scale);
+        const snapped_cell_width = snapToDevicePixel(cell_width, self.render_scale);
+        const snapped_cell_height = snapToDevicePixel(cell_height, self.render_scale);
+        const snapped_cell_w_i = snapInt(snapped_cell_width);
+        const snapped_cell_h_i = snapInt(snapped_cell_height);
 
         if (draw_bg) {
             self.drawRect(
@@ -1180,12 +1185,12 @@ pub const Renderer = struct {
             return;
         }
 
-        const snapped_x = snapFloat(x);
-        const snapped_y = snapFloat(y);
-        const snapped_cell_width = snapFloat(cell_width);
-        const snapped_cell_height = snapFloat(cell_height);
-        const snapped_cell_w_i = snapInt(self.terminal_cell_width);
-        const snapped_cell_h_i = snapInt(self.terminal_cell_height);
+        const snapped_x = snapToDevicePixel(x, self.render_scale);
+        const snapped_y = snapToDevicePixel(y, self.render_scale);
+        const snapped_cell_width = snapToDevicePixel(cell_width, self.render_scale);
+        const snapped_cell_height = snapToDevicePixel(cell_height, self.render_scale);
+        const snapped_cell_w_i = snapInt(snapped_cell_width);
+        const snapped_cell_h_i = snapInt(snapped_cell_height);
 
         if (draw_bg) {
             self.addTerminalRect(
@@ -1249,12 +1254,12 @@ pub const Renderer = struct {
         followed_by_space: bool,
         draw_bg: bool,
     ) void {
-        const snapped_x = snapFloat(x);
-        const snapped_y = snapFloat(y);
-        const snapped_cell_width = snapFloat(cell_width);
-        const snapped_cell_height = snapFloat(cell_height);
-        const snapped_cell_w_i = snapInt(self.terminal_cell_width);
-        const snapped_cell_h_i = snapInt(self.terminal_cell_height);
+        const snapped_x = snapToDevicePixel(x, self.render_scale);
+        const snapped_y = snapToDevicePixel(y, self.render_scale);
+        const snapped_cell_width = snapToDevicePixel(cell_width, self.render_scale);
+        const snapped_cell_height = snapToDevicePixel(cell_height, self.render_scale);
+        const snapped_cell_w_i = snapInt(snapped_cell_width);
+        const snapped_cell_h_i = snapInt(snapped_cell_height);
 
         if (draw_bg) {
             self.addTerminalRect(
@@ -1439,15 +1444,15 @@ pub const Renderer = struct {
         y: f32,
     };
 
-    fn snapTextOrigin(x: f32, y: f32) TextOrigin {
+    fn snapTextOrigin(self: *Renderer, x: f32, y: f32) TextOrigin {
         return .{
-            .x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(x))))),
-            .y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(@floor(y))))),
+            .x = snapToDevicePixel(x, self.render_scale),
+            .y = snapToDevicePixel(y, self.render_scale),
         };
     }
 
     fn drawTextWithFont(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: Color) void {
-        const origin = snapTextOrigin(x, y);
+        const origin = snapTextOrigin(self, x, y);
         text_draw.drawText(
             self.allocator,
             font,
@@ -1464,7 +1469,7 @@ pub const Renderer = struct {
     }
 
     fn drawTextWithFontMonospace(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool) void {
-        const origin = snapTextOrigin(x, y);
+        const origin = snapTextOrigin(self, x, y);
         if (self.drawTextWithFontMonospaceShaped(font, cell_w, cell_h, text, origin.x, origin.y, color.toRgba(), disable_programming_ligatures)) {
             return;
         }
@@ -1575,15 +1580,15 @@ pub const Renderer = struct {
 
                 const glyph = font.getGlyphById(start_choice.face, infos[gi].codepoint, start_choice.want_color, positions[gi].x_advance) catch continue;
                 const cell_x = x + @as(f32, @floatFromInt(span_start + cluster)) * cell_w;
-                const baseline = y + font.ascent * inv_scale;
+                const baseline = y + font.baseline_from_top * inv_scale;
                 const gx_off = (@as(f32, @floatFromInt(positions[gi].x_offset)) / 64.0) * inv_scale;
                 const gy_off = (@as(f32, @floatFromInt(positions[gi].y_offset)) / 64.0) * inv_scale;
                 const draw_x = cell_x + pen_rel + gx_off + @as(f32, @floatFromInt(glyph.bearing_x)) * inv_scale;
                 const draw_y = (baseline - @as(f32, @floatFromInt(glyph.bearing_y)) * inv_scale) - gy_off;
 
                 const dest: types.Rect = .{
-                    .x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x))))),
-                    .y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(@floor(draw_y))))),
+                    .x = snapToDevicePixel(draw_x, render_scale),
+                    .y = snapToDevicePixel(draw_y, render_scale),
                     .width = @as(f32, @floatFromInt(glyph.width)) * inv_scale,
                     .height = @as(f32, @floatFromInt(glyph.height)) * inv_scale,
                 };

@@ -30,6 +30,11 @@ const TerminalDisableLigaturesStrategy = renderer_mod.TerminalDisableLigaturesSt
 
 var jitter_debug_enabled_cache: ?bool = null;
 
+fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
+    const scale = if (render_scale > 0.0) render_scale else 1.0;
+    return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
+}
+
 pub fn draw(
     self: anytype,
     shell: *Shell,
@@ -1141,7 +1146,7 @@ fn drawShapedGlyph(
     const glyph = font.getGlyphById(face, glyph_id, want_color, hb_pos.x_advance) catch return;
     const render_scale = if (font.render_scale > 0.0) font.render_scale else 1.0;
     const inv_scale = 1.0 / render_scale;
-    const baseline = y + font.ascent * inv_scale;
+    const baseline = y + font.baseline_from_top * inv_scale;
 
     const gx_off = (@as(f32, @floatFromInt(hb_pos.x_offset)) / 64.0) * inv_scale;
     const gy_off = (@as(f32, @floatFromInt(hb_pos.y_offset)) / 64.0) * inv_scale;
@@ -1177,8 +1182,8 @@ fn drawShapedGlyph(
 
     const draw_x = if (allow_width_overflow) origin_x + bearing_x * overflow_scale else @max(x, origin_x + bearing_x * overflow_scale);
     const draw_y = (baseline - bearing_y * overflow_scale) - gy_off;
-    const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
-    const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(@floor(draw_y)))));
+    const snapped_x = snapToDevicePixel(draw_x, render_scale);
+    const snapped_y = snapToDevicePixel(draw_y, render_scale);
 
     const jitter_log = app_logger.logger("terminal.font.jitter");
     if ((jitter_log.enabled_file or jitter_log.enabled_console) and jitterDebugEnabled()) {

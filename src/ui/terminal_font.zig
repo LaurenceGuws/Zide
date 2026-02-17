@@ -384,6 +384,7 @@ pub const TerminalFont = struct {
     ascent: f32,
     descent: f32,
     line_height: f32,
+    baseline_from_top: f32,
     cell_width: f32,
     ft_load_flags_base: c_int,
     render_scale: f32,
@@ -555,9 +556,9 @@ pub const TerminalFont = struct {
         }
 
         const metrics = ft_face.*.size.*.metrics;
-        const ascent_raw = @as(f32, @floatFromInt(metrics.ascender >> 6));
-        const descent_raw = @as(f32, @floatFromInt(@abs(metrics.descender >> 6)));
-        const line_height_raw = @as(f32, @floatFromInt(metrics.height >> 6));
+        const ascent_raw = @as(f32, @floatFromInt(metrics.ascender)) / 64.0;
+        const descent_raw = @abs(@as(f32, @floatFromInt(metrics.descender)) / 64.0);
+        const line_height_raw = @as(f32, @floatFromInt(metrics.height)) / 64.0;
 
         // Derive a reasonable monospace cell width from representative ASCII.
         // Some fonts (especially Nerd Font builds) can report a very large
@@ -598,9 +599,21 @@ pub const TerminalFont = struct {
         }
         const cell_width_px = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(cell_width)))));
 
-        const ascent_px = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(ascent_raw)))));
-        const descent_px = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(descent_raw)))));
-        const line_height_px = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(line_height_raw)))));
+        const ascent_px_rounded = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.ceil(ascent_raw)))));
+        const descent_px = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.ceil(descent_raw)))));
+        const line_height_px = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.ceil(line_height_raw)))));
+        // Keep baseline placement stable by ensuring ascent does not undershoot the
+        // line-height/descent relationship at fractional UI/render scales.
+        const ascent_from_line = @max(1.0, line_height_px - descent_px);
+        const ascent_px = @max(ascent_px_rounded, ascent_from_line);
+
+        // Follow ghostty-style terminal metrics: derive a rounded baseline from
+        // line-height/descent with centered line-gap distribution in the cell.
+        const line_gap_raw = line_height_raw - (ascent_raw + descent_raw);
+        const half_line_gap = line_gap_raw / 2.0;
+        const face_baseline_from_bottom = half_line_gap + descent_raw;
+        const cell_baseline = std.math.round(face_baseline_from_bottom - (line_height_px - line_height_raw) / 2.0);
+        const baseline_from_top = @max(1.0, @min(line_height_px, line_height_px - cell_baseline));
 
         const atlas_width: i32 = 2048;
         const atlas_height: i32 = 2048;
@@ -657,6 +670,7 @@ pub const TerminalFont = struct {
             .ascent = ascent_px,
             .descent = descent_px,
             .line_height = if (line_height_px > 0) line_height_px else ascent_px + descent_px,
+            .baseline_from_top = baseline_from_top,
             .cell_width = if (cell_width_px > 0) cell_width_px else size * 0.6,
             .ft_load_flags_base = ft_load_flags_base,
             .render_scale = 1.0,
@@ -773,12 +787,17 @@ pub const TerminalFont = struct {
         }
     }
 
+    fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
+        const scale = if (render_scale > 0.0) render_scale else 1.0;
+        return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
+    }
+
     pub fn drawGlyph(self: *TerminalFont, draw: DrawContext, codepoint: u32, x: f32, y: f32, cell_width: f32, cell_height: f32, followed_by_space: bool, color: Rgba) void {
         if (codepoint == 0) return;
         const glyph = self.getGlyphForCodepoint(codepoint) catch return;
         const render_scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
         const inv_scale = 1.0 / render_scale;
-        const baseline = y + self.ascent * inv_scale;
+        const baseline = y + self.baseline_from_top * inv_scale;
 
         const glyph_w = @as(f32, @floatFromInt(glyph.width)) * inv_scale;
         const glyph_h = @as(f32, @floatFromInt(glyph.height)) * inv_scale;
@@ -820,8 +839,8 @@ pub const TerminalFont = struct {
         if (is_symbol_glyph) {
             const draw_x = @max(x, x + bearing * overflow_scale);
             const draw_y = baseline - bearing_y * overflow_scale;
-            const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
-            const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(@floor(draw_y)))));
+            const snapped_x = snapToDevicePixel(draw_x, render_scale);
+            const snapped_y = snapToDevicePixel(draw_y, render_scale);
             const dest = Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
             if (glyph.is_color) {
                 draw.drawTexture(draw.ctx, self.color_texture, glyph.rect, dest, draw_color, .rgba);
@@ -834,8 +853,8 @@ pub const TerminalFont = struct {
         // Normal glyph: draw at bearing position, clamped to not go left of cell.
         const draw_x = if (allow_width_overflow) x + bearing * overflow_scale else @max(x, x + bearing * overflow_scale);
         const draw_y = baseline - bearing_y * overflow_scale;
-        const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
-        const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(@floor(draw_y)))));
+        const snapped_x = snapToDevicePixel(draw_x, render_scale);
+        const snapped_y = snapToDevicePixel(draw_y, render_scale);
         const dest = Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
         if (glyph.is_color) {
             draw.drawTexture(draw.ctx, self.color_texture, glyph.rect, dest, draw_color, .rgba);
@@ -902,7 +921,7 @@ pub const TerminalFont = struct {
 
         const render_scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
         const inv_scale = 1.0 / render_scale;
-        const baseline = y + self.ascent * inv_scale;
+        const baseline = y + self.baseline_from_top * inv_scale;
 
         const is_color_face = c.FT_HAS_COLOR(face) or (self.emoji_color_ft_face != null and face == self.emoji_color_ft_face.?);
         const want_color = is_color_face;
@@ -946,8 +965,8 @@ pub const TerminalFont = struct {
             const draw_x = if (allow_width_overflow) origin_x + bearing_x * overflow_scale else @max(x, origin_x + bearing_x * overflow_scale);
             const draw_y = (baseline - bearing_y * overflow_scale) - gy_off;
 
-            const snapped_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(draw_x)))));
-            const snapped_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(@floor(draw_y)))));
+            const snapped_x = snapToDevicePixel(draw_x, render_scale);
+            const snapped_y = snapToDevicePixel(draw_y, render_scale);
             const dest = Rect{ .x = snapped_x, .y = snapped_y, .width = scaled_w, .height = scaled_h };
 
             const draw_color = if (glyph.is_color)
