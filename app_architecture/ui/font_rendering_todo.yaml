@@ -183,14 +183,16 @@ font_rendering_todo:
       tasks:
         - id: FR-4-01
           title: "Background-aware correction under selections/highlights"
-          status: in_progress
+          status: done
           files_to_edit:
             - src/ui/renderer.zig
             - src/ui/renderer/text_draw.zig
+            - src/ui/widgets/editor_widget_draw.zig
           notes:
             - "Editor must supply bg color for text draws (selection, current line, etc.)."
             - "Goal: editor text matches terminal quality under overlays."
             - "Implemented for editor line rendering (current line + selection + gutter) via per-text background in editor draw list."
+            - "Removed the stale non-bg fallback highlight helper so editor text paths consistently flow through bg-aware rendering."
 
     - name: "Phase 5 - LCD/Subpixel (optional, only after linear blending is correct)"
       tasks:
@@ -216,7 +218,10 @@ font_rendering_todo:
 
         - id: FR-V-02
           title: "Regression check: font sample grid screenshot/buffer compare"
-          status: in_progress
+          status: done
+          commands:
+            - tools/font_sample_compare.sh
           notes:
             - "Once FR-0-01 exists, gate larger refactors behind it."
-            - "Generated an ad-hoc screenshot via: ZIDE_FONT_SAMPLE_FRAMES=3 ZIDE_FONT_SAMPLE_SCREENSHOT=zig-cache/font_sample.ppm zig build run -- --mode font-sample"
+            - "Automated compare now runs fixture captures for sizes 12/14/16/20 and byte-compares against fixtures/ui/font_sample/*.ppm."
+            - "Outputs are written to zig-cache/font_sample_compare/ for mismatch inspection."
