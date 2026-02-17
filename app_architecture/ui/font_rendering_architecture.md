@@ -105,3 +105,18 @@ Recommended fixture dimensions:
 
 The goal is to be able to make architectural changes (shaping, atlas,
 correction) with confidence.
+
+### Fixture Refresh Policy
+
+- Default rule: if `tools/font_sample_compare.sh` reports a mismatch, treat it
+  as a regression until the rendering behavior change is intentionally scoped
+  and documented.
+- Only refresh fixtures when all of these are true:
+  - the rendering behavior change is intentional (not incidental);
+  - the change is described in `app_architecture/ui/font_rendering_todo.yaml`;
+  - reviewer/user approval has been given for the visual baseline shift.
+- Refresh workflow:
+  - run `tools/font_sample_compare.sh` and inspect mismatch outputs in
+    `zig-cache/font_sample_compare/`;
+  - if approved, copy updated captures into `fixtures/ui/font_sample/`;
+  - rerun `tools/font_sample_compare.sh` to confirm the repository is green.
