@@ -199,11 +199,13 @@ fn triangleCoverage(
 
 fn powerlineCoverage(mode: PowerlineMode, iw: f32, ih: f32, x: f32, y: f32) f32 {
     const mid_y = ih * 0.5;
+    const min_dim = @min(iw, ih);
+    const thin_stroke = std.math.clamp(min_dim / 13.5, 1.2, 1.9);
     return switch (mode) {
         .filled_right => triangleCoverage(x, y, 0.0, 0.0, iw, mid_y, 0.0, ih),
         .filled_left => triangleCoverage(x, y, iw, 0.0, 0.0, mid_y, iw, ih),
         .thin_right => blk: {
-            const stroke = @max(1.0, @round(ih / 16.0));
+            const stroke = thin_stroke;
             const half_w = stroke * 0.5;
             const d0 = distToStrokeExtended(x, y, 0.0, 0.0, iw, mid_y, half_w);
             const d1 = distToStrokeExtended(x, y, 0.0, ih, iw, mid_y, half_w);
@@ -212,7 +214,7 @@ fn powerlineCoverage(mode: PowerlineMode, iw: f32, ih: f32, x: f32, y: f32) f32 
             break :blk @max(c0, c1);
         },
         .thin_left => blk: {
-            const stroke = @max(1.0, @round(ih / 16.0));
+            const stroke = thin_stroke;
             const half_w = stroke * 0.5;
             const d0 = distToStrokeExtended(x, y, iw, 0.0, 0.0, mid_y, half_w);
             const d1 = distToStrokeExtended(x, y, iw, ih, 0.0, mid_y, half_w);
@@ -223,26 +225,34 @@ fn powerlineCoverage(mode: PowerlineMode, iw: f32, ih: f32, x: f32, y: f32) f32 
     };
 }
 
-fn powerlineCoverageHard(mode: PowerlineMode, iw: f32, ih: f32, x: f32, y: f32) u8 {
+fn powerlineCoverageHard(mode: PowerlineMode, iw: f32, ih: f32, x: f32, y: f32, ss: i32) u8 {
     const mid_y = ih * 0.5;
+    const ss_f = @as(f32, @floatFromInt(@max(1, ss)));
+    const logical_h = ih / ss_f;
+    const thin_stroke_logical = std.math.clamp(logical_h / 15.5, 1.2, 2.0);
+    const thin_stroke = thin_stroke_logical * ss_f;
     return switch (mode) {
         .filled_right => blk: {
-            const ext = 0.25;
-            break :blk if (insideTriangle(x, y, -ext, 0.0, iw + ext, mid_y, -ext, ih)) 255 else 0;
+            // Extend diagonals slightly beyond cell joins to avoid 1px seam leaks
+            // after supersample/downsample quantization at fractional render scales.
+            const ext_x = 0.75;
+            const ext_y = 0.75;
+            break :blk if (insideTriangle(x, y, -ext_x, -ext_y, iw + ext_x, mid_y, -ext_x, ih + ext_y)) 255 else 0;
         },
         .filled_left => blk: {
-            const ext = 0.25;
-            break :blk if (insideTriangle(x, y, iw + ext, 0.0, -ext, mid_y, iw + ext, ih)) 255 else 0;
+            const ext_x = 0.75;
+            const ext_y = 0.75;
+            break :blk if (insideTriangle(x, y, iw + ext_x, -ext_y, -ext_x, mid_y, iw + ext_x, ih + ext_y)) 255 else 0;
         },
         .thin_right => blk: {
-            const stroke = @max(1.0, @round(ih / 16.0));
+            const stroke = thin_stroke;
             const half_w = stroke * 0.5;
             const d0 = distToStrokeExtended(x, y, 0.0, 0.0, iw, mid_y, half_w);
             const d1 = distToStrokeExtended(x, y, 0.0, ih, iw, mid_y, half_w);
             break :blk if (d0 <= half_w or d1 <= half_w) 255 else 0;
         },
         .thin_left => blk: {
-            const stroke = @max(1.0, @round(ih / 16.0));
+            const stroke = thin_stroke;
             const half_w = stroke * 0.5;
             const d0 = distToStrokeExtended(x, y, iw, 0.0, 0.0, mid_y, half_w);
             const d1 = distToStrokeExtended(x, y, iw, ih, 0.0, mid_y, half_w);
@@ -256,7 +266,7 @@ fn rasterizePowerlineMask(mode: PowerlineMode, width: i32, height: i32, out_alph
     const out_len: usize = @intCast(width * height);
     if (out_alpha.len < out_len) return false;
 
-    const ss: i32 = 8;
+    const ss: i32 = 12;
     const hi_w = width * ss;
     const hi_h = height * ss;
     const hi_len: usize = @intCast(hi_w * hi_h);
@@ -273,7 +283,7 @@ fn rasterizePowerlineMask(mode: PowerlineMode, width: i32, height: i32, out_alph
             const x = @as(f32, @floatFromInt(px)) + 0.5;
             const y = @as(f32, @floatFromInt(py)) + 0.5;
             const hi_idx: usize = @intCast(py * hi_w + px);
-            hi[hi_idx] = powerlineCoverageHard(mode, fw, fh, x, y);
+            hi[hi_idx] = powerlineCoverageHard(mode, fw, fh, x, y, ss);
         }
     }
 
@@ -297,6 +307,27 @@ fn rasterizePowerlineMask(mode: PowerlineMode, width: i32, height: i32, out_alph
             const avg: u8 = @intCast(@divTrunc(sum + ss_area / 2, ss_area));
             out_alpha[out_idx] = avg;
         }
+    }
+
+    // Filled separators should have a hard, fully-opaque vertical edge on the
+    // flat side so adjacent-cell joins don't leak background at fractional scales.
+    switch (mode) {
+        .filled_right => {
+            py = 0;
+            while (py < height) : (py += 1) {
+                const out_idx: usize = @intCast(py * width);
+                out_alpha[out_idx] = 255;
+            }
+        },
+        .filled_left => {
+            const edge_x = width - 1;
+            py = 0;
+            while (py < height) : (py += 1) {
+                const out_idx: usize = @intCast(py * width + edge_x);
+                out_alpha[out_idx] = 255;
+            }
+        },
+        else => {},
     }
 
     return true;

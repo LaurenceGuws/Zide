@@ -579,11 +579,10 @@ pub fn draw(
                         const box_h_i = cell_h_i;
                         if (terminal_glyphs.specialVariantForCodepoint(cell.codepoint)) |variant| {
                             const x0 = snapToDevicePixel(@as(f32, @floatFromInt(box_x_i)), render_scale);
-                            const y0 = snapToDevicePixel(@as(f32, @floatFromInt(box_y_i)), render_scale);
                             const x1 = snapToDevicePixel(@as(f32, @floatFromInt(box_x_i + box_w_i)), render_scale);
-                            const y1 = snapToDevicePixel(@as(f32, @floatFromInt(box_y_i + box_h_i)), render_scale);
+                            const y0 = @as(f32, @floatFromInt(box_y_i));
                             const snapped_w = @max(1.0 / render_scale, x1 - x0);
-                            const snapped_h = @max(1.0 / render_scale, y1 - y0);
+                            const snapped_h = @as(f32, @floatFromInt(box_h_i));
                             const raster_w_i: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(snapped_w * render_scale))));
                             const raster_h_i: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(snapped_h * render_scale))));
                             const sprite_key = rr.terminal_font.specialGlyphSpriteKey(
@@ -601,10 +600,35 @@ pub fn draw(
                                 variant,
                             );
                             if (sprite) |sp| {
+                                var dest_x = x0;
+                                var dest_w = snapped_w;
+                                const seam_overdraw = 1.0 / render_scale;
+                                if (cell.codepoint == 0xE0B2) { //  flat edge on right
+                                    const next_col = abs_col + width_units;
+                                    if (next_col < row_cells.len) {
+                                        const next_cell = row_cells[next_col];
+                                        const next_reverse = next_cell.attrs.reverse != screen_reverse_mode;
+                                        const next_bg = if (next_reverse) next_cell.attrs.fg else next_cell.attrs.bg;
+                                        if (next_bg.r == fg_draw.r and next_bg.g == fg_draw.g and next_bg.b == fg_draw.b) {
+                                            dest_w += seam_overdraw;
+                                        }
+                                    }
+                                } else if (cell.codepoint == 0xE0B0) { //  flat edge on left
+                                    if (abs_col > 0) {
+                                        const prev_col = abs_col - 1;
+                                        const prev_cell = row_cells[prev_col];
+                                        const prev_reverse = prev_cell.attrs.reverse != screen_reverse_mode;
+                                        const prev_bg = if (prev_reverse) prev_cell.attrs.fg else prev_cell.attrs.bg;
+                                        if (prev_bg.r == fg_draw.r and prev_bg.g == fg_draw.g and prev_bg.b == fg_draw.b) {
+                                            dest_x -= seam_overdraw;
+                                            dest_w += seam_overdraw;
+                                        }
+                                    }
+                                }
                                 const dest = terminal_font_mod.Rect{
-                                    .x = x0,
+                                    .x = dest_x,
                                     .y = y0,
-                                    .width = snapped_w,
+                                    .width = dest_w,
                                     .height = snapped_h,
                                 };
                                 rr.terminal_glyph_cache.addQuad(
