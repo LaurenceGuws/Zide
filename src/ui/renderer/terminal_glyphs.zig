@@ -11,6 +11,16 @@ const PowerlineMode = enum {
     thin_left, // 
 };
 
+fn powerlineModeForCodepoint(codepoint: u32) ?PowerlineMode {
+    return switch (codepoint) {
+        0xE0B0 => .filled_right,
+        0xE0B1 => .thin_right,
+        0xE0B2 => .filled_left,
+        0xE0B3 => .thin_left,
+        else => null,
+    };
+}
+
 pub fn specialVariantForCodepoint(codepoint: u32) ?types.SpecialGlyphVariant {
     if (codepoint == 0xE0B0 or codepoint == 0xE0B1 or codepoint == 0xE0B2 or codepoint == 0xE0B3) {
         return .powerline;
@@ -43,6 +53,9 @@ pub fn rasterizeSpecialGlyphCoverage(
     height: i32,
     out_alpha: []u8,
 ) bool {
+    if (powerlineModeForCodepoint(codepoint)) |mode| {
+        return rasterizePowerlineMask(mode, width, height, out_alpha);
+    }
     if (width <= 0 or height <= 0) return false;
     const expected_len: usize = @intCast(width * height);
     if (out_alpha.len < expected_len) return false;
@@ -133,71 +146,163 @@ fn distToSegmentSquared(px: f32, py: f32, ax: f32, ay: f32, bx: f32, by: f32) f3
     return dx * dx + dy * dy;
 }
 
-fn insideStrokeExtended(
+fn distToStrokeExtended(
+    x: f32,
+    y: f32,
+    ax: f32,
+    ay: f32,
+    bx: f32,
+    by: f32,
+    extend: f32,
+) f32 {
+    const vx = bx - ax;
+    const vy = by - ay;
+    const v2 = vx * vx + vy * vy;
+    if (v2 <= 0.0001) return 1_000_000.0;
+
+    const vlen = std.math.sqrt(v2);
+    const ux = vx / vlen;
+    const uy = vy / vlen;
+
+    // Square-cap style stroke extension.
+    const sx = ax - ux * extend;
+    const sy = ay - uy * extend;
+    const ex = bx + ux * extend;
+    const ey = by + uy * extend;
+
+    return std.math.sqrt(distToSegmentSquared(x, y, sx, sy, ex, ey));
+}
+
+fn clamp01(v: f32) f32 {
+    if (v <= 0.0) return 0.0;
+    if (v >= 1.0) return 1.0;
+    return v;
+}
+
+fn triangleCoverage(
     px: f32,
     py: f32,
     ax: f32,
     ay: f32,
     bx: f32,
     by: f32,
-    half_w: f32,
-) bool {
-    const vx = bx - ax;
-    const vy = by - ay;
-    const v2 = vx * vx + vy * vy;
-    if (v2 <= 0.0001) return false;
-
-    const vlen = std.math.sqrt(v2);
-    const ux = vx / vlen;
-    const uy = vy / vlen;
-
-    // Extend both ends along the line direction by half-width, matching
-    // square-cap behavior and preventing endpoint clipping at cell boundaries.
-    const sx = ax - ux * half_w;
-    const sy = ay - uy * half_w;
-    const ex = bx + ux * half_w;
-    const ey = by + uy * half_w;
-
-    const evx = ex - sx;
-    const evy = ey - sy;
-    const ev2 = evx * evx + evy * evy;
-    if (ev2 <= 0.0001) return false;
-
-    const wx = px - sx;
-    const wy = py - sy;
-    const t = (wx * evx + wy * evy) / ev2;
-    if (t < 0.0 or t > 1.0) return false;
-
-    const qx = sx + t * evx;
-    const qy = sy + t * evy;
-    const dx = px - qx;
-    const dy = py - qy;
-    return (dx * dx + dy * dy) <= (half_w * half_w);
+    cx: f32,
+    cy: f32,
+) f32 {
+    const inside = insideTriangle(px, py, ax, ay, bx, by, cx, cy);
+    const d0 = std.math.sqrt(distToSegmentSquared(px, py, ax, ay, bx, by));
+    const d1 = std.math.sqrt(distToSegmentSquared(px, py, bx, by, cx, cy));
+    const d2 = std.math.sqrt(distToSegmentSquared(px, py, cx, cy, ax, ay));
+    const d = @min(d0, @min(d1, d2));
+    return if (inside) clamp01(0.5 + d) else clamp01(0.5 - d);
 }
 
-fn powerlineInside(mode: PowerlineMode, iw: f32, ih: f32, x: f32, y: f32) bool {
+fn powerlineCoverage(mode: PowerlineMode, iw: f32, ih: f32, x: f32, y: f32) f32 {
     const mid_y = ih * 0.5;
     return switch (mode) {
-        .filled_right => insideTriangle(x, y, 0.0, 0.0, iw, mid_y, 0.0, ih),
-        .filled_left => insideTriangle(x, y, iw, 0.0, 0.0, mid_y, iw, ih),
+        .filled_right => triangleCoverage(x, y, 0.0, 0.0, iw, mid_y, 0.0, ih),
+        .filled_left => triangleCoverage(x, y, iw, 0.0, 0.0, mid_y, iw, ih),
         .thin_right => blk: {
-            // Keep thin separator thickness stable across nearby zoom steps.
-            // Quantizing thickness avoids visible thick/thin wobble.
             const stroke = @max(1.0, @round(ih / 16.0));
             const half_w = stroke * 0.5;
-            break :blk insideStrokeExtended(x, y, 0.0, 0.0, iw, mid_y, half_w) or
-                insideStrokeExtended(x, y, 0.0, ih, iw, mid_y, half_w);
+            const d0 = distToStrokeExtended(x, y, 0.0, 0.0, iw, mid_y, half_w);
+            const d1 = distToStrokeExtended(x, y, 0.0, ih, iw, mid_y, half_w);
+            const c0 = clamp01(half_w + 0.5 - d0);
+            const c1 = clamp01(half_w + 0.5 - d1);
+            break :blk @max(c0, c1);
         },
         .thin_left => blk: {
             const stroke = @max(1.0, @round(ih / 16.0));
             const half_w = stroke * 0.5;
-            break :blk insideStrokeExtended(x, y, iw, 0.0, 0.0, mid_y, half_w) or
-                insideStrokeExtended(x, y, iw, ih, 0.0, mid_y, half_w);
+            const d0 = distToStrokeExtended(x, y, iw, 0.0, 0.0, mid_y, half_w);
+            const d1 = distToStrokeExtended(x, y, iw, ih, 0.0, mid_y, half_w);
+            const c0 = clamp01(half_w + 0.5 - d0);
+            const c1 = clamp01(half_w + 0.5 - d1);
+            break :blk @max(c0, c1);
         },
     };
 }
 
-fn drawPowerlineGlyphAA(
+fn powerlineCoverageHard(mode: PowerlineMode, iw: f32, ih: f32, x: f32, y: f32) u8 {
+    const mid_y = ih * 0.5;
+    return switch (mode) {
+        .filled_right => blk: {
+            const ext = 0.25;
+            break :blk if (insideTriangle(x, y, -ext, 0.0, iw + ext, mid_y, -ext, ih)) 255 else 0;
+        },
+        .filled_left => blk: {
+            const ext = 0.25;
+            break :blk if (insideTriangle(x, y, iw + ext, 0.0, -ext, mid_y, iw + ext, ih)) 255 else 0;
+        },
+        .thin_right => blk: {
+            const stroke = @max(1.0, @round(ih / 16.0));
+            const half_w = stroke * 0.5;
+            const d0 = distToStrokeExtended(x, y, 0.0, 0.0, iw, mid_y, half_w);
+            const d1 = distToStrokeExtended(x, y, 0.0, ih, iw, mid_y, half_w);
+            break :blk if (d0 <= half_w or d1 <= half_w) 255 else 0;
+        },
+        .thin_left => blk: {
+            const stroke = @max(1.0, @round(ih / 16.0));
+            const half_w = stroke * 0.5;
+            const d0 = distToStrokeExtended(x, y, iw, 0.0, 0.0, mid_y, half_w);
+            const d1 = distToStrokeExtended(x, y, iw, ih, 0.0, mid_y, half_w);
+            break :blk if (d0 <= half_w or d1 <= half_w) 255 else 0;
+        },
+    };
+}
+
+fn rasterizePowerlineMask(mode: PowerlineMode, width: i32, height: i32, out_alpha: []u8) bool {
+    if (width <= 0 or height <= 0) return false;
+    const out_len: usize = @intCast(width * height);
+    if (out_alpha.len < out_len) return false;
+
+    const ss: i32 = 8;
+    const hi_w = width * ss;
+    const hi_h = height * ss;
+    const hi_len: usize = @intCast(hi_w * hi_h);
+    var hi = std.heap.page_allocator.alloc(u8, hi_len) catch return false;
+    defer std.heap.page_allocator.free(hi);
+    @memset(hi, 0);
+
+    const fw = @as(f32, @floatFromInt(hi_w));
+    const fh = @as(f32, @floatFromInt(hi_h));
+    var py: i32 = 0;
+    while (py < hi_h) : (py += 1) {
+        var px: i32 = 0;
+        while (px < hi_w) : (px += 1) {
+            const x = @as(f32, @floatFromInt(px)) + 0.5;
+            const y = @as(f32, @floatFromInt(py)) + 0.5;
+            const hi_idx: usize = @intCast(py * hi_w + px);
+            hi[hi_idx] = powerlineCoverageHard(mode, fw, fh, x, y);
+        }
+    }
+
+    const ss_area: u32 = @intCast(ss * ss);
+    py = 0;
+    while (py < height) : (py += 1) {
+        var px: i32 = 0;
+        while (px < width) : (px += 1) {
+            var sum: u32 = 0;
+            var sy: i32 = 0;
+            while (sy < ss) : (sy += 1) {
+                var sx: i32 = 0;
+                while (sx < ss) : (sx += 1) {
+                    const hix = px * ss + sx;
+                    const hiy = py * ss + sy;
+                    const hi_idx: usize = @intCast(hiy * hi_w + hix);
+                    sum += hi[hi_idx];
+                }
+            }
+            const out_idx: usize = @intCast(py * width + px);
+            const avg: u8 = @intCast(@divTrunc(sum + ss_area / 2, ss_area));
+            out_alpha[out_idx] = avg;
+        }
+    }
+
+    return true;
+}
+
+fn drawPowerlineGlyphAnalytic(
     drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
     ctx: *anyopaque,
     mode: PowerlineMode,
@@ -207,32 +312,19 @@ fn drawPowerlineGlyphAA(
     ih: i32,
     color: Color,
 ) void {
-    // High-quality supersampling for diagonal separators.
-    // Cached sprite generation amortizes this cost.
-    const ss: i32 = switch (mode) {
-        .thin_right, .thin_left => 14,
-        .filled_right, .filled_left => 10,
-    };
-    const samples = ss * ss;
-    const fw = @as(f32, @floatFromInt(iw));
-    const fh = @as(f32, @floatFromInt(ih));
+    const len: usize = @intCast(iw * ih);
+    const mask = std.heap.page_allocator.alloc(u8, len) catch return;
+    defer std.heap.page_allocator.free(mask);
+    if (!rasterizePowerlineMask(mode, iw, ih, mask)) return;
     var py: i32 = 0;
     while (py < ih) : (py += 1) {
         var px: i32 = 0;
         while (px < iw) : (px += 1) {
-            var hit: i32 = 0;
-            var sy: i32 = 0;
-            while (sy < ss) : (sy += 1) {
-                var sx: i32 = 0;
-                while (sx < ss) : (sx += 1) {
-                    const sample_x = @as(f32, @floatFromInt(px)) + (@as(f32, @floatFromInt(sx)) + 0.5) / @as(f32, @floatFromInt(ss));
-                    const sample_y = @as(f32, @floatFromInt(py)) + (@as(f32, @floatFromInt(sy)) + 0.5) / @as(f32, @floatFromInt(ss));
-                    if (powerlineInside(mode, fw, fh, sample_x, sample_y)) hit += 1;
-                }
-            }
-            if (hit == 0) continue;
+            const idx: usize = @intCast(py * iw + px);
+            if (mask[idx] == 0) continue;
             var c = color;
-            c.a = @intCast(@divTrunc(@as(i32, color.a) * hit + @divTrunc(samples, 2), samples));
+            c.a = @intCast(@divTrunc(@as(i32, color.a) * mask[idx] + 127, 255));
+            if (c.a == 0) continue;
             drawRect(ctx, ix + px, iy + py, 1, 1, c);
         }
     }
@@ -376,19 +468,19 @@ pub fn drawBoxGlyph(
             return true;
         },
         0xE0B0 => { // 
-            drawPowerlineGlyphAA(drawRect, ctx, .filled_right, ix, iy, iw, ih, color);
+            drawPowerlineGlyphAnalytic(drawRect, ctx, .filled_right, ix, iy, iw, ih, color);
             return true;
         },
         0xE0B1 => { // 
-            drawPowerlineGlyphAA(drawRect, ctx, .thin_right, ix, iy, iw, ih, color);
+            drawPowerlineGlyphAnalytic(drawRect, ctx, .thin_right, ix, iy, iw, ih, color);
             return true;
         },
         0xE0B2 => { // 
-            drawPowerlineGlyphAA(drawRect, ctx, .filled_left, ix, iy, iw, ih, color);
+            drawPowerlineGlyphAnalytic(drawRect, ctx, .filled_left, ix, iy, iw, ih, color);
             return true;
         },
         0xE0B3 => { // 
-            drawPowerlineGlyphAA(drawRect, ctx, .thin_left, ix, iy, iw, ih, color);
+            drawPowerlineGlyphAnalytic(drawRect, ctx, .thin_left, ix, iy, iw, ih, color);
             return true;
         },
         else => return false,

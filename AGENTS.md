@@ -29,3 +29,11 @@ Follow this workflow for every feature/task:
 - All task progress, checkpoints, and detailed changes live in the relevant todo files and `app_architecture/` docs.
 - If research was done to create or update a todo item, capture it in the relevant `app_architecture/` doc (not in handoff).
 - See `docs/WORKFLOW.md` for the full workflow + docs usage guide.
+
+## Logging ownership policy
+
+- `./.zide.lua` logging configuration is owned by the agent, not the user.
+- For every bug investigation, the agent **must** configure `./.zide.lua` logging to the minimum useful, bug-scoped signal set before asking the user for more data.
+- The agent must proactively add/remove log tags per issue and keep log noise low while preserving required diagnostics.
+- The agent must not ask the user to manually set `ZIDE_LOG` env vars or tune logging unless explicitly requested by the user.
+- After debugging, the agent should leave `./.zide.lua` in a sensible default state (or clearly state the temporary logging changes made).
