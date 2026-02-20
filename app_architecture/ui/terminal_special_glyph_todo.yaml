@@ -39,6 +39,7 @@ terminal_special_glyph_todo:
     - "SDL_ttf LCD/subpixel APIs (`TTF_RenderGlyph_LCD`, `TTF_RenderText_LCD`) are foreground+background aware; keep Zide coverage pipeline background-aware where we do gamma/linear correction, and avoid mixed fallback paths for the same codepoint class."
     - "SDL render docs note default texture scaling is linear; text atlas paths should intentionally choose filtering (nearest vs linear) per atlas type. For Zide special glyphs, keep a single explicit policy and avoid implicit backend defaults."
     - "SDL Wayland docs warn DPI-unaware paths blur under compositor scaling; keep SDL high-density handling and Zide render_scale path aligned to avoid double-scaling blur."
+    - "2026-02-20 code audit follow-up: route `SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED` through the same window/resize handling path as other resize/display events. Without this, render-scale dependent font/sprite sizing can remain stale after compositor display-scale transitions, producing apparent blur/quality drift until a later resize."
 
   commands:
     always:
@@ -161,6 +162,7 @@ terminal_special_glyph_todo:
             - "Generate analytic coverage masks from exact geometry, then cache as sprites in coverage atlas."
             - "Success bar: repeated separators (``) are consistent and visually close to normal glyph smoothness."
             - "Current state: `U+E0B0..U+E0B3` use a single supersampled+downsampled sprite-mask pipeline (kitty/ghostty-style geometry + coverage downsample), with no alternate powerline render path in terminal draw."
+            - "2026-02-20 follow-up: sprite cache/create now keys by snapped raster size per cell phase (not just logical cell size), so columns that quantize to different pixel widths at fractional render scales (e.g. 1.6) no longer stretch a single cached sprite shape across mismatched widths."
         - id: TSG-2-05
           title: "Prototype real font-outline raster path for powerline codepoints"
           status: pending
