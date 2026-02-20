@@ -22,7 +22,9 @@ fn powerlineModeForCodepoint(codepoint: u32) ?PowerlineMode {
 }
 
 pub fn specialVariantForCodepoint(codepoint: u32) ?types.SpecialGlyphVariant {
-    if (codepoint == 0xE0B0 or codepoint == 0xE0B1 or codepoint == 0xE0B2 or codepoint == 0xE0B3) {
+    // Experiment: let thick powerline separators (E0B0/E0B2) render via normal
+    // font shaping instead of the special sprite pipeline.
+    if (codepoint == 0xE0B1 or codepoint == 0xE0B3) {
         return .powerline;
     }
     if (codepoint == 0x2591 or codepoint == 0x2592 or codepoint == 0x2593) {

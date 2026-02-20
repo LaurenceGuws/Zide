@@ -219,6 +219,11 @@ terminal_special_glyph_todo:
               result: "User reported general icon rendering regressions (`bash` icon too high, `zzz` overlap/bleed)."
               likely_cause: "Outline path temporarily changed shared face pixel size and restored with incorrect baseline size assumption."
               status: "fixed_in_progress"
+            - date: "2026-02-20"
+              change: "Thick outline plain render experiment (`path=outline_ft_plain_v1`) with direct bbox copy (no 2x internal render or resample)."
+              result: "Rejected by visual QA: rounded/pixelated arrows across zoom; worse than `outline_ft_v4`."
+              likely_cause: "Native hinted outline bitmap at cell-size preserves font-specific curvature/pixel quantization that conflicts with desired geometric separator look."
+              status: "reverted_regression"
         - id: TSG-2-05
           title: "Prototype real font-outline raster path for powerline codepoints"
           status: pending
