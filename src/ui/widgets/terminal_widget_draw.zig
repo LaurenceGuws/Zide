@@ -670,13 +670,6 @@ pub fn draw(
                         continue;
                     }
 
-                    const is_thick_powerline = cell.codepoint == 0xE0B0 or cell.codepoint == 0xE0B2;
-                    const prev_text_bg = rr.text_bg_rgba;
-                    if (is_thick_powerline) {
-                        var seam_bg = fg_draw.toRgba();
-                        seam_bg.a = 255;
-                        rr.text_bg_rgba = seam_bg;
-                    }
                     drawShapedGlyph(
                         &rr.terminal_font,
                         draw_ctx,
@@ -693,61 +686,6 @@ pub fn draw(
                         followed_by_space,
                         fg_draw.toRgba(),
                     );
-                    if (is_thick_powerline) {
-                        rr.text_bg_rgba = prev_text_bg;
-                    }
-
-                    // Seam-only fix for thick powerline on shaped path:
-                    // draw a device-pixel seam strip at snapped cell boundaries.
-                    if (cell.codepoint == 0xE0B0) { // , flat edge on left
-                        if (abs_col > 0) {
-                            const prev_col = abs_col - 1;
-                            const prev_cell = row_cells[prev_col];
-                            const prev_reverse = prev_cell.attrs.reverse != screen_reverse_mode;
-                            const prev_bg = if (prev_reverse) prev_cell.attrs.fg else prev_cell.attrs.bg;
-                            if (prev_bg.r == fg_draw.r and prev_bg.g == fg_draw.g and prev_bg.b == fg_draw.b) {
-                                const seam_w = 2.0 * inv_scale;
-                                const seam_x = snapToDevicePixel(cell_x, render_scale) - inv_scale;
-                                rr.terminal_glyph_cache.addQuad(
-                                    rr.white_texture,
-                                    terminal_font_mod.Rect{ .x = 0, .y = 0, .width = 1, .height = 1 },
-                                    terminal_font_mod.Rect{
-                                        .x = seam_x,
-                                        .y = snapToDevicePixel(cell_y, render_scale),
-                                        .width = seam_w,
-                                        .height = cell_h,
-                                    },
-                                    fg_draw.toRgba(),
-                                    Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 },
-                                    .rgba,
-                                );
-                            }
-                        }
-                    } else if (cell.codepoint == 0xE0B2) { // , flat edge on right
-                        const next_col = abs_col + width_units;
-                        if (next_col < row_cells.len) {
-                            const next_cell = row_cells[next_col];
-                            const next_reverse = next_cell.attrs.reverse != screen_reverse_mode;
-                            const next_bg = if (next_reverse) next_cell.attrs.fg else next_cell.attrs.bg;
-                            if (next_bg.r == fg_draw.r and next_bg.g == fg_draw.g and next_bg.b == fg_draw.b) {
-                                const seam_w = 2.0 * inv_scale;
-                                const seam_x = snapToDevicePixel(cell_x + cell_w, render_scale) - inv_scale;
-                                rr.terminal_glyph_cache.addQuad(
-                                    rr.white_texture,
-                                    terminal_font_mod.Rect{ .x = 0, .y = 0, .width = 1, .height = 1 },
-                                    terminal_font_mod.Rect{
-                                        .x = seam_x,
-                                        .y = snapToDevicePixel(cell_y, render_scale),
-                                        .width = seam_w,
-                                        .height = cell_h,
-                                    },
-                                    fg_draw.toRgba(),
-                                    Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 },
-                                    .rgba,
-                                );
-                            }
-                        }
-                    }
                 }
 
                 col = span_end_excl;

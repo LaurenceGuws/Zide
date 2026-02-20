@@ -239,6 +239,16 @@ terminal_special_glyph_todo:
               result: "Still no visible reduction of bleed line."
               likely_cause: "Join fill overlays do not address the underlying coverage/blend fringe source."
               status: "no_effect"
+            - date: "2026-02-20"
+              change: "Incremental breakpoint bisect: (1) thin-only shaped edge-lock, (2) remove thick from box fallback, (3) remove thick from special powerline routing."
+              result: "Skew persisted through (1) and (2), and disappeared at (3)."
+              likely_cause: "Root cause is thick glyphs going through special powerline path in current pipeline; shaped thick path avoids skew."
+              status: "confirmed_breakpoint"
+            - date: "2026-02-20"
+              change: "Re-established baseline decision from bisect results."
+              result: "Keep thick (`/`) out of special powerline path; keep thin (`/`) on analytic special path."
+              likely_cause: "Mixed routing best matches observed quality: thick smoothness without skew, thin remains consistent."
+              status: "active_baseline"
         - id: TSG-2-05
           title: "Prototype real font-outline raster path for powerline codepoints"
           status: pending
