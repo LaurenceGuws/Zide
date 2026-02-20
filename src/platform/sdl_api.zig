@@ -80,6 +80,7 @@ pub fn isWindowEventType(event_type: c_uint) bool {
     if (@hasDecl(c, "SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED") and event_type == c.SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) return true;
     if (@hasDecl(c, "SDL_EVENT_WINDOW_SIZE_CHANGED") and event_type == c.SDL_EVENT_WINDOW_SIZE_CHANGED) return true;
     if (@hasDecl(c, "SDL_EVENT_WINDOW_DISPLAY_CHANGED") and event_type == c.SDL_EVENT_WINDOW_DISPLAY_CHANGED) return true;
+    if (@hasDecl(c, "SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED") and event_type == c.SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED) return true;
     if (@hasDecl(c, "SDL_EVENT_WINDOW_MINIMIZED") and event_type == c.SDL_EVENT_WINDOW_MINIMIZED) return true;
     if (@hasDecl(c, "SDL_EVENT_WINDOW_MAXIMIZED") and event_type == c.SDL_EVENT_WINDOW_MAXIMIZED) return true;
     if (@hasDecl(c, "SDL_EVENT_WINDOW_RESTORED") and event_type == c.SDL_EVENT_WINDOW_RESTORED) return true;
@@ -112,6 +113,7 @@ pub fn windowEventName(event_type: c_uint, window_event_id: u8) []const u8 {
     if (@hasDecl(c, "SDL_EVENT_WINDOW_TAKE_FOCUS") and event_type == c.SDL_EVENT_WINDOW_TAKE_FOCUS) return "take_focus";
     if (@hasDecl(c, "SDL_EVENT_WINDOW_HIT_TEST") and event_type == c.SDL_EVENT_WINDOW_HIT_TEST) return "hit_test";
     if (@hasDecl(c, "SDL_EVENT_WINDOW_DISPLAY_CHANGED") and event_type == c.SDL_EVENT_WINDOW_DISPLAY_CHANGED) return "display_changed";
+    if (@hasDecl(c, "SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED") and event_type == c.SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED) return "display_scale_changed";
     _ = window_event_id;
     return "unknown";
 }
@@ -122,6 +124,7 @@ pub fn isResizeEvent(event_type: c_uint, window_event_id: u8) bool {
     if (@hasDecl(c, "SDL_EVENT_WINDOW_SIZE_CHANGED") and event_type == c.SDL_EVENT_WINDOW_SIZE_CHANGED) return true;
     if (@hasDecl(c, "SDL_EVENT_WINDOW_MOVED") and event_type == c.SDL_EVENT_WINDOW_MOVED) return true;
     if (@hasDecl(c, "SDL_EVENT_WINDOW_DISPLAY_CHANGED") and event_type == c.SDL_EVENT_WINDOW_DISPLAY_CHANGED) return true;
+    if (@hasDecl(c, "SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED") and event_type == c.SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED) return true;
     _ = window_event_id;
     return false;
 }

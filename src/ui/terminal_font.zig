@@ -807,16 +807,16 @@ pub const TerminalFont = struct {
     pub fn specialGlyphSpriteKey(
         self: *const TerminalFont,
         codepoint: u32,
-        cell_w_px: i32,
-        cell_h_px: i32,
+        raster_w_px: i32,
+        raster_h_px: i32,
         variant: SpecialGlyphVariant,
     ) SpecialGlyphSpriteKey {
         const rs = if (self.render_scale > 0.0) self.render_scale else 1.0;
         const rs_milli_f = std.math.round(rs * 1000.0);
         const rs_milli_i: i32 = @intFromFloat(rs_milli_f);
         const rs_milli_u16: u16 = @intCast(@max(0, @min(@as(i32, std.math.maxInt(u16)), rs_milli_i)));
-        const cw_u16: u16 = @intCast(@max(0, @min(@as(i32, std.math.maxInt(u16)), cell_w_px)));
-        const ch_u16: u16 = @intCast(@max(0, @min(@as(i32, std.math.maxInt(u16)), cell_h_px)));
+        const cw_u16: u16 = @intCast(@max(0, @min(@as(i32, std.math.maxInt(u16)), raster_w_px)));
+        const ch_u16: u16 = @intCast(@max(0, @min(@as(i32, std.math.maxInt(u16)), raster_h_px)));
         return .{
             .codepoint = codepoint,
             .cell_w_px = cw_u16,
@@ -846,16 +846,18 @@ pub const TerminalFont = struct {
         codepoint: u32,
         cell_w_px: i32,
         cell_h_px: i32,
+        raster_w_px: i32,
+        raster_h_px: i32,
         variant: SpecialGlyphVariant,
     ) ?*SpecialGlyphSprite {
         const special_log = app_logger.logger("terminal.glyph.special");
-        if (cell_w_px <= 0 or cell_h_px <= 0) return null;
-        const key = self.specialGlyphSpriteKey(codepoint, cell_w_px, cell_h_px, variant);
+        if (cell_w_px <= 0 or cell_h_px <= 0 or raster_w_px <= 0 or raster_h_px <= 0) return null;
+        const key = self.specialGlyphSpriteKey(codepoint, raster_w_px, raster_h_px, variant);
         if (self.special_glyph_sprites.getPtr(key)) |existing| return existing;
 
         const rs = if (self.render_scale > 0.0) self.render_scale else 1.0;
-        const width = @max(1, @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(cell_w_px)) * rs))));
-        const height = @max(1, @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(cell_h_px)) * rs))));
+        const width = raster_w_px;
+        const height = raster_h_px;
         const needed: usize = @intCast(width * height);
         if (needed == 0) return null;
         if (needed > self.upload_buffer_capacity) {
