@@ -1216,9 +1216,7 @@ fn isTerminalBoxGlyph(codepoint: u32) bool {
         0x2580,
         0x2584,
         0x2588,
-        0xE0B0,
         0xE0B1,
-        0xE0B2,
         0xE0B3,
         => true,
         else => false,
@@ -1266,7 +1264,7 @@ fn drawShapedGlyph(
         (base_codepoint >= 0x100000 and base_codepoint <= 0x10FFFD) or
         (base_codepoint >= 0x2700 and base_codepoint <= 0x27BF) or
         (base_codepoint >= 0x2600 and base_codepoint <= 0x26FF);
-    const is_powerline = isPowerlineGlyph(base_codepoint);
+    const is_powerline_thin = base_codepoint == 0xE0B1 or base_codepoint == 0xE0B3;
 
     const aspect = if (cell_height > 0) glyph_w / cell_height else 0.0;
     const is_square_or_wide = aspect >= 0.7;
@@ -1319,7 +1317,7 @@ fn drawShapedGlyph(
         }
     }
 
-    const dest = if (is_powerline) blk: {
+    const dest = if (is_powerline_thin) blk: {
         // Powerline separators should lock horizontally to cell edges. Using
         // font side bearings can cause zoom-dependent seams between cells.
         const cell_left = snapToDevicePixel(x, render_scale);
