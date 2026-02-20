@@ -48,6 +48,12 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - Editor multiline selection overlay seams were fixed and deselect cleanup now invalidates cached overlays correctly.
 - Terminal draw now locks the session cache during render to avoid stale view-cache reads during rapid zoom/resize.
 - Special-glyph rendering work is in active iteration for powerline separators (`   `) and is not quality-complete yet.
+- `./.zide.lua` logging workflow was tightened: agent owns log configuration and should keep bug-scoped low-noise tags (currently focused on `terminal.glyph.special` during powerline work; file logging can be disabled for interactive debugging).
+- Powerline pipeline status:
+  - Current active path is sprite-only for `U+E0B0..U+E0B3` with analytic geometry + supersample/downsample coverage masks.
+  - Outline-preference experiment was tried and reverted due visible pixelation regression.
+  - Best quality so far was committed as baseline (`71a02df`) before continued tuning.
+- SDL/SDL_ttf documentation sweep was completed from `reference_repos/sdlwiki_md` (DPI, hinting, LCD/subpixel, texture scaling, Wayland scaling notes) and summarized in `app_architecture/ui/terminal_special_glyph_todo.yaml` `research_notes`.
 
 ### Constraints / Guardrails
 - Handoff docs are high-level only; progress tracking lives in todo + app_architecture docs.
@@ -77,8 +83,20 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
  - Scrollback view cache + reflow resizing are still in progress; expect instability during the redesign.
 
 ### In-Progress (Uncommitted)
-- Terminal special-glyph powerline experiments are currently in progress in `src/ui/renderer/terminal_glyphs.zig` and `src/ui/widgets/terminal_widget_draw.zig`.
-- Docs were expanded with dedicated special-glyph coverage + todo files; keep those in sync with code status while iterating.
+- Uncommitted docs alignment:
+  - `app_architecture/ui/terminal_special_glyph_todo.yaml` status corrections + SDL research notes.
+- Workspace note:
+  - `.github/workflows/ci.yml` is intentionally deleted for this pet project (do not restore unless user asks).
+
+### Next Agent Should Do
+- Continue `TSG-2-04` only (single pipeline), avoid reintroducing alternate powerline paths until quality is accepted.
+- Keep `terminal.glyph.special` logging scoped in `./.zide.lua` and collect zoom-specific observations against `term_cell` sizes.
+- Execute a controlled parameter sweep for filled vs thin separators within the same pipeline:
+  - supersample factor
+  - stroke thickness quantization
+  - seam extension
+  - downsample kernel behavior
+- Promote changes only if they improve both startup quality and zoom consistency (`render_scale=1.6` stress case).
 
 ### Checklist
 - `zig build test`

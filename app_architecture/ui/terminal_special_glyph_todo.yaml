@@ -34,6 +34,12 @@ terminal_special_glyph_todo:
     - "No visual regressions in terminal/editor/app baseline text while special pipeline changes land."
     - "Do not widen scope to full renderer rewrite until sprite pipeline baseline is measured."
 
+  research_notes:
+    - "2026-02-20 SDL/SDL_ttf doc sweep (reference_repos/sdlwiki_md): SDL_ttf emphasizes explicit DPI (`TTF_SetFontSizeDPI` / `TTF_GetFontDPI`) and cache invalidation when font properties change (`TTF_SetFontHinting`, `TTF_SetFontSDF`, `TTF_GetFontGeneration` semantics). Mirror this in Zide by treating render_scale/size/hinting as strict cache-key + invalidation inputs."
+    - "SDL_ttf LCD/subpixel APIs (`TTF_RenderGlyph_LCD`, `TTF_RenderText_LCD`) are foreground+background aware; keep Zide coverage pipeline background-aware where we do gamma/linear correction, and avoid mixed fallback paths for the same codepoint class."
+    - "SDL render docs note default texture scaling is linear; text atlas paths should intentionally choose filtering (nearest vs linear) per atlas type. For Zide special glyphs, keep a single explicit policy and avoid implicit backend defaults."
+    - "SDL Wayland docs warn DPI-unaware paths blur under compositor scaling; keep SDL high-density handling and Zide render_scale path aligned to avoid double-scaling blur."
+
   commands:
     always:
       - "zig build"
@@ -154,10 +160,10 @@ terminal_special_glyph_todo:
             - "Use ghostty/kitty-style geometry rules (path fill for ` `, stroked paths for ` `) instead of current per-pixel procedural approximation."
             - "Generate analytic coverage masks from exact geometry, then cache as sprites in coverage atlas."
             - "Success bar: repeated separators (``) are consistent and visually close to normal glyph smoothness."
-            - "Current state: `U+E0B0..U+E0B3` now use a single supersampled+downsampled sprite-mask pipeline (kitty/ghostty-style geometry + coverage downsample), and powerline no longer routes through outline/fallback alternatives in terminal draw."
+            - "Current state: `U+E0B0..U+E0B3` use a single supersampled+downsampled sprite-mask pipeline (kitty/ghostty-style geometry + coverage downsample), with no alternate powerline render path in terminal draw."
         - id: TSG-2-05
           title: "Prototype real font-outline raster path for powerline codepoints"
-          status: in_progress
+          status: pending
           files_to_edit:
             - "src/ui/terminal_font.zig"
             - "src/ui/widgets/terminal_widget_draw.zig"
@@ -165,7 +171,7 @@ terminal_special_glyph_todo:
             - "Route `U+E0B0..U+E0B3` through FreeType outline raster (selected face) and cache resulting masks as special sprites."
             - "Compare quality/consistency against analytic path and choose one as canonical."
             - "If outline raster wins, keep analytic path as fallback when outlines are missing/unsuitable."
-            - "Current state: terminal draw now prefers real font-outline rendering for powerline codepoints when glyphs are available, and only falls back to special sprite path otherwise."
+            - "Attempted and reverted in this iteration due severe pixelation regression; keep pending until retried as an isolated A/B experiment."
 
     - name: "TSG-3 Blocks/Shades/Box Continuity"
       tasks:
