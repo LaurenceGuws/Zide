@@ -611,6 +611,15 @@ pub fn draw(
                                 );
                                 continue;
                             }
+                            if (variant == .powerline) {
+                                const special_log = app_logger.logger("terminal.glyph.special");
+                                special_log.logf(
+                                    "sprite_missing cp=U+{X} variant={s} cell={d}x{d}",
+                                    .{ cell.codepoint, @tagName(variant), box_w_i, box_h_i },
+                                );
+                                // No powerline fallback path: only sprite pipeline is used.
+                                continue;
+                            }
                         }
                     }
                     if (cell.combining_len == 0 and isTerminalBoxGlyph(cell.codepoint)) {

@@ -313,6 +313,10 @@ pub const DrawContext = struct {
     drawTexture: *const fn (ctx: *anyopaque, texture: Texture, src: Rect, dest: Rect, color: Rgba, kind: TextureKind) void,
 };
 
+fn isPowerlineCodepoint(cp: u32) bool {
+    return cp >= 0xE0B0 and cp <= 0xE0BF;
+}
+
 pub const Glyph = struct {
     rect: Rect,
     bearing_x: i32,
@@ -844,6 +848,7 @@ pub const TerminalFont = struct {
         cell_h_px: i32,
         variant: SpecialGlyphVariant,
     ) ?*SpecialGlyphSprite {
+        const special_log = app_logger.logger("terminal.glyph.special");
         if (cell_w_px <= 0 or cell_h_px <= 0) return null;
         const key = self.specialGlyphSpriteKey(codepoint, cell_w_px, cell_h_px, variant);
         if (self.special_glyph_sprites.getPtr(key)) |existing| return existing;
@@ -861,7 +866,15 @@ pub const TerminalFont = struct {
             self.upload_buffer_capacity = needed;
         }
         const mask = self.upload_buffer[0..needed];
-        if (!terminal_glyphs.rasterizeSpecialGlyphCoverage(codepoint, width, height, mask)) return null;
+        if (!terminal_glyphs.rasterizeSpecialGlyphCoverage(codepoint, width, height, mask)) {
+            if (variant == .powerline or isPowerlineCodepoint(codepoint)) {
+                special_log.logf(
+                    "sprite_create_fail cp=U+{X} reason=rasterize_failed cell={d}x{d} raster={d}x{d} rs={d:.3}",
+                    .{ codepoint, cell_w_px, cell_h_px, width, height, rs },
+                );
+            }
+            return null;
+        }
 
         var non_zero = false;
         for (mask) |a| {
@@ -870,7 +883,15 @@ pub const TerminalFont = struct {
                 break;
             }
         }
-        if (!non_zero) return null;
+        if (!non_zero) {
+            if (variant == .powerline or isPowerlineCodepoint(codepoint)) {
+                special_log.logf(
+                    "sprite_create_fail cp=U+{X} reason=empty_mask cell={d}x{d} raster={d}x{d} rs={d:.3}",
+                    .{ codepoint, cell_w_px, cell_h_px, width, height, rs },
+                );
+            }
+            return null;
+        }
 
         if (self.pen_x + width + self.padding > self.atlas_width) {
             self.pen_x = self.padding;
@@ -878,6 +899,12 @@ pub const TerminalFont = struct {
             self.row_h = 0;
         }
         if (self.pen_y + height + self.padding > self.atlas_height) {
+            if (variant == .powerline or isPowerlineCodepoint(codepoint)) {
+                special_log.logf(
+                    "sprite_create_fail cp=U+{X} reason=atlas_full cell={d}x{d} raster={d}x{d} rs={d:.3}",
+                    .{ codepoint, cell_w_px, cell_h_px, width, height, rs },
+                );
+            }
             return null;
         }
 
@@ -901,6 +928,12 @@ pub const TerminalFont = struct {
             .height = height,
         };
         self.special_glyph_sprites.put(key, sprite) catch return null;
+        if (variant == .powerline or isPowerlineCodepoint(codepoint)) {
+            special_log.logf(
+                "sprite_create cp=U+{X} variant={s} path=analytic_v1 cell={d}x{d} raster={d}x{d} rs={d:.3}",
+                .{ codepoint, @tagName(variant), cell_w_px, cell_h_px, width, height, rs },
+            );
+        }
         return self.special_glyph_sprites.getPtr(key);
     }
 

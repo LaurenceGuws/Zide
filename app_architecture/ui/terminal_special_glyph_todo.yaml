@@ -145,7 +145,7 @@ terminal_special_glyph_todo:
             - "Current state: horizontal seam gap regression is improved, but line quality remains below target."
         - id: TSG-2-04
           title: "Prototype dedicated analytic/vector stroke+fill path for powerline separators"
-          status: pending
+          status: in_progress
           files_to_edit:
             - "src/ui/renderer/terminal_glyphs.zig"
             - "src/ui/terminal_font.zig"
@@ -154,9 +154,10 @@ terminal_special_glyph_todo:
             - "Use ghostty/kitty-style geometry rules (path fill for ` `, stroked paths for ` `) instead of current per-pixel procedural approximation."
             - "Generate analytic coverage masks from exact geometry, then cache as sprites in coverage atlas."
             - "Success bar: repeated separators (``) are consistent and visually close to normal glyph smoothness."
+            - "Current state: `U+E0B0..U+E0B3` now use a single supersampled+downsampled sprite-mask pipeline (kitty/ghostty-style geometry + coverage downsample), and powerline no longer routes through outline/fallback alternatives in terminal draw."
         - id: TSG-2-05
           title: "Prototype real font-outline raster path for powerline codepoints"
-          status: pending
+          status: in_progress
           files_to_edit:
             - "src/ui/terminal_font.zig"
             - "src/ui/widgets/terminal_widget_draw.zig"
@@ -164,6 +165,7 @@ terminal_special_glyph_todo:
             - "Route `U+E0B0..U+E0B3` through FreeType outline raster (selected face) and cache resulting masks as special sprites."
             - "Compare quality/consistency against analytic path and choose one as canonical."
             - "If outline raster wins, keep analytic path as fallback when outlines are missing/unsuitable."
+            - "Current state: terminal draw now prefers real font-outline rendering for powerline codepoints when glyphs are available, and only falls back to special sprite path otherwise."
 
     - name: "TSG-3 Blocks/Shades/Box Continuity"
       tasks:
