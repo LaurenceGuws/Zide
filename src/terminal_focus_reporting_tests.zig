@@ -240,7 +240,7 @@ test "terminal DECRQM private query returns Pm=4 for permanently-reset unsupport
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            const modes = [_]i32{ 67, 1001, 1005, 1015, 1016 };
+            const modes = [_]i32{ 9, 45, 67, 1001, 1005, 1015, 1016 };
 
             for (modes) |mode| {
                 var qbuf: [32]u8 = undefined;
