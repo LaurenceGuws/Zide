@@ -240,15 +240,17 @@ fn validateAssertions(
 ) !void {
     for (fixture.meta.assertions) |tag| {
         if (std.mem.eql(u8, tag, "grid")) {
-            // Presence is inherent in the snapshot format; recognized for traceability.
+            if (!snapshotHasNonDefaultGrid(snapshot)) return error.AssertionGridNotExercised;
             continue;
         }
         if (std.mem.eql(u8, tag, "cursor")) {
-            // Cursor is always encoded in the snapshot header; recognized for traceability.
+            if (snapshot.cursor.row == fixture.meta.cursor.row and snapshot.cursor.col == fixture.meta.cursor.col) {
+                return error.AssertionCursorNotExercised;
+            }
             continue;
         }
         if (std.mem.eql(u8, tag, "attrs")) {
-            // Attr runs are always encoded; recognized for traceability.
+            if (!snapshotHasNonDefaultAttrs(snapshot, debug.base_default_attrs)) return error.AssertionAttrsNotExercised;
             continue;
         }
         if (std.mem.eql(u8, tag, "clipboard")) {
@@ -293,6 +295,34 @@ fn validateAssertions(
         }
         return error.UnknownAssertionTag;
     }
+}
+
+fn snapshotHasNonDefaultGrid(snapshot: terminal.TerminalSnapshot) bool {
+    for (snapshot.cells) |cell| {
+        if (cell.width == 0) return true;
+        if (cell.codepoint != 0) return true;
+        if (cell.combining_len > 0) return true;
+    }
+    return false;
+}
+
+fn snapshotHasNonDefaultAttrs(snapshot: terminal.TerminalSnapshot, base_default: terminal.CellAttrs) bool {
+    for (snapshot.cells) |cell| {
+        if (!attrsEqual(cell.attrs, base_default)) return true;
+    }
+    return false;
+}
+
+fn attrsEqual(a: terminal.CellAttrs, b: terminal.CellAttrs) bool {
+    return a.fg.r == b.fg.r and a.fg.g == b.fg.g and a.fg.b == b.fg.b and a.fg.a == b.fg.a and
+        a.bg.r == b.bg.r and a.bg.g == b.bg.g and a.bg.b == b.bg.b and a.bg.a == b.bg.a and
+        a.bold == b.bold and a.blink == b.blink and a.blink_fast == b.blink_fast and
+        a.reverse == b.reverse and a.underline == b.underline and
+        a.underline_color.r == b.underline_color.r and
+        a.underline_color.g == b.underline_color.g and
+        a.underline_color.b == b.underline_color.b and
+        a.underline_color.a == b.underline_color.a and
+        a.link_id == b.link_id;
 }
 
 fn applySelectionActions(session: *terminal.TerminalSession, actions: []const SelectionAction) void {

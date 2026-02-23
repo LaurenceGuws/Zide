@@ -95,6 +95,10 @@ Remaining work:
 - PTY reply paths still untested in replay (`DSR/DA/OSC query/DCS/kitty replies`).
 - Some tags remain recognized-but-not-semantic (`grid`, `cursor`, `attrs`, `scrollback`) until per-section assertions are implemented.
 
+Implemented (increment 2):
+- `grid`, `cursor`, and `attrs` assertions now perform semantic checks on the final snapshot/debug state instead of being recognized-only.
+- `scrollback` remains recognized-only pending a clearer split between "scroll semantics" and "persistent scrollback" fixture tags.
+
 Planned fix shape (candidate):
 - Phase 1: enforce/assert known assertion tags and surface them in harness output.
 - Phase 2: use assertions to filter/validate snapshot sections or explicit sub-assertions.
@@ -243,6 +247,7 @@ Priority notes:
 - Completed `PA-06` (X10 coord overflow saturates to `255`; added unit coverage).
 - Completed `PA-07` (removed bare `58` reset behavior in SGR parser).
 - Advanced `PA-02` to `partial` (replay assertions are now consumed and validated; PTY reply coverage still pending).
+- Strengthened `PA-02` semantic checks for `grid`/`cursor`/`attrs` assertions in replay harness.
 - Advanced `PA-05` to `partial` (unsupported `alternate_key` no longer advertised via key-mode flags).
 
 ## Next Work Queue (Ordered)
