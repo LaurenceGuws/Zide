@@ -308,6 +308,46 @@ Files:
 Verification:
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 4 / `PA-04b` delete edge-case fixtures):
+- Added replay fixtures for additional delete-selector edge cases:
+  - `i` with `placement_id` filter: matching placement removed, non-matching filter is a no-op
+  - `I` uppercase image delete ignores `placement_id` filter and removes the backing image
+  - `n/N` image-number selectors (current implementation aliases image number to id in delete resolution)
+  - `x/X` and `y/Y` selectors on multi-cell placements with partial-overlap coordinates
+- These fixtures lock current semantics for placement-id filtering and overlap-based selectors in snapshot `kitty:` state.
+
+Files:
+- `fixtures/terminal/kitty_delete_image_selector_pid_filter_match.vt`
+- `fixtures/terminal/kitty_delete_image_selector_pid_filter_match.json`
+- `fixtures/terminal/kitty_delete_image_selector_pid_filter_match.golden`
+- `fixtures/terminal/kitty_delete_image_selector_pid_filter_no_match.vt`
+- `fixtures/terminal/kitty_delete_image_selector_pid_filter_no_match.json`
+- `fixtures/terminal/kitty_delete_image_selector_pid_filter_no_match.golden`
+- `fixtures/terminal/kitty_delete_image_uppercase_ignores_pid_filter.vt`
+- `fixtures/terminal/kitty_delete_image_uppercase_ignores_pid_filter.json`
+- `fixtures/terminal/kitty_delete_image_uppercase_ignores_pid_filter.golden`
+- `fixtures/terminal/kitty_delete_image_number_preserves_image.vt`
+- `fixtures/terminal/kitty_delete_image_number_preserves_image.json`
+- `fixtures/terminal/kitty_delete_image_number_preserves_image.golden`
+- `fixtures/terminal/kitty_delete_image_number_uppercase_deletes_image.vt`
+- `fixtures/terminal/kitty_delete_image_number_uppercase_deletes_image.json`
+- `fixtures/terminal/kitty_delete_image_number_uppercase_deletes_image.golden`
+- `fixtures/terminal/kitty_delete_x_preserves_image_partial_overlap.vt`
+- `fixtures/terminal/kitty_delete_x_preserves_image_partial_overlap.json`
+- `fixtures/terminal/kitty_delete_x_preserves_image_partial_overlap.golden`
+- `fixtures/terminal/kitty_delete_x_uppercase_deletes_image_partial_overlap.vt`
+- `fixtures/terminal/kitty_delete_x_uppercase_deletes_image_partial_overlap.json`
+- `fixtures/terminal/kitty_delete_x_uppercase_deletes_image_partial_overlap.golden`
+- `fixtures/terminal/kitty_delete_y_preserves_image_partial_overlap.vt`
+- `fixtures/terminal/kitty_delete_y_preserves_image_partial_overlap.json`
+- `fixtures/terminal/kitty_delete_y_preserves_image_partial_overlap.golden`
+- `fixtures/terminal/kitty_delete_y_uppercase_deletes_image_partial_overlap.vt`
+- `fixtures/terminal/kitty_delete_y_uppercase_deletes_image_partial_overlap.json`
+- `fixtures/terminal/kitty_delete_y_uppercase_deletes_image_partial_overlap.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --all`
+
 Query coverage note (`PA-04c` remaining):
 - `a=q` reply-byte conformance is now substantially covered:
   - helper-level branch/unit coverage for early replies and payload/build reply branches
@@ -581,6 +621,7 @@ Priority notes:
 - Advanced `PA-04a` by documenting the current kitty graphics `a=`/`d=` surface from code as a parity map for follow-on fixtures/fixes.
 - Advanced `PA-04c` with replay delete conformance fixtures (placement-only vs image+placement delete, plus unsupported-selector no-op).
 - Expanded `PA-04b` delete selector replay coverage to include `c/C`, `z/Z`, and `r/R`.
+- Expanded `PA-04b` delete edge-case replay coverage for `i/I`, `n/N`, `x/X`, and `y/Y` semantics (filters + partial overlaps).
 - Advanced `PA-04c` query coverage with an extracted `a=q` early-reply seam and unit tests (`EINVAL` missing id / metadata-only `OK`).
 - Advanced `PA-04c` query payload-validation coverage with extracted helper tests for `EINVAL`, `ENODATA`, and `EBADPNG` reply mapping branches.
 - Advanced `PA-04c` integrated query control-flow coverage with `a=q` chunk-build reply seam tests (success + build-error paths).
