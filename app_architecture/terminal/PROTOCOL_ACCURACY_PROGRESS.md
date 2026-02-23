@@ -1668,6 +1668,7 @@ Implemented (increment 8 / `PA-08d` replay query-reply fixtures for DA/DSR/OSC):
   - `DSR` CPR (`CSI 6 n`, after cursor positioning)
   - `OSC 10` dynamic-color query with BEL terminator
 - These fixtures use the `reply_hex` + `assertions: ["reply"]` seam and expand replay-level query coverage beyond the initial `DECRQM ?1004` example.
+- Coverage now includes both ANSI and DEC-private `DSR` cursor position replies and two OSC query families (`OSC 10`, `OSC 52`).
 
 Files:
 - `fixtures/terminal/da_primary_query_reply.vt`
@@ -1679,8 +1680,27 @@ Files:
 - `fixtures/terminal/osc_10_query_reply_bel.vt`
 - `fixtures/terminal/osc_10_query_reply_bel.json`
 - `fixtures/terminal/osc_10_query_reply_bel.golden`
+- `fixtures/terminal/dsr_decx_cpr_query_reply.vt`
+- `fixtures/terminal/dsr_decx_cpr_query_reply.json`
+- `fixtures/terminal/dsr_decx_cpr_query_reply.golden`
+- `fixtures/terminal/osc_52_query_reply_bel.vt`
+- `fixtures/terminal/osc_52_query_reply_bel.json`
+- `fixtures/terminal/osc_52_query_reply_bel.golden`
 
 Verification:
+- `zig build test-terminal-replay -- --all`
+
+Implemented (increment 9 / `PA-08d` `DECRQM` replay query matrix fixture):
+- Added a compact replay fixture that issues multiple `DECRQM` queries in one stream (private + ANSI, supported + unsupported, before/after mode toggles) and asserts the concatenated reply byte sequence.
+- This reduces reliance on one-off PTY tests for query ordering and gives fixture-level regression coverage for a representative `DECRQM` reply matrix.
+
+Files:
+- `fixtures/terminal/decrqm_query_matrix_reply.vt`
+- `fixtures/terminal/decrqm_query_matrix_reply.json`
+- `fixtures/terminal/decrqm_query_matrix_reply.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture decrqm_query_matrix_reply --update-goldens`
 - `zig build test-terminal-replay -- --all`
 
 ## Change Log
@@ -1726,6 +1746,8 @@ Verification:
 - Advanced `PA-08d` with a first replay-level query reply assertion seam (`reply_hex`) and a `DECRQM ?1004` reply fixture.
 - Broadened `PA-08e` `DECRQM` coverage to additional DEC private modes and locked unsupported ANSI `DECRQM -> Pm=0` per xterm/foot convention.
 - Expanded `PA-08d` replay-level query reply coverage with `DA`, `DSR` CPR, and `OSC 10` reply fixtures.
+- Expanded `PA-08d` replay reply fixtures to include DEC-private `DSR ?6n` and `OSC 52` query replies.
+- Added a compact replay `DECRQM` query matrix fixture (multi-query concatenated reply assertions).
 
 ## Next Work Queue (Ordered)
 
