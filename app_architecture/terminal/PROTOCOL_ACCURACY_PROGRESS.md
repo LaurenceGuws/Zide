@@ -1987,7 +1987,8 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
 | App cursor keys / app keypad | reset | terminal session global mode bits |
 | Mouse reporting modes | reset | `input.resetMouse()` |
 | Focus reporting / bracketed paste / sync updates | reset | mode defaults |
-| Alt-screen active state | preserve | no screen switch in first slice |
+| Alt-screen active state | preserve | `DECSTR` must not force alt-screen enter/exit |
+| Hidden screen contents (non-active screen) | preserve | verified for primary hidden behind alt in current slice |
 | Title / cwd / clipboard / hyperlinks | preserve | outside DECSTR scope in Zide first slice |
 
 Implemented (increment 1 / `PA-08h` `DECSTR` first safe subset):
@@ -2019,6 +2020,9 @@ Implemented (increment 2 / `PA-08h` `DECSTR` end-to-end reset/preserve verificat
   - `?1004`, `?1002`, `?2004`, ANSI `20`, `?66`
 - Added replay reply fixture that captures the same before/after `DECRQM` replies end-to-end (set -> query, `DECSTR`, query again).
 - Added replay fixture that proves kitty image/placement state survives `DECSTR` (direct preserved-state lock via `kitty:` snapshot section).
+- Added PTY + replay coverage for alt-screen boundary semantics:
+  - `DECSTR` does not force `?1049` reset while alt is active
+  - primary-screen contents survive `DECSTR` executed while alt-screen is active
 - Added an extra replay fixture with `scrollback` assertion + `DECSTR`; note this currently validates scroll behavior via existing `scrollback` assertion semantics (heuristic/tag semantics), not persistent scrollback count preservation in snapshot output.
 
 Files:
@@ -2029,6 +2033,9 @@ Files:
 - `fixtures/terminal/decstr_preserves_kitty_placement.vt`
 - `fixtures/terminal/decstr_preserves_kitty_placement.json`
 - `fixtures/terminal/decstr_preserves_kitty_placement.golden`
+- `fixtures/terminal/decstr_alt_screen_preserve_reply_and_grid.vt`
+- `fixtures/terminal/decstr_alt_screen_preserve_reply_and_grid.json`
+- `fixtures/terminal/decstr_alt_screen_preserve_reply_and_grid.golden`
 - `fixtures/terminal/decstr_preserves_scrollback.vt`
 - `fixtures/terminal/decstr_preserves_scrollback.json`
 - `fixtures/terminal/decstr_preserves_scrollback.golden`
@@ -2037,6 +2044,7 @@ Verification:
 - `zig build test-terminal-focus-reporting`
 - `zig build test-terminal-replay -- --fixture decstr_resets_modes_query_reply --update-goldens`
 - `zig build test-terminal-replay -- --fixture decstr_preserves_kitty_placement --update-goldens`
+- `zig build test-terminal-replay -- --fixture decstr_alt_screen_preserve_reply_and_grid --update-goldens`
 - `zig build test-terminal-replay -- --fixture decstr_preserves_scrollback --update-goldens`
 - `zig build test-terminal-replay -- --all`
   4. Extend/reset matrix incrementally as reference behavior is confirmed.
