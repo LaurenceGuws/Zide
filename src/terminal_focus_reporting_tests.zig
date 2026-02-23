@@ -530,7 +530,7 @@ test "terminal DECSTR resets title to default" {
     }.run);
 }
 
-test "terminal DECSTR preserves kitty state while alt screen remains active" {
+test "terminal DECSTR clears active-screen kitty state while alt screen remains active" {
     const allocator = std.testing.allocator;
     var session = try terminal.TerminalSession.init(allocator, 6, 12);
     defer session.deinit();
@@ -553,8 +553,8 @@ test "terminal DECSTR preserves kitty state while alt screen remains active" {
     {
         const snap = session.snapshot();
         try std.testing.expect(snap.alt_active);
-        try std.testing.expectEqual(@as(usize, 1), snap.kitty_images.len);
-        try std.testing.expectEqual(@as(usize, 1), snap.kitty_placements.len);
+        try std.testing.expectEqual(@as(usize, 0), snap.kitty_images.len);
+        try std.testing.expectEqual(@as(usize, 0), snap.kitty_placements.len);
     }
 }
 
@@ -574,7 +574,7 @@ test "terminal DECSTR alt-screen kitty placement does not leak to primary after 
     {
         const snap = session.snapshot();
         try std.testing.expect(snap.alt_active);
-        try std.testing.expectEqual(@as(usize, 1), snap.kitty_placements.len);
+        try std.testing.expectEqual(@as(usize, 0), snap.kitty_placements.len);
     }
 
     terminal.debugFeedBytes(session, "\x1b[?1049l");
