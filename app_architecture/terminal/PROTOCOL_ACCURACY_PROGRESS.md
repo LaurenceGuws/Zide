@@ -27,7 +27,7 @@ Rules for this document:
 | ID | Severity | Status | Summary | Acceptance Criteria |
 |---|---|---|---|---|
 | PA-01 | High | done | Unicode width/cursor accounting incorrect in core write path | Wide codepoints occupy correct cell width; combining marks attach correctly; replay fixtures pass |
-| PA-02 | High | partial | Replay `assertions` metadata is ignored; fixture intent not enforced | Harness consumes `assertions` (or field removed/replaced) and coverage intent is explicit/tested |
+| PA-02 | High | done | Replay `assertions` metadata is ignored; fixture intent not enforced | Harness consumes `assertions`; fixture intent is semantically enforced for active tags; representative replay query/reply coverage exists |
 | PA-03 | Medium-High | done | Kitty invalid controls can be dropped without explicit ERR reply | Invalid kitty commands produce `ERR`/`EINVAL` response when reply is allowed |
 | PA-04 | Medium | todo | Kitty graphics command/delete surface is partial vs kitty/ghostty | Scope split into concrete parity tasks and progress tracked; command support expanded or explicitly deferred |
 | PA-05 | Medium | partial | Kitty keyboard / CSI-u alternate/disambiguation flags tracked but not encoded | `alternate_key` / disambiguation flags affect output and tests cover behavior |
@@ -53,8 +53,8 @@ Definition-of-done requirements for parity-oriented items:
 
 ### Current Partial Scan (2026-02-23)
 
-`PA-02` Replay assertions / fixture intent (`partial`)
-- Classification: `finish now` before broader protocol parity claims.
+`PA-02` Replay assertions / fixture intent (`done`)
+- Classification: completed in current scope (`finish now` gate satisfied).
 - Why: this is test infrastructure; weak fixture intent checks can overstate coverage across all later protocol work.
 - Done looks like (parity-supporting infra):
   - replay assertions have semantic checks for all supported tags we rely on
@@ -128,7 +128,7 @@ Evidence from review:
 - PTY-gated reply paths are under-tested because replay sessions have no PTY.
 
 Status:
-- `partial` (2026-02-23)
+- `done` (2026-02-23)
 
 Implemented (increment 1):
 - Replay harness now consumes `assertions` instead of ignoring them.
@@ -141,10 +141,6 @@ Files:
 
 Verification:
 - `zig build test-terminal-replay -- --all`
-
-Remaining work:
-- PTY reply paths still untested in replay (`DSR/DA/OSC query/DCS/kitty replies`).
-- Some tags remain recognized-but-not-semantic (`grid`, `cursor`, `attrs`, `scrollback`) until per-section assertions are implemented.
 
 Implemented (increment 2):
 - `grid`, `cursor`, and `attrs` assertions now perform semantic checks on the final snapshot/debug state instead of being recognized-only.
@@ -229,6 +225,41 @@ Files:
 Verification:
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 9):
+- Added replay-harness `reply_hex` support with `assertions: ["reply"]` so VT fixtures can capture and verify PTY reply bytes end-to-end.
+- The replay harness now attaches a pipe-backed PTY only for fixtures that declare `reply_hex`.
+- Added initial replay reply fixtures covering `DECRQM ?1004`, `DA`, `DSR` (ANSI CPR / DEC private CPR), `OSC 10`, `OSC 52`, and a compact `DECRQM` query matrix.
+
+Files:
+- `src/terminal/replay_harness.zig`
+- `fixtures/terminal/decrqm_focus_reporting_query_reply.*`
+- `fixtures/terminal/da_primary_query_reply.*`
+- `fixtures/terminal/dsr_cpr_query_reply.*`
+- `fixtures/terminal/dsr_decx_cpr_query_reply.*`
+- `fixtures/terminal/osc_10_query_reply_bel.*`
+- `fixtures/terminal/osc_52_query_reply_bel.*`
+- `fixtures/terminal/decrqm_query_matrix_reply.*`
+
+Verification:
+- `zig build test-terminal-replay -- --all`
+
+Implemented (increment 10):
+- Added replay reply fixtures for representative `DCS` and kitty reply paths to complete the `PA-02` “representative query/reply replay coverage” gate:
+  - DCS `XTGETTCAP` (`TN`) reply
+  - kitty invalid-command `EINVAL` reply
+- This closes the replay-level representative set across `DA/DSR/OSC/DCS/kitty`.
+
+Files:
+- `fixtures/terminal/dcs_xtgettcap_tn_query_reply.*`
+- `fixtures/terminal/kitty_invalid_command_reply.*`
+
+Verification:
+- `zig build test-terminal-replay -- --all`
+
+Completion note (scope of `done`):
+- `PA-02` is considered `done` for test-infrastructure purposes because assertion metadata is enforced semantically for the active tags we rely on and replay-level reply assertions now cover representative query/reply families (`DA/DSR/OSC/DCS/kitty`).
+- This does **not** imply exhaustive protocol parity coverage; future fixtures can extend the replay reply matrix as new protocol slices are implemented.
+
 Planned fix shape (candidate):
 - Phase 1: enforce/assert known assertion tags and surface them in harness output.
 - Phase 2: use assertions to filter/validate snapshot sections or explicit sub-assertions.
@@ -253,7 +284,7 @@ Verification:
 - `zig build test-terminal-replay -- --all` (regression sweep; no kitty fixture regressions)
 
 Residual gap:
-- No PTY-attached replay/unit test yet validates the emitted reply bytes for invalid commands (`PA-02` / PTY reply coverage gap).
+- Replay-level coverage for invalid kitty reply bytes now exists via `fixtures/terminal/kitty_invalid_command_reply.*`.
 
 ### PA-04 Kitty Graphics Surface Partial vs Reference
 
