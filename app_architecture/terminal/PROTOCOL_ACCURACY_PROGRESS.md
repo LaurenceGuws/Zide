@@ -2031,6 +2031,25 @@ Notes:
   - Evidence:
     - PTY integration: `src/terminal_focus_reporting_tests.zig` (`DECRQM` state + unsolicited event + `type=read`)
     - replay: `fixtures/terminal/decrqm_query_matrix_reply.*` now queries `?5522` default/set/reset
+- `PA-08g` next dedicated implementation slice (docs-first, `?2048` in-band resize notifications):
+  - Reference anchors:
+    - `foot` supports/query-reports mode `2048` (`reference_repos/terminals/foot/csi.c`); foot ctlseq docs list `2048` as in-band window resize notifications (`reference_repos/terminals/foot/doc/foot-ctlseqs.7.scd`)
+    - `ghostty` emits mode-2048 resize reports on resize when enabled and uses CSI `48;rows;cols;rows_px;cols_px t` (`reference_repos/terminals/ghostty/src/termio/Termio.zig`)
+    - `kitty` emits the same `CSI 48;rows;cols;rows_px;cols_px t` payload on resize (`reference_repos/terminals/kitty/kitty/window.py`)
+  - Proposed Zide first-slice target (implementation, not reporting polish):
+    - `DECRQM/DECSET/DECRST ?2048` returns real mode state (`Pm=1/2`)
+    - when enabled, terminal sends in-band resize report to child on terminal resize using `CSI 48;rows;cols;rows_px;cols_px t`
+    - report values sourced from terminal grid size and current terminal pixel size (already tracked in `TerminalSession`)
+  - Done looks like (first slice):
+    - `?2048` mode bit exists and is reset by `DECSTR`
+    - resize path emits one report per resize event when mode is enabled and PTY is attached
+    - no reports when mode is disabled
+    - PTY tests cover default/set/reset + emitted bytes on resize
+    - replay fixture or integrated PTY test locks exact payload formatting
+  - Explicit non-goals for first slice:
+    - throttling/debouncing policy tuning beyond current resize flow
+    - backfilling reports for historical resizes
+    - alternate payload formats or legacy compatibility aliases
 - `PA-08g` DECRQM unsupported-reporting correction review (2026-02-23):
   - Kept `Pm=4` only for strategic fixed-off / legacy non-goal modes in current scope: `?67`, `?1001`, `?1005`, `?1015`, `?1034`, `?1035`, `?1036`, `?1042`, `?1070`.
   - Reverted to `Pm=0` provisional unsupported replies for modes still plausibly on the support path: `?9`, `?45`, `?1016`, `?2031`, `?2048`, `?5522`.
