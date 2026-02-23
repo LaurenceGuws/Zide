@@ -148,10 +148,23 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
         if (handleKittyQueryPayloadPreflightReply(self, control, image_id)) {
             return;
         }
-        const chunk = loadKittyPayload(self, &control, data) orelse {
+        var chunk = loadKittyPayload(self, &control, data) orelse {
             handleKittyQueryPayloadLoadFailureReply(self, control, image_id);
             return;
         };
+        if (control.compression == 'z') {
+            const inflated = inflateKittyData(self, chunk, control.size) orelse {
+                self.allocator.free(chunk);
+                writeKittyResponse(self, control, image_id, false, "EINVAL");
+                return;
+            };
+            self.allocator.free(chunk);
+            chunk = inflated;
+        } else if (control.compression != 0) {
+            self.allocator.free(chunk);
+            writeKittyResponse(self, control, image_id, false, "EINVAL");
+            return;
+        }
         if (handleKittyQueryPayloadSizeReply(self, control, image_id, chunk.len)) {
             self.allocator.free(chunk);
             return;
