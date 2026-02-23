@@ -466,6 +466,39 @@ test "kitty parse query invalid compression value emits EINVAL" {
     }.run);
 }
 
+test "kitty parse query invalid compression beats png decode errors" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,o=1,f=100;AA==");
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;EINVAL\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query invalid compression beats rgba size checks" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,o=1,f=32,s=2,v=2;AAAA");
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;EINVAL\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query invalid compression beats rgba missing-dimensions validation" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,o=1,f=32;AAAA/w==");
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;EINVAL\x1b\\", reply);
+        }
+    }.run);
+}
+
 test "kitty parse query quiet=2 suppresses invalid compression reply" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
