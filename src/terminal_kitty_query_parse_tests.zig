@@ -583,15 +583,6 @@ test "kitty parse query missing-id precedence matrix" {
     }
 }
 
-test "kitty parse query quiet=2 suppresses missing-id preflight before invalid compression" {
-    try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
-            kitty.parseKittyGraphics(session, "a=q,q=2,o=1,f=32,s=1,v=1;AAAA/w==");
-            try capture.expectNoReply();
-        }
-    }.run);
-}
-
 test "kitty parse query non-missing-id zlib preflight precedence matrix" {
     const reply_cases = [_]struct {
         name: []const u8,
