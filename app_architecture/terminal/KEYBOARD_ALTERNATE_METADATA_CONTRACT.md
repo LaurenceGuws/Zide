@@ -72,3 +72,37 @@ With the metadata above, kitty `report_alternate_key` encoding can follow:
 
 - `PA-05b` Thread metadata through input event path to terminal encoder
 - `PA-05c` Add non-US layout replay/unit fixtures and parity tests
+
+## SDL / Platform Feasibility Notes (PA-05b research)
+
+Current data available in our SDL input pipeline:
+- physical key identity via SDL scancode (`event.keysym.scancode`)
+- layout-translated key symbol (`event.keysym.sym`)
+- modifier state
+- text input UTF-8 bytes from `SDL_EVENT_TEXT_INPUT`
+- composition/editing state from `SDL_EVENT_TEXT_EDITING`
+
+What this enables now:
+- stable `physical_key` (from scancode)
+- `produced_text_utf8` and `text_is_composed`
+- a better future path to infer `base_codepoint` / `shifted_codepoint` in some cases
+  using SDL scancode + modifier translation
+
+Important SDL limits / caveats:
+- `keysym.sym` is a single layout-translated keycode for the event, not a full
+  tuple of base/shifted/alternate layout outputs.
+- `SDL_EVENT_TEXT_INPUT` provides committed text (possibly IME/composed), which
+  is too late / too lossy to reconstruct the physical-key layout mapping in all
+  cases.
+- IME / dead-key composition can produce text that should not imply alternate
+  key fields (hence `text_is_composed` suppression in the encoder).
+- SDL keyboard translation behavior can be affected by keycode options hints;
+  for reliable layout translation from scancode+modstate, SDL docs recommend
+  explicit `SDL_GetKeyFromScancode(...)` calls instead of assuming event keycode
+  semantics.
+
+Feasibility conclusion:
+- Partial layout-aware alternate support is feasible with current plumbing.
+- Full parity (`key:shifted:alternate` across layouts/IME paths) still likely
+  needs explicit scancode+modstate translation calls (new wrapper in
+  `src/platform/sdl_api.zig`) and careful platform/IME behavior testing.
