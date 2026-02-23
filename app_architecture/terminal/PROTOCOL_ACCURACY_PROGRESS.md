@@ -732,6 +732,20 @@ Verification:
 - `zig build test-terminal-kitty-query-parse`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 23 / `PA-04c` missing-id matrix `O=` offset combinations):
+- Extended the table-driven missing-id precedence matrix to cover mixed invalid
+  `O=` (offset) combinations with invalid format and malformed payload branches under
+  both `q=1` and `q=2`.
+- This closes the offset-form counterpart to the earlier `o=` invalid-compression
+  missing-id precedence coverage in the matrix path.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
@@ -1285,6 +1299,40 @@ Verification:
 - `zig test src/terminal_input_encoding_tests.zig`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 10):
+- Completed the action-field matrix coverage for cursor/home/end function keys in
+  disambiguate + `report_all_event_types` mode by adding repeat-event (`:2`) unit and
+  replay fixture coverage.
+- Replay encoder fixtures now lock press/repeat/release formatting coverage across:
+  - compact/modified press forms (previous increments)
+  - repeat `:2` forms
+  - release `:3` forms
+
+Files:
+- `src/terminal_input_encoding_tests.zig`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_up_repeat.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_up_repeat.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_down_repeat.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_down_repeat.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_left_repeat.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_left_repeat.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_right_repeat.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_right_repeat.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_home_repeat.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_home_repeat.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_end_repeat.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_end_repeat.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_up_shift_repeat.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_up_shift_repeat.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_home_alt_repeat.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_home_alt_repeat.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_end_ctrl_repeat.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_end_ctrl_repeat.golden`
+
+Verification:
+- `zig test src/terminal_input_encoding_tests.zig`
+- `zig build test-terminal-replay -- --all`
+
 Remaining work:
 - Alternate-key reporting is only a US-ASCII shifted-char subset in the legacy char path (no layout-aware base/alternate reporting for general keys yet).
 - Disambiguation semantics are improved but still incomplete (broader kitty keyboard parity and key-map coverage).
@@ -1349,6 +1397,39 @@ Sub-items (traceable parity slices):
 Priority notes:
 - Focus first on sequences observed in fixtures, vttest, and real apps in `reference_repos/terminals/*`.
 - Prefer PTY-stubbed tests before expanding query/reply behavior.
+
+Implemented (increment 1 / `PA-08a` first CSI/private-mode gap inventory pass):
+- Created an initial inventory of high-value CSI/private-mode gaps relative to xterm /
+  kitty / ghostty usage patterns, scoped to realistic TUI impact.
+- This is a planning/inventory increment (no behavior change) intended to feed
+  `PA-08d` implementable follow-on items.
+
+Inventory snapshot (`PA-08a`, first pass):
+- `implemented / strong` (already in Zide):
+  - core cursor movement/positioning (`A/B/C/D/E/F/G/H/f/d`)
+  - erase / insert-delete char+line (`J/K/@/P/X/L/M`)
+  - scroll region and region scroll (`r/S/T`)
+  - SGR (basic/256/truecolor/underline color), cursor style (`m/q`)
+  - DSR/DA basic replies (`n/c`)
+  - DEC private modes used by modern TUIs: alt screen, DECCKM, DECOM, DECAWM,
+    bracketed paste, sync update, mouse `1000/1002/1003/1006`
+  - kitty keyboard mode controls (`CSI >u/<u/=u/?u`)
+- `partial / likely gaps for xterm compatibility`:
+  - tabulation family beyond `TBC` (`CHT`/`CBT` tab moves not implemented; only `CSI g`)
+  - mode query/report breadth (`DECRQM` / mode reports beyond current DSR subset)
+  - terminal reset/control conveniences (`DECSTR`, `RIS`-adjacent CSI soft reset behavior)
+  - left/right margins (`DECSLRM`) and related rectangular editing semantics
+  - focus in/out reporting mode (`?1004`) and associated event emission path
+  - alternate mouse encodings (`1005` UTF-8, `1015` urxvt) if compatibility is needed
+- `likely low priority unless demanded by apps`:
+  - xterm window ops (`CSI ... t`)
+  - printer/media and status extensions
+  - legacy/rare tab-stop editing/reporting variants
+
+Suggested `PA-08d` promotion candidates (first pass):
+1. `?1004` focus reporting mode + event emission (real TUI impact)
+2. `CHT` / `CBT` tab movement coverage (completes currently-partial tab family)
+3. `DECRQM` / minimal mode-report replies for queried private modes seen in reference seeds
 
 ## Change Log
 
