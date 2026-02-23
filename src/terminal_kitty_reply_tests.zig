@@ -69,3 +69,39 @@ test "kitty reply quiet=2 suppresses all replies" {
     kitty.writeKittyResponse(&self, control, 9, false, "EINVAL");
     try std.testing.expectEqual(@as(usize, 0), self.pty.?.writes.items.len);
 }
+
+test "kitty query early reply errors on missing image id" {
+    var self = TestSelf{
+        .allocator = std.testing.allocator,
+        .pty = FakePty.init(),
+    };
+    defer if (self.pty) |*pty| pty.deinit();
+
+    const handled = kitty.handleKittyQueryEarlyReply(&self, .{ .action = 'q' }, 0);
+    try std.testing.expect(handled);
+    try std.testing.expectEqualStrings("\x1b_G;EINVAL\x1b\\", self.pty.?.writes.items);
+}
+
+test "kitty query early reply returns metadata-only OK" {
+    var self = TestSelf{
+        .allocator = std.testing.allocator,
+        .pty = FakePty.init(),
+    };
+    defer if (self.pty) |*pty| pty.deinit();
+
+    const handled = kitty.handleKittyQueryEarlyReply(&self, .{ .action = 'q', .image_id = 7 }, 0);
+    try std.testing.expect(handled);
+    try std.testing.expectEqualStrings("\x1b_Gi=7;OK\x1b\\", self.pty.?.writes.items);
+}
+
+test "kitty query early reply falls through when payload or dimensions present" {
+    var self = TestSelf{
+        .allocator = std.testing.allocator,
+        .pty = FakePty.init(),
+    };
+    defer if (self.pty) |*pty| pty.deinit();
+
+    const handled = kitty.handleKittyQueryEarlyReply(&self, .{ .action = 'q', .image_id = 7, .width = 1 }, 0);
+    try std.testing.expect(!handled);
+    try std.testing.expectEqual(@as(usize, 0), self.pty.?.writes.items.len);
+}

@@ -280,7 +280,23 @@ Verification:
 
 Query coverage note (`PA-04c` remaining):
 - `a=q` reply-byte conformance is still only partially covered via generic reply formatter tests (`writeKittyResponse` quiet-mode/formatting).
-- Direct `parseKittyGraphics(a=q,...)` unit tests currently require a deeper test seam (the generic function monomorphizes image/screen paths and standalone tests hit non-trivial `activeScreen` + image decode dependencies).
+- Added a small extracted seam for the early `a=q` parse-path replies (`missing image id`, metadata-only query); these cases now have direct unit coverage.
+- Full `a=q` payload/image-validation reply-path coverage (payload decode/build image error/success replies) still needs a deeper seam or project-integrated test harness.
+
+Implemented (increment 3 / `PA-04c` query early-reply seam):
+- Extracted `handleKittyQueryEarlyReply()` from `parseKittyGraphics()` for `a=q` early replies:
+  - missing image id -> `EINVAL`
+  - metadata-only query (`i=` with no payload/dimensions) -> `OK`
+  - non-metadata query falls through to existing payload path unchanged
+- Added direct unit tests for the helper, covering handled error/success and fallthrough behavior.
+
+Files:
+- `src/terminal/kitty/graphics.zig`
+- `src/terminal_kitty_reply_tests.zig`
+
+Verification:
+- `zig test src/terminal_kitty_reply_tests.zig -lc`
+- `zig build test-terminal-replay -- --all`
 
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
@@ -452,6 +468,7 @@ Priority notes:
 - Strengthened `PA-02` `scrollback` assertion semantics (no longer recognized-only; now checks scrollback/scroll behavior evidence).
 - Advanced `PA-04a` by documenting the current kitty graphics `a=`/`d=` surface from code as a parity map for follow-on fixtures/fixes.
 - Advanced `PA-04c` with replay delete conformance fixtures (placement-only vs image+placement delete, plus unsupported-selector no-op).
+- Advanced `PA-04c` query coverage with an extracted `a=q` early-reply seam and unit tests (`EINVAL` missing id / metadata-only `OK`).
 - Advanced `PA-05` to `partial` (unsupported `alternate_key` no longer advertised via key-mode flags).
 - Advanced `PA-05` disambiguation support: modified chars and ambiguous control chars now emit CSI-u without `report_text`; aligned encoder test helper/golden with runtime behavior.
 - Tightened `PA-05` key-encoder test helper gating/mappings so replay/unit tests do not falsely advertise unsupported key-mode outputs.
