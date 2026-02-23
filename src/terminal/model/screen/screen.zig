@@ -224,45 +224,134 @@ pub const Screen = struct {
         if (idx >= self.grid.cells.items.len) return;
 
         if (isCombiningMark(cp)) {
-            if (col == 0) return;
-            const prev_idx = idx - 1;
-            if (prev_idx >= self.grid.cells.items.len) return;
+            var prev_col_opt: ?usize = null;
+            var scan_col = col;
+            while (scan_col > 0) {
+                scan_col -= 1;
+                const scan_idx = row * cols + scan_col;
+                if (scan_idx >= self.grid.cells.items.len) break;
+                const scan = self.grid.cells.items[scan_idx];
+                if (scan.width == 0 and scan.x > 0) continue; // skip wide-cell continuations
+                prev_col_opt = scan_col;
+                break;
+            }
+            const prev_col = prev_col_opt orelse return;
+            const prev_idx = row * cols + prev_col;
             var prev = self.grid.cells.items[prev_idx];
             if (prev.codepoint == 0) return;
             if (prev.combining_len < prev.combining.len) {
                 prev.combining[prev.combining_len] = cp;
                 prev.combining_len += 1;
                 self.grid.cells.items[prev_idx] = prev;
-                self.grid.markDirtyRange(row, row, col - 1, col - 1);
+                self.grid.markDirtyRange(row, row, prev_col, prev_col);
             }
             return;
+        }
+
+        const width: u8 = codepointCellWidth(cp);
+        const write_width: u8 = if (width > 1 and col + 1 >= cols) 1 else width;
+
+        // If overwriting a prior wide-cell root, clear its tail continuation.
+        const existing = self.grid.cells.items[idx];
+        if (existing.width > 1 and col + 1 < cols) {
+            self.grid.cells.items[idx + 1] = self.blankCell();
+        }
+
+        // If writing into a continuation cell, clear the owning root first.
+        if (existing.width == 0 and existing.x > 0 and col >= existing.x) {
+            const root_col = col - existing.x;
+            const root_idx = row * cols + root_col;
+            if (root_idx < self.grid.cells.items.len) {
+                const root = self.grid.cells.items[root_idx];
+                if (root.width > 1) {
+                    self.grid.cells.items[root_idx] = self.blankCell();
+                    if (root_col + 1 < cols) {
+                        self.grid.cells.items[root_idx + 1] = self.blankCell();
+                    }
+                }
+            }
         }
 
         self.grid.cells.items[idx] = types.Cell{
             .codepoint = cp,
             .combining_len = 0,
             .combining = .{ 0, 0 },
-            .width = 1,
+            .width = write_width,
             .attrs = attrs,
         };
+        if (write_width == 2 and col + 1 < cols) {
+            self.grid.cells.items[idx + 1] = types.Cell{
+                .codepoint = 0,
+                .width = 0,
+                .x = 1,
+                .attrs = attrs,
+            };
+        }
 
-        if (self.cursor.col + 1 >= cols) {
+        if (self.cursor.col + write_width >= cols) {
             if (self.auto_wrap) {
                 self.wrap_next = true;
                 self.grid.setRowWrapped(row, true);
             }
         } else {
-            self.cursor.col += 1;
+            self.cursor.col += write_width;
         }
-        self.grid.markDirtyRange(row, row, col, col);
+        self.grid.markDirtyRange(row, row, col, @min(cols - 1, col + write_width - 1));
     }
 
     fn isCombiningMark(codepoint: u32) bool {
         return (codepoint >= 0x0300 and codepoint <= 0x036F) or
+            (codepoint >= 0x0483 and codepoint <= 0x0489) or
+            (codepoint >= 0x0591 and codepoint <= 0x05BD) or
+            codepoint == 0x05BF or
+            (codepoint >= 0x05C1 and codepoint <= 0x05C2) or
+            (codepoint >= 0x05C4 and codepoint <= 0x05C5) or
+            codepoint == 0x05C7 or
+            (codepoint >= 0x0610 and codepoint <= 0x061A) or
+            (codepoint >= 0x064B and codepoint <= 0x065F) or
+            codepoint == 0x0670 or
+            (codepoint >= 0x06D6 and codepoint <= 0x06ED) or
+            (codepoint >= 0x0711 and codepoint <= 0x0711) or
+            (codepoint >= 0x0730 and codepoint <= 0x074A) or
+            (codepoint >= 0x07A6 and codepoint <= 0x07B0) or
+            (codepoint >= 0x07EB and codepoint <= 0x07F3) or
+            (codepoint >= 0x0816 and codepoint <= 0x082D) or
+            (codepoint >= 0x0859 and codepoint <= 0x085B) or
+            (codepoint >= 0x08D3 and codepoint <= 0x0902) or
+            codepoint == 0x093A or
+            codepoint == 0x093C or
+            (codepoint >= 0x0941 and codepoint <= 0x0948) or
+            codepoint == 0x094D or
+            (codepoint >= 0x0951 and codepoint <= 0x0957) or
+            (codepoint >= 0x0962 and codepoint <= 0x0963) or
             (codepoint >= 0x1AB0 and codepoint <= 0x1AFF) or
             (codepoint >= 0x1DC0 and codepoint <= 0x1DFF) or
             (codepoint >= 0x20D0 and codepoint <= 0x20FF) or
-            (codepoint >= 0xFE20 and codepoint <= 0xFE2F);
+            (codepoint >= 0xFE00 and codepoint <= 0xFE0F) or
+            (codepoint >= 0xFE20 and codepoint <= 0xFE2F) or
+            codepoint == 0x200C or codepoint == 0x200D or
+            (codepoint >= 0xE0100 and codepoint <= 0xE01EF) or
+            (codepoint >= 0x1F3FB and codepoint <= 0x1F3FF);
+    }
+
+    pub fn codepointCellWidth(codepoint: u32) u8 {
+        // Conservative width-2 coverage for common East Asian wide/fullwidth glyphs
+        // and emoji blocks. This is wcwidth-like (locale-neutral, no ambiguous-width=2).
+        if ((codepoint >= 0x1100 and codepoint <= 0x115F) or
+            codepoint == 0x2329 or codepoint == 0x232A or
+            (codepoint >= 0x2E80 and codepoint <= 0xA4CF and codepoint != 0x303F) or
+            (codepoint >= 0xAC00 and codepoint <= 0xD7A3) or
+            (codepoint >= 0xF900 and codepoint <= 0xFAFF) or
+            (codepoint >= 0xFE10 and codepoint <= 0xFE19) or
+            (codepoint >= 0xFE30 and codepoint <= 0xFE6F) or
+            (codepoint >= 0xFF00 and codepoint <= 0xFF60) or
+            (codepoint >= 0xFFE0 and codepoint <= 0xFFE6) or
+            (codepoint >= 0x1F300 and codepoint <= 0x1FAFF) or
+            (codepoint >= 0x20000 and codepoint <= 0x3FFFD))
+        {
+            return 2;
+        }
+        return 1;
     }
 
     pub fn writeAsciiRun(self: *Screen, bytes: []const u8, attrs: types.CellAttrs, use_dec_special: bool) usize {
