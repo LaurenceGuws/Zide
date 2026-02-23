@@ -49,6 +49,36 @@ test "terminal input disambiguate mode uses legacy compact cursor/home/end forms
     try std.testing.expectEqualStrings("\x1b[F", end);
 }
 
+test "terminal input disambiguate mode encodes modified cursor/home/end with 1;{m} forms" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 1; // key_mode_disambiguate
+
+    const cases = [_]struct {
+        key: types.Key,
+        mod: types.Modifier,
+        expected: []const u8,
+    }{
+        .{ .key = types.VTERM_KEY_UP, .mod = types.VTERM_MOD_SHIFT, .expected = "\x1b[1;2A" },
+        .{ .key = types.VTERM_KEY_DOWN, .mod = types.VTERM_MOD_SHIFT, .expected = "\x1b[1;2B" },
+        .{ .key = types.VTERM_KEY_LEFT, .mod = types.VTERM_MOD_SHIFT, .expected = "\x1b[1;2D" },
+        .{ .key = types.VTERM_KEY_RIGHT, .mod = types.VTERM_MOD_SHIFT, .expected = "\x1b[1;2C" },
+        .{ .key = types.VTERM_KEY_HOME, .mod = types.VTERM_MOD_SHIFT, .expected = "\x1b[1;2H" },
+        .{ .key = types.VTERM_KEY_END, .mod = types.VTERM_MOD_SHIFT, .expected = "\x1b[1;2F" },
+        .{ .key = types.VTERM_KEY_UP, .mod = types.VTERM_MOD_ALT, .expected = "\x1b[1;3A" },
+        .{ .key = types.VTERM_KEY_HOME, .mod = types.VTERM_MOD_ALT, .expected = "\x1b[1;3H" },
+        .{ .key = types.VTERM_KEY_END, .mod = types.VTERM_MOD_ALT, .expected = "\x1b[1;3F" },
+        .{ .key = types.VTERM_KEY_UP, .mod = types.VTERM_MOD_CTRL, .expected = "\x1b[1;5A" },
+        .{ .key = types.VTERM_KEY_HOME, .mod = types.VTERM_MOD_CTRL, .expected = "\x1b[1;5H" },
+        .{ .key = types.VTERM_KEY_END, .mod = types.VTERM_MOD_CTRL, .expected = "\x1b[1;5F" },
+    };
+
+    inline for (cases) |case_| {
+        const seq = try input_mod.encodeKeyBytesForTest(allocator, case_.key, case_.mod, flags);
+        defer allocator.free(seq);
+        try std.testing.expectEqualStrings(case_.expected, seq);
+    }
+}
+
 test "terminal input encodes char with modifiers when report_text enabled" {
     const allocator = std.testing.allocator;
     const flags: u32 = 8; // key_mode_report_text
