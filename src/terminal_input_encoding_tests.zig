@@ -71,3 +71,23 @@ test "terminal input skips key protocol encoding for alternate-key flag alone" {
     defer allocator.free(seq);
     try std.testing.expectEqual(@as(usize, 0), seq.len);
 }
+
+test "terminal input reports shifted alternate for uppercase char" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 1 | 4; // disambiguate + report_alternate_key
+    const shift = types.VTERM_MOD_SHIFT;
+
+    const seq = try input_mod.encodeCharBytesForTest(allocator, 'A', shift, flags);
+    defer allocator.free(seq);
+    try std.testing.expectEqualStrings("\x1b[97:65;2u", seq);
+}
+
+test "terminal input reports shifted alternate for shifted punctuation" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 1 | 4; // disambiguate + report_alternate_key
+    const shift = types.VTERM_MOD_SHIFT;
+
+    const seq = try input_mod.encodeCharBytesForTest(allocator, ':', shift, flags);
+    defer allocator.free(seq);
+    try std.testing.expectEqualStrings("\x1b[59:58;2u", seq);
+}

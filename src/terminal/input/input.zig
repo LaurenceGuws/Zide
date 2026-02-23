@@ -258,6 +258,7 @@ fn sendCharWithProtocol(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, flags
     if ((flags & key_encoding.key_mode_report_all_event_types) == 0 and action == .release) return false;
 
     var buf: [64]u8 = undefined;
+    const key_fields = protocolCharKeyFields(char, mod, flags);
     const mod_value = key_encoding.kittyModValue(mod);
     const has_mods = mod_value != 1;
     const add_actions = (flags & key_encoding.key_mode_report_all_event_types) != 0 and action != .press;
@@ -268,8 +269,14 @@ fn sendCharWithProtocol(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, flags
     pos += 1;
     buf[pos] = '[';
     pos += 1;
-    const written_key = std.fmt.bufPrint(buf[pos..], "{d}", .{char}) catch return false;
+    const written_key = std.fmt.bufPrint(buf[pos..], "{d}", .{key_fields.key}) catch return false;
     pos += written_key.len;
+    if (key_fields.shifted) |shifted_key| {
+        buf[pos] = ':';
+        pos += 1;
+        const written_shifted = std.fmt.bufPrint(buf[pos..], "{d}", .{shifted_key}) catch return false;
+        pos += written_shifted.len;
+    }
     if (second_field or (flags & key_encoding.key_mode_embed_text) != 0) {
         buf[pos] = ';';
         pos += 1;
@@ -294,6 +301,53 @@ fn sendCharWithProtocol(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, flags
     pos += 1;
     _ = pty.write(buf[0..pos]) catch return false;
     return true;
+}
+
+const ProtocolCharKeyFields = struct {
+    key: u32,
+    shifted: ?u32 = null,
+};
+
+fn protocolCharKeyFields(char: u32, mod: types.Modifier, flags: u32) ProtocolCharKeyFields {
+    const report_alternate = (flags & key_encoding.key_mode_report_alternate_key) != 0;
+    if (!report_alternate) return .{ .key = char };
+    if ((mod & types.VTERM_MOD_SHIFT) == 0) return .{ .key = char };
+
+    if (asciiShiftBase(char)) |base| {
+        return .{
+            .key = base,
+            .shifted = char,
+        };
+    }
+    return .{ .key = char };
+}
+
+fn asciiShiftBase(char: u32) ?u32 {
+    if (char >= 'A' and char <= 'Z') return char + 32;
+    return switch (char) {
+        '!' => '1',
+        '@' => '2',
+        '#' => '3',
+        '$' => '4',
+        '%' => '5',
+        '^' => '6',
+        '&' => '7',
+        '*' => '8',
+        '(' => '9',
+        ')' => '0',
+        '_' => '-',
+        '+' => '=',
+        '{' => '[',
+        '}' => ']',
+        '|' => '\\',
+        ':' => ';',
+        '"' => '\'',
+        '<' => ',',
+        '>' => '.',
+        '?' => '/',
+        '~' => '`',
+        else => null,
+    };
 }
 
 fn charNeedsProtocolDisambiguation(char: u32, mod: types.Modifier) bool {
@@ -361,7 +415,11 @@ pub fn encodeCharBytesForTest(
     if (!report_text and !disambiguate) return allocator.alloc(u8, 0);
     if (!report_text and !charNeedsProtocolDisambiguation(char, mod)) return allocator.alloc(u8, 0);
     const mod_code = encodeModifier(mod);
-    return std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ char, mod_code });
+    const key_fields = protocolCharKeyFields(char, mod, flags);
+    if (key_fields.shifted) |shifted_key| {
+        return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};{d}u", .{ key_fields.key, shifted_key, mod_code });
+    }
+    return std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ key_fields.key, mod_code });
 }
 
 fn encodeCsiWithModBytes(
