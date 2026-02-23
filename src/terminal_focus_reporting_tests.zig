@@ -32,7 +32,7 @@ const PipeCapture = struct {
         var fds = [_]posix.pollfd{.{ .fd = self.read_fd, .events = posix.POLL.IN, .revents = 0 }};
         const ready = try posix.poll(&fds, 50);
         if (ready <= 0 or (fds[0].revents & posix.POLL.IN) == 0) return error.NoReplyData;
-        var buf: [64]u8 = undefined;
+        var buf: [4096]u8 = undefined;
         const n = try posix.read(self.read_fd, &buf);
         return allocator.dupe(u8, buf[0..n]);
     }
@@ -159,6 +159,7 @@ test "terminal DECRQM private queries report common mode set/reset states" {
                 .{ .mode = 1007, .set_seq = "\x1b[?1007h", .reset_seq = "\x1b[?1007l", .default_set = true },
                 .{ .mode = 2004, .set_seq = "\x1b[?2004h", .reset_seq = "\x1b[?2004l" },
                 .{ .mode = 2026, .set_seq = "\x1b[?2026h", .reset_seq = "\x1b[?2026l" },
+                .{ .mode = 5522, .set_seq = "\x1b[?5522h", .reset_seq = "\x1b[?5522l" },
             };
 
             for (cases) |case| {
@@ -261,11 +262,46 @@ test "terminal DECRQM private query returns Pm=4 only for strategic fixed-off un
     }.run);
 }
 
+test "terminal kitty paste events mode emits OSC 5522 mime list and serves text/plain reads" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+
+            terminal.debugFeedBytes(session, "\x1b[?5522h");
+            try std.testing.expect(session.kittyPasteEvents5522Enabled());
+
+            try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings(
+                    "\x1b]5522;type=read:status=OK\x1b\\"
+                    ++ "\x1b]5522;type=read:status=DATA:mime=Lg==;dGV4dC9wbGFpbgo=\x1b\\"
+                    ++ "\x1b]5522;type=read:status=DONE\x1b\\",
+                    reply,
+                );
+            }
+
+            terminal.debugFeedBytes(session, "\x1b]5522;type=read;dGV4dC9wbGFpbg==\x1b\\");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings(
+                    "\x1b]5522;type=read:status=OK\x1b\\"
+                    ++ "\x1b]5522;type=read:status=DATA:mime=dGV4dC9wbGFpbg==;aGk=\x1b\\"
+                    ++ "\x1b]5522;type=read:status=DONE\x1b\\",
+                    reply,
+                );
+            }
+        }
+    }.run);
+}
+
 test "terminal DECRQM private query returns Pm=0 for provisional unsupported modes still on support path" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            const modes = [_]i32{ 45, 1016, 2031, 2048, 5522 };
+            const modes = [_]i32{ 45, 1016, 2031, 2048 };
 
             for (modes) |mode| {
                 var qbuf: [32]u8 = undefined;
