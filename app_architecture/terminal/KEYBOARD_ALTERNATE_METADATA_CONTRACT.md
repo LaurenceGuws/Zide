@@ -135,6 +135,10 @@ Implemented since the initial contract draft:
   duplicate filtering.
 - `alternate_probe.zig` also exposes a small key/text->metadata bridge seam used by
   encoder tests to verify derived metadata reaches CSI-u formatting.
+- The replay harness now supports an `encoder.alternate_probe_meta` fixture path that
+  exercises this bridge seam with synthetic shared key-event modifiers (including
+  normalized `mods.altgr`) plus probe outputs, so runtime metadata selection behavior
+  is fixture-locked in addition to unit-tested.
 - `terminal.input.altmeta` diagnostic logging was added to compare event `sym`
   against scancode-translation probe outputs during real-layout manual testing.
 
