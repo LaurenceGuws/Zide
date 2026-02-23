@@ -238,24 +238,28 @@ pub const TerminalWidget = struct {
     }
 
     pub fn pasteClipboardFromSystem(self: *TerminalWidget, shell: *Shell) bool {
-        const clip = shell.getClipboardText() orelse return false;
+        const clip_opt = shell.getClipboardText();
         const html = shell.getClipboardMimeData(self.session.allocator, "text/html");
         const uri_list = shell.getClipboardMimeData(self.session.allocator, "text/uri-list");
         const png = shell.getClipboardMimeData(self.session.allocator, "image/png");
         defer if (html) |buf| self.session.allocator.free(buf);
         defer if (uri_list) |buf| self.session.allocator.free(buf);
         defer if (png) |buf| self.session.allocator.free(buf);
+        const clip = clip_opt orelse "";
+        const has_supported_clipboard_data = clip_opt != null or html != null or uri_list != null or png != null;
+        if (!has_supported_clipboard_data) return false;
         if (self.session.scrollOffset() > 0) {
             self.session.setScrollOffset(0);
         }
         if (self.session.sendKittyPasteEvent5522WithMimeRich(clip, html, uri_list, png) catch false) {
             return true;
         }
+        if (clip_opt == null) return false;
         if (self.session.bracketedPasteEnabled()) {
             self.session.sendText("\x1b[200~") catch return false;
             var filtered = std.ArrayList(u8).empty;
             defer filtered.deinit(self.session.allocator);
-            for (clip) |b| {
+            for (clip_opt.?) |b| {
                 if (b == 0x1b or b == 0x03) continue;
                 filtered.append(self.session.allocator, b) catch return false;
             }
@@ -264,7 +268,7 @@ pub const TerminalWidget = struct {
             }
             self.session.sendText("\x1b[201~") catch return false;
         } else {
-            self.session.sendText(clip) catch return false;
+            self.session.sendText(clip_opt.?) catch return false;
         }
         return true;
     }

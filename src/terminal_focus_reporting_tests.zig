@@ -337,6 +337,28 @@ test "terminal kitty paste events mode emits OSC 5522 mime list and serves text/
     }.run);
 }
 
+test "terminal kitty paste events mode supports image-only clipboard payloads" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            const png = [_]u8{ 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n' };
+
+            terminal.debugFeedBytes(session, "\x1b[?5522h");
+            try std.testing.expect(try session.sendKittyPasteEvent5522WithMimeRich("", null, null, &png));
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings(
+                    "\x1b]5522;type=read:status=OK\x1b\\"
+                    ++ "\x1b]5522;type=read:status=DATA:mime=Lg==;aW1hZ2UvcG5nCg==\x1b\\"
+                    ++ "\x1b]5522;type=read:status=DONE\x1b\\",
+                    reply,
+                );
+            }
+        }
+    }.run);
+}
+
 test "terminal DECRQM private query returns Pm=0 for provisional unsupported modes still on support path" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {

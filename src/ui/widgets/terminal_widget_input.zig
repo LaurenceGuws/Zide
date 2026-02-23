@@ -603,23 +603,28 @@ pub fn handleInput(
 
         if (!mouse_reporting and in_terminal) {
             if (input_batch.mousePressed(.middle)) {
-                if (shell.getClipboardText()) |clip| {
-                    const html = shell.getClipboardMimeData(self.session.allocator, "text/html");
-                    const uri_list = shell.getClipboardMimeData(self.session.allocator, "text/uri-list");
-                    const png = shell.getClipboardMimeData(self.session.allocator, "image/png");
-                    defer if (html) |buf| self.session.allocator.free(buf);
-                    defer if (uri_list) |buf| self.session.allocator.free(buf);
-                    defer if (png) |buf| self.session.allocator.free(buf);
+                const clip_opt = shell.getClipboardText();
+                const html = shell.getClipboardMimeData(self.session.allocator, "text/html");
+                const uri_list = shell.getClipboardMimeData(self.session.allocator, "text/uri-list");
+                const png = shell.getClipboardMimeData(self.session.allocator, "image/png");
+                defer if (html) |buf| self.session.allocator.free(buf);
+                defer if (uri_list) |buf| self.session.allocator.free(buf);
+                defer if (png) |buf| self.session.allocator.free(buf);
+                const has_supported_clipboard_data = clip_opt != null or html != null or uri_list != null or png != null;
+                if (has_supported_clipboard_data) {
+                    const clip = clip_opt orelse "";
                     if (try self.session.sendKittyPasteEvent5522WithMimeRich(clip, html, uri_list, png)) {
                         handled = true;
-                    } else if (self.session.bracketedPasteEnabled()) {
-                        try self.session.sendText("\x1b[200~");
-                        try self.session.sendText(clip);
-                        try self.session.sendText("\x1b[201~");
-                    } else {
-                        try self.session.sendText(clip);
+                    } else if (clip_opt) |clip_text| {
+                        if (self.session.bracketedPasteEnabled()) {
+                            try self.session.sendText("\x1b[200~");
+                            try self.session.sendText(clip_text);
+                            try self.session.sendText("\x1b[201~");
+                        } else {
+                            try self.session.sendText(clip_text);
+                        }
+                        handled = true;
                     }
-                    handled = true;
                 }
             }
             if (wheel_steps != 0) {
