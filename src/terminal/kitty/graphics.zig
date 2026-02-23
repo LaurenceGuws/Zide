@@ -1475,7 +1475,7 @@ fn kittyPlacementIntersects(placement: KittyPlacement, row: u16, col: u16) bool 
     return row >= placement.row and row <= end_row and col >= placement.col and col <= end_col;
 }
 
-fn writeKittyResponse(self: anytype, control: KittyControl, image_id: u32, ok: bool, message: []const u8) void {
+pub fn writeKittyResponse(self: anytype, control: KittyControl, image_id: u32, ok: bool, message: []const u8) void {
     if (control.quiet == 2) return;
     if (control.quiet == 1 and ok) return;
     if (self.pty == null) return;
