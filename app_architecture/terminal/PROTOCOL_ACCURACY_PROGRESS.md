@@ -2010,6 +2010,10 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
     - resets title/app-id state
     - clears image/notification state
   - Zide currently preserves those areas by design for a safer soft-reset slice; this is intentional for now but must be kept marked as a divergence until xterm/kitty/ghostty alignment is chosen and documented.
+- Current row-by-row classification in this `DECSTR` slice (to avoid ambiguity while `PA-08h` remains `partial`):
+  - `implemented + evidence locked`: grid/scrollback (heuristic caveat), kitty state, cursor pos/style, attrs, scroll region, tabs, parser/charsets, saved cursor/charset slots, session mode bits, alt-screen active state, hidden primary contents, clipboard/title/cwd/hyperlinks
+  - `defer (reference parity decision pending)`: whether `DECSTR` should reset title/app-id metadata, exit alt-screen, or clear graphics/notification state to match broader implementations like foot
+  - `out of current slice`: broader CSI reset-family parity beyond `DECSTR` (`PA-08h` promoted gaps)
 - Deferred / out of current `PA-08h` slice unless reference/app evidence demands it:
   - hard-reset-like behavior (screen clear, scrollback wipe, kitty image wipe)
   - broader CSI reset-family parity beyond `DECSTR` (tracked separately in `PA-08h` promoted gaps / `PA-08a`)
@@ -2147,6 +2151,19 @@ Files:
 Verification:
 - `zig build test-terminal-replay -- --fixture decstr_preserves_title_cwd_hyperlink --update-goldens`
 - `zig build test-terminal-replay -- --fixture csi_x_intermediate_unsupported_no_reply --update-goldens`
+- `zig build test-terminal-replay -- --all`
+
+Implemented (increment 7 / `PA-08f` unsupported-intermediate ignore coverage for `CSI ... z`):
+- Added replay fixture that locks deterministic ignore/no-reply behavior for unsupported intermediate-bearing `CSI ... z` forms (`CSI $ z`, `CSI ! z`) with surrounding grid text preserved.
+- This broadens end-to-end ignore coverage across multiple final bytes (`p`, `q`, `x`, `z`) so parser/disambiguation regressions are more likely to be caught early.
+
+Files:
+- `fixtures/terminal/csi_z_intermediate_unsupported_no_reply.vt`
+- `fixtures/terminal/csi_z_intermediate_unsupported_no_reply.json`
+- `fixtures/terminal/csi_z_intermediate_unsupported_no_reply.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture csi_z_intermediate_unsupported_no_reply --update-goldens`
 - `zig build test-terminal-replay -- --all`
   4. Extend/reset matrix incrementally as reference behavior is confirmed.
 
