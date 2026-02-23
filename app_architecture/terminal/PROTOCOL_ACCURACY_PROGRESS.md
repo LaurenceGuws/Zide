@@ -1806,6 +1806,34 @@ Verification:
 - `zig build test-terminal-replay -- --fixture decrqm_query_matrix_reply --update-goldens`
 - `zig build test-terminal-replay -- --all`
 
+Planned work (decomposition / `PA-08f` CSI parser intermediate-byte parity):
+- Problem statement:
+  - Zide's CSI parser currently records `final`, `params`, `leader`, and `private`, but drops CSI intermediate bytes entirely (`src/terminal/parser/csi.zig`).
+  - Current `DECRQM` support is handled opportunistically by final-byte dispatch (`'p'`) plus leader/private checks, with an explicit code comment documenting the parser limitation (`src/terminal/protocol/csi.zig`).
+- Why parity work requires this:
+  - xterm control sequences define distinct CSI families that differ only by intermediate bytes (e.g. `CSI Ps $ p` `DECRQM`, `CSI ! p` `DECSTR`, `CSI ? Ps $ p` DEC-private `DECRQM`).
+  - kitty and ghostty both parse CSI intermediates and branch on them; ghostty explicitly logs/ignores unimplemented sequences by final+intermediate combinations rather than conflating by final byte (`reference_repos/terminals/ghostty/src/terminal/stream.zig`, `reference_repos/terminals/kitty/kitty/vt-parser.c`).
+- `PA-08f` done looks like:
+  - `CsiAction` captures CSI intermediates (at least enough bytes/range for parity-critical sequences) without regressing existing parser behavior.
+  - CSI dispatch in `src/terminal/protocol/csi.zig` uses intermediates for parity-critical families (`DECRQM`, `DECSTR`, and future promoted `$`/`!` forms) instead of final-byte shortcuts.
+  - Unsupported intermediate-bearing CSI sequences are ignored/logged deterministically by exact final+intermediate combination (not accidentally interpreted as another family).
+  - Coverage exists at three layers:
+    - parser unit tests (intermediate capture)
+    - protocol PTY/unit tests for dispatch/replies (`DECRQM`, `DECSTR` when implemented)
+    - replay fixture(s) for at least one `$` family and one `!` family sequence
+- `PA-08f` implementation plan (small-commit slices):
+  1. Extend `src/terminal/parser/csi.zig` `CsiAction` with intermediate storage (bounded array + length) and preserve existing `leader/private/params` semantics.
+  2. Add parser unit tests that prove:
+     - `CSI 20 $ p` captures `intermediates="$"`
+     - `CSI ? 1004 $ p` captures `intermediates="?$"` (or equivalent `leader + "$"` representation, whichever API we choose)
+     - `CSI ! p` captures `intermediates="!"`
+  3. Refactor `src/terminal/protocol/csi.zig` `DECRQM` dispatch to require/interrogate intermediate bytes explicitly (behavior-preserving for currently-supported queries).
+  4. Add exact ignore-path tests for unrelated `CSI ... p` sequences so `DECRQM` handling does not over-match.
+  5. Promote next intermediate-dependent CSI family (`DECSTR` or another `PA-08h` item) using the new parser capability.
+- Scope boundary (current pass):
+  - `PA-08f` is parser/disambiguation infrastructure; it does not by itself require implementing all intermediate-bearing CSI families.
+  - Each newly-enabled family still needs a separate parity slice (`PA-08h`) with reference behavior + tests.
+
 ## Change Log
 
 ### 2026-02-23
