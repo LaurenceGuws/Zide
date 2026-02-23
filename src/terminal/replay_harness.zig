@@ -1,5 +1,7 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const terminal = @import("core/terminal.zig");
+const pty_mod = @import("io/pty.zig");
 const snapshot_mod = @import("core/snapshot.zig");
 const input_mod = @import("input/input.zig");
 const alt_probe = @import("input/alternate_probe.zig");
@@ -80,8 +82,46 @@ pub const FixtureMeta = struct {
     cursor: types.CursorPos = .{ .row = 0, .col = 0 },
     line_ending: LineEnding = .lf,
     assertions: []const []const u8 = &.{},
+    reply_hex: ?[]const u8 = null,
     selection: []const SelectionAction = &.{},
     encoder: ?EncoderSpec = null,
+};
+
+const ReplayPtyCapture = struct {
+    read_fd: std.posix.fd_t,
+    pty: pty_mod.Pty,
+
+    fn init() !ReplayPtyCapture {
+        if (builtin.os.tag != .linux and builtin.os.tag != .macos) return error.UnsupportedReplyCapture;
+        const fds = try std.posix.pipe();
+        return .{
+            .read_fd = fds[0],
+            .pty = .{ .master_fd = fds[1], .child_pid = null },
+        };
+    }
+
+    fn deinit(self: *ReplayPtyCapture) void {
+        std.posix.close(self.read_fd);
+        self.pty.deinit();
+    }
+
+    fn readAll(self: *ReplayPtyCapture, allocator: std.mem.Allocator) ![]u8 {
+        var out = std.ArrayList(u8).empty;
+        errdefer out.deinit(allocator);
+
+        while (true) {
+            var pollfds = [_]std.posix.pollfd{.{ .fd = self.read_fd, .events = std.posix.POLL.IN, .revents = 0 }};
+            const timeout_ms: i32 = if (out.items.len == 0) 50 else 0;
+            const ready = try std.posix.poll(&pollfds, timeout_ms);
+            if (ready <= 0 or (pollfds[0].revents & std.posix.POLL.IN) == 0) break;
+
+            var buf: [256]u8 = undefined;
+            const n = try std.posix.read(self.read_fd, &buf);
+            if (n == 0) break;
+            try out.appendSlice(allocator, buf[0..n]);
+        }
+        return out.toOwnedSlice(allocator);
+    }
 };
 
 pub const Fixture = struct {
@@ -232,6 +272,19 @@ pub fn runFixture(
     var session = try terminal.TerminalSession.init(allocator, fixture.meta.rows, fixture.meta.cols);
     defer session.deinit();
 
+    var reply_capture: ?ReplayPtyCapture = null;
+    if (fixture.meta.reply_hex != null) {
+        reply_capture = try ReplayPtyCapture.init();
+        session.pty = reply_capture.?.pty;
+    }
+    defer {
+        if (reply_capture != null) {
+            session.pty = null;
+            var capture = reply_capture.?;
+            capture.deinit();
+        }
+    }
+
     terminal.debugSetCursor(session, fixture.meta.cursor.row, fixture.meta.cursor.col);
 
     const normalized = try normalizeLineEndings(allocator, fixture.input, fixture.meta.line_ending);
@@ -245,6 +298,14 @@ pub fn runFixture(
     const snapshot = session.snapshot();
     const debug = terminal.debugSnapshot(session);
     try validateAssertions(fixture, snapshot, debug);
+    if (fixture.meta.reply_hex) |reply_hex| {
+        var capture = reply_capture orelse return error.ReplyAssertionMissingCapture;
+        const actual = try capture.readAll(allocator);
+        defer allocator.free(actual);
+        const expected = try decodeHex(allocator, reply_hex);
+        defer allocator.free(expected);
+        if (!std.mem.eql(u8, actual, expected)) return error.ReplyAssertionMismatch;
+    }
 
     return snapshot_mod.encodeSnapshot(allocator, session, snapshot, debug, terminal.debugScrollbackRow);
 }
@@ -370,6 +431,10 @@ fn validateAssertions(
             }
             continue;
         }
+        if (std.mem.eql(u8, tag, "reply")) {
+            if (fixture.meta.reply_hex == null) return error.AssertionReplyNotExercised;
+            continue;
+        }
         if (std.mem.eql(u8, tag, "title")) {
             if (std.mem.eql(u8, debug.title, "Terminal")) return error.AssertionTitleNotExercised;
             continue;
@@ -395,6 +460,19 @@ fn validateAssertions(
         }
         return error.UnknownAssertionTag;
     }
+}
+
+fn decodeHex(allocator: std.mem.Allocator, hex: []const u8) ![]u8 {
+    if ((hex.len % 2) != 0) return error.InvalidHexLength;
+    var out = try allocator.alloc(u8, hex.len / 2);
+    errdefer allocator.free(out);
+    var i: usize = 0;
+    while (i < out.len) : (i += 1) {
+        const hi = try std.fmt.charToDigit(hex[i * 2], 16);
+        const lo = try std.fmt.charToDigit(hex[i * 2 + 1], 16);
+        out[i] = @as(u8, @intCast(hi * 16 + lo));
+    }
+    return out;
 }
 
 fn snapshotHasNonDefaultGrid(snapshot: terminal.TerminalSnapshot) bool {
