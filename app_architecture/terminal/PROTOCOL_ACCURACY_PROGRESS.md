@@ -1523,7 +1523,7 @@ Inventory snapshot (`PA-08a`, first pass) checklist:
 | DEC private modes (alt screen/DECCKM/DECOM/DECAWM/bracketed paste/sync update/mouse 1000/1002/1003/1006) | implemented | high | replay+app | Strong modern TUI coverage |
 | Kitty keyboard mode controls (`CSI >u/<u/=u/?u`) | implemented | high | replay+unit | Encoding parity still partial under `PA-05` |
 | Tabulation family beyond `TBC` | partial | medium | replay | `CHT/CBT/TBC` now implemented; tab-stop report/edit breadth still partial |
-| Mode query/report breadth (`DECRQM` etc.) | partial | high | unit+PTY (partial) | Minimal private `DECRQM` replies implemented for common DEC modes; breadth still incomplete |
+| Mode query/report breadth (`DECRQM` etc.) | partial | high | replay+unit+PTY (partial) | Private `DECRQM` replies implemented for common DEC modes + ANSI mode `20`; replay reply assertions now available |
 | Focus reporting mode (`?1004`) + event emission path | partial | high | replay+PTY | Implemented with window + pane source toggles; semantics may evolve |
 | Terminal reset conveniences (`DECSTR`, CSI soft reset breadth) | partial | medium | no | Not prioritized yet |
 | Left/right margins (`DECSLRM`) + rectangular semantics | partial | medium | no | xterm-compat gap for some advanced TUIs |
@@ -1626,6 +1626,34 @@ Verification:
 - `zig test src/terminal_csi_reply_tests.zig -lc`
 - `zig build test-terminal-focus-reporting`
 
+Implemented (increment 6 / `PA-08e` `DECRQM` query coverage expansion + ANSI mode `20`):
+- Expanded PTY-capture `DECRQM` integration coverage with a table-driven private-mode query matrix covering representative common modes (`?1`, `?7`, `?25`, `?1000`, `?1006`, `?2004`, `?2026`) across default/set/reset states.
+- Added explicit `Pm=0` integration coverage for unsupported private mode queries.
+- Added minimal ANSI `DECRQM` support for mode `20` (newline mode) with set/reset reporting (`CSI 20 ; Pm $ y`).
+
+Files:
+- `src/terminal/protocol/csi.zig`
+- `src/terminal_focus_reporting_tests.zig`
+
+Verification:
+- `zig build test-terminal-focus-reporting`
+- `zig test src/terminal_csi_reply_tests.zig -lc`
+
+Implemented (increment 7 / `PA-08d` replay query-reply assertion seam, first slice):
+- Added replay-harness support for fixture-level PTY reply assertions via `reply_hex` metadata plus `assertions: [\"reply\"]`.
+- Replay harness now attaches a pipe-backed PTY only when `reply_hex` is present and compares captured reply bytes to the expected hex payload.
+- Added a replay fixture that validates `DECRQM ?1004` reply bytes end-to-end in fixture flow (`\x1b[?1004;1$y`).
+
+Files:
+- `src/terminal/replay_harness.zig`
+- `fixtures/terminal/decrqm_focus_reporting_query_reply.vt`
+- `fixtures/terminal/decrqm_focus_reporting_query_reply.json`
+- `fixtures/terminal/decrqm_focus_reporting_query_reply.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture decrqm_focus_reporting_query_reply --update-goldens`
+- `zig build test-terminal-replay -- --all`
+
 ## Change Log
 
 ### 2026-02-23
@@ -1665,6 +1693,8 @@ Verification:
 - Advanced `PA-08e` with `CHT`/`CBT` tab movement support and replay fixture coverage (`2I` / `2Z` tab-stop traversal).
 - Advanced `PA-08e` `?1004` focus reporting with dual event sources (window + terminal-pane) and separate Lua toggles for each source.
 - Advanced `PA-08e` with a first `DECRQM` slice: minimal DEC private mode query replies (`DECRPM`) for common supported modes plus `Pm=0` for unsupported private queries.
+- Expanded `PA-08e` `DECRQM` coverage with a table-driven private-mode PTY query matrix and ANSI mode `20` (newline mode) query replies.
+- Advanced `PA-08d` with a first replay-level query reply assertion seam (`reply_hex`) and a `DECRQM ?1004` reply fixture.
 
 ## Next Work Queue (Ordered)
 
