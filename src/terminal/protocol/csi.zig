@@ -14,11 +14,12 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
     const log = app_logger.logger("terminal.csi");
     if (log.enabled_file or log.enabled_console) {
         log.logf(
-            "csi final={c} leader={c} private={d} count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
+            "csi final={c} leader={c} private={d} interm={s} count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
             .{
                 action.final,
                 if (action.leader == 0) '.' else action.leader,
                 @as(u8, @intFromBool(action.private)),
+                action.intermediates[0..action.intermediates_len],
                 action.count,
                 action.params[0],
                 action.params[1],

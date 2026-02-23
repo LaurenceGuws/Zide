@@ -257,6 +257,24 @@ test "terminal CSI !p does not trigger DECRQM reply" {
     }.run);
 }
 
+test "terminal CSI ?1004p without $ intermediate does not trigger DECRQM reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            terminal.debugFeedBytes(session, "\x1b[?1004p");
+            try capture.expectNoReply();
+        }
+    }.run);
+}
+
+test "terminal CSI #p does not trigger DECRQM reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            terminal.debugFeedBytes(session, "\x1b[#p");
+            try capture.expectNoReply();
+        }
+    }.run);
+}
+
 test "terminal widget focus source toggles gate window and pane reports" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
