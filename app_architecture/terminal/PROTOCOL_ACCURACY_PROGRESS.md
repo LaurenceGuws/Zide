@@ -661,6 +661,20 @@ Verification:
 - `zig build test-terminal-kitty-query-parse`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 18 / `PA-04c` missing-id precedence matrix expansion):
+- Added integrated `a=q` parse-path tests confirming missing image-id preflight wins over:
+  - invalid format validation
+  - chunked query preflight (`m=1`, including with `o=z`)
+- Added `q=2` suppression coverage when missing-id preflight wins over invalid format.
+- This extends early-error ordering coverage around the highest-priority `image_id`
+  preflight branch.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
@@ -861,6 +875,30 @@ Verification:
 - `zig build`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 16 / `PA-05b` explicit SDL keymod plumbing for AltGr/right-alt distinction):
+- Preserved raw SDL keymod bits on key events (`sdl_mod_bits`) through the input pipeline:
+  - SDL event parsing (`event.key.mod` / `keysym.mod`)
+  - platform key queue
+  - shared `InputBatch` key events
+- Terminal widget alternate-key metadata derivation now uses explicit SDL keymod bits to
+  distinguish:
+  - explicit AltGr/right-alt (`RALT` / `MODE`) -> prefer AltGr probe candidates
+  - explicit non-AltGr alt usage -> avoid generic ctrl+alt AltGr inference
+  - missing SDL keymod bits -> fall back to generic best-effort probing
+- This reduces false third-field alternates when left Alt is used and better matches the
+  intent of `PA-05b` explicit AltGr distinction.
+
+Files:
+- `src/platform/sdl_api.zig`
+- `src/platform/input_events.zig`
+- `src/types/input.zig`
+- `src/input/input_builder.zig`
+- `src/ui/widgets/terminal_widget_input.zig`
+
+Verification:
+- `zig build`
+- `zig build test-terminal-replay -- --all`
+
 Investigated feasibility/limits (research note, 2026-02-23):
 - Documented the current SDL/platform data surface and limitations for layout-aware alternate-key parity:
   - available: scancode, key symbol (`sym`), text input UTF-8, composition state
@@ -877,6 +915,23 @@ Implemented (increment 1 / `PA-05c` synthetic non-US metadata fixtures at encode
 - Added initial replay fixtures that emulate non-US/layout metadata and composed-text metadata:
   - non-US alternate metadata present -> current encoder output unchanged (no-op baseline)
   - composed-text metadata present -> current encoder output unchanged (no-op baseline)
+
+Implemented (increment 5 / `PA-05c` unit tests for runtime AltGr probe selection behavior):
+- Extracted third-field selection ordering into a small pure helper used by terminal UI
+  metadata derivation (`src/terminal/input/alternate_probe.zig`).
+- Added unit coverage for runtime probe behavior:
+  - explicit AltGr probe candidates are preferred over event `sym`
+  - explicit non-AltGr alt usage suppresses generic ctrl+alt AltGr inference
+  - generic ctrl+alt probing still applies when explicit SDL distinction is unavailable
+  - duplicate candidates are ignored
+- This provides direct regression coverage for runtime-derived alternate selection logic,
+  complementing encoder replay fixtures that cover downstream CSI-u formatting.
+
+Files:
+- `src/terminal/input/alternate_probe.zig`
+
+Verification:
+- `zig test src/terminal/input/alternate_probe.zig`
 - These fixtures create a regression seam for future layout-aware alternate-key encoding without changing current behavior.
 
 Files:
