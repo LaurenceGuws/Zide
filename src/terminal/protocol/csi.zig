@@ -232,6 +232,10 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         1049 => self.enterAltScreen(true, true),
                         2004 => self.bracketed_paste = true,
                         2026 => self.setSyncUpdates(true),
+                        1004 => {
+                            self.focus_reporting = true;
+                            self.updateInputSnapshot();
+                        },
                         1000 => {
                             self.input.mouse_mode_x10 = true;
                             self.updateInputSnapshot();
@@ -285,6 +289,10 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         1049 => self.exitAltScreen(true),
                         2004 => self.bracketed_paste = false,
                         2026 => self.setSyncUpdates(false),
+                        1004 => {
+                            self.focus_reporting = false;
+                            self.updateInputSnapshot();
+                        },
                         1000 => {
                             self.input.mouse_mode_x10 = false;
                             self.updateInputSnapshot();

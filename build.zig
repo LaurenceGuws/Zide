@@ -404,6 +404,37 @@ pub fn build(b: *std.Build) void {
     );
     terminal_kitty_query_tests_step.dependOn(&run_terminal_kitty_query_tests.step);
 
+    const terminal_focus_reporting_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/terminal_focus_reporting_tests.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    terminal_focus_reporting_tests.linkSystemLibrary("SDL3");
+    if (target_os == .linux) {
+        terminal_focus_reporting_tests.linkSystemLibrary("GL");
+    } else if (target_os == .windows) {
+        terminal_focus_reporting_tests.linkSystemLibrary("opengl32");
+    } else if (target_os == .macos) {
+        terminal_focus_reporting_tests.linkFramework("OpenGL");
+    }
+    terminal_focus_reporting_tests.addIncludePath(b.path("vendor"));
+    if (target_os == .linux) {
+        terminal_focus_reporting_tests.addIncludePath(.{ .cwd_relative = "/usr/include/SDL3" });
+    }
+    terminal_focus_reporting_tests.addCSourceFile(.{
+        .file = b.path("src/c/stb_image.c"),
+        .flags = &.{"-std=c99"},
+    });
+    const run_terminal_focus_reporting_tests = b.addRunArtifact(terminal_focus_reporting_tests);
+    const terminal_focus_reporting_tests_step = b.step(
+        "test-terminal-focus-reporting",
+        "Run project-integrated terminal focus reporting tests",
+    );
+    terminal_focus_reporting_tests_step.dependOn(&run_terminal_focus_reporting_tests.step);
+
     const terminal_import_check = b.addExecutable(.{
         .name = "terminal-import-check",
         .root_module = b.createModule(.{

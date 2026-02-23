@@ -74,6 +74,7 @@ pub const DebugSnapshot = struct {
     hyperlinks: []const Hyperlink,
     scrollback_count: usize,
     scrollback_offset: usize,
+    focus_reporting: bool,
     selection: ?types.TerminalSelection,
     base_default_attrs: types.CellAttrs,
 };
@@ -111,6 +112,9 @@ pub fn encodeSnapshot(
         "scrollback: count={d} view_offset={d}",
         .{ debug.scrollback_count, debug.scrollback_offset },
     );
+    if (debug.focus_reporting) {
+        try appendLine(&out, allocator, "focus_reporting: 1");
+    }
     try appendQuotedField(&out, allocator, "title", debug.title);
     try appendQuotedField(&out, allocator, "cwd", debug.cwd);
     var clipboard_buf: ?[]u8 = null;

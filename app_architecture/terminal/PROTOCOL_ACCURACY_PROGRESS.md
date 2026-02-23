@@ -33,7 +33,7 @@ Rules for this document:
 | PA-05 | Medium | partial | Kitty keyboard / CSI-u alternate/disambiguation flags tracked but not encoded | `alternate_key` / disambiguation flags affect output and tests cover behavior |
 | PA-06 | Medium | done | X10 mouse encoding can emit `0` for large coords | X10 coord encoding saturates/falls back safely; no invalid zero coord bytes from overflow |
 | PA-07 | Medium | done | Bare SGR `58` likely treated incorrectly as reset | Bare `58` no longer resets underline color; `59` remains reset |
-| PA-08 | Medium-Low | todo | CSI/DCS/APC coverage is subset of reference terminals | Sub-gaps enumerated and prioritized with explicit roadmap/tests |
+| PA-08 | Medium-Low | partial | CSI/DCS/APC coverage is subset of reference terminals | Sub-gaps enumerated and prioritized with explicit roadmap/tests |
 
 ## Detailed Findings (Source Review Snapshot)
 
@@ -782,6 +782,35 @@ Files:
 
 Verification:
 - `zig test src/terminal_input_encoding_tests.zig`
+
+Implemented (increment 11):
+- Completed `report_all_event_types` action-field coverage for non-cursor function keys in disambiguate mode:
+  - `Enter`, `Tab`, `Backspace`, `Escape`, `Ins`, `Del`, `PgUp`, `PgDn`
+  - repeat (`:2`) and release (`:3`) forms
+- Added replay encoder fixtures/goldens to lock the action-field matrix beyond cursor/home/end, with representative modified-key cases.
+
+Files:
+- `src/terminal_input_encoding_tests.zig`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_enter_release.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_enter_repeat.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_tab_release.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_tab_repeat.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_backspace_release.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_backspace_repeat.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_escape_release.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_escape_repeat.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_ins_release.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_ins_repeat.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_del_release.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_del_repeat.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_pageup_release.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_pageup_repeat.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_pagedown_release.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_pagedown_repeat.json`
+
+Verification:
+- `zig test src/terminal_input_encoding_tests.zig`
+- `zig build test-terminal-replay -- --all`
 - `zig build test-terminal-replay -- --all`
 
 Deferred (increment 7 / layout-aware alternates decision):
@@ -1382,7 +1411,7 @@ Evidence from review:
 - DCS limited to XTGETTCAP; APC limited to kitty graphics.
 
 Status:
-- `todo`
+- `partial` (2026-02-23)
 
 Notes:
 - Track as roadmap item with sub-issues (e.g., missing DCS queries, APC extensions, CSI tabs/window ops).
@@ -1431,6 +1460,33 @@ Suggested `PA-08d` promotion candidates (first pass):
 2. `CHT` / `CBT` tab movement coverage (completes currently-partial tab family)
 3. `DECRQM` / minimal mode-report replies for queried private modes seen in reference seeds
 
+Implemented (increment 2 / `PA-08e` promoted high-value CSI gap: `?1004` focus reporting):
+- Implemented CSI private mode handling for `?1004 h/l` (focus reporting enable/disable).
+- Added terminal focus-report emission (`ESC[I` / `ESC[O`) gated on the mode bit.
+- Wired SDL window focus gain/loss through renderer -> `InputBatch.events` -> terminal widget input dispatch.
+- Added project-integrated PTY-capture tests for mode toggling and emitted focus bytes.
+- Added replay fixtures to lock parser-side mode toggles in snapshot output (`focus_reporting: 1` when enabled).
+
+Files:
+- `src/terminal/protocol/csi.zig`
+- `src/terminal/core/terminal_session.zig`
+- `src/terminal/core/snapshot.zig`
+- `src/ui/renderer.zig`
+- `src/input/input_builder.zig`
+- `src/ui/widgets/terminal_widget_input.zig`
+- `src/terminal_focus_reporting_tests.zig`
+- `build.zig`
+- `fixtures/terminal/focus_reporting_mode_enable.vt`
+- `fixtures/terminal/focus_reporting_mode_enable.json`
+- `fixtures/terminal/focus_reporting_mode_enable.golden`
+- `fixtures/terminal/focus_reporting_mode_disable.vt`
+- `fixtures/terminal/focus_reporting_mode_disable.json`
+- `fixtures/terminal/focus_reporting_mode_disable.golden`
+
+Verification:
+- `zig build test-terminal-focus-reporting`
+- `zig build test-terminal-replay -- --all`
+
 ## Change Log
 
 ### 2026-02-23
@@ -1463,8 +1519,10 @@ Suggested `PA-08d` promotion candidates (first pass):
 - Advanced `PA-05` alternate-key support: flag now persists in key-mode state and char CSI-u emits US-ASCII shifted alternates (`key:shifted`) for common shifted printable keys.
 - Added replay encoder fixtures for `PA-05` alternate-key shifted-char CSI-u outputs (`key:shifted`) to lock behavior in the fixture harness.
 - Expanded `PA-05` alternate-key replay coverage (`report_text`, `embed_text`, key-path no-op) and fixed `embed_text` formatting drift in encoder test helper.
+- Expanded `PA-05` disambiguate+report-all action-field coverage to non-cursor function keys (`Enter`/`Tab`/`Backspace`/`Escape`/`Ins`/`Del`/`PgUp`/`PgDn`) with replay fixtures.
 - Deferred full layout-aware `PA-05` alternate-key parity pending input-model metadata; tracked as explicit follow-on sub-items instead of expanding heuristics.
 - Defined `PA-05a` input metadata contract for layout-aware alternate-key parity in `app_architecture/terminal/KEYBOARD_ALTERNATE_METADATA_CONTRACT.md`.
+- Advanced `PA-08` to `partial` by implementing promoted CSI private mode gap `?1004` focus reporting (parser mode toggles + focus event emission + PTY/replay coverage).
 
 ## Next Work Queue (Ordered)
 
@@ -1487,4 +1545,4 @@ Suggested `PA-08d` promotion candidates (first pass):
 - [ ] `PA-08a` Inventory missing CSI finals and private modes from xterm seed relevant to Zide
 - [ ] `PA-08b` Inventory DCS/APC gaps relative to kitty/ghostty/foot usage
 - [ ] `PA-08c` Define PTY-stub replay strategy for query/reply assertions
-- [ ] `PA-08d` Promote highest-value gaps into implementable tracker items
+- [x] `PA-08d` Promote highest-value gaps into implementable tracker items (`?1004` promoted and implemented under `PA-08e`)
