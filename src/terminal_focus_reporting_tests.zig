@@ -359,6 +359,59 @@ test "terminal kitty paste events mode supports image-only clipboard payloads" {
     }.run);
 }
 
+test "terminal OSC 5522 read echoes sanitized id metadata" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            terminal.debugFeedBytes(session, "\x1b[?5522h");
+            try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
+            {
+                const unsolicited = try capture.readReply(allocator);
+                defer allocator.free(unsolicited);
+            }
+
+            // `!` is stripped; `+._-` are preserved.
+            terminal.debugFeedBytes(session, "\x1b]5522;type=read:id=ab!c+._-9;dGV4dC9wbGFpbg==\x1b\\");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings(
+                    "\x1b]5522;type=read:status=OK:id=abc+._-9\x1b\\"
+                    ++ "\x1b]5522;type=read:status=DATA:mime=dGV4dC9wbGFpbg==:id=abc+._-9;aGk=\x1b\\"
+                    ++ "\x1b]5522;type=read:status=DONE:id=abc+._-9\x1b\\",
+                    reply,
+                );
+            }
+        }
+    }.run);
+}
+
+test "terminal OSC 5522 read preserves BEL terminator" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            terminal.debugFeedBytes(session, "\x1b[?5522h");
+            try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
+            {
+                const unsolicited = try capture.readReply(allocator);
+                defer allocator.free(unsolicited);
+            }
+
+            terminal.debugFeedBytes(session, "\x1b]5522;type=read;dGV4dC9wbGFpbg==\x07");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings(
+                    "\x1b]5522;type=read:status=OK\x07"
+                    ++ "\x1b]5522;type=read:status=DATA:mime=dGV4dC9wbGFpbg==;aGk=\x07"
+                    ++ "\x1b]5522;type=read:status=DONE\x07",
+                    reply,
+                );
+            }
+        }
+    }.run);
+}
+
 test "terminal DECRQM private query returns Pm=0 for provisional unsupported modes still on support path" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
