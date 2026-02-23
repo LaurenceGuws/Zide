@@ -177,6 +177,7 @@ pub fn sendChar(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, key_mode_flag
 
 pub fn sendCharAction(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, key_mode_flags: u32, action: KeyAction) !bool {
     if (char > 0x10FFFF or (char >= 0xD800 and char <= 0xDFFF)) return false;
+    if (sendCharWithProtocol(pty, char, mod, key_mode_flags, action)) return true;
     const report_text = (key_mode_flags & key_encoding.key_mode_report_text) != 0;
     if (!report_text and (mod & types.VTERM_MOD_CTRL) != 0) {
         if (ctrlChar(char)) |mapped| {
@@ -190,7 +191,6 @@ pub fn sendCharAction(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, key_mod
     if (!report_text and (mod & types.VTERM_MOD_ALT) != 0) {
         _ = try pty.write(&[_]u8{0x1b});
     }
-    if (sendCharWithProtocol(pty, char, mod, key_mode_flags, action)) return true;
     var buf: [4]u8 = undefined;
     const len = std.unicode.utf8Encode(@intCast(char), &buf) catch return false;
     _ = try pty.write(buf[0..len]);
@@ -251,7 +251,10 @@ fn sendKeyWithProtocol(pty: *pty_mod.Pty, key: types.Key, mod: types.Modifier, f
 fn sendCharWithProtocol(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, flags: u32, action: KeyAction) bool {
     if (flags == 0) return false;
     if (!key_encoding.supportsKeyEncoding(flags)) return false;
-    if ((flags & key_encoding.key_mode_report_text) == 0) return false;
+    const report_text = (flags & key_encoding.key_mode_report_text) != 0;
+    const disambiguate = (flags & key_encoding.key_mode_disambiguate) != 0;
+    if (!report_text and !disambiguate) return false;
+    if (!report_text and !charNeedsProtocolDisambiguation(char, mod)) return false;
     if ((flags & key_encoding.key_mode_report_all_event_types) == 0 and action == .release) return false;
 
     var buf: [64]u8 = undefined;
@@ -293,6 +296,19 @@ fn sendCharWithProtocol(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, flags
     return true;
 }
 
+fn charNeedsProtocolDisambiguation(char: u32, mod: types.Modifier) bool {
+    if (mod != types.VTERM_MOD_NONE) return true;
+    return switch (char) {
+        0x08, // BS
+        0x09, // TAB
+        0x0D, // CR
+        0x1B, // ESC
+        0x7F, // DEL/Backspace legacy
+        => true,
+        else => false,
+    };
+}
+
 pub fn encodeKeyBytesForTest(
     allocator: std.mem.Allocator,
     key: types.Key,
@@ -331,9 +347,10 @@ pub fn encodeCharBytesForTest(
 ) ![]u8 {
     if (!debugAccessAllowed()) @panic("encodeCharBytesForTest is test-only");
     if (flags == 0) return allocator.alloc(u8, 0);
-    if (mod == types.VTERM_MOD_NONE and (flags & key_encoding.key_mode_report_all_event_types) == 0) {
-        return allocator.alloc(u8, 0);
-    }
+    const report_text = (flags & key_encoding.key_mode_report_text) != 0;
+    const disambiguate = (flags & key_encoding.key_mode_disambiguate) != 0;
+    if (!report_text and !disambiguate) return allocator.alloc(u8, 0);
+    if (!report_text and !charNeedsProtocolDisambiguation(char, mod)) return allocator.alloc(u8, 0);
     const mod_code = encodeModifier(mod);
     return std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ char, mod_code });
 }

@@ -199,22 +199,6 @@ Evidence from review:
 Status:
 - `partial` (2026-02-23)
 
-Implemented (increment 1):
-- Unsupported `alternate_key` flag is now sanitized out when pushed/modified/queried via key mode flags.
-- Prevents `CSI ?u` query replies and input snapshots from advertising a flag the encoder does not implement.
-
-Files:
-- `src/terminal/core/input_modes.zig`
-- `src/terminal_input_modes_tests.zig`
-
-Verification:
-- `zig test src/terminal_input_modes_tests.zig`
-- `zig build test-terminal-replay -- --all`
-
-Remaining work:
-- Actual alternate-key field encoding is still not implemented.
-- Disambiguation semantics remain partial.
-
 Notes:
 - This is a parity expansion item, not a single bug fix. Split before implementation.
 
@@ -239,7 +223,40 @@ Evidence from review:
 - Current kitty key mapping is intentionally subset-focused.
 
 Status:
-- `todo`
+- `partial` (2026-02-23)
+
+Implemented (increment 1):
+- Unsupported `alternate_key` flag is now sanitized out when pushed/modified/queried via key mode flags.
+- Prevents `CSI ?u` query replies and input snapshots from advertising a flag the encoder does not implement.
+
+Files:
+- `src/terminal/core/input_modes.zig`
+- `src/terminal_input_modes_tests.zig`
+
+Verification:
+- `zig test src/terminal_input_modes_tests.zig`
+- `zig build test-terminal-replay -- --all`
+
+Implemented (increment 2):
+- `disambiguate` mode now affects char-key output in the legacy input path:
+  - protocol encoding is attempted before legacy Ctrl/Alt fallback
+  - modified chars can emit CSI-u without requiring `report_text`
+  - unmodified ambiguous control chars (e.g. `ESC`) can emit CSI-u in disambiguate mode
+- Test helper `encodeCharBytesForTest` now matches runtime gating for `report_text` / `disambiguate`.
+- Updated encoder replay golden for `report_text` plain-char case to match runtime output (`CSI-u` instead of empty bytes).
+
+Files:
+- `src/terminal/input/input.zig`
+- `src/terminal_input_encoding_tests.zig`
+- `fixtures/terminal/encoder/csi_u_encoder_bytes.golden`
+
+Verification:
+- `zig test src/terminal_input_encoding_tests.zig`
+- `zig build test-terminal-replay -- --all`
+
+Remaining work:
+- Actual alternate-key field encoding is still not implemented.
+- Disambiguation semantics are improved but still incomplete (broader kitty keyboard parity and key-map coverage).
 
 ### PA-06 X10 Mouse Overflow Encoding
 
@@ -319,6 +336,7 @@ Priority notes:
 - Expanded `PA-02` to cover CSI `DA`/`DSR` reply bytes with direct PTY-gated unit tests.
 - Expanded `PA-02` to cover kitty reply formatting + quiet-mode suppression behavior.
 - Advanced `PA-05` to `partial` (unsupported `alternate_key` no longer advertised via key-mode flags).
+- Advanced `PA-05` disambiguation support: modified chars and ambiguous control chars now emit CSI-u without `report_text`; aligned encoder test helper/golden with runtime behavior.
 
 ## Next Work Queue (Ordered)
 

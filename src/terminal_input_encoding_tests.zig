@@ -17,9 +17,9 @@ test "terminal input encodes arrow keys with modifiers" {
     try std.testing.expectEqualStrings("\x1b[1;2A", up_shift);
 }
 
-test "terminal input encodes char with modifiers" {
+test "terminal input encodes char with modifiers when report_text enabled" {
     const allocator = std.testing.allocator;
-    const flags: u32 = 2; // key_mode_report_all_event_types
+    const flags: u32 = 8; // key_mode_report_text
     const ctrl = types.VTERM_MOD_CTRL;
 
     const seq = try input_mod.encodeCharBytesForTest(allocator, 'a', ctrl, flags);
@@ -33,4 +33,23 @@ test "terminal input skips char encoding without report_all" {
     const seq = try input_mod.encodeCharBytesForTest(allocator, 'a', types.VTERM_MOD_NONE, flags);
     defer allocator.free(seq);
     try std.testing.expectEqual(@as(usize, 0), seq.len);
+}
+
+test "terminal input disambiguate mode encodes modified char without report_text" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 1; // key_mode_disambiguate
+    const ctrl = types.VTERM_MOD_CTRL;
+
+    const seq = try input_mod.encodeCharBytesForTest(allocator, 'a', ctrl, flags);
+    defer allocator.free(seq);
+    try std.testing.expectEqualStrings("\x1b[97;5u", seq);
+}
+
+test "terminal input disambiguate mode encodes escape without modifiers" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 1; // key_mode_disambiguate
+
+    const seq = try input_mod.encodeCharBytesForTest(allocator, 27, types.VTERM_MOD_NONE, flags);
+    defer allocator.free(seq);
+    try std.testing.expectEqualStrings("\x1b[27;1u", seq);
 }
