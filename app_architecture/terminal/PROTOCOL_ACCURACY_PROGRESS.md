@@ -746,6 +746,24 @@ Verification:
 - `zig build test-terminal-kitty-query-parse`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 24 / `PA-04c` dense missing-id multi-invalid precedence matrix expansion):
+- Expanded the table-driven missing-id precedence matrix to cover denser combinations
+  where missing-id preflight competes with multiple simultaneous lower-priority
+  branches in one sequence, including:
+  - invalid compression (`o=1`) + invalid format + malformed payload
+  - invalid offset (`O=1`) + invalid compression + invalid format + malformed payload
+  - chunked query (`m=1`) + invalid compression + invalid format + malformed payload
+  - offset/chunked zlib preflight variants under `q=2` no-reply behavior
+- This increases confidence that the highest-priority missing-id preflight ordering
+  remains stable even as more parser validation branches are added.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
