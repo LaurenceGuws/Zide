@@ -159,6 +159,7 @@ test "terminal DECRQM private queries report common mode set/reset states" {
                 .{ .mode = 1007, .set_seq = "\x1b[?1007h", .reset_seq = "\x1b[?1007l", .default_set = true },
                 .{ .mode = 2004, .set_seq = "\x1b[?2004h", .reset_seq = "\x1b[?2004l" },
                 .{ .mode = 2026, .set_seq = "\x1b[?2026h", .reset_seq = "\x1b[?2026l" },
+                .{ .mode = 2048, .set_seq = "\x1b[?2048h", .reset_seq = "\x1b[?2048l" },
                 .{ .mode = 5522, .set_seq = "\x1b[?5522h", .reset_seq = "\x1b[?5522l" },
             };
 
@@ -472,7 +473,7 @@ test "terminal DECRQM private query returns Pm=0 for provisional unsupported mod
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            const modes = [_]i32{ 45, 1016, 2031, 2048 };
+            const modes = [_]i32{ 45, 1016, 2031 };
 
             for (modes) |mode| {
                 var qbuf: [32]u8 = undefined;
@@ -483,6 +484,56 @@ test "terminal DECRQM private query returns Pm=0 for provisional unsupported mod
                 const expected = try std.fmt.allocPrint(allocator, "\x1b[?{d};0$y", .{mode});
                 defer allocator.free(expected);
                 try std.testing.expectEqualStrings(expected, reply);
+            }
+        }
+    }.run);
+}
+
+test "terminal in-band resize notifications ?2048 emit CSI 48 t when enabled" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            session.setCellSize(8, 16);
+
+            try session.resize(7, 13);
+            try capture.expectNoReply();
+
+            terminal.debugFeedBytes(session, "\x1b[?2048h");
+            try session.resize(7, 13);
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[48;7;13;112;104t", reply);
+            }
+
+            terminal.debugFeedBytes(session, "\x1b[?2048l");
+            try session.resize(8, 14);
+            try capture.expectNoReply();
+        }
+    }.run);
+}
+
+test "terminal DECSTR restores default-set modes ?8 and ?1007" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            terminal.debugFeedBytes(session, "\x1b[?8l\x1b[?1007l");
+
+            terminal.debugFeedBytes(session, "\x1b[?8$p\x1b[?1007$p");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[?8;2$y\x1b[?1007;2$y", reply);
+            }
+
+            terminal.debugFeedBytes(session, "\x1b[!p");
+            try capture.expectNoReply();
+
+            terminal.debugFeedBytes(session, "\x1b[?8$p\x1b[?1007$p");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[?8;1$y\x1b[?1007;1$y", reply);
             }
         }
     }.run);

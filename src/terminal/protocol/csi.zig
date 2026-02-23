@@ -296,6 +296,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         1049 => self.enterAltScreen(true, true),
                         2004 => self.bracketed_paste = true,
                         2026 => self.setSyncUpdates(true),
+                        2048 => self.inband_resize_notifications_2048 = true,
                         1004 => {
                             self.focus_reporting = true;
                             self.updateInputSnapshot();
@@ -366,6 +367,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         1049 => self.exitAltScreen(true),
                         2004 => self.bracketed_paste = false,
                         2026 => self.setSyncUpdates(false),
+                        2048 => self.inband_resize_notifications_2048 = false,
                         1004 => {
                             self.focus_reporting = false;
                             self.updateInputSnapshot();
@@ -460,6 +462,7 @@ fn applyDecstr(self: anytype) void {
     self.app_keypad = false;
     self.auto_repeat = true;
     self.mouse_alternate_scroll = true;
+    self.inband_resize_notifications_2048 = false;
     self.kitty_paste_events_5522 = false;
     self.input.resetMouse();
     self.bracketed_paste = false;
@@ -512,7 +515,7 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState
         2004 => boolModeState(self.bracketed_paste),
         2026 => boolModeState(self.sync_updates_active),
         2031 => .not_recognized, // theme change reporting not yet supported
-        2048 => .not_recognized, // size notifications not yet supported
+        2048 => boolModeState(self.inband_resize_notifications_2048),
         5522 => boolModeState(self.kitty_paste_events_5522),
         else => .not_recognized,
     };
