@@ -498,6 +498,56 @@ pub const TerminalSession = struct {
         }
     }
 
+    pub fn sendKeyActionWithMetadata(
+        self: *TerminalSession,
+        key: Key,
+        mod: Modifier,
+        action: input_mod.KeyAction,
+        alternate_meta: ?types.KeyboardAlternateMetadata,
+    ) !void {
+        const log = app_logger.logger("terminal.input");
+        const input_snapshot = self.input_snapshot;
+        const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
+        const app_cursor = input_snapshot.app_cursor_keys.load(.acquire);
+        if (log.enabled_file or log.enabled_console) {
+            log.logf("sendKey(meta) key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x} alt_meta={any}", .{
+                keyName(key),
+                key,
+                mod,
+                @tagName(action),
+                app_cursor,
+                key_mode_flags,
+                alternate_meta != null,
+            });
+        }
+        if (self.pty) |*pty| {
+            self.pty_write_mutex.lock();
+            defer self.pty_write_mutex.unlock();
+            if (key_mode_flags == 0 and app_cursor and mod == types.VTERM_MOD_NONE and action == .press) {
+                const seq = switch (key) {
+                    VTERM_KEY_UP => "\x1bOA",
+                    VTERM_KEY_DOWN => "\x1bOB",
+                    VTERM_KEY_RIGHT => "\x1bOC",
+                    VTERM_KEY_LEFT => "\x1bOD",
+                    VTERM_KEY_HOME => "\x1bOH",
+                    VTERM_KEY_END => "\x1bOF",
+                    else => "",
+                };
+                if (seq.len > 0) {
+                    _ = try pty.write(seq);
+                    return;
+                }
+            }
+            _ = try input_mod.sendKeyActionEvent(pty, .{
+                .key = key,
+                .mod = mod,
+                .key_mode_flags = key_mode_flags,
+                .action = action,
+                .protocol = .{ .alternate = alternate_meta },
+            });
+        }
+    }
+
     pub fn sendKeypad(self: *TerminalSession, key: input_mod.KeypadKey, mod: Modifier) !void {
         try self.sendKeypadAction(key, mod, input_mod.KeyAction.press);
     }
@@ -549,6 +599,38 @@ pub const TerminalSession = struct {
             self.pty_write_mutex.lock();
             defer self.pty_write_mutex.unlock();
             _ = try input_mod.sendCharAction(pty, char, mod, key_mode_flags, action);
+        }
+    }
+
+    pub fn sendCharActionWithMetadata(
+        self: *TerminalSession,
+        char: u32,
+        mod: Modifier,
+        action: input_mod.KeyAction,
+        alternate_meta: ?types.KeyboardAlternateMetadata,
+    ) !void {
+        const log = app_logger.logger("terminal.input");
+        const input_snapshot = self.input_snapshot;
+        const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
+        if (log.enabled_file or log.enabled_console) {
+            log.logf("sendChar(meta) cp={d} mod=0x{x} action={s} key_mode=0x{x} alt_meta={any}", .{
+                char,
+                mod,
+                @tagName(action),
+                key_mode_flags,
+                alternate_meta != null,
+            });
+        }
+        if (self.pty) |*pty| {
+            self.pty_write_mutex.lock();
+            defer self.pty_write_mutex.unlock();
+            _ = try input_mod.sendCharActionEvent(pty, .{
+                .codepoint = char,
+                .mod = mod,
+                .key_mode_flags = key_mode_flags,
+                .action = action,
+                .protocol = .{ .alternate = alternate_meta },
+            });
         }
     }
 

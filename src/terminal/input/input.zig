@@ -8,6 +8,26 @@ const keypad = @import("keypad.zig");
 
 pub const KeyAction = key_encoding.KeyAction;
 
+pub const KeyProtocolMetadata = struct {
+    alternate: ?types.KeyboardAlternateMetadata = null,
+};
+
+pub const KeyInputEvent = struct {
+    key: types.Key,
+    mod: types.Modifier,
+    key_mode_flags: u32,
+    action: KeyAction = .press,
+    protocol: KeyProtocolMetadata = .{},
+};
+
+pub const CharInputEvent = struct {
+    codepoint: u32,
+    mod: types.Modifier,
+    key_mode_flags: u32,
+    action: KeyAction = .press,
+    protocol: KeyProtocolMetadata = .{},
+};
+
 pub const InputState = struct {
     mouse_mode_x10: bool,
     mouse_mode_button: bool,
@@ -154,6 +174,12 @@ pub fn sendKeyAction(pty: *pty_mod.Pty, key: types.Key, mod: types.Modifier, key
     return sendKey(pty, key, mod, key_mode_flags);
 }
 
+pub fn sendKeyActionEvent(pty: *pty_mod.Pty, event: KeyInputEvent) !bool {
+    // Metadata is threaded through the input boundary for future kitty alternate-key parity work.
+    _ = event.protocol;
+    return sendKeyAction(pty, event.key, event.mod, event.key_mode_flags, event.action);
+}
+
 pub fn sendKeypad(pty: *pty_mod.Pty, key: KeypadKey, mod: types.Modifier, app_keypad: bool, key_mode_flags: u32) !bool {
     if (app_keypad and mod == types.VTERM_MOD_NONE) {
         if (keypad.keypadAppCode(key)) |code| {
@@ -195,6 +221,12 @@ pub fn sendCharAction(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, key_mod
     const len = std.unicode.utf8Encode(@intCast(char), &buf) catch return false;
     _ = try pty.write(buf[0..len]);
     return true;
+}
+
+pub fn sendCharActionEvent(pty: *pty_mod.Pty, event: CharInputEvent) !bool {
+    // Metadata is threaded through the input boundary for future kitty alternate-key parity work.
+    _ = event.protocol;
+    return sendCharAction(pty, event.codepoint, event.mod, event.key_mode_flags, event.action);
 }
 
 pub fn sendText(pty: *pty_mod.Pty, text: []const u8) !void {
@@ -434,6 +466,15 @@ pub fn encodeCharBytesForTest(
         return std.fmt.allocPrint(allocator, "\x1b[{d};;{d}u", .{ key_fields.key, char });
     }
     return std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ key_fields.key, mod_code });
+}
+
+pub fn encodeCharEventBytesForTest(
+    allocator: std.mem.Allocator,
+    event: CharInputEvent,
+) ![]u8 {
+    if (!debugAccessAllowed()) @panic("encodeCharEventBytesForTest is test-only");
+    _ = event.protocol;
+    return encodeCharBytesForTest(allocator, event.codepoint, event.mod, event.key_mode_flags);
 }
 
 fn encodeCsiWithModBytes(
