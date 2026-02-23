@@ -261,7 +261,7 @@ Implemented (increment 2 / `PA-04c` fixture matrix start):
 - Added replay fixtures for kitty delete conformance behavior (state-level coverage):
   - `d=p` explicit point delete removes placement but preserves image storage
   - `d=P` explicit point delete removes placement and backing image
-  - unsupported delete selector (e.g. `d=v`) is currently a no-op on kitty state
+- unsupported delete selector (e.g. `d=v`) is currently a no-op on kitty state
 - These fixtures validate the current delete-surface semantics through snapshot `kitty:` state (`images`, `placements`, ids).
 
 Files:
@@ -274,6 +274,36 @@ Files:
 - `fixtures/terminal/kitty_delete_unsupported_selector_noop.vt`
 - `fixtures/terminal/kitty_delete_unsupported_selector_noop.json`
 - `fixtures/terminal/kitty_delete_unsupported_selector_noop.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --all`
+
+Implemented (increment 3 / `PA-04b` delete selector fixture expansion):
+- Expanded replay delete conformance fixtures to cover additional selector pairs:
+  - `c` / `C` (cursor-cell selector; placement-only vs image+placement delete)
+  - `z` / `Z` (z-layer selector; placement-only vs image+placement delete)
+  - `r` / `R` (image-id range selector via `x..y`; placement-only vs image+placement delete)
+- Range fixtures use two stored images to validate that delete scope is limited to the selected id range.
+
+Files:
+- `fixtures/terminal/kitty_delete_cursor_preserves_image.vt`
+- `fixtures/terminal/kitty_delete_cursor_preserves_image.json`
+- `fixtures/terminal/kitty_delete_cursor_preserves_image.golden`
+- `fixtures/terminal/kitty_delete_cursor_uppercase_deletes_image.vt`
+- `fixtures/terminal/kitty_delete_cursor_uppercase_deletes_image.json`
+- `fixtures/terminal/kitty_delete_cursor_uppercase_deletes_image.golden`
+- `fixtures/terminal/kitty_delete_z_preserves_image.vt`
+- `fixtures/terminal/kitty_delete_z_preserves_image.json`
+- `fixtures/terminal/kitty_delete_z_preserves_image.golden`
+- `fixtures/terminal/kitty_delete_z_uppercase_deletes_image.vt`
+- `fixtures/terminal/kitty_delete_z_uppercase_deletes_image.json`
+- `fixtures/terminal/kitty_delete_z_uppercase_deletes_image.golden`
+- `fixtures/terminal/kitty_delete_range_preserves_images.vt`
+- `fixtures/terminal/kitty_delete_range_preserves_images.json`
+- `fixtures/terminal/kitty_delete_range_preserves_images.golden`
+- `fixtures/terminal/kitty_delete_range_uppercase_deletes_images.vt`
+- `fixtures/terminal/kitty_delete_range_uppercase_deletes_images.json`
+- `fixtures/terminal/kitty_delete_range_uppercase_deletes_images.golden`
 
 Verification:
 - `zig build test-terminal-replay -- --all`
@@ -487,6 +517,7 @@ Priority notes:
 - Strengthened `PA-02` `scrollback` assertion semantics (no longer recognized-only; now checks scrollback/scroll behavior evidence).
 - Advanced `PA-04a` by documenting the current kitty graphics `a=`/`d=` surface from code as a parity map for follow-on fixtures/fixes.
 - Advanced `PA-04c` with replay delete conformance fixtures (placement-only vs image+placement delete, plus unsupported-selector no-op).
+- Expanded `PA-04b` delete selector replay coverage to include `c/C`, `z/Z`, and `r/R`.
 - Advanced `PA-04c` query coverage with an extracted `a=q` early-reply seam and unit tests (`EINVAL` missing id / metadata-only `OK`).
 - Advanced `PA-04c` query payload-validation coverage with extracted helper tests for `EINVAL`, `ENODATA`, and `EBADPNG` reply mapping branches.
 - Advanced `PA-05` to `partial` (unsupported `alternate_key` no longer advertised via key-mode flags).
