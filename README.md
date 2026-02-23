@@ -18,7 +18,7 @@ We design every piece with embedded-style resource constraints in mind. That mea
 sudo pacman -S zig sdl3 freetype2 harfbuzz lua wayland wayland-protocols libxkbcommon mesa
 
 # Bootstrap and build
-make bootstrap
+./scripts/bootstrap.sh
 zig build run
 ```
 
