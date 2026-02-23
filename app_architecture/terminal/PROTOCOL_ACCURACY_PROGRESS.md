@@ -899,6 +899,26 @@ Verification:
 - `zig build`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 17 / `PA-05b` normalized `altgr` flag in shared modifiers):
+- Added `altgr` to `shared_types.input.Modifiers` and propagated it in the input pipeline.
+- `input_builder` now derives `KeyEvent.mods.altgr` from SDL keymod bits (`RALT` / `MODE`)
+  for queued key events, so downstream terminal code can consume a normalized AltGr signal
+  without reading raw `sdl_mod_bits`.
+- Batch-level `mods.altgr` uses `RightAlt` key state as a best-effort proxy (SDL `MODE`
+  remains event-scoped).
+- Terminal widget alternate-key metadata derivation now uses `key_event.mods.altgr` /
+  `key_event.mods.alt` for explicit AltGr vs non-AltAlt distinction; raw SDL keymod bits are
+  retained for diagnostics only.
+
+Files:
+- `src/types/input.zig`
+- `src/input/input_builder.zig`
+- `src/ui/widgets/terminal_widget_input.zig`
+
+Verification:
+- `zig build`
+- `zig build test-terminal-replay -- --all`
+
 Investigated feasibility/limits (research note, 2026-02-23):
 - Documented the current SDL/platform data surface and limitations for layout-aware alternate-key parity:
   - available: scancode, key symbol (`sym`), text input UTF-8, composition state
@@ -931,7 +951,23 @@ Files:
 - `src/terminal/input/alternate_probe.zig`
 
 Verification:
-- `zig test src/terminal/input/alternate_probe.zig`
+- `zig test src/terminal_input_encoding_tests.zig` (includes `alternate_probe` unit tests)
+
+Implemented (increment 6 / `PA-05c` key/text batch -> metadata -> CSI-u bridge seam test):
+- Added a small pure bridge helper in `src/terminal/input/alternate_probe.zig` that builds
+  `KeyboardAlternateMetadata` from synthetic shared `KeyEvent` / `TextEvent` inputs plus
+  precomputed probe outputs.
+- Added an encoder integration test that feeds synthetic key/text events through this seam and
+  verifies the derived metadata reaches CSI-u formatting (`key:shifted:alternate`) correctly.
+- This complements the existing encoder fixture coverage by testing the UI-side derived metadata
+  contract without requiring the full terminal widget path.
+
+Files:
+- `src/terminal/input/alternate_probe.zig`
+- `src/terminal_input_encoding_tests.zig`
+
+Verification:
+- `zig test src/terminal_input_encoding_tests.zig`
 - These fixtures create a regression seam for future layout-aware alternate-key encoding without changing current behavior.
 
 Files:
