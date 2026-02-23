@@ -553,6 +553,23 @@ Verification:
 - `zig build test-terminal-kitty-query-parse`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 11 / `PA-04c` align query `o=z` behavior with kitty/ghostty convention):
+- Updated the `a=q` parse path to honor query payload compression (`o=z`) instead of ignoring it.
+- Query flow now inflates zlib-compressed payloads before size validation/build checks, matching the shared load/validate behavior expected by kitty/ghostty-style implementations.
+- Invalid/decompression-failed `o=z` query payloads now return `EINVAL` (and still respect quiet suppression semantics).
+- Updated integrated parse-path tests to lock the new behavior:
+  - compressed RGBA payload + `o=z` -> `OK`
+  - uncompressed RGBA payload + `o=z` -> `EINVAL`
+  - quiet-mode combinations for compressed success and decompression error
+
+Files:
+- `src/terminal/kitty/graphics.zig`
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
@@ -638,6 +655,23 @@ Files:
 - `src/terminal/input/input.zig`
 - `src/terminal/core/terminal_session.zig`
 - `src/terminal_input_encoding_tests.zig`
+
+Verification:
+- `zig test src/terminal_input_encoding_tests.zig`
+- `zig build test-terminal-replay -- --all`
+
+Implemented (increment 10 / `PA-05b` UI/key-encoder call-site metadata threading):
+- Threaded `KeyboardAlternateMetadata` through active UI terminal input call sites into the new terminal session metadata APIs (`send*WithMetadata(...)`) without changing encoding behavior.
+- Updated key-mapped key and ctrl/alt fallback-char paths in `key_encoder` to pass:
+  - `physical_key` (from UI key enum)
+  - `base_codepoint` when a base char is known
+- Updated direct terminal text and report-text key-char paths in `terminal_widget_input` to call `sendCharActionWithMetadata(...)` and attach available metadata (`produced_text_utf8`, `base_codepoint`, key identity where available).
+- Metadata remains a no-op in the encoder for now; this step is plumbing only.
+
+Files:
+- `src/terminal/input/key_encoder.zig`
+- `src/ui/widgets/terminal_widget_input.zig`
+- `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
 
 Verification:
 - `zig test src/terminal_input_encoding_tests.zig`
