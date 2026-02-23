@@ -164,6 +164,20 @@ Verification:
 - `zig test src/terminal_kitty_reply_tests.zig -lc`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 8):
+- `scrollback` replay assertion tag now enforces a semantic check instead of being recognized-only.
+- The check accepts:
+  - actual persistent scrollback activity (`scrollback_count` / `scrollback_offset`)
+  - explicit scroll-control CSI usage (`DECSTBM`, `SU`, `SD`)
+  - sufficient line-break input to force scrolling in the configured viewport height
+- This preserves current fixture intent for both `scrollback_push` and `scroll_region_basic` while making the tag meaningful.
+
+Files:
+- `src/terminal/replay_harness.zig`
+
+Verification:
+- `zig build test-terminal-replay -- --all`
+
 Planned fix shape (candidate):
 - Phase 1: enforce/assert known assertion tags and surface them in harness output.
 - Phase 2: use assertions to filter/validate snapshot sections or explicit sub-assertions.
@@ -383,6 +397,7 @@ Priority notes:
 - Expanded `PA-02` reply coverage to include `OSC 10` dynamic-color query formatting/terminator behavior.
 - Expanded `PA-02` to cover CSI `DA`/`DSR` reply bytes with direct PTY-gated unit tests.
 - Expanded `PA-02` to cover kitty reply formatting + quiet-mode suppression behavior.
+- Strengthened `PA-02` `scrollback` assertion semantics (no longer recognized-only; now checks scrollback/scroll behavior evidence).
 - Advanced `PA-05` to `partial` (unsupported `alternate_key` no longer advertised via key-mode flags).
 - Advanced `PA-05` disambiguation support: modified chars and ambiguous control chars now emit CSI-u without `report_text`; aligned encoder test helper/golden with runtime behavior.
 - Tightened `PA-05` key-encoder test helper gating/mappings so replay/unit tests do not falsely advertise unsupported key-mode outputs.
