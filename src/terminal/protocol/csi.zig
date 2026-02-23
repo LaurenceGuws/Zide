@@ -422,7 +422,9 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState
         5 => boolModeState(screen.screen_reverse),
         6 => boolModeState(screen.origin_mode),
         7 => boolModeState(screen.auto_wrap),
+        9 => .permanently_reset, // Legacy X10 mouse mode (?9) not supported; use ?1000 family
         25 => boolModeState(screen.cursor_visible),
+        45 => .permanently_reset, // Reverse-wrap mode not implemented
         47, 1047, 1049 => boolModeState(self.active == .alt),
         66 => boolModeState(self.app_keypad),
         67 => .permanently_reset, // DECBKM (backarrow key mode) not supported
