@@ -433,6 +433,27 @@ test "terminal OSC 5522 read returns ENOSYS for unsupported MIME request" {
     }.run);
 }
 
+test "terminal OSC 5522 read returns ENOSYS for loc=primary" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            terminal.debugFeedBytes(session, "\x1b[?5522h");
+            try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
+            {
+                const unsolicited = try capture.readReply(allocator);
+                defer allocator.free(unsolicited);
+            }
+
+            terminal.debugFeedBytes(session, "\x1b]5522;type=read:loc=primary;dGV4dC9wbGFpbg==\x1b\\");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b]5522;type=read:status=ENOSYS\x1b\\", reply);
+            }
+        }
+    }.run);
+}
+
 test "terminal OSC 5522 read returns EINVAL for malformed payload" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
@@ -660,7 +681,7 @@ test "terminal DECSTR resets DECRQM-queryable modes to defaults" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            terminal.debugFeedBytes(session, "\x1b[?1004h\x1b[?1002h\x1b[?2004h\x1b[20h\x1b=");
+            terminal.debugFeedBytes(session, "\x1b[?1004h\x1b[?1002h\x1b[?2004h\x1b[?5522h\x1b[20h\x1b=");
 
             const Case = struct {
                 query: []const u8,
@@ -671,6 +692,7 @@ test "terminal DECSTR resets DECRQM-queryable modes to defaults" {
                 .{ .query = "\x1b[?1004$p", .before_reply = "\x1b[?1004;1$y", .after_reply = "\x1b[?1004;2$y" },
                 .{ .query = "\x1b[?1002$p", .before_reply = "\x1b[?1002;1$y", .after_reply = "\x1b[?1002;2$y" },
                 .{ .query = "\x1b[?2004$p", .before_reply = "\x1b[?2004;1$y", .after_reply = "\x1b[?2004;2$y" },
+                .{ .query = "\x1b[?5522$p", .before_reply = "\x1b[?5522;1$y", .after_reply = "\x1b[?5522;2$y" },
                 .{ .query = "\x1b[20$p", .before_reply = "\x1b[20;1$y", .after_reply = "\x1b[20;2$y" },
                 .{ .query = "\x1b[?66$p", .before_reply = "\x1b[?66;1$y", .after_reply = "\x1b[?66;2$y" },
             };

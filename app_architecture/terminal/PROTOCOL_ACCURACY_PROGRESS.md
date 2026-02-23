@@ -2030,7 +2030,10 @@ Notes:
     - arbitrary MIME types beyond `text/plain` / `text/html` / `text/uri-list` / `image/png`
   - Evidence:
     - PTY integration: `src/terminal_focus_reporting_tests.zig` (`DECRQM` state + unsolicited event + `type=read`)
+    - PTY integration: explicit `OSC 5522 type=read:loc=primary` -> `ENOSYS` and malformed/unsupported read error replies (`EINVAL` / `ENOSYS`)
     - replay: `fixtures/terminal/decrqm_query_matrix_reply.*` now queries `?5522` default/set/reset
+    - replay: `fixtures/terminal/osc_5522_read_invalid_payload_reply_bel.*`, `fixtures/terminal/osc_5522_read_unsupported_mime_reply_st.*`, `fixtures/terminal/osc_5522_read_primary_unsupported_reply_st.*`
+    - `PA-08h` alignment: `DECSTR` reset reply fixture now includes `?5522` (`fixtures/terminal/decstr_resets_modes_query_reply.*`)
 - `PA-08g` next dedicated implementation slice (docs-first, `?2048` in-band resize notifications):
   - Reference anchors:
     - `foot` supports/query-reports mode `2048` (`reference_repos/terminals/foot/csi.c`); foot ctlseq docs list `2048` as in-band window resize notifications (`reference_repos/terminals/foot/doc/foot-ctlseqs.7.scd`)
