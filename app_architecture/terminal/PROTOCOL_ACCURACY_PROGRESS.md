@@ -675,6 +675,20 @@ Files:
 Verification:
 - `zig build test-terminal-kitty-query-parse`
 
+Implemented (increment 19 / `PA-04c` `q=1` missing-id precedence permutations):
+- Added integrated `a=q` parse-path tests proving `q=1` does not suppress missing-id
+  preflight errors when missing-id wins over:
+  - invalid compression (`o=1`)
+  - malformed payload data
+  - chunked `m=1,o=z` forms
+- This closes the `q=1` permutation gap for the missing-id early-error branch.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
@@ -968,6 +982,27 @@ Files:
 
 Verification:
 - `zig test src/terminal_input_encoding_tests.zig`
+
+Implemented (increment 7 / `PA-05c` replay fixture seam for normalized AltGr metadata selection):
+- Extended encoder replay fixture schema with `encoder.alternate_probe_meta`, which builds
+  `KeyboardAlternateMetadata` through the key/text bridge seam using synthetic shared key-event
+  modifiers (including `mods.altgr`) plus probe outputs.
+- Added replay fixtures locking:
+  - normalized AltGr path selects the third alternate field from probe outputs
+  - explicit non-AltGr Alt suppresses generic AltGr probes and falls back to `event_sym`
+- Added a matching unit bridge-seam test for the explicit non-AltGr Alt case.
+
+Files:
+- `src/terminal/replay_harness.zig`
+- `src/terminal_input_encoding_tests.zig`
+- `fixtures/terminal/encoder/csi_u_alternate_probe_altgr_mods_third_field.json`
+- `fixtures/terminal/encoder/csi_u_alternate_probe_altgr_mods_third_field.golden`
+- `fixtures/terminal/encoder/csi_u_alternate_probe_non_altgr_alt_suppresses_generic.json`
+- `fixtures/terminal/encoder/csi_u_alternate_probe_non_altgr_alt_suppresses_generic.golden`
+
+Verification:
+- `zig test src/terminal_input_encoding_tests.zig`
+- `zig build test-terminal-replay -- --all`
 - These fixtures create a regression seam for future layout-aware alternate-key encoding without changing current behavior.
 
 Files:
