@@ -106,3 +106,27 @@ Feasibility conclusion:
 - Full parity (`key:shifted:alternate` across layouts/IME paths) still likely
   needs explicit scancode+modstate translation calls (new wrapper in
   `src/platform/sdl_api.zig`) and careful platform/IME behavior testing.
+
+## Progress Update (PA-05b / PA-05c, 2026-02-23)
+
+Implemented since the initial contract draft:
+- `src/platform/sdl_api.zig` now provides a wrapper around
+  `SDL_GetKeyFromScancode(scancode, modstate, key_event)` and a printable SDL
+  keycode -> Unicode codepoint helper.
+- `src/ui/renderer.zig` exposes those helpers to higher UI layers without adding
+  a direct platform import in terminal widget code.
+- `src/ui/widgets/terminal_widget_input.zig` now uses this translation path as a
+  best-effort runtime metadata probe to populate:
+  - `base_codepoint`
+  - `shifted_codepoint`
+  - inferred `alternate_layout_codepoint` from event `sym` when distinct
+
+Current limits (still unresolved):
+- We only infer a single distinct third alternate from event `sym`; this is not
+  a full layout tuple and may miss layout-specific alternates not visible in the
+  current event/modifier state.
+- Text events borrow metadata from the preceding key event in the same input
+  batch; this is a pragmatic correlation, not a guaranteed key/text pairing
+  contract across all IME/platform behaviors.
+- Composed/IME text remains intentionally conservative (`text_is_composed`
+  suppresses alternate reporting in the encoder).
