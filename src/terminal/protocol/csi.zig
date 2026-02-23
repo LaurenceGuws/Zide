@@ -222,6 +222,14 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                     const state = decrqmPrivateModeState(self, screen, mode);
                     _ = writeDecrqmReply(pty, true, mode, state);
                 }
+                return;
+            }
+            if (action.leader == 0 and !action.private) {
+                const mode = if (param_len > 0) p[0] else 0;
+                if (self.pty) |*pty| {
+                    const state = decrqmAnsiModeState(screen, mode);
+                    _ = writeDecrqmReply(pty, false, mode, state);
+                }
             }
         },
         'h' => { // SM
@@ -409,6 +417,13 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) u8 {
         2004 => boolModeState(self.bracketed_paste),
         2026 => boolModeState(self.sync_updates_active),
         else => 0, // not recognized
+    };
+}
+
+fn decrqmAnsiModeState(screen: anytype, mode: i32) u8 {
+    return switch (mode) {
+        20 => boolModeState(screen.newline_mode),
+        else => 0,
     };
 }
 
