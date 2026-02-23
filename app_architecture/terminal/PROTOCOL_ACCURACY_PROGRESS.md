@@ -30,7 +30,7 @@ Rules for this document:
 | PA-02 | High | partial | Replay `assertions` metadata is ignored; fixture intent not enforced | Harness consumes `assertions` (or field removed/replaced) and coverage intent is explicit/tested |
 | PA-03 | Medium-High | done | Kitty invalid controls can be dropped without explicit ERR reply | Invalid kitty commands produce `ERR`/`EINVAL` response when reply is allowed |
 | PA-04 | Medium | todo | Kitty graphics command/delete surface is partial vs kitty/ghostty | Scope split into concrete parity tasks and progress tracked; command support expanded or explicitly deferred |
-| PA-05 | Medium | todo | Kitty keyboard / CSI-u alternate/disambiguation flags tracked but not encoded | `alternate_key` / disambiguation flags affect output and tests cover behavior |
+| PA-05 | Medium | partial | Kitty keyboard / CSI-u alternate/disambiguation flags tracked but not encoded | `alternate_key` / disambiguation flags affect output and tests cover behavior |
 | PA-06 | Medium | done | X10 mouse encoding can emit `0` for large coords | X10 coord encoding saturates/falls back safely; no invalid zero coord bytes from overflow |
 | PA-07 | Medium | done | Bare SGR `58` likely treated incorrectly as reset | Bare `58` no longer resets underline color; `59` remains reset |
 | PA-08 | Medium-Low | todo | CSI/DCS/APC coverage is subset of reference terminals | Sub-gaps enumerated and prioritized with explicit roadmap/tests |
@@ -128,7 +128,23 @@ Evidence from review:
 - Delete action coverage is partial.
 
 Status:
-- `todo`
+- `partial` (2026-02-23)
+
+Implemented (increment 1):
+- Unsupported `alternate_key` flag is now sanitized out when pushed/modified/queried via key mode flags.
+- Prevents `CSI ?u` query replies and input snapshots from advertising a flag the encoder does not implement.
+
+Files:
+- `src/terminal/core/input_modes.zig`
+- `src/terminal_input_modes_tests.zig`
+
+Verification:
+- `zig test src/terminal_input_modes_tests.zig`
+- `zig build test-terminal-replay -- --all`
+
+Remaining work:
+- Actual alternate-key field encoding is still not implemented.
+- Disambiguation semantics remain partial.
 
 Notes:
 - This is a parity expansion item, not a single bug fix. Split before implementation.
@@ -202,10 +218,11 @@ Notes:
 - Completed `PA-06` (X10 coord overflow saturates to `255`; added unit coverage).
 - Completed `PA-07` (removed bare `58` reset behavior in SGR parser).
 - Advanced `PA-02` to `partial` (replay assertions are now consumed and validated; PTY reply coverage still pending).
+- Advanced `PA-05` to `partial` (unsupported `alternate_key` no longer advertised via key-mode flags).
 
 ## Next Work Queue (Ordered)
 
 1. `PA-02` PTY reply fixture/stub coverage + stronger semantic assertion checks
-2. `PA-05` Kitty keyboard alternate/disambiguation flags
+2. `PA-05` Implement alternate-key output + stronger disambiguation semantics
 3. `PA-04` Kitty graphics parity decomposition
 4. `PA-08` CSI/DCS/APC parity decomposition
