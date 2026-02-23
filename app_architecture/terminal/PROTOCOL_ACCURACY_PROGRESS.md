@@ -1939,14 +1939,14 @@ High-value ANSI modes:
 | Mode | Meaning | Zide | foot | ghostty | kitty | xterm-family | Note |
 |---|---|---|---|---|---|---|---|
 | `20` | newline (LNM) | implemented | `Y` | `Y` | `Y` | docs family | implemented and test-locked |
-| `4` | insert (IRM) | `Pm=0` | `?` | `Y` | `Y` | docs family | strong implementation candidate |
+| `4` | insert (IRM) | implemented (`1/2`) | `?` | `Y` | `Y` | docs family | implemented with real insert-mode write semantics + DECRQM |
 | `12` | send/receive (SRM) | `Pm=0` | `?` | `Y` | `-` | docs family | lower immediate TUI value |
 
 High-value DEC private modes (common TUI / modern terminal usage):
 
 | Mode | Meaning | Zide | foot | ghostty | kitty | xterm-family | Suggested next action |
 |---|---|---|---|---|---|---|---|
-| `?12` | cursor blinking | `Pm=0` | `Y` | `Y` | `?` | strong | implement/defer decision next (good small slice) |
+| `?12` | cursor blinking | implemented (`1/2`) | `Y` | `Y` | `?` | strong | implemented via DECSET/DECRST + DECRQM state |
 | `?45` | reverse-wrap | `Pm=0` | `Y` | `Y` | `?` | strong | defer or implement with explicit rationale |
 | `?1016` | SGR pixel mouse | `Pm=0` | `Y` | `Y` | `Y` | strong modern | likely future implement, do not mark `Pm=4` |
 | `?2031` | color scheme notifications | `Pm=0` | `Y` | `Y` | `Y` | modern ext | likely future implement, do not mark `Pm=4` |
@@ -1962,18 +1962,24 @@ Current strategic non-support rows (`Pm=4`) are retained only where references a
 | Family | Mode(s) | Zide status | Current reply policy | Reference signal | Suggested action |
 |---|---|---|---|---|---|
 | ANSI `DECRQM` | `20` (newline) | implemented | `1/2` state, `0` unsupported others | xterm/foot | keep |
-| ANSI `DECRQM` | `4` (insert), `12` (local echo), other ANSI queryable modes | not implemented | `0` | xterm/foot/ghostty parsing model | audit + decide `implement/defer` |
+| ANSI `DECRQM` | `4` (insert), `20` (newline) | implemented | `1/2` | xterm/kitty/ghostty | `4` now implemented with IRM behavior + DECRQM; `20` unchanged |
+| ANSI `DECRQM` | `12` (local echo), other ANSI queryable modes | not implemented | `0` | xterm/foot/ghostty parsing model | audit + decide `implement/defer` |
 | DEC private `DECRQM` | `?1 ?3 ?5 ?6 ?7 ?25 ?47 ?1047 ?1049` | implemented | `1/2` | xterm/foot | keep |
 | DEC private `DECRQM` | `?1000 ?1002 ?1003 ?1004 ?1006 ?2004 ?2026` | implemented | `1/2` | xterm/foot/kitty app usage | keep |
 | DEC private `DECRQM` | `?66` (application keypad) | implemented | `1/2` | foot/xterm VT semantics | implemented via existing `DECPAM` / `DECPNM` state |
-| DEC private `DECRQM` | `?9 ?45` | not implemented | `0` | xterm/foot `DECRPM` semantics | defer provisional; plausible future support |
-| DEC private `DECRQM` | `?12` | not implemented | `0` | foot often reports blink state | evaluate separately (DECSET cursor blink semantics) |
+| DEC private `DECRQM` | `?1048` (save cursor mode) | implemented | `1/2` | ghostty mode list, foot set/reset support, kitty mode constant | implemented with explicit Zide `?1048` mode-state tracking + save/restore action |
+| DEC private `DECRQM` | `?8` (DECARM autorepeat) | implemented | `1/2` | ghostty/kitty (xterm-family common) | implemented with repeat suppression in terminal input dispatch |
+| DEC private `DECRQM` | `?9` (X10 mouse) | implemented | `1/2` | xterm/foot/ghostty | implemented via existing X10 mouse state (`mouse_mode_x10`) |
+| DEC private `DECRQM` | `?12` (cursor blinking) | implemented | `1/2` | foot/ghostty (kitty mixed) | implemented via DECSET/DECRST cursor blink toggle on `cursor_style.blink` |
+| DEC private `DECRQM` | `?45` (reverse-wrap) | not implemented | `0` | foot/ghostty | defer provisional (needs real reverse-wrap behavior, not query-only) |
 | DEC private `DECRQM` | `?67 ?1001 ?1005` | implemented (query-only) | `4` (permanently reset) | foot often reports permanent reset (`4`) | strategic non-support (fixed-off) |
 | DEC private `DECRQM` | `?1015` mouse alt encoding (urxvt) | implemented (query-only) | `4` (permanently reset) | foot/xterm queryable | strategic non-support (legacy encoding) |
-| DEC private `DECRQM` | `?1016` mouse pixel encoding (SGR pixels) | not implemented | `0` | foot/xterm queryable | defer provisional (possible future support) |
+| DEC private `DECRQM` | `?1016` mouse pixel encoding (SGR pixels) | not implemented | `0` | foot/ghostty/kitty | defer provisional (requires real pixel-coordinate mouse reporting path) |
 | DEC private `DECRQM` | `?1034 ?1035 ?1036 ?1042` | implemented (query-only) | `4` (permanently reset) | foot supports/reportable | unsupported fixed-off parity policy adopted |
 | DEC private `DECRQM` | `?1070` | implemented (query-only) | `4` (permanently reset) | foot supports/reportable | unsupported fixed-off parity policy adopted |
-| DEC private `DECRQM` | `?2031 ?2048 ?5522` kitty/modern extensions | not implemented | `0` | kitty docs + foot examples | defer provisional; do not claim fixed-off unless strategic |
+| DEC private `DECRQM` | `?2031 ?2048` modern notifications | not implemented | `0` | foot/ghostty/kitty | defer provisional; do not claim fixed-off unless strategic |
+| DEC private `DECRQM` | `?5522` kitty paste/clipboard events mode | not implemented | `0` | kitty docs + code | defer provisional (kitty-specific; real behavior required before non-support decision) |
+| DEC private `DECRQM` | `?1007` alternate scroll | implemented | `1/2` | foot/ghostty | implemented via wheel->arrow behavior in alt-screen (when mouse reporting off) |
 | DEC private `DECRQM` | unknown modes | implemented fallback | `0` | xterm/foot convention | keep (test-locked) |
 
 Notes:
@@ -1981,6 +1987,18 @@ Notes:
 - Reference candidate set is seeded primarily from `reference_repos/terminals/foot/csi.c` plus xterm docs and kitty clipboard docs (`?5522`).
 - Final `implement/defer` decisions for each non-implemented row should be recorded here before broadening `PA-08e` mode handling.
 - `?66` is now implemented and test-covered (`DECPAM`/`DECPNM` -> `DECRQM ?66`).
+- `PA-08g` 5-mode batch decision (2026-02-23, implementation-first, batch A):
+  - Implemented: `?9` (X10 mouse mode query/state), `?12` (cursor blinking query/state)
+  - Deferred provisional: `?45` (reverse-wrap), `?1016` (SGR pixel mouse), `?5522` (kitty paste events)
+  - Rationale: only `?9`/`?12` had low-risk underlying state support already present in Zide; the others require larger behavior work and remain `Pm=0` provisional unsupported.
+- `PA-08g` 5-mode batch decision (2026-02-23, implementation-first, batch B):
+  - Implemented: ANSI `4` (IRM insert mode + DECRQM), `?1048` (save-cursor mode query tracking + DECRQM)
+  - Deferred provisional: `?45` (reverse-wrap), `?1016` (SGR pixel mouse), `?5522` (kitty paste events)
+  - Rationale: `IRM` and `?1048` were the next tractable rows with bounded underlying support; deferred rows require materially larger behavior/integration work.
+- `PA-08g` 5-mode batch decision (2026-02-23, implementation-first, batch C):
+  - Implemented: `?8` (DECARM autorepeat + DECRQM), `?1007` (alternate scroll + DECRQM)
+  - Deferred provisional: `?45` (reverse-wrap), `?1016` (SGR pixel mouse), `?5522` (kitty paste events)
+  - Rationale: `?8`/`?1007` had tractable underlying behavior in Zide input/UI paths; deferred rows still require larger protocol/UI feature work.
 - `PA-08g` DECRQM unsupported-reporting correction review (2026-02-23):
   - Kept `Pm=4` only for strategic fixed-off / legacy non-goal modes in current scope: `?67`, `?1001`, `?1005`, `?1015`, `?1034`, `?1035`, `?1036`, `?1042`, `?1070`.
   - Reverted to `Pm=0` provisional unsupported replies for modes still plausibly on the support path: `?9`, `?45`, `?1016`, `?2031`, `?2048`, `?5522`.
