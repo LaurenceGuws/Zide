@@ -230,6 +230,12 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
             }
         },
         'p' => { // DECRQM (requires '$' intermediate)
+            if (csiIntermediatesEq(action, "!")) { // DECSTR (soft terminal reset)
+                if (action.leader == 0 and !action.private) {
+                    applyDecstr(self);
+                }
+                return;
+            }
             if (!csiIntermediatesEq(action, "$")) return;
             if (action.leader == '?' and action.private) {
                 const mode = if (param_len > 0) p[0] else 0;
@@ -415,6 +421,27 @@ pub fn writeDecrqmReply(pty: anytype, private: bool, mode: i32, state: DecrpmSta
     return true;
 }
 
+fn applyDecstr(self: anytype) void {
+    // DECSTR is a soft reset: reset parser/mode state but preserve screen contents,
+    // scrollback, and kitty graphics. Do not call the hard reset path.
+    self.parser.reset();
+    self.saved_charset = .{};
+
+    self.app_cursor_keys = false;
+    self.app_keypad = false;
+    self.input.resetMouse();
+    self.bracketed_paste = false;
+    self.focus_reporting = false;
+    self.column_mode_132 = false;
+    self.setSyncUpdates(false);
+
+    const screen = self.activeScreen();
+    screen.resetState();
+    screen.markDirtyAll();
+
+    self.updateInputSnapshot();
+}
+
 fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState {
     return switch (mode) {
         1 => boolModeState(self.app_cursor_keys),
@@ -422,9 +449,9 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState
         5 => boolModeState(screen.screen_reverse),
         6 => boolModeState(screen.origin_mode),
         7 => boolModeState(screen.auto_wrap),
-        9 => .permanently_reset, // Legacy X10 mouse mode (?9) not supported; use ?1000 family
+        9 => .not_recognized, // Legacy X10 mouse mode (?9) not yet supported in DECSET/DECRQM scope
         25 => boolModeState(screen.cursor_visible),
-        45 => .permanently_reset, // Reverse-wrap mode not implemented
+        45 => .not_recognized, // Reverse-wrap mode not yet implemented
         47, 1047, 1049 => boolModeState(self.active == .alt),
         66 => boolModeState(self.app_keypad),
         67 => .permanently_reset, // DECBKM (backarrow key mode) not supported
@@ -436,7 +463,7 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState
         1005 => .permanently_reset, // UTF-8 mouse encoding not supported
         1006 => boolModeState(self.input.mouse_mode_sgr),
         1015 => .permanently_reset, // urxvt mouse encoding not supported
-        1016 => .permanently_reset, // SGR pixel mouse encoding not supported
+        1016 => .not_recognized, // SGR pixel mouse encoding not yet supported
         1034 => .permanently_reset, // 8-bit meta mode not supported
         1035 => .permanently_reset, // num lock modifier mode not supported
         1036 => .permanently_reset, // ESC-prefixed meta mode toggle not supported
@@ -444,9 +471,9 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState
         1070 => .permanently_reset, // sixel private palette mode not supported
         2004 => boolModeState(self.bracketed_paste),
         2026 => boolModeState(self.sync_updates_active),
-        2031 => .permanently_reset, // theme change reporting not supported
-        2048 => .permanently_reset, // size notifications not supported
-        5522 => .permanently_reset, // kitty clipboard protocol mode not supported
+        2031 => .not_recognized, // theme change reporting not yet supported
+        2048 => .not_recognized, // size notifications not yet supported
+        5522 => .not_recognized, // kitty clipboard protocol mode not yet supported
         else => .not_recognized,
     };
 }
