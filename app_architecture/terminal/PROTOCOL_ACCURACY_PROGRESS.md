@@ -613,6 +613,21 @@ Files:
 Verification:
 - `zig build test-terminal-kitty-query-parse`
 
+Implemented (increment 15 / `PA-04c` invalid `o=` and `m/O + o=z` precedence cases):
+- Added integrated `a=q` parse-path tests for:
+  - unsupported compression value (`o=1`) -> `EINVAL`
+  - `q=2` suppression for unsupported compression reply
+  - chunked query (`m=1`) + `o=z` returns preflight `EINVAL` (compression is not consulted first)
+  - offset query (`O=1`) + `o=z` returns preflight `EINVAL`
+  - `q=2` suppression for both preflight error cases
+- These tests explicitly lock parser-path precedence between query preflight validation and compression handling.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
