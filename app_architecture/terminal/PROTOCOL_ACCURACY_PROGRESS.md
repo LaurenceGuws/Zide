@@ -764,6 +764,24 @@ Verification:
 - `zig build test-terminal-kitty-query-parse`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 25 / `PA-04c` table-driven non-missing-id invalid-compression precedence matrix):
+- Replaced scattered one-off tests for non-missing-id `invalid o=` precedence with a
+  compact table-driven matrix covering reply/no-reply behavior across:
+  - PNG decode branch
+  - raw RGBA size and missing-dimensions branches
+  - invalid format branch
+  - malformed payload decode branch
+  - `q=1` reply and `q=2` no-reply variants
+- This brings the same table-driven style used for missing-id precedence to the
+  non-missing-id invalid-compression precedence path.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
@@ -1504,6 +1522,13 @@ Files:
 Verification:
 - `zig build test-terminal-focus-reporting`
 - `zig build test-terminal-replay -- --all`
+
+Follow-on requirement note (user request, not implemented yet):
+- `?1004` focus event sources should support both:
+  1. window focus gain/loss
+  2. terminal-pane focus gain/loss within the IDE
+- Add separate Lua config toggles for each source so users can enable/disable them independently.
+- Current implementation emits window-focus events only.
 
 ## Change Log
 
