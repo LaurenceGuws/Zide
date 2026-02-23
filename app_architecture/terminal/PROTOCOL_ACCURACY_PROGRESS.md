@@ -583,6 +583,21 @@ Files:
 Verification:
 - `zig build test-terminal-kitty-query-parse`
 
+Implemented (increment 13 / `PA-04c` compressed PNG query matrix):
+- Added integrated `a=q` parse-path tests for compressed PNG (`f=100,o=z`) success/error and quiet-mode behavior:
+  - valid compressed PNG -> `OK`
+  - `q=2` suppresses compressed PNG success replies
+  - compressed invalid PNG payload -> `EBADPNG`
+  - `q=1` does not suppress compressed PNG `EBADPNG`
+  - `q=2` suppresses compressed PNG `EBADPNG`
+- This extends the query compression coverage beyond raw RGB/RGBA into the PNG decode path and quiet-mode conformance.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
@@ -724,6 +739,19 @@ Verification:
 - `zig build`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 13 / `PA-05b` preserve SDL key symbol metadata in input events):
+- Extended platform key queue and shared input key events to preserve the SDL key symbol (`sym`) alongside scancode.
+- `input_builder` now records `KeyEvent.sym` for keydown events (and leaves it absent on synthetic release events).
+- This is additive metadata plumbing for future layout/base-key inference work and complements the existing scancode path.
+
+Files:
+- `src/platform/input_events.zig`
+- `src/types/input.zig`
+- `src/input/input_builder.zig`
+
+Verification:
+- `zig build`
+
 Implemented (increment 1 / `PA-05c` synthetic non-US metadata fixtures at encoder boundary):
 - Extended the encoder replay fixture schema with optional `encoder.alternate_meta` so fixtures can inject synthetic `KeyboardAlternateMetadata` into char encoding tests.
 - `runEncoderFixture()` now routes metadata-bearing char fixtures through `encodeCharEventBytesForTest(...)`.
@@ -742,6 +770,30 @@ Files:
 Verification:
 - `zig build test-terminal-replay -- --fixture encoder:csi_u_alternate_metadata_non_us_noop --update-goldens`
 - `zig build test-terminal-replay -- --fixture encoder:csi_u_alternate_metadata_composed_noop --update-goldens`
+- `zig build test-terminal-replay -- --all`
+
+Implemented (increment 2 / `PA-05c` first metadata-aware encoder behavior + fixtures):
+- `encodeCharEventBytesForTest(...)` and `sendCharActionEvent(...)` now use `KeyboardAlternateMetadata` for char CSI-u alternate-key field selection.
+- Behavior changes (metadata-bearing event path only):
+  - non-US base/shifted metadata can produce `key:shifted` alternates (when shift is active and metadata is consistent with the emitted char)
+  - `text_is_composed=true` suppresses alternate-key reporting to avoid fabricating alternates for IME/compose text
+- Added unit tests and replay encoder fixtures for both behaviors:
+  - synthetic non-US shifted alternate (`é/É` metadata)
+  - composed-text suppression (`A` with composed flag no longer emits ASCII heuristic alternate)
+
+Files:
+- `src/terminal/input/input.zig`
+- `src/terminal_input_encoding_tests.zig`
+- `src/terminal/replay_harness.zig`
+- `fixtures/terminal/encoder/csi_u_alternate_metadata_non_us_shifted.json`
+- `fixtures/terminal/encoder/csi_u_alternate_metadata_non_us_shifted.golden`
+- `fixtures/terminal/encoder/csi_u_alternate_metadata_composed_suppresses.json`
+- `fixtures/terminal/encoder/csi_u_alternate_metadata_composed_suppresses.golden`
+
+Verification:
+- `zig test src/terminal_input_encoding_tests.zig`
+- `zig build test-terminal-replay -- --fixture encoder:csi_u_alternate_metadata_non_us_shifted --update-goldens`
+- `zig build test-terminal-replay -- --fixture encoder:csi_u_alternate_metadata_composed_suppresses --update-goldens`
 - `zig build test-terminal-replay -- --all`
 
 Implemented (increment 3):
