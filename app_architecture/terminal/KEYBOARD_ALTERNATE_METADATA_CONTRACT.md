@@ -120,13 +120,20 @@ Implemented since the initial contract draft:
   - `base_codepoint`
   - `shifted_codepoint`
   - inferred `alternate_layout_codepoint` from event `sym` when distinct
+- The probe path now also samples AltGr-style modifier combinations
+  (`ctrl+alt`, `shift+ctrl+alt`) via `SDL_GetKeyFromScancode(...)` and prefers
+  those translated codepoints when deriving the third kitty alternate field.
+- `terminal.input.altmeta` diagnostic logging was added to compare event `sym`
+  against scancode-translation probe outputs during real-layout manual testing.
 
 Current limits (still unresolved):
 - We only infer a single distinct third alternate from event `sym`; this is not
   a full layout tuple and may miss layout-specific alternates not visible in the
-  current event/modifier state.
+  sampled modifier combinations (`none`, `shift`, `ctrl+alt`, `shift+ctrl+alt`).
 - Text events borrow metadata from the preceding key event in the same input
   batch; this is a pragmatic correlation, not a guaranteed key/text pairing
   contract across all IME/platform behaviors.
+- We still do not distinguish right-alt/AltGr from generic `ctrl+alt` in the
+  shared input model, so the AltGr probe is a best-effort heuristic.
 - Composed/IME text remains intentionally conservative (`text_is_composed`
   suppresses alternate reporting in the encoder).

@@ -643,6 +643,24 @@ Files:
 Verification:
 - `zig build test-terminal-kitty-query-parse`
 
+Implemented (increment 17 / `PA-04c` invalid `o=` ordering vs missing-id/format/payload decode):
+- Added integrated `a=q` parse-path tests locking additional precedence combinations:
+  - missing image id preflight beats invalid compression handling
+  - invalid compression (`o=1`) beats invalid format validation
+  - invalid compression beats malformed payload base64 error handling
+  - `q=2` suppression still applies when missing-id preflight wins
+- The malformed payload precedence test exposed and fixed a real leak in kitty base64
+  decoding (`decodeBase64` used `errdefer` in an optional-return path, so invalid
+  base64 could leak temporary storage).
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+- `src/terminal/kitty/graphics.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
@@ -811,6 +829,28 @@ Implemented (increment 14 / `PA-05b` SDL scancode translation probe + runtime me
 - Text events can now inherit this richer key metadata from the preceding key event in
   the same input batch, improving real runtime alternate-key fidelity beyond synthetic
   test fixtures.
+
+Files:
+- `src/platform/sdl_api.zig`
+- `src/ui/renderer.zig`
+- `src/ui/widgets/terminal_widget_input.zig`
+
+Verification:
+- `zig build`
+- `zig build test-terminal-replay -- --all`
+
+Implemented (increment 15 / `PA-05b` AltGr-style probe candidates + runtime comparison logging):
+- Expanded the SDL translation probe wrapper to accept full modifier combinations
+  (shift/alt/ctrl/super) so terminal input can sample AltGr-style candidates
+  (`ctrl+alt`, `shift+ctrl+alt`) in addition to base/shift translations.
+- Terminal widget metadata derivation now prefers these scancode-translation probe
+  candidates before falling back to distinct event `sym` inference for the third
+  alternate field, improving non-US alternate-key fidelity on layouts that expose
+  alternate characters through AltGr.
+- Added low-noise diagnostic logging (`terminal.input.altmeta`) that logs event `sym`
+  and scancode-translation probe outputs (`base/shift/altgr/altgr_shift`) alongside
+  the metadata selected for the encoder, for real-layout validation during manual
+  testing.
 
 Files:
 - `src/platform/sdl_api.zig`
