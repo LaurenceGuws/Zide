@@ -8,7 +8,7 @@ cwd: ""
 clipboard: ""
 selection: none
 grid:
-row0: "A" "界" "B" " " "e" ^ . . . . . .
+row0: "A" "界" # "B" " " "é" . . . . . .
 row1: . . . . . . . . . . . .
 row2: . . . . . . . . . . . .
 row3: . . . . . . . . . . . .

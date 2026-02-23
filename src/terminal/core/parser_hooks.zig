@@ -51,6 +51,22 @@ pub fn handleCodepoint(self: anytype, codepoint: u32) void {
         }
     }
 
+    // A width-2 glyph at the last column should wrap before writing instead of being
+    // forced into a single cell.
+    if (screen.auto_wrap and cols > 1) {
+        const cp_width = screen_mod.Screen.codepointCellWidth(cp);
+        if (cp_width > 1 and screen.cursor.col + cp_width > cols) {
+            self.wrapNewline();
+            while (true) {
+                switch (screen.prepareWrite()) {
+                    .done => return,
+                    .need_wrap => self.wrapNewline(),
+                    .proceed => break,
+                }
+            }
+        }
+    }
+
     var attrs = screen.current_attrs;
     if (self.osc_hyperlink_active and self.current_hyperlink_id > 0) {
         attrs.link_id = self.current_hyperlink_id;
