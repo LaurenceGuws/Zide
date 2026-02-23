@@ -479,6 +479,22 @@ Verification:
 - `zig test src/terminal_input_encoding_tests.zig`
 - `zig build test-terminal-replay -- --all`
 
+Deferred (increment 7 / layout-aware alternates decision):
+- Explicitly deferred full layout-aware alternate-key reporting (beyond the current US-ASCII shifted-char subset).
+- Rationale:
+  - the current legacy char input path only receives a resolved Unicode codepoint + modifier bits
+  - it does not carry keyboard-layout metadata (e.g. unshifted/base codepoint, physical key identity, alternate layout codepoint)
+  - reliable kitty `report_alternate_key` parity for non-US layouts requires that metadata to avoid incorrect `key:shifted[:alternate]` fields
+- Decision:
+  - keep the current US-ASCII shifted subset in place as a pragmatic enhancement
+  - do not expand heuristics further without upstream input-model support for layout/base-key metadata
+  - track future work as an input-model/API extension rather than more encoding heuristics
+
+Follow-on sub-items:
+- `PA-05a` Define required input metadata for layout-aware alternates (base/unshifted codepoint, physical key, produced text)
+- `PA-05b` Thread metadata through input event path to kitty encoder
+- `PA-05c` Add non-US layout replay/unit fixtures once metadata exists
+
 Implemented (increment 3):
 - Aligned `encodeKeyBytesForTest` with runtime protocol gating for key-mode flags:
   - unsupported flag-only modes (e.g. `alternate_key` bit by itself) no longer produce protocol bytes in tests
@@ -648,11 +664,12 @@ Priority notes:
 - Advanced `PA-05` alternate-key support: flag now persists in key-mode state and char CSI-u emits US-ASCII shifted alternates (`key:shifted`) for common shifted printable keys.
 - Added replay encoder fixtures for `PA-05` alternate-key shifted-char CSI-u outputs (`key:shifted`) to lock behavior in the fixture harness.
 - Expanded `PA-05` alternate-key replay coverage (`report_text`, `embed_text`, key-path no-op) and fixed `embed_text` formatting drift in encoder test helper.
+- Deferred full layout-aware `PA-05` alternate-key parity pending input-model metadata; tracked as explicit follow-on sub-items instead of expanding heuristics.
 
 ## Next Work Queue (Ordered)
 
 1. `PA-02` PTY reply fixture/stub coverage + stronger semantic assertion checks
-2. `PA-05` Implement alternate-key output + stronger disambiguation semantics
+2. `PA-05` Input-model metadata for layout-aware alternate-key parity (`PA-05a/b/c`)
 3. `PA-04` Kitty graphics parity decomposition
 4. `PA-08` CSI/DCS/APC parity decomposition
 
