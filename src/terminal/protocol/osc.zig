@@ -2,6 +2,7 @@ const std = @import("std");
 const palette_mod = @import("palette.zig");
 const osc_semantic = @import("osc_semantic.zig");
 const osc_clipboard = @import("osc_clipboard.zig");
+const osc_kitty_clipboard = @import("osc_kitty_clipboard.zig");
 const osc_cwd = @import("osc_cwd.zig");
 const osc_hyperlink = @import("osc_hyperlink.zig");
 const osc_title = @import("osc_title.zig");
@@ -51,6 +52,9 @@ pub fn parseOsc(self: anytype, payload: []const u8, terminator: OscTerminator) v
         },
         52 => {
             osc_clipboard.parseClipboard(self, text, terminator);
+        },
+        5522 => {
+            osc_kitty_clipboard.parseOsc5522(self, text, terminator);
         },
         133 => {
             osc_semantic.parseSemanticPrompt(self, text);
