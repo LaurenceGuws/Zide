@@ -1923,6 +1923,31 @@ Notes:
 - `?66` is now implemented and test-covered (`DECPAM`/`DECPNM` -> `DECRQM ?66`).
 - Initial `Pm=4` policy adoption landed for a growing set of clearly unsupported fixed DEC-private modes (`?9`, `?45`, `?67`, `?1001`, `?1005`, `?1015`, `?1016`, `?1034`, `?1035`, `?1036`, `?1042`, `?1070`, `?2031`, `?2048`, `?5522`) to align more closely with xterm/foot-style `DECRPM` semantics.
 
+Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft terminal reset):
+- Reference anchors:
+  - xterm docs define `CSI ! p` as `DECSTR` (soft terminal reset), VT220+ (`reference_repos/terminals/xterm_snapshots/ctlseqs.txt`).
+  - kitty parses `DECSTR` as a distinct CSI family keyed by intermediates + final (`reference_repos/terminals/kitty/kitty/vt-parser.c`).
+  - ghostty routes intermediate-bearing CSI families distinctly (via intermediate-aware parsing/dispatch), which is the model we are moving toward with `PA-08f` (`reference_repos/terminals/ghostty/src/terminal/stream.zig`).
+- Why this is a separate `PA-08h` slice (not just a parser follow-up):
+  - `DECSTR` semantics are behavioral and reset-scoped; parser support alone is not sufficient.
+  - Zide already has a hard reset path (`src/terminal/core/state_reset.zig`, `TerminalSession.resetState()`), and using it for `DECSTR` would be incorrect and destructive (clears screens/kitty images, etc.).
+- `PA-08h` `DECSTR` done looks like:
+  - `CSI ! p` is recognized via explicit `!` intermediate handling in CSI dispatch.
+  - `DECSTR` applies a documented soft-reset subset aligned with xterm/kitty/ghostty conventions for Zide scope (mode resets, parser/input state resets as appropriate, but no destructive full terminal reset).
+  - Hard-reset-only effects are explicitly excluded (e.g. no full screen clear, no kitty image wipe, no scrollback destruction) unless a reference-backed requirement says otherwise.
+  - Tests cover:
+    - PTY/no-reply dispatch path (`CSI ! p` recognized and handled as soft reset, not `DECRQM`)
+    - replay fixture(s) showing key mode/mode bits reset behavior and preserved state that should survive soft reset
+- Guardrails (must hold during implementation):
+  - Do **not** call `TerminalSession.resetState()` / `state_reset.resetState()` from `DECSTR`.
+  - Implement `DECSTR` as its own reset helper (or narrowly composed helpers) with a documented reset matrix.
+  - If any `DECSTR` behavior is uncertain across references, document the divergence and test-lock the chosen convention.
+- Suggested small-commit sequence:
+  1. Docs-only reset matrix (what `DECSTR` resets vs preserves in Zide scope).
+  2. Behavior-preserving parser/dispatch hook for `CSI ! p` (no-op handler + tests proving exact dispatch family).
+  3. Implement the first safe subset (mode resets only) with PTY/replay coverage.
+  4. Extend/reset matrix incrementally as reference behavior is confirmed.
+
 ## Change Log
 
 ### 2026-02-23
