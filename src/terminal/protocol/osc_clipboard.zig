@@ -1,9 +1,6 @@
 const std = @import("std");
-const pty_mod = @import("../io/pty.zig");
 const parser_mod = @import("../parser/parser.zig");
 const app_logger = @import("../../app_logger.zig");
-
-const Pty = pty_mod.Pty;
 const OscTerminator = parser_mod.OscTerminator;
 
 pub fn parseClipboard(self: anytype, text: []const u8, terminator: OscTerminator) void {
@@ -38,7 +35,7 @@ pub fn parseClipboard(self: anytype, text: []const u8, terminator: OscTerminator
     self.osc_clipboard_pending = true;
 }
 
-fn writeClipboardReply(self: anytype, pty: *Pty, selection: []const u8, terminator: OscTerminator) void {
+fn writeClipboardReply(self: anytype, pty: anytype, selection: []const u8, terminator: OscTerminator) void {
     const log = app_logger.logger("terminal.osc");
     const end = if (terminator == .bel) "\x07" else "\x1b\\";
     var data = self.osc_clipboard.items;

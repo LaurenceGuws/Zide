@@ -99,6 +99,23 @@ Implemented (increment 2):
 - `grid`, `cursor`, and `attrs` assertions now perform semantic checks on the final snapshot/debug state instead of being recognized-only.
 - `scrollback` remains recognized-only pending a clearer split between "scroll semantics" and "persistent scrollback" fixture tags.
 
+Implemented (increment 3):
+- Added direct PTY-gated reply unit tests (with fake PTY capture) for:
+  - DCS `XTGETTCAP` reply (`+q` / `TN`)
+  - OSC 52 clipboard query reply (BEL terminator preservation)
+  - OSC 4 palette query reply (ST terminator preservation)
+- Refactored reply helper functions in `dcs_apc`, `osc_clipboard`, and `palette` modules to accept generic PTY writers (`anytype`) for testability.
+
+Files:
+- `src/terminal_protocol_reply_tests.zig`
+- `src/terminal/protocol/dcs_apc.zig`
+- `src/terminal/protocol/osc_clipboard.zig`
+- `src/terminal/protocol/palette.zig`
+
+Verification:
+- `zig test src/terminal_protocol_reply_tests.zig -lc`
+- `zig build test-terminal-replay -- --all`
+
 Planned fix shape (candidate):
 - Phase 1: enforce/assert known assertion tags and surface them in harness output.
 - Phase 2: use assertions to filter/validate snapshot sections or explicit sub-assertions.
@@ -248,6 +265,7 @@ Priority notes:
 - Completed `PA-07` (removed bare `58` reset behavior in SGR parser).
 - Advanced `PA-02` to `partial` (replay assertions are now consumed and validated; PTY reply coverage still pending).
 - Strengthened `PA-02` semantic checks for `grid`/`cursor`/`attrs` assertions in replay harness.
+- Advanced `PA-02` PTY-gated reply coverage with direct unit tests for DCS/OSC reply paths.
 - Advanced `PA-05` to `partial` (unsupported `alternate_key` no longer advertised via key-mode flags).
 
 ## Next Work Queue (Ordered)

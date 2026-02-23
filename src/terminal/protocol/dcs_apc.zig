@@ -1,8 +1,5 @@
 const std = @import("std");
-const pty_mod = @import("../io/pty.zig"); // TODO(layering): consider routing PTY writes via core to avoid protocol->io coupling.
 const app_logger = @import("../../app_logger.zig");
-
-const Pty = pty_mod.Pty;
 
 pub fn parseDcs(self: anytype, payload: []const u8) void {
     if (payload.len < 2) return;
@@ -64,8 +61,8 @@ fn writeXtgettcapReply(self: anytype, ok: bool, cap_hex: []const u8, value: ?[]c
         if (!encodeHex(self.allocator, &reply, value.?)) return;
     }
     _ = reply.appendSlice(self.allocator, "\x1b\\") catch return;
-    if (self.pty) |*pty_mut| {
-        _ = pty_mut.write(reply.items) catch {};
+    if (self.pty) |*pty_writer| {
+        _ = pty_writer.write(reply.items) catch {};
     }
 }
 
