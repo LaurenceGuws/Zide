@@ -326,6 +326,12 @@ fn sendCharWithProtocolMeta(
         pos += 1;
         const written_shifted = std.fmt.bufPrint(buf[pos..], "{d}", .{shifted_key}) catch return false;
         pos += written_shifted.len;
+        if (key_fields.alternate) |alternate_key| {
+            buf[pos] = ':';
+            pos += 1;
+            const written_alt = std.fmt.bufPrint(buf[pos..], "{d}", .{alternate_key}) catch return false;
+            pos += written_alt.len;
+        }
     }
     if (second_field or (flags & key_encoding.key_mode_embed_text) != 0) {
         buf[pos] = ';';
@@ -356,6 +362,7 @@ fn sendCharWithProtocolMeta(
 const ProtocolCharKeyFields = struct {
     key: u32,
     shifted: ?u32 = null,
+    alternate: ?u32 = null,
 };
 
 fn protocolCharKeyFields(
@@ -373,9 +380,14 @@ fn protocolCharKeyFields(
         if (meta.base_codepoint) |base_cp| {
             const shifted_cp = meta.shifted_codepoint orelse char;
             if (shifted_cp == char and base_cp != char) {
+                var alt_cp: ?u32 = null;
+                if (meta.alternate_layout_codepoint) |candidate| {
+                    if (candidate != base_cp and candidate != shifted_cp) alt_cp = candidate;
+                }
                 return .{
                     .key = base_cp,
                     .shifted = char,
+                    .alternate = alt_cp,
                 };
             }
         }
@@ -521,9 +533,18 @@ pub fn encodeCharEventBytesForTest(
     if (key_fields.shifted) |shifted_key| {
         if (embed_text) {
             if (has_mods) {
+                if (key_fields.alternate) |alternate_key| {
+                    return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};{d};{d}u", .{ key_fields.key, shifted_key, alternate_key, mod_code, event.codepoint });
+                }
                 return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};{d};{d}u", .{ key_fields.key, shifted_key, mod_code, event.codepoint });
             }
+            if (key_fields.alternate) |alternate_key| {
+                return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};;{d}u", .{ key_fields.key, shifted_key, alternate_key, event.codepoint });
+            }
             return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};;{d}u", .{ key_fields.key, shifted_key, event.codepoint });
+        }
+        if (key_fields.alternate) |alternate_key| {
+            return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};{d}u", .{ key_fields.key, shifted_key, alternate_key, mod_code });
         }
         return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};{d}u", .{ key_fields.key, shifted_key, mod_code });
     }
