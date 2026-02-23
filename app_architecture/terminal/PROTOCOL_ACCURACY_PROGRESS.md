@@ -689,6 +689,22 @@ Files:
 Verification:
 - `zig build test-terminal-kitty-query-parse`
 
+Implemented (increment 20 / `PA-04c` `q=1` mixed invalid-format precedence combinations):
+- Added integrated `a=q` parse-path tests proving missing-id preflight still wins (and
+  `q=1` still does not suppress the error) when mixed lower-priority invalid branches
+  are also present:
+  - invalid compression + invalid format
+  - chunked zlib form + invalid format
+- Added `q=2` suppression coverage for the mixed invalid-compression + invalid-format
+  case when missing-id preflight is the winning branch.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:

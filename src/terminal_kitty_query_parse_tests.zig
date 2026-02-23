@@ -574,6 +574,37 @@ test "kitty parse query quiet=1 does not suppress missing-id preflight before ch
     }.run);
 }
 
+test "kitty parse query quiet=1 missing-id preflight beats invalid format plus invalid compression" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,q=1,o=1,f=999;AA==");
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_G;EINVAL\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query quiet=1 missing-id preflight beats invalid format plus chunked zlib form" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,q=1,m=1,o=z,f=999;" ++ zlib_rgba_1x1);
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_G;EINVAL\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query quiet=2 suppresses missing-id preflight before invalid format plus invalid compression" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,q=2,o=1,f=999;AA==");
+            try capture.expectNoReply();
+        }
+    }.run);
+}
+
 test "kitty parse query invalid compression beats invalid format" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
