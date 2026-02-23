@@ -140,9 +140,17 @@ test "terminal DECRQM private queries report common mode set/reset states" {
             };
             const cases = [_]Case{
                 .{ .mode = 1, .set_seq = "\x1b[?1h", .reset_seq = "\x1b[?1l" },
+                .{ .mode = 3, .set_seq = "\x1b[?3h", .reset_seq = "\x1b[?3l" },
+                .{ .mode = 5, .set_seq = "\x1b[?5h", .reset_seq = "\x1b[?5l" },
+                .{ .mode = 6, .set_seq = "\x1b[?6h", .reset_seq = "\x1b[?6l" },
                 .{ .mode = 7, .set_seq = "\x1b[?7h", .reset_seq = "\x1b[?7l", .default_set = true },
                 .{ .mode = 25, .set_seq = "\x1b[?25h", .reset_seq = "\x1b[?25l", .default_set = true },
+                .{ .mode = 47, .set_seq = "\x1b[?47h", .reset_seq = "\x1b[?47l" },
+                .{ .mode = 1047, .set_seq = "\x1b[?1047h", .reset_seq = "\x1b[?1047l" },
+                .{ .mode = 1049, .set_seq = "\x1b[?1049h", .reset_seq = "\x1b[?1049l" },
                 .{ .mode = 1000, .set_seq = "\x1b[?1000h", .reset_seq = "\x1b[?1000l" },
+                .{ .mode = 1002, .set_seq = "\x1b[?1002h", .reset_seq = "\x1b[?1002l" },
+                .{ .mode = 1003, .set_seq = "\x1b[?1003h", .reset_seq = "\x1b[?1003l" },
                 .{ .mode = 1006, .set_seq = "\x1b[?1006h", .reset_seq = "\x1b[?1006l" },
                 .{ .mode = 2004, .set_seq = "\x1b[?2004h", .reset_seq = "\x1b[?2004l" },
                 .{ .mode = 2026, .set_seq = "\x1b[?2026h", .reset_seq = "\x1b[?2026l" },
@@ -224,6 +232,18 @@ test "terminal DECRQM ansi query reports mode 20 newline set/reset state" {
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings("\x1b[20;2$y", reply);
             }
+        }
+    }.run);
+}
+
+test "terminal DECRQM ansi query returns Pm=0 for unsupported mode per xterm-foot convention" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            terminal.debugFeedBytes(session, "\x1b[999$p");
+            const reply = try capture.readReply(allocator);
+            defer allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b[999;0$y", reply);
         }
     }.run);
 }
