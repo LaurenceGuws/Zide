@@ -35,6 +35,57 @@ Rules for this document:
 | PA-07 | Medium | done | Bare SGR `58` likely treated incorrectly as reset | Bare `58` no longer resets underline color; `59` remains reset |
 | PA-08 | Medium-Low | partial | CSI/DCS/APC coverage is subset of reference terminals | Sub-gaps enumerated and prioritized with explicit roadmap/tests |
 
+## Partial Completion Gate (Parity Discipline)
+
+Policy (added after parity-review follow-up discussion):
+- `partial` is a milestone state, not a completion state.
+- Do not silently move past a `partial` item when the stated goal is parity against reference terminals (kitty / ghostty / xterm / foot).
+- Before starting a new top-level todo area, run a **partial scan** and explicitly classify each open `partial` item as one of:
+  - `finish now` (blocking for correctness/parity confidence)
+  - `defer intentionally` (non-blocking; leave a reason + explicit done criteria)
+  - `split further` (too broad; create sub-items with clear acceptance)
+
+Definition-of-done requirements for parity-oriented items:
+- Name the reference target(s) (`kitty`, `ghostty`, `xterm`, `foot`) and scope.
+- Define exact behavior/reply expectations (including unsupported behavior conventions).
+- Define test coverage required to call it done (unit / PTY / replay fixtures).
+- List any explicit out-of-scope behaviors so `partial` vs `done` is auditable.
+
+### Current Partial Scan (2026-02-23)
+
+`PA-02` Replay assertions / fixture intent (`partial`)
+- Classification: `finish now` before broader protocol parity claims.
+- Why: this is test infrastructure; weak fixture intent checks can overstate coverage across all later protocol work.
+- Done looks like (parity-supporting infra):
+  - replay assertions have semantic checks for all supported tags we rely on
+  - replay query/reply assertions cover representative DA/DSR/OSC/DCS/kitty cases
+  - unknown tags fail fast (done)
+  - fixture intent is not “recognized-only” for tags we actively use
+
+`PA-04` Kitty graphics parity (`partial` scope item represented as parity slices)
+- Classification: `defer intentionally` unless a user-visible kitty graphics bug appears.
+- Why: large surface area; current protocol focus is broader CSI correctness and test infrastructure.
+- Done looks like (when resumed):
+  - explicit command/delete/query parity matrix vs kitty/ghostty
+  - error-code + quiet-mode conformance documented and test-covered
+  - unsupported features explicitly deferred with rationale
+
+`PA-05` Kitty keyboard / CSI-u parity (`partial`)
+- Classification: `defer intentionally`, but keep traceable.
+- Why: major remaining gap is layout-aware metadata completeness; this depends on upstream input data quality, not just encoder logic.
+- Done looks like:
+  - layout-aware alternate key reporting end-to-end (not mostly synthetic metadata)
+  - non-US/AltGr paths validated by fixtures/tests
+  - disambiguation / action-field coverage complete for supported key classes
+
+`PA-08` CSI/DCS/APC parity (`partial`)
+- Classification: `split further` and continue in explicit parity slices.
+- Why: umbrella item is too broad; we should keep shipping small protocol slices with reference-backed acceptance.
+- Done looks like (umbrella):
+  - CSI parser capability sufficient for targeted CSI families (including intermediates where required)
+  - prioritized CSI/DCS/APC gaps either implemented to spec/reference behavior or explicitly deferred
+  - replay/PTY coverage exists for reply-driven features we claim support for
+
 ## Detailed Findings (Source Review Snapshot)
 
 ### PA-01 Unicode Width / Cursor Accounting
