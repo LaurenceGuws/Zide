@@ -1,0 +1,18 @@
+{
+  "fixture_type": "vt",
+  "rows": 6,
+  "cols": 12,
+  "cursor": { "row": 0, "col": 0 },
+  "line_ending": "lf",
+  "assertions": ["reply"],
+  "reply_hex": "1b5b3c303b32303b33344d1b5b3c33323b32383b35304d1b5b3c303b32383b35306d1b5b3c38303b34313b36314d1b5b3c37363b34313b36314d1b5b3c36353b34313b36314d1b5b3c36343b34313b36314d",
+  "mouse": [
+    { "kind": "press", "button": "left", "row": 1, "col": 2, "pixel_x": 19, "pixel_y": 33, "mod": 0, "buttons_down": 1 },
+    { "kind": "move", "button": "none", "row": 2, "col": 3, "pixel_x": 27, "pixel_y": 49, "mod": 0, "buttons_down": 1 },
+    { "kind": "release", "button": "left", "row": 2, "col": 3, "pixel_x": 27, "pixel_y": 49, "mod": 0, "buttons_down": 0 },
+    { "kind": "wheel", "button": "wheel_up", "row": 4, "col": 5, "pixel_x": 40, "pixel_y": 60, "mod": 4, "buttons_down": 0 },
+    { "kind": "wheel", "button": "wheel_up", "row": 4, "col": 5, "pixel_x": 40, "pixel_y": 60, "mod": 3, "buttons_down": 0 },
+    { "kind": "wheel", "button": "wheel_down", "row": 4, "col": 5, "pixel_x": 40, "pixel_y": 60, "mod": 0, "buttons_down": 0 },
+    { "kind": "wheel", "button": "wheel_up", "row": 4, "col": 5, "pixel_x": 40, "pixel_y": 60, "mod": 0, "buttons_down": 0 }
+  ]
+}

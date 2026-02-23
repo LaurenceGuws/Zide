@@ -32,6 +32,17 @@ pub const SelectionAction = struct {
     col: usize = 0,
 };
 
+pub const MouseAction = struct {
+    kind: types.MouseEventKind,
+    button: types.MouseButton,
+    row: usize,
+    col: usize,
+    pixel_x: ?u32 = null,
+    pixel_y: ?u32 = null,
+    mod: types.Modifier = types.VTERM_MOD_NONE,
+    buttons_down: u8 = 0,
+};
+
 pub const EncoderSpec = struct {
     key: ?u32 = null,
     char: ?u32 = null,
@@ -84,9 +95,12 @@ pub const FixtureMeta = struct {
     assertions: []const []const u8 = &.{},
     reply_hex: ?[]const u8 = null,
     selection: []const SelectionAction = &.{},
+    mouse: []const MouseAction = &.{},
     encoder: ?EncoderSpec = null,
     osc_5522_clipboard_text: ?[]const u8 = null,
     osc_5522_clipboard_html: ?[]const u8 = null,
+    osc_5522_clipboard_uri_list: ?[]const u8 = null,
+    osc_5522_clipboard_png_hex: ?[]const u8 = null,
 };
 
 const ReplayPtyCapture = struct {
@@ -297,6 +311,7 @@ pub fn runFixture(
     if (fixture.meta.fixture_type == .harness_api) {
         applySelectionActions(session, fixture.meta.selection);
     }
+    try applyMouseActions(session, fixture.meta.mouse);
 
     const snapshot = session.snapshot();
     const debug = terminal.debugSnapshot(session);
@@ -323,6 +338,18 @@ fn seedOsc5522Clipboard(session: *terminal.TerminalSession, meta: FixtureMeta) !
         session.kitty_osc5522_clipboard_html.clearRetainingCapacity();
         try session.kitty_osc5522_clipboard_html.ensureTotalCapacity(session.allocator, html.len);
         try session.kitty_osc5522_clipboard_html.appendSlice(session.allocator, html);
+    }
+    if (meta.osc_5522_clipboard_uri_list) |uri_list| {
+        session.kitty_osc5522_clipboard_uri_list.clearRetainingCapacity();
+        try session.kitty_osc5522_clipboard_uri_list.ensureTotalCapacity(session.allocator, uri_list.len);
+        try session.kitty_osc5522_clipboard_uri_list.appendSlice(session.allocator, uri_list);
+    }
+    if (meta.osc_5522_clipboard_png_hex) |hex| {
+        const bytes = try decodeHex(session.allocator, hex);
+        defer session.allocator.free(bytes);
+        session.kitty_osc5522_clipboard_png.clearRetainingCapacity();
+        try session.kitty_osc5522_clipboard_png.ensureTotalCapacity(session.allocator, bytes.len);
+        try session.kitty_osc5522_clipboard_png.appendSlice(session.allocator, bytes);
     }
 }
 
@@ -571,6 +598,21 @@ fn applySelectionActions(session: *terminal.TerminalSession, actions: []const Se
             .update => session.updateSelection(action.row, action.col),
             .finish => session.finishSelection(),
         }
+    }
+}
+
+fn applyMouseActions(session: *terminal.TerminalSession, actions: []const MouseAction) !void {
+    for (actions) |action| {
+        _ = try session.reportMouseEvent(.{
+            .kind = action.kind,
+            .button = action.button,
+            .row = action.row,
+            .col = action.col,
+            .pixel_x = action.pixel_x,
+            .pixel_y = action.pixel_y,
+            .mod = action.mod,
+            .buttons_down = action.buttons_down,
+        });
     }
 }
 
