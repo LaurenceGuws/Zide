@@ -138,14 +138,10 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
     }
 
     if (control.action == 'q') {
-        const image_id = resolveKittyImageId(control) orelse {
-            writeKittyResponse(self, control, 0, false, "EINVAL");
-            return;
-        };
-        if (data.len == 0 and control.size == 0 and control.width == 0 and control.height == 0) {
-            writeKittyResponse(self, control, image_id, true, "OK");
+        if (handleKittyQueryEarlyReply(self, control, data.len)) {
             return;
         }
+        const image_id = resolveKittyImageId(control).?;
         if (control.format == 0) {
             control.format = 32;
         }
@@ -274,6 +270,18 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
     }
     clearKittyLoading(kitty, final_image_id);
     writeKittyResponse(self, control, final_image_id, true, "OK");
+}
+
+pub fn handleKittyQueryEarlyReply(self: anytype, control: KittyControl, data_len: usize) bool {
+    const image_id = resolveKittyImageId(control) orelse {
+        writeKittyResponse(self, control, 0, false, "EINVAL");
+        return true;
+    };
+    if (data_len == 0 and control.size == 0 and control.width == 0 and control.height == 0) {
+        writeKittyResponse(self, control, image_id, true, "OK");
+        return true;
+    }
+    return false;
 }
 
 fn parseKittyControl(
