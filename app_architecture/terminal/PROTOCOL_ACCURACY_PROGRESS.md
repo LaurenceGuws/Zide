@@ -2075,6 +2075,18 @@ Verification:
 - `zig build test-terminal-replay -- --fixture decstr_resets_cursor_style --update-goldens`
 - `zig build test-terminal-replay -- --fixture decstr_preserves_alt_kitty_placement --update-goldens`
 - `zig build test-terminal-replay -- --all`
+
+Implemented (increment 4 / `PA-08h` `DECSTR` alt-screen kitty non-leak boundary):
+- Added a direct terminal-session test proving kitty placement state created in alt-screen:
+  - survives `DECSTR` while alt-screen remains active
+  - does not leak into the primary-screen snapshot after `?1049l`
+- This tightens the soft-reset boundary semantics around screen-scoped kitty placements without relying on replay `kitty` assertions (which require final active-snapshot kitty activity).
+
+Files:
+- `src/terminal_focus_reporting_tests.zig`
+
+Verification:
+- `zig build test-terminal-focus-reporting`
   4. Extend/reset matrix incrementally as reference behavior is confirmed.
 
 ## Change Log
