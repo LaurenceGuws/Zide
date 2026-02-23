@@ -1951,7 +1951,7 @@ High-value DEC private modes (common TUI / modern terminal usage):
 | `?1016` | SGR pixel mouse | `Pm=0` | `Y` | `Y` | `Y` | strong modern | likely future implement, do not mark `Pm=4` |
 | `?2031` | color scheme notifications | `Pm=0` | `Y` | `Y` | `Y` | modern ext | likely future implement, do not mark `Pm=4` |
 | `?2048` | in-band resize notifications | `Pm=0` | `Y` | `Y` | `Y` | modern ext | likely future implement, do not mark `Pm=4` |
-| `?5522` | kitty paste/clipboard events mode | implemented (`1/2`, partial behavior slice) | `-` | `-` | `Y` (+ docs) | kitty-specific | implemented mode + paste-event MIME list + minimal read path (`.`/`text/plain`/`text/html`); write/permission/primary deferred |
+| `?5522` | kitty paste/clipboard events mode | implemented (`1/2`, partial behavior slice) | `-` | `-` | `Y` (+ docs) | kitty-specific | implemented mode + paste-event MIME list + minimal read path (`.`/`text/plain`/`text/html`/`text/uri-list`); write/permission/primary deferred |
 
 Current strategic non-support rows (`Pm=4`) are retained only where references and product direction both support fixed-off behavior:
 - legacy/low-value mouse/meta toggles: `?67`, `?1001`, `?1005`, `?1015`, `?1034`, `?1035`, `?1036`, `?1042`, `?1070`
@@ -1978,7 +1978,7 @@ Current strategic non-support rows (`Pm=4`) are retained only where references a
 | DEC private `DECRQM` | `?1034 ?1035 ?1036 ?1042` | implemented (query-only) | `4` (permanently reset) | foot supports/reportable | unsupported fixed-off parity policy adopted |
 | DEC private `DECRQM` | `?1070` | implemented (query-only) | `4` (permanently reset) | foot supports/reportable | unsupported fixed-off parity policy adopted |
 | DEC private `DECRQM` | `?2031 ?2048` modern notifications | not implemented | `0` | foot/ghostty/kitty | defer provisional; do not claim fixed-off unless strategic |
-| DEC private `DECRQM` | `?5522` kitty paste/clipboard events mode | implemented (bounded slice) | `1/2` | kitty docs + code | implemented mode + unsolicited paste-event MIME list + minimal `OSC 5522` read (`.`/`text/plain`/`text/html`); write path + permission/pw flow deferred |
+| DEC private `DECRQM` | `?5522` kitty paste/clipboard events mode | implemented (bounded slice) | `1/2` | kitty docs + code | implemented mode + unsolicited paste-event MIME list + minimal `OSC 5522` read (`.`/`text/plain`/`text/html`/`text/uri-list`); write path + permission/pw flow deferred |
 | DEC private `DECRQM` | `?1007` alternate scroll | implemented | `1/2` | foot/ghostty | implemented via wheel->arrow behavior in alt-screen (when mouse reporting off) |
 | DEC private `DECRQM` | unknown modes | implemented fallback | `0` | xterm/foot convention | keep (test-locked) |
 
@@ -2018,14 +2018,15 @@ Notes:
   - Implemented behavior (current bounded scope):
     - user-triggered paste routes (shortcut/menu paste + middle-click paste path) send unsolicited `OSC 5522` MIME-list event instead of direct paste text when mode is enabled
     - minimal `OSC 5522` read replies for `type=read` requests:
-      - `.` (targets list) -> advertises `text/plain` and `text/html` (when present)
+      - `.` (targets list) -> advertises `text/plain`, `text/html`, and `text/uri-list` (when present)
       - `text/plain` -> returns cached clipboard text from the user-triggered paste event
       - `text/html` -> returns cached HTML clipboard data when available (via SDL clipboard MIME read)
+      - `text/uri-list` -> returns cached URI list clipboard data when available (via SDL clipboard MIME read)
   - Deferred within `?5522` slice (still parity work, not unsupported polish):
     - `OSC 5522` write path (`type=write` / `wdata` / `walias`)
     - permission prompts / `pw` one-time password flow
     - primary-selection (`loc=primary`)
-    - arbitrary MIME types beyond `text/plain` / `text/html`
+    - arbitrary MIME types beyond `text/plain` / `text/html` / `text/uri-list`
   - Evidence:
     - PTY integration: `src/terminal_focus_reporting_tests.zig` (`DECRQM` state + unsolicited event + `type=read`)
     - replay: `fixtures/terminal/decrqm_query_matrix_reply.*` now queries `?5522` default/set/reset
