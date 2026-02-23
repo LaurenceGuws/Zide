@@ -437,6 +437,10 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState
         1006 => boolModeState(self.input.mouse_mode_sgr),
         1015 => .permanently_reset, // urxvt mouse encoding not supported
         1016 => .permanently_reset, // SGR pixel mouse encoding not supported
+        1034 => .permanently_reset, // 8-bit meta mode not supported
+        1035 => .permanently_reset, // num lock modifier mode not supported
+        1036 => .permanently_reset, // ESC-prefixed meta mode toggle not supported
+        1042 => .permanently_reset, // bell action toggle not supported
         2004 => boolModeState(self.bracketed_paste),
         2026 => boolModeState(self.sync_updates_active),
         else => .not_recognized,
