@@ -3,7 +3,7 @@ size: 4x24
 cursor: r=1 c=0 visible=1 style=block-blink
 alt: 0
 scrollback: count=0 view_offset=0
-title: "DECSTR title"
+title: "Terminal"
 cwd: "/tmp/zide-decstr"
 clipboard: ""
 selection: none

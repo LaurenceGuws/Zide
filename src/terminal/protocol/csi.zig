@@ -426,6 +426,8 @@ fn applyDecstr(self: anytype) void {
     // scrollback, and kitty graphics. Do not call the hard reset path.
     self.parser.reset();
     self.saved_charset = .{};
+    self.title_buffer.clearRetainingCapacity();
+    self.title = "Terminal";
 
     self.app_cursor_keys = false;
     self.app_keypad = false;
