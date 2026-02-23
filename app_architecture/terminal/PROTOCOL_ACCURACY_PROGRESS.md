@@ -1576,16 +1576,36 @@ Status:
 Notes:
 - Track as roadmap item with sub-issues (e.g., missing DCS queries, APC extensions, CSI tabs/window ops).
 
+Parity targets (for `PA-08` sub-items unless explicitly scoped otherwise):
+- Primary references: `xterm`, `kitty`, `ghostty` (with `foot` used as an additional xterm-family implementation check when useful).
+- "Done" for a parity slice means behavior is either:
+  1. implemented to match reference-terminal convention, or
+  2. intentionally deferred with documented scope + rationale.
+
 Sub-items (traceable parity slices):
-- `PA-08a` CSI gap inventory vs xterm seed (missing finals / private modes used by modern TUIs)
+- `PA-08a` CSI gap inventory vs xterm/kitty/ghostty seeds (missing finals / private modes used by modern TUIs)
 - `PA-08b` DCS query/reply gap inventory (beyond XTGETTCAP)
 - `PA-08c` APC extension policy (kitty-only vs extensible dispatcher)
 - `PA-08d` Add replay/PTY fixtures for query/reply coverage (DA/DSR/OSC/DCS)
-- `PA-08e` Implement highest-value CSI gaps (tabulation/window ops only if demanded)
+- `PA-08e` Implement highest-value CSI gaps (tabulation/window ops/mode queries in demand-driven slices)
+- `PA-08f` CSI parser intermediate-byte parity (`$`, `!`, and other intermediates needed to disambiguate CSI families cleanly)
+- `PA-08g` `DECRQM` / `DECRPM` parity breadth and reply-value policy (`Pm=0/1/2/3/4`, supported ANSI/DEC mode set)
+- `PA-08h` Remaining high-value CSI/private-mode gaps promoted from `PA-08a` (e.g. `DECSTR`, `DECSLRM`, `DECRQM` follow-ons)
 
 Priority notes:
 - Focus first on sequences observed in fixtures, vttest, and real apps in `reference_repos/terminals/*`.
 - Prefer PTY-stubbed tests before expanding query/reply behavior.
+- Before marking any `PA-08*` item `done`, document:
+  - exact sequence scope
+  - target reference convention(s)
+  - required test layers (`unit`, `PTY`, `replay`) and what is intentionally omitted
+
+Definition of done (current `PA-08` top-level status can become `done` only when all are true):
+- `PA-08a` inventory/checklist is complete enough to enumerate remaining relevant CSI/private-mode gaps against `xterm` / `kitty` / `ghostty` for Zide's TUI scope.
+- `PA-08d` replay + PTY query/reply coverage is representative across implemented families and is used for newly-added query/reply behavior.
+- `PA-08f` CSI parser intermediate handling is implemented (or explicitly scoped/deferred with documented consequences) so CSI-family dispatch is not relying on ambiguous final-byte shortcuts for parity-critical sequences.
+- `PA-08g` `DECRQM` support scope is explicitly defined against references (implemented set + unsupported convention) and test-locked.
+- Remaining promoted `PA-08h` gaps are either implemented or intentionally deferred with rationale and compatibility impact notes.
 
 Implemented (increment 1 / `PA-08a` first CSI/private-mode gap inventory pass):
 - Created an initial inventory of high-value CSI/private-mode gaps relative to xterm /
@@ -1720,6 +1740,7 @@ Implemented (increment 6 / `PA-08e` `DECRQM` query coverage expansion + ANSI mod
   - implemented: mode `20` (newline mode)
   - unsupported ANSI modes: reply with `Pm=0` (not recognized) rather than silent ignore
   - expand only when a real app/seed demonstrates demand
+- This is a **partial milestone**, not `DECRQM` parity completion; broader `DECRQM` breadth and parser-intermediate correctness are tracked under `PA-08f` / `PA-08g`.
 
 Files:
 - `src/terminal/protocol/csi.zig`
@@ -1833,10 +1854,10 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `PA-02` PTY reply fixture/stub coverage + stronger semantic assertion checks
-2. `PA-05b` Thread layout/base-key metadata through input path using `PA-05a` contract
-3. `PA-04` Kitty graphics parity decomposition
-4. `PA-08` CSI/DCS/APC parity decomposition
+1. `PA-08f` CSI parser intermediate-byte parity decomposition + implementation plan (`$`, `!`, and dispatch impact)
+2. `PA-08g` `DECRQM`/`DECRPM` parity breadth checklist (supported ANSI/DEC mode set + reply-value policy vs references)
+3. `PA-05b` Thread layout/base-key metadata through input path using `PA-05a` contract
+4. `PA-04` Kitty graphics parity decomposition
 
 ## Decomposition Backlog (New)
 
@@ -1849,7 +1870,10 @@ Verification:
 
 ### PA-08 Parity Decomposition Checklist
 
-- [ ] `PA-08a` Inventory missing CSI finals and private modes from xterm seed relevant to Zide
-- [ ] `PA-08b` Inventory DCS/APC gaps relative to kitty/ghostty/foot usage
-- [ ] `PA-08c` Define PTY-stub replay strategy for query/reply assertions
+- [ ] `PA-08a` Inventory missing CSI finals/private modes from `xterm`/`kitty`/`ghostty` relevant to Zide, with explicit `done` criteria and reference links/notes
+- [ ] `PA-08b` Inventory DCS/APC gaps relative to kitty/ghostty/foot usage, with explicit `implement` vs `defer` policy per family
+- [x] `PA-08c` Define PTY-stub replay strategy for query/reply assertions (implemented as `reply_hex` + `assertions: ["reply"]`)
 - [x] `PA-08d` Promote highest-value gaps into implementable tracker items (`?1004` promoted and implemented under `PA-08e`)
+- [ ] `PA-08f` Implement or explicitly defer CSI intermediate-byte parser support required for parity-critical CSI families
+- [ ] `PA-08g` Define and test-lock `DECRQM`/`DECRPM` parity scope (mode coverage + `Pm` reply semantics) against `xterm`/`kitty`/`ghostty`
+- [ ] `PA-08h` Close or defer remaining promoted CSI/private-mode gaps with compatibility notes before advancing new top-level parity areas
