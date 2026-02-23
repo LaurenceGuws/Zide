@@ -309,11 +309,14 @@ Verification:
 - `zig build test-terminal-replay -- --all`
 
 Query coverage note (`PA-04c` remaining):
-- `a=q` reply-byte conformance is still partial, but now includes direct tests for early replies and payload-validation reply branches via extracted helpers.
+- `a=q` reply-byte conformance is now substantially covered:
+  - helper-level branch/unit coverage for early replies and payload/build reply branches
+  - project-integrated parse-path tests with real `TerminalSession` + PTY capture for representative success/error cases
 - Added a small extracted seam for the early `a=q` parse-path replies (`missing image id`, metadata-only query); these cases now have direct unit coverage.
 - Payload/image reply coverage status:
   - covered via extracted helpers: `EINVAL` (chunked/load-failure), `ENODATA` size reply formatting, build-error message mapping (`EBADPNG`/`EINVAL`)
-  - remaining gap: full integrated `a=q` payload decode/build-image parse-path tests (actual decode/build invocation and success cases)
+  - covered via project-integrated parse-path tests: metadata-only `OK`, PNG decode failure (`EBADPNG`), raw RGBA success (`OK`), raw RGBA short payload (`ENODATA`)
+  - remaining gap: broader integrated matrix (e.g. offset/chunking invalids through full parser path, more formats/quiet variants)
 
 Implemented (increment 3 / `PA-04c` query early-reply seam):
 - Extracted `handleKittyQueryEarlyReply()` from `parseKittyGraphics()` for `a=q` early replies:
@@ -360,6 +363,26 @@ Files:
 - `src/terminal_kitty_reply_tests.zig`
 
 Verification:
+- `zig test src/terminal_kitty_reply_tests.zig -lc`
+- `zig build test-terminal-replay -- --all`
+
+Implemented (increment 6 / `PA-04c` project-integrated parse-path tests):
+- Added a project-integrated test target with real `TerminalSession` + PTY reply capture for `kitty.parseKittyGraphics(a=q,...)`:
+  - uses a pipe-backed synthetic `Pty` value attached to the session to capture terminal->app reply bytes deterministically
+  - compiles via `zig build` with project `stb_image` setup, avoiding standalone `zig test` C-include friction
+- Added end-to-end parse-path tests covering:
+  - metadata-only query -> `OK`
+  - invalid PNG payload -> `EBADPNG`
+  - raw RGBA query payload success -> `OK`
+  - raw RGBA short payload -> `ENODATA`
+- Added build step: `zig build test-terminal-kitty-query-parse`
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+- `build.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
 - `zig test src/terminal_kitty_reply_tests.zig -lc`
 - `zig build test-terminal-replay -- --all`
 
@@ -561,6 +584,7 @@ Priority notes:
 - Advanced `PA-04c` query coverage with an extracted `a=q` early-reply seam and unit tests (`EINVAL` missing id / metadata-only `OK`).
 - Advanced `PA-04c` query payload-validation coverage with extracted helper tests for `EINVAL`, `ENODATA`, and `EBADPNG` reply mapping branches.
 - Advanced `PA-04c` integrated query control-flow coverage with `a=q` chunk-build reply seam tests (success + build-error paths).
+- Advanced `PA-04c` with project-integrated `a=q` parse-path tests (real session + PTY capture) for representative success/error replies.
 - Advanced `PA-05` to `partial` (unsupported `alternate_key` no longer advertised via key-mode flags).
 - Advanced `PA-05` disambiguation support: modified chars and ambiguous control chars now emit CSI-u without `report_text`; aligned encoder test helper/golden with runtime behavior.
 - Tightened `PA-05` key-encoder test helper gating/mappings so replay/unit tests do not falsely advertise unsupported key-mode outputs.

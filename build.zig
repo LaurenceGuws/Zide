@@ -373,6 +373,37 @@ pub fn build(b: *std.Build) void {
     const terminal_replay_step = b.step("test-terminal-replay", "Run terminal replay harness");
     terminal_replay_step.dependOn(&run_terminal_replay.step);
 
+    const terminal_kitty_query_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/terminal_kitty_query_parse_tests.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    terminal_kitty_query_tests.linkSystemLibrary("SDL3");
+    if (target_os == .linux) {
+        terminal_kitty_query_tests.linkSystemLibrary("GL");
+    } else if (target_os == .windows) {
+        terminal_kitty_query_tests.linkSystemLibrary("opengl32");
+    } else if (target_os == .macos) {
+        terminal_kitty_query_tests.linkFramework("OpenGL");
+    }
+    terminal_kitty_query_tests.addIncludePath(b.path("vendor"));
+    if (target_os == .linux) {
+        terminal_kitty_query_tests.addIncludePath(.{ .cwd_relative = "/usr/include/SDL3" });
+    }
+    terminal_kitty_query_tests.addCSourceFile(.{
+        .file = b.path("src/c/stb_image.c"),
+        .flags = &.{"-std=c99"},
+    });
+    const run_terminal_kitty_query_tests = b.addRunArtifact(terminal_kitty_query_tests);
+    const terminal_kitty_query_tests_step = b.step(
+        "test-terminal-kitty-query-parse",
+        "Run project-integrated kitty query parse-path tests",
+    );
+    terminal_kitty_query_tests_step.dependOn(&run_terminal_kitty_query_tests.step);
+
     const terminal_import_check = b.addExecutable(.{
         .name = "terminal-import-check",
         .root_module = b.createModule(.{
