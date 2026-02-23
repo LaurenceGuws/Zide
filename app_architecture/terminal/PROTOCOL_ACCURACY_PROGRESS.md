@@ -1999,6 +1999,20 @@ Notes:
   - Implemented: `?8` (DECARM autorepeat + DECRQM), `?1007` (alternate scroll + DECRQM)
   - Deferred provisional: `?45` (reverse-wrap), `?1016` (SGR pixel mouse), `?5522` (kitty paste events)
   - Rationale: `?8`/`?1007` had tractable underlying behavior in Zide input/UI paths; deferred rows still require larger protocol/UI feature work.
+- `PA-08g` 5-mode batch decision (2026-02-23, implementation-first, batch D: medium rows audit):
+  - Deferred provisional (all `Pm=0`, no implementation landed in this batch): `?45`, `?1016`, `?2031`, `?2048`, `?5522`
+  - Reference direction:
+    - `?45` is supported/queryable in `foot` and `ghostty` (xterm-family common reverse-wrap semantics)
+    - `?1016` is supported/queryable in `foot`, `ghostty`, and `kitty` (SGR pixel mouse)
+    - `?2031` / `?2048` are supported/queryable in `foot`, `ghostty`, and `kitty` (modern notifications)
+    - `?5522` is kitty-specific but documented/queryable in kitty (`docs/clipboard.rst`) and should not be reclassified as fixed-off without a product decision
+  - Why no implementation was landed (none are "small" after batches A/B/C):
+    - `?45` reverse-wrap: requires real reverse-wrap cursor/write semantics (screen/cursor movement behavior), not query-only state
+    - `?1016` SGR pixel mouse: requires pixel-coordinate mouse reporting path (current terminal mouse reporting uses row/col only)
+    - `?2031` color-scheme notifications: requires terminal mode state + theme-change event emission into terminal child stream
+    - `?2048` in-band resize notifications: requires resize event protocol emission path and payload semantics
+    - `?5522` kitty paste/clipboard events: requires kitty clipboard event protocol behavior (not just mode bit)
+  - Follow-on rule (reaffirmed): next work should take one of these as a dedicated implementation slice; do not "improve" by changing unsupported reporting alone.
 - `PA-08g` DECRQM unsupported-reporting correction review (2026-02-23):
   - Kept `Pm=4` only for strategic fixed-off / legacy non-goal modes in current scope: `?67`, `?1001`, `?1005`, `?1015`, `?1034`, `?1035`, `?1036`, `?1042`, `?1070`.
   - Reverted to `Pm=0` provisional unsupported replies for modes still plausibly on the support path: `?9`, `?45`, `?1016`, `?2031`, `?2048`, `?5522`.
