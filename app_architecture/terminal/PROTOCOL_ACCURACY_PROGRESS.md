@@ -1511,27 +1511,26 @@ Implemented (increment 1 / `PA-08a` first CSI/private-mode gap inventory pass):
 - This is a planning/inventory increment (no behavior change) intended to feed
   `PA-08d` implementable follow-on items.
 
-Inventory snapshot (`PA-08a`, first pass):
-- `implemented / strong` (already in Zide):
-  - core cursor movement/positioning (`A/B/C/D/E/F/G/H/f/d`)
-  - erase / insert-delete char+line (`J/K/@/P/X/L/M`)
-  - scroll region and region scroll (`r/S/T`)
-  - SGR (basic/256/truecolor/underline color), cursor style (`m/q`)
-  - DSR/DA basic replies (`n/c`)
-  - DEC private modes used by modern TUIs: alt screen, DECCKM, DECOM, DECAWM,
-    bracketed paste, sync update, mouse `1000/1002/1003/1006`
-  - kitty keyboard mode controls (`CSI >u/<u/=u/?u`)
-- `partial / likely gaps for xterm compatibility`:
-  - tabulation family beyond `TBC` (`CHT`/`CBT` tab moves not implemented; only `CSI g`)
-  - mode query/report breadth (`DECRQM` / mode reports beyond current DSR subset)
-  - terminal reset/control conveniences (`DECSTR`, `RIS`-adjacent CSI soft reset behavior)
-  - left/right margins (`DECSLRM`) and related rectangular editing semantics
-  - focus in/out reporting mode (`?1004`) and associated event emission path
-  - alternate mouse encodings (`1005` UTF-8, `1015` urxvt) if compatibility is needed
-- `likely low priority unless demanded by apps`:
-  - xterm window ops (`CSI ... t`)
-  - printer/media and status extensions
-  - legacy/rare tab-stop editing/reporting variants
+Inventory snapshot (`PA-08a`, first pass) checklist:
+
+| Area | Status | Priority | Tested | Notes |
+|---|---|---|---|---|
+| Core cursor movement/positioning (`A/B/C/D/E/F/G/H/f/d`) | implemented | high | replay | Strong baseline support for real TUIs |
+| Erase / insert-delete char+line (`J/K/@/P/X/L/M`) | implemented | high | replay | Covered in existing fixtures |
+| Scroll region + region scroll (`r/S/T`) | implemented | high | replay | Includes scroll-region fixtures |
+| SGR + cursor style (`m/q`) | implemented | high | replay | Basic/256/truecolor/underline-color present |
+| DSR/DA basic replies (`n/c`) | implemented | high | unit+PTY | PTY-capture reply tests added |
+| DEC private modes (alt screen/DECCKM/DECOM/DECAWM/bracketed paste/sync update/mouse 1000/1002/1003/1006) | implemented | high | replay+app | Strong modern TUI coverage |
+| Kitty keyboard mode controls (`CSI >u/<u/=u/?u`) | implemented | high | replay+unit | Encoding parity still partial under `PA-05` |
+| Tabulation family beyond `TBC` | partial | medium | replay | `CHT/CBT/TBC` now implemented; tab-stop report/edit breadth still partial |
+| Mode query/report breadth (`DECRQM` etc.) | partial | high | partial | Good next CSI gap candidate |
+| Focus reporting mode (`?1004`) + event emission path | partial | high | replay+PTY | Implemented with window + pane source toggles; semantics may evolve |
+| Terminal reset conveniences (`DECSTR`, CSI soft reset breadth) | partial | medium | no | Not prioritized yet |
+| Left/right margins (`DECSLRM`) + rectangular semantics | partial | medium | no | xterm-compat gap for some advanced TUIs |
+| Alternate mouse encodings (`1005`, `1015`) | todo | low/medium | no | Add only if app compatibility demands |
+| Xterm window ops (`CSI ... t`) | todo | low | no | Likely low priority unless demanded |
+| Printer/media/status extensions | todo | low | no | Out of current scope |
+| Legacy/rare tab-stop report/edit variants | todo | low | no | Keep deferred unless an app/seed requires them |
 
 Suggested `PA-08d` promotion candidates (first pass):
 1. `?1004` focus reporting mode + event emission (real TUI impact)
@@ -1565,12 +1564,52 @@ Verification:
 - `zig build test-terminal-focus-reporting`
 - `zig build test-terminal-replay -- --all`
 
-Follow-on requirement note (user request, not implemented yet):
-- `?1004` focus event sources should support both:
-  1. window focus gain/loss
-  2. terminal-pane focus gain/loss within the IDE
-- Add separate Lua config toggles for each source so users can enable/disable them independently.
-- Current implementation emits window-focus events only.
+Implemented (increment 3 / `PA-08e` promoted high-value CSI gap: `CHT` / `CBT` tab movement):
+- Implemented CSI `I` (CHT, Cursor Forward Tabulation) by advancing to the next tab stop `n` times (default `1`).
+- Implemented CSI `Z` (CBT, Cursor Backward Tabulation) by moving to the previous tab stop `n` times (default `1`).
+- Added `Screen.backTab()` and `TabStops.prev()` to support backward tab-stop traversal in the screen model.
+- Added replay fixture coverage for parameterized forward/backward tab movement (`2I`, `2Z`) to lock tab-stop behavior against the replay harness.
+
+Files:
+- `src/terminal/protocol/csi.zig`
+- `src/terminal/model/screen/screen.zig`
+- `src/terminal/model/screen/tabstops.zig`
+- `fixtures/terminal/csi_tab_cht_cbt_counts.vt`
+- `fixtures/terminal/csi_tab_cht_cbt_counts.json`
+- `fixtures/terminal/csi_tab_cht_cbt_counts.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --all`
+
+Implemented (increment 4 / `PA-08e` `?1004` dual-source event toggles + pane focus source):
+- Added separate terminal focus-report event sources for `?1004` emission:
+  1. window focus gain/loss (existing SDL window-focus path)
+  2. terminal-pane focus gain/loss within the IDE (new `AppState` focus transition hook)
+- Added separate Lua config toggles for each source under `terminal.focus_reporting`:
+  - `window` (default `true`)
+  - `pane` (default `false`)
+- Added widget-level source gating and duplicate-state suppression so enabling both sources does not emit duplicate focus bytes for the same effective focus state transition.
+- Reloading config updates the source toggles on existing terminal widgets.
+
+Lua config example:
+- `terminal = { focus_reporting = { window = true, pane = true } }`
+
+Files:
+- `src/config/lua_config.zig`
+- `src/main.zig`
+- `src/ui/widgets/terminal_widget.zig`
+- `src/ui/widgets/terminal_widget_input.zig`
+- `src/terminal_focus_reporting_tests.zig`
+
+Verification:
+- `zig build`
+- `zig build test-terminal-focus-reporting`
+- `zig build test-terminal-replay -- --all`
+
+Decision note (scope boundary, 2026-02-23):
+- Kitty-style unfocused cursor UI feedback (non-blinking hollow block when terminal loses focus) is intentionally treated as a **UI render behavior**, not part of `?1004` protocol correctness.
+- Do not implement this by mutating terminal protocol cursor style/state; implement as a terminal widget draw-time cursor override keyed off effective focus state.
+- This is out of scope for the current protocol pass and should be tracked as a UI follow-on when focus visualization work is scheduled.
 
 ## Change Log
 
@@ -1608,6 +1647,8 @@ Follow-on requirement note (user request, not implemented yet):
 - Deferred full layout-aware `PA-05` alternate-key parity pending input-model metadata; tracked as explicit follow-on sub-items instead of expanding heuristics.
 - Defined `PA-05a` input metadata contract for layout-aware alternate-key parity in `app_architecture/terminal/KEYBOARD_ALTERNATE_METADATA_CONTRACT.md`.
 - Advanced `PA-08` to `partial` by implementing promoted CSI private mode gap `?1004` focus reporting (parser mode toggles + focus event emission + PTY/replay coverage).
+- Advanced `PA-08e` with `CHT`/`CBT` tab movement support and replay fixture coverage (`2I` / `2Z` tab-stop traversal).
+- Advanced `PA-08e` `?1004` focus reporting with dual event sources (window + terminal-pane) and separate Lua toggles for each source.
 
 ## Next Work Queue (Ordered)
 
