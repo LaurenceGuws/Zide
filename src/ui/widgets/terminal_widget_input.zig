@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 
 const app_shell = @import("../../app_shell.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
+const terminal_types = @import("../../terminal/model/types.zig");
 const key_encoder = @import("../../terminal/input/key_encoder.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
@@ -224,6 +225,14 @@ pub fn handleInput(
                 return key_encoder.sendKeyAction(widget.session, key, key_mod, action);
             }
         }.apply;
+        const keyAltMeta = struct {
+            fn apply(key: shared_types.input.Key, base_char: ?u32) terminal_types.KeyboardAlternateMetadata {
+                return .{
+                    .physical_key = @as(terminal_types.PhysicalKey, @intCast(@intFromEnum(key))),
+                    .base_codepoint = base_char,
+                };
+            }
+        }.apply;
 
         if (allow_terminal_key) {
             var handled_keys: [32]shared_types.input.Key = undefined;
@@ -263,7 +272,7 @@ pub fn handleInput(
                     if (report_text_enabled) {
                         if (key_encoder.baseCharForKey(key)) |base_char| {
                             clearLiveState(self);
-                            try self.session.sendCharAction(base_char, mod, .release);
+                            try self.session.sendCharActionWithMetadata(base_char, mod, .release, keyAltMeta(key, base_char));
                             handled = true;
                             skip_chars = true;
                             continue;
@@ -287,7 +296,7 @@ pub fn handleInput(
                 if (report_text_enabled) {
                     if (key_encoder.baseCharForKey(key)) |base_char| {
                         clearLiveState(self);
-                        try self.session.sendCharAction(base_char, mod, action);
+                        try self.session.sendCharActionWithMetadata(base_char, mod, action, keyAltMeta(key, base_char));
                         markHandled(&handled_keys, &handled_key_count, key);
                         handled = true;
                         skip_chars = true;
@@ -334,8 +343,14 @@ pub fn handleInput(
                 if (event == .text) {
                     const char = event.text.codepoint;
                     if (char >= 32) {
+                        var utf8_buf: [4]u8 = undefined;
+                        const utf8_len = std.unicode.utf8Encode(@intCast(char), &utf8_buf) catch 0;
+                        const alt_meta: terminal_types.KeyboardAlternateMetadata = .{
+                            .produced_text_utf8 = if (utf8_len > 0) utf8_buf[0..utf8_len] else null,
+                            .base_codepoint = char,
+                        };
                         clearLiveState(self);
-                        try self.session.sendChar(char, mod);
+                        try self.session.sendCharActionWithMetadata(char, mod, .press, alt_meta);
                         handled = true;
                     }
                 }
