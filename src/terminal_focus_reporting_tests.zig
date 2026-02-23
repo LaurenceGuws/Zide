@@ -236,11 +236,11 @@ test "terminal DECRQM private query returns Pm=0 for unsupported mode" {
     }.run);
 }
 
-test "terminal DECRQM private query returns Pm=4 for permanently-reset unsupported modes" {
+test "terminal DECRQM private query returns Pm=4 only for strategic fixed-off unsupported modes" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            const modes = [_]i32{ 9, 45, 67, 1001, 1005, 1015, 1016, 1034, 1035, 1036, 1042, 1070, 2031, 2048, 5522 };
+            const modes = [_]i32{ 67, 1001, 1005, 1015, 1034, 1035, 1036, 1042, 1070 };
 
             for (modes) |mode| {
                 var qbuf: [32]u8 = undefined;
@@ -249,6 +249,26 @@ test "terminal DECRQM private query returns Pm=4 for permanently-reset unsupport
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 const expected = try std.fmt.allocPrint(allocator, "\x1b[?{d};4$y", .{mode});
+                defer allocator.free(expected);
+                try std.testing.expectEqualStrings(expected, reply);
+            }
+        }
+    }.run);
+}
+
+test "terminal DECRQM private query returns Pm=0 for provisional unsupported modes still on support path" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            const modes = [_]i32{ 9, 45, 1016, 2031, 2048, 5522 };
+
+            for (modes) |mode| {
+                var qbuf: [32]u8 = undefined;
+                const query = try std.fmt.bufPrint(&qbuf, "\x1b[?{d}$p", .{mode});
+                terminal.debugFeedBytes(session, query);
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                const expected = try std.fmt.allocPrint(allocator, "\x1b[?{d};0$y", .{mode});
                 defer allocator.free(expected);
                 try std.testing.expectEqualStrings(expected, reply);
             }
@@ -304,6 +324,64 @@ test "terminal CSI !p does not trigger DECRQM reply" {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
             terminal.debugFeedBytes(session, "\x1b[!p");
             try capture.expectNoReply();
+        }
+    }.run);
+}
+
+test "terminal DECSTR soft reset clears mode subset and preserves grid" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            terminal.debugFeedBytes(session, "AB");
+            terminal.debugFeedBytes(
+                session,
+                "\x1b[?1004h" ++ // focus reporting
+                    "\x1b[?2004h" ++ // bracketed paste
+                    "\x1b[?1002h" ++ // mouse button tracking
+                    "\x1b[?1006h" ++ // SGR mouse
+                    "\x1b[?1h" ++ // app cursor keys
+                    "\x1b[?5h" ++ // reverse video
+                    "\x1b[?6h" ++ // origin mode
+                    "\x1b[?25l" ++ // cursor invisible
+                    "\x1b=" ++ // app keypad
+                    "\x1b[>13u" ++ // kitty key mode flags
+                    "\x1b[3;5H" ++ // cursor move
+                    "\x1b[2;4r", // scroll region
+            );
+
+            try std.testing.expect(session.focusReportingEnabled());
+            try std.testing.expect(session.bracketedPasteEnabled());
+            try std.testing.expect(session.mouseReportingEnabled());
+            try std.testing.expect(session.app_cursor_keys);
+            try std.testing.expect(session.app_keypad);
+            try std.testing.expect(session.keyModeFlagsValue() != 0);
+
+            terminal.debugFeedBytes(session, "\x1b[!p");
+            try capture.expectNoReply();
+
+            // Content is preserved (soft reset, not hard reset).
+            try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 0).codepoint);
+            try std.testing.expectEqual(@as(u32, 'B'), session.getCell(0, 1).codepoint);
+
+            // Key global/session modes reset to defaults.
+            try std.testing.expect(!session.focusReportingEnabled());
+            try std.testing.expect(!session.bracketedPasteEnabled());
+            try std.testing.expect(!session.mouseReportingEnabled());
+            try std.testing.expect(!session.app_cursor_keys);
+            try std.testing.expect(!session.app_keypad);
+            try std.testing.expectEqual(@as(u32, 0), session.keyModeFlagsValue());
+
+            // Active-screen soft reset defaults restored.
+            const pos = session.getCursorPos();
+            try std.testing.expectEqual(@as(usize, 0), pos.row);
+            try std.testing.expectEqual(@as(usize, 0), pos.col);
+
+            const screen = session.activeScreen();
+            try std.testing.expect(screen.cursor_visible);
+            try std.testing.expect(!screen.screen_reverse);
+            try std.testing.expect(!screen.origin_mode);
+            try std.testing.expect(screen.auto_wrap);
+            try std.testing.expectEqual(@as(usize, 0), screen.scroll_top);
+            try std.testing.expectEqual(@as(usize, @intCast(screen.grid.rows - 1)), screen.scroll_bottom);
         }
     }.run);
 }
