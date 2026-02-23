@@ -4,6 +4,7 @@ const posix = std.posix;
 
 const terminal = @import("terminal/core/terminal.zig");
 const pty_mod = @import("terminal/io/pty.zig");
+const terminal_widget_mod = @import("ui/widgets/terminal_widget.zig");
 
 fn requireUnix() !void {
     if (builtin.os.tag != .linux and builtin.os.tag != .macos) return error.SkipZigTest;
@@ -100,6 +101,57 @@ test "terminal focus reporting suppresses writes when disabled or cleared" {
             terminal.debugFeedBytes(session, "\x1b[?1004l");
             try std.testing.expect(!(try session.reportFocusChanged(true)));
             try capture.expectNoReply();
+        }
+    }.run);
+}
+
+test "terminal widget focus source toggles gate window and pane reports" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            terminal.debugFeedBytes(session, "\x1b[?1004h");
+
+            var widget = terminal_widget_mod.TerminalWidget.init(session, .kitty);
+            widget.setFocusReportSources(true, false);
+
+            try std.testing.expect(try widget.reportFocusChangedFrom(.window, true));
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[I", reply);
+            }
+
+            try std.testing.expect(!(try widget.reportFocusChangedFrom(.pane, false)));
+            try capture.expectNoReply();
+        }
+    }.run);
+}
+
+test "terminal widget focus source dedupe suppresses duplicate state across sources" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            terminal.debugFeedBytes(session, "\x1b[?1004h");
+
+            var widget = terminal_widget_mod.TerminalWidget.init(session, .kitty);
+            widget.setFocusReportSources(true, true);
+
+            try std.testing.expect(try widget.reportFocusChangedFrom(.window, true));
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[I", reply);
+            }
+
+            try std.testing.expect(!(try widget.reportFocusChangedFrom(.pane, true)));
+            try capture.expectNoReply();
+
+            try std.testing.expect(try widget.reportFocusChangedFrom(.pane, false));
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[O", reply);
+            }
         }
     }.run);
 }

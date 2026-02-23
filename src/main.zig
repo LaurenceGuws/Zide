@@ -125,6 +125,9 @@ const AppState = struct {
     terminal_blink_style: TerminalWidget.BlinkStyle,
     terminal_cursor_style: ?term_types.CursorStyle,
     terminal_scrollback_rows: ?usize,
+    terminal_focus_report_window_events: bool,
+    terminal_focus_report_pane_events: bool,
+    last_terminal_pane_focus_reported: ?bool,
 
     // Dirty tracking for efficient rendering
     needs_redraw: bool,
@@ -199,6 +202,8 @@ const AppState = struct {
                 .terminal_scrollback_rows = null,
                 .terminal_cursor_shape = null,
                 .terminal_cursor_blink = null,
+                .terminal_focus_report_window = null,
+                .terminal_focus_report_pane = null,
                 .font_lcd = null,
                 .font_hinting = null,
                 .font_autohint = null,
@@ -341,6 +346,9 @@ const AppState = struct {
             .terminal_blink_style = terminal_blink_style,
             .terminal_cursor_style = terminal_cursor_style,
             .terminal_scrollback_rows = config.terminal_scrollback_rows,
+            .terminal_focus_report_window_events = config.terminal_focus_report_window orelse true,
+            .terminal_focus_report_pane_events = config.terminal_focus_report_pane orelse false,
+            .last_terminal_pane_focus_reported = null,
             .needs_redraw = true,
             .idle_frames = 0,
             .last_mouse_pos = .{ .x = -1, .y = -1 },
@@ -525,7 +533,9 @@ const AppState = struct {
         );
         try term.start(null);
         try self.terminals.append(self.allocator, term);
-        try self.terminal_widgets.append(self.allocator, TerminalWidget.init(term, self.terminal_blink_style));
+        var widget = TerminalWidget.init(term, self.terminal_blink_style);
+        widget.setFocusReportSources(self.terminal_focus_report_window_events, self.terminal_focus_report_pane_events);
+        try self.terminal_widgets.append(self.allocator, widget);
 
         self.show_terminal = true;
     }
@@ -838,6 +848,13 @@ const AppState = struct {
         }
         if (focus == .terminal and (self.app_mode == .terminal or self.show_terminal) and self.terminals.items.len > 0) {
             var term_widget = &self.terminal_widgets.items[0];
+            const pane_focused_now = true;
+            if (self.last_terminal_pane_focus_reported == null or self.last_terminal_pane_focus_reported.? != pane_focused_now) {
+                if (try term_widget.reportFocusChangedFrom(.pane, pane_focused_now)) {
+                    handled_shortcut = true;
+                }
+                self.last_terminal_pane_focus_reported = pane_focused_now;
+            }
             if (input_batch.events.items.len > 0) {
                 term_widget.noteInput(now);
             }
@@ -856,6 +873,16 @@ const AppState = struct {
                     },
                     else => {},
                 }
+            }
+        }
+        if (!(focus == .terminal and (self.app_mode == .terminal or self.show_terminal) and self.terminals.items.len > 0) and self.terminals.items.len > 0) {
+            var term_widget = &self.terminal_widgets.items[0];
+            const pane_focused_now = false;
+            if (self.last_terminal_pane_focus_reported == null or self.last_terminal_pane_focus_reported.? != pane_focused_now) {
+                if (try term_widget.reportFocusChangedFrom(.pane, pane_focused_now)) {
+                    handled_shortcut = true;
+                }
+                self.last_terminal_pane_focus_reported = pane_focused_now;
             }
         }
         if (focus == .editor and self.editors.items.len > 0) {
@@ -1536,6 +1563,17 @@ const AppState = struct {
         if (config.terminal_scrollback_rows != null) {
             self.terminal_scrollback_rows = config.terminal_scrollback_rows;
             log.logStdout("reload note: terminal scrollback cap applies to new sessions", .{});
+        }
+        if (config.terminal_focus_report_window != null or config.terminal_focus_report_pane != null) {
+            if (config.terminal_focus_report_window) |v| self.terminal_focus_report_window_events = v;
+            if (config.terminal_focus_report_pane) |v| self.terminal_focus_report_pane_events = v;
+            for (self.terminal_widgets.items) |*widget| {
+                widget.setFocusReportSources(self.terminal_focus_report_window_events, self.terminal_focus_report_pane_events);
+            }
+            log.logStdout("reload terminal.focus_reporting window={any} pane={any}", .{
+                self.terminal_focus_report_window_events,
+                self.terminal_focus_report_pane_events,
+            });
         }
 
         if (config.app_font_path != null or config.app_font_size != null or

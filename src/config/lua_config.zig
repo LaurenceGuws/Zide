@@ -46,6 +46,8 @@ pub const Config = struct {
     terminal_scrollback_rows: ?usize,
     terminal_cursor_shape: ?term_types.CursorShape,
     terminal_cursor_blink: ?bool,
+    terminal_focus_report_window: ?bool,
+    terminal_focus_report_pane: ?bool,
     font_lcd: ?bool,
     font_hinting: ?FontHinting,
     font_autohint: ?bool,
@@ -142,6 +144,8 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
         .terminal_scrollback_rows = null,
         .terminal_cursor_shape = null,
         .terminal_cursor_blink = null,
+        .terminal_focus_report_window = null,
+        .terminal_focus_report_pane = null,
         .font_lcd = null,
         .font_hinting = null,
         .font_autohint = null,
@@ -283,6 +287,12 @@ fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) voi
     if (overlay.terminal_cursor_blink != null) {
         base.terminal_cursor_blink = overlay.terminal_cursor_blink;
     }
+    if (overlay.terminal_focus_report_window != null) {
+        base.terminal_focus_report_window = overlay.terminal_focus_report_window;
+    }
+    if (overlay.terminal_focus_report_pane != null) {
+        base.terminal_focus_report_pane = overlay.terminal_focus_report_pane;
+    }
     if (overlay.font_lcd != null) {
         base.font_lcd = overlay.font_lcd;
     }
@@ -357,6 +367,8 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             .terminal_scrollback_rows = null,
             .terminal_cursor_shape = null,
             .terminal_cursor_blink = null,
+            .terminal_focus_report_window = null,
+            .terminal_focus_report_pane = null,
             .font_lcd = null,
             .font_hinting = null,
             .font_autohint = null,
@@ -392,6 +404,8 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     var terminal_scrollback_rows: ?usize = null;
     var terminal_cursor_shape: ?term_types.CursorShape = null;
     var terminal_cursor_blink: ?bool = null;
+    var terminal_focus_report_window: ?bool = null;
+    var terminal_focus_report_pane: ?bool = null;
     var font_lcd: ?bool = null;
     var font_hinting: ?FontHinting = null;
     var font_autohint: ?bool = null;
@@ -582,6 +596,26 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             terminal_cursor_blink = true;
         }
         c.lua_pop(L, 1);
+
+        _ = c.lua_getfield(L, -1, "focus_reporting");
+        if (c.lua_isboolean(L, -1)) {
+            const enabled = c.lua_toboolean(L, -1) != 0;
+            terminal_focus_report_window = enabled;
+            terminal_focus_report_pane = enabled;
+        } else if (c.lua_istable(L, -1)) {
+            _ = c.lua_getfield(L, -1, "window");
+            if (c.lua_isboolean(L, -1)) {
+                terminal_focus_report_window = c.lua_toboolean(L, -1) != 0;
+            }
+            c.lua_pop(L, 1);
+
+            _ = c.lua_getfield(L, -1, "pane");
+            if (c.lua_isboolean(L, -1)) {
+                terminal_focus_report_pane = c.lua_toboolean(L, -1) != 0;
+            }
+            c.lua_pop(L, 1);
+        }
+        c.lua_pop(L, 1);
     }
     c.lua_pop(L, 1);
 
@@ -670,6 +704,8 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         .terminal_scrollback_rows = terminal_scrollback_rows,
         .terminal_cursor_shape = terminal_cursor_shape,
         .terminal_cursor_blink = terminal_cursor_blink,
+        .terminal_focus_report_window = terminal_focus_report_window,
+        .terminal_focus_report_pane = terminal_focus_report_pane,
         .font_lcd = font_lcd,
         .font_hinting = font_hinting,
         .font_autohint = font_autohint,

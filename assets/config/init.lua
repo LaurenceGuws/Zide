@@ -148,6 +148,17 @@ return {
         -- Valid shapes: "block", "underline", "bar". Blink is boolean.
         -- Invalid values warn and fall back to block/true.
         cursor = { shape = "block", blink = true },
+
+        -- Focus reporting source controls for CSI ?1004 event emission.
+        -- Boolean shorthand applies to both sources:
+        --   focus_reporting = true   -- enable window + pane focus events
+        --   focus_reporting = false  -- disable window + pane focus events
+        -- Table form controls each source independently.
+        -- Defaults: window = true, pane = false
+        focus_reporting = {
+            window = true,  -- SDL window focus gain/loss
+            pane = false,   -- terminal pane focus within the IDE
+        },
     },
 
     -- Keybindings (keycode-based). Key names match `shared_types.input.Key` tags.

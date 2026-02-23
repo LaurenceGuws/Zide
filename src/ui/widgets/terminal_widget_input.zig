@@ -381,7 +381,7 @@ pub fn handleInput(
         if (allow_terminal_key) {
             for (input_batch.events.items) |event| {
                 if (event != .focus) continue;
-                if (try self.session.reportFocusChanged(event.focus)) {
+                if (try self.reportFocusChangedFrom(.window, event.focus)) {
                     handled = true;
                 }
             }

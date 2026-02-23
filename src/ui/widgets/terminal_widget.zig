@@ -27,6 +27,10 @@ pub const TerminalWidget = struct {
     };
 
     pub const PendingOpen = open_mod.PendingOpen;
+    pub const FocusReportSource = enum {
+        window,
+        pane,
+    };
 
     session: *TerminalSession,
     blink_style: BlinkStyle = .kitty,
@@ -46,6 +50,9 @@ pub const TerminalWidget = struct {
     last_cell_w_i: i32 = 0,
     last_cell_h_i: i32 = 0,
     last_render_scale: f32 = 0,
+    focus_report_window_events: bool = true,
+    focus_report_pane_events: bool = false,
+    last_focus_reported: ?bool = null,
 
     pub fn init(session: *TerminalSession, blink_style: BlinkStyle) TerminalWidget {
         return .{
@@ -66,7 +73,31 @@ pub const TerminalWidget = struct {
             .last_cell_w_i = 0,
             .last_cell_h_i = 0,
             .last_render_scale = 0,
+            .focus_report_window_events = true,
+            .focus_report_pane_events = false,
+            .last_focus_reported = null,
         };
+    }
+
+    pub fn setFocusReportSources(self: *TerminalWidget, window: bool, pane: bool) void {
+        self.focus_report_window_events = window;
+        self.focus_report_pane_events = pane;
+    }
+
+    pub fn reportFocusChangedFrom(self: *TerminalWidget, source: FocusReportSource, focused: bool) !bool {
+        const source_enabled = switch (source) {
+            .window => self.focus_report_window_events,
+            .pane => self.focus_report_pane_events,
+        };
+        if (!source_enabled) return false;
+        if (self.last_focus_reported) |last| {
+            if (last == focused) return false;
+        }
+        if (try self.session.reportFocusChanged(focused)) {
+            self.last_focus_reported = focused;
+            return true;
+        }
+        return false;
     }
 
     pub fn updateBlink(self: *TerminalWidget, now: f64) bool {
