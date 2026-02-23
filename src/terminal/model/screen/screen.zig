@@ -475,6 +475,12 @@ pub const Screen = struct {
         self.wrap_next = false;
     }
 
+    pub fn backTab(self: *Screen) void {
+        if (self.grid.cols == 0) return;
+        self.cursor.col = self.tabstops.prev(self.cursor.col);
+        self.wrap_next = false;
+    }
+
     pub fn clearTabAtCursor(self: *Screen) void {
         self.tabstops.clearAt(self.cursor.col);
     }

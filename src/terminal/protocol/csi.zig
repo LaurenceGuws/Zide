@@ -79,6 +79,13 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
             const col_1 = @max(1, get(p, 0, 1));
             screen.cursorColAbsolute(col_1);
         },
+        'I' => { // CHT
+            const n = @max(1, get(p, 0, 1));
+            var i: i32 = 0;
+            while (i < n) : (i += 1) {
+                screen.tab();
+            }
+        },
         'H', 'f' => { // CUP
             const row_1 = @max(1, get(p, 0, 1));
             const col_1 = @max(1, get(p, 1, 1));
@@ -123,6 +130,13 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
         'T' => { // SD
             const n = @max(1, get(p, 0, 1));
             self.scrollRegionDown(@intCast(n));
+        },
+        'Z' => { // CBT
+            const n = @max(1, get(p, 0, 1));
+            var i: i32 = 0;
+            while (i < n) : (i += 1) {
+                screen.backTab();
+            }
         },
         'r' => { // DECSTBM
             const top_1 = if (param_len > 0 and p[0] > 0) p[0] else 1;

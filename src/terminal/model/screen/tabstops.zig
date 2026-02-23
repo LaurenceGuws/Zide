@@ -62,6 +62,19 @@ pub const TabStops = struct {
         return max_col;
     }
 
+    pub fn prev(self: *const TabStops, col: usize) usize {
+        if (self.stops.items.len == 0) return col;
+        var idx = @min(col, self.stops.items.len - 1);
+        if (idx == 0) return 0;
+        idx -= 1;
+        while (true) {
+            if (self.stops.items[idx]) return idx;
+            if (idx == 0) break;
+            idx -= 1;
+        }
+        return 0;
+    }
+
     fn defaultStop(col: usize) bool {
         return (col % 8) == 0;
     }
