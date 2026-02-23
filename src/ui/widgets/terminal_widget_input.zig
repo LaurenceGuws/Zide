@@ -57,6 +57,7 @@ pub fn handleInput(
     const show_scrollbar = !cache.alt_active and !self.session.mouseReportingEnabled() and total_lines > rows;
     const mouse_on_scrollbar = show_scrollbar and common.pointInRect(mouse.x, mouse.y, scrollbar_x, scrollbar_y, scrollbar_w, scrollbar_h);
     const scroll_log = app_logger.logger("terminal.scroll");
+    const altmeta_log = app_logger.logger("terminal.input.altmeta");
 
     const r = shell.rendererPtr();
     hover_mod.updateHoverState(
@@ -231,14 +232,32 @@ pub fn handleInput(
                 return renderer.keycodeToCodepoint(renderer.keycodeFromScancode(sc, shift_mod));
             }
         }.apply;
+        const translatedKeyCodepointMods = struct {
+            fn apply(
+                renderer: anytype,
+                key_event: shared_types.input.KeyEvent,
+                shift_mod: bool,
+                alt_mod: bool,
+                ctrl_mod: bool,
+                super_mod: bool,
+            ) ?u32 {
+                const sc = key_event.scancode orelse return null;
+                return renderer.keycodeToCodepoint(
+                    renderer.keycodeFromScancodeMods(sc, shift_mod, alt_mod, ctrl_mod, super_mod),
+                );
+            }
+        }.apply;
         const keyAltMeta = struct {
             fn apply(
                 renderer: anytype,
+                log: app_logger.Logger,
                 key_event: shared_types.input.KeyEvent,
                 base_char: ?u32,
             ) terminal_types.KeyboardAlternateMetadata {
                 const translated_base = translatedKeyCodepoint(renderer, key_event, false);
                 const translated_shifted = translatedKeyCodepoint(renderer, key_event, true);
+                const translated_altgr = translatedKeyCodepointMods(renderer, key_event, false, true, true, false);
+                const translated_shift_altgr = translatedKeyCodepointMods(renderer, key_event, true, true, true, false);
                 const event_sym = if (key_event.sym) |sym| renderer.keycodeToCodepoint(sym) else null;
 
                 var meta = terminal_types.KeyboardAlternateMetadata{
@@ -258,12 +277,52 @@ pub fn handleInput(
                         }
                     }
                 }
+                if (meta.alternate_layout_codepoint == null) {
+                    const base_cp = meta.base_codepoint;
+                    const shifted_cp = meta.shifted_codepoint;
+                    if (translated_altgr) |altgr_cp| {
+                        if ((base_cp == null or altgr_cp != base_cp.?) and (shifted_cp == null or altgr_cp != shifted_cp.?)) {
+                            meta.alternate_layout_codepoint = altgr_cp;
+                        }
+                    }
+                }
+                if (meta.alternate_layout_codepoint == null) {
+                    const base_cp = meta.base_codepoint;
+                    const shifted_cp = meta.shifted_codepoint;
+                    if (translated_shift_altgr) |altgr_shift_cp| {
+                        if ((base_cp == null or altgr_shift_cp != base_cp.?) and (shifted_cp == null or altgr_shift_cp != shifted_cp.?)) {
+                            meta.alternate_layout_codepoint = altgr_shift_cp;
+                        }
+                    }
+                }
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(
+                        "key={d} sc={d} sym={d} mods(s={d} a={d} c={d} g={d}) trans(base={d} shift={d} altgr={d} altgr_shift={d}) meta(base={d} shift={d} alt={d})",
+                        .{
+                            @intFromEnum(key_event.key),
+                            key_event.scancode orelse -1,
+                            key_event.sym orelse 0,
+                            @intFromBool(key_event.mods.shift),
+                            @intFromBool(key_event.mods.alt),
+                            @intFromBool(key_event.mods.ctrl),
+                            @intFromBool(key_event.mods.super),
+                            translated_base orelse 0,
+                            translated_shifted orelse 0,
+                            translated_altgr orelse 0,
+                            translated_shift_altgr orelse 0,
+                            meta.base_codepoint orelse 0,
+                            meta.shifted_codepoint orelse 0,
+                            meta.alternate_layout_codepoint orelse 0,
+                        },
+                    );
+                }
                 return meta;
             }
         }.apply;
         const textAltMeta = struct {
             fn apply(
                 renderer: anytype,
+                log: app_logger.Logger,
                 text_event: shared_types.input.TextEvent,
                 key_event: ?shared_types.input.KeyEvent,
                 fallback_char: u32,
@@ -282,7 +341,7 @@ pub fn handleInput(
                 };
 
                 if (key_event) |ke| {
-                    const key_meta = keyAltMeta(renderer, ke, fallback_char);
+                    const key_meta = keyAltMeta(renderer, log, ke, fallback_char);
                     meta.physical_key = key_meta.physical_key;
                     meta.base_codepoint = key_meta.base_codepoint orelse fallback_char;
                     meta.shifted_codepoint = key_meta.shifted_codepoint;
@@ -330,7 +389,7 @@ pub fn handleInput(
                     if (report_text_enabled) {
                         if (key_encoder.baseCharForKey(key)) |base_char| {
                             clearLiveState(self);
-                            try self.session.sendCharActionWithMetadata(base_char, mod, .release, keyAltMeta(r, event.key, base_char));
+                            try self.session.sendCharActionWithMetadata(base_char, mod, .release, keyAltMeta(r, altmeta_log, event.key, base_char));
                             handled = true;
                             skip_chars = true;
                             continue;
@@ -354,7 +413,7 @@ pub fn handleInput(
                 if (report_text_enabled) {
                     if (key_encoder.baseCharForKey(key)) |base_char| {
                         clearLiveState(self);
-                        try self.session.sendCharActionWithMetadata(base_char, mod, action, keyAltMeta(r, event.key, base_char));
+                        try self.session.sendCharActionWithMetadata(base_char, mod, action, keyAltMeta(r, altmeta_log, event.key, base_char));
                         markHandled(&handled_keys, &handled_key_count, key);
                         handled = true;
                         skip_chars = true;
@@ -406,7 +465,7 @@ pub fn handleInput(
                     .text => |text_event| {
                         const char = text_event.codepoint;
                         if (char < 32) continue;
-                        const alt_meta = textAltMeta(r, text_event, pending_text_key, char);
+                        const alt_meta = textAltMeta(r, altmeta_log, text_event, pending_text_key, char);
                         clearLiveState(self);
                         try self.session.sendCharActionWithMetadata(char, mod, .press, alt_meta);
                         handled = true;

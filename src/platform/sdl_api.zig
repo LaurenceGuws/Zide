@@ -319,14 +319,20 @@ pub fn keyRepeat(event: *const c.SDL_Event) u8 {
     return 0;
 }
 
-pub fn keycodeFromScancode(scancode: i32, shift: bool) i32 {
+pub fn keycodeFromScancodeMods(scancode: i32, shift: bool, alt: bool, ctrl: bool, super: bool) i32 {
     if (!@hasDecl(c, "SDL_GetKeyFromScancode")) return 0;
-    const modstate = if (shift)
-        @as(c.SDL_Keymod, @intCast(c.SDL_KMOD_SHIFT))
-    else
-        @as(c.SDL_Keymod, @intCast(c.SDL_KMOD_NONE));
+    var raw_modstate: c_uint = @intCast(c.SDL_KMOD_NONE);
+    if (shift) raw_modstate |= @as(c_uint, @intCast(c.SDL_KMOD_SHIFT));
+    if (alt) raw_modstate |= @as(c_uint, @intCast(c.SDL_KMOD_ALT));
+    if (ctrl) raw_modstate |= @as(c_uint, @intCast(c.SDL_KMOD_CTRL));
+    if (super) raw_modstate |= @as(c_uint, @intCast(c.SDL_KMOD_GUI));
+    const modstate: c.SDL_Keymod = @intCast(raw_modstate);
     const sdl_scancode: c.SDL_Scancode = @intCast(scancode);
     return @intCast(c.SDL_GetKeyFromScancode(sdl_scancode, modstate, true));
+}
+
+pub fn keycodeFromScancode(scancode: i32, shift: bool) i32 {
+    return keycodeFromScancodeMods(scancode, shift, false, false, false);
 }
 
 pub fn keycodeToCodepoint(keycode: i32) ?u32 {
