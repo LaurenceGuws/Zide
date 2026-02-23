@@ -1834,6 +1834,44 @@ Planned work (decomposition / `PA-08f` CSI parser intermediate-byte parity):
   - `PA-08f` is parser/disambiguation infrastructure; it does not by itself require implementing all intermediate-bearing CSI families.
   - Each newly-enabled family still needs a separate parity slice (`PA-08h`) with reference behavior + tests.
 
+Planned work (decomposition / `PA-08g` `DECRQM` / `DECRPM` parity breadth + reply policy):
+- Reference convention summary (anchors for parity decisions):
+  - xterm defines `DECRPM` reply values `Pm=0..4` (`not recognized`, `set`, `reset`, `permanently set`, `permanently reset`) for both ANSI and DEC-private `DECRQM` (`reference_repos/terminals/xterm_snapshots/ctlseqs.txt`).
+  - foot implements broad `DECRQM` coverage and uses all `DECRPM` statuses, including permanent states for unsupported/fixed modes such as mouse encodings and other features (`reference_repos/terminals/foot/csi.c`).
+  - kitty protocol docs (clipboard extension) explicitly rely on `DECRQM` for feature detection and note that `0` or `4` can indicate unsupported mode (`CSI ? 5522 $ p` -> `CSI ? 5522 ; Ps $ y`) (`reference_repos/terminals/kitty/docs/clipboard.rst`).
+  - ghostty parses `DECRQM` with CSI intermediate-aware dispatch and routes unknown modes through a dedicated path (`request_mode_unknown`) rather than overloading other CSI `p` families (`reference_repos/terminals/ghostty/src/terminal/stream.zig`, `reference_repos/terminals/ghostty/src/terminal/modes.zig`).
+- Current Zide state (partial milestone):
+  - Implemented DEC-private `DECRQM` for a useful common subset and ANSI mode `20`.
+  - Unsupported ANSI/DEC queries reply `Pm=0` (xterm/foot-compatible convention already locked by tests).
+  - `Pm=3/4` is not yet emitted for fixed/permanent modes.
+  - Parser intermediate handling is still a blocker for clean parity expansion (`PA-08f`).
+- `PA-08g` done looks like:
+  - Supported ANSI and DEC-private `DECRQM` mode set is explicitly documented against references (`xterm` / `kitty` / `ghostty`, checked with `foot` where useful).
+  - Unsupported-mode policy is explicit and test-locked (`Pm=0` vs `Pm=4` by mode/category, if differentiated).
+  - Zide emits `Pm=3/4` for modes that are intentionally fixed/permanent in Zide (if any exist and parity gain justifies exposing them), or explicitly documents why Zide always returns `0/1/2` for now.
+  - Coverage is table-driven across:
+    - unit reply formatting (`src/terminal_csi_reply_tests.zig`)
+    - PTY integration mode-state queries (`src/terminal_focus_reporting_tests.zig` or renamed broader file)
+    - replay fixture matrix (`fixtures/terminal/decrqm_query_matrix_reply.*`, expanded as needed)
+- `PA-08g` parity checklist (mode coverage and policy):
+  - ANSI `DECRQM`:
+    - [x] mode `20` newline mode (`Pm=1/2`, `Pm=0` unsupported others)
+    - [ ] Audit xterm/ghostty/foot-relevant ANSI modes for Zide (`4` insert mode, `12` local echo, `20` newline, etc.) and classify `implement` / `defer`
+    - [ ] Add explicit tests/docs for any intentionally unsupported ANSI modes that apps may query (reply `Pm=0`)
+  - DEC-private `DECRQM`:
+    - [x] common TUI modes currently implemented (`?1`, `?3`, `?5`, `?6`, `?7`, `?25`, `?47`, `?1047`, `?1049`, `?1000`, `?1002`, `?1003`, `?1004`, `?1006`, `?2004`, `?2026`)
+    - [ ] Audit reference-terminal queried modes relevant to Zide parity (`?9`, `?12`, `?45`, `?66`, `?67`, `?80`, `?1005`, `?1015`, `?1016`, `?1034`, `?1035`, `?1036`, `?1042`, `?1070`, `?2027`, `?2031`, `?2048`, `?5522`, etc.) and classify `implement` / `defer`
+    - [ ] Decide whether any fixed unsupported features should report `Pm=4` instead of `Pm=0` (kitty docs treat both as unsupported for `?5522`; xterm/foot semantics permit both)
+  - Reply-value policy:
+    - [x] `Pm=0` for unsupported ANSI/DEC query in current implemented scope
+    - [ ] Define criteria for `Pm=3/4` use in Zide (feature permanently on/off vs unsupported/not recognized)
+    - [ ] Add explicit fixture/unit cases that lock the chosen `Pm=3/4` policy (or explicit "not used" policy)
+- Suggested small-commit sequence for `PA-08g`:
+  1. Docs-only mode inventory table (current implemented DEC/ANSI set vs reference-candidate set) with `implement/defer` decisions.
+  2. Behavior-preserving refactor to centralize `DECRQM` mode classification/state policy (easier table-driven testing).
+  3. Add or defer one small batch of high-value modes (e.g. `?9`, `?12`, `?45`, `?66`) with PTY + replay matrix updates.
+  4. Finalize `Pm=3/4` policy and lock with unit/replay tests.
+
 ## Change Log
 
 ### 2026-02-23
