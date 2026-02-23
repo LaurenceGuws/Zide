@@ -116,6 +116,9 @@ pub const TerminalSession = struct {
     app_keypad: bool,
     mouse_alternate_scroll: bool,
     inband_resize_notifications_2048: bool,
+    report_color_scheme_2031: bool,
+    grapheme_cluster_shaping_2027: bool,
+    color_scheme_dark: bool,
     kitty_paste_events_5522: bool,
     input: input_mod.InputState,
     input_snapshot: InputSnapshot,
@@ -214,6 +217,9 @@ pub const TerminalSession = struct {
             .app_keypad = false,
             .mouse_alternate_scroll = true,
             .inband_resize_notifications_2048 = false,
+            .report_color_scheme_2031 = false,
+            .grapheme_cluster_shaping_2027 = false,
+            .color_scheme_dark = true,
             .kitty_paste_events_5522 = false,
             .input = input_mod.InputState.init(),
             .input_snapshot = InputSnapshot.init(),
@@ -707,6 +713,20 @@ pub const TerminalSession = struct {
             self.pty_write_mutex.lock();
             defer self.pty_write_mutex.unlock();
             _ = try pty.write(if (focused) "\x1b[I" else "\x1b[O");
+            return true;
+        }
+        return false;
+    }
+
+    pub fn reportColorSchemeChanged(self: *TerminalSession, dark: bool) !bool {
+        self.color_scheme_dark = dark;
+        if (!self.report_color_scheme_2031) return false;
+        if (self.pty) |*pty| {
+            var buf: [16]u8 = undefined;
+            const seq = try std.fmt.bufPrint(&buf, "\x1b[?997;{d}n", .{if (dark) @as(u8, 1) else @as(u8, 2)});
+            self.pty_write_mutex.lock();
+            defer self.pty_write_mutex.unlock();
+            _ = try pty.write(seq);
             return true;
         }
         return false;
