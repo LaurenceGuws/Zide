@@ -2043,7 +2043,15 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
     - hidden-screen kitty state remains preserved for now (we do not clear both screens like foot's broader soft reset path).
   - Evidence:
     - PTY/direct tests: active alt-screen kitty clears after `DECSTR`, hidden-primary non-leak boundary remains enforced
-    - replay fixtures (legacy names retained): `decstr_preserves_kitty_placement`, `decstr_preserves_alt_kitty_placement` now lock active-screen kitty clear semantics after `DECSTR`
+    - replay fixtures: `decstr_clears_active_primary_kitty_placement`, `decstr_clears_active_alt_kitty_placement`
+
+- Explicit product/parity decision (2026-02-23):
+  - `DECSTR` **kitty graphics state (hidden non-active screen)**: keep current Zide behavior (`preserve`) as a **strategic divergence** for now.
+  - Rationale:
+    - preserves hidden-screen context across active-screen soft resets in IDE workflows
+    - avoids broadening `DECSTR` to foot-style multi-screen graphics clearing without direct compatibility evidence
+  - Revisit trigger:
+    - if a compatibility issue is traced to hidden-screen kitty persistence across `DECSTR`, promote a focused `PA-08h` parity adjustment slice and compare reference terminals before changing behavior.
 - Deferred / out of current `PA-08h` slice unless reference/app evidence demands it:
   - hard-reset-like behavior (screen clear, scrollback wipe, kitty image wipe)
   - broader CSI reset-family parity beyond `DECSTR` (tracked separately in `PA-08h` promoted gaps / `PA-08a`)
@@ -2089,9 +2097,9 @@ Files:
 - `fixtures/terminal/decstr_resets_modes_query_reply.vt`
 - `fixtures/terminal/decstr_resets_modes_query_reply.json`
 - `fixtures/terminal/decstr_resets_modes_query_reply.golden`
-- `fixtures/terminal/decstr_preserves_kitty_placement.vt`
-- `fixtures/terminal/decstr_preserves_kitty_placement.json`
-- `fixtures/terminal/decstr_preserves_kitty_placement.golden`
+- `fixtures/terminal/decstr_clears_active_primary_kitty_placement.vt`
+- `fixtures/terminal/decstr_clears_active_primary_kitty_placement.json`
+- `fixtures/terminal/decstr_clears_active_primary_kitty_placement.golden`
 - `fixtures/terminal/decstr_alt_screen_preserve_reply_and_grid.vt`
 - `fixtures/terminal/decstr_alt_screen_preserve_reply_and_grid.json`
 - `fixtures/terminal/decstr_alt_screen_preserve_reply_and_grid.golden`
@@ -2105,7 +2113,7 @@ Files:
 Verification:
 - `zig build test-terminal-focus-reporting`
 - `zig build test-terminal-replay -- --fixture decstr_resets_modes_query_reply --update-goldens`
-- `zig build test-terminal-replay -- --fixture decstr_preserves_kitty_placement --update-goldens`
+- `zig build test-terminal-replay -- --fixture decstr_clears_active_primary_kitty_placement --update-goldens`
 - `zig build test-terminal-replay -- --fixture decstr_alt_screen_preserve_reply_and_grid --update-goldens`
 - `zig build test-terminal-replay -- --fixture decstr_resets_charset_mapping --update-goldens`
 - `zig build test-terminal-replay -- --fixture decstr_preserves_scrollback --update-goldens`
@@ -2121,14 +2129,14 @@ Files:
 - `fixtures/terminal/decstr_resets_cursor_style.vt`
 - `fixtures/terminal/decstr_resets_cursor_style.json`
 - `fixtures/terminal/decstr_resets_cursor_style.golden`
-- `fixtures/terminal/decstr_preserves_alt_kitty_placement.vt`
-- `fixtures/terminal/decstr_preserves_alt_kitty_placement.json`
-- `fixtures/terminal/decstr_preserves_alt_kitty_placement.golden`
+- `fixtures/terminal/decstr_clears_active_alt_kitty_placement.vt`
+- `fixtures/terminal/decstr_clears_active_alt_kitty_placement.json`
+- `fixtures/terminal/decstr_clears_active_alt_kitty_placement.golden`
 
 Verification:
 - `zig build test-terminal-focus-reporting`
 - `zig build test-terminal-replay -- --fixture decstr_resets_cursor_style --update-goldens`
-- `zig build test-terminal-replay -- --fixture decstr_preserves_alt_kitty_placement --update-goldens`
+- `zig build test-terminal-replay -- --fixture decstr_clears_active_alt_kitty_placement --update-goldens`
 - `zig build test-terminal-replay -- --all`
 
 Implemented (increment 4 / `PA-08h` `DECSTR` alt-screen kitty non-leak boundary):
@@ -2220,18 +2228,18 @@ Implemented (increment 9 / `PA-08h` `DECSTR` active-screen kitty clear parity ro
 - Updated direct DECSTR kitty tests to reflect the new semantics:
   - active alt-screen kitty state is cleared by `DECSTR`
   - hidden primary still does not receive leaked alt placements after `?1049l`
-- Refreshed the two existing DECSTR kitty replay fixtures (legacy filenames retained) to lock active-screen kitty clear behavior.
+- Renamed + refreshed the DECSTR kitty replay fixtures so filenames match active-screen kitty clear semantics.
 
 Files:
 - `src/terminal/protocol/csi.zig`
 - `src/terminal_focus_reporting_tests.zig`
-- `fixtures/terminal/decstr_preserves_kitty_placement.golden`
-- `fixtures/terminal/decstr_preserves_alt_kitty_placement.golden`
+- `fixtures/terminal/decstr_clears_active_primary_kitty_placement.golden`
+- `fixtures/terminal/decstr_clears_active_alt_kitty_placement.golden`
 
 Verification:
 - `zig build test-terminal-focus-reporting`
-- `zig build test-terminal-replay -- --fixture decstr_preserves_kitty_placement --update-goldens`
-- `zig build test-terminal-replay -- --fixture decstr_preserves_alt_kitty_placement --update-goldens`
+- `zig build test-terminal-replay -- --fixture decstr_clears_active_primary_kitty_placement --update-goldens`
+- `zig build test-terminal-replay -- --fixture decstr_clears_active_alt_kitty_placement --update-goldens`
 - `zig build test-terminal-replay -- --all`
   4. Extend/reset matrix incrementally as reference behavior is confirmed.
 
