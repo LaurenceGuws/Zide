@@ -4,5 +4,5 @@
   "cols": 24,
   "cursor": { "row": 0, "col": 4 },
   "line_ending": "lf",
-  "assertions": ["grid", "attrs", "hyperlinks", "title", "cwd"]
+  "assertions": ["grid", "attrs", "hyperlinks", "cwd"]
 }

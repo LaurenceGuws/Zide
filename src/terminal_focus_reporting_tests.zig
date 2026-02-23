@@ -516,6 +516,20 @@ test "terminal DECSTR resets cursor style to default" {
     }.run);
 }
 
+test "terminal DECSTR resets title to default" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            terminal.debugFeedBytes(session, "\x1b]2;custom title\x07");
+            try std.testing.expectEqualStrings("custom title", terminal.debugSnapshot(session).title);
+
+            terminal.debugFeedBytes(session, "\x1b[!p");
+            try capture.expectNoReply();
+
+            try std.testing.expectEqualStrings("Terminal", terminal.debugSnapshot(session).title);
+        }
+    }.run);
+}
+
 test "terminal DECSTR preserves kitty state while alt screen remains active" {
     const allocator = std.testing.allocator;
     var session = try terminal.TerminalSession.init(allocator, 6, 12);
