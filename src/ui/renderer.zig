@@ -1856,10 +1856,12 @@ pub const Renderer = struct {
                 }
             },
             sdl_api.EVENT_TEXT_INPUT => {
+                const text_was_composed = state.composing_active.*;
                 const text_len = platform_input_events.handleTextInput(
                     event,
                     &self.char_queue,
                     self.allocator,
+                    text_was_composed,
                 );
                 input_state.applyTextInputReset(state);
                 input_logging.logTextInput(text_len);

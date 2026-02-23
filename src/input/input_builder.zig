@@ -172,7 +172,7 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
             .codepoint = text_press.codepoint,
             .utf8_len = text_press.utf8_len,
             .utf8 = text_press.utf8,
-            .text_is_composed = false,
+            .text_is_composed = text_press.text_is_composed,
         } }) catch {};
     }
 
