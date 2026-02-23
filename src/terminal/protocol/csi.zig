@@ -317,6 +317,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             self.updateInputSnapshot();
                         },
                         1007 => self.mouse_alternate_scroll = true,
+                        5522 => self.kitty_paste_events_5522 = true,
                         else => {},
                     }
                 }
@@ -386,6 +387,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             self.updateInputSnapshot();
                         },
                         1007 => self.mouse_alternate_scroll = false,
+                        5522 => self.kitty_paste_events_5522 = false,
                         else => {},
                     }
                 }
@@ -458,6 +460,7 @@ fn applyDecstr(self: anytype) void {
     self.app_keypad = false;
     self.auto_repeat = true;
     self.mouse_alternate_scroll = true;
+    self.kitty_paste_events_5522 = false;
     self.input.resetMouse();
     self.bracketed_paste = false;
     self.focus_reporting = false;
@@ -510,7 +513,7 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState
         2026 => boolModeState(self.sync_updates_active),
         2031 => .not_recognized, // theme change reporting not yet supported
         2048 => .not_recognized, // size notifications not yet supported
-        5522 => .not_recognized, // kitty clipboard protocol mode not yet supported
+        5522 => boolModeState(self.kitty_paste_events_5522),
         else => .not_recognized,
     };
 }

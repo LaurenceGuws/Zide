@@ -24,6 +24,7 @@ const input_modes = @import("input_modes.zig");
 const hyperlink_table = @import("hyperlink_table.zig");
 const state_reset = @import("state_reset.zig");
 const scrollback_view = @import("scrollback_view.zig");
+const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
 const Screen = screen_mod.Screen;
@@ -114,6 +115,7 @@ pub const TerminalSession = struct {
     app_cursor_keys: bool,
     app_keypad: bool,
     mouse_alternate_scroll: bool,
+    kitty_paste_events_5522: bool,
     input: input_mod.InputState,
     input_snapshot: InputSnapshot,
     pty_write_mutex: std.Thread.Mutex,
@@ -122,6 +124,7 @@ pub const TerminalSession = struct {
     parser: parser_mod.Parser,
     osc_clipboard: std.ArrayList(u8),
     osc_clipboard_pending: bool,
+    kitty_osc5522_clipboard_text: std.ArrayList(u8),
     osc_hyperlink: std.ArrayList(u8),
     osc_hyperlink_active: bool,
     hyperlink_table: std.ArrayList(Hyperlink),
@@ -206,6 +209,7 @@ pub const TerminalSession = struct {
             .app_cursor_keys = false,
             .app_keypad = false,
             .mouse_alternate_scroll = true,
+            .kitty_paste_events_5522 = false,
             .input = input_mod.InputState.init(),
             .input_snapshot = InputSnapshot.init(),
             .pty_write_mutex = .{},
@@ -214,6 +218,7 @@ pub const TerminalSession = struct {
             .parser = parser_mod.Parser.init(allocator),
             .osc_clipboard = .empty,
             .osc_clipboard_pending = false,
+            .kitty_osc5522_clipboard_text = .empty,
             .osc_hyperlink = .empty,
             .osc_hyperlink_active = false,
             .hyperlink_table = .empty,
@@ -380,6 +385,7 @@ pub const TerminalSession = struct {
         self.alt.deinit();
         self.parser.deinit();
         self.osc_clipboard.deinit(self.allocator);
+        self.kitty_osc5522_clipboard_text.deinit(self.allocator);
         self.osc_hyperlink.deinit(self.allocator);
         self.cwd_buffer.deinit(self.allocator);
         self.semantic_prompt_aid.deinit(self.allocator);
@@ -1052,6 +1058,27 @@ pub const TerminalSession = struct {
 
     pub fn mouseAlternateScrollEnabled(self: *TerminalSession) bool {
         return self.mouse_alternate_scroll;
+    }
+
+    pub fn kittyPasteEvents5522Enabled(self: *TerminalSession) bool {
+        return self.kitty_paste_events_5522;
+    }
+
+    pub fn sendKittyPasteEvent5522(self: *TerminalSession, clip: []const u8) !bool {
+        if (!self.kitty_paste_events_5522) return false;
+        if (self.pty == null) return false;
+
+        self.kitty_osc5522_clipboard_text.clearRetainingCapacity();
+        try self.kitty_osc5522_clipboard_text.ensureTotalCapacity(self.allocator, clip.len);
+        try self.kitty_osc5522_clipboard_text.appendSlice(self.allocator, clip);
+
+        if (self.pty) |*pty| {
+            self.pty_write_mutex.lock();
+            defer self.pty_write_mutex.unlock();
+            osc_kitty_clipboard.sendPasteEventMimes(self, pty, .st);
+            return true;
+        }
+        return false;
     }
 
     pub fn mouseReportingEnabled(self: *TerminalSession) bool {

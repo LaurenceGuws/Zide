@@ -242,6 +242,9 @@ pub const TerminalWidget = struct {
         if (self.session.scrollOffset() > 0) {
             self.session.setScrollOffset(0);
         }
+        if (self.session.sendKittyPasteEvent5522(clip) catch false) {
+            return true;
+        }
         if (self.session.bracketedPasteEnabled()) {
             self.session.sendText("\x1b[200~") catch return false;
             var filtered = std.ArrayList(u8).empty;
