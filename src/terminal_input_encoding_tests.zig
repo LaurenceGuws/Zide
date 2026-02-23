@@ -12,7 +12,7 @@ test "terminal input encodes arrow keys with modifiers" {
 
     const up = try input_mod.encodeKeyBytesForTest(allocator, types.VTERM_KEY_UP, none, flags);
     defer allocator.free(up);
-    try std.testing.expectEqualStrings("\x1b[1A", up);
+    try std.testing.expectEqualStrings("\x1b[A", up);
 
     const up_shift = try input_mod.encodeKeyBytesForTest(allocator, types.VTERM_KEY_UP, shift, flags);
     defer allocator.free(up_shift);

@@ -88,6 +88,7 @@ pub fn sendKittyFunctionKey(
     const has_mods = mod_value != 1;
     const add_actions = report_all and action != .press;
     const second_field = has_mods or add_actions;
+    const omit_leading_one = !second_field and key_number == 1 and isLegacyCsiCursorTrailer(trailer);
 
     var buf: [64]u8 = undefined;
     var pos: usize = 0;
@@ -95,8 +96,10 @@ pub fn sendKittyFunctionKey(
     pos += 1;
     buf[pos] = '[';
     pos += 1;
-    const written_key = std.fmt.bufPrint(buf[pos..], "{d}", .{key_number}) catch return false;
-    pos += written_key.len;
+    if (!omit_leading_one) {
+        const written_key = std.fmt.bufPrint(buf[pos..], "{d}", .{key_number}) catch return false;
+        pos += written_key.len;
+    }
     if (second_field) {
         buf[pos] = ';';
         pos += 1;
@@ -115,4 +118,11 @@ pub fn sendKittyFunctionKey(
     pos += 1;
     _ = pty.write(buf[0..pos]) catch return false;
     return true;
+}
+
+fn isLegacyCsiCursorTrailer(trailer: u8) bool {
+    return switch (trailer) {
+        'A', 'B', 'C', 'D', 'H', 'F' => true,
+        else => false,
+    };
 }
