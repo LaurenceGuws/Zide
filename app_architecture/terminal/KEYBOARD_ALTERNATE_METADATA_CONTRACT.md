@@ -139,6 +139,9 @@ Implemented since the initial contract draft:
   exercises this bridge seam with synthetic shared key-event modifiers (including
   normalized `mods.altgr`) plus probe outputs, so runtime metadata selection behavior
   is fixture-locked in addition to unit-tested.
+- A replay fixture also locks the composed-text suppression rule in this probe path
+  (`mods.altgr=true` + AltGr probe candidates still yields no alternate fields when
+  `text_is_composed=true`).
 - `terminal.input.altmeta` diagnostic logging was added to compare event `sym`
   against scancode-translation probe outputs during real-layout manual testing.
 

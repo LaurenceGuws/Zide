@@ -1003,6 +1003,19 @@ Files:
 Verification:
 - `zig test src/terminal_input_encoding_tests.zig`
 - `zig build test-terminal-replay -- --all`
+
+Implemented (increment 8 / `PA-05c` composed-text AltGr replay suppression fixture):
+- Added an encoder replay fixture proving composed text still suppresses alternate-key
+  fields even when normalized `mods.altgr=true` and AltGr probe candidates are present.
+- This locks the composed-text suppression rule against future regressions in the replay
+  harness path that builds metadata from `alternate_probe_meta`.
+
+Files:
+- `fixtures/terminal/encoder/csi_u_alternate_probe_composed_altgr_suppresses.json`
+- `fixtures/terminal/encoder/csi_u_alternate_probe_composed_altgr_suppresses.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --all`
 - These fixtures create a regression seam for future layout-aware alternate-key encoding without changing current behavior.
 
 Files:
