@@ -84,11 +84,9 @@ This document is for dependencies, bootstrapping, build/run/test, and platform n
 Current focus and active issues live in `docs/AGENT_HANDOFF.md` and the relevant
 `app_architecture/**/_todo.yaml` files.
 
-Fetch vendor dependencies:
+Bootstrap the project:
 
 ```bash
-make bootstrap
-# or
 ./scripts/bootstrap.sh
 ```
 
@@ -102,16 +100,12 @@ Tree-sitter (runtime + Zig parser) and stb_image (PNG decode) are vendored under
 `vendor/`, so no extra bootstrap step is required. Grammar packs are built and
 installed via `zig build grammar-update`.
 
-On Linux, this also generates Wayland protocol headers via `make wayland-protocols`.
-
 UI rendering journey: `app_architecture/ui/DEVELOPMENT_JOURNEY.md`.
 
 ## Build
 
 ```bash
 zig build
-# or
-make build
 ```
 
 ## Tree-sitter Grammar Packs
@@ -132,16 +126,12 @@ If you want Android grammars, ensure an NDK is available:
 
 ```bash
 zig build run
-# or
-make run
 ```
 
 ## Test
 
 ```bash
 zig build test
-# or
-make test
 ```
 
 ## Keyboard Shortcuts
