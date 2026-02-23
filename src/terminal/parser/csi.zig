@@ -126,3 +126,11 @@ test "CSI parser captures DECSTR intermediate !" {
     try std.testing.expectEqual(@as(u8, 1), action.intermediates_len);
     try std.testing.expectEqual(@as(u8, '!'), action.intermediates[0]);
 }
+
+test "CSI parser preserves multiple intermediate bytes in order" {
+    const action = try feedCsiBytes("#!p");
+    try std.testing.expectEqual(@as(u8, 'p'), action.final);
+    try std.testing.expectEqual(@as(u8, 2), action.intermediates_len);
+    try std.testing.expectEqual(@as(u8, '#'), action.intermediates[0]);
+    try std.testing.expectEqual(@as(u8, '!'), action.intermediates[1]);
+}
