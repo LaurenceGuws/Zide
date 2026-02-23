@@ -1,0 +1,13 @@
+{
+  "fixture_type": "vt",
+  "rows": 6,
+  "cols": 12,
+  "cursor": { "row": 0, "col": 0 },
+  "line_ending": "lf",
+  "assertions": ["reply"],
+  "reply_hex": "1b5b4d2023221b5b4d602625",
+  "mouse": [
+    { "kind": "press", "button": "left", "row": 1, "col": 2, "pixel_x": 99, "pixel_y": 199, "mod": 0, "buttons_down": 1 },
+    { "kind": "wheel", "button": "wheel_up", "row": 4, "col": 5, "pixel_x": 40, "pixel_y": 60, "mod": 0, "buttons_down": 0 }
+  ]
+}
