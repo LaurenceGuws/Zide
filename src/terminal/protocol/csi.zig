@@ -441,8 +441,12 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState
         1035 => .permanently_reset, // num lock modifier mode not supported
         1036 => .permanently_reset, // ESC-prefixed meta mode toggle not supported
         1042 => .permanently_reset, // bell action toggle not supported
+        1070 => .permanently_reset, // sixel private palette mode not supported
         2004 => boolModeState(self.bracketed_paste),
         2026 => boolModeState(self.sync_updates_active),
+        2031 => .permanently_reset, // theme change reporting not supported
+        2048 => .permanently_reset, // size notifications not supported
+        5522 => .permanently_reset, // kitty clipboard protocol mode not supported
         else => .not_recognized,
     };
 }
