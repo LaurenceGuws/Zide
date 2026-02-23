@@ -149,6 +149,7 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
                     .repeated = press.repeated,
                     .pressed = true,
                     .scancode = press.scancode,
+                    .sym = press.sym,
                 },
             }) catch {};
         }
@@ -163,6 +164,7 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
                 .repeated = false,
                 .pressed = false,
                 .scancode = entry.code,
+                .sym = null,
             },
         }) catch {};
     }
