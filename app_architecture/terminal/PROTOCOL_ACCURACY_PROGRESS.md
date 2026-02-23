@@ -797,6 +797,21 @@ Verification:
 - `zig build test-terminal-kitty-query-parse`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 27 / `PA-04c` retire redundant isolated precedence one-off):
+- Removed the remaining isolated missing-id precedence test (`q=2` suppresses missing-id
+  preflight before invalid compression) after confirming equivalent coverage exists in
+  the table-driven missing-id precedence matrix.
+- Result: the major kitty query precedence families are table-driven in current scope
+  (missing-id, invalid-compression, zlib preflight), with non-matrix tests focused on
+  non-precedence behaviors (reply formatting, decode/build outcomes, quiet semantics).
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
