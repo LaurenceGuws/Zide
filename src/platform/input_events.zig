@@ -6,6 +6,7 @@ const sdl = gl.c;
 
 pub const KeyPress = struct {
     scancode: i32,
+    sym: i32,
     repeated: bool,
 };
 
@@ -51,6 +52,7 @@ pub fn handleKeyDown(
         }
         _ = key_queue.append(allocator, .{
             .scancode = sc,
+            .sym = sym,
             .repeated = repeat != 0,
         }) catch {};
         handled = true;
