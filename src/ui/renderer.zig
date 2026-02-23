@@ -285,6 +285,7 @@ pub const Renderer = struct {
     mouse_released: [mouse_button_count]bool,
     key_queue: std.ArrayList(KeyPress),
     char_queue: std.ArrayList(TextPress),
+    focus_queue: std.ArrayList(bool),
     composing_text: std.ArrayList(u8),
     composing_cursor: i32,
     composing_selection_len: i32,
@@ -414,6 +415,7 @@ pub const Renderer = struct {
             .mouse_released = [_]bool{false} ** mouse_button_count,
             .key_queue = std.ArrayList(KeyPress).empty,
             .char_queue = std.ArrayList(TextPress).empty,
+            .focus_queue = std.ArrayList(bool).empty,
             .composing_text = std.ArrayList(u8).empty,
             .composing_cursor = 0,
             .composing_selection_len = 0,
@@ -477,6 +479,7 @@ pub const Renderer = struct {
 
         self.key_queue.deinit(self.allocator);
         self.char_queue.deinit(self.allocator);
+        self.focus_queue.deinit(self.allocator);
         self.composing_text.deinit(self.allocator);
         self.sdl_input.deinit(self.allocator);
         self.clipboard_buffer.deinit(self.allocator);
@@ -1343,6 +1346,11 @@ pub const Renderer = struct {
         return self.char_queue.orderedRemove(0);
     }
 
+    pub fn getFocusEvent(self: *Renderer) ?bool {
+        if (self.focus_queue.items.len == 0) return null;
+        return self.focus_queue.orderedRemove(0);
+    }
+
     pub const TextComposition = text_composition.TextComposition;
 
     pub fn getTextComposition(self: *Renderer) TextComposition {
@@ -1823,9 +1831,11 @@ pub const Renderer = struct {
                 if (sdl_api.isFocusGainedEvent(event.type, evt)) {
                     sdl_api.startTextInput(self.window);
                     text_input.reapplyRect(&self.text_input_state, self.window);
+                    _ = self.focus_queue.append(self.allocator, true) catch {};
                 }
                 if (sdl_api.isFocusLostEvent(event.type, evt)) {
                     sdl_api.stopTextInput(self.window);
+                    _ = self.focus_queue.append(self.allocator, false) catch {};
                 }
                 if (window_log.enabled_file or window_log.enabled_console) {
                     window_log.logf(
@@ -1971,9 +1981,11 @@ pub const Renderer = struct {
                     if (sdl_api.isFocusGainedEvent(event.type, evt)) {
                         sdl_api.startTextInput(self.window);
                         text_input.reapplyRect(&self.text_input_state, self.window);
+                        _ = self.focus_queue.append(self.allocator, true) catch {};
                     }
                     if (sdl_api.isFocusLostEvent(event.type, evt)) {
                         sdl_api.stopTextInput(self.window);
+                        _ = self.focus_queue.append(self.allocator, false) catch {};
                     }
                     if (window_log.enabled_file or window_log.enabled_console) {
                         window_log.logf(

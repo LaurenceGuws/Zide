@@ -190,6 +190,10 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
         } }) catch {};
     }
 
+    while (r.getFocusEvent()) |focused| {
+        batch.append(.{ .focus = focused }) catch {};
+    }
+
     const composition = r.getTextComposition();
     if (composition.active and composition.text.len > 0) {
         batch.composing_buffer.clearRetainingCapacity();

@@ -379,6 +379,13 @@ pub fn handleInput(
         }.apply;
 
         if (allow_terminal_key) {
+            for (input_batch.events.items) |event| {
+                if (event != .focus) continue;
+                if (try self.session.reportFocusChanged(event.focus)) {
+                    handled = true;
+                }
+            }
+
             var handled_keys: [32]shared_types.input.Key = undefined;
             var handled_key_count: usize = 0;
             const markHandled = struct {

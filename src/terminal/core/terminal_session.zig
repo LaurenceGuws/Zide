@@ -66,6 +66,7 @@ pub fn debugSnapshot(self: *TerminalSession) DebugSnapshot {
         .hyperlinks = self.hyperlink_table.items,
         .scrollback_count = self.history.scrollbackCount(),
         .scrollback_offset = self.history.scrollOffset(),
+        .focus_reporting = self.focus_reporting,
         .selection = self.selectionState(),
         .base_default_attrs = self.base_default_attrs,
     };
@@ -108,6 +109,7 @@ pub const TerminalSession = struct {
     active: ActiveScreen,
     history: history_mod.TerminalHistory,
     bracketed_paste: bool,
+    focus_reporting: bool,
     app_cursor_keys: bool,
     app_keypad: bool,
     input: input_mod.InputState,
@@ -197,6 +199,7 @@ pub const TerminalSession = struct {
             .active = .primary,
             .history = history,
             .bracketed_paste = false,
+            .focus_reporting = false,
             .app_cursor_keys = false,
             .app_keypad = false,
             .input = input_mod.InputState.init(),
@@ -294,6 +297,7 @@ pub const TerminalSession = struct {
         self.input_snapshot.mouse_mode_button.store(self.input.mouse_mode_button, .release);
         self.input_snapshot.mouse_mode_any.store(self.input.mouse_mode_any, .release);
         self.input_snapshot.mouse_mode_sgr.store(self.input.mouse_mode_sgr, .release);
+        self.input_snapshot.focus_reporting.store(self.focus_reporting, .release);
     }
 
     fn hashRow(cells: []const Cell) u64 {
@@ -658,6 +662,17 @@ pub const TerminalSession = struct {
         }
     }
 
+    pub fn reportFocusChanged(self: *TerminalSession, focused: bool) !bool {
+        if (!self.focusReportingEnabled()) return false;
+        if (self.pty) |*pty| {
+            self.pty_write_mutex.lock();
+            defer self.pty_write_mutex.unlock();
+            _ = try pty.write(if (focused) "\x1b[I" else "\x1b[O");
+            return true;
+        }
+        return false;
+    }
+
     pub fn resize(self: *TerminalSession, rows: u16, cols: u16) !void {
         try resize_reflow.resize(self, rows, cols);
     }
@@ -1005,6 +1020,10 @@ pub const TerminalSession = struct {
         return self.bracketed_paste;
     }
 
+    pub fn focusReportingEnabled(self: *TerminalSession) bool {
+        return self.input_snapshot.focus_reporting.load(.acquire);
+    }
+
     pub fn mouseReportingEnabled(self: *TerminalSession) bool {
         const input_snapshot = self.input_snapshot;
         return input_snapshot.mouse_mode_x10.load(.acquire) or input_snapshot.mouse_mode_button.load(.acquire) or input_snapshot.mouse_mode_any.load(.acquire);
@@ -1039,6 +1058,7 @@ pub const InputSnapshot = struct {
     mouse_mode_button: std.atomic.Value(bool),
     mouse_mode_any: std.atomic.Value(bool),
     mouse_mode_sgr: std.atomic.Value(bool),
+    focus_reporting: std.atomic.Value(bool),
 
     pub fn init() InputSnapshot {
         return .{
@@ -1049,6 +1069,7 @@ pub const InputSnapshot = struct {
             .mouse_mode_button = std.atomic.Value(bool).init(false),
             .mouse_mode_any = std.atomic.Value(bool).init(false),
             .mouse_mode_sgr = std.atomic.Value(bool).init(false),
+            .focus_reporting = std.atomic.Value(bool).init(false),
         };
     }
 };
