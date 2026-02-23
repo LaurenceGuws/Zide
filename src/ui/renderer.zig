@@ -1362,6 +1362,10 @@ pub const Renderer = struct {
         return sdl_api.keycodeFromScancode(scancode, shift);
     }
 
+    pub fn keycodeFromScancodeMods(_: *Renderer, scancode: i32, shift: bool, alt: bool, ctrl: bool, super: bool) i32 {
+        return sdl_api.keycodeFromScancodeMods(scancode, shift, alt, ctrl, super);
+    }
+
     pub fn keycodeToCodepoint(_: *Renderer, keycode: i32) ?u32 {
         return sdl_api.keycodeToCodepoint(keycode);
     }
