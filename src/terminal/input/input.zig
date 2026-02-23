@@ -224,8 +224,15 @@ pub fn sendCharAction(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, key_mod
 }
 
 pub fn sendCharActionEvent(pty: *pty_mod.Pty, event: CharInputEvent) !bool {
-    // Metadata is threaded through the input boundary for future kitty alternate-key parity work.
-    _ = event.protocol;
+    if (event.codepoint > 0x10FFFF or (event.codepoint >= 0xD800 and event.codepoint <= 0xDFFF)) return false;
+    if (sendCharWithProtocolMeta(
+        pty,
+        event.codepoint,
+        event.mod,
+        event.key_mode_flags,
+        event.action,
+        event.protocol.alternate,
+    )) return true;
     return sendCharAction(pty, event.codepoint, event.mod, event.key_mode_flags, event.action);
 }
 
@@ -281,6 +288,17 @@ fn sendKeyWithProtocol(pty: *pty_mod.Pty, key: types.Key, mod: types.Modifier, f
 }
 
 fn sendCharWithProtocol(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, flags: u32, action: KeyAction) bool {
+    return sendCharWithProtocolMeta(pty, char, mod, flags, action, null);
+}
+
+fn sendCharWithProtocolMeta(
+    pty: *pty_mod.Pty,
+    char: u32,
+    mod: types.Modifier,
+    flags: u32,
+    action: KeyAction,
+    alternate_meta: ?types.KeyboardAlternateMetadata,
+) bool {
     if (flags == 0) return false;
     if (!key_encoding.supportsKeyEncoding(flags)) return false;
     const report_text = (flags & key_encoding.key_mode_report_text) != 0;
@@ -290,7 +308,7 @@ fn sendCharWithProtocol(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, flags
     if ((flags & key_encoding.key_mode_report_all_event_types) == 0 and action == .release) return false;
 
     var buf: [64]u8 = undefined;
-    const key_fields = protocolCharKeyFields(char, mod, flags);
+    const key_fields = protocolCharKeyFields(char, mod, flags, alternate_meta);
     const mod_value = key_encoding.kittyModValue(mod);
     const has_mods = mod_value != 1;
     const add_actions = (flags & key_encoding.key_mode_report_all_event_types) != 0 and action != .press;
@@ -340,10 +358,28 @@ const ProtocolCharKeyFields = struct {
     shifted: ?u32 = null,
 };
 
-fn protocolCharKeyFields(char: u32, mod: types.Modifier, flags: u32) ProtocolCharKeyFields {
+fn protocolCharKeyFields(
+    char: u32,
+    mod: types.Modifier,
+    flags: u32,
+    alternate_meta: ?types.KeyboardAlternateMetadata,
+) ProtocolCharKeyFields {
     const report_alternate = (flags & key_encoding.key_mode_report_alternate_key) != 0;
     if (!report_alternate) return .{ .key = char };
     if ((mod & types.VTERM_MOD_SHIFT) == 0) return .{ .key = char };
+
+    if (alternate_meta) |meta| {
+        if (meta.text_is_composed) return .{ .key = char };
+        if (meta.base_codepoint) |base_cp| {
+            const shifted_cp = meta.shifted_codepoint orelse char;
+            if (shifted_cp == char and base_cp != char) {
+                return .{
+                    .key = base_cp,
+                    .shifted = char,
+                };
+            }
+        }
+    }
 
     if (asciiShiftBase(char)) |base| {
         return .{
@@ -447,7 +483,7 @@ pub fn encodeCharBytesForTest(
     if (!report_text and !disambiguate) return allocator.alloc(u8, 0);
     if (!report_text and !charNeedsProtocolDisambiguation(char, mod)) return allocator.alloc(u8, 0);
     const mod_code = encodeModifier(mod);
-    const key_fields = protocolCharKeyFields(char, mod, flags);
+    const key_fields = protocolCharKeyFields(char, mod, flags, null);
     const embed_text = (flags & key_encoding.key_mode_embed_text) != 0;
     const has_mods = mod_code != 1;
     if (key_fields.shifted) |shifted_key| {
@@ -473,8 +509,31 @@ pub fn encodeCharEventBytesForTest(
     event: CharInputEvent,
 ) ![]u8 {
     if (!debugAccessAllowed()) @panic("encodeCharEventBytesForTest is test-only");
-    _ = event.protocol;
-    return encodeCharBytesForTest(allocator, event.codepoint, event.mod, event.key_mode_flags);
+    if (event.key_mode_flags == 0) return allocator.alloc(u8, 0);
+    const report_text = (event.key_mode_flags & key_encoding.key_mode_report_text) != 0;
+    const disambiguate = (event.key_mode_flags & key_encoding.key_mode_disambiguate) != 0;
+    if (!report_text and !disambiguate) return allocator.alloc(u8, 0);
+    if (!report_text and !charNeedsProtocolDisambiguation(event.codepoint, event.mod)) return allocator.alloc(u8, 0);
+    const mod_code = encodeModifier(event.mod);
+    const key_fields = protocolCharKeyFields(event.codepoint, event.mod, event.key_mode_flags, event.protocol.alternate);
+    const embed_text = (event.key_mode_flags & key_encoding.key_mode_embed_text) != 0;
+    const has_mods = mod_code != 1;
+    if (key_fields.shifted) |shifted_key| {
+        if (embed_text) {
+            if (has_mods) {
+                return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};{d};{d}u", .{ key_fields.key, shifted_key, mod_code, event.codepoint });
+            }
+            return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};;{d}u", .{ key_fields.key, shifted_key, event.codepoint });
+        }
+        return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};{d}u", .{ key_fields.key, shifted_key, mod_code });
+    }
+    if (embed_text) {
+        if (has_mods) {
+            return std.fmt.allocPrint(allocator, "\x1b[{d};{d};{d}u", .{ key_fields.key, mod_code, event.codepoint });
+        }
+        return std.fmt.allocPrint(allocator, "\x1b[{d};;{d}u", .{ key_fields.key, event.codepoint });
+    }
+    return std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ key_fields.key, mod_code });
 }
 
 fn encodeCsiWithModBytes(
