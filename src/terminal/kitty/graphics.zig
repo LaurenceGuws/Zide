@@ -118,6 +118,7 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
         if (log.enabled_file or log.enabled_console) {
             log.logf("kitty invalid command a={c} data_len={d}", .{ control.action, data.len });
         }
+        writeKittyResponse(self, control, resolveKittyImageId(control) orelse 0, false, "EINVAL");
         return;
     }
     if (control.action == 'd') {
