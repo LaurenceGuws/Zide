@@ -59,8 +59,13 @@ pub fn handleInput(
     const mouse_on_scrollbar = show_scrollbar and common.pointInRect(mouse.x, mouse.y, scrollbar_x, scrollbar_y, scrollbar_w, scrollbar_h);
     const scroll_log = app_logger.logger("terminal.scroll");
     const altmeta_log = app_logger.logger("terminal.input.altmeta");
+    const mousemap_log = app_logger.logger("terminal.ui.mousemap");
 
     const r = shell.rendererPtr();
+    const hit_cell_w = @as(f32, @floatFromInt(@max(1, @as(i32, @intFromFloat(std.math.round(r.terminal_cell_width))))));
+    const hit_cell_h = @as(f32, @floatFromInt(@max(1, @as(i32, @intFromFloat(std.math.round(r.terminal_cell_height))))));
+    const hit_base_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(x)))));
+    const hit_base_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(y)))));
     hover_mod.updateHoverState(
         &self.hover,
         self.session,
@@ -68,8 +73,8 @@ pub fn handleInput(
         y,
         width,
         height,
-        r.terminal_cell_width,
-        r.terminal_cell_height,
+        hit_cell_w,
+        hit_cell_h,
         snapshot,
         history_len,
         start_line,
@@ -106,12 +111,12 @@ pub fn handleInput(
                 start_line,
                 rows,
                 cols,
-                x,
-                y,
+                hit_base_x,
+                hit_base_y,
                 mouse.x,
                 mouse.y,
-                shell.terminalCellWidth(),
-                shell.terminalCellHeight(),
+                hit_cell_w,
+                hit_cell_h,
             );
             if (did_open) {
                 handled = true;
@@ -136,15 +141,49 @@ pub fn handleInput(
         if (mouse_right_down) buttons_down |= 4;
 
         var col: usize = 0;
-        if (mouse.x > x) {
-            col = @as(usize, @intFromFloat((mouse.x - x) / shell.terminalCellWidth()));
+        if (mouse.x > hit_base_x) {
+            col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
         }
         var row: usize = 0;
-        if (mouse.y > y) {
-            row = @as(usize, @intFromFloat((mouse.y - y) / shell.terminalCellHeight()));
+        if (mouse.y > hit_base_y) {
+            row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
         }
         row = @min(row, rows - 1);
         col = @min(col, cols - 1);
+        if ((mousemap_log.enabled_file or mousemap_log.enabled_console) and
+            (input_batch.mousePressed(.left) or input_batch.mousePressed(.middle) or input_batch.mousePressed(.right)))
+        {
+            const screen = r.getScreenSize();
+            const render = r.getRenderSize();
+            const dpi = r.getDpiScale();
+            mousemap_log.logf(
+                "mouse press raw=({d:.2},{d:.2}) scaled=({d:.2},{d:.2}) widget=({d:.2},{d:.2},{d:.2},{d:.2}) base=({d:.2},{d:.2}) cell=({d:.2},{d:.2}) rowcol=({d},{d}) rows={d} cols={d} screen=({d:.2},{d:.2}) render=({d:.2},{d:.2}) dpi=({d:.3},{d:.3})",
+                .{
+                    input_batch.mouse_pos_raw.x,
+                    input_batch.mouse_pos_raw.y,
+                    mouse.x,
+                    mouse.y,
+                    x,
+                    y,
+                    width,
+                    height,
+                    hit_base_x,
+                    hit_base_y,
+                    hit_cell_w,
+                    hit_cell_h,
+                    row,
+                    col,
+                    rows,
+                    cols,
+                    screen.x,
+                    screen.y,
+                    render.x,
+                    render.y,
+                    dpi.x,
+                    dpi.y,
+                },
+            );
+        }
 
         if (wheel_steps != 0) {
             var remaining = wheel_steps;
@@ -505,10 +544,8 @@ pub fn handleInput(
         const suppress_selection_for_scrollbar = mouse_on_scrollbar or scroll_dragging.*;
         if (!mouse_reporting and in_terminal and !suppress_selection_for_scrollbar) {
             if (input_batch.mousePressed(.left)) {
-                const local_x = mouse.x - x;
-                const local_y = mouse.y - y;
-                const col = @as(usize, @intFromFloat(local_x / shell.terminalCellWidth()));
-                const row = @as(usize, @intFromFloat(local_y / shell.terminalCellHeight()));
+                const col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
+                const row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
                 if (cols > 0 and rows > 0) {
                     const clamped_col = @min(col, cols - 1);
                     const clamped_row = @min(row, rows - 1);
@@ -522,10 +559,8 @@ pub fn handleInput(
 
             if (input_batch.mouseDown(.left)) {
                 if (self.session.selectionState()) |_| {
-                    const local_x = mouse.x - x;
-                    const local_y = mouse.y - y;
-                    const col = @as(usize, @intFromFloat(local_x / shell.terminalCellWidth()));
-                    const row = @as(usize, @intFromFloat(local_y / shell.terminalCellHeight()));
+                    const col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
+                    const row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
                     if (cols > 0 and rows > 0) {
                         const clamped_col = @min(col, cols - 1);
                         const clamped_row = @min(row, rows - 1);
