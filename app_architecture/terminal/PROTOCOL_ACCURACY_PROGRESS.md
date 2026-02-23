@@ -705,6 +705,19 @@ Verification:
 - `zig build test-terminal-kitty-query-parse`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 21 / `PA-04c` table-driven missing-id precedence matrix refactor):
+- Refactored the integrated missing-id precedence tests into a compact table-driven
+  matrix using reusable reply / no-reply helpers.
+- No behavior change intended; this reduces repetition and makes it cheaper to add
+  more early-error ordering cases.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
@@ -1179,6 +1192,44 @@ Files:
 - `fixtures/terminal/encoder/csi_u_disambiguate_home_compact.golden`
 - `fixtures/terminal/encoder/csi_u_disambiguate_end_compact.json`
 - `fixtures/terminal/encoder/csi_u_disambiguate_end_compact.golden`
+
+Verification:
+- `zig test src/terminal_input_encoding_tests.zig`
+- `zig build test-terminal-replay -- --all`
+
+Implemented (increment 8):
+- Expanded disambiguate-mode cursor/home/end coverage for modified keys (`Shift`,
+  `Alt`, `Ctrl`) to lock the `ESC[1;{m}{A/B/C/D/H/F}` form while preserving the new
+  compact unmodified form.
+- Added replay encoder fixtures for representative modified cursor/home/end cases and
+  unit coverage spanning cursor + home/end variants.
+
+Files:
+- `src/terminal_input_encoding_tests.zig`
+- `fixtures/terminal/encoder/csi_u_disambiguate_up_shift_mod.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_up_shift_mod.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_down_shift_mod.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_down_shift_mod.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_left_shift_mod.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_left_shift_mod.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_right_shift_mod.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_right_shift_mod.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_home_shift_mod.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_home_shift_mod.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_end_shift_mod.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_end_shift_mod.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_up_alt_mod.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_up_alt_mod.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_home_alt_mod.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_home_alt_mod.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_end_alt_mod.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_end_alt_mod.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_up_ctrl_mod.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_up_ctrl_mod.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_home_ctrl_mod.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_home_ctrl_mod.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_end_ctrl_mod.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_end_ctrl_mod.golden`
 
 Verification:
 - `zig test src/terminal_input_encoding_tests.zig`
