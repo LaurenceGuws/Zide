@@ -1644,7 +1644,7 @@ Inventory snapshot (`PA-08a`, first pass) checklist (audit-traceable):
 | Tabulation family beyond `TBC` | partial | medium | replay | `src/terminal/protocol/csi.zig` (`I/Z/g`), `src/terminal/model/screen/tabstops.zig`, `fixtures/terminal/csi_tab_cht_cbt_counts.*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig` | `CHT/CBT/TBC` now implemented; tab-stop report/edit breadth still partial |
 | Mode query/report breadth (`DECRQM` etc.) | partial | high | replay+unit+PTY (partial) | `src/terminal/protocol/csi.zig`, `src/terminal_csi_reply_tests.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/decrqm_*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/foot/csi.c`, `reference_repos/terminals/ghostty/src/terminal/stream.zig`, `reference_repos/terminals/kitty/docs/clipboard.rst` | Private `DECRQM` replies implemented for common DEC modes + ANSI mode `20`; replay reply assertions now available |
 | Focus reporting mode (`?1004`) + event emission path | partial | high | replay+PTY | `src/terminal/protocol/csi.zig`, `src/terminal/core/terminal_session.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/focus_reporting_mode_*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/foot/csi.c` | Implemented with window + pane source toggles; semantics may evolve |
-| Terminal reset conveniences (`DECSTR`, CSI soft reset breadth) | partial | medium | no | parser/protocol currently dispatch by final only (`src/terminal/parser/csi.zig`, `src/terminal/protocol/csi.zig`) | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/kitty/kitty/vt-parser.c`, `reference_repos/terminals/ghostty/src/terminal/stream.zig` | Not prioritized yet; blocked by `PA-08f` intermediate handling for clean dispatch |
+| Terminal reset conveniences (`DECSTR`, CSI soft reset breadth) | partial | medium | replay + PTY | `DECSTR` implemented/tested (`src/terminal/protocol/csi.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/decstr_*`); broader reset-family breadth still pending | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/kitty/kitty/vt-parser.c`, `reference_repos/terminals/ghostty/src/terminal/stream.zig` | `DECSTR` slice active; broader CSI reset-family parity still tracked under `PA-08h` |
 | Left/right margins (`DECSLRM`) + rectangular semantics | partial | medium | no | no Zide implementation yet (`src/terminal/protocol/csi.zig`) | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig`, `reference_repos/terminals/ghostty/src/terminal/Terminal.zig` | xterm-compat gap for some advanced TUIs |
 | Alternate mouse encodings (`1005`, `1015`) | todo | low/medium | no | `src/terminal/protocol/csi.zig`, `src/terminal/input/mouse_report.zig` (current modes) | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/foot/csi.c` | Add only if app compatibility demands |
 | Xterm window ops (`CSI ... t`) | todo | low | no | `src/terminal/protocol/csi.zig` (no `t` support) | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt` | Likely low priority unless demanded |
@@ -1993,6 +1993,21 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
 | Hidden screen contents (non-active screen) | preserve | verified for primary hidden behind alt in current slice |
 | Title / cwd / clipboard / hyperlinks | preserve | outside DECSTR scope in Zide first slice |
 
+`PA-08h` DECSTR reference-alignment review snapshot (xterm / kitty / ghostty anchors, 2026-02-23):
+- Implemented + test-locked in Zide current scope:
+  - intermediate-aware `CSI ! p` dispatch (distinct from `DECRQM`)
+  - no-reply soft-reset handling (not hard reset)
+  - active-screen soft-state resets (cursor/style/attrs/scroll region/tabs/parser charset state)
+  - session mode resets (mouse/focus/bracketed paste/app cursor/app keypad/key mode flags)
+  - preserve boundaries: grid contents, scrollback (heuristic replay assertion caveat), kitty state, alt-screen active state, hidden primary contents
+  - saved cursor/charset restore slots invalidated
+- Implemented, but reference nuance still not fully audited:
+  - exact title/cwd/hyperlink preservation behavior across `DECSTR` (currently preserved by omission; clipboard now replay-verified below)
+  - any reference-specific divergences in saved-state scope beyond Zide's current `CSI s/u` model
+- Deferred / out of current `PA-08h` slice unless reference/app evidence demands it:
+  - hard-reset-like behavior (screen clear, scrollback wipe, kitty image wipe)
+  - broader CSI reset-family parity beyond `DECSTR` (tracked separately in `PA-08h` promoted gaps / `PA-08a`)
+
 Implemented (increment 1 / `PA-08h` `DECSTR` first safe subset):
 - Added explicit `CSI ! p` dispatch handling using CSI intermediate-aware matching (`!`), distinct from `DECRQM` (`$`).
 - Implemented a non-destructive soft reset helper that resets parser/mode state and active-screen soft state without calling the hard reset path.
@@ -2087,6 +2102,26 @@ Files:
 
 Verification:
 - `zig build test-terminal-focus-reporting`
+
+Implemented (increment 5 / `PA-08h` `DECSTR` clipboard preserve + `PA-08f` non-`p` intermediate ignore fixture):
+- Added replay reply fixture proving `DECSTR` preserves clipboard state in current Zide scope:
+  - `OSC 52` set clipboard (`BEL` terminator)
+  - `DECSTR`
+  - `OSC 52` query reply unchanged (`BEL` terminator preserved)
+- Added replay fixture that locks deterministic ignore/no-reply behavior for unsupported intermediate-bearing non-`p` CSI families (`CSI $ q`, `CSI ! q`) while preserving surrounding grid text.
+
+Files:
+- `fixtures/terminal/decstr_preserves_clipboard_query_reply_bel.vt`
+- `fixtures/terminal/decstr_preserves_clipboard_query_reply_bel.json`
+- `fixtures/terminal/decstr_preserves_clipboard_query_reply_bel.golden`
+- `fixtures/terminal/csi_q_intermediate_unsupported_no_reply.vt`
+- `fixtures/terminal/csi_q_intermediate_unsupported_no_reply.json`
+- `fixtures/terminal/csi_q_intermediate_unsupported_no_reply.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture decstr_preserves_clipboard_query_reply_bel --update-goldens`
+- `zig build test-terminal-replay -- --fixture csi_q_intermediate_unsupported_no_reply --update-goldens`
+- `zig build test-terminal-replay -- --all`
   4. Extend/reset matrix incrementally as reference behavior is confirmed.
 
 ## Change Log
