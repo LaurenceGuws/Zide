@@ -225,15 +225,70 @@ pub fn handleInput(
                 return key_encoder.sendKeyAction(widget.session, key, key_mod, action);
             }
         }.apply;
+        const translatedKeyCodepoint = struct {
+            fn apply(renderer: anytype, key_event: shared_types.input.KeyEvent, shift_mod: bool) ?u32 {
+                const sc = key_event.scancode orelse return null;
+                return renderer.keycodeToCodepoint(renderer.keycodeFromScancode(sc, shift_mod));
+            }
+        }.apply;
         const keyAltMeta = struct {
-            fn apply(key_event: shared_types.input.KeyEvent, base_char: ?u32) terminal_types.KeyboardAlternateMetadata {
-                return .{
+            fn apply(
+                renderer: anytype,
+                key_event: shared_types.input.KeyEvent,
+                base_char: ?u32,
+            ) terminal_types.KeyboardAlternateMetadata {
+                const translated_base = translatedKeyCodepoint(renderer, key_event, false);
+                const translated_shifted = translatedKeyCodepoint(renderer, key_event, true);
+                const event_sym = if (key_event.sym) |sym| renderer.keycodeToCodepoint(sym) else null;
+
+                var meta = terminal_types.KeyboardAlternateMetadata{
                     .physical_key = if (key_event.scancode) |sc|
                         @as(terminal_types.PhysicalKey, @intCast(sc))
                     else
                         @as(terminal_types.PhysicalKey, @intCast(@intFromEnum(key_event.key))),
-                    .base_codepoint = base_char,
+                    .base_codepoint = translated_base orelse base_char,
+                    .shifted_codepoint = translated_shifted,
                 };
+                if (event_sym) |sym_cp| {
+                    const base_cp = meta.base_codepoint;
+                    const shifted_cp = meta.shifted_codepoint;
+                    if (base_cp == null or sym_cp != base_cp.?) {
+                        if (shifted_cp == null or sym_cp != shifted_cp.?) {
+                            meta.alternate_layout_codepoint = sym_cp;
+                        }
+                    }
+                }
+                return meta;
+            }
+        }.apply;
+        const textAltMeta = struct {
+            fn apply(
+                renderer: anytype,
+                text_event: shared_types.input.TextEvent,
+                key_event: ?shared_types.input.KeyEvent,
+                fallback_char: u32,
+            ) terminal_types.KeyboardAlternateMetadata {
+                var utf8_buf: [4]u8 = undefined;
+                const utf8_len = std.unicode.utf8Encode(@intCast(fallback_char), &utf8_buf) catch 0;
+                var meta: terminal_types.KeyboardAlternateMetadata = .{
+                    .produced_text_utf8 = if (text_event.utf8_len > 0)
+                        text_event.utf8Slice()
+                    else if (utf8_len > 0)
+                        utf8_buf[0..utf8_len]
+                    else
+                        null,
+                    .base_codepoint = fallback_char,
+                    .text_is_composed = text_event.text_is_composed,
+                };
+
+                if (key_event) |ke| {
+                    const key_meta = keyAltMeta(renderer, ke, fallback_char);
+                    meta.physical_key = key_meta.physical_key;
+                    meta.base_codepoint = key_meta.base_codepoint orelse fallback_char;
+                    meta.shifted_codepoint = key_meta.shifted_codepoint;
+                    meta.alternate_layout_codepoint = key_meta.alternate_layout_codepoint;
+                }
+                return meta;
             }
         }.apply;
 
@@ -275,7 +330,7 @@ pub fn handleInput(
                     if (report_text_enabled) {
                         if (key_encoder.baseCharForKey(key)) |base_char| {
                             clearLiveState(self);
-                            try self.session.sendCharActionWithMetadata(base_char, mod, .release, keyAltMeta(event.key, base_char));
+                            try self.session.sendCharActionWithMetadata(base_char, mod, .release, keyAltMeta(r, event.key, base_char));
                             handled = true;
                             skip_chars = true;
                             continue;
@@ -299,7 +354,7 @@ pub fn handleInput(
                 if (report_text_enabled) {
                     if (key_encoder.baseCharForKey(key)) |base_char| {
                         clearLiveState(self);
-                        try self.session.sendCharActionWithMetadata(base_char, mod, action, keyAltMeta(event.key, base_char));
+                        try self.session.sendCharActionWithMetadata(base_char, mod, action, keyAltMeta(r, event.key, base_char));
                         markHandled(&handled_keys, &handled_key_count, key);
                         handled = true;
                         skip_chars = true;
@@ -342,26 +397,22 @@ pub fn handleInput(
         }
 
         if (!skip_chars and !report_text_enabled and !input_batch.mods.ctrl and !input_batch.mods.alt and !input_batch.mods.super) {
+            var pending_text_key: ?shared_types.input.KeyEvent = null;
             for (input_batch.events.items) |event| {
-                if (event == .text) {
-                    const char = event.text.codepoint;
-                    if (char >= 32) {
-                        var utf8_buf: [4]u8 = undefined;
-                        const utf8_len = std.unicode.utf8Encode(@intCast(char), &utf8_buf) catch 0;
-                        const alt_meta: terminal_types.KeyboardAlternateMetadata = .{
-                            .produced_text_utf8 = if (event.text.utf8_len > 0)
-                                event.text.utf8Slice()
-                            else if (utf8_len > 0)
-                                utf8_buf[0..utf8_len]
-                            else
-                                null,
-                            .base_codepoint = char,
-                            .text_is_composed = event.text.text_is_composed,
-                        };
+                switch (event) {
+                    .key => |key_event| {
+                        if (key_event.pressed and !key_event.repeated) pending_text_key = key_event;
+                    },
+                    .text => |text_event| {
+                        const char = text_event.codepoint;
+                        if (char < 32) continue;
+                        const alt_meta = textAltMeta(r, text_event, pending_text_key, char);
                         clearLiveState(self);
                         try self.session.sendCharActionWithMetadata(char, mod, .press, alt_meta);
                         handled = true;
-                    }
+                        pending_text_key = null;
+                    },
+                    else => {},
                 }
             }
         }

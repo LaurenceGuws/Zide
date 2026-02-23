@@ -319,6 +319,25 @@ pub fn keyRepeat(event: *const c.SDL_Event) u8 {
     return 0;
 }
 
+pub fn keycodeFromScancode(scancode: i32, shift: bool) i32 {
+    if (!@hasDecl(c, "SDL_GetKeyFromScancode")) return 0;
+    const modstate = if (shift)
+        @as(c.SDL_Keymod, @intCast(c.SDL_KMOD_SHIFT))
+    else
+        @as(c.SDL_Keymod, @intCast(c.SDL_KMOD_NONE));
+    const sdl_scancode: c.SDL_Scancode = @intCast(scancode);
+    return @intCast(c.SDL_GetKeyFromScancode(sdl_scancode, modstate, true));
+}
+
+pub fn keycodeToCodepoint(keycode: i32) ?u32 {
+    if (keycode <= 0) return null;
+    const cp: u32 = @intCast(keycode);
+    if (cp < 0x20 or cp == 0x7f) return null;
+    if (cp > 0x10FFFF) return null;
+    if (!std.unicode.utf8ValidCodepoint(@as(u21, @intCast(cp)))) return null;
+    return cp;
+}
+
 pub fn wheelDelta(event: *const c.SDL_Event) f32 {
     return @as(f32, event.wheel.y);
 }

@@ -1358,6 +1358,14 @@ pub const Renderer = struct {
         return key_queue.pop(&self.key_queue);
     }
 
+    pub fn keycodeFromScancode(_: *Renderer, scancode: i32, shift: bool) i32 {
+        return sdl_api.keycodeFromScancode(scancode, shift);
+    }
+
+    pub fn keycodeToCodepoint(_: *Renderer, keycode: i32) ?u32 {
+        return sdl_api.keycodeToCodepoint(keycode);
+    }
+
     pub fn isKeyDown(self: *Renderer, key: i32) bool {
         return key_state.isKeyDown(self.key_down[0..], key);
     }
