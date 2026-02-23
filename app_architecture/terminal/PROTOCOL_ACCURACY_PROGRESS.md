@@ -1993,7 +1993,8 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
 | Focus reporting / bracketed paste / sync updates | reset | mode defaults |
 | Alt-screen active state | preserve | `DECSTR` must not force alt-screen enter/exit |
 | Hidden screen contents (non-active screen) | preserve | verified for primary hidden behind alt in current slice |
-| Title / cwd / clipboard / hyperlinks | preserve | outside DECSTR scope in Zide first slice; clipboard + title/cwd/hyperlink replay-verified |
+| Title | reset to default (`"Terminal"`) | explicit `PA-08h` parity decision (2026-02-23); matched to broader soft-reset precedent (foot), replay + PTY verified |
+| Cwd / clipboard / hyperlinks | preserve | outside DECSTR scope in Zide current slice; replay-verified |
 
 `PA-08h` DECSTR reference-alignment review snapshot (xterm / kitty / ghostty anchors, 2026-02-23):
 - Implemented + test-locked in Zide current scope:
@@ -2004,7 +2005,7 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
   - preserve boundaries: grid contents, scrollback (heuristic replay assertion caveat), kitty state, alt-screen active state, hidden primary contents
   - saved cursor/charset restore slots invalidated
 - Implemented, but reference nuance still not fully audited:
-  - exact title/cwd/hyperlink preservation behavior across `DECSTR` is replay-verified in Zide, but broader reference nuance (if any terminal resets related metadata differently) is not fully audited yet
+  - exact metadata reset/preserve behavior across `DECSTR` (title reset vs cwd/clipboard/hyperlink preserve) is now replay-verified in Zide, but broader reference nuance across terminals is not fully audited yet
   - any reference-specific divergences in saved-state scope beyond Zide's current `CSI s/u` model
 - Explicit reference divergence / pending policy decision (do not treat as parity-complete yet):
   - foot's `DECSTR` path (`reference_repos/terminals/foot/csi.c` -> `term_reset(term, false)` in `reference_repos/terminals/foot/terminal.c`) is materially broader than Zide's current slice:
@@ -2013,8 +2014,8 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
     - clears image/notification state
   - Zide currently preserves those areas by design for a safer soft-reset slice; this is intentional for now but must be kept marked as a divergence until xterm/kitty/ghostty alignment is chosen and documented.
 - Current row-by-row classification in this `DECSTR` slice (to avoid ambiguity while `PA-08h` remains `partial`):
-  - `implemented + evidence locked`: grid/scrollback (heuristic caveat), kitty state, cursor pos/style, attrs, scroll region, tabs, parser/charsets, saved cursor/charset slots, session mode bits, alt-screen active state, hidden primary contents, clipboard/title/cwd/hyperlinks
-  - `defer (reference parity decision pending)`: whether `DECSTR` should reset title/app-id metadata, exit alt-screen, or clear graphics/notification state to match broader implementations like foot
+  - `implemented + evidence locked`: grid/scrollback (heuristic caveat), kitty state, cursor pos/style, attrs, scroll region, tabs, parser/charsets, saved cursor/charset slots, session mode bits, alt-screen active state, hidden primary contents, **title reset to default**, cwd/clipboard/hyperlinks preserve
+  - `defer (reference parity decision pending)`: whether `DECSTR` should reset app-id metadata, clear graphics/notification state, or otherwise broaden toward foot-like soft reset scope
   - `out of current slice`: broader CSI reset-family parity beyond `DECSTR` (`PA-08h` promoted gaps)
 - Explicit product/parity decision (2026-02-23):
   - `DECSTR` **alt-screen active state**: keep current Zide behavior (`preserve`) as a **strategic divergence** for now.
@@ -2024,6 +2025,16 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
     - We already have PTY + replay evidence locking preserve semantics (`decstr_alt_screen_preserve_reply_and_grid`, direct alt-kitty boundary tests).
   - Revisit trigger:
     - If a real TUI compatibility issue is traced to `DECSTR` alt-screen preservation, promote a dedicated `PA-08h` parity adjustment slice and compare xterm/kitty/ghostty behavior directly before changing semantics.
+
+- Explicit product/parity decision + implementation (2026-02-23):
+  - `DECSTR` **title metadata**: changed Zide behavior to **reset title to default** (`"Terminal"`) on `CSI ! p` (match broader soft-reset precedent, notably foot, for this row).
+  - Scope:
+    - title only (app-id remains deferred/not modeled in Zide terminal session state)
+    - cwd / clipboard / hyperlinks remain preserved in the current slice
+  - Evidence:
+    - PTY test: `terminal DECSTR resets title to default`
+    - replay fixture: `decstr_resets_title_to_default`
+    - existing metadata preserve fixture updated to assert cwd/hyperlinks (not title): `decstr_preserves_title_cwd_hyperlink`
 - Deferred / out of current `PA-08h` slice unless reference/app evidence demands it:
   - hard-reset-like behavior (screen clear, scrollback wipe, kitty image wipe)
   - broader CSI reset-family parity beyond `DECSTR` (tracked separately in `PA-08h` promoted gaps / `PA-08a`)
@@ -2174,6 +2185,25 @@ Files:
 
 Verification:
 - `zig build test-terminal-replay -- --fixture csi_z_intermediate_unsupported_no_reply --update-goldens`
+- `zig build test-terminal-replay -- --all`
+
+Implemented (increment 8 / `PA-08h` `DECSTR` title reset parity row):
+- Updated `DECSTR` soft reset to reset terminal title back to the default (`"Terminal"`), while continuing to preserve cwd / clipboard / hyperlinks in the current slice.
+- Added PTY integration test proving title reset and no-reply behavior.
+- Added replay fixture locking title reset in snapshot output with `reply_hex: ""`.
+- Updated the existing metadata-preserve replay fixture to stop asserting `title` exercised in final state, since title is now intentionally reset by `DECSTR`.
+
+Files:
+- `src/terminal/protocol/csi.zig`
+- `src/terminal_focus_reporting_tests.zig`
+- `fixtures/terminal/decstr_resets_title_to_default.vt`
+- `fixtures/terminal/decstr_resets_title_to_default.json`
+- `fixtures/terminal/decstr_resets_title_to_default.golden`
+- `fixtures/terminal/decstr_preserves_title_cwd_hyperlink.json`
+
+Verification:
+- `zig build test-terminal-focus-reporting`
+- `zig build test-terminal-replay -- --fixture decstr_resets_title_to_default --update-goldens`
 - `zig build test-terminal-replay -- --all`
   4. Extend/reset matrix incrementally as reference behavior is confirmed.
 
