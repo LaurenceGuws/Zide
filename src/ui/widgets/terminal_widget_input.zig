@@ -255,13 +255,8 @@ pub fn handleInput(
                 key_event: shared_types.input.KeyEvent,
                 base_char: ?u32,
             ) terminal_types.KeyboardAlternateMetadata {
-                const sdl_mod_bits = key_event.sdl_mod_bits orelse 0;
-                const has_sdl_mod_bits = key_event.sdl_mod_bits != null;
-                const sdl_ralt_mask: u32 = 0x0200;
-                const sdl_alt_mask: u32 = 0x0300;
-                const sdl_mode_mask: u32 = 0x4000;
-                const explicit_altgr = has_sdl_mod_bits and ((sdl_mod_bits & (sdl_ralt_mask | sdl_mode_mask)) != 0);
-                const explicit_non_altgr_alt = has_sdl_mod_bits and ((sdl_mod_bits & sdl_alt_mask) != 0) and !explicit_altgr;
+                const explicit_altgr = key_event.mods.altgr;
+                const explicit_non_altgr_alt = key_event.mods.alt and !key_event.mods.altgr;
                 const translated_base = translatedKeyCodepoint(renderer, key_event, false);
                 const translated_shifted = translatedKeyCodepoint(renderer, key_event, true);
                 const translated_altgr = translatedKeyCodepointMods(renderer, key_event, false, true, true, false);

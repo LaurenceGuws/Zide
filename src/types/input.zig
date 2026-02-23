@@ -5,10 +5,11 @@ pub const Modifiers = packed struct(u8) {
     alt: bool = false,
     ctrl: bool = false,
     super: bool = false,
-    _pad: u4 = 0,
+    altgr: bool = false,
+    _pad: u3 = 0,
 
     pub fn isEmpty(self: Modifiers) bool {
-        return !self.shift and !self.alt and !self.ctrl and !self.super;
+        return !self.shift and !self.alt and !self.ctrl and !self.super and !self.altgr;
     }
 };
 

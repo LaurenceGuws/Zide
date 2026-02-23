@@ -2,6 +2,12 @@ const std = @import("std");
 const app_shell = @import("../app_shell.zig");
 const shared_types = @import("../types/mod.zig");
 
+fn sdlModHasAltGr(mod_bits: u32) bool {
+    const sdl_ralt_mask: u32 = 0x0200;
+    const sdl_mode_mask: u32 = 0x4000;
+    return (mod_bits & (sdl_ralt_mask | sdl_mode_mask)) != 0;
+}
+
 pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) shared_types.input.InputBatch {
     var batch = shared_types.input.InputBatch.init(allocator);
     const r = shell.rendererPtr();
@@ -29,6 +35,8 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
         .alt = r.isKeyDown(app_shell.KEY_LEFT_ALT) or r.isKeyDown(app_shell.KEY_RIGHT_ALT),
         .ctrl = r.isKeyDown(app_shell.KEY_LEFT_CONTROL) or r.isKeyDown(app_shell.KEY_RIGHT_CONTROL),
         .super = r.isKeyDown(app_shell.KEY_LEFT_SUPER) or r.isKeyDown(app_shell.KEY_RIGHT_SUPER),
+        // SDL MODE (AltGr) is event-scoped; batch-level state uses right-alt as a best-effort proxy.
+        .altgr = r.isKeyDown(app_shell.KEY_RIGHT_ALT),
     };
 
     const key_map = [_]struct { key: shared_types.input.Key, code: i32 }{
@@ -142,10 +150,12 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
 
     while (r.getKeyPressed()) |press| {
         if (inputKeyFromShell(press.scancode)) |key| {
+            var key_mods = batch.mods;
+            key_mods.altgr = sdlModHasAltGr(press.mod_bits);
             batch.append(.{
                 .key = .{
                     .key = key,
-                    .mods = batch.mods,
+                    .mods = key_mods,
                     .repeated = press.repeated,
                     .pressed = true,
                     .scancode = press.scancode,
