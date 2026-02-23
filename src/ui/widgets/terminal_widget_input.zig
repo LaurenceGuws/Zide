@@ -226,9 +226,12 @@ pub fn handleInput(
             }
         }.apply;
         const keyAltMeta = struct {
-            fn apply(key: shared_types.input.Key, base_char: ?u32) terminal_types.KeyboardAlternateMetadata {
+            fn apply(key_event: shared_types.input.KeyEvent, base_char: ?u32) terminal_types.KeyboardAlternateMetadata {
                 return .{
-                    .physical_key = @as(terminal_types.PhysicalKey, @intCast(@intFromEnum(key))),
+                    .physical_key = if (key_event.scancode) |sc|
+                        @as(terminal_types.PhysicalKey, @intCast(sc))
+                    else
+                        @as(terminal_types.PhysicalKey, @intCast(@intFromEnum(key_event.key))),
                     .base_codepoint = base_char,
                 };
             }
@@ -272,7 +275,7 @@ pub fn handleInput(
                     if (report_text_enabled) {
                         if (key_encoder.baseCharForKey(key)) |base_char| {
                             clearLiveState(self);
-                            try self.session.sendCharActionWithMetadata(base_char, mod, .release, keyAltMeta(key, base_char));
+                            try self.session.sendCharActionWithMetadata(base_char, mod, .release, keyAltMeta(event.key, base_char));
                             handled = true;
                             skip_chars = true;
                             continue;
@@ -296,7 +299,7 @@ pub fn handleInput(
                 if (report_text_enabled) {
                     if (key_encoder.baseCharForKey(key)) |base_char| {
                         clearLiveState(self);
-                        try self.session.sendCharActionWithMetadata(base_char, mod, action, keyAltMeta(key, base_char));
+                        try self.session.sendCharActionWithMetadata(base_char, mod, action, keyAltMeta(event.key, base_char));
                         markHandled(&handled_keys, &handled_key_count, key);
                         handled = true;
                         skip_chars = true;
@@ -346,8 +349,14 @@ pub fn handleInput(
                         var utf8_buf: [4]u8 = undefined;
                         const utf8_len = std.unicode.utf8Encode(@intCast(char), &utf8_buf) catch 0;
                         const alt_meta: terminal_types.KeyboardAlternateMetadata = .{
-                            .produced_text_utf8 = if (utf8_len > 0) utf8_buf[0..utf8_len] else null,
+                            .produced_text_utf8 = if (event.text.utf8_len > 0)
+                                event.text.utf8Slice()
+                            else if (utf8_len > 0)
+                                utf8_buf[0..utf8_len]
+                            else
+                                null,
                             .base_codepoint = char,
+                            .text_is_composed = event.text.text_is_composed,
                         };
                         clearLiveState(self);
                         try self.session.sendCharActionWithMetadata(char, mod, .press, alt_meta);

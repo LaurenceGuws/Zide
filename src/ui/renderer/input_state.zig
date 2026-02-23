@@ -3,6 +3,7 @@ const std = @import("std");
 const text_composition = @import("text_composition.zig");
 
 pub const KeyPress = input_events.KeyPress;
+pub const TextPress = input_events.TextPress;
 
 pub const InputState = struct {
     key_down: []bool,
@@ -13,7 +14,7 @@ pub const InputState = struct {
     mouse_pressed: []bool,
     mouse_released: []bool,
     key_queue: *std.ArrayList(KeyPress),
-    char_queue: *std.ArrayList(u32),
+    char_queue: *std.ArrayList(TextPress),
     composing_text: *std.ArrayList(u8),
     composing_cursor: *i32,
     composing_selection_len: *i32,
