@@ -91,3 +91,13 @@ test "terminal input reports shifted alternate for shifted punctuation" {
     defer allocator.free(seq);
     try std.testing.expectEqualStrings("\x1b[59:58;2u", seq);
 }
+
+test "terminal input reports shifted alternate with embedded text" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 4 | 8 | 16; // alternate + report_text + embed_text
+    const shift = types.VTERM_MOD_SHIFT;
+
+    const seq = try input_mod.encodeCharBytesForTest(allocator, 'A', shift, flags);
+    defer allocator.free(seq);
+    try std.testing.expectEqualStrings("\x1b[97:65;2;65u", seq);
+}

@@ -449,6 +449,30 @@ Files:
 Verification:
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 6):
+- Expanded `PA-05` encoder fixture coverage across additional flag combinations:
+  - `report_text + alternate_key` shifted-letter output
+  - `report_text + embed_text + alternate_key` shifted-letter output
+  - key-path `alternate_key`-only no-op (`UP` remains empty)
+- Fixed a test-helper conformance bug in `encodeCharBytesForTest()`:
+  - helper now models `embed_text` field formatting (including alternate-key `key:shifted` forms)
+  - this aligns replay encoder fixtures with runtime formatting for `embed_text`
+- Added direct unit coverage for alternate-key + embedded-text char encoding.
+
+Files:
+- `src/terminal/input/input.zig`
+- `src/terminal_input_encoding_tests.zig`
+- `fixtures/terminal/encoder/csi_u_alternate_report_text_shifted_letter.json`
+- `fixtures/terminal/encoder/csi_u_alternate_report_text_shifted_letter.golden`
+- `fixtures/terminal/encoder/csi_u_alternate_embed_text_shifted_letter.json`
+- `fixtures/terminal/encoder/csi_u_alternate_embed_text_shifted_letter.golden`
+- `fixtures/terminal/encoder/csi_u_alternate_only_key_noop_up.json`
+- `fixtures/terminal/encoder/csi_u_alternate_only_key_noop_up.golden`
+
+Verification:
+- `zig test src/terminal_input_encoding_tests.zig`
+- `zig build test-terminal-replay -- --all`
+
 Remaining work:
 - Alternate-key reporting is only a US-ASCII shifted-char subset in the legacy char path (no layout-aware base/alternate reporting for general keys yet).
 - Disambiguation semantics are improved but still incomplete (broader kitty keyboard parity and key-map coverage).
@@ -542,6 +566,7 @@ Priority notes:
 - Tightened `PA-05` key-encoder test helper gating/mappings so replay/unit tests do not falsely advertise unsupported key-mode outputs.
 - Advanced `PA-05` alternate-key support: flag now persists in key-mode state and char CSI-u emits US-ASCII shifted alternates (`key:shifted`) for common shifted printable keys.
 - Added replay encoder fixtures for `PA-05` alternate-key shifted-char CSI-u outputs (`key:shifted`) to lock behavior in the fixture harness.
+- Expanded `PA-05` alternate-key replay coverage (`report_text`, `embed_text`, key-path no-op) and fixed `embed_text` formatting drift in encoder test helper.
 
 ## Next Work Queue (Ordered)
 

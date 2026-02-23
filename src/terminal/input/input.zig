@@ -416,8 +416,22 @@ pub fn encodeCharBytesForTest(
     if (!report_text and !charNeedsProtocolDisambiguation(char, mod)) return allocator.alloc(u8, 0);
     const mod_code = encodeModifier(mod);
     const key_fields = protocolCharKeyFields(char, mod, flags);
+    const embed_text = (flags & key_encoding.key_mode_embed_text) != 0;
+    const has_mods = mod_code != 1;
     if (key_fields.shifted) |shifted_key| {
+        if (embed_text) {
+            if (has_mods) {
+                return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};{d};{d}u", .{ key_fields.key, shifted_key, mod_code, char });
+            }
+            return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};;{d}u", .{ key_fields.key, shifted_key, char });
+        }
         return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};{d}u", .{ key_fields.key, shifted_key, mod_code });
+    }
+    if (embed_text) {
+        if (has_mods) {
+            return std.fmt.allocPrint(allocator, "\x1b[{d};{d};{d}u", .{ key_fields.key, mod_code, char });
+        }
+        return std.fmt.allocPrint(allocator, "\x1b[{d};;{d}u", .{ key_fields.key, char });
     }
     return std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ key_fields.key, mod_code });
 }
