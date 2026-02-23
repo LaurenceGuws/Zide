@@ -425,6 +425,42 @@ test "terminal DECSTR resets DECRQM-queryable modes to defaults" {
     }.run);
 }
 
+test "terminal DECSTR in alt screen preserves active screen selection and primary contents" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+
+            terminal.debugFeedBytes(session, "P");
+            terminal.debugFeedBytes(session, "\x1b[?1049h");
+            terminal.debugFeedBytes(session, "A");
+            terminal.debugFeedBytes(session, "\x1b[!p");
+            try capture.expectNoReply();
+
+            // Still in alt screen after DECSTR.
+            terminal.debugFeedBytes(session, "\x1b[?1049$p");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[?1049;1$y", reply);
+            }
+
+            {
+                const snap = session.snapshot();
+                try std.testing.expect(snap.alt_active);
+                try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 0).codepoint);
+            }
+
+            terminal.debugFeedBytes(session, "\x1b[?1049l");
+
+            {
+                const snap = session.snapshot();
+                try std.testing.expect(!snap.alt_active);
+                try std.testing.expectEqual(@as(u32, 'P'), session.getCell(0, 0).codepoint);
+            }
+        }
+    }.run);
+}
+
 test "terminal CSI ?1004p without $ intermediate does not trigger DECRQM reply" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
