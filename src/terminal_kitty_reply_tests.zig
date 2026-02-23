@@ -161,3 +161,53 @@ test "kitty query build error reply message maps bad png" {
 test "kitty query build error reply message maps invalid data" {
     try std.testing.expectEqualStrings("EINVAL", kitty.kittyQueryBuildErrorReplyMessage(error.InvalidData));
 }
+
+test "kitty query chunk build reply emits OK on builder success" {
+    var self = TestSelf{
+        .allocator = std.testing.allocator,
+        .pty = FakePty.init(),
+    };
+    defer if (self.pty) |*pty| pty.deinit();
+
+    const Ctx = struct {};
+    const Builder = struct {
+        fn run(_: Ctx, _: anytype, _: u32, _: kitty.KittyControl) kitty.KittyBuildError!void {}
+    };
+
+    const handled = kitty.handleKittyQueryChunkBuildReply(
+        &self,
+        .{ .action = 'q', .image_id = 12, .format = 32, .width = 1, .height = 1 },
+        12,
+        16,
+        Ctx{},
+        Builder.run,
+    );
+    try std.testing.expect(handled);
+    try std.testing.expectEqualStrings("\x1b_Gi=12;OK\x1b\\", self.pty.?.writes.items);
+}
+
+test "kitty query chunk build reply emits EBADPNG on builder error" {
+    var self = TestSelf{
+        .allocator = std.testing.allocator,
+        .pty = FakePty.init(),
+    };
+    defer if (self.pty) |*pty| pty.deinit();
+
+    const Ctx = struct {};
+    const Builder = struct {
+        fn run(_: Ctx, _: anytype, _: u32, _: kitty.KittyControl) kitty.KittyBuildError!void {
+            return error.BadPng;
+        }
+    };
+
+    const handled = kitty.handleKittyQueryChunkBuildReply(
+        &self,
+        .{ .action = 'q', .image_id = 12, .format = 100 },
+        12,
+        67,
+        Ctx{},
+        Builder.run,
+    );
+    try std.testing.expect(handled);
+    try std.testing.expectEqualStrings("\x1b_Gi=12;EBADPNG\x1b\\", self.pty.?.writes.items);
+}

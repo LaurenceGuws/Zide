@@ -347,6 +347,22 @@ Verification:
 - `zig test src/terminal_kitty_reply_tests.zig -lc`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 5 / `PA-04c` integrated chunk-build reply seam):
+- Extracted `handleKittyQueryChunkBuildReply()` to cover the integrated `a=q` chunk-processing reply control flow after payload load:
+  - size check / `ENODATA`
+  - build error mapping (`EBADPNG` / `EINVAL`)
+  - success `OK` reply
+- `parseKittyGraphics()` now uses this helper with an injected builder callback that wraps the real `buildKittyImage()` path and preserves existing behavior.
+- Added direct unit tests for integrated success and build-error branches via injected fake builders.
+
+Files:
+- `src/terminal/kitty/graphics.zig`
+- `src/terminal_kitty_reply_tests.zig`
+
+Verification:
+- `zig test src/terminal_kitty_reply_tests.zig -lc`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
@@ -520,6 +536,7 @@ Priority notes:
 - Expanded `PA-04b` delete selector replay coverage to include `c/C`, `z/Z`, and `r/R`.
 - Advanced `PA-04c` query coverage with an extracted `a=q` early-reply seam and unit tests (`EINVAL` missing id / metadata-only `OK`).
 - Advanced `PA-04c` query payload-validation coverage with extracted helper tests for `EINVAL`, `ENODATA`, and `EBADPNG` reply mapping branches.
+- Advanced `PA-04c` integrated query control-flow coverage with `a=q` chunk-build reply seam tests (success + build-error paths).
 - Advanced `PA-05` to `partial` (unsupported `alternate_key` no longer advertised via key-mode flags).
 - Advanced `PA-05` disambiguation support: modified chars and ambiguous control chars now emit CSI-u without `report_text`; aligned encoder test helper/golden with runtime behavior.
 - Tightened `PA-05` key-encoder test helper gating/mappings so replay/unit tests do not falsely advertise unsupported key-mode outputs.
