@@ -489,6 +489,10 @@ test "kitty parse query quiet=2 suppresses compressed png EBADPNG" {
     }.run);
 }
 
+// Query precedence matrix coverage (current scope):
+// - non-missing-id invalid compression (`o=1`)
+// - missing-id preflight
+// - non-missing-id zlib preflight (`m/O + o=z`)
 test "kitty parse query invalid-compression precedence matrix" {
     const reply_cases = [_]struct {
         name: []const u8,
