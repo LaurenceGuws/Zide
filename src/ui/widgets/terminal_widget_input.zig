@@ -54,6 +54,7 @@ pub fn handleInput(
     const max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
     const cache = self.session.renderCache();
     const show_scrollbar = !cache.alt_active and !self.session.mouseReportingEnabled() and total_lines > rows;
+    const mouse_on_scrollbar = show_scrollbar and common.pointInRect(mouse.x, mouse.y, scrollbar_x, scrollbar_y, scrollbar_w, scrollbar_h);
     const scroll_log = app_logger.logger("terminal.scroll");
 
     const r = shell.rendererPtr();
@@ -341,7 +342,46 @@ pub fn handleInput(
             }
         }
 
-        if (!mouse_reporting and in_terminal) {
+        if (!mouse_reporting and in_terminal and mouse_on_scrollbar) {
+            if (input_batch.mousePressed(.left)) {
+                scroll_dragging.* = true;
+                const track_h = scrollbar_h;
+                const min_thumb_h: f32 = 18;
+                const scroll_offset_local = self.session.scrollOffset();
+                const ratio = if (max_scroll_offset > 0)
+                    @as(f32, @floatFromInt(max_scroll_offset - scroll_offset_local)) / @as(f32, @floatFromInt(max_scroll_offset))
+                else
+                    1.0;
+                const thumb = common.computeScrollbarThumb(scrollbar_y, track_h, rows, total_lines, min_thumb_h, ratio);
+                scroll_grab_offset.* = mouse.y - thumb.thumb_y;
+                if (scroll_log.enabled_file or scroll_log.enabled_console) {
+                    scroll_log.logf("scrollbar press offset={d}", .{scroll_offset_local});
+                }
+                handled = true;
+            }
+        }
+
+        if (!mouse_reporting and scroll_dragging.*) {
+            if (input_batch.mouseDown(.left)) {
+                const track_h = scrollbar_h;
+                const min_thumb_h: f32 = 18;
+                const thumb = common.computeScrollbarThumb(scrollbar_y, track_h, rows, total_lines, min_thumb_h, 0.0);
+                const available = thumb.available;
+                const clamped_mouse = @min(@max(mouse.y - scroll_grab_offset.*, scrollbar_y), scrollbar_y + available);
+                const ratio = if (available > 0) (clamped_mouse - scrollbar_y) / available else 0;
+                const target_offset = @as(usize, @intFromFloat(@round(@as(f32, @floatFromInt(max_scroll_offset)) * (1.0 - ratio))));
+                self.session.setScrollOffset(target_offset);
+                if (scroll_log.enabled_file or scroll_log.enabled_console) {
+                    scroll_log.logf("scrollbar drag offset={d} ratio={d:.3}", .{ target_offset, ratio });
+                }
+                handled = true;
+            } else {
+                scroll_dragging.* = false;
+            }
+        }
+
+        const suppress_selection_for_scrollbar = mouse_on_scrollbar or scroll_dragging.*;
+        if (!mouse_reporting and in_terminal and !suppress_selection_for_scrollbar) {
             if (input_batch.mousePressed(.left)) {
                 const local_x = mouse.x - x;
                 const local_y = mouse.y - y;
@@ -416,44 +456,6 @@ pub fn handleInput(
             }
         }
 
-        const mouse_on_scrollbar = show_scrollbar and common.pointInRect(mouse.x, mouse.y, scrollbar_x, scrollbar_y, scrollbar_w, scrollbar_h);
-        if (!mouse_reporting and in_terminal and mouse_on_scrollbar) {
-            if (input_batch.mousePressed(.left)) {
-                scroll_dragging.* = true;
-                const track_h = scrollbar_h;
-                const min_thumb_h: f32 = 18;
-                const scroll_offset_local = self.session.scrollOffset();
-                const ratio = if (max_scroll_offset > 0)
-                    @as(f32, @floatFromInt(max_scroll_offset - scroll_offset_local)) / @as(f32, @floatFromInt(max_scroll_offset))
-                else
-                    1.0;
-                const thumb = common.computeScrollbarThumb(scrollbar_y, track_h, rows, total_lines, min_thumb_h, ratio);
-                scroll_grab_offset.* = mouse.y - thumb.thumb_y;
-                if (scroll_log.enabled_file or scroll_log.enabled_console) {
-                    scroll_log.logf("scrollbar press offset={d}", .{scroll_offset_local});
-                }
-                handled = true;
-            }
-        }
-
-        if (!mouse_reporting and scroll_dragging.*) {
-            if (input_batch.mouseDown(.left)) {
-                const track_h = scrollbar_h;
-                const min_thumb_h: f32 = 18;
-                const thumb = common.computeScrollbarThumb(scrollbar_y, track_h, rows, total_lines, min_thumb_h, 0.0);
-                const available = thumb.available;
-                const clamped_mouse = @min(@max(mouse.y - scroll_grab_offset.*, scrollbar_y), scrollbar_y + available);
-                const ratio = if (available > 0) (clamped_mouse - scrollbar_y) / available else 0;
-                const target_offset = @as(usize, @intFromFloat(@round(@as(f32, @floatFromInt(max_scroll_offset)) * (1.0 - ratio))));
-                self.session.setScrollOffset(target_offset);
-                if (scroll_log.enabled_file or scroll_log.enabled_console) {
-                    scroll_log.logf("scrollbar drag offset={d} ratio={d:.3}", .{ target_offset, ratio });
-                }
-                handled = true;
-            } else {
-                scroll_dragging.* = false;
-            }
-        }
     }
 
     return handled;
