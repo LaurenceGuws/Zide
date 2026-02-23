@@ -1613,26 +1613,26 @@ Implemented (increment 1 / `PA-08a` first CSI/private-mode gap inventory pass):
 - This is a planning/inventory increment (no behavior change) intended to feed
   `PA-08d` implementable follow-on items.
 
-Inventory snapshot (`PA-08a`, first pass) checklist:
+Inventory snapshot (`PA-08a`, first pass) checklist (audit-traceable):
 
-| Area | Status | Priority | Tested | Notes |
-|---|---|---|---|---|
-| Core cursor movement/positioning (`A/B/C/D/E/F/G/H/f/d`) | implemented | high | replay | Strong baseline support for real TUIs |
-| Erase / insert-delete char+line (`J/K/@/P/X/L/M`) | implemented | high | replay | Covered in existing fixtures |
-| Scroll region + region scroll (`r/S/T`) | implemented | high | replay | Includes scroll-region fixtures |
-| SGR + cursor style (`m/q`) | implemented | high | replay | Basic/256/truecolor/underline-color present |
-| DSR/DA basic replies (`n/c`) | implemented | high | unit+PTY | PTY-capture reply tests added |
-| DEC private modes (alt screen/DECCKM/DECOM/DECAWM/bracketed paste/sync update/mouse 1000/1002/1003/1006) | implemented | high | replay+app | Strong modern TUI coverage |
-| Kitty keyboard mode controls (`CSI >u/<u/=u/?u`) | implemented | high | replay+unit | Encoding parity still partial under `PA-05` |
-| Tabulation family beyond `TBC` | partial | medium | replay | `CHT/CBT/TBC` now implemented; tab-stop report/edit breadth still partial |
-| Mode query/report breadth (`DECRQM` etc.) | partial | high | replay+unit+PTY (partial) | Private `DECRQM` replies implemented for common DEC modes + ANSI mode `20`; replay reply assertions now available |
-| Focus reporting mode (`?1004`) + event emission path | partial | high | replay+PTY | Implemented with window + pane source toggles; semantics may evolve |
-| Terminal reset conveniences (`DECSTR`, CSI soft reset breadth) | partial | medium | no | Not prioritized yet |
-| Left/right margins (`DECSLRM`) + rectangular semantics | partial | medium | no | xterm-compat gap for some advanced TUIs |
-| Alternate mouse encodings (`1005`, `1015`) | todo | low/medium | no | Add only if app compatibility demands |
-| Xterm window ops (`CSI ... t`) | todo | low | no | Likely low priority unless demanded |
-| Printer/media/status extensions | todo | low | no | Out of current scope |
-| Legacy/rare tab-stop report/edit variants | todo | low | no | Keep deferred unless an app/seed requires them |
+| Area | Status | Priority | Tested | Zide refs (impl/tests) | Reference refs | Notes |
+|---|---|---|---|---|---|---|
+| Core cursor movement/positioning (`A/B/C/D/E/F/G/H/f/d`) | implemented | high | replay | `src/terminal/protocol/csi.zig`, `fixtures/terminal/*cursor*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig` | Strong baseline support for real TUIs |
+| Erase / insert-delete char+line (`J/K/@/P/X/L/M`) | implemented | high | replay | `src/terminal/protocol/csi.zig`, replay fixtures in `fixtures/terminal/` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig` | Covered in existing fixtures |
+| Scroll region + region scroll (`r/S/T`) | implemented | high | replay | `src/terminal/protocol/csi.zig`, `fixtures/terminal/scroll_region_basic.*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig` | Includes scroll-region fixtures |
+| SGR + cursor style (`m/q`) | implemented | high | replay | `src/terminal/protocol/csi.zig`, `fixtures/terminal/*sgr*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig` | Basic/256/truecolor/underline-color present |
+| DSR/DA basic replies (`n/c`) | implemented | high | unit+PTY+replay | `src/terminal/protocol/csi.zig`, `src/terminal_csi_reply_tests.zig`, `fixtures/terminal/da_primary_query_reply.*`, `fixtures/terminal/dsr_*_query_reply.*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/foot/csi.c` | PTY-capture + replay reply tests added |
+| DEC private modes (alt screen/DECCKM/DECOM/DECAWM/bracketed paste/sync update/mouse 1000/1002/1003/1006) | implemented | high | replay+app | `src/terminal/protocol/csi.zig`, replay fixtures, app validation (nvim/lazygit) | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig`, `reference_repos/terminals/foot/csi.c` | Strong modern TUI coverage |
+| Kitty keyboard mode controls (`CSI >u/<u/=u/?u`) | implemented | high | replay+unit | `src/terminal/protocol/csi.zig`, `src/terminal/input/*`, encoder fixtures in `fixtures/terminal/encoder/` | `reference_repos/terminals/kitty` (protocol behavior), `reference_repos/terminals/ghostty/src/terminal/stream.zig` | Encoding parity still partial under `PA-05` |
+| Tabulation family beyond `TBC` | partial | medium | replay | `src/terminal/protocol/csi.zig` (`I/Z/g`), `src/terminal/model/screen/tabstops.zig`, `fixtures/terminal/csi_tab_cht_cbt_counts.*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig` | `CHT/CBT/TBC` now implemented; tab-stop report/edit breadth still partial |
+| Mode query/report breadth (`DECRQM` etc.) | partial | high | replay+unit+PTY (partial) | `src/terminal/protocol/csi.zig`, `src/terminal_csi_reply_tests.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/decrqm_*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/foot/csi.c`, `reference_repos/terminals/ghostty/src/terminal/stream.zig`, `reference_repos/terminals/kitty/docs/clipboard.rst` | Private `DECRQM` replies implemented for common DEC modes + ANSI mode `20`; replay reply assertions now available |
+| Focus reporting mode (`?1004`) + event emission path | partial | high | replay+PTY | `src/terminal/protocol/csi.zig`, `src/terminal/core/terminal_session.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/focus_reporting_mode_*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/foot/csi.c` | Implemented with window + pane source toggles; semantics may evolve |
+| Terminal reset conveniences (`DECSTR`, CSI soft reset breadth) | partial | medium | no | parser/protocol currently dispatch by final only (`src/terminal/parser/csi.zig`, `src/terminal/protocol/csi.zig`) | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/kitty/kitty/vt-parser.c`, `reference_repos/terminals/ghostty/src/terminal/stream.zig` | Not prioritized yet; blocked by `PA-08f` intermediate handling for clean dispatch |
+| Left/right margins (`DECSLRM`) + rectangular semantics | partial | medium | no | no Zide implementation yet (`src/terminal/protocol/csi.zig`) | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig`, `reference_repos/terminals/ghostty/src/terminal/Terminal.zig` | xterm-compat gap for some advanced TUIs |
+| Alternate mouse encodings (`1005`, `1015`) | todo | low/medium | no | `src/terminal/protocol/csi.zig`, `src/terminal/input/mouse_report.zig` (current modes) | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/foot/csi.c` | Add only if app compatibility demands |
+| Xterm window ops (`CSI ... t`) | todo | low | no | `src/terminal/protocol/csi.zig` (no `t` support) | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt` | Likely low priority unless demanded |
+| Printer/media/status extensions | todo | low | no | no Zide support | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt` | Out of current scope |
+| Legacy/rare tab-stop report/edit variants | todo | low | no | current tab support in `src/terminal/protocol/csi.zig`, `src/terminal/model/screen/tabstops.zig` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt` | Keep deferred unless an app/seed requires them |
 
 Suggested `PA-08d` promotion candidates (first pass):
 1. `?1004` focus reporting mode + event emission (real TUI impact)
