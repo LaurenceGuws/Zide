@@ -1809,6 +1809,7 @@ Verification:
 Implemented (increment 10 / `PA-08g` `DECRQM` reply-policy prep + keypad mode query):
 - `PA-08f` groundwork: CSI parser now captures intermediate bytes (`$`, `!`, `#`, etc.), and `DECRQM` dispatch requires the `$` intermediate so unrelated `CSI ... p` families no longer over-match.
 - Added PTY no-reply tests for non-`DECRQM` `CSI p` forms (`CSI ! p`, `CSI ?1004p`, `CSI #p`) and CSI debug logging now includes captured intermediates.
+- Added a replay no-reply fixture that locks deterministic ignore behavior for non-`DECRQM` intermediate-bearing `CSI p` sequences (`CSI ! p`, `CSI # p`, malformed `CSI ?1004p`) end-to-end in fixture flow.
 - Refactored `DECRQM` state reporting to use an explicit `DecrpmState` enum (`0..4`) to support future parity policy work cleanly.
 - Expanded `DECRQM` private-mode coverage with keypad application mode `?66` (reports state from existing `DECPAM` / `DECPNM` tracking).
 - Began `Pm=4` adoption for clearly unsupported fixed DEC-private modes (`?67`, `?1001`, `?1005`, `?1015`, `?1016`) to move closer to xterm/foot `DECRPM` semantics.
