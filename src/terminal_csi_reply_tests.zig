@@ -63,13 +63,13 @@ test "CSI DSR unsupported mode returns false and writes nothing" {
 test "CSI DECRQM private reply bytes" {
     var pty = FakePty.init();
     defer pty.deinit();
-    try std.testing.expect(csi.writeDecrqmReply(&pty, true, 1004, 1));
+    try std.testing.expect(csi.writeDecrqmReply(&pty, true, 1004, .set));
     try std.testing.expectEqualStrings("\x1b[?1004;1$y", pty.writes.items);
 }
 
 test "CSI DECRQM ansi reply bytes" {
     var pty = FakePty.init();
     defer pty.deinit();
-    try std.testing.expect(csi.writeDecrqmReply(&pty, false, 20, 2));
+    try std.testing.expect(csi.writeDecrqmReply(&pty, false, 20, .reset));
     try std.testing.expectEqualStrings("\x1b[20;2$y", pty.writes.items);
 }

@@ -5,6 +5,14 @@ const app_logger = @import("../../app_logger.zig");
 
 const Color = types.Color;
 
+pub const DecrpmState = enum(u8) {
+    not_recognized = 0,
+    set = 1,
+    reset = 2,
+    permanently_set = 3,
+    permanently_reset = 4,
+};
+
 fn csiIntermediatesEq(action: parser_csi.CsiAction, bytes: []const u8) bool {
     if (action.intermediates_len != bytes.len) return false;
     return std.mem.eql(u8, action.intermediates[0..action.intermediates_len], bytes);
@@ -396,18 +404,18 @@ pub fn writeDsrReply(pty: anytype, leader: u8, mode: i32, row_1: usize, col_1: u
     return false;
 }
 
-pub fn writeDecrqmReply(pty: anytype, private: bool, mode: i32, state: u8) bool {
+pub fn writeDecrqmReply(pty: anytype, private: bool, mode: i32, state: DecrpmState) bool {
     var buf: [32]u8 = undefined;
     const seq = if (private)
-        std.fmt.bufPrint(&buf, "\x1b[?{d};{d}$y", .{ mode, state })
+        std.fmt.bufPrint(&buf, "\x1b[?{d};{d}$y", .{ mode, @intFromEnum(state) })
     else
-        std.fmt.bufPrint(&buf, "\x1b[{d};{d}$y", .{ mode, state });
+        std.fmt.bufPrint(&buf, "\x1b[{d};{d}$y", .{ mode, @intFromEnum(state) });
     const bytes = seq catch return false;
     _ = pty.write(bytes) catch return false;
     return true;
 }
 
-fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) u8 {
+fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState {
     return switch (mode) {
         1 => boolModeState(self.app_cursor_keys),
         3 => boolModeState(self.column_mode_132),
@@ -423,19 +431,19 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) u8 {
         1006 => boolModeState(self.input.mouse_mode_sgr),
         2004 => boolModeState(self.bracketed_paste),
         2026 => boolModeState(self.sync_updates_active),
-        else => 0, // not recognized
+        else => .not_recognized,
     };
 }
 
-fn decrqmAnsiModeState(screen: anytype, mode: i32) u8 {
+fn decrqmAnsiModeState(screen: anytype, mode: i32) DecrpmState {
     return switch (mode) {
         20 => boolModeState(screen.newline_mode),
-        else => 0,
+        else => .not_recognized,
     };
 }
 
-fn boolModeState(enabled: bool) u8 {
-    return if (enabled) 1 else 2; // DECRPM: 1=set, 2=reset
+fn boolModeState(enabled: bool) DecrpmState {
+    return if (enabled) .set else .reset;
 }
 
 fn writeConst(pty: anytype, seq: []const u8) bool {
