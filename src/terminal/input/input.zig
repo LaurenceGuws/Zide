@@ -33,6 +33,7 @@ pub const InputState = struct {
     mouse_mode_button: bool,
     mouse_mode_any: bool,
     mouse_mode_sgr: bool,
+    mouse_mode_sgr_pixels_1016: bool,
     mouse_last_row: usize,
     mouse_last_col: usize,
     mouse_last_buttons: u8,
@@ -43,6 +44,7 @@ pub const InputState = struct {
             .mouse_mode_button = false,
             .mouse_mode_any = false,
             .mouse_mode_sgr = false,
+            .mouse_mode_sgr_pixels_1016 = false,
             .mouse_last_row = 0,
             .mouse_last_col = 0,
             .mouse_last_buttons = 0,
@@ -54,6 +56,7 @@ pub const InputState = struct {
         self.mouse_mode_button = false;
         self.mouse_mode_any = false;
         self.mouse_mode_sgr = false;
+        self.mouse_mode_sgr_pixels_1016 = false;
         self.mouse_last_row = 0;
         self.mouse_last_col = 0;
         self.mouse_last_buttons = 0;
@@ -99,10 +102,18 @@ pub const InputState = struct {
         if (self.mouse_mode_sgr) {
             var buf: [64]u8 = undefined;
             const terminator: u8 = if (event.kind == .release) 'm' else 'M';
+            const sgr_x: u32 = if (self.mouse_mode_sgr_pixels_1016)
+                (if (event.pixel_x) |x| x + 1 else @as(u32, @intCast(col + 1)))
+            else
+                @as(u32, @intCast(col + 1));
+            const sgr_y: u32 = if (self.mouse_mode_sgr_pixels_1016)
+                (if (event.pixel_y) |y| y + 1 else @as(u32, @intCast(row + 1)))
+            else
+                @as(u32, @intCast(row + 1));
             const seq = std.fmt.bufPrint(
                 &buf,
                 "\x1b[<{d};{d};{d}{c}",
-                .{ code, col + 1, row + 1, terminator },
+                .{ code, sgr_x, sgr_y, terminator },
             ) catch return false;
             _ = try pty.write(seq);
         } else {

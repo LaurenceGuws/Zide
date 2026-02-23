@@ -97,6 +97,8 @@ pub const MouseEvent = struct {
     button: MouseButton,
     row: usize,
     col: usize,
+    pixel_x: ?u32 = null,
+    pixel_y: ?u32 = null,
     mod: Modifier,
     buttons_down: u8,
 };

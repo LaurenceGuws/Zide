@@ -157,8 +157,11 @@ test "terminal DECRQM private queries report common mode set/reset states" {
                 .{ .mode = 1003, .set_seq = "\x1b[?1003h", .reset_seq = "\x1b[?1003l" },
                 .{ .mode = 1006, .set_seq = "\x1b[?1006h", .reset_seq = "\x1b[?1006l" },
                 .{ .mode = 1007, .set_seq = "\x1b[?1007h", .reset_seq = "\x1b[?1007l", .default_set = true },
+                .{ .mode = 1016, .set_seq = "\x1b[?1016h", .reset_seq = "\x1b[?1016l" },
                 .{ .mode = 2004, .set_seq = "\x1b[?2004h", .reset_seq = "\x1b[?2004l" },
                 .{ .mode = 2026, .set_seq = "\x1b[?2026h", .reset_seq = "\x1b[?2026l" },
+                .{ .mode = 2027, .set_seq = "\x1b[?2027h", .reset_seq = "\x1b[?2027l" },
+                .{ .mode = 2031, .set_seq = "\x1b[?2031h", .reset_seq = "\x1b[?2031l" },
                 .{ .mode = 2048, .set_seq = "\x1b[?2048h", .reset_seq = "\x1b[?2048l" },
                 .{ .mode = 5522, .set_seq = "\x1b[?5522h", .reset_seq = "\x1b[?5522l" },
             };
@@ -473,7 +476,7 @@ test "terminal DECRQM private query returns Pm=0 for provisional unsupported mod
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            const modes = [_]i32{ 45, 1016, 2031 };
+            const modes = [_]i32{ 45 };
 
             for (modes) |mode| {
                 var qbuf: [32]u8 = undefined;
@@ -484,6 +487,163 @@ test "terminal DECRQM private query returns Pm=0 for provisional unsupported mod
                 const expected = try std.fmt.allocPrint(allocator, "\x1b[?{d};0$y", .{mode});
                 defer allocator.free(expected);
                 try std.testing.expectEqualStrings(expected, reply);
+            }
+        }
+    }.run);
+}
+
+test "terminal SGR pixel mouse mode ?1016 emits pixel coordinates when enabled" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            terminal.debugFeedBytes(session, "\x1b[?1000h\x1b[?1002h\x1b[?1006h");
+
+            _ = try session.reportMouseEvent(.{
+                .kind = .press,
+                .button = .left,
+                .row = 1,
+                .col = 2,
+                .pixel_x = 19,
+                .pixel_y = 33,
+                .mod = terminal.VTERM_MOD_NONE,
+                .buttons_down = 1,
+            });
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[<0;3;2M", reply);
+            }
+
+            terminal.debugFeedBytes(session, "\x1b[?1016h");
+            _ = try session.reportMouseEvent(.{
+                .kind = .press,
+                .button = .left,
+                .row = 1,
+                .col = 2,
+                .pixel_x = 19,
+                .pixel_y = 33,
+                .mod = terminal.VTERM_MOD_NONE,
+                .buttons_down = 1,
+            });
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[<0;20;34M", reply);
+            }
+
+            _ = try session.reportMouseEvent(.{
+                .kind = .move,
+                .button = .none,
+                .row = 2,
+                .col = 3,
+                .pixel_x = 27,
+                .pixel_y = 49,
+                .mod = terminal.VTERM_MOD_NONE,
+                .buttons_down = 1,
+            });
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[<32;28;50M", reply);
+            }
+
+            _ = try session.reportMouseEvent(.{
+                .kind = .release,
+                .button = .left,
+                .row = 2,
+                .col = 3,
+                .pixel_x = 27,
+                .pixel_y = 49,
+                .mod = terminal.VTERM_MOD_NONE,
+                .buttons_down = 0,
+            });
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[<0;28;50m", reply);
+            }
+
+            const WheelCase = struct {
+                button: terminal.MouseButton,
+                mod: terminal.Modifier,
+                expected: []const u8,
+            };
+            const wheel_cases = [_]WheelCase{
+                .{ .button = .wheel_up, .mod = terminal.VTERM_MOD_SHIFT, .expected = "\x1b[<68;41;61M" },
+                .{ .button = .wheel_down, .mod = terminal.VTERM_MOD_ALT, .expected = "\x1b[<73;41;61M" },
+                .{ .button = .wheel_up, .mod = terminal.VTERM_MOD_CTRL, .expected = "\x1b[<80;41;61M" },
+                .{ .button = .wheel_up, .mod = terminal.VTERM_MOD_SHIFT | terminal.VTERM_MOD_ALT, .expected = "\x1b[<76;41;61M" },
+                .{ .button = .wheel_down, .mod = terminal.VTERM_MOD_SHIFT | terminal.VTERM_MOD_CTRL, .expected = "\x1b[<85;41;61M" },
+            };
+            for (wheel_cases) |case| {
+                _ = try session.reportMouseEvent(.{
+                    .kind = .wheel,
+                    .button = case.button,
+                    .row = 4,
+                    .col = 5,
+                    .pixel_x = 40,
+                    .pixel_y = 60,
+                    .mod = case.mod,
+                    .buttons_down = 0,
+                });
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings(case.expected, reply);
+            }
+
+            // Lock wheel up/down ordering explicitly in pixel-SGR mode.
+            _ = try session.reportMouseEvent(.{
+                .kind = .wheel,
+                .button = .wheel_down,
+                .row = 4,
+                .col = 5,
+                .pixel_x = 40,
+                .pixel_y = 60,
+                .mod = terminal.VTERM_MOD_NONE,
+                .buttons_down = 0,
+            });
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[<65;41;61M", reply);
+            }
+            _ = try session.reportMouseEvent(.{
+                .kind = .wheel,
+                .button = .wheel_up,
+                .row = 4,
+                .col = 5,
+                .pixel_x = 40,
+                .pixel_y = 60,
+                .mod = terminal.VTERM_MOD_NONE,
+                .buttons_down = 0,
+            });
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[<64;41;61M", reply);
+            }
+
+            terminal.debugFeedBytes(session, "\x1b[?1006l");
+            _ = try session.reportMouseEvent(.{
+                .kind = .press,
+                .button = .left,
+                .row = 1,
+                .col = 2,
+                .pixel_x = 99,
+                .pixel_y = 199,
+                .mod = terminal.VTERM_MOD_NONE,
+                .buttons_down = 1,
+            });
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqual(@as(usize, 6), reply.len);
+                try std.testing.expectEqual(@as(u8, 0x1b), reply[0]);
+                try std.testing.expectEqual(@as(u8, '['), reply[1]);
+                try std.testing.expectEqual(@as(u8, 'M'), reply[2]);
+                try std.testing.expectEqual(@as(u8, 32), reply[3]);
+                try std.testing.expectEqual(@as(u8, 35), reply[4]);
+                try std.testing.expectEqual(@as(u8, 34), reply[5]);
             }
         }
     }.run);
@@ -513,6 +673,95 @@ test "terminal in-band resize notifications ?2048 emit CSI 48 t when enabled" {
     }.run);
 }
 
+test "terminal in-band resize notifications ?2048 use zero pixel fallback when cell size unknown" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            terminal.debugFeedBytes(session, "\x1b[?2048h");
+            try session.resize(6, 12);
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[48;6;12;0;0t", reply);
+            }
+        }
+    }.run);
+}
+
+test "terminal color scheme notifications ?2031 reply to DSR ?996 and emit on change" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+
+            terminal.debugFeedBytes(session, "\x1b[?996n");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[?997;1n", reply);
+            }
+
+            try std.testing.expect(!(try session.reportColorSchemeChanged(false)));
+            try capture.expectNoReply();
+
+            terminal.debugFeedBytes(session, "\x1b[?2031h");
+            try std.testing.expect(try session.reportColorSchemeChanged(false));
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[?997;2n", reply);
+            }
+
+            terminal.debugFeedBytes(session, "\x1b[?996n");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[?997;2n", reply);
+            }
+
+            terminal.debugFeedBytes(session, "\x1b[?2031l");
+            try std.testing.expect(!(try session.reportColorSchemeChanged(true)));
+            try capture.expectNoReply();
+        }
+    }.run);
+}
+
+test "terminal grapheme cluster mode ?2027 first slice is queryable no-op for text model" {
+    const allocator = std.testing.allocator;
+
+    var a = try terminal.TerminalSession.init(allocator, 6, 12);
+    defer a.deinit();
+    var b = try terminal.TerminalSession.init(allocator, 6, 12);
+    defer b.deinit();
+
+    // Representative multicodepoint sequence (emoji ZWJ family) should currently
+    // behave the same in Zide regardless of ?2027 until shaping semantics are implemented.
+    const seq = "\xF0\x9F\x91\xA8\xE2\x80\x8D\xF0\x9F\x91\xA9\xE2\x80\x8D\xF0\x9F\x91\xA7";
+
+    terminal.debugFeedBytes(a, seq);
+    terminal.debugFeedBytes(b, "\x1b[?2027h");
+    terminal.debugFeedBytes(b, seq);
+
+    try std.testing.expect(!a.grapheme_cluster_shaping_2027);
+    try std.testing.expect(b.grapheme_cluster_shaping_2027);
+
+    const posa = a.getCursorPos();
+    const posb = b.getCursorPos();
+    try std.testing.expectEqual(posa.row, posb.row);
+    try std.testing.expectEqual(posa.col, posb.col);
+
+    var row: usize = 0;
+    while (row < 2) : (row += 1) {
+        var col: usize = 0;
+        while (col < 8) : (col += 1) {
+            const ca = a.getCell(row, col);
+            const cb = b.getCell(row, col);
+            try std.testing.expectEqual(ca.codepoint, cb.codepoint);
+            try std.testing.expectEqual(ca.width, cb.width);
+            try std.testing.expectEqual(ca.combining_len, cb.combining_len);
+        }
+    }
+}
+
 test "terminal DECSTR restores default-set modes ?8 and ?1007" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
@@ -534,6 +783,81 @@ test "terminal DECSTR restores default-set modes ?8 and ?1007" {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings("\x1b[?8;1$y\x1b[?1007;1$y", reply);
+            }
+        }
+    }.run);
+}
+
+test "terminal DECSTR suppresses ?2031 and ?2048 live emissions after reset" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            session.setCellSize(8, 16);
+
+            terminal.debugFeedBytes(session, "\x1b[?2031h\x1b[?2048h");
+
+            try std.testing.expect(try session.reportColorSchemeChanged(false));
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[?997;2n", reply);
+            }
+
+            try session.resize(7, 13);
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[48;7;13;112;104t", reply);
+            }
+
+            terminal.debugFeedBytes(session, "\x1b[!p");
+            try capture.expectNoReply();
+
+            try std.testing.expect(!(try session.reportColorSchemeChanged(true)));
+            try capture.expectNoReply();
+
+            try session.resize(8, 14);
+            try capture.expectNoReply();
+
+            terminal.debugFeedBytes(session, "\x1b[?2048h");
+            try session.resize(9, 15);
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[48;9;15;144;120t", reply);
+            }
+        }
+    }.run);
+}
+
+test "terminal DECSTR suppresses ?5522 unsolicited paste events until re-enabled" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+
+            terminal.debugFeedBytes(session, "\x1b[?5522h");
+            try std.testing.expect(session.kittyPasteEvents5522Enabled());
+            try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expect(std.mem.startsWith(u8, reply, "\x1b]5522;type=read:status=OK"));
+            }
+
+            terminal.debugFeedBytes(session, "\x1b[!p");
+            try capture.expectNoReply();
+            try std.testing.expect(!session.kittyPasteEvents5522Enabled());
+
+            try std.testing.expect(!(try session.sendKittyPasteEvent5522("hi")));
+            try capture.expectNoReply();
+
+            terminal.debugFeedBytes(session, "\x1b[?5522h");
+            try std.testing.expect(session.kittyPasteEvents5522Enabled());
+            try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expect(std.mem.startsWith(u8, reply, "\x1b]5522;type=read:status=OK"));
             }
         }
     }.run);
@@ -732,7 +1056,7 @@ test "terminal DECSTR resets DECRQM-queryable modes to defaults" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            terminal.debugFeedBytes(session, "\x1b[?1004h\x1b[?1002h\x1b[?2004h\x1b[?5522h\x1b[20h\x1b=");
+            terminal.debugFeedBytes(session, "\x1b[?1004h\x1b[?1002h\x1b[?1016h\x1b[?2004h\x1b[?2027h\x1b[?2031h\x1b[?2048h\x1b[?5522h\x1b[20h\x1b=");
 
             const Case = struct {
                 query: []const u8,
@@ -742,7 +1066,11 @@ test "terminal DECSTR resets DECRQM-queryable modes to defaults" {
             const cases = [_]Case{
                 .{ .query = "\x1b[?1004$p", .before_reply = "\x1b[?1004;1$y", .after_reply = "\x1b[?1004;2$y" },
                 .{ .query = "\x1b[?1002$p", .before_reply = "\x1b[?1002;1$y", .after_reply = "\x1b[?1002;2$y" },
+                .{ .query = "\x1b[?1016$p", .before_reply = "\x1b[?1016;1$y", .after_reply = "\x1b[?1016;2$y" },
                 .{ .query = "\x1b[?2004$p", .before_reply = "\x1b[?2004;1$y", .after_reply = "\x1b[?2004;2$y" },
+                .{ .query = "\x1b[?2027$p", .before_reply = "\x1b[?2027;1$y", .after_reply = "\x1b[?2027;2$y" },
+                .{ .query = "\x1b[?2031$p", .before_reply = "\x1b[?2031;1$y", .after_reply = "\x1b[?2031;2$y" },
+                .{ .query = "\x1b[?2048$p", .before_reply = "\x1b[?2048;1$y", .after_reply = "\x1b[?2048;2$y" },
                 .{ .query = "\x1b[?5522$p", .before_reply = "\x1b[?5522;1$y", .after_reply = "\x1b[?5522;2$y" },
                 .{ .query = "\x1b[20$p", .before_reply = "\x1b[20;1$y", .after_reply = "\x1b[20;2$y" },
                 .{ .query = "\x1b[?66$p", .before_reply = "\x1b[?66;1$y", .after_reply = "\x1b[?66;2$y" },

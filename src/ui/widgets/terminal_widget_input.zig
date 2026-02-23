@@ -150,6 +150,14 @@ pub fn handleInput(
         }
         row = @min(row, rows - 1);
         col = @min(col, cols - 1);
+        const grid_px_w = @as(u32, @intCast(cols)) * @as(u32, @intFromFloat(hit_cell_w));
+        const grid_px_h = @as(u32, @intCast(rows)) * @as(u32, @intFromFloat(hit_cell_h));
+        const raw_px_x_f = @max(0.0, mouse.x - hit_base_x);
+        const raw_px_y_f = @max(0.0, mouse.y - hit_base_y);
+        var pixel_x: u32 = @intFromFloat(raw_px_x_f);
+        var pixel_y: u32 = @intFromFloat(raw_px_y_f);
+        if (grid_px_w > 0) pixel_x = @min(pixel_x, grid_px_w - 1);
+        if (grid_px_h > 0) pixel_y = @min(pixel_y, grid_px_h - 1);
         if ((mousemap_log.enabled_file or mousemap_log.enabled_console) and
             (input_batch.mousePressed(.left) or input_batch.mousePressed(.middle) or input_batch.mousePressed(.right)))
         {
@@ -189,7 +197,7 @@ pub fn handleInput(
             var remaining = wheel_steps;
             while (remaining != 0) {
                 const button: terminal_mod.MouseButton = if (remaining > 0) .wheel_up else .wheel_down;
-                if (try self.session.reportMouseEvent(.{ .kind = .wheel, .button = button, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
+                if (try self.session.reportMouseEvent(.{ .kind = .wheel, .button = button, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) {
                     handled = true;
                 }
                 remaining += if (remaining > 0) -1 else 1;
@@ -197,38 +205,38 @@ pub fn handleInput(
         }
 
         if (input_batch.mousePressed(.left) and !skip_mouse_click) {
-            if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .left, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
+            if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .left, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) {
                 handled = true;
             }
         }
         if (input_batch.mousePressed(.middle)) {
-            if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .middle, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
+            if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .middle, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) {
                 handled = true;
             }
         }
         if (input_batch.mousePressed(.right)) {
-            if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .right, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
+            if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .right, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) {
                 handled = true;
             }
         }
 
         if (input_batch.mouseReleased(.left)) {
-            if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .left, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
+            if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .left, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) {
                 handled = true;
             }
         }
         if (input_batch.mouseReleased(.middle)) {
-            if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .middle, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
+            if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .middle, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) {
                 handled = true;
             }
         }
         if (input_batch.mouseReleased(.right)) {
-            if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .right, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
+            if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .right, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) {
                 handled = true;
             }
         }
 
-        if (try self.session.reportMouseEvent(.{ .kind = .move, .button = .none, .row = row, .col = col, .mod = mod, .buttons_down = buttons_down })) {
+        if (try self.session.reportMouseEvent(.{ .kind = .move, .button = .none, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) {
             handled = true;
         }
     }

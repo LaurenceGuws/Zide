@@ -178,6 +178,22 @@ const AppState = struct {
     font_sample_close_pending: bool,
     font_sample_screenshot_path: ?[]const u8,
 
+    fn isDarkTheme(theme: *const app_shell.Theme) bool {
+        const r = @as(u32, theme.background.r);
+        const g = @as(u32, theme.background.g);
+        const b = @as(u32, theme.background.b);
+        // Integer luma heuristic (BT.601-ish) is enough for ?2031 dark/light signaling.
+        const luma = r * 299 + g * 587 + b * 114;
+        return luma < 128000;
+    }
+
+    fn notifyTerminalColorSchemeChanged(self: *AppState) !void {
+        const dark = isDarkTheme(self.shell.theme());
+        for (self.terminal_widgets.items) |*widget| {
+            _ = try widget.session.reportColorSchemeChanged(dark);
+        }
+    }
+
     pub fn init(allocator: std.mem.Allocator, app_mode: AppMode) !*AppState {
         var config = config_mod.loadConfig(allocator) catch |err| blk: {
             std.debug.print("config load error: {any}\n", .{err});
@@ -536,6 +552,7 @@ const AppState = struct {
         var widget = TerminalWidget.init(term, self.terminal_blink_style);
         widget.setFocusReportSources(self.terminal_focus_report_window_events, self.terminal_focus_report_pane_events);
         try self.terminal_widgets.append(self.allocator, widget);
+        try self.notifyTerminalColorSchemeChanged();
 
         self.show_terminal = true;
     }
@@ -1485,6 +1502,7 @@ const AppState = struct {
             var theme = self.shell.theme().*;
             config_mod.applyThemeConfig(&theme, theme_config);
             self.shell.setTheme(theme);
+            try self.notifyTerminalColorSchemeChanged();
         }
 
         self.editor_wrap = config.editor_wrap orelse self.editor_wrap;
@@ -1817,4 +1835,14 @@ test "editor cursor movement" {
     // Move to end
     editor.moveCursorToLineEnd();
     try std.testing.expectEqual(@as(usize, 6), editor.cursor.col);
+}
+
+test "AppState.isDarkTheme classifies background luma" {
+    var dark_theme = app_shell.Theme{};
+    dark_theme.background = .{ .r = 20, .g = 22, .b = 26 };
+    try std.testing.expect(AppState.isDarkTheme(&dark_theme));
+
+    var light_theme = app_shell.Theme{};
+    light_theme.background = .{ .r = 245, .g = 245, .b = 245 };
+    try std.testing.expect(!AppState.isDarkTheme(&light_theme));
 }

@@ -209,6 +209,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             _ = writeDsrReply(pty, action.leader, mode, pos.row_1, pos.col_1);
                         },
                         15, 25, 26, 55, 56, 75, 85 => _ = writeDsrReply(pty, action.leader, mode, 0, 0),
+                        996 => _ = writeColorSchemePreferenceReply(pty, self.color_scheme_dark),
                         else => {},
                     }
                 } else if (action.leader == 0) {
@@ -296,6 +297,8 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         1049 => self.enterAltScreen(true, true),
                         2004 => self.bracketed_paste = true,
                         2026 => self.setSyncUpdates(true),
+                        2027 => self.grapheme_cluster_shaping_2027 = true,
+                        2031 => self.report_color_scheme_2031 = true,
                         2048 => self.inband_resize_notifications_2048 = true,
                         1004 => {
                             self.focus_reporting = true;
@@ -318,6 +321,10 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             self.updateInputSnapshot();
                         },
                         1007 => self.mouse_alternate_scroll = true,
+                        1016 => {
+                            self.input.mouse_mode_sgr_pixels_1016 = true;
+                            self.updateInputSnapshot();
+                        },
                         5522 => self.kitty_paste_events_5522 = true,
                         else => {},
                     }
@@ -367,6 +374,8 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         1049 => self.exitAltScreen(true),
                         2004 => self.bracketed_paste = false,
                         2026 => self.setSyncUpdates(false),
+                        2027 => self.grapheme_cluster_shaping_2027 = false,
+                        2031 => self.report_color_scheme_2031 = false,
                         2048 => self.inband_resize_notifications_2048 = false,
                         1004 => {
                             self.focus_reporting = false;
@@ -389,6 +398,10 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             self.updateInputSnapshot();
                         },
                         1007 => self.mouse_alternate_scroll = false,
+                        1016 => {
+                            self.input.mouse_mode_sgr_pixels_1016 = false;
+                            self.updateInputSnapshot();
+                        },
                         5522 => self.kitty_paste_events_5522 = false,
                         else => {},
                     }
@@ -462,6 +475,8 @@ fn applyDecstr(self: anytype) void {
     self.app_keypad = false;
     self.auto_repeat = true;
     self.mouse_alternate_scroll = true;
+    self.report_color_scheme_2031 = false;
+    self.grapheme_cluster_shaping_2027 = false;
     self.inband_resize_notifications_2048 = false;
     self.kitty_paste_events_5522 = false;
     self.input.resetMouse();
@@ -506,7 +521,7 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState
         1006 => boolModeState(self.input.mouse_mode_sgr),
         1007 => boolModeState(self.mouse_alternate_scroll),
         1015 => .permanently_reset, // urxvt mouse encoding not supported
-        1016 => .not_recognized, // SGR pixel mouse encoding not yet supported
+        1016 => boolModeState(self.input.mouse_mode_sgr_pixels_1016),
         1034 => .permanently_reset, // 8-bit meta mode not supported
         1035 => .permanently_reset, // num lock modifier mode not supported
         1036 => .permanently_reset, // ESC-prefixed meta mode toggle not supported
@@ -514,7 +529,8 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState
         1070 => .permanently_reset, // sixel private palette mode not supported
         2004 => boolModeState(self.bracketed_paste),
         2026 => boolModeState(self.sync_updates_active),
-        2031 => .not_recognized, // theme change reporting not yet supported
+        2027 => boolModeState(self.grapheme_cluster_shaping_2027),
+        2031 => boolModeState(self.report_color_scheme_2031),
         2048 => boolModeState(self.inband_resize_notifications_2048),
         5522 => boolModeState(self.kitty_paste_events_5522),
         else => .not_recognized,
@@ -534,6 +550,13 @@ fn boolModeState(enabled: bool) DecrpmState {
 }
 
 fn writeConst(pty: anytype, seq: []const u8) bool {
+    _ = pty.write(seq) catch return false;
+    return true;
+}
+
+pub fn writeColorSchemePreferenceReply(pty: anytype, dark: bool) bool {
+    var buf: [16]u8 = undefined;
+    const seq = std.fmt.bufPrint(&buf, "\x1b[?997;{d}n", .{if (dark) @as(u8, 1) else @as(u8, 2)}) catch return false;
     _ = pty.write(seq) catch return false;
     return true;
 }
