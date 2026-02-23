@@ -1142,6 +1142,32 @@ Verification:
 - `zig test src/terminal_input_encoding_tests.zig`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 7):
+- Fixed kitty/disambiguate-mode unmodified cursor/home/end function-key encoding to use the compact legacy-compatible CSI forms (`ESC[A/B/C/D/H/F`) instead of `ESC[1A/B/C/D/H/F`.
+- This was a real app-facing regression (`lazygit` arrows stopped responding after entering kitty keyboard disambiguate mode).
+- Added unit coverage and replay encoder fixtures to lock compact forms for `Up/Down/Left/Right/Home/End` under `flags=1`.
+
+Files:
+- `src/terminal/input/key_encoding.zig`
+- `src/terminal/input/input.zig`
+- `src/terminal_input_encoding_tests.zig`
+- `fixtures/terminal/encoder/csi_u_disambiguate_up_compact.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_up_compact.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_down_compact.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_down_compact.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_left_compact.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_left_compact.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_right_compact.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_right_compact.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_home_compact.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_home_compact.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_end_compact.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_end_compact.golden`
+
+Verification:
+- `zig test src/terminal_input_encoding_tests.zig`
+- `zig build test-terminal-replay -- --all`
+
 Remaining work:
 - Alternate-key reporting is only a US-ASCII shifted-char subset in the legacy char path (no layout-aware base/alternate reporting for general keys yet).
 - Disambiguation semantics are improved but still incomplete (broader kitty keyboard parity and key-map coverage).
