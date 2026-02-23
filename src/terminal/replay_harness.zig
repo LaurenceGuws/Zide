@@ -266,8 +266,9 @@ fn validateAssertions(
             continue;
         }
         if (std.mem.eql(u8, tag, "scrollback")) {
-            // Current fixtures use this tag for scroll/scroll-region semantics as well as
-            // persistent scrollback changes, so treat it as a recognized category for now.
+            if (!fixtureExercisesScrollbackOrScrollSemantics(fixture, debug)) {
+                return error.AssertionScrollbackNotExercised;
+            }
             continue;
         }
         if (std.mem.eql(u8, tag, "title")) {
@@ -311,6 +312,51 @@ fn snapshotHasNonDefaultAttrs(snapshot: terminal.TerminalSnapshot, base_default:
         if (!attrsEqual(cell.attrs, base_default)) return true;
     }
     return false;
+}
+
+fn fixtureExercisesScrollbackOrScrollSemantics(fixture: *const Fixture, debug: terminal.DebugSnapshot) bool {
+    if (debug.scrollback_count > 0 or debug.scrollback_offset > 0) return true;
+    const input = fixture.input;
+    if (inputHasCsiFinal(input, 'r') or // DECSTBM set/reset scroll region
+        inputHasCsiFinal(input, 'S') or // SU
+        inputHasCsiFinal(input, 'T'))
+    {
+        return true;
+    }
+    return inputLineBreakCount(input) >= fixture.meta.rows;
+}
+
+fn inputHasCsiFinal(input: []const u8, final: u8) bool {
+    var i: usize = 0;
+    while (i + 2 < input.len) : (i += 1) {
+        if (input[i] != 0x1b or input[i + 1] != '[') continue;
+        var j = i + 2;
+        while (j < input.len) : (j += 1) {
+            const b = input[j];
+            if (b >= 0x40 and b <= 0x7e) {
+                if (b == final) return true;
+                break;
+            }
+        }
+        i = j;
+    }
+    return false;
+}
+
+fn inputLineBreakCount(input: []const u8) usize {
+    var count: usize = 0;
+    var i: usize = 0;
+    while (i < input.len) : (i += 1) {
+        if (input[i] == '\n') {
+            count += 1;
+            continue;
+        }
+        if (input[i] == '\r') {
+            count += 1;
+            if (i + 1 < input.len and input[i + 1] == '\n') i += 1;
+        }
+    }
+    return count;
 }
 
 fn attrsEqual(a: terminal.CellAttrs, b: terminal.CellAttrs) bool {
