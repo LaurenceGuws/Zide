@@ -1984,6 +1984,8 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
 | Scroll region | reset to full active-screen region | via `Screen.resetState()` |
 | Tabs | reset to default tab stops | via `Screen.resetState()` |
 | Parser partial state / charsets | reset | via `parser.reset()` + `saved_charset = .{}` |
+| Saved cursor restore slot (active screen) | reset/invalidated | `CSI u`/DECRC should not restore pre-`DECSTR` saved cursor on active screen |
+| Saved charset restore slot | reset/invalidated | `CSI u`/DECRC should not restore pre-`DECSTR` saved charset |
 | App cursor keys / app keypad | reset | terminal session global mode bits |
 | Mouse reporting modes | reset | `input.resetMouse()` |
 | Focus reporting / bracketed paste / sync updates | reset | mode defaults |
@@ -2023,6 +2025,8 @@ Implemented (increment 2 / `PA-08h` `DECSTR` end-to-end reset/preserve verificat
 - Added PTY + replay coverage for alt-screen boundary semantics:
   - `DECSTR` does not force `?1049` reset while alt is active
   - primary-screen contents survive `DECSTR` executed while alt-screen is active
+- Added PTY tests proving `DECSTR` invalidates the active-screen saved-cursor restore slot and saved charset restore slot.
+- Added replay fixture that visibly proves charset reset behavior (`DEC special` mapped glyph before `DECSTR`, plain ASCII after `DECSTR`).
 - Added an extra replay fixture with `scrollback` assertion + `DECSTR`; note this currently validates scroll behavior via existing `scrollback` assertion semantics (heuristic/tag semantics), not persistent scrollback count preservation in snapshot output.
 
 Files:
@@ -2036,6 +2040,9 @@ Files:
 - `fixtures/terminal/decstr_alt_screen_preserve_reply_and_grid.vt`
 - `fixtures/terminal/decstr_alt_screen_preserve_reply_and_grid.json`
 - `fixtures/terminal/decstr_alt_screen_preserve_reply_and_grid.golden`
+- `fixtures/terminal/decstr_resets_charset_mapping.vt`
+- `fixtures/terminal/decstr_resets_charset_mapping.json`
+- `fixtures/terminal/decstr_resets_charset_mapping.golden`
 - `fixtures/terminal/decstr_preserves_scrollback.vt`
 - `fixtures/terminal/decstr_preserves_scrollback.json`
 - `fixtures/terminal/decstr_preserves_scrollback.golden`
@@ -2045,6 +2052,7 @@ Verification:
 - `zig build test-terminal-replay -- --fixture decstr_resets_modes_query_reply --update-goldens`
 - `zig build test-terminal-replay -- --fixture decstr_preserves_kitty_placement --update-goldens`
 - `zig build test-terminal-replay -- --fixture decstr_alt_screen_preserve_reply_and_grid --update-goldens`
+- `zig build test-terminal-replay -- --fixture decstr_resets_charset_mapping --update-goldens`
 - `zig build test-terminal-replay -- --fixture decstr_preserves_scrollback --update-goldens`
 - `zig build test-terminal-replay -- --all`
   4. Extend/reset matrix incrementally as reference behavior is confirmed.
