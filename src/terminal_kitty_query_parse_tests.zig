@@ -545,6 +545,9 @@ test "kitty parse query missing-id precedence matrix" {
         .{ .seq = "a=q,q=1,f=32,s=1,v=1;%%%%", .expected = "\x1b_G;EINVAL\x1b\\" },
         .{ .seq = "a=q,q=1,m=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1, .expected = "\x1b_G;EINVAL\x1b\\" },
         .{ .seq = "a=q,q=1,o=1,f=999;AA==", .expected = "\x1b_G;EINVAL\x1b\\" },
+        .{ .seq = "a=q,q=1,O=1,f=999;AA==", .expected = "\x1b_G;EINVAL\x1b\\" },
+        .{ .seq = "a=q,q=1,O=1,f=32,s=1,v=1;%%%%", .expected = "\x1b_G;EINVAL\x1b\\" },
+        .{ .seq = "a=q,q=1,O=1,f=999;%%%%", .expected = "\x1b_G;EINVAL\x1b\\" },
         .{ .seq = "a=q,q=1,m=1,o=z,f=999;" ++ zlib_rgba_1x1, .expected = "\x1b_G;EINVAL\x1b\\" },
     };
     inline for (reply_cases) |case_| {
@@ -557,6 +560,9 @@ test "kitty parse query missing-id precedence matrix" {
         "a=q,q=2,f=999;%%%%",
         "a=q,q=2,o=1,f=32,s=1,v=1;%%%%",
         "a=q,q=2,o=1,f=999;%%%%",
+        "a=q,q=2,O=1,f=999;AA==",
+        "a=q,q=2,O=1,f=32,s=1,v=1;%%%%",
+        "a=q,q=2,O=1,f=999;%%%%",
         "a=q,q=2,m=1,o=z,f=999;%%%%",
     };
     inline for (no_reply_cases) |seq| {
