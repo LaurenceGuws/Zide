@@ -1876,6 +1876,8 @@ Planned work (decomposition / `PA-08f` CSI parser intermediate-byte parity):
 - Scope boundary (current pass):
   - `PA-08f` is parser/disambiguation infrastructure; it does not by itself require implementing all intermediate-bearing CSI families.
   - Each newly-enabled family still needs a separate parity slice (`PA-08h`) with reference behavior + tests.
+  - Coverage freeze rule (after `p/q/x/z` replay no-reply fixtures):
+    - Do not add more generic unsupported-intermediate replay fixtures unless a real parser/dispatch bug appears or a touched CSI family needs a new regression lock.
 
 Planned work (decomposition / `PA-08g` `DECRQM` / `DECRPM` parity breadth + reply policy):
 - Reference convention summary (anchors for parity decisions):
@@ -2014,6 +2016,14 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
   - `implemented + evidence locked`: grid/scrollback (heuristic caveat), kitty state, cursor pos/style, attrs, scroll region, tabs, parser/charsets, saved cursor/charset slots, session mode bits, alt-screen active state, hidden primary contents, clipboard/title/cwd/hyperlinks
   - `defer (reference parity decision pending)`: whether `DECSTR` should reset title/app-id metadata, exit alt-screen, or clear graphics/notification state to match broader implementations like foot
   - `out of current slice`: broader CSI reset-family parity beyond `DECSTR` (`PA-08h` promoted gaps)
+- Explicit product/parity decision (2026-02-23):
+  - `DECSTR` **alt-screen active state**: keep current Zide behavior (`preserve`) as a **strategic divergence** for now.
+  - Rationale:
+    - Zide is an IDE terminal and preserving active alt-screen state avoids surprising pane resets during soft-reset handling.
+    - xterm docs define `DECSTR` as soft reset but do not provide a single unambiguous row-level reset matrix here; foot is broader, but that breadth is not automatically the target for Zide.
+    - We already have PTY + replay evidence locking preserve semantics (`decstr_alt_screen_preserve_reply_and_grid`, direct alt-kitty boundary tests).
+  - Revisit trigger:
+    - If a real TUI compatibility issue is traced to `DECSTR` alt-screen preservation, promote a dedicated `PA-08h` parity adjustment slice and compare xterm/kitty/ghostty behavior directly before changing semantics.
 - Deferred / out of current `PA-08h` slice unless reference/app evidence demands it:
   - hard-reset-like behavior (screen clear, scrollback wipe, kitty image wipe)
   - broader CSI reset-family parity beyond `DECSTR` (tracked separately in `PA-08h` promoted gaps / `PA-08a`)
