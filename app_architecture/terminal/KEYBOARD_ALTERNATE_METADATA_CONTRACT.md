@@ -123,6 +123,13 @@ Implemented since the initial contract draft:
 - The probe path now also samples AltGr-style modifier combinations
   (`ctrl+alt`, `shift+ctrl+alt`) via `SDL_GetKeyFromScancode(...)` and prefers
   those translated codepoints when deriving the third kitty alternate field.
+- Raw SDL keymod bits are now preserved on shared key events (`sdl_mod_bits`) so
+  runtime metadata derivation can distinguish explicit right-alt / AltGr state
+  from generic Alt usage.
+- The third-field selection logic is now isolated in a pure helper
+  (`src/terminal/input/alternate_probe.zig`) with unit tests covering AltGr probe
+  preference, explicit non-AltGr suppression, generic fallback probing, and
+  duplicate filtering.
 - `terminal.input.altmeta` diagnostic logging was added to compare event `sym`
   against scancode-translation probe outputs during real-layout manual testing.
 
@@ -135,5 +142,7 @@ Current limits (still unresolved):
   contract across all IME/platform behaviors.
 - We still do not distinguish right-alt/AltGr from generic `ctrl+alt` in the
   shared input model, so the AltGr probe is a best-effort heuristic.
+  (Updated: `sdl_mod_bits` now carries raw SDL keymods; higher-level normalized
+  input modifiers still do not model AltGr explicitly.)
 - Composed/IME text remains intentionally conservative (`text_is_composed`
   suppresses alternate reporting in the encoder).
