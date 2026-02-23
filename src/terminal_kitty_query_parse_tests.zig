@@ -164,3 +164,37 @@ test "kitty parse query offset form emits EINVAL" {
         }
     }.run);
 }
+
+test "kitty parse query quiet=2 suppresses success reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,q=2,f=32,s=1,v=1;AAAA/w==");
+            try capture.expectNoReply();
+        }
+    }.run);
+}
+
+test "kitty parse query quiet=1 does not suppress ENODATA reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,q=1,f=32,s=2,v=2;AAAA");
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings(
+                "\x1b_Gi=7;ENODATA:Insufficient image data: 3 < 16\x1b\\",
+                reply,
+            );
+        }
+    }.run);
+}
+
+test "kitty parse query quiet=1 does not suppress EINVAL preflight reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,q=1,m=1;AAAA");
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;EINVAL\x1b\\", reply);
+        }
+    }.run);
+}
