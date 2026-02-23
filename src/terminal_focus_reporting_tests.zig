@@ -494,6 +494,56 @@ test "terminal DECSTR resets parser charset and clears saved charset restore" {
     }.run);
 }
 
+test "terminal DECSTR resets cursor style to default" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            terminal.debugFeedBytes(session, "\x1b[6 q"); // bar, steady
+            {
+                const snap = session.snapshot();
+                try std.testing.expectEqual(.bar, snap.cursor_style.shape);
+                try std.testing.expect(!snap.cursor_style.blink);
+            }
+
+            terminal.debugFeedBytes(session, "\x1b[!p");
+            try capture.expectNoReply();
+
+            {
+                const snap = session.snapshot();
+                try std.testing.expectEqual(.block, snap.cursor_style.shape);
+                try std.testing.expect(snap.cursor_style.blink);
+            }
+        }
+    }.run);
+}
+
+test "terminal DECSTR preserves kitty state while alt screen remains active" {
+    const allocator = std.testing.allocator;
+    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    defer session.deinit();
+
+    terminal.debugFeedBytes(session, "\x1b[?1049h");
+    terminal.debugFeedBytes(session,
+        "\x1b_Ga=t,f=100,i=1;iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=\x1b\\" ++
+            "\x1b_Ga=p,i=1,c=2,r=1,x=1,y=1\x1b\\",
+    );
+
+    {
+        const snap = session.snapshot();
+        try std.testing.expect(snap.alt_active);
+        try std.testing.expectEqual(@as(usize, 1), snap.kitty_images.len);
+        try std.testing.expectEqual(@as(usize, 1), snap.kitty_placements.len);
+    }
+
+    terminal.debugFeedBytes(session, "\x1b[!p");
+
+    {
+        const snap = session.snapshot();
+        try std.testing.expect(snap.alt_active);
+        try std.testing.expectEqual(@as(usize, 1), snap.kitty_images.len);
+        try std.testing.expectEqual(@as(usize, 1), snap.kitty_placements.len);
+    }
+}
+
 test "terminal CSI ?1004p without $ intermediate does not trigger DECRQM reply" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
