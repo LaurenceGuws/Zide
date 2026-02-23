@@ -61,6 +61,20 @@ pub const Color = struct {
 
 pub const Key = u32;
 pub const Modifier = u8;
+pub const PhysicalKey = u32;
+
+pub const KeyboardAlternateMetadata = struct {
+    // Logical/physical key identity for layout-aware alternate reporting.
+    physical_key: ?PhysicalKey = null,
+    // UTF-8 text produced by the event (if any).
+    produced_text_utf8: ?[]const u8 = null,
+    // Layout-derived codepoints used for kitty alternate-key reporting.
+    base_codepoint: ?u32 = null,
+    shifted_codepoint: ?u32 = null,
+    alternate_layout_codepoint: ?u32 = null,
+    // Marks IME/compose output where alternate inference may be suppressed.
+    text_is_composed: bool = false,
+};
 
 pub const MouseButton = enum(u8) {
     none = 0,

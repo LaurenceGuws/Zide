@@ -101,3 +101,26 @@ test "terminal input reports shifted alternate with embedded text" {
     defer allocator.free(seq);
     try std.testing.expectEqualStrings("\x1b[97:65;2;65u", seq);
 }
+
+test "terminal input char event metadata path preserves encoding bytes" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 1 | 4; // disambiguate + alternate
+    const shift = types.VTERM_MOD_SHIFT;
+
+    const seq = try input_mod.encodeCharEventBytesForTest(allocator, .{
+        .codepoint = 'A',
+        .mod = shift,
+        .key_mode_flags = flags,
+        .action = .press,
+        .protocol = .{
+            .alternate = .{
+                .physical_key = 30,
+                .produced_text_utf8 = "A",
+                .base_codepoint = 'a',
+                .shifted_codepoint = 'A',
+            },
+        },
+    });
+    defer allocator.free(seq);
+    try std.testing.expectEqualStrings("\x1b[97:65;2u", seq);
+}

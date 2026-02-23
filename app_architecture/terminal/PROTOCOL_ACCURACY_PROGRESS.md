@@ -392,6 +392,25 @@ Verification:
 - `zig build test-terminal-replay -- --fixture kitty_delete_nN_y_mixed_interactions --update-goldens`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 7 / `PA-04b` dense multi-placement selector sequencing fixture):
+- Added a denser replay fixture using non-zero `placement_id`s and multiple placements on the same image to exercise selector ordering in one scenario.
+- The sequence combines:
+  - `d=i` no-op with non-matching `placement_id`
+  - `d=i` targeted placement delete on image 1 (`p=11`)
+  - `d=x` overlap delete removing the remaining image-1 placement only
+  - `d=y` overlap delete removing image-2 placement only
+  - `d=I` uppercase image delete on image 2 (with ignored mismatched `placement_id`)
+- Final state preserves image 1 (no placements) and image 3 (untouched), which makes sequencing effects visible in the golden.
+
+Files:
+- `fixtures/terminal/kitty_delete_dense_pid_selector_sequence.vt`
+- `fixtures/terminal/kitty_delete_dense_pid_selector_sequence.json`
+- `fixtures/terminal/kitty_delete_dense_pid_selector_sequence.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture kitty_delete_dense_pid_selector_sequence --update-goldens`
+- `zig build test-terminal-replay -- --all`
+
 Query coverage note (`PA-04c` remaining):
 - `a=q` reply-byte conformance is now substantially covered:
   - helper-level branch/unit coverage for early replies and payload/build reply branches
@@ -516,6 +535,24 @@ Files:
 Verification:
 - `zig build test-terminal-kitty-query-parse`
 
+Implemented (increment 10 / `PA-04c` malformed base64 + compression-flag query matrix):
+- Expanded project-integrated `a=q` parse-path tests for additional payload-encoding conditions:
+  - malformed base64 payload -> `EINVAL`
+  - `q=2` suppresses malformed-base64 `EINVAL`
+  - `o=z` with raw RGBA payload still returns `OK` in the current query path
+  - `o=z` with zlib-compressed RGBA payload also currently returns `OK` (current behavior: query path does not inflate `o=z`)
+  - `q=2` suppresses the current `o=z` success reply path
+- These tests explicitly document and lock current query-path compression behavior while improving quiet/error coverage.
+- Also fixed a leak exposed by the new invalid-format parse-path tests: `buildKittyImage()` now frees owned payload data before returning `InvalidData` when `f=` is unsupported.
+
+Files:
+- `src/terminal/kitty/graphics.zig`
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
@@ -582,6 +619,29 @@ Implemented (increment 8 / `PA-05a` metadata contract definition):
 Files:
 - `app_architecture/terminal/KEYBOARD_ALTERNATE_METADATA_CONTRACT.md`
 - `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+
+Implemented (increment 9 / `PA-05b` type-only metadata threading to input boundary):
+- Added `types.KeyboardAlternateMetadata` as the runtime carrier for the `PA-05a` contract fields (all optional, no behavior impact yet).
+- Added additive input-layer event structs/APIs:
+  - `input.KeyInputEvent`
+  - `input.CharInputEvent`
+  - `sendKeyActionEvent(...)`
+  - `sendCharActionEvent(...)`
+- Added additive terminal session entrypoints:
+  - `sendKeyActionWithMetadata(...)`
+  - `sendCharActionWithMetadata(...)`
+- Current encoder behavior is unchanged: metadata is threaded to the input boundary and intentionally ignored for now pending real layout-aware encoding work.
+- Added a unit test ensuring the char-event metadata path preserves current encoded output bytes.
+
+Files:
+- `src/terminal/model/types.zig`
+- `src/terminal/input/input.zig`
+- `src/terminal/core/terminal_session.zig`
+- `src/terminal_input_encoding_tests.zig`
+
+Verification:
+- `zig test src/terminal_input_encoding_tests.zig`
+- `zig build test-terminal-replay -- --all`
 
 Implemented (increment 3):
 - Aligned `encodeKeyBytesForTest` with runtime protocol gating for key-mode flags:
