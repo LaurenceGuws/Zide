@@ -1813,6 +1813,7 @@ Implemented (increment 10 / `PA-08g` `DECRQM` reply-policy prep + keypad mode qu
 - Expanded `DECRQM` private-mode coverage with keypad application mode `?66` (reports state from existing `DECPAM` / `DECPNM` tracking).
 - Began `Pm=4` adoption for clearly unsupported fixed DEC-private modes (`?67`, `?1001`, `?1005`, `?1015`, `?1016`) to move closer to xterm/foot `DECRPM` semantics.
 - Expanded that `Pm=4` set with `?9` (legacy X10 mouse) and `?45` (reverse-wrap) as unsupported fixed-off modes.
+- Expanded the `Pm=4` set again with `?1034`, `?1035`, `?1036`, and `?1042` (unsupported meta/bell toggles) and extended replay matrix coverage with a representative `?1034` case.
 - Expanded the replay `DECRQM` matrix fixture to cover `?66` transitions and a representative `Pm=4` mode (`?1005`).
 
 Files:
@@ -1908,7 +1909,8 @@ Planned work (decomposition / `PA-08g` `DECRQM` / `DECRPM` parity breadth + repl
 | DEC private `DECRQM` | `?12` | not implemented | `0` | foot often reports blink state | evaluate separately (DECSET cursor blink semantics) |
 | DEC private `DECRQM` | `?67 ?1001 ?1005` | not implemented | `0` | foot often reports permanent reset (`4`) | policy decision (`0` vs `4`) |
 | DEC private `DECRQM` | `?1015 ?1016` mouse alt encodings | not implemented | `0` | foot/xterm queryable | likely defer unless app demand |
-| DEC private `DECRQM` | `?1034 ?1035 ?1036 ?1042 ?1070` | not implemented | `0` | foot supports/reportable | defer unless feature lands |
+| DEC private `DECRQM` | `?1034 ?1035 ?1036 ?1042` | implemented (query-only) | `4` (permanently reset) | foot supports/reportable | unsupported fixed-off parity policy adopted |
+| DEC private `DECRQM` | `?1070` | not implemented | `0` | foot supports/reportable | defer unless feature lands |
 | DEC private `DECRQM` | `?2031 ?2048 ?5522` kitty/modern extensions | not implemented | `0` | kitty docs + foot examples | explicit defer/feature-specific slice |
 | DEC private `DECRQM` | unknown modes | implemented fallback | `0` | xterm/foot convention | keep (test-locked) |
 
@@ -1917,7 +1919,7 @@ Notes:
 - Reference candidate set is seeded primarily from `reference_repos/terminals/foot/csi.c` plus xterm docs and kitty clipboard docs (`?5522`).
 - Final `implement/defer` decisions for each non-implemented row should be recorded here before broadening `PA-08e` mode handling.
 - `?66` is now implemented and test-covered (`DECPAM`/`DECPNM` -> `DECRQM ?66`).
-- Initial `Pm=4` policy adoption landed for a small set of clearly unsupported fixed DEC-private modes (`?9`, `?45`, `?67`, `?1001`, `?1005`, `?1015`, `?1016`) to align more closely with xterm/foot-style `DECRPM` semantics.
+- Initial `Pm=4` policy adoption landed for a growing set of clearly unsupported fixed DEC-private modes (`?9`, `?45`, `?67`, `?1001`, `?1005`, `?1015`, `?1016`, `?1034`, `?1035`, `?1036`, `?1042`) to align more closely with xterm/foot-style `DECRPM` semantics.
 
 ## Change Log
 
