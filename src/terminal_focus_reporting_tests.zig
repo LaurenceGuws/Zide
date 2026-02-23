@@ -248,6 +248,15 @@ test "terminal DECRQM ansi query returns Pm=0 for unsupported mode per xterm-foo
     }.run);
 }
 
+test "terminal CSI !p does not trigger DECRQM reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            terminal.debugFeedBytes(session, "\x1b[!p");
+            try capture.expectNoReply();
+        }
+    }.run);
+}
+
 test "terminal widget focus source toggles gate window and pane reports" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
