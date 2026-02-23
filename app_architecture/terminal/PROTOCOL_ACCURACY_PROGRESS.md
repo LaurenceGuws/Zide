@@ -1991,7 +1991,7 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
 | Focus reporting / bracketed paste / sync updates | reset | mode defaults |
 | Alt-screen active state | preserve | `DECSTR` must not force alt-screen enter/exit |
 | Hidden screen contents (non-active screen) | preserve | verified for primary hidden behind alt in current slice |
-| Title / cwd / clipboard / hyperlinks | preserve | outside DECSTR scope in Zide first slice |
+| Title / cwd / clipboard / hyperlinks | preserve | outside DECSTR scope in Zide first slice; clipboard + title/cwd/hyperlink replay-verified |
 
 `PA-08h` DECSTR reference-alignment review snapshot (xterm / kitty / ghostty anchors, 2026-02-23):
 - Implemented + test-locked in Zide current scope:
@@ -2002,7 +2002,7 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
   - preserve boundaries: grid contents, scrollback (heuristic replay assertion caveat), kitty state, alt-screen active state, hidden primary contents
   - saved cursor/charset restore slots invalidated
 - Implemented, but reference nuance still not fully audited:
-  - exact title/cwd/hyperlink preservation behavior across `DECSTR` (currently preserved by omission; clipboard now replay-verified below)
+  - exact title/cwd/hyperlink preservation behavior across `DECSTR` is replay-verified in Zide, but broader reference nuance (if any terminal resets related metadata differently) is not fully audited yet
   - any reference-specific divergences in saved-state scope beyond Zide's current `CSI s/u` model
 - Deferred / out of current `PA-08h` slice unless reference/app evidence demands it:
   - hard-reset-like behavior (screen clear, scrollback wipe, kitty image wipe)
@@ -2121,6 +2121,26 @@ Files:
 Verification:
 - `zig build test-terminal-replay -- --fixture decstr_preserves_clipboard_query_reply_bel --update-goldens`
 - `zig build test-terminal-replay -- --fixture csi_q_intermediate_unsupported_no_reply --update-goldens`
+- `zig build test-terminal-replay -- --all`
+
+Implemented (increment 6 / `PA-08h` `DECSTR` title/cwd/hyperlink preserve lock + `PA-08f` alternate-final ignore fixture):
+- Added replay fixture proving `DECSTR` preserves all of the following together in one end-to-end snapshot:
+  - terminal title (`OSC 2`)
+  - cwd metadata (`OSC 7`)
+  - hyperlink attrs + link table (`OSC 8`)
+- Added replay fixture that locks deterministic ignore/no-reply behavior for unsupported intermediate-bearing `CSI ... x` forms (`CSI $ x`, `CSI ! x`) with surrounding grid text preserved.
+
+Files:
+- `fixtures/terminal/decstr_preserves_title_cwd_hyperlink.vt`
+- `fixtures/terminal/decstr_preserves_title_cwd_hyperlink.json`
+- `fixtures/terminal/decstr_preserves_title_cwd_hyperlink.golden`
+- `fixtures/terminal/csi_x_intermediate_unsupported_no_reply.vt`
+- `fixtures/terminal/csi_x_intermediate_unsupported_no_reply.json`
+- `fixtures/terminal/csi_x_intermediate_unsupported_no_reply.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture decstr_preserves_title_cwd_hyperlink --update-goldens`
+- `zig build test-terminal-replay -- --fixture csi_x_intermediate_unsupported_no_reply --update-goldens`
 - `zig build test-terminal-replay -- --all`
   4. Extend/reset matrix incrementally as reference behavior is confirmed.
 
