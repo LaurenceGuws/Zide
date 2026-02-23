@@ -10,62 +10,87 @@ pub const key_mode_report_alternate_key: u32 = 4;
 pub const key_mode_report_text: u32 = 8;
 pub const key_mode_embed_text: u32 = 16;
 
+fn keyAltMetadata(key: input_types.Key, base_codepoint: ?u32) types.KeyboardAlternateMetadata {
+    return .{
+        .physical_key = @as(types.PhysicalKey, @intCast(@intFromEnum(key))),
+        .base_codepoint = base_codepoint,
+    };
+}
+
+fn sessionSendMappedKeyAction(session: anytype, source_key: input_types.Key, term_key: types.Key, key_mod: Modifier, action: anytype) !void {
+    const owner_type = @TypeOf(session.*);
+    if (@hasDecl(owner_type, "sendKeyActionWithMetadata")) {
+        try session.sendKeyActionWithMetadata(term_key, key_mod, action, keyAltMetadata(source_key, null));
+        return;
+    }
+    try session.sendKeyAction(term_key, key_mod, action);
+}
+
+fn sessionSendMappedCharAction(session: anytype, source_key: input_types.Key, ch: u32, key_mod: Modifier, action: anytype) !void {
+    const owner_type = @TypeOf(session.*);
+    if (@hasDecl(owner_type, "sendCharActionWithMetadata")) {
+        try session.sendCharActionWithMetadata(ch, key_mod, action, keyAltMetadata(source_key, ch));
+        return;
+    }
+    try session.sendCharAction(ch, key_mod, action);
+}
+
 pub fn sendKeyAction(session: anytype, key: input_types.Key, key_mod: Modifier, action: anytype) !bool {
     switch (key) {
         .enter => {
-            try session.sendKeyAction(types.VTERM_KEY_ENTER, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_ENTER, key_mod, action);
             return true;
         },
         .backspace => {
-            try session.sendKeyAction(types.VTERM_KEY_BACKSPACE, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_BACKSPACE, key_mod, action);
             return true;
         },
         .tab => {
-            try session.sendKeyAction(types.VTERM_KEY_TAB, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_TAB, key_mod, action);
             return true;
         },
         .escape => {
-            try session.sendKeyAction(types.VTERM_KEY_ESCAPE, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_ESCAPE, key_mod, action);
             return true;
         },
         .up => {
-            try session.sendKeyAction(types.VTERM_KEY_UP, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_UP, key_mod, action);
             return true;
         },
         .down => {
-            try session.sendKeyAction(types.VTERM_KEY_DOWN, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_DOWN, key_mod, action);
             return true;
         },
         .left => {
-            try session.sendKeyAction(types.VTERM_KEY_LEFT, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_LEFT, key_mod, action);
             return true;
         },
         .right => {
-            try session.sendKeyAction(types.VTERM_KEY_RIGHT, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_RIGHT, key_mod, action);
             return true;
         },
         .home => {
-            try session.sendKeyAction(types.VTERM_KEY_HOME, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_HOME, key_mod, action);
             return true;
         },
         .end => {
-            try session.sendKeyAction(types.VTERM_KEY_END, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_END, key_mod, action);
             return true;
         },
         .page_up => {
-            try session.sendKeyAction(types.VTERM_KEY_PAGEUP, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_PAGEUP, key_mod, action);
             return true;
         },
         .page_down => {
-            try session.sendKeyAction(types.VTERM_KEY_PAGEDOWN, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_PAGEDOWN, key_mod, action);
             return true;
         },
         .insert => {
-            try session.sendKeyAction(types.VTERM_KEY_INS, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_INS, key_mod, action);
             return true;
         },
         .delete => {
-            try session.sendKeyAction(types.VTERM_KEY_DEL, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_DEL, key_mod, action);
             return true;
         },
         .kp_0 => {
@@ -137,35 +162,35 @@ pub fn sendKeyAction(session: anytype, key: input_types.Key, key_mod: Modifier, 
             return true;
         },
         .left_shift => {
-            try session.sendKeyAction(types.VTERM_KEY_LEFT_SHIFT, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_LEFT_SHIFT, key_mod, action);
             return true;
         },
         .right_shift => {
-            try session.sendKeyAction(types.VTERM_KEY_RIGHT_SHIFT, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_RIGHT_SHIFT, key_mod, action);
             return true;
         },
         .left_ctrl => {
-            try session.sendKeyAction(types.VTERM_KEY_LEFT_CTRL, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_LEFT_CTRL, key_mod, action);
             return true;
         },
         .right_ctrl => {
-            try session.sendKeyAction(types.VTERM_KEY_RIGHT_CTRL, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_RIGHT_CTRL, key_mod, action);
             return true;
         },
         .left_alt => {
-            try session.sendKeyAction(types.VTERM_KEY_LEFT_ALT, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_LEFT_ALT, key_mod, action);
             return true;
         },
         .right_alt => {
-            try session.sendKeyAction(types.VTERM_KEY_RIGHT_ALT, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_RIGHT_ALT, key_mod, action);
             return true;
         },
         .left_super => {
-            try session.sendKeyAction(types.VTERM_KEY_LEFT_SUPER, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_LEFT_SUPER, key_mod, action);
             return true;
         },
         .right_super => {
-            try session.sendKeyAction(types.VTERM_KEY_RIGHT_SUPER, key_mod, action);
+            try sessionSendMappedKeyAction(session, key, types.VTERM_KEY_RIGHT_SUPER, key_mod, action);
             return true;
         },
         else => return false,
@@ -183,7 +208,7 @@ pub fn sendCharForKey(
     if (!ctrl and !alt) return false;
     const base_char = baseCharForKey(key) orelse return false;
     if (ctrl and !ctrlAllowsChar(base_char)) return false;
-    try session.sendCharAction(base_char, key_mod, action);
+    try sessionSendMappedCharAction(session, key, base_char, key_mod, action);
     return true;
 }
 
