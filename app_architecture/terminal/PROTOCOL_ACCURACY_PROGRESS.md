@@ -2004,6 +2004,12 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
 - Implemented, but reference nuance still not fully audited:
   - exact title/cwd/hyperlink preservation behavior across `DECSTR` is replay-verified in Zide, but broader reference nuance (if any terminal resets related metadata differently) is not fully audited yet
   - any reference-specific divergences in saved-state scope beyond Zide's current `CSI s/u` model
+- Explicit reference divergence / pending policy decision (do not treat as parity-complete yet):
+  - foot's `DECSTR` path (`reference_repos/terminals/foot/csi.c` -> `term_reset(term, false)` in `reference_repos/terminals/foot/terminal.c`) is materially broader than Zide's current slice:
+    - exits alt-screen
+    - resets title/app-id state
+    - clears image/notification state
+  - Zide currently preserves those areas by design for a safer soft-reset slice; this is intentional for now but must be kept marked as a divergence until xterm/kitty/ghostty alignment is chosen and documented.
 - Deferred / out of current `PA-08h` slice unless reference/app evidence demands it:
   - hard-reset-like behavior (screen clear, scrollback wipe, kitty image wipe)
   - broader CSI reset-family parity beyond `DECSTR` (tracked separately in `PA-08h` promoted gaps / `PA-08a`)
