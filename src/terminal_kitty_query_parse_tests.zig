@@ -6,6 +6,8 @@ const terminal = @import("terminal/core/terminal.zig");
 const kitty = @import("terminal/kitty/graphics.zig");
 const pty_mod = @import("terminal/io/pty.zig");
 
+const tiny_png_1x1 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=";
+
 fn requireUnix() !void {
     if (builtin.os.tag != .linux and builtin.os.tag != .macos) return error.SkipZigTest;
 }
@@ -238,6 +240,66 @@ test "kitty parse query rgb short payload emits ENODATA reply" {
                 "\x1b_Gi=7;ENODATA:Insufficient image data: 3 < 6\x1b\\",
                 reply,
             );
+        }
+    }.run);
+}
+
+test "kitty parse query png payload emits OK reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,f=100;" ++ tiny_png_1x1);
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;OK\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query quiet=2 suppresses png success reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,q=2,f=100;" ++ tiny_png_1x1);
+            try capture.expectNoReply();
+        }
+    }.run);
+}
+
+test "kitty parse query invalid format emits EINVAL reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,f=999;AAAA");
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;EINVAL\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query quiet=2 suppresses invalid format reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,q=2,f=999;AAAA");
+            try capture.expectNoReply();
+        }
+    }.run);
+}
+
+test "kitty parse query rgba missing dimensions emits EINVAL reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,f=32;AAAA/w==");
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;EINVAL\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query quiet=2 suppresses missing-dimensions EINVAL reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,q=2,f=32;AAAA/w==");
+            try capture.expectNoReply();
         }
     }.run);
 }

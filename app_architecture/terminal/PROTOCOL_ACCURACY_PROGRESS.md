@@ -369,6 +369,29 @@ Verification:
 - `zig build test-terminal-replay -- --fixture kitty_delete_y_mixed_interactions --update-goldens`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 6 / `PA-04b` selector-composition fixtures with id/number filters):
+- Added larger replay fixtures that combine image-id/image-number selectors with overlap selectors:
+  - `i/I` + `x/X`
+  - `n/N` + `y/Y`
+- These scenarios verify multi-step delete sequencing in one fixture:
+  - selector-specific no-op with non-matching `placement_id` filter
+  - lowercase overlap delete removes placement only
+  - uppercase id/number delete removes backing image even with non-matching `placement_id` filter
+- This extends coverage beyond isolated selector behavior into selector composition and ordering.
+
+Files:
+- `fixtures/terminal/kitty_delete_iI_x_mixed_interactions.vt`
+- `fixtures/terminal/kitty_delete_iI_x_mixed_interactions.json`
+- `fixtures/terminal/kitty_delete_iI_x_mixed_interactions.golden`
+- `fixtures/terminal/kitty_delete_nN_y_mixed_interactions.vt`
+- `fixtures/terminal/kitty_delete_nN_y_mixed_interactions.json`
+- `fixtures/terminal/kitty_delete_nN_y_mixed_interactions.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture kitty_delete_iI_x_mixed_interactions --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_delete_nN_y_mixed_interactions --update-goldens`
+- `zig build test-terminal-replay -- --all`
+
 Query coverage note (`PA-04c` remaining):
 - `a=q` reply-byte conformance is now substantially covered:
   - helper-level branch/unit coverage for early replies and payload/build reply branches
@@ -470,6 +493,22 @@ Implemented (increment 8 / `PA-04c` integrated quiet/error matrix + RGB query ca
   - valid RGB payload -> `OK`
   - short RGB payload -> `ENODATA`
 - This strengthens both the quiet/error matrix and format coverage in the end-to-end parse path.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+
+Implemented (increment 9 / `PA-04c` integrated format/error matrix expansion):
+- Expanded end-to-end `a=q` parse-path tests with additional format and validation combinations:
+  - valid PNG (`f=100`) success -> `OK`
+  - `q=2` suppresses PNG success replies
+  - unsupported format (`f=999`) -> `EINVAL`
+  - `q=2` suppresses unsupported-format `EINVAL`
+  - RGBA payload without dimensions (`f=32` and no `s`/`v`) -> `EINVAL`
+  - `q=2` suppresses missing-dimensions `EINVAL`
+- This strengthens parser-path conformance coverage for format validation and dimension requirements, not just payload-size checks.
 
 Files:
 - `src/terminal_kitty_query_parse_tests.zig`
