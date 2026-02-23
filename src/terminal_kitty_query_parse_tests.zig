@@ -8,6 +8,7 @@ const pty_mod = @import("terminal/io/pty.zig");
 
 const tiny_png_1x1 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=";
 const zlib_rgba_1x1 = "eJxjYGD4DwABAwEA";
+const zlib_three_bytes = "eJxLTEoGAAJNASc=";
 
 fn requireUnix() !void {
     if (builtin.os.tag != .linux and builtin.os.tag != .macos) return error.SkipZigTest;
@@ -363,6 +364,40 @@ test "kitty parse query quiet=1 does not suppress o=z decompression error" {
             const reply = try capture.readReply(std.testing.allocator);
             defer std.testing.allocator.free(reply);
             try std.testing.expectEqualStrings("\x1b_Gi=7;EINVAL\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query quiet=2 suppresses o=z decompression error" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,q=2,o=z,f=32,s=1,v=1;AAAA/w==");
+            try capture.expectNoReply();
+        }
+    }.run);
+}
+
+test "kitty parse query malformed zlib payload emits EINVAL" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,o=z,f=32,s=1,v=1;AQIDBA==");
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;EINVAL\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query post-inflate size mismatch emits ENODATA" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,o=z,f=32,s=1,v=1;" ++ zlib_three_bytes);
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings(
+                "\x1b_Gi=7;ENODATA:Insufficient image data: 3 < 4\x1b\\",
+                reply,
+            );
         }
     }.run);
 }
