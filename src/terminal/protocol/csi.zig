@@ -5,6 +5,11 @@ const app_logger = @import("../../app_logger.zig");
 
 const Color = types.Color;
 
+fn csiIntermediatesEq(action: parser_csi.CsiAction, bytes: []const u8) bool {
+    if (action.intermediates_len != bytes.len) return false;
+    return std.mem.eql(u8, action.intermediates[0..action.intermediates_len], bytes);
+}
+
 pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
     const log = app_logger.logger("terminal.csi");
     if (log.enabled_file or log.enabled_console) {
@@ -215,7 +220,8 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 }
             }
         },
-        'p' => { // DECRQM / DECRPM reply (parser drops CSI intermediates like '$')
+        'p' => { // DECRQM (requires '$' intermediate)
+            if (!csiIntermediatesEq(action, "$")) return;
             if (action.leader == '?' and action.private) {
                 const mode = if (param_len > 0) p[0] else 0;
                 if (self.pty) |*pty| {
