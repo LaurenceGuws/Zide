@@ -36,6 +36,21 @@ test "DCS XTGETTCAP writes TN reply" {
     try std.testing.expectEqualStrings("\x1bP1+r544E=7A696465\x1b\\", self.pty.?.writes.items);
 }
 
+test "DCS XTGETTCAP writes failure reply for unknown cap" {
+    const allocator = std.testing.allocator;
+
+    const Self = struct {
+        allocator: std.mem.Allocator,
+        pty: ?FakePty,
+    };
+
+    var self = Self{ .allocator = allocator, .pty = FakePty.init() };
+    defer if (self.pty) |*pty| pty.deinit(allocator);
+    dcs_apc.parseDcs(&self, "+q5A5A"); // hex("ZZ")
+
+    try std.testing.expectEqualStrings("\x1bP0+r5A5A\x1b\\", self.pty.?.writes.items);
+}
+
 test "OSC 52 clipboard query preserves BEL terminator" {
     const allocator = std.testing.allocator;
 
@@ -61,6 +76,33 @@ test "OSC 52 clipboard query preserves BEL terminator" {
 
     osc_clipboard.parseClipboard(&self, "c;?", .bel);
     try std.testing.expectEqualStrings("\x1b]52;c;aGk=\x07", self.pty.?.writes.items);
+}
+
+test "OSC 52 clipboard query preserves ST terminator" {
+    const allocator = std.testing.allocator;
+
+    const Self = struct {
+        allocator: std.mem.Allocator,
+        pty: ?FakePty,
+        osc_clipboard: std.ArrayList(u8),
+        osc_clipboard_pending: bool,
+    };
+
+    var clipboard = std.ArrayList(u8).empty;
+    defer clipboard.deinit(allocator);
+    try clipboard.appendSlice(allocator, "ok");
+    try clipboard.append(allocator, 0);
+
+    var self = Self{
+        .allocator = allocator,
+        .pty = FakePty.init(),
+        .osc_clipboard = clipboard,
+        .osc_clipboard_pending = false,
+    };
+    defer if (self.pty) |*pty| pty.deinit(allocator);
+
+    osc_clipboard.parseClipboard(&self, "c;?", .st);
+    try std.testing.expectEqualStrings("\x1b]52;c;b2s=\x1b\\", self.pty.?.writes.items);
 }
 
 test "OSC 4 palette query preserves ST terminator" {
