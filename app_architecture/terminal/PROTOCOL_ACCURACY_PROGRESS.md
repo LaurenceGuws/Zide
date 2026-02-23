@@ -718,6 +718,20 @@ Verification:
 - `zig build test-terminal-kitty-query-parse`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 22 / `PA-04c` `q=2` mixed missing-id precedence matrix expansion):
+- Expanded the table-driven missing-id precedence matrix with additional `q=2`
+  quiet-mode combinations that mix invalid format, malformed payload, invalid
+  compression (`o=1`), and chunked zlib forms.
+- This locks the no-reply behavior when missing-id preflight wins over multiple
+  simultaneous lower-priority invalid branches.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
@@ -1230,6 +1244,42 @@ Files:
 - `fixtures/terminal/encoder/csi_u_disambiguate_home_ctrl_mod.golden`
 - `fixtures/terminal/encoder/csi_u_disambiguate_end_ctrl_mod.json`
 - `fixtures/terminal/encoder/csi_u_disambiguate_end_ctrl_mod.golden`
+
+Verification:
+- `zig test src/terminal_input_encoding_tests.zig`
+- `zig build test-terminal-replay -- --all`
+
+Implemented (increment 9):
+- Added action-aware encoder test support (`encodeKeyActionBytesForTest`) and replay
+  fixture support (`encoder.action`) so key release formatting can be fixture-locked.
+- Added unit and replay coverage for disambiguate + `report_all_event_types` release
+  events on cursor/home/end keys, including representative modified releases, to lock
+  the `:3` action field formatting (`ESC[1;:3A`, `ESC[1;2:3A`, etc.).
+- Aligned the existing disambiguate `Enter` unit-test expectation with runtime output
+  (`ESC[13u` compact form).
+
+Files:
+- `src/terminal/input/input.zig`
+- `src/terminal/replay_harness.zig`
+- `src/terminal_input_encoding_tests.zig`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_up_release.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_up_release.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_down_release.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_down_release.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_left_release.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_left_release.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_right_release.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_right_release.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_home_release.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_home_release.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_end_release.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_end_release.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_up_shift_release.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_up_shift_release.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_home_alt_release.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_home_alt_release.golden`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_end_ctrl_release.json`
+- `fixtures/terminal/encoder/csi_u_disambiguate_reportall_end_ctrl_release.golden`
 
 Verification:
 - `zig test src/terminal_input_encoding_tests.zig`
