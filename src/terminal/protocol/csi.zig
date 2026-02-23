@@ -215,6 +215,15 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 }
             }
         },
+        'p' => { // DECRQM / DECRPM reply (parser drops CSI intermediates like '$')
+            if (action.leader == '?' and action.private) {
+                const mode = if (param_len > 0) p[0] else 0;
+                if (self.pty) |*pty| {
+                    const state = decrqmPrivateModeState(self, screen, mode);
+                    _ = writeDecrqmReply(pty, true, mode, state);
+                }
+            }
+        },
         'h' => { // SM
             if (!action.private) {
                 var idx: u8 = 0;
@@ -370,6 +379,41 @@ pub fn writeDsrReply(pty: anytype, leader: u8, mode: i32, row_1: usize, col_1: u
         }
     }
     return false;
+}
+
+pub fn writeDecrqmReply(pty: anytype, private: bool, mode: i32, state: u8) bool {
+    var buf: [32]u8 = undefined;
+    const seq = if (private)
+        std.fmt.bufPrint(&buf, "\x1b[?{d};{d}$y", .{ mode, state })
+    else
+        std.fmt.bufPrint(&buf, "\x1b[{d};{d}$y", .{ mode, state });
+    const bytes = seq catch return false;
+    _ = pty.write(bytes) catch return false;
+    return true;
+}
+
+fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) u8 {
+    return switch (mode) {
+        1 => boolModeState(self.app_cursor_keys),
+        3 => boolModeState(self.column_mode_132),
+        5 => boolModeState(screen.screen_reverse),
+        6 => boolModeState(screen.origin_mode),
+        7 => boolModeState(screen.auto_wrap),
+        25 => boolModeState(screen.cursor_visible),
+        47, 1047, 1049 => boolModeState(self.active == .alt),
+        1000 => boolModeState(self.input.mouse_mode_x10),
+        1002 => boolModeState(self.input.mouse_mode_button),
+        1003 => boolModeState(self.input.mouse_mode_any),
+        1004 => boolModeState(self.focus_reporting),
+        1006 => boolModeState(self.input.mouse_mode_sgr),
+        2004 => boolModeState(self.bracketed_paste),
+        2026 => boolModeState(self.sync_updates_active),
+        else => 0, // not recognized
+    };
+}
+
+fn boolModeState(enabled: bool) u8 {
+    return if (enabled) 1 else 2; // DECRPM: 1=set, 2=reset
 }
 
 fn writeConst(pty: anytype, seq: []const u8) bool {

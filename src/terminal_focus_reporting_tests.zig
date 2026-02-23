@@ -105,6 +105,29 @@ test "terminal focus reporting suppresses writes when disabled or cleared" {
     }.run);
 }
 
+test "terminal DECRQM private query reports ?1004 set/reset state" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+
+            terminal.debugFeedBytes(session, "\x1b[?1004$p");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[?1004;2$y", reply);
+            }
+
+            terminal.debugFeedBytes(session, "\x1b[?1004h");
+            terminal.debugFeedBytes(session, "\x1b[?1004$p");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[?1004;1$y", reply);
+            }
+        }
+    }.run);
+}
+
 test "terminal widget focus source toggles gate window and pane reports" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
