@@ -128,6 +128,106 @@ test "terminal DECRQM private query reports ?1004 set/reset state" {
     }.run);
 }
 
+test "terminal DECRQM private queries report common mode set/reset states" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            const Case = struct {
+                mode: i32,
+                set_seq: []const u8,
+                reset_seq: []const u8,
+                default_set: bool = false,
+            };
+            const cases = [_]Case{
+                .{ .mode = 1, .set_seq = "\x1b[?1h", .reset_seq = "\x1b[?1l" },
+                .{ .mode = 7, .set_seq = "\x1b[?7h", .reset_seq = "\x1b[?7l", .default_set = true },
+                .{ .mode = 25, .set_seq = "\x1b[?25h", .reset_seq = "\x1b[?25l", .default_set = true },
+                .{ .mode = 1000, .set_seq = "\x1b[?1000h", .reset_seq = "\x1b[?1000l" },
+                .{ .mode = 1006, .set_seq = "\x1b[?1006h", .reset_seq = "\x1b[?1006l" },
+                .{ .mode = 2004, .set_seq = "\x1b[?2004h", .reset_seq = "\x1b[?2004l" },
+                .{ .mode = 2026, .set_seq = "\x1b[?2026h", .reset_seq = "\x1b[?2026l" },
+            };
+
+            for (cases) |case| {
+                var qbuf: [32]u8 = undefined;
+                const query = try std.fmt.bufPrint(&qbuf, "\x1b[?{d}$p", .{case.mode});
+                terminal.debugFeedBytes(session, query);
+                {
+                    const reply = try capture.readReply(allocator);
+                    defer allocator.free(reply);
+                    const default_state: u8 = if (case.default_set) 1 else 2;
+                    const expected = try std.fmt.allocPrint(allocator, "\x1b[?{d};{d}$y", .{ case.mode, default_state });
+                    defer allocator.free(expected);
+                    try std.testing.expectEqualStrings(expected, reply);
+                }
+
+                terminal.debugFeedBytes(session, case.set_seq);
+                terminal.debugFeedBytes(session, query);
+                {
+                    const reply = try capture.readReply(allocator);
+                    defer allocator.free(reply);
+                    const expected = try std.fmt.allocPrint(allocator, "\x1b[?{d};1$y", .{case.mode});
+                    defer allocator.free(expected);
+                    try std.testing.expectEqualStrings(expected, reply);
+                }
+
+                terminal.debugFeedBytes(session, case.reset_seq);
+                terminal.debugFeedBytes(session, query);
+                {
+                    const reply = try capture.readReply(allocator);
+                    defer allocator.free(reply);
+                    const expected = try std.fmt.allocPrint(allocator, "\x1b[?{d};2$y", .{case.mode});
+                    defer allocator.free(expected);
+                    try std.testing.expectEqualStrings(expected, reply);
+                }
+            }
+        }
+    }.run);
+}
+
+test "terminal DECRQM private query returns Pm=0 for unsupported mode" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            terminal.debugFeedBytes(session, "\x1b[?9999$p");
+            const reply = try capture.readReply(allocator);
+            defer allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b[?9999;0$y", reply);
+        }
+    }.run);
+}
+
+test "terminal DECRQM ansi query reports mode 20 newline set/reset state" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+
+            terminal.debugFeedBytes(session, "\x1b[20$p");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[20;2$y", reply);
+            }
+
+            terminal.debugFeedBytes(session, "\x1b[20h");
+            terminal.debugFeedBytes(session, "\x1b[20$p");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[20;1$y", reply);
+            }
+
+            terminal.debugFeedBytes(session, "\x1b[20l");
+            terminal.debugFeedBytes(session, "\x1b[20$p");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[20;2$y", reply);
+            }
+        }
+    }.run);
+}
+
 test "terminal widget focus source toggles gate window and pane reports" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
