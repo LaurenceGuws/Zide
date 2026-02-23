@@ -1,4 +1,5 @@
 pub const max_params: usize = 16;
+pub const max_intermediates: usize = 4;
 
 pub const CsiAction = struct {
     final: u8,
@@ -6,6 +7,8 @@ pub const CsiAction = struct {
     count: u8,
     leader: u8,
     private: bool,
+    intermediates: [max_intermediates]u8,
+    intermediates_len: u8,
 };
 
 pub const CsiParser = struct {
@@ -13,6 +16,8 @@ pub const CsiParser = struct {
     count: u8 = 0,
     leader: u8 = 0,
     private: bool = false,
+    intermediates: [max_intermediates]u8 = [_]u8{0} ** max_intermediates,
+    intermediates_len: u8 = 0,
     in_param: bool = false,
 
     pub fn reset(self: *CsiParser) void {
@@ -20,6 +25,8 @@ pub const CsiParser = struct {
         self.count = 0;
         self.leader = 0;
         self.private = false;
+        self.intermediates = [_]u8{0} ** max_intermediates;
+        self.intermediates_len = 0;
         self.in_param = false;
     }
 
@@ -32,6 +39,8 @@ pub const CsiParser = struct {
                 .count = self.count,
                 .leader = self.leader,
                 .private = self.private,
+                .intermediates = self.intermediates,
+                .intermediates_len = self.intermediates_len,
             };
             self.reset();
             return action;
@@ -65,7 +74,55 @@ pub const CsiParser = struct {
             return null;
         }
 
+        // Intermediate bytes in 0x20..0x2F (e.g. '$', '!').
+        if (byte >= 0x20 and byte <= 0x2F) {
+            if (self.intermediates_len < self.intermediates.len) {
+                self.intermediates[self.intermediates_len] = byte;
+                self.intermediates_len += 1;
+            }
+            return null;
+        }
+
         // Ignore other bytes in CSI sequence.
         return null;
     }
 };
+
+const std = @import("std");
+
+fn feedCsiBytes(bytes: []const u8) !CsiAction {
+    var parser = CsiParser{};
+    for (bytes) |b| {
+        if (parser.feed(b)) |action| return action;
+    }
+    return error.NoAction;
+}
+
+test "CSI parser captures ansi DECRQM intermediate $" {
+    const action = try feedCsiBytes("20$p");
+    try std.testing.expectEqual(@as(u8, 'p'), action.final);
+    try std.testing.expectEqual(@as(u8, 0), action.leader);
+    try std.testing.expect(!action.private);
+    try std.testing.expectEqual(@as(u8, 1), action.intermediates_len);
+    try std.testing.expectEqual(@as(u8, '$'), action.intermediates[0]);
+    try std.testing.expectEqual(@as(i32, 20), action.params[0]);
+}
+
+test "CSI parser captures dec private DECRQM intermediate $" {
+    const action = try feedCsiBytes("?1004$p");
+    try std.testing.expectEqual(@as(u8, 'p'), action.final);
+    try std.testing.expectEqual(@as(u8, '?'), action.leader);
+    try std.testing.expect(action.private);
+    try std.testing.expectEqual(@as(u8, 1), action.intermediates_len);
+    try std.testing.expectEqual(@as(u8, '$'), action.intermediates[0]);
+    try std.testing.expectEqual(@as(i32, 1004), action.params[0]);
+}
+
+test "CSI parser captures DECSTR intermediate !" {
+    const action = try feedCsiBytes("!p");
+    try std.testing.expectEqual(@as(u8, 'p'), action.final);
+    try std.testing.expectEqual(@as(u8, 0), action.leader);
+    try std.testing.expect(!action.private);
+    try std.testing.expectEqual(@as(u8, 1), action.intermediates_len);
+    try std.testing.expectEqual(@as(u8, '!'), action.intermediates[0]);
+}
