@@ -257,6 +257,31 @@ Planned acceptance by phase:
 - Phase 3: transfer/placement parity fixtures and fixes.
 - Phase 4: animation/composition implement or defer with rationale.
 
+Implemented (increment 2 / `PA-04c` fixture matrix start):
+- Added replay fixtures for kitty delete conformance behavior (state-level coverage):
+  - `d=p` explicit point delete removes placement but preserves image storage
+  - `d=P` explicit point delete removes placement and backing image
+  - unsupported delete selector (e.g. `d=v`) is currently a no-op on kitty state
+- These fixtures validate the current delete-surface semantics through snapshot `kitty:` state (`images`, `placements`, ids).
+
+Files:
+- `fixtures/terminal/kitty_delete_point_preserves_image.vt`
+- `fixtures/terminal/kitty_delete_point_preserves_image.json`
+- `fixtures/terminal/kitty_delete_point_preserves_image.golden`
+- `fixtures/terminal/kitty_delete_point_uppercase_deletes_image.vt`
+- `fixtures/terminal/kitty_delete_point_uppercase_deletes_image.json`
+- `fixtures/terminal/kitty_delete_point_uppercase_deletes_image.golden`
+- `fixtures/terminal/kitty_delete_unsupported_selector_noop.vt`
+- `fixtures/terminal/kitty_delete_unsupported_selector_noop.json`
+- `fixtures/terminal/kitty_delete_unsupported_selector_noop.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --all`
+
+Query coverage note (`PA-04c` remaining):
+- `a=q` reply-byte conformance is still only partially covered via generic reply formatter tests (`writeKittyResponse` quiet-mode/formatting).
+- Direct `parseKittyGraphics(a=q,...)` unit tests currently require a deeper test seam (the generic function monomorphizes image/screen paths and standalone tests hit non-trivial `activeScreen` + image decode dependencies).
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
@@ -426,6 +451,7 @@ Priority notes:
 - Expanded `PA-02` to cover kitty reply formatting + quiet-mode suppression behavior.
 - Strengthened `PA-02` `scrollback` assertion semantics (no longer recognized-only; now checks scrollback/scroll behavior evidence).
 - Advanced `PA-04a` by documenting the current kitty graphics `a=`/`d=` surface from code as a parity map for follow-on fixtures/fixes.
+- Advanced `PA-04c` with replay delete conformance fixtures (placement-only vs image+placement delete, plus unsupported-selector no-op).
 - Advanced `PA-05` to `partial` (unsupported `alternate_key` no longer advertised via key-mode flags).
 - Advanced `PA-05` disambiguation support: modified chars and ambiguous control chars now emit CSI-u without `report_text`; aligned encoder test helper/golden with runtime behavior.
 - Tightened `PA-05` key-encoder test helper gating/mappings so replay/unit tests do not falsely advertise unsupported key-mode outputs.
