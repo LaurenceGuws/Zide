@@ -124,3 +124,48 @@ test "terminal input char event metadata path preserves encoding bytes" {
     defer allocator.free(seq);
     try std.testing.expectEqualStrings("\x1b[97:65;2u", seq);
 }
+
+test "terminal input char event metadata enables non-us shifted alternate" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 4 | 8; // alternate + report_text
+    const shift = types.VTERM_MOD_SHIFT;
+
+    const seq = try input_mod.encodeCharEventBytesForTest(allocator, .{
+        .codepoint = 0x00C9, // É
+        .mod = shift,
+        .key_mode_flags = flags,
+        .protocol = .{
+            .alternate = .{
+                .physical_key = 30,
+                .produced_text_utf8 = "É",
+                .base_codepoint = 0x00E9, // é
+                .shifted_codepoint = 0x00C9, // É
+            },
+        },
+    });
+    defer allocator.free(seq);
+    try std.testing.expectEqualStrings("\x1b[233:201;2u", seq);
+}
+
+test "terminal input char event composed metadata suppresses alternate reporting" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 1 | 4; // disambiguate + alternate
+    const shift = types.VTERM_MOD_SHIFT;
+
+    const seq = try input_mod.encodeCharEventBytesForTest(allocator, .{
+        .codepoint = 'A',
+        .mod = shift,
+        .key_mode_flags = flags,
+        .protocol = .{
+            .alternate = .{
+                .physical_key = 30,
+                .produced_text_utf8 = "A",
+                .base_codepoint = 'a',
+                .shifted_codepoint = 'A',
+                .text_is_composed = true,
+            },
+        },
+    });
+    defer allocator.free(seq);
+    try std.testing.expectEqualStrings("\x1b[65;2u", seq);
+}
