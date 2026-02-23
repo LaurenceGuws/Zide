@@ -206,6 +206,7 @@ pub fn runFixture(
 
     const snapshot = session.snapshot();
     const debug = terminal.debugSnapshot(session);
+    try validateAssertions(fixture, snapshot, debug);
 
     return snapshot_mod.encodeSnapshot(allocator, session, snapshot, debug, terminal.debugScrollbackRow);
 }
@@ -217,11 +218,81 @@ pub fn runEncoderFixture(
     const encoder = fixture.meta.encoder orelse return error.MissingEncoderSpec;
     if (encoder.key == null and encoder.char == null) return error.MissingEncoderValue;
     if (encoder.key != null and encoder.char != null) return error.InvalidEncoderSpec;
+    try validateEncoderAssertions(fixture);
 
     if (encoder.key) |key| {
         return input_mod.encodeKeyBytesForTest(allocator, key, encoder.mod, encoder.flags);
     }
     return input_mod.encodeCharBytesForTest(allocator, encoder.char.?, encoder.mod, encoder.flags);
+}
+
+fn validateEncoderAssertions(fixture: *const Fixture) !void {
+    for (fixture.meta.assertions) |tag| {
+        if (std.mem.eql(u8, tag, "encoder")) continue;
+        return error.UnknownAssertionTag;
+    }
+}
+
+fn validateAssertions(
+    fixture: *const Fixture,
+    snapshot: terminal.TerminalSnapshot,
+    debug: terminal.DebugSnapshot,
+) !void {
+    for (fixture.meta.assertions) |tag| {
+        if (std.mem.eql(u8, tag, "grid")) {
+            // Presence is inherent in the snapshot format; recognized for traceability.
+            continue;
+        }
+        if (std.mem.eql(u8, tag, "cursor")) {
+            // Cursor is always encoded in the snapshot header; recognized for traceability.
+            continue;
+        }
+        if (std.mem.eql(u8, tag, "attrs")) {
+            // Attr runs are always encoded; recognized for traceability.
+            continue;
+        }
+        if (std.mem.eql(u8, tag, "clipboard")) {
+            if (debug.osc_clipboard.len == 0) return error.AssertionClipboardNotExercised;
+            continue;
+        }
+        if (std.mem.eql(u8, tag, "hyperlinks")) {
+            if (debug.hyperlinks.len == 0) return error.AssertionHyperlinksNotExercised;
+            continue;
+        }
+        if (std.mem.eql(u8, tag, "selection")) {
+            if (debug.selection == null) return error.AssertionSelectionNotExercised;
+            continue;
+        }
+        if (std.mem.eql(u8, tag, "scrollback")) {
+            // Current fixtures use this tag for scroll/scroll-region semantics as well as
+            // persistent scrollback changes, so treat it as a recognized category for now.
+            continue;
+        }
+        if (std.mem.eql(u8, tag, "title")) {
+            if (std.mem.eql(u8, debug.title, "Terminal")) return error.AssertionTitleNotExercised;
+            continue;
+        }
+        if (std.mem.eql(u8, tag, "cwd")) {
+            if (debug.cwd.len == 0) return error.AssertionCwdNotExercised;
+            continue;
+        }
+        if (std.mem.eql(u8, tag, "kitty")) {
+            if (snapshot.kitty_generation == 0) return error.AssertionKittyNotExercised;
+            continue;
+        }
+        if (std.mem.eql(u8, tag, "alt-screen")) {
+            const input = fixture.input;
+            const has_alt = std.mem.indexOf(u8, input, "\x1b[?47h") != null or
+                std.mem.indexOf(u8, input, "\x1b[?47l") != null or
+                std.mem.indexOf(u8, input, "\x1b[?1047h") != null or
+                std.mem.indexOf(u8, input, "\x1b[?1047l") != null or
+                std.mem.indexOf(u8, input, "\x1b[?1049h") != null or
+                std.mem.indexOf(u8, input, "\x1b[?1049l") != null;
+            if (!has_alt) return error.AssertionAltScreenNotExercised;
+            continue;
+        }
+        return error.UnknownAssertionTag;
+    }
 }
 
 fn applySelectionActions(session: *terminal.TerminalSession, actions: []const SelectionAction) void {
