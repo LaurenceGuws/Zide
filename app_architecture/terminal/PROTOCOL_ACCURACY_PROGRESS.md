@@ -812,6 +812,18 @@ Verification:
 - `zig build test-terminal-kitty-query-parse`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 28 / `PA-04c` precedence matrix layout polish):
+- Added an explicit section header in `src/terminal_kitty_query_parse_tests.zig` to mark
+  the grouped query precedence matrix coverage block.
+- This is a no-behavior-change readability pass to make future additions/reviews easier.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
