@@ -136,6 +136,22 @@ Files:
 Verification:
 - `zig test src/terminal_protocol_reply_tests.zig -lc`
 
+Implemented (increment 6):
+- Extracted CSI `DA` / `DSR` reply writers for direct unit coverage.
+- Added PTY-gated unit tests for:
+  - DA primary reply
+  - DSR status (5) and CPR (6)
+  - DEC private DSR cursor ( ?6 ) and keyboard status ( ?26 )
+  - unsupported DSR mode returns no write
+
+Files:
+- `src/terminal/protocol/csi.zig`
+- `src/terminal_csi_reply_tests.zig`
+
+Verification:
+- `zig test src/terminal_csi_reply_tests.zig -lc`
+- `zig build test-terminal-replay -- --all`
+
 Planned fix shape (candidate):
 - Phase 1: enforce/assert known assertion tags and surface them in harness output.
 - Phase 2: use assertions to filter/validate snapshot sections or explicit sub-assertions.
@@ -288,6 +304,7 @@ Priority notes:
 - Advanced `PA-02` PTY-gated reply coverage with direct unit tests for DCS/OSC reply paths.
 - Expanded `PA-02` DCS/OSC reply coverage to include error-path and ST-terminator variants.
 - Expanded `PA-02` reply coverage to include `OSC 10` dynamic-color query formatting/terminator behavior.
+- Expanded `PA-02` to cover CSI `DA`/`DSR` reply bytes with direct PTY-gated unit tests.
 - Advanced `PA-05` to `partial` (unsupported `alternate_key` no longer advertised via key-mode flags).
 
 ## Next Work Queue (Ordered)

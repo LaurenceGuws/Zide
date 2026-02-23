@@ -173,50 +173,21 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
         'n' => { // DSR
             const mode = if (param_len > 0) p[0] else 0;
             if (self.pty) |*pty| {
-                var buf: [32]u8 = undefined;
                 if (action.leader == '?') {
                     switch (mode) {
                         6 => { // DECXCPR
                             const pos = screen.cursorReport();
-                            const row_1 = pos.row_1;
-                            const col_1 = pos.col_1;
-                            const seq = std.fmt.bufPrint(&buf, "\x1b[?{d};{d}R", .{ row_1, col_1 }) catch return;
-                            _ = pty.write(seq) catch {};
+                            _ = writeDsrReply(pty, action.leader, mode, pos.row_1, pos.col_1);
                         },
-                        15 => { // Printer status
-                            _ = pty.write("\x1b[?10n") catch {};
-                        },
-                        25 => { // UDK status
-                            _ = pty.write("\x1b[?20n") catch {};
-                        },
-                        26 => { // Keyboard status
-                            _ = pty.write("\x1b[?27;1;0;0n") catch {};
-                        },
-                        55 => { // Locator status
-                            _ = pty.write("\x1b[?50n") catch {};
-                        },
-                        56 => { // Locator type
-                            _ = pty.write("\x1b[?57;0n") catch {};
-                        },
-                        75 => { // Data integrity
-                            _ = pty.write("\x1b[?70n") catch {};
-                        },
-                        85 => { // Multi-session config
-                            _ = pty.write("\x1b[?83n") catch {};
-                        },
+                        15, 25, 26, 55, 56, 75, 85 => _ = writeDsrReply(pty, action.leader, mode, 0, 0),
                         else => {},
                     }
                 } else if (action.leader == 0) {
                     switch (mode) {
-                        5 => { // Device status report
-                            _ = pty.write("\x1b[0n") catch {};
-                        },
+                        5 => _ = writeDsrReply(pty, action.leader, mode, 0, 0),
                         6 => { // Cursor position report
                             const pos = screen.cursorReport();
-                            const row_1 = pos.row_1;
-                            const col_1 = pos.col_1;
-                            const seq = std.fmt.bufPrint(&buf, "\x1b[{d};{d}R", .{ row_1, col_1 }) catch return;
-                            _ = pty.write(seq) catch {};
+                            _ = writeDsrReply(pty, action.leader, mode, pos.row_1, pos.col_1);
                         },
                         else => {},
                     }
@@ -226,7 +197,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
         'c' => { // DA
             if (action.leader == 0 or action.leader == '?') {
                 if (self.pty) |*pty| {
-                    _ = pty.write("\x1b[?62;1;2;4;6;7;8;9;15;18;21;22;28;29c") catch {};
+                    _ = writeDaPrimaryReply(pty);
                 }
             }
         },
@@ -338,6 +309,50 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
         },
         else => {},
     }
+}
+
+pub fn writeDaPrimaryReply(pty: anytype) bool {
+    _ = pty.write("\x1b[?62;1;2;4;6;7;8;9;15;18;21;22;28;29c") catch return false;
+    return true;
+}
+
+pub fn writeDsrReply(pty: anytype, leader: u8, mode: i32, row_1: usize, col_1: usize) bool {
+    if (leader == '?') {
+        switch (mode) {
+            6 => {
+                var buf: [32]u8 = undefined;
+                const seq = std.fmt.bufPrint(&buf, "\x1b[?{d};{d}R", .{ row_1, col_1 }) catch return false;
+                _ = pty.write(seq) catch return false;
+                return true;
+            },
+            15 => return writeConst(pty, "\x1b[?10n"),
+            25 => return writeConst(pty, "\x1b[?20n"),
+            26 => return writeConst(pty, "\x1b[?27;1;0;0n"),
+            55 => return writeConst(pty, "\x1b[?50n"),
+            56 => return writeConst(pty, "\x1b[?57;0n"),
+            75 => return writeConst(pty, "\x1b[?70n"),
+            85 => return writeConst(pty, "\x1b[?83n"),
+            else => return false,
+        }
+    }
+    if (leader == 0) {
+        switch (mode) {
+            5 => return writeConst(pty, "\x1b[0n"),
+            6 => {
+                var buf: [32]u8 = undefined;
+                const seq = std.fmt.bufPrint(&buf, "\x1b[{d};{d}R", .{ row_1, col_1 }) catch return false;
+                _ = pty.write(seq) catch return false;
+                return true;
+            },
+            else => return false,
+        }
+    }
+    return false;
+}
+
+fn writeConst(pty: anytype, seq: []const u8) bool {
+    _ = pty.write(seq) catch return false;
+    return true;
 }
 
 pub fn applySgr(self: anytype, action: parser_csi.CsiAction) void {
