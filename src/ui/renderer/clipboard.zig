@@ -12,3 +12,11 @@ pub fn getText() ?[]const u8 {
 pub fn freeText(text: []const u8) void {
     sdl_api.freeClipboardText(text);
 }
+
+pub fn getData(mime_type: [*:0]const u8) ?[]const u8 {
+    return sdl_api.getClipboardData(mime_type);
+}
+
+pub fn freeData(data: []const u8) void {
+    sdl_api.freeClipboardData(data);
+}

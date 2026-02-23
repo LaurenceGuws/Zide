@@ -604,7 +604,9 @@ pub fn handleInput(
         if (!mouse_reporting and in_terminal) {
             if (input_batch.mousePressed(.middle)) {
                 if (shell.getClipboardText()) |clip| {
-                    if (try self.session.sendKittyPasteEvent5522(clip)) {
+                    const html = shell.getClipboardMimeData(self.session.allocator, "text/html");
+                    defer if (html) |buf| self.session.allocator.free(buf);
+                    if (try self.session.sendKittyPasteEvent5522WithHtml(clip, html)) {
                         handled = true;
                     } else if (self.session.bracketedPasteEnabled()) {
                         try self.session.sendText("\x1b[200~");

@@ -340,6 +340,10 @@ pub const Shell = struct {
         return self.renderer.getClipboardText();
     }
 
+    pub fn getClipboardMimeData(self: *Shell, allocator: std.mem.Allocator, mime_type: [*:0]const u8) ?[]u8 {
+        return self.renderer.getClipboardMimeData(allocator, mime_type);
+    }
+
     pub fn getDpiScale(self: *Shell) MousePos {
         return self.renderer.getDpiScale();
     }
