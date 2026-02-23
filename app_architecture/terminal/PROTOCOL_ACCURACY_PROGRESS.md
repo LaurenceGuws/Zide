@@ -628,6 +628,21 @@ Files:
 Verification:
 - `zig build test-terminal-kitty-query-parse`
 
+Implemented (increment 16 / `PA-04c` invalid `o=` ordering vs decode/size validation):
+- Added integrated `a=q` parse-path tests to ensure unsupported compression (`o=1`)
+  returns `EINVAL` before later validation stages that would otherwise yield:
+  - PNG decode error (`EBADPNG`)
+  - raw RGBA size mismatch (`ENODATA`)
+  - raw RGBA missing-dimensions validation
+- This extends parser-precedence coverage beyond `q` suppression and `m/O` preflight
+  cases to include deeper format/decode branches.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
@@ -781,6 +796,30 @@ Files:
 
 Verification:
 - `zig build`
+
+Implemented (increment 14 / `PA-05b` SDL scancode translation probe + runtime metadata derivation):
+- Added SDL wrapper helpers for:
+  - scancode+modifier translation via `SDL_GetKeyFromScancode(...)`
+  - printable SDL keycode -> Unicode codepoint conversion
+- Exposed these helpers through `ui.Renderer` so terminal widget input can use them
+  without introducing a direct `ui/widgets -> platform` dependency.
+- Terminal widget input now uses best-effort runtime SDL translation (when scancode is
+  present) to populate richer metadata on char/report-text paths:
+  - `base_codepoint`
+  - `shifted_codepoint`
+  - inferred distinct `alternate_layout_codepoint` (from event `sym`)
+- Text events can now inherit this richer key metadata from the preceding key event in
+  the same input batch, improving real runtime alternate-key fidelity beyond synthetic
+  test fixtures.
+
+Files:
+- `src/platform/sdl_api.zig`
+- `src/ui/renderer.zig`
+- `src/ui/widgets/terminal_widget_input.zig`
+
+Verification:
+- `zig build`
+- `zig build test-terminal-replay -- --all`
 
 Investigated feasibility/limits (research note, 2026-02-23):
 - Documented the current SDL/platform data surface and limitations for layout-aware alternate-key parity:
