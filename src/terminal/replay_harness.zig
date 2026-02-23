@@ -33,6 +33,16 @@ pub const EncoderSpec = struct {
     char: ?u32 = null,
     mod: u8 = 0,
     flags: u32 = 0,
+    alternate_meta: ?EncoderAlternateMetaSpec = null,
+};
+
+pub const EncoderAlternateMetaSpec = struct {
+    physical_key: ?u32 = null,
+    produced_text_utf8: ?[]const u8 = null,
+    base_codepoint: ?u32 = null,
+    shifted_codepoint: ?u32 = null,
+    alternate_layout_codepoint: ?u32 = null,
+    text_is_composed: bool = false,
 };
 
 pub const FixtureMeta = struct {
@@ -222,6 +232,23 @@ pub fn runEncoderFixture(
 
     if (encoder.key) |key| {
         return input_mod.encodeKeyBytesForTest(allocator, key, encoder.mod, encoder.flags);
+    }
+    if (encoder.alternate_meta) |alt| {
+        return input_mod.encodeCharEventBytesForTest(allocator, .{
+            .codepoint = encoder.char.?,
+            .mod = encoder.mod,
+            .key_mode_flags = encoder.flags,
+            .protocol = .{
+                .alternate = .{
+                    .physical_key = alt.physical_key,
+                    .produced_text_utf8 = alt.produced_text_utf8,
+                    .base_codepoint = alt.base_codepoint,
+                    .shifted_codepoint = alt.shifted_codepoint,
+                    .alternate_layout_codepoint = alt.alternate_layout_codepoint,
+                    .text_is_composed = alt.text_is_composed,
+                },
+            },
+        });
     }
     return input_mod.encodeCharBytesForTest(allocator, encoder.char.?, encoder.mod, encoder.flags);
 }
