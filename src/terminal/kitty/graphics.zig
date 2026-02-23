@@ -556,10 +556,13 @@ fn decodeBase64(self: anytype, data: []const u8) ?[]u8 {
     }
     const decoded_len = std.base64.standard.Decoder.calcSizeForSlice(data) catch return null;
     var decoded = std.ArrayList(u8).empty;
-    errdefer decoded.deinit(self.allocator);
+    var owned = false;
+    defer if (!owned) decoded.deinit(self.allocator);
     decoded.resize(self.allocator, decoded_len) catch return null;
     _ = std.base64.standard.Decoder.decode(decoded.items, data) catch return null;
-    return decoded.toOwnedSlice(self.allocator) catch null;
+    const out = decoded.toOwnedSlice(self.allocator) catch return null;
+    owned = true;
+    return out;
 }
 
 fn loadKittyPayload(self: anytype, control: *KittyControl, data: []const u8) ?[]u8 {
