@@ -27,7 +27,7 @@ Rules for this document:
 | ID | Severity | Status | Summary | Acceptance Criteria |
 |---|---|---|---|---|
 | PA-01 | High | done | Unicode width/cursor accounting incorrect in core write path | Wide codepoints occupy correct cell width; combining marks attach correctly; replay fixtures pass |
-| PA-02 | High | todo | Replay `assertions` metadata is ignored; fixture intent not enforced | Harness consumes `assertions` (or field removed/replaced) and coverage intent is explicit/tested |
+| PA-02 | High | partial | Replay `assertions` metadata is ignored; fixture intent not enforced | Harness consumes `assertions` (or field removed/replaced) and coverage intent is explicit/tested |
 | PA-03 | Medium-High | done | Kitty invalid controls can be dropped without explicit ERR reply | Invalid kitty commands produce `ERR`/`EINVAL` response when reply is allowed |
 | PA-04 | Medium | todo | Kitty graphics command/delete surface is partial vs kitty/ghostty | Scope split into concrete parity tasks and progress tracked; command support expanded or explicitly deferred |
 | PA-05 | Medium | todo | Kitty keyboard / CSI-u alternate/disambiguation flags tracked but not encoded | `alternate_key` / disambiguation flags affect output and tests cover behavior |
@@ -77,7 +77,23 @@ Evidence from review:
 - PTY-gated reply paths are under-tested because replay sessions have no PTY.
 
 Status:
-- `todo`
+- `partial` (2026-02-23)
+
+Implemented (increment 1):
+- Replay harness now consumes `assertions` instead of ignoring them.
+- Unknown assertion tags fail the fixture run.
+- Added explicit support for current fixture tags (`grid`, `cursor`, `attrs`, `clipboard`, `hyperlinks`, `selection`, `scrollback`, `title`, `cwd`, `kitty`, `alt-screen`, `encoder`).
+- Added lightweight category checks for several tags (clipboard/hyperlinks/selection/title/cwd/kitty).
+
+Files:
+- `src/terminal/replay_harness.zig`
+
+Verification:
+- `zig build test-terminal-replay -- --all`
+
+Remaining work:
+- PTY reply paths still untested in replay (`DSR/DA/OSC query/DCS/kitty replies`).
+- Some tags remain recognized-but-not-semantic (`grid`, `cursor`, `attrs`, `scrollback`) until per-section assertions are implemented.
 
 Planned fix shape (candidate):
 - Phase 1: enforce/assert known assertion tags and surface them in harness output.
@@ -185,10 +201,11 @@ Notes:
 - Completed `PA-03` (kitty invalid control emits `EINVAL` reply).
 - Completed `PA-06` (X10 coord overflow saturates to `255`; added unit coverage).
 - Completed `PA-07` (removed bare `58` reset behavior in SGR parser).
+- Advanced `PA-02` to `partial` (replay assertions are now consumed and validated; PTY reply coverage still pending).
 
 ## Next Work Queue (Ordered)
 
-1. `PA-02` Replay assertions enforcement design + minimal implementation
+1. `PA-02` PTY reply fixture/stub coverage + stronger semantic assertion checks
 2. `PA-05` Kitty keyboard alternate/disambiguation flags
 3. `PA-04` Kitty graphics parity decomposition
 4. `PA-08` CSI/DCS/APC parity decomposition
