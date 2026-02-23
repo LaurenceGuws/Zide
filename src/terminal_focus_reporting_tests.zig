@@ -412,6 +412,41 @@ test "terminal OSC 5522 read preserves BEL terminator" {
     }.run);
 }
 
+test "terminal OSC 5522 read returns ENOSYS for unsupported MIME request" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            terminal.debugFeedBytes(session, "\x1b[?5522h");
+            try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
+            {
+                const unsolicited = try capture.readReply(allocator);
+                defer allocator.free(unsolicited);
+            }
+
+            terminal.debugFeedBytes(session, "\x1b]5522;type=read;YXBwbGljYXRpb24vanNvbg==\x1b\\");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b]5522;type=read:status=ENOSYS\x1b\\", reply);
+            }
+        }
+    }.run);
+}
+
+test "terminal OSC 5522 read returns EINVAL for malformed payload" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            terminal.debugFeedBytes(session, "\x1b]5522;type=read;%%%\x1b\\");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b]5522;type=read:status=EINVAL\x1b\\", reply);
+            }
+        }
+    }.run);
+}
+
 test "terminal DECRQM private query returns Pm=0 for provisional unsupported modes still on support path" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
