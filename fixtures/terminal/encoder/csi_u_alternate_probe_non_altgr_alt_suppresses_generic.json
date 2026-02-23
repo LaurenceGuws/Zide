@@ -1,0 +1,30 @@
+{
+  "fixture_type": "encoder",
+  "rows": 1,
+  "cols": 1,
+  "cursor": { "row": 0, "col": 0 },
+  "line_ending": "lf",
+  "assertions": ["encoder"],
+  "encoder": {
+    "char": 201,
+    "mod": 1,
+    "flags": 12,
+    "alternate_probe_meta": {
+      "key_mods": {
+        "shift": true,
+        "alt": true,
+        "ctrl": true,
+        "altgr": false
+      },
+      "key_scancode": 18,
+      "key_sym": 64,
+      "key_enum": "e",
+      "text_utf8": "É",
+      "probe_base_codepoint": 233,
+      "probe_shifted_codepoint": 201,
+      "probe_event_sym_codepoint": 64,
+      "probe_altgr_codepoint": 8364,
+      "explicit_non_altgr_alt": true
+    }
+  }
+}

@@ -2,7 +2,9 @@ const std = @import("std");
 const terminal = @import("core/terminal.zig");
 const snapshot_mod = @import("core/snapshot.zig");
 const input_mod = @import("input/input.zig");
+const alt_probe = @import("input/alternate_probe.zig");
 const types = @import("model/types.zig");
+const shared_types = @import("../types/mod.zig");
 
 pub const FixtureType = enum {
     vt,
@@ -34,6 +36,7 @@ pub const EncoderSpec = struct {
     mod: u8 = 0,
     flags: u32 = 0,
     alternate_meta: ?EncoderAlternateMetaSpec = null,
+    alternate_probe_meta: ?EncoderAlternateProbeMetaSpec = null,
 };
 
 pub const EncoderAlternateMetaSpec = struct {
@@ -43,6 +46,30 @@ pub const EncoderAlternateMetaSpec = struct {
     shifted_codepoint: ?u32 = null,
     alternate_layout_codepoint: ?u32 = null,
     text_is_composed: bool = false,
+};
+
+pub const EncoderKeyModsSpec = struct {
+    shift: bool = false,
+    alt: bool = false,
+    ctrl: bool = false,
+    super: bool = false,
+    altgr: bool = false,
+};
+
+pub const EncoderAlternateProbeMetaSpec = struct {
+    key_mods: EncoderKeyModsSpec = .{},
+    key_scancode: ?i32 = null,
+    key_sym: ?i32 = null,
+    key_enum: shared_types.input.Key = .unknown,
+    text_utf8: ?[]const u8 = null,
+    text_is_composed: bool = false,
+    probe_base_codepoint: ?u32 = null,
+    probe_shifted_codepoint: ?u32 = null,
+    probe_event_sym_codepoint: ?u32 = null,
+    probe_altgr_codepoint: ?u32 = null,
+    probe_altgr_shift_codepoint: ?u32 = null,
+    explicit_altgr: bool = false,
+    explicit_non_altgr_alt: bool = false,
 };
 
 pub const FixtureMeta = struct {
@@ -232,6 +259,50 @@ pub fn runEncoderFixture(
 
     if (encoder.key) |key| {
         return input_mod.encodeKeyBytesForTest(allocator, key, encoder.mod, encoder.flags);
+    }
+    if (encoder.alternate_meta != null and encoder.alternate_probe_meta != null) return error.InvalidEncoderSpec;
+    if (encoder.alternate_probe_meta) |probe_spec| {
+        var text_utf8_buf: [4]u8 = .{ 0, 0, 0, 0 };
+        var text_event: shared_types.input.TextEvent = .{
+            .codepoint = encoder.char.?,
+            .text_is_composed = probe_spec.text_is_composed,
+        };
+        if (probe_spec.text_utf8) |provided| {
+            const n = @min(provided.len, text_utf8_buf.len);
+            @memcpy(text_utf8_buf[0..n], provided[0..n]);
+            text_event.utf8_len = @intCast(n);
+            text_event.utf8 = text_utf8_buf;
+        }
+        const key_event: shared_types.input.KeyEvent = .{
+            .key = probe_spec.key_enum,
+            .mods = .{
+                .shift = probe_spec.key_mods.shift,
+                .alt = probe_spec.key_mods.alt,
+                .ctrl = probe_spec.key_mods.ctrl,
+                .super = probe_spec.key_mods.super,
+                .altgr = probe_spec.key_mods.altgr,
+            },
+            .repeated = false,
+            .pressed = true,
+            .scancode = probe_spec.key_scancode,
+            .sym = probe_spec.key_sym,
+            .sdl_mod_bits = null,
+        };
+        const meta = alt_probe.buildTextEventAlternateMetadata(key_event, text_event, encoder.char.?, .{
+            .base = probe_spec.probe_base_codepoint,
+            .shifted = probe_spec.probe_shifted_codepoint,
+            .event_sym = probe_spec.probe_event_sym_codepoint,
+            .altgr = probe_spec.probe_altgr_codepoint,
+            .altgr_shift = probe_spec.probe_altgr_shift_codepoint,
+            .explicit_altgr = probe_spec.explicit_altgr,
+            .explicit_non_altgr_alt = probe_spec.explicit_non_altgr_alt,
+        });
+        return input_mod.encodeCharEventBytesForTest(allocator, .{
+            .codepoint = encoder.char.?,
+            .mod = encoder.mod,
+            .key_mode_flags = encoder.flags,
+            .protocol = .{ .alternate = meta },
+        });
     }
     if (encoder.alternate_meta) |alt| {
         return input_mod.encodeCharEventBytesForTest(allocator, .{
