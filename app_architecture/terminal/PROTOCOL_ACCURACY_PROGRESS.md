@@ -152,6 +152,18 @@ Verification:
 - `zig test src/terminal_csi_reply_tests.zig -lc`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 7):
+- Added direct unit coverage for kitty reply formatting and `quiet` suppression behavior (`q=1`, `q=2`).
+- Exported `writeKittyResponse` for testability (no behavior change).
+
+Files:
+- `src/terminal/kitty/graphics.zig`
+- `src/terminal_kitty_reply_tests.zig`
+
+Verification:
+- `zig test src/terminal_kitty_reply_tests.zig -lc`
+- `zig build test-terminal-replay -- --all`
+
 Planned fix shape (candidate):
 - Phase 1: enforce/assert known assertion tags and surface them in harness output.
 - Phase 2: use assertions to filter/validate snapshot sections or explicit sub-assertions.
@@ -305,6 +317,7 @@ Priority notes:
 - Expanded `PA-02` DCS/OSC reply coverage to include error-path and ST-terminator variants.
 - Expanded `PA-02` reply coverage to include `OSC 10` dynamic-color query formatting/terminator behavior.
 - Expanded `PA-02` to cover CSI `DA`/`DSR` reply bytes with direct PTY-gated unit tests.
+- Expanded `PA-02` to cover kitty reply formatting + quiet-mode suppression behavior.
 - Advanced `PA-05` to `partial` (unsupported `alternate_key` no longer advertised via key-mode flags).
 
 ## Next Work Queue (Ordered)
