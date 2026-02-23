@@ -469,9 +469,6 @@ pub fn applySgr(self: anytype, action: parser_csi.CsiAction) void {
             49 => { // default bg
                 screen.current_attrs.bg = screen.default_attrs.bg;
             },
-            58 => {
-                screen.current_attrs.underline_color = screen.default_attrs.underline_color;
-            },
             59 => {
                 screen.current_attrs.underline_color = screen.default_attrs.underline_color;
             },

@@ -1,3 +1,4 @@
+const std = @import("std");
 const types = @import("../model/types.zig");
 
 const mouse_button_left_mask: u8 = 1;
@@ -32,6 +33,11 @@ pub fn mouseButtonCode(button: types.MouseButton) u8 {
 
 pub fn mouseEncodeCoordX10(value: usize) u8 {
     const v = value + 1 + 32;
-    if (v > 255) return 0;
+    if (v > 255) return 255;
     return @intCast(v);
+}
+
+test "x10 mouse coord encoding saturates on overflow" {
+    try std.testing.expectEqual(@as(u8, 33), mouseEncodeCoordX10(0));
+    try std.testing.expectEqual(@as(u8, 255), mouseEncodeCoordX10(10_000));
 }
