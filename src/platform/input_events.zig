@@ -13,6 +13,7 @@ pub const TextPress = struct {
     codepoint: u32,
     utf8_len: u8,
     utf8: [4]u8,
+    text_is_composed: bool,
 };
 
 pub const KeyEventInfo = struct {
@@ -105,6 +106,7 @@ pub fn handleTextInput(
     event: *const sdl.SDL_Event,
     char_queue: *std.ArrayList(TextPress),
     allocator: std.mem.Allocator,
+    text_is_composed: bool,
 ) usize {
     const len = sdl_api.textInputLen(event);
     const text_field = event.text;
@@ -121,6 +123,7 @@ pub fn handleTextInput(
             .codepoint = cp,
             .utf8_len = utf8_len,
             .utf8 = utf8,
+            .text_is_composed = text_is_composed,
         }) catch {};
     }
     return text.len;
