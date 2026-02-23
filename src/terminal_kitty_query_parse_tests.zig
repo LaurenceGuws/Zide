@@ -592,42 +592,39 @@ test "kitty parse query quiet=2 suppresses missing-id preflight before invalid c
     }.run);
 }
 
-test "kitty parse query chunked plus zlib compression returns preflight EINVAL" {
-    try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
-            kitty.parseKittyGraphics(session, "a=q,i=7,m=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1);
-            const reply = try capture.readReply(std.testing.allocator);
-            defer std.testing.allocator.free(reply);
-            try std.testing.expectEqualStrings("\x1b_Gi=7;EINVAL\x1b\\", reply);
-        }
-    }.run);
-}
+test "kitty parse query non-missing-id zlib preflight precedence matrix" {
+    const reply_cases = [_]struct {
+        name: []const u8,
+        seq: []const u8,
+        expected: []const u8,
+    }{
+        .{ .name = "chunked zlib preflight", .seq = "a=q,i=7,m=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1, .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "offset zlib preflight", .seq = "a=q,i=7,O=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1, .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "chunked zlib beats invalid format", .seq = "a=q,i=7,m=1,o=z,f=999;" ++ zlib_rgba_1x1, .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "offset zlib beats invalid format", .seq = "a=q,i=7,O=1,o=z,f=999;" ++ zlib_rgba_1x1, .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "chunked zlib beats malformed payload", .seq = "a=q,i=7,m=1,o=z,f=32,s=1,v=1;%%%%", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "offset zlib beats malformed payload", .seq = "a=q,i=7,O=1,o=z,f=32,s=1,v=1;%%%%", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "q1 chunked zlib preflight", .seq = "a=q,i=7,q=1,m=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1, .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "q1 offset zlib preflight", .seq = "a=q,i=7,q=1,O=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1, .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "q1 chunked zlib plus invalid format and malformed", .seq = "a=q,i=7,q=1,m=1,o=z,f=999;%%%%", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "q1 offset zlib plus invalid format and malformed", .seq = "a=q,i=7,q=1,O=1,o=z,f=999;%%%%", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+    };
+    inline for (reply_cases) |case_| {
+        _ = case_.name;
+        try expectKittyQueryReply(case_.seq, case_.expected);
+    }
 
-test "kitty parse query offset plus zlib compression returns preflight EINVAL" {
-    try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
-            kitty.parseKittyGraphics(session, "a=q,i=7,O=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1);
-            const reply = try capture.readReply(std.testing.allocator);
-            defer std.testing.allocator.free(reply);
-            try std.testing.expectEqualStrings("\x1b_Gi=7;EINVAL\x1b\\", reply);
-        }
-    }.run);
-}
-
-test "kitty parse query quiet=2 suppresses chunked zlib preflight EINVAL" {
-    try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
-            kitty.parseKittyGraphics(session, "a=q,i=7,q=2,m=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1);
-            try capture.expectNoReply();
-        }
-    }.run);
-}
-
-test "kitty parse query quiet=2 suppresses offset zlib preflight EINVAL" {
-    try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
-            kitty.parseKittyGraphics(session, "a=q,i=7,q=2,O=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1);
-            try capture.expectNoReply();
-        }
-    }.run);
+    const no_reply_cases = [_]struct {
+        name: []const u8,
+        seq: []const u8,
+    }{
+        .{ .name = "q2 chunked zlib preflight", .seq = "a=q,i=7,q=2,m=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1 },
+        .{ .name = "q2 offset zlib preflight", .seq = "a=q,i=7,q=2,O=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1 },
+        .{ .name = "q2 chunked zlib plus invalid format and malformed", .seq = "a=q,i=7,q=2,m=1,o=z,f=999;%%%%" },
+        .{ .name = "q2 offset zlib plus invalid format and malformed", .seq = "a=q,i=7,q=2,O=1,o=z,f=999;%%%%" },
+    };
+    inline for (no_reply_cases) |case_| {
+        _ = case_.name;
+        try expectKittyQueryNoReply(case_.seq);
+    }
 }
