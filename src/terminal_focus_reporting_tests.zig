@@ -461,6 +461,39 @@ test "terminal DECSTR in alt screen preserves active screen selection and primar
     }.run);
 }
 
+test "terminal DECSTR invalidates saved cursor restore slot" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            terminal.debugFeedBytes(session, "\x1b[3;5H\x1b[s\x1b[1;1H\x1b[!p\x1b[u");
+            try capture.expectNoReply();
+            const pos = session.getCursorPos();
+            try std.testing.expectEqual(@as(usize, 0), pos.row);
+            try std.testing.expectEqual(@as(usize, 0), pos.col);
+        }
+    }.run);
+}
+
+test "terminal DECSTR resets parser charset and clears saved charset restore" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            terminal.debugFeedBytes(session, "\x1b(0"); // DEC special G0 active in GL by default
+            terminal.debugFeedBytes(session, "j");
+            const before = session.getCell(0, 0).codepoint;
+            try std.testing.expect(before != @as(u32, 'j'));
+
+            terminal.debugFeedBytes(session, "\x1b[s"); // save cursor + charset state
+            terminal.debugFeedBytes(session, "\x1b(B"); // back to ASCII
+            terminal.debugFeedBytes(session, "\x1b[!p"); // DECSTR clears saved charset + parser state
+            try capture.expectNoReply();
+            terminal.debugFeedBytes(session, "\x1b[u"); // should not restore saved charset/cursor after DECSTR
+            terminal.debugFeedBytes(session, "j");
+
+            try std.testing.expectEqual(@as(u32, 'j'), session.getCell(0, 0).codepoint);
+            try std.testing.expectEqual(@as(usize, 1), session.getCursorPos().col);
+        }
+    }.run);
+}
+
 test "terminal CSI ?1004p without $ intermediate does not trigger DECRQM reply" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
