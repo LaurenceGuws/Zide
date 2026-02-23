@@ -123,3 +123,31 @@ test "OSC 4 palette query preserves ST terminator" {
     palette.handleOscPalette(&self, "1;?", .st);
     try std.testing.expectEqualStrings("\x1b]4;1;rgb:0101/0202/0303\x1b\\", self.pty.?.writes.items);
 }
+
+test "OSC 10 dynamic color query replies with default fg and BEL terminator" {
+    const Attrs = types.CellAttrs;
+    const ScreenLike = struct {
+        default_attrs: Attrs,
+    };
+
+    const Self = struct {
+        pty: ?FakePty,
+        primary: ScreenLike,
+        base_default_attrs: Attrs,
+        dynamic_colors: [10]?types.Color,
+
+        pub fn setDefaultColors(_: *@This(), _: types.Color, _: types.Color) void {}
+    };
+
+    const default_attrs = types.defaultCell().attrs;
+    var self = Self{
+        .pty = FakePty.init(),
+        .primary = .{ .default_attrs = default_attrs },
+        .base_default_attrs = default_attrs,
+        .dynamic_colors = [_]?types.Color{null} ** 10,
+    };
+    defer if (self.pty) |*pty| pty.deinit(std.testing.allocator);
+
+    palette.handleOscDynamicColor(&self, 10, "?", .bel);
+    try std.testing.expectEqualStrings("\x1b]10;rgb:dcdc/dcdc/dcdc\x07", self.pty.?.writes.items);
+}
