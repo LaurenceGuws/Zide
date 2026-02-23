@@ -2055,6 +2055,26 @@ Verification:
 - `zig build test-terminal-replay -- --fixture decstr_resets_charset_mapping --update-goldens`
 - `zig build test-terminal-replay -- --fixture decstr_preserves_scrollback --update-goldens`
 - `zig build test-terminal-replay -- --all`
+
+Implemented (increment 3 / `PA-08h` `DECSTR` cursor-style + alt-screen kitty nuance locks):
+- Added PTY integration test proving `DECSTR` resets cursor style to the default (shape=`block`, blink=`true`) after `DECSCUSR` style changes.
+- Added replay fixture that visibly locks cursor-style reset in snapshot output after `CSI 6 q` then `DECSTR`.
+- Added state-level test and replay fixture proving kitty image/placement state survives `DECSTR` while alt-screen remains active (not only on primary or after alt exit).
+
+Files:
+- `src/terminal_focus_reporting_tests.zig`
+- `fixtures/terminal/decstr_resets_cursor_style.vt`
+- `fixtures/terminal/decstr_resets_cursor_style.json`
+- `fixtures/terminal/decstr_resets_cursor_style.golden`
+- `fixtures/terminal/decstr_preserves_alt_kitty_placement.vt`
+- `fixtures/terminal/decstr_preserves_alt_kitty_placement.json`
+- `fixtures/terminal/decstr_preserves_alt_kitty_placement.golden`
+
+Verification:
+- `zig build test-terminal-focus-reporting`
+- `zig build test-terminal-replay -- --fixture decstr_resets_cursor_style --update-goldens`
+- `zig build test-terminal-replay -- --fixture decstr_preserves_alt_kitty_placement --update-goldens`
+- `zig build test-terminal-replay -- --all`
   4. Extend/reset matrix incrementally as reference behavior is confirmed.
 
 ## Change Log
