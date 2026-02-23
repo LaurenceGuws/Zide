@@ -1979,7 +1979,8 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
 |---|---|---|
 | Screen grid contents | preserve | soft reset only; no clear |
 | Scrollback | preserve | hard-reset-only behavior |
-| Kitty images/placements | preserve | hard-reset-only behavior |
+| Kitty images/placements (active screen) | reset/clear | explicit `PA-08h` parity decision (2026-02-23); active-screen kitty state now cleared by `DECSTR` |
+| Kitty images/placements (hidden non-active screen) | preserve | strategic divergence for now; preserves hidden-screen state across active-screen `DECSTR` |
 | Cursor position | reset to home (`0,0`) on active screen | via `Screen.resetState()` |
 | Cursor style/visibility | reset to defaults | active screen only |
 | SGR attrs / key-mode stack / wrap-next | reset on active screen | via `Screen.resetState()` |
@@ -2011,11 +2012,11 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
   - foot's `DECSTR` path (`reference_repos/terminals/foot/csi.c` -> `term_reset(term, false)` in `reference_repos/terminals/foot/terminal.c`) is materially broader than Zide's current slice:
     - exits alt-screen
     - resets title/app-id state
-    - clears image/notification state
+    - clears image/notification state (broader than Zide's current hidden-screen preserve behavior)
   - Zide currently preserves those areas by design for a safer soft-reset slice; this is intentional for now but must be kept marked as a divergence until xterm/kitty/ghostty alignment is chosen and documented.
 - Current row-by-row classification in this `DECSTR` slice (to avoid ambiguity while `PA-08h` remains `partial`):
-  - `implemented + evidence locked`: grid/scrollback (heuristic caveat), kitty state, cursor pos/style, attrs, scroll region, tabs, parser/charsets, saved cursor/charset slots, session mode bits, alt-screen active state, hidden primary contents, **title reset to default**, cwd/clipboard/hyperlinks preserve
-  - `defer (reference parity decision pending)`: whether `DECSTR` should reset app-id metadata, clear graphics/notification state, or otherwise broaden toward foot-like soft reset scope
+  - `implemented + evidence locked`: grid/scrollback (heuristic caveat), **active-screen kitty clear**, hidden-screen kitty preserve, cursor pos/style, attrs, scroll region, tabs, parser/charsets, saved cursor/charset slots, session mode bits, alt-screen active state, hidden primary contents, **title reset to default**, cwd/clipboard/hyperlinks preserve
+  - `defer (reference parity decision pending)`: whether `DECSTR` should reset app-id metadata and/or broaden graphics/notification clearing toward foot-like soft reset scope (including hidden-screen state)
   - `out of current slice`: broader CSI reset-family parity beyond `DECSTR` (`PA-08h` promoted gaps)
 - Explicit product/parity decision (2026-02-23):
   - `DECSTR` **alt-screen active state**: keep current Zide behavior (`preserve`) as a **strategic divergence** for now.
@@ -2035,6 +2036,14 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
     - PTY test: `terminal DECSTR resets title to default`
     - replay fixture: `decstr_resets_title_to_default`
     - existing metadata preserve fixture updated to assert cwd/hyperlinks (not title): `decstr_preserves_title_cwd_hyperlink`
+
+- Explicit product/parity decision + implementation (2026-02-23):
+  - `DECSTR` **kitty graphics state (active screen)**: changed Zide behavior to **clear active-screen kitty images/placements** on `CSI ! p` (match broader soft-reset precedent for graphics reset on the active screen).
+  - Strategic divergence retained:
+    - hidden-screen kitty state remains preserved for now (we do not clear both screens like foot's broader soft reset path).
+  - Evidence:
+    - PTY/direct tests: active alt-screen kitty clears after `DECSTR`, hidden-primary non-leak boundary remains enforced
+    - replay fixtures (legacy names retained): `decstr_preserves_kitty_placement`, `decstr_preserves_alt_kitty_placement` now lock active-screen kitty clear semantics after `DECSTR`
 - Deferred / out of current `PA-08h` slice unless reference/app evidence demands it:
   - hard-reset-like behavior (screen clear, scrollback wipe, kitty image wipe)
   - broader CSI reset-family parity beyond `DECSTR` (tracked separately in `PA-08h` promoted gaps / `PA-08a`)
@@ -2204,6 +2213,25 @@ Files:
 Verification:
 - `zig build test-terminal-focus-reporting`
 - `zig build test-terminal-replay -- --fixture decstr_resets_title_to_default --update-goldens`
+- `zig build test-terminal-replay -- --all`
+
+Implemented (increment 9 / `PA-08h` `DECSTR` active-screen kitty clear parity row):
+- Updated `DECSTR` soft reset to clear kitty graphics state on the active screen (images, placements, partials), while preserving hidden-screen kitty state for now.
+- Updated direct DECSTR kitty tests to reflect the new semantics:
+  - active alt-screen kitty state is cleared by `DECSTR`
+  - hidden primary still does not receive leaked alt placements after `?1049l`
+- Refreshed the two existing DECSTR kitty replay fixtures (legacy filenames retained) to lock active-screen kitty clear behavior.
+
+Files:
+- `src/terminal/protocol/csi.zig`
+- `src/terminal_focus_reporting_tests.zig`
+- `fixtures/terminal/decstr_preserves_kitty_placement.golden`
+- `fixtures/terminal/decstr_preserves_alt_kitty_placement.golden`
+
+Verification:
+- `zig build test-terminal-focus-reporting`
+- `zig build test-terminal-replay -- --fixture decstr_preserves_kitty_placement --update-goldens`
+- `zig build test-terminal-replay -- --fixture decstr_preserves_alt_kitty_placement --update-goldens`
 - `zig build test-terminal-replay -- --all`
   4. Extend/reset matrix incrementally as reference behavior is confirmed.
 
