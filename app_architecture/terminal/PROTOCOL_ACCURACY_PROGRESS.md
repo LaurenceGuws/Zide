@@ -1872,6 +1872,26 @@ Planned work (decomposition / `PA-08g` `DECRQM` / `DECRPM` parity breadth + repl
   3. Add or defer one small batch of high-value modes (e.g. `?9`, `?12`, `?45`, `?66`) with PTY + replay matrix updates.
   4. Finalize `Pm=3/4` policy and lock with unit/replay tests.
 
+`PA-08g` mode inventory snapshot (current Zide vs reference candidates):
+
+| Family | Mode(s) | Zide status | Current reply policy | Reference signal | Suggested action |
+|---|---|---|---|---|---|
+| ANSI `DECRQM` | `20` (newline) | implemented | `1/2` state, `0` unsupported others | xterm/foot | keep |
+| ANSI `DECRQM` | `4` (insert), `12` (local echo), other ANSI queryable modes | not implemented | `0` | xterm/foot/ghostty parsing model | audit + decide `implement/defer` |
+| DEC private `DECRQM` | `?1 ?3 ?5 ?6 ?7 ?25 ?47 ?1047 ?1049` | implemented | `1/2` | xterm/foot | keep |
+| DEC private `DECRQM` | `?1000 ?1002 ?1003 ?1004 ?1006 ?2004 ?2026` | implemented | `1/2` | xterm/foot/kitty app usage | keep |
+| DEC private `DECRQM` | `?9 ?12 ?45 ?66` | not implemented | `0` | foot returns `1/2` for some; common VT semantics | evaluate next batch |
+| DEC private `DECRQM` | `?67 ?1001 ?1005` | not implemented | `0` | foot often reports permanent reset (`4`) | policy decision (`0` vs `4`) |
+| DEC private `DECRQM` | `?1015 ?1016` mouse alt encodings | not implemented | `0` | foot/xterm queryable | likely defer unless app demand |
+| DEC private `DECRQM` | `?1034 ?1035 ?1036 ?1042 ?1070` | not implemented | `0` | foot supports/reportable | defer unless feature lands |
+| DEC private `DECRQM` | `?2031 ?2048 ?5522` kitty/modern extensions | not implemented | `0` | kitty docs + foot examples | explicit defer/feature-specific slice |
+| DEC private `DECRQM` | unknown modes | implemented fallback | `0` | xterm/foot convention | keep (test-locked) |
+
+Notes:
+- Current Zide implemented set is sourced from `src/terminal/protocol/csi.zig` (`decrqmPrivateModeState`, `decrqmAnsiModeState`).
+- Reference candidate set is seeded primarily from `reference_repos/terminals/foot/csi.c` plus xterm docs and kitty clipboard docs (`?5522`).
+- Final `implement/defer` decisions for each non-implemented row should be recorded here before broadening `PA-08e` mode handling.
+
 ## Change Log
 
 ### 2026-02-23
