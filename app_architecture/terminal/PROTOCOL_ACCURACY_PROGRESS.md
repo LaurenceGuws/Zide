@@ -127,6 +127,15 @@ Files:
 Verification:
 - `zig test src/terminal_protocol_reply_tests.zig -lc`
 
+Implemented (increment 5):
+- Added PTY-gated unit coverage for `OSC 10` dynamic-color query reply (default fg + BEL terminator).
+
+Files:
+- `src/terminal_protocol_reply_tests.zig`
+
+Verification:
+- `zig test src/terminal_protocol_reply_tests.zig -lc`
+
 Planned fix shape (candidate):
 - Phase 1: enforce/assert known assertion tags and surface them in harness output.
 - Phase 2: use assertions to filter/validate snapshot sections or explicit sub-assertions.
@@ -278,6 +287,7 @@ Priority notes:
 - Strengthened `PA-02` semantic checks for `grid`/`cursor`/`attrs` assertions in replay harness.
 - Advanced `PA-02` PTY-gated reply coverage with direct unit tests for DCS/OSC reply paths.
 - Expanded `PA-02` DCS/OSC reply coverage to include error-path and ST-terminator variants.
+- Expanded `PA-02` reply coverage to include `OSC 10` dynamic-color query formatting/terminator behavior.
 - Advanced `PA-05` to `partial` (unsupported `alternate_key` no longer advertised via key-mode flags).
 
 ## Next Work Queue (Ordered)
