@@ -710,6 +710,40 @@ Verification:
 - `zig build`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 12 / `PA-05b` IME commit `text_is_composed` propagation):
+- Propagated `text_is_composed` from the SDL text-input path when text input is emitted while composition was active.
+- The renderer now captures composition-active state immediately before `EVENT_TEXT_INPUT` clears composition, and passes that signal into per-codepoint text queue entries.
+- `input_builder` preserves the composed flag into `shared_types.input.TextEvent`, so terminal input metadata consumers receive a real IME/compose signal.
+
+Files:
+- `src/platform/input_events.zig`
+- `src/ui/renderer.zig`
+- `src/input/input_builder.zig`
+
+Verification:
+- `zig build`
+- `zig build test-terminal-replay -- --all`
+
+Implemented (increment 1 / `PA-05c` synthetic non-US metadata fixtures at encoder boundary):
+- Extended the encoder replay fixture schema with optional `encoder.alternate_meta` so fixtures can inject synthetic `KeyboardAlternateMetadata` into char encoding tests.
+- `runEncoderFixture()` now routes metadata-bearing char fixtures through `encodeCharEventBytesForTest(...)`.
+- Added initial replay fixtures that emulate non-US/layout metadata and composed-text metadata:
+  - non-US alternate metadata present -> current encoder output unchanged (no-op baseline)
+  - composed-text metadata present -> current encoder output unchanged (no-op baseline)
+- These fixtures create a regression seam for future layout-aware alternate-key encoding without changing current behavior.
+
+Files:
+- `src/terminal/replay_harness.zig`
+- `fixtures/terminal/encoder/csi_u_alternate_metadata_non_us_noop.json`
+- `fixtures/terminal/encoder/csi_u_alternate_metadata_non_us_noop.golden`
+- `fixtures/terminal/encoder/csi_u_alternate_metadata_composed_noop.json`
+- `fixtures/terminal/encoder/csi_u_alternate_metadata_composed_noop.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture encoder:csi_u_alternate_metadata_non_us_noop --update-goldens`
+- `zig build test-terminal-replay -- --fixture encoder:csi_u_alternate_metadata_composed_noop --update-goldens`
+- `zig build test-terminal-replay -- --all`
+
 Implemented (increment 3):
 - Aligned `encodeKeyBytesForTest` with runtime protocol gating for key-mode flags:
   - unsupported flag-only modes (e.g. `alternate_key` bit by itself) no longer produce protocol bytes in tests
