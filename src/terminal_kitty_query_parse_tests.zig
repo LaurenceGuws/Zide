@@ -7,6 +7,7 @@ const kitty = @import("terminal/kitty/graphics.zig");
 const pty_mod = @import("terminal/io/pty.zig");
 
 const tiny_png_1x1 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=";
+const zlib_rgba_1x1 = "eJxjYGD4DwABAwEA";
 
 fn requireUnix() !void {
     if (builtin.os.tag != .linux and builtin.os.tag != .macos) return error.SkipZigTest;
@@ -299,6 +300,59 @@ test "kitty parse query quiet=2 suppresses missing-dimensions EINVAL reply" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
             kitty.parseKittyGraphics(session, "a=q,i=7,q=2,f=32;AAAA/w==");
+            try capture.expectNoReply();
+        }
+    }.run);
+}
+
+test "kitty parse query malformed base64 emits EINVAL reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,f=32,s=1,v=1;!!!");
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;EINVAL\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query quiet=2 suppresses malformed base64 reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,q=2,f=32,s=1,v=1;!!!");
+            try capture.expectNoReply();
+        }
+    }.run);
+}
+
+test "kitty parse query compression flag is accepted on rgba payload" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            // Current query path does not inflate `o=z`; it still validates/builds from decoded bytes.
+            kitty.parseKittyGraphics(session, "a=q,i=7,o=z,f=32,s=1,v=1;AAAA/w==");
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;OK\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query compressed payload currently returns OK" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            // Query path currently ignores `o=z` inflation and treats compressed bytes as payload.
+            kitty.parseKittyGraphics(session, "a=q,i=7,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1);
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;OK\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query quiet=2 suppresses compressed payload current OK reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,q=2,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1);
             try capture.expectNoReply();
         }
     }.run);
