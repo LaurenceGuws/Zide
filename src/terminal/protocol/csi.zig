@@ -424,6 +424,7 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState
         7 => boolModeState(screen.auto_wrap),
         25 => boolModeState(screen.cursor_visible),
         47, 1047, 1049 => boolModeState(self.active == .alt),
+        66 => boolModeState(self.app_keypad),
         1000 => boolModeState(self.input.mouse_mode_x10),
         1002 => boolModeState(self.input.mouse_mode_button),
         1003 => boolModeState(self.input.mouse_mode_any),

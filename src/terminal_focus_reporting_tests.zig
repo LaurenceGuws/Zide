@@ -193,6 +193,37 @@ test "terminal DECRQM private queries report common mode set/reset states" {
     }.run);
 }
 
+test "terminal DECRQM private query reports keypad mode ?66 via DECPAM/DECPNM state" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+
+            terminal.debugFeedBytes(session, "\x1b[?66$p");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[?66;2$y", reply);
+            }
+
+            terminal.debugFeedBytes(session, "\x1b=");
+            terminal.debugFeedBytes(session, "\x1b[?66$p");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[?66;1$y", reply);
+            }
+
+            terminal.debugFeedBytes(session, "\x1b>");
+            terminal.debugFeedBytes(session, "\x1b[?66$p");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[?66;2$y", reply);
+            }
+        }
+    }.run);
+}
+
 test "terminal DECRQM private query returns Pm=0 for unsupported mode" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
