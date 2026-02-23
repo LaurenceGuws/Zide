@@ -1950,7 +1950,7 @@ High-value DEC private modes (common TUI / modern terminal usage):
 | `?45` | reverse-wrap | `Pm=0` | `Y` | `Y` | `?` | strong | defer or implement with explicit rationale |
 | `?1016` | SGR pixel mouse | `Pm=0` | `Y` | `Y` | `Y` | strong modern | likely future implement, do not mark `Pm=4` |
 | `?2031` | color scheme notifications | `Pm=0` | `Y` | `Y` | `Y` | modern ext | likely future implement, do not mark `Pm=4` |
-| `?2048` | in-band resize notifications | `Pm=0` | `Y` | `Y` | `Y` | modern ext | likely future implement, do not mark `Pm=4` |
+| `?2048` | in-band resize notifications | implemented (`1/2`) | `Y` | `Y` | `Y` | modern ext | implemented first slice (mode + resize report emit) |
 | `?5522` | kitty paste/clipboard events mode | implemented (`1/2`, partial behavior slice) | `-` | `-` | `Y` (+ docs) | kitty-specific | implemented mode + paste-event MIME list + minimal read path (`.`/`text/plain`/`text/html`/`text/uri-list`/`image/png`); write/permission/primary deferred |
 
 Current strategic non-support rows (`Pm=4`) are retained only where references and product direction both support fixed-off behavior:
@@ -1977,7 +1977,8 @@ Current strategic non-support rows (`Pm=4`) are retained only where references a
 | DEC private `DECRQM` | `?1016` mouse pixel encoding (SGR pixels) | not implemented | `0` | foot/ghostty/kitty | defer provisional (requires real pixel-coordinate mouse reporting path) |
 | DEC private `DECRQM` | `?1034 ?1035 ?1036 ?1042` | implemented (query-only) | `4` (permanently reset) | foot supports/reportable | unsupported fixed-off parity policy adopted |
 | DEC private `DECRQM` | `?1070` | implemented (query-only) | `4` (permanently reset) | foot supports/reportable | unsupported fixed-off parity policy adopted |
-| DEC private `DECRQM` | `?2031 ?2048` modern notifications | not implemented | `0` | foot/ghostty/kitty | defer provisional; do not claim fixed-off unless strategic |
+| DEC private `DECRQM` | `?2031` theme notifications | not implemented | `0` | foot/ghostty/kitty | defer provisional; do not claim fixed-off unless strategic |
+| DEC private `DECRQM` | `?2048` in-band resize notifications | implemented (first slice) | `1/2` | foot/ghostty/kitty | mode bit + resize report emit (`CSI 48;rows;cols;rows_px;cols_px t`) |
 | DEC private `DECRQM` | `?5522` kitty paste/clipboard events mode | implemented (bounded slice) | `1/2` | kitty docs + code | implemented mode + unsolicited paste-event MIME list + minimal `OSC 5522` read (`.`/`text/plain`/`text/html`/`text/uri-list`/`image/png`); write path + permission/pw flow deferred |
 | DEC private `DECRQM` | `?1007` alternate scroll | implemented | `1/2` | foot/ghostty | implemented via wheel->arrow behavior in alt-screen (when mouse reporting off) |
 | DEC private `DECRQM` | unknown modes | implemented fallback | `0` | xterm/foot convention | keep (test-locked) |
@@ -2033,6 +2034,7 @@ Notes:
     - PTY integration: explicit `OSC 5522 type=read:loc=primary` -> `ENOSYS` and malformed/unsupported read error replies (`EINVAL` / `ENOSYS`)
     - replay: `fixtures/terminal/decrqm_query_matrix_reply.*` now queries `?5522` default/set/reset
     - replay: `fixtures/terminal/osc_5522_read_invalid_payload_reply_bel.*`, `fixtures/terminal/osc_5522_read_unsupported_mime_reply_st.*`, `fixtures/terminal/osc_5522_read_primary_unsupported_reply_st.*`
+    - replay (success): `fixtures/terminal/osc_5522_read_html_success_reply_st.*`, `fixtures/terminal/osc_5522_read_html_success_reply_bel.*` (via replay pre-seeded `OSC 5522` clipboard cache)
     - `PA-08h` alignment: `DECSTR` reset reply fixture now includes `?5522` (`fixtures/terminal/decstr_resets_modes_query_reply.*`)
 - `PA-08g` next dedicated implementation slice (docs-first, `?2048` in-band resize notifications):
   - Reference anchors:
@@ -2053,6 +2055,20 @@ Notes:
     - throttling/debouncing policy tuning beyond current resize flow
     - backfilling reports for historical resizes
     - alternate payload formats or legacy compatibility aliases
+- `PA-08g` dedicated implementation slice (2026-02-23, `?2048` in-band resize notifications):
+  - Implemented first slice: `DECRQM/DECSET/DECRST ?2048` mode state (`Pm=1/2`) + in-band resize report emission on terminal resize
+  - Behavior:
+    - emits `CSI 48;rows;cols;rows_px;cols_px t` when mode enabled and PTY attached
+    - no emission when mode disabled
+    - `DECSTR` resets `?2048` to default (`Pm=2`)
+  - Evidence:
+    - PTY integration: `src/terminal_focus_reporting_tests.zig` (`DECRQM` state + resize emit bytes)
+    - replay: `fixtures/terminal/decrqm_query_matrix_reply.*` now queries/set/resets `?2048`
+- `PA-08h` DECSTR matrix alignment follow-up (2026-02-23):
+  - Added PTY + replay coverage proving `DECSTR` restores default-set modes `?8` (DECARM autorepeat) and `?1007` (alternate scroll) after they are explicitly reset.
+  - Evidence:
+    - PTY integration: `src/terminal_focus_reporting_tests.zig`
+    - replay: `fixtures/terminal/decstr_resets_default_set_modes_query_reply.*`
 - `PA-08g` DECRQM unsupported-reporting correction review (2026-02-23):
   - Kept `Pm=4` only for strategic fixed-off / legacy non-goal modes in current scope: `?67`, `?1001`, `?1005`, `?1015`, `?1034`, `?1035`, `?1036`, `?1042`, `?1070`.
   - Reverted to `Pm=0` provisional unsupported replies for modes still plausibly on the support path: `?9`, `?45`, `?1016`, `?2031`, `?2048`, `?5522`.
