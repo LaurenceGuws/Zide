@@ -386,6 +386,45 @@ test "terminal DECSTR soft reset clears mode subset and preserves grid" {
     }.run);
 }
 
+test "terminal DECSTR resets DECRQM-queryable modes to defaults" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            terminal.debugFeedBytes(session, "\x1b[?1004h\x1b[?1002h\x1b[?2004h\x1b[20h\x1b=");
+
+            const Case = struct {
+                query: []const u8,
+                before_reply: []const u8,
+                after_reply: []const u8,
+            };
+            const cases = [_]Case{
+                .{ .query = "\x1b[?1004$p", .before_reply = "\x1b[?1004;1$y", .after_reply = "\x1b[?1004;2$y" },
+                .{ .query = "\x1b[?1002$p", .before_reply = "\x1b[?1002;1$y", .after_reply = "\x1b[?1002;2$y" },
+                .{ .query = "\x1b[?2004$p", .before_reply = "\x1b[?2004;1$y", .after_reply = "\x1b[?2004;2$y" },
+                .{ .query = "\x1b[20$p", .before_reply = "\x1b[20;1$y", .after_reply = "\x1b[20;2$y" },
+                .{ .query = "\x1b[?66$p", .before_reply = "\x1b[?66;1$y", .after_reply = "\x1b[?66;2$y" },
+            };
+
+            for (cases) |case| {
+                terminal.debugFeedBytes(session, case.query);
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings(case.before_reply, reply);
+            }
+
+            terminal.debugFeedBytes(session, "\x1b[!p");
+            try capture.expectNoReply(); // DECSTR itself
+
+            for (cases) |case| {
+                terminal.debugFeedBytes(session, case.query);
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings(case.after_reply, reply);
+            }
+        }
+    }.run);
+}
+
 test "terminal CSI ?1004p without $ intermediate does not trigger DECRQM reply" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
