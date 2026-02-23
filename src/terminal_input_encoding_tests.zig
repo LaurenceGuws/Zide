@@ -1,6 +1,8 @@
 const std = @import("std");
 const input_mod = @import("terminal/input/input.zig");
+const alt_probe = @import("terminal/input/alternate_probe.zig");
 const types = @import("terminal/model/types.zig");
+const shared_types = @import("types/mod.zig");
 
 test "terminal input encodes arrow keys with modifiers" {
     const allocator = std.testing.allocator;
@@ -188,6 +190,44 @@ test "terminal input char event metadata emits third alternate field" {
                 .alternate_layout_codepoint = 0x20AC, // €
             },
         },
+    });
+    defer allocator.free(seq);
+    try std.testing.expectEqualStrings("\x1b[233:201:8364;2u", seq);
+}
+
+test "terminal input bridge seam derives altgr metadata into CSI-u bytes" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 4 | 8; // alternate + report_text
+    const shift = types.VTERM_MOD_SHIFT;
+
+    const key_event: shared_types.input.KeyEvent = .{
+        .key = .e,
+        .mods = .{ .shift = true, .alt = true, .ctrl = true, .altgr = true },
+        .repeated = false,
+        .pressed = true,
+        .scancode = 18,
+        .sym = 0x20AC, // Euro
+        .sdl_mod_bits = 0x4200, // MODE | RALT (representative)
+    };
+    const text_event: shared_types.input.TextEvent = .{
+        .codepoint = 0x00C9, // É
+        .utf8_len = 2,
+        .utf8 = .{ 0xC3, 0x89, 0, 0 },
+        .text_is_composed = false,
+    };
+    const meta = alt_probe.buildTextEventAlternateMetadata(key_event, text_event, text_event.codepoint, .{
+        .base = 0x00E9, // é
+        .shifted = 0x00C9, // É
+        .event_sym = 0x20AC, // €
+        .altgr = 0x20AC, // €
+        .explicit_altgr = true,
+    });
+
+    const seq = try input_mod.encodeCharEventBytesForTest(allocator, .{
+        .codepoint = text_event.codepoint,
+        .mod = shift,
+        .key_mode_flags = flags,
+        .protocol = .{ .alternate = meta },
     });
     defer allocator.free(seq);
     try std.testing.expectEqualStrings("\x1b[233:201:8364;2u", seq);
