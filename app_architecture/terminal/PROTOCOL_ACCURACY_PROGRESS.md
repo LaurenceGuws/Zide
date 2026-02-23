@@ -356,7 +356,8 @@ Query coverage note (`PA-04c` remaining):
 - Payload/image reply coverage status:
   - covered via extracted helpers: `EINVAL` (chunked/load-failure), `ENODATA` size reply formatting, build-error message mapping (`EBADPNG`/`EINVAL`)
   - covered via project-integrated parse-path tests: metadata-only `OK`, PNG decode failure (`EBADPNG`), raw RGBA success (`OK`), raw RGBA short payload (`ENODATA`)
-  - remaining gap: broader integrated matrix (e.g. offset/chunking invalids through full parser path, more formats/quiet variants)
+  - covered via project-integrated parse-path tests: quiet-mode suppression semantics (`q=1`, `q=2`) and invalid chunking/offset query forms (`m=1`, `O=1`)
+  - remaining gap: broader integrated matrix (more formats/quiet variants combinations, multi-chunk query edge cases if supported/invalidated)
 
 Implemented (increment 3 / `PA-04c` query early-reply seam):
 - Extracted `handleKittyQueryEarlyReply()` from `parseKittyGraphics()` for `a=q` early replies:
@@ -425,6 +426,20 @@ Verification:
 - `zig build test-terminal-kitty-query-parse`
 - `zig test src/terminal_kitty_reply_tests.zig -lc`
 - `zig build test-terminal-replay -- --all`
+
+Implemented (increment 7 / `PA-04c` integrated quiet/invalid query cases):
+- Expanded project-integrated `a=q` parse-path tests to cover:
+  - `q=1` quiet mode suppresses success replies but not error replies
+  - `q=2` quiet mode suppresses error replies
+  - invalid chunked query (`m=1`) emits `EINVAL` through the full parse path
+  - invalid offset query (`O=1`) emits `EINVAL` through the full parse path
+- Added a `PipeCapture.expectNoReply()` helper for deterministic no-reply assertions in the project-integrated test target.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
 
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
@@ -626,6 +641,7 @@ Priority notes:
 - Advanced `PA-04c` query payload-validation coverage with extracted helper tests for `EINVAL`, `ENODATA`, and `EBADPNG` reply mapping branches.
 - Advanced `PA-04c` integrated query control-flow coverage with `a=q` chunk-build reply seam tests (success + build-error paths).
 - Advanced `PA-04c` with project-integrated `a=q` parse-path tests (real session + PTY capture) for representative success/error replies.
+- Expanded `PA-04c` integrated parse-path tests with quiet-mode suppression and invalid chunk/offset query cases.
 - Advanced `PA-05` to `partial` (unsupported `alternate_key` no longer advertised via key-mode flags).
 - Advanced `PA-05` disambiguation support: modified chars and ambiguous control chars now emit CSI-u without `report_text`; aligned encoder test helper/golden with runtime behavior.
 - Tightened `PA-05` key-encoder test helper gating/mappings so replay/unit tests do not falsely advertise unsupported key-mode outputs.

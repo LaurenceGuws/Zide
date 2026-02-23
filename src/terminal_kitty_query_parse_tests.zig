@@ -44,6 +44,10 @@ const PipeCapture = struct {
         const n = try posix.read(self.read_fd, &buf);
         return allocator.dupe(u8, buf[0..n]);
     }
+
+    fn expectNoReply(self: *PipeCapture) !void {
+        try std.testing.expectError(error.NoReplyData, self.readReply(std.testing.allocator));
+    }
 };
 
 fn withSessionAndCapture(
@@ -106,6 +110,57 @@ test "kitty parse query rgba short payload emits ENODATA reply" {
                 "\x1b_Gi=7;ENODATA:Insufficient image data: 3 < 16\x1b\\",
                 reply,
             );
+        }
+    }.run);
+}
+
+test "kitty parse query quiet=1 suppresses success reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,q=1");
+            try capture.expectNoReply();
+        }
+    }.run);
+}
+
+test "kitty parse query quiet=1 does not suppress error reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,q=1,f=100;AA==");
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;EBADPNG\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query quiet=2 suppresses error reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,q=2,f=100;AA==");
+            try capture.expectNoReply();
+        }
+    }.run);
+}
+
+test "kitty parse query chunked form emits EINVAL" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,m=1;AAAA");
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;EINVAL\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query offset form emits EINVAL" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,O=1;AAAA");
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;EINVAL\x1b\\", reply);
         }
     }.run);
 }
