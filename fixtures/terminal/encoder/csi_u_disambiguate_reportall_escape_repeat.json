@@ -1,0 +1,14 @@
+{
+  "fixture_type": "encoder",
+  "rows": 1,
+  "cols": 1,
+  "cursor": { "row": 0, "col": 0 },
+  "line_ending": "lf",
+  "assertions": ["encoder"],
+  "encoder": {
+    "key": 4,
+    "mod": 0,
+    "flags": 3,
+    "action": "repeat"
+  }
+}
