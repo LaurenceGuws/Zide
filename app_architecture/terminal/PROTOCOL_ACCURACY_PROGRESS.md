@@ -149,6 +149,20 @@ Remaining work:
 Notes:
 - This is a parity expansion item, not a single bug fix. Split before implementation.
 
+Sub-items (traceable parity slices):
+- `PA-04a` Kitty action surface parity map (`a=` actions supported/unsupported, reference behavior notes)
+- `PA-04b` Delete action parity map (`d=` variants and semantics)
+- `PA-04c` Query/reply conformance tests (`a=q`, error codes, quiet modes)
+- `PA-04d` Transfer medium/chunking/compression regression fixtures (direct/file/temp/shm/zlib/chunks)
+- `PA-04e` Parent/virtual placement regression fixtures (cycles/depth/errors)
+- `PA-04f` Animation/composition support decision (implement vs defer explicitly)
+
+Planned acceptance by phase:
+- Phase 1: parity map + fixture matrix documented, unsupported commands explicitly listed.
+- Phase 2: query/delete conformance fixtures and fixes.
+- Phase 3: transfer/placement parity fixtures and fixes.
+- Phase 4: animation/composition implement or defer with rationale.
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
@@ -208,6 +222,17 @@ Status:
 Notes:
 - Track as roadmap item with sub-issues (e.g., missing DCS queries, APC extensions, CSI tabs/window ops).
 
+Sub-items (traceable parity slices):
+- `PA-08a` CSI gap inventory vs xterm seed (missing finals / private modes used by modern TUIs)
+- `PA-08b` DCS query/reply gap inventory (beyond XTGETTCAP)
+- `PA-08c` APC extension policy (kitty-only vs extensible dispatcher)
+- `PA-08d` Add replay/PTY fixtures for query/reply coverage (DA/DSR/OSC/DCS)
+- `PA-08e` Implement highest-value CSI gaps (tabulation/window ops only if demanded)
+
+Priority notes:
+- Focus first on sequences observed in fixtures, vttest, and real apps in `reference_repos/terminals/*`.
+- Prefer PTY-stubbed tests before expanding query/reply behavior.
+
 ## Change Log
 
 ### 2026-02-23
@@ -226,3 +251,19 @@ Notes:
 2. `PA-05` Implement alternate-key output + stronger disambiguation semantics
 3. `PA-04` Kitty graphics parity decomposition
 4. `PA-08` CSI/DCS/APC parity decomposition
+
+## Decomposition Backlog (New)
+
+### PA-04 Parity Decomposition Checklist
+
+- [ ] `PA-04a` Write command surface table (`a=` actions, `d=` delete variants) with status `implemented/partial/todo`
+- [ ] `PA-04b` Document response/error-code conformance targets (`OK/EINVAL/ENOENT/...`) with quiet-mode rules
+- [ ] `PA-04c` Add fixture matrix for query/chunking/mediums/parented placements
+- [ ] `PA-04d` Decide animation/composition path (`implement` / `defer`)
+
+### PA-08 Parity Decomposition Checklist
+
+- [ ] `PA-08a` Inventory missing CSI finals and private modes from xterm seed relevant to Zide
+- [ ] `PA-08b` Inventory DCS/APC gaps relative to kitty/ghostty/foot usage
+- [ ] `PA-08c` Define PTY-stub replay strategy for query/reply assertions
+- [ ] `PA-08d` Promote highest-value gaps into implementable tracker items
