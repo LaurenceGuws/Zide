@@ -1630,6 +1630,10 @@ Implemented (increment 6 / `PA-08e` `DECRQM` query coverage expansion + ANSI mod
 - Expanded PTY-capture `DECRQM` integration coverage with a table-driven private-mode query matrix covering representative common modes (`?1`, `?7`, `?25`, `?1000`, `?1006`, `?2004`, `?2026`) across default/set/reset states.
 - Added explicit `Pm=0` integration coverage for unsupported private mode queries.
 - Added minimal ANSI `DECRQM` support for mode `20` (newline mode) with set/reset reporting (`CSI 20 ; Pm $ y`).
+- Broadened PTY-capture `DECRQM` private-mode coverage to include more DEC modes (`?3`, `?5`, `?6`, `?47`, `?1047`, `?1049`, `?1002`, `?1003`) and added an explicit unsupported ANSI `DECRQM` integration test.
+- Convention decision (implemented): unsupported ANSI `DECRQM` queries return `Pm=0` (`not recognized`), following local reference terminal sources:
+  - xterm docs (`reference_repos/terminals/xterm_snapshots/ctlseqs.txt`)
+  - foot implementation/docs (`reference_repos/terminals/foot/csi.c`, `reference_repos/terminals/foot/doc/foot-ctlseqs.7.scd`)
 
 Files:
 - `src/terminal/protocol/csi.zig`
@@ -1652,6 +1656,27 @@ Files:
 
 Verification:
 - `zig build test-terminal-replay -- --fixture decrqm_focus_reporting_query_reply --update-goldens`
+- `zig build test-terminal-replay -- --all`
+
+Implemented (increment 8 / `PA-08d` replay query-reply fixtures for DA/DSR/OSC):
+- Added replay fixtures that validate query reply bytes end-to-end for:
+  - `DA` primary (`CSI c`)
+  - `DSR` CPR (`CSI 6 n`, after cursor positioning)
+  - `OSC 10` dynamic-color query with BEL terminator
+- These fixtures use the `reply_hex` + `assertions: ["reply"]` seam and expand replay-level query coverage beyond the initial `DECRQM ?1004` example.
+
+Files:
+- `fixtures/terminal/da_primary_query_reply.vt`
+- `fixtures/terminal/da_primary_query_reply.json`
+- `fixtures/terminal/da_primary_query_reply.golden`
+- `fixtures/terminal/dsr_cpr_query_reply.vt`
+- `fixtures/terminal/dsr_cpr_query_reply.json`
+- `fixtures/terminal/dsr_cpr_query_reply.golden`
+- `fixtures/terminal/osc_10_query_reply_bel.vt`
+- `fixtures/terminal/osc_10_query_reply_bel.json`
+- `fixtures/terminal/osc_10_query_reply_bel.golden`
+
+Verification:
 - `zig build test-terminal-replay -- --all`
 
 ## Change Log
@@ -1695,6 +1720,8 @@ Verification:
 - Advanced `PA-08e` with a first `DECRQM` slice: minimal DEC private mode query replies (`DECRPM`) for common supported modes plus `Pm=0` for unsupported private queries.
 - Expanded `PA-08e` `DECRQM` coverage with a table-driven private-mode PTY query matrix and ANSI mode `20` (newline mode) query replies.
 - Advanced `PA-08d` with a first replay-level query reply assertion seam (`reply_hex`) and a `DECRQM ?1004` reply fixture.
+- Broadened `PA-08e` `DECRQM` coverage to additional DEC private modes and locked unsupported ANSI `DECRQM -> Pm=0` per xterm/foot convention.
+- Expanded `PA-08d` replay-level query reply coverage with `DA`, `DSR` CPR, and `OSC 10` reply fixtures.
 
 ## Next Work Queue (Ordered)
 
