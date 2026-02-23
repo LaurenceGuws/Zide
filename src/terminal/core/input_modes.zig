@@ -4,6 +4,7 @@ const key_encoding = @import("../input/key_encoding.zig");
 const supported_key_mode_flags: u32 =
     key_encoding.key_mode_disambiguate |
     key_encoding.key_mode_report_all_event_types |
+    key_encoding.key_mode_report_alternate_key |
     key_encoding.key_mode_report_text |
     key_encoding.key_mode_embed_text;
 
@@ -48,12 +49,12 @@ pub fn appKeypadEnabled(self: anytype) bool {
     return self.input_snapshot.app_keypad.load(.acquire);
 }
 
-test "sanitize key mode flags masks unsupported alternate-key bit" {
+test "sanitize key mode flags preserves alternate-key bit" {
     const flags = key_encoding.key_mode_report_alternate_key |
         key_encoding.key_mode_report_text |
         key_encoding.key_mode_report_all_event_types;
     const sanitized = sanitizeKeyModeFlags(flags);
-    try std.testing.expect((sanitized & key_encoding.key_mode_report_alternate_key) == 0);
+    try std.testing.expect((sanitized & key_encoding.key_mode_report_alternate_key) != 0);
     try std.testing.expect((sanitized & key_encoding.key_mode_report_text) != 0);
     try std.testing.expect((sanitized & key_encoding.key_mode_report_all_event_types) != 0);
 }
