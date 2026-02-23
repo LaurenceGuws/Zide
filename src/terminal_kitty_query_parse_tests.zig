@@ -9,6 +9,8 @@ const pty_mod = @import("terminal/io/pty.zig");
 const tiny_png_1x1 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=";
 const zlib_rgba_1x1 = "eJxjYGD4DwABAwEA";
 const zlib_three_bytes = "eJxLTEoGAAJNASc=";
+const zlib_png_1x1 = "eJzrDPBz5+WS4mJgYOD19HAJAtKMIMzBAiS3yvAwASluTxfHkIo5yQkJQA4zA6M2p28LkMXg6ernss4poQkASQMLKg==";
+const zlib_not_png = "eJzLyy8pyEsHAAkoApc=";
 
 fn requireUnix() !void {
     if (builtin.os.tag != .linux and builtin.os.tag != .macos) return error.SkipZigTest;
@@ -398,6 +400,57 @@ test "kitty parse query post-inflate size mismatch emits ENODATA" {
                 "\x1b_Gi=7;ENODATA:Insufficient image data: 3 < 4\x1b\\",
                 reply,
             );
+        }
+    }.run);
+}
+
+test "kitty parse query compressed png payload emits OK reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,o=z,f=100;" ++ zlib_png_1x1);
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;OK\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query quiet=2 suppresses compressed png success reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,q=2,o=z,f=100;" ++ zlib_png_1x1);
+            try capture.expectNoReply();
+        }
+    }.run);
+}
+
+test "kitty parse query compressed invalid png emits EBADPNG reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,o=z,f=100;" ++ zlib_not_png);
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;EBADPNG\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query quiet=1 does not suppress compressed png EBADPNG" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,q=1,o=z,f=100;" ++ zlib_not_png);
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;EBADPNG\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query quiet=2 suppresses compressed png EBADPNG" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,q=2,o=z,f=100;" ++ zlib_not_png);
+            try capture.expectNoReply();
         }
     }.run);
 }
