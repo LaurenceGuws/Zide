@@ -1948,8 +1948,8 @@ High-value DEC private modes (common TUI / modern terminal usage):
 |---|---|---|---|---|---|---|---|
 | `?12` | cursor blinking | implemented (`1/2`) | `Y` | `Y` | `?` | strong | implemented via DECSET/DECRST + DECRQM state |
 | `?45` | reverse-wrap | `Pm=0` | `Y` | `Y` | `?` | strong | defer or implement with explicit rationale |
-| `?1016` | SGR pixel mouse | `Pm=0` | `Y` | `Y` | `Y` | strong modern | likely future implement, do not mark `Pm=4` |
-| `?2031` | color scheme notifications | `Pm=0` | `Y` | `Y` | `Y` | modern ext | likely future implement, do not mark `Pm=4` |
+| `?1016` | SGR pixel mouse | implemented (`1/2`, first slice) | `Y` | `Y` | `Y` | strong modern | first slice implemented (SGR pixel coords when `1006+1016` enabled); broader compat matrix still pending |
+| `?2031` | color scheme notifications | implemented (`1/2`, first slice) | `Y` | `Y` | `Y` | modern ext | implemented mode + `?996n` current-scheme reply + live notify API seam |
 | `?2048` | in-band resize notifications | implemented (`1/2`) | `Y` | `Y` | `Y` | modern ext | implemented first slice (mode + resize report emit) |
 | `?5522` | kitty paste/clipboard events mode | implemented (`1/2`, partial behavior slice) | `-` | `-` | `Y` (+ docs) | kitty-specific | implemented mode + paste-event MIME list + minimal read path (`.`/`text/plain`/`text/html`/`text/uri-list`/`image/png`); write/permission/primary deferred |
 
@@ -1974,7 +1974,7 @@ Current strategic non-support rows (`Pm=4`) are retained only where references a
 | DEC private `DECRQM` | `?45` (reverse-wrap) | not implemented | `0` | foot/ghostty | defer provisional (needs real reverse-wrap behavior, not query-only) |
 | DEC private `DECRQM` | `?67 ?1001 ?1005` | implemented (query-only) | `4` (permanently reset) | foot often reports permanent reset (`4`) | strategic non-support (fixed-off) |
 | DEC private `DECRQM` | `?1015` mouse alt encoding (urxvt) | implemented (query-only) | `4` (permanently reset) | foot/xterm queryable | strategic non-support (legacy encoding) |
-| DEC private `DECRQM` | `?1016` mouse pixel encoding (SGR pixels) | not implemented | `0` | foot/ghostty/kitty | defer provisional (requires real pixel-coordinate mouse reporting path) |
+| DEC private `DECRQM` | `?1016` mouse pixel encoding (SGR pixels) | implemented (first slice) | `1/2` | foot/ghostty/kitty | SGR pixel coords emitted when `1006+1016` enabled; broader compat/replay coverage pending |
 | DEC private `DECRQM` | `?1034 ?1035 ?1036 ?1042` | implemented (query-only) | `4` (permanently reset) | foot supports/reportable | unsupported fixed-off parity policy adopted |
 | DEC private `DECRQM` | `?1070` | implemented (query-only) | `4` (permanently reset) | foot supports/reportable | unsupported fixed-off parity policy adopted |
 | DEC private `DECRQM` | `?2031` theme notifications | not implemented | `0` | foot/ghostty/kitty | defer provisional; do not claim fixed-off unless strategic |
@@ -2034,7 +2034,9 @@ Notes:
     - PTY integration: explicit `OSC 5522 type=read:loc=primary` -> `ENOSYS` and malformed/unsupported read error replies (`EINVAL` / `ENOSYS`)
     - replay: `fixtures/terminal/decrqm_query_matrix_reply.*` now queries `?5522` default/set/reset
     - replay: `fixtures/terminal/osc_5522_read_invalid_payload_reply_bel.*`, `fixtures/terminal/osc_5522_read_unsupported_mime_reply_st.*`, `fixtures/terminal/osc_5522_read_primary_unsupported_reply_st.*`
-    - replay (success): `fixtures/terminal/osc_5522_read_html_success_reply_st.*`, `fixtures/terminal/osc_5522_read_html_success_reply_bel.*` (via replay pre-seeded `OSC 5522` clipboard cache)
+    - replay (success): `fixtures/terminal/osc_5522_read_html_success_reply_st.*`, `fixtures/terminal/osc_5522_read_html_success_reply_bel.*`, `fixtures/terminal/osc_5522_read_text_success_reply_st.*`, `fixtures/terminal/osc_5522_read_text_success_id_reply_st.*`, `fixtures/terminal/osc_5522_read_uri_list_success_reply_bel.*`, `fixtures/terminal/osc_5522_read_png_success_reply_st.*`, `fixtures/terminal/osc_5522_read_targets_order_success_reply_st.*` (via replay pre-seeded `OSC 5522` clipboard cache)
+    - replay (success semantics): target-list ordering is test-locked as `text/plain`, `text/html`, `text/uri-list`, `image/png`; success `id=` echo/sanitization is replay-covered in addition to PTY tests
+    - replay harness support: `src/terminal/replay_harness.zig` now supports pre-seeding `OSC 5522` clipboard caches (`text/plain`, `text/html`, `text/uri-list`, `image/png` hex) for reply-fixture success-path coverage
     - `PA-08h` alignment: `DECSTR` reset reply fixture now includes `?5522` (`fixtures/terminal/decstr_resets_modes_query_reply.*`)
 - `PA-08g` next dedicated implementation slice (docs-first, `?2048` in-band resize notifications):
   - Reference anchors:
@@ -2059,20 +2061,148 @@ Notes:
   - Implemented first slice: `DECRQM/DECSET/DECRST ?2048` mode state (`Pm=1/2`) + in-band resize report emission on terminal resize
   - Behavior:
     - emits `CSI 48;rows;cols;rows_px;cols_px t` when mode enabled and PTY attached
+    - if cell pixel size is unknown (`cell_width=0`/`cell_height=0`), emits `rows_px=0;cols_px=0` (explicit fallback, test-locked)
     - no emission when mode disabled
     - `DECSTR` resets `?2048` to default (`Pm=2`)
   - Evidence:
     - PTY integration: `src/terminal_focus_reporting_tests.zig` (`DECRQM` state + resize emit bytes)
     - replay: `fixtures/terminal/decrqm_query_matrix_reply.*` now queries/set/resets `?2048`
+  - Second-slice docs-first follow-up (event-source fidelity / emission policy):
+    - Confirm resize emit source(s) and duplication behavior across UI resize paths so `?2048` notifications do not double-fire during the same logical resize.
+    - Define throttling/debouncing policy only if a real app compatibility/perf issue appears; current foundation intentionally emits from the existing terminal resize path without extra throttling.
+    - Keep current `rows_px/cols_px = 0` fallback when cell pixel size is unknown unless reference behavior or app compatibility demands a different policy.
+- `PA-08g` dedicated implementation slice (2026-02-23, `?2031` color-scheme notifications):
+  - Reference anchors:
+    - `foot` supports/query-reports mode `2031` and replies to private DSR `?996n` with `CSI ? 997 ; {1|2} n` (`reference_repos/terminals/foot/csi.c`)
+    - `ghostty` supports mode `2031` and emits `CSI ? 997 ; {1|2} n` on color-scheme changes (`reference_repos/terminals/ghostty/src/Surface.zig`)
+    - `kitty` supports color preference notification mode `2031` and private DSR `?996n` handling (`reference_repos/terminals/kitty/kitty/modes.h`, `reference_repos/terminals/kitty/kitty/screen.c`)
+  - Implemented first slice:
+    - `DECRQM/DECSET/DECRST ?2031` mode state (`Pm=1/2`)
+    - private DSR `CSI ? 996 n` reply for current color-scheme preference (`CSI ? 997 ; 1 n` dark, `CSI ? 997 ; 2 n` light)
+    - `TerminalSession.reportColorSchemeChanged(dark)` API emits live `?997` notification only when `?2031` is enabled
+    - App theme wiring in `src/main.zig` now propagates config/theme changes to terminal sessions using a background-luma dark/light heuristic
+  - Deferred within `?2031` slice:
+    - OS/theme-provider event wiring beyond current app-config theme changes
+    - richer theme semantics beyond dark/light preference (current signal is dark vs light only)
+  - Evidence:
+    - PTY integration: `src/terminal_focus_reporting_tests.zig` (`DECRQM` state, `?996n`, gated live notify emission)
+    - replay: `fixtures/terminal/decrqm_query_matrix_reply.*` now queries/set/resets `?2031`
+    - app integration wiring: `src/main.zig` (`reloadConfig`, `newTerminal`)
+- `PA-08g` next-slice decision (2026-02-23, post-`?45` defer):
+  - Chosen next real follow-up for medium-mode work: continue `?2031` with richer live event sources before reopening larger behavior modes like `?45`.
+  - Why:
+    - `?2031` already has real mode state + DSR + app-config wiring, so the next step is incremental and low-risk.
+    - `?45` still requires deeper cursor/write semantics and wrap-history behavior.
+  - Current status checkpoint:
+    - audited `Shell.setTheme(...)` callsites and confirmed current live theme-change path is startup/new-terminal + config reload (`src/main.zig`).
+    - no separate runtime theme-toggle event source exists today, so current `?2031` app wiring is sufficient for this slice until a new real source is added.
+  - Next `?2031` done-slice target:
+    - add additional live event sources only when a concrete UI/theme-change path exists (beyond config reload)
+    - test-lock notification suppression when mode is reset/disabled (including after `DECSTR`)
+  - If no new real `?2031` source appears, the next medium mode candidate moves to `?2027` (grapheme-cluster shaping mode), but only after a docs-first implement/defer review.
 - `PA-08h` DECSTR matrix alignment follow-up (2026-02-23):
   - Added PTY + replay coverage proving `DECSTR` restores default-set modes `?8` (DECARM autorepeat) and `?1007` (alternate scroll) after they are explicitly reset.
+  - Expanded the DECSTR mode-reset reply matrix to include `?2031` and `?5522` so newer `PA-08g` mode slices remain aligned (later extended to `?1016` as that slice landed).
   - Evidence:
     - PTY integration: `src/terminal_focus_reporting_tests.zig`
-    - replay: `fixtures/terminal/decstr_resets_default_set_modes_query_reply.*`
+    - replay: `fixtures/terminal/decstr_resets_default_set_modes_query_reply.*`, `fixtures/terminal/decstr_resets_modes_query_reply.*`
+  - Later extension:
+    - `src/terminal_focus_reporting_tests.zig` now also locks `DECSTR` suppression of live `?2031` color-scheme notifications and `?2048` resize reports after reset (mode reset side-effect boundary)
+    - `fixtures/terminal/decstr_resets_modes_query_reply.*` now includes `?2048` in the DECRQM before/after matrix
+    - `src/terminal_focus_reporting_tests.zig` also locks `DECSTR` suppression of unsolicited `?5522` paste-event emissions after reset and re-enable recovery in the same sequence
 - `PA-08g` DECRQM unsupported-reporting correction review (2026-02-23):
   - Kept `Pm=4` only for strategic fixed-off / legacy non-goal modes in current scope: `?67`, `?1001`, `?1005`, `?1015`, `?1034`, `?1035`, `?1036`, `?1042`, `?1070`.
   - Reverted to `Pm=0` provisional unsupported replies for modes still plausibly on the support path: `?9`, `?45`, `?1016`, `?2031`, `?2048`, `?5522`.
+  - Subsequent implementations promoted `?1016`, `?2031`, `?2048`, and `?5522` to real support (`Pm=1/2`) with feature slices; remaining provisional rows continue to require implement/defer decisions.
   - Rule in force: do not expand the `Pm=4` set further without a strategic non-support decision per mode.
+- `PA-08g` docs-first implementation decision (2026-02-23, `?1016` SGR pixel mouse mode):
+  - Decision basis (before implementation): keep `Pm=0` provisional unsupported until a real end-to-end slice is landed; do not reclassify as fixed-off.
+  - Reference direction:
+    - `foot`, `ghostty`, and `kitty` support/query-report `?1016`, so this remains on Zide's support path rather than strategic non-support.
+  - Why it was deferred initially (not a small slice):
+    - current terminal mouse reporting is row/col-oriented; `?1016` needs a pixel-coordinate reporting path plumbed end-to-end
+    - requires explicit interaction/precedence rules with existing mouse-report modes (`1000/1002/1003`) and SGR formatting mode (`1006`)
+    - should land as real behavior with PTY + replay evidence, not as query-only `DECRQM` reporting
+  - `?1016` first-slice done looks like:
+    - `DECRQM/DECSET/DECRST ?1016` reports/toggles real mode state (`Pm=1/2`)
+    - when enabled and SGR mouse reporting is active, mouse reports use pixel coordinates (not cell coordinates)
+    - precedence/compat rules for non-SGR mouse modes are documented and test-locked
+    - PTY tests + replay fixture(s) cover representative click + motion payloads
+- `PA-08g` dedicated implementation slice (2026-02-23, `?1016` SGR pixel mouse mode):
+  - Implemented first slice: `DECRQM/DECSET/DECRST ?1016` mode state (`Pm=1/2`) + SGR pixel-coordinate mouse reporting when `1006` SGR mouse is active
+  - Behavior (current bounded scope):
+    - SGR mouse reports use pixel coordinates (`x`,`y` pixels, 1-based) when `?1016` and `?1006` are both enabled
+    - falls back to standard SGR cell coordinates when `?1016` is disabled
+    - UI mouse path now supplies snapped terminal-grid pixel coordinates (`pixel_x`/`pixel_y`) in `MouseEvent`
+  - Deferred within `?1016` slice:
+    - explicit broader compatibility matrix for motion-heavy edge cases and non-SGR mode interactions beyond the current first-slice behavior
+    - replay fixture coverage for emitted pixel mouse bytes (PTY tests currently lock representative bytes)
+  - Evidence:
+    - PTY integration: `src/terminal_focus_reporting_tests.zig` (`DECRQM` state + representative pixel-vs-cell SGR mouse click bytes)
+    - PTY integration: `src/terminal_focus_reporting_tests.zig` (`?1016` motion + release bytes and non-SGR precedence when `1006` is disabled)
+    - PTY integration: `src/terminal_focus_reporting_tests.zig` (`?1016` wheel bytes with Shift/Alt/Ctrl modifiers in SGR pixel mode)
+    - PTY integration: `src/terminal_focus_reporting_tests.zig` (`?1016` mixed-modifier wheel bytes and explicit wheel-up/down ordering in SGR pixel mode)
+    - replay: `fixtures/terminal/mouse_sgr_1016_pixel_reply.*` synthetic mouse events lock representative pixel-SGR press/move/release/wheel bytes via `reply_hex`
+    - replay: `fixtures/terminal/mouse_1016_without_1006_cell_reply.*` synthetic mouse events lock non-SGR precedence (`?1016` without `?1006` still emits X10/cell-coordinate bytes)
+    - replay: `fixtures/terminal/decrqm_query_matrix_reply.*` queries/set/resets `?1016`
+- `PA-08g` docs-first implementation decision (2026-02-23, `?45` reverse-wrap mode):
+  - Decision: defer implementation for now (`Pm=0` provisional unsupported remains); do not reclassify as fixed-off.
+  - Reference direction:
+    - `foot` and `ghostty` support/query-report `?45`; xterm-family semantics are established enough that this stays on the support path.
+  - Why deferred (not a small slice):
+    - requires real reverse-wrap cursor/write semantics at line boundaries (not just a mode bit)
+    - needs interaction policy with autowrap (`?7`) and edge-case cursor movement behavior
+    - should be implemented and replay-tested as behavior, not query-only DECRQM support
+  - `?45` first-slice done looks like:
+    - `DECRQM/DECSET/DECRST ?45` reports/toggles real mode state (`Pm=1/2`)
+    - reverse-wrap behavior is defined for cursor-left/BS/backward movement at column 0 with wrap history context (within Zide scope)
+    - replay fixtures lock at least one boundary-wrap scenario and one no-op scenario
+- `PA-08g` implementation slice (2026-02-23, `?2027` grapheme-cluster shaping mode, first slice):
+  - Decision: implement a **queryable no-op semantics** first slice (real mode state + documented no-op behavior boundary), then defer renderer/shaping behavior changes to a later slice.
+  - Reference direction:
+    - `foot` and `ghostty` support/query-report `?2027`, so it remains on the support path.
+    - Reference polarity check completed:
+      - `foot`: `2027` toggles grapheme shaping state (config-gated in some builds; may DECRPM as permanent reset if unavailable)
+      - `ghostty`: `2027` is a real mode with explicit enabled/disabled tests
+      - kitty: no equivalent `?2027` mode identified in current parity review; treat as xterm/foot/ghostty-side extension
+  - Why first slice is queryable no-op (not renderer behavior yet):
+    - requires a clear shaping-semantics contract for the terminal pipeline beyond a mode bit
+    - must define interaction with existing grapheme/ligature shaping paths and user-visible behavior boundaries
+    - implementation-first rule is still satisfied because this slice adds real state + reset/query semantics + explicit, test-locked no-op boundary
+  - Shaping semantics contract (implemented first slice):
+    - Scope target for first slice:
+      - `?2027` controls whether the terminal is allowed to apply multi-codepoint grapheme shaping / cluster-aware presentation heuristics beyond simple cell-local combining storage.
+      - It does **not** change parser decoding, codepoint storage, UTF-8 validation, or terminal cell width accounting.
+    - Zide-specific behavioral boundary (first slice proposal):
+      - `?2027 = reset/default` (`Pm=2`): current Zide behavior (existing grapheme shaping path allowed, as implemented today).
+      - `?2027 = set` (`Pm=1`): explicit enable state (same behavior as default in first slice unless we define a divergent default policy).
+      - If references require opposite polarity, record and adjust before code; do not guess.
+    - Observable effects that count for first-slice evidence:
+      - `DECRQM/DECSET/DECRST ?2027` real state (`Pm=1/2`)
+      - at least one replay/PTy-visible boundary proving mode toggling affects a documented behavior **or** an explicit reference-aligned no-op policy with stable query semantics
+      - `DECSTR` reset returns mode to default and query reports `Pm=2`
+    - Non-goals for first slice:
+      - redesigning shaping pipeline, ligature engine, or renderer architecture
+      - changing Unicode storage/model semantics (`PA-01` scope)
+      - introducing font-dependent shaping quality tuning work
+    - Reference check status:
+      - polarity/meaning in `foot`/`ghostty` reviewed (mode enables/disables grapheme shaping behavior)
+      - kitty overlap reviewed: no direct `?2027` equivalent tracked in current slice
+  - `?2027` first-slice done looks like:
+    - `DECRQM/DECSET/DECRST ?2027` reports/toggles real mode state (`Pm=1/2`)
+    - shaping behavior impact (or explicit no-op semantics, if reference-aligned for Zide scope) is documented by the contract above and observable/test-locked
+    - PTY + replay coverage lock query state and at least one behavior boundary
+  - Status (current):
+    - implemented for first slice
+    - query/reset semantics:
+      - `DECRQM/DECSET/DECRST ?2027` -> real state (`Pm=1/2`) in `src/terminal/protocol/csi.zig`
+      - `DECSTR` resets `?2027` to default (`Pm=2`)
+    - behavior boundary (explicit no-op for now):
+      - PTY test proves representative multicodepoint text model state remains unchanged while mode bit toggles
+      - see `src/terminal_focus_reporting_tests.zig` (`terminal grapheme cluster mode ?2027 first slice is queryable no-op for text model`)
+    - replay/PTy evidence:
+      - `fixtures/terminal/decrqm_query_matrix_reply.*` (query/set/reset replies)
+      - `fixtures/terminal/decstr_resets_modes_query_reply.*` (reset-to-default reply after `DECSTR`)
 
 Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft terminal reset):
 - Reference anchors:
