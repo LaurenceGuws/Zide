@@ -267,8 +267,26 @@ Files:
 Verification:
 - `zig test src/terminal_input_encoding_tests.zig`
 
+Implemented (increment 4):
+- Re-enabled `report_alternate_key` flag in key-mode state push/modify/query paths (it is no longer masked out of `CSI ?u` state).
+- Added a US-ASCII shifted-alternate subset for char CSI-u encoding when `report_alternate_key` is enabled:
+  - uppercase letters (e.g. `A`) encode as base+shifted alternate (`97:65`)
+  - shifted punctuation on a US layout (e.g. `:` from `Shift+;`) encodes as base+shifted alternate (`59:58`)
+- This applies only when the event is already encoded as CSI-u (e.g. via `disambiguate` / `report_text`), matching kitty's progressive-enhancement model.
+
+Files:
+- `src/terminal/core/input_modes.zig`
+- `src/terminal_input_modes_tests.zig`
+- `src/terminal/input/input.zig`
+- `src/terminal_input_encoding_tests.zig`
+
+Verification:
+- `zig test src/terminal_input_modes_tests.zig`
+- `zig test src/terminal_input_encoding_tests.zig`
+- `zig build test-terminal-replay -- --all`
+
 Remaining work:
-- Actual alternate-key field encoding is still not implemented.
+- Alternate-key reporting is only a US-ASCII shifted-char subset in the legacy char path (no layout-aware base/alternate reporting for general keys yet).
 - Disambiguation semantics are improved but still incomplete (broader kitty keyboard parity and key-map coverage).
 
 ### PA-06 X10 Mouse Overflow Encoding
@@ -351,6 +369,7 @@ Priority notes:
 - Advanced `PA-05` to `partial` (unsupported `alternate_key` no longer advertised via key-mode flags).
 - Advanced `PA-05` disambiguation support: modified chars and ambiguous control chars now emit CSI-u without `report_text`; aligned encoder test helper/golden with runtime behavior.
 - Tightened `PA-05` key-encoder test helper gating/mappings so replay/unit tests do not falsely advertise unsupported key-mode outputs.
+- Advanced `PA-05` alternate-key support: flag now persists in key-mode state and char CSI-u emits US-ASCII shifted alternates (`key:shifted`) for common shifted printable keys.
 
 ## Next Work Queue (Ordered)
 
