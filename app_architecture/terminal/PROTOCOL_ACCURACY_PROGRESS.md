@@ -285,6 +285,20 @@ Verification:
 - `zig test src/terminal_input_encoding_tests.zig`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 5):
+- Added encoder replay fixtures for `alternate_key` char CSI-u outputs so fixture harness coverage matches unit-test coverage:
+  - shifted letter (`A` -> `97:65`)
+  - shifted punctuation (`:` -> `59:58`)
+
+Files:
+- `fixtures/terminal/encoder/csi_u_alternate_shifted_letter.json`
+- `fixtures/terminal/encoder/csi_u_alternate_shifted_letter.golden`
+- `fixtures/terminal/encoder/csi_u_alternate_shifted_punct.json`
+- `fixtures/terminal/encoder/csi_u_alternate_shifted_punct.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --all`
+
 Remaining work:
 - Alternate-key reporting is only a US-ASCII shifted-char subset in the legacy char path (no layout-aware base/alternate reporting for general keys yet).
 - Disambiguation semantics are improved but still incomplete (broader kitty keyboard parity and key-map coverage).
@@ -370,6 +384,7 @@ Priority notes:
 - Advanced `PA-05` disambiguation support: modified chars and ambiguous control chars now emit CSI-u without `report_text`; aligned encoder test helper/golden with runtime behavior.
 - Tightened `PA-05` key-encoder test helper gating/mappings so replay/unit tests do not falsely advertise unsupported key-mode outputs.
 - Advanced `PA-05` alternate-key support: flag now persists in key-mode state and char CSI-u emits US-ASCII shifted alternates (`key:shifted`) for common shifted printable keys.
+- Added replay encoder fixtures for `PA-05` alternate-key shifted-char CSI-u outputs (`key:shifted`) to lock behavior in the fixture harness.
 
 ## Next Work Queue (Ordered)
 
