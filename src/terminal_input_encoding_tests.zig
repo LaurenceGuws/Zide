@@ -133,6 +133,64 @@ test "terminal input report-all disambiguate encodes cursor/home/end repeats wit
     }
 }
 
+test "terminal input report-all disambiguate encodes non-cursor function key releases with :3 action field" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 1 | 2; // disambiguate + report_all_event_types
+
+    const cases = [_]struct {
+        key: types.Key,
+        mod: types.Modifier,
+        expected: []const u8,
+    }{
+        .{ .key = types.VTERM_KEY_ENTER, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[13;:3u" },
+        .{ .key = types.VTERM_KEY_TAB, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[9;:3u" },
+        .{ .key = types.VTERM_KEY_BACKSPACE, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[127;:3u" },
+        .{ .key = types.VTERM_KEY_ESCAPE, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[27;:3u" },
+        .{ .key = types.VTERM_KEY_INS, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[2;:3~" },
+        .{ .key = types.VTERM_KEY_DEL, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[3;:3~" },
+        .{ .key = types.VTERM_KEY_PAGEUP, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[5;:3~" },
+        .{ .key = types.VTERM_KEY_PAGEDOWN, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[6;:3~" },
+        .{ .key = types.VTERM_KEY_ENTER, .mod = types.VTERM_MOD_SHIFT, .expected = "\x1b[13;2:3u" },
+        .{ .key = types.VTERM_KEY_ESCAPE, .mod = types.VTERM_MOD_ALT, .expected = "\x1b[27;3:3u" },
+        .{ .key = types.VTERM_KEY_DEL, .mod = types.VTERM_MOD_CTRL, .expected = "\x1b[3;5:3~" },
+    };
+
+    inline for (cases) |case_| {
+        const seq = try input_mod.encodeKeyActionBytesForTest(allocator, case_.key, case_.mod, flags, .release);
+        defer allocator.free(seq);
+        try std.testing.expectEqualStrings(case_.expected, seq);
+    }
+}
+
+test "terminal input report-all disambiguate encodes non-cursor function key repeats with :2 action field" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 1 | 2; // disambiguate + report_all_event_types
+
+    const cases = [_]struct {
+        key: types.Key,
+        mod: types.Modifier,
+        expected: []const u8,
+    }{
+        .{ .key = types.VTERM_KEY_ENTER, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[13;:2u" },
+        .{ .key = types.VTERM_KEY_TAB, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[9;:2u" },
+        .{ .key = types.VTERM_KEY_BACKSPACE, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[127;:2u" },
+        .{ .key = types.VTERM_KEY_ESCAPE, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[27;:2u" },
+        .{ .key = types.VTERM_KEY_INS, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[2;:2~" },
+        .{ .key = types.VTERM_KEY_DEL, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[3;:2~" },
+        .{ .key = types.VTERM_KEY_PAGEUP, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[5;:2~" },
+        .{ .key = types.VTERM_KEY_PAGEDOWN, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[6;:2~" },
+        .{ .key = types.VTERM_KEY_ENTER, .mod = types.VTERM_MOD_SHIFT, .expected = "\x1b[13;2:2u" },
+        .{ .key = types.VTERM_KEY_ESCAPE, .mod = types.VTERM_MOD_ALT, .expected = "\x1b[27;3:2u" },
+        .{ .key = types.VTERM_KEY_DEL, .mod = types.VTERM_MOD_CTRL, .expected = "\x1b[3;5:2~" },
+    };
+
+    inline for (cases) |case_| {
+        const seq = try input_mod.encodeKeyActionBytesForTest(allocator, case_.key, case_.mod, flags, .repeat);
+        defer allocator.free(seq);
+        try std.testing.expectEqualStrings(case_.expected, seq);
+    }
+}
+
 test "terminal input encodes char with modifiers when report_text enabled" {
     const allocator = std.testing.allocator;
     const flags: u32 = 8; // key_mode_report_text
