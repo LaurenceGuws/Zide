@@ -1,10 +1,7 @@
 const std = @import("std");
 const types = @import("../model/types.zig");
-const pty_mod = @import("../io/pty.zig");
 const parser_mod = @import("../parser/parser.zig");
 const app_logger = @import("../../app_logger.zig");
-
-const Pty = pty_mod.Pty;
 const OscTerminator = parser_mod.OscTerminator;
 
 const dynamic_color_base: u8 = 10;
@@ -176,7 +173,7 @@ fn parseOscIndex(text: []const u8) ?usize {
     return value;
 }
 
-fn writeOscColorReply(self: anytype, pty: *Pty, code: u8, color: types.Color, terminator: OscTerminator) void {
+fn writeOscColorReply(self: anytype, pty: anytype, code: u8, color: types.Color, terminator: OscTerminator) void {
     const log = app_logger.logger("terminal.osc");
     _ = self;
     var buf: [80]u8 = undefined;
@@ -196,7 +193,7 @@ fn writeOscColorReply(self: anytype, pty: *Pty, code: u8, color: types.Color, te
     _ = pty.write(seq) catch {};
 }
 
-fn writeOscPaletteReply(self: anytype, pty: *Pty, idx: u8, color: types.Color, terminator: OscTerminator) void {
+fn writeOscPaletteReply(self: anytype, pty: anytype, idx: u8, color: types.Color, terminator: OscTerminator) void {
     const log = app_logger.logger("terminal.osc");
     _ = self;
     var buf: [88]u8 = undefined;
