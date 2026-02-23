@@ -1523,7 +1523,7 @@ Inventory snapshot (`PA-08a`, first pass) checklist:
 | DEC private modes (alt screen/DECCKM/DECOM/DECAWM/bracketed paste/sync update/mouse 1000/1002/1003/1006) | implemented | high | replay+app | Strong modern TUI coverage |
 | Kitty keyboard mode controls (`CSI >u/<u/=u/?u`) | implemented | high | replay+unit | Encoding parity still partial under `PA-05` |
 | Tabulation family beyond `TBC` | partial | medium | replay | `CHT/CBT/TBC` now implemented; tab-stop report/edit breadth still partial |
-| Mode query/report breadth (`DECRQM` etc.) | partial | high | partial | Good next CSI gap candidate |
+| Mode query/report breadth (`DECRQM` etc.) | partial | high | unit+PTY (partial) | Minimal private `DECRQM` replies implemented for common DEC modes; breadth still incomplete |
 | Focus reporting mode (`?1004`) + event emission path | partial | high | replay+PTY | Implemented with window + pane source toggles; semantics may evolve |
 | Terminal reset conveniences (`DECSTR`, CSI soft reset breadth) | partial | medium | no | Not prioritized yet |
 | Left/right margins (`DECSLRM`) + rectangular semantics | partial | medium | no | xterm-compat gap for some advanced TUIs |
@@ -1611,6 +1611,21 @@ Decision note (scope boundary, 2026-02-23):
 - Do not implement this by mutating terminal protocol cursor style/state; implement as a terminal widget draw-time cursor override keyed off effective focus state.
 - This is out of scope for the current protocol pass and should be tracked as a UI follow-on when focus visualization work is scheduled.
 
+Implemented (increment 5 / `PA-08e` `DECRQM` minimal private mode replies, first slice):
+- Implemented minimal DEC private mode query handling for `DECRQM` (`CSI ? Ps $ p`) with `DECRPM` replies (`CSI ? Ps ; Pm $ y`).
+- Added state reporting for currently-supported common DEC/private modes (cursor keys, autowrap/origin/reverse/cursor-visible, alt screen, mouse modes, focus reporting, bracketed paste, sync updates, 132-column mode).
+- Unsupported queried private modes currently return `Pm=0` (not recognized) instead of silently ignoring the query.
+- Added PTY-capture integration coverage for `?1004` query set/reset replies and unit coverage for reply-byte formatting.
+
+Files:
+- `src/terminal/protocol/csi.zig`
+- `src/terminal_csi_reply_tests.zig`
+- `src/terminal_focus_reporting_tests.zig`
+
+Verification:
+- `zig test src/terminal_csi_reply_tests.zig -lc`
+- `zig build test-terminal-focus-reporting`
+
 ## Change Log
 
 ### 2026-02-23
@@ -1649,6 +1664,7 @@ Decision note (scope boundary, 2026-02-23):
 - Advanced `PA-08` to `partial` by implementing promoted CSI private mode gap `?1004` focus reporting (parser mode toggles + focus event emission + PTY/replay coverage).
 - Advanced `PA-08e` with `CHT`/`CBT` tab movement support and replay fixture coverage (`2I` / `2Z` tab-stop traversal).
 - Advanced `PA-08e` `?1004` focus reporting with dual event sources (window + terminal-pane) and separate Lua toggles for each source.
+- Advanced `PA-08e` with a first `DECRQM` slice: minimal DEC private mode query replies (`DECRPM`) for common supported modes plus `Pm=0` for unsupported private queries.
 
 ## Next Work Queue (Ordered)
 
