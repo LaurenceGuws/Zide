@@ -1,6 +1,7 @@
 const std = @import("std");
 const types = @import("../model/types.zig");
 const parser_csi = @import("../parser/csi.zig");
+const kitty_mod = @import("../kitty/graphics.zig");
 const app_logger = @import("../../app_logger.zig");
 
 const Color = types.Color;
@@ -436,6 +437,10 @@ fn applyDecstr(self: anytype) void {
     self.focus_reporting = false;
     self.column_mode_132 = false;
     self.setSyncUpdates(false);
+
+    // Reset active-screen kitty graphics state as part of DECSTR.
+    // Hidden-screen kitty state is preserved for now (strategic divergence).
+    kitty_mod.clearKittyImages(self);
 
     const screen = self.activeScreen();
     screen.resetState();
