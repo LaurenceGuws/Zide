@@ -1806,6 +1806,28 @@ Verification:
 - `zig build test-terminal-replay -- --fixture decrqm_query_matrix_reply --update-goldens`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 10 / `PA-08g` `DECRQM` reply-policy prep + keypad mode query):
+- `PA-08f` groundwork: CSI parser now captures intermediate bytes (`$`, `!`, `#`, etc.), and `DECRQM` dispatch requires the `$` intermediate so unrelated `CSI ... p` families no longer over-match.
+- Added PTY no-reply tests for non-`DECRQM` `CSI p` forms (`CSI ! p`, `CSI ?1004p`, `CSI #p`) and CSI debug logging now includes captured intermediates.
+- Refactored `DECRQM` state reporting to use an explicit `DecrpmState` enum (`0..4`) to support future parity policy work cleanly.
+- Expanded `DECRQM` private-mode coverage with keypad application mode `?66` (reports state from existing `DECPAM` / `DECPNM` tracking).
+- Began `Pm=4` adoption for clearly unsupported fixed DEC-private modes (`?67`, `?1001`, `?1005`, `?1015`, `?1016`) to move closer to xterm/foot `DECRPM` semantics.
+- Expanded the replay `DECRQM` matrix fixture to cover `?66` transitions and a representative `Pm=4` mode (`?1005`).
+
+Files:
+- `src/terminal/parser/csi.zig`
+- `src/terminal/protocol/csi.zig`
+- `src/terminal_focus_reporting_tests.zig`
+- `src/terminal_csi_reply_tests.zig`
+- `fixtures/terminal/decrqm_query_matrix_reply.vt`
+- `fixtures/terminal/decrqm_query_matrix_reply.json`
+
+Verification:
+- `zig test src/terminal/parser/csi.zig`
+- `zig test src/terminal_csi_reply_tests.zig -lc`
+- `zig build test-terminal-focus-reporting`
+- `zig build test-terminal-replay -- --all`
+
 Planned work (decomposition / `PA-08f` CSI parser intermediate-byte parity):
 - Problem statement:
   - Zide's CSI parser currently records `final`, `params`, `leader`, and `private`, but drops CSI intermediate bytes entirely (`src/terminal/parser/csi.zig`).
@@ -1880,7 +1902,8 @@ Planned work (decomposition / `PA-08g` `DECRQM` / `DECRPM` parity breadth + repl
 | ANSI `DECRQM` | `4` (insert), `12` (local echo), other ANSI queryable modes | not implemented | `0` | xterm/foot/ghostty parsing model | audit + decide `implement/defer` |
 | DEC private `DECRQM` | `?1 ?3 ?5 ?6 ?7 ?25 ?47 ?1047 ?1049` | implemented | `1/2` | xterm/foot | keep |
 | DEC private `DECRQM` | `?1000 ?1002 ?1003 ?1004 ?1006 ?2004 ?2026` | implemented | `1/2` | xterm/foot/kitty app usage | keep |
-| DEC private `DECRQM` | `?9 ?12 ?45 ?66` | not implemented | `0` | foot returns `1/2` for some; common VT semantics | evaluate next batch |
+| DEC private `DECRQM` | `?66` (application keypad) | implemented | `1/2` | foot/xterm VT semantics | implemented via existing `DECPAM` / `DECPNM` state |
+| DEC private `DECRQM` | `?9 ?12 ?45` | not implemented | `0` | foot returns `1/2` for some; common VT semantics | evaluate next batch |
 | DEC private `DECRQM` | `?67 ?1001 ?1005` | not implemented | `0` | foot often reports permanent reset (`4`) | policy decision (`0` vs `4`) |
 | DEC private `DECRQM` | `?1015 ?1016` mouse alt encodings | not implemented | `0` | foot/xterm queryable | likely defer unless app demand |
 | DEC private `DECRQM` | `?1034 ?1035 ?1036 ?1042 ?1070` | not implemented | `0` | foot supports/reportable | defer unless feature lands |
@@ -1891,6 +1914,8 @@ Notes:
 - Current Zide implemented set is sourced from `src/terminal/protocol/csi.zig` (`decrqmPrivateModeState`, `decrqmAnsiModeState`).
 - Reference candidate set is seeded primarily from `reference_repos/terminals/foot/csi.c` plus xterm docs and kitty clipboard docs (`?5522`).
 - Final `implement/defer` decisions for each non-implemented row should be recorded here before broadening `PA-08e` mode handling.
+- `?66` is now implemented and test-covered (`DECPAM`/`DECPNM` -> `DECRQM ?66`).
+- Initial `Pm=4` policy adoption landed for a small set of clearly unsupported fixed DEC-private modes (`?67`, `?1001`, `?1005`, `?1015`, `?1016`) to align more closely with xterm/foot-style `DECRPM` semantics.
 
 ## Change Log
 

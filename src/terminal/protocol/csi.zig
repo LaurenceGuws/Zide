@@ -425,11 +425,16 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState
         25 => boolModeState(screen.cursor_visible),
         47, 1047, 1049 => boolModeState(self.active == .alt),
         66 => boolModeState(self.app_keypad),
+        67 => .permanently_reset, // DECBKM (backarrow key mode) not supported
         1000 => boolModeState(self.input.mouse_mode_x10),
+        1001 => .permanently_reset, // Mouse highlight tracking not supported
         1002 => boolModeState(self.input.mouse_mode_button),
         1003 => boolModeState(self.input.mouse_mode_any),
         1004 => boolModeState(self.focus_reporting),
+        1005 => .permanently_reset, // UTF-8 mouse encoding not supported
         1006 => boolModeState(self.input.mouse_mode_sgr),
+        1015 => .permanently_reset, // urxvt mouse encoding not supported
+        1016 => .permanently_reset, // SGR pixel mouse encoding not supported
         2004 => boolModeState(self.bracketed_paste),
         2026 => boolModeState(self.sync_updates_active),
         else => .not_recognized,
