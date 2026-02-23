@@ -236,6 +236,26 @@ test "terminal DECRQM private query returns Pm=0 for unsupported mode" {
     }.run);
 }
 
+test "terminal DECRQM private query returns Pm=4 for permanently-reset unsupported modes" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            const modes = [_]i32{ 67, 1001, 1005, 1015, 1016 };
+
+            for (modes) |mode| {
+                var qbuf: [32]u8 = undefined;
+                const query = try std.fmt.bufPrint(&qbuf, "\x1b[?{d}$p", .{mode});
+                terminal.debugFeedBytes(session, query);
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                const expected = try std.fmt.allocPrint(allocator, "\x1b[?{d};4$y", .{mode});
+                defer allocator.free(expected);
+                try std.testing.expectEqualStrings(expected, reply);
+            }
+        }
+    }.run);
+}
+
 test "terminal DECRQM ansi query reports mode 20 newline set/reset state" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
