@@ -495,6 +495,19 @@ Follow-on sub-items:
 - `PA-05b` Thread metadata through input event path to kitty encoder
 - `PA-05c` Add non-US layout replay/unit fixtures once metadata exists
 
+Implemented (increment 8 / `PA-05a` metadata contract definition):
+- Added a dedicated architecture note defining the minimum input-event metadata
+  needed for layout-aware kitty `report_alternate_key` parity.
+- The contract specifies required fields (`physical_key`, `produced_text_utf8`,
+  `base_codepoint`, `shifted_codepoint`, optional `alternate_layout_codepoint`)
+  and encoder expectations/non-goals.
+- This converts the `PA-05` blocker into an explicit contract for future input
+  pipeline work (`PA-05b` / `PA-05c`).
+
+Files:
+- `app_architecture/terminal/KEYBOARD_ALTERNATE_METADATA_CONTRACT.md`
+- `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+
 Implemented (increment 3):
 - Aligned `encodeKeyBytesForTest` with runtime protocol gating for key-mode flags:
   - unsupported flag-only modes (e.g. `alternate_key` bit by itself) no longer produce protocol bytes in tests
@@ -665,11 +678,12 @@ Priority notes:
 - Added replay encoder fixtures for `PA-05` alternate-key shifted-char CSI-u outputs (`key:shifted`) to lock behavior in the fixture harness.
 - Expanded `PA-05` alternate-key replay coverage (`report_text`, `embed_text`, key-path no-op) and fixed `embed_text` formatting drift in encoder test helper.
 - Deferred full layout-aware `PA-05` alternate-key parity pending input-model metadata; tracked as explicit follow-on sub-items instead of expanding heuristics.
+- Defined `PA-05a` input metadata contract for layout-aware alternate-key parity in `app_architecture/terminal/KEYBOARD_ALTERNATE_METADATA_CONTRACT.md`.
 
 ## Next Work Queue (Ordered)
 
 1. `PA-02` PTY reply fixture/stub coverage + stronger semantic assertion checks
-2. `PA-05` Input-model metadata for layout-aware alternate-key parity (`PA-05a/b/c`)
+2. `PA-05b` Thread layout/base-key metadata through input path using `PA-05a` contract
 3. `PA-04` Kitty graphics parity decomposition
 4. `PA-08` CSI/DCS/APC parity decomposition
 
