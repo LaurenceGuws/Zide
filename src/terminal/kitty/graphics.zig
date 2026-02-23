@@ -835,7 +835,10 @@ fn findKittyImageById(images: []const KittyImage, image_id: u32) ?KittyImage {
 }
 
 fn buildKittyImage(self: anytype, image_id: u32, control: KittyControl, data: []u8) KittyBuildError!KittyImage {
-    const format = kittyFormatFor(control.format) orelse return error.InvalidData;
+    const format = kittyFormatFor(control.format) orelse {
+        self.allocator.free(data);
+        return error.InvalidData;
+    };
     switch (format) {
         .png => {
             const decoded = decodeKittyPng(self, data) catch |err| {
