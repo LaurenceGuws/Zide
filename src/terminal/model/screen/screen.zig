@@ -22,9 +22,11 @@ pub const Screen = struct {
     default_attrs: types.CellAttrs,
     wrap_next: bool,
     auto_wrap: bool,
+    insert_mode: bool,
     origin_mode: bool,
     newline_mode: bool,
     screen_reverse: bool,
+    save_cursor_mode_1048: bool,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16, default_attrs: types.CellAttrs) !Screen {
         const grid = try TerminalGrid.init(allocator, rows, cols, .{
@@ -47,9 +49,11 @@ pub const Screen = struct {
             .default_attrs = default_attrs,
             .wrap_next = false,
             .auto_wrap = true,
+            .insert_mode = false,
             .origin_mode = false,
             .newline_mode = false,
             .screen_reverse = false,
+            .save_cursor_mode_1048 = false,
         };
     }
 
@@ -102,9 +106,11 @@ pub const Screen = struct {
         self.current_attrs = self.default_attrs;
         self.wrap_next = false;
         self.auto_wrap = true;
+        self.insert_mode = false;
         self.origin_mode = false;
         self.newline_mode = false;
         self.screen_reverse = false;
+        self.save_cursor_mode_1048 = false;
         self.tabstops.reset();
     }
 
@@ -141,6 +147,10 @@ pub const Screen = struct {
             else => self.cursor_style,
         };
         self.cursor_style = style;
+    }
+
+    pub fn setCursorBlink(self: *Screen, enabled: bool) void {
+        self.cursor_style.blink = enabled;
     }
 
     pub fn saveCursor(self: *Screen) void {
@@ -185,6 +195,14 @@ pub const Screen = struct {
 
     pub fn setAutowrap(self: *Screen, enabled: bool) void {
         self.auto_wrap = enabled;
+    }
+
+    pub fn setInsertMode(self: *Screen, enabled: bool) void {
+        self.insert_mode = enabled;
+    }
+
+    pub fn setSaveCursorMode1048(self: *Screen, enabled: bool) void {
+        self.save_cursor_mode_1048 = enabled;
     }
 
     pub fn setOriginMode(self: *Screen, enabled: bool) void {

@@ -110,8 +110,10 @@ pub const TerminalSession = struct {
     history: history_mod.TerminalHistory,
     bracketed_paste: bool,
     focus_reporting: bool,
+    auto_repeat: bool,
     app_cursor_keys: bool,
     app_keypad: bool,
+    mouse_alternate_scroll: bool,
     input: input_mod.InputState,
     input_snapshot: InputSnapshot,
     pty_write_mutex: std.Thread.Mutex,
@@ -200,8 +202,10 @@ pub const TerminalSession = struct {
             .history = history,
             .bracketed_paste = false,
             .focus_reporting = false,
+            .auto_repeat = true,
             .app_cursor_keys = false,
             .app_keypad = false,
+            .mouse_alternate_scroll = true,
             .input = input_mod.InputState.init(),
             .input_snapshot = InputSnapshot.init(),
             .pty_write_mutex = .{},
@@ -466,6 +470,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn sendKeyAction(self: *TerminalSession, key: Key, mod: Modifier, action: input_mod.KeyAction) !void {
+        if (action == .repeat and !self.auto_repeat) return;
         const log = app_logger.logger("terminal.input");
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
@@ -509,6 +514,7 @@ pub const TerminalSession = struct {
         action: input_mod.KeyAction,
         alternate_meta: ?types.KeyboardAlternateMetadata,
     ) !void {
+        if (action == .repeat and !self.auto_repeat) return;
         const log = app_logger.logger("terminal.input");
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
@@ -557,6 +563,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn sendKeypadAction(self: *TerminalSession, key: input_mod.KeypadKey, mod: Modifier, action: input_mod.KeyAction) !void {
+        if (action == .repeat and !self.auto_repeat) return;
         const log = app_logger.logger("terminal.input");
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
@@ -588,6 +595,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn sendCharAction(self: *TerminalSession, char: u32, mod: Modifier, action: input_mod.KeyAction) !void {
+        if (action == .repeat and !self.auto_repeat) return;
         const log = app_logger.logger("terminal.input");
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
@@ -613,6 +621,7 @@ pub const TerminalSession = struct {
         action: input_mod.KeyAction,
         alternate_meta: ?types.KeyboardAlternateMetadata,
     ) !void {
+        if (action == .repeat and !self.auto_repeat) return;
         const log = app_logger.logger("terminal.input");
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
@@ -647,6 +656,19 @@ pub const TerminalSession = struct {
             return self.input.reportMouseEvent(pty, event, screen.grid.rows, screen.grid.cols);
         }
         return false;
+    }
+
+    pub fn reportAlternateScrollWheel(self: *TerminalSession, wheel_steps: i32, mod: Modifier) !bool {
+        if (wheel_steps == 0) return false;
+        if (!self.mouse_alternate_scroll) return false;
+        if (!self.isAltActive()) return false;
+        var remaining = wheel_steps;
+        while (remaining != 0) {
+            const key: Key = if (remaining > 0) VTERM_KEY_UP else VTERM_KEY_DOWN;
+            try self.sendKeyAction(key, mod, input_mod.KeyAction.press);
+            remaining += if (remaining > 0) -1 else 1;
+        }
+        return true;
     }
 
     pub fn sendText(self: *TerminalSession, text: []const u8) !void {
@@ -1022,6 +1044,14 @@ pub const TerminalSession = struct {
 
     pub fn focusReportingEnabled(self: *TerminalSession) bool {
         return self.input_snapshot.focus_reporting.load(.acquire);
+    }
+
+    pub fn autoRepeatEnabled(self: *TerminalSession) bool {
+        return self.auto_repeat;
+    }
+
+    pub fn mouseAlternateScrollEnabled(self: *TerminalSession) bool {
+        return self.mouse_alternate_scroll;
     }
 
     pub fn mouseReportingEnabled(self: *TerminalSession) bool {

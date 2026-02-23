@@ -144,14 +144,19 @@ test "terminal DECRQM private queries report common mode set/reset states" {
                 .{ .mode = 5, .set_seq = "\x1b[?5h", .reset_seq = "\x1b[?5l" },
                 .{ .mode = 6, .set_seq = "\x1b[?6h", .reset_seq = "\x1b[?6l" },
                 .{ .mode = 7, .set_seq = "\x1b[?7h", .reset_seq = "\x1b[?7l", .default_set = true },
+                .{ .mode = 8, .set_seq = "\x1b[?8h", .reset_seq = "\x1b[?8l", .default_set = true },
+                .{ .mode = 9, .set_seq = "\x1b[?9h", .reset_seq = "\x1b[?9l" },
+                .{ .mode = 12, .set_seq = "\x1b[?12h", .reset_seq = "\x1b[?12l", .default_set = true },
                 .{ .mode = 25, .set_seq = "\x1b[?25h", .reset_seq = "\x1b[?25l", .default_set = true },
                 .{ .mode = 47, .set_seq = "\x1b[?47h", .reset_seq = "\x1b[?47l" },
                 .{ .mode = 1047, .set_seq = "\x1b[?1047h", .reset_seq = "\x1b[?1047l" },
+                .{ .mode = 1048, .set_seq = "\x1b[?1048h", .reset_seq = "\x1b[?1048l" },
                 .{ .mode = 1049, .set_seq = "\x1b[?1049h", .reset_seq = "\x1b[?1049l" },
                 .{ .mode = 1000, .set_seq = "\x1b[?1000h", .reset_seq = "\x1b[?1000l" },
                 .{ .mode = 1002, .set_seq = "\x1b[?1002h", .reset_seq = "\x1b[?1002l" },
                 .{ .mode = 1003, .set_seq = "\x1b[?1003h", .reset_seq = "\x1b[?1003l" },
                 .{ .mode = 1006, .set_seq = "\x1b[?1006h", .reset_seq = "\x1b[?1006l" },
+                .{ .mode = 1007, .set_seq = "\x1b[?1007h", .reset_seq = "\x1b[?1007l", .default_set = true },
                 .{ .mode = 2004, .set_seq = "\x1b[?2004h", .reset_seq = "\x1b[?2004l" },
                 .{ .mode = 2026, .set_seq = "\x1b[?2026h", .reset_seq = "\x1b[?2026l" },
             };
@@ -260,7 +265,7 @@ test "terminal DECRQM private query returns Pm=0 for provisional unsupported mod
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            const modes = [_]i32{ 9, 45, 1016, 2031, 2048, 5522 };
+            const modes = [_]i32{ 45, 1016, 2031, 2048, 5522 };
 
             for (modes) |mode| {
                 var qbuf: [32]u8 = undefined;
@@ -276,32 +281,111 @@ test "terminal DECRQM private query returns Pm=0 for provisional unsupported mod
     }.run);
 }
 
-test "terminal DECRQM ansi query reports mode 20 newline set/reset state" {
+test "terminal DECARM ?8 disables repeat key output" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
 
-            terminal.debugFeedBytes(session, "\x1b[20$p");
+            try session.sendKeyAction(terminal.VTERM_KEY_UP, terminal.VTERM_MOD_NONE, .repeat);
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
-                try std.testing.expectEqualStrings("\x1b[20;2$y", reply);
+                try std.testing.expectEqualStrings("\x1b[A", reply);
             }
 
-            terminal.debugFeedBytes(session, "\x1b[20h");
-            terminal.debugFeedBytes(session, "\x1b[20$p");
+            terminal.debugFeedBytes(session, "\x1b[?8l");
+            try session.sendKeyAction(terminal.VTERM_KEY_UP, terminal.VTERM_MOD_NONE, .repeat);
+            try capture.expectNoReply();
+
+            terminal.debugFeedBytes(session, "\x1b[?8h");
+            try session.sendKeyAction(terminal.VTERM_KEY_UP, terminal.VTERM_MOD_NONE, .repeat);
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
-                try std.testing.expectEqualStrings("\x1b[20;1$y", reply);
+                try std.testing.expectEqualStrings("\x1b[A", reply);
+            }
+        }
+    }.run);
+}
+
+test "terminal alt-scroll ?1007 emits arrows in alt screen" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+
+            try std.testing.expect(!(try session.reportAlternateScrollWheel(1, terminal.VTERM_MOD_NONE)));
+            try capture.expectNoReply();
+
+            terminal.debugFeedBytes(session, "\x1b[?1049h");
+            try std.testing.expect(try session.reportAlternateScrollWheel(2, terminal.VTERM_MOD_NONE));
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[A\x1b[A", reply);
             }
 
-            terminal.debugFeedBytes(session, "\x1b[20l");
-            terminal.debugFeedBytes(session, "\x1b[20$p");
+            terminal.debugFeedBytes(session, "\x1b[?1007l");
+            try std.testing.expect(!(try session.reportAlternateScrollWheel(-1, terminal.VTERM_MOD_NONE)));
+            try capture.expectNoReply();
+
+            terminal.debugFeedBytes(session, "\x1b[?1007h");
+            try std.testing.expect(try session.reportAlternateScrollWheel(-1, terminal.VTERM_MOD_NONE));
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
-                try std.testing.expectEqualStrings("\x1b[20;2$y", reply);
+                try std.testing.expectEqualStrings("\x1b[B", reply);
+            }
+        }
+    }.run);
+}
+
+test "terminal DECRQM ansi queries report mode 4 and 20 set/reset state" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            const Case = struct {
+                mode: i32,
+                set_seq: []const u8,
+                reset_seq: []const u8,
+                default_set: bool = false,
+            };
+            const cases = [_]Case{
+                .{ .mode = 4, .set_seq = "\x1b[4h", .reset_seq = "\x1b[4l" },
+                .{ .mode = 20, .set_seq = "\x1b[20h", .reset_seq = "\x1b[20l" },
+            };
+
+            for (cases) |case| {
+                var qbuf: [32]u8 = undefined;
+                const query = try std.fmt.bufPrint(&qbuf, "\x1b[{d}$p", .{case.mode});
+                terminal.debugFeedBytes(session, query);
+                {
+                    const reply = try capture.readReply(allocator);
+                    defer allocator.free(reply);
+                    const default_state: u8 = if (case.default_set) 1 else 2;
+                    const expected = try std.fmt.allocPrint(allocator, "\x1b[{d};{d}$y", .{ case.mode, default_state });
+                    defer allocator.free(expected);
+                    try std.testing.expectEqualStrings(expected, reply);
+                }
+
+                terminal.debugFeedBytes(session, case.set_seq);
+                terminal.debugFeedBytes(session, query);
+                {
+                    const reply = try capture.readReply(allocator);
+                    defer allocator.free(reply);
+                    const expected = try std.fmt.allocPrint(allocator, "\x1b[{d};1$y", .{case.mode});
+                    defer allocator.free(expected);
+                    try std.testing.expectEqualStrings(expected, reply);
+                }
+
+                terminal.debugFeedBytes(session, case.reset_seq);
+                terminal.debugFeedBytes(session, query);
+                {
+                    const reply = try capture.readReply(allocator);
+                    defer allocator.free(reply);
+                    const expected = try std.fmt.allocPrint(allocator, "\x1b[{d};2$y", .{case.mode});
+                    defer allocator.free(expected);
+                    try std.testing.expectEqualStrings(expected, reply);
+                }
             }
         }
     }.run);

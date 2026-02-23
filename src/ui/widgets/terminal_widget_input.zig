@@ -441,6 +441,9 @@ pub fn handleInput(
                     continue;
                 }
                 const action: terminal_mod.KeyAction = if (event.key.repeated) .repeat else .press;
+                if (action == .repeat and !self.session.autoRepeatEnabled()) {
+                    continue;
+                }
                 if (!report_text_enabled and isModifierKey(key)) {
                     continue;
                 }
@@ -480,6 +483,7 @@ pub fn handleInput(
                 if (input_batch.keyReleased(key)) continue;
                 if (input_batch.keyPressed(key) or input_batch.keyRepeated(key)) {
                     const action: terminal_mod.KeyAction = if (input_batch.keyRepeated(key)) .repeat else .press;
+                    if (action == .repeat and !self.session.autoRepeatEnabled()) continue;
                     if (try applyTerminalKey(self, key, mod, action)) {
                         clearLiveState(self);
                         handled = true;
@@ -608,6 +612,15 @@ pub fn handleInput(
                         try self.session.sendText(clip);
                     }
                     handled = true;
+                }
+            }
+            if (wheel_steps != 0) {
+                if (try self.session.reportAlternateScrollWheel(wheel_steps, mod)) {
+                    if (scroll_log.enabled_file or scroll_log.enabled_console) {
+                        scroll_log.logf("alt-scroll wheel steps={d}", .{wheel_steps});
+                    }
+                    handled = true;
+                    wheel_steps = 0;
                 }
             }
             if (wheel_steps != 0) {

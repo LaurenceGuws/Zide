@@ -259,8 +259,10 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 var idx: u8 = 0;
                 while (idx < param_len and idx < p.len) : (idx += 1) {
                     const mode = p[idx];
-                    if (mode == 20) {
-                        self.activeScreen().*.setNewlineMode(true);
+                    switch (mode) {
+                        4 => self.activeScreen().*.setInsertMode(true),
+                        20 => self.activeScreen().*.setNewlineMode(true),
+                        else => {},
                     }
                 }
                 return;
@@ -277,11 +279,20 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         3 => self.setColumnMode132(true),
                         5 => self.activeScreen().*.setScreenReverse(true),
                         6 => self.activeScreen().*.setOriginMode(true),
-                        25 => self.activeScreen().setCursorVisible(true),
                         7 => self.activeScreen().*.setAutowrap(true),
+                        8 => self.auto_repeat = true,
+                        9 => {
+                            self.input.mouse_mode_x10 = true;
+                            self.updateInputSnapshot();
+                        },
+                        12 => self.activeScreen().*.setCursorBlink(true),
+                        25 => self.activeScreen().setCursorVisible(true),
                         47 => self.enterAltScreen(false, false),
                         1047 => self.enterAltScreen(true, false),
-                        1048 => self.saveCursor(),
+                        1048 => {
+                            self.saveCursor();
+                            self.activeScreen().*.setSaveCursorMode1048(true);
+                        },
                         1049 => self.enterAltScreen(true, true),
                         2004 => self.bracketed_paste = true,
                         2026 => self.setSyncUpdates(true),
@@ -305,6 +316,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             self.input.mouse_mode_sgr = true;
                             self.updateInputSnapshot();
                         },
+                        1007 => self.mouse_alternate_scroll = true,
                         else => {},
                     }
                 }
@@ -316,8 +328,10 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 var idx: u8 = 0;
                 while (idx < param_len and idx < p.len) : (idx += 1) {
                     const mode = p[idx];
-                    if (mode == 20) {
-                        self.activeScreen().*.setNewlineMode(false);
+                    switch (mode) {
+                        4 => self.activeScreen().*.setInsertMode(false),
+                        20 => self.activeScreen().*.setNewlineMode(false),
+                        else => {},
                     }
                 }
                 return;
@@ -334,11 +348,20 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         3 => self.setColumnMode132(false),
                         5 => self.activeScreen().*.setScreenReverse(false),
                         6 => self.activeScreen().*.setOriginMode(false),
-                        25 => self.activeScreen().setCursorVisible(false),
                         7 => self.activeScreen().*.setAutowrap(false),
+                        8 => self.auto_repeat = false,
+                        9 => {
+                            self.input.mouse_mode_x10 = false;
+                            self.updateInputSnapshot();
+                        },
+                        12 => self.activeScreen().*.setCursorBlink(false),
+                        25 => self.activeScreen().setCursorVisible(false),
                         47 => self.exitAltScreen(false),
                         1047 => self.exitAltScreen(false),
-                        1048 => self.restoreCursor(),
+                        1048 => {
+                            self.restoreCursor();
+                            self.activeScreen().*.setSaveCursorMode1048(false);
+                        },
                         1049 => self.exitAltScreen(true),
                         2004 => self.bracketed_paste = false,
                         2026 => self.setSyncUpdates(false),
@@ -362,6 +385,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             self.input.mouse_mode_sgr = false;
                             self.updateInputSnapshot();
                         },
+                        1007 => self.mouse_alternate_scroll = false,
                         else => {},
                     }
                 }
@@ -432,6 +456,8 @@ fn applyDecstr(self: anytype) void {
 
     self.app_cursor_keys = false;
     self.app_keypad = false;
+    self.auto_repeat = true;
+    self.mouse_alternate_scroll = true;
     self.input.resetMouse();
     self.bracketed_paste = false;
     self.focus_reporting = false;
@@ -456,10 +482,13 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState
         5 => boolModeState(screen.screen_reverse),
         6 => boolModeState(screen.origin_mode),
         7 => boolModeState(screen.auto_wrap),
-        9 => .not_recognized, // Legacy X10 mouse mode (?9) not yet supported in DECSET/DECRQM scope
+        8 => boolModeState(self.auto_repeat),
+        9 => boolModeState(self.input.mouse_mode_x10),
+        12 => boolModeState(screen.cursor_style.blink),
         25 => boolModeState(screen.cursor_visible),
         45 => .not_recognized, // Reverse-wrap mode not yet implemented
         47, 1047, 1049 => boolModeState(self.active == .alt),
+        1048 => boolModeState(screen.save_cursor_mode_1048),
         66 => boolModeState(self.app_keypad),
         67 => .permanently_reset, // DECBKM (backarrow key mode) not supported
         1000 => boolModeState(self.input.mouse_mode_x10),
@@ -469,6 +498,7 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState
         1004 => boolModeState(self.focus_reporting),
         1005 => .permanently_reset, // UTF-8 mouse encoding not supported
         1006 => boolModeState(self.input.mouse_mode_sgr),
+        1007 => boolModeState(self.mouse_alternate_scroll),
         1015 => .permanently_reset, // urxvt mouse encoding not supported
         1016 => .not_recognized, // SGR pixel mouse encoding not yet supported
         1034 => .permanently_reset, // 8-bit meta mode not supported
@@ -487,6 +517,7 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState
 
 fn decrqmAnsiModeState(screen: anytype, mode: i32) DecrpmState {
     return switch (mode) {
+        4 => boolModeState(screen.insert_mode),
         20 => boolModeState(screen.newline_mode),
         else => .not_recognized,
     };

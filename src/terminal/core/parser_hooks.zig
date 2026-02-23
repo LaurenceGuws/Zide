@@ -83,6 +83,10 @@ pub fn handleCodepoint(self: anytype, codepoint: u32) void {
             );
         }
     }
+    const cp_width = screen_mod.Screen.codepointCellWidth(cp);
+    if (screen.insert_mode and cp_width > 0) {
+        self.insertChars(@intCast(cp_width));
+    }
     screen.writeCodepoint(cp, attrs);
 }
 
@@ -102,6 +106,24 @@ pub fn handleAsciiSlice(self: anytype, bytes: []const u8) void {
         attrs.link_id = 0;
     }
     const use_dec_special = self.parser.gl_charset == .dec_special;
+
+    if (screen.insert_mode) {
+        for (bytes) |b| {
+            while (true) {
+                switch (screen.prepareWrite()) {
+                    .done => return,
+                    .need_wrap => {
+                        self.wrapNewline();
+                        continue;
+                    },
+                    .proceed => break,
+                }
+            }
+            self.insertChars(1);
+            screen.writeCodepoint(@intCast(b), attrs);
+        }
+        return;
+    }
 
     var i: usize = 0;
     while (i < bytes.len) {
