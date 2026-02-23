@@ -216,6 +216,33 @@ Status:
 Notes:
 - This is a parity expansion item, not a single bug fix. Split before implementation.
 
+Implemented (increment 1 / `PA-04a` parity map):
+- Documented the currently implemented kitty graphics `a=` action surface and `d=` delete variants directly from `src/terminal/kitty/graphics.zig`.
+- This converts the review note ("partial") into a traceable parity map for follow-on fixes and fixtures.
+
+Current `a=` action surface (from `validateKittyControl`):
+- Implemented: `t` (transmit), `T` (transmit+place), `p` (place), `d` (delete), `q` (query)
+- Rejected as invalid (current behavior): all other `a=` actions
+
+Current `d=` delete variant surface (from `deleteKittyByAction`, default `a`):
+- Implemented selectors:
+  - `a` / `A` all placements / all images
+  - `i` / `I` by image id (+ optional placement id) / image+placements
+  - `n` / `N` by image number (+ optional placement id) / image+placements
+  - `c` / `C` at cursor cell / plus image deletion
+  - `p` / `P` at explicit cell (`x`,`y`) / plus image deletion
+  - `z` / `Z` by z-layer / plus image deletion
+  - `r` / `R` image id range (`x..y`) / plus image deletion
+  - `x` / `X` column intersection / plus image deletion
+  - `y` / `Y` row intersection / plus image deletion
+- Unsupported/ignored (current code path): other delete selectors fall through with no effect.
+
+Files:
+- `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+
+Verification:
+- Source-audit only (mapped to current code in `src/terminal/kitty/graphics.zig`)
+
 Sub-items (traceable parity slices):
 - `PA-04a` Kitty action surface parity map (`a=` actions supported/unsupported, reference behavior notes)
 - `PA-04b` Delete action parity map (`d=` variants and semantics)
@@ -398,6 +425,7 @@ Priority notes:
 - Expanded `PA-02` to cover CSI `DA`/`DSR` reply bytes with direct PTY-gated unit tests.
 - Expanded `PA-02` to cover kitty reply formatting + quiet-mode suppression behavior.
 - Strengthened `PA-02` `scrollback` assertion semantics (no longer recognized-only; now checks scrollback/scroll behavior evidence).
+- Advanced `PA-04a` by documenting the current kitty graphics `a=`/`d=` surface from code as a parity map for follow-on fixtures/fixes.
 - Advanced `PA-05` to `partial` (unsupported `alternate_key` no longer advertised via key-mode flags).
 - Advanced `PA-05` disambiguation support: modified chars and ambiguous control chars now emit CSI-u without `report_text`; aligned encoder test helper/golden with runtime behavior.
 - Tightened `PA-05` key-encoder test helper gating/mappings so replay/unit tests do not falsely advertise unsupported key-mode outputs.
