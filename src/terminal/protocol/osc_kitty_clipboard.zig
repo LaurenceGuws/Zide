@@ -14,6 +14,7 @@ const ReadReq = struct {
     wants_text_plain: bool = false,
     wants_text_html: bool = false,
     wants_text_uri_list: bool = false,
+    wants_image_png: bool = false,
 };
 
 pub fn parseOsc5522(self: anytype, text: []const u8, terminator: OscTerminator) void {
@@ -85,6 +86,8 @@ fn parseReadRequest(self: anytype, metadata: []const u8, payload_b64: []const u8
             req.wants_text_html = true;
         } else if (std.mem.eql(u8, mime, "text/uri-list")) {
             req.wants_text_uri_list = true;
+        } else if (std.mem.eql(u8, mime, "image/png")) {
+            req.wants_image_png = true;
         }
     }
     if (!saw_any) return error.InvalidPayload;
@@ -103,6 +106,9 @@ fn replyReadRequest(self: anytype, pty: anytype, req: *const ReadReq, terminator
         }
         if (self.kitty_osc5522_clipboard_uri_list.items.len > 0) {
             writeReadData(self, pty, terminator, id.value, ".", "text/uri-list\n");
+        }
+        if (self.kitty_osc5522_clipboard_png.items.len > 0) {
+            writeReadData(self, pty, terminator, id.value, ".", "image/png\n");
         }
         writeReadStatusWithId(self, pty, terminator, id.value, "DONE");
         return;
@@ -153,6 +159,23 @@ fn replyReadRequest(self: anytype, pty: anytype, req: *const ReadReq, terminator
         while (offset < clip.len) {
             const end = @min(offset + data_chunk_max, clip.len);
             writeReadData(self, pty, terminator, id.value, "text/uri-list", clip[offset..end]);
+            offset = end;
+        }
+        writeReadStatusWithId(self, pty, terminator, id.value, "DONE");
+        return;
+    }
+
+    if (req.wants_image_png) {
+        const clip = self.kitty_osc5522_clipboard_png.items;
+        if (clip.len == 0) {
+            writeReadStatusWithId(self, pty, terminator, id.value, "ENOSYS");
+            return;
+        }
+        writeReadStatusWithId(self, pty, terminator, id.value, "OK");
+        var offset: usize = 0;
+        while (offset < clip.len) {
+            const end = @min(offset + data_chunk_max, clip.len);
+            writeReadData(self, pty, terminator, id.value, "image/png", clip[offset..end]);
             offset = end;
         }
         writeReadStatusWithId(self, pty, terminator, id.value, "DONE");

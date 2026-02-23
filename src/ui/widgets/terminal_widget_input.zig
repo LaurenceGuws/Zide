@@ -606,9 +606,11 @@ pub fn handleInput(
                 if (shell.getClipboardText()) |clip| {
                     const html = shell.getClipboardMimeData(self.session.allocator, "text/html");
                     const uri_list = shell.getClipboardMimeData(self.session.allocator, "text/uri-list");
+                    const png = shell.getClipboardMimeData(self.session.allocator, "image/png");
                     defer if (html) |buf| self.session.allocator.free(buf);
                     defer if (uri_list) |buf| self.session.allocator.free(buf);
-                    if (try self.session.sendKittyPasteEvent5522WithMime(clip, html, uri_list)) {
+                    defer if (png) |buf| self.session.allocator.free(buf);
+                    if (try self.session.sendKittyPasteEvent5522WithMimeRich(clip, html, uri_list, png)) {
                         handled = true;
                     } else if (self.session.bracketedPasteEnabled()) {
                         try self.session.sendText("\x1b[200~");

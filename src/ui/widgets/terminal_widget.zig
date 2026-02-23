@@ -241,12 +241,14 @@ pub const TerminalWidget = struct {
         const clip = shell.getClipboardText() orelse return false;
         const html = shell.getClipboardMimeData(self.session.allocator, "text/html");
         const uri_list = shell.getClipboardMimeData(self.session.allocator, "text/uri-list");
+        const png = shell.getClipboardMimeData(self.session.allocator, "image/png");
         defer if (html) |buf| self.session.allocator.free(buf);
         defer if (uri_list) |buf| self.session.allocator.free(buf);
+        defer if (png) |buf| self.session.allocator.free(buf);
         if (self.session.scrollOffset() > 0) {
             self.session.setScrollOffset(0);
         }
-        if (self.session.sendKittyPasteEvent5522WithMime(clip, html, uri_list) catch false) {
+        if (self.session.sendKittyPasteEvent5522WithMimeRich(clip, html, uri_list, png) catch false) {
             return true;
         }
         if (self.session.bracketedPasteEnabled()) {
