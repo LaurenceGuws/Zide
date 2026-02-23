@@ -1,0 +1,20 @@
+{
+  "fixture_type": "encoder",
+  "rows": 1,
+  "cols": 1,
+  "cursor": { "row": 0, "col": 0 },
+  "line_ending": "lf",
+  "assertions": ["encoder"],
+  "encoder": {
+    "char": 233,
+    "mod": 0,
+    "flags": 8,
+    "alternate_meta": {
+      "physical_key": 30,
+      "produced_text_utf8": "é",
+      "base_codepoint": 101,
+      "shifted_codepoint": 201,
+      "alternate_layout_codepoint": 233
+    }
+  }
+}
