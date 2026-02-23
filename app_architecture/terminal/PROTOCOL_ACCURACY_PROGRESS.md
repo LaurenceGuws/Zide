@@ -348,6 +348,27 @@ Files:
 Verification:
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 5 / `PA-04b` mixed-selector interaction fixtures):
+- Added replay fixtures that combine no-match and match delete operations in a single scenario for `x/X` and `y/Y` selectors.
+- Each fixture uses two images/placements and verifies:
+  - an initial no-match delete is a no-op
+  - a lowercase selector deletes only the matching placement
+  - a later uppercase selector deletes the other matching placement and backing image
+- This adds interaction coverage (sequence semantics) rather than only isolated selector cases.
+
+Files:
+- `fixtures/terminal/kitty_delete_x_mixed_interactions.vt`
+- `fixtures/terminal/kitty_delete_x_mixed_interactions.json`
+- `fixtures/terminal/kitty_delete_x_mixed_interactions.golden`
+- `fixtures/terminal/kitty_delete_y_mixed_interactions.vt`
+- `fixtures/terminal/kitty_delete_y_mixed_interactions.json`
+- `fixtures/terminal/kitty_delete_y_mixed_interactions.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture kitty_delete_x_mixed_interactions --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_delete_y_mixed_interactions --update-goldens`
+- `zig build test-terminal-replay -- --all`
+
 Query coverage note (`PA-04c` remaining):
 - `a=q` reply-byte conformance is now substantially covered:
   - helper-level branch/unit coverage for early replies and payload/build reply branches
@@ -434,6 +455,21 @@ Implemented (increment 7 / `PA-04c` integrated quiet/invalid query cases):
   - invalid chunked query (`m=1`) emits `EINVAL` through the full parse path
   - invalid offset query (`O=1`) emits `EINVAL` through the full parse path
 - Added a `PipeCapture.expectNoReply()` helper for deterministic no-reply assertions in the project-integrated test target.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+
+Implemented (increment 8 / `PA-04c` integrated quiet/error matrix + RGB query cases):
+- Expanded the project-integrated `a=q` parse-path tests to cover more quiet-mode combinations:
+  - `q=2` suppresses `ENODATA`
+  - `q=2` suppresses preflight `EINVAL`
+- Added additional raw RGB (`f=24`) integrated parse-path coverage:
+  - valid RGB payload -> `OK`
+  - short RGB payload -> `ENODATA`
+- This strengthens both the quiet/error matrix and format coverage in the end-to-end parse path.
 
 Files:
 - `src/terminal_kitty_query_parse_tests.zig`
