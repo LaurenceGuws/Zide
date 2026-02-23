@@ -169,3 +169,26 @@ test "terminal input char event composed metadata suppresses alternate reporting
     defer allocator.free(seq);
     try std.testing.expectEqualStrings("\x1b[65;2u", seq);
 }
+
+test "terminal input char event metadata emits third alternate field" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 4 | 8; // alternate + report_text
+    const shift = types.VTERM_MOD_SHIFT;
+
+    const seq = try input_mod.encodeCharEventBytesForTest(allocator, .{
+        .codepoint = 0x00C9, // É
+        .mod = shift,
+        .key_mode_flags = flags,
+        .protocol = .{
+            .alternate = .{
+                .physical_key = 30,
+                .produced_text_utf8 = "É",
+                .base_codepoint = 0x00E9, // é
+                .shifted_codepoint = 0x00C9, // É
+                .alternate_layout_codepoint = 0x20AC, // €
+            },
+        },
+    });
+    defer allocator.free(seq);
+    try std.testing.expectEqualStrings("\x1b[233:201:8364;2u", seq);
+}
