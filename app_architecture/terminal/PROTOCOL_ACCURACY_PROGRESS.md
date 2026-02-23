@@ -1634,6 +1634,10 @@ Implemented (increment 6 / `PA-08e` `DECRQM` query coverage expansion + ANSI mod
 - Convention decision (implemented): unsupported ANSI `DECRQM` queries return `Pm=0` (`not recognized`), following local reference terminal sources:
   - xterm docs (`reference_repos/terminals/xterm_snapshots/ctlseqs.txt`)
   - foot implementation/docs (`reference_repos/terminals/foot/csi.c`, `reference_repos/terminals/foot/doc/foot-ctlseqs.7.scd`)
+- Current ANSI `DECRQM` scope is intentionally minimal:
+  - implemented: mode `20` (newline mode)
+  - unsupported ANSI modes: reply with `Pm=0` (not recognized) rather than silent ignore
+  - expand only when a real app/seed demonstrates demand
 
 Files:
 - `src/terminal/protocol/csi.zig`
