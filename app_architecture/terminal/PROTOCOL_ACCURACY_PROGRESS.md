@@ -2013,6 +2013,32 @@ Verification:
 - `zig build test-terminal-focus-reporting`
 - `zig build test-terminal-replay -- --fixture decstr_soft_reset_mode_subset --update-goldens`
 - `zig build test-terminal-replay -- --all`
+
+Implemented (increment 2 / `PA-08h` `DECSTR` end-to-end reset/preserve verification):
+- Added PTY integration test that proves `DECSTR` resets a representative DECRQM-queryable mode set back to defaults:
+  - `?1004`, `?1002`, `?2004`, ANSI `20`, `?66`
+- Added replay reply fixture that captures the same before/after `DECRQM` replies end-to-end (set -> query, `DECSTR`, query again).
+- Added replay fixture that proves kitty image/placement state survives `DECSTR` (direct preserved-state lock via `kitty:` snapshot section).
+- Added an extra replay fixture with `scrollback` assertion + `DECSTR`; note this currently validates scroll behavior via existing `scrollback` assertion semantics (heuristic/tag semantics), not persistent scrollback count preservation in snapshot output.
+
+Files:
+- `src/terminal_focus_reporting_tests.zig`
+- `fixtures/terminal/decstr_resets_modes_query_reply.vt`
+- `fixtures/terminal/decstr_resets_modes_query_reply.json`
+- `fixtures/terminal/decstr_resets_modes_query_reply.golden`
+- `fixtures/terminal/decstr_preserves_kitty_placement.vt`
+- `fixtures/terminal/decstr_preserves_kitty_placement.json`
+- `fixtures/terminal/decstr_preserves_kitty_placement.golden`
+- `fixtures/terminal/decstr_preserves_scrollback.vt`
+- `fixtures/terminal/decstr_preserves_scrollback.json`
+- `fixtures/terminal/decstr_preserves_scrollback.golden`
+
+Verification:
+- `zig build test-terminal-focus-reporting`
+- `zig build test-terminal-replay -- --fixture decstr_resets_modes_query_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture decstr_preserves_kitty_placement --update-goldens`
+- `zig build test-terminal-replay -- --fixture decstr_preserves_scrollback --update-goldens`
+- `zig build test-terminal-replay -- --all`
   4. Extend/reset matrix incrementally as reference behavior is confirmed.
 
 ## Change Log
