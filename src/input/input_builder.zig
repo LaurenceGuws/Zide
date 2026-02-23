@@ -150,6 +150,7 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
                     .pressed = true,
                     .scancode = press.scancode,
                     .sym = press.sym,
+                    .sdl_mod_bits = press.mod_bits,
                 },
             }) catch {};
         }
@@ -165,6 +166,7 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
                 .pressed = false,
                 .scancode = entry.code,
                 .sym = null,
+                .sdl_mod_bits = null,
             },
         }) catch {};
     }

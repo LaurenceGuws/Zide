@@ -5,6 +5,7 @@ const app_shell = @import("../../app_shell.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const key_encoder = @import("../../terminal/input/key_encoder.zig");
+const alt_probe = @import("../../terminal/input/alternate_probe.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 
@@ -254,6 +255,13 @@ pub fn handleInput(
                 key_event: shared_types.input.KeyEvent,
                 base_char: ?u32,
             ) terminal_types.KeyboardAlternateMetadata {
+                const sdl_mod_bits = key_event.sdl_mod_bits orelse 0;
+                const has_sdl_mod_bits = key_event.sdl_mod_bits != null;
+                const sdl_ralt_mask: u32 = 0x0200;
+                const sdl_alt_mask: u32 = 0x0300;
+                const sdl_mode_mask: u32 = 0x4000;
+                const explicit_altgr = has_sdl_mod_bits and ((sdl_mod_bits & (sdl_ralt_mask | sdl_mode_mask)) != 0);
+                const explicit_non_altgr_alt = has_sdl_mod_bits and ((sdl_mod_bits & sdl_alt_mask) != 0) and !explicit_altgr;
                 const translated_base = translatedKeyCodepoint(renderer, key_event, false);
                 const translated_shifted = translatedKeyCodepoint(renderer, key_event, true);
                 const translated_altgr = translatedKeyCodepointMods(renderer, key_event, false, true, true, false);
@@ -268,40 +276,25 @@ pub fn handleInput(
                     .base_codepoint = translated_base orelse base_char,
                     .shifted_codepoint = translated_shifted,
                 };
-                if (event_sym) |sym_cp| {
-                    const base_cp = meta.base_codepoint;
-                    const shifted_cp = meta.shifted_codepoint;
-                    if (base_cp == null or sym_cp != base_cp.?) {
-                        if (shifted_cp == null or sym_cp != shifted_cp.?) {
-                            meta.alternate_layout_codepoint = sym_cp;
-                        }
-                    }
-                }
-                if (meta.alternate_layout_codepoint == null) {
-                    const base_cp = meta.base_codepoint;
-                    const shifted_cp = meta.shifted_codepoint;
-                    if (translated_altgr) |altgr_cp| {
-                        if ((base_cp == null or altgr_cp != base_cp.?) and (shifted_cp == null or altgr_cp != shifted_cp.?)) {
-                            meta.alternate_layout_codepoint = altgr_cp;
-                        }
-                    }
-                }
-                if (meta.alternate_layout_codepoint == null) {
-                    const base_cp = meta.base_codepoint;
-                    const shifted_cp = meta.shifted_codepoint;
-                    if (translated_shift_altgr) |altgr_shift_cp| {
-                        if ((base_cp == null or altgr_shift_cp != base_cp.?) and (shifted_cp == null or altgr_shift_cp != shifted_cp.?)) {
-                            meta.alternate_layout_codepoint = altgr_shift_cp;
-                        }
-                    }
-                }
+                meta.alternate_layout_codepoint = alt_probe.selectThirdAlternate(.{
+                    .base = meta.base_codepoint,
+                    .shifted = meta.shifted_codepoint,
+                    .event_sym = event_sym,
+                    .altgr = translated_altgr,
+                    .altgr_shift = translated_shift_altgr,
+                    .explicit_altgr = explicit_altgr,
+                    .explicit_non_altgr_alt = explicit_non_altgr_alt,
+                });
                 if (log.enabled_file or log.enabled_console) {
                     log.logf(
-                        "key={d} sc={d} sym={d} mods(s={d} a={d} c={d} g={d}) trans(base={d} shift={d} altgr={d} altgr_shift={d}) meta(base={d} shift={d} alt={d})",
+                        "key={d} sc={d} sym={d} sdl_mods={d} flags(exp_altgr={d} exp_non_alt={d}) mods(s={d} a={d} c={d} g={d}) trans(base={d} shift={d} altgr={d} altgr_shift={d}) meta(base={d} shift={d} alt={d})",
                         .{
                             @intFromEnum(key_event.key),
                             key_event.scancode orelse -1,
                             key_event.sym orelse 0,
+                            key_event.sdl_mod_bits orelse 0,
+                            @intFromBool(explicit_altgr),
+                            @intFromBool(explicit_non_altgr_alt),
                             @intFromBool(key_event.mods.shift),
                             @intFromBool(key_event.mods.alt),
                             @intFromBool(key_event.mods.ctrl),

@@ -7,6 +7,7 @@ const sdl = gl.c;
 pub const KeyPress = struct {
     scancode: i32,
     sym: i32,
+    mod_bits: u32,
     repeated: bool,
 };
 
@@ -20,6 +21,7 @@ pub const TextPress = struct {
 pub const KeyEventInfo = struct {
     scancode: i32,
     sym: i32,
+    mod_bits: u32,
     repeat: u8,
     handled: bool,
 };
@@ -41,6 +43,7 @@ pub fn handleKeyDown(
 ) KeyEventInfo {
     const sc = sdl_api.keyScancode(event);
     const sym = sdl_api.keySym(event);
+    const mod_bits = sdl_api.keyModBits(event);
     const repeat: u8 = sdl_api.keyRepeat(event);
     var handled = false;
     if (sc >= 0 and @as(usize, @intCast(sc)) < key_down.len) {
@@ -53,11 +56,12 @@ pub fn handleKeyDown(
         _ = key_queue.append(allocator, .{
             .scancode = sc,
             .sym = sym,
+            .mod_bits = mod_bits,
             .repeated = repeat != 0,
         }) catch {};
         handled = true;
     }
-    return .{ .scancode = sc, .sym = sym, .repeat = repeat, .handled = handled };
+    return .{ .scancode = sc, .sym = sym, .mod_bits = mod_bits, .repeat = repeat, .handled = handled };
 }
 
 pub fn handleKeyUp(
@@ -67,13 +71,14 @@ pub fn handleKeyUp(
 ) KeyEventInfo {
     const sc = sdl_api.keyScancode(event);
     const sym = sdl_api.keySym(event);
+    const mod_bits = sdl_api.keyModBits(event);
     var handled = false;
     if (sc >= 0 and @as(usize, @intCast(sc)) < key_down.len) {
         key_down[@intCast(sc)] = false;
         key_released[@intCast(sc)] = true;
         handled = true;
     }
-    return .{ .scancode = sc, .sym = sym, .repeat = 0, .handled = handled };
+    return .{ .scancode = sc, .sym = sym, .mod_bits = mod_bits, .repeat = 0, .handled = handled };
 }
 
 pub fn handleMouseButtonDown(

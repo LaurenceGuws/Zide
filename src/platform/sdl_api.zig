@@ -319,6 +319,15 @@ pub fn keyRepeat(event: *const c.SDL_Event) u8 {
     return 0;
 }
 
+pub fn keyModBits(event: *const c.SDL_Event) u32 {
+    const key = event.key;
+    if (@hasField(@TypeOf(key), "mod")) return @intCast(key.mod);
+    if (@hasField(@TypeOf(key), "keysym") and @hasField(@TypeOf(key.keysym), "mod")) {
+        return @intCast(key.keysym.mod);
+    }
+    return 0;
+}
+
 pub fn keycodeFromScancodeMods(scancode: i32, shift: bool, alt: bool, ctrl: bool, super: bool) i32 {
     if (!@hasDecl(c, "SDL_GetKeyFromScancode")) return 0;
     var raw_modstate: c_uint = @intCast(c.SDL_KMOD_NONE);
