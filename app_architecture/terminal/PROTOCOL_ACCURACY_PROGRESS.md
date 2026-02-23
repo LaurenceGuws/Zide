@@ -782,6 +782,21 @@ Verification:
 - `zig build test-terminal-kitty-query-parse`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 26 / `PA-04c` table-driven non-missing-id zlib preflight precedence matrix):
+- Replaced remaining one-off non-missing-id chunk/offset+zlib preflight tests with a
+  compact table-driven matrix for `m=1,o=z` and `O=1,o=z` query forms.
+- Covers reply/no-reply behavior and precedence against invalid format/malformed payload
+  branches under `q=1` and `q=2`.
+- This brings the major query-precedence families (missing-id, invalid-compression,
+  zlib preflight) under a consistent table-driven test style.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
