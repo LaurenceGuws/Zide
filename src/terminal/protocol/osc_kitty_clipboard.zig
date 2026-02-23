@@ -100,7 +100,9 @@ fn replyReadRequest(self: anytype, pty: anytype, req: *const ReadReq, terminator
 
     if (req.wants_targets) {
         writeReadStatusWithId(self, pty, terminator, id.value, "OK");
-        writeReadData(self, pty, terminator, id.value, ".", "text/plain\n");
+        if (self.kitty_osc5522_clipboard_text.items.len > 0) {
+            writeReadData(self, pty, terminator, id.value, ".", "text/plain\n");
+        }
         if (self.kitty_osc5522_clipboard_html.items.len > 0) {
             writeReadData(self, pty, terminator, id.value, ".", "text/html\n");
         }
