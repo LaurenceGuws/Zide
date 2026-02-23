@@ -126,10 +126,15 @@ Implemented since the initial contract draft:
 - Raw SDL keymod bits are now preserved on shared key events (`sdl_mod_bits`) so
   runtime metadata derivation can distinguish explicit right-alt / AltGr state
   from generic Alt usage.
+- Shared normalized input modifiers now include `altgr` on key events (derived from
+  SDL `RALT` / `MODE`), so downstream terminal code can prefer a normalized AltGr
+  signal and use raw SDL keymod bits only for diagnostics.
 - The third-field selection logic is now isolated in a pure helper
   (`src/terminal/input/alternate_probe.zig`) with unit tests covering AltGr probe
   preference, explicit non-AltGr suppression, generic fallback probing, and
   duplicate filtering.
+- `alternate_probe.zig` also exposes a small key/text->metadata bridge seam used by
+  encoder tests to verify derived metadata reaches CSI-u formatting.
 - `terminal.input.altmeta` diagnostic logging was added to compare event `sym`
   against scancode-translation probe outputs during real-layout manual testing.
 
@@ -140,9 +145,8 @@ Current limits (still unresolved):
 - Text events borrow metadata from the preceding key event in the same input
   batch; this is a pragmatic correlation, not a guaranteed key/text pairing
   contract across all IME/platform behaviors.
-- We still do not distinguish right-alt/AltGr from generic `ctrl+alt` in the
-  shared input model, so the AltGr probe is a best-effort heuristic.
-  (Updated: `sdl_mod_bits` now carries raw SDL keymods; higher-level normalized
-  input modifiers still do not model AltGr explicitly.)
+- Shared key-event modifiers now model `altgr`, but batch-level/global modifiers are
+  still a best-effort approximation (`RightAlt` state proxy) because SDL `MODE` is
+  event-scoped in our current pipeline.
 - Composed/IME text remains intentionally conservative (`text_is_composed`
   suppresses alternate reporting in the encoder).
