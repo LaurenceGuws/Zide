@@ -35,6 +35,7 @@ pub const EncoderSpec = struct {
     char: ?u32 = null,
     mod: u8 = 0,
     flags: u32 = 0,
+    action: input_mod.KeyAction = .press,
     alternate_meta: ?EncoderAlternateMetaSpec = null,
     alternate_probe_meta: ?EncoderAlternateProbeMetaSpec = null,
 };
@@ -258,7 +259,7 @@ pub fn runEncoderFixture(
     try validateEncoderAssertions(fixture);
 
     if (encoder.key) |key| {
-        return input_mod.encodeKeyBytesForTest(allocator, key, encoder.mod, encoder.flags);
+        return input_mod.encodeKeyActionBytesForTest(allocator, key, encoder.mod, encoder.flags, encoder.action);
     }
     if (encoder.alternate_meta != null and encoder.alternate_probe_meta != null) return error.InvalidEncoderSpec;
     if (encoder.alternate_probe_meta) |probe_spec| {

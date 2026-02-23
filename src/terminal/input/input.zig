@@ -443,13 +443,14 @@ fn charNeedsProtocolDisambiguation(char: u32, mod: types.Modifier) bool {
     };
 }
 
-pub fn encodeKeyBytesForTest(
+pub fn encodeKeyActionBytesForTest(
     allocator: std.mem.Allocator,
     key: types.Key,
     mod: types.Modifier,
     flags: u32,
+    action: KeyAction,
 ) ![]u8 {
-    if (!debugAccessAllowed()) @panic("encodeKeyBytesForTest is test-only");
+    if (!debugAccessAllowed()) @panic("encodeKeyActionBytesForTest is test-only");
     if (flags == 0) return allocator.alloc(u8, 0);
     const report_all = (flags & key_encoding.key_mode_report_all_event_types) != 0;
     const disambiguate = (flags & key_encoding.key_mode_disambiguate) != 0;
@@ -457,29 +458,83 @@ pub fn encodeKeyBytesForTest(
     if (!report_all and !disambiguate and !report_text) {
         return allocator.alloc(u8, 0);
     }
+    if (!report_all and action == .release) return allocator.alloc(u8, 0);
+
     const mod_code = encodeModifier(mod);
+    const has_mods = mod_code != 1;
+    const add_actions = report_all and action != .press;
+    const second_field = has_mods or add_actions;
+    const TestFunctionKey = struct {
+        number: u32,
+        trailer: u8,
+    };
+
+    const function_key: ?TestFunctionKey = switch (key) {
+        types.VTERM_KEY_ENTER => .{ .number = 13, .trailer = 'u' },
+        types.VTERM_KEY_TAB => .{ .number = 9, .trailer = 'u' },
+        types.VTERM_KEY_BACKSPACE => .{ .number = 127, .trailer = 'u' },
+        types.VTERM_KEY_ESCAPE => .{ .number = 27, .trailer = 'u' },
+        types.VTERM_KEY_UP => .{ .number = 1, .trailer = 'A' },
+        types.VTERM_KEY_DOWN => .{ .number = 1, .trailer = 'B' },
+        types.VTERM_KEY_RIGHT => .{ .number = 1, .trailer = 'C' },
+        types.VTERM_KEY_LEFT => .{ .number = 1, .trailer = 'D' },
+        types.VTERM_KEY_HOME => .{ .number = 1, .trailer = 'H' },
+        types.VTERM_KEY_END => .{ .number = 1, .trailer = 'F' },
+        types.VTERM_KEY_PAGEUP => .{ .number = 5, .trailer = '~' },
+        types.VTERM_KEY_PAGEDOWN => .{ .number = 6, .trailer = '~' },
+        types.VTERM_KEY_INS => .{ .number = 2, .trailer = '~' },
+        types.VTERM_KEY_DEL => .{ .number = 3, .trailer = '~' },
+        else => null,
+    };
+    if (function_key == null) return allocator.alloc(u8, 0);
+    const fk = function_key.?;
+
     if (!report_all) {
         if (key == types.VTERM_KEY_ENTER or key == types.VTERM_KEY_TAB or key == types.VTERM_KEY_BACKSPACE) {
             if (!disambiguate and !report_text) return allocator.alloc(u8, 0);
         }
     }
-    return switch (key) {
-        types.VTERM_KEY_ENTER => std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ 13, mod_code }),
-        types.VTERM_KEY_TAB => std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ 9, mod_code }),
-        types.VTERM_KEY_BACKSPACE => std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ 127, mod_code }),
-        types.VTERM_KEY_UP => if (mod_code == 1) std.fmt.allocPrint(allocator, "\x1b[A", .{}) else encodeCsiWithModBytes(allocator, "1", mod_code, "A"),
-        types.VTERM_KEY_DOWN => if (mod_code == 1) std.fmt.allocPrint(allocator, "\x1b[B", .{}) else encodeCsiWithModBytes(allocator, "1", mod_code, "B"),
-        types.VTERM_KEY_RIGHT => if (mod_code == 1) std.fmt.allocPrint(allocator, "\x1b[C", .{}) else encodeCsiWithModBytes(allocator, "1", mod_code, "C"),
-        types.VTERM_KEY_LEFT => if (mod_code == 1) std.fmt.allocPrint(allocator, "\x1b[D", .{}) else encodeCsiWithModBytes(allocator, "1", mod_code, "D"),
-        types.VTERM_KEY_HOME => if (mod_code == 1) std.fmt.allocPrint(allocator, "\x1b[H", .{}) else encodeCsiWithModBytes(allocator, "1", mod_code, "H"),
-        types.VTERM_KEY_END => if (mod_code == 1) std.fmt.allocPrint(allocator, "\x1b[F", .{}) else encodeCsiWithModBytes(allocator, "1", mod_code, "F"),
-        types.VTERM_KEY_PAGEUP => encodeCsiWithModBytes(allocator, "5", mod_code, "~"),
-        types.VTERM_KEY_PAGEDOWN => encodeCsiWithModBytes(allocator, "6", mod_code, "~"),
-        types.VTERM_KEY_INS => encodeCsiWithModBytes(allocator, "2", mod_code, "~"),
-        types.VTERM_KEY_DEL => encodeCsiWithModBytes(allocator, "3", mod_code, "~"),
-        types.VTERM_KEY_ESCAPE => std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ 27, mod_code }),
-        else => allocator.alloc(u8, 0),
+
+    var buf: [64]u8 = undefined;
+    var pos: usize = 0;
+    buf[pos] = 0x1b;
+    pos += 1;
+    buf[pos] = '[';
+    pos += 1;
+    const omit_leading_one = !second_field and fk.number == 1 and switch (fk.trailer) {
+        'A', 'B', 'C', 'D', 'H', 'F' => true,
+        else => false,
     };
+    if (!omit_leading_one) {
+        const written_key = std.fmt.bufPrint(buf[pos..], "{d}", .{fk.number}) catch return allocator.alloc(u8, 0);
+        pos += written_key.len;
+    }
+    if (second_field) {
+        buf[pos] = ';';
+        pos += 1;
+        if (has_mods) {
+            const written_mod = std.fmt.bufPrint(buf[pos..], "{d}", .{mod_code}) catch return allocator.alloc(u8, 0);
+            pos += written_mod.len;
+        }
+        if (add_actions) {
+            buf[pos] = ':';
+            pos += 1;
+            const written_action = std.fmt.bufPrint(buf[pos..], "{d}", .{@intFromEnum(action) + 1}) catch return allocator.alloc(u8, 0);
+            pos += written_action.len;
+        }
+    }
+    buf[pos] = fk.trailer;
+    pos += 1;
+    return allocator.dupe(u8, buf[0..pos]);
+}
+
+pub fn encodeKeyBytesForTest(
+    allocator: std.mem.Allocator,
+    key: types.Key,
+    mod: types.Modifier,
+    flags: u32,
+) ![]u8 {
+    return encodeKeyActionBytesForTest(allocator, key, mod, flags, .press);
 }
 
 pub fn encodeCharBytesForTest(

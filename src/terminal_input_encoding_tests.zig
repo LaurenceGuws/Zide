@@ -79,6 +79,33 @@ test "terminal input disambiguate mode encodes modified cursor/home/end with 1;{
     }
 }
 
+test "terminal input report-all disambiguate encodes cursor/home/end releases with :3 action field" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 1 | 2; // disambiguate + report_all_event_types
+
+    const cases = [_]struct {
+        key: types.Key,
+        mod: types.Modifier,
+        expected: []const u8,
+    }{
+        .{ .key = types.VTERM_KEY_UP, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[1;:3A" },
+        .{ .key = types.VTERM_KEY_DOWN, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[1;:3B" },
+        .{ .key = types.VTERM_KEY_LEFT, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[1;:3D" },
+        .{ .key = types.VTERM_KEY_RIGHT, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[1;:3C" },
+        .{ .key = types.VTERM_KEY_HOME, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[1;:3H" },
+        .{ .key = types.VTERM_KEY_END, .mod = types.VTERM_MOD_NONE, .expected = "\x1b[1;:3F" },
+        .{ .key = types.VTERM_KEY_UP, .mod = types.VTERM_MOD_SHIFT, .expected = "\x1b[1;2:3A" },
+        .{ .key = types.VTERM_KEY_HOME, .mod = types.VTERM_MOD_ALT, .expected = "\x1b[1;3:3H" },
+        .{ .key = types.VTERM_KEY_END, .mod = types.VTERM_MOD_CTRL, .expected = "\x1b[1;5:3F" },
+    };
+
+    inline for (cases) |case_| {
+        const seq = try input_mod.encodeKeyActionBytesForTest(allocator, case_.key, case_.mod, flags, .release);
+        defer allocator.free(seq);
+        try std.testing.expectEqualStrings(case_.expected, seq);
+    }
+}
+
 test "terminal input encodes char with modifiers when report_text enabled" {
     const allocator = std.testing.allocator;
     const flags: u32 = 8; // key_mode_report_text
@@ -122,7 +149,7 @@ test "terminal input disambiguate mode encodes enter key" {
 
     const seq = try input_mod.encodeKeyBytesForTest(allocator, types.VTERM_KEY_ENTER, types.VTERM_MOD_NONE, flags);
     defer allocator.free(seq);
-    try std.testing.expectEqualStrings("\x1b[13;1u", seq);
+    try std.testing.expectEqualStrings("\x1b[13u", seq);
 }
 
 test "terminal input skips key protocol encoding for alternate-key flag alone" {
