@@ -454,3 +454,63 @@ test "kitty parse query quiet=2 suppresses compressed png EBADPNG" {
         }
     }.run);
 }
+
+test "kitty parse query invalid compression value emits EINVAL" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,o=1,f=32,s=1,v=1;AAAA/w==");
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;EINVAL\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query quiet=2 suppresses invalid compression reply" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,q=2,o=1,f=32,s=1,v=1;AAAA/w==");
+            try capture.expectNoReply();
+        }
+    }.run);
+}
+
+test "kitty parse query chunked plus zlib compression returns preflight EINVAL" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,m=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1);
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;EINVAL\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query offset plus zlib compression returns preflight EINVAL" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,O=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1);
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=7;EINVAL\x1b\\", reply);
+        }
+    }.run);
+}
+
+test "kitty parse query quiet=2 suppresses chunked zlib preflight EINVAL" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,q=2,m=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1);
+            try capture.expectNoReply();
+        }
+    }.run);
+}
+
+test "kitty parse query quiet=2 suppresses offset zlib preflight EINVAL" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=q,i=7,q=2,O=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1);
+            try capture.expectNoReply();
+        }
+    }.run);
+}
