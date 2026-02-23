@@ -570,6 +570,19 @@ Verification:
 - `zig build test-terminal-kitty-query-parse`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 12 / `PA-04c` integrated `o=z` error-matrix expansion):
+- Expanded integrated `a=q` parse-path coverage for additional `o=z` failure and quiet-mode combinations:
+  - `q=2` suppresses decompression-error replies
+  - malformed zlib stream payload -> `EINVAL`
+  - post-inflate size mismatch -> `ENODATA`
+- This locks the new kitty/ghostty-aligned query compression behavior across both pre-build decompression failures and post-inflate size validation.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
@@ -675,6 +688,26 @@ Files:
 
 Verification:
 - `zig test src/terminal_input_encoding_tests.zig`
+- `zig build test-terminal-replay -- --all`
+
+Implemented (increment 11 / `PA-05b` shared input metadata plumbing from platform ingestion):
+- Extended `shared_types.input` events with additive metadata fields:
+  - `KeyEvent.scancode`
+  - `TextEvent.utf8_len` / `TextEvent.utf8` / `TextEvent.text_is_composed`
+- Preserved UTF-8 bytes per text codepoint through the SDL input path (`platform.input_events` -> `ui.Renderer` queue -> `input_builder`) and attached scancodes to key events in `InputBatch`.
+- Updated terminal UI metadata assembly to consume event-provided fields (`scancode`, `utf8`) when available, reducing local metadata synthesis.
+- Existing behavior remains unchanged; this is metadata quality/plumbing for future layout-aware alternate-key encoding.
+
+Files:
+- `src/types/input.zig`
+- `src/platform/input_events.zig`
+- `src/ui/renderer.zig`
+- `src/app_shell.zig`
+- `src/input/input_builder.zig`
+- `src/ui/widgets/terminal_widget_input.zig`
+
+Verification:
+- `zig build`
 - `zig build test-terminal-replay -- --all`
 
 Implemented (increment 3):
