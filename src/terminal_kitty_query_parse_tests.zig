@@ -554,6 +554,10 @@ test "kitty parse query missing-id precedence matrix" {
     const no_reply_cases = [_][]const u8{
         "a=q,q=2,f=999;AA==",
         "a=q,q=2,o=1,f=999;AA==",
+        "a=q,q=2,f=999;%%%%",
+        "a=q,q=2,o=1,f=32,s=1,v=1;%%%%",
+        "a=q,q=2,o=1,f=999;%%%%",
+        "a=q,q=2,m=1,o=z,f=999;%%%%",
     };
     inline for (no_reply_cases) |seq| {
         try expectKittyQueryNoReply(seq);
