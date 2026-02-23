@@ -53,3 +53,21 @@ test "terminal input disambiguate mode encodes escape without modifiers" {
     defer allocator.free(seq);
     try std.testing.expectEqualStrings("\x1b[27;1u", seq);
 }
+
+test "terminal input disambiguate mode encodes enter key" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 1; // key_mode_disambiguate
+
+    const seq = try input_mod.encodeKeyBytesForTest(allocator, types.VTERM_KEY_ENTER, types.VTERM_MOD_NONE, flags);
+    defer allocator.free(seq);
+    try std.testing.expectEqualStrings("\x1b[13;1u", seq);
+}
+
+test "terminal input skips key protocol encoding for alternate-key flag alone" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 4; // key_mode_report_alternate_key (unsupported / no-op in encoder)
+
+    const seq = try input_mod.encodeKeyBytesForTest(allocator, types.VTERM_KEY_UP, types.VTERM_MOD_NONE, flags);
+    defer allocator.free(seq);
+    try std.testing.expectEqual(@as(usize, 0), seq.len);
+}

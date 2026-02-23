@@ -317,13 +317,22 @@ pub fn encodeKeyBytesForTest(
 ) ![]u8 {
     if (!debugAccessAllowed()) @panic("encodeKeyBytesForTest is test-only");
     if (flags == 0) return allocator.alloc(u8, 0);
+    const report_all = (flags & key_encoding.key_mode_report_all_event_types) != 0;
+    const disambiguate = (flags & key_encoding.key_mode_disambiguate) != 0;
+    const report_text = (flags & key_encoding.key_mode_report_text) != 0;
+    if (!report_all and !disambiguate and !report_text) {
+        return allocator.alloc(u8, 0);
+    }
     const mod_code = encodeModifier(mod);
-    if ((flags & key_encoding.key_mode_report_all_event_types) == 0) {
+    if (!report_all) {
         if (key == types.VTERM_KEY_ENTER or key == types.VTERM_KEY_TAB or key == types.VTERM_KEY_BACKSPACE) {
-            return allocator.alloc(u8, 0);
+            if (!disambiguate and !report_text) return allocator.alloc(u8, 0);
         }
     }
     return switch (key) {
+        types.VTERM_KEY_ENTER => std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ 13, mod_code }),
+        types.VTERM_KEY_TAB => std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ 9, mod_code }),
+        types.VTERM_KEY_BACKSPACE => std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ 127, mod_code }),
         types.VTERM_KEY_UP => encodeCsiWithModBytes(allocator, "1", mod_code, "A"),
         types.VTERM_KEY_DOWN => encodeCsiWithModBytes(allocator, "1", mod_code, "B"),
         types.VTERM_KEY_RIGHT => encodeCsiWithModBytes(allocator, "1", mod_code, "C"),

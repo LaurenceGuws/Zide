@@ -254,6 +254,19 @@ Verification:
 - `zig test src/terminal_input_encoding_tests.zig`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 3):
+- Aligned `encodeKeyBytesForTest` with runtime protocol gating for key-mode flags:
+  - unsupported flag-only modes (e.g. `alternate_key` bit by itself) no longer produce protocol bytes in tests
+  - `disambiguate` now allows `Enter`/`Tab`/`Backspace` CSI-u key encoding in the test helper
+- Added unit coverage for `Enter` disambiguation and unsupported-flag-only key-mode behavior.
+
+Files:
+- `src/terminal/input/input.zig`
+- `src/terminal_input_encoding_tests.zig`
+
+Verification:
+- `zig test src/terminal_input_encoding_tests.zig`
+
 Remaining work:
 - Actual alternate-key field encoding is still not implemented.
 - Disambiguation semantics are improved but still incomplete (broader kitty keyboard parity and key-map coverage).
@@ -337,6 +350,7 @@ Priority notes:
 - Expanded `PA-02` to cover kitty reply formatting + quiet-mode suppression behavior.
 - Advanced `PA-05` to `partial` (unsupported `alternate_key` no longer advertised via key-mode flags).
 - Advanced `PA-05` disambiguation support: modified chars and ambiguous control chars now emit CSI-u without `report_text`; aligned encoder test helper/golden with runtime behavior.
+- Tightened `PA-05` key-encoder test helper gating/mappings so replay/unit tests do not falsely advertise unsupported key-mode outputs.
 
 ## Next Work Queue (Ordered)
 
