@@ -16,11 +16,18 @@ Rules for this document:
 
 ## Status Legend
 
-- `todo`: not started
-- `in_progress`: actively being fixed
-- `done`: fixed and verified
-- `deferred`: intentionally postponed with reason
-- `partial`: mitigated but not full parity
+- `todo`: not started; no parity claim beyond review notes
+- `in_progress`: actively being fixed in the current slice; do not start adjacent parity slices until this slice is commit/test stable or explicitly paused
+- `done`: implemented behavior matches the stated scope/targets and required verification was run (unit / PTY / replay as listed)
+- `deferred`: intentionally postponed with reason, target references, and explicit resume criteria
+- `partial`: milestone only; useful progress landed, but parity finish criteria are not yet met
+
+Status usage rules (parity work):
+- Do not use `done` for "better unsupported reporting" unless the mode/feature is intentionally meant to remain unsupported in Zide (strategic non-support).
+- If work adds `Pm=0`/`Pm=4` reporting for a mode that may later be supported, record it as provisional parity scaffolding under the parent `partial` item and add a follow-up audit entry.
+- Prefer implementing support (with tests) before expanding unsupported reporting. Unsupported reporting expansion is only valid when:
+  - the feature is intentionally out of scope / strategically unsupported, or
+  - reference-compatible unsupported replies are required to correctly represent an already-implemented feature boundary.
 
 ## Findings Tracker
 
@@ -40,6 +47,7 @@ Rules for this document:
 Policy (added after parity-review follow-up discussion):
 - `partial` is a milestone state, not a completion state.
 - Do not silently move past a `partial` item when the stated goal is parity against reference terminals (kitty / ghostty / xterm / foot).
+- Do not "improve parity" by broadening unsupported-mode reporting (`Pm=0/4`) as a substitute for implementing support, unless the non-support is an explicit strategic product decision.
 - Before starting a new top-level todo area, run a **partial scan** and explicitly classify each open `partial` item as one of:
   - `finish now` (blocking for correctness/parity confidence)
   - `defer intentionally` (non-blocking; leave a reason + explicit done criteria)
@@ -50,6 +58,14 @@ Definition-of-done requirements for parity-oriented items:
 - Define exact behavior/reply expectations (including unsupported behavior conventions).
 - Define test coverage required to call it done (unit / PTY / replay fixtures).
 - List any explicit out-of-scope behaviors so `partial` vs `done` is auditable.
+- If unsupported reporting was added during a parity slice, include an explicit review of whether those modes are actually intended to remain unsupported before closing or moving past the slice.
+
+Unsupported-reporting correction rule (applies to work already landed):
+- Before continuing further `PA-08g`/`PA-08h` parity expansion, review all recently added DECRQM `Pm=4` / query-only unsupported rows and classify each as:
+  - `implement now` (feature is on-path; replace reporting-only parity with real support),
+  - `strategic non-support` (keep `Pm=4/0`, document rationale), or
+  - `defer but provisional` (keep temporary reporting, but mark as non-completion and schedule revisit).
+- Do not add additional unsupported-mode DECRQM batches until that review is completed and documented.
 
 ### Current Partial Scan (2026-02-23)
 
@@ -85,6 +101,7 @@ Definition-of-done requirements for parity-oriented items:
   - CSI parser capability sufficient for targeted CSI families (including intermediates where required)
   - prioritized CSI/DCS/APC gaps either implemented to spec/reference behavior or explicitly deferred
   - replay/PTY coverage exists for reply-driven features we claim support for
+- Current rule for this umbrella (2026-02-23 follow-up): when a mode/feature is still on the path to support, implement it before adding more unsupported-reporting-only parity polish.
 
 ## Detailed Findings (Source Review Snapshot)
 
@@ -1887,7 +1904,10 @@ Planned work (decomposition / `PA-08g` `DECRQM` / `DECRPM` parity breadth + repl
   - DEC-private `DECRQM`:
     - [x] common TUI modes currently implemented (`?1`, `?3`, `?5`, `?6`, `?7`, `?25`, `?47`, `?1047`, `?1049`, `?1000`, `?1002`, `?1003`, `?1004`, `?1006`, `?2004`, `?2026`)
     - [ ] Audit reference-terminal queried modes relevant to Zide parity (`?9`, `?12`, `?45`, `?66`, `?67`, `?80`, `?1005`, `?1015`, `?1016`, `?1034`, `?1035`, `?1036`, `?1042`, `?1070`, `?2027`, `?2031`, `?2048`, `?5522`, etc.) and classify `implement` / `defer`
-    - [ ] Decide whether any fixed unsupported features should report `Pm=4` instead of `Pm=0` (kitty docs treat both as unsupported for `?5522`; xterm/foot semantics permit both)
+    - [x] Review already-landed `Pm=4` rows and correct course before further DECRQM parity breadth work:
+      - keep only if `strategic non-support` is intentional and documented
+      - otherwise convert to `implement now` / `defer provisional` with follow-up slice
+    - [ ] Decide whether any fixed unsupported features should report `Pm=4` instead of `Pm=0` (kitty docs treat both as unsupported for `?5522`; xterm/foot semantics permit both); apply only to strategically unsupported modes
   - Reply-value policy:
     - [x] `Pm=0` for unsupported ANSI/DEC query in current implemented scope
     - [ ] Define criteria for `Pm=3/4` use in Zide (feature permanently on/off vs unsupported/not recognized)
@@ -1907,13 +1927,14 @@ Planned work (decomposition / `PA-08g` `DECRQM` / `DECRPM` parity breadth + repl
 | DEC private `DECRQM` | `?1 ?3 ?5 ?6 ?7 ?25 ?47 ?1047 ?1049` | implemented | `1/2` | xterm/foot | keep |
 | DEC private `DECRQM` | `?1000 ?1002 ?1003 ?1004 ?1006 ?2004 ?2026` | implemented | `1/2` | xterm/foot/kitty app usage | keep |
 | DEC private `DECRQM` | `?66` (application keypad) | implemented | `1/2` | foot/xterm VT semantics | implemented via existing `DECPAM` / `DECPNM` state |
-| DEC private `DECRQM` | `?9 ?45` | implemented (query-only) | `4` (permanently reset) | xterm/foot `DECRPM` semantics | unsupported fixed-off parity policy adopted |
+| DEC private `DECRQM` | `?9 ?45` | not implemented | `0` | xterm/foot `DECRPM` semantics | defer provisional; plausible future support |
 | DEC private `DECRQM` | `?12` | not implemented | `0` | foot often reports blink state | evaluate separately (DECSET cursor blink semantics) |
-| DEC private `DECRQM` | `?67 ?1001 ?1005` | not implemented | `0` | foot often reports permanent reset (`4`) | policy decision (`0` vs `4`) |
-| DEC private `DECRQM` | `?1015 ?1016` mouse alt encodings | not implemented | `0` | foot/xterm queryable | likely defer unless app demand |
+| DEC private `DECRQM` | `?67 ?1001 ?1005` | implemented (query-only) | `4` (permanently reset) | foot often reports permanent reset (`4`) | strategic non-support (fixed-off) |
+| DEC private `DECRQM` | `?1015` mouse alt encoding (urxvt) | implemented (query-only) | `4` (permanently reset) | foot/xterm queryable | strategic non-support (legacy encoding) |
+| DEC private `DECRQM` | `?1016` mouse pixel encoding (SGR pixels) | not implemented | `0` | foot/xterm queryable | defer provisional (possible future support) |
 | DEC private `DECRQM` | `?1034 ?1035 ?1036 ?1042` | implemented (query-only) | `4` (permanently reset) | foot supports/reportable | unsupported fixed-off parity policy adopted |
 | DEC private `DECRQM` | `?1070` | implemented (query-only) | `4` (permanently reset) | foot supports/reportable | unsupported fixed-off parity policy adopted |
-| DEC private `DECRQM` | `?2031 ?2048 ?5522` kitty/modern extensions | implemented (query-only) | `4` (permanently reset) | kitty docs + foot examples | unsupported fixed-off parity policy adopted (feature-specific implementation still deferred) |
+| DEC private `DECRQM` | `?2031 ?2048 ?5522` kitty/modern extensions | not implemented | `0` | kitty docs + foot examples | defer provisional; do not claim fixed-off unless strategic |
 | DEC private `DECRQM` | unknown modes | implemented fallback | `0` | xterm/foot convention | keep (test-locked) |
 
 Notes:
@@ -1921,7 +1942,10 @@ Notes:
 - Reference candidate set is seeded primarily from `reference_repos/terminals/foot/csi.c` plus xterm docs and kitty clipboard docs (`?5522`).
 - Final `implement/defer` decisions for each non-implemented row should be recorded here before broadening `PA-08e` mode handling.
 - `?66` is now implemented and test-covered (`DECPAM`/`DECPNM` -> `DECRQM ?66`).
-- Initial `Pm=4` policy adoption landed for a growing set of clearly unsupported fixed DEC-private modes (`?9`, `?45`, `?67`, `?1001`, `?1005`, `?1015`, `?1016`, `?1034`, `?1035`, `?1036`, `?1042`, `?1070`, `?2031`, `?2048`, `?5522`) to align more closely with xterm/foot-style `DECRPM` semantics.
+- `PA-08g` DECRQM unsupported-reporting correction review (2026-02-23):
+  - Kept `Pm=4` only for strategic fixed-off / legacy non-goal modes in current scope: `?67`, `?1001`, `?1005`, `?1015`, `?1034`, `?1035`, `?1036`, `?1042`, `?1070`.
+  - Reverted to `Pm=0` provisional unsupported replies for modes still plausibly on the support path: `?9`, `?45`, `?1016`, `?2031`, `?2048`, `?5522`.
+  - Rule in force: do not expand the `Pm=4` set further without a strategic non-support decision per mode.
 
 Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft terminal reset):
 - Reference anchors:
@@ -1946,6 +1970,49 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
   1. Docs-only reset matrix (what `DECSTR` resets vs preserves in Zide scope).
   2. Behavior-preserving parser/dispatch hook for `CSI ! p` (no-op handler + tests proving exact dispatch family).
   3. Implement the first safe subset (mode resets only) with PTY/replay coverage.
+
+`PA-08h` DECSTR reset matrix (Zide first implementation scope):
+
+| Area | `DECSTR` first-slice behavior | Notes |
+|---|---|---|
+| Screen grid contents | preserve | soft reset only; no clear |
+| Scrollback | preserve | hard-reset-only behavior |
+| Kitty images/placements | preserve | hard-reset-only behavior |
+| Cursor position | reset to home (`0,0`) on active screen | via `Screen.resetState()` |
+| Cursor style/visibility | reset to defaults | active screen only |
+| SGR attrs / key-mode stack / wrap-next | reset on active screen | via `Screen.resetState()` |
+| Scroll region | reset to full active-screen region | via `Screen.resetState()` |
+| Tabs | reset to default tab stops | via `Screen.resetState()` |
+| Parser partial state / charsets | reset | via `parser.reset()` + `saved_charset = .{}` |
+| App cursor keys / app keypad | reset | terminal session global mode bits |
+| Mouse reporting modes | reset | `input.resetMouse()` |
+| Focus reporting / bracketed paste / sync updates | reset | mode defaults |
+| Alt-screen active state | preserve | no screen switch in first slice |
+| Title / cwd / clipboard / hyperlinks | preserve | outside DECSTR scope in Zide first slice |
+
+Implemented (increment 1 / `PA-08h` `DECSTR` first safe subset):
+- Added explicit `CSI ! p` dispatch handling using CSI intermediate-aware matching (`!`), distinct from `DECRQM` (`$`).
+- Implemented a non-destructive soft reset helper that resets parser/mode state and active-screen soft state without calling the hard reset path.
+- Preserves grid contents, scrollback, and kitty graphics while resetting:
+  - parser/charsets, cursor/style/visibility, scroll region, tab stops, key-mode stack
+  - app cursor/keypad modes, mouse reporting, focus reporting, bracketed paste, sync updates
+- Added PTY integration test proving:
+  - no reply bytes for `DECSTR`
+  - mode subset resets to defaults
+  - grid contents remain intact
+- Added replay fixture locking end-to-end soft-reset preservation of grid + cursor default state.
+
+Files:
+- `src/terminal/protocol/csi.zig`
+- `src/terminal_focus_reporting_tests.zig`
+- `fixtures/terminal/decstr_soft_reset_mode_subset.vt`
+- `fixtures/terminal/decstr_soft_reset_mode_subset.json`
+- `fixtures/terminal/decstr_soft_reset_mode_subset.golden`
+
+Verification:
+- `zig build test-terminal-focus-reporting`
+- `zig build test-terminal-replay -- --fixture decstr_soft_reset_mode_subset --update-goldens`
+- `zig build test-terminal-replay -- --all`
   4. Extend/reset matrix incrementally as reference behavior is confirmed.
 
 ## Change Log
