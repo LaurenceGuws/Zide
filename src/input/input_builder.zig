@@ -148,6 +148,7 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
                     .mods = batch.mods,
                     .repeated = press.repeated,
                     .pressed = true,
+                    .scancode = press.scancode,
                 },
             }) catch {};
         }
@@ -161,12 +162,18 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
                 .mods = batch.mods,
                 .repeated = false,
                 .pressed = false,
+                .scancode = entry.code,
             },
         }) catch {};
     }
 
-    while (r.getCharPressed()) |char| {
-        batch.append(.{ .text = .{ .codepoint = char } }) catch {};
+    while (r.getTextPressed()) |text_press| {
+        batch.append(.{ .text = .{
+            .codepoint = text_press.codepoint,
+            .utf8_len = text_press.utf8_len,
+            .utf8 = text_press.utf8,
+            .text_is_composed = false,
+        } }) catch {};
     }
 
     const composition = r.getTextComposition();

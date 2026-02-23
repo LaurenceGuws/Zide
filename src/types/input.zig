@@ -146,10 +146,18 @@ pub const KeyEvent = struct {
     mods: Modifiers,
     repeated: bool,
     pressed: bool,
+    scancode: ?i32 = null,
 };
 
 pub const TextEvent = struct {
     codepoint: u32,
+    utf8_len: u8 = 0,
+    utf8: [4]u8 = .{ 0, 0, 0, 0 },
+    text_is_composed: bool = false,
+
+    pub fn utf8Slice(self: TextEvent) []const u8 {
+        return self.utf8[0..self.utf8_len];
+    }
 };
 
 pub const MouseEvent = struct {

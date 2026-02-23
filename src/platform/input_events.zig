@@ -9,6 +9,12 @@ pub const KeyPress = struct {
     repeated: bool,
 };
 
+pub const TextPress = struct {
+    codepoint: u32,
+    utf8_len: u8,
+    utf8: [4]u8,
+};
+
 pub const KeyEventInfo = struct {
     scancode: i32,
     sym: i32,
@@ -97,7 +103,7 @@ pub fn wheelDelta(event: *const sdl.SDL_Event) f32 {
 
 pub fn handleTextInput(
     event: *const sdl.SDL_Event,
-    char_queue: *std.ArrayList(u32),
+    char_queue: *std.ArrayList(TextPress),
     allocator: std.mem.Allocator,
 ) usize {
     const len = sdl_api.textInputLen(event);
@@ -109,7 +115,13 @@ pub fn handleTextInput(
     var it = std.unicode.Utf8View.init(text) catch return 0;
     var iter = it.iterator();
     while (iter.nextCodepoint()) |cp| {
-        _ = char_queue.append(allocator, cp) catch {};
+        var utf8: [4]u8 = .{ 0, 0, 0, 0 };
+        const utf8_len: u8 = @intCast(std.unicode.utf8Encode(cp, &utf8) catch 0);
+        _ = char_queue.append(allocator, .{
+            .codepoint = cp,
+            .utf8_len = utf8_len,
+            .utf8 = utf8,
+        }) catch {};
     }
     return text.len;
 }

@@ -3,6 +3,7 @@ const r = @import("ui/renderer.zig");
 const iface = @import("ui/renderer/interface.zig");
 const window = @import("platform/window.zig");
 const input = @import("platform/input.zig");
+const platform_input_events = @import("platform/input_events.zig");
 
 pub const MousePos = iface.MousePos;
 pub const Color = iface.Color;
@@ -325,6 +326,10 @@ pub const Shell = struct {
 
     pub fn getCharPressed(self: *Shell) ?u32 {
         return self.renderer.getCharPressed();
+    }
+
+    pub fn getTextPressed(self: *Shell) ?platform_input_events.TextPress {
+        return self.renderer.getTextPressed();
     }
 
     pub fn setClipboardText(self: *Shell, text: [*:0]const u8) void {

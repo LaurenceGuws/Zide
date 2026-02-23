@@ -51,6 +51,7 @@ const types = @import("renderer/types.zig");
 const app_logger = @import("../app_logger.zig");
 
 const sdl = gl.c;
+const TextPress = platform_input_events.TextPress;
 
 var active_renderer: ?*Renderer = null;
 var mouse_wheel_delta: f32 = 0.0;
@@ -283,7 +284,7 @@ pub const Renderer = struct {
     mouse_pressed: [mouse_button_count]bool,
     mouse_released: [mouse_button_count]bool,
     key_queue: std.ArrayList(KeyPress),
-    char_queue: std.ArrayList(u32),
+    char_queue: std.ArrayList(TextPress),
     composing_text: std.ArrayList(u8),
     composing_cursor: i32,
     composing_selection_len: i32,
@@ -412,7 +413,7 @@ pub const Renderer = struct {
             .mouse_pressed = [_]bool{false} ** mouse_button_count,
             .mouse_released = [_]bool{false} ** mouse_button_count,
             .key_queue = std.ArrayList(KeyPress).empty,
-            .char_queue = std.ArrayList(u32).empty,
+            .char_queue = std.ArrayList(TextPress).empty,
             .composing_text = std.ArrayList(u8).empty,
             .composing_cursor = 0,
             .composing_selection_len = 0,
@@ -1333,6 +1334,11 @@ pub const Renderer = struct {
     }
 
     pub fn getCharPressed(self: *Renderer) ?u32 {
+        if (self.char_queue.items.len == 0) return null;
+        return self.char_queue.orderedRemove(0).codepoint;
+    }
+
+    pub fn getTextPressed(self: *Renderer) ?TextPress {
         if (self.char_queue.items.len == 0) return null;
         return self.char_queue.orderedRemove(0);
     }
