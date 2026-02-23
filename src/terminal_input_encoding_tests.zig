@@ -19,6 +19,36 @@ test "terminal input encodes arrow keys with modifiers" {
     try std.testing.expectEqualStrings("\x1b[1;2A", up_shift);
 }
 
+test "terminal input disambiguate mode uses legacy compact cursor/home/end forms when unmodified" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 1; // key_mode_disambiguate
+    const none = types.VTERM_MOD_NONE;
+
+    const up = try input_mod.encodeKeyBytesForTest(allocator, types.VTERM_KEY_UP, none, flags);
+    defer allocator.free(up);
+    try std.testing.expectEqualStrings("\x1b[A", up);
+
+    const down = try input_mod.encodeKeyBytesForTest(allocator, types.VTERM_KEY_DOWN, none, flags);
+    defer allocator.free(down);
+    try std.testing.expectEqualStrings("\x1b[B", down);
+
+    const right = try input_mod.encodeKeyBytesForTest(allocator, types.VTERM_KEY_RIGHT, none, flags);
+    defer allocator.free(right);
+    try std.testing.expectEqualStrings("\x1b[C", right);
+
+    const left = try input_mod.encodeKeyBytesForTest(allocator, types.VTERM_KEY_LEFT, none, flags);
+    defer allocator.free(left);
+    try std.testing.expectEqualStrings("\x1b[D", left);
+
+    const home = try input_mod.encodeKeyBytesForTest(allocator, types.VTERM_KEY_HOME, none, flags);
+    defer allocator.free(home);
+    try std.testing.expectEqualStrings("\x1b[H", home);
+
+    const end = try input_mod.encodeKeyBytesForTest(allocator, types.VTERM_KEY_END, none, flags);
+    defer allocator.free(end);
+    try std.testing.expectEqualStrings("\x1b[F", end);
+}
+
 test "terminal input encodes char with modifiers when report_text enabled" {
     const allocator = std.testing.allocator;
     const flags: u32 = 8; // key_mode_report_text
