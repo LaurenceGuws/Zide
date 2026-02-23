@@ -239,10 +239,12 @@ pub const TerminalWidget = struct {
 
     pub fn pasteClipboardFromSystem(self: *TerminalWidget, shell: *Shell) bool {
         const clip = shell.getClipboardText() orelse return false;
+        const html = shell.getClipboardMimeData(self.session.allocator, "text/html");
+        defer if (html) |buf| self.session.allocator.free(buf);
         if (self.session.scrollOffset() > 0) {
             self.session.setScrollOffset(0);
         }
-        if (self.session.sendKittyPasteEvent5522(clip) catch false) {
+        if (self.session.sendKittyPasteEvent5522WithHtml(clip, html) catch false) {
             return true;
         }
         if (self.session.bracketedPasteEnabled()) {

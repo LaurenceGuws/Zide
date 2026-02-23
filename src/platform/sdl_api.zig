@@ -527,4 +527,16 @@ pub fn freeClipboardText(text: []const u8) void {
     c.SDL_free(@constCast(text.ptr));
 }
 
+pub fn getClipboardData(mime_type: [*:0]const u8) ?[]const u8 {
+    var size: usize = 0;
+    const ptr = c.SDL_GetClipboardData(mime_type, &size) orelse return null;
+    const bytes: [*]const u8 = @ptrCast(ptr);
+    return bytes[0..size];
+}
+
+pub fn freeClipboardData(data: []const u8) void {
+    if (data.len == 0) return;
+    c.SDL_free(@constCast(data.ptr));
+}
+
 pub const scancode_count: usize = if (@hasDecl(c, "SDL_SCANCODE_COUNT")) @intCast(c.SDL_SCANCODE_COUNT) else 512;

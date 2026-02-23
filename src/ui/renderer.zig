@@ -905,6 +905,11 @@ pub const Renderer = struct {
         return clipboard_state.getText(self.allocator, &self.clipboard_buffer);
     }
 
+    pub fn getClipboardMimeData(self: *Renderer, allocator: std.mem.Allocator, mime_type: [*:0]const u8) ?[]u8 {
+        _ = self;
+        return clipboard_state.getData(allocator, mime_type);
+    }
+
     pub fn drawText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
         const prev = self.text_bg_rgba;
         defer self.text_bg_rgba = prev;

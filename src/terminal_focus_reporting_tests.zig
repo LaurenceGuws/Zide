@@ -262,7 +262,7 @@ test "terminal DECRQM private query returns Pm=4 only for strategic fixed-off un
     }.run);
 }
 
-test "terminal kitty paste events mode emits OSC 5522 mime list and serves text/plain reads" {
+test "terminal kitty paste events mode emits OSC 5522 mime list and serves text/plain/text/html reads" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
@@ -270,13 +270,14 @@ test "terminal kitty paste events mode emits OSC 5522 mime list and serves text/
             terminal.debugFeedBytes(session, "\x1b[?5522h");
             try std.testing.expect(session.kittyPasteEvents5522Enabled());
 
-            try std.testing.expect(try session.sendKittyPasteEvent5522("hi"));
+            try std.testing.expect(try session.sendKittyPasteEvent5522WithHtml("hi", "<b>hi</b>"));
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings(
                     "\x1b]5522;type=read:status=OK\x1b\\"
                     ++ "\x1b]5522;type=read:status=DATA:mime=Lg==;dGV4dC9wbGFpbgo=\x1b\\"
+                    ++ "\x1b]5522;type=read:status=DATA:mime=Lg==;dGV4dC9odG1sCg==\x1b\\"
                     ++ "\x1b]5522;type=read:status=DONE\x1b\\",
                     reply,
                 );
@@ -289,6 +290,18 @@ test "terminal kitty paste events mode emits OSC 5522 mime list and serves text/
                 try std.testing.expectEqualStrings(
                     "\x1b]5522;type=read:status=OK\x1b\\"
                     ++ "\x1b]5522;type=read:status=DATA:mime=dGV4dC9wbGFpbg==;aGk=\x1b\\"
+                    ++ "\x1b]5522;type=read:status=DONE\x1b\\",
+                    reply,
+                );
+            }
+
+            terminal.debugFeedBytes(session, "\x1b]5522;type=read;dGV4dC9odG1s\x1b\\");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings(
+                    "\x1b]5522;type=read:status=OK\x1b\\"
+                    ++ "\x1b]5522;type=read:status=DATA:mime=dGV4dC9odG1s;PGI+aGk8L2I+\x1b\\"
                     ++ "\x1b]5522;type=read:status=DONE\x1b\\",
                     reply,
                 );

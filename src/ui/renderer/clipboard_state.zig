@@ -15,3 +15,10 @@ pub fn getText(allocator: std.mem.Allocator, buffer: *std.ArrayList(u8)) ?[]cons
     clipboard.freeText(slice);
     return buffer.items;
 }
+
+pub fn getData(allocator: std.mem.Allocator, mime_type: [*:0]const u8) ?[]u8 {
+    const slice = clipboard.getData(mime_type) orelse return null;
+    defer clipboard.freeData(slice);
+    if (slice.len == 0) return allocator.dupe(u8, "") catch null;
+    return allocator.dupe(u8, slice) catch null;
+}

@@ -125,6 +125,7 @@ pub const TerminalSession = struct {
     osc_clipboard: std.ArrayList(u8),
     osc_clipboard_pending: bool,
     kitty_osc5522_clipboard_text: std.ArrayList(u8),
+    kitty_osc5522_clipboard_html: std.ArrayList(u8),
     osc_hyperlink: std.ArrayList(u8),
     osc_hyperlink_active: bool,
     hyperlink_table: std.ArrayList(Hyperlink),
@@ -219,6 +220,7 @@ pub const TerminalSession = struct {
             .osc_clipboard = .empty,
             .osc_clipboard_pending = false,
             .kitty_osc5522_clipboard_text = .empty,
+            .kitty_osc5522_clipboard_html = .empty,
             .osc_hyperlink = .empty,
             .osc_hyperlink_active = false,
             .hyperlink_table = .empty,
@@ -386,6 +388,7 @@ pub const TerminalSession = struct {
         self.parser.deinit();
         self.osc_clipboard.deinit(self.allocator);
         self.kitty_osc5522_clipboard_text.deinit(self.allocator);
+        self.kitty_osc5522_clipboard_html.deinit(self.allocator);
         self.osc_hyperlink.deinit(self.allocator);
         self.cwd_buffer.deinit(self.allocator);
         self.semantic_prompt_aid.deinit(self.allocator);
@@ -1065,12 +1068,21 @@ pub const TerminalSession = struct {
     }
 
     pub fn sendKittyPasteEvent5522(self: *TerminalSession, clip: []const u8) !bool {
+        return self.sendKittyPasteEvent5522WithHtml(clip, null);
+    }
+
+    pub fn sendKittyPasteEvent5522WithHtml(self: *TerminalSession, clip: []const u8, html: ?[]const u8) !bool {
         if (!self.kitty_paste_events_5522) return false;
         if (self.pty == null) return false;
 
         self.kitty_osc5522_clipboard_text.clearRetainingCapacity();
         try self.kitty_osc5522_clipboard_text.ensureTotalCapacity(self.allocator, clip.len);
         try self.kitty_osc5522_clipboard_text.appendSlice(self.allocator, clip);
+        self.kitty_osc5522_clipboard_html.clearRetainingCapacity();
+        if (html) |html_bytes| {
+            try self.kitty_osc5522_clipboard_html.ensureTotalCapacity(self.allocator, html_bytes.len);
+            try self.kitty_osc5522_clipboard_html.appendSlice(self.allocator, html_bytes);
+        }
 
         if (self.pty) |*pty| {
             self.pty_write_mutex.lock();
