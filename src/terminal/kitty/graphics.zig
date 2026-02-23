@@ -156,13 +156,16 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
             self.allocator.free(chunk);
             return;
         }
-        const image = buildKittyImage(self, image_id, control, chunk) catch |err| {
-            const message = kittyQueryBuildErrorReplyMessage(err);
-            writeKittyResponse(self, control, image_id, false, message);
-            return;
+        const Builder = struct {
+            chunk: []u8,
+            fn run(ctx: @This(), session: anytype, target_image_id: u32, ctl: KittyControl) KittyBuildError!void {
+                const image = try buildKittyImage(session, target_image_id, ctl, ctx.chunk);
+                session.allocator.free(image.data);
+            }
         };
-        self.allocator.free(image.data);
-        writeKittyResponse(self, control, image_id, true, "OK");
+        if (handleKittyQueryChunkBuildReply(self, control, image_id, chunk.len, Builder{ .chunk = chunk }, Builder.run)) {
+            return;
+        }
         return;
     }
     if (control.action != 't' and control.action != 'T') return;
@@ -294,6 +297,25 @@ pub fn handleKittyQueryPayloadSizeReply(self: anytype, control: KittyControl, im
         }
     }
     return false;
+}
+
+pub fn handleKittyQueryChunkBuildReply(
+    self: anytype,
+    control: KittyControl,
+    image_id: u32,
+    chunk_len: usize,
+    builder_ctx: anytype,
+    comptime build_fn: anytype,
+) bool {
+    if (handleKittyQueryPayloadSizeReply(self, control, image_id, chunk_len)) {
+        return true;
+    }
+    build_fn(builder_ctx, self, image_id, control) catch |err| {
+        writeKittyResponse(self, control, image_id, false, kittyQueryBuildErrorReplyMessage(err));
+        return true;
+    };
+    writeKittyResponse(self, control, image_id, true, "OK");
+    return true;
 }
 
 pub fn kittyQueryBuildErrorReplyMessage(err: KittyBuildError) []const u8 {
