@@ -1920,6 +1920,43 @@ Planned work (decomposition / `PA-08g` `DECRQM` / `DECRPM` parity breadth + repl
   3. Add or defer one small batch of high-value modes (e.g. `?9`, `?12`, `?45`, `?66`) with PTY + replay matrix updates.
   4. Finalize `Pm=3/4` policy and lock with unit/replay tests.
 
+- Non-support decision rule (tightened, 2026-02-23):
+  - Do not classify a DECRQM mode as strategic non-support (`Pm=4`) based on Zide preference alone.
+  - `Pm=4` requires:
+    1. A product-level decision that Zide intends to keep the feature unsupported in current scope, and
+    2. Multiple strong references (at least 2 of: `foot`, `kitty`, `ghostty`, xterm-family docs/source behavior) that lean in the same direction (`fixed-off` / permanent-reset semantics) for that mode family.
+  - If the references are mixed or parity implementation is plausible/likely soon, keep `Pm=0` provisional unsupported until an explicit implement/defer decision is recorded.
+
+`PA-08g` reference coverage snapshot (DECRQM mode families, strong refs):
+
+Legend:
+- `Y`: explicit mode support/query path present in scanned reference source/docs
+- `P`: explicit permanent/fixed reply behavior (commonly `Pm=4`) in reference
+- `?`: not directly audited in local source snapshot for that mode
+
+High-value ANSI modes:
+
+| Mode | Meaning | Zide | foot | ghostty | kitty | xterm-family | Note |
+|---|---|---|---|---|---|---|---|
+| `20` | newline (LNM) | implemented | `Y` | `Y` | `Y` | docs family | implemented and test-locked |
+| `4` | insert (IRM) | `Pm=0` | `?` | `Y` | `Y` | docs family | strong implementation candidate |
+| `12` | send/receive (SRM) | `Pm=0` | `?` | `Y` | `-` | docs family | lower immediate TUI value |
+
+High-value DEC private modes (common TUI / modern terminal usage):
+
+| Mode | Meaning | Zide | foot | ghostty | kitty | xterm-family | Suggested next action |
+|---|---|---|---|---|---|---|---|
+| `?12` | cursor blinking | `Pm=0` | `Y` | `Y` | `?` | strong | implement/defer decision next (good small slice) |
+| `?45` | reverse-wrap | `Pm=0` | `Y` | `Y` | `?` | strong | defer or implement with explicit rationale |
+| `?1016` | SGR pixel mouse | `Pm=0` | `Y` | `Y` | `Y` | strong modern | likely future implement, do not mark `Pm=4` |
+| `?2031` | color scheme notifications | `Pm=0` | `Y` | `Y` | `Y` | modern ext | likely future implement, do not mark `Pm=4` |
+| `?2048` | in-band resize notifications | `Pm=0` | `Y` | `Y` | `Y` | modern ext | likely future implement, do not mark `Pm=4` |
+| `?5522` | kitty paste/clipboard events mode | `Pm=0` | `-` | `-` | `Y` (+ docs) | kitty-specific | implement/defer explicitly; kitty docs allow `0/4` unsupported |
+
+Current strategic non-support rows (`Pm=4`) are retained only where references and product direction both support fixed-off behavior:
+- legacy/low-value mouse/meta toggles: `?67`, `?1001`, `?1005`, `?1015`, `?1034`, `?1035`, `?1036`, `?1042`, `?1070`
+- Any expansion beyond this set requires the rule above.
+
 `PA-08g` mode inventory snapshot (current Zide vs reference candidates):
 
 | Family | Mode(s) | Zide status | Current reply policy | Reference signal | Suggested action |
