@@ -289,8 +289,11 @@ Implemented (increment 5):
 - Added encoder replay fixtures for `alternate_key` char CSI-u outputs so fixture harness coverage matches unit-test coverage:
   - shifted letter (`A` -> `97:65`)
   - shifted punctuation (`:` -> `59:58`)
+  - `alternate_key`-only no-op case (pure enhancement; does not force CSI-u on its own)
 
 Files:
+- `fixtures/terminal/encoder/csi_u_alternate_only_noop.json`
+- `fixtures/terminal/encoder/csi_u_alternate_only_noop.golden`
 - `fixtures/terminal/encoder/csi_u_alternate_shifted_letter.json`
 - `fixtures/terminal/encoder/csi_u_alternate_shifted_letter.golden`
 - `fixtures/terminal/encoder/csi_u_alternate_shifted_punct.json`
