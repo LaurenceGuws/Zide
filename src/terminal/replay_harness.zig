@@ -85,6 +85,8 @@ pub const FixtureMeta = struct {
     reply_hex: ?[]const u8 = null,
     selection: []const SelectionAction = &.{},
     encoder: ?EncoderSpec = null,
+    osc_5522_clipboard_text: ?[]const u8 = null,
+    osc_5522_clipboard_html: ?[]const u8 = null,
 };
 
 const ReplayPtyCapture = struct {
@@ -286,6 +288,7 @@ pub fn runFixture(
     }
 
     terminal.debugSetCursor(session, fixture.meta.cursor.row, fixture.meta.cursor.col);
+    try seedOsc5522Clipboard(session, fixture.meta);
 
     const normalized = try normalizeLineEndings(allocator, fixture.input, fixture.meta.line_ending);
     defer allocator.free(normalized);
@@ -308,6 +311,19 @@ pub fn runFixture(
     }
 
     return snapshot_mod.encodeSnapshot(allocator, session, snapshot, debug, terminal.debugScrollbackRow);
+}
+
+fn seedOsc5522Clipboard(session: *terminal.TerminalSession, meta: FixtureMeta) !void {
+    if (meta.osc_5522_clipboard_text) |text| {
+        session.kitty_osc5522_clipboard_text.clearRetainingCapacity();
+        try session.kitty_osc5522_clipboard_text.ensureTotalCapacity(session.allocator, text.len);
+        try session.kitty_osc5522_clipboard_text.appendSlice(session.allocator, text);
+    }
+    if (meta.osc_5522_clipboard_html) |html| {
+        session.kitty_osc5522_clipboard_html.clearRetainingCapacity();
+        try session.kitty_osc5522_clipboard_html.ensureTotalCapacity(session.allocator, html.len);
+        try session.kitty_osc5522_clipboard_html.appendSlice(session.allocator, html);
+    }
 }
 
 pub fn runEncoderFixture(
