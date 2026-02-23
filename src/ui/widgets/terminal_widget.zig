@@ -240,11 +240,13 @@ pub const TerminalWidget = struct {
     pub fn pasteClipboardFromSystem(self: *TerminalWidget, shell: *Shell) bool {
         const clip = shell.getClipboardText() orelse return false;
         const html = shell.getClipboardMimeData(self.session.allocator, "text/html");
+        const uri_list = shell.getClipboardMimeData(self.session.allocator, "text/uri-list");
         defer if (html) |buf| self.session.allocator.free(buf);
+        defer if (uri_list) |buf| self.session.allocator.free(buf);
         if (self.session.scrollOffset() > 0) {
             self.session.setScrollOffset(0);
         }
-        if (self.session.sendKittyPasteEvent5522WithHtml(clip, html) catch false) {
+        if (self.session.sendKittyPasteEvent5522WithMime(clip, html, uri_list) catch false) {
             return true;
         }
         if (self.session.bracketedPasteEnabled()) {

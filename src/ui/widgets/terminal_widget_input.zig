@@ -605,8 +605,10 @@ pub fn handleInput(
             if (input_batch.mousePressed(.middle)) {
                 if (shell.getClipboardText()) |clip| {
                     const html = shell.getClipboardMimeData(self.session.allocator, "text/html");
+                    const uri_list = shell.getClipboardMimeData(self.session.allocator, "text/uri-list");
                     defer if (html) |buf| self.session.allocator.free(buf);
-                    if (try self.session.sendKittyPasteEvent5522WithHtml(clip, html)) {
+                    defer if (uri_list) |buf| self.session.allocator.free(buf);
+                    if (try self.session.sendKittyPasteEvent5522WithMime(clip, html, uri_list)) {
                         handled = true;
                     } else if (self.session.bracketedPasteEnabled()) {
                         try self.session.sendText("\x1b[200~");

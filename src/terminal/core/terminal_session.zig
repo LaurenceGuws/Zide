@@ -126,6 +126,7 @@ pub const TerminalSession = struct {
     osc_clipboard_pending: bool,
     kitty_osc5522_clipboard_text: std.ArrayList(u8),
     kitty_osc5522_clipboard_html: std.ArrayList(u8),
+    kitty_osc5522_clipboard_uri_list: std.ArrayList(u8),
     osc_hyperlink: std.ArrayList(u8),
     osc_hyperlink_active: bool,
     hyperlink_table: std.ArrayList(Hyperlink),
@@ -221,6 +222,7 @@ pub const TerminalSession = struct {
             .osc_clipboard_pending = false,
             .kitty_osc5522_clipboard_text = .empty,
             .kitty_osc5522_clipboard_html = .empty,
+            .kitty_osc5522_clipboard_uri_list = .empty,
             .osc_hyperlink = .empty,
             .osc_hyperlink_active = false,
             .hyperlink_table = .empty,
@@ -389,6 +391,7 @@ pub const TerminalSession = struct {
         self.osc_clipboard.deinit(self.allocator);
         self.kitty_osc5522_clipboard_text.deinit(self.allocator);
         self.kitty_osc5522_clipboard_html.deinit(self.allocator);
+        self.kitty_osc5522_clipboard_uri_list.deinit(self.allocator);
         self.osc_hyperlink.deinit(self.allocator);
         self.cwd_buffer.deinit(self.allocator);
         self.semantic_prompt_aid.deinit(self.allocator);
@@ -1068,10 +1071,14 @@ pub const TerminalSession = struct {
     }
 
     pub fn sendKittyPasteEvent5522(self: *TerminalSession, clip: []const u8) !bool {
-        return self.sendKittyPasteEvent5522WithHtml(clip, null);
+        return self.sendKittyPasteEvent5522WithMime(clip, null, null);
     }
 
     pub fn sendKittyPasteEvent5522WithHtml(self: *TerminalSession, clip: []const u8, html: ?[]const u8) !bool {
+        return self.sendKittyPasteEvent5522WithMime(clip, html, null);
+    }
+
+    pub fn sendKittyPasteEvent5522WithMime(self: *TerminalSession, clip: []const u8, html: ?[]const u8, uri_list: ?[]const u8) !bool {
         if (!self.kitty_paste_events_5522) return false;
         if (self.pty == null) return false;
 
@@ -1082,6 +1089,11 @@ pub const TerminalSession = struct {
         if (html) |html_bytes| {
             try self.kitty_osc5522_clipboard_html.ensureTotalCapacity(self.allocator, html_bytes.len);
             try self.kitty_osc5522_clipboard_html.appendSlice(self.allocator, html_bytes);
+        }
+        self.kitty_osc5522_clipboard_uri_list.clearRetainingCapacity();
+        if (uri_list) |uri_bytes| {
+            try self.kitty_osc5522_clipboard_uri_list.ensureTotalCapacity(self.allocator, uri_bytes.len);
+            try self.kitty_osc5522_clipboard_uri_list.appendSlice(self.allocator, uri_bytes);
         }
 
         if (self.pty) |*pty| {
