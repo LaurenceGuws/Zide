@@ -105,3 +105,59 @@ test "kitty query early reply falls through when payload or dimensions present" 
     try std.testing.expect(!handled);
     try std.testing.expectEqual(@as(usize, 0), self.pty.?.writes.items.len);
 }
+
+test "kitty query payload preflight rejects chunked query" {
+    var self = TestSelf{
+        .allocator = std.testing.allocator,
+        .pty = FakePty.init(),
+    };
+    defer if (self.pty) |*pty| pty.deinit();
+
+    const handled = kitty.handleKittyQueryPayloadPreflightReply(&self, .{
+        .action = 'q',
+        .image_id = 9,
+        .more = true,
+    }, 9);
+    try std.testing.expect(handled);
+    try std.testing.expectEqualStrings("\x1b_Gi=9;EINVAL\x1b\\", self.pty.?.writes.items);
+}
+
+test "kitty query payload load failure replies EINVAL" {
+    var self = TestSelf{
+        .allocator = std.testing.allocator,
+        .pty = FakePty.init(),
+    };
+    defer if (self.pty) |*pty| pty.deinit();
+
+    kitty.handleKittyQueryPayloadLoadFailureReply(&self, .{ .action = 'q', .image_id = 5 }, 5);
+    try std.testing.expectEqualStrings("\x1b_Gi=5;EINVAL\x1b\\", self.pty.?.writes.items);
+}
+
+test "kitty query payload size reply emits ENODATA message" {
+    var self = TestSelf{
+        .allocator = std.testing.allocator,
+        .pty = FakePty.init(),
+    };
+    defer if (self.pty) |*pty| pty.deinit();
+
+    const handled = kitty.handleKittyQueryPayloadSizeReply(&self, .{
+        .action = 'q',
+        .image_id = 3,
+        .format = 32,
+        .width = 2,
+        .height = 2,
+    }, 3, 15);
+    try std.testing.expect(handled);
+    try std.testing.expectEqualStrings(
+        "\x1b_Gi=3;ENODATA:Insufficient image data: 15 < 16\x1b\\",
+        self.pty.?.writes.items,
+    );
+}
+
+test "kitty query build error reply message maps bad png" {
+    try std.testing.expectEqualStrings("EBADPNG", kitty.kittyQueryBuildErrorReplyMessage(error.BadPng));
+}
+
+test "kitty query build error reply message maps invalid data" {
+    try std.testing.expectEqualStrings("EINVAL", kitty.kittyQueryBuildErrorReplyMessage(error.InvalidData));
+}

@@ -145,35 +145,19 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
         if (control.format == 0) {
             control.format = 32;
         }
-        if (control.more or control.offset != 0) {
-            writeKittyResponse(self, control, image_id, false, "EINVAL");
+        if (handleKittyQueryPayloadPreflightReply(self, control, image_id)) {
             return;
         }
         const chunk = loadKittyPayload(self, &control, data) orelse {
-            writeKittyResponse(self, control, image_id, false, "EINVAL");
+            handleKittyQueryPayloadLoadFailureReply(self, control, image_id);
             return;
         };
-        if (kittyExpectedDataBytes(control)) |expected| {
-            if (chunk.len < expected) {
-                var message = std.ArrayList(u8).empty;
-                defer message.deinit(self.allocator);
-                _ = message.writer(self.allocator).print(
-                    "ENODATA:Insufficient image data: {d} < {d}",
-                    .{ chunk.len, expected },
-                ) catch {
-                    self.allocator.free(chunk);
-                    return;
-                };
-                self.allocator.free(chunk);
-                writeKittyResponse(self, control, image_id, false, message.items);
-                return;
-            }
+        if (handleKittyQueryPayloadSizeReply(self, control, image_id, chunk.len)) {
+            self.allocator.free(chunk);
+            return;
         }
         const image = buildKittyImage(self, image_id, control, chunk) catch |err| {
-            const message = switch (err) {
-                error.BadPng => "EBADPNG",
-                else => "EINVAL",
-            };
+            const message = kittyQueryBuildErrorReplyMessage(err);
             writeKittyResponse(self, control, image_id, false, message);
             return;
         };
@@ -282,6 +266,41 @@ pub fn handleKittyQueryEarlyReply(self: anytype, control: KittyControl, data_len
         return true;
     }
     return false;
+}
+
+pub fn handleKittyQueryPayloadPreflightReply(self: anytype, control: KittyControl, image_id: u32) bool {
+    if (control.more or control.offset != 0) {
+        writeKittyResponse(self, control, image_id, false, "EINVAL");
+        return true;
+    }
+    return false;
+}
+
+pub fn handleKittyQueryPayloadLoadFailureReply(self: anytype, control: KittyControl, image_id: u32) void {
+    writeKittyResponse(self, control, image_id, false, "EINVAL");
+}
+
+pub fn handleKittyQueryPayloadSizeReply(self: anytype, control: KittyControl, image_id: u32, chunk_len: usize) bool {
+    if (kittyExpectedDataBytes(control)) |expected| {
+        if (chunk_len < expected) {
+            var message = std.ArrayList(u8).empty;
+            defer message.deinit(self.allocator);
+            _ = message.writer(self.allocator).print(
+                "ENODATA:Insufficient image data: {d} < {d}",
+                .{ chunk_len, expected },
+            ) catch return false;
+            writeKittyResponse(self, control, image_id, false, message.items);
+            return true;
+        }
+    }
+    return false;
+}
+
+pub fn kittyQueryBuildErrorReplyMessage(err: KittyBuildError) []const u8 {
+    return switch (err) {
+        error.BadPng => "EBADPNG",
+        else => "EINVAL",
+    };
 }
 
 fn parseKittyControl(
