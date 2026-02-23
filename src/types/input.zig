@@ -148,6 +148,7 @@ pub const KeyEvent = struct {
     pressed: bool,
     scancode: ?i32 = null,
     sym: ?i32 = null,
+    sdl_mod_bits: ?u32 = null,
 };
 
 pub const TextEvent = struct {
