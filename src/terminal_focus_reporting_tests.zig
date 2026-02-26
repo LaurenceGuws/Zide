@@ -1582,6 +1582,31 @@ test "terminal CSI 18 t reports text area size in chars" {
     }.run);
 }
 
+test "terminal CSI 14 t reports text area size in pixels" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+
+            // Default cell metrics are unknown, so report zeros.
+            terminal.debugFeedBytes(session, "\x1b[14t");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[4;0;0t", reply);
+            }
+
+            // Once metrics are known, reply in pixels.
+            session.setCellSize(9, 21);
+            terminal.debugFeedBytes(session, "\x1b[14t");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[4;126;108t", reply);
+            }
+        }
+    }.run);
+}
+
 test "terminal widget focus source toggles gate window and pane reports" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
