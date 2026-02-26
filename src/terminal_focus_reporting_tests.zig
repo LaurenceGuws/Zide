@@ -255,6 +255,40 @@ test "terminal DECRQM strategic fixed-off private modes report permanently reset
     }.run);
 }
 
+test "terminal DECRQM emits no Pm=3 replies in current policy scope" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            const queries = [_][]const u8{
+                "\x1b[4$p",      // ANSI IRM
+                "\x1b[12$p",     // ANSI local echo
+                "\x1b[20$p",     // ANSI newline
+                "\x1b[?1$p",     // DECCKM
+                "\x1b[?7$p",     // DECAWM
+                "\x1b[?8$p",     // DECARM
+                "\x1b[?25$p",    // DECTCEM
+                "\x1b[?45$p",    // reverse-wrap
+                "\x1b[?66$p",    // keypad mode
+                "\x1b[?1004$p",  // focus reporting
+                "\x1b[?1016$p",  // SGR pixel mouse
+                "\x1b[?2027$p",  // grapheme shaping mode
+                "\x1b[?2031$p",  // color-scheme notify
+                "\x1b[?2048$p",  // in-band resize notify
+                "\x1b[?5522$p",  // kitty paste events
+                "\x1b[?67$p",    // strategic fixed-off
+                "\x1b[?1001$p",  // strategic fixed-off
+            };
+
+            for (queries) |query| {
+                terminal.debugFeedBytes(session, query);
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expect(std.mem.indexOf(u8, reply, ";3$y") == null);
+            }
+        }
+    }.run);
+}
+
 test "terminal DECRQM private query returns Pm=0 for unsupported mode" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
