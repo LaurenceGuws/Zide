@@ -162,8 +162,20 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 screen.setScrollRegion(top, bot);
             }
         },
-        's' => { // SCP
+        's' => { // SCP / DECSLRM (when ?69 enabled)
             if (!action.private) {
+                if (param_len > 0 and screen.left_right_margin_mode_69) {
+                    const cols = @as(usize, screen.grid.cols);
+                    if (cols == 0) return;
+                    const left_1 = if (param_len > 0 and p[0] > 0) p[0] else 1;
+                    const right_1 = if (param_len > 1 and p[1] > 0) p[1] else @as(i32, @intCast(cols));
+                    const left = @min(cols - 1, @as(usize, @intCast(@max(1, left_1) - 1)));
+                    const right = @min(cols - 1, @as(usize, @intCast(@max(1, right_1) - 1)));
+                    if (left <= right) {
+                        screen.setLeftRightMargins(left, right);
+                    }
+                    return;
+                }
                 self.saveCursor();
             }
         },
@@ -302,6 +314,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         },
                         12 => self.activeScreen().*.setCursorBlink(true),
                         45 => self.activeScreen().*.setReverseWrap(true),
+                        69 => self.activeScreen().*.setLeftRightMarginMode69(true),
                         25 => self.activeScreen().setCursorVisible(true),
                         47 => self.enterAltScreen(false, false),
                         1047 => self.enterAltScreen(true, false),
@@ -385,6 +398,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         },
                         12 => self.activeScreen().*.setCursorBlink(false),
                         45 => self.activeScreen().*.setReverseWrap(false),
+                        69 => self.activeScreen().*.setLeftRightMarginMode69(false),
                         25 => self.activeScreen().setCursorVisible(false),
                         47 => self.exitAltScreen(false),
                         1047 => self.exitAltScreen(false),
@@ -535,6 +549,7 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState
         12 => boolModeState(screen.cursor_style.blink),
         25 => boolModeState(screen.cursor_visible),
         45 => boolModeState(screen.reverse_wrap),
+        69 => boolModeState(screen.left_right_margin_mode_69),
         47, 1047, 1049 => boolModeState(self.active == .alt),
         1048 => boolModeState(screen.save_cursor_mode_1048),
         66 => boolModeState(self.app_keypad),
