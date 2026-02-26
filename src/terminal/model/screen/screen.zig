@@ -26,6 +26,7 @@ pub const Screen = struct {
     origin_mode: bool,
     newline_mode: bool,
     screen_reverse: bool,
+    reverse_wrap: bool,
     save_cursor_mode_1048: bool,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16, default_attrs: types.CellAttrs) !Screen {
@@ -53,6 +54,7 @@ pub const Screen = struct {
             .origin_mode = false,
             .newline_mode = false,
             .screen_reverse = false,
+            .reverse_wrap = false,
             .save_cursor_mode_1048 = false,
         };
     }
@@ -110,6 +112,7 @@ pub const Screen = struct {
         self.origin_mode = false;
         self.newline_mode = false;
         self.screen_reverse = false;
+        self.reverse_wrap = false;
         self.save_cursor_mode_1048 = false;
         self.tabstops.reset();
     }
@@ -481,7 +484,15 @@ pub const Screen = struct {
     }
 
     pub fn backspace(self: *Screen) void {
-        if (self.cursor.col > 0) self.cursor.col -= 1;
+        if (self.cursor.col > 0) {
+            self.cursor.col -= 1;
+            self.wrap_next = false;
+            return;
+        }
+        if (self.reverse_wrap and self.cursor.row > self.scroll_top and self.grid.rowWrapped(self.cursor.row - 1)) {
+            self.cursor.row -= 1;
+            self.cursor.col = @as(usize, self.grid.cols - 1);
+        }
         self.wrap_next = false;
     }
 
@@ -551,8 +562,24 @@ pub const Screen = struct {
     }
 
     pub fn cursorBack(self: *Screen, delta: usize) void {
-        self.cursor.col = if (self.cursor.col > delta) self.cursor.col - delta else 0;
+        var remaining = delta;
+        while (remaining > 0) : (remaining -= 1) {
+            if (self.cursor.col > 0) {
+                self.cursor.col -= 1;
+                continue;
+            }
+            if (self.reverse_wrap and self.cursor.row > self.scroll_top and self.grid.rowWrapped(self.cursor.row - 1)) {
+                self.cursor.row -= 1;
+                self.cursor.col = @as(usize, self.grid.cols - 1);
+                continue;
+            }
+            break;
+        }
         self.wrap_next = false;
+    }
+
+    pub fn setReverseWrap(self: *Screen, enabled: bool) void {
+        self.reverse_wrap = enabled;
     }
 
     pub fn cursorNextLine(self: *Screen, delta: usize) void {

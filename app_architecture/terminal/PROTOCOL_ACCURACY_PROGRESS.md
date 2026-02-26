@@ -2145,18 +2145,21 @@ Notes:
     - replay: `fixtures/terminal/mouse_sgr_1016_pixel_reply.*` synthetic mouse events lock representative pixel-SGR press/move/release/wheel bytes via `reply_hex`
     - replay: `fixtures/terminal/mouse_1016_without_1006_cell_reply.*` synthetic mouse events lock non-SGR precedence (`?1016` without `?1006` still emits X10/cell-coordinate bytes)
     - replay: `fixtures/terminal/decrqm_query_matrix_reply.*` queries/set/resets `?1016`
-- `PA-08g` docs-first implementation decision (2026-02-23, `?45` reverse-wrap mode):
-  - Decision: defer implementation for now (`Pm=0` provisional unsupported remains); do not reclassify as fixed-off.
-  - Reference direction:
-    - `foot` and `ghostty` support/query-report `?45`; xterm-family semantics are established enough that this stays on the support path.
-  - Why deferred (not a small slice):
-    - requires real reverse-wrap cursor/write semantics at line boundaries (not just a mode bit)
-    - needs interaction policy with autowrap (`?7`) and edge-case cursor movement behavior
-    - should be implemented and replay-tested as behavior, not query-only DECRQM support
-  - `?45` first-slice done looks like:
-    - `DECRQM/DECSET/DECRST ?45` reports/toggles real mode state (`Pm=1/2`)
-    - reverse-wrap behavior is defined for cursor-left/BS/backward movement at column 0 with wrap history context (within Zide scope)
-    - replay fixtures lock at least one boundary-wrap scenario and one no-op scenario
+- `PA-08g` implementation slice (2026-02-26, `?45` reverse-wrap mode):
+  - Implemented first slice: `DECRQM/DECSET/DECRST ?45` real mode state (`Pm=1/2`) plus reverse-wrap behavior for cursor-left operations at column `0`.
+  - Behavior:
+    - `BS` (`0x08`) and `CUB` (`CSI D`) now reverse-wrap to the previous row’s last column when all are true:
+      - `?45` enabled
+      - current column is `0`
+      - previous row is marked wrapped
+      - cursor is within the active scroll region (`row > scroll_top`)
+    - otherwise behavior remains clamped-at-column-0.
+  - Evidence:
+    - PTY/unit integration:
+      - `src/terminal_focus_reporting_tests.zig` common `DECRQM` mode matrix now includes `?45`
+      - `src/terminal_focus_reporting_tests.zig` adds reverse-wrap cursor behavior tests for both `BS` and `CUB`
+    - replay:
+      - `fixtures/terminal/decrqm_query_matrix_reply.*` now includes `?45` query/set/reset replies
 - `PA-08g` implementation slice (2026-02-23, `?2027` grapheme-cluster shaping mode, first slice):
   - Decision: implement a **queryable no-op semantics** first slice (real mode state + documented no-op behavior boundary), then defer renderer/shaping behavior changes to a later slice.
   - Reference direction:

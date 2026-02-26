@@ -147,6 +147,7 @@ test "terminal DECRQM private queries report common mode set/reset states" {
                 .{ .mode = 8, .set_seq = "\x1b[?8h", .reset_seq = "\x1b[?8l", .default_set = true },
                 .{ .mode = 9, .set_seq = "\x1b[?9h", .reset_seq = "\x1b[?9l" },
                 .{ .mode = 12, .set_seq = "\x1b[?12h", .reset_seq = "\x1b[?12l", .default_set = true },
+                .{ .mode = 45, .set_seq = "\x1b[?45h", .reset_seq = "\x1b[?45l" },
                 .{ .mode = 25, .set_seq = "\x1b[?25h", .reset_seq = "\x1b[?25l", .default_set = true },
                 .{ .mode = 47, .set_seq = "\x1b[?47h", .reset_seq = "\x1b[?47l" },
                 .{ .mode = 1047, .set_seq = "\x1b[?1047h", .reset_seq = "\x1b[?1047l" },
@@ -244,6 +245,54 @@ test "terminal DECRQM private query returns Pm=0 for unsupported mode" {
             try std.testing.expectEqualStrings("\x1b[?9999;0$y", reply);
         }
     }.run);
+}
+
+test "terminal reverse-wrap mode ?45 enables BS wrap to previous wrapped row" {
+    const allocator = std.testing.allocator;
+    var session = try terminal.TerminalSession.init(allocator, 3, 4);
+    defer session.deinit();
+
+    terminal.debugFeedBytes(session, "ABCDX");
+    terminal.debugFeedBytes(session, "\r");
+
+    terminal.debugFeedBytes(session, "\x08");
+    {
+        const snap = session.snapshot();
+        try std.testing.expectEqual(@as(usize, 1), snap.cursor.row);
+        try std.testing.expectEqual(@as(usize, 0), snap.cursor.col);
+    }
+
+    terminal.debugFeedBytes(session, "\x1b[?45h");
+    terminal.debugFeedBytes(session, "\x08");
+    {
+        const snap = session.snapshot();
+        try std.testing.expectEqual(@as(usize, 0), snap.cursor.row);
+        try std.testing.expectEqual(@as(usize, 3), snap.cursor.col);
+    }
+}
+
+test "terminal reverse-wrap mode ?45 enables CUB wrap to previous wrapped row" {
+    const allocator = std.testing.allocator;
+    var session = try terminal.TerminalSession.init(allocator, 3, 4);
+    defer session.deinit();
+
+    terminal.debugFeedBytes(session, "ABCDX");
+    terminal.debugFeedBytes(session, "\x1b[2;1H");
+
+    terminal.debugFeedBytes(session, "\x1b[D");
+    {
+        const snap = session.snapshot();
+        try std.testing.expectEqual(@as(usize, 1), snap.cursor.row);
+        try std.testing.expectEqual(@as(usize, 0), snap.cursor.col);
+    }
+
+    terminal.debugFeedBytes(session, "\x1b[?45h");
+    terminal.debugFeedBytes(session, "\x1b[2D");
+    {
+        const snap = session.snapshot();
+        try std.testing.expectEqual(@as(usize, 0), snap.cursor.row);
+        try std.testing.expectEqual(@as(usize, 2), snap.cursor.col);
+    }
 }
 
 test "terminal DECRQM private query returns Pm=4 only for strategic fixed-off unsupported modes" {
@@ -467,26 +516,6 @@ test "terminal OSC 5522 read returns EINVAL for malformed payload" {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings("\x1b]5522;type=read:status=EINVAL\x1b\\", reply);
-            }
-        }
-    }.run);
-}
-
-test "terminal DECRQM private query returns Pm=0 for provisional unsupported modes still on support path" {
-    try withSessionAndCapture(struct {
-        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
-            const allocator = std.testing.allocator;
-            const modes = [_]i32{ 45 };
-
-            for (modes) |mode| {
-                var qbuf: [32]u8 = undefined;
-                const query = try std.fmt.bufPrint(&qbuf, "\x1b[?{d}$p", .{mode});
-                terminal.debugFeedBytes(session, query);
-                const reply = try capture.readReply(allocator);
-                defer allocator.free(reply);
-                const expected = try std.fmt.allocPrint(allocator, "\x1b[?{d};0$y", .{mode});
-                defer allocator.free(expected);
-                try std.testing.expectEqualStrings(expected, reply);
             }
         }
     }.run);

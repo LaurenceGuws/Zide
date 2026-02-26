@@ -287,6 +287,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             self.updateInputSnapshot();
                         },
                         12 => self.activeScreen().*.setCursorBlink(true),
+                        45 => self.activeScreen().*.setReverseWrap(true),
                         25 => self.activeScreen().setCursorVisible(true),
                         47 => self.enterAltScreen(false, false),
                         1047 => self.enterAltScreen(true, false),
@@ -364,6 +365,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             self.updateInputSnapshot();
                         },
                         12 => self.activeScreen().*.setCursorBlink(false),
+                        45 => self.activeScreen().*.setReverseWrap(false),
                         25 => self.activeScreen().setCursorVisible(false),
                         47 => self.exitAltScreen(false),
                         1047 => self.exitAltScreen(false),
@@ -507,7 +509,7 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState
         9 => boolModeState(self.input.mouse_mode_x10),
         12 => boolModeState(screen.cursor_style.blink),
         25 => boolModeState(screen.cursor_visible),
-        45 => .not_recognized, // Reverse-wrap mode not yet implemented
+        45 => boolModeState(screen.reverse_wrap),
         47, 1047, 1049 => boolModeState(self.active == .alt),
         1048 => boolModeState(screen.save_cursor_mode_1048),
         66 => boolModeState(self.app_keypad),
