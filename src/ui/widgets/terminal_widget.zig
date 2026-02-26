@@ -16,6 +16,7 @@ const Color = app_shell.Color;
 const TerminalSession = terminal_mod.TerminalSession;
 const CursorPos = terminal_mod.CursorPos;
 const Cell = terminal_mod.Cell;
+const CellAttrs = terminal_mod.CellAttrs;
 const KittyImage = terminal_mod.KittyImage;
 const KittyPlacement = terminal_mod.KittyPlacement;
 
@@ -324,6 +325,115 @@ pub const TerminalWidget = struct {
                 _ = line.pop();
             }
             try out.appendSlice(allocator, line.items);
+            try out.append(allocator, '\n');
+        }
+
+        return out.toOwnedSlice(allocator);
+    }
+
+    fn appendSgrForAttrs(out: *std.ArrayList(u8), allocator: std.mem.Allocator, attrs: CellAttrs) !void {
+        const bold = if (attrs.bold) ";1" else "";
+        const underline = if (attrs.underline) ";4" else "";
+        const reverse = if (attrs.reverse) ";7" else "";
+        const blink = if (attrs.blink) (if (attrs.blink_fast) ";6" else ";5") else "";
+        const seq = try std.fmt.allocPrint(
+            allocator,
+            "\x1b[0{s}{s}{s}{s};38;2;{d};{d};{d};48;2;{d};{d};{d};58;2;{d};{d};{d}m",
+            .{
+                bold,
+                underline,
+                reverse,
+                blink,
+                attrs.fg.r,
+                attrs.fg.g,
+                attrs.fg.b,
+                attrs.bg.r,
+                attrs.bg.g,
+                attrs.bg.b,
+                attrs.underline_color.r,
+                attrs.underline_color.g,
+                attrs.underline_color.b,
+            },
+        );
+        defer allocator.free(seq);
+        try out.appendSlice(allocator, seq);
+    }
+
+    fn attrsEqual(a: CellAttrs, b: CellAttrs) bool {
+        return a.fg.r == b.fg.r and
+            a.fg.g == b.fg.g and
+            a.fg.b == b.fg.b and
+            a.fg.a == b.fg.a and
+            a.bg.r == b.bg.r and
+            a.bg.g == b.bg.g and
+            a.bg.b == b.bg.b and
+            a.bg.a == b.bg.a and
+            a.bold == b.bold and
+            a.blink == b.blink and
+            a.blink_fast == b.blink_fast and
+            a.reverse == b.reverse and
+            a.underline == b.underline and
+            a.underline_color.r == b.underline_color.r and
+            a.underline_color.g == b.underline_color.g and
+            a.underline_color.b == b.underline_color.b and
+            a.underline_color.a == b.underline_color.a;
+    }
+
+    pub fn scrollbackAnsiTextAlloc(self: *TerminalWidget, allocator: std.mem.Allocator) ![]u8 {
+        const snap = self.session.snapshot();
+        const rows = snap.rows;
+        const cols = snap.cols;
+        const history = self.session.scrollbackCount();
+
+        var out = std.ArrayList(u8).empty;
+        errdefer out.deinit(allocator);
+
+        var buf: [4]u8 = undefined;
+
+        var line_idx: usize = 0;
+        while (line_idx < history + rows) : (line_idx += 1) {
+            const row_cells = blk: {
+                if (line_idx < history) {
+                    if (self.session.scrollbackRow(line_idx)) |history_row| break :blk history_row;
+                    continue;
+                }
+                const grid_row = line_idx - history;
+                if (grid_row >= rows or cols == 0) continue;
+                const row_start = grid_row * cols;
+                break :blk snap.cells[row_start .. row_start + cols];
+            };
+
+            var active_attrs: ?CellAttrs = null;
+            var col_idx: usize = 0;
+            while (col_idx < row_cells.len) : (col_idx += 1) {
+                const cell = row_cells[col_idx];
+                if (cell.x != 0 or cell.y != 0) continue;
+                if (active_attrs == null or !attrsEqual(active_attrs.?, cell.attrs)) {
+                    try appendSgrForAttrs(&out, allocator, cell.attrs);
+                    active_attrs = cell.attrs;
+                }
+
+                if (cell.codepoint == 0) {
+                    try out.append(allocator, ' ');
+                    continue;
+                }
+                const len = std.unicode.utf8Encode(@intCast(cell.codepoint), &buf) catch 0;
+                if (len > 0) {
+                    try out.appendSlice(allocator, buf[0..len]);
+                }
+                if (cell.combining_len > 0) {
+                    var ci: usize = 0;
+                    while (ci < @as(usize, @intCast(cell.combining_len)) and ci < cell.combining.len) : (ci += 1) {
+                        const cp = cell.combining[ci];
+                        const clen = std.unicode.utf8Encode(@intCast(cp), &buf) catch 0;
+                        if (clen > 0) try out.appendSlice(allocator, buf[0..clen]);
+                    }
+                }
+            }
+
+            if (active_attrs != null) {
+                try out.appendSlice(allocator, "\x1b[0m");
+            }
             try out.append(allocator, '\n');
         }
 
