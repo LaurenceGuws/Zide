@@ -53,6 +53,44 @@ fn writeTempFileAbsolute(
     return path;
 }
 
+fn createSharedMemoryObject(
+    allocator: std.mem.Allocator,
+    name_prefix: []const u8,
+    content: []const u8,
+) ![]u8 {
+    if (!builtin.link_libc) return error.SkipZigTest;
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
+
+    var rand_bytes: [8]u8 = undefined;
+    std.crypto.random.bytes(&rand_bytes);
+    const rand_id = std.mem.readInt(u64, &rand_bytes, .little);
+    const name = try std.fmt.allocPrint(allocator, "/{s}-{x}", .{ name_prefix, rand_id });
+    errdefer allocator.free(name);
+
+    const name_z = try allocator.allocSentinel(u8, name.len, 0);
+    defer allocator.free(name_z);
+    @memcpy(name_z[0..name.len], name);
+
+    const create_flags: c_int = @bitCast(std.c.O{
+        .ACCMODE = .RDWR,
+        .CREAT = true,
+        .EXCL = true,
+    });
+    const fd = std.c.shm_open(name_z.ptr, create_flags, 0o600);
+    if (fd < 0) return error.ShmOpenFailed;
+    defer _ = std.c.close(fd);
+    errdefer _ = std.c.shm_unlink(name_z.ptr);
+
+    if (std.c.ftruncate(fd, @intCast(content.len)) != 0) return error.ShmTruncateFailed;
+    var written: usize = 0;
+    while (written < content.len) {
+        const n = posix.write(fd, content[written..]) catch return error.ShmWriteFailed;
+        if (n == 0) return error.ShmWriteFailed;
+        written += n;
+    }
+    return name;
+}
+
 fn requireUnix() !void {
     if (builtin.os.tag != .linux and builtin.os.tag != .macos) return error.SkipZigTest;
 }
@@ -818,4 +856,39 @@ test "kitty parse query non-missing-id mixed chunk+offset precedence matrix" {
         _ = case_.name;
         try expectKittyQueryNoReply(case_.seq);
     }
+}
+
+test "kitty parse query medium shared-memory success matrix" {
+    try requireUnix();
+    if (!builtin.link_libc) return error.SkipZigTest;
+
+    const allocator = std.testing.allocator;
+    const png_bytes = try decodeBase64Alloc(allocator, tiny_png_1x1);
+    defer allocator.free(png_bytes);
+
+    // medium=s: shared-memory name with PNG bytes.
+    const shm_name = try createSharedMemoryObject(allocator, "zide-kitty-query-shm", png_bytes);
+    defer allocator.free(shm_name);
+    const shm_name_b64 = try encodeBase64Alloc(allocator, shm_name);
+    defer allocator.free(shm_name_b64);
+
+    const seq_ok = try std.fmt.allocPrint(allocator, "a=q,i=7,t=s,f=100;{s}", .{shm_name_b64});
+    defer allocator.free(seq_ok);
+    try expectKittyQueryReply(seq_ok, "\x1b_Gi=7;OK\x1b\\");
+
+    const shm_name_q1 = try createSharedMemoryObject(allocator, "zide-kitty-query-shm-q1", png_bytes);
+    defer allocator.free(shm_name_q1);
+    const shm_name_q1_b64 = try encodeBase64Alloc(allocator, shm_name_q1);
+    defer allocator.free(shm_name_q1_b64);
+    const seq_q1 = try std.fmt.allocPrint(allocator, "a=q,i=7,q=1,t=s,f=100;{s}", .{shm_name_q1_b64});
+    defer allocator.free(seq_q1);
+    try expectKittyQueryNoReply(seq_q1);
+
+    const shm_name_q2 = try createSharedMemoryObject(allocator, "zide-kitty-query-shm-q2", png_bytes);
+    defer allocator.free(shm_name_q2);
+    const shm_name_q2_b64 = try encodeBase64Alloc(allocator, shm_name_q2);
+    defer allocator.free(shm_name_q2_b64);
+    const seq_q2 = try std.fmt.allocPrint(allocator, "a=q,i=7,q=2,t=s,f=100;{s}", .{shm_name_q2_b64});
+    defer allocator.free(seq_q2);
+    try expectKittyQueryNoReply(seq_q2);
 }
