@@ -1066,6 +1066,26 @@ Files:
 - `fixtures/terminal/kitty_query_medium_temp_missing_marker_q1_q2_reply.json`
 - `fixtures/terminal/kitty_query_medium_temp_missing_marker_q1_q2_reply.golden`
 
+Implemented (increment 36 / `PA-04c` replay `t=s` edge-form locks within current harness limits):
+- Added replay fixtures for shared-memory query medium (`t=s`) error edge forms with explicit quiet split (`q=1` reply, `q=2` suppression):
+  - missing shared-memory name/object path (`EINVAL`)
+  - transport-precedence invalid combination (`m=1` with non-direct medium) (`EINVAL`)
+- This closes the practical replay-side `t=s` edge coverage that is feasible without extending replay harness lifecycle control for real shm objects.
+
+Files:
+- `fixtures/terminal/kitty_query_medium_shm_missing_q1_q2_reply.vt`
+- `fixtures/terminal/kitty_query_medium_shm_missing_q1_q2_reply.json`
+- `fixtures/terminal/kitty_query_medium_shm_missing_q1_q2_reply.golden`
+- `fixtures/terminal/kitty_query_medium_shm_precedence_q1_q2_reply.vt`
+- `fixtures/terminal/kitty_query_medium_shm_precedence_q1_q2_reply.json`
+- `fixtures/terminal/kitty_query_medium_shm_precedence_q1_q2_reply.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture kitty_query_medium_shm_missing_q1_q2_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_query_medium_shm_precedence_q1_q2_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_query_medium_shm_missing_q1_q2_reply`
+- `zig build test-terminal-replay -- --fixture kitty_query_medium_shm_precedence_q1_q2_reply`
+
 Verification:
 - `zig build test-terminal-replay -- --fixture kitty_query_medium_file_missing_q1_q2_reply --update-goldens`
 - `zig build test-terminal-replay -- --fixture kitty_query_medium_file_missing_q1_q2_reply`
@@ -2916,9 +2936,9 @@ Verification:
 ## Next Work Queue (Ordered)
 
 1. `PA-08h` Extend `DECSLRM` parity beyond first slice (margin interactions with insert/delete/erase and wrap behavior)
-2. `PA-04c` Extend replay-side transport fixture coverage for kitty query temp/shared-memory edge forms as feasible
+2. `PA-04c` Decide whether to keep replay harness file-only for `t=s` or add deterministic shm lifecycle support to replay fixtures
 3. `PA-05c` Extend metadata-aware encoder format usage for `alternate_layout_codepoint` when protocol field support is promoted
-4. `PA-04d` Decide animation/composition support path (`implement` vs explicit defer) with reference-backed rationale
+4. `PA-04c` Extend parent/virtual placement fixture coverage (`U=1`, `P/Q/H/V`) with explicit success/error expectations
 
 ## Decomposition Backlog (New)
 
