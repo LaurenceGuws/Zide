@@ -1345,7 +1345,7 @@ test "terminal DECSTR clears active-screen kitty state while alt screen remains 
     var session = try terminal.TerminalSession.init(allocator, 6, 12);
     defer session.deinit();
 
-    terminal.debugFeedBytes(session, "\x1b[?1049h");
+    terminal.debugFeedBytes(session, "\x1b[?1047h");
     terminal.debugFeedBytes(
         session,
         "\x1b_Ga=t,f=100,i=1;iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=\x1b\\" ++
@@ -1389,7 +1389,7 @@ test "terminal DECSTR alt-screen kitty placement does not leak to primary after 
         try std.testing.expectEqual(@as(usize, 0), snap.kitty_placements.len);
     }
 
-    terminal.debugFeedBytes(session, "\x1b[?1049l");
+    terminal.debugFeedBytes(session, "\x1b[?1047l");
 
     {
         const snap = session.snapshot();
@@ -1425,6 +1425,58 @@ test "terminal DECSTR clears hidden primary kitty state while alt screen is acti
     {
         const snap = session.snapshot();
         try std.testing.expect(!snap.alt_active);
+        try std.testing.expectEqual(@as(usize, 0), snap.kitty_images.len);
+        try std.testing.expectEqual(@as(usize, 0), snap.kitty_placements.len);
+    }
+}
+
+test "terminal DECSTR clears hidden alt kitty state while primary screen is active" {
+    const allocator = std.testing.allocator;
+    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    defer session.deinit();
+
+    // Seed kitty state directly on hidden alt while primary is active.
+    const rgba = try allocator.dupe(u8, &[_]u8{ 0xff, 0xff, 0xff, 0xff });
+    try session.kitty_alt.images.append(allocator, .{
+        .id = 1,
+        .width = 1,
+        .height = 1,
+        .format = .rgba,
+        .data = rgba,
+        .version = 1,
+    });
+    try session.kitty_alt.placements.append(allocator, .{
+        .image_id = 1,
+        .placement_id = 0,
+        .row = 0,
+        .col = 0,
+        .cols = 2,
+        .rows = 1,
+        .z = 0,
+        .anchor_row = 0,
+        .is_virtual = false,
+        .parent_image_id = 0,
+        .parent_placement_id = 0,
+        .offset_x = 0,
+        .offset_y = 0,
+    });
+    session.kitty_alt.total_bytes = rgba.len;
+
+    try std.testing.expectEqual(@as(usize, 1), session.kitty_alt.images.items.len);
+    try std.testing.expectEqual(@as(usize, 1), session.kitty_alt.placements.items.len);
+
+    // DECSTR on primary now clears both active + hidden kitty states.
+    terminal.debugFeedBytes(session, "\x1b[!p");
+    try std.testing.expectEqual(@as(usize, 0), session.kitty_primary.images.items.len);
+    try std.testing.expectEqual(@as(usize, 0), session.kitty_primary.placements.items.len);
+    try std.testing.expectEqual(@as(usize, 0), session.kitty_alt.images.items.len);
+    try std.testing.expectEqual(@as(usize, 0), session.kitty_alt.placements.items.len);
+
+    // Re-enter alt to prove hidden-alt state was really cleared.
+    terminal.debugFeedBytes(session, "\x1b[?1047h");
+    {
+        const snap = session.snapshot();
+        try std.testing.expect(snap.alt_active);
         try std.testing.expectEqual(@as(usize, 0), snap.kitty_images.len);
         try std.testing.expectEqual(@as(usize, 0), snap.kitty_placements.len);
     }
