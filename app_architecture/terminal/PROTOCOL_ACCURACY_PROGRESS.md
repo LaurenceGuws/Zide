@@ -2543,6 +2543,17 @@ Notes:
     - replay:
       - `fixtures/terminal/decslrm_margin_clips_ich_dch_ech.*`
 
+- `PA-08h` implementation slice (2026-02-27, `DECSLRM` write/wrap boundary alignment):
+  - Aligned text write paths and wrap behavior to active horizontal margins when `?69` is enabled:
+    - `writeCodepoint` / ASCII-run writes now use `right_margin` as the active write boundary
+    - autowrap transition lands at `left_margin` on the next row (not column 1)
+    - wide-codepoint pre-wrap guard now checks margin boundary, not full-grid width
+  - Evidence:
+    - PTY/unit integration: `src/terminal_focus_reporting_tests.zig`
+      - `terminal DECSLRM autowrap continues at left margin`
+    - replay:
+      - `fixtures/terminal/decslrm_wrap_left_margin.*`
+
 Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft terminal reset):
 - Reference anchors:
   - xterm docs define `CSI ! p` as `DECSTR` (soft terminal reset), VT220+ (`reference_repos/terminals/xterm_snapshots/ctlseqs.txt`).
@@ -2935,7 +2946,7 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `PA-08h` Extend `DECSLRM` parity beyond first slice (margin interactions with insert/delete/erase and wrap behavior)
+1. `PA-08h` Extend `DECSLRM` parity beyond current slices (line/region ops: `IL`/`DL`/`EL`/`ED` interactions under horizontal margins)
 2. `PA-04c` Decide whether to keep replay harness file-only for `t=s` or add deterministic shm lifecycle support to replay fixtures
 3. `PA-05c` Extend metadata-aware encoder format usage for `alternate_layout_codepoint` when protocol field support is promoted
 4. `PA-04c` Extend parent/virtual placement fixture coverage (`U=1`, `P/Q/H/V`) with explicit success/error expectations

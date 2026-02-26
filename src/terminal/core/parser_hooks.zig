@@ -55,7 +55,9 @@ pub fn handleCodepoint(self: anytype, codepoint: u32) void {
     // forced into a single cell.
     if (screen.auto_wrap and cols > 1) {
         const cp_width = screen_mod.Screen.codepointCellWidth(cp);
-        if (cp_width > 1 and screen.cursor.col + cp_width > cols) {
+        const right = screen.writeRightBoundary();
+        const cpw: usize = cp_width;
+        if (cp_width > 1 and screen.cursor.col + cpw > right + 1) {
             self.wrapNewline();
             while (true) {
                 switch (screen.prepareWrite()) {
