@@ -148,6 +148,7 @@ test "terminal DECRQM private queries report common mode set/reset states" {
                 .{ .mode = 9, .set_seq = "\x1b[?9h", .reset_seq = "\x1b[?9l" },
                 .{ .mode = 12, .set_seq = "\x1b[?12h", .reset_seq = "\x1b[?12l", .default_set = true },
                 .{ .mode = 45, .set_seq = "\x1b[?45h", .reset_seq = "\x1b[?45l" },
+                .{ .mode = 69, .set_seq = "\x1b[?69h", .reset_seq = "\x1b[?69l" },
                 .{ .mode = 25, .set_seq = "\x1b[?25h", .reset_seq = "\x1b[?25l", .default_set = true },
                 .{ .mode = 47, .set_seq = "\x1b[?47h", .reset_seq = "\x1b[?47l" },
                 .{ .mode = 1047, .set_seq = "\x1b[?1047h", .reset_seq = "\x1b[?1047l" },
@@ -230,6 +231,35 @@ test "terminal DECRQM private query reports keypad mode ?66 via DECPAM/DECPNM st
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings("\x1b[?66;2$y", reply);
+            }
+        }
+    }.run);
+}
+
+test "terminal DECSLRM applies margins only when ?69 mode is enabled" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            const screen = session.activeScreen();
+
+            // Without ?69, CSI ... s remains SCP behavior and does not change margins.
+            terminal.debugFeedBytes(session, "\x1b[3;8s");
+            try std.testing.expectEqual(@as(usize, 0), screen.left_margin);
+            try std.testing.expectEqual(@as(usize, @intCast(screen.grid.cols - 1)), screen.right_margin);
+
+            // Enable left/right margin mode and set margins.
+            terminal.debugFeedBytes(session, "\x1b[?69h");
+            terminal.debugFeedBytes(session, "\x1b[3;8s");
+            try std.testing.expect(screen.left_right_margin_mode_69);
+            try std.testing.expectEqual(@as(usize, 2), screen.left_margin);
+            try std.testing.expectEqual(@as(usize, 7), screen.right_margin);
+
+            // Cursor should home to row 1 at left margin after DECSLRM.
+            terminal.debugFeedBytes(session, "\x1b[6n");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[1;3R", reply);
             }
         }
     }.run);
@@ -1240,7 +1270,7 @@ test "terminal DECSTR resets DECRQM-queryable modes to defaults" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
-            terminal.debugFeedBytes(session, "\x1b[?1004h\x1b[?1002h\x1b[?1016h\x1b[?2004h\x1b[?2027h\x1b[?2031h\x1b[?2048h\x1b[?5522h\x1b[20h\x1b=");
+            terminal.debugFeedBytes(session, "\x1b[?1004h\x1b[?1002h\x1b[?1016h\x1b[?2004h\x1b[?2027h\x1b[?2031h\x1b[?2048h\x1b[?5522h\x1b[?69h\x1b[20h\x1b=");
 
             const Case = struct {
                 query: []const u8,
@@ -1256,6 +1286,7 @@ test "terminal DECSTR resets DECRQM-queryable modes to defaults" {
                 .{ .query = "\x1b[?2031$p", .before_reply = "\x1b[?2031;1$y", .after_reply = "\x1b[?2031;2$y" },
                 .{ .query = "\x1b[?2048$p", .before_reply = "\x1b[?2048;1$y", .after_reply = "\x1b[?2048;2$y" },
                 .{ .query = "\x1b[?5522$p", .before_reply = "\x1b[?5522;1$y", .after_reply = "\x1b[?5522;2$y" },
+                .{ .query = "\x1b[?69$p", .before_reply = "\x1b[?69;1$y", .after_reply = "\x1b[?69;2$y" },
                 .{ .query = "\x1b[20$p", .before_reply = "\x1b[20;1$y", .after_reply = "\x1b[20;2$y" },
                 .{ .query = "\x1b[?66$p", .before_reply = "\x1b[?66;1$y", .after_reply = "\x1b[?66;2$y" },
             };

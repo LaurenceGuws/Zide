@@ -16,6 +16,8 @@ pub const Screen = struct {
     saved_cursor: SavedCursor,
     scroll_top: usize,
     scroll_bottom: usize,
+    left_margin: usize,
+    right_margin: usize,
     tabstops: TabStops,
     key_mode: KeyModeStack,
     current_attrs: types.CellAttrs,
@@ -30,6 +32,7 @@ pub const Screen = struct {
     reverse_wrap: bool,
     grapheme_cluster_shaping_2027: bool,
     save_cursor_mode_1048: bool,
+    left_right_margin_mode_69: bool,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16, default_attrs: types.CellAttrs) !Screen {
         const grid = try TerminalGrid.init(allocator, rows, cols, .{
@@ -46,6 +49,8 @@ pub const Screen = struct {
             .saved_cursor = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = default_attrs },
             .scroll_top = 0,
             .scroll_bottom = if (rows > 0) @as(usize, rows - 1) else 0,
+            .left_margin = 0,
+            .right_margin = if (cols > 0) @as(usize, cols - 1) else 0,
             .tabstops = tabstops,
             .key_mode = KeyModeStack.init(),
             .current_attrs = default_attrs,
@@ -60,6 +65,7 @@ pub const Screen = struct {
             .reverse_wrap = false,
             .grapheme_cluster_shaping_2027 = false,
             .save_cursor_mode_1048 = false,
+            .left_right_margin_mode_69 = false,
         };
     }
 
@@ -97,8 +103,15 @@ pub const Screen = struct {
         }
         const max_row = if (rows > 0) @as(usize, rows - 1) else 0;
         const max_col = if (cols > 0) @as(usize, cols - 1) else 0;
+        if (self.left_margin > max_col) self.left_margin = 0;
+        if (self.right_margin > max_col) self.right_margin = max_col;
+        if (self.left_margin > self.right_margin) {
+            self.left_margin = 0;
+            self.right_margin = max_col;
+        }
         if (self.cursor.row > max_row) self.cursor.row = max_row;
         if (self.cursor.col > max_col) self.cursor.col = max_col;
+        self.clampCursorToMargins();
     }
 
     pub fn resetState(self: *Screen) void {
@@ -108,6 +121,8 @@ pub const Screen = struct {
         self.saved_cursor = .{ .active = false, .cursor = .{ .row = 0, .col = 0 }, .attrs = self.default_attrs };
         self.scroll_top = 0;
         self.scroll_bottom = if (self.grid.rows > 0) @as(usize, self.grid.rows - 1) else 0;
+        self.left_margin = 0;
+        self.right_margin = if (self.grid.cols > 0) @as(usize, self.grid.cols - 1) else 0;
         self.key_mode = KeyModeStack.init();
         self.current_attrs = self.default_attrs;
         self.wrap_next = false;
@@ -120,6 +135,7 @@ pub const Screen = struct {
         self.reverse_wrap = false;
         self.grapheme_cluster_shaping_2027 = false;
         self.save_cursor_mode_1048 = false;
+        self.left_right_margin_mode_69 = false;
         self.tabstops.reset();
     }
 
@@ -217,7 +233,7 @@ pub const Screen = struct {
     pub fn setOriginMode(self: *Screen, enabled: bool) void {
         self.origin_mode = enabled;
         self.cursor.row = self.scroll_top;
-        self.cursor.col = 0;
+        self.cursor.col = self.leftBoundary();
         self.wrap_next = false;
     }
 
@@ -505,6 +521,7 @@ pub const Screen = struct {
 
     pub fn setCursor(self: *Screen, row: usize, col: usize) void {
         self.cursor = .{ .row = row, .col = col };
+        self.clampCursorToMargins();
     }
 
     pub fn backspace(self: *Screen) void {
@@ -522,7 +539,7 @@ pub const Screen = struct {
 
     pub fn tab(self: *Screen) void {
         if (self.grid.cols == 0) return;
-        const max_col = @as(usize, self.grid.cols - 1);
+        const max_col = self.rightBoundary();
         const next = self.tabstops.next(self.cursor.col, max_col);
         self.cursor.col = @min(next, max_col);
         self.wrap_next = false;
@@ -530,7 +547,7 @@ pub const Screen = struct {
 
     pub fn backTab(self: *Screen) void {
         if (self.grid.cols == 0) return;
-        self.cursor.col = self.tabstops.prev(self.cursor.col);
+        self.cursor.col = @max(self.leftBoundary(), self.tabstops.prev(self.cursor.col));
         self.wrap_next = false;
     }
 
@@ -551,7 +568,7 @@ pub const Screen = struct {
     }
 
     pub fn carriageReturn(self: *Screen) void {
-        self.cursor.col = 0;
+        self.cursor.col = self.leftBoundary();
         self.wrap_next = false;
     }
 
@@ -580,15 +597,16 @@ pub const Screen = struct {
     }
 
     pub fn cursorForward(self: *Screen, delta: usize) void {
-        const max_col = @as(usize, self.grid.cols - 1);
+        const max_col = self.rightBoundary();
         self.cursor.col = @min(max_col, self.cursor.col + delta);
         self.wrap_next = false;
     }
 
     pub fn cursorBack(self: *Screen, delta: usize) void {
+        const left_bound = self.leftBoundary();
         var remaining = delta;
         while (remaining > 0) : (remaining -= 1) {
-            if (self.cursor.col > 0) {
+            if (self.cursor.col > left_bound) {
                 self.cursor.col -= 1;
                 continue;
             }
@@ -614,7 +632,7 @@ pub const Screen = struct {
             const max_row = @as(usize, self.grid.rows - 1);
             self.cursor.row = @min(max_row, self.cursor.row + delta);
         }
-        self.cursor.col = 0;
+        self.cursor.col = self.leftBoundary();
         self.wrap_next = false;
     }
 
@@ -628,13 +646,14 @@ pub const Screen = struct {
         } else {
             self.cursor.row = if (self.cursor.row > delta) self.cursor.row - delta else 0;
         }
-        self.cursor.col = 0;
+        self.cursor.col = self.leftBoundary();
         self.wrap_next = false;
     }
 
     pub fn cursorColAbsolute(self: *Screen, col_1: i32) void {
         const col = @min(@as(usize, self.grid.cols - 1), @as(usize, @intCast(col_1 - 1)));
         self.cursor.col = col;
+        self.clampCursorToMargins();
         self.wrap_next = false;
     }
 
@@ -650,6 +669,7 @@ pub const Screen = struct {
         const col = @min(@as(usize, self.grid.cols - 1), @as(usize, @intCast(col_1 - 1)));
         self.cursor.row = row;
         self.cursor.col = col;
+        self.clampCursorToMargins();
         self.wrap_next = false;
     }
 
@@ -722,8 +742,52 @@ pub const Screen = struct {
         self.scroll_top = top;
         self.scroll_bottom = bot;
         self.cursor.row = top;
-        self.cursor.col = 0;
+        self.cursor.col = self.leftBoundary();
         self.wrap_next = false;
+    }
+
+    pub fn setLeftRightMarginMode69(self: *Screen, enabled: bool) void {
+        self.left_right_margin_mode_69 = enabled;
+        if (!enabled) {
+            self.left_margin = 0;
+            self.right_margin = if (self.grid.cols > 0) @as(usize, self.grid.cols - 1) else 0;
+        }
+        self.clampCursorToMargins();
+    }
+
+    pub fn setLeftRightMargins(self: *Screen, left: usize, right: usize) void {
+        if (self.grid.cols == 0) return;
+        self.left_margin = @min(left, @as(usize, self.grid.cols - 1));
+        self.right_margin = @min(right, @as(usize, self.grid.cols - 1));
+        if (self.left_margin > self.right_margin) {
+            self.left_margin = 0;
+            self.right_margin = @as(usize, self.grid.cols - 1);
+        }
+        // xterm-compatible DECSLRM behavior homes cursor to row 1 at left margin.
+        self.cursor.row = 0;
+        self.cursor.col = self.leftBoundary();
+        self.wrap_next = false;
+    }
+
+    fn leftBoundary(self: *const Screen) usize {
+        if (self.left_right_margin_mode_69) return self.left_margin;
+        return 0;
+    }
+
+    fn rightBoundary(self: *const Screen) usize {
+        if (self.left_right_margin_mode_69) return self.right_margin;
+        return if (self.grid.cols > 0) @as(usize, self.grid.cols - 1) else 0;
+    }
+
+    fn clampCursorToMargins(self: *Screen) void {
+        if (self.grid.cols == 0) {
+            self.cursor.col = 0;
+            return;
+        }
+        const left = self.leftBoundary();
+        const right = self.rightBoundary();
+        if (self.cursor.col < left) self.cursor.col = left;
+        if (self.cursor.col > right) self.cursor.col = right;
     }
 
     pub fn cursorPos(self: *const Screen) types.CursorPos {
