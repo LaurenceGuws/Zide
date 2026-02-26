@@ -2237,6 +2237,7 @@ Notes:
   - Evidence:
     - PTY/unit integration: `src/terminal_focus_reporting_tests.zig` (`terminal grapheme cluster mode ?2027 keeps shaping-priority combining mark on overflow`)
     - replay: `fixtures/terminal/decrqm_query_matrix_reply.*` (query/set/reset replies remain locked)
+    - replay: `fixtures/terminal/grapheme_mode_2027_priority_overflow.*` (mode-off vs mode-on overflow behavior on grid snapshot)
 
 - `PA-08g` implementation slice (2026-02-26, ANSI mode `12` local echo first slice):
   - Implemented `DECRQM/SM/RM` for ANSI mode `12` with real behavior:
