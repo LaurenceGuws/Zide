@@ -1647,7 +1647,7 @@ Inventory snapshot (`PA-08a`, first pass) checklist (audit-traceable):
 | Terminal reset conveniences (`DECSTR`, CSI soft reset breadth) | partial | medium | replay + PTY | `DECSTR` implemented/tested (`src/terminal/protocol/csi.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/decstr_*`); broader reset-family breadth still pending | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/kitty/kitty/vt-parser.c`, `reference_repos/terminals/ghostty/src/terminal/stream.zig` | `DECSTR` slice active; broader CSI reset-family parity still tracked under `PA-08h` |
 | Left/right margins (`DECSLRM`) + rectangular semantics | partial | medium | no | no Zide implementation yet (`src/terminal/protocol/csi.zig`) | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig`, `reference_repos/terminals/ghostty/src/terminal/Terminal.zig` | xterm-compat gap for some advanced TUIs |
 | Alternate mouse encodings (`1005`, `1015`) | todo | low/medium | no | `src/terminal/protocol/csi.zig`, `src/terminal/input/mouse_report.zig` (current modes) | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/foot/csi.c` | Add only if app compatibility demands |
-| Xterm window ops (`CSI ... t`) | partial | low/medium | PTY + replay | `src/terminal/protocol/csi.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/csi_window_ops_18t_query_reply.*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt` | bounded support: `CSI 18 t` text-area size report; broader `t` family still pending |
+| Xterm window ops (`CSI ... t`) | partial | low/medium | PTY + replay | `src/terminal/protocol/csi.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/csi_window_ops_14t_query_reply.*`, `fixtures/terminal/csi_window_ops_18t_query_reply.*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt` | bounded support: `CSI 14 t` (pixels) and `CSI 18 t` (chars); broader `t` family still pending |
 | Printer/media/status extensions | todo | low | no | no Zide support | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt` | Out of current scope |
 | Legacy/rare tab-stop report/edit variants | todo | low | no | current tab support in `src/terminal/protocol/csi.zig`, `src/terminal/model/screen/tabstops.zig` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt` | Keep deferred unless an app/seed requires them |
 
@@ -1723,20 +1723,26 @@ Verification:
 - `zig build test-terminal-focus-reporting`
 - `zig build test-terminal-replay -- --all`
 
-Implemented (increment 4 / `PA-08e` bounded xterm window-op query `CSI 18 t`):
-- Added bounded support for xterm window-op query `CSI 18 t` (report text area size in characters).
-- Reply format implemented as `CSI 8 ; rows ; cols t` using current terminal grid dimensions.
+Implemented (increment 4 / `PA-08e` bounded xterm window-op queries `CSI 14 t` + `CSI 18 t`):
+- Added bounded support for xterm window-op queries:
+  - `CSI 14 t` report text area size in pixels (`CSI 4 ; height ; width t`)
+  - `CSI 18 t` report text area size in characters (`CSI 8 ; rows ; cols t`)
+- Pixel reply uses current cell metrics (`cell_height * rows`, `cell_width * cols`) and reports `0;0` when metrics are unknown.
 - Unsupported/other `CSI ... t` window-op modes remain ignored for now (no reply).
 
 Files:
 - `src/terminal/protocol/csi.zig`
 - `src/terminal_focus_reporting_tests.zig`
+- `fixtures/terminal/csi_window_ops_14t_query_reply.vt`
+- `fixtures/terminal/csi_window_ops_14t_query_reply.json`
+- `fixtures/terminal/csi_window_ops_14t_query_reply.golden`
 - `fixtures/terminal/csi_window_ops_18t_query_reply.vt`
 - `fixtures/terminal/csi_window_ops_18t_query_reply.json`
 - `fixtures/terminal/csi_window_ops_18t_query_reply.golden`
 
 Verification:
 - `zig build test-terminal-focus-reporting`
+- `zig build test-terminal-replay -- --fixture csi_window_ops_14t_query_reply --update-goldens`
 - `zig build test-terminal-replay -- --fixture csi_window_ops_18t_query_reply --update-goldens`
 - `zig build test-terminal-replay -- --all`
 

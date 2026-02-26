@@ -236,6 +236,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
             const mode = if (param_len > 0) p[0] else 0;
             if (self.pty) |*pty| {
                 switch (mode) {
+                    14 => _ = writeWindowOpPixelsReply(pty, @as(u32, self.cell_height) * screen.grid.rows, @as(u32, self.cell_width) * screen.grid.cols),
                     18 => _ = writeWindowOpCharsReply(pty, screen.grid.rows, screen.grid.cols),
                     else => {},
                 }
@@ -589,6 +590,13 @@ pub fn writeColorSchemePreferenceReply(pty: anytype, dark: bool) bool {
 pub fn writeWindowOpCharsReply(pty: anytype, rows: u16, cols: u16) bool {
     var buf: [32]u8 = undefined;
     const seq = std.fmt.bufPrint(&buf, "\x1b[8;{d};{d}t", .{ rows, cols }) catch return false;
+    _ = pty.write(seq) catch return false;
+    return true;
+}
+
+pub fn writeWindowOpPixelsReply(pty: anytype, height_px: u32, width_px: u32) bool {
+    var buf: [40]u8 = undefined;
+    const seq = std.fmt.bufPrint(&buf, "\x1b[4;{d};{d}t", .{ height_px, width_px }) catch return false;
     _ = pty.write(seq) catch return false;
     return true;
 }
