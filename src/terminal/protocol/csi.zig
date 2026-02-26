@@ -231,6 +231,16 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 }
             }
         },
+        't' => { // Window ops (bounded subset)
+            if (action.leader != 0 or action.private) return;
+            const mode = if (param_len > 0) p[0] else 0;
+            if (self.pty) |*pty| {
+                switch (mode) {
+                    18 => _ = writeWindowOpCharsReply(pty, screen.grid.rows, screen.grid.cols),
+                    else => {},
+                }
+            }
+        },
         'p' => { // DECRQM (requires '$' intermediate)
             if (csiIntermediatesEq(action, "!")) { // DECSTR (soft terminal reset)
                 if (action.leader == 0 and !action.private) {
@@ -572,6 +582,13 @@ fn writeConst(pty: anytype, seq: []const u8) bool {
 pub fn writeColorSchemePreferenceReply(pty: anytype, dark: bool) bool {
     var buf: [16]u8 = undefined;
     const seq = std.fmt.bufPrint(&buf, "\x1b[?997;{d}n", .{if (dark) @as(u8, 1) else @as(u8, 2)}) catch return false;
+    _ = pty.write(seq) catch return false;
+    return true;
+}
+
+pub fn writeWindowOpCharsReply(pty: anytype, rows: u16, cols: u16) bool {
+    var buf: [32]u8 = undefined;
+    const seq = std.fmt.bufPrint(&buf, "\x1b[8;{d};{d}t", .{ rows, cols }) catch return false;
     _ = pty.write(seq) catch return false;
     return true;
 }
