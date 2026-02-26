@@ -972,6 +972,38 @@ Verification:
 - `zig build test-terminal-replay -- --fixture kitty_query_chunk_offset_z_precedence_q1_q2_reply --update-goldens`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 30 / `PA-04c` medium transport success matrix for query path):
+- Expanded project-integrated `a=q` parse-path coverage for transport mediums with real success-path behavior:
+  - `t=f` file medium with valid PNG path payload (`OK`)
+  - `t=t` temp-file medium with valid `/tmp/*tty-graphics-protocol*` path payload (`OK`)
+- Added quiet-mode expectations for both mediums:
+  - `q=1` suppresses success reply
+  - `q=2` suppresses success reply
+- Added behavioral assertion for `t=t` temp-file cleanup (file removed after read path).
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+
+Implemented (increment 31 / `PA-04c` mixed `m=1` + `O=1` precedence matrix + replay lock):
+- Added integrated precedence matrix coverage for non-missing-id queries where chunk/offset forms are combined in one request:
+  - `m=1,O=1` (with and without `o=z`) under `q=1` and `q=2`
+  - mixed lower-priority invalid branches (`f=999` + malformed payload) to ensure preflight precedence remains stable
+- Added replay-level reply lock covering the same mixed precedence under both quiet modes in one stream.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+- `fixtures/terminal/kitty_query_mixed_chunk_offset_precedence_q1_q2_reply.vt`
+- `fixtures/terminal/kitty_query_mixed_chunk_offset_precedence_q1_q2_reply.json`
+- `fixtures/terminal/kitty_query_mixed_chunk_offset_precedence_q1_q2_reply.golden`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+- `zig build test-terminal-replay -- --fixture kitty_query_mixed_chunk_offset_precedence_q1_q2_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_query_mixed_chunk_offset_precedence_q1_q2_reply`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
