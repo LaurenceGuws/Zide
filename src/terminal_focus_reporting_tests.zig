@@ -1607,6 +1607,21 @@ test "terminal CSI 14 t reports text area size in pixels" {
     }.run);
 }
 
+test "terminal CSI 19 t reports screen size in chars" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+
+            terminal.debugFeedBytes(session, "\x1b[19t");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[9;6;12t", reply);
+            }
+        }
+    }.run);
+}
+
 test "terminal widget focus source toggles gate window and pane reports" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
