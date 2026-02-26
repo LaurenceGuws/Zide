@@ -949,6 +949,29 @@ Verification:
 - `zig build test-terminal-kitty-query-parse`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 29 / `PA-04c` non-missing-id `O=` precedence matrix + replay locks):
+- Expanded the non-missing-id `a=q` precedence matrix to explicitly cover invalid offset
+  (`O=1`) ordering against invalid format and malformed payload combinations under both
+  `q=1` (reply) and `q=2` (suppressed reply).
+- Added replay-level `reply_hex` fixtures to lock representative end-to-end precedence:
+  - non-missing-id `O=1` + invalid-format+malformed quiet split (`q=1` emits `EINVAL`, `q=2` suppresses)
+  - chunk/offset zlib preflight (`m=1,o=z` and `O=1,o=z`) quiet split in one stream
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+- `fixtures/terminal/kitty_query_offset_precedence_q1_q2_reply.vt`
+- `fixtures/terminal/kitty_query_offset_precedence_q1_q2_reply.json`
+- `fixtures/terminal/kitty_query_offset_precedence_q1_q2_reply.golden`
+- `fixtures/terminal/kitty_query_chunk_offset_z_precedence_q1_q2_reply.vt`
+- `fixtures/terminal/kitty_query_chunk_offset_z_precedence_q1_q2_reply.json`
+- `fixtures/terminal/kitty_query_chunk_offset_z_precedence_q1_q2_reply.golden`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+- `zig build test-terminal-replay -- --fixture kitty_query_offset_precedence_q1_q2_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_query_chunk_offset_z_precedence_q1_q2_reply --update-goldens`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
