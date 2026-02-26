@@ -2480,6 +2480,23 @@ Notes:
     - PTY/unit integration: `src/terminal_focus_reporting_tests.zig` (`terminal ANSI local echo mode 12 echoes chars only without PTY`)
     - replay: `fixtures/terminal/decrqm_query_matrix_reply.*` now includes ANSI `12` query/set/reset replies
 
+- `PA-08h` implementation slice (2026-02-27, `DECSLRM` first bounded slice):
+  - Implemented first bounded `DECSLRM` behavior behind private mode `?69`:
+    - `DECRQM/DECSET/DECRST ?69` now reports/toggles real state (`Pm=1/2`)
+    - `CSI Pl;Pr s` applies left/right margins only when `?69` is enabled
+    - cursor is clamped to active horizontal bounds and `DECSLRM` homes cursor to row 1 at left margin
+  - Scope boundary (first slice):
+    - includes margin state + core cursor clamp behavior (`CR`, `CUF/CUB`, `HPA/HVP/CUP`, tab movement paths)
+    - excludes broader rectangular editing semantics (`DECCRA`/rect ops) and full app-parity matrix for all margin-interacting operations
+  - Evidence:
+    - PTY integration: `src/terminal_focus_reporting_tests.zig`
+      - `terminal DECSLRM applies margins only when ?69 mode is enabled`
+      - common private `DECRQM` mode matrix now includes `?69`
+      - `DECSTR` mode-reset matrix includes `?69`
+    - replay:
+      - `fixtures/terminal/decrqm_declrmm_69_query_reply.*`
+      - `fixtures/terminal/decslrm_set_margins_cpr_reply.*`
+
 Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft terminal reset):
 - Reference anchors:
   - xterm docs define `CSI ! p` as `DECSTR` (soft terminal reset), VT220+ (`reference_repos/terminals/xterm_snapshots/ctlseqs.txt`).
@@ -2872,7 +2889,7 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `PA-08h` Implement promoted `DECSLRM` slice (dispatch + behavior + PTY/replay evidence)
+1. `PA-08h` Extend `DECSLRM` parity beyond first slice (margin interactions with insert/delete/erase and wrap behavior)
 2. `PA-04c` Extend replay-side transport fixture coverage for kitty query temp/shared-memory edge forms as feasible
 3. `PA-05c` Extend metadata-aware encoder format usage for `alternate_layout_codepoint` when protocol field support is promoted
 4. `PA-04d` Decide animation/composition support path (`implement` vs explicit defer) with reference-backed rationale
