@@ -18,6 +18,41 @@ fn expectKittyQuerySuppressedForQ2(base_seq: []const u8) !void {
     try expectKittyQueryNoReply(seq);
 }
 
+fn decodeBase64Alloc(allocator: std.mem.Allocator, encoded: []const u8) ![]u8 {
+    const decoded_len = try std.base64.standard.Decoder.calcSizeForSlice(encoded);
+    const out = try allocator.alloc(u8, decoded_len);
+    errdefer allocator.free(out);
+    _ = try std.base64.standard.Decoder.decode(out, encoded);
+    return out;
+}
+
+fn encodeBase64Alloc(allocator: std.mem.Allocator, data: []const u8) ![]u8 {
+    const encoded_len = std.base64.standard.Encoder.calcSize(data.len);
+    const out = try allocator.alloc(u8, encoded_len);
+    _ = std.base64.standard.Encoder.encode(out, data);
+    return out;
+}
+
+fn writeTempFileAbsolute(
+    allocator: std.mem.Allocator,
+    pattern_prefix: []const u8,
+    content: []const u8,
+) ![]u8 {
+    var rand_bytes: [8]u8 = undefined;
+    std.crypto.random.bytes(&rand_bytes);
+    const rand_id = std.mem.readInt(u64, &rand_bytes, .little);
+    const path = try std.fmt.allocPrint(
+        allocator,
+        "/tmp/{s}-{x}.bin",
+        .{ pattern_prefix, rand_id },
+    );
+    errdefer allocator.free(path);
+    var file = try std.fs.createFileAbsolute(path, .{ .truncate = true });
+    defer file.close();
+    try file.writeAll(content);
+    return path;
+}
+
 fn requireUnix() !void {
     if (builtin.os.tag != .linux and builtin.os.tag != .macos) return error.SkipZigTest;
 }
@@ -694,4 +729,62 @@ test "kitty parse query medium/path load-failure precedence matrix" {
         _ = case_.name;
         try expectKittyQuerySuppressedForQ2(case_.seq);
     }
+}
+
+test "kitty parse query medium file/temp success matrix" {
+    const allocator = std.testing.allocator;
+    const png_bytes = try decodeBase64Alloc(allocator, tiny_png_1x1);
+    defer allocator.free(png_bytes);
+
+    // medium=f: absolute file path, should load and decode PNG successfully.
+    const file_path = try writeTempFileAbsolute(allocator, "zide-kitty-query-file", png_bytes);
+    defer {
+        std.fs.deleteFileAbsolute(file_path) catch {};
+        allocator.free(file_path);
+    }
+    const file_path_b64 = try encodeBase64Alloc(allocator, file_path);
+    defer allocator.free(file_path_b64);
+
+    const seq_file_ok = try std.fmt.allocPrint(allocator, "a=q,i=7,t=f,f=100;{s}", .{file_path_b64});
+    defer allocator.free(seq_file_ok);
+    try expectKittyQueryReply(seq_file_ok, "\x1b_Gi=7;OK\x1b\\");
+
+    const seq_file_q1 = try std.fmt.allocPrint(allocator, "a=q,i=7,q=1,t=f,f=100;{s}", .{file_path_b64});
+    defer allocator.free(seq_file_q1);
+    try expectKittyQueryNoReply(seq_file_q1);
+
+    const seq_file_q2 = try std.fmt.allocPrint(allocator, "a=q,i=7,q=2,t=f,f=100;{s}", .{file_path_b64});
+    defer allocator.free(seq_file_q2);
+    try expectKittyQueryNoReply(seq_file_q2);
+
+    // medium=t: temp-file path under /tmp with tty-graphics-protocol marker.
+    const temp_path = try writeTempFileAbsolute(allocator, "zide-tty-graphics-protocol-query-temp", png_bytes);
+    defer allocator.free(temp_path);
+    const temp_path_b64 = try encodeBase64Alloc(allocator, temp_path);
+    defer allocator.free(temp_path_b64);
+
+    const seq_temp_ok = try std.fmt.allocPrint(allocator, "a=q,i=7,t=t,f=100;{s}", .{temp_path_b64});
+    defer allocator.free(seq_temp_ok);
+    try expectKittyQueryReply(seq_temp_ok, "\x1b_Gi=7;OK\x1b\\");
+
+    // medium=t read path should remove temporary file after read.
+    try std.testing.expectError(error.FileNotFound, std.fs.accessAbsolute(temp_path, .{}));
+
+    const temp_path_q1 = try writeTempFileAbsolute(allocator, "zide-tty-graphics-protocol-query-temp-q1", png_bytes);
+    defer allocator.free(temp_path_q1);
+    const temp_path_q1_b64 = try encodeBase64Alloc(allocator, temp_path_q1);
+    defer allocator.free(temp_path_q1_b64);
+    const seq_temp_q1 = try std.fmt.allocPrint(allocator, "a=q,i=7,q=1,t=t,f=100;{s}", .{temp_path_q1_b64});
+    defer allocator.free(seq_temp_q1);
+    try expectKittyQueryNoReply(seq_temp_q1);
+    try std.testing.expectError(error.FileNotFound, std.fs.accessAbsolute(temp_path_q1, .{}));
+
+    const temp_path_q2 = try writeTempFileAbsolute(allocator, "zide-tty-graphics-protocol-query-temp-q2", png_bytes);
+    defer allocator.free(temp_path_q2);
+    const temp_path_q2_b64 = try encodeBase64Alloc(allocator, temp_path_q2);
+    defer allocator.free(temp_path_q2_b64);
+    const seq_temp_q2 = try std.fmt.allocPrint(allocator, "a=q,i=7,q=2,t=t,f=100;{s}", .{temp_path_q2_b64});
+    defer allocator.free(seq_temp_q2);
+    try expectKittyQueryNoReply(seq_temp_q2);
+    try std.testing.expectError(error.FileNotFound, std.fs.accessAbsolute(temp_path_q2, .{}));
 }
