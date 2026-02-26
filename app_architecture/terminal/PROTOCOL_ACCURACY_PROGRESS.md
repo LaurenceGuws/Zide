@@ -1913,7 +1913,8 @@ Planned work (decomposition / `PA-08g` `DECRQM` / `DECRPM` parity breadth + repl
   - Reply-value policy:
     - [x] `Pm=0` for unsupported ANSI/DEC query in current implemented scope
     - [ ] Define criteria for `Pm=3/4` use in Zide (feature permanently on/off vs unsupported/not recognized)
-    - [ ] Add explicit fixture/unit cases that lock the chosen `Pm=3/4` policy (or explicit "not used" policy)
+    - [x] Add explicit fixture/unit cases that lock the current strategic `Pm=4` mode set
+    - [ ] Decide and lock whether `Pm=3` is used in any Zide mode family
 - Suggested small-commit sequence for `PA-08g`:
   1. Docs-only mode inventory table (current implemented DEC/ANSI set vs reference-candidate set) with `implement/defer` decisions.
   2. Behavior-preserving refactor to centralize `DECRQM` mode classification/state policy (easier table-driven testing).
@@ -2160,6 +2161,14 @@ Notes:
       - `src/terminal_focus_reporting_tests.zig` adds reverse-wrap cursor behavior tests for both `BS` and `CUB`
     - replay:
       - `fixtures/terminal/decrqm_query_matrix_reply.*` now includes `?45` query/set/reset replies
+- `PA-08g` implementation slice (2026-02-26, strategic fixed-off `Pm=4` policy lock):
+  - Added explicit PTY and replay coverage that locks the current strategic fixed-off private-mode set to `Pm=4` replies:
+    - `?67`, `?1001`, `?1005`, `?1015`, `?1034`, `?1035`, `?1036`, `?1042`, `?1070`
+  - Scope:
+    - this is policy-lock coverage only (no behavior change), to prevent accidental drift between `Pm=0` provisional rows and strategic fixed-off rows.
+  - Evidence:
+    - PTY integration: `src/terminal_focus_reporting_tests.zig` (`terminal DECRQM strategic fixed-off private modes report permanently reset (Pm=4)`)
+    - replay: `fixtures/terminal/decrqm_strategic_fixed_off_query_reply.*` (`reply_hex` asserted end-to-end)
 - `PA-08g` implementation slice (2026-02-23, `?2027` grapheme-cluster shaping mode, first slice):
   - Decision: implement a **queryable no-op semantics** first slice (real mode state + documented no-op behavior boundary), then defer renderer/shaping behavior changes to a later slice.
   - Reference direction:
