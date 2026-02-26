@@ -122,6 +122,11 @@ Implemented:
 - Combining mark attachment skips continuations
 - Pre-wrap for width-2 glyphs at right edge
 - Added replay fixture for wide-char edge wrapping
+- Fixed wrap-newline column reset on scroll paths (`wrapNewlineAction` now forces `col=0`
+  for `scroll_region` / `scroll_full`) to prevent right-edge autowrap drift that can
+  render long output as one-character-per-line near the viewport boundary.
+- Added replay regression fixture `wrap_newline_scroll_sets_col0` and refreshed affected
+  scroll fixtures.
 
 Files:
 - `src/terminal/model/screen/screen.zig`
@@ -130,6 +135,11 @@ Files:
 - `fixtures/terminal/utf8_wide_wrap_edge.vt`
 - `fixtures/terminal/utf8_wide_wrap_edge.json`
 - `fixtures/terminal/utf8_wide_wrap_edge.golden`
+- `fixtures/terminal/wrap_newline_scroll_sets_col0.vt`
+- `fixtures/terminal/wrap_newline_scroll_sets_col0.json`
+- `fixtures/terminal/wrap_newline_scroll_sets_col0.golden`
+- `fixtures/terminal/scroll_region_basic.golden`
+- `fixtures/terminal/scrollback_push.golden`
 
 Verification:
 - `zig build test-terminal-replay -- --all`
