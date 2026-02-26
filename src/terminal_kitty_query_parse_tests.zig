@@ -12,6 +12,12 @@ const zlib_three_bytes = "eJxLTEoGAAJNASc=";
 const zlib_png_1x1 = "eJzrDPBz5+WS4mJgYOD19HAJAtKMIMzBAiS3yvAwASluTxfHkIo5yQkJQA4zA6M2p28LkMXg6ernss4poQkASQMLKg==";
 const zlib_not_png = "eJzLyy8pyEsHAAkoApc=";
 
+fn expectKittyQuerySuppressedForQ2(base_seq: []const u8) !void {
+    var seq_buf: [512]u8 = undefined;
+    const seq = try std.fmt.bufPrint(&seq_buf, "a=q,i=7,q=2,{s}", .{base_seq});
+    try expectKittyQueryNoReply(seq);
+}
+
 fn requireUnix() !void {
     if (builtin.os.tag != .linux and builtin.os.tag != .macos) return error.SkipZigTest;
 }
@@ -656,5 +662,36 @@ test "kitty parse query non-missing-id invalid-offset precedence matrix" {
     inline for (no_reply_cases) |case_| {
         _ = case_.name;
         try expectKittyQueryNoReply(case_.seq);
+    }
+}
+
+test "kitty parse query medium/path load-failure precedence matrix" {
+    const reply_cases = [_]struct {
+        name: []const u8,
+        seq: []const u8,
+        expected: []const u8,
+    }{
+        .{ .name = "q1 medium=f malformed path base64 replies EINVAL", .seq = "a=q,i=7,q=1,t=f,f=999;%%%%", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "q1 medium=f missing file path replies EINVAL", .seq = "a=q,i=7,q=1,t=f,f=100;L3RtcC96aWRlLW1pc3Npbmcta2l0dHktcXVlcnkucG5n", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "q1 medium=t disallowed temp path replies EINVAL", .seq = "a=q,i=7,q=1,t=t,f=100;L2hvbWUveA==", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "q1 medium=t missing protocol marker path replies EINVAL", .seq = "a=q,i=7,q=1,t=t,f=100;L3RtcC96aWRlLXBhdGgucG5n", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+    };
+    inline for (reply_cases) |case_| {
+        _ = case_.name;
+        try expectKittyQueryReply(case_.seq, case_.expected);
+    }
+
+    const q2_no_reply_cases = [_]struct {
+        name: []const u8,
+        seq: []const u8,
+    }{
+        .{ .name = "q2 medium=f malformed path base64 suppressed", .seq = "t=f,f=999;%%%%" },
+        .{ .name = "q2 medium=f missing file path suppressed", .seq = "t=f,f=100;L3RtcC96aWRlLW1pc3Npbmcta2l0dHktcXVlcnkucG5n" },
+        .{ .name = "q2 medium=t disallowed temp path suppressed", .seq = "t=t,f=100;L2hvbWUveA==" },
+        .{ .name = "q2 medium=t missing protocol marker path suppressed", .seq = "t=t,f=100;L3RtcC96aWRlLXBhdGgucG5n" },
+    };
+    inline for (q2_no_reply_cases) |case_| {
+        _ = case_.name;
+        try expectKittyQuerySuppressedForQ2(case_.seq);
     }
 }
