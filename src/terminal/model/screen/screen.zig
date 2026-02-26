@@ -709,9 +709,11 @@ pub const Screen = struct {
             return .moved;
         }
         if (self.cursor.row == self.scroll_bottom) {
+            self.cursor.col = 0;
             self.wrap_next = false;
             return .scroll_region;
         }
+        self.cursor.col = 0;
         self.wrap_next = false;
         return .scroll_full;
     }
