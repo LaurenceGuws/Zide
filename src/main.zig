@@ -889,7 +889,7 @@ const AppState = struct {
                         }
                     },
                     .terminal_scrollback_pager => {
-                        if (try self.openTerminalScrollbackInPager(term_widget)) {
+                        if (try self.openTerminalScrollbackInPager(term_widget, self.terminals.items[0])) {
                             handled_shortcut = true;
                         }
                     },
@@ -1486,7 +1486,7 @@ const AppState = struct {
         }
     }
 
-    fn openTerminalScrollbackInPager(self: *AppState, term_widget: *TerminalWidget) !bool {
+    fn openTerminalScrollbackInPager(self: *AppState, term_widget: *TerminalWidget, term: *TerminalSession) !bool {
         const allocator = self.allocator;
         const text = try term_widget.scrollbackPlainTextAlloc(allocator);
         defer allocator.free(text);
@@ -1509,29 +1509,24 @@ const AppState = struct {
         defer allocator.free(path);
 
         if (builtin.os.tag == .windows) {
-            // Fallback: open in default associated app until a Windows pager flow exists.
-            var child = std.process.Child.init(&.{ "cmd", "/C", "start", "", path }, allocator);
-            child.stdin_behavior = .Inherit;
-            child.stdout_behavior = .Inherit;
-            child.stderr_behavior = .Inherit;
-            child.spawn() catch return false;
+            // Keep flow inside the active terminal session; use `more` as a simple pager.
+            const cmd = try std.fmt.allocPrint(
+                allocator,
+                "\x15more {s}\r",
+                .{path},
+            );
+            defer allocator.free(cmd);
+            term.sendText(cmd) catch return false;
             return true;
         }
 
-        var child = std.process.Child.init(
-            &.{
-                "sh",
-                "-lc",
-                "if [ -n \"${PAGER:-}\" ]; then exec ${PAGER} \"$1\"; elif command -v less >/dev/null 2>&1; then exec less -R \"$1\"; else exec cat \"$1\"; fi",
-                "zide-scrollback-pager",
-                path,
-            },
+        const cmd = try std.fmt.allocPrint(
             allocator,
+            "\x15if [ -n \"${{PAGER:-}}\" ]; then $PAGER {s}; elif command -v less >/dev/null 2>&1; then less -R {s}; else cat {s}; fi\r",
+            .{ path, path, path },
         );
-        child.stdin_behavior = .Inherit;
-        child.stdout_behavior = .Inherit;
-        child.stderr_behavior = .Inherit;
-        child.spawn() catch return false;
+        defer allocator.free(cmd);
+        term.sendText(cmd) catch return false;
         return true;
     }
 

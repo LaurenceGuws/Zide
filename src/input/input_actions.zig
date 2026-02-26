@@ -72,49 +72,12 @@ pub const InputRouter = struct {
     pub fn setBindings(self: *InputRouter, bindings: []const BindSpec) void {
         self.bindings.clearRetainingCapacity();
         _ = self.bindings.appendSlice(self.allocator, bindings) catch {};
-        const log = app_logger.logger("config.keybinds");
-        if (log.enabled_file or log.enabled_console) {
-            log.logf("loaded bindings={d}", .{self.bindings.items.len});
-            for (self.bindings.items) |binding| {
-                log.logf(
-                    "bind scope={s} key={s} action={s} shift={d} ctrl={d} alt={d} super={d} repeat={d}",
-                    .{
-                        @tagName(binding.scope),
-                        @tagName(binding.key),
-                        actionName(binding.action),
-                        @intFromBool(binding.mods.shift),
-                        @intFromBool(binding.mods.ctrl),
-                        @intFromBool(binding.mods.alt),
-                        @intFromBool(binding.mods.super),
-                        @intFromBool(binding.repeat),
-                    },
-                );
-            }
-        }
     }
 
     pub fn route(self: *InputRouter, batch: *shared_types.input.InputBatch, focus: FocusKind) void {
         self.clear();
         const log = app_logger.logger("input.router");
         var text_events: usize = 0;
-        if (log.enabled_file or log.enabled_console) {
-            for (batch.events.items) |event| {
-                if (event != .key) continue;
-                const k = event.key;
-                log.logf(
-                    "key_event key={s} pressed={d} repeated={d} shift={d} ctrl={d} alt={d} super={d}",
-                    .{
-                        @tagName(k.key),
-                        @intFromBool(k.pressed),
-                        @intFromBool(k.repeated),
-                        @intFromBool(k.mods.shift),
-                        @intFromBool(k.mods.ctrl),
-                        @intFromBool(k.mods.alt),
-                        @intFromBool(k.mods.super),
-                    },
-                );
-            }
-        }
         const keyEventMatches = struct {
             fn apply(batch_in: *shared_types.input.InputBatch, binding: BindSpec) bool {
                 for (batch_in.events.items) |event| {
