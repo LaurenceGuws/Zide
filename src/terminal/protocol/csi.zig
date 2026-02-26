@@ -237,6 +237,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
             if (self.pty) |*pty| {
                 switch (mode) {
                     14 => _ = writeWindowOpPixelsReply(pty, @as(u32, self.cell_height) * screen.grid.rows, @as(u32, self.cell_width) * screen.grid.cols),
+                    16 => _ = writeWindowOpCellPixelsReply(pty, self.cell_height, self.cell_width),
                     18 => _ = writeWindowOpCharsReply(pty, screen.grid.rows, screen.grid.cols),
                     19 => _ = writeWindowOpScreenCharsReply(pty, screen.grid.rows, screen.grid.cols),
                     else => {},
@@ -605,6 +606,13 @@ pub fn writeWindowOpScreenCharsReply(pty: anytype, rows: u16, cols: u16) bool {
 pub fn writeWindowOpPixelsReply(pty: anytype, height_px: u32, width_px: u32) bool {
     var buf: [40]u8 = undefined;
     const seq = std.fmt.bufPrint(&buf, "\x1b[4;{d};{d}t", .{ height_px, width_px }) catch return false;
+    _ = pty.write(seq) catch return false;
+    return true;
+}
+
+pub fn writeWindowOpCellPixelsReply(pty: anytype, cell_h: u16, cell_w: u16) bool {
+    var buf: [32]u8 = undefined;
+    const seq = std.fmt.bufPrint(&buf, "\x1b[6;{d};{d}t", .{ cell_h, cell_w }) catch return false;
     _ = pty.write(seq) catch return false;
     return true;
 }
