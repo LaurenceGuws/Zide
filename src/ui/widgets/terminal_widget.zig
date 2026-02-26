@@ -273,6 +273,63 @@ pub const TerminalWidget = struct {
         return true;
     }
 
+    pub fn scrollbackPlainTextAlloc(self: *TerminalWidget, allocator: std.mem.Allocator) ![]u8 {
+        const snap = self.session.snapshot();
+        const rows = snap.rows;
+        const cols = snap.cols;
+        const history = self.session.scrollbackCount();
+
+        var out = std.ArrayList(u8).empty;
+        errdefer out.deinit(allocator);
+
+        var buf: [4]u8 = undefined;
+
+        var line_idx: usize = 0;
+        while (line_idx < history + rows) : (line_idx += 1) {
+            const row_cells = blk: {
+                if (line_idx < history) {
+                    if (self.session.scrollbackRow(line_idx)) |history_row| break :blk history_row;
+                    continue;
+                }
+                const grid_row = line_idx - history;
+                if (grid_row >= rows or cols == 0) continue;
+                const row_start = grid_row * cols;
+                break :blk snap.cells[row_start .. row_start + cols];
+            };
+
+            var line = std.ArrayList(u8).empty;
+            defer line.deinit(allocator);
+
+            var col_idx: usize = 0;
+            while (col_idx < row_cells.len) : (col_idx += 1) {
+                const cell = row_cells[col_idx];
+                if (cell.x != 0 or cell.y != 0) continue;
+                if (cell.codepoint == 0) {
+                    try line.append(allocator, ' ');
+                    continue;
+                }
+                const len = std.unicode.utf8Encode(@intCast(cell.codepoint), &buf) catch 0;
+                if (len > 0) try line.appendSlice(allocator, buf[0..len]);
+                if (cell.combining_len > 0) {
+                    var ci: usize = 0;
+                    while (ci < @as(usize, @intCast(cell.combining_len)) and ci < cell.combining.len) : (ci += 1) {
+                        const cp = cell.combining[ci];
+                        const clen = std.unicode.utf8Encode(@intCast(cp), &buf) catch 0;
+                        if (clen > 0) try line.appendSlice(allocator, buf[0..clen]);
+                    }
+                }
+            }
+
+            while (line.items.len > 0 and line.items[line.items.len - 1] == ' ') {
+                _ = line.pop();
+            }
+            try out.appendSlice(allocator, line.items);
+            try out.append(allocator, '\n');
+        }
+
+        return out.toOwnedSlice(allocator);
+    }
+
     pub fn draw(
         self: *TerminalWidget,
         shell: *Shell,
