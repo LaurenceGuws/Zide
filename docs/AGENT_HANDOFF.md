@@ -96,7 +96,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
   - stroke thickness quantization
   - seam extension
   - downsample kernel behavior
-- Promote changes only if they improve both startup quality and zoom consistency (`render_scale=1.6` stress case).
+- Promote changes only if they improve both startup quality and zoom consistency across dynamic render scales (use `1.6` only as one checkpoint, not the optimization target).
 
 ### Checklist
 - `zig build test`

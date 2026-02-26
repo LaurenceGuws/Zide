@@ -141,7 +141,7 @@ terminal_special_glyph_todo:
             - "src/ui/widgets/terminal_widget_draw.zig"
           notes:
             - "Include `U+E0B0..U+E0BF`, `U+E0D2`, `U+E0D4`, `U+E0D6..U+E0D7`."
-            - "Current state: only `U+E0B0..U+E0B3` is experimentally routed; all remaining powerline targets are pending."
+            - "Current state: `U+E0B0..U+E0B7` (core + rounded separators) are now routed through the special analytic/sprite path; remaining powerline targets are pending."
         - id: TSG-2-03
           title: "Add seam and stroke-thickness invariants"
           status: in_progress
@@ -163,6 +163,7 @@ terminal_special_glyph_todo:
             - "Success bar: repeated separators (``) are consistent and visually close to normal glyph smoothness."
             - "Current state: `U+E0B0..U+E0B3` use a single supersampled+downsampled sprite-mask pipeline (kitty/ghostty-style geometry + coverage downsample), with no alternate powerline render path in terminal draw."
             - "2026-02-20 follow-up: sprite cache/create now keys by snapped raster size per cell phase (not just logical cell size), so columns that quantize to different pixel widths at fractional render scales (e.g. 1.6) no longer stretch a single cached sprite shape across mismatched widths."
+            - "2026-02-26 follow-up: sweep knobs are now dynamic by raster size (adaptive supersample factor, quantized thin-stroke width, scale-aware seam extension, and adaptive box/tent downsample kernel); acceptance focus is consistency across zoom/render-scale changes, not a single fixed scale."
           failed_attempt_log:
             - date: "2026-02-20"
               change: "Coverage UV inset tweak in shader sampling for special glyph masks."

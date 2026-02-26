@@ -584,82 +584,82 @@ pub fn draw(
                             if (variant == .box) {
                                 // Fall through to the procedural box renderer below.
                             } else {
-                            const x0 = snapToDevicePixel(@as(f32, @floatFromInt(box_x_i)), render_scale);
-                            const x1 = snapToDevicePixel(@as(f32, @floatFromInt(box_x_i + box_w_i)), render_scale);
-                            const y0_unsnapped = @as(f32, @floatFromInt(box_y_i));
-                            const y1_unsnapped = @as(f32, @floatFromInt(box_y_i + box_h_i));
-                            const use_y_snap = variant == .box;
-                            const y0 = if (use_y_snap) snapToDevicePixel(y0_unsnapped, render_scale) else y0_unsnapped;
-                            const y1 = if (use_y_snap) snapToDevicePixel(y1_unsnapped, render_scale) else y1_unsnapped;
-                            const snapped_w = @max(1.0 / render_scale, x1 - x0);
-                            const snapped_h = @max(1.0 / render_scale, y1 - y0);
-                            const raster_w_i: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(snapped_w * render_scale))));
-                            const raster_h_i: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(snapped_h * render_scale))));
-                            const sprite_key = rr.terminal_font.specialGlyphSpriteKey(
-                                cell.codepoint,
-                                raster_w_i,
-                                raster_h_i,
-                                variant,
-                            );
-                            const sprite = rr.terminal_font.getSpecialGlyphSprite(sprite_key) orelse rr.terminal_font.getOrCreateSpecialGlyphSprite(
-                                cell.codepoint,
-                                box_w_i,
-                                box_h_i,
-                                raster_w_i,
-                                raster_h_i,
-                                variant,
-                            );
-                            if (sprite) |sp| {
-                                var dest_x = x0;
-                                var dest_w = snapped_w;
-                                const seam_overdraw = 1.0 / render_scale;
-                                if (cell.codepoint == 0xE0B2) { //  flat edge on right
-                                    const next_col = abs_col + width_units;
-                                    if (next_col < row_cells.len) {
-                                        const next_cell = row_cells[next_col];
-                                        const next_reverse = next_cell.attrs.reverse != screen_reverse_mode;
-                                        const next_bg = if (next_reverse) next_cell.attrs.fg else next_cell.attrs.bg;
-                                        if (next_bg.r == fg_draw.r and next_bg.g == fg_draw.g and next_bg.b == fg_draw.b) {
-                                            dest_w += seam_overdraw;
+                                const x0 = snapToDevicePixel(@as(f32, @floatFromInt(box_x_i)), render_scale);
+                                const x1 = snapToDevicePixel(@as(f32, @floatFromInt(box_x_i + box_w_i)), render_scale);
+                                const y0_unsnapped = @as(f32, @floatFromInt(box_y_i));
+                                const y1_unsnapped = @as(f32, @floatFromInt(box_y_i + box_h_i));
+                                const use_y_snap = variant == .box or variant == .braille;
+                                const y0 = if (use_y_snap) snapToDevicePixel(y0_unsnapped, render_scale) else y0_unsnapped;
+                                const y1 = if (use_y_snap) snapToDevicePixel(y1_unsnapped, render_scale) else y1_unsnapped;
+                                const snapped_w = @max(1.0 / render_scale, x1 - x0);
+                                const snapped_h = @max(1.0 / render_scale, y1 - y0);
+                                const raster_w_i: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(snapped_w * render_scale))));
+                                const raster_h_i: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(snapped_h * render_scale))));
+                                const sprite_key = rr.terminal_font.specialGlyphSpriteKey(
+                                    cell.codepoint,
+                                    raster_w_i,
+                                    raster_h_i,
+                                    variant,
+                                );
+                                const sprite = rr.terminal_font.getSpecialGlyphSprite(sprite_key) orelse rr.terminal_font.getOrCreateSpecialGlyphSprite(
+                                    cell.codepoint,
+                                    box_w_i,
+                                    box_h_i,
+                                    raster_w_i,
+                                    raster_h_i,
+                                    variant,
+                                );
+                                if (sprite) |sp| {
+                                    var dest_x = x0;
+                                    var dest_w = snapped_w;
+                                    const seam_overdraw = 1.0 / render_scale;
+                                    if (cell.codepoint == 0xE0B2 or cell.codepoint == 0xE0B6) { // / flat edge on right
+                                        const next_col = abs_col + width_units;
+                                        if (next_col < row_cells.len) {
+                                            const next_cell = row_cells[next_col];
+                                            const next_reverse = next_cell.attrs.reverse != screen_reverse_mode;
+                                            const next_bg = if (next_reverse) next_cell.attrs.fg else next_cell.attrs.bg;
+                                            if (next_bg.r == fg_draw.r and next_bg.g == fg_draw.g and next_bg.b == fg_draw.b) {
+                                                dest_w += seam_overdraw;
+                                            }
+                                        }
+                                    } else if (cell.codepoint == 0xE0B0 or cell.codepoint == 0xE0B4) { // / flat edge on left
+                                        if (abs_col > 0) {
+                                            const prev_col = abs_col - 1;
+                                            const prev_cell = row_cells[prev_col];
+                                            const prev_reverse = prev_cell.attrs.reverse != screen_reverse_mode;
+                                            const prev_bg = if (prev_reverse) prev_cell.attrs.fg else prev_cell.attrs.bg;
+                                            if (prev_bg.r == fg_draw.r and prev_bg.g == fg_draw.g and prev_bg.b == fg_draw.b) {
+                                                dest_x -= seam_overdraw;
+                                                dest_w += seam_overdraw;
+                                            }
                                         }
                                     }
-                                } else if (cell.codepoint == 0xE0B0) { //  flat edge on left
-                                    if (abs_col > 0) {
-                                        const prev_col = abs_col - 1;
-                                        const prev_cell = row_cells[prev_col];
-                                        const prev_reverse = prev_cell.attrs.reverse != screen_reverse_mode;
-                                        const prev_bg = if (prev_reverse) prev_cell.attrs.fg else prev_cell.attrs.bg;
-                                        if (prev_bg.r == fg_draw.r and prev_bg.g == fg_draw.g and prev_bg.b == fg_draw.b) {
-                                            dest_x -= seam_overdraw;
-                                            dest_w += seam_overdraw;
-                                        }
-                                    }
+                                    const dest = terminal_font_mod.Rect{
+                                        .x = dest_x,
+                                        .y = y0,
+                                        .width = dest_w,
+                                        .height = snapped_h,
+                                    };
+                                    rr.terminal_glyph_cache.addQuad(
+                                        rr.terminal_font.coverage_texture,
+                                        sp.rect,
+                                        dest,
+                                        fg_draw.toRgba(),
+                                        rr.text_bg_rgba,
+                                        .font_coverage,
+                                    );
+                                    continue;
                                 }
-                                const dest = terminal_font_mod.Rect{
-                                    .x = dest_x,
-                                    .y = y0,
-                                    .width = dest_w,
-                                    .height = snapped_h,
-                                };
-                                rr.terminal_glyph_cache.addQuad(
-                                    rr.terminal_font.coverage_texture,
-                                    sp.rect,
-                                    dest,
-                                    fg_draw.toRgba(),
-                                    rr.text_bg_rgba,
-                                    .font_coverage,
-                                );
-                                continue;
-                            }
-                            if (variant == .powerline) {
-                                const special_log = app_logger.logger("terminal.glyph.special");
-                                special_log.logf(
-                                    "sprite_missing cp=U+{X} variant={s} cell={d}x{d}",
-                                    .{ cell.codepoint, @tagName(variant), box_w_i, box_h_i },
-                                );
-                                // No powerline fallback path: only sprite pipeline is used.
-                                continue;
-                            }
+                                if (variant == .powerline) {
+                                    const special_log = app_logger.logger("terminal.glyph.special");
+                                    special_log.logf(
+                                        "sprite_missing cp=U+{X} variant={s} cell={d}x{d}",
+                                        .{ cell.codepoint, @tagName(variant), box_w_i, box_h_i },
+                                    );
+                                    // No powerline fallback path: only sprite pipeline is used.
+                                    continue;
+                                }
                             }
                         }
                     }
