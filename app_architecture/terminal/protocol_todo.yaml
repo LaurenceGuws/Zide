@@ -173,6 +173,7 @@ terminal_protocol_todo:
         - "Delete actions implemented (d= a/A/i/I/n/N/c/C/p/P/z/Z/r/R/x/X/y/Y) with placement_id filtering."
         - "Basic OK/ERR responses emitted for kitty commands (q=0/1); query action (a=q) validated with EBADPNG/ENODATA/ENOENT/EINVAL."
         - "Parented placements supported with parent lookup + offsets; cycle + depth checks (ECYCLE/ETOODEEP). Virtual placements stored but not rendered."
+        - "Animation/composition actions are intentionally deferred in current scope; unsupported kitty `a=` actions remain explicit rejects until a dedicated parity slice is scheduled."
         - "PNG decoded to RGBA in core for cursor placement; overlays scroll with viewport."
         - "Per-screen kitty storage (primary vs alt) so alt apps render without leaking into scrollback."
         - "Mediums supported: direct + file/temporary/shm (basic validation)."
