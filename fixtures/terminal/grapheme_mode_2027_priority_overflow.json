@@ -1,0 +1,8 @@
+{
+  "fixture_type": "vt",
+  "rows": 6,
+  "cols": 12,
+  "cursor": { "row": 1, "col": 1 },
+  "line_ending": "lf",
+  "assertions": ["grid"]
+}
