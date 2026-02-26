@@ -2180,6 +2180,7 @@ Notes:
     - `1`, `2`, `3`, `5`, `6`, `10`, `13`, `14`, `18`, `19`
   - Evidence:
     - PTY integration: `src/terminal_focus_reporting_tests.zig` (`terminal DECRQM representative unsupported ANSI modes return Pm=0`)
+    - replay: `fixtures/terminal/decrqm_ansi_unsupported_query_reply.*` (`reply_hex` asserted end-to-end)
 - `PA-08g` implementation slice (2026-02-23, `?2027` grapheme-cluster shaping mode, first slice):
   - Decision: implement a **queryable no-op semantics** first slice (real mode state + documented no-op behavior boundary), then defer renderer/shaping behavior changes to a later slice.
   - Reference direction:
