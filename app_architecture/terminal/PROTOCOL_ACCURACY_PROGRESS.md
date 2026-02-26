@@ -2497,6 +2497,18 @@ Notes:
       - `fixtures/terminal/decrqm_declrmm_69_query_reply.*`
       - `fixtures/terminal/decslrm_set_margins_cpr_reply.*`
 
+- `PA-08h` implementation slice (2026-02-27, `DECSLRM` margin-clipped character-edit ops):
+  - Extended `DECSLRM` behavior so character-edit operations are clipped to active horizontal margins when `?69` is enabled:
+    - `ICH` (`CSI Ps @`) shifts only within `left_margin..right_margin`
+    - `DCH` (`CSI Ps P`) deletes/shifts only within `left_margin..right_margin`
+    - `ECH` (`CSI Ps X`) erases only within `left_margin..right_margin`
+  - Outside-margin cells are preserved for these operations.
+  - Evidence:
+    - PTY/unit integration: `src/terminal_focus_reporting_tests.zig`
+      - `terminal DECSLRM clips ICH DCH ECH edits to active horizontal margins`
+    - replay:
+      - `fixtures/terminal/decslrm_margin_clips_ich_dch_ech.*`
+
 Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft terminal reset):
 - Reference anchors:
   - xterm docs define `CSI ! p` as `DECSTR` (soft terminal reset), VT220+ (`reference_repos/terminals/xterm_snapshots/ctlseqs.txt`).

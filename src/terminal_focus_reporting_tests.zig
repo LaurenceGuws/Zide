@@ -265,6 +265,34 @@ test "terminal DECSLRM applies margins only when ?69 mode is enabled" {
     }.run);
 }
 
+test "terminal DECSLRM clips ICH DCH ECH edits to active horizontal margins" {
+    const allocator = std.testing.allocator;
+    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    defer session.deinit();
+
+    terminal.debugFeedBytes(session, "ABCDEFGHIJKL");
+    // Enable DECSLRM and set margins to columns 3..8 (0-based 2..7).
+    terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
+    terminal.debugFeedBytes(session, "\x1b[1;5H"); // row 1, col 5 (inside margin)
+    terminal.debugFeedBytes(session, "\x1b[2@\x1b[P\x1b[2X"); // ICH 2, DCH 1, ECH 2
+
+    // Outside-margin cells should remain unchanged.
+    try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(0, 1).codepoint);
+    try std.testing.expectEqual(@as(u32, 'I'), session.getCell(0, 8).codepoint);
+    try std.testing.expectEqual(@as(u32, 'J'), session.getCell(0, 9).codepoint);
+    try std.testing.expectEqual(@as(u32, 'K'), session.getCell(0, 10).codepoint);
+    try std.testing.expectEqual(@as(u32, 'L'), session.getCell(0, 11).codepoint);
+
+    // Margin interior reflects clipped edits only within 3..8.
+    try std.testing.expectEqual(@as(u32, 'C'), session.getCell(0, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), session.getCell(0, 3).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), session.getCell(0, 4).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), session.getCell(0, 5).codepoint);
+    try std.testing.expectEqual(@as(u32, 'F'), session.getCell(0, 6).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), session.getCell(0, 7).codepoint);
+}
+
 test "terminal DECRQM strategic fixed-off private modes report permanently reset (Pm=4)" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
