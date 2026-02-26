@@ -953,41 +953,53 @@ pub const Screen = struct {
         const cols = @as(usize, self.grid.cols);
         if (cols == 0) return;
         if (self.cursor.row >= @as(usize, self.grid.rows)) return;
+        const left = self.leftBoundary();
+        const right = self.rightBoundary();
         const col = self.cursor.col;
-        if (col >= cols) return;
-        const n = @min(count, cols - col);
+        if (col < left or col > right or col >= cols) return;
+        const end_excl = right + 1;
+        const n = @min(count, end_excl - col);
+        if (n == 0) return;
         const row_start = self.cursor.row * cols;
         const line = self.grid.cells.items[row_start .. row_start + cols];
-        if (cols - col > n) {
-            std.mem.copyBackwards(types.Cell, line[col + n ..], line[col .. cols - n]);
+        if (end_excl - col > n) {
+            std.mem.copyBackwards(types.Cell, line[col + n .. end_excl], line[col .. end_excl - n]);
         }
         for (line[col .. col + n]) |*cell| cell.* = blank_cell;
-        self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, cols - 1);
+        self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, right);
     }
 
     pub fn deleteChars(self: *Screen, count: usize, blank_cell: types.Cell) void {
         const cols = @as(usize, self.grid.cols);
         if (cols == 0) return;
         if (self.cursor.row >= @as(usize, self.grid.rows)) return;
+        const left = self.leftBoundary();
+        const right = self.rightBoundary();
         const col = self.cursor.col;
-        if (col >= cols) return;
-        const n = @min(count, cols - col);
+        if (col < left or col > right or col >= cols) return;
+        const end_excl = right + 1;
+        const n = @min(count, end_excl - col);
+        if (n == 0) return;
         const row_start = self.cursor.row * cols;
         const line = self.grid.cells.items[row_start .. row_start + cols];
-        if (cols - col > n) {
-            std.mem.copyForwards(types.Cell, line[col .. cols - n], line[col + n ..]);
+        if (end_excl - col > n) {
+            std.mem.copyForwards(types.Cell, line[col .. end_excl - n], line[col + n .. end_excl]);
         }
-        for (line[cols - n .. cols]) |*cell| cell.* = blank_cell;
-        self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, cols - 1);
+        for (line[end_excl - n .. end_excl]) |*cell| cell.* = blank_cell;
+        self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, right);
     }
 
     pub fn eraseChars(self: *Screen, count: usize, blank_cell: types.Cell) void {
         const cols = @as(usize, self.grid.cols);
         if (cols == 0) return;
         if (self.cursor.row >= @as(usize, self.grid.rows)) return;
+        const left = self.leftBoundary();
+        const right = self.rightBoundary();
         const col = self.cursor.col;
-        if (col >= cols) return;
-        const n = @min(count, cols - col);
+        if (col < left or col > right or col >= cols) return;
+        const end_excl = right + 1;
+        const n = @min(count, end_excl - col);
+        if (n == 0) return;
         const row_start = self.cursor.row * cols;
         const line = self.grid.cells.items[row_start .. row_start + cols];
         for (line[col .. col + n]) |*cell| cell.* = blank_cell;
