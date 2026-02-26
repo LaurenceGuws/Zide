@@ -623,3 +623,38 @@ test "kitty parse query non-missing-id zlib preflight precedence matrix" {
         try expectKittyQueryNoReply(case_.seq);
     }
 }
+
+test "kitty parse query non-missing-id invalid-offset precedence matrix" {
+    const reply_cases = [_]struct {
+        name: []const u8,
+        seq: []const u8,
+        expected: []const u8,
+    }{
+        .{ .name = "offset baseline emits EINVAL", .seq = "a=q,i=7,O=1,f=32,s=1,v=1;AAAA/w==", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "offset beats invalid format", .seq = "a=q,i=7,O=1,f=999;AA==", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "offset beats malformed payload", .seq = "a=q,i=7,O=1,f=32,s=1,v=1;%%%%", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "offset beats invalid format plus malformed payload", .seq = "a=q,i=7,O=1,f=999;%%%%", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "q1 offset baseline emits EINVAL", .seq = "a=q,i=7,q=1,O=1,f=32,s=1,v=1;AAAA/w==", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "q1 offset beats invalid format and malformed payload", .seq = "a=q,i=7,q=1,O=1,f=999;%%%%", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "q1 offset+zlib preflight beats invalid format and malformed payload", .seq = "a=q,i=7,q=1,O=1,o=z,f=999;%%%%", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+    };
+    inline for (reply_cases) |case_| {
+        _ = case_.name;
+        try expectKittyQueryReply(case_.seq, case_.expected);
+    }
+
+    const no_reply_cases = [_]struct {
+        name: []const u8,
+        seq: []const u8,
+    }{
+        .{ .name = "q2 offset baseline", .seq = "a=q,i=7,q=2,O=1,f=32,s=1,v=1;AAAA/w==" },
+        .{ .name = "q2 offset beats invalid format", .seq = "a=q,i=7,q=2,O=1,f=999;AA==" },
+        .{ .name = "q2 offset beats malformed payload", .seq = "a=q,i=7,q=2,O=1,f=32,s=1,v=1;%%%%" },
+        .{ .name = "q2 offset beats invalid format plus malformed payload", .seq = "a=q,i=7,q=2,O=1,f=999;%%%%" },
+        .{ .name = "q2 offset+zlib preflight beats invalid format plus malformed payload", .seq = "a=q,i=7,q=2,O=1,o=z,f=999;%%%%" },
+    };
+    inline for (no_reply_cases) |case_| {
+        _ = case_.name;
+        try expectKittyQueryNoReply(case_.seq);
+    }
+}
