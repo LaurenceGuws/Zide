@@ -1399,6 +1399,37 @@ test "terminal DECSTR alt-screen kitty placement does not leak to primary after 
     }
 }
 
+test "terminal DECSTR clears hidden primary kitty state while alt screen is active" {
+    const allocator = std.testing.allocator;
+    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    defer session.deinit();
+
+    // Seed kitty state on primary.
+    terminal.debugFeedBytes(
+        session,
+        "\x1b_Ga=t,f=100,i=1;iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=\x1b\\" ++
+            "\x1b_Ga=p,i=1,c=2,r=1,x=1,y=1\x1b\\",
+    );
+    {
+        const snap = session.snapshot();
+        try std.testing.expect(!snap.alt_active);
+        try std.testing.expectEqual(@as(usize, 1), snap.kitty_images.len);
+        try std.testing.expectEqual(@as(usize, 1), snap.kitty_placements.len);
+    }
+
+    // Switch to alt, issue DECSTR (applies to both screens now), then return.
+    terminal.debugFeedBytes(session, "\x1b[?1049h");
+    terminal.debugFeedBytes(session, "\x1b[!p");
+    terminal.debugFeedBytes(session, "\x1b[?1049l");
+
+    {
+        const snap = session.snapshot();
+        try std.testing.expect(!snap.alt_active);
+        try std.testing.expectEqual(@as(usize, 0), snap.kitty_images.len);
+        try std.testing.expectEqual(@as(usize, 0), snap.kitty_placements.len);
+    }
+}
+
 test "terminal CSI ?1004p without $ intermediate does not trigger DECRQM reply" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {

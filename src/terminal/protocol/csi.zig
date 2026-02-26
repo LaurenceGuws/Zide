@@ -499,9 +499,9 @@ fn applyDecstr(self: anytype) void {
     self.column_mode_132 = false;
     self.setSyncUpdates(false);
 
-    // Reset active-screen kitty graphics state as part of DECSTR.
-    // Hidden-screen kitty state is preserved for now (strategic divergence).
-    kitty_mod.clearKittyImages(self);
+    // Reset kitty graphics state across both screens as part of DECSTR.
+    // This follows foot-style soft reset behavior and avoids hidden-screen leaks.
+    kitty_mod.clearAllKittyImages(self);
 
     const screen = self.activeScreen();
     screen.resetState();

@@ -1574,6 +1574,15 @@ pub fn writeKittyResponse(self: anytype, control: KittyControl, image_id: u32, o
 
 pub fn clearKittyImages(self: anytype) void {
     const kitty = kittyState(self);
+    clearKittyImagesState(self, kitty);
+}
+
+pub fn clearAllKittyImages(self: anytype) void {
+    clearKittyImagesState(self, &self.kitty_primary);
+    clearKittyImagesState(self, &self.kitty_alt);
+}
+
+fn clearKittyImagesState(self: anytype, kitty: *KittyState) void {
     for (kitty.images.items) |image| {
         self.allocator.free(image.data);
     }
