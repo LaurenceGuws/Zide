@@ -855,10 +855,12 @@ pub const Renderer = struct {
 
     pub fn drawTerminalTexture(self: *Renderer, x: f32, y: f32) void {
         if (self.terminal_target) |target| {
+            const snapped_x = snapToDevicePixel(x, self.render_scale);
+            const snapped_y = snapToDevicePixel(y, self.render_scale);
             const src = texture_draw.fullTextureSrcRect(target.texture);
             const dest = types.Rect{
-                .x = x,
-                .y = y,
+                .x = snapped_x,
+                .y = snapped_y,
                 .width = @floatFromInt(target.logical_width),
                 .height = @floatFromInt(target.logical_height),
             };
@@ -875,10 +877,12 @@ pub const Renderer = struct {
 
     pub fn drawEditorTexture(self: *Renderer, x: f32, y: f32) void {
         if (self.editor_target) |target| {
+            const snapped_x = snapToDevicePixel(x, self.render_scale);
+            const snapped_y = snapToDevicePixel(y, self.render_scale);
             const src = texture_draw.fullTextureSrcRect(target.texture);
             const dest = types.Rect{
-                .x = x,
-                .y = y,
+                .x = snapped_x,
+                .y = snapped_y,
                 .width = @floatFromInt(target.logical_width),
                 .height = @floatFromInt(target.logical_height),
             };
