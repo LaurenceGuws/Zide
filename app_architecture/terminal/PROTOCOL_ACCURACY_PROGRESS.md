@@ -382,6 +382,20 @@ Planned acceptance by phase:
 - Phase 3: transfer/placement parity fixtures and fixes.
 - Phase 4: animation/composition implement or defer with rationale.
 
+Implemented (increment 35 / `PA-04f` animation/composition path decision):
+- Decision: **defer intentionally** for current Zide scope.
+- Current parser/validation surface explicitly accepts only `a=t/T/p/d/q`; animation/composition-specific kitty actions are not accepted in `validateKittyControl` and remain out-of-scope for this cycle.
+- Rationale:
+  - no active app-compat signal requiring animation/composition support
+  - higher-value parity work remains in `PA-04c` transport/query edge forms and `PA-08h` terminal-control gaps
+  - keeping unsupported actions explicit avoids silent partial behavior drift
+- Resume criteria:
+  - concrete user/app breakage tied to missing kitty animation/composition actions, or
+  - targeted parity mandate with bounded fixture matrix + expected behavior table.
+- Evidence:
+  - source surface lock: `src/terminal/kitty/graphics.zig` (`validateKittyControl`, action gating)
+  - replay/query conformance remains covered by existing `a=q` and delete fixture matrix.
+
 Implemented (increment 2 / `PA-04c` fixture matrix start):
 - Added replay fixtures for kitty delete conformance behavior (state-level coverage):
   - `d=p` explicit point delete removes placement but preserves image storage
@@ -2913,7 +2927,7 @@ Verification:
 - [ ] `PA-04a` Write command surface table (`a=` actions, `d=` delete variants) with status `implemented/partial/todo`
 - [ ] `PA-04b` Document response/error-code conformance targets (`OK/EINVAL/ENOENT/...`) with quiet-mode rules
 - [ ] `PA-04c` Add fixture matrix for query/chunking/mediums/parented placements
-- [ ] `PA-04d` Decide animation/composition path (`implement` / `defer`)
+- [x] `PA-04d` Decide animation/composition path (`implement` / `defer`)
 
 ### PA-08 Parity Decomposition Checklist
 
