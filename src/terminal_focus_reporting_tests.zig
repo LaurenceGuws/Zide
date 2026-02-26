@@ -329,12 +329,7 @@ test "terminal kitty paste events mode emits OSC 5522 mime list and serves text/
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings(
-                    "\x1b]5522;type=read:status=OK\x1b\\"
-                    ++ "\x1b]5522;type=read:status=DATA:mime=Lg==;dGV4dC9wbGFpbgo=\x1b\\"
-                    ++ "\x1b]5522;type=read:status=DATA:mime=Lg==;dGV4dC9odG1sCg==\x1b\\"
-                    ++ "\x1b]5522;type=read:status=DATA:mime=Lg==;dGV4dC91cmktbGlzdAo=\x1b\\"
-                    ++ "\x1b]5522;type=read:status=DATA:mime=Lg==;aW1hZ2UvcG5nCg==\x1b\\"
-                    ++ "\x1b]5522;type=read:status=DONE\x1b\\",
+                    "\x1b]5522;type=read:status=OK\x1b\\" ++ "\x1b]5522;type=read:status=DATA:mime=Lg==;dGV4dC9wbGFpbgo=\x1b\\" ++ "\x1b]5522;type=read:status=DATA:mime=Lg==;dGV4dC9odG1sCg==\x1b\\" ++ "\x1b]5522;type=read:status=DATA:mime=Lg==;dGV4dC91cmktbGlzdAo=\x1b\\" ++ "\x1b]5522;type=read:status=DATA:mime=Lg==;aW1hZ2UvcG5nCg==\x1b\\" ++ "\x1b]5522;type=read:status=DONE\x1b\\",
                     reply,
                 );
             }
@@ -344,9 +339,7 @@ test "terminal kitty paste events mode emits OSC 5522 mime list and serves text/
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings(
-                    "\x1b]5522;type=read:status=OK\x1b\\"
-                    ++ "\x1b]5522;type=read:status=DATA:mime=dGV4dC9wbGFpbg==;aGk=\x1b\\"
-                    ++ "\x1b]5522;type=read:status=DONE\x1b\\",
+                    "\x1b]5522;type=read:status=OK\x1b\\" ++ "\x1b]5522;type=read:status=DATA:mime=dGV4dC9wbGFpbg==;aGk=\x1b\\" ++ "\x1b]5522;type=read:status=DONE\x1b\\",
                     reply,
                 );
             }
@@ -356,9 +349,7 @@ test "terminal kitty paste events mode emits OSC 5522 mime list and serves text/
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings(
-                    "\x1b]5522;type=read:status=OK\x1b\\"
-                    ++ "\x1b]5522;type=read:status=DATA:mime=dGV4dC9odG1s;PGI+aGk8L2I+\x1b\\"
-                    ++ "\x1b]5522;type=read:status=DONE\x1b\\",
+                    "\x1b]5522;type=read:status=OK\x1b\\" ++ "\x1b]5522;type=read:status=DATA:mime=dGV4dC9odG1s;PGI+aGk8L2I+\x1b\\" ++ "\x1b]5522;type=read:status=DONE\x1b\\",
                     reply,
                 );
             }
@@ -368,9 +359,7 @@ test "terminal kitty paste events mode emits OSC 5522 mime list and serves text/
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings(
-                    "\x1b]5522;type=read:status=OK\x1b\\"
-                    ++ "\x1b]5522;type=read:status=DATA:mime=dGV4dC91cmktbGlzdA==;ZmlsZTovLy90bXAvYQo=\x1b\\"
-                    ++ "\x1b]5522;type=read:status=DONE\x1b\\",
+                    "\x1b]5522;type=read:status=OK\x1b\\" ++ "\x1b]5522;type=read:status=DATA:mime=dGV4dC91cmktbGlzdA==;ZmlsZTovLy90bXAvYQo=\x1b\\" ++ "\x1b]5522;type=read:status=DONE\x1b\\",
                     reply,
                 );
             }
@@ -380,9 +369,7 @@ test "terminal kitty paste events mode emits OSC 5522 mime list and serves text/
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings(
-                    "\x1b]5522;type=read:status=OK\x1b\\"
-                    ++ "\x1b]5522;type=read:status=DATA:mime=aW1hZ2UvcG5n;iVBORw0KGgo=\x1b\\"
-                    ++ "\x1b]5522;type=read:status=DONE\x1b\\",
+                    "\x1b]5522;type=read:status=OK\x1b\\" ++ "\x1b]5522;type=read:status=DATA:mime=aW1hZ2UvcG5n;iVBORw0KGgo=\x1b\\" ++ "\x1b]5522;type=read:status=DONE\x1b\\",
                     reply,
                 );
             }
@@ -402,9 +389,7 @@ test "terminal kitty paste events mode supports image-only clipboard payloads" {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings(
-                    "\x1b]5522;type=read:status=OK\x1b\\"
-                    ++ "\x1b]5522;type=read:status=DATA:mime=Lg==;aW1hZ2UvcG5nCg==\x1b\\"
-                    ++ "\x1b]5522;type=read:status=DONE\x1b\\",
+                    "\x1b]5522;type=read:status=OK\x1b\\" ++ "\x1b]5522;type=read:status=DATA:mime=Lg==;aW1hZ2UvcG5nCg==\x1b\\" ++ "\x1b]5522;type=read:status=DONE\x1b\\",
                     reply,
                 );
             }
@@ -429,9 +414,7 @@ test "terminal OSC 5522 read echoes sanitized id metadata" {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings(
-                    "\x1b]5522;type=read:status=OK:id=abc+._-9\x1b\\"
-                    ++ "\x1b]5522;type=read:status=DATA:mime=dGV4dC9wbGFpbg==:id=abc+._-9;aGk=\x1b\\"
-                    ++ "\x1b]5522;type=read:status=DONE:id=abc+._-9\x1b\\",
+                    "\x1b]5522;type=read:status=OK:id=abc+._-9\x1b\\" ++ "\x1b]5522;type=read:status=DATA:mime=dGV4dC9wbGFpbg==:id=abc+._-9;aGk=\x1b\\" ++ "\x1b]5522;type=read:status=DONE:id=abc+._-9\x1b\\",
                     reply,
                 );
             }
@@ -455,9 +438,7 @@ test "terminal OSC 5522 read preserves BEL terminator" {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
                 try std.testing.expectEqualStrings(
-                    "\x1b]5522;type=read:status=OK\x07"
-                    ++ "\x1b]5522;type=read:status=DATA:mime=dGV4dC9wbGFpbg==;aGk=\x07"
-                    ++ "\x1b]5522;type=read:status=DONE\x07",
+                    "\x1b]5522;type=read:status=OK\x07" ++ "\x1b]5522;type=read:status=DATA:mime=dGV4dC9wbGFpbg==;aGk=\x07" ++ "\x1b]5522;type=read:status=DONE\x07",
                     reply,
                 );
             }
@@ -950,7 +931,7 @@ test "terminal alt-scroll ?1007 emits arrows in alt screen" {
     }.run);
 }
 
-test "terminal DECRQM ansi queries report mode 4 and 20 set/reset state" {
+test "terminal DECRQM ansi queries report mode 4, 12 and 20 set/reset state" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
@@ -962,6 +943,7 @@ test "terminal DECRQM ansi queries report mode 4 and 20 set/reset state" {
             };
             const cases = [_]Case{
                 .{ .mode = 4, .set_seq = "\x1b[4h", .reset_seq = "\x1b[4l" },
+                .{ .mode = 12, .set_seq = "\x1b[12h", .reset_seq = "\x1b[12l" },
                 .{ .mode = 20, .set_seq = "\x1b[20h", .reset_seq = "\x1b[20l" },
             };
 
@@ -1000,6 +982,59 @@ test "terminal DECRQM ansi queries report mode 4 and 20 set/reset state" {
             }
         }
     }.run);
+}
+
+test "terminal ANSI local echo mode 12 echoes chars only without PTY" {
+    const allocator = std.testing.allocator;
+    var session = try terminal.TerminalSession.init(allocator, 3, 6);
+    defer session.deinit();
+
+    terminal.debugFeedBytes(session, "\x1b[12h");
+    try session.sendChar('a', terminal.VTERM_MOD_NONE);
+    {
+        const snap = session.snapshot();
+        try std.testing.expectEqual(@as(u32, 'a'), snap.cellAt(0, 0).codepoint);
+        try std.testing.expectEqual(@as(usize, 1), snap.cursor.col);
+    }
+
+    terminal.debugFeedBytes(session, "\x1b[12l");
+    try session.sendChar('b', terminal.VTERM_MOD_NONE);
+    {
+        const snap = session.snapshot();
+        try std.testing.expectEqual(@as(u32, 0), snap.cellAt(0, 1).codepoint);
+        try std.testing.expectEqual(@as(usize, 1), snap.cursor.col);
+    }
+}
+
+test "terminal grapheme cluster mode ?2027 keeps shaping-priority combining mark on overflow" {
+    const allocator = std.testing.allocator;
+    var off = try terminal.TerminalSession.init(allocator, 3, 8);
+    defer off.deinit();
+    var on = try terminal.TerminalSession.init(allocator, 3, 8);
+    defer on.deinit();
+
+    // Turn mode on only for `on`.
+    terminal.debugFeedBytes(on, "\x1b[?2027h");
+
+    // Base + 3 combining marks (capacity is 2); VS16 is the shaping-priority mark.
+    terminal.debugFeedBytes(off, "A\u{0301}\u{0300}\u{FE0F}");
+    terminal.debugFeedBytes(on, "A\u{0301}\u{0300}\u{FE0F}");
+
+    {
+        const snap_off = off.snapshot();
+        const cell_off = snap_off.cellAt(0, 0);
+        try std.testing.expectEqual(@as(u8, 2), cell_off.combining_len);
+        try std.testing.expectEqual(@as(u32, 0x0301), cell_off.combining[0]);
+        try std.testing.expectEqual(@as(u32, 0x0300), cell_off.combining[1]);
+    }
+
+    {
+        const snap_on = on.snapshot();
+        const cell_on = snap_on.cellAt(0, 0);
+        try std.testing.expectEqual(@as(u8, 2), cell_on.combining_len);
+        try std.testing.expectEqual(@as(u32, 0x0301), cell_on.combining[0]);
+        try std.testing.expectEqual(@as(u32, 0xFE0F), cell_on.combining[1]);
+    }
 }
 
 test "terminal DECRQM ansi query returns Pm=0 for unsupported mode per xterm-foot convention" {
@@ -1236,7 +1271,8 @@ test "terminal DECSTR clears active-screen kitty state while alt screen remains 
     defer session.deinit();
 
     terminal.debugFeedBytes(session, "\x1b[?1049h");
-    terminal.debugFeedBytes(session,
+    terminal.debugFeedBytes(
+        session,
         "\x1b_Ga=t,f=100,i=1;iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=\x1b\\" ++
             "\x1b_Ga=p,i=1,c=2,r=1,x=1,y=1\x1b\\",
     );
@@ -1265,7 +1301,8 @@ test "terminal DECSTR alt-screen kitty placement does not leak to primary after 
 
     terminal.debugFeedBytes(session, "P");
     terminal.debugFeedBytes(session, "\x1b[?1049h");
-    terminal.debugFeedBytes(session,
+    terminal.debugFeedBytes(
+        session,
         "\x1b_Ga=t,f=100,i=1;iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=\x1b\\" ++
             "\x1b_Ga=p,i=1,c=2,r=1,x=1,y=1\x1b\\",
     );
