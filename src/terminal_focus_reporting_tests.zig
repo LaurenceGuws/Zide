@@ -235,6 +235,26 @@ test "terminal DECRQM private query reports keypad mode ?66 via DECPAM/DECPNM st
     }.run);
 }
 
+test "terminal DECRQM strategic fixed-off private modes report permanently reset (Pm=4)" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            const modes = [_]i32{ 67, 1001, 1005, 1015, 1034, 1035, 1036, 1042, 1070 };
+
+            for (modes) |mode| {
+                var qbuf: [32]u8 = undefined;
+                const query = try std.fmt.bufPrint(&qbuf, "\x1b[?{d}$p", .{mode});
+                terminal.debugFeedBytes(session, query);
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                const expected = try std.fmt.allocPrint(allocator, "\x1b[?{d};4$y", .{mode});
+                defer allocator.free(expected);
+                try std.testing.expectEqualStrings(expected, reply);
+            }
+        }
+    }.run);
+}
+
 test "terminal DECRQM private query returns Pm=0 for unsupported mode" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
