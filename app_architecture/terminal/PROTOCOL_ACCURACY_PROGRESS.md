@@ -1036,6 +1036,28 @@ Verification:
 - `zig build test-terminal-replay -- --fixture kitty_query_medium_file_success_q1_q2_reply`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 34 / `PA-04c` replay transport error-matrix expansion + `t=s` replay-limit note):
+- Added replay fixtures for additional transport error permutations with explicit quiet split (`q=1` reply, `q=2` suppression):
+  - file medium (`t=f`) missing path
+  - temp medium (`t=t`) missing `tty-graphics-protocol` marker path
+- Documented replay limitation for shared-memory transport (`t=s`):
+  - parse-path unit/integration tests cover `t=s` success/suppression with real shm objects
+  - replay harness remains intentionally file-stream-only for now, so deterministic shm lifecycle fixtures are deferred
+
+Files:
+- `fixtures/terminal/kitty_query_medium_file_missing_q1_q2_reply.vt`
+- `fixtures/terminal/kitty_query_medium_file_missing_q1_q2_reply.json`
+- `fixtures/terminal/kitty_query_medium_file_missing_q1_q2_reply.golden`
+- `fixtures/terminal/kitty_query_medium_temp_missing_marker_q1_q2_reply.vt`
+- `fixtures/terminal/kitty_query_medium_temp_missing_marker_q1_q2_reply.json`
+- `fixtures/terminal/kitty_query_medium_temp_missing_marker_q1_q2_reply.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture kitty_query_medium_file_missing_q1_q2_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_query_medium_file_missing_q1_q2_reply`
+- `zig build test-terminal-replay -- --fixture kitty_query_medium_temp_missing_marker_q1_q2_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_query_medium_temp_missing_marker_q1_q2_reply`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
@@ -2850,8 +2872,8 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `PA-04c` Extend replay-side transport fixture coverage for kitty query mediums (`t=f` additional error permutations; document `t=s` replay limits)
-2. `PA-08h` Implement promoted `DECSLRM` slice (dispatch + behavior + PTY/replay evidence)
+1. `PA-08h` Implement promoted `DECSLRM` slice (dispatch + behavior + PTY/replay evidence)
+2. `PA-04c` Extend replay-side transport fixture coverage for kitty query temp/shared-memory edge forms as feasible
 3. `PA-05c` Extend metadata-aware encoder format usage for `alternate_layout_codepoint` when protocol field support is promoted
 4. `PA-04d` Decide animation/composition support path (`implement` vs explicit defer) with reference-backed rationale
 
