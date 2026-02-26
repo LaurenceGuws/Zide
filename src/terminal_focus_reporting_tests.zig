@@ -312,6 +312,30 @@ test "terminal DECSLRM autowrap continues at left margin" {
     try std.testing.expectEqual(@as(usize, 3), pos.col);
 }
 
+test "terminal DECSLRM clips EL to active horizontal margins" {
+    const allocator = std.testing.allocator;
+    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    defer session.deinit();
+
+    terminal.debugFeedBytes(session, "ABCDEFGHIJKL");
+    terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
+    terminal.debugFeedBytes(session, "\x1b[1;5H\x1b[2K");
+
+    // Outside margins (0..1 and 8..11) must remain untouched.
+    try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(0, 1).codepoint);
+    try std.testing.expectEqual(@as(u32, 'I'), session.getCell(0, 8).codepoint);
+    try std.testing.expectEqual(@as(u32, 'J'), session.getCell(0, 9).codepoint);
+    try std.testing.expectEqual(@as(u32, 'K'), session.getCell(0, 10).codepoint);
+    try std.testing.expectEqual(@as(u32, 'L'), session.getCell(0, 11).codepoint);
+
+    // Margin interior (2..7) should be erased.
+    var c: usize = 2;
+    while (c <= 7) : (c += 1) {
+        try std.testing.expectEqual(@as(u32, 0), session.getCell(0, c).codepoint);
+    }
+}
+
 test "terminal DECRQM strategic fixed-off private modes report permanently reset (Pm=4)" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
