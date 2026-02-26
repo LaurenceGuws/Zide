@@ -936,21 +936,23 @@ pub const Screen = struct {
         const cols = @as(usize, self.grid.cols);
         if (cols == 0 or self.grid.rows == 0) return;
         if (self.cursor.row >= @as(usize, self.grid.rows)) return;
+        const left = self.leftBoundary();
+        const right = self.rightBoundary();
         const row_start = self.cursor.row * cols;
         const col = self.cursor.col;
-        if (col >= cols) return;
+        if (col < left or col > right or col >= cols) return;
         switch (mode) {
             0 => { // cursor to end of line
-                for (self.grid.cells.items[row_start + col .. row_start + cols]) |*cell| cell.* = blank_cell;
-                self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, cols - 1);
+                for (self.grid.cells.items[row_start + col .. row_start + right + 1]) |*cell| cell.* = blank_cell;
+                self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, right);
             },
             1 => { // start to cursor
-                for (self.grid.cells.items[row_start .. row_start + col + 1]) |*cell| cell.* = blank_cell;
-                self.grid.markDirtyRange(self.cursor.row, self.cursor.row, 0, col);
+                for (self.grid.cells.items[row_start + left .. row_start + col + 1]) |*cell| cell.* = blank_cell;
+                self.grid.markDirtyRange(self.cursor.row, self.cursor.row, left, col);
             },
             2 => { // entire line
-                for (self.grid.cells.items[row_start .. row_start + cols]) |*cell| cell.* = blank_cell;
-                self.grid.markDirtyRange(self.cursor.row, self.cursor.row, 0, cols - 1);
+                for (self.grid.cells.items[row_start + left .. row_start + right + 1]) |*cell| cell.* = blank_cell;
+                self.grid.markDirtyRange(self.cursor.row, self.cursor.row, left, right);
             },
             else => {},
         }
