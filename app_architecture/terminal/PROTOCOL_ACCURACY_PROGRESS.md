@@ -1667,7 +1667,7 @@ Implemented (increment 2 / `PA-08b` DCS/APC gap inventory + implement/defer poli
 |---|---|---|---|---|---|
 | DCS XTGETTCAP | `DCS + q` termcap query | implemented (minimal) | foot/rio docs list/support XTGETTCAP (`reference_repos/terminals/rio/docs/docs/escape-sequence-support.md`) | keep + expand on demand | already test-locked via PTY + replay; extend only if missing caps are demanded by apps |
 | DCS DECRQSS/DECRPSS | request/report setting strings | not implemented | xterm control-sequence family (`reference_repos/terminals/xterm_snapshots/ctlseqs.txt`) | defer | promote only with concrete app demand; add PTY reply tests before implementation |
-| DCS sync-update legacy form | `DCS = s` | not implemented | rio/alacritty docs mark this rejected in favor of `CSI ? 2026 h/l` (`reference_repos/terminals/rio/docs/docs/escape-sequence-support.md`, `reference_repos/terminals/alacritty/docs/escape_support.md`) | strategic non-support | keep rejected; maintain `CSI ?2026` path only |
+| DCS sync-update legacy form | `DCS = s` (`=1s` / `=2s`) | implemented (compat alias) | rio/alacritty docs mark this rejected in favor of `CSI ? 2026 h/l` (`reference_repos/terminals/rio/docs/docs/escape-sequence-support.md`, `reference_repos/terminals/alacritty/docs/escape_support.md`) | implemented (bounded) | map `=1s`/`=2s` to existing sync-updates mode state, ignore other values, keep `CSI ?2026` as primary path |
 | DCS sixel/DRCS graphics | sixel payload families | not implemented | rio advertises sixel support; broad surface (`reference_repos/terminals/rio/docs/docs/features/sixel-protocol.md`) | defer | separate large-scope graphics project; not in PA-08 near-term scope |
 | APC kitty graphics | `APC G ... ST` | implemented (partial protocol surface under PA-04) | kitty/ghostty convention | keep expanding under PA-04 | continue PA-04 command/error/reply conformance work |
 | APC non-kitty payloads | generic APC app commands | ignored | parser capability exists in reference parsers (rio/copa) but no strong cross-terminal standard behavior | strategic non-support for now | keep ignore-by-default; only promote with explicit product need |
@@ -1675,6 +1675,26 @@ Implemented (increment 2 / `PA-08b` DCS/APC gap inventory + implement/defer poli
 
 Verification:
 - source audit + reference doc audit only (inventory increment)
+
+Implemented (increment 3 / `PA-08b` legacy DCS sync-updates compatibility alias):
+- Added bounded support for legacy synchronized-update DCS controls:
+  - `DCS = 1 s` enables sync updates (equivalent to `CSI ? 2026 h`)
+  - `DCS = 2 s` disables sync updates (equivalent to `CSI ? 2026 l`)
+  - unsupported values are ignored (no reply)
+- This keeps `CSI ?2026` as the canonical mode path while improving compatibility
+  with apps/tools that still emit the historical DCS form.
+
+Files:
+- `src/terminal/protocol/dcs_apc.zig`
+- `src/terminal_focus_reporting_tests.zig`
+- `fixtures/terminal/dcs_legacy_sync_updates_query_reply.vt`
+- `fixtures/terminal/dcs_legacy_sync_updates_query_reply.json`
+- `fixtures/terminal/dcs_legacy_sync_updates_query_reply.golden`
+
+Verification:
+- `zig build test-terminal-focus-reporting`
+- `zig build test-terminal-replay -- --fixture dcs_legacy_sync_updates_query_reply --update-goldens`
+- `zig build test-terminal-replay -- --all`
 
 Implemented (increment 2 / `PA-08e` promoted high-value CSI gap: `?1004` focus reporting):
 - Implemented CSI private mode handling for `?1004 h/l` (focus reporting enable/disable).

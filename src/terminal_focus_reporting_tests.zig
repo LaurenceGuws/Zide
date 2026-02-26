@@ -789,6 +789,51 @@ test "terminal color scheme notifications ?2031 reply to DSR ?996 and emit on ch
     }.run);
 }
 
+test "terminal legacy DCS sync updates toggles ?2026 mode state" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+
+            terminal.debugFeedBytes(session, "\x1b[?2026$p");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[?2026;2$y", reply);
+            }
+
+            terminal.debugFeedBytes(session, "\x1bP=1s\x1b\\");
+            try capture.expectNoReply();
+
+            terminal.debugFeedBytes(session, "\x1b[?2026$p");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[?2026;1$y", reply);
+            }
+
+            terminal.debugFeedBytes(session, "\x1bP=2s\x1b\\");
+            try capture.expectNoReply();
+
+            terminal.debugFeedBytes(session, "\x1b[?2026$p");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[?2026;2$y", reply);
+            }
+
+            // Unsupported legacy DCS value is ignored and does not emit a reply.
+            terminal.debugFeedBytes(session, "\x1bP=3s\x1b\\");
+            try capture.expectNoReply();
+            terminal.debugFeedBytes(session, "\x1b[?2026$p");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[?2026;2$y", reply);
+            }
+        }
+    }.run);
+}
+
 test "terminal grapheme cluster mode ?2027 first slice is queryable no-op for text model" {
     const allocator = std.testing.allocator;
 
