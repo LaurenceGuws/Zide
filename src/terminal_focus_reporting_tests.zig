@@ -1500,6 +1500,24 @@ test "terminal CSI #p does not trigger DECRQM reply" {
     }.run);
 }
 
+test "terminal CSI malformed p-family intermediates do not trigger DECRQM or DECSTR" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const cases = [_][]const u8{
+                "\x1b[?1004$!p", // malformed mixed DECRQM+DECSTR intermediates
+                "\x1b[20!$p",    // malformed ansi mixed-intermediate form
+                "\x1b[##p",      // unsupported repeated intermediate
+                "\x1b[?!p",      // private+intermediate without DECRQM form
+            };
+
+            for (cases) |seq| {
+                terminal.debugFeedBytes(session, seq);
+                try capture.expectNoReply();
+            }
+        }
+    }.run);
+}
+
 test "terminal widget focus source toggles gate window and pane reports" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {

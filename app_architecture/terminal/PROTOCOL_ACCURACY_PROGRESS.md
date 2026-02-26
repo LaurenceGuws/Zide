@@ -1849,10 +1849,33 @@ Verification:
 - `zig build test-terminal-focus-reporting`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 11 / `PA-08f` malformed-intermediate dispatch lock):
+- Expanded PTY no-reply coverage for malformed `CSI ... p` intermediate combinations so
+  intermediate-aware dispatch remains exact and non-overlapping:
+  - `CSI ?1004$!p`
+  - `CSI 20!$p`
+  - `CSI ##p`
+  - `CSI ?!p`
+- Expanded replay no-reply fixture coverage for the same malformed forms under
+  `csi_p_intermediate_non_decrqm_no_reply`.
+- This closes the remaining ambiguity gap for parity-critical `p`-family intermediate
+  dispatch in current scope (`DECRQM` requires exact `$`, `DECSTR` requires exact `!`).
+
+Files:
+- `src/terminal_focus_reporting_tests.zig`
+- `fixtures/terminal/csi_p_intermediate_non_decrqm_no_reply.vt`
+- `fixtures/terminal/csi_p_intermediate_non_decrqm_no_reply.golden`
+
+Verification:
+- `zig build test-terminal-focus-reporting`
+- `zig build test-terminal-replay -- --fixture csi_p_intermediate_non_decrqm_no_reply --update-goldens`
+- `zig build test-terminal-replay -- --all`
+
 Planned work (decomposition / `PA-08f` CSI parser intermediate-byte parity):
+- Status note (2026-02-26): **implemented for current parity-critical scope**. The plan below is retained as historical decomposition context.
 - Problem statement:
-  - Zide's CSI parser currently records `final`, `params`, `leader`, and `private`, but drops CSI intermediate bytes entirely (`src/terminal/parser/csi.zig`).
-  - Current `DECRQM` support is handled opportunistically by final-byte dispatch (`'p'`) plus leader/private checks, with an explicit code comment documenting the parser limitation (`src/terminal/protocol/csi.zig`).
+  - (historical) Zide's CSI parser previously recorded `final`, `params`, `leader`, and `private` but dropped CSI intermediate bytes.
+  - (historical) `DECRQM` support previously depended on final-byte dispatch without exact intermediate matching.
 - Why parity work requires this:
   - xterm control sequences define distinct CSI families that differ only by intermediate bytes (e.g. `CSI Ps $ p` `DECRQM`, `CSI ! p` `DECSTR`, `CSI ? Ps $ p` DEC-private `DECRQM`).
   - kitty and ghostty both parse CSI intermediates and branch on them; ghostty explicitly logs/ignores unimplemented sequences by final+intermediate combinations rather than conflating by final byte (`reference_repos/terminals/ghostty/src/terminal/stream.zig`, `reference_repos/terminals/kitty/kitty/vt-parser.c`).
@@ -1888,8 +1911,8 @@ Planned work (decomposition / `PA-08g` `DECRQM` / `DECRPM` parity breadth + repl
 - Current Zide state (partial milestone):
   - Implemented DEC-private `DECRQM` for a useful common subset and ANSI mode `20`.
   - Unsupported ANSI/DEC queries reply `Pm=0` (xterm/foot-compatible convention already locked by tests).
-  - `Pm=3/4` is not yet emitted for fixed/permanent modes.
-  - Parser intermediate handling is still a blocker for clean parity expansion (`PA-08f`).
+  - `Pm=4` is emitted for strategic fixed-off private modes; `Pm=3` is intentionally not emitted in current policy scope.
+  - Parser intermediate handling is implemented for parity-critical `p` families (`PA-08f` scope complete).
 - `PA-08g` done looks like:
   - Supported ANSI and DEC-private `DECRQM` mode set is explicitly documented against references (`xterm` / `kitty` / `ghostty`, checked with `foot` where useful).
   - Unsupported-mode policy is explicit and test-locked (`Pm=0` vs `Pm=4` by mode/category, if differentiated).
@@ -2622,6 +2645,6 @@ Verification:
 - [ ] `PA-08b` Inventory DCS/APC gaps relative to kitty/ghostty/foot usage, with explicit `implement` vs `defer` policy per family
 - [x] `PA-08c` Define PTY-stub replay strategy for query/reply assertions (implemented as `reply_hex` + `assertions: ["reply"]`)
 - [x] `PA-08d` Promote highest-value gaps into implementable tracker items (`?1004` promoted and implemented under `PA-08e`)
-- [ ] `PA-08f` Implement or explicitly defer CSI intermediate-byte parser support required for parity-critical CSI families
+- [x] `PA-08f` Implement or explicitly defer CSI intermediate-byte parser support required for parity-critical CSI families
 - [ ] `PA-08g` Define and test-lock `DECRQM`/`DECRPM` parity scope (mode coverage + `Pm` reply semantics) against `xterm`/`kitty`/`ghostty`
 - [ ] `PA-08h` Close or defer remaining promoted CSI/private-mode gaps with compatibility notes before advancing new top-level parity areas
