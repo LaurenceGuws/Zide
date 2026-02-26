@@ -788,3 +788,34 @@ test "kitty parse query medium file/temp success matrix" {
     try expectKittyQueryNoReply(seq_temp_q2);
     try std.testing.expectError(error.FileNotFound, std.fs.accessAbsolute(temp_path_q2, .{}));
 }
+
+test "kitty parse query non-missing-id mixed chunk+offset precedence matrix" {
+    const reply_cases = [_]struct {
+        name: []const u8,
+        seq: []const u8,
+        expected: []const u8,
+    }{
+        .{ .name = "q1 mixed m+O without compression", .seq = "a=q,i=7,q=1,m=1,O=1,f=32,s=1,v=1;AAAA/w==", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "q1 mixed m+O with zlib", .seq = "a=q,i=7,q=1,m=1,O=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1, .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "q1 mixed m+O beats invalid format + malformed", .seq = "a=q,i=7,q=1,m=1,O=1,f=999;%%%%", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .name = "q1 mixed m+O+z beats invalid format + malformed", .seq = "a=q,i=7,q=1,m=1,O=1,o=z,f=999;%%%%", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+    };
+    inline for (reply_cases) |case_| {
+        _ = case_.name;
+        try expectKittyQueryReply(case_.seq, case_.expected);
+    }
+
+    const no_reply_cases = [_]struct {
+        name: []const u8,
+        seq: []const u8,
+    }{
+        .{ .name = "q2 mixed m+O without compression", .seq = "a=q,i=7,q=2,m=1,O=1,f=32,s=1,v=1;AAAA/w==" },
+        .{ .name = "q2 mixed m+O with zlib", .seq = "a=q,i=7,q=2,m=1,O=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1 },
+        .{ .name = "q2 mixed m+O beats invalid format + malformed", .seq = "a=q,i=7,q=2,m=1,O=1,f=999;%%%%" },
+        .{ .name = "q2 mixed m+O+z beats invalid format + malformed", .seq = "a=q,i=7,q=2,m=1,O=1,o=z,f=999;%%%%" },
+    };
+    inline for (no_reply_cases) |case_| {
+        _ = case_.name;
+        try expectKittyQueryNoReply(case_.seq);
+    }
+}
