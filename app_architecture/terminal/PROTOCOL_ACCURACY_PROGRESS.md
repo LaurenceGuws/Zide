@@ -283,6 +283,22 @@ Files:
 Verification:
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 11):
+- Expanded `XTGETTCAP` reply coverage for multi-cap requests:
+  - unit coverage locks ordered concatenated replies for `TN`, `Co`, `RGB`, and unknown-cap failure in one `DCS +q ...` request.
+  - replay coverage locks the same end-to-end byte stream in fixture flow.
+
+Files:
+- `src/terminal_protocol_reply_tests.zig`
+- `fixtures/terminal/dcs_xtgettcap_multi_query_reply.vt`
+- `fixtures/terminal/dcs_xtgettcap_multi_query_reply.json`
+- `fixtures/terminal/dcs_xtgettcap_multi_query_reply.golden`
+
+Verification:
+- `zig test src/terminal_protocol_reply_tests.zig -lc`
+- `zig build test-terminal-replay -- --fixture dcs_xtgettcap_multi_query_reply --update-goldens`
+- `zig build test-terminal-replay -- --all`
+
 Completion note (scope of `done`):
 - `PA-02` is considered `done` for test-infrastructure purposes because assertion metadata is enforced semantically for the active tags we rely on and replay-level reply assertions now cover representative query/reply families (`DA/DSR/OSC/DCS/kitty`).
 - This does **not** imply exhaustive protocol parity coverage; future fixtures can extend the replay reply matrix as new protocol slices are implemented.

@@ -27,6 +27,8 @@ test "DCS XTGETTCAP writes TN reply" {
     const Self = struct {
         allocator: std.mem.Allocator,
         pty: ?FakePty,
+
+        pub fn setSyncUpdates(_: *@This(), _: bool) void {}
     };
 
     var self = Self{ .allocator = allocator, .pty = FakePty.init() };
@@ -42,6 +44,8 @@ test "DCS XTGETTCAP writes failure reply for unknown cap" {
     const Self = struct {
         allocator: std.mem.Allocator,
         pty: ?FakePty,
+
+        pub fn setSyncUpdates(_: *@This(), _: bool) void {}
     };
 
     var self = Self{ .allocator = allocator, .pty = FakePty.init() };
@@ -49,6 +53,30 @@ test "DCS XTGETTCAP writes failure reply for unknown cap" {
     dcs_apc.parseDcs(&self, "+q5A5A"); // hex("ZZ")
 
     try std.testing.expectEqualStrings("\x1bP0+r5A5A\x1b\\", self.pty.?.writes.items);
+}
+
+test "DCS XTGETTCAP writes ordered replies for multi-cap request" {
+    const allocator = std.testing.allocator;
+
+    const Self = struct {
+        allocator: std.mem.Allocator,
+        pty: ?FakePty,
+
+        pub fn setSyncUpdates(_: *@This(), _: bool) void {}
+    };
+
+    var self = Self{ .allocator = allocator, .pty = FakePty.init() };
+    defer if (self.pty) |*pty| pty.deinit(allocator);
+    // TN ; Co ; RGB ; ZZ (unknown)
+    dcs_apc.parseDcs(&self, "+q544E;436F;524742;5A5A");
+
+    try std.testing.expectEqualStrings(
+        "\x1bP1+r544E=7A696465\x1b\\" ++
+            "\x1bP1+r436F=323536\x1b\\" ++
+            "\x1bP1+r524742=38\x1b\\" ++
+            "\x1bP0+r5A5A\x1b\\",
+        self.pty.?.writes.items,
+    );
 }
 
 test "OSC 52 clipboard query preserves BEL terminator" {
