@@ -5,7 +5,9 @@ pub fn parseDcs(self: anytype, payload: []const u8) void {
     if (payload.len < 2) return;
     if (payload[0] == '+' and payload[1] == 'q') {
         handleXtgettcap(self, payload[2..]);
+        return;
     }
+    _ = handleLegacySyncUpdates(self, payload);
 }
 
 pub fn parseApc(self: anytype, payload: []const u8) void {
@@ -102,4 +104,21 @@ fn hexNibble(c: u8) ?u8 {
         'A'...'F' => c - 'A' + 10,
         else => null,
     };
+}
+
+fn handleLegacySyncUpdates(self: anytype, payload: []const u8) bool {
+    // Legacy synchronized update control:
+    // DCS = 1 s ST -> enable
+    // DCS = 2 s ST -> disable
+    if (payload.len < 3) return false;
+    if (payload[0] != '=' or payload[payload.len - 1] != 's') return false;
+    const raw = std.mem.trim(u8, payload[1 .. payload.len - 1], " ;");
+    if (raw.len == 0) return false;
+    const mode = std.fmt.parseInt(u8, raw, 10) catch return false;
+    switch (mode) {
+        1 => self.setSyncUpdates(true),
+        2 => self.setSyncUpdates(false),
+        else => return false,
+    }
+    return true;
 }
