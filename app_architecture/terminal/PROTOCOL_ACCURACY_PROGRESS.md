@@ -1914,7 +1914,7 @@ Planned work (decomposition / `PA-08g` `DECRQM` / `DECRPM` parity breadth + repl
     - [x] `Pm=0` for unsupported ANSI/DEC query in current implemented scope
     - [ ] Define criteria for `Pm=3/4` use in Zide (feature permanently on/off vs unsupported/not recognized)
     - [x] Add explicit fixture/unit cases that lock the current strategic `Pm=4` mode set
-    - [ ] Decide and lock whether `Pm=3` is used in any Zide mode family
+    - [x] Decide and lock whether `Pm=3` is used in any Zide mode family (currently not used)
 - Suggested small-commit sequence for `PA-08g`:
   1. Docs-only mode inventory table (current implemented DEC/ANSI set vs reference-candidate set) with `implement/defer` decisions.
   2. Behavior-preserving refactor to centralize `DECRQM` mode classification/state policy (easier table-driven testing).
@@ -2169,6 +2169,12 @@ Notes:
   - Evidence:
     - PTY integration: `src/terminal_focus_reporting_tests.zig` (`terminal DECRQM strategic fixed-off private modes report permanently reset (Pm=4)`)
     - replay: `fixtures/terminal/decrqm_strategic_fixed_off_query_reply.*` (`reply_hex` asserted end-to-end)
+- `PA-08g` implementation slice (2026-02-26, `Pm=3` policy lock):
+  - Decision:
+    - Zide does not currently emit `Pm=3` (`permanently set`) for any `DECRPM` mode family.
+    - Use `Pm=1/2` for dynamic set/reset modes, `Pm=4` for strategic fixed-off modes, and `Pm=0` for not-recognized/provisional unsupported rows.
+  - Evidence:
+    - PTY integration: `src/terminal_focus_reporting_tests.zig` (`terminal DECRQM emits no Pm=3 replies in current policy scope`) guards representative ANSI/DEC/strategic-fixed-off queries against `;3$y`.
 - `PA-08g` implementation slice (2026-02-23, `?2027` grapheme-cluster shaping mode, first slice):
   - Decision: implement a **queryable no-op semantics** first slice (real mode state + documented no-op behavior boundary), then defer renderer/shaping behavior changes to a later slice.
   - Reference direction:
