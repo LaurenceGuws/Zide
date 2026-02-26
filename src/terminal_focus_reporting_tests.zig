@@ -1563,6 +1563,25 @@ test "terminal CSI malformed p-family intermediates do not trigger DECRQM or DEC
     }.run);
 }
 
+test "terminal CSI 18 t reports text area size in chars" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+
+            terminal.debugFeedBytes(session, "\x1b[18t");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[8;6;12t", reply);
+            }
+
+            // Unsupported window-op mode: no reply.
+            terminal.debugFeedBytes(session, "\x1b[99t");
+            try capture.expectNoReply();
+        }
+    }.run);
+}
+
 test "terminal widget focus source toggles gate window and pane reports" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
