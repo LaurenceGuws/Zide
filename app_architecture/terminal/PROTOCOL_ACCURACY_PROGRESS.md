@@ -2491,6 +2491,45 @@ Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft 
   - hard-reset-like behavior (screen clear, scrollback wipe, kitty image wipe)
   - broader CSI reset-family parity beyond `DECSTR` (tracked separately in `PA-08h` promoted gaps / `PA-08a`)
 
+Implemented (increment 12 / `PA-08h` promoted-gap closure pass: explicit implement/defer classification):
+- Added an explicit closure classification for the remaining promoted CSI/private rows
+  outside the landed `DECSTR` slice. This is docs-only (no behavior change).
+- Purpose: keep `PA-08h` auditable and prevent ambiguous `partial` drift.
+
+Remaining promoted rows (`PA-08h`) and disposition:
+- `DECSLRM` (`CSI ? Ps s` / left-right margins):
+  - classification: `implement next` (not strategic non-support)
+  - reference basis: xterm ctlseqs + ghostty margin-aware terminal flow indicate this is real, relevant support.
+  - done criteria:
+    - parser/dispatch + mode behavior in viewport model
+    - interaction lock with `DECOM` and cursor-motion boundaries
+    - PTY + replay fixtures for margin movement/erase behavior
+- Broader reset-family rows beyond `DECSTR`:
+  - classification: `defer intentionally`
+  - reason: no current app breakage signal; `DECSTR` semantics are already test-locked.
+  - resume criteria:
+    - app compatibility failure tied to a specific reset-family sequence, or
+    - clear high-impact reference divergence requiring parity change
+- Xterm window-op breadth beyond `14/16/18/19`:
+  - classification: `defer intentionally`
+  - reason: low TUI impact relative to active protocol priorities.
+  - resume criteria:
+    - concrete app/tool demand for specific additional `CSI ... t` modes
+    - PTY + replay reply fixtures per promoted mode
+- Alternate mouse encodings (`?1005`, `?1015`):
+  - classification: `strategic non-support` (fixed-off)
+  - reference basis: modern terminals/apps favor SGR mouse paths; legacy encodings remain optional compatibility surface.
+  - keep policy: continue `Pm=4` for these rows (already test-locked) unless product direction changes.
+- Legacy tab-stop report/edit variants:
+  - classification: `defer intentionally`
+  - reason: low observed demand in active app/test set.
+  - resume criteria:
+    - fixture or app requiring a specific missing variant, then implement + replay lock.
+
+Evidence anchors:
+- Inventory + references: `PA-08a` table entries for DECSLRM, window-op breadth, tab variants, alternate mouse encodings.
+- Existing lock points: `src/terminal/protocol/csi.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/decrqm_*`, `fixtures/terminal/csi_window_ops_*`.
+
 Implemented (increment 1 / `PA-08h` `DECSTR` first safe subset):
 - Added explicit `CSI ! p` dispatch handling using CSI intermediate-aware matching (`!`), distinct from `DECRQM` (`$`).
 - Implemented a non-destructive soft reset helper that resets parser/mode state and active-screen soft state without calling the hard reset path.
@@ -2747,10 +2786,10 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `PA-08f` CSI parser intermediate-byte parity decomposition + implementation plan (`$`, `!`, and dispatch impact)
-2. `PA-08g` `DECRQM`/`DECRPM` parity breadth checklist (supported ANSI/DEC mode set + reply-value policy vs references)
-3. `PA-05b` Thread layout/base-key metadata through input path using `PA-05a` contract
-4. `PA-04` Kitty graphics parity decomposition
+1. `PA-04c` Extend kitty query transport matrix with `t=f/t/s` success/error path fixtures (including quiet-mode precedence)
+2. `PA-08h` Implement promoted `DECSLRM` slice (dispatch + behavior + PTY/replay evidence)
+3. `PA-05c` Extend metadata-aware encoder format usage for `alternate_layout_codepoint` when protocol field support is promoted
+4. `PA-04d` Decide animation/composition support path (`implement` vs explicit defer) with reference-backed rationale
 
 ## Decomposition Backlog (New)
 
