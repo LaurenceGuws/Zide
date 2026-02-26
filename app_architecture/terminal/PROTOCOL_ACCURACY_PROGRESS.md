@@ -1940,7 +1940,7 @@ High-value ANSI modes:
 |---|---|---|---|---|---|---|---|
 | `20` | newline (LNM) | implemented | `Y` | `Y` | `Y` | docs family | implemented and test-locked |
 | `4` | insert (IRM) | implemented (`1/2`) | `?` | `Y` | `Y` | docs family | implemented with real insert-mode write semantics + DECRQM |
-| `12` | send/receive (SRM) | `Pm=0` | `?` | `Y` | `-` | docs family | lower immediate TUI value |
+| `12` | send/receive (SRM) | implemented (`1/2`) | `?` | `Y` | `-` | docs family | implemented first slice as no-PTY local echo toggle |
 
 High-value DEC private modes (common TUI / modern terminal usage):
 
@@ -1963,7 +1963,7 @@ Current strategic non-support rows (`Pm=4`) are retained only where references a
 |---|---|---|---|---|---|
 | ANSI `DECRQM` | `20` (newline) | implemented | `1/2` state, `0` unsupported others | xterm/foot | keep |
 | ANSI `DECRQM` | `4` (insert), `20` (newline) | implemented | `1/2` | xterm/kitty/ghostty | `4` now implemented with IRM behavior + DECRQM; `20` unchanged |
-| ANSI `DECRQM` | `12` (local echo), other ANSI queryable modes | not implemented | `0` | xterm/foot/ghostty parsing model | audit + decide `implement/defer` |
+| ANSI `DECRQM` | `12` (local echo), other ANSI queryable modes | `12` implemented, others pending | `12 => 1/2`, others `0` | xterm/foot/ghostty parsing model | continue mode-by-mode |
 | DEC private `DECRQM` | `?1 ?3 ?5 ?6 ?7 ?25 ?47 ?1047 ?1049` | implemented | `1/2` | xterm/foot | keep |
 | DEC private `DECRQM` | `?1000 ?1002 ?1003 ?1004 ?1006 ?2004 ?2026` | implemented | `1/2` | xterm/foot/kitty app usage | keep |
 | DEC private `DECRQM` | `?66` (application keypad) | implemented | `1/2` | foot/xterm VT semantics | implemented via existing `DECPAM` / `DECPNM` state |
@@ -2206,6 +2206,26 @@ Notes:
     - replay/PTy evidence:
       - `fixtures/terminal/decrqm_query_matrix_reply.*` (query/set/reset replies)
       - `fixtures/terminal/decstr_resets_modes_query_reply.*` (reset-to-default reply after `DECSTR`)
+
+- `PA-08g` implementation slice (2026-02-26, `?2027` grapheme-cluster shaping mode, second slice):
+  - Implemented first real behavior toggle beyond query-only no-op:
+    - when a cell's combining-mark storage is full, `?2027` now preserves shaping-priority marks (`ZWJ`, `VS16`, emoji skin-tone modifiers) by replacing the last stored combining mark.
+    - when `?2027` is reset/default, overflow behavior remains unchanged (drop extra combining mark).
+  - Scope:
+    - keeps parser/storage model unchanged; only affects overflow replacement policy for shaping-critical marks.
+  - Evidence:
+    - PTY/unit integration: `src/terminal_focus_reporting_tests.zig` (`terminal grapheme cluster mode ?2027 keeps shaping-priority combining mark on overflow`)
+    - replay: `fixtures/terminal/decrqm_query_matrix_reply.*` (query/set/reset replies remain locked)
+
+- `PA-08g` implementation slice (2026-02-26, ANSI mode `12` local echo first slice):
+  - Implemented `DECRQM/SM/RM` for ANSI mode `12` with real behavior:
+    - `DECRQM 12` returns `Pm=1/2`
+    - with no PTY attached and mode `12` enabled, printable `sendChar` input is echoed to the terminal model
+    - with mode `12` reset, no local echo occurs
+  - Evidence:
+    - PTY/unit integration: `src/terminal_focus_reporting_tests.zig` (`terminal DECRQM ansi queries report mode 4, 12 and 20 set/reset state`)
+    - PTY/unit integration: `src/terminal_focus_reporting_tests.zig` (`terminal ANSI local echo mode 12 echoes chars only without PTY`)
+    - replay: `fixtures/terminal/decrqm_query_matrix_reply.*` now includes ANSI `12` query/set/reset replies
 
 Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft terminal reset):
 - Reference anchors:
