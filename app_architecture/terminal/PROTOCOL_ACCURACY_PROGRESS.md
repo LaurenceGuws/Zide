@@ -1656,6 +1656,26 @@ Suggested `PA-08d` promotion candidates (first pass):
 2. `CHT` / `CBT` tab movement coverage (completes currently-partial tab family)
 3. `DECRQM` / minimal mode-report replies for queried private modes seen in reference seeds
 
+Implemented (increment 2 / `PA-08b` DCS/APC gap inventory + implement/defer policy):
+- Added an explicit DCS/APC parity inventory with reference-backed implement/defer
+  decisions for Zide's current protocol scope.
+- This is docs-only classification work; no runtime behavior change in this increment.
+
+`PA-08b` DCS/APC inventory (beyond current XTGETTCAP + kitty APC):
+
+| Family | Sequence scope | Zide status | Reference signal | Decision | Done criteria |
+|---|---|---|---|---|---|
+| DCS XTGETTCAP | `DCS + q` termcap query | implemented (minimal) | foot/rio docs list/support XTGETTCAP (`reference_repos/terminals/rio/docs/docs/escape-sequence-support.md`) | keep + expand on demand | already test-locked via PTY + replay; extend only if missing caps are demanded by apps |
+| DCS DECRQSS/DECRPSS | request/report setting strings | not implemented | xterm control-sequence family (`reference_repos/terminals/xterm_snapshots/ctlseqs.txt`) | defer | promote only with concrete app demand; add PTY reply tests before implementation |
+| DCS sync-update legacy form | `DCS = s` | not implemented | rio/alacritty docs mark this rejected in favor of `CSI ? 2026 h/l` (`reference_repos/terminals/rio/docs/docs/escape-sequence-support.md`, `reference_repos/terminals/alacritty/docs/escape_support.md`) | strategic non-support | keep rejected; maintain `CSI ?2026` path only |
+| DCS sixel/DRCS graphics | sixel payload families | not implemented | rio advertises sixel support; broad surface (`reference_repos/terminals/rio/docs/docs/features/sixel-protocol.md`) | defer | separate large-scope graphics project; not in PA-08 near-term scope |
+| APC kitty graphics | `APC G ... ST` | implemented (partial protocol surface under PA-04) | kitty/ghostty convention | keep expanding under PA-04 | continue PA-04 command/error/reply conformance work |
+| APC non-kitty payloads | generic APC app commands | ignored | parser capability exists in reference parsers (rio/copa) but no strong cross-terminal standard behavior | strategic non-support for now | keep ignore-by-default; only promote with explicit product need |
+| PM/SOS strings | privacy/message strings | not implemented/ignored | parser capabilities exist in rio/copa (`reference_repos/terminals/rio/copa/src/lib.rs`) | strategic non-support for now | keep ignored unless compatibility evidence appears |
+
+Verification:
+- source audit + reference doc audit only (inventory increment)
+
 Implemented (increment 2 / `PA-08e` promoted high-value CSI gap: `?1004` focus reporting):
 - Implemented CSI private mode handling for `?1004 h/l` (focus reporting enable/disable).
 - Added terminal focus-report emission (`ESC[I` / `ESC[O`) gated on the mode bit.
@@ -2642,7 +2662,7 @@ Verification:
 ### PA-08 Parity Decomposition Checklist
 
 - [ ] `PA-08a` Inventory missing CSI finals/private modes from `xterm`/`kitty`/`ghostty` relevant to Zide, with explicit `done` criteria and reference links/notes
-- [ ] `PA-08b` Inventory DCS/APC gaps relative to kitty/ghostty/foot usage, with explicit `implement` vs `defer` policy per family
+- [x] `PA-08b` Inventory DCS/APC gaps relative to kitty/ghostty/foot usage, with explicit `implement` vs `defer` policy per family
 - [x] `PA-08c` Define PTY-stub replay strategy for query/reply assertions (implemented as `reply_hex` + `assertions: ["reply"]`)
 - [x] `PA-08d` Promote highest-value gaps into implementable tracker items (`?1004` promoted and implemented under `PA-08e`)
 - [x] `PA-08f` Implement or explicitly defer CSI intermediate-byte parser support required for parity-critical CSI families
