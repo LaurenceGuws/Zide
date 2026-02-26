@@ -25,8 +25,10 @@ pub const Screen = struct {
     insert_mode: bool,
     origin_mode: bool,
     newline_mode: bool,
+    local_echo_mode_12: bool,
     screen_reverse: bool,
     reverse_wrap: bool,
+    grapheme_cluster_shaping_2027: bool,
     save_cursor_mode_1048: bool,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16, default_attrs: types.CellAttrs) !Screen {
@@ -53,8 +55,10 @@ pub const Screen = struct {
             .insert_mode = false,
             .origin_mode = false,
             .newline_mode = false,
+            .local_echo_mode_12 = false,
             .screen_reverse = false,
             .reverse_wrap = false,
+            .grapheme_cluster_shaping_2027 = false,
             .save_cursor_mode_1048 = false,
         };
     }
@@ -111,8 +115,10 @@ pub const Screen = struct {
         self.insert_mode = false;
         self.origin_mode = false;
         self.newline_mode = false;
+        self.local_echo_mode_12 = false;
         self.screen_reverse = false;
         self.reverse_wrap = false;
+        self.grapheme_cluster_shaping_2027 = false;
         self.save_cursor_mode_1048 = false;
         self.tabstops.reset();
     }
@@ -219,6 +225,14 @@ pub const Screen = struct {
         self.newline_mode = enabled;
     }
 
+    pub fn setLocalEchoMode12(self: *Screen, enabled: bool) void {
+        self.local_echo_mode_12 = enabled;
+    }
+
+    pub fn setGraphemeClusterShaping2027(self: *Screen, enabled: bool) void {
+        self.grapheme_cluster_shaping_2027 = enabled;
+    }
+
     pub fn setScreenReverse(self: *Screen, enabled: bool) void {
         if (self.screen_reverse == enabled) return;
         self.screen_reverse = enabled;
@@ -263,6 +277,10 @@ pub const Screen = struct {
             if (prev.combining_len < prev.combining.len) {
                 prev.combining[prev.combining_len] = cp;
                 prev.combining_len += 1;
+                self.grid.cells.items[prev_idx] = prev;
+                self.grid.markDirtyRange(row, row, prev_col, prev_col);
+            } else if (self.grapheme_cluster_shaping_2027 and isGraphemeClusterPriorityMark(cp)) {
+                prev.combining[prev.combining.len - 1] = cp;
                 self.grid.cells.items[prev_idx] = prev;
                 self.grid.markDirtyRange(row, row, prev_col, prev_col);
             }
@@ -353,6 +371,12 @@ pub const Screen = struct {
             codepoint == 0x200C or codepoint == 0x200D or
             (codepoint >= 0xE0100 and codepoint <= 0xE01EF) or
             (codepoint >= 0x1F3FB and codepoint <= 0x1F3FF);
+    }
+
+    fn isGraphemeClusterPriorityMark(codepoint: u32) bool {
+        return codepoint == 0x200D or // ZWJ
+            codepoint == 0xFE0F or // VS16 emoji presentation
+            (codepoint >= 0x1F3FB and codepoint <= 0x1F3FF); // emoji skin-tone modifiers
     }
 
     pub fn codepointCellWidth(codepoint: u32) u8 {

@@ -262,6 +262,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                     const mode = p[idx];
                     switch (mode) {
                         4 => self.activeScreen().*.setInsertMode(true),
+                        12 => self.activeScreen().*.setLocalEchoMode12(true),
                         20 => self.activeScreen().*.setNewlineMode(true),
                         else => {},
                     }
@@ -298,7 +299,11 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         1049 => self.enterAltScreen(true, true),
                         2004 => self.bracketed_paste = true,
                         2026 => self.setSyncUpdates(true),
-                        2027 => self.grapheme_cluster_shaping_2027 = true,
+                        2027 => {
+                            self.grapheme_cluster_shaping_2027 = true;
+                            self.primary.setGraphemeClusterShaping2027(true);
+                            self.alt.setGraphemeClusterShaping2027(true);
+                        },
                         2031 => self.report_color_scheme_2031 = true,
                         2048 => self.inband_resize_notifications_2048 = true,
                         1004 => {
@@ -340,6 +345,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                     const mode = p[idx];
                     switch (mode) {
                         4 => self.activeScreen().*.setInsertMode(false),
+                        12 => self.activeScreen().*.setLocalEchoMode12(false),
                         20 => self.activeScreen().*.setNewlineMode(false),
                         else => {},
                     }
@@ -376,7 +382,11 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         1049 => self.exitAltScreen(true),
                         2004 => self.bracketed_paste = false,
                         2026 => self.setSyncUpdates(false),
-                        2027 => self.grapheme_cluster_shaping_2027 = false,
+                        2027 => {
+                            self.grapheme_cluster_shaping_2027 = false;
+                            self.primary.setGraphemeClusterShaping2027(false);
+                            self.alt.setGraphemeClusterShaping2027(false);
+                        },
                         2031 => self.report_color_scheme_2031 = false,
                         2048 => self.inband_resize_notifications_2048 = false,
                         1004 => {
@@ -479,6 +489,8 @@ fn applyDecstr(self: anytype) void {
     self.mouse_alternate_scroll = true;
     self.report_color_scheme_2031 = false;
     self.grapheme_cluster_shaping_2027 = false;
+    self.primary.setGraphemeClusterShaping2027(false);
+    self.alt.setGraphemeClusterShaping2027(false);
     self.inband_resize_notifications_2048 = false;
     self.kitty_paste_events_5522 = false;
     self.input.resetMouse();
@@ -542,6 +554,7 @@ fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState
 fn decrqmAnsiModeState(screen: anytype, mode: i32) DecrpmState {
     return switch (mode) {
         4 => boolModeState(screen.insert_mode),
+        12 => boolModeState(screen.local_echo_mode_12),
         20 => boolModeState(screen.newline_mode),
         else => .not_recognized,
     };

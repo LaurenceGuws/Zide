@@ -634,6 +634,8 @@ pub const TerminalSession = struct {
             self.pty_write_mutex.lock();
             defer self.pty_write_mutex.unlock();
             _ = try input_mod.sendCharAction(pty, char, mod, key_mode_flags, action);
+        } else {
+            self.echoCharLocallyIfEnabled(char, mod, action);
         }
     }
 
@@ -667,7 +669,19 @@ pub const TerminalSession = struct {
                 .action = action,
                 .protocol = .{ .alternate = alternate_meta },
             });
+        } else {
+            self.echoCharLocallyIfEnabled(char, mod, action);
         }
+    }
+
+    fn echoCharLocallyIfEnabled(self: *TerminalSession, char: u32, mod: Modifier, action: input_mod.KeyAction) void {
+        if (action == .release) return;
+        if (mod != VTERM_MOD_NONE) return;
+        if (char < 0x20 or char == 0x7F) return;
+        if (char > 0x10FFFF or (char >= 0xD800 and char <= 0xDFFF)) return;
+        const screen = self.activeScreen();
+        if (!screen.local_echo_mode_12) return;
+        self.handleCodepoint(char);
     }
 
     pub fn reportMouseEvent(self: *TerminalSession, event: MouseEvent) !bool {
