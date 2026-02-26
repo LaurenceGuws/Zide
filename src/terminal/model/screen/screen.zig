@@ -271,6 +271,8 @@ pub const Screen = struct {
         if (self.cursor.col >= cols or self.cursor.row >= rows) return;
         const row = self.cursor.row;
         const col = self.cursor.col;
+        const right = self.rightBoundary();
+        if (col > right) return;
         const idx = row * cols + col;
         if (idx >= self.grid.cells.items.len) return;
 
@@ -304,7 +306,7 @@ pub const Screen = struct {
         }
 
         const width: u8 = codepointCellWidth(cp);
-        const write_width: u8 = if (width > 1 and col + 1 >= cols) 1 else width;
+        const write_width: u8 = if (width > 1 and col + 1 > right) 1 else width;
 
         // If overwriting a prior wide-cell root, clear its tail continuation.
         const existing = self.grid.cells.items[idx];
@@ -343,15 +345,16 @@ pub const Screen = struct {
             };
         }
 
-        if (self.cursor.col + write_width >= cols) {
+        const advance: usize = write_width;
+        if (self.cursor.col + advance > right) {
             if (self.auto_wrap) {
                 self.wrap_next = true;
                 self.grid.setRowWrapped(row, true);
             }
         } else {
-            self.cursor.col += write_width;
+            self.cursor.col += advance;
         }
-        self.grid.markDirtyRange(row, row, col, @min(cols - 1, col + write_width - 1));
+        self.grid.markDirtyRange(row, row, col, @min(right, col + advance - 1));
     }
 
     fn isCombiningMark(codepoint: u32) bool {
@@ -424,7 +427,9 @@ pub const Screen = struct {
 
         const row = self.cursor.row;
         const col = self.cursor.col;
-        const remaining_cols = cols - col;
+        const right = self.rightBoundary();
+        if (col > right) return 0;
+        const remaining_cols = right - col + 1;
         const run_len = @min(remaining_cols, bytes.len);
         const row_start = row * cols + col;
         if (use_dec_special) {
@@ -478,9 +483,7 @@ pub const Screen = struct {
         self.grid.markDirtyRange(row, row, col, col + run_len - 1);
 
         if (run_len == remaining_cols) {
-            if (cols > 0) {
-                self.cursor.col = cols - 1;
-            }
+            self.cursor.col = right;
             if (self.auto_wrap) {
                 self.wrap_next = true;
                 self.grid.setRowWrapped(row, true);
@@ -708,7 +711,7 @@ pub const Screen = struct {
         if (self.cursor.row + 1 < @as(usize, self.grid.rows) and self.cursor.row != self.scroll_bottom) {
             self.cursor.row += 1;
             if (self.newline_mode) {
-                self.cursor.col = 0;
+                self.cursor.col = self.leftBoundary();
             }
             self.wrap_next = false;
             return .moved;
@@ -722,18 +725,19 @@ pub const Screen = struct {
     }
 
     pub fn wrapNewlineAction(self: *Screen) NewlineAction {
+        const left = self.leftBoundary();
         if (self.cursor.row + 1 < @as(usize, self.grid.rows) and self.cursor.row != self.scroll_bottom) {
             self.cursor.row += 1;
-            self.cursor.col = 0;
+            self.cursor.col = left;
             self.wrap_next = false;
             return .moved;
         }
         if (self.cursor.row == self.scroll_bottom) {
-            self.cursor.col = 0;
+            self.cursor.col = left;
             self.wrap_next = false;
             return .scroll_region;
         }
-        self.cursor.col = 0;
+        self.cursor.col = left;
         self.wrap_next = false;
         return .scroll_full;
     }
@@ -777,6 +781,10 @@ pub const Screen = struct {
     fn rightBoundary(self: *const Screen) usize {
         if (self.left_right_margin_mode_69) return self.right_margin;
         return if (self.grid.cols > 0) @as(usize, self.grid.cols - 1) else 0;
+    }
+
+    pub fn writeRightBoundary(self: *const Screen) usize {
+        return self.rightBoundary();
     }
 
     fn clampCursorToMargins(self: *Screen) void {

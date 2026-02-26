@@ -293,6 +293,25 @@ test "terminal DECSLRM clips ICH DCH ECH edits to active horizontal margins" {
     try std.testing.expectEqual(@as(u32, 0), session.getCell(0, 7).codepoint);
 }
 
+test "terminal DECSLRM autowrap continues at left margin" {
+    const allocator = std.testing.allocator;
+    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    defer session.deinit();
+
+    terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
+    terminal.debugFeedBytes(session, "\x1b[1;8HXY");
+
+    // First glyph lands at right margin, second wraps to next row left margin.
+    try std.testing.expectEqual(@as(u32, 'X'), session.getCell(0, 7).codepoint);
+    try std.testing.expectEqual(@as(u32, 'Y'), session.getCell(1, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), session.getCell(1, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), session.getCell(1, 1).codepoint);
+
+    const pos = session.getCursorPos();
+    try std.testing.expectEqual(@as(usize, 1), pos.row);
+    try std.testing.expectEqual(@as(usize, 3), pos.col);
+}
+
 test "terminal DECRQM strategic fixed-off private modes report permanently reset (Pm=4)" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
@@ -318,23 +337,23 @@ test "terminal DECRQM emits no Pm=3 replies in current policy scope" {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
             const allocator = std.testing.allocator;
             const queries = [_][]const u8{
-                "\x1b[4$p",      // ANSI IRM
-                "\x1b[12$p",     // ANSI local echo
-                "\x1b[20$p",     // ANSI newline
-                "\x1b[?1$p",     // DECCKM
-                "\x1b[?7$p",     // DECAWM
-                "\x1b[?8$p",     // DECARM
-                "\x1b[?25$p",    // DECTCEM
-                "\x1b[?45$p",    // reverse-wrap
-                "\x1b[?66$p",    // keypad mode
-                "\x1b[?1004$p",  // focus reporting
-                "\x1b[?1016$p",  // SGR pixel mouse
-                "\x1b[?2027$p",  // grapheme shaping mode
-                "\x1b[?2031$p",  // color-scheme notify
-                "\x1b[?2048$p",  // in-band resize notify
-                "\x1b[?5522$p",  // kitty paste events
-                "\x1b[?67$p",    // strategic fixed-off
-                "\x1b[?1001$p",  // strategic fixed-off
+                "\x1b[4$p", // ANSI IRM
+                "\x1b[12$p", // ANSI local echo
+                "\x1b[20$p", // ANSI newline
+                "\x1b[?1$p", // DECCKM
+                "\x1b[?7$p", // DECAWM
+                "\x1b[?8$p", // DECARM
+                "\x1b[?25$p", // DECTCEM
+                "\x1b[?45$p", // reverse-wrap
+                "\x1b[?66$p", // keypad mode
+                "\x1b[?1004$p", // focus reporting
+                "\x1b[?1016$p", // SGR pixel mouse
+                "\x1b[?2027$p", // grapheme shaping mode
+                "\x1b[?2031$p", // color-scheme notify
+                "\x1b[?2048$p", // in-band resize notify
+                "\x1b[?5522$p", // kitty paste events
+                "\x1b[?67$p", // strategic fixed-off
+                "\x1b[?1001$p", // strategic fixed-off
             };
 
             for (queries) |query| {
@@ -1609,9 +1628,9 @@ test "terminal CSI malformed p-family intermediates do not trigger DECRQM or DEC
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
             const cases = [_][]const u8{
                 "\x1b[?1004$!p", // malformed mixed DECRQM+DECSTR intermediates
-                "\x1b[20!$p",    // malformed ansi mixed-intermediate form
-                "\x1b[##p",      // unsupported repeated intermediate
-                "\x1b[?!p",      // private+intermediate without DECRQM form
+                "\x1b[20!$p", // malformed ansi mixed-intermediate form
+                "\x1b[##p", // unsupported repeated intermediate
+                "\x1b[?!p", // private+intermediate without DECRQM form
             };
 
             for (cases) |seq| {
