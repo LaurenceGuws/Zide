@@ -578,11 +578,21 @@ pub fn draw(
                         const box_w_i = cell_w_i * @as(i32, @intCast(width_units));
                         const box_h_i = cell_h_i;
                         if (terminal_glyphs.specialVariantForCodepoint(cell.codepoint)) |variant| {
+                            // Keep core box/block glyphs on the procedural path for now.
+                            // The sprite migration for U+2500..U+259F is not quality-accepted yet
+                            // at fractional scales (e.g. 4k @ 1.6x in btop panel layouts).
+                            if (variant == .box) {
+                                // Fall through to the procedural box renderer below.
+                            } else {
                             const x0 = snapToDevicePixel(@as(f32, @floatFromInt(box_x_i)), render_scale);
                             const x1 = snapToDevicePixel(@as(f32, @floatFromInt(box_x_i + box_w_i)), render_scale);
-                            const y0 = @as(f32, @floatFromInt(box_y_i));
+                            const y0_unsnapped = @as(f32, @floatFromInt(box_y_i));
+                            const y1_unsnapped = @as(f32, @floatFromInt(box_y_i + box_h_i));
+                            const use_y_snap = variant == .box;
+                            const y0 = if (use_y_snap) snapToDevicePixel(y0_unsnapped, render_scale) else y0_unsnapped;
+                            const y1 = if (use_y_snap) snapToDevicePixel(y1_unsnapped, render_scale) else y1_unsnapped;
                             const snapped_w = @max(1.0 / render_scale, x1 - x0);
-                            const snapped_h = @as(f32, @floatFromInt(box_h_i));
+                            const snapped_h = @max(1.0 / render_scale, y1 - y0);
                             const raster_w_i: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(snapped_w * render_scale))));
                             const raster_h_i: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(snapped_h * render_scale))));
                             const sprite_key = rr.terminal_font.specialGlyphSpriteKey(
@@ -649,6 +659,7 @@ pub fn draw(
                                 );
                                 // No powerline fallback path: only sprite pipeline is used.
                                 continue;
+                            }
                             }
                         }
                     }

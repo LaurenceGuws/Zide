@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_logger = @import("../../../app_logger.zig");
 const types = @import("../types.zig");
 const grid_mod = @import("grid.zig");
 const tab_mod = @import("tabstops.zig");
@@ -266,8 +267,16 @@ pub const Screen = struct {
             return;
         }
 
+        const width_log = app_logger.logger("terminal.width");
+        const log_width = (width_log.enabled_file or width_log.enabled_console) and shouldLogWidthCodepoint(cp);
         const width: u8 = codepointCellWidth(cp);
         const write_width: u8 = if (width > 1 and col + 1 >= cols) 1 else width;
+        if (log_width) {
+            width_log.logf(
+                "cp=U+{X} row={d} col={d} cols={d} width={d} write_width={d} wrap_next={d} autowrap={d}",
+                .{ cp, row, col, cols, width, write_width, @intFromBool(self.wrap_next), @intFromBool(self.auto_wrap) },
+            );
+        }
 
         // If overwriting a prior wide-cell root, clear its tail continuation.
         const existing = self.grid.cells.items[idx];
@@ -314,6 +323,12 @@ pub const Screen = struct {
         } else {
             self.cursor.col += write_width;
         }
+        if (log_width) {
+            width_log.logf(
+                "post cp=U+{X} cursor=({d},{d}) wrap_next={d}",
+                .{ cp, self.cursor.row, self.cursor.col, @intFromBool(self.wrap_next) },
+            );
+        }
         self.grid.markDirtyRange(row, row, col, @min(cols - 1, col + write_width - 1));
     }
 
@@ -350,6 +365,14 @@ pub const Screen = struct {
             codepoint == 0x200C or codepoint == 0x200D or
             (codepoint >= 0xE0100 and codepoint <= 0xE01EF) or
             (codepoint >= 0x1F3FB and codepoint <= 0x1F3FF);
+    }
+
+    fn shouldLogWidthCodepoint(codepoint: u32) bool {
+        return codepoint == 0x00B2 or codepoint == 0x00B3 or codepoint == 0x00B9 or // latin-1 superscripts used by btop panel labels
+            (codepoint >= 0x2070 and codepoint <= 0x209F) or // superscripts/subscripts
+            (codepoint >= 0x2190 and codepoint <= 0x21FF) or // arrows
+            (codepoint >= 0x2500 and codepoint <= 0x259F) or // box/block/shade
+            (codepoint >= 0x2580 and codepoint <= 0x259F);
     }
 
     pub fn codepointCellWidth(codepoint: u32) u8 {

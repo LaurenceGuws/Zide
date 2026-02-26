@@ -188,6 +188,8 @@ return {
         terminal = {
             { key = "c", mods = { "ctrl", "shift" }, action = "copy" },
             { key = "v", mods = { "ctrl", "shift" }, action = "paste" },
+            -- Debug helper: dump current terminal scrollback + visible grid to a temp file and open in pager.
+            { key = "h", mods = { "ctrl", "shift" }, action = "terminal_scrollback_pager" },
         },
     },
 }

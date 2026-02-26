@@ -888,6 +888,11 @@ const AppState = struct {
                             self.needs_redraw = true;
                         }
                     },
+                    .terminal_scrollback_pager => {
+                        if (try self.openTerminalScrollbackInPager(term_widget)) {
+                            handled_shortcut = true;
+                        }
+                    },
                     else => {},
                 }
             }
@@ -1479,6 +1484,55 @@ const AppState = struct {
                 }
             }
         }
+    }
+
+    fn openTerminalScrollbackInPager(self: *AppState, term_widget: *TerminalWidget) !bool {
+        const allocator = self.allocator;
+        const text = try term_widget.scrollbackPlainTextAlloc(allocator);
+        defer allocator.free(text);
+        if (text.len == 0) return false;
+
+        var dir = try std.fs.cwd().makeOpenPath(".tmp", .{});
+        defer dir.close();
+
+        const nanos = std.time.nanoTimestamp();
+        const file_name = try std.fmt.allocPrint(allocator, "terminal-scrollback-{d}.txt", .{nanos});
+        defer allocator.free(file_name);
+
+        {
+            var file = try dir.createFile(file_name, .{ .truncate = true });
+            defer file.close();
+            try file.writeAll(text);
+        }
+
+        const path = try std.fs.path.join(allocator, &.{ ".tmp", file_name });
+        defer allocator.free(path);
+
+        if (builtin.os.tag == .windows) {
+            // Fallback: open in default associated app until a Windows pager flow exists.
+            var child = std.process.Child.init(&.{ "cmd", "/C", "start", "", path }, allocator);
+            child.stdin_behavior = .Inherit;
+            child.stdout_behavior = .Inherit;
+            child.stderr_behavior = .Inherit;
+            child.spawn() catch return false;
+            return true;
+        }
+
+        var child = std.process.Child.init(
+            &.{
+                "sh",
+                "-lc",
+                "if [ -n \"${PAGER:-}\" ]; then exec ${PAGER} \"$1\"; elif command -v less >/dev/null 2>&1; then exec less -R \"$1\"; else exec cat \"$1\"; fi",
+                "zide-scrollback-pager",
+                path,
+            },
+            allocator,
+        );
+        child.stdin_behavior = .Inherit;
+        child.stdout_behavior = .Inherit;
+        child.stderr_behavior = .Inherit;
+        child.spawn() catch return false;
+        return true;
     }
 
     fn reloadConfig(self: *AppState) !void {
