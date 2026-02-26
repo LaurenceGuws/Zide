@@ -1004,6 +1004,38 @@ Verification:
 - `zig build test-terminal-replay -- --fixture kitty_query_mixed_chunk_offset_precedence_q1_q2_reply --update-goldens`
 - `zig build test-terminal-replay -- --fixture kitty_query_mixed_chunk_offset_precedence_q1_q2_reply`
 
+Implemented (increment 32 / `PA-04c` shared-memory (`t=s`) query transport success coverage):
+- Added project-integrated parse-path coverage for kitty query shared-memory medium (`t=s`) with valid PNG payloads.
+- Locked behavior for quiet-mode success suppression:
+  - baseline success reply (`OK`)
+  - `q=1` success suppression
+  - `q=2` success suppression
+- Test helper now creates and fills temporary POSIX shared-memory objects for deterministic transport-path validation.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+
+Implemented (increment 33 / `PA-04c` replay lock for file-medium success + quiet split):
+- Added replay-level fixture lock for kitty query file medium (`t=f`) success behavior in one stream:
+  - `q=1` success suppressed
+  - default `q=0` success replies `OK`
+  - `q=2` success suppressed
+- Added deterministic fixture asset PNG used by the replay file-medium success path.
+
+Files:
+- `fixtures/terminal/assets/kitty_query_png_1x1.png`
+- `fixtures/terminal/kitty_query_medium_file_success_q1_q2_reply.vt`
+- `fixtures/terminal/kitty_query_medium_file_success_q1_q2_reply.json`
+- `fixtures/terminal/kitty_query_medium_file_success_q1_q2_reply.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture kitty_query_medium_file_success_q1_q2_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_query_medium_file_success_q1_q2_reply`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
@@ -2818,7 +2850,7 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `PA-04c` Extend kitty query transport matrix with `t=f/t/s` success/error path fixtures (including quiet-mode precedence)
+1. `PA-04c` Extend replay-side transport fixture coverage for kitty query mediums (`t=f` additional error permutations; document `t=s` replay limits)
 2. `PA-08h` Implement promoted `DECSLRM` slice (dispatch + behavior + PTY/replay evidence)
 3. `PA-05c` Extend metadata-aware encoder format usage for `alternate_layout_codepoint` when protocol field support is promoted
 4. `PA-04d` Decide animation/composition support path (`implement` vs explicit defer) with reference-backed rationale
