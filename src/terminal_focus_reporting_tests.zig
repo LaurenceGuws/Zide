@@ -1038,6 +1038,27 @@ test "terminal DECRQM ansi queries report mode 4, 12 and 20 set/reset state" {
     }.run);
 }
 
+test "terminal DECRQM representative unsupported ANSI modes return Pm=0" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            const unsupported_modes = [_]i32{ 1, 2, 3, 5, 6, 10, 13, 14, 18, 19 };
+
+            for (unsupported_modes) |mode| {
+                var qbuf: [32]u8 = undefined;
+                const query = try std.fmt.bufPrint(&qbuf, "\x1b[{d}$p", .{mode});
+                terminal.debugFeedBytes(session, query);
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+
+                const expected = try std.fmt.allocPrint(allocator, "\x1b[{d};0$y", .{mode});
+                defer allocator.free(expected);
+                try std.testing.expectEqualStrings(expected, reply);
+            }
+        }
+    }.run);
+}
+
 test "terminal ANSI local echo mode 12 echoes chars only without PTY" {
     const allocator = std.testing.allocator;
     var session = try terminal.TerminalSession.init(allocator, 3, 6);

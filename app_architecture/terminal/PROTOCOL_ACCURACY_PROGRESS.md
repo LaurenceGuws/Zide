@@ -1902,7 +1902,7 @@ Planned work (decomposition / `PA-08g` `DECRQM` / `DECRPM` parity breadth + repl
   - ANSI `DECRQM`:
     - [x] mode `20` newline mode (`Pm=1/2`, `Pm=0` unsupported others)
     - [ ] Audit xterm/ghostty/foot-relevant ANSI modes for Zide (`4` insert mode, `12` local echo, `20` newline, etc.) and classify `implement` / `defer`
-    - [ ] Add explicit tests/docs for any intentionally unsupported ANSI modes that apps may query (reply `Pm=0`)
+    - [x] Add explicit tests/docs for representative unsupported ANSI modes that apps may query (reply `Pm=0`)
   - DEC-private `DECRQM`:
     - [x] common TUI modes currently implemented (`?1`, `?3`, `?5`, `?6`, `?7`, `?25`, `?47`, `?1047`, `?1049`, `?1000`, `?1002`, `?1003`, `?1004`, `?1006`, `?2004`, `?2026`)
     - [ ] Audit reference-terminal queried modes relevant to Zide parity (`?9`, `?12`, `?45`, `?66`, `?67`, `?80`, `?1005`, `?1015`, `?1016`, `?1034`, `?1035`, `?1036`, `?1042`, `?1070`, `?2027`, `?2031`, `?2048`, `?5522`, etc.) and classify `implement` / `defer`
@@ -2175,6 +2175,11 @@ Notes:
     - Use `Pm=1/2` for dynamic set/reset modes, `Pm=4` for strategic fixed-off modes, and `Pm=0` for not-recognized/provisional unsupported rows.
   - Evidence:
     - PTY integration: `src/terminal_focus_reporting_tests.zig` (`terminal DECRQM emits no Pm=3 replies in current policy scope`) guards representative ANSI/DEC/strategic-fixed-off queries against `;3$y`.
+- `PA-08g` implementation slice (2026-02-26, ANSI unsupported-mode query lock):
+  - Added explicit PTY coverage for representative unsupported ANSI `DECRQM` rows returning `Pm=0`:
+    - `1`, `2`, `3`, `5`, `6`, `10`, `13`, `14`, `18`, `19`
+  - Evidence:
+    - PTY integration: `src/terminal_focus_reporting_tests.zig` (`terminal DECRQM representative unsupported ANSI modes return Pm=0`)
 - `PA-08g` implementation slice (2026-02-23, `?2027` grapheme-cluster shaping mode, first slice):
   - Decision: implement a **queryable no-op semantics** first slice (real mode state + documented no-op behavior boundary), then defer renderer/shaping behavior changes to a later slice.
   - Reference direction:
