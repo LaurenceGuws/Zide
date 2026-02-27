@@ -3256,6 +3256,29 @@ Verification:
 - `zig build test-terminal-kitty-query-parse`
 - `zig build test-terminal-replay -- --fixture kitty_delete_deferred_selectors_policy_reply`
 
+Implemented (increment 17 / `PA-08g` `DECRQM`/`DECRPM` representative parity-policy scope lock):
+- Added a representative, deterministic `DECRPM` policy matrix lock for `Pm=0/1/2/4` across ANSI + DEC-private query paths:
+  - `Pm=2/1`: supported mode reset/set (`4`, `?1004`)
+  - `Pm=0`: unsupported mode (`999`)
+  - `Pm=4`: strategic fixed-off mode (`?1005`)
+- Added reply-format unit coverage that locks exact encoded bytes for representative `Pm=0/1/2/4` values.
+- Added focused PTY integration coverage that exercises real query/set/query flows and validates exact replies for the same policy matrix.
+- Added a replay fixture authority for the same representative policy matrix (`reply_hex`) to lock end-to-end fixture behavior.
+- Scope decision for `PA-08g`: parity-policy semantics are now considered test-locked for the currently implemented mode set; additional mode-family expansion work proceeds under `PA-08h`.
+
+Files:
+- `src/terminal_csi_reply_tests.zig`
+- `src/terminal_focus_reporting_tests.zig`
+- `fixtures/terminal/decrqm_pm_policy_matrix_reply.vt`
+- `fixtures/terminal/decrqm_pm_policy_matrix_reply.json`
+- `fixtures/terminal/decrqm_pm_policy_matrix_reply.golden`
+
+Verification:
+- `ZIG_GLOBAL_CACHE_DIR=.zig-global-cache ZIG_LOCAL_CACHE_DIR=.zig-cache zig test src/terminal_csi_reply_tests.zig`
+- `zig build test-terminal-focus-reporting`
+- `zig build test-terminal-replay -- --fixture decrqm_pm_policy_matrix_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture decrqm_pm_policy_matrix_reply`
+
 ## Change Log
 
 ### 2026-02-27
@@ -3282,6 +3305,9 @@ Verification:
   - selectors `d=q/Q/f/F` are now explicitly treated as invalid (deferred parity, no silent fallback)
   - added focused parse-path tests for `q=0/1/2` quiet-policy behavior
   - added replay fixture `fixtures/terminal/kitty_delete_deferred_selectors_policy_reply.*` with `reply_hex` lock
+- Implemented `PA-08g` `DECRQM`/`DECRPM` representative policy lock:
+  - added focused unit + PTY + replay coverage for deterministic representative `Pm` semantics (`0/1/2/4`)
+  - explicitly locked current `PA-08g` scope as complete for mode-policy parity, with remaining mode-family breadth tracked under `PA-08h`
 
 ### 2026-02-23
 
@@ -3329,9 +3355,9 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `AUDIT-03` Enforce strict invalid equal-bounds rejection for `DECSTBM` / `DECSLRM`
-2. `AUDIT-11` Keyboard: allow alternate-field emission without shift
-3. See consolidated cross-reference backlog and ordering in `app_architecture/terminal/PROTOCOL_ALIGNMENT_AUDIT_2026-02-27.md`
+1. `PA-08h` Close or explicitly defer remaining promoted CSI/private-mode gaps with compatibility notes
+2. `PA-08a` Complete CSI/private inventory closure with explicit `implement/defer` decisions for remaining reference rows
+3. `PA-04a` / `PA-04b` Finish kitty command-surface + response/quiet-rule documentation parity
 
 ## Decomposition Backlog (New)
 
@@ -3349,5 +3375,5 @@ Verification:
 - [x] `PA-08c` Define PTY-stub replay strategy for query/reply assertions (implemented as `reply_hex` + `assertions: ["reply"]`)
 - [x] `PA-08d` Promote highest-value gaps into implementable tracker items (`?1004` promoted and implemented under `PA-08e`)
 - [x] `PA-08f` Implement or explicitly defer CSI intermediate-byte parser support required for parity-critical CSI families
-- [ ] `PA-08g` Define and test-lock `DECRQM`/`DECRPM` parity scope (mode coverage + `Pm` reply semantics) against `xterm`/`kitty`/`ghostty`
+- [x] `PA-08g` Define and test-lock `DECRQM`/`DECRPM` parity scope (mode coverage + `Pm` reply semantics) against `xterm`/`kitty`/`ghostty`
 - [ ] `PA-08h` Close or defer remaining promoted CSI/private-mode gaps with compatibility notes before advancing new top-level parity areas

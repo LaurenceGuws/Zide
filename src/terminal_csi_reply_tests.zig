@@ -73,3 +73,24 @@ test "CSI DECRQM ansi reply bytes" {
     try std.testing.expect(csi.writeDecrqmReply(&pty, false, 20, .reset));
     try std.testing.expectEqualStrings("\x1b[20;2$y", pty.writes.items);
 }
+
+test "CSI DECRQM reply bytes cover representative Pm policy values" {
+    const cases = [_]struct {
+        private: bool,
+        mode: i32,
+        state: csi.DecrpmState,
+        expected: []const u8,
+    }{
+        .{ .private = false, .mode = 999, .state = .not_recognized, .expected = "\x1b[999;0$y" },
+        .{ .private = false, .mode = 4, .state = .set, .expected = "\x1b[4;1$y" },
+        .{ .private = false, .mode = 4, .state = .reset, .expected = "\x1b[4;2$y" },
+        .{ .private = true, .mode = 1005, .state = .permanently_reset, .expected = "\x1b[?1005;4$y" },
+    };
+
+    for (cases) |case| {
+        var pty = FakePty.init();
+        defer pty.deinit();
+        try std.testing.expect(csi.writeDecrqmReply(&pty, case.private, case.mode, case.state));
+        try std.testing.expectEqualStrings(case.expected, pty.writes.items);
+    }
+}
