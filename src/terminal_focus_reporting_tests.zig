@@ -606,6 +606,36 @@ test "terminal DECSLRM and DECSTBM clip DL to margin band within scroll region" 
     try std.testing.expectEqual(@as(u32, 0), session.getCell(3, 2).codepoint);
 }
 
+test "terminal DECSTBM homes cursor using DECOM semantics under DECLRMM" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            const screen = session.activeScreen();
+
+            terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
+            try std.testing.expect(screen.left_right_margin_mode_69);
+            try std.testing.expectEqual(@as(usize, 2), screen.left_margin);
+            try std.testing.expectEqual(@as(usize, 7), screen.right_margin);
+
+            // DECOM off: DECSTBM homes to display 1;1, not top/left-margin.
+            terminal.debugFeedBytes(session, "\x1b[?6l\x1b[2;4r\x1b[6n");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[1;1R", reply);
+            }
+
+            // DECOM on: DECSTBM homes to scroll-top and left margin.
+            terminal.debugFeedBytes(session, "\x1b[?6h\x1b[2;4r\x1b[6n");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[1;3R", reply);
+            }
+        }
+    }.run);
+}
+
 test "terminal DECSTBM equal bounds are rejected as no-op" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
