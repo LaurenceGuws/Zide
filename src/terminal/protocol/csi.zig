@@ -158,7 +158,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
             const bot_1 = if (param_len > 1 and p[1] > 0) p[1] else @as(i32, @intCast(screen.grid.rows));
             const top = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(@max(1, top_1) - 1)));
             const bot = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(@max(1, bot_1) - 1)));
-            if (top <= bot) {
+            if (top < bot) {
                 screen.setScrollRegion(top, bot);
             }
         },
@@ -171,7 +171,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                     const right_1 = if (param_len > 1 and p[1] > 0) p[1] else @as(i32, @intCast(cols));
                     const left = @min(cols - 1, @as(usize, @intCast(@max(1, left_1) - 1)));
                     const right = @min(cols - 1, @as(usize, @intCast(@max(1, right_1) - 1)));
-                    if (left <= right) {
+                    if (left < right) {
                         screen.setLeftRightMargins(left, right);
                     }
                     return;

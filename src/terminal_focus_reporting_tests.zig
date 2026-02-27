@@ -606,6 +606,60 @@ test "terminal DECSLRM and DECSTBM clip DL to margin band within scroll region" 
     try std.testing.expectEqual(@as(u32, 0), session.getCell(3, 2).codepoint);
 }
 
+test "terminal DECSTBM equal bounds are rejected as no-op" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            const screen = session.activeScreen();
+
+            terminal.debugFeedBytes(session, "\x1b[2;5r");
+            try std.testing.expectEqual(@as(usize, 1), screen.scroll_top);
+            try std.testing.expectEqual(@as(usize, 4), screen.scroll_bottom);
+
+            terminal.debugFeedBytes(session, "\x1b[4;4H");
+            terminal.debugFeedBytes(session, "\x1b[3;3r");
+
+            // Invalid top==bottom must not alter region or home cursor.
+            try std.testing.expectEqual(@as(usize, 1), screen.scroll_top);
+            try std.testing.expectEqual(@as(usize, 4), screen.scroll_bottom);
+
+            terminal.debugFeedBytes(session, "\x1b[6n");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[4;4R", reply);
+            }
+        }
+    }.run);
+}
+
+test "terminal DECSLRM equal bounds are rejected as no-op" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            const screen = session.activeScreen();
+
+            terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
+            try std.testing.expectEqual(@as(usize, 2), screen.left_margin);
+            try std.testing.expectEqual(@as(usize, 7), screen.right_margin);
+
+            terminal.debugFeedBytes(session, "\x1b[2;5H");
+            terminal.debugFeedBytes(session, "\x1b[4;4s");
+
+            // Invalid left==right must not alter margins or home cursor.
+            try std.testing.expectEqual(@as(usize, 2), screen.left_margin);
+            try std.testing.expectEqual(@as(usize, 7), screen.right_margin);
+
+            terminal.debugFeedBytes(session, "\x1b[6n");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1b[2;5R", reply);
+            }
+        }
+    }.run);
+}
+
 test "terminal DECRQM strategic fixed-off private modes report permanently reset (Pm=4)" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
