@@ -1284,6 +1284,23 @@ Verification:
 - `zig build test-terminal-replay -- --fixture kitty_invalid_action_quiet_matrix_reply`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 46 / `PA-04c` invalid query-chunk quiet matrix replay lock):
+- Added replay fixture coverage for invalid kitty query chunk marker (`a=q,m=1`) across quiet levels in one stream:
+  - default quiet (`q=0`) -> `EINVAL` reply
+  - `q=1` -> `EINVAL` reply (error reply preserved)
+  - `q=2` -> reply suppressed
+- The fixture includes payload bytes to force the query preflight/validation path (avoids metadata-only early `OK` path) and locks parser+reply-policy behavior end-to-end.
+
+Files:
+- `fixtures/terminal/kitty_query_invalid_chunk_quiet_matrix_reply.vt`
+- `fixtures/terminal/kitty_query_invalid_chunk_quiet_matrix_reply.json`
+- `fixtures/terminal/kitty_query_invalid_chunk_quiet_matrix_reply.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture kitty_query_invalid_chunk_quiet_matrix_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_query_invalid_chunk_quiet_matrix_reply`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
