@@ -262,6 +262,18 @@ test "kitty parse query quiet=2 suppresses error reply" {
     }.run);
 }
 
+test "kitty parse placement with P without Q replies EINVAL (policy lock)" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            kitty.parseKittyGraphics(session, "a=t,q=2,f=100,i=1;" ++ tiny_png_1x1);
+            kitty.parseKittyGraphics(session, "a=p,i=1,p=31,P=1,c=1,r=1");
+            const reply = try capture.readReply(std.testing.allocator);
+            defer std.testing.allocator.free(reply);
+            try std.testing.expectEqualStrings("\x1b_Gi=1,p=31;EINVAL\x1b\\", reply);
+        }
+    }.run);
+}
+
 test "kitty parse query chunked form emits EINVAL" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
