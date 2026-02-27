@@ -2297,6 +2297,28 @@ Verification:
 - `zig build test-terminal-replay -- --fixture dcs_sixel_deferred_no_reply`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 5 / `PA-08b` minimal `DECRQSS` support for `DECSCUSR`):
+- Implemented a first bounded `DCS $ q` (`DECRQSS`) slice for cursor-style state queries:
+  - `DCS $ q SP q ST` now replies with `DCS 1 $ r Ps SP q ST` using the current `DECSCUSR` cursor style
+  - unsupported request strings currently return `DCS 0 $ r ST`
+- This promotes one `PA-08b` row from deferred to implemented in a tightly-scoped, reference-backed way without broad DCS expansion.
+
+Files:
+- `src/terminal/protocol/dcs_apc.zig`
+- `src/terminal/core/terminal_session.zig`
+- `src/terminal_protocol_reply_tests.zig`
+- `src/terminal_focus_reporting_tests.zig`
+- `fixtures/terminal/dcs_decrqss_decscusr_query_reply.vt`
+- `fixtures/terminal/dcs_decrqss_decscusr_query_reply.json`
+- `fixtures/terminal/dcs_decrqss_decscusr_query_reply.golden`
+
+Verification:
+- `zig test src/terminal_protocol_reply_tests.zig -lc`
+- `zig build test-terminal-focus-reporting`
+- `zig build test-terminal-replay -- --fixture dcs_decrqss_decscusr_query_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture dcs_decrqss_decscusr_query_reply`
+- `zig build test-terminal-replay -- --all`
+
 Implemented (increment 2 / `PA-08e` promoted high-value CSI gap: `?1004` focus reporting):
 - Implemented CSI private mode handling for `?1004 h/l` (focus reporting enable/disable).
 - Added terminal focus-report emission (`ESC[I` / `ESC[O`) gated on the mode bit.
