@@ -264,8 +264,10 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 return;
             }
             if (!csiIntermediatesEq(action, "$")) return;
+            // DECRQM is valid only with exactly one parameter; invalid cardinality is ignored.
+            if (param_len != 1) return;
             if (action.leader == '?' and action.private) {
-                const mode = if (param_len > 0) p[0] else 0;
+                const mode = p[0];
                 if (self.pty) |*pty| {
                     const state = decrqmPrivateModeState(self, screen, mode);
                     _ = writeDecrqmReply(pty, true, mode, state);
@@ -273,7 +275,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 return;
             }
             if (action.leader == 0 and !action.private) {
-                const mode = if (param_len > 0) p[0] else 0;
+                const mode = p[0];
                 if (self.pty) |*pty| {
                     const state = decrqmAnsiModeState(screen, mode);
                     _ = writeDecrqmReply(pty, false, mode, state);
