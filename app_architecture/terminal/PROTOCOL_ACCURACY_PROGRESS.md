@@ -1346,6 +1346,23 @@ Verification:
 - `zig build test-terminal-kitty-query-parse` *(fails in this environment due existing shared-memory test path: `ShmOpenFailed`; new test still compiles/runs within suite before that failure point)*
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 50 / `PA-04c` invalid-action metadata reply-field quiet matrix replay lock):
+- Added replay fixture coverage for invalid action (`a=x`) with explicit metadata fields (`i=`, `I=`, `p=`) across quiet levels:
+  - `q=0` -> `EINVAL` reply with `i/I/p` fields preserved
+  - `q=1` -> `EINVAL` reply with `i/I/p` fields preserved
+  - `q=2` -> reply suppressed
+- This locks reply-field formatting and quiet-policy behavior together for the invalid-action path.
+
+Files:
+- `fixtures/terminal/kitty_invalid_action_metadata_quiet_matrix_reply.vt`
+- `fixtures/terminal/kitty_invalid_action_metadata_quiet_matrix_reply.json`
+- `fixtures/terminal/kitty_invalid_action_metadata_quiet_matrix_reply.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture kitty_invalid_action_metadata_quiet_matrix_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_invalid_action_metadata_quiet_matrix_reply`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
