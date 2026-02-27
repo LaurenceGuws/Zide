@@ -675,6 +675,21 @@ test "kitty parse delete deferred selectors q/Q/f/F reply is suppressed for q=2"
     }
 }
 
+test "kitty parse invalid action quiet-policy matrix" {
+    const reply_cases = [_]struct {
+        seq: []const u8,
+        expected: []const u8,
+    }{
+        .{ .seq = "a=x", .expected = "\x1b_G;EINVAL\x1b\\" },
+        .{ .seq = "a=x,q=1", .expected = "\x1b_G;EINVAL\x1b\\" },
+    };
+    inline for (reply_cases) |case_| {
+        try expectKittyQueryReply(case_.seq, case_.expected);
+    }
+
+    try expectKittyQueryNoReply("a=x,q=2");
+}
+
 // Query precedence matrix coverage (current scope):
 // - non-missing-id invalid compression (`o=1`)
 // - missing-id preflight
