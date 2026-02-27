@@ -151,7 +151,7 @@ test "DCS DECRQSS writes SGR reply for bounded attribute state" {
 
         pub fn setSyncUpdates(_: *@This(), _: bool) void {}
         pub fn decrqssReplyInto(_: *@This(), text: []const u8, _: []u8) ?[]const u8 {
-            if (std.mem.eql(u8, text, "m")) return "1;5;7;31;42";
+            if (std.mem.eql(u8, text, "m")) return "1;5;7;31;42m";
             return null;
         }
     };
