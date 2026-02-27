@@ -1151,6 +1151,22 @@ Verification:
 - `zig build test-terminal-replay -- --fixture kitty_delete_parent_image_cascades_child_placements`
 - `zig build check-app-imports`
 
+Implemented (increment 40 / `PA-04c` parented placement success lock without explicit `p`):
+- Added replay fixture that locks the parented placement path when no explicit placement id is provided (`p=0` path):
+  - parent reference via `P/Q/H/V` succeeds
+  - reply format is `OK` with image id only (`i=<id>;OK`)
+  - kitty snapshot asserts resulting placement state is retained.
+
+Files:
+- `fixtures/terminal/kitty_parent_no_pid_success_reply.vt`
+- `fixtures/terminal/kitty_parent_no_pid_success_reply.json`
+- `fixtures/terminal/kitty_parent_no_pid_success_reply.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture kitty_parent_no_pid_success_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_parent_no_pid_success_reply`
+- `zig build check-app-imports`
+
 Verification:
 - `zig build test-terminal-replay -- --fixture kitty_query_medium_file_missing_q1_q2_reply --update-goldens`
 - `zig build test-terminal-replay -- --fixture kitty_query_medium_file_missing_q1_q2_reply`
@@ -3120,8 +3136,8 @@ Verification:
 ## Next Work Queue (Ordered)
 
 1. `PA-05c` Extend metadata-aware encoder format usage for `alternate_layout_codepoint` when protocol field support is promoted
-2. `PA-04c` Add additional parent/virtual branch locks for parented updates without explicit placement id (`p=0` paths)
-3. `PA-04c` Add a focused parented-placement delete matrix for selector variants beyond `d=I` (id/number/range + parent cleanup edges)
+2. `PA-04c` Add a focused parented-placement delete matrix for selector variants beyond `d=I` (id/number/range + parent cleanup edges)
+3. `PA-04c` Add parented no-`p` error-path locks (`ENOPARENT` / `ETOODEEP`) to complete explicit `p=0` branch coverage
 4. `PA-08h` Revisit DECSLRM rectangular-operation parity (`DECCRA` family) only when a concrete app-compat signal appears
 
 ## Decomposition Backlog (New)
