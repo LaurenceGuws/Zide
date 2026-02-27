@@ -2649,6 +2649,19 @@ Notes:
     - replay:
       - `fixtures/terminal/decslrm_decstbm_dl_margin_band_only.*`
 
+- `PA-08h` audit slice (2026-02-26, DECSLRM promoted-row closure review):
+  - Completed an explicit DECSLRM coverage audit for the promoted non-rectangular margin-sensitive operations in current scope.
+  - Implemented + test-locked in current DECSLRM scope:
+    - margin set/query baseline (`?69`, `DECSLRM`) and write/wrap boundary behavior
+    - character/erase ops (`ICH`, `DCH`, `ECH`, `EL`, `ED`)
+    - line/scroll ops (`IL`, `DL`, `SU`, `SD`)
+    - combined vertical+horizontal interaction locks with `DECSTBM` for (`SU`, `SD`, `IL`, `DL`)
+  - Deferred beyond current scope (intentional):
+    - rectangular editing/copy families (`DECCRA` and related rectangular ops) under left/right margins
+    - full cross-terminal parity matrix across all advanced xterm private-mode edge combinations
+  - Outcome:
+    - promoted DECSLRM non-rectangular operation row is considered covered for current PA-08h scope; remaining DECSLRM work is now explicitly in the deferred rectangular/advanced matrix bucket.
+
 Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft terminal reset):
 - Reference anchors:
   - xterm docs define `CSI ! p` as `DECSTR` (soft terminal reset), VT220+ (`reference_repos/terminals/xterm_snapshots/ctlseqs.txt`).
@@ -3041,10 +3054,10 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `PA-08h` Run DECSLRM reference behavior audit and close/defer the promoted row with explicit compatibility notes
-2. `PA-04c` Decide whether to keep replay harness file-only for `t=s` or add deterministic shm lifecycle support to replay fixtures
-3. `PA-05c` Extend metadata-aware encoder format usage for `alternate_layout_codepoint` when protocol field support is promoted
-4. `PA-04c` Extend parent/virtual placement fixture coverage (`U=1`, `P/Q/H/V`) with explicit success/error expectations
+1. `PA-04c` Decide whether to keep replay harness file-only for `t=s` or add deterministic shm lifecycle support to replay fixtures
+2. `PA-05c` Extend metadata-aware encoder format usage for `alternate_layout_codepoint` when protocol field support is promoted
+3. `PA-04c` Extend parent/virtual placement fixture coverage (`U=1`, `P/Q/H/V`) with explicit success/error expectations
+4. `PA-08h` Revisit DECSLRM rectangular-operation parity (`DECCRA` family) only when a concrete app-compat signal appears
 
 ## Decomposition Backlog (New)
 
