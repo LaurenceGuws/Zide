@@ -1962,7 +1962,7 @@ Inventory snapshot (`PA-08a`, first pass) checklist (audit-traceable):
 | Alternate mouse encodings (`1005`, `1015`) | todo | low/medium | no | `src/terminal/protocol/csi.zig`, `src/terminal/input/mouse_report.zig` (current modes) | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/foot/csi.c` | Add only if app compatibility demands |
 | Xterm window ops (`CSI ... t`) | partial | low/medium | PTY + replay | `src/terminal/protocol/csi.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/csi_window_ops_14t_query_reply.*`, `fixtures/terminal/csi_window_ops_16t_query_reply.*`, `fixtures/terminal/csi_window_ops_18t_query_reply.*`, `fixtures/terminal/csi_window_ops_19t_query_reply.*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt` | bounded support: `CSI 14 t` (text-area pixels), `CSI 16 t` (cell pixels), `CSI 18 t` (text area chars), `CSI 19 t` (screen chars); broader `t` family still pending |
 | Printer/media/status extensions | todo | low | no | no Zide support | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt` | Out of current scope |
-| Legacy/rare tab-stop report/edit variants | todo | low | no | current tab support in `src/terminal/protocol/csi.zig`, `src/terminal/model/screen/tabstops.zig` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt` | Keep deferred unless an app/seed requires them |
+| Legacy/rare tab-stop report/edit variants | deferred | low | replay | current tab support in `src/terminal/protocol/csi.zig`, `src/terminal/model/screen/tabstops.zig`, `fixtures/terminal/csi_tab_ctc_legacy_variants_deferred_noop.*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt` | Explicitly defer-lock representative `CSI Ps W` variants as no-op until app demand appears |
 
 Suggested `PA-08d` promotion candidates (first pass):
 1. `?1004` focus reporting mode + event emission (real TUI impact)
@@ -3301,6 +3301,30 @@ Verification:
 - `zig build test-terminal-replay -- --fixture csi_window_ops_deferred_modes_no_reply --update-goldens`
 - `zig build test-terminal-replay -- --fixture csi_window_ops_deferred_modes_no_reply`
 
+Implemented (increment 19 / `PA-08h` legacy tab-stop report/edit variants explicit defer lock):
+- Promoted one remaining `PA-08h` row to an explicit defer lock for legacy tab-stop report/edit variants (`CSI Ps W` / CTC family).
+- Policy lock:
+  - keep `CSI Ps W` variants deferred (no-op) in current scope while `CHT`/`CBT`/`TBC` remain the supported tab-control surface.
+  - avoid partial/emulated CTC behavior until a concrete app-compat signal justifies full semantics.
+- Added replay authority that deterministically exercises representative deferred `CSI Ps W` forms and verifies no behavioral change to tab traversal:
+  - `CSI 5 W` (legacy clear-all variant)
+  - `CSI 0 W` (legacy set-at-cursor variant)
+  - `CSI 2 W` (legacy clear-at-cursor variant)
+  - `CSI 1 W` (legacy/report variant)
+- Compatibility notes:
+  - xterm-family terminals may implement additional CTC report/edit behavior, so apps that depend on those legacy tab-edit semantics can observe reduced capability in Zide.
+  - current policy intentionally keeps these variants inert rather than shipping partial semantics.
+
+Files:
+- `fixtures/terminal/csi_tab_ctc_legacy_variants_deferred_noop.vt`
+- `fixtures/terminal/csi_tab_ctc_legacy_variants_deferred_noop.json`
+- `fixtures/terminal/csi_tab_ctc_legacy_variants_deferred_noop.golden`
+- `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture csi_tab_ctc_legacy_variants_deferred_noop --update-goldens`
+- `zig build test-terminal-replay -- --fixture csi_tab_ctc_legacy_variants_deferred_noop`
+
 ## Change Log
 
 ### 2026-02-27
@@ -3330,6 +3354,10 @@ Verification:
 - Implemented `PA-08g` `DECRQM`/`DECRPM` representative policy lock:
   - added focused unit + PTY + replay coverage for deterministic representative `Pm` semantics (`0/1/2/4`)
   - explicitly locked current `PA-08g` scope as complete for mode-policy parity, with remaining mode-family breadth tracked under `PA-08h`
+- Implemented `PA-08h` legacy tab-stop `CSI Ps W` explicit defer lock:
+  - added replay fixture authority for representative deferred variants (`0/1/2/5W`) and locked current no-op policy
+  - updated `PA-08` inventory row status for legacy tab-stop report/edit variants to `deferred`
+  - narrowed the top Next Work Queue `PA-08h` note to remaining reset-family breadth
 
 ### 2026-02-23
 
@@ -3377,7 +3405,7 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `PA-08h` Close or explicitly defer remaining promoted CSI/private-mode gaps with compatibility notes (reset-family breadth + legacy tab-stop variants)
+1. `PA-08h` Close or explicitly defer remaining promoted CSI/private-mode gaps with compatibility notes (reset-family breadth)
 2. `PA-08a` Complete CSI/private inventory closure with explicit `implement/defer` decisions for remaining reference rows
 3. `PA-04a` / `PA-04b` Finish kitty command-surface + response/quiet-rule documentation parity
 
