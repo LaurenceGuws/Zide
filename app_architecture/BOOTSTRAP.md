@@ -128,6 +128,25 @@ If you want Android grammars, ensure an NDK is available:
 zig build run
 ```
 
+## Terminal Setup
+
+Install the bundled `zide` terminfo entry for best terminal capability
+detection by shells and TUIs:
+
+```bash
+mkdir -p ~/.terminfo
+tic -x -o ~/.terminfo terminfo/zide.terminfo
+```
+
+Then start a new shell inside Zide and verify:
+
+```bash
+printf '%s\n' "$TERM"
+```
+
+Expected value is `zide`. If the terminfo entry is not installed yet, Zide
+falls back to `xterm-kitty` when available, otherwise `xterm-256color`.
+
 ## Test
 
 ```bash

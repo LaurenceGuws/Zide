@@ -39,6 +39,21 @@ See [app_architecture/BOOTSTRAP.md](app_architecture/BOOTSTRAP.md) for:
 - Keyboard shortcuts
 - Configuration options
 
+Terminal compatibility and terminfo:
+- `docs/terminal/compatibility.md`
+- Install the bundled terminal entry for best app detection:
+
+```bash
+mkdir -p ~/.terminfo
+tic -x -o ~/.terminfo terminfo/zide.terminfo
+```
+
+Open a new terminal inside Zide and verify:
+
+```bash
+printf '%s\n' "$TERM"
+```
+
 UI renderer roadmap:
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md`
 

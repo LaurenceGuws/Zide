@@ -195,12 +195,7 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
     const shell_path = shell orelse defaultShell();
     const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
 
-    const term = if (terminfoExists("zide"))
-        "zide"
-    else if (terminfoExists("xterm-kitty"))
-        "xterm-kitty"
-    else
-        "xterm-256color";
+    const term = chooseTermName(terminfoExists);
     _ = c.setenv("TERM", term, 1);
     if (std.c.getenv("INPUTRC") == null) {
         const pid = c.getpid();
@@ -255,6 +250,12 @@ fn terminfoExists(name: []const u8) bool {
         terminfoInDirSlice("/etc/terminfo", name);
 }
 
+fn chooseTermName(existsFn: fn ([]const u8) bool) [:0]const u8 {
+    if (existsFn("zide")) return "zide";
+    if (existsFn("xterm-kitty")) return "xterm-kitty";
+    return "xterm-256color";
+}
+
 fn terminfoInDir(dir_c: ?[*:0]const u8, name: []const u8) bool {
     if (dir_c == null) return false;
     return terminfoInDirSlice(std.mem.sliceTo(dir_c.?, 0), name);
@@ -271,4 +272,89 @@ fn terminfoInDirSlice(dir: []const u8, name: []const u8) bool {
     } else |_| {
         return false;
     }
+}
+
+test "chooseTermName prefers zide terminfo" {
+    const Exists = struct {
+        fn has(name: []const u8) bool {
+            return std.mem.eql(u8, name, "zide") or std.mem.eql(u8, name, "xterm-kitty");
+        }
+    };
+    try std.testing.expectEqualStrings("zide", chooseTermName(Exists.has));
+}
+
+test "chooseTermName falls back to xterm-kitty before xterm-256color" {
+    const Exists = struct {
+        fn has(name: []const u8) bool {
+            return std.mem.eql(u8, name, "xterm-kitty");
+        }
+    };
+    try std.testing.expectEqualStrings("xterm-kitty", chooseTermName(Exists.has));
+}
+
+test "chooseTermName falls back to xterm-256color when no richer terminfo exists" {
+    const Exists = struct {
+        fn has(_: []const u8) bool {
+            return false;
+        }
+    };
+    try std.testing.expectEqualStrings("xterm-256color", chooseTermName(Exists.has));
+}
+
+test "unix pty smoke prefers zide TERM when bundled terminfo is installed" {
+    if (builtin.target.os.tag == .windows) return;
+
+    const allocator = std.testing.allocator;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    var terminfo_dir_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const terminfo_dir = try tmp.dir.realpath(".", &terminfo_dir_buf);
+
+    const compile = std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &.{ "tic", "-x", "-o", terminfo_dir, "terminfo/zide.terminfo" },
+    }) catch |err| switch (err) {
+        error.FileNotFound => return,
+        else => return err,
+    };
+    defer allocator.free(compile.stdout);
+    defer allocator.free(compile.stderr);
+    try std.testing.expectEqual(@as(u8, 0), compile.term.Exited);
+
+    const old_terminfo = std.c.getenv("TERMINFO");
+    defer {
+        if (old_terminfo) |value| {
+            _ = c.setenv("TERMINFO", value, 1);
+        } else {
+            _ = c.unsetenv("TERMINFO");
+        }
+    }
+    _ = c.setenv("TERMINFO", terminfo_dir.ptr, 1);
+
+    var pty = Pty.init(allocator, .{ .rows = 24, .cols = 80, .cell_width = 8, .cell_height = 16 }, "/bin/sh") catch |err| switch (err) {
+        error.OpenPtyFailed => return,
+        else => return err,
+    };
+    defer pty.deinit();
+
+    var output = std.ArrayList(u8).empty;
+    defer output.deinit(allocator);
+
+    _ = try pty.write("printf '%s\\n' \"$TERM\"\n");
+    _ = try pty.write("exit\n");
+
+    const start_ms = std.time.milliTimestamp();
+    var buf: [4096]u8 = undefined;
+    while (std.time.milliTimestamp() - start_ms < 3000) {
+        if (!pty.waitForData(50)) continue;
+        const n_opt = try pty.read(&buf);
+        if (n_opt) |n| {
+            if (n == 0) break;
+            _ = try output.appendSlice(allocator, buf[0..n]);
+            if (std.mem.indexOf(u8, output.items, "zide") != null) break;
+        }
+    }
+
+    try std.testing.expect(std.mem.indexOf(u8, output.items, "zide") != null);
 }

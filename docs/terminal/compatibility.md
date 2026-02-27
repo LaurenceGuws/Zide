@@ -11,6 +11,10 @@ do not assume it is supported just because a reference terminal implements it.
 - Recommended `TERM`: `zide`
 - Fallback `TERM`: `xterm-256color`
 - Terminfo source: `terminfo/zide.terminfo`
+- Runtime selection order inside Zide:
+  - `zide` when its terminfo entry is installed
+  - `xterm-kitty` when available but `zide` is not installed
+  - `xterm-256color` as the final fallback
 
 Install the bundled terminfo entry with:
 
@@ -22,6 +26,17 @@ tic -x -o ~/.terminfo terminfo/zide.terminfo
 After installation, new shells launched inside Zide will prefer `TERM=zide`.
 If the entry is not installed, Zide falls back to `xterm-kitty` when available,
 otherwise `xterm-256color`.
+
+The initial `zide` terminfo entry intentionally keeps `xterm-256color` as its
+base and adds only audited extensions:
+
+- `Tc` for truecolor
+- `Su` and `Smulx` for styled underlines
+- `Setulc` for underline color (`SGR 58`)
+- `XF` for focus reporting
+- `fullkbd` for kitty keyboard / CSI-u full keyboard mode
+- `Sync` for synchronized-update capability advertising
+- `Ms` for OSC 52 clipboard transport
 
 ## Supported Baseline
 
@@ -95,8 +110,33 @@ otherwise `xterm-256color`.
 - For image rendering, kitty graphics is the supported path; sixel is not.
 - For keyboard richness, kitty keyboard / CSI-u should be treated as progressive enhancement, not the only usable input path.
 
+## Installing And Verifying
+
+Install the bundled terminfo entry:
+
+```sh
+mkdir -p ~/.terminfo
+tic -x -o ~/.terminfo terminfo/zide.terminfo
+```
+
+Verify the entry is visible:
+
+```sh
+infocmp zide
+```
+
+Then launch a new shell inside Zide and confirm:
+
+```sh
+printf '%s\n' "$TERM"
+```
+
+Expected value is `zide`. If the terminfo entry is not installed yet, expect
+`xterm-kitty` or `xterm-256color` depending on what is available on the host.
+
 ## Validation Sources
 
 - Replay fixtures under `fixtures/terminal/`
 - Protocol tracker: `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
 - Terminal API notes: `app_architecture/terminal/TERMINAL_API.md`
+- PTY TERM smoke: `src/terminal/io/pty_unix.zig`
