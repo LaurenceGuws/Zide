@@ -3188,6 +3188,21 @@ Verification:
 - `zig build test-terminal-replay -- --fixture audit02_decstbm_home_decom_declrmm_reply`
 - `zig build check-app-imports`
 
+Implemented (increment 14 / `AUDIT-04` DECRQM strict single-parameter validation + policy-matrix lock):
+- Tightened CSI `p` DECRQM dispatch to require exactly one parameter (`param_len == 1`) after `$` intermediate matching.
+- Invalid DECRQM cardinality now has explicit ignore/no-reply behavior for both ANSI and DEC-private forms (missing mode, multi-parameter, leading-empty forms).
+- Added focused PTY integration coverage for invalid DECRQM cardinality no-reply behavior.
+- Extended the replay `DECRQM` policy matrix fixture with invalid-cardinality query forms to lock no-reply behavior without altering the existing supported/unsupported reply matrix.
+
+Files:
+- `src/terminal/protocol/csi.zig`
+- `src/terminal_focus_reporting_tests.zig`
+- `fixtures/terminal/decrqm_query_matrix_reply.vt`
+
+Verification:
+- `zig build test-terminal-focus-reporting`
+- `zig build test-terminal-replay -- --fixture decrqm_query_matrix_reply`
+
 ## Change Log
 
 ### 2026-02-27

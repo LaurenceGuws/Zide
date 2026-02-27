@@ -1624,6 +1624,26 @@ test "terminal DECRQM ansi query returns Pm=0 for unsupported mode per xterm-foo
     }.run);
 }
 
+test "terminal DECRQM requires exactly one parameter" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const cases = [_][]const u8{
+                "\x1b[$p", // missing ANSI mode
+                "\x1b[?$p", // missing DEC private mode
+                "\x1b[4;20$p", // ANSI multi-parameter DECRQM
+                "\x1b[;4$p", // ANSI leading empty parameter
+                "\x1b[?1004;25$p", // DEC private multi-parameter DECRQM
+                "\x1b[?;1004$p", // DEC private leading empty parameter
+            };
+
+            for (cases) |seq| {
+                terminal.debugFeedBytes(session, seq);
+                try capture.expectNoReply();
+            }
+        }
+    }.run);
+}
+
 test "terminal CSI !p does not trigger DECRQM reply" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
