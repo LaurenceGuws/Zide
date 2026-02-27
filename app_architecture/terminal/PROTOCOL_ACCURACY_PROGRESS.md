@@ -2566,6 +2566,18 @@ Notes:
     - replay:
       - `fixtures/terminal/decslrm_el_mode2_clips_to_margins.*`
 
+- `PA-08h` implementation slice (2026-02-26, `DECSLRM` line insert/delete margin-band clipping):
+  - Aligned line insert/delete behavior to active horizontal margins when `?69` is enabled:
+    - `IL` (`CSI Ps L`) shifts only the active margin band (`left_margin..right_margin`) downward within the vertical scroll region and blanks inserted band cells.
+    - `DL` (`CSI Ps M`) shifts only the active margin band upward within the vertical scroll region and blanks vacated tail band cells.
+  - Outside-margin columns are preserved for both operations.
+  - Evidence:
+    - PTY/unit integration: `src/terminal_focus_reporting_tests.zig`
+      - `terminal DECSLRM clips IL and DL to active horizontal margins`
+    - replay:
+      - `fixtures/terminal/decslrm_il_margin_band_only.*`
+      - `fixtures/terminal/decslrm_dl_margin_band_only.*`
+
 Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft terminal reset):
 - Reference anchors:
   - xterm docs define `CSI ! p` as `DECSTR` (soft terminal reset), VT220+ (`reference_repos/terminals/xterm_snapshots/ctlseqs.txt`).
@@ -2958,7 +2970,7 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `PA-08h` Extend `DECSLRM` parity beyond current slices (line/region ops: `IL`/`DL`/`ED` interactions under horizontal margins)
+1. `PA-08h` Extend `DECSLRM` parity beyond current slices (line/region ops: `ED` interactions and remaining margin-sensitive operations)
 2. `PA-04c` Decide whether to keep replay harness file-only for `t=s` or add deterministic shm lifecycle support to replay fixtures
 3. `PA-05c` Extend metadata-aware encoder format usage for `alternate_layout_codepoint` when protocol field support is promoted
 4. `PA-04c` Extend parent/virtual placement fixture coverage (`U=1`, `P/Q/H/V`) with explicit success/error expectations

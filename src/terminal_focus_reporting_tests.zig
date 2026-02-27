@@ -336,6 +336,35 @@ test "terminal DECSLRM clips EL to active horizontal margins" {
     }
 }
 
+test "terminal DECSLRM clips IL and DL to active horizontal margins" {
+    const allocator = std.testing.allocator;
+    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    defer session.deinit();
+
+    terminal.debugFeedBytes(session, "\x1b[1;1HAAAAAAAAAAAA");
+    terminal.debugFeedBytes(session, "\x1b[2;1HBBBBBBBBBBBB");
+    terminal.debugFeedBytes(session, "\x1b[3;1HCCCCCCCCCCCC");
+    terminal.debugFeedBytes(session, "\x1b[4;1HDDDDDDDDDDDD");
+    terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
+
+    // Insert one line at row 2, col 3; only margin band should shift.
+    terminal.debugFeedBytes(session, "\x1b[2;3H\x1b[1L");
+    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(1, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), session.getCell(1, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(2, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), session.getCell(3, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), session.getCell(4, 2).codepoint);
+
+    // Delete one line at row 2, col 3; margin band shifts back up.
+    terminal.debugFeedBytes(session, "\x1b[2;3H\x1b[1M");
+    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(1, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), session.getCell(2, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), session.getCell(3, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(1, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), session.getCell(2, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), session.getCell(3, 2).codepoint);
+}
+
 test "terminal DECRQM strategic fixed-off private modes report permanently reset (Pm=4)" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
