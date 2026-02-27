@@ -744,6 +744,32 @@ test "terminal DECRQM emits no Pm=3 replies in current policy scope" {
     }.run);
 }
 
+test "terminal DECRQM representative Pm policy matrix returns 0 1 2 and 4" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+            const cases = [_]struct {
+                seq: []const u8,
+                expected: []const u8,
+            }{
+                .{ .seq = "\x1b[4$p", .expected = "\x1b[4;2$y" },
+                .{ .seq = "\x1b[4h\x1b[4$p", .expected = "\x1b[4;1$y" },
+                .{ .seq = "\x1b[999$p", .expected = "\x1b[999;0$y" },
+                .{ .seq = "\x1b[?1004$p", .expected = "\x1b[?1004;2$y" },
+                .{ .seq = "\x1b[?1004h\x1b[?1004$p", .expected = "\x1b[?1004;1$y" },
+                .{ .seq = "\x1b[?1005$p", .expected = "\x1b[?1005;4$y" },
+            };
+
+            for (cases) |case| {
+                terminal.debugFeedBytes(session, case.seq);
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings(case.expected, reply);
+            }
+        }
+    }.run);
+}
+
 test "terminal DECRQM private query returns Pm=0 for unsupported mode" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
