@@ -2007,18 +2007,29 @@ Inventory snapshot (`PA-08a`, first pass) checklist (audit-traceable):
 | Kitty keyboard mode controls (`CSI >u/<u/=u/?u`) | implemented | high | replay+unit | `src/terminal/protocol/csi.zig`, `src/terminal/input/*`, encoder fixtures in `fixtures/terminal/encoder/` | `reference_repos/terminals/kitty` (protocol behavior), `reference_repos/terminals/ghostty/src/terminal/stream.zig` | Encoding parity still partial under `PA-05` |
 | Tabulation family beyond `TBC` | partial | medium | replay | `src/terminal/protocol/csi.zig` (`I/Z/g`), `src/terminal/model/screen/tabstops.zig`, `fixtures/terminal/csi_tab_cht_cbt_counts.*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig` | `CHT/CBT/TBC` now implemented; tab-stop report/edit breadth still partial |
 | Mode query/report breadth (`DECRQM` etc.) | partial | high | replay+unit+PTY (partial) | `src/terminal/protocol/csi.zig`, `src/terminal_csi_reply_tests.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/decrqm_*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/foot/csi.c`, `reference_repos/terminals/ghostty/src/terminal/stream.zig`, `reference_repos/terminals/kitty/docs/clipboard.rst` | Private `DECRQM` replies implemented for common DEC modes + ANSI mode `20`; replay reply assertions now available |
-| Focus reporting mode (`?1004`) + event emission path | partial | high | replay+PTY | `src/terminal/protocol/csi.zig`, `src/terminal/core/terminal_session.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/focus_reporting_mode_*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/foot/csi.c` | Implemented with window + pane source toggles; semantics may evolve |
+| Focus reporting mode (`?1004`) + event emission path | implemented (bounded) | high | replay+PTY | `src/terminal/protocol/csi.zig`, `src/terminal/core/terminal_session.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/focus_reporting_mode_*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/foot/csi.c` | Implemented with window + pane source toggles; bounded semantics are test-locked |
 | Terminal reset conveniences (`DECSTR`, CSI soft reset breadth) | partial | medium | replay + PTY | `DECSTR` implemented/tested (`src/terminal/protocol/csi.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/decstr_*`); broader reset-family breadth still pending | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/kitty/kitty/vt-parser.c`, `reference_repos/terminals/ghostty/src/terminal/stream.zig` | `DECSTR` slice active; broader CSI reset-family parity still tracked under `PA-08h` |
-| Left/right margins (`DECSLRM`) + rectangular semantics | partial | medium | no | no Zide implementation yet (`src/terminal/protocol/csi.zig`) | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig`, `reference_repos/terminals/ghostty/src/terminal/Terminal.zig` | xterm-compat gap for some advanced TUIs |
-| Alternate mouse encodings (`1005`, `1015`) | todo | low/medium | no | `src/terminal/protocol/csi.zig`, `src/terminal/input/mouse_report.zig` (current modes) | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/foot/csi.c` | Add only if app compatibility demands |
+| Left/right margins (`DECSLRM`) + rectangular semantics | partial | medium | replay+PTY | `src/terminal/protocol/csi.zig`, `src/terminal/model/screen/screen.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/decslrm_*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/ghostty/src/terminal/stream.zig`, `reference_repos/terminals/ghostty/src/terminal/Terminal.zig` | core `DECSLRM` behavior implemented and heavily fixture-covered; advanced rectangular breadth remains deferred |
+| Alternate mouse encodings (`1005`, `1015`) | deferred | low/medium | replay (query policy) | `src/terminal/protocol/csi.zig`, `src/terminal/input/mouse_report.zig`, `fixtures/terminal/decrqm_pm_policy_matrix_reply.*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt`, `reference_repos/terminals/foot/csi.c` | explicit strategic non-support (`DECRQM Pm=4`); revisit on concrete app compatibility signal |
 | Xterm window ops (`CSI ... t`) | partial | low/medium | PTY + replay | `src/terminal/protocol/csi.zig`, `src/terminal_focus_reporting_tests.zig`, `fixtures/terminal/csi_window_ops_14t_query_reply.*`, `fixtures/terminal/csi_window_ops_16t_query_reply.*`, `fixtures/terminal/csi_window_ops_18t_query_reply.*`, `fixtures/terminal/csi_window_ops_19t_query_reply.*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt` | bounded support: `CSI 14 t` (text-area pixels), `CSI 16 t` (cell pixels), `CSI 18 t` (text area chars), `CSI 19 t` (screen chars); broader `t` family still pending |
-| Printer/media/status extensions | todo | low | no | no Zide support | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt` | Out of current scope |
+| Printer/media/status extensions | deferred | low | no | no Zide support | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt` | Explicit out-of-scope defer for current product/parity phase |
 | Legacy/rare tab-stop report/edit variants | deferred | low | replay | current tab support in `src/terminal/protocol/csi.zig`, `src/terminal/model/screen/tabstops.zig`, `fixtures/terminal/csi_tab_ctc_legacy_variants_deferred_noop.*` | `reference_repos/terminals/xterm_snapshots/ctlseqs.txt` | Explicitly defer-lock representative `CSI Ps W` variants as no-op until app demand appears |
 
 Suggested `PA-08d` promotion candidates (first pass):
 1. `?1004` focus reporting mode + event emission (real TUI impact)
 2. `CHT` / `CBT` tab movement coverage (completes currently-partial tab family)
 3. `DECRQM` / minimal mode-report replies for queried private modes seen in reference seeds
+
+Implemented (increment 2 / `PA-08a` inventory closure pass):
+- Refreshed the `PA-08a` CSI/private inventory table to reflect current landed behavior and explicit defer decisions:
+  - `?1004` focus reporting is now tracked as implemented (bounded + test-locked).
+  - `DECSLRM` row now reflects implemented core behavior with replay/PTy coverage instead of pre-implementation wording.
+  - alternate mouse encodings (`1005`, `1015`) are explicitly deferred with query-policy coverage reference.
+  - printer/media/status extensions are explicitly deferred for current scope.
+- This closes the queue-level inventory drift and keeps `PA-08a` as an auditable reference for subsequent parity slices.
+
+Verification:
+- source-audit/docs alignment increment (no runtime behavior change)
 
 Implemented (increment 2 / `PA-08b` DCS/APC gap inventory + implement/defer policy):
 - Added an explicit DCS/APC parity inventory with reference-backed implement/defer
@@ -3459,6 +3470,9 @@ Verification:
 - Closed current `PA-08h` promoted-gap gate for this parity phase:
   - marked promoted CSI/private rows as implemented-or-explicitly-deferred with fixture authority
   - moved top queue focus to `PA-08a` inventory closure and `PA-04c` kitty query/reply matrix breadth
+- Closed `PA-08a` CSI/private inventory drift for current scope:
+  - updated stale rows (`?1004`, `DECSLRM`, alternate mouse encodings, printer/media/status family) to explicit implemented/deferred states with references
+  - moved top queue focus to `PA-04c` and ongoing replay/PTY matrix hygiene
 
 ### 2026-02-23
 
@@ -3506,9 +3520,9 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `PA-08a` Complete CSI/private inventory closure with explicit `implement/defer` decisions for remaining reference rows
-2. `PA-04c` Continue kitty query/reply matrix closure for remaining integrated edge-form combinations (keep `PA-04a/04b` docs as audit authority)
-3. `PA-08` replay/PTY matrix maintenance as new parity slices land (avoid assertion/golden drift)
+1. `PA-04c` Continue kitty query/reply matrix closure for remaining integrated edge-form combinations (keep `PA-04a/04b` docs as audit authority)
+2. `PA-08` replay/PTY matrix maintenance as new parity slices land (avoid assertion/golden drift)
+3. `PA-08` defer-policy hygiene: ensure newly deferred rows include resume criteria + compatibility notes
 
 ## Decomposition Backlog (New)
 
@@ -3521,7 +3535,7 @@ Verification:
 
 ### PA-08 Parity Decomposition Checklist
 
-- [ ] `PA-08a` Inventory missing CSI finals/private modes from `xterm`/`kitty`/`ghostty` relevant to Zide, with explicit `done` criteria and reference links/notes
+- [x] `PA-08a` Inventory missing CSI finals/private modes from `xterm`/`kitty`/`ghostty` relevant to Zide, with explicit `done` criteria and reference links/notes
 - [x] `PA-08b` Inventory DCS/APC gaps relative to kitty/ghostty/foot usage, with explicit `implement` vs `defer` policy per family
 - [x] `PA-08c` Define PTY-stub replay strategy for query/reply assertions (implemented as `reply_hex` + `assertions: ["reply"]`)
 - [x] `PA-08d` Promote highest-value gaps into implementable tracker items (`?1004` promoted and implemented under `PA-08e`)
