@@ -318,7 +318,7 @@ fn sendCharWithProtocolMeta(
     if (!report_text and !charNeedsProtocolDisambiguation(char, mod)) return false;
     if ((flags & key_encoding.key_mode_report_all_event_types) == 0 and action == .release) return false;
 
-    var buf: [64]u8 = undefined;
+    var buf: [128]u8 = undefined;
     const key_fields = protocolCharKeyFields(char, mod, flags, alternate_meta);
     const mod_value = key_encoding.kittyModValue(mod);
     const has_mods = mod_value != 1;
@@ -362,12 +362,45 @@ fn sendCharWithProtocolMeta(
     if (include_associated_text) {
         buf[pos] = ';';
         pos += 1;
-        const written_text = std.fmt.bufPrint(buf[pos..], "{d}", .{char}) catch return false;
-        pos += written_text.len;
+        if (!appendAssociatedTextCodepoints(&buf, &pos, char, alternate_meta)) return false;
     }
     buf[pos] = 'u';
     pos += 1;
     _ = pty.write(buf[0..pos]) catch return false;
+    return true;
+}
+
+fn appendAssociatedTextCodepoints(
+    buf: []u8,
+    pos: *usize,
+    fallback_codepoint: u32,
+    alternate_meta: ?types.KeyboardAlternateMetadata,
+) bool {
+    if (alternate_meta) |meta| {
+        if (meta.produced_text_utf8) |text| {
+            if (text.len > 0) {
+                var view = std.unicode.Utf8View.init(text) catch return appendAssociatedCodepoint(buf, pos, fallback_codepoint);
+                var it = view.iterator();
+                var wrote_any = false;
+                while (it.nextCodepoint()) |cp| {
+                    if (wrote_any) {
+                        if (pos.* >= buf.len) return false;
+                        buf[pos.*] = ':';
+                        pos.* += 1;
+                    }
+                    if (!appendAssociatedCodepoint(buf, pos, cp)) return false;
+                    wrote_any = true;
+                }
+                if (wrote_any) return true;
+            }
+        }
+    }
+    return appendAssociatedCodepoint(buf, pos, fallback_codepoint);
+}
+
+fn appendAssociatedCodepoint(buf: []u8, pos: *usize, cp: u32) bool {
+    const written = std.fmt.bufPrint(buf[pos.*..], "{d}", .{cp}) catch return false;
+    pos.* += written.len;
     return true;
 }
 
@@ -603,30 +636,35 @@ pub fn encodeCharEventBytesForTest(
     const add_actions = (event.key_mode_flags & key_encoding.key_mode_report_all_event_types) != 0 and event.action != .press;
     const include_associated_text = embed_text and event.action != .release;
     const second_field = has_mods or add_actions;
+    const associated_text = if (include_associated_text)
+        try associatedTextFieldForTest(allocator, event.codepoint, event.protocol.alternate)
+    else
+        &[_]u8{};
+    defer if (include_associated_text) allocator.free(associated_text);
     if (key_fields.shifted) |shifted_key| {
         if (include_associated_text) {
             if (second_field) {
                 if (has_mods and add_actions) {
                     if (key_fields.alternate) |alternate_key| {
-                        return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};{d}:{d};{d}u", .{ key_fields.key, shifted_key, alternate_key, mod_code, @intFromEnum(event.action) + 1, event.codepoint });
+                        return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};{d}:{d};{s}u", .{ key_fields.key, shifted_key, alternate_key, mod_code, @intFromEnum(event.action) + 1, associated_text });
                     }
-                    return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};{d}:{d};{d}u", .{ key_fields.key, shifted_key, mod_code, @intFromEnum(event.action) + 1, event.codepoint });
+                    return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};{d}:{d};{s}u", .{ key_fields.key, shifted_key, mod_code, @intFromEnum(event.action) + 1, associated_text });
                 }
                 if (has_mods) {
                     if (key_fields.alternate) |alternate_key| {
-                        return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};{d};{d}u", .{ key_fields.key, shifted_key, alternate_key, mod_code, event.codepoint });
+                        return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};{d};{s}u", .{ key_fields.key, shifted_key, alternate_key, mod_code, associated_text });
                     }
-                    return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};{d};{d}u", .{ key_fields.key, shifted_key, mod_code, event.codepoint });
+                    return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};{d};{s}u", .{ key_fields.key, shifted_key, mod_code, associated_text });
                 }
                 if (key_fields.alternate) |alternate_key| {
-                    return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};:{d};{d}u", .{ key_fields.key, shifted_key, alternate_key, @intFromEnum(event.action) + 1, event.codepoint });
+                    return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};:{d};{s}u", .{ key_fields.key, shifted_key, alternate_key, @intFromEnum(event.action) + 1, associated_text });
                 }
-                return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};:{d};{d}u", .{ key_fields.key, shifted_key, @intFromEnum(event.action) + 1, event.codepoint });
+                return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};:{d};{s}u", .{ key_fields.key, shifted_key, @intFromEnum(event.action) + 1, associated_text });
             }
             if (key_fields.alternate) |alternate_key| {
-                return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};;{d}u", .{ key_fields.key, shifted_key, alternate_key, event.codepoint });
+                return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};;{s}u", .{ key_fields.key, shifted_key, alternate_key, associated_text });
             }
-            return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};;{d}u", .{ key_fields.key, shifted_key, event.codepoint });
+            return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};;{s}u", .{ key_fields.key, shifted_key, associated_text });
         }
         if (second_field) {
             if (has_mods and add_actions) {
@@ -654,14 +692,14 @@ pub fn encodeCharEventBytesForTest(
     if (include_associated_text) {
         if (second_field) {
             if (has_mods and add_actions) {
-                return std.fmt.allocPrint(allocator, "\x1b[{d};{d}:{d};{d}u", .{ key_fields.key, mod_code, @intFromEnum(event.action) + 1, event.codepoint });
+                return std.fmt.allocPrint(allocator, "\x1b[{d};{d}:{d};{s}u", .{ key_fields.key, mod_code, @intFromEnum(event.action) + 1, associated_text });
             }
             if (has_mods) {
-                return std.fmt.allocPrint(allocator, "\x1b[{d};{d};{d}u", .{ key_fields.key, mod_code, event.codepoint });
+                return std.fmt.allocPrint(allocator, "\x1b[{d};{d};{s}u", .{ key_fields.key, mod_code, associated_text });
             }
-            return std.fmt.allocPrint(allocator, "\x1b[{d};:{d};{d}u", .{ key_fields.key, @intFromEnum(event.action) + 1, event.codepoint });
+            return std.fmt.allocPrint(allocator, "\x1b[{d};:{d};{s}u", .{ key_fields.key, @intFromEnum(event.action) + 1, associated_text });
         }
-        return std.fmt.allocPrint(allocator, "\x1b[{d};;{d}u", .{ key_fields.key, event.codepoint });
+        return std.fmt.allocPrint(allocator, "\x1b[{d};;{s}u", .{ key_fields.key, associated_text });
     }
     if (second_field) {
         if (has_mods and add_actions) {
@@ -673,6 +711,38 @@ pub fn encodeCharEventBytesForTest(
         return std.fmt.allocPrint(allocator, "\x1b[{d};:{d}u", .{ key_fields.key, @intFromEnum(event.action) + 1 });
     }
     return std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ key_fields.key, mod_code });
+}
+
+fn associatedTextFieldForTest(
+    allocator: std.mem.Allocator,
+    fallback_codepoint: u32,
+    alternate_meta: ?types.KeyboardAlternateMetadata,
+) ![]u8 {
+    var list: std.ArrayList(u32) = .empty;
+    defer list.deinit(allocator);
+
+    if (alternate_meta) |meta| {
+        if (meta.produced_text_utf8) |text| {
+            if (text.len > 0) {
+                var view = std.unicode.Utf8View.init(text) catch return std.fmt.allocPrint(allocator, "{d}", .{fallback_codepoint});
+                var it = view.iterator();
+                while (it.nextCodepoint()) |cp| {
+                    try list.append(allocator, cp);
+                }
+                if (list.items.len > 0) {
+                    var out: std.ArrayList(u8) = .empty;
+                    errdefer out.deinit(allocator);
+                    for (list.items, 0..) |cp, idx| {
+                        if (idx != 0) try out.append(allocator, ':');
+                        try out.writer(allocator).print("{d}", .{cp});
+                    }
+                    return out.toOwnedSlice(allocator);
+                }
+            }
+        }
+    }
+
+    return std.fmt.allocPrint(allocator, "{d}", .{fallback_codepoint});
 }
 
 fn encodeCsiWithModBytes(

@@ -1255,6 +1255,21 @@ Files:
 Verification:
 - `zig test src/terminal_input_encoding_tests.zig`
 
+Implemented (increment 13 / `AUDIT-10` multi-codepoint associated text for `embed_text`):
+- Updated CSI-u associated-text serialization (third field) for char press/repeat paths to support multiple codepoints as colon-separated decimal values when metadata provides multi-codepoint UTF-8 text.
+- Behavior remains consistent with `AUDIT-09`: release events still omit the associated-text field entirely.
+- Runtime encoder and test helper parity were kept aligned for `embed_text` formatting.
+- Added focused input-encoding tests for:
+  - press/repeat multi-codepoint associated text serialization
+  - release omission even when metadata contains multi-codepoint text
+
+Files:
+- `src/terminal/input/input.zig`
+- `src/terminal_input_encoding_tests.zig`
+
+Verification:
+- `zig test src/terminal_input_encoding_tests.zig`
+
 Deferred (increment 7 / layout-aware alternates decision):
 - Explicitly deferred full layout-aware alternate-key reporting (beyond the current US-ASCII shifted-char subset).
 - Rationale:
@@ -3147,6 +3162,10 @@ Implemented (increment 12 / `AUDIT-03` strict equal-bounds rejection for `DECSTB
   - replay fixtures locking end-to-end reply bytes:
     - `fixtures/terminal/kitty_query_missing_id_no_reply_policy.*`
     - `fixtures/terminal/kitty_delete_reply_policy_parity.*`
+- Implemented `AUDIT-10` keyboard `embed_text` associated-text parity slice:
+  - press/repeat now support multi-codepoint associated text (colon-separated) via metadata UTF-8 text
+  - release continues to omit associated text (`AUDIT-09` preserved)
+  - focused encoder tests added in `src/terminal_input_encoding_tests.zig`
 
 ### 2026-02-23
 
@@ -3195,9 +3214,8 @@ Implemented (increment 12 / `AUDIT-03` strict equal-bounds rejection for `DECSTB
 ## Next Work Queue (Ordered)
 
 1. `AUDIT-03` Enforce strict invalid equal-bounds rejection for `DECSTBM` / `DECSLRM`
-2. `AUDIT-10` Keyboard: multi-codepoint associated text field for `embed_text`
-3. `AUDIT-06` Kitty: replace unknown delete selector no-op with explicit invalid reply
-4. See consolidated cross-reference backlog and ordering in `app_architecture/terminal/PROTOCOL_ALIGNMENT_AUDIT_2026-02-27.md`
+2. `AUDIT-06` Kitty: replace unknown delete selector no-op with explicit invalid reply
+3. See consolidated cross-reference backlog and ordering in `app_architecture/terminal/PROTOCOL_ALIGNMENT_AUDIT_2026-02-27.md`
 
 ## Decomposition Backlog (New)
 
