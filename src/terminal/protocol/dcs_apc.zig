@@ -41,7 +41,13 @@ fn handleXtgettcap(self: anytype, text: []const u8) void {
 
 fn handleDecrqss(self: anytype, text: []const u8) void {
     if (self.pty == null) return;
-    const ok_reply = if (@hasDecl(@TypeOf(self.*), "decrqssReply")) self.decrqssReply(text) else null;
+    var buf: [128]u8 = undefined;
+    const ok_reply = if (@hasDecl(@TypeOf(self.*), "decrqssReplyInto"))
+        self.decrqssReplyInto(text, &buf)
+    else if (@hasDecl(@TypeOf(self.*), "decrqssReply"))
+        self.decrqssReply(text)
+    else
+        null;
     writeDecrqssReply(self, ok_reply != null, ok_reply);
 }
 

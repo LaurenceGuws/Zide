@@ -128,7 +128,7 @@ test "DCS DECRQSS writes SGR reply for bounded attribute state" {
         pty: ?FakePty,
 
         pub fn setSyncUpdates(_: *@This(), _: bool) void {}
-        pub fn decrqssReply(_: *@This(), text: []const u8) ?[]const u8 {
+        pub fn decrqssReplyInto(_: *@This(), text: []const u8, _: []u8) ?[]const u8 {
             if (std.mem.eql(u8, text, "m")) return "1;5;7;31;42";
             return null;
         }
@@ -138,7 +138,7 @@ test "DCS DECRQSS writes SGR reply for bounded attribute state" {
     defer if (self.pty) |*pty| pty.deinit(allocator);
     dcs_apc.parseDcs(&self, "$qm");
 
-    try std.testing.expectEqualStrings("\x1bP1$r1;5;7;31;42\x1b\\", self.pty.?.writes.items);
+    try std.testing.expectEqualStrings("\x1bP1$r1;5;7;31;42m\x1b\\", self.pty.?.writes.items);
 }
 
 test "DCS DECRQSS writes DECSTBM reply" {
