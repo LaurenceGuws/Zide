@@ -336,6 +336,28 @@ test "terminal DECSLRM clips EL to active horizontal margins" {
     }
 }
 
+test "terminal DECSLRM clips ED to active horizontal margins" {
+    const allocator = std.testing.allocator;
+    var session = try terminal.TerminalSession.init(allocator, 4, 12);
+    defer session.deinit();
+
+    terminal.debugFeedBytes(session, "\x1b[1;1HAAAAAAAAAAAA");
+    terminal.debugFeedBytes(session, "\x1b[2;1HBBBBBBBBBBBB");
+    terminal.debugFeedBytes(session, "\x1b[3;1HCCCCCCCCCCCC");
+    terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s");
+
+    terminal.debugFeedBytes(session, "\x1b[2;5H\x1b[2J");
+    for (0..3) |r| {
+        try std.testing.expectEqual(@as(u32, @intCast('A' + r)), session.getCell(r, 0).codepoint);
+        try std.testing.expectEqual(@as(u32, @intCast('A' + r)), session.getCell(r, 1).codepoint);
+        try std.testing.expectEqual(@as(u32, @intCast('A' + r)), session.getCell(r, 8).codepoint);
+        try std.testing.expectEqual(@as(u32, @intCast('A' + r)), session.getCell(r, 11).codepoint);
+        for (2..8) |c| {
+            try std.testing.expectEqual(@as(u32, 0), session.getCell(r, c).codepoint);
+        }
+    }
+}
+
 test "terminal DECSLRM clips IL and DL to active horizontal margins" {
     const allocator = std.testing.allocator;
     var session = try terminal.TerminalSession.init(allocator, 6, 12);
