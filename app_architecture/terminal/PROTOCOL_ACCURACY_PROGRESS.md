@@ -3124,6 +3124,16 @@ Verification:
 - `zig build test-terminal-replay -- --fixture decslrm_csi_s_ambiguity_reply`
 - `zig build check-app-imports`
 
+Implemented (increment 12 / `AUDIT-03` strict equal-bounds rejection for `DECSTBM` / `DECSLRM`):
+- Tightened invalid-bound guards in CSI handling:
+  - `DECSTBM` (`CSI t;b r`) now no-ops when `top >= bottom` (equal bounds rejected).
+  - `DECSLRM` (`CSI l;r s` with `?69` enabled) now no-ops when `left >= right` (equal bounds rejected).
+- Added focused integration tests proving equal-bound sequences are no-op and preserve prior region/margins + cursor position:
+  - `terminal DECSTBM equal bounds are rejected as no-op`
+  - `terminal DECSLRM equal bounds are rejected as no-op`
+- Added replay fixture locking end-to-end reply behavior for both cases via `CPR`:
+  - `fixtures/terminal/audit03_equal_bounds_noop_reply.*`
+
 ## Change Log
 
 ### 2026-02-27
