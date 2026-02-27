@@ -2318,6 +2318,20 @@ Verification:
 - `zig build test-terminal-replay -- --fixture decrqm_query_matrix_reply --update-goldens`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 10 / `PA-08d` color-scheme DSR replay reply lock):
+- Added replay fixture coverage for `DSR ?996n` color-scheme preference replies in one stream with `?2031` mode toggles interleaved.
+- The fixture asserts concatenated reply bytes and locks current behavior that `?996n` replies are available regardless of `?2031` enablement.
+
+Files:
+- `fixtures/terminal/color_scheme_dsr_996_query_reply.vt`
+- `fixtures/terminal/color_scheme_dsr_996_query_reply.json`
+- `fixtures/terminal/color_scheme_dsr_996_query_reply.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture color_scheme_dsr_996_query_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture color_scheme_dsr_996_query_reply`
+- `zig build test-terminal-replay -- --all`
+
 Implemented (increment 10 / `PA-08g` `DECRQM` reply-policy prep + keypad mode query):
 - `PA-08f` groundwork: CSI parser now captures intermediate bytes (`$`, `!`, `#`, etc.), and `DECRQM` dispatch requires the `$` intermediate so unrelated `CSI ... p` families no longer over-match.
 - Added PTY no-reply tests for non-`DECRQM` `CSI p` forms (`CSI ! p`, `CSI ?1004p`, `CSI #p`) and CSI debug logging now includes captured intermediates.
@@ -3499,6 +3513,9 @@ Verification:
 - Refreshed replay cursor baselines for:
   - `fixtures/terminal/decslrm_decstbm_su_margin_band_only.golden`
   - `fixtures/terminal/decslrm_decstbm_sd_margin_band_only.golden`
+- Added replay fixture `fixtures/terminal/color_scheme_dsr_996_query_reply.*`:
+  - locks concatenated `DSR ?996n` reply bytes across interleaved `?2031` toggles
+  - preserves current behavior boundary where `?996n` replies are available regardless of `?2031` mode state
   after confirming current parser/runtime behavior produced cursor `r=1 c=0` with unchanged grid semantics.
 - Implemented `AUDIT-07` kitty delete selector explicit defer lock:
   - selectors `d=q/Q/f/F` are now explicitly treated as invalid (deferred parity, no silent fallback)
