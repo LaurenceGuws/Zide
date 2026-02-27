@@ -3166,6 +3166,28 @@ Implemented (increment 12 / `AUDIT-03` strict equal-bounds rejection for `DECSTB
 - Added replay fixture locking end-to-end reply behavior for both cases via `CPR`:
   - `fixtures/terminal/audit03_equal_bounds_noop_reply.*`
 
+Implemented (increment 13 / `AUDIT-02` `DECSTBM` cursor-home semantics with `DECOM` / `DECLRMM`):
+- Updated `DECSTBM` cursor-home behavior to follow `CUP 1;1` style origin semantics:
+  - with `DECOM` off, homes to display origin (`row=1`, `col=1`) even when `?69` margins are active.
+  - with `DECOM` on, homes to scroll-region top and left margin when `?69` is active.
+- Added focused integration coverage that proves both states under active `DECLRMM`:
+  - `terminal DECSTBM homes cursor using DECOM semantics under DECLRMM`
+- Added replay fixture with reply-byte lock across both transitions (`DECOM` off then on):
+  - `fixtures/terminal/audit02_decstbm_home_decom_declrmm_reply.*`
+
+Files:
+- `src/terminal/model/screen/screen.zig`
+- `src/terminal_focus_reporting_tests.zig`
+- `fixtures/terminal/audit02_decstbm_home_decom_declrmm_reply.vt`
+- `fixtures/terminal/audit02_decstbm_home_decom_declrmm_reply.json`
+- `fixtures/terminal/audit02_decstbm_home_decom_declrmm_reply.golden`
+
+Verification:
+- `zig build test-terminal-focus-reporting`
+- `zig build test-terminal-replay -- --fixture audit02_decstbm_home_decom_declrmm_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture audit02_decstbm_home_decom_declrmm_reply`
+- `zig build check-app-imports`
+
 ## Change Log
 
 ### 2026-02-27

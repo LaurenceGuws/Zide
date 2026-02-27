@@ -745,8 +745,13 @@ pub const Screen = struct {
     pub fn setScrollRegion(self: *Screen, top: usize, bot: usize) void {
         self.scroll_top = top;
         self.scroll_bottom = bot;
-        self.cursor.row = top;
-        self.cursor.col = self.leftBoundary();
+        if (self.origin_mode) {
+            self.cursor.row = top;
+            self.cursor.col = self.leftBoundary();
+        } else {
+            self.cursor.row = 0;
+            self.cursor.col = 0;
+        }
         self.wrap_next = false;
     }
 
