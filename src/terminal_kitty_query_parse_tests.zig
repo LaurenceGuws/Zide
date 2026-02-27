@@ -594,6 +594,23 @@ test "kitty parse delete invalid control reply is suppressed for q=2" {
     try expectKittyQueryNoReply("a=d,q=2,i=1,I=2,d=a");
 }
 
+test "kitty parse delete unknown selector replies EINVAL for q=0 and q=1" {
+    const cases = [_]struct {
+        seq: []const u8,
+        expected: []const u8,
+    }{
+        .{ .seq = "a=d,i=1,d=v", .expected = "\x1b_Gi=1;EINVAL\x1b\\" },
+        .{ .seq = "a=d,q=1,i=1,d=v", .expected = "\x1b_Gi=1;EINVAL\x1b\\" },
+    };
+    inline for (cases) |case_| {
+        try expectKittyQueryReply(case_.seq, case_.expected);
+    }
+}
+
+test "kitty parse delete unknown selector reply is suppressed for q=2" {
+    try expectKittyQueryNoReply("a=d,q=2,i=1,d=v");
+}
+
 // Query precedence matrix coverage (current scope):
 // - non-missing-id invalid compression (`o=1`)
 // - missing-id preflight
