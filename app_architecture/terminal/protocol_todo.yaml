@@ -233,6 +233,8 @@ terminal_protocol_todo:
         - "Initial public compatibility doc added: docs/terminal/compatibility.md"
         - "Initial conservative terminfo entry added: terminfo/zide.terminfo"
         - "Runtime TERM selection now prefers `zide` when the terminfo entry is installed"
+        - "Initial `zide` terminfo now advertises only audited overrides above `xterm-256color` (Tc/Su/Smulx/Setulc/XF/fullkbd/Sync/Ms)"
+        - "PTY TERM selection is covered both by selector unit tests and a Unix PTY smoke that verifies spawned-shell `TERM=zide` when bundled terminfo is installed"
         - "Further capability-specific terminfo expansion still requires a feature-by-feature audit"
       refs:
         - reference_repos/terminals/kitty/kitty/terminfo.py
