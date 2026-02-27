@@ -2280,6 +2280,23 @@ Verification:
 - `zig build test-terminal-replay -- --fixture dcs_legacy_sync_updates_query_reply --update-goldens`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 4 / `PA-08b` sixel deferred no-reply lock):
+- Promoted the deferred sixel/DRCS DCS row into explicit replay authority for the current non-support policy:
+  - representative sixel payload is consumed/ignored
+  - no reply is emitted
+  - surrounding printable text remains stable, so the defer boundary is visible and deterministic
+- This keeps sixel out of current scope while turning implicit ignore behavior into an auditable compatibility boundary.
+
+Files:
+- `fixtures/terminal/dcs_sixel_deferred_no_reply.vt`
+- `fixtures/terminal/dcs_sixel_deferred_no_reply.json`
+- `fixtures/terminal/dcs_sixel_deferred_no_reply.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture dcs_sixel_deferred_no_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture dcs_sixel_deferred_no_reply`
+- `zig build test-terminal-replay -- --all`
+
 Implemented (increment 2 / `PA-08e` promoted high-value CSI gap: `?1004` focus reporting):
 - Implemented CSI private mode handling for `?1004 h/l` (focus reporting enable/disable).
 - Added terminal focus-report emission (`ESC[I` / `ESC[O`) gated on the mode bit.
