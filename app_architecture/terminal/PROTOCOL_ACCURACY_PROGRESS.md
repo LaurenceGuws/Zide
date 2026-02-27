@@ -1318,6 +1318,20 @@ Verification:
 - `zig build test-terminal-replay -- --fixture kitty_query_invalid_offset_quiet_matrix_reply`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 48 / `PA-04c` parse-path mirror tests for query preflight quiet matrices):
+- Added focused project-integrated parse-path tests that mirror the new replay quiet matrices for invalid query preflight forms:
+  - invalid chunk marker (`a=q,m=1`) across `q=0/1/2`
+  - invalid offset marker (`a=q,O=1`) across `q=0/1/2`
+- This adds unit/integration authority for the same behavior now locked in replay fixtures, reducing risk of internal parser/control-flow drift.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse -- --test-filter "invalid chunk quiet-policy matrix"` *(fails in this environment due existing shared-memory test path: `ShmOpenFailed`)*
+- `zig build test-terminal-kitty-query-parse -- --test-filter "invalid offset quiet-policy matrix"` *(fails in this environment due existing shared-memory test path: `ShmOpenFailed`)*
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
