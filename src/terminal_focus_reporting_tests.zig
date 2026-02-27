@@ -1907,7 +1907,7 @@ test "terminal DECRQSS SGR query replies for bounded attribute state" {
             {
                 const reply = try capture.readReply(allocator);
                 defer allocator.free(reply);
-                try std.testing.expectEqualStrings("\x1bP1$r1;5;7;31;42\x1b\\", reply);
+                try std.testing.expectEqualStrings("\x1bP1$r1;5;7;31;42m\x1b\\", reply);
             }
         }
     }.run);

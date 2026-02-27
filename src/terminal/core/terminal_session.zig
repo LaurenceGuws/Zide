@@ -977,7 +977,7 @@ pub const TerminalSession = struct {
         self.activeScreen().setCursorStyle(mode);
     }
 
-    pub fn decrqssReply(self: *TerminalSession, text: []const u8) ?[]const u8 {
+    pub fn decrqssReplyInto(self: *TerminalSession, text: []const u8, buf: []u8) ?[]const u8 {
         if (std.mem.eql(u8, text, " q")) {
             const style = self.activeScreen().cursor_style;
             return switch (style.shape) {
@@ -987,21 +987,18 @@ pub const TerminalSession = struct {
             };
         }
         if (std.mem.eql(u8, text, "m")) {
-            var buf: [64]u8 = undefined;
-            return self.decrqssSgrReply(&buf);
+            return self.decrqssSgrReply(buf);
         }
         if (std.mem.eql(u8, text, "r")) {
             const screen = self.activeScreen();
-            var buf: [32]u8 = undefined;
-            return std.fmt.bufPrint(&buf, "{d};{d}r", .{
+            return std.fmt.bufPrint(buf, "{d};{d}r", .{
                 screen.scroll_top + 1,
                 screen.scroll_bottom + 1,
             }) catch null;
         }
         if (std.mem.eql(u8, text, "s")) {
             const screen = self.activeScreen();
-            var buf: [32]u8 = undefined;
-            return std.fmt.bufPrint(&buf, "{d};{d}s", .{
+            return std.fmt.bufPrint(buf, "{d};{d}s", .{
                 screen.left_margin + 1,
                 screen.right_margin + 1,
             }) catch null;
@@ -1038,7 +1035,14 @@ pub const TerminalSession = struct {
             if (!appendParam(buf, &pos, code)) return null;
         }
 
-        return buf[0..pos];
+        if (pos == 0) {
+            if (buf.len < 1) return null;
+            buf[0] = 'm';
+            return buf[0..1];
+        }
+        if (pos + 1 > buf.len) return null;
+        buf[pos] = 'm';
+        return buf[0 .. pos + 1];
     }
 
     fn decrqssPaletteSgrCode(self: *TerminalSession, color: types.Color, fg: bool) ?u8 {
