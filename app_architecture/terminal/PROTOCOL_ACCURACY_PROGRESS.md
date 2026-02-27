@@ -1374,6 +1374,25 @@ Verification:
 - `zig build test-terminal-kitty-query-parse`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 52 / `PA-04c` invalid query-compression quiet matrix replay + parse mirror):
+- Added a compact replay quiet matrix for invalid query compression value (`a=q,o=1`) across quiet levels in one stream:
+  - `q=0` -> `EINVAL` reply
+  - `q=1` -> `EINVAL` reply
+  - `q=2` -> reply suppressed
+- Added a matching parse-path matrix test in `src/terminal_kitty_query_parse_tests.zig` so replay authority and integration authority remain paired for this policy slice.
+
+Files:
+- `fixtures/terminal/kitty_query_invalid_compression_quiet_matrix_reply.vt`
+- `fixtures/terminal/kitty_query_invalid_compression_quiet_matrix_reply.json`
+- `fixtures/terminal/kitty_query_invalid_compression_quiet_matrix_reply.golden`
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture kitty_query_invalid_compression_quiet_matrix_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_query_invalid_compression_quiet_matrix_reply`
+- `zig build test-terminal-kitty-query-parse`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
