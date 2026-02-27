@@ -2319,6 +2319,28 @@ Verification:
 - `zig build test-terminal-replay -- --fixture dcs_decrqss_decscusr_query_reply`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 6 / `PA-08b` bounded `DECRQSS` support for current SGR state):
+- Extended the minimal `DCS $ q` (`DECRQSS`) slice to support `m` queries for a bounded current-SGR subset:
+  - serializes current boolean attributes in scope (`bold`, `blink`, `reverse`, `underline`)
+  - serializes current fg/bg when they are default or within the 16-color palette mapping
+  - unsupported richer SGR state remains outside this first bounded slice and falls back to `DCS 0 $ r ST`
+- This adds another real `PA-08b` implementation step without taking on full RGB / underline-color / extended-attribute serialization yet.
+
+Files:
+- `src/terminal/core/terminal_session.zig`
+- `src/terminal_protocol_reply_tests.zig`
+- `src/terminal_focus_reporting_tests.zig`
+- `fixtures/terminal/dcs_decrqss_sgr_query_reply.vt`
+- `fixtures/terminal/dcs_decrqss_sgr_query_reply.json`
+- `fixtures/terminal/dcs_decrqss_sgr_query_reply.golden`
+- `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+
+Verification:
+- `zig test src/terminal_protocol_reply_tests.zig -lc`
+- `zig build test-terminal-focus-reporting`
+- `zig build test-terminal-replay -- --fixture dcs_decrqss_sgr_query_reply --update-goldens`
+- `zig build test-terminal-replay -- --all`
+
 Implemented (increment 2 / `PA-08e` promoted high-value CSI gap: `?1004` focus reporting):
 - Implemented CSI private mode handling for `?1004 h/l` (focus reporting enable/disable).
 - Added terminal focus-report emission (`ESC[I` / `ESC[O`) gated on the mode bit.

@@ -1897,6 +1897,22 @@ test "terminal DECRQSS cursor-style query replies with DECSCUSR state" {
     }.run);
 }
 
+test "terminal DECRQSS SGR query replies for bounded attribute state" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+
+            terminal.debugFeedBytes(session, "\x1b[1;5;7;31;42m");
+            terminal.debugFeedBytes(session, "\x1bP$qm\x1b\\");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1bP1$r1;5;7;31;42\x1b\\", reply);
+            }
+        }
+    }.run);
+}
+
 test "terminal DECSTR resets title to default" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
