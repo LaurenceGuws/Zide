@@ -886,15 +886,25 @@ pub const Screen = struct {
         if (rows == 0 or cols == 0) return;
         const row = self.cursor.row;
         const col = self.cursor.col;
+        const left = self.leftBoundary();
+        const right = self.rightBoundary();
 
         switch (mode) {
             0 => { // cursor to end
                 if (row >= rows or col >= cols) return;
-                const start_idx = row * cols + col;
-                for (self.grid.cells.items[start_idx..]) |*cell| cell.* = blank_cell;
-                self.grid.markDirtyRange(row, row, col, cols - 1);
+                const start_col = if (col < left) left else col;
+                if (start_col <= right) {
+                    const row_start = row * cols;
+                    for (self.grid.cells.items[row_start + start_col .. row_start + right + 1]) |*cell| cell.* = blank_cell;
+                    self.grid.markDirtyRange(row, row, start_col, right);
+                }
                 if (row + 1 < rows) {
-                    self.grid.markDirtyRange(row + 1, rows - 1, 0, cols - 1);
+                    var r = row + 1;
+                    while (r < rows) : (r += 1) {
+                        const row_start = r * cols;
+                        for (self.grid.cells.items[row_start + left .. row_start + right + 1]) |*cell| cell.* = blank_cell;
+                    }
+                    self.grid.markDirtyRange(row + 1, rows - 1, left, right);
                 }
                 var r = row;
                 while (r < rows) : (r += 1) {
@@ -903,27 +913,53 @@ pub const Screen = struct {
             },
             1 => { // start to cursor
                 if (row >= rows or col >= cols) return;
-                const end = row * cols + col + 1;
-                for (self.grid.cells.items[0..end]) |*cell| cell.* = blank_cell;
                 if (row > 0) {
-                    self.grid.markDirtyRange(0, row - 1, 0, cols - 1);
+                    var r: usize = 0;
+                    while (r < row) : (r += 1) {
+                        const row_start = r * cols;
+                        for (self.grid.cells.items[row_start + left .. row_start + right + 1]) |*cell| cell.* = blank_cell;
+                    }
+                    self.grid.markDirtyRange(0, row - 1, left, right);
                 }
-                self.grid.markDirtyRange(row, row, 0, col);
+                if (col >= left) {
+                    const end_col = @min(col, right);
+                    const row_start = row * cols;
+                    for (self.grid.cells.items[row_start + left .. row_start + end_col + 1]) |*cell| cell.* = blank_cell;
+                    self.grid.markDirtyRange(row, row, left, end_col);
+                }
                 var r: usize = 0;
                 while (r <= row) : (r += 1) {
                     self.grid.setRowWrapped(r, false);
                 }
             },
             2 => { // all
-                for (self.grid.cells.items) |*cell| cell.* = blank_cell;
-                self.grid.markDirtyAll();
+                if (left == 0 and right + 1 == cols) {
+                    for (self.grid.cells.items) |*cell| cell.* = blank_cell;
+                    self.grid.markDirtyAll();
+                } else {
+                    var r: usize = 0;
+                    while (r < rows) : (r += 1) {
+                        const row_start = r * cols;
+                        for (self.grid.cells.items[row_start + left .. row_start + right + 1]) |*cell| cell.* = blank_cell;
+                    }
+                    self.grid.markDirtyRange(0, rows - 1, left, right);
+                }
                 for (self.grid.wrap_flags.items) |*flag| {
                     flag.* = false;
                 }
             },
             3 => { // saved lines + all (treat as full clear)
-                for (self.grid.cells.items) |*cell| cell.* = blank_cell;
-                self.grid.markDirtyAll();
+                if (left == 0 and right + 1 == cols) {
+                    for (self.grid.cells.items) |*cell| cell.* = blank_cell;
+                    self.grid.markDirtyAll();
+                } else {
+                    var r: usize = 0;
+                    while (r < rows) : (r += 1) {
+                        const row_start = r * cols;
+                        for (self.grid.cells.items[row_start + left .. row_start + right + 1]) |*cell| cell.* = blank_cell;
+                    }
+                    self.grid.markDirtyRange(0, rows - 1, left, right);
+                }
                 for (self.grid.wrap_flags.items) |*flag| {
                     flag.* = false;
                 }
