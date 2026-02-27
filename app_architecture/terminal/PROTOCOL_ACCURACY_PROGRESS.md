@@ -3126,6 +3126,18 @@ Verification:
 
 ## Change Log
 
+### 2026-02-27
+
+- Implemented `AUDIT-05` kitty reply-policy parity slice:
+  - `a=d` now suppresses success replies (`OK`) unconditionally.
+  - `a=q` with missing image id/number now follows explicit no-reply policy (all quiet levels).
+- Added focused test coverage:
+  - unit seam: `handleKittyQueryEarlyReply` missing-id now asserts handled + no-reply
+  - integrated parse-path tests for delete success suppression and delete invalid-control error quiet behavior (`q=1` reply, `q=2` suppression)
+  - replay fixtures locking end-to-end reply bytes:
+    - `fixtures/terminal/kitty_query_missing_id_no_reply_policy.*`
+    - `fixtures/terminal/kitty_delete_reply_policy_parity.*`
+
 ### 2026-02-23
 
 - Created progress tracker from protocol support/accuracy review.
@@ -3172,11 +3184,10 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `AUDIT-05` Kitty: suppress delete success replies and lock missing-id query no-reply policy decision
-2. `AUDIT-03` Enforce strict invalid equal-bounds rejection for `DECSTBM` / `DECSLRM`
-3. `AUDIT-10` Keyboard: multi-codepoint associated text field for `embed_text`
-4. `AUDIT-06` Kitty: replace unknown delete selector no-op with explicit invalid reply
-6. See consolidated cross-reference backlog and ordering in `app_architecture/terminal/PROTOCOL_ALIGNMENT_AUDIT_2026-02-27.md`
+1. `AUDIT-03` Enforce strict invalid equal-bounds rejection for `DECSTBM` / `DECSLRM`
+2. `AUDIT-10` Keyboard: multi-codepoint associated text field for `embed_text`
+3. `AUDIT-06` Kitty: replace unknown delete selector no-op with explicit invalid reply
+4. See consolidated cross-reference backlog and ordering in `app_architecture/terminal/PROTOCOL_ALIGNMENT_AUDIT_2026-02-27.md`
 
 ## Decomposition Backlog (New)
 

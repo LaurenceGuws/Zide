@@ -568,6 +568,32 @@ test "kitty parse query quiet=2 suppresses compressed png EBADPNG" {
     }.run);
 }
 
+test "kitty parse delete success replies are suppressed for q=0/q=1/q=2" {
+    const cases = [_]struct {
+        name: []const u8,
+        seq: []const u8,
+    }{
+        .{ .name = "q0 delete success suppressed", .seq = "a=d,d=a" },
+        .{ .name = "q1 delete success suppressed", .seq = "a=d,q=1,d=a" },
+        .{ .name = "q2 delete success suppressed", .seq = "a=d,q=2,d=a" },
+    };
+    inline for (cases) |case_| {
+        _ = case_.name;
+        try expectKittyQueryNoReply(case_.seq);
+    }
+}
+
+test "kitty parse delete invalid control still replies EINVAL for q=1" {
+    try expectKittyQueryReply(
+        "a=d,q=1,i=1,I=2,d=a",
+        "\x1b_Gi=1,I=2;EINVAL\x1b\\",
+    );
+}
+
+test "kitty parse delete invalid control reply is suppressed for q=2" {
+    try expectKittyQueryNoReply("a=d,q=2,i=1,I=2,d=a");
+}
+
 // Query precedence matrix coverage (current scope):
 // - non-missing-id invalid compression (`o=1`)
 // - missing-id preflight
@@ -614,39 +640,28 @@ test "kitty parse query invalid-compression precedence matrix" {
 }
 
 test "kitty parse query missing-id precedence matrix" {
-    const reply_cases = [_]struct {
-        name: []const u8,
-        seq: []const u8,
-        expected: []const u8,
-    }{
-        .{ .name = "baseline invalid compression", .seq = "a=q,o=1,f=32,s=1,v=1;AAAA/w==", .expected = "\x1b_G;EINVAL\x1b\\" },
-        .{ .name = "baseline invalid format", .seq = "a=q,f=999;AA==", .expected = "\x1b_G;EINVAL\x1b\\" },
-        .{ .name = "baseline malformed payload", .seq = "a=q,f=32,s=1,v=1;%%%%", .expected = "\x1b_G;EINVAL\x1b\\" },
-        .{ .name = "baseline chunked zlib preflight", .seq = "a=q,m=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1, .expected = "\x1b_G;EINVAL\x1b\\" },
-        .{ .name = "baseline offset zlib preflight", .seq = "a=q,O=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1, .expected = "\x1b_G;EINVAL\x1b\\" },
-        .{ .name = "baseline invalid offset plus invalid format plus malformed", .seq = "a=q,O=1,f=999;%%%%", .expected = "\x1b_G;EINVAL\x1b\\" },
-        .{ .name = "q1 invalid compression", .seq = "a=q,q=1,o=1,f=32,s=1,v=1;AAAA/w==", .expected = "\x1b_G;EINVAL\x1b\\" },
-        .{ .name = "q1 malformed payload", .seq = "a=q,q=1,f=32,s=1,v=1;%%%%", .expected = "\x1b_G;EINVAL\x1b\\" },
-        .{ .name = "q1 chunked zlib preflight", .seq = "a=q,q=1,m=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1, .expected = "\x1b_G;EINVAL\x1b\\" },
-        .{ .name = "q1 invalid compression plus invalid format", .seq = "a=q,q=1,o=1,f=999;AA==", .expected = "\x1b_G;EINVAL\x1b\\" },
-        .{ .name = "q1 invalid offset plus invalid format", .seq = "a=q,q=1,O=1,f=999;AA==", .expected = "\x1b_G;EINVAL\x1b\\" },
-        .{ .name = "q1 invalid offset plus malformed payload", .seq = "a=q,q=1,O=1,f=32,s=1,v=1;%%%%", .expected = "\x1b_G;EINVAL\x1b\\" },
-        .{ .name = "q1 invalid offset plus invalid format plus malformed", .seq = "a=q,q=1,O=1,f=999;%%%%", .expected = "\x1b_G;EINVAL\x1b\\" },
-        .{ .name = "q1 chunked zlib plus invalid format", .seq = "a=q,q=1,m=1,o=z,f=999;" ++ zlib_rgba_1x1, .expected = "\x1b_G;EINVAL\x1b\\" },
-        .{ .name = "q1 chunked zlib plus invalid format plus malformed", .seq = "a=q,q=1,m=1,o=z,f=999;%%%%", .expected = "\x1b_G;EINVAL\x1b\\" },
-        .{ .name = "q1 invalid compression plus invalid format plus malformed", .seq = "a=q,q=1,o=1,f=999;%%%%", .expected = "\x1b_G;EINVAL\x1b\\" },
-        .{ .name = "q1 invalid offset plus invalid compression plus invalid format plus malformed", .seq = "a=q,q=1,O=1,o=1,f=999;%%%%", .expected = "\x1b_G;EINVAL\x1b\\" },
-        .{ .name = "q1 chunked zlib plus invalid compression plus invalid format plus malformed", .seq = "a=q,q=1,m=1,o=1,f=999;%%%%", .expected = "\x1b_G;EINVAL\x1b\\" },
-    };
-    inline for (reply_cases) |case_| {
-        _ = case_.name;
-        try expectKittyQueryReply(case_.seq, case_.expected);
-    }
-
     const no_reply_cases = [_]struct {
         name: []const u8,
         seq: []const u8,
     }{
+        .{ .name = "baseline invalid compression", .seq = "a=q,o=1,f=32,s=1,v=1;AAAA/w==" },
+        .{ .name = "baseline invalid format", .seq = "a=q,f=999;AA==" },
+        .{ .name = "baseline malformed payload", .seq = "a=q,f=32,s=1,v=1;%%%%" },
+        .{ .name = "baseline chunked zlib preflight", .seq = "a=q,m=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1 },
+        .{ .name = "baseline offset zlib preflight", .seq = "a=q,O=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1 },
+        .{ .name = "baseline invalid offset plus invalid format plus malformed", .seq = "a=q,O=1,f=999;%%%%" },
+        .{ .name = "q1 invalid compression", .seq = "a=q,q=1,o=1,f=32,s=1,v=1;AAAA/w==" },
+        .{ .name = "q1 malformed payload", .seq = "a=q,q=1,f=32,s=1,v=1;%%%%" },
+        .{ .name = "q1 chunked zlib preflight", .seq = "a=q,q=1,m=1,o=z,f=32,s=1,v=1;" ++ zlib_rgba_1x1 },
+        .{ .name = "q1 invalid compression plus invalid format", .seq = "a=q,q=1,o=1,f=999;AA==" },
+        .{ .name = "q1 invalid offset plus invalid format", .seq = "a=q,q=1,O=1,f=999;AA==" },
+        .{ .name = "q1 invalid offset plus malformed payload", .seq = "a=q,q=1,O=1,f=32,s=1,v=1;%%%%" },
+        .{ .name = "q1 invalid offset plus invalid format plus malformed", .seq = "a=q,q=1,O=1,f=999;%%%%" },
+        .{ .name = "q1 chunked zlib plus invalid format", .seq = "a=q,q=1,m=1,o=z,f=999;" ++ zlib_rgba_1x1 },
+        .{ .name = "q1 chunked zlib plus invalid format plus malformed", .seq = "a=q,q=1,m=1,o=z,f=999;%%%%" },
+        .{ .name = "q1 invalid compression plus invalid format plus malformed", .seq = "a=q,q=1,o=1,f=999;%%%%" },
+        .{ .name = "q1 invalid offset plus invalid compression plus invalid format plus malformed", .seq = "a=q,q=1,O=1,o=1,f=999;%%%%" },
+        .{ .name = "q1 chunked zlib plus invalid compression plus invalid format plus malformed", .seq = "a=q,q=1,m=1,o=1,f=999;%%%%" },
         .{ .name = "q2 invalid format", .seq = "a=q,q=2,f=999;AA==" },
         .{ .name = "q2 malformed payload", .seq = "a=q,q=2,f=999;%%%%" },
         .{ .name = "q2 invalid compression plus invalid format", .seq = "a=q,q=2,o=1,f=999;AA==" },
