@@ -1363,6 +1363,17 @@ Verification:
 - `zig build test-terminal-replay -- --fixture kitty_invalid_action_metadata_quiet_matrix_reply`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 51 / `PA-04c` shared-memory query matrix test skip gate in constrained environments):
+- Updated the shared-memory medium success matrix test to skip when shared-memory object creation is unavailable (`ShmOpenFailed`) instead of failing the whole suite.
+- This preserves coverage where shm is supported while restoring deterministic pass/fail semantics for sandboxed/restricted environments.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
