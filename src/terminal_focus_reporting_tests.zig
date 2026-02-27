@@ -490,6 +490,33 @@ test "terminal DECSLRM and DECSTBM clip SU to margin band within scroll region" 
     try std.testing.expectEqual(@as(u32, 0), session.getCell(3, 2).codepoint);
 }
 
+test "terminal DECSLRM and DECSTBM clip SD to margin band within scroll region" {
+    const allocator = std.testing.allocator;
+    var session = try terminal.TerminalSession.init(allocator, 5, 12);
+    defer session.deinit();
+
+    terminal.debugFeedBytes(session, "\x1b[1;1HAAAAAAAAAAAA");
+    terminal.debugFeedBytes(session, "\x1b[2;1HBBBBBBBBBBBB");
+    terminal.debugFeedBytes(session, "\x1b[3;1HCCCCCCCCCCCC");
+    terminal.debugFeedBytes(session, "\x1b[4;1HDDDDDDDDDDDD");
+    terminal.debugFeedBytes(session, "\x1b[5;1HEEEEEEEEEEEE");
+    terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s\x1b[2;4r\x1b[1T");
+
+    // Outside the vertical region is unchanged.
+    try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'E'), session.getCell(4, 2).codepoint);
+
+    // Outside horizontal margins is preserved within the region.
+    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(1, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), session.getCell(2, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), session.getCell(3, 0).codepoint);
+
+    // Margin band shifts down only within DECSTBM rows 2..4.
+    try std.testing.expectEqual(@as(u32, 0), session.getCell(1, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(2, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), session.getCell(3, 2).codepoint);
+}
+
 test "terminal DECRQM strategic fixed-off private modes report permanently reset (Pm=4)" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
