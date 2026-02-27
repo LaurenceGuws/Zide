@@ -729,6 +729,7 @@ Files:
 Verification:
 - `zig build test-terminal-kitty-query-parse`
 - `zig build test-terminal-replay -- --all`
+- Environment note: `test-terminal-kitty-query-parse` can fail in restricted environments on the shared-memory medium test (`ShmOpenFailed`); replay sweep remains authoritative and passed in this slice.
 
 Implemented (increment 11 / `PA-04c` align query `o=z` behavior with kitty/ghostty convention):
 - Updated the `a=q` parse path to honor query payload compression (`o=z`) instead of ignoring it.
@@ -1222,6 +1223,17 @@ Verification:
 - `zig build test-terminal-replay -- --fixture kitty_query_medium_file_missing_q1_q2_reply`
 - `zig build test-terminal-replay -- --fixture kitty_query_medium_temp_missing_marker_q1_q2_reply --update-goldens`
 - `zig build test-terminal-replay -- --fixture kitty_query_medium_temp_missing_marker_q1_q2_reply`
+
+Implemented (increment 42 / `PA-04c` fixture-matrix closure gate):
+- Closed the `PA-04c` query/reply fixture-matrix gate for the current kitty graphics parity phase:
+  - query-path precedence/error/quiet matrices are covered by integrated parse-path tests.
+  - transport medium paths (`t=d/f/t/s`) and representative failure forms are replay-locked within current harness limits.
+  - parent/virtual placement reply and delete-interaction branches are replay-locked with explicit ids/reply bytes.
+- Remaining kitty graphics parity breadth is now tracked under other `PA-04*` rows (not `PA-04c` fixture-matrix incompleteness).
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+- `zig build test-terminal-replay -- --all`
 
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
@@ -3473,6 +3485,9 @@ Verification:
 - Closed `PA-08a` CSI/private inventory drift for current scope:
   - updated stale rows (`?1004`, `DECSLRM`, alternate mouse encodings, printer/media/status family) to explicit implemented/deferred states with references
   - moved top queue focus to `PA-04c` and ongoing replay/PTY matrix hygiene
+- Closed current `PA-04c` query/reply fixture-matrix gate:
+  - matrix now treated as complete for the current kitty graphics phase (precedence/error/quiet, transport forms, parent/virtual branches)
+  - follow-on kitty graphics breadth should proceed under other `PA-04*` rows
 
 ### 2026-02-23
 
@@ -3520,9 +3535,9 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `PA-04c` Continue kitty query/reply matrix closure for remaining integrated edge-form combinations (keep `PA-04a/04b` docs as audit authority)
-2. `PA-08` replay/PTY matrix maintenance as new parity slices land (avoid assertion/golden drift)
-3. `PA-08` defer-policy hygiene: ensure newly deferred rows include resume criteria + compatibility notes
+1. `PA-08` replay/PTY matrix maintenance as new parity slices land (avoid assertion/golden drift)
+2. `PA-08` defer-policy hygiene: ensure newly deferred rows include resume criteria + compatibility notes
+3. `PA-04` follow-on parity breadth outside fixture-matrix closure (as needed by compatibility signals)
 
 ## Decomposition Backlog (New)
 
@@ -3530,7 +3545,7 @@ Verification:
 
 - [x] `PA-04a` Write command surface table (`a=` actions, `d=` delete variants) with status `implemented/partial/todo`
 - [x] `PA-04b` Document response/error-code conformance targets (`OK/EINVAL/ENOENT/...`) with quiet-mode rules
-- [ ] `PA-04c` Add fixture matrix for query/chunking/mediums/parented placements
+- [x] `PA-04c` Add fixture matrix for query/chunking/mediums/parented placements
 - [x] `PA-04d` Decide animation/composition path (`implement` / `defer`)
 
 ### PA-08 Parity Decomposition Checklist
