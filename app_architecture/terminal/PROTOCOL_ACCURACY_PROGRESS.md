@@ -3203,6 +3203,25 @@ Verification:
 - `zig build test-terminal-focus-reporting`
 - `zig build test-terminal-replay -- --fixture decrqm_query_matrix_reply`
 
+Implemented (increment 15 / `AUDIT-08` kitty parent semantics parity decision + depth-limit policy lock):
+- Explicitly locked current (deferred parity) parent policy for now: placement commands that provide `P` without `Q` are treated as invalid control and reply `EINVAL`.
+- Added focused parse-path test proving the invalid-control path reply format includes `i/p` identifiers.
+- Added replay fixture authority for the same `P`-without-`Q` scenario, with `reply_hex` and kitty state assertions.
+- Depth-limit policy remains locked at current behavior (`kitty_parent_max_depth = 10`) and is re-verified via the existing depth fixture (`kitty_parent_depth_limit_reply`).
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+- `fixtures/terminal/kitty_parent_p_without_q_policy_reply.vt`
+- `fixtures/terminal/kitty_parent_p_without_q_policy_reply.json`
+- `fixtures/terminal/kitty_parent_p_without_q_policy_reply.golden`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+- `zig build test-terminal-replay -- --fixture kitty_parent_p_without_q_policy_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_parent_p_without_q_policy_reply`
+- `zig build test-terminal-replay -- --fixture kitty_parent_depth_limit_reply`
+- `zig build check-app-imports`
+
 ## Change Log
 
 ### 2026-02-27
