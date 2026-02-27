@@ -1235,6 +1235,21 @@ Verification:
 - `zig build test-terminal-kitty-query-parse`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 43 / `PA-04c` unknown delete-selector quiet-policy replay lock):
+- Added replay fixture authority for unknown kitty delete-selector behavior across quiet levels:
+  - `q=1` unknown selector emits `EINVAL`
+  - `q=2` unknown selector suppresses the error reply
+- Fixture also locks kitty-state no-op semantics (image/placement unchanged) for the unknown-selector path.
+
+Files:
+- `fixtures/terminal/kitty_delete_unknown_selector_quiet_policy.vt`
+- `fixtures/terminal/kitty_delete_unknown_selector_quiet_policy.json`
+- `fixtures/terminal/kitty_delete_unknown_selector_quiet_policy.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture kitty_delete_unknown_selector_quiet_policy --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_delete_unknown_selector_quiet_policy`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
@@ -3508,6 +3523,9 @@ Verification:
 - Closed current `PA-04c` query/reply fixture-matrix gate:
   - matrix now treated as complete for the current kitty graphics phase (precedence/error/quiet, transport forms, parent/virtual branches)
   - follow-on kitty graphics breadth should proceed under other `PA-04*` rows
+- Added replay fixture `fixtures/terminal/kitty_delete_unknown_selector_quiet_policy.*`:
+  - locks unknown delete-selector quiet policy end-to-end (`q=1` reply, `q=2` suppression)
+  - preserves kitty-state no-op semantics for the unknown-selector path
 - Added explicit `PA-08` deferred-row registry:
   - each deferred row now includes compatibility impact and concrete resume criteria, with fixture authority links where available
 
