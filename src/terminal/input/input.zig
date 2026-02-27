@@ -344,6 +344,13 @@ fn sendCharWithProtocolMeta(
             const written_alt = std.fmt.bufPrint(buf[pos..], "{d}", .{alternate_key}) catch return false;
             pos += written_alt.len;
         }
+    } else if (key_fields.alternate) |alternate_key| {
+        buf[pos] = ':';
+        pos += 1;
+        buf[pos] = ':';
+        pos += 1;
+        const written_alt = std.fmt.bufPrint(buf[pos..], "{d}", .{alternate_key}) catch return false;
+        pos += written_alt.len;
     }
     if (second_field or include_associated_text) {
         buf[pos] = ';';
@@ -418,10 +425,20 @@ fn protocolCharKeyFields(
 ) ProtocolCharKeyFields {
     const report_alternate = (flags & key_encoding.key_mode_report_alternate_key) != 0;
     if (!report_alternate) return .{ .key = char };
-    if ((mod & types.VTERM_MOD_SHIFT) == 0) return .{ .key = char };
 
     if (alternate_meta) |meta| {
         if (meta.text_is_composed) return .{ .key = char };
+        if ((mod & types.VTERM_MOD_SHIFT) == 0) {
+            if (meta.alternate_layout_codepoint) |alternate_cp| {
+                if (alternate_cp != char) {
+                    return .{
+                        .key = char,
+                        .alternate = alternate_cp,
+                    };
+                }
+            }
+            return .{ .key = char };
+        }
         if (meta.base_codepoint) |base_cp| {
             const shifted_cp = meta.shifted_codepoint orelse char;
             if (shifted_cp == char and base_cp != char) {
@@ -437,6 +454,8 @@ fn protocolCharKeyFields(
             }
         }
     }
+
+    if ((mod & types.VTERM_MOD_SHIFT) == 0) return .{ .key = char };
 
     if (asciiShiftBase(char)) |base| {
         return .{
@@ -692,23 +711,47 @@ pub fn encodeCharEventBytesForTest(
     if (include_associated_text) {
         if (second_field) {
             if (has_mods and add_actions) {
+                if (key_fields.alternate) |alternate_key| {
+                    return std.fmt.allocPrint(allocator, "\x1b[{d}::{d};{d}:{d};{s}u", .{ key_fields.key, alternate_key, mod_code, @intFromEnum(event.action) + 1, associated_text });
+                }
                 return std.fmt.allocPrint(allocator, "\x1b[{d};{d}:{d};{s}u", .{ key_fields.key, mod_code, @intFromEnum(event.action) + 1, associated_text });
             }
             if (has_mods) {
+                if (key_fields.alternate) |alternate_key| {
+                    return std.fmt.allocPrint(allocator, "\x1b[{d}::{d};{d};{s}u", .{ key_fields.key, alternate_key, mod_code, associated_text });
+                }
                 return std.fmt.allocPrint(allocator, "\x1b[{d};{d};{s}u", .{ key_fields.key, mod_code, associated_text });
             }
+            if (key_fields.alternate) |alternate_key| {
+                return std.fmt.allocPrint(allocator, "\x1b[{d}::{d};:{d};{s}u", .{ key_fields.key, alternate_key, @intFromEnum(event.action) + 1, associated_text });
+            }
             return std.fmt.allocPrint(allocator, "\x1b[{d};:{d};{s}u", .{ key_fields.key, @intFromEnum(event.action) + 1, associated_text });
+        }
+        if (key_fields.alternate) |alternate_key| {
+            return std.fmt.allocPrint(allocator, "\x1b[{d}::{d};;{s}u", .{ key_fields.key, alternate_key, associated_text });
         }
         return std.fmt.allocPrint(allocator, "\x1b[{d};;{s}u", .{ key_fields.key, associated_text });
     }
     if (second_field) {
         if (has_mods and add_actions) {
+            if (key_fields.alternate) |alternate_key| {
+                return std.fmt.allocPrint(allocator, "\x1b[{d}::{d};{d}:{d}u", .{ key_fields.key, alternate_key, mod_code, @intFromEnum(event.action) + 1 });
+            }
             return std.fmt.allocPrint(allocator, "\x1b[{d};{d}:{d}u", .{ key_fields.key, mod_code, @intFromEnum(event.action) + 1 });
         }
         if (has_mods) {
+            if (key_fields.alternate) |alternate_key| {
+                return std.fmt.allocPrint(allocator, "\x1b[{d}::{d};{d}u", .{ key_fields.key, alternate_key, mod_code });
+            }
             return std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ key_fields.key, mod_code });
         }
+        if (key_fields.alternate) |alternate_key| {
+            return std.fmt.allocPrint(allocator, "\x1b[{d}::{d};:{d}u", .{ key_fields.key, alternate_key, @intFromEnum(event.action) + 1 });
+        }
         return std.fmt.allocPrint(allocator, "\x1b[{d};:{d}u", .{ key_fields.key, @intFromEnum(event.action) + 1 });
+    }
+    if (key_fields.alternate) |alternate_key| {
+        return std.fmt.allocPrint(allocator, "\x1b[{d}::{d};{d}u", .{ key_fields.key, alternate_key, mod_code });
     }
     return std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ key_fields.key, mod_code });
 }

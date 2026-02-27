@@ -1287,6 +1287,22 @@ Files:
 Verification:
 - `zig test src/terminal_input_encoding_tests.zig`
 
+Implemented (increment 14 / `AUDIT-11` alternate-field emission without Shift):
+- Relaxed CSI-u alternate serialization gating so metadata-provided alternate layout codepoints can emit without requiring `Shift`.
+- When no shifted field is present, the encoder now emits kitty/foot-style empty shifted slot syntax (`key::alternate`) instead of suppressing the alternate field.
+- Kept existing shifted alternate behavior unchanged (`key:shifted[:alternate]` still applies for Shift paths).
+- Added focused coverage for a no-Shift metadata event and locked it with both unit and encoder replay fixture assertions.
+
+Files:
+- `src/terminal/input/input.zig`
+- `src/terminal_input_encoding_tests.zig`
+- `fixtures/terminal/encoder/csi_u_alternate_metadata_no_shift_third_field.json`
+- `fixtures/terminal/encoder/csi_u_alternate_metadata_no_shift_third_field.golden`
+
+Verification:
+- `zig test src/terminal_input_encoding_tests.zig`
+- `zig build test-terminal-replay -- --fixture csi_u_alternate_metadata_no_shift_third_field`
+
 Deferred (increment 7 / layout-aware alternates decision):
 - Explicitly deferred full layout-aware alternate-key reporting (beyond the current US-ASCII shifted-char subset).
 - Rationale:
