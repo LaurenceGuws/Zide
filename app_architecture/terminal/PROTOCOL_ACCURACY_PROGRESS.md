@@ -36,7 +36,7 @@ Status usage rules (parity work):
 | PA-01 | High | done | Unicode width/cursor accounting incorrect in core write path | Wide codepoints occupy correct cell width; combining marks attach correctly; replay fixtures pass |
 | PA-02 | High | done | Replay `assertions` metadata is ignored; fixture intent not enforced | Harness consumes `assertions`; fixture intent is semantically enforced for active tags; representative replay query/reply coverage exists |
 | PA-03 | Medium-High | done | Kitty invalid controls can be dropped without explicit ERR reply | Invalid kitty commands produce `ERR`/`EINVAL` response when reply is allowed |
-| PA-04 | Medium | todo | Kitty graphics command/delete surface is partial vs kitty/ghostty | Scope split into concrete parity tasks and progress tracked; command support expanded or explicitly deferred |
+| PA-04 | Medium | partial | Kitty graphics command/delete surface is partial vs kitty/ghostty | Scope split into concrete parity tasks and progress tracked; command support expanded or explicitly deferred |
 | PA-05 | Medium | partial | Kitty keyboard / CSI-u alternate/disambiguation flags tracked but not encoded | `alternate_key` / disambiguation flags affect output and tests cover behavior |
 | PA-06 | Medium | done | X10 mouse encoding can emit `0` for large coords | X10 coord encoding saturates/falls back safely; no invalid zero coord bytes from overflow |
 | PA-07 | Medium | done | Bare SGR `58` likely treated incorrectly as reset | Bare `58` no longer resets underline color; `59` remains reset |
@@ -381,6 +381,27 @@ Planned acceptance by phase:
 - Phase 2: query/delete conformance fixtures and fixes.
 - Phase 3: transfer/placement parity fixtures and fixes.
 - Phase 4: animation/composition implement or defer with rationale.
+
+Auditability snapshot (2026-02-27, post `AUDIT-05/06/07/08`):
+
+| Surface | Status | Current behavior lock |
+|---|---|---|
+| `a=t/T/p` | implemented | Accepted by parser; existing transmit/place behavior unchanged in this slice |
+| `a=d` delete | implemented (policy-aligned) | Success reply suppressed for all quiet levels (`q=0/1/2`) per `AUDIT-05` |
+| `a=q` query | implemented (policy-aligned) | Missing id/number path is explicit no-reply policy (`AUDIT-05`); payload/format errors still emit mapped errors unless quiet-suppressed |
+| `a=` other actions | deferred/invalid | Explicitly invalid at parser gate (`EINVAL` response subject to quiet rules) |
+| `d=` selectors `a/A i/I n/N c/C p/P z/Z r/R x/X y/Y` | implemented | Selector semantics covered by replay matrix; uppercase variants remove backing images where applicable |
+| `d=` selectors `q/Q f/F` | deferred (explicit) | Treated as invalid (`EINVAL`) with quiet-policy tests + replay lock (`AUDIT-07`) |
+| Unknown `d=` selector | invalid (policy-aligned) | Explicit `EINVAL` reply for `q=0/1`; suppressed for `q=2` (`AUDIT-06`) |
+
+Reply/quiet rule parity lock (current intended behavior):
+
+| Case | `q=0` | `q=1` | `q=2` |
+|---|---|---|---|
+| `a=d` successful delete | no reply | no reply | no reply |
+| `a=q` successful query | reply | reply suppressed | reply suppressed |
+| `a=q` missing image id/number | no reply | no reply | no reply |
+| invalid control / invalid selector | error reply (`EINVAL`) | error reply (`EINVAL`) | error suppressed |
 
 Implemented (increment 35 / `PA-04f` animation/composition path decision):
 - Decision: **defer intentionally** for current Zide scope.
@@ -3433,14 +3454,14 @@ Verification:
 
 1. `PA-08h` Close or explicitly defer remaining promoted CSI/private-mode gaps with compatibility notes (reset-family breadth)
 2. `PA-08a` Complete CSI/private inventory closure with explicit `implement/defer` decisions for remaining reference rows
-3. `PA-04a` / `PA-04b` Finish kitty command-surface + response/quiet-rule documentation parity
+3. `PA-04c` Continue kitty query/reply matrix closure for remaining integrated edge-form combinations (keep `PA-04a/04b` docs as audit authority)
 
 ## Decomposition Backlog (New)
 
 ### PA-04 Parity Decomposition Checklist
 
-- [ ] `PA-04a` Write command surface table (`a=` actions, `d=` delete variants) with status `implemented/partial/todo`
-- [ ] `PA-04b` Document response/error-code conformance targets (`OK/EINVAL/ENOENT/...`) with quiet-mode rules
+- [x] `PA-04a` Write command surface table (`a=` actions, `d=` delete variants) with status `implemented/partial/todo`
+- [x] `PA-04b` Document response/error-code conformance targets (`OK/EINVAL/ENOENT/...`) with quiet-mode rules
 - [ ] `PA-04c` Add fixture matrix for query/chunking/mediums/parented placements
 - [x] `PA-04d` Decide animation/composition path (`implement` / `defer`)
 
