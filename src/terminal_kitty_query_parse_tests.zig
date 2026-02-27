@@ -1031,7 +1031,10 @@ test "kitty parse query medium shared-memory success matrix" {
     defer allocator.free(png_bytes);
 
     // medium=s: shared-memory name with PNG bytes.
-    const shm_name = try createSharedMemoryObject(allocator, "zide-kitty-query-shm", png_bytes);
+    const shm_name = createSharedMemoryObject(allocator, "zide-kitty-query-shm", png_bytes) catch |err| switch (err) {
+        error.ShmOpenFailed => return error.SkipZigTest,
+        else => return err,
+    };
     defer allocator.free(shm_name);
     const shm_name_b64 = try encodeBase64Alloc(allocator, shm_name);
     defer allocator.free(shm_name_b64);
@@ -1040,7 +1043,10 @@ test "kitty parse query medium shared-memory success matrix" {
     defer allocator.free(seq_ok);
     try expectKittyQueryReply(seq_ok, "\x1b_Gi=7;OK\x1b\\");
 
-    const shm_name_q1 = try createSharedMemoryObject(allocator, "zide-kitty-query-shm-q1", png_bytes);
+    const shm_name_q1 = createSharedMemoryObject(allocator, "zide-kitty-query-shm-q1", png_bytes) catch |err| switch (err) {
+        error.ShmOpenFailed => return error.SkipZigTest,
+        else => return err,
+    };
     defer allocator.free(shm_name_q1);
     const shm_name_q1_b64 = try encodeBase64Alloc(allocator, shm_name_q1);
     defer allocator.free(shm_name_q1_b64);
@@ -1048,7 +1054,10 @@ test "kitty parse query medium shared-memory success matrix" {
     defer allocator.free(seq_q1);
     try expectKittyQueryNoReply(seq_q1);
 
-    const shm_name_q2 = try createSharedMemoryObject(allocator, "zide-kitty-query-shm-q2", png_bytes);
+    const shm_name_q2 = createSharedMemoryObject(allocator, "zide-kitty-query-shm-q2", png_bytes) catch |err| switch (err) {
+        error.ShmOpenFailed => return error.SkipZigTest,
+        else => return err,
+    };
     defer allocator.free(shm_name_q2);
     const shm_name_q2_b64 = try encodeBase64Alloc(allocator, shm_name_q2);
     defer allocator.free(shm_name_q2_b64);
