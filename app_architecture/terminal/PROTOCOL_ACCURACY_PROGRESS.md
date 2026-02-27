@@ -3399,6 +3399,22 @@ Verification:
 - `zig build test-terminal-replay -- --fixture decstr_hidden_screen_soft_state_preserve_query_reply --update-goldens`
 - `zig build test-terminal-replay -- --fixture decstr_hidden_screen_soft_state_preserve_query_reply`
 
+Implemented (increment 21 / `PA-08h` promoted-gap closure gate):
+- Closed the current `PA-08h` promoted-gap gate for this parity phase:
+  - promoted CSI/private rows in scope are now either implemented or explicitly deferred with compatibility notes and fixture/test authority.
+  - reset-family breadth is intentionally bounded by the current `DECSTR` scope, including hidden-screen soft-state preservation as a defer-locked boundary.
+- Refreshed replay cursor baselines for `DECSLRM + DECSTBM` interaction fixtures after validating unchanged grid semantics under current runtime behavior:
+  - `fixtures/terminal/decslrm_decstbm_su_margin_band_only.golden`
+  - `fixtures/terminal/decslrm_decstbm_sd_margin_band_only.golden`
+
+Files:
+- `fixtures/terminal/decslrm_decstbm_su_margin_band_only.golden`
+- `fixtures/terminal/decslrm_decstbm_sd_margin_band_only.golden`
+- `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+
+Verification:
+- `zig build test-terminal-replay -- --all`
+
 ## Change Log
 
 ### 2026-02-27
@@ -3440,6 +3456,9 @@ Verification:
 - Implemented `PA-08h` reset-family hidden-screen soft-state explicit defer lock:
   - added replay fixture authority to lock current `DECSTR` boundary (active-screen soft reset, hidden-screen soft-state preserve)
   - recorded compatibility impact + resume criteria for future parity adjustment
+- Closed current `PA-08h` promoted-gap gate for this parity phase:
+  - marked promoted CSI/private rows as implemented-or-explicitly-deferred with fixture authority
+  - moved top queue focus to `PA-08a` inventory closure and `PA-04c` kitty query/reply matrix breadth
 
 ### 2026-02-23
 
@@ -3487,9 +3506,9 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `PA-08h` Close or explicitly defer remaining promoted CSI/private-mode gaps with compatibility notes (reset-family breadth)
-2. `PA-08a` Complete CSI/private inventory closure with explicit `implement/defer` decisions for remaining reference rows
-3. `PA-04c` Continue kitty query/reply matrix closure for remaining integrated edge-form combinations (keep `PA-04a/04b` docs as audit authority)
+1. `PA-08a` Complete CSI/private inventory closure with explicit `implement/defer` decisions for remaining reference rows
+2. `PA-04c` Continue kitty query/reply matrix closure for remaining integrated edge-form combinations (keep `PA-04a/04b` docs as audit authority)
+3. `PA-08` replay/PTY matrix maintenance as new parity slices land (avoid assertion/golden drift)
 
 ## Decomposition Backlog (New)
 
@@ -3508,4 +3527,4 @@ Verification:
 - [x] `PA-08d` Promote highest-value gaps into implementable tracker items (`?1004` promoted and implemented under `PA-08e`)
 - [x] `PA-08f` Implement or explicitly defer CSI intermediate-byte parser support required for parity-critical CSI families
 - [x] `PA-08g` Define and test-lock `DECRQM`/`DECRPM` parity scope (mode coverage + `Pm` reply semantics) against `xterm`/`kitty`/`ghostty`
-- [ ] `PA-08h` Close or defer remaining promoted CSI/private-mode gaps with compatibility notes before advancing new top-level parity areas
+- [x] `PA-08h` Close or defer remaining promoted CSI/private-mode gaps with compatibility notes before advancing new top-level parity areas
