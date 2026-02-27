@@ -1267,6 +1267,23 @@ Verification:
 - `zig build test-terminal-replay -- --fixture kitty_delete_unknown_selector_quiet_matrix_reply`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 45 / `PA-04c` invalid kitty-action quiet matrix replay lock):
+- Added replay fixture coverage that locks invalid kitty action (`a=x`) reply policy across all quiet levels in one stream:
+  - default quiet (`q=0`) -> `EINVAL` reply
+  - `q=1` -> `EINVAL` reply (error reply still emitted)
+  - `q=2` -> reply suppressed
+- This pins end-to-end parser+dispatcher behavior for invalid-action handling and quiet-policy suppression.
+
+Files:
+- `fixtures/terminal/kitty_invalid_action_quiet_matrix_reply.vt`
+- `fixtures/terminal/kitty_invalid_action_quiet_matrix_reply.json`
+- `fixtures/terminal/kitty_invalid_action_quiet_matrix_reply.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture kitty_invalid_action_quiet_matrix_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_invalid_action_quiet_matrix_reply`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
