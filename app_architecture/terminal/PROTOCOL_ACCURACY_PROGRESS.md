@@ -3135,10 +3135,13 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `PA-05c` Extend metadata-aware encoder format usage for `alternate_layout_codepoint` when protocol field support is promoted
-2. `PA-04c` Add a focused parented-placement delete matrix for selector variants beyond `d=I` (id/number/range + parent cleanup edges)
-3. `PA-04c` Add parented no-`p` error-path locks (`ENOPARENT` / `ETOODEEP`) to complete explicit `p=0` branch coverage
-4. `PA-08h` Revisit DECSLRM rectangular-operation parity (`DECCRA` family) only when a concrete app-compat signal appears
+1. `AUDIT-01` Fix `CSI s` ambiguous dispatch under `?69` (`DECLRMM`) and lock with unit+replay
+2. `AUDIT-09` Keyboard: suppress `embed_text` on release (unit + replay)
+3. `AUDIT-05` Kitty: suppress delete success replies and lock missing-id query no-reply policy decision
+4. `AUDIT-03` Enforce strict invalid equal-bounds rejection for `DECSTBM` / `DECSLRM`
+5. `AUDIT-10` Keyboard: multi-codepoint associated text field for `embed_text`
+6. `AUDIT-06` Kitty: replace unknown delete selector no-op with explicit invalid reply
+7. See consolidated cross-reference backlog and ordering in `app_architecture/terminal/PROTOCOL_ALIGNMENT_AUDIT_2026-02-27.md`
 
 ## Decomposition Backlog (New)
 
