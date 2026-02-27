@@ -1205,6 +1205,18 @@ Verification:
 - `zig build test-terminal-replay -- --fixture kitty_parent_no_pid_success_reply`
 - `zig build check-app-imports`
 
+Implemented (increment 41 / `PA-04c` temp-medium preflight precedence side-effect lock):
+- Added project-integrated parse-path coverage for kitty query temp-file medium (`t=t`) with invalid query chunk/offset forms:
+  - `m=1` and `O=1` still take query preflight `EINVAL` branches for `q=1`
+  - `q=2` continues to suppress those preflight errors
+- Locked a side-effect boundary not previously explicit in tests: invalid query preflight must occur before temp-medium file loading, so temp files are not consumed/deleted on these invalid forms.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+
 Verification:
 - `zig build test-terminal-replay -- --fixture kitty_query_medium_file_missing_q1_q2_reply --update-goldens`
 - `zig build test-terminal-replay -- --fixture kitty_query_medium_file_missing_q1_q2_reply`
