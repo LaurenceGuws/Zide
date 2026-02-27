@@ -296,7 +296,7 @@ Research notes:
 
 Known gaps (as of 2026-01-28):
 - Kitty graphics protocol is still partial (see IMG-01 in `app_architecture/terminal/protocol_todo.yaml`).
-- Terminfo feature parity sweep is pending (TERM-01).
+- Public terminal compatibility contract and initial `zide` terminfo entry landed; broader terminfo parity sweep remains tracked under `TERM-01`.
 - Replay harness + fixtures exist and gate refactors (see Layer 10; run `zig build test-terminal-replay -- --all`).
 - Cross-platform font fallback: macOS is still TODO; Windows has a DirectWrite-based resolver.
 
