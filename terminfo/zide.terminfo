@@ -1,0 +1,5 @@
+# Conservative public terminal identity for Zide.
+# Keep this aligned with docs/terminal/compatibility.md and only advertise
+# capabilities that are safe under an xterm-compatible baseline.
+zide|Zide terminal emulator,
+	use=xterm-256color,

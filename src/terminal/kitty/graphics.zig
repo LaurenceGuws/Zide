@@ -125,31 +125,6 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
     var raw_kv = std.ArrayList(KittyKV).empty;
     defer raw_kv.deinit(self.allocator);
     const data = parseKittyControl(self.allocator, payload, &control, &raw_kv);
-    if (log.enabled_file or log.enabled_console) {
-        log.logf(
-            "kitty control a={c} d={c} q={d} f={d} t={c} o={c} m={any} i={any} I={any} p={any} c={d} r={d} U={d} P={any} Q={any} H={d} V={d} data_len={d}",
-            .{
-                control.action,
-                control.delete_action,
-                control.quiet,
-                control.format,
-                control.medium,
-                control.compression,
-                control.more,
-                control.image_id,
-                control.image_number,
-                control.placement_id,
-                control.cols,
-                control.rows,
-                control.virtual,
-                control.parent_id,
-                control.child_id,
-                control.parent_x,
-                control.parent_y,
-                data.len,
-            },
-        );
-    }
     if (!validateKittyControl(control)) {
         if (log.enabled_file or log.enabled_console) {
             log.logf("kitty invalid command a={c} data_len={d}", .{ control.action, data.len });
@@ -300,21 +275,6 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
     storeKittyImage(self, image);
     if (control.action == 'T') {
         if (placeKittyImage(self, final_image_id, control)) |err_msg| {
-            if (log.enabled_file or log.enabled_console) {
-                log.logf(
-                    "kitty place failed a=T id={d} pid={any} cols={d} rows={d} virtual={d} parent={any}/{any} err={s}",
-                    .{
-                        final_image_id,
-                        control.placement_id,
-                        control.cols,
-                        control.rows,
-                        control.virtual,
-                        control.parent_id,
-                        control.child_id,
-                        err_msg,
-                    },
-                );
-            }
             clearKittyLoading(kitty, final_image_id);
             writeKittyResponse(self, control, final_image_id, false, err_msg);
             return;

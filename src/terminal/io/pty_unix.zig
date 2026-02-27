@@ -195,7 +195,12 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
     const shell_path = shell orelse defaultShell();
     const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
 
-    const term = if (terminfoExists("xterm-kitty")) "xterm-kitty" else "xterm-256color";
+    const term = if (terminfoExists("zide"))
+        "zide"
+    else if (terminfoExists("xterm-kitty"))
+        "xterm-kitty"
+    else
+        "xterm-256color";
     _ = c.setenv("TERM", term, 1);
     if (std.c.getenv("INPUTRC") == null) {
         const pid = c.getpid();

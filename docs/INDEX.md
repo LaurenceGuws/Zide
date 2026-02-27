@@ -29,6 +29,7 @@ Quick map of where to look for common needs.
 - `app_architecture/BOOTSTRAP.md` — dependencies, bootstrap, build, run, test.
 - `app_architecture/CONFIG.md` — config (currently logging-only POC).
 - `docs/DEPENDENCIES.md` — native dependency setup (vcpkg + system packages).
+- `docs/terminal/compatibility.md` — public terminal support contract, TERM identity, and terminfo install instructions.
 
 ## Reviews and audits
 - `app_architecture/review/` — past review notes (scope + date in file).

@@ -228,7 +228,12 @@ terminal_protocol_todo:
 
     - id: TERM-01
       title: "Terminfo feature parity sweep"
-      status: todo
+      status: partial
+      notes:
+        - "Initial public compatibility doc added: docs/terminal/compatibility.md"
+        - "Initial conservative terminfo entry added: terminfo/zide.terminfo"
+        - "Runtime TERM selection now prefers `zide` when the terminfo entry is installed"
+        - "Further capability-specific terminfo expansion still requires a feature-by-feature audit"
       refs:
         - reference_repos/terminals/kitty/kitty/terminfo.py
         - reference_repos/terminals/xterm_snapshots/ctlseqs.txt

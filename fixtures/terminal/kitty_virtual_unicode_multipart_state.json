@@ -1,0 +1,8 @@
+{
+  "fixture_type": "vt",
+  "rows": 6,
+  "cols": 12,
+  "cursor": { "row": 0, "col": 0 },
+  "line_ending": "lf",
+  "assertions": ["kitty"]
+}
