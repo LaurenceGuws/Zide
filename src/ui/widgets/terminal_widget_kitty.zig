@@ -105,6 +105,12 @@ pub const KittyState = struct {
         }
     }
 
+    fn shouldDrawPlacement(placement: KittyPlacement, above_text: bool) bool {
+        if (placement.is_virtual) return above_text;
+        if (above_text) return placement.z >= 0;
+        return placement.z < 0;
+    }
+
     pub fn drawImages(
         self: *KittyState,
         allocator: std.mem.Allocator,
@@ -124,12 +130,7 @@ pub const KittyState = struct {
         const cols_i: i32 = @intCast(cols);
 
         for (self.placements_view.items) |placement| {
-            if (placement.is_virtual) continue;
-            if (above_text) {
-                if (placement.z < 0) continue;
-            } else {
-                if (placement.z >= 0) continue;
-            }
+            if (!shouldDrawPlacement(placement, above_text)) continue;
             const image = findKittyImage(self.images_view.items, placement.image_id) orelse continue;
             const tex = self.ensureTexture(allocator, image) orelse continue;
 
@@ -274,3 +275,60 @@ pub const KittyState = struct {
         return null;
     }
 };
+
+test "kitty virtual placements render only on above-text pass" {
+    const virtual = KittyPlacement{
+        .image_id = 1,
+        .placement_id = 0,
+        .row = 0,
+        .col = 0,
+        .cols = 0,
+        .rows = 0,
+        .z = -1,
+        .anchor_row = 0,
+        .is_virtual = true,
+        .parent_image_id = 0,
+        .parent_placement_id = 0,
+        .offset_x = 0,
+        .offset_y = 0,
+    };
+    try std.testing.expect(!KittyState.shouldDrawPlacement(virtual, false));
+    try std.testing.expect(KittyState.shouldDrawPlacement(virtual, true));
+}
+
+test "kitty non-virtual placement z-layer policy unchanged" {
+    const below = KittyPlacement{
+        .image_id = 1,
+        .placement_id = 0,
+        .row = 0,
+        .col = 0,
+        .cols = 0,
+        .rows = 0,
+        .z = -1,
+        .anchor_row = 0,
+        .is_virtual = false,
+        .parent_image_id = 0,
+        .parent_placement_id = 0,
+        .offset_x = 0,
+        .offset_y = 0,
+    };
+    const above = KittyPlacement{
+        .image_id = 1,
+        .placement_id = 0,
+        .row = 0,
+        .col = 0,
+        .cols = 0,
+        .rows = 0,
+        .z = 1,
+        .anchor_row = 0,
+        .is_virtual = false,
+        .parent_image_id = 0,
+        .parent_placement_id = 0,
+        .offset_x = 0,
+        .offset_y = 0,
+    };
+    try std.testing.expect(KittyState.shouldDrawPlacement(below, false));
+    try std.testing.expect(!KittyState.shouldDrawPlacement(below, true));
+    try std.testing.expect(!KittyState.shouldDrawPlacement(above, false));
+    try std.testing.expect(KittyState.shouldDrawPlacement(above, true));
+}

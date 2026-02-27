@@ -27,6 +27,17 @@ pub const KittyPartial = struct {
     compression: u8,
     quiet: u8,
     size_initialized: bool,
+    auto_place: bool,
+    placement_id: ?u32,
+    cols: u32,
+    rows: u32,
+    z: i32,
+    cursor_movement: u8,
+    virtual: u32,
+    parent_id: ?u32,
+    child_id: ?u32,
+    parent_x: i32,
+    parent_y: i32,
 };
 
 pub const KittyControl = struct {
@@ -114,6 +125,31 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
     var raw_kv = std.ArrayList(KittyKV).empty;
     defer raw_kv.deinit(self.allocator);
     const data = parseKittyControl(self.allocator, payload, &control, &raw_kv);
+    if (log.enabled_file or log.enabled_console) {
+        log.logf(
+            "kitty control a={c} d={c} q={d} f={d} t={c} o={c} m={any} i={any} I={any} p={any} c={d} r={d} U={d} P={any} Q={any} H={d} V={d} data_len={d}",
+            .{
+                control.action,
+                control.delete_action,
+                control.quiet,
+                control.format,
+                control.medium,
+                control.compression,
+                control.more,
+                control.image_id,
+                control.image_number,
+                control.placement_id,
+                control.cols,
+                control.rows,
+                control.virtual,
+                control.parent_id,
+                control.child_id,
+                control.parent_x,
+                control.parent_y,
+                data.len,
+            },
+        );
+    }
     if (!validateKittyControl(control)) {
         if (log.enabled_file or log.enabled_console) {
             log.logf("kitty invalid command a={c} data_len={d}", .{ control.action, data.len });
@@ -264,6 +300,21 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
     storeKittyImage(self, image);
     if (control.action == 'T') {
         if (placeKittyImage(self, final_image_id, control)) |err_msg| {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(
+                    "kitty place failed a=T id={d} pid={any} cols={d} rows={d} virtual={d} parent={any}/{any} err={s}",
+                    .{
+                        final_image_id,
+                        control.placement_id,
+                        control.cols,
+                        control.rows,
+                        control.virtual,
+                        control.parent_id,
+                        control.child_id,
+                        err_msg,
+                    },
+                );
+            }
             clearKittyLoading(kitty, final_image_id);
             writeKittyResponse(self, control, final_image_id, false, err_msg);
             return;
@@ -699,6 +750,17 @@ fn accumulateKittyData(self: anytype, image_id: u32, control: *KittyControl, dec
                 .compression = compression,
                 .quiet = control.quiet,
                 .size_initialized = false,
+                .auto_place = control.action == 'T',
+                .placement_id = control.placement_id,
+                .cols = control.cols,
+                .rows = control.rows,
+                .z = control.z,
+                .cursor_movement = control.cursor_movement,
+                .virtual = control.virtual,
+                .parent_id = control.parent_id,
+                .child_id = control.child_id,
+                .parent_x = control.parent_x,
+                .parent_y = control.parent_y,
             };
         } else {
             if (control.quiet == 0) {
@@ -712,6 +774,23 @@ fn accumulateKittyData(self: anytype, image_id: u32, control: *KittyControl, dec
             if (entry.value_ptr.format_value == 0 and control.format != 0) {
                 entry.value_ptr.format_value = control.format;
             }
+            if (control.action == 'T') entry.value_ptr.auto_place = true;
+            if (entry.value_ptr.placement_id == null and control.placement_id != null) {
+                entry.value_ptr.placement_id = control.placement_id;
+            }
+            if (entry.value_ptr.cols == 0) entry.value_ptr.cols = control.cols;
+            if (entry.value_ptr.rows == 0) entry.value_ptr.rows = control.rows;
+            if (entry.value_ptr.z == 0) entry.value_ptr.z = control.z;
+            if (entry.value_ptr.cursor_movement == 0) entry.value_ptr.cursor_movement = control.cursor_movement;
+            if (entry.value_ptr.virtual == 0) entry.value_ptr.virtual = control.virtual;
+            if (entry.value_ptr.parent_id == null and control.parent_id != null) {
+                entry.value_ptr.parent_id = control.parent_id;
+            }
+            if (entry.value_ptr.child_id == null and control.child_id != null) {
+                entry.value_ptr.child_id = control.child_id;
+            }
+            if (entry.value_ptr.parent_x == 0) entry.value_ptr.parent_x = control.parent_x;
+            if (entry.value_ptr.parent_y == 0) entry.value_ptr.parent_y = control.parent_y;
         }
         if (!applyKittyChunk(self, entry.value_ptr, control, chunk)) {
             self.allocator.free(chunk);
@@ -749,6 +828,19 @@ fn accumulateKittyData(self: anytype, image_id: u32, control: *KittyControl, dec
                     .rgba => 32,
                 };
             }
+        }
+        if (entry.value_ptr.auto_place) {
+            control.action = 'T';
+            if (control.placement_id == null) control.placement_id = entry.value_ptr.placement_id;
+            if (control.cols == 0) control.cols = entry.value_ptr.cols;
+            if (control.rows == 0) control.rows = entry.value_ptr.rows;
+            if (control.z == 0) control.z = entry.value_ptr.z;
+            if (control.cursor_movement == 0) control.cursor_movement = entry.value_ptr.cursor_movement;
+            if (control.virtual == 0) control.virtual = entry.value_ptr.virtual;
+            if (control.parent_id == null) control.parent_id = entry.value_ptr.parent_id;
+            if (control.child_id == null) control.child_id = entry.value_ptr.child_id;
+            if (control.parent_x == 0) control.parent_x = entry.value_ptr.parent_x;
+            if (control.parent_y == 0) control.parent_y = entry.value_ptr.parent_y;
         }
         entry.value_ptr.data.clearRetainingCapacity();
         _ = kitty.partials.remove(image_id);

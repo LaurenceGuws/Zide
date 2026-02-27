@@ -27,6 +27,7 @@ const TextureKind = terminal_font_mod.TextureKind;
 const Rgba = terminal_font_mod.Rgba;
 const Renderer = renderer_mod.Renderer;
 const TerminalDisableLigaturesStrategy = renderer_mod.TerminalDisableLigaturesStrategy;
+const kitty_unicode_placeholder: u32 = 0x10EEEE;
 
 var jitter_debug_enabled_cache: ?bool = null;
 
@@ -571,7 +572,7 @@ pub fn draw(
                     behind_rgba.a = 255;
                     rr.text_bg_rgba = behind_rgba;
 
-                    if (cell.codepoint == 0) continue;
+                    if (cell.codepoint == 0 or cell.codepoint == kitty_unicode_placeholder) continue;
                     if (cell.combining_len == 0) {
                         const box_x_i = base_x_i + @as(i32, @intCast(abs_col)) * cell_w_i;
                         const box_y_i = base_y_i + @as(i32, @intCast(row_idx)) * cell_h_i;

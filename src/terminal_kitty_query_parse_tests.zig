@@ -219,6 +219,22 @@ test "kitty parse query rgba payload emits OK reply" {
     }.run);
 }
 
+test "kitty multipart T first chunk preserves auto-place through t continuations" {
+    const allocator = std.testing.allocator;
+    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    defer session.deinit();
+
+    kitty.parseKittyGraphics(session, "a=T,i=7,f=32,s=1,v=1,S=4,m=1,U=1;AA==");
+    kitty.parseKittyGraphics(session, "a=t,i=7,O=1,m=1;AA==");
+    kitty.parseKittyGraphics(session, "a=t,i=7,O=2,m=1;AA==");
+    kitty.parseKittyGraphics(session, "a=t,i=7,O=3;/w==");
+
+    try std.testing.expectEqual(@as(usize, 1), session.kitty_primary.images.items.len);
+    try std.testing.expectEqual(@as(usize, 1), session.kitty_primary.placements.items.len);
+    try std.testing.expectEqual(@as(u32, 7), session.kitty_primary.images.items[0].id);
+    try std.testing.expectEqual(@as(u32, 7), session.kitty_primary.placements.items[0].image_id);
+}
+
 test "kitty parse query rgba short payload emits ENODATA reply" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
