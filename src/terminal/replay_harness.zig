@@ -173,7 +173,7 @@ pub fn loadFixtures(allocator: std.mem.Allocator, dir_path: []const u8) ![]Fixtu
         const file_bytes = try dir.readFileAlloc(allocator, entry.name, 1024 * 1024);
         errdefer allocator.free(file_bytes);
 
-        const meta_name = try std.fmt.allocPrint(allocator, "{s}.json", .{ stem });
+        const meta_name = try std.fmt.allocPrint(allocator, "{s}.json", .{stem});
         defer allocator.free(meta_name);
         const meta_bytes = try dir.readFileAlloc(allocator, meta_name, 64 * 1024);
         defer allocator.free(meta_bytes);
@@ -189,7 +189,7 @@ pub fn loadFixtures(allocator: std.mem.Allocator, dir_path: []const u8) ![]Fixtu
         errdefer parsed.deinit();
 
         var golden: ?[]const u8 = null;
-        const golden_name = try std.fmt.allocPrint(allocator, "{s}.golden", .{ stem });
+        const golden_name = try std.fmt.allocPrint(allocator, "{s}.golden", .{stem});
         defer allocator.free(golden_name);
         if (dir.openFile(golden_name, .{})) |golden_file| {
             defer golden_file.close();
@@ -244,7 +244,7 @@ pub fn loadEncoderFixtures(allocator: std.mem.Allocator, dir_path: []const u8) !
         errdefer parsed.deinit();
 
         var golden: ?[]const u8 = null;
-        const golden_name = try std.fmt.allocPrint(allocator, "{s}.golden", .{ stem });
+        const golden_name = try std.fmt.allocPrint(allocator, "{s}.golden", .{stem});
         defer allocator.free(golden_name);
         if (dir.openFile(golden_name, .{})) |golden_file| {
             defer golden_file.close();
@@ -406,6 +406,7 @@ pub fn runEncoderFixture(
             .codepoint = encoder.char.?,
             .mod = encoder.mod,
             .key_mode_flags = encoder.flags,
+            .action = encoder.action,
             .protocol = .{ .alternate = meta },
         });
     }
@@ -414,6 +415,7 @@ pub fn runEncoderFixture(
             .codepoint = encoder.char.?,
             .mod = encoder.mod,
             .key_mode_flags = encoder.flags,
+            .action = encoder.action,
             .protocol = .{
                 .alternate = .{
                     .physical_key = alt.physical_key,

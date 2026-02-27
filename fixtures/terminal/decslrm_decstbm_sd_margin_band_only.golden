@@ -1,6 +1,6 @@
 TERM_SNAPSHOT v1
 size: 5x12
-cursor: r=2 c=2 visible=1 style=block-blink
+cursor: r=1 c=0 visible=1 style=block-blink
 alt: 0
 scrollback: count=0 view_offset=0
 title: "Terminal"
