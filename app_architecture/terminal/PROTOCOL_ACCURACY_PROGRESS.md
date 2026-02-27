@@ -3325,6 +3325,29 @@ Verification:
 - `zig build test-terminal-replay -- --fixture csi_tab_ctc_legacy_variants_deferred_noop --update-goldens`
 - `zig build test-terminal-replay -- --fixture csi_tab_ctc_legacy_variants_deferred_noop`
 
+Implemented (increment 20 / `PA-08h` reset-family breadth: DECSTR hidden-screen soft-state explicit defer lock):
+- Promoted one remaining reset-family breadth ambiguity under `DECSTR` into an explicit defer lock:
+  - current Zide `DECSTR` scope resets active-screen soft state only (`screen.resetState()` on active screen), while hidden-screen soft state is preserved.
+  - this is now an intentional, test-locked compatibility boundary in `PA-08h` (not accidental behavior).
+- Added replay authority that exercises the boundary end-to-end with reply bytes:
+  - set `?45` on primary, switch to alt, set `?45` on alt, run `DECSTR`, query `?45` while alt active (expects reset/default), return to primary and query `?45` again (expects preserved set state).
+- Compatibility notes:
+  - terminals with broader soft-reset scope may reset hidden-screen soft modes on `DECSTR`; Zide currently does not.
+  - TUI flows that rely on `DECSTR` to scrub hidden-screen mode bits can observe divergence after alt-screen exit.
+- Resume criteria:
+  - concrete app compatibility failure tied to hidden-screen soft-mode persistence across `DECSTR`, or
+  - clear xterm/kitty/ghostty alignment evidence favoring dual-screen soft-state reset for this row.
+
+Files:
+- `fixtures/terminal/decstr_hidden_screen_soft_state_preserve_query_reply.vt`
+- `fixtures/terminal/decstr_hidden_screen_soft_state_preserve_query_reply.json`
+- `fixtures/terminal/decstr_hidden_screen_soft_state_preserve_query_reply.golden`
+- `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture decstr_hidden_screen_soft_state_preserve_query_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture decstr_hidden_screen_soft_state_preserve_query_reply`
+
 ## Change Log
 
 ### 2026-02-27
@@ -3358,6 +3381,9 @@ Verification:
   - added replay fixture authority for representative deferred variants (`0/1/2/5W`) and locked current no-op policy
   - updated `PA-08` inventory row status for legacy tab-stop report/edit variants to `deferred`
   - narrowed the top Next Work Queue `PA-08h` note to remaining reset-family breadth
+- Implemented `PA-08h` reset-family hidden-screen soft-state explicit defer lock:
+  - added replay fixture authority to lock current `DECSTR` boundary (active-screen soft reset, hidden-screen soft-state preserve)
+  - recorded compatibility impact + resume criteria for future parity adjustment
 
 ### 2026-02-23
 
