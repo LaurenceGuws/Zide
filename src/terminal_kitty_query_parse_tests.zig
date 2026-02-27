@@ -623,6 +623,28 @@ test "kitty parse delete unknown selector reply is suppressed for q=2" {
     try expectKittyQueryNoReply("a=d,q=2,i=1,d=v");
 }
 
+test "kitty parse delete deferred selectors q/Q/f/F reply EINVAL for q=0 and q=1" {
+    const selectors = [_]u8{ 'q', 'Q', 'f', 'F' };
+    inline for (selectors) |selector| {
+        const seq_q0 = try std.fmt.allocPrint(std.testing.allocator, "a=d,i=1,d={c}", .{selector});
+        defer std.testing.allocator.free(seq_q0);
+        try expectKittyQueryReply(seq_q0, "\x1b_Gi=1;EINVAL\x1b\\");
+
+        const seq_q1 = try std.fmt.allocPrint(std.testing.allocator, "a=d,q=1,i=1,d={c}", .{selector});
+        defer std.testing.allocator.free(seq_q1);
+        try expectKittyQueryReply(seq_q1, "\x1b_Gi=1;EINVAL\x1b\\");
+    }
+}
+
+test "kitty parse delete deferred selectors q/Q/f/F reply is suppressed for q=2" {
+    const selectors = [_]u8{ 'q', 'Q', 'f', 'F' };
+    inline for (selectors) |selector| {
+        const seq_q2 = try std.fmt.allocPrint(std.testing.allocator, "a=d,q=2,i=1,d={c}", .{selector});
+        defer std.testing.allocator.free(seq_q2);
+        try expectKittyQueryNoReply(seq_q2);
+    }
+}
+
 // Query precedence matrix coverage (current scope):
 // - non-missing-id invalid compression (`o=1`)
 // - missing-id preflight

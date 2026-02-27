@@ -3238,6 +3238,24 @@ Verification:
 - `zig build test-terminal-replay -- --fixture kitty_parent_depth_limit_reply`
 - `zig build check-app-imports`
 
+Implemented (increment 16 / `AUDIT-07` kitty delete selector `q/Q/f/F` explicit defer lock):
+- Locked current policy explicitly in delete handling: selectors `q/Q/f/F` are intentionally deferred and treated as invalid (`EINVAL`).
+- Added focused parse-path tests for the selector set across quiet policies:
+  - `q=0` and `q=1` reply with `EINVAL`
+  - `q=2` suppresses replies.
+- Added replay fixture authority for the deferred selector set with concatenated reply assertions and preserved kitty-state no-op behavior.
+
+Files:
+- `src/terminal/kitty/graphics.zig`
+- `src/terminal_kitty_query_parse_tests.zig`
+- `fixtures/terminal/kitty_delete_deferred_selectors_policy_reply.vt`
+- `fixtures/terminal/kitty_delete_deferred_selectors_policy_reply.json`
+- `fixtures/terminal/kitty_delete_deferred_selectors_policy_reply.golden`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse`
+- `zig build test-terminal-replay -- --fixture kitty_delete_deferred_selectors_policy_reply`
+
 ## Change Log
 
 ### 2026-02-27
@@ -3260,6 +3278,10 @@ Verification:
   - press/repeat now support multi-codepoint associated text (colon-separated) via metadata UTF-8 text
   - release continues to omit associated text (`AUDIT-09` preserved)
   - focused encoder tests added in `src/terminal_input_encoding_tests.zig`
+- Implemented `AUDIT-07` kitty delete selector explicit defer lock:
+  - selectors `d=q/Q/f/F` are now explicitly treated as invalid (deferred parity, no silent fallback)
+  - added focused parse-path tests for `q=0/1/2` quiet-policy behavior
+  - added replay fixture `fixtures/terminal/kitty_delete_deferred_selectors_policy_reply.*` with `reply_hex` lock
 
 ### 2026-02-23
 
@@ -3308,7 +3330,7 @@ Verification:
 ## Next Work Queue (Ordered)
 
 1. `AUDIT-03` Enforce strict invalid equal-bounds rejection for `DECSTBM` / `DECSLRM`
-2. `AUDIT-07` Kitty: extend delete selector surface (`q/Q`, `f/F`) or explicitly defer with lock
+2. `AUDIT-11` Keyboard: allow alternate-field emission without shift
 3. See consolidated cross-reference backlog and ordering in `app_architecture/terminal/PROTOCOL_ALIGNMENT_AUDIT_2026-02-27.md`
 
 ## Decomposition Backlog (New)

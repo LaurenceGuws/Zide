@@ -1539,6 +1539,9 @@ fn deleteKittyByAction(self: anytype, control: KittyControl) bool {
             deleteKittyPlacements(self, Ctx{ .row = row, .delete_images = delete_images }, Ctx.pred);
             return true;
         },
+        // AUDIT-07 policy lock: kitty delete selectors q/Q/f/F are explicitly deferred
+        // in Zide and treated as invalid (`EINVAL`) instead of falling into unknown.
+        'q', 'Q', 'f', 'F' => return false,
         else => return false,
     }
 }
