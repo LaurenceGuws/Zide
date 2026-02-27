@@ -2589,6 +2589,17 @@ Notes:
     - replay:
       - `fixtures/terminal/decslrm_ed_mode2_clips_to_margins.*`
 
+- `PA-08h` implementation slice (2026-02-26, `DECSLRM` scroll-region clipping for `SU`/`SD`):
+  - Aligned `SU` (`CSI Ps S`) and `SD` (`CSI Ps T`) scroll-region operations to active horizontal margins when `?69` is enabled:
+    - row shifts are now limited to `left_margin..right_margin` inside the vertical scroll region
+    - outside-margin columns are preserved
+  - Evidence:
+    - PTY/unit integration: `src/terminal_focus_reporting_tests.zig`
+      - `terminal DECSLRM clips SU and SD to active horizontal margins`
+    - replay:
+      - `fixtures/terminal/decslrm_su_margin_band_only.*`
+      - `fixtures/terminal/decslrm_sd_margin_band_only.*`
+
 Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft terminal reset):
 - Reference anchors:
   - xterm docs define `CSI ! p` as `DECSTR` (soft terminal reset), VT220+ (`reference_repos/terminals/xterm_snapshots/ctlseqs.txt`).
@@ -2981,7 +2992,7 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `PA-08h` Extend `DECSLRM` parity beyond current slices (remaining margin-sensitive operations + reference behavior audit)
+1. `PA-08h` Run DECSLRM reference behavior audit for remaining operations and close/defer the promoted row with explicit compatibility notes
 2. `PA-04c` Decide whether to keep replay harness file-only for `t=s` or add deterministic shm lifecycle support to replay fixtures
 3. `PA-05c` Extend metadata-aware encoder format usage for `alternate_layout_codepoint` when protocol field support is promoted
 4. `PA-04c` Extend parent/virtual placement fixture coverage (`U=1`, `P/Q/H/V`) with explicit success/error expectations

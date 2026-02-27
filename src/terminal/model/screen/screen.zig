@@ -1212,6 +1212,28 @@ pub const Screen = struct {
         const cols = @as(usize, self.grid.cols);
         if (cols == 0 or self.grid.rows == 0) return;
         if (n == 0) return;
+        if (self.left_right_margin_mode_69) {
+            const left = self.leftBoundary();
+            const right = self.rightBoundary();
+            var row = self.scroll_top;
+            while (row <= self.scroll_bottom) : (row += 1) {
+                const row_start = row * cols;
+                if (row + n <= self.scroll_bottom) {
+                    const src_row = row + n;
+                    const src_start = src_row * cols;
+                    std.mem.copyForwards(
+                        types.Cell,
+                        self.grid.cells.items[row_start + left .. row_start + right + 1],
+                        self.grid.cells.items[src_start + left .. src_start + right + 1],
+                    );
+                } else {
+                    for (self.grid.cells.items[row_start + left .. row_start + right + 1]) |*cell| cell.* = blank_cell;
+                }
+                self.grid.setRowWrapped(row, false);
+            }
+            self.grid.markDirtyRange(self.scroll_top, self.scroll_bottom, left, right);
+            return;
+        }
         const region_start = self.scroll_top * cols;
         const region_end = (self.scroll_bottom + 1) * cols;
         const move_len = region_end - region_start - n * cols;
@@ -1247,6 +1269,30 @@ pub const Screen = struct {
         const cols = @as(usize, self.grid.cols);
         if (cols == 0 or self.grid.rows == 0) return;
         if (n == 0) return;
+        if (self.left_right_margin_mode_69) {
+            const left = self.leftBoundary();
+            const right = self.rightBoundary();
+            var row = self.scroll_bottom;
+            while (true) {
+                const row_start = row * cols;
+                if (row >= self.scroll_top + n) {
+                    const src_row = row - n;
+                    const src_start = src_row * cols;
+                    std.mem.copyForwards(
+                        types.Cell,
+                        self.grid.cells.items[row_start + left .. row_start + right + 1],
+                        self.grid.cells.items[src_start + left .. src_start + right + 1],
+                    );
+                } else {
+                    for (self.grid.cells.items[row_start + left .. row_start + right + 1]) |*cell| cell.* = blank_cell;
+                }
+                self.grid.setRowWrapped(row, false);
+                if (row == self.scroll_top) break;
+                row -= 1;
+            }
+            self.grid.markDirtyRange(self.scroll_top, self.scroll_bottom, left, right);
+            return;
+        }
         const region_start = self.scroll_top * cols;
         const region_end = (self.scroll_bottom + 1) * cols;
         const move_len = region_end - region_start - n * cols;

@@ -387,6 +387,42 @@ test "terminal DECSLRM clips IL and DL to active horizontal margins" {
     try std.testing.expectEqual(@as(u32, 'D'), session.getCell(3, 2).codepoint);
 }
 
+test "terminal DECSLRM clips SU and SD to active horizontal margins" {
+    const allocator = std.testing.allocator;
+
+    var up_session = try terminal.TerminalSession.init(allocator, 4, 12);
+    defer up_session.deinit();
+    terminal.debugFeedBytes(up_session, "\x1b[1;1HAAAAAAAAAAAA");
+    terminal.debugFeedBytes(up_session, "\x1b[2;1HBBBBBBBBBBBB");
+    terminal.debugFeedBytes(up_session, "\x1b[3;1HCCCCCCCCCCCC");
+    terminal.debugFeedBytes(up_session, "\x1b[4;1HDDDDDDDDDDDD");
+    terminal.debugFeedBytes(up_session, "\x1b[?69h\x1b[3;8s\x1b[1S");
+    try std.testing.expectEqual(@as(u32, 'A'), up_session.getCell(0, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), up_session.getCell(0, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), up_session.getCell(1, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), up_session.getCell(1, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), up_session.getCell(2, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), up_session.getCell(2, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), up_session.getCell(3, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), up_session.getCell(3, 2).codepoint);
+
+    var down_session = try terminal.TerminalSession.init(allocator, 4, 12);
+    defer down_session.deinit();
+    terminal.debugFeedBytes(down_session, "\x1b[1;1HAAAAAAAAAAAA");
+    terminal.debugFeedBytes(down_session, "\x1b[2;1HBBBBBBBBBBBB");
+    terminal.debugFeedBytes(down_session, "\x1b[3;1HCCCCCCCCCCCC");
+    terminal.debugFeedBytes(down_session, "\x1b[4;1HDDDDDDDDDDDD");
+    terminal.debugFeedBytes(down_session, "\x1b[?69h\x1b[3;8s\x1b[1T");
+    try std.testing.expectEqual(@as(u32, 'A'), down_session.getCell(0, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), down_session.getCell(0, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), down_session.getCell(1, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'A'), down_session.getCell(1, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), down_session.getCell(2, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), down_session.getCell(2, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), down_session.getCell(3, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), down_session.getCell(3, 2).codepoint);
+}
+
 test "terminal DECRQM strategic fixed-off private modes report permanently reset (Pm=4)" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
