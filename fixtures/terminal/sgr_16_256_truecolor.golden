@@ -1,6 +1,6 @@
 TERM_SNAPSHOT v1
 size: 4x12
-cursor: r=0 c=5 visible=1 style=block-blink
+cursor: r=1 c=9 visible=1 style=block-blink
 alt: 0
 scrollback: count=0 view_offset=0
 title: "Terminal"
@@ -8,7 +8,7 @@ cwd: ""
 clipboard: ""
 selection: none
 grid:
-row0: "R" " " "P" " " "T" . . . . . . .
+row0: "R" " " "P" " " "T" " " "U" " " "V" . . .
 row1: . . . . . . . . . . . .
 row2: . . . . . . . . . . . .
 row3: . . . . . . . . . . . .
@@ -18,7 +18,11 @@ row0: cols 1-1 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
 row0: cols 2-2 fg=#ff00d7ff bg=default bold=0 rev=0 ul=0 ulc=default link=0
 row0: cols 3-3 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
 row0: cols 4-4 fg=#0a141eff bg=default bold=0 rev=0 ul=0 ulc=default link=0
-row0: cols 5-11 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row0: cols 5-5 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row0: cols 6-6 fg=default bg=default bold=0 rev=0 ul=1 ulc=#00af00ff link=0
+row0: cols 7-7 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row0: cols 8-8 fg=default bg=default bold=0 rev=0 ul=1 ulc=#010203ff link=0
+row0: cols 9-11 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
 row1: cols 0-11 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
 row2: cols 0-11 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
 row3: cols 0-11 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
