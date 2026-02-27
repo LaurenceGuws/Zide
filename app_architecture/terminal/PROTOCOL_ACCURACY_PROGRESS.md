@@ -360,7 +360,7 @@ Current `d=` delete variant surface (from `deleteKittyByAction`, default `a`):
   - `r` / `R` image id range (`x..y`) / plus image deletion
   - `x` / `X` column intersection / plus image deletion
   - `y` / `Y` row intersection / plus image deletion
-- Unsupported/ignored (current code path): other delete selectors fall through with no effect.
+- Unknown/unsupported selectors: now treated as invalid (`EINVAL` error reply subject to quiet-mode suppression).
 
 Files:
 - `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
@@ -400,7 +400,7 @@ Implemented (increment 2 / `PA-04c` fixture matrix start):
 - Added replay fixtures for kitty delete conformance behavior (state-level coverage):
   - `d=p` explicit point delete removes placement but preserves image storage
   - `d=P` explicit point delete removes placement and backing image
-- unsupported delete selector (e.g. `d=v`) is currently a no-op on kitty state
+- unsupported delete selector (e.g. `d=v`) preserves kitty state and now emits explicit `EINVAL` reply (`q=0/1`; suppressed by `q=2`)
 - These fixtures validate the current delete-surface semantics through snapshot `kitty:` state (`images`, `placements`, ids).
 
 Files:
@@ -416,6 +416,23 @@ Files:
 
 Verification:
 - `zig build test-terminal-replay -- --all`
+
+Implemented (increment 36 / `AUDIT-06` unknown delete-selector invalid reply):
+- Updated kitty delete handling so unknown `d=` selectors are not silent: they now emit `EINVAL` via `writeKittyResponse`.
+- Preserved known-selector behavior: successful delete actions still emit no success reply (`q=0/1/2` behavior unchanged), and existing invalid-control reply behavior remains intact.
+- Expanded parse-path tests for unknown selector quiet behavior:
+  - `q=0` / `q=1` => `EINVAL`
+  - `q=2` => reply suppressed
+- Updated replay fixture expectations for the prior unsupported-selector no-op case to assert end-to-end reply bytes while still locking unchanged kitty state.
+
+Files:
+- `src/terminal/kitty/graphics.zig`
+- `src/terminal_kitty_query_parse_tests.zig`
+- `fixtures/terminal/kitty_delete_unsupported_selector_noop.json`
+
+Verification:
+- `zig test src/terminal_kitty_query_parse_tests.zig -lc`
+- `zig build test-terminal-replay -- --fixture kitty_delete_unsupported_selector_noop`
 
 Implemented (increment 3 / `PA-04b` delete selector fixture expansion):
 - Expanded replay delete conformance fixtures to cover additional selector pairs:
@@ -3162,6 +3179,11 @@ Implemented (increment 12 / `AUDIT-03` strict equal-bounds rejection for `DECSTB
   - replay fixtures locking end-to-end reply bytes:
     - `fixtures/terminal/kitty_query_missing_id_no_reply_policy.*`
     - `fixtures/terminal/kitty_delete_reply_policy_parity.*`
+- Implemented `AUDIT-06` unknown kitty delete-selector invalid-reply slice:
+  - unknown `d=` selectors now emit explicit `EINVAL` replies instead of silent no-op success.
+  - known selectors keep existing behavior (success replies remain suppressed).
+  - quiet handling for unknown selector is locked (`q=0/1` reply, `q=2` suppression).
+  - replay fixture `fixtures/terminal/kitty_delete_unsupported_selector_noop.*` now asserts reply bytes while preserving kitty-state no-op semantics.
 - Implemented `AUDIT-10` keyboard `embed_text` associated-text parity slice:
   - press/repeat now support multi-codepoint associated text (colon-separated) via metadata UTF-8 text
   - release continues to omit associated text (`AUDIT-09` preserved)
@@ -3214,7 +3236,7 @@ Implemented (increment 12 / `AUDIT-03` strict equal-bounds rejection for `DECSTB
 ## Next Work Queue (Ordered)
 
 1. `AUDIT-03` Enforce strict invalid equal-bounds rejection for `DECSTBM` / `DECSLRM`
-2. `AUDIT-06` Kitty: replace unknown delete selector no-op with explicit invalid reply
+2. `AUDIT-07` Kitty: extend delete selector surface (`q/Q`, `f/F`) or explicitly defer with lock
 3. See consolidated cross-reference backlog and ordering in `app_architecture/terminal/PROTOCOL_ALIGNMENT_AUDIT_2026-02-27.md`
 
 ## Decomposition Backlog (New)

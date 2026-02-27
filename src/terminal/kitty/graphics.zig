@@ -122,7 +122,9 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
         return;
     }
     if (control.action == 'd') {
-        deleteKittyByAction(self, control);
+        if (!deleteKittyByAction(self, control)) {
+            writeKittyResponse(self, control, resolveKittyImageId(control) orelse 0, false, "EINVAL");
+        }
         return;
     }
 
@@ -1362,7 +1364,7 @@ fn deleteKittyPlacements(
     }
 }
 
-fn deleteKittyByAction(self: anytype, control: KittyControl) void {
+fn deleteKittyByAction(self: anytype, control: KittyControl) bool {
     const action = if (control.delete_action == 0) 'a' else control.delete_action;
     const id = resolveKittyImageId(control);
     const placement_id = control.placement_id orelse 0;
@@ -1382,16 +1384,18 @@ fn deleteKittyByAction(self: anytype, control: KittyControl) void {
                 }
             };
             deleteKittyPlacements(self, Ctx{}, Ctx.pred);
+            return true;
         },
         'A' => {
             clearKittyImages(self);
+            return true;
         },
         'i', 'I' => {
-            if (id == null) return;
+            if (id == null) return true;
             const target = id.?;
             if (action == 'I') {
                 deleteKittyImages(self, target);
-                return;
+                return true;
             }
             const Ctx = struct {
                 target_id: u32,
@@ -1403,13 +1407,14 @@ fn deleteKittyByAction(self: anytype, control: KittyControl) void {
                 }
             };
             deleteKittyPlacements(self, Ctx{ .target_id = target, .target_pid = placement_id }, Ctx.pred);
+            return true;
         },
         'n', 'N' => {
-            if (id == null) return;
+            if (id == null) return true;
             const target = id.?;
             if (action == 'N') {
                 deleteKittyImages(self, target);
-                return;
+                return true;
             }
             const Ctx = struct {
                 target_id: u32,
@@ -1421,6 +1426,7 @@ fn deleteKittyByAction(self: anytype, control: KittyControl) void {
                 }
             };
             deleteKittyPlacements(self, Ctx{ .target_id = target, .target_pid = placement_id }, Ctx.pred);
+            return true;
         },
         'c', 'C' => {
             const delete_images = action == 'C';
@@ -1438,6 +1444,7 @@ fn deleteKittyByAction(self: anytype, control: KittyControl) void {
                 }
             };
             deleteKittyPlacements(self, Ctx{ .row = cursor_row, .col = cursor_col, .delete_images = delete_images }, Ctx.pred);
+            return true;
         },
         'p', 'P' => {
             const row = @as(u16, @intCast(y));
@@ -1457,6 +1464,7 @@ fn deleteKittyByAction(self: anytype, control: KittyControl) void {
                 }
             };
             deleteKittyPlacements(self, Ctx{ .row = row, .col = col, .delete_images = delete_images }, Ctx.pred);
+            return true;
         },
         'z', 'Z' => {
             const delete_images = action == 'Z';
@@ -1473,10 +1481,11 @@ fn deleteKittyByAction(self: anytype, control: KittyControl) void {
                 }
             };
             deleteKittyPlacements(self, Ctx{ .z = z, .delete_images = delete_images }, Ctx.pred);
+            return true;
         },
         'r', 'R' => {
             const end = if (range_end > 0) range_end else range_start;
-            if (range_start > end) return;
+            if (range_start > end) return true;
             const delete_images = action == 'R';
             const Ctx = struct {
                 start_id: u32,
@@ -1492,6 +1501,7 @@ fn deleteKittyByAction(self: anytype, control: KittyControl) void {
                 }
             };
             deleteKittyPlacements(self, Ctx{ .start_id = range_start, .end_id = end, .delete_images = delete_images }, Ctx.pred);
+            return true;
         },
         'x', 'X' => {
             const col = @as(u16, @intCast(x));
@@ -1509,6 +1519,7 @@ fn deleteKittyByAction(self: anytype, control: KittyControl) void {
                 }
             };
             deleteKittyPlacements(self, Ctx{ .col = col, .delete_images = delete_images }, Ctx.pred);
+            return true;
         },
         'y', 'Y' => {
             const row = @as(u16, @intCast(y));
@@ -1526,8 +1537,9 @@ fn deleteKittyByAction(self: anytype, control: KittyControl) void {
                 }
             };
             deleteKittyPlacements(self, Ctx{ .row = row, .delete_images = delete_images }, Ctx.pred);
+            return true;
         },
-        else => {},
+        else => return false,
     }
 }
 

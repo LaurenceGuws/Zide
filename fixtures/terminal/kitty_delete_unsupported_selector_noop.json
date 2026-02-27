@@ -8,6 +8,8 @@
   },
   "line_ending": "lf",
   "assertions": [
-    "kitty"
-  ]
+    "kitty",
+    "reply"
+  ],
+  "reply_hex": "1b5f47693d313b45494e56414c1b5c"
 }
