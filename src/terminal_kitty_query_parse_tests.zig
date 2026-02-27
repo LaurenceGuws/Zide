@@ -393,6 +393,21 @@ test "kitty parse query invalid compression quiet-policy matrix" {
     try expectKittyQueryNoReply("a=q,i=7,q=2,o=1,f=999;%%%%");
 }
 
+test "kitty parse query o=z decompression-error quiet-policy matrix" {
+    const reply_cases = [_]struct {
+        seq: []const u8,
+        expected: []const u8,
+    }{
+        .{ .seq = "a=q,i=7,o=z,f=32,s=1,v=1;AAAA/w==", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+        .{ .seq = "a=q,i=7,q=1,o=z,f=32,s=1,v=1;AAAA/w==", .expected = "\x1b_Gi=7;EINVAL\x1b\\" },
+    };
+    inline for (reply_cases) |case_| {
+        try expectKittyQueryReply(case_.seq, case_.expected);
+    }
+
+    try expectKittyQueryNoReply("a=q,i=7,q=2,o=z,f=32,s=1,v=1;AAAA/w==");
+}
+
 test "kitty parse query rgb payload emits OK reply" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
