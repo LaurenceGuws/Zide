@@ -1913,6 +1913,22 @@ test "terminal DECRQSS SGR query replies for bounded attribute state" {
     }.run);
 }
 
+test "terminal DECRQSS DECSTBM query replies with current scroll region" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+
+            terminal.debugFeedBytes(session, "\x1b[2;5r");
+            terminal.debugFeedBytes(session, "\x1bP$qr\x1b\\");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1bP1$r2;5r\x1b\\", reply);
+            }
+        }
+    }.run);
+}
+
 test "terminal DECSTR resets title to default" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {

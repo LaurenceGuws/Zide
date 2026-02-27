@@ -990,6 +990,14 @@ pub const TerminalSession = struct {
             var buf: [64]u8 = undefined;
             return self.decrqssSgrReply(&buf);
         }
+        if (std.mem.eql(u8, text, "r")) {
+            const screen = self.activeScreen();
+            var buf: [32]u8 = undefined;
+            return std.fmt.bufPrint(&buf, "{d};{d}r", .{
+                screen.scroll_top + 1,
+                screen.scroll_bottom + 1,
+            }) catch null;
+        }
         return null;
     }
 
