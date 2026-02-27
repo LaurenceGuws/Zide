@@ -162,6 +162,27 @@ test "DCS DECRQSS writes DECSTBM reply" {
     try std.testing.expectEqualStrings("\x1bP1$r2;5r\x1b\\", self.pty.?.writes.items);
 }
 
+test "DCS DECRQSS writes DECSLRM reply" {
+    const allocator = std.testing.allocator;
+
+    const Self = struct {
+        allocator: std.mem.Allocator,
+        pty: ?FakePty,
+
+        pub fn setSyncUpdates(_: *@This(), _: bool) void {}
+        pub fn decrqssReply(_: *@This(), text: []const u8) ?[]const u8 {
+            if (std.mem.eql(u8, text, "s")) return "3;8s";
+            return null;
+        }
+    };
+
+    var self = Self{ .allocator = allocator, .pty = FakePty.init() };
+    defer if (self.pty) |*pty| pty.deinit(allocator);
+    dcs_apc.parseDcs(&self, "$qs");
+
+    try std.testing.expectEqualStrings("\x1bP1$r3;8s\x1b\\", self.pty.?.writes.items);
+}
+
 test "OSC 52 clipboard query preserves BEL terminator" {
     const allocator = std.testing.allocator;
 
