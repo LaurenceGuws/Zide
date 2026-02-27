@@ -1,0 +1,17 @@
+{
+  "fixture_type": "encoder",
+  "rows": 1,
+  "cols": 1,
+  "cursor": { "row": 0, "col": 0 },
+  "line_ending": "lf",
+  "assertions": ["encoder"],
+  "encoder": {
+    "char": 97,
+    "mod": 0,
+    "flags": 26,
+    "action": "release",
+    "alternate_meta": {
+      "produced_text_utf8": "ab"
+    }
+  }
+}

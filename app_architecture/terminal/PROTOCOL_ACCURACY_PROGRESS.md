@@ -1320,6 +1320,24 @@ Files:
 Verification:
 - `zig test src/terminal_input_encoding_tests.zig`
 
+Implemented (increment 14 / `AUDIT-10` replay encoder fixture locks):
+- Added replay encoder fixtures to lock multi-codepoint `embed_text` associated-text serialization for:
+  - press (`;;97:98`)
+  - repeat (`;:2;97:98`)
+  - release omission (`;:3` with no third field)
+
+Files:
+- `fixtures/terminal/encoder/csi_u_embed_text_multicodepoint_press.json`
+- `fixtures/terminal/encoder/csi_u_embed_text_multicodepoint_press.golden`
+- `fixtures/terminal/encoder/csi_u_embed_text_multicodepoint_repeat.json`
+- `fixtures/terminal/encoder/csi_u_embed_text_multicodepoint_repeat.golden`
+- `fixtures/terminal/encoder/csi_u_embed_text_multicodepoint_release_omit.json`
+- `fixtures/terminal/encoder/csi_u_embed_text_multicodepoint_release_omit.golden`
+- `src/terminal/replay_harness.zig` (encoder char-event action passthrough for alternate metadata path)
+
+Verification:
+- `zig build test-terminal-replay -- --all`
+
 Implemented (increment 14 / `AUDIT-11` alternate-field emission without Shift):
 - Relaxed CSI-u alternate serialization gating so metadata-provided alternate layout codepoints can emit without requiring `Shift`.
 - When no shifted field is present, the encoder now emits kitty/foot-style empty shifted slot syntax (`key::alternate`) instead of suppressing the alternate field.
@@ -3403,6 +3421,11 @@ Verification:
   - press/repeat now support multi-codepoint associated text (colon-separated) via metadata UTF-8 text
   - release continues to omit associated text (`AUDIT-09` preserved)
   - focused encoder tests added in `src/terminal_input_encoding_tests.zig`
+- Added `AUDIT-10` replay encoder fixtures to lock multi-codepoint `embed_text` press/repeat bytes and release omission.
+- Refreshed replay cursor baselines for:
+  - `fixtures/terminal/decslrm_decstbm_su_margin_band_only.golden`
+  - `fixtures/terminal/decslrm_decstbm_sd_margin_band_only.golden`
+  after confirming current parser/runtime behavior produced cursor `r=1 c=0` with unchanged grid semantics.
 - Implemented `AUDIT-07` kitty delete selector explicit defer lock:
   - selectors `d=q/Q/f/F` are now explicitly treated as invalid (deferred parity, no silent fallback)
   - added focused parse-path tests for `q=0/1/2` quiet-policy behavior
