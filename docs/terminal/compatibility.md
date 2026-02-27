@@ -92,6 +92,29 @@ The intended claim is narrower and more defensible:
 - a curated set of modern extensions that matter in real TUIs
 - explicit documentation of bounded and deferred areas
 
+## Capability Matrix
+
+This is a rough product-positioning table, not a claim of exhaustive parity.
+
+| Capability family | Zide beta | xterm | kitty | ghostty | foot |
+| --- | --- | --- | --- | --- | --- |
+| Core VT / xterm TUI baseline | strong | reference | strong | strong | strong |
+| Truecolor + modern SGR | strong | partial/varies by extension | strong | strong | strong |
+| Underline style + underline color | strong | partial | strong | strong | strong |
+| Focus / bracketed paste / sync updates | strong | mixed by feature | strong | strong | strong |
+| Clipboard transport (`OSC 52`) | strong | baseline | strong | strong | strong |
+| Keyboard richness (`CSI-u` / kitty keyboard) | bounded | low | reference | strong | medium |
+| State queries (`DECRQSS` / `XTGETTCAP`) | bounded | broad | broad | broad | medium |
+| Window ops / legacy control breadth | bounded | reference | bounded | bounded | bounded |
+| Image protocol | bounded kitty subset | none | reference | strong kitty subset | none |
+| Sixel / DRCS | deferred | mixed/legacy | none | none | none |
+
+Interpretation:
+
+- `strong`: good practical coverage for modern TUI use
+- `bounded`: implemented and useful, but intentionally not full breadth/parity
+- `reference`: peer is the compatibility source for that family
+
 ## Supported Baseline
 
 - Core cursor movement and positioning
