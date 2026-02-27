@@ -451,6 +451,28 @@ test "terminal input char event metadata emits third alternate field" {
     try std.testing.expectEqualStrings("\x1b[233:201:8364;2u", seq);
 }
 
+test "terminal input char event metadata emits alternate field without shift" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 4 | 8; // alternate + report_text
+
+    const seq = try input_mod.encodeCharEventBytesForTest(allocator, .{
+        .codepoint = 0x00E9, // é
+        .mod = types.VTERM_MOD_NONE,
+        .key_mode_flags = flags,
+        .protocol = .{
+            .alternate = .{
+                .physical_key = 30,
+                .produced_text_utf8 = "é",
+                .base_codepoint = 0x0065, // e
+                .shifted_codepoint = 0x00C9, // É
+                .alternate_layout_codepoint = 0x20AC, // €
+            },
+        },
+    });
+    defer allocator.free(seq);
+    try std.testing.expectEqualStrings("\x1b[233::8364;1u", seq);
+}
+
 test "terminal input bridge seam derives altgr metadata into CSI-u bytes" {
     const allocator = std.testing.allocator;
     const flags: u32 = 4 | 8; // alternate + report_text
