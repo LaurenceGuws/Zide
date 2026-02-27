@@ -1240,6 +1240,21 @@ Verification:
 - `zig build test-terminal-replay -- --all`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 12 / `AUDIT-09` release omits associated text field for `embed_text`):
+- Suppressed CSI-u associated text (third field) for char **release** events when `embed_text` is enabled.
+- Press/repeat behavior is unchanged:
+  - press continues to include associated text
+  - repeat continues to include associated text plus action (`:2`) when `report_all_event_types` is active
+- Updated test helper parity for char-event encoding so release formatting matches runtime behavior.
+- Added focused unit coverage proving press includes associated text while release omits it.
+
+Files:
+- `src/terminal/input/input.zig`
+- `src/terminal_input_encoding_tests.zig`
+
+Verification:
+- `zig test src/terminal_input_encoding_tests.zig`
+
 Deferred (increment 7 / layout-aware alternates decision):
 - Explicitly deferred full layout-aware alternate-key reporting (beyond the current US-ASCII shifted-char subset).
 - Rationale:
@@ -3157,11 +3172,10 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `AUDIT-09` Keyboard: suppress `embed_text` on release (unit + replay)
-2. `AUDIT-05` Kitty: suppress delete success replies and lock missing-id query no-reply policy decision
-3. `AUDIT-03` Enforce strict invalid equal-bounds rejection for `DECSTBM` / `DECSLRM`
-4. `AUDIT-10` Keyboard: multi-codepoint associated text field for `embed_text`
-5. `AUDIT-06` Kitty: replace unknown delete selector no-op with explicit invalid reply
+1. `AUDIT-05` Kitty: suppress delete success replies and lock missing-id query no-reply policy decision
+2. `AUDIT-03` Enforce strict invalid equal-bounds rejection for `DECSTBM` / `DECSLRM`
+3. `AUDIT-10` Keyboard: multi-codepoint associated text field for `embed_text`
+4. `AUDIT-06` Kitty: replace unknown delete selector no-op with explicit invalid reply
 6. See consolidated cross-reference backlog and ordering in `app_architecture/terminal/PROTOCOL_ALIGNMENT_AUDIT_2026-02-27.md`
 
 ## Decomposition Backlog (New)

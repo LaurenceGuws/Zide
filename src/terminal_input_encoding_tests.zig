@@ -276,6 +276,38 @@ test "terminal input reports shifted alternate with embedded text" {
     try std.testing.expectEqualStrings("\x1b[97:65;2;65u", seq);
 }
 
+test "terminal input embed_text keeps press/repeat text field and omits it on release" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 2 | 8 | 16; // report_all_event_types + report_text + embed_text
+
+    const press_seq = try input_mod.encodeCharEventBytesForTest(allocator, .{
+        .codepoint = 'a',
+        .mod = types.VTERM_MOD_NONE,
+        .key_mode_flags = flags,
+        .action = .press,
+    });
+    defer allocator.free(press_seq);
+    try std.testing.expectEqualStrings("\x1b[97;;97u", press_seq);
+
+    const repeat_seq = try input_mod.encodeCharEventBytesForTest(allocator, .{
+        .codepoint = 'a',
+        .mod = types.VTERM_MOD_NONE,
+        .key_mode_flags = flags,
+        .action = .repeat,
+    });
+    defer allocator.free(repeat_seq);
+    try std.testing.expectEqualStrings("\x1b[97;:2;97u", repeat_seq);
+
+    const release_seq = try input_mod.encodeCharEventBytesForTest(allocator, .{
+        .codepoint = 'a',
+        .mod = types.VTERM_MOD_NONE,
+        .key_mode_flags = flags,
+        .action = .release,
+    });
+    defer allocator.free(release_seq);
+    try std.testing.expectEqualStrings("\x1b[97;:3u", release_seq);
+}
+
 test "terminal input char event metadata path preserves encoding bytes" {
     const allocator = std.testing.allocator;
     const flags: u32 = 1 | 4; // disambiguate + alternate
