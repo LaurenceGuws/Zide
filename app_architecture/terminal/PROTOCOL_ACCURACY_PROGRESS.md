@@ -1332,6 +1332,20 @@ Verification:
 - `zig build test-terminal-kitty-query-parse -- --test-filter "invalid offset quiet-policy matrix"` *(fails in this environment due existing shared-memory test path: `ShmOpenFailed`)*
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 49 / `PA-04c` parse-path invalid-action quiet matrix mirror):
+- Added a focused parse-path matrix test for invalid kitty action (`a=x`) across quiet levels:
+  - `q=0` -> `EINVAL` reply
+  - `q=1` -> `EINVAL` reply
+  - `q=2` -> reply suppressed
+- This mirrors the replay lock with in-process parse-path authority for the same quiet-policy behavior.
+
+Files:
+- `src/terminal_kitty_query_parse_tests.zig`
+
+Verification:
+- `zig build test-terminal-kitty-query-parse` *(fails in this environment due existing shared-memory test path: `ShmOpenFailed`; new test still compiles/runs within suite before that failure point)*
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
