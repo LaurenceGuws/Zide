@@ -164,7 +164,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
         },
         's' => { // SCP / DECSLRM (when ?69 enabled)
             if (!action.private) {
-                if (param_len > 0 and screen.left_right_margin_mode_69) {
+                if (screen.left_right_margin_mode_69) {
                     const cols = @as(usize, screen.grid.cols);
                     if (cols == 0) return;
                     const left_1 = if (param_len > 0 and p[0] > 0) p[0] else 1;

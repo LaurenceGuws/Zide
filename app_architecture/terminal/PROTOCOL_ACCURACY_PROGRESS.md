@@ -3087,6 +3087,28 @@ Verification:
 - `zig build test-terminal-replay -- --fixture decstr_clears_hidden_primary_kitty_state`
   4. Extend/reset matrix incrementally as reference behavior is confirmed.
 
+Implemented (increment 11 / `AUDIT-01` `CSI s` ambiguity under `?69` / `DECLRMM`):
+- Updated CSI `s` dispatch so `?69` enabled always routes to DECSLRM semantics, including zero-parameter full-width margin reset (`CSI s` -> left=1/right=cols), instead of save-cursor.
+- Preserved SCP behavior when `?69` is disabled (`CSI s` remains save-cursor).
+- Added focused integration coverage proving:
+  - `CSI s/u` save/restore behavior with `?69` disabled
+  - zero-param `CSI s` under `?69` resets margins to full width and homes cursor
+  - `CSI s` under `?69` does not overwrite the saved cursor slot
+- Added replay fixture with `reply_hex` lock proving end-to-end ambiguity behavior (`\x1b[4;7R` expected after `CSI u`).
+
+Files:
+- `src/terminal/protocol/csi.zig`
+- `src/terminal_focus_reporting_tests.zig`
+- `fixtures/terminal/decslrm_csi_s_ambiguity_reply.vt`
+- `fixtures/terminal/decslrm_csi_s_ambiguity_reply.json`
+- `fixtures/terminal/decslrm_csi_s_ambiguity_reply.golden`
+
+Verification:
+- `zig build test-terminal-focus-reporting`
+- `zig build test-terminal-replay -- --fixture decslrm_csi_s_ambiguity_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture decslrm_csi_s_ambiguity_reply`
+- `zig build check-app-imports`
+
 ## Change Log
 
 ### 2026-02-23
@@ -3135,13 +3157,12 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `AUDIT-01` Fix `CSI s` ambiguous dispatch under `?69` (`DECLRMM`) and lock with unit+replay
-2. `AUDIT-09` Keyboard: suppress `embed_text` on release (unit + replay)
-3. `AUDIT-05` Kitty: suppress delete success replies and lock missing-id query no-reply policy decision
-4. `AUDIT-03` Enforce strict invalid equal-bounds rejection for `DECSTBM` / `DECSLRM`
-5. `AUDIT-10` Keyboard: multi-codepoint associated text field for `embed_text`
-6. `AUDIT-06` Kitty: replace unknown delete selector no-op with explicit invalid reply
-7. See consolidated cross-reference backlog and ordering in `app_architecture/terminal/PROTOCOL_ALIGNMENT_AUDIT_2026-02-27.md`
+1. `AUDIT-09` Keyboard: suppress `embed_text` on release (unit + replay)
+2. `AUDIT-05` Kitty: suppress delete success replies and lock missing-id query no-reply policy decision
+3. `AUDIT-03` Enforce strict invalid equal-bounds rejection for `DECSTBM` / `DECSLRM`
+4. `AUDIT-10` Keyboard: multi-codepoint associated text field for `embed_text`
+5. `AUDIT-06` Kitty: replace unknown delete selector no-op with explicit invalid reply
+6. See consolidated cross-reference backlog and ordering in `app_architecture/terminal/PROTOCOL_ALIGNMENT_AUDIT_2026-02-27.md`
 
 ## Decomposition Backlog (New)
 

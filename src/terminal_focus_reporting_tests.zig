@@ -265,6 +265,41 @@ test "terminal DECSLRM applies margins only when ?69 mode is enabled" {
     }.run);
 }
 
+test "terminal CSI s is save-cursor when ?69 is off and DECSLRM reset when ?69 is on" {
+    const allocator = std.testing.allocator;
+    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    defer session.deinit();
+
+    const screen = session.activeScreen();
+
+    // ?69 disabled: CSI s/u behaves as save/restore cursor.
+    terminal.debugFeedBytes(session, "\x1b[4;7H\x1b[s\x1b[1;1H\x1b[u");
+    {
+        const pos = session.getCursorPos();
+        try std.testing.expectEqual(@as(usize, 3), pos.row);
+        try std.testing.expectEqual(@as(usize, 6), pos.col);
+    }
+
+    // ?69 enabled: zero-param CSI s is DECSLRM reset-to-full-width, not save-cursor.
+    terminal.debugFeedBytes(session, "\x1b[?69h\x1b[3;8s\x1b[2;5H\x1b[s");
+    try std.testing.expect(screen.left_right_margin_mode_69);
+    try std.testing.expectEqual(@as(usize, 0), screen.left_margin);
+    try std.testing.expectEqual(@as(usize, @intCast(screen.grid.cols - 1)), screen.right_margin);
+    {
+        const pos = session.getCursorPos();
+        try std.testing.expectEqual(@as(usize, 0), pos.row);
+        try std.testing.expectEqual(@as(usize, 0), pos.col);
+    }
+
+    // Saved cursor from the pre-?69 CSI s should still restore.
+    terminal.debugFeedBytes(session, "\x1b[u");
+    {
+        const pos = session.getCursorPos();
+        try std.testing.expectEqual(@as(usize, 3), pos.row);
+        try std.testing.expectEqual(@as(usize, 6), pos.col);
+    }
+}
+
 test "terminal DECSLRM clips ICH DCH ECH edits to active horizontal margins" {
     const allocator = std.testing.allocator;
     var session = try terminal.TerminalSession.init(allocator, 6, 12);
