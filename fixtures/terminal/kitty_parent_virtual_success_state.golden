@@ -1,0 +1,33 @@
+TERM_SNAPSHOT v1
+size: 8x18
+cursor: r=4 c=8 visible=1 style=block-blink
+alt: 0
+scrollback: count=0 view_offset=0
+title: "Terminal"
+cwd: ""
+clipboard: ""
+selection: none
+grid:
+row0: "\\" "\\" . . . . . . . . . . . . . . . .
+row1: . . . "\\" . . . . . . . . . . . . . .
+row2: . . . . "\\" . . . . . . . . . . . . .
+row3: . . . . . . "\\" "Z" . . . . . . . . . .
+row4: . . . . . . . . . . . . . . . . . .
+row5: . . . . . . . . . . . . . . . . . .
+row6: . . . . . . . . . . . . . . . . . .
+row7: . . . . . . . . . . . . . . . . . .
+attrs:
+row0: cols 0-17 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row1: cols 0-17 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row2: cols 0-17 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row3: cols 0-17 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row4: cols 0-17 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row5: cols 0-17 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row6: cols 0-17 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+row7: cols 0-17 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
+links: none
+scrollback: none
+kitty:
+images=2 placements=3
+image ids: [1, 2]
+placement ids: [(img=1 id=11), (img=2 id=22), (img=2 id=33)]

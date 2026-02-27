@@ -1086,6 +1086,39 @@ Verification:
 - `zig build test-terminal-replay -- --fixture kitty_query_medium_shm_missing_q1_q2_reply`
 - `zig build test-terminal-replay -- --fixture kitty_query_medium_shm_precedence_q1_q2_reply`
 
+Implemented (increment 37 / `PA-04c` parent/virtual placement replay matrix start):
+- Added replay fixtures that lock first parent/virtual placement success and error expectations with explicit ids and reply bytes:
+  - success state lock for parented placement (`P/Q/H/V`) plus virtual placement (`U=1`) in one stream, asserted via kitty snapshot ids
+  - missing parent placement reference returns `ENOPARENT`
+  - invalid virtual+parent combination (`U=1` with `P/Q`) returns `EINVAL`
+  - parent cycle update returns `ECYCLE`
+- This establishes deterministic replay authority for the first `PA-04c` parent/virtual slice without changing kitty placement behavior.
+
+Files:
+- `fixtures/terminal/kitty_parent_virtual_success_state.vt`
+- `fixtures/terminal/kitty_parent_virtual_success_state.json`
+- `fixtures/terminal/kitty_parent_virtual_success_state.golden`
+- `fixtures/terminal/kitty_parent_missing_reply.vt`
+- `fixtures/terminal/kitty_parent_missing_reply.json`
+- `fixtures/terminal/kitty_parent_missing_reply.golden`
+- `fixtures/terminal/kitty_virtual_parent_combo_invalid_reply.vt`
+- `fixtures/terminal/kitty_virtual_parent_combo_invalid_reply.json`
+- `fixtures/terminal/kitty_virtual_parent_combo_invalid_reply.golden`
+- `fixtures/terminal/kitty_parent_cycle_reply.vt`
+- `fixtures/terminal/kitty_parent_cycle_reply.json`
+- `fixtures/terminal/kitty_parent_cycle_reply.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture kitty_parent_virtual_success_state --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_parent_missing_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_virtual_parent_combo_invalid_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_parent_cycle_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_parent_virtual_success_state`
+- `zig build test-terminal-replay -- --fixture kitty_parent_missing_reply`
+- `zig build test-terminal-replay -- --fixture kitty_virtual_parent_combo_invalid_reply`
+- `zig build test-terminal-replay -- --fixture kitty_parent_cycle_reply`
+- `zig build check-app-imports`
+
 Verification:
 - `zig build test-terminal-replay -- --fixture kitty_query_medium_file_missing_q1_q2_reply --update-goldens`
 - `zig build test-terminal-replay -- --fixture kitty_query_medium_file_missing_q1_q2_reply`
@@ -3054,9 +3087,9 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `PA-04c` Decide whether to keep replay harness file-only for `t=s` or add deterministic shm lifecycle support to replay fixtures
-2. `PA-05c` Extend metadata-aware encoder format usage for `alternate_layout_codepoint` when protocol field support is promoted
-3. `PA-04c` Extend parent/virtual placement fixture coverage (`U=1`, `P/Q/H/V`) with explicit success/error expectations
+1. `PA-05c` Extend metadata-aware encoder format usage for `alternate_layout_codepoint` when protocol field support is promoted
+2. `PA-04c` Extend parent/virtual placement fixture coverage (`U=1`, `P/Q/H/V`) with deeper chain/depth variants (`ETOODEEP` and long-parent stacks)
+3. `PA-04c` Extend parent/virtual placement coverage to include mixed delete interactions on parented placements
 4. `PA-08h` Revisit DECSLRM rectangular-operation parity (`DECCRA` family) only when a concrete app-compat signal appears
 
 ## Decomposition Backlog (New)
