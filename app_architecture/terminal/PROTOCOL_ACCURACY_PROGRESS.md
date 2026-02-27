@@ -2609,6 +2609,16 @@ Notes:
     - PTY/unit integration: `src/terminal_focus_reporting_tests.zig`
       - `terminal DECSLRM IL and DL are no-op when cursor is outside margins`
 
+- `PA-08h` implementation slice (2026-02-26, `DECSLRM` + `DECSTBM` interaction lock for `SU`):
+  - Added explicit interaction coverage for vertical + horizontal margin composition:
+    - with `?69` + `DECSLRM` and `DECSTBM` active together, `SU` (`CSI Ps S`) shifts only the horizontal margin band and only within the configured vertical scroll region.
+    - outside-margin columns and rows outside `DECSTBM` are preserved.
+  - Evidence:
+    - PTY/unit integration: `src/terminal_focus_reporting_tests.zig`
+      - `terminal DECSLRM and DECSTBM clip SU to margin band within scroll region`
+    - replay:
+      - `fixtures/terminal/decslrm_decstbm_su_margin_band_only.*`
+
 Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft terminal reset):
 - Reference anchors:
   - xterm docs define `CSI ! p` as `DECSTR` (soft terminal reset), VT220+ (`reference_repos/terminals/xterm_snapshots/ctlseqs.txt`).
@@ -3001,7 +3011,7 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `PA-08h` Run DECSLRM reference behavior audit for remaining operations and close/defer the promoted row with explicit compatibility notes
+1. `PA-08h` Extend DECSLRM+DECSTBM interaction coverage (`SD`, `IL`, `DL`) and then run a close/defer reference audit with explicit compatibility notes
 2. `PA-04c` Decide whether to keep replay harness file-only for `t=s` or add deterministic shm lifecycle support to replay fixtures
 3. `PA-05c` Extend metadata-aware encoder format usage for `alternate_layout_codepoint` when protocol field support is promoted
 4. `PA-04c` Extend parent/virtual placement fixture coverage (`U=1`, `P/Q/H/V`) with explicit success/error expectations
