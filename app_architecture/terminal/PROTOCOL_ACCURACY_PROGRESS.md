@@ -1135,6 +1135,22 @@ Verification:
 - `zig build test-terminal-replay -- --fixture kitty_parent_depth_limit_reply`
 - `zig build check-app-imports`
 
+Implemented (increment 39 / `PA-04c` parented-placement delete interaction lock):
+- Added replay fixture that locks a mixed delete interaction on parented placements:
+  - deleting parent image by `d=I,i=<parent>` removes the parent image and also removes child placements that reference it as `parent_image_id`
+  - unrelated placements on surviving images remain intact
+- This adds explicit regression authority for parent-reference cleanup behavior in delete flows.
+
+Files:
+- `fixtures/terminal/kitty_delete_parent_image_cascades_child_placements.vt`
+- `fixtures/terminal/kitty_delete_parent_image_cascades_child_placements.json`
+- `fixtures/terminal/kitty_delete_parent_image_cascades_child_placements.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture kitty_delete_parent_image_cascades_child_placements --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_delete_parent_image_cascades_child_placements`
+- `zig build check-app-imports`
+
 Verification:
 - `zig build test-terminal-replay -- --fixture kitty_query_medium_file_missing_q1_q2_reply --update-goldens`
 - `zig build test-terminal-replay -- --fixture kitty_query_medium_file_missing_q1_q2_reply`
@@ -3104,8 +3120,8 @@ Verification:
 ## Next Work Queue (Ordered)
 
 1. `PA-05c` Extend metadata-aware encoder format usage for `alternate_layout_codepoint` when protocol field support is promoted
-2. `PA-04c` Extend parent/virtual placement coverage to include mixed delete interactions on parented placements
-3. `PA-04c` Add additional parent/virtual branch locks for parented updates without explicit placement id (`p=0` paths)
+2. `PA-04c` Add additional parent/virtual branch locks for parented updates without explicit placement id (`p=0` paths)
+3. `PA-04c` Add a focused parented-placement delete matrix for selector variants beyond `d=I` (id/number/range + parent cleanup edges)
 4. `PA-08h` Revisit DECSLRM rectangular-operation parity (`DECCRA` family) only when a concrete app-compat signal appears
 
 ## Decomposition Backlog (New)
