@@ -79,6 +79,28 @@ test "DCS XTGETTCAP writes ordered replies for multi-cap request" {
     );
 }
 
+test "DCS XTGETTCAP identity tuple writes TN Co RGB replies" {
+    const allocator = std.testing.allocator;
+
+    const Self = struct {
+        allocator: std.mem.Allocator,
+        pty: ?FakePty,
+
+        pub fn setSyncUpdates(_: *@This(), _: bool) void {}
+    };
+
+    var self = Self{ .allocator = allocator, .pty = FakePty.init() };
+    defer if (self.pty) |*pty| pty.deinit(allocator);
+    dcs_apc.parseDcs(&self, "+q544E;436F;524742");
+
+    try std.testing.expectEqualStrings(
+        "\x1bP1+r544E=7A696465\x1b\\" ++
+            "\x1bP1+r436F=323536\x1b\\" ++
+            "\x1bP1+r524742=38\x1b\\",
+        self.pty.?.writes.items,
+    );
+}
+
 test "DCS DECRQSS writes DECSCUSR reply" {
     const allocator = std.testing.allocator;
 

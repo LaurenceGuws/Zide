@@ -1,10 +1,11 @@
-# Terminal Compatibility
+# Terminal Beta Compatibility
 
 Zide currently exposes a conservative xterm-compatible terminal surface with a
 small set of explicitly supported modern extensions.
 
-This document is the public support contract. If behavior is not listed here,
-do not assume it is supported just because a reference terminal implements it.
+This document defines the current beta support surface for Zide's terminal. If
+behavior is not listed here, do not assume it is supported just because a
+reference terminal implements it.
 
 ## Identity
 
@@ -38,6 +39,25 @@ base and adds only audited extensions:
 - `Sync` for synchronized-update capability advertising (`CSI ? 2026 h/l`)
 - `Ms` for OSC 52 clipboard transport
 
+This set is intentionally frozen for the current beta release.
+
+Reasoning against peer terminals:
+
+- kitty, ghostty, foot, and modern alacritty entries advertise a broader set of
+  nonstandard capabilities
+- the most visibly meaningful ones for modern TUIs are already covered here:
+  truecolor, styled underlines, underline color, clipboard transport, focus,
+  sync updates, and richer keyboard reporting
+- adding more caps just for breadth is lower-value than keeping the advertised
+  set exact and defensible
+- Zide should look conservative-but-serious, not parity-aspirational
+
+So the current terminfo strategy is:
+
+- advertise capabilities that make Zide feel modern next to kitty/ghostty/foot
+- do not advertise every peer extension unless there is direct authority and a
+  real app-interop reason
+
 ## Capability Discovery
 
 - `TERM`:
@@ -47,9 +67,30 @@ base and adds only audited extensions:
   - Zide answers as an xterm-family VT identity for broad compatibility
 - XTGETTCAP (`DCS + q`):
   - bounded support includes `TN=zide`, `Co=256`, and `RGB=8`
+  - replay authority: `fixtures/terminal/terminal_identity_query_reply.vt`
 - Sync updates:
   - canonical mode is `CSI ? 2026 h/l`
   - legacy `DCS = 1/2 s` remains a compatibility alias, but is not the primary advertised form
+
+## Positioning
+
+Zide should be understood as:
+
+- more modern than a plain `xterm-256color` baseline
+- intentionally compatible with xterm-family TUIs first
+- selectively competitive with kitty/ghostty/foot on high-value modern features
+
+Zide should not be described as:
+
+- full kitty parity
+- full xterm extension parity
+- full ghostty/foot parity
+
+The intended claim is narrower and more defensible:
+
+- strong xterm-family compatibility
+- a curated set of modern extensions that matter in real TUIs
+- explicit documentation of bounded and deferred areas
 
 ## Supported Baseline
 

@@ -41,6 +41,7 @@ See [app_architecture/BOOTSTRAP.md](app_architecture/BOOTSTRAP.md) for:
 
 Terminal compatibility and terminfo:
 - `docs/terminal/compatibility.md`
+- this is the current beta terminal support surface
 - Install the bundled terminal entry for best app detection:
 
 ```bash
