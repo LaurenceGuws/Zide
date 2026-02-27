@@ -2341,6 +2341,28 @@ Verification:
 - `zig build test-terminal-replay -- --fixture dcs_decrqss_sgr_query_reply --update-goldens`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 7 / `PA-08b` bounded `DECRQSS` support for `DECSTBM`):
+- Extended the minimal `DCS $ q` (`DECRQSS`) slice to support `r` queries for current vertical scroll-region state:
+  - `DCS $ q r ST` now replies with `DCS 1 $ r Pt ; Pb r ST`
+  - reply reflects the current `DECSTBM` top/bottom margins already modeled in the active screen
+- This keeps the implementation bounded while expanding `PA-08b` into another real query family with existing terminal state authority.
+
+Files:
+- `src/terminal/core/terminal_session.zig`
+- `src/terminal_protocol_reply_tests.zig`
+- `src/terminal_focus_reporting_tests.zig`
+- `fixtures/terminal/dcs_decrqss_decstbm_query_reply.vt`
+- `fixtures/terminal/dcs_decrqss_decstbm_query_reply.json`
+- `fixtures/terminal/dcs_decrqss_decstbm_query_reply.golden`
+- `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+
+Verification:
+- `zig test src/terminal_protocol_reply_tests.zig -lc`
+- `zig build test-terminal-focus-reporting`
+- `zig build test-terminal-replay -- --fixture dcs_decrqss_decstbm_query_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture dcs_decrqss_decstbm_query_reply`
+- `zig build test-terminal-replay -- --all`
+
 Implemented (increment 2 / `PA-08e` promoted high-value CSI gap: `?1004` focus reporting):
 - Implemented CSI private mode handling for `?1004 h/l` (focus reporting enable/disable).
 - Added terminal focus-report emission (`ESC[I` / `ESC[O`) gated on the mode bit.
