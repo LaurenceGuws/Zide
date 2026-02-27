@@ -323,6 +323,7 @@ fn sendCharWithProtocolMeta(
     const mod_value = key_encoding.kittyModValue(mod);
     const has_mods = mod_value != 1;
     const add_actions = (flags & key_encoding.key_mode_report_all_event_types) != 0 and action != .press;
+    const include_associated_text = (flags & key_encoding.key_mode_embed_text) != 0 and action != .release;
     const second_field = has_mods or add_actions;
 
     var pos: usize = 0;
@@ -344,7 +345,7 @@ fn sendCharWithProtocolMeta(
             pos += written_alt.len;
         }
     }
-    if (second_field or (flags & key_encoding.key_mode_embed_text) != 0) {
+    if (second_field or include_associated_text) {
         buf[pos] = ';';
         pos += 1;
         if (has_mods) {
@@ -358,7 +359,7 @@ fn sendCharWithProtocolMeta(
             pos += written_action.len;
         }
     }
-    if ((flags & key_encoding.key_mode_embed_text) != 0) {
+    if (include_associated_text) {
         buf[pos] = ';';
         pos += 1;
         const written_text = std.fmt.bufPrint(buf[pos..], "{d}", .{char}) catch return false;
@@ -592,33 +593,84 @@ pub fn encodeCharEventBytesForTest(
     const disambiguate = (event.key_mode_flags & key_encoding.key_mode_disambiguate) != 0;
     if (!report_text and !disambiguate) return allocator.alloc(u8, 0);
     if (!report_text and !charNeedsProtocolDisambiguation(event.codepoint, event.mod)) return allocator.alloc(u8, 0);
+    if ((event.key_mode_flags & key_encoding.key_mode_report_all_event_types) == 0 and event.action == .release) {
+        return allocator.alloc(u8, 0);
+    }
     const mod_code = encodeModifier(event.mod);
     const key_fields = protocolCharKeyFields(event.codepoint, event.mod, event.key_mode_flags, event.protocol.alternate);
     const embed_text = (event.key_mode_flags & key_encoding.key_mode_embed_text) != 0;
     const has_mods = mod_code != 1;
+    const add_actions = (event.key_mode_flags & key_encoding.key_mode_report_all_event_types) != 0 and event.action != .press;
+    const include_associated_text = embed_text and event.action != .release;
+    const second_field = has_mods or add_actions;
     if (key_fields.shifted) |shifted_key| {
-        if (embed_text) {
-            if (has_mods) {
-                if (key_fields.alternate) |alternate_key| {
-                    return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};{d};{d}u", .{ key_fields.key, shifted_key, alternate_key, mod_code, event.codepoint });
+        if (include_associated_text) {
+            if (second_field) {
+                if (has_mods and add_actions) {
+                    if (key_fields.alternate) |alternate_key| {
+                        return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};{d}:{d};{d}u", .{ key_fields.key, shifted_key, alternate_key, mod_code, @intFromEnum(event.action) + 1, event.codepoint });
+                    }
+                    return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};{d}:{d};{d}u", .{ key_fields.key, shifted_key, mod_code, @intFromEnum(event.action) + 1, event.codepoint });
                 }
-                return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};{d};{d}u", .{ key_fields.key, shifted_key, mod_code, event.codepoint });
+                if (has_mods) {
+                    if (key_fields.alternate) |alternate_key| {
+                        return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};{d};{d}u", .{ key_fields.key, shifted_key, alternate_key, mod_code, event.codepoint });
+                    }
+                    return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};{d};{d}u", .{ key_fields.key, shifted_key, mod_code, event.codepoint });
+                }
+                if (key_fields.alternate) |alternate_key| {
+                    return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};:{d};{d}u", .{ key_fields.key, shifted_key, alternate_key, @intFromEnum(event.action) + 1, event.codepoint });
+                }
+                return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};:{d};{d}u", .{ key_fields.key, shifted_key, @intFromEnum(event.action) + 1, event.codepoint });
             }
             if (key_fields.alternate) |alternate_key| {
                 return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};;{d}u", .{ key_fields.key, shifted_key, alternate_key, event.codepoint });
             }
             return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};;{d}u", .{ key_fields.key, shifted_key, event.codepoint });
         }
+        if (second_field) {
+            if (has_mods and add_actions) {
+                if (key_fields.alternate) |alternate_key| {
+                    return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};{d}:{d}u", .{ key_fields.key, shifted_key, alternate_key, mod_code, @intFromEnum(event.action) + 1 });
+                }
+                return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};{d}:{d}u", .{ key_fields.key, shifted_key, mod_code, @intFromEnum(event.action) + 1 });
+            }
+            if (has_mods) {
+                if (key_fields.alternate) |alternate_key| {
+                    return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};{d}u", .{ key_fields.key, shifted_key, alternate_key, mod_code });
+                }
+                return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};{d}u", .{ key_fields.key, shifted_key, mod_code });
+            }
+            if (key_fields.alternate) |alternate_key| {
+                return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};:{d}u", .{ key_fields.key, shifted_key, alternate_key, @intFromEnum(event.action) + 1 });
+            }
+            return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};:{d}u", .{ key_fields.key, shifted_key, @intFromEnum(event.action) + 1 });
+        }
         if (key_fields.alternate) |alternate_key| {
             return std.fmt.allocPrint(allocator, "\x1b[{d}:{d}:{d};{d}u", .{ key_fields.key, shifted_key, alternate_key, mod_code });
         }
         return std.fmt.allocPrint(allocator, "\x1b[{d}:{d};{d}u", .{ key_fields.key, shifted_key, mod_code });
     }
-    if (embed_text) {
-        if (has_mods) {
-            return std.fmt.allocPrint(allocator, "\x1b[{d};{d};{d}u", .{ key_fields.key, mod_code, event.codepoint });
+    if (include_associated_text) {
+        if (second_field) {
+            if (has_mods and add_actions) {
+                return std.fmt.allocPrint(allocator, "\x1b[{d};{d}:{d};{d}u", .{ key_fields.key, mod_code, @intFromEnum(event.action) + 1, event.codepoint });
+            }
+            if (has_mods) {
+                return std.fmt.allocPrint(allocator, "\x1b[{d};{d};{d}u", .{ key_fields.key, mod_code, event.codepoint });
+            }
+            return std.fmt.allocPrint(allocator, "\x1b[{d};:{d};{d}u", .{ key_fields.key, @intFromEnum(event.action) + 1, event.codepoint });
         }
         return std.fmt.allocPrint(allocator, "\x1b[{d};;{d}u", .{ key_fields.key, event.codepoint });
+    }
+    if (second_field) {
+        if (has_mods and add_actions) {
+            return std.fmt.allocPrint(allocator, "\x1b[{d};{d}:{d}u", .{ key_fields.key, mod_code, @intFromEnum(event.action) + 1 });
+        }
+        if (has_mods) {
+            return std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ key_fields.key, mod_code });
+        }
+        return std.fmt.allocPrint(allocator, "\x1b[{d};:{d}u", .{ key_fields.key, @intFromEnum(event.action) + 1 });
     }
     return std.fmt.allocPrint(allocator, "\x1b[{d};{d}u", .{ key_fields.key, mod_code });
 }
