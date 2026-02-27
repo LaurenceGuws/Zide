@@ -70,7 +70,7 @@ test "kitty reply quiet=2 suppresses all replies" {
     try std.testing.expectEqual(@as(usize, 0), self.pty.?.writes.items.len);
 }
 
-test "kitty query early reply errors on missing image id" {
+test "kitty query early reply emits no reply on missing image id" {
     var self = TestSelf{
         .allocator = std.testing.allocator,
         .pty = FakePty.init(),
@@ -79,7 +79,7 @@ test "kitty query early reply errors on missing image id" {
 
     const handled = kitty.handleKittyQueryEarlyReply(&self, .{ .action = 'q' }, 0);
     try std.testing.expect(handled);
-    try std.testing.expectEqualStrings("\x1b_G;EINVAL\x1b\\", self.pty.?.writes.items);
+    try std.testing.expectEqual(@as(usize, 0), self.pty.?.writes.items.len);
 }
 
 test "kitty query early reply returns metadata-only OK" {

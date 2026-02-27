@@ -123,7 +123,6 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
     }
     if (control.action == 'd') {
         deleteKittyByAction(self, control);
-        writeKittyResponse(self, control, resolveKittyImageId(control) orelse 0, true, "OK");
         return;
     }
 
@@ -273,10 +272,7 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
 }
 
 pub fn handleKittyQueryEarlyReply(self: anytype, control: KittyControl, data_len: usize) bool {
-    const image_id = resolveKittyImageId(control) orelse {
-        writeKittyResponse(self, control, 0, false, "EINVAL");
-        return true;
-    };
+    const image_id = resolveKittyImageId(control) orelse return true;
     if (data_len == 0 and control.size == 0 and control.width == 0 and control.height == 0) {
         writeKittyResponse(self, control, image_id, true, "OK");
         return true;
