@@ -1250,6 +1250,23 @@ Verification:
 - `zig build test-terminal-replay -- --fixture kitty_delete_unknown_selector_quiet_policy --update-goldens`
 - `zig build test-terminal-replay -- --fixture kitty_delete_unknown_selector_quiet_policy`
 
+Implemented (increment 44 / `PA-04c` unknown delete-selector quiet matrix replay lock):
+- Added replay fixture coverage that locks unknown delete-selector behavior across all quiet levels in one stream:
+  - default quiet (`q=0`) -> `EINVAL` reply
+  - `q=1` -> `EINVAL` reply
+  - `q=2` -> reply suppressed
+- The fixture also locks no-op kitty state semantics for the unknown-selector path (image/placement retained).
+
+Files:
+- `fixtures/terminal/kitty_delete_unknown_selector_quiet_matrix_reply.vt`
+- `fixtures/terminal/kitty_delete_unknown_selector_quiet_matrix_reply.json`
+- `fixtures/terminal/kitty_delete_unknown_selector_quiet_matrix_reply.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture kitty_delete_unknown_selector_quiet_matrix_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_delete_unknown_selector_quiet_matrix_reply`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
