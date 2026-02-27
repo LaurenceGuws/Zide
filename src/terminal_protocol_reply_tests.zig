@@ -79,6 +79,47 @@ test "DCS XTGETTCAP writes ordered replies for multi-cap request" {
     );
 }
 
+test "DCS DECRQSS writes DECSCUSR reply" {
+    const allocator = std.testing.allocator;
+
+    const Self = struct {
+        allocator: std.mem.Allocator,
+        pty: ?FakePty,
+
+        pub fn setSyncUpdates(_: *@This(), _: bool) void {}
+        pub fn decrqssReply(_: *@This(), text: []const u8) ?[]const u8 {
+            if (std.mem.eql(u8, text, " q")) return "3 q";
+            return null;
+        }
+    };
+
+    var self = Self{ .allocator = allocator, .pty = FakePty.init() };
+    defer if (self.pty) |*pty| pty.deinit(allocator);
+    dcs_apc.parseDcs(&self, "$q q");
+
+    try std.testing.expectEqualStrings("\x1bP1$r3 q\x1b\\", self.pty.?.writes.items);
+}
+
+test "DCS DECRQSS writes failure reply for unsupported request string" {
+    const allocator = std.testing.allocator;
+
+    const Self = struct {
+        allocator: std.mem.Allocator,
+        pty: ?FakePty,
+
+        pub fn setSyncUpdates(_: *@This(), _: bool) void {}
+        pub fn decrqssReply(_: *@This(), _: []const u8) ?[]const u8 {
+            return null;
+        }
+    };
+
+    var self = Self{ .allocator = allocator, .pty = FakePty.init() };
+    defer if (self.pty) |*pty| pty.deinit(allocator);
+    dcs_apc.parseDcs(&self, "$qm");
+
+    try std.testing.expectEqualStrings("\x1bP0$r\x1b\\", self.pty.?.writes.items);
+}
+
 test "OSC 52 clipboard query preserves BEL terminator" {
     const allocator = std.testing.allocator;
 

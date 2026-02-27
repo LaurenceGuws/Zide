@@ -977,6 +977,18 @@ pub const TerminalSession = struct {
         self.activeScreen().setCursorStyle(mode);
     }
 
+    pub fn decrqssReply(self: *TerminalSession, text: []const u8) ?[]const u8 {
+        if (std.mem.eql(u8, text, " q")) {
+            const style = self.activeScreen().cursor_style;
+            return switch (style.shape) {
+                .block => if (style.blink) "1 q" else "2 q",
+                .underline => if (style.blink) "3 q" else "4 q",
+                .bar => if (style.blink) "5 q" else "6 q",
+            };
+        }
+        return null;
+    }
+
     pub fn saveCursor(self: *TerminalSession) void {
         state_reset.saveCursor(self);
     }

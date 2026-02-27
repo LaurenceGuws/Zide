@@ -7,6 +7,10 @@ pub fn parseDcs(self: anytype, payload: []const u8) void {
         handleXtgettcap(self, payload[2..]);
         return;
     }
+    if (payload[0] == '$' and payload[1] == 'q') {
+        handleDecrqss(self, payload[2..]);
+        return;
+    }
     _ = handleLegacySyncUpdates(self, payload);
 }
 
@@ -35,6 +39,12 @@ fn handleXtgettcap(self: anytype, text: []const u8) void {
     }
 }
 
+fn handleDecrqss(self: anytype, text: []const u8) void {
+    if (self.pty == null) return;
+    const ok_reply = if (@hasDecl(@TypeOf(self.*), "decrqssReply")) self.decrqssReply(text) else null;
+    writeDecrqssReply(self, ok_reply != null, ok_reply);
+}
+
 fn replyXtgettcap(self: anytype, cap_hex: []const u8) void {
     var decoded = std.ArrayList(u8).empty;
     defer decoded.deinit(self.allocator);
@@ -61,6 +71,22 @@ fn writeXtgettcapReply(self: anytype, ok: bool, cap_hex: []const u8, value: ?[]c
     if (ok and value != null) {
         _ = reply.append(self.allocator, '=') catch return;
         if (!encodeHex(self.allocator, &reply, value.?)) return;
+    }
+    _ = reply.appendSlice(self.allocator, "\x1b\\") catch return;
+    if (self.pty) |*pty_writer| {
+        _ = pty_writer.write(reply.items) catch {};
+    }
+}
+
+fn writeDecrqssReply(self: anytype, ok: bool, value: ?[]const u8) void {
+    var reply = std.ArrayList(u8).empty;
+    defer reply.deinit(self.allocator);
+
+    _ = reply.appendSlice(self.allocator, if (ok) "\x1bP1$r" else "\x1bP0$r") catch return;
+    if (ok) {
+        if (value) |val| {
+            _ = reply.appendSlice(self.allocator, val) catch return;
+        }
     }
     _ = reply.appendSlice(self.allocator, "\x1b\\") catch return;
     if (self.pty) |*pty_writer| {

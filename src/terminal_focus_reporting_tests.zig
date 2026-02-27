@@ -1873,6 +1873,30 @@ test "terminal DECSTR resets cursor style to default" {
     }.run);
 }
 
+test "terminal DECRQSS cursor-style query replies with DECSCUSR state" {
+    try withSessionAndCapture(struct {
+        fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
+            const allocator = std.testing.allocator;
+
+            terminal.debugFeedBytes(session, "\x1b[3 q");
+            terminal.debugFeedBytes(session, "\x1bP$q q\x1b\\");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1bP1$r3 q\x1b\\", reply);
+            }
+
+            terminal.debugFeedBytes(session, "\x1b[6 q");
+            terminal.debugFeedBytes(session, "\x1bP$q q\x1b\\");
+            {
+                const reply = try capture.readReply(allocator);
+                defer allocator.free(reply);
+                try std.testing.expectEqualStrings("\x1bP1$r6 q\x1b\\", reply);
+            }
+        }
+    }.run);
+}
+
 test "terminal DECSTR resets title to default" {
     try withSessionAndCapture(struct {
         fn run(session: *terminal.TerminalSession, capture: *PipeCapture) !void {
