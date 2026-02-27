@@ -1301,6 +1301,23 @@ Verification:
 - `zig build test-terminal-replay -- --fixture kitty_query_invalid_chunk_quiet_matrix_reply`
 - `zig build test-terminal-replay -- --all`
 
+Implemented (increment 47 / `PA-04c` invalid query-offset quiet matrix replay lock):
+- Added replay fixture coverage for invalid kitty query offset marker (`a=q,O=1`) across quiet levels in one stream:
+  - default quiet (`q=0`) -> `EINVAL` reply
+  - `q=1` -> `EINVAL` reply (error reply preserved)
+  - `q=2` -> reply suppressed
+- This locks end-to-end parser/query-preflight error policy for offset-invalid forms with deterministic reply bytes.
+
+Files:
+- `fixtures/terminal/kitty_query_invalid_offset_quiet_matrix_reply.vt`
+- `fixtures/terminal/kitty_query_invalid_offset_quiet_matrix_reply.json`
+- `fixtures/terminal/kitty_query_invalid_offset_quiet_matrix_reply.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture kitty_query_invalid_offset_quiet_matrix_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_query_invalid_offset_quiet_matrix_reply`
+- `zig build test-terminal-replay -- --all`
+
 ### PA-05 Kitty Keyboard / CSI-u Alternate-Key & Disambiguation Flags
 
 Evidence from review:
