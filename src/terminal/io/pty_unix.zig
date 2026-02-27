@@ -311,16 +311,7 @@ test "unix pty smoke prefers zide TERM when bundled terminfo is installed" {
     var terminfo_dir_buf: [std.fs.max_path_bytes]u8 = undefined;
     const terminfo_dir = try tmp.dir.realpath(".", &terminfo_dir_buf);
 
-    const compile = std.process.Child.run(.{
-        .allocator = allocator,
-        .argv = &.{ "tic", "-x", "-o", terminfo_dir, "terminfo/zide.terminfo" },
-    }) catch |err| switch (err) {
-        error.FileNotFound => return,
-        else => return err,
-    };
-    defer allocator.free(compile.stdout);
-    defer allocator.free(compile.stderr);
-    try std.testing.expectEqual(@as(u8, 0), compile.term.Exited);
+    try installBundledZideTerminfo(allocator, terminfo_dir);
 
     const old_terminfo = std.c.getenv("TERMINFO");
     defer {
@@ -357,4 +348,43 @@ test "unix pty smoke prefers zide TERM when bundled terminfo is installed" {
     }
 
     try std.testing.expect(std.mem.indexOf(u8, output.items, "zide") != null);
+}
+
+test "compiled zide terminfo advertises Ms Setulc and Sync" {
+    if (builtin.target.os.tag == .windows) return;
+
+    const allocator = std.testing.allocator;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    var terminfo_dir_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const terminfo_dir = try tmp.dir.realpath(".", &terminfo_dir_buf);
+    try installBundledZideTerminfo(allocator, terminfo_dir);
+
+    const infocmp = std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &.{ "infocmp", "-x", "-A", terminfo_dir, "zide" },
+    }) catch |err| switch (err) {
+        error.FileNotFound => return,
+        else => return err,
+    };
+    defer allocator.free(infocmp.stdout);
+    defer allocator.free(infocmp.stderr);
+    try std.testing.expectEqual(@as(u8, 0), infocmp.term.Exited);
+    try std.testing.expect(std.mem.indexOf(u8, infocmp.stdout, "Ms=") != null);
+    try std.testing.expect(std.mem.indexOf(u8, infocmp.stdout, "Setulc=") != null);
+    try std.testing.expect(std.mem.indexOf(u8, infocmp.stdout, "Sync=") != null);
+}
+
+fn installBundledZideTerminfo(allocator: std.mem.Allocator, terminfo_dir: []const u8) !void {
+    const compile = std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &.{ "tic", "-x", "-o", terminfo_dir, "terminfo/zide.terminfo" },
+    }) catch |err| switch (err) {
+        error.FileNotFound => return,
+        else => return err,
+    };
+    defer allocator.free(compile.stdout);
+    defer allocator.free(compile.stderr);
+    try std.testing.expectEqual(@as(u8, 0), compile.term.Exited);
 }

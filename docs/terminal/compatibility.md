@@ -35,8 +35,21 @@ base and adds only audited extensions:
 - `Setulc` for underline color (`SGR 58`)
 - `XF` for focus reporting
 - `fullkbd` for kitty keyboard / CSI-u full keyboard mode
-- `Sync` for synchronized-update capability advertising
+- `Sync` for synchronized-update capability advertising (`CSI ? 2026 h/l`)
 - `Ms` for OSC 52 clipboard transport
+
+## Capability Discovery
+
+- `TERM`:
+  - primary identity is `zide`
+  - runtime fallback order remains `xterm-kitty`, then `xterm-256color`
+- Primary DA:
+  - Zide answers as an xterm-family VT identity for broad compatibility
+- XTGETTCAP (`DCS + q`):
+  - bounded support includes `TN=zide`, `Co=256`, and `RGB=8`
+- Sync updates:
+  - canonical mode is `CSI ? 2026 h/l`
+  - legacy `DCS = 1/2 s` remains a compatibility alias, but is not the primary advertised form
 
 ## Supported Baseline
 
