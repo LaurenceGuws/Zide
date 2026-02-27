@@ -2043,6 +2043,26 @@ Implemented (increment 2 / `PA-08a` inventory closure pass):
 Verification:
 - source-audit/docs alignment increment (no runtime behavior change)
 
+Implemented (increment 3 / `PA-08` defer-policy hygiene registry):
+- Added an explicit deferred-row registry for current `PA-08` scope so each deferred area has:
+  - current behavior boundary
+  - compatibility impact note
+  - concrete resume criteria
+  - pointer to replay/fixture authority when available
+
+`PA-08` deferred-row registry (current phase):
+
+| Deferred row | Current behavior boundary | Compatibility impact | Resume criteria | Evidence/authority |
+|---|---|---|---|---|
+| Alternate mouse encodings (`1005`, `1015`) | strategic non-support (`DECRQM Pm=4`), no encoder/report path | apps expecting UTF-8/urxvt mouse encodings can fall back poorly vs SGR-only support | concrete app breakage requiring `1005`/`1015` encoding parity | `fixtures/terminal/decrqm_pm_policy_matrix_reply.*`, `src/terminal/protocol/csi.zig` |
+| Printer/media/status extension families | explicit out-of-scope defer; no implementation | scripts expecting printer/media/status reports will observe no support | concrete product requirement or compatibility issue tied to a specific extension | xterm control-sequence family references + current no-support policy |
+| Legacy tab-stop report/edit variants (`CSI Ps W`) | explicit no-op defer lock | rare apps relying on full CTC edit/report breadth may not observe expected tab-stop edits | real app signal requiring specific `CSI Ps W` variant support | `fixtures/terminal/csi_tab_ctc_legacy_variants_deferred_noop.*` |
+| Broader xterm window-op `CSI ... t` modes | bounded support only (`14/16/18/19`), representative deferred modes no-reply | apps querying unsupported window-op modes may receive no reply vs richer terminals | compatibility issue tied to a specific deferred `t` mode with demonstrated app impact | `fixtures/terminal/csi_window_ops_deferred_modes_no_reply.*` |
+| `DECSTR` hidden-screen soft-state reset breadth | defer lock: active-screen soft reset, hidden-screen soft state preserved | TUIs expecting `DECSTR` to scrub hidden-screen mode bits may diverge after alt-screen exit | concrete app failure or strong reference alignment evidence favoring dual-screen soft-state reset | `fixtures/terminal/decstr_hidden_screen_soft_state_preserve_query_reply.*` |
+
+Verification:
+- source-audit/docs alignment increment (no runtime behavior change)
+
 Implemented (increment 2 / `PA-08b` DCS/APC gap inventory + implement/defer policy):
 - Added an explicit DCS/APC parity inventory with reference-backed implement/defer
   decisions for Zide's current protocol scope.
@@ -3488,6 +3508,8 @@ Verification:
 - Closed current `PA-04c` query/reply fixture-matrix gate:
   - matrix now treated as complete for the current kitty graphics phase (precedence/error/quiet, transport forms, parent/virtual branches)
   - follow-on kitty graphics breadth should proceed under other `PA-04*` rows
+- Added explicit `PA-08` deferred-row registry:
+  - each deferred row now includes compatibility impact and concrete resume criteria, with fixture authority links where available
 
 ### 2026-02-23
 
@@ -3536,8 +3558,8 @@ Verification:
 ## Next Work Queue (Ordered)
 
 1. `PA-08` replay/PTY matrix maintenance as new parity slices land (avoid assertion/golden drift)
-2. `PA-08` defer-policy hygiene: ensure newly deferred rows include resume criteria + compatibility notes
-3. `PA-04` follow-on parity breadth outside fixture-matrix closure (as needed by compatibility signals)
+2. `PA-04` follow-on parity breadth outside fixture-matrix closure (as needed by compatibility signals)
+3. `PA-08` focused implementation slice for one deferred row when compatibility signal appears
 
 ## Decomposition Backlog (New)
 
