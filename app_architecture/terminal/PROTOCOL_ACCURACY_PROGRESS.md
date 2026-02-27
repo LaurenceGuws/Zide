@@ -3279,6 +3279,28 @@ Verification:
 - `zig build test-terminal-replay -- --fixture decrqm_pm_policy_matrix_reply --update-goldens`
 - `zig build test-terminal-replay -- --fixture decrqm_pm_policy_matrix_reply`
 
+Implemented (increment 18 / `PA-08h` xterm window-op breadth explicit defer lock):
+- Promoted one remaining `PA-08h` row to an explicit defer lock for bounded window-op support:
+  - keep `CSI 14 t`, `CSI 16 t`, `CSI 18 t`, `CSI 19 t` as the only implemented window-op query set.
+  - keep broader xterm window-op query/report modes deferred for now.
+- Added replay authority that locks deterministic no-reply behavior (and no grid side effects) for representative deferred modes:
+  - `CSI 11 t` (window state report)
+  - `CSI 13 t` (window position report)
+  - `CSI 20 t` (icon label report/reset family surface)
+- Compatibility notes:
+  - xterm-family terminals may implement additional `CSI ... t` replies, so some window-management-aware tools can observe fewer capabilities in Zide.
+  - current policy intentionally avoids partial/emulated replies outside the implemented bounded set.
+
+Files:
+- `fixtures/terminal/csi_window_ops_deferred_modes_no_reply.vt`
+- `fixtures/terminal/csi_window_ops_deferred_modes_no_reply.json`
+- `fixtures/terminal/csi_window_ops_deferred_modes_no_reply.golden`
+- `app_architecture/terminal/PROTOCOL_ACCURACY_PROGRESS.md`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture csi_window_ops_deferred_modes_no_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture csi_window_ops_deferred_modes_no_reply`
+
 ## Change Log
 
 ### 2026-02-27
@@ -3355,7 +3377,7 @@ Verification:
 
 ## Next Work Queue (Ordered)
 
-1. `PA-08h` Close or explicitly defer remaining promoted CSI/private-mode gaps with compatibility notes
+1. `PA-08h` Close or explicitly defer remaining promoted CSI/private-mode gaps with compatibility notes (reset-family breadth + legacy tab-stop variants)
 2. `PA-08a` Complete CSI/private inventory closure with explicit `implement/defer` decisions for remaining reference rows
 3. `PA-04a` / `PA-04b` Finish kitty command-surface + response/quiet-rule documentation parity
 
