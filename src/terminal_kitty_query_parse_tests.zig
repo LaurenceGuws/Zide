@@ -893,6 +893,59 @@ test "kitty parse query medium file/temp success matrix" {
     try std.testing.expectError(error.FileNotFound, std.fs.accessAbsolute(temp_path_q2, .{}));
 }
 
+test "kitty parse query temp medium chunk/offset preflight does not consume temp file" {
+    try requireUnix();
+
+    const allocator = std.testing.allocator;
+    const png_bytes = try decodeBase64Alloc(allocator, tiny_png_1x1);
+    defer allocator.free(png_bytes);
+
+    const temp_path = try writeTempFileAbsolute(allocator, "zide-tty-graphics-protocol-query-preflight", png_bytes);
+    defer {
+        std.fs.deleteFileAbsolute(temp_path) catch {};
+        allocator.free(temp_path);
+    }
+    const temp_path_b64 = try encodeBase64Alloc(allocator, temp_path);
+    defer allocator.free(temp_path_b64);
+
+    var session = try terminal.TerminalSession.init(allocator, 6, 12);
+    defer session.deinit();
+
+    var capture = try PipeCapture.init();
+    defer capture.deinit();
+
+    session.pty = capture.pty;
+    defer session.pty = null;
+
+    const seq_q1_m = try std.fmt.allocPrint(allocator, "a=q,i=7,q=1,t=t,m=1,f=100;{s}", .{temp_path_b64});
+    defer allocator.free(seq_q1_m);
+    kitty.parseKittyGraphics(session, seq_q1_m);
+    const reply_q1_m = try capture.readReply(allocator);
+    defer allocator.free(reply_q1_m);
+    try std.testing.expectEqualStrings("\x1b_Gi=7;EINVAL\x1b\\", reply_q1_m);
+    try std.fs.accessAbsolute(temp_path, .{});
+
+    const seq_q1_o = try std.fmt.allocPrint(allocator, "a=q,i=7,q=1,t=t,O=1,f=100;{s}", .{temp_path_b64});
+    defer allocator.free(seq_q1_o);
+    kitty.parseKittyGraphics(session, seq_q1_o);
+    const reply_q1_o = try capture.readReply(allocator);
+    defer allocator.free(reply_q1_o);
+    try std.testing.expectEqualStrings("\x1b_Gi=7;EINVAL\x1b\\", reply_q1_o);
+    try std.fs.accessAbsolute(temp_path, .{});
+
+    const seq_q2_m = try std.fmt.allocPrint(allocator, "a=q,i=7,q=2,t=t,m=1,f=100;{s}", .{temp_path_b64});
+    defer allocator.free(seq_q2_m);
+    kitty.parseKittyGraphics(session, seq_q2_m);
+    try capture.expectNoReply();
+    try std.fs.accessAbsolute(temp_path, .{});
+
+    const seq_q2_o = try std.fmt.allocPrint(allocator, "a=q,i=7,q=2,t=t,O=1,f=100;{s}", .{temp_path_b64});
+    defer allocator.free(seq_q2_o);
+    kitty.parseKittyGraphics(session, seq_q2_o);
+    try capture.expectNoReply();
+    try std.fs.accessAbsolute(temp_path, .{});
+}
+
 test "kitty parse query non-missing-id mixed chunk+offset precedence matrix" {
     const reply_cases = [_]struct {
         name: []const u8,
