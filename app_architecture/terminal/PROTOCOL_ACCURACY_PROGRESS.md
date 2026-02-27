@@ -2600,6 +2600,15 @@ Notes:
       - `fixtures/terminal/decslrm_su_margin_band_only.*`
       - `fixtures/terminal/decslrm_sd_margin_band_only.*`
 
+- `PA-08h` implementation slice (2026-02-26, `DECSLRM` IL/DL outside-margin cursor guard):
+  - Added a defensive parity guard for direct `IL` (`CSI Ps L`) / `DL` (`CSI Ps M`) in DECSLRM mode:
+    - when `?69` is enabled and cursor column is outside `left_margin..right_margin`, `IL`/`DL` are no-op.
+  - Note:
+    - this state is not normally reachable via CSI cursor positioning under active DECSLRM because movement is margin-clamped; guard is locked via direct model-state unit integration.
+  - Evidence:
+    - PTY/unit integration: `src/terminal_focus_reporting_tests.zig`
+      - `terminal DECSLRM IL and DL are no-op when cursor is outside margins`
+
 Planned work (decomposition / `PA-08h` first promoted CSI family: `DECSTR` soft terminal reset):
 - Reference anchors:
   - xterm docs define `CSI ! p` as `DECSTR` (soft terminal reset), VT220+ (`reference_repos/terminals/xterm_snapshots/ctlseqs.txt`).

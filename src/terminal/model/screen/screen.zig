@@ -1057,6 +1057,7 @@ pub const Screen = struct {
         const rows = @as(usize, self.grid.rows);
         if (rows == 0 or cols == 0) return;
         if (self.cursor.row < self.scroll_top or self.cursor.row > self.scroll_bottom) return;
+        if (self.left_right_margin_mode_69 and (self.cursor.col < self.leftBoundary() or self.cursor.col > self.rightBoundary())) return;
         const n = @min(count, self.scroll_bottom - self.cursor.row + 1);
         if (self.left_right_margin_mode_69) {
             const left = self.leftBoundary();
@@ -1106,6 +1107,7 @@ pub const Screen = struct {
         const rows = @as(usize, self.grid.rows);
         if (rows == 0 or cols == 0) return;
         if (self.cursor.row < self.scroll_top or self.cursor.row > self.scroll_bottom) return;
+        if (self.left_right_margin_mode_69 and (self.cursor.col < self.leftBoundary() or self.cursor.col > self.rightBoundary())) return;
         const n = @min(count, self.scroll_bottom - self.cursor.row + 1);
         if (self.left_right_margin_mode_69) {
             const left = self.leftBoundary();

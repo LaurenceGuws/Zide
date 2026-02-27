@@ -387,6 +387,46 @@ test "terminal DECSLRM clips IL and DL to active horizontal margins" {
     try std.testing.expectEqual(@as(u32, 'D'), session.getCell(3, 2).codepoint);
 }
 
+test "terminal DECSLRM IL and DL are no-op when cursor is outside margins" {
+    const allocator = std.testing.allocator;
+
+    var il_session = try terminal.TerminalSession.init(allocator, 4, 12);
+    defer il_session.deinit();
+    terminal.debugFeedBytes(il_session, "\x1b[1;1HAAAAAAAAAAAA");
+    terminal.debugFeedBytes(il_session, "\x1b[2;1HBBBBBBBBBBBB");
+    terminal.debugFeedBytes(il_session, "\x1b[3;1HCCCCCCCCCCCC");
+    terminal.debugFeedBytes(il_session, "\x1b[4;1HDDDDDDDDDDDD");
+    terminal.debugFeedBytes(il_session, "\x1b[?69h\x1b[3;8s");
+    {
+        const screen = il_session.activeScreen();
+        screen.cursor.row = 1;
+        screen.cursor.col = 0; // deliberately outside left margin (2)
+    }
+    terminal.debugFeedBytes(il_session, "\x1b[1L");
+    try std.testing.expectEqual(@as(u32, 'A'), il_session.getCell(0, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), il_session.getCell(1, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), il_session.getCell(2, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), il_session.getCell(3, 2).codepoint);
+
+    var dl_session = try terminal.TerminalSession.init(allocator, 4, 12);
+    defer dl_session.deinit();
+    terminal.debugFeedBytes(dl_session, "\x1b[1;1HAAAAAAAAAAAA");
+    terminal.debugFeedBytes(dl_session, "\x1b[2;1HBBBBBBBBBBBB");
+    terminal.debugFeedBytes(dl_session, "\x1b[3;1HCCCCCCCCCCCC");
+    terminal.debugFeedBytes(dl_session, "\x1b[4;1HDDDDDDDDDDDD");
+    terminal.debugFeedBytes(dl_session, "\x1b[?69h\x1b[3;8s");
+    {
+        const screen = dl_session.activeScreen();
+        screen.cursor.row = 1;
+        screen.cursor.col = 0; // deliberately outside left margin (2)
+    }
+    terminal.debugFeedBytes(dl_session, "\x1b[1M");
+    try std.testing.expectEqual(@as(u32, 'A'), dl_session.getCell(0, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), dl_session.getCell(1, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), dl_session.getCell(2, 2).codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), dl_session.getCell(3, 2).codepoint);
+}
+
 test "terminal DECSLRM clips SU and SD to active horizontal margins" {
     const allocator = std.testing.allocator;
 
