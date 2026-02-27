@@ -120,6 +120,27 @@ test "DCS DECRQSS writes failure reply for unsupported request string" {
     try std.testing.expectEqualStrings("\x1bP0$r\x1b\\", self.pty.?.writes.items);
 }
 
+test "DCS DECRQSS writes SGR reply for bounded attribute state" {
+    const allocator = std.testing.allocator;
+
+    const Self = struct {
+        allocator: std.mem.Allocator,
+        pty: ?FakePty,
+
+        pub fn setSyncUpdates(_: *@This(), _: bool) void {}
+        pub fn decrqssReply(_: *@This(), text: []const u8) ?[]const u8 {
+            if (std.mem.eql(u8, text, "m")) return "1;5;7;31;42";
+            return null;
+        }
+    };
+
+    var self = Self{ .allocator = allocator, .pty = FakePty.init() };
+    defer if (self.pty) |*pty| pty.deinit(allocator);
+    dcs_apc.parseDcs(&self, "$qm");
+
+    try std.testing.expectEqualStrings("\x1bP1$r1;5;7;31;42\x1b\\", self.pty.?.writes.items);
+}
+
 test "OSC 52 clipboard query preserves BEL terminator" {
     const allocator = std.testing.allocator;
 

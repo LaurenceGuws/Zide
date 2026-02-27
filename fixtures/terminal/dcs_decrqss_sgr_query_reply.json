@@ -1,0 +1,9 @@
+{
+  "fixture_type": "vt",
+  "rows": 2,
+  "cols": 8,
+  "cursor": { "row": 0, "col": 2 },
+  "line_ending": "lf",
+  "assertions": ["grid", "reply"],
+  "reply_hex": "1b50312472313b353b373b33313b34321b5c"
+}
