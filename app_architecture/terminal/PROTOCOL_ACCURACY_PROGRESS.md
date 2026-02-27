@@ -1119,6 +1119,22 @@ Verification:
 - `zig build test-terminal-replay -- --fixture kitty_parent_cycle_reply`
 - `zig build check-app-imports`
 
+Implemented (increment 38 / `PA-04c` parent-chain depth-limit replay lock):
+- Added replay fixture that locks parent-chain depth-limit behavior for parented placements:
+  - long parent chain build with quiet setup
+  - depth-overflow placement attempt replies `ETOODEEP` with explicit `i/p` identifiers.
+- This gives deterministic replay evidence for the depth-limit branch in parented placement handling.
+
+Files:
+- `fixtures/terminal/kitty_parent_depth_limit_reply.vt`
+- `fixtures/terminal/kitty_parent_depth_limit_reply.json`
+- `fixtures/terminal/kitty_parent_depth_limit_reply.golden`
+
+Verification:
+- `zig build test-terminal-replay -- --fixture kitty_parent_depth_limit_reply --update-goldens`
+- `zig build test-terminal-replay -- --fixture kitty_parent_depth_limit_reply`
+- `zig build check-app-imports`
+
 Verification:
 - `zig build test-terminal-replay -- --fixture kitty_query_medium_file_missing_q1_q2_reply --update-goldens`
 - `zig build test-terminal-replay -- --fixture kitty_query_medium_file_missing_q1_q2_reply`
@@ -3088,8 +3104,8 @@ Verification:
 ## Next Work Queue (Ordered)
 
 1. `PA-05c` Extend metadata-aware encoder format usage for `alternate_layout_codepoint` when protocol field support is promoted
-2. `PA-04c` Extend parent/virtual placement fixture coverage (`U=1`, `P/Q/H/V`) with deeper chain/depth variants (`ETOODEEP` and long-parent stacks)
-3. `PA-04c` Extend parent/virtual placement coverage to include mixed delete interactions on parented placements
+2. `PA-04c` Extend parent/virtual placement coverage to include mixed delete interactions on parented placements
+3. `PA-04c` Add additional parent/virtual branch locks for parented updates without explicit placement id (`p=0` paths)
 4. `PA-08h` Revisit DECSLRM rectangular-operation parity (`DECCRA` family) only when a concrete app-compat signal appears
 
 ## Decomposition Backlog (New)
