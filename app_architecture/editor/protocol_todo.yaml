@@ -2,11 +2,17 @@ editor_protocol_todo:
   scope:
     description: "Text engine + editing semantics (buffer model, undo, selection, search, folding)."
     priorities:
+      - "core-first protocol semantics before advanced features"
       - "modularize editor view/state before behavior changes"
-      - "large-file performance"
+      - "large-file performance + bounded allocations"
       - "correctness for unicode + graphemes"
-      - "multi-cursor editing"
-      - "predictable undo/redo"
+      - "predictable undo/redo and cursor mapping"
+      - "search semantics parity before find-in-files UX expansion"
+  quality_bar:
+    acceptance:
+      - "every protocol/state change has focused regression coverage"
+      - "no behavior-only refactors mixed with feature deltas"
+      - "editing/search state remains deterministic under undo/redo"
   reference_maps:
     helix:
       - reference_repos/editors/helix/docs/architecture.md
@@ -85,6 +91,7 @@ editor_protocol_todo:
         - "Search state increments a dedicated epoch and marks highlight dirty range for render cache invalidation."
         - "Added active-match navigation API (`activateNextSearchMatch` / `activatePrevSearchMatch`) and cursor jump behavior."
         - "Added regex search entrypoint (`setSearchQueryRegex`) for a minimal regex subset while preserving literal mode API."
+        - "Current priority: harden baseline literal/regex correctness + replace semantics before adding Find-in-files UX layers."
       references:
         - reference_repos/editors/neovim/src/nvim/search.c
         - reference_repos/editors/lapce/lapce-app/src/find.rs
@@ -94,6 +101,7 @@ editor_protocol_todo:
       status: todo
       title: "Folding model + markers"
       notes:
+        - "Deferred by core-first policy until EP-02/03/04 semantics are stable and test-backed."
         - "Syntax-driven folds + manual fold markers."
       references:
         - reference_repos/editors/neovim/src/nvim/fold.c
