@@ -1102,6 +1102,9 @@ const Theme = struct {
     preproc: Color = Color{ .r = 143, .g = 188, .b = 187 },
     macro: Color = Color{ .r = 180, .g = 142, .b = 173 },
     escape: Color = Color{ .r = 136, .g = 192, .b = 208 },
+    keyword_control: Color = Color{ .r = 255, .g = 121, .b = 198 },
+    function_method: Color = Color{ .r = 80, .g = 250, .b = 123 },
+    type_builtin: Color = Color{ .r = 139, .g = 233, .b = 253 },
 };
 
 const DrawLog = struct {

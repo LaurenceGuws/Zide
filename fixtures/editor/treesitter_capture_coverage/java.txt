@@ -5,11 +5,14 @@ character string
 number number
 boolean constant
 type type_name
+type.builtin type_builtin
 constructor function
+function.method function_method
 method function
 namespace namespace
 annotation attribute
 keyword keyword
+keyword.control keyword_control
 import keyword
 label label
 operator operator

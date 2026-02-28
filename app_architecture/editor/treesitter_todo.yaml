@@ -41,6 +41,7 @@ treesitter_todo:
         - "Added dedicated token kinds/colors for preprocessor, macro, and escape captures to increase syntax granularity without query-side changes."
         - "Runtime sampling now logs top unmapped capture hits per active highlighter session (sample + final summaries) so real-world query gaps are visible beyond query-load coverage stats."
         - "Added replay-style capture mapping fixtures for Java/Python/Go/Bash so token-kind coverage expectations stay locked under test."
+        - "Added optional theme sub-variant keys (`keyword_control`/`keyword.control`, `function_method`/`function.method`, `type_builtin`/`type.builtin`) with capture-suffix remapping so finer color splits do not require query edits."
         - "Rendering now respects conceal/url metadata (conceal hides or replaces token text; url forces link color)."
     - id: TS-03
       status: in_progress

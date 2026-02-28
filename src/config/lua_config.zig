@@ -138,6 +138,9 @@ pub const ThemeConfig = struct {
     preproc: ?Color = null,
     macro: ?Color = null,
     escape: ?Color = null,
+    keyword_control: ?Color = null,
+    function_method: ?Color = null,
+    type_builtin: ?Color = null,
     ansi_colors: [16]?Color = .{null} ** 16,
 };
 
@@ -1564,6 +1567,9 @@ fn mergeThemeConfig(base: *ThemeConfig, overlay: ThemeConfig) void {
     if (overlay.preproc) |color| base.preproc = color;
     if (overlay.macro) |color| base.macro = color;
     if (overlay.escape) |color| base.escape = color;
+    if (overlay.keyword_control) |color| base.keyword_control = color;
+    if (overlay.function_method) |color| base.function_method = color;
+    if (overlay.type_builtin) |color| base.type_builtin = color;
     for (0..16) |i| {
         if (overlay.ansi_colors[i]) |color| base.ansi_colors[i] = color;
     }
@@ -1607,6 +1613,9 @@ pub fn applyThemeConfig(theme: *Theme, overlay: ThemeConfig) void {
     if (overlay.preproc) |color| theme.preproc = color;
     if (overlay.macro) |color| theme.macro = color;
     if (overlay.escape) |color| theme.escape = color;
+    if (overlay.keyword_control) |color| theme.keyword_control = color;
+    if (overlay.function_method) |color| theme.function_method = color;
+    if (overlay.type_builtin) |color| theme.type_builtin = color;
     if (theme.ansi_colors) |*colors| {
         for (0..16) |i| {
             if (overlay.ansi_colors[i]) |color| colors[i] = color;
@@ -1695,6 +1704,12 @@ fn parseThemeSyntaxTable(L: *c.lua_State, idx: c_int, theme: *ThemeConfig) void 
     parseColorField(L, idx, "preproc", &theme.preproc);
     parseColorField(L, idx, "macro", &theme.macro);
     parseColorField(L, idx, "escape", &theme.escape);
+    parseColorField(L, idx, "keyword_control", &theme.keyword_control);
+    parseColorField(L, idx, "function_method", &theme.function_method);
+    parseColorField(L, idx, "type_builtin", &theme.type_builtin);
+    parseColorField(L, idx, "keyword.control", &theme.keyword_control);
+    parseColorField(L, idx, "function.method", &theme.function_method);
+    parseColorField(L, idx, "type.builtin", &theme.type_builtin);
 }
 
 fn parseColorField(L: *c.lua_State, idx: c_int, field: [:0]const u8, out: *?Color) void {

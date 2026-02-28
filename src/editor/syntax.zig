@@ -33,6 +33,9 @@ pub const TokenKind = enum(u8) {
     preproc = 17,
     macro = 18,
     escape = 19,
+    keyword_control = 20,
+    function_method = 21,
+    type_builtin = 22,
 };
 
 pub const HighlightToken = struct {
@@ -895,6 +898,9 @@ fn appendHighlightTokens(
 }
 
 fn mapCaptureKind(name: []const u8) TokenKind {
+    if (captureNameIsOrHasPrefix(name, "keyword.control")) return .keyword_control;
+    if (captureNameIsOrHasPrefix(name, "function.method")) return .function_method;
+    if (captureNameIsOrHasPrefix(name, "type.builtin")) return .type_builtin;
     if (std.mem.startsWith(u8, name, "comment")) return .comment;
     if (std.mem.indexOf(u8, name, "builtin") != null) return .builtin;
     if (std.mem.startsWith(u8, name, "preproc")) return .preproc;
@@ -980,6 +986,12 @@ fn mapCaptureKind(name: []const u8) TokenKind {
     if (std.mem.eql(u8, name, "define")) return .preproc;
     if (std.mem.eql(u8, name, "charset")) return .escape;
     return .plain;
+}
+
+fn captureNameIsOrHasPrefix(name: []const u8, prefix: []const u8) bool {
+    if (std.mem.eql(u8, name, prefix)) return true;
+    if (!std.mem.startsWith(u8, name, prefix)) return false;
+    return name.len > prefix.len and name[prefix.len] == '.';
 }
 
 fn shouldSkipCapture(name: []const u8) bool {
@@ -2274,6 +2286,9 @@ test "map capture kind covers common alias captures" {
     try std.testing.expectEqual(TokenKind.preproc, mapCaptureKind("keyword.directive"));
     try std.testing.expectEqual(TokenKind.macro, mapCaptureKind("function.macro"));
     try std.testing.expectEqual(TokenKind.escape, mapCaptureKind("string.escape"));
+    try std.testing.expectEqual(TokenKind.keyword_control, mapCaptureKind("keyword.control.conditional"));
+    try std.testing.expectEqual(TokenKind.function_method, mapCaptureKind("function.method.call"));
+    try std.testing.expectEqual(TokenKind.type_builtin, mapCaptureKind("type.builtin"));
 }
 
 const CaptureMappingFixture = struct {
