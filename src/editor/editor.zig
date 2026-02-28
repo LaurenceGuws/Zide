@@ -54,8 +54,6 @@ pub const Editor = struct {
     scroll_row_offset: usize,
     line_width_cache: std.AutoHashMap(usize, usize),
     max_line_width_cache: usize,
-    max_line_width_scan_index: usize,
-    max_line_width_scan_complete: bool,
     highlighter: ?*syntax_mod.SyntaxHighlighter,
     highlight_dirty_start_line: ?usize,
     highlight_dirty_end_line: ?usize,
@@ -97,8 +95,6 @@ pub const Editor = struct {
             .scroll_row_offset = 0,
             .line_width_cache = std.AutoHashMap(usize, usize).init(allocator),
             .max_line_width_cache = 0,
-            .max_line_width_scan_index = 0,
-            .max_line_width_scan_complete = false,
             .highlighter = null,
             .highlight_dirty_start_line = null,
             .highlight_dirty_end_line = null,
@@ -214,8 +210,6 @@ pub const Editor = struct {
     pub fn invalidateLineWidthCache(self: *Editor) void {
         self.line_width_cache.clearRetainingCapacity();
         self.max_line_width_cache = 0;
-        self.max_line_width_scan_index = 0;
-        self.max_line_width_scan_complete = false;
     }
 
     pub fn lineWidthCached(self: *Editor, line_idx: usize, line_text: []const u8, cluster_offsets: ?[]const u32) usize {
@@ -237,42 +231,6 @@ pub const Editor = struct {
         self.line_width_cache.put(line_idx, count) catch {};
         if (count > self.max_line_width_cache) self.max_line_width_cache = count;
         return count;
-    }
-
-    pub fn advanceMaxLineWidthCache(self: *Editor, budget_lines: usize) struct { max: usize, complete: bool } {
-        if (self.max_line_width_scan_complete) {
-            return .{ .max = self.max_line_width_cache, .complete = true };
-        }
-
-        const total_lines = self.lineCount();
-        var line_idx = self.max_line_width_scan_index;
-        var remaining = budget_lines;
-        while (line_idx < total_lines and remaining > 0) : (line_idx += 1) {
-            var line_buf: [4096]u8 = undefined;
-            const line_len = self.lineLen(line_idx);
-            var line_alloc: ?[]u8 = null;
-            const line_text = if (line_len <= line_buf.len)
-                line_buf[0..self.getLine(line_idx, &line_buf)]
-            else blk: {
-                const owned = self.getLineAlloc(line_idx) catch break :blk &[_]u8{};
-                line_alloc = owned;
-                break :blk owned;
-            };
-            defer if (line_alloc) |owned| self.allocator.free(owned);
-
-            const width = self.lineWidthCached(line_idx, line_text, null);
-            if (width > self.max_line_width_cache) {
-                self.max_line_width_cache = width;
-            }
-            remaining -= 1;
-        }
-
-        self.max_line_width_scan_index = line_idx;
-        if (line_idx >= total_lines) {
-            self.max_line_width_scan_complete = true;
-        }
-
-        return .{ .max = self.max_line_width_cache, .complete = self.max_line_width_scan_complete };
     }
 
     pub fn maxLineWidthCached(self: *const Editor) usize {
