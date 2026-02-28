@@ -148,6 +148,8 @@ editor_widget_todo:
         - "Shift-based extend actions now preserve multi-caret zero-length selections as per-caret ranges for horizontal, word-wise, line-boundary, and visual vertical extension."
         - "Ctrl+Shift+up/down now route as large visual selection-extension jumps (five rows), matching ctrl+up/down movement."
         - "Multi-range extend now preserves existing anchor/head pairs across the whole selection set instead of only supporting the zero-length-caret starting case."
+        - "Plain unmodified left/right now explicitly collapse mixed multi-range selections to directional edges while preserving the full caret set."
+        - "Large visual move/extend jump size is now configurable via `editor.large_cursor_jump_rows`."
         - "Ctrl+up/down now route as larger visual cursor jumps (five visual rows), complementing ctrl+left/right word jumps."
         - "Rectangular selection clipboard semantics are now regression-tested as per-line column slices, and cursor movement explicitly collapses column selections."
         - "Editor-core rectangular expansion now has a cluster-provider variant so non-widget callers can reuse the same cluster-aware visual-column rules as widget/view selection mapping."
