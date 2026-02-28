@@ -138,9 +138,9 @@ editor_widget_todo:
         - "Multi-selection copy now skips empty carets without emitting stray separator newlines."
         - "Primary caret ownership is now preserved across multi-caret restore paths instead of silently promoting the first normalized caret."
         - "The editor model now treats `cursor` as the primary caret and keeps auxiliary zero-length carets only in `selections`, rather than duplicating the primary caret into the auxiliary set."
-        - "Editor core now exposes explicit primary/auxiliary caret accessors on top of that model so future multi-caret work can avoid raw storage coupling."
+        - "Editor core now exposes explicit primary/auxiliary caret accessors on top of that model, and more multi-caret internals now consume those helpers instead of raw zero-length selection iteration."
         - "Core word-left/word-right and selection-expanding movement APIs now exist in the editor engine."
-        - "Word-wise and expanding movement now route through the Lua keybind/input-router layer instead of staying editor-only helpers, and direct word/line-boundary extend dispatch now has app-level helper coverage."
+        - "Word-wise and expanding movement now route through the Lua keybind/input-router layer instead of staying editor-only helpers, and direct word/line-boundary extend plus add-caret dispatch now have app-level helper coverage."
         - "Visual `Shift+Up/Down` selection growth now routes through widget/view helpers, has app-level dispatch coverage, and is covered in both wrapped and non-wrapped movement paths."
         - "Rectangular selection clipboard semantics are now regression-tested as per-line column slices, and cursor movement explicitly collapses column selections."
       references:
@@ -277,7 +277,7 @@ editor_widget_todo:
       title: "Clipboard + multi-line paste handling"
       notes:
         - "Preserve indentation and line endings."
-        - "Baseline paste semantics now split plain multi-selection paste from column paste: plain sets broadcast one payload, while rectangular selections trim CRLF row endings, preserve trailing empty rows, repeat a single row, map exact row counts 1:1, cycle clipboard rows when counts mismatch, and treat visual columns with tabs, combining marks, and wide glyphs instead of byte columns."
+        - "Baseline paste semantics now split plain multi-selection paste from column paste: plain sets broadcast one payload, while rectangular selections trim CRLF row endings, preserve trailing empty rows, repeat a single row, map exact row counts 1:1, cycle clipboard rows when counts mismatch, and treat visual columns through cluster boundaries plus shared visual-width rules instead of raw byte columns."
       references:
         - reference_repos/editors/neovim/src/nvim/clipboard.c
         - reference_repos/editors/zed/crates/editor/src/editor.rs
