@@ -76,11 +76,15 @@ editor_protocol_todo:
         - reference_repos/editors/xi-editor/rust/core-lib/src/selection.rs
 
     - id: EP-04
-      status: todo
+      status: in_progress
       title: "Search/replace and regex engine"
       notes:
         - "Incremental search state with highlights."
         - "Replace preview and replace-all."
+        - "Added initial editor search state scaffold (query string + byte-range matches + active index placeholder)."
+        - "Search state increments a dedicated epoch and marks highlight dirty range for render cache invalidation."
+        - "Added active-match navigation API (`activateNextSearchMatch` / `activatePrevSearchMatch`) and cursor jump behavior."
+        - "Added regex search entrypoint (`setSearchQueryRegex`) for a minimal regex subset while preserving literal mode API."
       references:
         - reference_repos/editors/neovim/src/nvim/search.c
         - reference_repos/editors/lapce/lapce-app/src/find.rs

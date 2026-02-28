@@ -66,12 +66,16 @@ treesitter_todo:
         - "Grammar packs now sync/package multiple query types; GrammarManager stores per-pack query paths."
         - "Syntax registry parses injection language overrides."
     - id: TS-06
-      status: todo
+      status: in_progress
       title: "Render integration"
       notes:
         - "Translate capture spans into editor HighlightToken ranges."
         - "Ensure stable token ordering for cached draws."
         - "Add cached draw tests for tree-sitter highlight spans."
+        - "Immediate draw + cached draw now share a single stable HighlightToken comparator (start/priority/end/kind/metadata), reducing order drift for equal-range captures."
+        - "Added render-cache sort regression test to lock deterministic ordering when tokens share position/priority."
+        - "Added syntax-level comparator test covering conceal/url/conceal_lines tie-break behavior for deterministic ordering."
+        - "Added editor render regression test asserting immediate vs cached text-op parity for conceal/url metadata rendering."
     - id: TS-07
       status: done
       title: "Dynamic grammar loader"

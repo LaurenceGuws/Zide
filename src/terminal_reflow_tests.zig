@@ -60,7 +60,7 @@ test "terminal reflow preserves trailing blank cursor and selection" {
     defer session.deinit();
 
     term_mod.debugFeedBytes(session, "A");
-    session.debugSetCursor(0, 3);
+    term_mod.debugSetCursor(session, 0, 3);
     session.startSelection(0, 3);
     session.finishSelection();
 

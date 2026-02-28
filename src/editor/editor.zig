@@ -14,6 +14,16 @@ const c = ts_api.c_api;
 
 /// High-level editor state wrapping a text buffer
 pub const Editor = struct {
+    pub const SearchMatch = struct {
+        start: usize,
+        end: usize,
+    };
+
+    pub const SearchMode = enum {
+        literal,
+        regex,
+    };
+
     allocator: std.mem.Allocator,
     buffer: *TextStore,
     cursor: CursorPos,
@@ -31,6 +41,11 @@ pub const Editor = struct {
     highlight_dirty_start_line: ?usize,
     highlight_dirty_end_line: ?usize,
     highlight_pending: bool,
+    search_query: ?[]u8,
+    search_matches: std.ArrayList(SearchMatch),
+    search_active: ?usize,
+    search_mode: SearchMode,
+    search_epoch: u64,
     change_tick: u64,
     highlight_epoch: u64,
     file_path: ?[]const u8,
@@ -67,6 +82,11 @@ pub const Editor = struct {
             .highlight_dirty_start_line = null,
             .highlight_dirty_end_line = null,
             .highlight_pending = false,
+            .search_query = null,
+            .search_matches = .empty,
+            .search_active = null,
+            .search_mode = .literal,
+            .search_epoch = 0,
             .change_tick = 0,
             .highlight_epoch = 0,
             .file_path = null,
@@ -84,6 +104,10 @@ pub const Editor = struct {
         if (self.file_path) |path| {
             self.allocator.free(path);
         }
+        if (self.search_query) |query| {
+            self.allocator.free(query);
+        }
+        self.search_matches.deinit(self.allocator);
         self.selections.deinit(self.allocator);
         self.line_width_cache.deinit();
         self.buffer.deinit();
@@ -101,6 +125,7 @@ pub const Editor = struct {
         const end = self.highlight_dirty_end_line orelse (start + 1);
         self.highlight_dirty_start_line = null;
         self.highlight_dirty_end_line = null;
+        self.clearSearchState();
         return .{ .start_line = start, .end_line = end };
     }
 
@@ -506,6 +531,9 @@ pub const Editor = struct {
         self.modified = true;
         self.invalidateLineWidthCache();
         self.change_tick +|= 1;
+        if (self.search_query != null) {
+            self.recomputeSearchMatches() catch {};
+        }
     }
 
     fn noteHighlightDirtyRange(self: *Editor, start_byte: usize, end_byte: usize) void {
@@ -986,5 +1014,250 @@ pub const Editor = struct {
     pub fn ensureHighlighter(self: *Editor) void {
         if (!self.highlight_pending) return;
         self.tryInitHighlighter(self.file_path) catch {};
+    }
+
+    pub fn setSearchQuery(self: *Editor, query: ?[]const u8) !void {
+        self.search_mode = .literal;
+        if (self.search_query) |prev| {
+            self.allocator.free(prev);
+            self.search_query = null;
+        }
+        if (query) |value| {
+            if (value.len == 0) {
+                self.clearSearchState();
+                return;
+            }
+            self.search_query = try self.allocator.dupe(u8, value);
+        } else {
+            self.clearSearchState();
+            return;
+        }
+        try self.recomputeSearchMatches();
+    }
+
+    pub fn setSearchQueryRegex(self: *Editor, query: ?[]const u8) !void {
+        self.search_mode = .regex;
+        if (self.search_query) |prev| {
+            self.allocator.free(prev);
+            self.search_query = null;
+        }
+        if (query) |value| {
+            if (value.len == 0) {
+                self.clearSearchState();
+                return;
+            }
+            self.search_query = try self.allocator.dupe(u8, value);
+        } else {
+            self.clearSearchState();
+            return;
+        }
+        try self.recomputeSearchMatches();
+    }
+
+    pub fn searchMatches(self: *const Editor) []const SearchMatch {
+        return self.search_matches.items;
+    }
+
+    pub fn searchActiveMatch(self: *const Editor) ?SearchMatch {
+        const idx = self.search_active orelse return null;
+        if (idx >= self.search_matches.items.len) return null;
+        return self.search_matches.items[idx];
+    }
+
+    pub fn activateNextSearchMatch(self: *Editor) bool {
+        if (self.search_matches.items.len == 0) return false;
+        const next = if (self.search_active) |idx|
+            (idx + 1) % self.search_matches.items.len
+        else
+            0;
+        self.search_active = next;
+        self.jumpToSearchActive();
+        return true;
+    }
+
+    pub fn activatePrevSearchMatch(self: *Editor) bool {
+        if (self.search_matches.items.len == 0) return false;
+        const prev = if (self.search_active) |idx|
+            if (idx == 0) self.search_matches.items.len - 1 else idx - 1
+        else
+            self.search_matches.items.len - 1;
+        self.search_active = prev;
+        self.jumpToSearchActive();
+        return true;
+    }
+
+    fn jumpToSearchActive(self: *Editor) void {
+        const active = self.searchActiveMatch() orelse return;
+        self.setCursorOffsetNoClear(active.start);
+        self.selection = null;
+        self.clearSelections();
+    }
+
+    fn clearSearchState(self: *Editor) void {
+        self.search_matches.clearRetainingCapacity();
+        self.search_active = null;
+        self.search_epoch +|= 1;
+    }
+
+    fn recomputeSearchMatches(self: *Editor) !void {
+        self.search_matches.clearRetainingCapacity();
+        const query = self.search_query orelse {
+            self.search_active = null;
+            self.search_epoch +|= 1;
+            return;
+        };
+        if (query.len == 0) {
+            self.search_active = null;
+            self.search_epoch +|= 1;
+            return;
+        }
+
+        const total = self.buffer.totalLen();
+        const content = try self.buffer.readRangeAlloc(0, total);
+        defer self.allocator.free(content);
+
+        switch (self.search_mode) {
+            .literal => {
+                var pos: usize = 0;
+                while (pos <= content.len) {
+                    const found = std.mem.indexOfPos(u8, content, pos, query) orelse break;
+                    try self.search_matches.append(self.allocator, .{
+                        .start = found,
+                        .end = found + query.len,
+                    });
+                    pos = found + 1;
+                }
+            },
+            .regex => {
+                var pos: usize = 0;
+                while (pos < content.len) : (pos += 1) {
+                    const len = regexMatchLengthAt(query, content, pos) orelse continue;
+                    if (len == 0) continue;
+                    try self.search_matches.append(self.allocator, .{
+                        .start = pos,
+                        .end = pos + len,
+                    });
+                }
+            },
+        }
+
+        self.search_active = if (self.search_matches.items.len > 0) 0 else null;
+        self.search_epoch +|= 1;
+        if (total > 0) self.noteHighlightDirtyRange(0, total - 1);
+    }
+
+    fn regexMatchLengthAt(pattern: []const u8, text: []const u8, start: usize) ?usize {
+        if (start >= text.len) return null;
+        var best: ?usize = null;
+        var end = start + 1;
+        while (end <= text.len) : (end += 1) {
+            if (simpleRegexFullMatch(pattern, text[start..end])) {
+                best = end - start;
+            }
+        }
+        return best;
+    }
+
+    fn simpleRegexFullMatch(pattern: []const u8, text: []const u8) bool {
+        var pat = pattern;
+        if (pat.len > 0 and pat[0] == '^') {
+            pat = pat[1..];
+        }
+        if (pat.len > 0 and pat[pat.len - 1] == '$') {
+            pat = pat[0 .. pat.len - 1];
+        }
+        return simpleRegexMatchHere(pat, text, true);
+    }
+
+    fn simpleRegexMatch(pattern: []const u8, text: []const u8) bool {
+        var pat = pattern;
+        var anchored_start = false;
+        var anchored_end = false;
+        if (pat.len > 0 and pat[0] == '^') {
+            anchored_start = true;
+            pat = pat[1..];
+        }
+        if (pat.len > 0 and pat[pat.len - 1] == '$') {
+            anchored_end = true;
+            pat = pat[0 .. pat.len - 1];
+        }
+
+        if (anchored_start) {
+            return simpleRegexMatchHere(pat, text, anchored_end);
+        }
+        var i: usize = 0;
+        while (i <= text.len) : (i += 1) {
+            if (simpleRegexMatchHere(pat, text[i..], anchored_end)) return true;
+            if (i == text.len) break;
+        }
+        return false;
+    }
+
+    fn simpleRegexMatchHere(pattern: []const u8, text: []const u8, anchored_end: bool) bool {
+        if (pattern.len == 0) return !anchored_end or text.len == 0;
+        const token = simpleRegexNextToken(pattern);
+        const rest = pattern[token.next_index..];
+        switch (token.quantifier) {
+            '*' => {
+                var i: usize = 0;
+                while (i <= text.len and (i == 0 or simpleRegexCharMatches(token, text[i - 1]))) : (i += 1) {
+                    if (simpleRegexMatchHere(rest, text[i..], anchored_end)) return true;
+                }
+                return false;
+            },
+            '+' => {
+                if (text.len == 0 or !simpleRegexCharMatches(token, text[0])) return false;
+                var i: usize = 1;
+                while (i <= text.len and (i == 1 or simpleRegexCharMatches(token, text[i - 1]))) : (i += 1) {
+                    if (simpleRegexMatchHere(rest, text[i..], anchored_end)) return true;
+                }
+                return false;
+            },
+            '?' => {
+                if (simpleRegexMatchHere(rest, text, anchored_end)) return true;
+                if (text.len > 0 and simpleRegexCharMatches(token, text[0])) {
+                    return simpleRegexMatchHere(rest, text[1..], anchored_end);
+                }
+                return false;
+            },
+            else => {
+                if (text.len == 0) return false;
+                if (!simpleRegexCharMatches(token, text[0])) return false;
+                return simpleRegexMatchHere(rest, text[1..], anchored_end);
+            },
+        }
+    }
+
+    const SimpleRegexToken = struct {
+        byte: u8,
+        any: bool,
+        next_index: usize,
+        quantifier: u8,
+    };
+
+    fn simpleRegexNextToken(pattern: []const u8) SimpleRegexToken {
+        if (pattern.len == 0) return .{ .byte = 0, .any = false, .next_index = 0, .quantifier = 0 };
+        var idx: usize = 1;
+        var byte = pattern[0];
+        var any = false;
+        if (byte == '\\' and pattern.len > 1) {
+            byte = pattern[1];
+            idx = 2;
+        } else if (byte == '.') {
+            any = true;
+        }
+        var quant: u8 = 0;
+        if (idx < pattern.len) {
+            const q = pattern[idx];
+            if (q == '*' or q == '+' or q == '?') {
+                quant = q;
+                idx += 1;
+            }
+        }
+        return .{ .byte = byte, .any = any, .next_index = idx, .quantifier = quant };
+    }
+
+    fn simpleRegexCharMatches(token: SimpleRegexToken, b: u8) bool {
+        return token.any or token.byte == b;
     }
 };

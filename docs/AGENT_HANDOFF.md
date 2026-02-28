@@ -36,6 +36,9 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 
 ### Recent Changes (High-Level)
 - Editor multi-selection carets are now preserved during edits, with multi-caret vertical expansion shortcuts routed via Lua keybinds (`editor_add_caret_up` / `editor_add_caret_down`).
+- Editor tree-sitter render integration advanced: immediate + cached draw now share a stable `HighlightToken` comparator, with new regression tests for equal-range capture ordering and conceal/url metadata behavior (`app_architecture/editor/treesitter_todo.yaml`, `src/editor/syntax.zig`, `src/editor/render/cache.zig`, `src/editor_tests.zig`).
+- Editor search scaffolding advanced to `in_progress`: literal + regex query entrypoints, incremental in-buffer match collection, active match next/prev navigation, and cursor jump to active match (`app_architecture/editor/editor_widget_todo.yaml`, `app_architecture/editor/protocol_todo.yaml`, `src/editor/editor.zig`).
+- Editor rendering now overlays search matches in both immediate and cached paths (`src/ui/widgets/editor_widget_draw.zig`).
 - Config subsystem contract established: `app_architecture/CONFIG.md` and `app_architecture/config_todo.yaml` define parser/runtime/reload behavior. Config reload now live-applies font rendering changes.
 - Terminal FFI bridge baseline landed (`src/terminal/ffi/bridge.zig`): stable snapshot export, PTY ABI, event queue, and a standalone Python ctypes smoke host.
 - Terminal replay harness now supports `--update-goldens` for snapshot refresh.
@@ -90,8 +93,10 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
  - Scrollback view cache + reflow resizing are still in progress; expect instability during the redesign.
 
 ### In-Progress (Uncommitted)
-- Uncommitted docs alignment:
-  - `app_architecture/ui/terminal_special_glyph_todo.yaml` status corrections + SDL research notes.
+- Editor uncommitted progress:
+  - Search scaffold + navigation + regex entrypoint + render overlays.
+  - Tree-sitter render-order stability tests and shared comparator rollout.
+  - Test harness updates for highlight replay/input/reflow API drift.
 - Workspace note:
   - `.github/workflows/ci.yml` is intentionally deleted for this pet project (do not restore unless user asks).
 
