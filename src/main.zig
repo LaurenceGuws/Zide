@@ -670,6 +670,14 @@ const AppState = struct {
         return true;
     }
 
+    fn applyCaretEditorAction(editor: *Editor, action: input_actions.ActionKind) !bool {
+        return switch (action) {
+            .editor_add_caret_up => try editor.addCaretUp(),
+            .editor_add_caret_down => try editor.addCaretDown(),
+            else => false,
+        };
+    }
+
     fn handleSearchPanelInput(self: *AppState, editor: *Editor, input_batch: *shared_types.input.InputBatch) !bool {
         if (!self.search_panel.active) return false;
 
@@ -1196,13 +1204,13 @@ const AppState = struct {
                         handled_shortcut = true;
                     },
                     .editor_add_caret_up => {
-                        if (try editor.addCaretUp()) {
+                        if (try applyCaretEditorAction(editor, action.kind)) {
                             self.needs_redraw = true;
                             handled_shortcut = true;
                         }
                     },
                     .editor_add_caret_down => {
-                        if (try editor.addCaretDown()) {
+                        if (try applyCaretEditorAction(editor, action.kind)) {
                             self.needs_redraw = true;
                             handled_shortcut = true;
                         }
@@ -2359,6 +2367,29 @@ test "direct editor action helper routes word and line selection actions" {
     try std.testing.expectEqual(@as(usize, 6), editor.selection.?.end.offset);
 
     try std.testing.expect(!AppState.applyDirectEditorAction(editor, .editor_search_open));
+}
+
+test "caret editor action helper routes add-caret actions" {
+    const allocator = std.testing.allocator;
+
+    var grammar_manager = try grammar_manager_mod.GrammarManager.init(allocator);
+    defer grammar_manager.deinit();
+
+    const editor = try Editor.init(allocator, &grammar_manager);
+    defer editor.deinit();
+
+    try editor.insertText("one\ntwo\nthree");
+    editor.setCursor(0, 1);
+
+    try std.testing.expect(try AppState.applyCaretEditorAction(editor, .editor_add_caret_down));
+    try std.testing.expectEqual(@as(usize, 1), editor.auxiliaryCaretCount());
+    try std.testing.expectEqual(@as(usize, 5), editor.auxiliaryCaretAt(0).?.offset);
+
+    try std.testing.expect(try AppState.applyCaretEditorAction(editor, .editor_add_caret_down));
+    try std.testing.expectEqual(@as(usize, 2), editor.auxiliaryCaretCount());
+    try std.testing.expectEqual(@as(usize, 9), editor.auxiliaryCaretAt(1).?.offset);
+
+    try std.testing.expect(!try AppState.applyCaretEditorAction(editor, .editor_search_open));
 }
 
 test "openSearchPanel restores editor query and clears stale panel text" {

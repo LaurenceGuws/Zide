@@ -62,9 +62,16 @@ pub fn visualColumnForByteIndex(text: []const u8, byte_index: usize, cluster_off
     if (cluster_offsets) |clusters| {
         if (clusters.len == 0) return utf8ColumnForByteIndex(text, byte_index);
         const target = @min(byte_index, text.len);
+        var vis: usize = 0;
         var idx: usize = 0;
-        while (idx < clusters.len and clusters[idx] < target) : (idx += 1) {}
-        return idx;
+        while (idx < clusters.len) : (idx += 1) {
+            const start = @min(@as(usize, clusters[idx]), text.len);
+            const end = if (idx + 1 < clusters.len) @min(@as(usize, clusters[idx + 1]), text.len) else text.len;
+            if (target <= start) return vis;
+            if (target < end) return vis;
+            vis += text_columns.visualWidth(text[start..end]);
+        }
+        return vis;
     }
     return text_columns.visualColumnForByteIndex(text, byte_index);
 }
@@ -72,8 +79,17 @@ pub fn visualColumnForByteIndex(text: []const u8, byte_index: usize, cluster_off
 pub fn byteIndexForVisualColumn(text: []const u8, column: usize, cluster_offsets: ?[]const u32) usize {
     if (cluster_offsets) |clusters| {
         if (clusters.len == 0) return utf8ByteIndexForColumn(text, column);
-        if (column >= clusters.len) return text.len;
-        return @min(@as(usize, clusters[column]), text.len);
+        var vis: usize = 0;
+        var idx: usize = 0;
+        while (idx < clusters.len) : (idx += 1) {
+            const start = @min(@as(usize, clusters[idx]), text.len);
+            const end = if (idx + 1 < clusters.len) @min(@as(usize, clusters[idx + 1]), text.len) else text.len;
+            const width = text_columns.visualWidth(text[start..end]);
+            if (vis >= column) return start;
+            if (vis + width > column) return start;
+            vis += width;
+        }
+        return text.len;
     }
     return text_columns.byteIndexForVisualColumn(text, column);
 }
@@ -139,4 +155,16 @@ test "tab expansion visual columns" {
     try std.testing.expectEqual(@as(usize, 0), utf8ByteIndexForColumn(s, 0));
     try std.testing.expectEqual(@as(usize, 0), utf8ByteIndexForColumn(s, 3));
     try std.testing.expectEqual(@as(usize, 1), utf8ByteIndexForColumn(s, 4));
+}
+
+test "cluster offsets preserve grapheme boundaries while keeping wide widths" {
+    const s = "e\u{0301}界x";
+    const clusters = [_]u32{ 0, 3, 6 };
+    try std.testing.expectEqual(@as(usize, 0), visualColumnForByteIndex(s, 0, &clusters));
+    try std.testing.expectEqual(@as(usize, 1), visualColumnForByteIndex(s, 3, &clusters));
+    try std.testing.expectEqual(@as(usize, 3), visualColumnForByteIndex(s, 6, &clusters));
+    try std.testing.expectEqual(@as(usize, 0), byteIndexForVisualColumn(s, 0, &clusters));
+    try std.testing.expectEqual(@as(usize, 3), byteIndexForVisualColumn(s, 1, &clusters));
+    try std.testing.expectEqual(@as(usize, 3), byteIndexForVisualColumn(s, 2, &clusters));
+    try std.testing.expectEqual(@as(usize, 6), byteIndexForVisualColumn(s, 3, &clusters));
 }

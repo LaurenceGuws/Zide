@@ -36,6 +36,10 @@ pub fn byteIndexForVisualColumn(text: []const u8, column: usize) usize {
     return text.len;
 }
 
+pub fn visualWidth(text: []const u8) usize {
+    return visualColumnForByteIndex(text, text.len);
+}
+
 pub fn cellWidthForCodepoint(cp: u21, col: usize) usize {
     if (cp == '\t') {
         const tab_width: usize = 4;
