@@ -651,6 +651,8 @@ const AppState = struct {
         return switch (action) {
             .editor_extend_up => -1,
             .editor_extend_down => 1,
+            .editor_extend_large_up => -5,
+            .editor_extend_large_down => 5,
             else => null,
         };
     }
@@ -1252,9 +1254,16 @@ const AppState = struct {
                             handled_shortcut = true;
                         }
                     },
-                    .editor_extend_up, .editor_extend_down => {
+                    .editor_extend_up, .editor_extend_down, .editor_extend_large_up, .editor_extend_large_down => {
                         const delta = visualExtendDeltaForAction(action.kind).?;
-                        if (editor_widget.extendSelectionVisual(shell, delta)) {
+                        var extended = false;
+                        var remaining = if (delta < 0) -delta else delta;
+                        const step: i32 = if (delta < 0) -1 else 1;
+                        while (remaining > 0) : (remaining -= 1) {
+                            if (!editor_widget.extendSelectionVisual(shell, step)) break;
+                            extended = true;
+                        }
+                        if (extended) {
                             editor_widget.ensureCursorVisible(shell, action_layout.editor.height);
                             self.needs_redraw = true;
                             handled_shortcut = true;
@@ -2365,6 +2374,8 @@ test "search panel text helper appends utf8 input events" {
 test "visual extend action helper maps routed editor actions" {
     try std.testing.expectEqual(@as(?i32, -1), AppState.visualExtendDeltaForAction(.editor_extend_up));
     try std.testing.expectEqual(@as(?i32, 1), AppState.visualExtendDeltaForAction(.editor_extend_down));
+    try std.testing.expectEqual(@as(?i32, -5), AppState.visualExtendDeltaForAction(.editor_extend_large_up));
+    try std.testing.expectEqual(@as(?i32, 5), AppState.visualExtendDeltaForAction(.editor_extend_large_down));
     try std.testing.expectEqual(@as(?i32, null), AppState.visualExtendDeltaForAction(.editor_extend_right));
 }
 
@@ -2396,6 +2407,26 @@ test "direct editor action helper routes word and line selection actions" {
     try std.testing.expectEqual(@as(usize, 6), editor.selection.?.end.offset);
 
     try std.testing.expect(!AppState.applyDirectEditorAction(editor, .editor_search_open));
+}
+
+test "direct editor action helper routes horizontal selection actions" {
+    const allocator = std.testing.allocator;
+
+    var grammar_manager = try grammar_manager_mod.GrammarManager.init(allocator);
+    defer grammar_manager.deinit();
+
+    const editor = try Editor.init(allocator, &grammar_manager);
+    defer editor.deinit();
+
+    try editor.insertText("alpha");
+    editor.setCursor(0, 2);
+
+    try std.testing.expect(AppState.applyDirectEditorAction(editor, .editor_extend_left));
+    try std.testing.expectEqual(@as(usize, 2), editor.selection.?.start.offset);
+    try std.testing.expectEqual(@as(usize, 1), editor.selection.?.end.offset);
+
+    try std.testing.expect(AppState.applyDirectEditorAction(editor, .editor_extend_right));
+    try std.testing.expect(editor.selection == null);
 }
 
 test "direct editor action helper routes word cursor movement actions" {

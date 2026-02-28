@@ -42,6 +42,8 @@ pub const ActionKind = enum {
     editor_extend_word_right,
     editor_extend_up,
     editor_extend_down,
+    editor_extend_large_up,
+    editor_extend_large_down,
     editor_search_open,
     editor_search_next,
     editor_search_prev,
@@ -175,6 +177,8 @@ fn actionName(kind: ActionKind) []const u8 {
         .editor_extend_word_right => "editor_extend_word_right",
         .editor_extend_up => "editor_extend_up",
         .editor_extend_down => "editor_extend_down",
+        .editor_extend_large_up => "editor_extend_large_up",
+        .editor_extend_large_down => "editor_extend_large_down",
         .editor_search_open => "editor_search_open",
         .editor_search_next => "editor_search_next",
         .editor_search_prev => "editor_search_prev",
@@ -336,6 +340,13 @@ test "input router routes editor movement actions by scope and modifiers" {
             .action = .editor_extend_up,
             .repeat = true,
         },
+        .{
+            .scope = .editor,
+            .key = .down,
+            .mods = .{ .ctrl = true, .shift = true },
+            .action = .editor_extend_large_down,
+            .repeat = true,
+        },
     });
 
     try batch.append(.{ .key = .{
@@ -391,6 +402,17 @@ test "input router routes editor movement actions by scope and modifiers" {
     router.route(&batch, .editor);
     try std.testing.expectEqual(@as(usize, 1), router.actionsSlice().len);
     try std.testing.expectEqual(ActionKind.editor_extend_up, router.actionsSlice()[0].kind);
+
+    batch.clear();
+    try batch.append(.{ .key = .{
+        .key = .down,
+        .mods = .{ .ctrl = true, .shift = true },
+        .pressed = true,
+        .repeated = false,
+    } });
+    router.route(&batch, .editor);
+    try std.testing.expectEqual(@as(usize, 1), router.actionsSlice().len);
+    try std.testing.expectEqual(ActionKind.editor_extend_large_down, router.actionsSlice()[0].kind);
 }
 
 test "input router treats altgr as part of exact modifier identity" {

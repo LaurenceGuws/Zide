@@ -253,39 +253,30 @@ pub fn extendSelectionVisual(
     scratch_a: *LineScratch,
     scratch_b: *LineScratch,
 ) bool {
-    if (editor.selections.items.len > 0) {
+    if (editor.hasSelectionSetState() and !editor.hasRectangularSelectionState()) {
         var anchor_offsets = std.ArrayList(usize).empty;
         defer anchor_offsets.deinit(editor.allocator);
-        anchor_offsets.append(editor.allocator, editor.cursor.offset) catch return false;
-        var has_nonempty = false;
-        for (editor.selections.items) |sel| {
-            const norm = sel.normalized();
-            if (!norm.isEmpty()) {
-                has_nonempty = true;
-                break;
-            }
-            if (std.mem.indexOfScalar(usize, anchor_offsets.items, norm.start.offset) != null) continue;
-            anchor_offsets.append(editor.allocator, norm.start.offset) catch return false;
+        var head_offsets = std.ArrayList(usize).empty;
+        defer head_offsets.deinit(editor.allocator);
+        editor.collectSelectionAnchorsAndHeads(&anchor_offsets, &head_offsets) catch return false;
+
+        var target_offsets = std.ArrayList(usize).empty;
+        defer target_offsets.deinit(editor.allocator);
+        var changed = false;
+        for (head_offsets.items) |offset| {
+            const line = editor.buffer.lineIndexForOffset(offset);
+            const current: types.CursorPos = .{
+                .line = line,
+                .col = offset - editor.buffer.lineStart(line),
+                .offset = offset,
+            };
+            const target = moveVisualFromPos(editor, current, delta, cols, wrap_enabled, provider, scratch_a, scratch_b) orelse current;
+            if (target.offset != offset) changed = true;
+            target_offsets.append(editor.allocator, target.offset) catch return false;
         }
-        if (!has_nonempty) {
-            var target_offsets = std.ArrayList(usize).empty;
-            defer target_offsets.deinit(editor.allocator);
-            var changed = false;
-            for (anchor_offsets.items) |offset| {
-                const line = editor.buffer.lineIndexForOffset(offset);
-                const current: types.CursorPos = .{
-                    .line = line,
-                    .col = offset - editor.buffer.lineStart(line),
-                    .offset = offset,
-                };
-                const target = moveVisualFromPos(editor, current, delta, cols, wrap_enabled, provider, scratch_a, scratch_b) orelse current;
-                if (target.offset != offset) changed = true;
-                target_offsets.append(editor.allocator, target.offset) catch return false;
-            }
-            if (!changed) return false;
-            editor.restoreExtendedCaretSelections(anchor_offsets.items, target_offsets.items) catch return false;
-            return true;
-        }
+        if (!changed) return false;
+        editor.restoreExtendedCaretSelections(anchor_offsets.items, target_offsets.items) catch return false;
+        return true;
     }
 
     const anchor = if (editor.selection) |sel| sel.start else editor.cursor;

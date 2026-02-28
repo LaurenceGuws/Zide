@@ -384,28 +384,72 @@ pub const Editor = struct {
         self.clearSelections();
     }
 
+    pub fn hasRectangularSelectionState(self: *Editor) bool {
+        if (self.selection) |sel| {
+            if (sel.is_rectangular) return true;
+        }
+        for (self.selections.items) |sel| {
+            if (sel.is_rectangular) return true;
+        }
+        return false;
+    }
+
+    pub fn hasSelectionSetState(self: *Editor) bool {
+        return self.selection != null or self.selections.items.len > 0;
+    }
+
+    pub fn collectSelectionAnchorsAndHeads(self: *Editor, anchors: *std.ArrayList(usize), heads: *std.ArrayList(usize)) !void {
+        if (self.selection) |sel| {
+            try anchors.append(self.allocator, sel.start.offset);
+            try heads.append(self.allocator, sel.end.offset);
+        } else {
+            try anchors.append(self.allocator, self.cursor.offset);
+            try heads.append(self.allocator, self.cursor.offset);
+        }
+        for (self.selections.items) |sel| {
+            try anchors.append(self.allocator, sel.start.offset);
+            try heads.append(self.allocator, sel.end.offset);
+        }
+    }
+
+    fn extendSelectionSetWithHeads(self: *Editor, target_heads: []const usize) !void {
+        var anchor_offsets = std.ArrayList(usize).empty;
+        defer anchor_offsets.deinit(self.allocator);
+        var head_offsets = std.ArrayList(usize).empty;
+        defer head_offsets.deinit(self.allocator);
+        try self.collectSelectionAnchorsAndHeads(&anchor_offsets, &head_offsets);
+        std.debug.assert(anchor_offsets.items.len == target_heads.len);
+        try self.restoreExtendedCaretSelections(anchor_offsets.items, target_heads);
+    }
+
     pub fn extendSelectionLeft(self: *Editor) void {
-        if (self.hasOnlyCaretSelections()) {
-            var target_offsets = self.collectCaretOffsets() catch return;
-            defer target_offsets.deinit(self.allocator);
-            for (target_offsets.items) |*offset| {
+        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
+            var anchors = std.ArrayList(usize).empty;
+            defer anchors.deinit(self.allocator);
+            var target_heads = std.ArrayList(usize).empty;
+            defer target_heads.deinit(self.allocator);
+            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch return;
+            for (target_heads.items) |*offset| {
                 if (offset.* > 0) offset.* -= 1;
             }
-            self.extendCaretSetToOffsets(target_offsets.items) catch {};
+            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch {};
             return;
         }
         self.extendPrimarySelectionToOffset(if (self.cursor.offset > 0) self.cursor.offset - 1 else 0);
     }
 
     pub fn extendSelectionRight(self: *Editor) void {
-        if (self.hasOnlyCaretSelections()) {
-            var target_offsets = self.collectCaretOffsets() catch return;
-            defer target_offsets.deinit(self.allocator);
+        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
+            var anchors = std.ArrayList(usize).empty;
+            defer anchors.deinit(self.allocator);
+            var target_heads = std.ArrayList(usize).empty;
+            defer target_heads.deinit(self.allocator);
+            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch return;
             const total = self.buffer.totalLen();
-            for (target_offsets.items) |*offset| {
+            for (target_heads.items) |*offset| {
                 if (offset.* < total) offset.* += 1;
             }
-            self.extendCaretSetToOffsets(target_offsets.items) catch {};
+            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch {};
             return;
         }
         const total = self.buffer.totalLen();
@@ -413,54 +457,66 @@ pub const Editor = struct {
     }
 
     pub fn extendSelectionToLineStart(self: *Editor) void {
-        if (self.hasOnlyCaretSelections()) {
-            var target_offsets = self.collectCaretOffsets() catch return;
-            defer target_offsets.deinit(self.allocator);
-            for (target_offsets.items) |*offset| {
+        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
+            var anchors = std.ArrayList(usize).empty;
+            defer anchors.deinit(self.allocator);
+            var target_heads = std.ArrayList(usize).empty;
+            defer target_heads.deinit(self.allocator);
+            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch return;
+            for (target_heads.items) |*offset| {
                 const caret = self.cursorPosForOffset(offset.*);
                 offset.* = self.buffer.lineStart(caret.line);
             }
-            self.extendCaretSetToOffsets(target_offsets.items) catch {};
+            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch {};
             return;
         }
         self.extendPrimarySelectionToOffset(self.buffer.lineStart(self.cursor.line));
     }
 
     pub fn extendSelectionToLineEnd(self: *Editor) void {
-        if (self.hasOnlyCaretSelections()) {
-            var target_offsets = self.collectCaretOffsets() catch return;
-            defer target_offsets.deinit(self.allocator);
-            for (target_offsets.items) |*offset| {
+        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
+            var anchors = std.ArrayList(usize).empty;
+            defer anchors.deinit(self.allocator);
+            var target_heads = std.ArrayList(usize).empty;
+            defer target_heads.deinit(self.allocator);
+            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch return;
+            for (target_heads.items) |*offset| {
                 const caret = self.cursorPosForOffset(offset.*);
                 offset.* = self.buffer.lineStart(caret.line) + self.buffer.lineLen(caret.line);
             }
-            self.extendCaretSetToOffsets(target_offsets.items) catch {};
+            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch {};
             return;
         }
         self.extendPrimarySelectionToOffset(self.buffer.lineStart(self.cursor.line) + self.buffer.lineLen(self.cursor.line));
     }
 
     pub fn extendSelectionWordLeft(self: *Editor) void {
-        if (self.hasOnlyCaretSelections()) {
-            var target_offsets = self.collectCaretOffsets() catch return;
-            defer target_offsets.deinit(self.allocator);
-            for (target_offsets.items) |*offset| {
+        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
+            var anchors = std.ArrayList(usize).empty;
+            defer anchors.deinit(self.allocator);
+            var target_heads = std.ArrayList(usize).empty;
+            defer target_heads.deinit(self.allocator);
+            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch return;
+            for (target_heads.items) |*offset| {
                 offset.* = self.wordLeftOffset(offset.*);
             }
-            self.extendCaretSetToOffsets(target_offsets.items) catch {};
+            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch {};
             return;
         }
         self.extendPrimarySelectionToOffset(self.wordLeftOffset(self.cursor.offset));
     }
 
     pub fn extendSelectionWordRight(self: *Editor) void {
-        if (self.hasOnlyCaretSelections()) {
-            var target_offsets = self.collectCaretOffsets() catch return;
-            defer target_offsets.deinit(self.allocator);
-            for (target_offsets.items) |*offset| {
+        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
+            var anchors = std.ArrayList(usize).empty;
+            defer anchors.deinit(self.allocator);
+            var target_heads = std.ArrayList(usize).empty;
+            defer target_heads.deinit(self.allocator);
+            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch return;
+            for (target_heads.items) |*offset| {
                 offset.* = self.wordRightOffset(offset.*);
             }
-            self.extendCaretSetToOffsets(target_offsets.items) catch {};
+            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch {};
             return;
         }
         self.extendPrimarySelectionToOffset(self.wordRightOffset(self.cursor.offset));
