@@ -7,8 +7,6 @@ const c = ts_api.c_api;
 
 pub const TSLanguage = ts_api.TSLanguage;
 
-extern "c" fn tree_sitter_zig() *const c.TSLanguage;
-
 const LanguageFn = *const fn () callconv(.c) *const c.TSLanguage;
 
 pub const QueryPaths = struct {
@@ -71,36 +69,11 @@ pub const GrammarManager = struct {
             return grammar;
         }
 
-        if (std.mem.eql(u8, language_name, "zig")) {
-            const grammar = try self.loadBuiltinZig();
-            return grammar;
-        }
-
         return null;
     }
 
     pub fn cacheRoot(self: *GrammarManager) []const u8 {
         return self.cache_root;
-    }
-
-    fn loadBuiltinZig(self: *GrammarManager) !*LoadedGrammar {
-        const name = try self.allocator.dupe(u8, "zig");
-        errdefer self.allocator.free(name);
-
-        const grammar = try self.allocator.create(LoadedGrammar);
-        errdefer self.allocator.destroy(grammar);
-
-        grammar.* = .{
-            .language_name = name,
-            .version = null,
-            .lib_path = null,
-            .query_paths = .{},
-            .handle = null,
-            .ts_language = tree_sitter_zig(),
-        };
-
-        try self.loaded.put(name, grammar);
-        return grammar;
     }
 
     fn loadFromCache(self: *GrammarManager, language_name: []const u8) !?*LoadedGrammar {

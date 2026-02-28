@@ -12,8 +12,6 @@ const c = ts_api.c_api;
 pub const TSLanguage = ts_api.TSLanguage;
 pub const QueryPaths = grammar_manager_mod.QueryPaths;
 
-extern "c" fn tree_sitter_zig() *const c.TSLanguage;
-
 pub const TokenKind = enum(u8) {
     plain = 0,
     comment = 1,
@@ -572,13 +570,6 @@ pub const SyntaxHighlighter = struct {
         return injected;
     }
 };
-
-pub fn createZigHighlighter(
-    allocator: std.mem.Allocator,
-    text_buffer: *TextStore,
-) !*SyntaxHighlighter {
-    return createHighlighter(allocator, text_buffer, "zig", tree_sitter_zig(), .{}, null);
-}
 
 pub fn createHighlighterForLanguage(
     allocator: std.mem.Allocator,
@@ -2057,6 +2048,8 @@ fn stringOptEqual(a: ?[]const u8, b: ?[]const u8) bool {
     if (b == null) return false;
     return std.mem.eql(u8, a.?, b.?);
 }
+
+extern "c" fn tree_sitter_zig() *const c.TSLanguage;
 
 test "predicates + priority metadata filter highlights" {
     const allocator = std.testing.allocator;
