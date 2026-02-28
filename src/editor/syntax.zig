@@ -2276,6 +2276,49 @@ test "map capture kind covers common alias captures" {
     try std.testing.expectEqual(TokenKind.escape, mapCaptureKind("string.escape"));
 }
 
+const CaptureMappingFixture = struct {
+    name: []const u8,
+    path: []const u8,
+};
+
+const capture_mapping_fixtures = [_]CaptureMappingFixture{
+    .{ .name = "java", .path = "fixtures/editor/treesitter_capture_coverage/java.txt" },
+    .{ .name = "python", .path = "fixtures/editor/treesitter_capture_coverage/python.txt" },
+    .{ .name = "go", .path = "fixtures/editor/treesitter_capture_coverage/go.txt" },
+    .{ .name = "bash", .path = "fixtures/editor/treesitter_capture_coverage/bash.txt" },
+};
+
+test "capture mapping fixtures stay stable across major languages" {
+    const allocator = std.testing.allocator;
+    for (capture_mapping_fixtures) |fixture| {
+        const data = try std.fs.cwd().readFileAlloc(allocator, fixture.path, 64 * 1024);
+        defer allocator.free(data);
+
+        var lines = std.mem.splitScalar(u8, data, '\n');
+        var line_no: usize = 0;
+        while (lines.next()) |line_raw| {
+            line_no += 1;
+            const line = std.mem.trim(u8, line_raw, " \t\r");
+            if (line.len == 0 or line[0] == '#') continue;
+            var parts = std.mem.tokenizeScalar(u8, line, ' ');
+            const capture_name = parts.next() orelse return error.InvalidFixture;
+            const expected_kind_name = parts.next() orelse return error.InvalidFixture;
+            if (parts.next() != null) return error.InvalidFixture;
+
+            const expected_kind = std.meta.stringToEnum(TokenKind, expected_kind_name) orelse {
+                std.debug.print("invalid expected token kind in fixture={s} line={d}: {s}\n", .{
+                    fixture.name,
+                    line_no,
+                    expected_kind_name,
+                });
+                return error.InvalidFixture;
+            };
+            const actual_kind = mapCaptureKind(capture_name);
+            try std.testing.expectEqual(expected_kind, actual_kind);
+        }
+    }
+}
+
 test "predicates + priority metadata filter highlights" {
     const allocator = std.testing.allocator;
     const text = "const foo = 1;\nconst bar = 2;\n";

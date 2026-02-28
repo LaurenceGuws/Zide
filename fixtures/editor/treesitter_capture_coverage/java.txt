@@ -1,0 +1,21 @@
+# capture expected_token_kind
+comment comment
+string string
+character string
+number number
+boolean constant
+type type_name
+constructor function
+method function
+namespace namespace
+annotation attribute
+keyword keyword
+import keyword
+label label
+operator operator
+punctuation.delimiter punctuation
+parameter variable
+variable variable
+constant constant
+none constant
+error error_token

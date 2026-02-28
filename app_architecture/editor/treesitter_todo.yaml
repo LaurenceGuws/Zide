@@ -40,6 +40,7 @@ treesitter_todo:
         - "Capture taxonomy now maps common non-standard alias captures (e.g. import/cImport/none/annotation/func/argument/diff.plus) to concrete token kinds instead of falling back to plain."
         - "Added dedicated token kinds/colors for preprocessor, macro, and escape captures to increase syntax granularity without query-side changes."
         - "Runtime sampling now logs top unmapped capture hits per active highlighter session (sample + final summaries) so real-world query gaps are visible beyond query-load coverage stats."
+        - "Added replay-style capture mapping fixtures for Java/Python/Go/Bash so token-kind coverage expectations stay locked under test."
         - "Rendering now respects conceal/url metadata (conceal hides or replaces token text; url forces link color)."
     - id: TS-03
       status: in_progress

@@ -1,0 +1,21 @@
+# capture expected_token_kind
+comment comment
+string string
+string.escape escape
+number number
+type type_name
+function function
+function.macro macro
+parameter variable
+variable variable
+keyword keyword
+import keyword
+cImport keyword
+namespace namespace
+operator operator
+punctuation punctuation
+attribute attribute
+builtin builtin
+constant constant
+none constant
+error error_token
