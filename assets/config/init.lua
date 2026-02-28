@@ -294,6 +294,8 @@ return {
             { key = "right", mods = { "ctrl", "shift" }, action = "editor_extend_word_right", ["repeat"] = true },
             { key = "up", mods = { "shift" }, action = "editor_extend_up", ["repeat"] = true },
             { key = "down", mods = { "shift" }, action = "editor_extend_down", ["repeat"] = true },
+            { key = "up", mods = { "ctrl", "shift" }, action = "editor_extend_large_up", ["repeat"] = true },
+            { key = "down", mods = { "ctrl", "shift" }, action = "editor_extend_large_down", ["repeat"] = true },
             { key = "f", mods = { "ctrl" }, action = "editor_search_open" },
             { key = "f3", mods = {}, action = "editor_search_next" },
             { key = "f3", mods = { "shift" }, action = "editor_search_prev" },
