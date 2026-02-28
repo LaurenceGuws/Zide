@@ -40,7 +40,7 @@ pub const OptionsBar = struct {
                 const bg = if (pressed) theme.ui_pressed else theme.ui_hover;
                 shell.drawRect(@intFromFloat(bx), @intFromFloat(by), @intFromFloat(bw), @intFromFloat(bh), bg);
             }
-            shell.drawText(label, x, y, if (hovered) theme.foreground else theme.comment_color);
+            shell.drawText(label, x, y, if (hovered) theme.ui_text else theme.ui_text_inactive);
             x += text_w + 16 * scale;
         }
     }

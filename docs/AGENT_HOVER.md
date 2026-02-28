@@ -10,7 +10,10 @@ This file is intentionally high-level. Detailed progress and research live in:
 See `docs/INDEX.md` for the full doc map.
 
 High-level state:
-- Font rendering strategy is the current focus: close the quality gap vs kitty/ghostty (especially for IosevkaTerm).
+- Terminal FFI Bridge base is landed and under active extension (`app_architecture/terminal/ffi_bridge_todo.yaml`).
+- Config subsystem contract is established, with hardened parser and live reload (`app_architecture/config_todo.yaml`, `app_architecture/CONFIG.md`).
+- Editor multi-cursor editing is maturing, recently gaining caret preservation across edits and routing via Lua keybinds (`app_architecture/editor/editor_widget_todo.yaml`).
+- Font rendering strategy remains an ongoing focus: close the quality gap vs kitty/ghostty (especially for IosevkaTerm).
   - Plan/todo: `app_architecture/ui/font_rendering_todo.yaml`
   - Architecture doc: `app_architecture/ui/font_rendering_architecture.md`
   - Primary Zide files: `src/ui/terminal_font.zig`, `src/ui/renderer/gl_backend.zig`
@@ -24,6 +27,9 @@ High-level state:
 - Logs are authoritative for debugging; the agent owns `./.zide.lua` to tune log tags without permission.
 
 Recent notable additions:
+- Terminal FFI bridge (`src/terminal/ffi/bridge.zig`) + Python ctypes smoke host.
+- Config reload dynamically applies font rendering knobs and re-sizes terminal.
+- Editor carets preserved during edits + vertical expansion shortcuts (`editor_add_caret_up/down`).
 - Linear text pipeline: coverage atlas (R8) + premultiplied blending + linear offscreen rendering + explicit present conversion.
 - Luminance-based linear correction (ghostty-style), with per-glyph background plumbed for terminal and editor.
 - FreeType hinting/autohint knobs moved into Lua config (`assets/config/init.lua`).

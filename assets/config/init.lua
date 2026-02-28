@@ -25,43 +25,120 @@ return {
 
     -- Theme configuration.
     -- Colors accept hex strings (#RRGGBB or #RRGGBBAA) or tables { r = 0, g = 0, b = 0, a = 255 }.
-    -- Nordic palette defaults (from nordic.nvim).
+    
+    -- Tokyo Night Moon palette defaults.
+    -- theme = {
+    --     palette = {
+    --         background = "#222436",
+    --         foreground = "#c8d3f5",
+    --         selection = "#2d3f76",
+    --         cursor = "#c8d3f5",
+    --         link = "#4fd6be",
+    --         line_number = "#545c7e",
+    --         line_number_bg = "#1e2030",
+    --         current_line = "#2f334d",
+    --         ui_bar_bg = "#1e2030",
+    --         ui_panel_bg = "#191B29",
+    --         ui_panel_overlay = "#191B29EB",
+    --         ui_hover = "#2f334d",
+    --         ui_pressed = "#444a73",
+    --         ui_tab_inactive_bg = "#222436",
+    --         ui_accent = "#82aaff",
+    --         ui_border = "#3b4261",
+    --         ui_modified = "#ffc777",
+    --         ui_text = "#c8d3f5",
+    --         ui_text_inactive = "#828bb8",
+    --         color0 = "#1b1d2b",
+    --         color1 = "#ff757f",
+    --         color2 = "#c3e88d",
+    --         color3 = "#ffc777",
+    --         color4 = "#82aaff",
+    --         color5 = "#c099ff",
+    --         color6 = "#86e1fc",
+    --         color7 = "#828bb8",
+    --         color8 = "#444a73",
+    --         color9 = "#ff8d94",
+    --         color10 = "#c7fb6d",
+    --         color11 = "#ffd8ab",
+    --         color12 = "#9ab8ff",
+    --         color13 = "#caabff",
+    --         color14 = "#b2ebff",
+    --         color15 = "#c8d3f5",
+    --     },
+    --     syntax = {
+    --         comment = "#636da6",
+    --         string = "#c3e88d",
+    --         keyword = "#c099ff",
+    --         number = "#ff966c",
+    --         ["function"] = "#82aaff",
+    --         variable = "#c8d3f5",
+    --         type_name = "#86e1fc",
+    --         operator = "#89ddff",
+    --         builtin = "#86e1fc",
+    --         punctuation = "#89ddff",
+    --         constant = "#ff966c",
+    --         attribute = "#c099ff",
+    --         namespace = "#82aaff",
+    --         label = "#ff966c",
+    --         error = "#ff757f",
+    --     },
+    -- },
+
+    -- Tokyo Night Day palette defaults.
     theme = {
         palette = {
-            background = "#242933",
-            foreground = "#BBC3D4",
-            selection = "#3B4252",
-            cursor = "#D8DEE9",
-            link = "#81A1C1",
-            line_number = "#4C566A",
-            line_number_bg = "#1E222A",
-            current_line = "#191D24",
-            ui_bar_bg = "#1E1F29",
-            ui_panel_bg = "#181921",
-            ui_panel_overlay = "#181921EB",
-            ui_hover = "#3B4252",
-            ui_pressed = "#3A3C4E",
-            ui_tab_inactive_bg = "#232430",
-            ui_accent = "#BE9DB8",
-            ui_border = "#434C5E",
-            ui_modified = "#D08770",
+            background = "#e1e2e7",
+            foreground = "#3760bf",
+            selection = "#b7c1e3",
+            cursor = "#3760bf",
+            link = "#387068",
+            line_number = "#a1a6c5",
+            line_number_bg = "#d0d5e3",
+            current_line = "#c4c8da",
+            ui_bar_bg = "#d0d5e3",
+            ui_panel_bg = "#c4c8da",
+            ui_panel_overlay = "#c4c8daEB",
+            ui_hover = "#b7c1e3",
+            ui_pressed = "#a1a6c5",
+            ui_tab_inactive_bg = "#e1e2e7",
+            ui_accent = "#2e7de9",
+            ui_border = "#8990b3",
+            ui_modified = "#8c6c3e",
+            ui_text = "#3760bf",
+            ui_text_inactive = "#6172b0",
+            color0 = "#b4b5b9",
+            color1 = "#f52a65",
+            color2 = "#587539",
+            color3 = "#8c6c3e",
+            color4 = "#2e7de9",
+            color5 = "#9854f1",
+            color6 = "#007197",
+            color7 = "#6172b0",
+            color8 = "#a1a6c5",
+            color9 = "#ff4774",
+            color10 = "#5c8524",
+            color11 = "#a27629",
+            color12 = "#358aff",
+            color13 = "#a463ff",
+            color14 = "#007ea8",
+            color15 = "#3760bf",
         },
         syntax = {
-            comment = "#4C566A",
-            string = "#A3BE8C",
-            keyword = "#D08770",
-            number = "#BE9DB8",
-            ["function"] = "#88C0D0",
-            variable = "#BBC3D4",
-            type_name = "#EBCB8B",
-            operator = "#BBC3D4",
-            builtin = "#5E81AC",
-            punctuation = "#60728A",
-            constant = "#BE9DB8",
-            attribute = "#8FBCBB",
-            namespace = "#E7C173",
-            label = "#D08770",
-            error = "#C5727A",
+            comment = "#848cb5",
+            string = "#587539",
+            keyword = "#9854f1",
+            number = "#b15c00",
+            ["function"] = "#2e7de9",
+            variable = "#3760bf",
+            type_name = "#007197",
+            operator = "#007197",
+            builtin = "#007197",
+            punctuation = "#007197",
+            constant = "#b15c00",
+            attribute = "#9854f1",
+            namespace = "#2e7de9",
+            label = "#b15c00",
+            error = "#f52a65",
         },
     },
 
@@ -69,6 +146,10 @@ return {
     -- Current runtime uses one effective font stack across app/editor/terminal.
     -- If multiple font blocks are set, precedence is: terminal.font > editor.font > app.font.
     app = {
+        -- App-specific theme override (affects UI chrome: tabs, status bar, side nav).
+        -- theme = {
+        --     palette = { background = "#1E222A" },
+        -- },
         font = {
             path = "assets/fonts/JetBrainsMonoNerdFont-Regular.ttf",
             size = 16,
@@ -101,6 +182,10 @@ return {
 
     -- Editor configuration.
     editor = {
+        -- Editor-specific theme override.
+        -- theme = {
+        --     palette = { background = "#2E3440" },
+        -- },
         -- Soft wrap long lines.
         wrap = false,
         -- Ligature strategy (matches terminal semantics):
@@ -126,6 +211,11 @@ return {
 
     -- Terminal configuration.
     terminal = {
+        -- Terminal-specific theme override.
+        -- theme = {
+        --     palette = { background = "#000000" },
+        -- },
+
         -- Optional override. Current runtime still resolves one shared effective font
         -- stack using precedence: terminal.font > editor.font > app.font.
         -- font = { path = "/usr/share/fonts/...", size = 16 },

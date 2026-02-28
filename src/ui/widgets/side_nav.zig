@@ -70,7 +70,7 @@ pub const SideNav = struct {
                 shell.drawRect(0, @intFromFloat(by), 2, @intFromFloat(bh), theme.ui_accent);
             }
 
-            const icon_color = if (item.active or hovered) theme.foreground else theme.comment_color;
+            const icon_color = if (item.active or hovered) theme.ui_text else theme.ui_text_inactive;
             const icon_text_x = icon_x + icon_text_offset;
             const icon_text_y = icon_y + (icon_size - icon_h_unit) / 2;
             shell.drawIconText(item.icon, icon_text_x, icon_text_y, icon_color);
@@ -81,7 +81,7 @@ pub const SideNav = struct {
                 const text_h = badge_h_unit;
                 const badge_x = icon_x + icon_text_offset + 2;
                 const badge_y = icon_y + (icon_size - text_h) / 2 + 1;
-                shell.drawTextSized(text, badge_x, badge_y, badge_size, Color.fg);
+                shell.drawTextSized(text, badge_x, badge_y, badge_size, theme.ui_text);
             }
 
             icon_y += icon_size + spacing;
@@ -106,7 +106,7 @@ pub const SideNav = struct {
                 shell.drawRect(0, @intFromFloat(by), 2, @intFromFloat(bh), theme.ui_accent);
             }
 
-            const icon_color = if (item.active or hovered) theme.foreground else theme.comment_color;
+            const icon_color = if (item.active or hovered) theme.ui_text else theme.ui_text_inactive;
             const icon_text_x = icon_x + icon_text_offset;
             const icon_text_y = bottom_y + (icon_size - icon_h_unit) / 2;
             shell.drawIconText(item.icon, icon_text_x, icon_text_y, icon_color);

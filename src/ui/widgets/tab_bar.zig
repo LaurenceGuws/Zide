@@ -102,7 +102,7 @@ pub const TabBar = struct {
                 tab.title,
                 title_x + prefix_width,
                 title_y,
-                if (is_active) theme.foreground else theme.comment_color,
+                if (is_active) theme.ui_text else theme.ui_text_inactive,
                 title_max,
             );
             const in_tab = mouse.x >= cursor_x and mouse.x <= cursor_x + self.tab_width and

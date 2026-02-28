@@ -75,8 +75,11 @@ This doc uses these status labels:
 
 | Lua path | Meaning | Runtime consumer | Status | Notes |
 |---|---|---|---|---|
-| `theme.palette.*` | Shared app/editor/terminal palette colors | `src/main.zig`, renderer, editor/terminal/widgets | `reloadable` | Supports hex colors or `{ r, g, b, a }`. |
-| `theme.syntax.*` | Editor syntax colors | `src/ui/widgets/editor_widget_draw.zig` | `reloadable` | Used by token coloring. |
+| `theme.palette.*` | Global/fallback palette colors | `src/main.zig`, renderer, editor/terminal/widgets | `reloadable` | Supports hex colors or `{ r, g, b, a }`. |
+| `theme.syntax.*` | Global/fallback syntax colors | `src/ui/widgets/editor_widget_draw.zig` | `reloadable` | Used by token coloring. |
+| `app.theme.*` | App-specific theme override | `src/main.zig`, UI chrome widgets | `reloadable` | Overrides global `theme` for UI elements (tabs, status, etc). |
+| `editor.theme.*` | Editor-specific theme override | `src/main.zig`, editor widgets | `reloadable` | Overrides global `theme` for the text editor pane. |
+| `terminal.theme.*` | Terminal-specific theme override | `src/main.zig`, terminal widgets | `reloadable` | Overrides global `theme` for the terminal pane. |
 | flat `theme.<field>` | Alias form for palette/syntax fields | `src/config/lua_config.zig` | `legacy` | Nested `palette` / `syntax` is the preferred shape. |
 | alias syntax keys | `comment_color`, `builtin_color`, `error_token` | `src/config/lua_config.zig` | `legacy` | Accepted alongside `comment`, `builtin`, `error`. |
 
