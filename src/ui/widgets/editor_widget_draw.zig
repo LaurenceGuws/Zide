@@ -49,6 +49,71 @@ fn addCursorOp(list: *EditorDrawList, x: f32, y: f32, h: f32, color: anytype) bo
     return true;
 }
 
+fn drawExtraCarets(
+    widget: anytype,
+    r: anytype,
+    line_idx: usize,
+    line_text: []const u8,
+    cluster_slice: ?[]const u32,
+    seg_start_col: usize,
+    seg_end_col: usize,
+    line_width: usize,
+    seg_y: f32,
+    text_start_x: f32,
+) void {
+    for (widget.editor.selections.items) |sel| {
+        const caret = sel.normalized();
+        if (!caret.isEmpty()) continue;
+        if (caret.start.offset == widget.editor.cursor.offset) continue;
+        if (caret.start.line != line_idx) continue;
+        const caret_col = selection_mod.visualColumnForByteIndex(line_text, caret.start.col, cluster_slice);
+        const in_segment = if (seg_start_col == seg_end_col)
+            caret_col == seg_start_col
+        else if (caret_col == line_width and seg_end_col == line_width)
+            caret_col >= seg_start_col and caret_col <= seg_end_col
+        else
+            caret_col >= seg_start_col and caret_col < seg_end_col;
+        if (!in_segment) continue;
+        const local_col = caret_col - seg_start_col;
+        const cursor_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.char_width;
+        r.drawCursor(cursor_x, seg_y, .line);
+    }
+}
+
+fn addExtraCaretOps(
+    list: *EditorDrawList,
+    widget: anytype,
+    r: anytype,
+    line_idx: usize,
+    line_text: []const u8,
+    cluster_slice: ?[]const u32,
+    seg_start_col: usize,
+    seg_end_col: usize,
+    line_width: usize,
+    seg_y: f32,
+    text_start_x: f32,
+) bool {
+    var ok = true;
+    for (widget.editor.selections.items) |sel| {
+        const caret = sel.normalized();
+        if (!caret.isEmpty()) continue;
+        if (caret.start.offset == widget.editor.cursor.offset) continue;
+        if (caret.start.line != line_idx) continue;
+        const caret_col = selection_mod.visualColumnForByteIndex(line_text, caret.start.col, cluster_slice);
+        const in_segment = if (seg_start_col == seg_end_col)
+            caret_col == seg_start_col
+        else if (caret_col == line_width and seg_end_col == line_width)
+            caret_col >= seg_start_col and caret_col <= seg_end_col
+        else
+            caret_col >= seg_start_col and caret_col < seg_end_col;
+        if (!in_segment) continue;
+        const local_col = caret_col - seg_start_col;
+        const cursor_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.char_width;
+        ok = ok and addCursorOp(list, cursor_x, seg_y, r.char_height, r.theme.cursor);
+    }
+    return ok;
+}
+
 fn selectionStateHash(editor: anytype) u64 {
     var h: u64 = 1469598103934665603;
     h ^= @as(u64, editor.cursor.offset);
@@ -730,6 +795,7 @@ pub fn draw(
                 cursor_draw_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.char_width;
                 cursor_draw_y = seg_y;
             }
+            drawExtraCarets(widget, r, line_idx, line_text, cluster_slice, seg_start_col, seg_end_col, line_width, seg_y, text_start_x);
             visual_row += 1;
         }
     }
@@ -1035,6 +1101,19 @@ pub fn drawCached(
                         const cursor_draw_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.char_width;
                         list_ok = list_ok and addCursorOp(draw_list, cursor_draw_x, seg_y, r.char_height, r.theme.cursor);
                     }
+                    list_ok = list_ok and addExtraCaretOps(
+                        draw_list,
+                        widget,
+                        r,
+                        line_idx,
+                        line_text,
+                        cluster_slice,
+                        seg_start_col,
+                        seg_end_col,
+                        line_width,
+                        seg_y,
+                        text_start_x,
+                    );
 
                     if (list_ok) {
                         flushDrawList(draw_list, r);
@@ -1137,6 +1216,7 @@ pub fn drawCached(
                             const cursor_draw_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.char_width;
                             r.drawCursor(cursor_draw_x, seg_y, .line);
                         }
+                        drawExtraCarets(widget, r, line_idx, line_text, cluster_slice, seg_start_col, seg_end_col, line_width, seg_y, text_start_x);
                     }
 
                     r.endClip();
