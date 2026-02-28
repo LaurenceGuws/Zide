@@ -79,6 +79,27 @@ pub const Rope = struct {
         return rope;
     }
 
+    pub fn initBorrowedOriginal(allocator: std.mem.Allocator, original: []const u8) !*Rope {
+        var rope = try allocator.create(Rope);
+        errdefer allocator.destroy(rope);
+        rope.* = .{
+            .allocator = allocator,
+            .root = null,
+            .original = original,
+            .owns_original = false,
+            .add = .{},
+            .undo_stack = .{},
+            .redo_stack = .{},
+            .history_suspended = false,
+            .group_depth = 0,
+            .group_dirty = false,
+        };
+        if (original.len > 0) {
+            rope.root = try rope.createLeafNode(.original, 0, original.len);
+        }
+        return rope;
+    }
+
     pub fn deinit(self: *Rope) void {
         if (self.owns_original) {
             self.allocator.free(self.original);
@@ -910,4 +931,17 @@ test "rope owned original init avoids duplicate copy" {
     const text = try rope.readRangeAlloc(0, rope.totalLen());
     defer allocator.free(text);
     try std.testing.expectEqualStrings("owned", text);
+}
+
+test "rope borrowed original init does not take ownership" {
+    const allocator = std.testing.allocator;
+    const original = "borrowed";
+    var rope = try Rope.initBorrowedOriginal(allocator, original);
+    defer rope.deinit();
+
+    try std.testing.expect(!rope.owns_original);
+    try std.testing.expectEqual(@intFromPtr(original.ptr), @intFromPtr(rope.original.ptr));
+    const text = try rope.readRangeAlloc(0, rope.totalLen());
+    defer allocator.free(text);
+    try std.testing.expectEqualStrings("borrowed", text);
 }
