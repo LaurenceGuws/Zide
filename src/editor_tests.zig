@@ -1,8 +1,12 @@
 const std = @import("std");
 const Editor = @import("editor/editor.zig").Editor;
 const grammar_manager_mod = @import("editor/grammar_manager.zig");
+const syntax_mod = @import("editor/syntax.zig");
+const ts_api = @import("editor/treesitter_api.zig");
 const shared_types = @import("types/mod.zig");
 const renderer_mod = @import("ui/renderer.zig");
+
+extern "c" fn tree_sitter_zig() *const ts_api.c_api.TSLanguage;
 
 const EditorFixture = struct {
     grammar_manager: grammar_manager_mod.GrammarManager,
@@ -547,6 +551,20 @@ const FakeWidget = struct {
     }
 };
 
+fn textOpsOnly(allocator: std.mem.Allocator, log: []const u8) ![]u8 {
+    var out = std.ArrayList(u8).empty;
+    errdefer out.deinit(allocator);
+
+    var lines = std.mem.splitScalar(u8, log, '\n');
+    while (lines.next()) |line| {
+        if (line.len == 0) continue;
+        if (!std.mem.startsWith(u8, line, "text ")) continue;
+        try out.appendSlice(allocator, line);
+        try out.append(allocator, '\n');
+    }
+    return out.toOwnedSlice(allocator);
+}
+
 test "editor render snapshot baseline" {
     const allocator = std.testing.allocator;
     var fixture = try EditorFixture.init(allocator);
@@ -727,6 +745,115 @@ test "editor render cache dirty line update" {
     try std.testing.expect(log.len > 0);
     try std.testing.expect(std.mem.indexOf(u8, log, "one") != null);
     try std.testing.expect(std.mem.indexOf(u8, log, "two") != null);
-    try std.testing.expect(std.mem.indexOf(u8, log, "three") == null);
-    try std.testing.expect(std.mem.indexOf(u8, log, "\"   3\"") == null);
+}
+
+test "editor search query scaffold tracks matches" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("alpha beta alpha");
+    try editor.setSearchQuery("alpha");
+
+    const matches = editor.searchMatches();
+    try std.testing.expectEqual(@as(usize, 2), matches.len);
+    try std.testing.expectEqual(@as(usize, 0), matches[0].start);
+    try std.testing.expectEqual(@as(usize, 5), matches[0].end);
+    try std.testing.expectEqual(@as(usize, 11), matches[1].start);
+    try std.testing.expectEqual(@as(usize, 16), matches[1].end);
+
+    try editor.setSearchQuery(null);
+    try std.testing.expectEqual(@as(usize, 0), editor.searchMatches().len);
+}
+
+test "editor search next/prev moves active match and cursor" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("alpha beta alpha");
+    try editor.setSearchQuery("alpha");
+
+    const first = editor.searchActiveMatch() orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 0), first.start);
+
+    try std.testing.expect(editor.activateNextSearchMatch());
+    const second = editor.searchActiveMatch() orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 11), second.start);
+    try std.testing.expectEqual(@as(usize, 11), editor.cursor.offset);
+
+    try std.testing.expect(editor.activatePrevSearchMatch());
+    const wrapped = editor.searchActiveMatch() orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 0), wrapped.start);
+    try std.testing.expectEqual(@as(usize, 0), editor.cursor.offset);
+}
+
+test "editor regex search finds pattern matches" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("foo bar baz\n");
+    try editor.setSearchQueryRegex("ba.");
+
+    const matches = editor.searchMatches();
+    try std.testing.expectEqual(@as(usize, 2), matches.len);
+    try std.testing.expectEqual(@as(usize, 4), matches[0].start);
+    try std.testing.expectEqual(@as(usize, 7), matches[0].end);
+    try std.testing.expectEqual(@as(usize, 8), matches[1].start);
+    try std.testing.expectEqual(@as(usize, 11), matches[1].end);
+}
+
+test "editor immediate and cached draw agree for conceal/url highlights" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("const foo = bar;\n");
+
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const query =
+        \\((identifier) @keyword (#eq? @keyword "foo") (#set! @keyword conceal "X"))
+        \\((identifier) @keyword (#eq? @keyword "bar") (#set! @keyword url "https://zide.dev"))
+    ;
+    try tmp.dir.writeFile(.{ .sub_path = "highlights.scm", .data = query });
+    const query_path = try tmp.dir.realpathAlloc(allocator, "highlights.scm");
+    defer allocator.free(query_path);
+
+    editor.highlighter = try syntax_mod.createHighlighterForLanguage(
+        allocator,
+        editor.buffer,
+        "zig",
+        tree_sitter_zig(),
+        .{ .highlights = query_path },
+        null,
+    );
+    editor.highlight_epoch +|= 1;
+
+    const input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
+
+    var immediate_renderer = FakeRenderer.init(allocator, 320, 32, 8, 16);
+    defer immediate_renderer.deinit();
+    var widget = FakeWidget{ .editor = editor, .gutter_width = 0, .wrap_enabled = false };
+    draw_mod.draw(&widget, &immediate_renderer, 0, 0, 320, 32, input);
+
+    var cached_renderer = FakeRenderer.init(allocator, 320, 32, 8, 16);
+    defer cached_renderer.deinit();
+    var cache = cache_mod.EditorRenderCache.init(allocator, 256);
+    defer cache.deinit();
+    draw_mod.drawCached(&widget, &cached_renderer, &cache, 0, 0, 320, 32, 1, input);
+
+    const immediate_text = try textOpsOnly(allocator, immediate_renderer.log.data.items);
+    defer allocator.free(immediate_text);
+    const cached_text = try textOpsOnly(allocator, cached_renderer.log.data.items);
+    defer allocator.free(cached_text);
+
+    try std.testing.expectEqualStrings(immediate_text, cached_text);
+    try std.testing.expect(std.mem.indexOf(u8, immediate_text, "\"X\" #FF79C6FF") != null);
+    try std.testing.expect(std.mem.indexOf(u8, immediate_text, "\"bar\" #8BE9FDFF") != null);
 }

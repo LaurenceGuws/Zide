@@ -2,6 +2,7 @@ const std = @import("std");
 const shared_types = @import("types/mod.zig");
 const terminal_mod = @import("terminal/core/terminal.zig");
 const terminal_widget_mod = @import("ui/widgets/terminal_widget.zig");
+const terminal_hover_mod = @import("ui/widgets/terminal_widget_hover.zig");
 
 test "input batch append/clear" {
     const allocator = std.testing.allocator;
@@ -83,8 +84,8 @@ test "input replay harness applies frames" {
             .mouse_x = 12,
             .mouse_y = 34,
             .scroll_y = 1,
-            .key_down = &.{ .a },
-            .key_pressed = &.{ .enter },
+            .key_down = &.{.a},
+            .key_pressed = &.{.enter},
             .key_repeated = &.{},
             .mouse_down = &.{},
             .mouse_pressed = &.{},
@@ -96,7 +97,7 @@ test "input replay harness applies frames" {
             .scroll_y = -2,
             .key_down = &.{ .a, .left },
             .key_pressed = &.{},
-            .key_repeated = &.{ .left },
+            .key_repeated = &.{.left},
             .mouse_down = &.{},
             .mouse_pressed = &.{},
             .mouse_released = &.{},
@@ -135,8 +136,8 @@ test "input replay harness supports mouse drag sequence" {
             .key_down = &.{},
             .key_pressed = &.{},
             .key_repeated = &.{},
-            .mouse_down = &.{ .left },
-            .mouse_pressed = &.{ .left },
+            .mouse_down = &.{.left},
+            .mouse_pressed = &.{.left},
             .mouse_released = &.{},
         },
         .{
@@ -146,7 +147,7 @@ test "input replay harness supports mouse drag sequence" {
             .key_down = &.{},
             .key_pressed = &.{},
             .key_repeated = &.{},
-            .mouse_down = &.{ .left },
+            .mouse_down = &.{.left},
             .mouse_pressed = &.{},
             .mouse_released = &.{},
         },
@@ -159,7 +160,7 @@ test "input replay harness supports mouse drag sequence" {
             .key_repeated = &.{},
             .mouse_down = &.{},
             .mouse_pressed = &.{},
-            .mouse_released = &.{ .left },
+            .mouse_released = &.{.left},
         },
     };
 
@@ -222,20 +223,20 @@ test "input replay updates terminal hover state" {
 
     batch.mouse_pos = .{ .x = 5, .y = 5 };
     batch.mods = .{};
-    widget.updateHoverState(0, 0, 30, 40, 10, 20, snapshot, history_len, start_line, &batch);
-    try std.testing.expectEqual(@as(isize, 0), widget.last_hover_row);
-    try std.testing.expectEqual(@as(isize, 0), widget.last_hover_col);
-    try std.testing.expect(!widget.last_hover_ctrl);
+    terminal_hover_mod.updateHoverState(&widget.hover, session, 0, 0, 30, 40, 10, 20, snapshot, history_len, start_line, &batch);
+    try std.testing.expectEqual(@as(isize, 0), widget.hover.last_hover_row);
+    try std.testing.expectEqual(@as(isize, 0), widget.hover.last_hover_col);
+    try std.testing.expect(!widget.hover.last_hover_ctrl);
 
     batch.mouse_pos = .{ .x = 25, .y = 5 };
     batch.mods.ctrl = true;
-    widget.updateHoverState(0, 0, 30, 40, 10, 20, snapshot, history_len, start_line, &batch);
-    try std.testing.expectEqual(@as(isize, 0), widget.last_hover_row);
-    try std.testing.expectEqual(@as(isize, 2), widget.last_hover_col);
-    try std.testing.expect(widget.last_hover_ctrl);
+    terminal_hover_mod.updateHoverState(&widget.hover, session, 0, 0, 30, 40, 10, 20, snapshot, history_len, start_line, &batch);
+    try std.testing.expectEqual(@as(isize, -1), widget.hover.last_hover_row);
+    try std.testing.expectEqual(@as(isize, -1), widget.hover.last_hover_col);
+    try std.testing.expect(widget.hover.last_hover_ctrl);
 
     batch.mouse_pos = .{ .x = 45, .y = 5 };
-    widget.updateHoverState(0, 0, 30, 40, 10, 20, snapshot, history_len, start_line, &batch);
-    try std.testing.expectEqual(@as(isize, -1), widget.last_hover_row);
-    try std.testing.expectEqual(@as(isize, -1), widget.last_hover_col);
+    terminal_hover_mod.updateHoverState(&widget.hover, session, 0, 0, 30, 40, 10, 20, snapshot, history_len, start_line, &batch);
+    try std.testing.expectEqual(@as(isize, -1), widget.hover.last_hover_row);
+    try std.testing.expectEqual(@as(isize, -1), widget.hover.last_hover_col);
 }

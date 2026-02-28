@@ -153,11 +153,15 @@ editor_widget_todo:
         - reference_repos/editors/helix/helix-core/src/wrap.rs
 
     - id: ED-06
-      status: todo
+      status: in_progress
       title: "Search/replace with regex + Find-in-files"
       notes:
         - "Incremental search and replace across buffer."
         - "Regex search with highlighting and replace preview."
+        - "Search query scaffold landed in Editor state (query + byte-range matches + epoch invalidation hooks)."
+        - "Editor draw path now overlays search match ranges in both immediate and cached pipelines."
+        - "Added next/prev active search match navigation with cursor jumps to active range start."
+        - "Regex mode scaffold added (`setSearchQueryRegex`) using minimal regex subset parity with tree-sitter predicate matching."
       references:
         - reference_repos/editors/neovim/src/nvim/search.c
         - reference_repos/editors/lapce/lapce-app/src/find.rs
@@ -186,6 +190,7 @@ editor_widget_todo:
         - "Wrap line counts are primed in update with a per-frame line budget when wrap is enabled."
         - "EditorDrawList command buffer integrated into cached draw path."
         - "Render cache regression test added for dirty-line updates."
+        - "Highlight token ordering comparator is now shared between immediate and cached paths to keep draw ordering deterministic for equal-range captures."
         - "Cache eviction now prunes least-recent entries instead of clearing everything."
         - "Scrollbars route through draw list when cached draw is active."
         - "Non-cached scrollbars now use the draw list path."

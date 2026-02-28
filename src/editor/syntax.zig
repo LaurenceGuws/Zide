@@ -44,6 +44,25 @@ pub const HighlightToken = struct {
     conceal_lines: bool,
 };
 
+pub fn highlightTokenLessThanStable(a: HighlightToken, b: HighlightToken) bool {
+    if (a.start != b.start) return a.start < b.start;
+    if (a.priority != b.priority) return a.priority < b.priority;
+    if (a.end != b.end) return a.end < b.end;
+    if (a.kind != b.kind) return @intFromEnum(a.kind) < @intFromEnum(b.kind);
+    if (a.conceal_lines != b.conceal_lines) return !a.conceal_lines and b.conceal_lines;
+    if (optionalSliceLessThan(a.conceal, b.conceal)) return true;
+    if (optionalSliceLessThan(b.conceal, a.conceal)) return false;
+    if (optionalSliceLessThan(a.url, b.url)) return true;
+    if (optionalSliceLessThan(b.url, a.url)) return false;
+    return false;
+}
+
+fn optionalSliceLessThan(a: ?[]const u8, b: ?[]const u8) bool {
+    if (a == null) return b != null;
+    if (b == null) return false;
+    return std.mem.order(u8, a.?, b.?) == .lt;
+}
+
 const InjectedLanguage = struct {
     language_name: []u8,
     parser: *c.TSParser,
@@ -2131,6 +2150,40 @@ test "split highlight overlaps by priority" {
     try std.testing.expectEqual(@as(usize, 9), split[4].start);
     try std.testing.expectEqual(@as(usize, 10), split[4].end);
     try std.testing.expectEqual(TokenKind.string, split[4].kind);
+}
+
+test "highlight token comparator is deterministic across metadata" {
+    const allocator = std.testing.allocator;
+    var tokens = try allocator.alloc(HighlightToken, 5);
+    defer allocator.free(tokens);
+
+    tokens[0] = .{ .start = 10, .end = 20, .kind = .link, .priority = 50, .conceal = null, .url = "https://z.dev", .conceal_lines = false };
+    tokens[1] = .{ .start = 10, .end = 20, .kind = .link, .priority = 50, .conceal = null, .url = "https://a.dev", .conceal_lines = false };
+    tokens[2] = .{ .start = 10, .end = 20, .kind = .keyword, .priority = 50, .conceal = null, .url = null, .conceal_lines = false };
+    tokens[3] = .{ .start = 10, .end = 20, .kind = .keyword, .priority = 50, .conceal = "*", .url = null, .conceal_lines = false };
+    tokens[4] = .{ .start = 10, .end = 20, .kind = .keyword, .priority = 50, .conceal = null, .url = null, .conceal_lines = true };
+
+    std.sort.heap(HighlightToken, tokens, {}, struct {
+        fn lessThan(_: void, a: HighlightToken, b: HighlightToken) bool {
+            return highlightTokenLessThanStable(a, b);
+        }
+    }.lessThan);
+
+    try std.testing.expectEqual(TokenKind.keyword, tokens[0].kind);
+    try std.testing.expectEqual(false, tokens[0].conceal_lines);
+    try std.testing.expectEqual(null, tokens[0].conceal);
+
+    try std.testing.expectEqual(TokenKind.keyword, tokens[1].kind);
+    try std.testing.expectEqualStrings("*", tokens[1].conceal.?);
+
+    try std.testing.expectEqual(TokenKind.keyword, tokens[2].kind);
+    try std.testing.expectEqual(true, tokens[2].conceal_lines);
+
+    try std.testing.expectEqual(TokenKind.link, tokens[3].kind);
+    try std.testing.expectEqualStrings("https://a.dev", tokens[3].url.?);
+
+    try std.testing.expectEqual(TokenKind.link, tokens[4].kind);
+    try std.testing.expectEqualStrings("https://z.dev", tokens[4].url.?);
 }
 
 test "match predicate filters captures" {

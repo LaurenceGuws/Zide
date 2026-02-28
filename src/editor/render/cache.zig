@@ -4,6 +4,7 @@ const draw_list_mod = @import("draw_list.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
 const SyntaxHighlighter = syntax_mod.SyntaxHighlighter;
+const TokenKind = syntax_mod.TokenKind;
 
 pub const EditorRenderCache = struct {
     allocator: std.mem.Allocator,
@@ -471,9 +472,26 @@ fn sortTokens(tokens: []HighlightToken) void {
     if (tokens.len <= 1) return;
     std.sort.heap(HighlightToken, tokens, {}, struct {
         fn lessThan(_: void, a: HighlightToken, b: HighlightToken) bool {
-            if (a.start != b.start) return a.start < b.start;
-            if (a.priority != b.priority) return a.priority < b.priority;
-            return a.end < b.end;
+            return syntax_mod.highlightTokenLessThanStable(a, b);
         }
     }.lessThan);
+}
+
+test "sortTokens uses stable highlight ordering" {
+    const allocator = std.testing.allocator;
+    const tokens = [_]HighlightToken{
+        .{ .start = 0, .end = 4, .kind = .link, .priority = 10, .conceal = null, .url = "https://zide.dev", .conceal_lines = false },
+        .{ .start = 0, .end = 4, .kind = .link, .priority = 10, .conceal = null, .url = "https://a.dev", .conceal_lines = false },
+        .{ .start = 0, .end = 4, .kind = .string, .priority = 10, .conceal = null, .url = null, .conceal_lines = false },
+        .{ .start = 0, .end = 4, .kind = .link, .priority = 10, .conceal = "*", .url = null, .conceal_lines = false },
+    };
+    const owned = try allocator.dupe(HighlightToken, &tokens);
+    defer allocator.free(owned);
+
+    sortTokens(owned);
+
+    try std.testing.expectEqual(TokenKind.string, owned[0].kind);
+    try std.testing.expectEqualStrings("https://a.dev", owned[1].url.?);
+    try std.testing.expectEqualStrings("https://zide.dev", owned[2].url.?);
+    try std.testing.expectEqualStrings("*", owned[3].conceal.?);
 }

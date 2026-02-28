@@ -132,6 +132,8 @@ fn selectionStateHash(editor: anytype) u64 {
         h ^= @as(u64, sel.end.offset);
         h *%= 1099511628211;
     }
+    h ^= editor.search_epoch;
+    h *%= 1099511628211;
     return h;
 }
 
@@ -320,6 +322,56 @@ fn buildSelectionByteRanges(
         }
         out[j] = key;
     }
+    var merged: usize = 0;
+    var k: usize = 0;
+    while (k < count) : (k += 1) {
+        const r = out[k];
+        if (merged == 0) {
+            out[0] = r;
+            merged = 1;
+            continue;
+        }
+        const last = &out[merged - 1];
+        if (r.start <= last.end) {
+            if (r.end > last.end) last.end = r.end;
+        } else {
+            out[merged] = r;
+            merged += 1;
+        }
+    }
+    return merged;
+}
+
+fn collectSearchByteRanges(
+    seg_abs_start: usize,
+    seg_abs_end: usize,
+    matches: anytype,
+    out: *[16]ByteRange,
+) usize {
+    if (seg_abs_end <= seg_abs_start) return 0;
+    var count: usize = 0;
+    for (matches) |m| {
+        if (m.end <= seg_abs_start) continue;
+        if (m.start >= seg_abs_end) break;
+        const s = @max(seg_abs_start, m.start);
+        const e = @min(seg_abs_end, m.end);
+        if (e <= s) continue;
+        if (count < out.len) {
+            out[count] = .{ .start = s, .end = e };
+            count += 1;
+        }
+    }
+
+    var i: usize = 1;
+    while (i < count) : (i += 1) {
+        const key = out[i];
+        var j: usize = i;
+        while (j > 0 and out[j - 1].start > key.start) : (j -= 1) {
+            out[j] = out[j - 1];
+        }
+        out[j] = key;
+    }
+
     var merged: usize = 0;
     var k: usize = 0;
     while (k < count) : (k += 1) {
@@ -740,6 +792,31 @@ pub fn draw(
                 }
             }
 
+            var search_ranges: [16]ByteRange = undefined;
+            const search_count = collectSearchByteRanges(
+                line_start + seg_start_byte,
+                line_start + seg_end_byte,
+                widget.editor.searchMatches(),
+                &search_ranges,
+            );
+            if (search_count > 0) {
+                const search_band = selectionBandForRowBand(seg_band);
+                for (search_ranges[0..search_count]) |match| {
+                    const local_start = match.start - line_start;
+                    const local_end = match.end - line_start;
+                    const sx = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_start, text_start_x);
+                    const ex = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_end, text_start_x);
+                    if (ex <= sx) continue;
+                    r.drawRect(
+                        @intFromFloat(sx),
+                        search_band.y_i,
+                        @intFromFloat(ex - sx),
+                        search_band.h_i,
+                        r.theme.selection,
+                    );
+                }
+            }
+
             const base_bg = if (is_current) r.theme.current_line else r.theme.background;
             var sel_bytes: [8]ByteRange = undefined;
             const sel_count = if (range_count > 0)
@@ -1039,6 +1116,25 @@ pub fn drawCached(
                             const sel_x = origin_x + widget.gutter_width + 8 * r.uiScaleFactor() + @as(f32, @floatFromInt(sel_start - seg_start_col)) * r.char_width;
                             const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r.char_width;
                             list_ok = list_ok and addRectOp(draw_list, sel_x, sel_band.y_f, sel_w, sel_band.h_f, r.theme.selection);
+                        }
+                    }
+
+                    var search_ranges: [16]ByteRange = undefined;
+                    const search_count = collectSearchByteRanges(
+                        line_start + seg_start_byte,
+                        line_start + seg_end_byte,
+                        widget.editor.searchMatches(),
+                        &search_ranges,
+                    );
+                    if (search_count > 0) {
+                        const search_band = selectionBandForRowBand(seg_band);
+                        for (search_ranges[0..search_count]) |match| {
+                            const local_start = match.start - line_start;
+                            const local_end = match.end - line_start;
+                            const sx = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_start, origin_x + widget.gutter_width + 8 * r.uiScaleFactor());
+                            const ex = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_end, origin_x + widget.gutter_width + 8 * r.uiScaleFactor());
+                            if (ex <= sx) continue;
+                            list_ok = list_ok and addRectOp(draw_list, sx, search_band.y_f, ex - sx, search_band.h_f, r.theme.selection);
                         }
                     }
 
@@ -1705,9 +1801,7 @@ fn drawHighlightedLineSegment(
 }
 
 fn highlightTokenLessThan(_: void, a: HighlightToken, b: HighlightToken) bool {
-    if (a.start != b.start) return a.start < b.start;
-    if (a.priority != b.priority) return a.priority < b.priority;
-    return a.end < b.end;
+    return syntax_mod.highlightTokenLessThanStable(a, b);
 }
 
 fn colorForToken(r: anytype, kind: TokenKind) @TypeOf(r.theme.foreground) {
