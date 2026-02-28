@@ -104,13 +104,15 @@ editor_widget_todo:
         - reference_repos/editors/xi-editor/rust/core-lib/src/editor.rs
 
     - id: ED-03
-      status: todo
+      status: in_progress
       title: "Selections + multi-cursor + column mode"
       notes:
         - "Selection = anchor/head ranges; support merging and rectangular selections."
         - "Selection set scaffolding in Editor (normalize/merge)."
         - "Rectangular selection scaffolding (per-line expansion)."
         - "Rectangular selection edit: insert/delete across selections."
+        - "Zero-length selections now render as extra carets in both immediate and cached draw paths."
+        - "Default multi-caret shortcuts now route through the Lua keybind/input-router layer (`editor_add_caret_up` / `editor_add_caret_down`) instead of hardcoded widget key branches."
         - "Mouse drag selection (normal + Alt-rect) wired in editor widget."
         - "Fixed drag selection clearing on cursor updates (setCursorNoClear)."
         - "Selection rendering shows highlight on empty lines."

@@ -192,6 +192,8 @@ return {
             { key = "c", mods = { "ctrl" }, action = "copy" },
             { key = "x", mods = { "ctrl" }, action = "cut" },
             { key = "v", mods = { "ctrl" }, action = "paste" },
+            { key = "up", mods = { "shift", "alt" }, action = "editor_add_caret_up" },
+            { key = "down", mods = { "shift", "alt" }, action = "editor_add_caret_down" },
         },
         terminal = {
             { key = "c", mods = { "ctrl", "shift" }, action = "copy" },

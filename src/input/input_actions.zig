@@ -28,6 +28,8 @@ pub const ActionKind = enum {
     cut,
     reload_config,
     terminal_scrollback_pager,
+    editor_add_caret_up,
+    editor_add_caret_down,
 };
 
 pub const InputAction = struct {
@@ -144,5 +146,91 @@ fn actionName(kind: ActionKind) []const u8 {
         .cut => "cut",
         .reload_config => "reload_config",
         .terminal_scrollback_pager => "terminal_scrollback_pager",
+        .editor_add_caret_up => "editor_add_caret_up",
+        .editor_add_caret_down => "editor_add_caret_down",
     };
+}
+
+test "input router routes editor multi-caret actions by keycode and exact mods" {
+    const allocator = std.testing.allocator;
+    var router = InputRouter.init(allocator);
+    defer router.deinit();
+
+    var batch = shared_types.input.InputBatch.init(allocator);
+    defer batch.deinit();
+
+    router.setBindings(&.{
+        .{
+            .scope = .editor,
+            .key = .up,
+            .mods = .{ .shift = true, .alt = true },
+            .action = .editor_add_caret_up,
+            .repeat = false,
+        },
+        .{
+            .scope = .editor,
+            .key = .down,
+            .mods = .{ .shift = true, .alt = true },
+            .action = .editor_add_caret_down,
+            .repeat = false,
+        },
+    });
+
+    try batch.append(.{ .key = .{
+        .key = .up,
+        .mods = .{ .shift = true, .alt = true },
+        .pressed = true,
+        .repeated = false,
+    } });
+    router.route(&batch, .editor);
+    try std.testing.expectEqual(@as(usize, 1), router.actionsSlice().len);
+    try std.testing.expectEqual(ActionKind.editor_add_caret_up, router.actionsSlice()[0].kind);
+
+    batch.clear();
+    try batch.append(.{ .key = .{
+        .key = .up,
+        .mods = .{ .shift = true },
+        .pressed = true,
+        .repeated = false,
+    } });
+    router.route(&batch, .editor);
+    try std.testing.expectEqual(@as(usize, 0), router.actionsSlice().len);
+}
+
+test "input router treats altgr as part of exact modifier identity" {
+    const allocator = std.testing.allocator;
+    var router = InputRouter.init(allocator);
+    defer router.deinit();
+
+    var batch = shared_types.input.InputBatch.init(allocator);
+    defer batch.deinit();
+
+    router.setBindings(&.{
+        .{
+            .scope = .editor,
+            .key = .e,
+            .mods = .{ .ctrl = true, .alt = true, .altgr = true },
+            .action = .copy,
+            .repeat = false,
+        },
+    });
+
+    try batch.append(.{ .key = .{
+        .key = .e,
+        .mods = .{ .ctrl = true, .alt = true, .altgr = true },
+        .pressed = true,
+        .repeated = false,
+    } });
+    router.route(&batch, .editor);
+    try std.testing.expectEqual(@as(usize, 1), router.actionsSlice().len);
+
+    batch.clear();
+    try batch.append(.{ .key = .{
+        .key = .e,
+        .mods = .{ .ctrl = true, .alt = true, .altgr = false },
+        .pressed = true,
+        .repeated = false,
+    } });
+    router.route(&batch, .editor);
+    try std.testing.expectEqual(@as(usize, 0), router.actionsSlice().len);
 }

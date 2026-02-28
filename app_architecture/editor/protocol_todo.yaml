@@ -67,6 +67,8 @@ editor_protocol_todo:
         - "Selection set scaffolding added to Editor (add/clear/normalize/merge)."
         - "Column selection scaffolding: rectangular selections + expand per-line."
         - "Rectangular selection editing: insert/delete per line."
+        - "Broadcast insert/delete now preserves the selection set as zero-length carets instead of clearing it."
+        - "Multi-caret vertical expansion now has keycode-routed editor actions (`editor_add_caret_up` / `editor_add_caret_down`) instead of widget-local shortcut branches."
         - "Column selection and editing."
       references:
         - reference_repos/editors/helix/helix-core/src/selection.rs

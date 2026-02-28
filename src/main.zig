@@ -988,6 +988,18 @@ const AppState = struct {
                         self.needs_redraw = true;
                         handled_shortcut = true;
                     },
+                    .editor_add_caret_up => {
+                        if (try editor.addCaretUp()) {
+                            self.needs_redraw = true;
+                            handled_shortcut = true;
+                        }
+                    },
+                    .editor_add_caret_down => {
+                        if (try editor.addCaretDown()) {
+                            self.needs_redraw = true;
+                            handled_shortcut = true;
+                        }
+                    },
                     else => {},
                 }
             }

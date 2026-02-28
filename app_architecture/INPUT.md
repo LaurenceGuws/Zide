@@ -32,6 +32,8 @@ References:
 - Lua keybind modifiers are exact-match and currently support `ctrl`, `shift`, `alt`, `super`, and `altgr`.
 - `altgr` is supported as an advanced desktop modifier. It should be used deliberately for layout-specific bindings, not as the default shortcut style in general examples.
 - Editor bindings now include copy/cut/paste (Ctrl+C/X/V) and route via the input router.
+- Editor semantic shortcuts should live on the input router and use SDL3 keycodes, while printable text stays on `SDL_EVENT_TEXT_INPUT`.
+- Plain editor navigation/edit keys should ignore `ctrl`/`alt`/`super` so SDL3 shortcut actions do not double-fire alongside widget-local key handling.
 
 ## Plan (Todo)
 
@@ -47,5 +49,6 @@ References:
 - Ctrl/Alt modifiers no longer change control semantics based on Shift in terminal input.
 - Selection is no longer cleared by keyboard input; copy/paste combos suppress terminal key events.
 - InputRouter now detects Ctrl+Shift+C/V actions and routes them to focused terminal copy/paste.
+- InputRouter now carries editor multi-caret actions (`editor_add_caret_up`, `editor_add_caret_down`) using SDL3 keycode bindings from Lua.
 - Terminal key encoding lives in `src/terminal/input/key_encoder.zig` (including key_mode flag helpers).
 - Added terminal input encoding tests and editor clipboard selection tests (`src/terminal_input_encoding_tests.zig`, `src/editor_clipboard_tests.zig`).
