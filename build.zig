@@ -287,6 +287,38 @@ pub fn build(b: *std.Build) void {
     terminal_ffi_step.dependOn(&install_terminal_ffi.step);
     terminal_ffi_step.dependOn(&install_terminal_ffi_header.step);
 
+    const editor_ffi = b.addLibrary(.{
+        .name = "zide-editor-ffi",
+        .linkage = .dynamic,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/editor_ffi_exports.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    editor_ffi.linkLibrary(treesitter);
+    editor_ffi.linkLibrary(ts_zig);
+    editor_ffi.addIncludePath(b.path("vendor"));
+    editor_ffi.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
+    editor_ffi.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
+    if (target_os == .windows) {
+        editor_ffi.linkSystemLibrary("user32");
+        editor_ffi.linkSystemLibrary("shell32");
+    } else if (target_os == .macos) {
+        editor_ffi.linkFramework("Cocoa");
+    } else {
+        editor_ffi.linkSystemLibrary("m");
+        editor_ffi.linkSystemLibrary("pthread");
+        editor_ffi.linkSystemLibrary("dl");
+        editor_ffi.linkSystemLibrary("rt");
+    }
+    const install_editor_ffi = b.addInstallArtifact(editor_ffi, .{});
+    const install_editor_ffi_header = b.addInstallFile(b.path("include/zide_editor_ffi.h"), "include/zide_editor_ffi.h");
+    const editor_ffi_step = b.step("build-editor-ffi", "Build the editor FFI shared library");
+    editor_ffi_step.dependOn(&install_editor_ffi.step);
+    editor_ffi_step.dependOn(&install_editor_ffi_header.step);
+
     // ─────────────────────────────────────────────────────────────────────────
     // Tests
     // ─────────────────────────────────────────────────────────────────────────
@@ -563,6 +595,26 @@ pub fn build(b: *std.Build) void {
         "Run terminal FFI bridge tests",
     );
     terminal_ffi_tests_step.dependOn(&run_terminal_ffi_tests.step);
+
+    const editor_ffi_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/editor_ffi_smoke_tests.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    editor_ffi_tests.linkLibrary(treesitter);
+    editor_ffi_tests.linkLibrary(ts_zig);
+    editor_ffi_tests.addIncludePath(b.path("vendor"));
+    editor_ffi_tests.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
+    editor_ffi_tests.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
+    const run_editor_ffi_tests = b.addRunArtifact(editor_ffi_tests);
+    const editor_ffi_tests_step = b.step(
+        "test-editor-ffi",
+        "Run editor FFI bridge tests",
+    );
+    editor_ffi_tests_step.dependOn(&run_editor_ffi_tests.step);
 
     const terminal_ffi_pty_smoke = b.addExecutable(.{
         .name = "terminal-ffi-pty-smoke",
