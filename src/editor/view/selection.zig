@@ -59,39 +59,11 @@ pub fn collectSelectionRanges(
 }
 
 pub fn visualColumnForByteIndex(text: []const u8, byte_index: usize, cluster_offsets: ?[]const u32) usize {
-    if (cluster_offsets) |clusters| {
-        if (clusters.len == 0) return utf8ColumnForByteIndex(text, byte_index);
-        const target = @min(byte_index, text.len);
-        var vis: usize = 0;
-        var idx: usize = 0;
-        while (idx < clusters.len) : (idx += 1) {
-            const start = @min(@as(usize, clusters[idx]), text.len);
-            const end = if (idx + 1 < clusters.len) @min(@as(usize, clusters[idx + 1]), text.len) else text.len;
-            if (target <= start) return vis;
-            if (target < end) return vis;
-            vis += text_columns.visualWidth(text[start..end]);
-        }
-        return vis;
-    }
-    return text_columns.visualColumnForByteIndex(text, byte_index);
+    return text_columns.visualColumnForByteIndexWithClusters(text, byte_index, cluster_offsets);
 }
 
 pub fn byteIndexForVisualColumn(text: []const u8, column: usize, cluster_offsets: ?[]const u32) usize {
-    if (cluster_offsets) |clusters| {
-        if (clusters.len == 0) return utf8ByteIndexForColumn(text, column);
-        var vis: usize = 0;
-        var idx: usize = 0;
-        while (idx < clusters.len) : (idx += 1) {
-            const start = @min(@as(usize, clusters[idx]), text.len);
-            const end = if (idx + 1 < clusters.len) @min(@as(usize, clusters[idx + 1]), text.len) else text.len;
-            const width = text_columns.visualWidth(text[start..end]);
-            if (vis >= column) return start;
-            if (vis + width > column) return start;
-            vis += width;
-        }
-        return text.len;
-    }
-    return text_columns.byteIndexForVisualColumn(text, column);
+    return text_columns.byteIndexForVisualColumnWithClusters(text, column, cluster_offsets);
 }
 
 fn addSelectionRange(ranges: *[8]SelectionRange, count: *usize, start_col: usize, end_col: usize) void {
