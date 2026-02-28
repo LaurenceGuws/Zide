@@ -4,11 +4,14 @@ string string
 string.escape escape
 number number
 type type_name
+type.builtin type_builtin
 function function
+function.method function_method
 function.macro macro
 parameter variable
 variable variable
 keyword keyword
+keyword.control keyword_control
 import keyword
 cImport keyword
 namespace namespace

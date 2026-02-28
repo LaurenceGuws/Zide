@@ -6,10 +6,13 @@ number number
 float number
 boolean constant
 type type_name
+type.builtin type_builtin
 function function
+function.method function_method
 parameter variable
 variable variable
 keyword keyword
+keyword.control keyword_control
 keyword.directive preproc
 namespace namespace
 operator operator

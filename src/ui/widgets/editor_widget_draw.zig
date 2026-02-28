@@ -1942,6 +1942,9 @@ fn colorForToken(r: anytype, kind: TokenKind) @TypeOf(r.theme.foreground) {
         .preproc => r.theme.preproc,
         .macro => r.theme.macro,
         .escape => r.theme.escape,
+        .keyword_control => r.theme.keyword_control,
+        .function_method => r.theme.function_method,
+        .type_builtin => r.theme.type_builtin,
         else => r.theme.foreground,
     };
 }

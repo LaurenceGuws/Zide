@@ -5,10 +5,13 @@ string.escape escape
 number number
 character string
 type type_name
+type.builtin type_builtin
 function function
+function.method function_method
 parameter variable
 variable variable
 keyword keyword
+keyword.control keyword_control
 include keyword
 use keyword
 namespace namespace
