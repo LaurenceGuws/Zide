@@ -1,7 +1,12 @@
 const std = @import("std");
 const app_logger = @import("app_logger.zig");
+const editor_mod = @import("editor/editor.zig");
+const grammar_manager_mod = @import("editor/grammar_manager.zig");
 const text_store = @import("editor/text_store.zig");
+const scroll_mod = @import("editor/view/scroll.zig");
 
+const Editor = editor_mod.Editor;
+const GrammarManager = grammar_manager_mod.GrammarManager;
 const TextStore = text_store.TextStore;
 
 const Config = struct {
@@ -21,6 +26,7 @@ const Scenario = enum {
     open,
     line_start,
     viewport,
+    editor_scroll,
 };
 
 const OpenResult = struct {
@@ -90,12 +96,12 @@ pub fn main() !void {
         );
     }
 
-    if (config.scenario == .all or config.scenario == .line_start or config.scenario == .viewport) {
-        var store = try TextStore.initFromFile(allocator, input_path);
-        defer store.deinit();
+    if (config.scenario == .all or config.scenario == .line_start or config.scenario == .viewport or config.scenario == .editor_scroll) {
+        var store: ?*TextStore = try TextStore.initFromFile(allocator, input_path);
+        defer if (store) |s| s.deinit();
 
         if (config.scenario == .all or config.scenario == .line_start) {
-            const line_random = runLineStartRandomScenario(store, config.queries, config.seed);
+            const line_random = runLineStartRandomScenario(store.?, config.queries, config.seed);
             std.debug.print(
                 "PERF line_start_random queries={d} total_ms={d:.3} ns_per_op={d:.1} checksum={d}\n",
                 .{
@@ -105,7 +111,7 @@ pub fn main() !void {
                     line_random.checksum,
                 },
             );
-            const line_seq = runLineStartSequentialScenario(store, config.queries);
+            const line_seq = runLineStartSequentialScenario(store.?, config.queries);
             std.debug.print(
                 "PERF line_start_sequential queries={d} total_ms={d:.3} ns_per_op={d:.1} checksum={d}\n",
                 .{
@@ -120,7 +126,7 @@ pub fn main() !void {
         if (config.scenario == .all or config.scenario == .viewport) {
             const viewport_result = try runViewportScenario(
                 allocator,
-                store,
+                store.?,
                 config.frames,
                 config.visible_lines,
                 config.stride_lines,
@@ -135,6 +141,33 @@ pub fn main() !void {
                         @as(f64, @floatFromInt(config.frames)) / 1_000_000.0,
                     viewport_result.bytes_read,
                     viewport_result.checksum,
+                },
+            );
+        }
+
+        if (config.scenario == .all or config.scenario == .editor_scroll) {
+            var grammar_manager = try GrammarManager.init(allocator);
+            defer grammar_manager.deinit();
+            var editor = try Editor.initWithStore(allocator, store.?, &grammar_manager);
+            defer editor.deinit();
+            // Ownership moved to editor for this scenario.
+            store = null;
+            const editor_result = try runEditorScrollScenario(
+                allocator,
+                editor,
+                config.frames,
+                config.visible_lines,
+            );
+            std.debug.print(
+                "PERF editor_scroll frames={d} visible_lines={d} total_ms={d:.3} ms_per_frame={d:.4} bytes_read={d} checksum={d}\n",
+                .{
+                    config.frames,
+                    config.visible_lines,
+                    nsToMs(editor_result.total_ns),
+                    @as(f64, @floatFromInt(editor_result.total_ns)) /
+                        @as(f64, @floatFromInt(config.frames)) / 1_000_000.0,
+                    editor_result.bytes_read,
+                    editor_result.checksum,
                 },
             );
         }
@@ -211,13 +244,14 @@ fn parseScenario(raw: []const u8) ?Scenario {
     if (std.mem.eql(u8, raw, "open")) return .open;
     if (std.mem.eql(u8, raw, "line-start")) return .line_start;
     if (std.mem.eql(u8, raw, "viewport")) return .viewport;
+    if (std.mem.eql(u8, raw, "editor-scroll")) return .editor_scroll;
     return null;
 }
 
 fn printHelp() void {
     std.debug.print(
         "editor perf harness (headless)\n" ++
-            "  --scenario all|open|line-start|viewport\n" ++
+            "  --scenario all|open|line-start|viewport|editor-scroll\n" ++
             "  --file <path>              (default: generated synthetic fixture)\n" ++
             "  --size-mb <int>            (default: 64, synthetic only)\n" ++
             "  --line-len <int>           (default: 120, synthetic only)\n" ++
@@ -368,6 +402,67 @@ fn runViewportScenario(
                 const read = store.readLine(line_idx, owned);
                 bytes_read += read;
                 checksum +%= @as(u64, @intCast(line_start + read));
+            }
+        }
+    }
+    const t1 = std.time.nanoTimestamp();
+    return .{
+        .total_ns = t1 - t0,
+        .bytes_read = bytes_read,
+        .checksum = checksum,
+    };
+}
+
+const DummyVisualCtx = struct {};
+
+fn dummyVisualLines(_: *anyopaque, _: usize, _: usize) usize {
+    return 1;
+}
+
+fn runEditorScrollScenario(
+    allocator: std.mem.Allocator,
+    editor: *Editor,
+    frames: usize,
+    visible_lines: usize,
+) !ViewportResult {
+    const line_cap: usize = 4096;
+    var stack_buf: [line_cap]u8 = undefined;
+    var bytes_read: usize = 0;
+    var checksum: u64 = 0;
+    var direction: i32 = 1;
+    var dummy_ctx = DummyVisualCtx{};
+
+    const t0 = std.time.nanoTimestamp();
+    for (0..frames) |_| {
+        if (direction > 0 and editor.scroll_line + visible_lines + 1 >= editor.lineCount()) {
+            direction = -1;
+        } else if (direction < 0 and editor.scroll_line == 0) {
+            direction = 1;
+        }
+        scroll_mod.scrollVisual(
+            editor,
+            direction,
+            120,
+            false,
+            &dummy_ctx,
+            dummyVisualLines,
+        );
+
+        for (0..visible_lines) |row| {
+            const line_idx = editor.scroll_line + row;
+            if (line_idx >= editor.lineCount()) break;
+            const line_len = editor.lineLen(line_idx);
+            if (line_len <= line_cap) {
+                const read = editor.getLine(line_idx, stack_buf[0..line_len]);
+                const width = editor.lineWidthCached(line_idx, stack_buf[0..read], null);
+                bytes_read += read;
+                checksum +%= @as(u64, @intCast(editor.lineStart(line_idx) + width));
+            } else {
+                const owned = try editor.getLineAlloc(line_idx);
+                defer allocator.free(owned);
+                const width = editor.lineWidthCached(line_idx, owned, null);
+                bytes_read += owned.len;
+                checksum +%= @as(u64, @intCast(editor.lineStart(line_idx) + width));
             }
         }
     }
