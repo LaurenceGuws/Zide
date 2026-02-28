@@ -158,7 +158,7 @@ pub const TextEvent = struct {
     utf8: [4]u8 = .{ 0, 0, 0, 0 },
     text_is_composed: bool = false,
 
-    pub fn utf8Slice(self: TextEvent) []const u8 {
+    pub fn utf8Slice(self: *const TextEvent) []const u8 {
         return self.utf8[0..self.utf8_len];
     }
 };

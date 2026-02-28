@@ -30,6 +30,9 @@ pub const ActionKind = enum {
     terminal_scrollback_pager,
     editor_add_caret_up,
     editor_add_caret_down,
+    editor_search_open,
+    editor_search_next,
+    editor_search_prev,
 };
 
 pub const InputAction = struct {
@@ -148,6 +151,9 @@ fn actionName(kind: ActionKind) []const u8 {
         .terminal_scrollback_pager => "terminal_scrollback_pager",
         .editor_add_caret_up => "editor_add_caret_up",
         .editor_add_caret_down => "editor_add_caret_down",
+        .editor_search_open => "editor_search_open",
+        .editor_search_next => "editor_search_next",
+        .editor_search_prev => "editor_search_prev",
     };
 }
 
@@ -195,6 +201,71 @@ test "input router routes editor multi-caret actions by keycode and exact mods" 
     } });
     router.route(&batch, .editor);
     try std.testing.expectEqual(@as(usize, 0), router.actionsSlice().len);
+}
+
+test "input router routes editor search actions by scope and modifiers" {
+    const allocator = std.testing.allocator;
+    var router = InputRouter.init(allocator);
+    defer router.deinit();
+
+    var batch = shared_types.input.InputBatch.init(allocator);
+    defer batch.deinit();
+
+    router.setBindings(&.{
+        .{
+            .scope = .editor,
+            .key = .f,
+            .mods = .{ .ctrl = true },
+            .action = .editor_search_open,
+            .repeat = false,
+        },
+        .{
+            .scope = .editor,
+            .key = .f3,
+            .mods = .{},
+            .action = .editor_search_next,
+            .repeat = false,
+        },
+        .{
+            .scope = .editor,
+            .key = .f3,
+            .mods = .{ .shift = true },
+            .action = .editor_search_prev,
+            .repeat = false,
+        },
+    });
+
+    try batch.append(.{ .key = .{
+        .key = .f,
+        .mods = .{ .ctrl = true },
+        .pressed = true,
+        .repeated = false,
+    } });
+    router.route(&batch, .editor);
+    try std.testing.expectEqual(@as(usize, 1), router.actionsSlice().len);
+    try std.testing.expectEqual(ActionKind.editor_search_open, router.actionsSlice()[0].kind);
+
+    batch.clear();
+    try batch.append(.{ .key = .{
+        .key = .f3,
+        .mods = .{},
+        .pressed = true,
+        .repeated = false,
+    } });
+    router.route(&batch, .editor);
+    try std.testing.expectEqual(@as(usize, 1), router.actionsSlice().len);
+    try std.testing.expectEqual(ActionKind.editor_search_next, router.actionsSlice()[0].kind);
+
+    batch.clear();
+    try batch.append(.{ .key = .{
+        .key = .f3,
+        .mods = .{ .shift = true },
+        .pressed = true,
+        .repeated = false,
+    } });
+    router.route(&batch, .editor);
+    try std.testing.expectEqual(@as(usize, 1), router.actionsSlice().len);
+    try std.testing.expectEqual(ActionKind.editor_search_prev, router.actionsSlice()[0].kind);
 }
 
 test "input router treats altgr as part of exact modifier identity" {

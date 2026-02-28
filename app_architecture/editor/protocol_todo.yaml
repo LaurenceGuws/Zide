@@ -91,6 +91,11 @@ editor_protocol_todo:
         - "Search state increments a dedicated epoch and marks highlight dirty range for render cache invalidation."
         - "Added active-match navigation API (`activateNextSearchMatch` / `activatePrevSearchMatch`) and cursor jump behavior."
         - "Added regex search entrypoint (`setSearchQueryRegex`) for a minimal regex subset while preserving literal mode API."
+        - "Added baseline replace semantics: active-match replace + replace-all are grouped undo operations."
+        - "Undo/redo now refresh search matches so highlight/navigation state stays synchronized with history."
+        - "Search query/recompute now picks or preserves the active match nearest the cursor/previous active location instead of always resetting to the first hit."
+        - "IDE status bar now exposes a live literal search field (`Ctrl+F`), with `Enter`/`F3` next and `Shift+Enter`/`Shift+F3` previous navigation."
+        - "Status-bar search text now renders against the real bar background so light-theme search input stays legible under linear text correction."
         - "Current priority: harden baseline literal/regex correctness + replace semantics before adding Find-in-files UX layers."
       references:
         - reference_repos/editors/neovim/src/nvim/search.c

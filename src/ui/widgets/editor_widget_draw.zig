@@ -167,6 +167,12 @@ fn selectionBandForRowBand(band: RowBand) RowBand {
     };
 }
 
+fn searchHighlightColor(theme: anytype) @TypeOf(theme.selection) {
+    var color = if (@hasField(@TypeOf(theme), "ui_accent")) theme.ui_accent else theme.selection;
+    color.a = 96;
+    return color;
+}
+
 fn flushDrawList(list: *EditorDrawList, r: anytype) void {
     const ColorType = @TypeOf(r.theme.foreground);
     for (list.ops.items) |op| {
@@ -800,6 +806,7 @@ pub fn draw(
                 &search_ranges,
             );
             if (search_count > 0) {
+                const search_color = searchHighlightColor(r.theme);
                 const search_band = selectionBandForRowBand(seg_band);
                 for (search_ranges[0..search_count]) |match| {
                     const local_start = match.start - line_start;
@@ -812,7 +819,7 @@ pub fn draw(
                         search_band.y_i,
                         @intFromFloat(ex - sx),
                         search_band.h_i,
-                        r.theme.selection,
+                        search_color,
                     );
                 }
             }
@@ -1127,6 +1134,7 @@ pub fn drawCached(
                         &search_ranges,
                     );
                     if (search_count > 0) {
+                        const search_color = searchHighlightColor(r.theme);
                         const search_band = selectionBandForRowBand(seg_band);
                         for (search_ranges[0..search_count]) |match| {
                             const local_start = match.start - line_start;
@@ -1134,7 +1142,7 @@ pub fn drawCached(
                             const sx = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_start, origin_x + widget.gutter_width + 8 * r.uiScaleFactor());
                             const ex = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_end, origin_x + widget.gutter_width + 8 * r.uiScaleFactor());
                             if (ex <= sx) continue;
-                            list_ok = list_ok and addRectOp(draw_list, sx, search_band.y_f, ex - sx, search_band.h_f, r.theme.selection);
+                            list_ok = list_ok and addRectOp(draw_list, sx, search_band.y_f, ex - sx, search_band.h_f, search_color);
                         }
                     }
 

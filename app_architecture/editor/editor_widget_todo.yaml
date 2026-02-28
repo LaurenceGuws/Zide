@@ -169,6 +169,11 @@ editor_widget_todo:
         - "Editor draw path now overlays search match ranges in both immediate and cached pipelines."
         - "Added next/prev active search match navigation with cursor jumps to active range start."
         - "Regex mode scaffold added (`setSearchQueryRegex`) using minimal regex subset parity with tree-sitter predicate matching."
+        - "Baseline replace-current and replace-all editor semantics landed with grouped undo support."
+        - "Search match state now refreshes on undo/redo to keep render overlays and navigation aligned."
+        - "Active search match selection now follows cursor/query context and stays stable across recomputes instead of snapping back to the first hit."
+        - "Status bar now hosts the first search query entry UI, with default keybinds for open/next/prev search."
+        - "Status-bar search text now uses background-aware text rendering so the light theme keeps typed queries readable."
       references:
         - reference_repos/editors/neovim/src/nvim/search.c
         - reference_repos/editors/lapce/lapce-app/src/find.rs
