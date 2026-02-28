@@ -83,12 +83,14 @@ editor_protocol_todo:
         - "Caret storage is now more explicit: `cursor` is the primary caret, while zero-length entries in `selections` are auxiliary carets instead of duplicating the primary caret into both places."
         - "Editor core now exposes explicit primary/auxiliary caret accessors, and more multi-caret internals now consume those helpers instead of iterating raw zero-length selections ad hoc."
         - "More edit branches now share explicit selection/caret helpers instead of open-coding normalized descending selection loops."
+        - "Selection replacement/delete branches now share one offset-remapping helper for descending multi-selection edits instead of duplicating per-command caret restoration logic."
         - "Editor core now exposes baseline word-wise navigation and selection-expanding movement APIs."
         - "Rectangular selection copy/move semantics are now explicit: copy yields per-line column slices, and plain cursor movement collapses the rectangular set."
         - "Word-wise and expanding movement now route through the keybind/input-router layer (`editor_move_word_*`, `editor_extend_*`) instead of being editor-only APIs, and app-level helper coverage now exists for direct word/line-boundary extend actions plus add-caret routing."
         - "Visual vertical selection growth now routes through keybind actions (`editor_extend_up` / `editor_extend_down`) and has app-level dispatch coverage plus regression coverage for both wrapped visual rows and plain logical-line movement."
         - "Paste semantics are now explicit: plain multi-selection paste broadcasts one payload to every selection, while rectangular selections trim CRLF row endings, preserve trailing empty rows, repeat a single row, map exact row counts 1:1, cycle clipboard rows when counts mismatch, and interpret visual columns via cluster boundaries plus core visual widths (tabs, combining marks, wide glyphs) instead of raw bytes."
         - "Editor-core rectangular expansion now has a cluster-provider entrypoint so non-widget callers can use the same cluster-aware visual-column mapping as view/widget selection code."
+        - "Cluster-aware rectangular editing now has regression coverage for both replacement and deletion, including the editor-core cluster-provider path."
         - "Column selection and editing."
       references:
         - reference_repos/editors/helix/helix-core/src/selection.rs
