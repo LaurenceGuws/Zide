@@ -735,8 +735,8 @@ pub fn draw(
         }
         var fallback_tokens_buf: [32]HighlightToken = undefined;
         var effective_tokens = tokens;
-        if (tokens.len == 0 and shouldUseLargeFileZigFallback(widget.editor)) {
-            const fallback_count = buildZigFallbackTokens(line_text, line_start, &fallback_tokens_buf);
+        if (tokens.len == 0 and shouldUseLargeFileFallback(widget.editor)) {
+            const fallback_count = buildLargeFileFallbackTokens(line_text, line_start, &fallback_tokens_buf);
             effective_tokens = fallback_tokens_buf[0..fallback_count];
         }
 
@@ -1045,8 +1045,8 @@ pub fn drawCached(
         );
         var fallback_tokens_buf: [32]HighlightToken = undefined;
         var effective_tokens = tokens;
-        if (tokens.len == 0 and shouldUseLargeFileZigFallback(widget.editor)) {
-            const fallback_count = buildZigFallbackTokens(line_text, line_start, &fallback_tokens_buf);
+        if (tokens.len == 0 and shouldUseLargeFileFallback(widget.editor)) {
+            const fallback_count = buildLargeFileFallbackTokens(line_text, line_start, &fallback_tokens_buf);
             effective_tokens = fallback_tokens_buf[0..fallback_count];
         }
 
@@ -1395,11 +1395,10 @@ pub fn hashLine(text: []const u8) u64 {
     return h;
 }
 
-fn shouldUseLargeFileZigFallback(editor: anytype) bool {
+fn shouldUseLargeFileFallback(editor: anytype) bool {
     if (editor.highlighter != null) return false;
     if (editor.totalLen() < large_file_fallback_threshold_bytes) return false;
-    const path = editor.file_path orelse return false;
-    return std.mem.endsWith(u8, path, ".zig");
+    return true;
 }
 
 fn isIdentStart(ch: u8) bool {
@@ -1414,43 +1413,12 @@ fn isDigit(ch: u8) bool {
     return ch >= '0' and ch <= '9';
 }
 
-fn zigKeywordKind(word: []const u8) TokenKind {
-    if (std.mem.eql(u8, word, "const") or
-        std.mem.eql(u8, word, "var") or
-        std.mem.eql(u8, word, "fn") or
-        std.mem.eql(u8, word, "pub") or
-        std.mem.eql(u8, word, "return") or
-        std.mem.eql(u8, word, "if") or
-        std.mem.eql(u8, word, "else") or
-        std.mem.eql(u8, word, "for") or
-        std.mem.eql(u8, word, "while") or
-        std.mem.eql(u8, word, "switch") or
-        std.mem.eql(u8, word, "break") or
-        std.mem.eql(u8, word, "continue") or
-        std.mem.eql(u8, word, "struct") or
-        std.mem.eql(u8, word, "enum") or
-        std.mem.eql(u8, word, "union") or
-        std.mem.eql(u8, word, "opaque") or
-        std.mem.eql(u8, word, "error") or
-        std.mem.eql(u8, word, "try") or
-        std.mem.eql(u8, word, "catch") or
-        std.mem.eql(u8, word, "defer") or
-        std.mem.eql(u8, word, "errdefer") or
-        std.mem.eql(u8, word, "comptime") or
-        std.mem.eql(u8, word, "inline") or
-        std.mem.eql(u8, word, "noinline"))
-    {
-        return .keyword;
-    }
-    return .plain;
-}
-
-fn buildZigFallbackTokens(line_text: []const u8, line_start: usize, out: []HighlightToken) usize {
+fn buildLargeFileFallbackTokens(line_text: []const u8, line_start: usize, out: []HighlightToken) usize {
     var count: usize = 0;
     var i: usize = 0;
     while (i < line_text.len and count < out.len) {
         const ch = line_text[i];
-        if (ch == '/' and i + 1 < line_text.len and line_text[i + 1] == '/') {
+        if ((ch == '/' and i + 1 < line_text.len and line_text[i + 1] == '/') or ch == '#') {
             out[count] = .{
                 .start = line_start + i,
                 .end = line_start + line_text.len,
@@ -1503,19 +1471,6 @@ fn buildZigFallbackTokens(line_text: []const u8, line_start: usize, out: []Highl
         if (isIdentStart(ch)) {
             var j = i + 1;
             while (j < line_text.len and isIdentContinue(line_text[j])) : (j += 1) {}
-            const kind = zigKeywordKind(line_text[i..j]);
-            if (kind != .plain) {
-                out[count] = .{
-                    .start = line_start + i,
-                    .end = line_start + j,
-                    .kind = kind,
-                    .priority = 0,
-                    .conceal = null,
-                    .url = null,
-                    .conceal_lines = false,
-                };
-                count += 1;
-            }
             i = j;
             continue;
         }

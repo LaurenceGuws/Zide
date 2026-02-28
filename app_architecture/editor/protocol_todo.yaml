@@ -51,7 +51,7 @@ editor_protocol_todo:
         - "Large-file open path now supports threshold-based mmap (with fallback) and rope line-start lookups now use bounded caching with eviction."
         - "Headless perf harness now provides raw large-file metrics (`zig build perf-editor-headless`) for open cost, line-start query throughput, and viewport-pass throughput."
         - "Rope initialization now builds a balanced chunked leaf tree for original buffers (instead of one monolithic leaf), which materially improves large-file line-offset query latency."
-        - "Large-file `.zig` view path now includes lightweight lexical fallback coloring when tree-sitter is intentionally deferred, preserving visible syntax cues without UI-thread parser work."
+        - "Large-file view path now includes lightweight language-agnostic fallback coloring (comments/strings/numbers) when tree-sitter is intentionally deferred, preserving visible syntax cues without UI-thread parser work."
       references:
         - reference_repos/text/ropey/src/rope.rs
         - reference_repos/text/xi-rope/src/engine.rs
