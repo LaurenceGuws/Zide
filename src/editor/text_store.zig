@@ -1,10 +1,14 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const rope_mod = @import("rope.zig");
 const app_logger = @import("../app_logger.zig");
 
 pub const TextStore = struct {
+    const mmap_threshold_bytes: usize = 16 * 1024 * 1024;
+
     allocator: std.mem.Allocator,
     rope: *rope_mod.Rope,
+    mapped_original: ?[]align(std.heap.page_size_min) const u8,
 
     pub fn init(allocator: std.mem.Allocator, initial: []const u8) !*TextStore {
         const store = try allocator.create(TextStore);
@@ -12,6 +16,7 @@ pub const TextStore = struct {
         store.* = .{
             .allocator = allocator,
             .rope = try rope_mod.Rope.init(allocator, initial),
+            .mapped_original = null,
         };
         return store;
     }
@@ -22,8 +27,49 @@ pub const TextStore = struct {
         const file = try std.fs.cwd().openFile(path, .{ .mode = .read_only });
         defer file.close();
         const stat = try file.stat();
+        if (stat.size > std.math.maxInt(usize)) return error.FileTooBig;
+        const size: usize = @intCast(stat.size);
+
+        if (builtin.os.tag != .windows and size >= mmap_threshold_bytes and size > 0) {
+            const t_map_start = std.time.nanoTimestamp();
+            const mapped = std.posix.mmap(
+                null,
+                size,
+                std.posix.PROT.READ,
+                .{ .TYPE = .PRIVATE },
+                file.handle,
+                0,
+            ) catch |err| blk: {
+                log.logf("initFromFile mmap fallback err={s} size={d}", .{ @errorName(err), stat.size });
+                break :blk null;
+            };
+            if (mapped) |mapped_bytes| {
+                const t_map_end = std.time.nanoTimestamp();
+                const t_rope_start = std.time.nanoTimestamp();
+                errdefer std.posix.munmap(mapped_bytes);
+                const store = try allocator.create(TextStore);
+                errdefer allocator.destroy(store);
+                store.* = .{
+                    .allocator = allocator,
+                    .rope = try rope_mod.Rope.initBorrowedOriginal(allocator, mapped_bytes),
+                    .mapped_original = mapped_bytes,
+                };
+                const t_rope_end = std.time.nanoTimestamp();
+                log.logf(
+                    "initFromFile size={d} mmap_ms={d} rope_ms={d} total_ms={d} source=mmap",
+                    .{
+                        stat.size,
+                        @as(i64, @intCast(@divTrunc(t_map_end - t_map_start, 1_000_000))),
+                        @as(i64, @intCast(@divTrunc(t_rope_end - t_rope_start, 1_000_000))),
+                        @as(i64, @intCast(@divTrunc(t_rope_end - t_open, 1_000_000))),
+                    },
+                );
+                return store;
+            }
+        }
+
         const t_read_start = std.time.nanoTimestamp();
-        const data = try file.readToEndAlloc(allocator, @as(usize, @intCast(stat.size)));
+        const data = try file.readToEndAlloc(allocator, size);
         const t_read_end = std.time.nanoTimestamp();
 
         const t_rope_start = std.time.nanoTimestamp();
@@ -32,6 +78,7 @@ pub const TextStore = struct {
         store.* = .{
             .allocator = allocator,
             .rope = try rope_mod.Rope.initOwnedOriginal(allocator, data),
+            .mapped_original = null,
         };
         const t_rope_end = std.time.nanoTimestamp();
 
@@ -50,6 +97,9 @@ pub const TextStore = struct {
 
     pub fn deinit(self: *TextStore) void {
         self.rope.deinit();
+        if (self.mapped_original) |mapped| {
+            std.posix.munmap(mapped);
+        }
         self.allocator.destroy(self);
     }
 
