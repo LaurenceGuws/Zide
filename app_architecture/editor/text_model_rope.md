@@ -10,6 +10,10 @@ Status (2026-01-27):
 - Undo batching merges adjacent inserts/deletes; undo groups are supported.
 - File-open path now transfers ownership of the loaded file buffer into rope
   (`Rope.initOwnedOriginal`) to avoid duplicating large initial contents.
+- File-open path now uses threshold-based mmap on supported platforms, with
+  read-to-alloc fallback.
+- Rope line-start lookups now use a bounded cache with eviction and edit-time
+  invalidation to reduce repeated line offset traversals.
 
 ## Current state (summary)
 - Text buffer is a rope/piece‑tree with per-node aggregates for byte length and
