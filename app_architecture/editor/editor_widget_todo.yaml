@@ -140,11 +140,13 @@ editor_widget_todo:
         - "The editor model now treats `cursor` as the primary caret and keeps auxiliary zero-length carets only in `selections`, rather than duplicating the primary caret into the auxiliary set."
         - "Editor core now exposes explicit primary/auxiliary caret accessors on top of that model, and more multi-caret internals now consume those helpers instead of raw zero-length selection iteration."
         - "More multi-caret edit paths now share explicit selection/caret helpers instead of repeating normalized descending selection loops."
+        - "Descending multi-selection replacement/delete branches now share one offset-remapping helper instead of repeating caret-restore logic per command."
         - "Core word-left/word-right and selection-expanding movement APIs now exist in the editor engine."
         - "Word-wise and expanding movement now route through the Lua keybind/input-router layer instead of staying editor-only helpers, and direct word/line-boundary extend plus add-caret dispatch now have app-level helper coverage."
         - "Visual `Shift+Up/Down` selection growth now routes through widget/view helpers, has app-level dispatch coverage, and is covered in both wrapped and non-wrapped movement paths."
         - "Rectangular selection clipboard semantics are now regression-tested as per-line column slices, and cursor movement explicitly collapses column selections."
         - "Editor-core rectangular expansion now has a cluster-provider variant so non-widget callers can reuse the same cluster-aware visual-column rules as widget/view selection mapping."
+        - "Cluster-aware rectangular editing is now regression-tested for both replacement and deletion, including the editor-core cluster-provider path."
       references:
         - reference_repos/editors/helix/helix-core/src/selection.rs
         - reference_repos/editors/kakoune/src/selection.cc

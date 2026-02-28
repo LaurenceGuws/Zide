@@ -2369,6 +2369,28 @@ test "direct editor action helper routes word and line selection actions" {
     try std.testing.expect(!AppState.applyDirectEditorAction(editor, .editor_search_open));
 }
 
+test "direct editor action helper routes word cursor movement actions" {
+    const allocator = std.testing.allocator;
+
+    var grammar_manager = try grammar_manager_mod.GrammarManager.init(allocator);
+    defer grammar_manager.deinit();
+
+    const editor = try Editor.init(allocator, &grammar_manager);
+    defer editor.deinit();
+
+    try editor.insertText("alpha beta_gamma");
+    editor.setCursor(0, 0);
+
+    try std.testing.expect(AppState.applyDirectEditorAction(editor, .editor_move_word_right));
+    try std.testing.expectEqual(@as(usize, 6), editor.cursor.offset);
+
+    try std.testing.expect(AppState.applyDirectEditorAction(editor, .editor_move_word_right));
+    try std.testing.expectEqual(@as(usize, 16), editor.cursor.offset);
+
+    try std.testing.expect(AppState.applyDirectEditorAction(editor, .editor_move_word_left));
+    try std.testing.expectEqual(@as(usize, 6), editor.cursor.offset);
+}
+
 test "caret editor action helper routes add-caret actions" {
     const allocator = std.testing.allocator;
 

@@ -200,6 +200,87 @@ test "visual rectangular selection with combining and wide glyphs pastes by cell
     try std.testing.expectEqualStrings("e\u{0301}QQz\naQQbc", text);
 }
 
+test "visual rectangular selection with combining and wide glyphs deletes by cell columns" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("e\u{0301}界z\na界bc");
+    editor.setCursor(0, 0);
+    try editor.expandRectSelectionVisual(0, 1, 1, 3);
+
+    try editor.deleteSelection();
+
+    const text = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(text);
+    try std.testing.expectEqualStrings("e\u{0301}z\nabc", text);
+}
+
+test "cluster-provider rectangular selection replacement preserves grapheme-aligned ranges" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("e\u{0301}界x\na界bc");
+
+    const Ctx = struct {
+        fn clusters(_: *anyopaque, line_idx: usize, line_text: []const u8) ?[]const u32 {
+            _ = line_text;
+            return switch (line_idx) {
+                0 => &[_]u32{ 0, 3, 6 },
+                1 => &[_]u32{ 0, 1, 4, 5 },
+                else => null,
+            };
+        }
+    };
+    var dummy: u8 = 0;
+    const provider = editor_mod.Editor.ClusterProvider{
+        .ctx = &dummy,
+        .getClusters = Ctx.clusters,
+    };
+
+    try editor.expandRectSelectionVisualWithClusters(0, 1, 1, 3, &provider);
+    try editor.insertText("QQ");
+
+    const text = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(text);
+    try std.testing.expectEqualStrings("e\u{0301}QQx\naQQbc", text);
+}
+
+test "cluster-provider rectangular selection deletion preserves grapheme-aligned ranges" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("e\u{0301}界x\na界bc");
+
+    const Ctx = struct {
+        fn clusters(_: *anyopaque, line_idx: usize, line_text: []const u8) ?[]const u32 {
+            _ = line_text;
+            return switch (line_idx) {
+                0 => &[_]u32{ 0, 3, 6 },
+                1 => &[_]u32{ 0, 1, 4, 5 },
+                else => null,
+            };
+        }
+    };
+    var dummy: u8 = 0;
+    const provider = editor_mod.Editor.ClusterProvider{
+        .ctx = &dummy,
+        .getClusters = Ctx.clusters,
+    };
+
+    try editor.expandRectSelectionVisualWithClusters(0, 1, 1, 3, &provider);
+    try editor.deleteSelection();
+
+    const text = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(text);
+    try std.testing.expectEqualStrings("e\u{0301}x\nabc", text);
+}
+
 test "plain multi-selection paste broadcasts the same text" {
     const allocator = std.testing.allocator;
     var fixture = try EditorFixture.init(allocator);

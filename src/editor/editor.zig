@@ -684,6 +684,12 @@ pub const Editor = struct {
         return self.allocator.dupe(Selection, self.selections.items);
     }
 
+    const SelectionReplacementOp = struct {
+        start: usize,
+        end: usize,
+        replacement: []const u8,
+    };
+
     pub fn addCaretUp(self: *Editor) !bool {
         return self.addCaretVertical(-1);
     }
@@ -874,6 +880,41 @@ pub const Editor = struct {
         } else if (primary_offset.* >= start) {
             primary_offset.* = start + replacement_len;
         }
+    }
+
+    fn applySelectionReplacementOps(
+        self: *Editor,
+        ops: []const SelectionReplacementOp,
+        initial_primary_offset: usize,
+    ) !void {
+        var changed = false;
+        var caret_offsets = std.ArrayList(usize).empty;
+        defer caret_offsets.deinit(self.allocator);
+        var primary_offset = initial_primary_offset;
+
+        for (ops) |op| {
+            const delete_len = op.end - op.start;
+            if (delete_len > 0) {
+                const start_point = self.pointForByte(op.start);
+                const end_point = self.pointForByte(op.end);
+                try self.buffer.deleteRange(op.start, delete_len);
+                self.applyHighlightEdit(op.start, op.end, op.start, start_point, end_point);
+                changed = true;
+            }
+            if (op.replacement.len > 0) {
+                const insert_point = self.pointForByte(op.start);
+                try self.buffer.insertBytes(op.start, op.replacement);
+                self.applyHighlightEdit(op.start, op.start, op.start + op.replacement.len, insert_point, insert_point);
+                changed = true;
+            }
+            shiftCaretOffsets(&caret_offsets, @as(isize, @intCast(op.replacement.len)) - @as(isize, @intCast(delete_len)));
+            adjustPrimaryOffsetForReplacement(&primary_offset, op.start, op.end, op.replacement.len);
+            try caret_offsets.append(self.allocator, op.start + op.replacement.len);
+        }
+
+        if (changed) self.noteTextChanged();
+        try self.restoreCaretSelections(caret_offsets.items, primary_offset);
+        self.selection = null;
     }
 
     fn isWordByte(byte: u8) bool {
@@ -1079,30 +1120,17 @@ pub const Editor = struct {
             const selections = try self.duplicateNormalizedSelectionsDescending();
             defer self.allocator.free(selections);
             const bytes = [_]u8{char};
-            var caret_offsets = std.ArrayList(usize).empty;
-            defer caret_offsets.deinit(self.allocator);
-            var primary_offset = self.cursor.offset;
+            var ops = std.ArrayList(SelectionReplacementOp).empty;
+            defer ops.deinit(self.allocator);
             for (selections) |sel| {
                 const norm = sel.normalized();
-                const len = norm.end.offset - norm.start.offset;
-                if (len > 0) {
-                    const start = norm.start.offset;
-                    const end = norm.end.offset;
-                    const start_point = self.pointForByte(start);
-                    const end_point = self.pointForByte(end);
-                    try self.buffer.deleteRange(start, len);
-                    self.applyHighlightEdit(start, end, start, start_point, end_point);
-                }
-                const insert_start = norm.start.offset;
-                const insert_point = self.pointForByte(insert_start);
-                try self.buffer.insertBytes(insert_start, &bytes);
-                self.applyHighlightEdit(insert_start, insert_start, insert_start + 1, insert_point, insert_point);
-                shiftCaretOffsets(&caret_offsets, 1 - @as(isize, @intCast(len)));
-                adjustPrimaryOffsetForReplacement(&primary_offset, norm.start.offset, norm.end.offset, 1);
-                try caret_offsets.append(self.allocator, insert_start + 1);
+                try ops.append(self.allocator, .{
+                    .start = norm.start.offset,
+                    .end = norm.end.offset,
+                    .replacement = &bytes,
+                });
             }
-            self.noteTextChanged();
-            try self.restoreCaretSelections(caret_offsets.items, primary_offset);
+            try self.applySelectionReplacementOps(ops.items, self.cursor.offset);
             try self.endTrackedUndoGroup();
             return;
         }
@@ -1162,36 +1190,23 @@ pub const Editor = struct {
             errdefer self.endTrackedUndoGroup() catch {};
             const selections = try self.duplicateNormalizedSelectionsDescending();
             defer self.allocator.free(selections);
-            var caret_offsets = std.ArrayList(usize).empty;
-            defer caret_offsets.deinit(self.allocator);
-            var primary_offset = self.cursor.offset;
             const rect_lines = try self.rectangularPasteLines(text);
             defer if (rect_lines) |lines| self.allocator.free(lines);
-            for (selections) |sel| {
+            var ops = std.ArrayList(SelectionReplacementOp).empty;
+            defer ops.deinit(self.allocator);
+            for (selections, 0..) |sel, idx| {
                 const norm = sel.normalized();
-                const len = norm.end.offset - norm.start.offset;
-                if (len > 0) {
-                    const start = norm.start.offset;
-                    const end = norm.end.offset;
-                    const start_point = self.pointForByte(start);
-                    const end_point = self.pointForByte(end);
-                    try self.buffer.deleteRange(start, len);
-                    self.applyHighlightEdit(start, end, start, start_point, end_point);
-                }
-                const insert_start = norm.start.offset;
                 const replacement = if (rect_lines) |lines|
-                    lines[selections.len - 1 - caret_offsets.items.len]
+                    lines[selections.len - 1 - idx]
                 else
                     text;
-                const insert_point = self.pointForByte(insert_start);
-                try self.buffer.insertBytes(insert_start, replacement);
-                self.applyHighlightEdit(insert_start, insert_start, insert_start + replacement.len, insert_point, insert_point);
-                shiftCaretOffsets(&caret_offsets, @as(isize, @intCast(replacement.len)) - @as(isize, @intCast(len)));
-                adjustPrimaryOffsetForReplacement(&primary_offset, norm.start.offset, norm.end.offset, replacement.len);
-                try caret_offsets.append(self.allocator, insert_start + replacement.len);
+                try ops.append(self.allocator, .{
+                    .start = norm.start.offset,
+                    .end = norm.end.offset,
+                    .replacement = replacement,
+                });
             }
-            self.noteTextChanged();
-            try self.restoreCaretSelections(caret_offsets.items, primary_offset);
+            try self.applySelectionReplacementOps(ops.items, self.cursor.offset);
             try self.endTrackedUndoGroup();
             return;
         }
@@ -1263,10 +1278,8 @@ pub const Editor = struct {
             errdefer self.endTrackedUndoGroup() catch {};
             const selections = try self.duplicateNormalizedSelectionsDescending();
             defer self.allocator.free(selections);
-            var changed = false;
-            var caret_offsets = std.ArrayList(usize).empty;
-            defer caret_offsets.deinit(self.allocator);
-            var primary_offset = self.cursor.offset;
+            var ops = std.ArrayList(SelectionReplacementOp).empty;
+            defer ops.deinit(self.allocator);
             for (selections) |sel| {
                 const norm = sel.normalized();
                 var delete_start = norm.start.offset;
@@ -1275,21 +1288,13 @@ pub const Editor = struct {
                     delete_start -= 1;
                     delete_len = 1;
                 }
-                if (delete_len > 0) {
-                    const delete_end = delete_start + delete_len;
-                    const start_point = self.pointForByte(delete_start);
-                    const end_point = self.pointForByte(delete_end);
-                    try self.buffer.deleteRange(delete_start, delete_len);
-                    self.applyHighlightEdit(delete_start, delete_end, delete_start, start_point, end_point);
-                    changed = true;
-                }
-                shiftCaretOffsets(&caret_offsets, -@as(isize, @intCast(delete_len)));
-                adjustPrimaryOffsetForReplacement(&primary_offset, delete_start, delete_start + delete_len, 0);
-                try caret_offsets.append(self.allocator, delete_start);
+                try ops.append(self.allocator, .{
+                    .start = delete_start,
+                    .end = delete_start + delete_len,
+                    .replacement = "",
+                });
             }
-            if (changed) self.noteTextChanged();
-            try self.restoreCaretSelections(caret_offsets.items, primary_offset);
-            self.selection = null;
+            try self.applySelectionReplacementOps(ops.items, self.cursor.offset);
             try self.endTrackedUndoGroup();
             return;
         }
@@ -1351,10 +1356,8 @@ pub const Editor = struct {
             errdefer self.endTrackedUndoGroup() catch {};
             const selections = try self.duplicateNormalizedSelectionsDescending();
             defer self.allocator.free(selections);
-            var changed = false;
-            var caret_offsets = std.ArrayList(usize).empty;
-            defer caret_offsets.deinit(self.allocator);
-            var primary_offset = self.cursor.offset;
+            var ops = std.ArrayList(SelectionReplacementOp).empty;
+            defer ops.deinit(self.allocator);
             for (selections) |sel| {
                 const norm = sel.normalized();
                 const delete_start = norm.start.offset;
@@ -1362,21 +1365,13 @@ pub const Editor = struct {
                 if (delete_len == 0 and delete_start < self.buffer.totalLen()) {
                     delete_len = 1;
                 }
-                if (delete_len > 0) {
-                    const delete_end = delete_start + delete_len;
-                    const start_point = self.pointForByte(delete_start);
-                    const end_point = self.pointForByte(delete_end);
-                    try self.buffer.deleteRange(delete_start, delete_len);
-                    self.applyHighlightEdit(delete_start, delete_end, delete_start, start_point, end_point);
-                    changed = true;
-                }
-                shiftCaretOffsets(&caret_offsets, -@as(isize, @intCast(delete_len)));
-                adjustPrimaryOffsetForReplacement(&primary_offset, delete_start, delete_start + delete_len, 0);
-                try caret_offsets.append(self.allocator, delete_start);
+                try ops.append(self.allocator, .{
+                    .start = delete_start,
+                    .end = delete_start + delete_len,
+                    .replacement = "",
+                });
             }
-            if (changed) self.noteTextChanged();
-            try self.restoreCaretSelections(caret_offsets.items, primary_offset);
-            self.selection = null;
+            try self.applySelectionReplacementOps(ops.items, self.cursor.offset);
             try self.endTrackedUndoGroup();
             return;
         }
@@ -1412,29 +1407,17 @@ pub const Editor = struct {
             errdefer self.endTrackedUndoGroup() catch {};
             const selections = try self.duplicateNormalizedSelectionsDescending();
             defer self.allocator.free(selections);
-            var changed = false;
-            var caret_offsets = std.ArrayList(usize).empty;
-            defer caret_offsets.deinit(self.allocator);
-            var primary_offset = self.cursor.offset;
+            var ops = std.ArrayList(SelectionReplacementOp).empty;
+            defer ops.deinit(self.allocator);
             for (selections) |sel| {
                 const norm = sel.normalized();
-                const len = norm.end.offset - norm.start.offset;
-                if (len > 0) {
-                    const start = norm.start.offset;
-                    const end = norm.end.offset;
-                    const start_point = self.pointForByte(start);
-                    const end_point = self.pointForByte(end);
-                    try self.buffer.deleteRange(start, len);
-                    self.applyHighlightEdit(start, end, start, start_point, end_point);
-                    changed = true;
-                }
-                shiftCaretOffsets(&caret_offsets, -@as(isize, @intCast(len)));
-                adjustPrimaryOffsetForReplacement(&primary_offset, norm.start.offset, norm.end.offset, 0);
-                try caret_offsets.append(self.allocator, norm.start.offset);
+                try ops.append(self.allocator, .{
+                    .start = norm.start.offset,
+                    .end = norm.end.offset,
+                    .replacement = "",
+                });
             }
-            if (changed) self.noteTextChanged();
-            try self.restoreCaretSelections(caret_offsets.items, primary_offset);
-            self.selection = null;
+            try self.applySelectionReplacementOps(ops.items, self.cursor.offset);
             try self.endTrackedUndoGroup();
             return;
         }
