@@ -56,6 +56,7 @@ pub const Config = struct {
     text_contrast: ?f32,
     text_linear_correction: ?bool,
     theme: ?ThemeConfig,
+    keybinds_no_defaults: ?bool,
     keybinds: ?[]input_actions.BindSpec,
 };
 
@@ -86,6 +87,14 @@ pub const TerminalDisableLigaturesStrategy = enum {
 const terminal_scrollback_default: usize = 1000;
 const terminal_scrollback_min: usize = 100;
 const terminal_scrollback_max: usize = 100000;
+const sdl_log_level_default: c_int = sdl.SDL_LOG_PRIORITY_INFO;
+const font_hinting_default: FontHinting = .default;
+const glyph_overflow_default: GlyphOverflowPolicy = .when_followed_by_space;
+const ligature_strategy_default: TerminalDisableLigaturesStrategy = .never;
+const terminal_blink_default: TerminalBlinkStyle = .kitty;
+const text_gamma_default: f32 = 1.0;
+const text_contrast_default: f32 = 1.0;
+const text_linear_correction_default: bool = true;
 
 pub const ThemeConfig = struct {
     background: ?Color = null,
@@ -154,6 +163,7 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
         .text_contrast = null,
         .text_linear_correction = null,
         .theme = null,
+        .keybinds_no_defaults = null,
         .keybinds = null,
     };
     if (fileExists("assets/config/init.lua")) {
@@ -209,6 +219,8 @@ pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
         allocator.free(binds);
         config.keybinds = null;
     }
+
+    config.keybinds_no_defaults = null;
 
     config.font_lcd = null;
     config.font_hinting = null;
@@ -324,8 +336,19 @@ fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) voi
         }
     }
     if (overlay.keybinds) |binds| {
-        if (base.keybinds) |old| allocator.free(old);
-        base.keybinds = allocator.dupe(input_actions.BindSpec, binds) catch base.keybinds;
+        if (overlay.keybinds_no_defaults == true or base.keybinds == null) {
+            if (base.keybinds) |old| allocator.free(old);
+            base.keybinds = allocator.dupe(input_actions.BindSpec, binds) catch base.keybinds;
+        } else if (base.keybinds) |base_binds| {
+            const merged = mergeKeybinds(allocator, base_binds, binds) catch base_binds;
+            if (merged.ptr != base_binds.ptr) {
+                allocator.free(base_binds);
+            }
+            base.keybinds = merged;
+        }
+    }
+    if (overlay.keybinds_no_defaults != null) {
+        base.keybinds_no_defaults = overlay.keybinds_no_defaults;
     }
 }
 
@@ -377,6 +400,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             .text_contrast = null,
             .text_linear_correction = null,
             .theme = null,
+            .keybinds_no_defaults = null,
             .keybinds = null,
         };
     }
@@ -414,6 +438,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     var text_contrast: ?f32 = null;
     var text_linear_correction: ?bool = null;
     var theme: ?ThemeConfig = null;
+    var keybinds_no_defaults: ?bool = null;
     var keybinds: ?[]input_actions.BindSpec = null;
 
     _ = c.lua_getfield(L, -1, "log");
@@ -429,12 +454,26 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     _ = c.lua_getfield(L, -1, "sdl");
     if (c.lua_isstring(L, -1) != 0) {
         sdl_log_level = parseSdlLogLevel(L, -1);
+        if (sdl_log_level == null) {
+            warnInvalidValue("sdl.log_level", "info");
+            sdl_log_level = sdl_log_level_default;
+        }
     } else if (c.lua_istable(L, -1)) {
         _ = c.lua_getfield(L, -1, "log_level");
         if (c.lua_isstring(L, -1) != 0) {
             sdl_log_level = parseSdlLogLevel(L, -1);
+            if (sdl_log_level == null) {
+                warnInvalidValue("sdl.log_level", "info");
+                sdl_log_level = sdl_log_level_default;
+            }
+        } else if (!c.lua_isnil(L, -1)) {
+            warnInvalidValue("sdl.log_level", "info");
+            sdl_log_level = sdl_log_level_default;
         }
         c.lua_pop(L, 1);
+    } else if (!c.lua_isnil(L, -1)) {
+        warnInvalidValue("sdl.log_level", "info");
+        sdl_log_level = sdl_log_level_default;
     }
     c.lua_pop(L, 1);
 
@@ -442,10 +481,21 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         _ = c.lua_getfield(L, -1, "raylib");
         if (c.lua_isstring(L, -1) != 0) {
             sdl_log_level = parseSdlLogLevel(L, -1);
+            if (sdl_log_level == null) {
+                warnInvalidValue("raylib.log_level", "info");
+                sdl_log_level = sdl_log_level_default;
+            }
         } else if (c.lua_istable(L, -1)) {
             _ = c.lua_getfield(L, -1, "log_level");
             if (c.lua_isstring(L, -1) != 0) {
                 sdl_log_level = parseSdlLogLevel(L, -1);
+                if (sdl_log_level == null) {
+                    warnInvalidValue("raylib.log_level", "info");
+                    sdl_log_level = sdl_log_level_default;
+                }
+            } else if (!c.lua_isnil(L, -1)) {
+                warnInvalidValue("raylib.log_level", "info");
+                sdl_log_level = sdl_log_level_default;
             }
             c.lua_pop(L, 1);
         }
@@ -473,12 +523,22 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         _ = c.lua_getfield(L, -1, "disable_ligatures");
         if (c.lua_isstring(L, -1) != 0) {
             editor_disable_ligatures = parseTerminalDisableLigatures(L, -1);
+            if (editor_disable_ligatures == null) {
+                warnInvalidValue("editor.disable_ligatures", "never");
+                editor_disable_ligatures = ligature_strategy_default;
+            }
+        } else if (!c.lua_isnil(L, -1)) {
+            warnInvalidValue("editor.disable_ligatures", "never");
+            editor_disable_ligatures = ligature_strategy_default;
         }
         c.lua_pop(L, 1);
 
         _ = c.lua_getfield(L, -1, "wrap");
         if (c.lua_isboolean(L, -1)) {
             editor_wrap = c.lua_toboolean(L, -1) != 0;
+        } else if (!c.lua_isnil(L, -1)) {
+            warnInvalidValue("editor.wrap", "false");
+            editor_wrap = false;
         }
         c.lua_pop(L, 1);
 
@@ -490,7 +550,13 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
                 const value = c.lua_tointegerx(L, -1, &is_num);
                 if (is_num != 0 and value >= 0) {
                     editor_highlight_budget = @intCast(value);
+                } else {
+                    warnInvalidValue("editor.render.highlight_budget", "0");
+                    editor_highlight_budget = 0;
                 }
+            } else if (!c.lua_isnil(L, -1)) {
+                warnInvalidValue("editor.render.highlight_budget", "0");
+                editor_highlight_budget = 0;
             }
             c.lua_pop(L, 1);
 
@@ -500,7 +566,13 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
                 const value = c.lua_tointegerx(L, -1, &is_num);
                 if (is_num != 0 and value >= 0) {
                     editor_width_budget = @intCast(value);
+                } else {
+                    warnInvalidValue("editor.render.width_budget", "0");
+                    editor_width_budget = 0;
                 }
+            } else if (!c.lua_isnil(L, -1)) {
+                warnInvalidValue("editor.render.width_budget", "0");
+                editor_width_budget = 0;
             }
             c.lua_pop(L, 1);
         }
@@ -533,14 +605,28 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         _ = c.lua_getfield(L, -1, "blink");
         if (c.lua_isstring(L, -1) != 0) {
             terminal_blink_style = parseTerminalBlink(L, -1);
+            if (terminal_blink_style == null) {
+                warnInvalidValue("terminal.blink", "kitty");
+                terminal_blink_style = terminal_blink_default;
+            }
         } else if (c.lua_isboolean(L, -1)) {
             terminal_blink_style = if (c.lua_toboolean(L, -1) != 0) .kitty else .off;
+        } else if (!c.lua_isnil(L, -1)) {
+            warnInvalidValue("terminal.blink", "kitty");
+            terminal_blink_style = terminal_blink_default;
         }
         c.lua_pop(L, 1);
 
         _ = c.lua_getfield(L, -1, "disable_ligatures");
         if (c.lua_isstring(L, -1) != 0) {
             terminal_disable_ligatures = parseTerminalDisableLigatures(L, -1);
+            if (terminal_disable_ligatures == null) {
+                warnInvalidValue("terminal.disable_ligatures", "never");
+                terminal_disable_ligatures = ligature_strategy_default;
+            }
+        } else if (!c.lua_isnil(L, -1)) {
+            warnInvalidValue("terminal.disable_ligatures", "never");
+            terminal_disable_ligatures = ligature_strategy_default;
         }
         c.lua_pop(L, 1);
 
@@ -606,14 +692,24 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             _ = c.lua_getfield(L, -1, "window");
             if (c.lua_isboolean(L, -1)) {
                 terminal_focus_report_window = c.lua_toboolean(L, -1) != 0;
+            } else if (!c.lua_isnil(L, -1)) {
+                warnInvalidValue("terminal.focus_reporting.window", "true");
+                terminal_focus_report_window = true;
             }
             c.lua_pop(L, 1);
 
             _ = c.lua_getfield(L, -1, "pane");
             if (c.lua_isboolean(L, -1)) {
                 terminal_focus_report_pane = c.lua_toboolean(L, -1) != 0;
+            } else if (!c.lua_isnil(L, -1)) {
+                warnInvalidValue("terminal.focus_reporting.pane", "false");
+                terminal_focus_report_pane = false;
             }
             c.lua_pop(L, 1);
+        } else if (!c.lua_isnil(L, -1)) {
+            warnInvalidValue("terminal.focus_reporting", "{ window = true, pane = false }");
+            terminal_focus_report_window = true;
+            terminal_focus_report_pane = false;
         }
         c.lua_pop(L, 1);
     }
@@ -624,24 +720,44 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         _ = c.lua_getfield(L, -1, "lcd");
         if (c.lua_isboolean(L, -1)) {
             font_lcd = c.lua_toboolean(L, -1) != 0;
+        } else if (!c.lua_isnil(L, -1)) {
+            warnInvalidValue("font_rendering.lcd", "false");
+            font_lcd = false;
         }
         c.lua_pop(L, 1);
 
         _ = c.lua_getfield(L, -1, "hinting");
         if (c.lua_isstring(L, -1) != 0) {
             font_hinting = parseFontHinting(L, -1);
+            if (font_hinting == null) {
+                warnInvalidValue("font_rendering.hinting", "default");
+                font_hinting = font_hinting_default;
+            }
+        } else if (!c.lua_isnil(L, -1)) {
+            warnInvalidValue("font_rendering.hinting", "default");
+            font_hinting = font_hinting_default;
         }
         c.lua_pop(L, 1);
 
         _ = c.lua_getfield(L, -1, "autohint");
         if (c.lua_isboolean(L, -1)) {
             font_autohint = c.lua_toboolean(L, -1) != 0;
+        } else if (!c.lua_isnil(L, -1)) {
+            warnInvalidValue("font_rendering.autohint", "false");
+            font_autohint = false;
         }
         c.lua_pop(L, 1);
 
         _ = c.lua_getfield(L, -1, "glyph_overflow");
         if (c.lua_isstring(L, -1) != 0) {
             font_glyph_overflow = parseGlyphOverflowPolicy(L, -1);
+            if (font_glyph_overflow == null) {
+                warnInvalidValue("font_rendering.glyph_overflow", "when_followed_by_space");
+                font_glyph_overflow = glyph_overflow_default;
+            }
+        } else if (!c.lua_isnil(L, -1)) {
+            warnInvalidValue("font_rendering.glyph_overflow", "when_followed_by_space");
+            font_glyph_overflow = glyph_overflow_default;
         }
         c.lua_pop(L, 1);
 
@@ -650,20 +766,39 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             _ = c.lua_getfield(L, -1, "gamma");
             if (c.lua_isnumber(L, -1) != 0) {
                 const v = c.lua_tonumberx(L, -1, null);
-                if (v > 0) text_gamma = @floatCast(v);
+                if (v > 0) {
+                    text_gamma = @floatCast(v);
+                } else {
+                    warnInvalidValue("font_rendering.text.gamma", "1.0");
+                    text_gamma = text_gamma_default;
+                }
+            } else if (!c.lua_isnil(L, -1)) {
+                warnInvalidValue("font_rendering.text.gamma", "1.0");
+                text_gamma = text_gamma_default;
             }
             c.lua_pop(L, 1);
 
             _ = c.lua_getfield(L, -1, "contrast");
             if (c.lua_isnumber(L, -1) != 0) {
                 const v = c.lua_tonumberx(L, -1, null);
-                if (v > 0) text_contrast = @floatCast(v);
+                if (v > 0) {
+                    text_contrast = @floatCast(v);
+                } else {
+                    warnInvalidValue("font_rendering.text.contrast", "1.0");
+                    text_contrast = text_contrast_default;
+                }
+            } else if (!c.lua_isnil(L, -1)) {
+                warnInvalidValue("font_rendering.text.contrast", "1.0");
+                text_contrast = text_contrast_default;
             }
             c.lua_pop(L, 1);
 
             _ = c.lua_getfield(L, -1, "linear_correction");
             if (c.lua_isboolean(L, -1)) {
                 text_linear_correction = c.lua_toboolean(L, -1) != 0;
+            } else if (!c.lua_isnil(L, -1)) {
+                warnInvalidValue("font_rendering.text.linear_correction", "true");
+                text_linear_correction = text_linear_correction_default;
             }
             c.lua_pop(L, 1);
         }
@@ -679,6 +814,11 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
 
     _ = c.lua_getfield(L, -1, "keybinds");
     if (c.lua_istable(L, -1)) {
+        _ = c.lua_getfield(L, -1, "no_defaults");
+        if (c.lua_isboolean(L, -1)) {
+            keybinds_no_defaults = c.lua_toboolean(L, -1) != 0;
+        }
+        c.lua_pop(L, 1);
         keybinds = try parseKeybinds(allocator, L, -1);
     }
     c.lua_pop(L, 1);
@@ -714,8 +854,44 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         .text_contrast = text_contrast,
         .text_linear_correction = text_linear_correction,
         .theme = theme,
+        .keybinds_no_defaults = keybinds_no_defaults,
         .keybinds = keybinds,
     };
+}
+
+fn sameBindingIdentity(a: input_actions.BindSpec, b: input_actions.BindSpec) bool {
+    return a.scope == b.scope and
+        a.key == b.key and
+        a.mods.shift == b.mods.shift and
+        a.mods.alt == b.mods.alt and
+        a.mods.ctrl == b.mods.ctrl and
+        a.mods.super == b.mods.super and
+        a.mods.altgr == b.mods.altgr;
+}
+
+fn mergeKeybinds(
+    allocator: std.mem.Allocator,
+    base: []const input_actions.BindSpec,
+    overlay: []const input_actions.BindSpec,
+) ![]input_actions.BindSpec {
+    var merged = std.ArrayList(input_actions.BindSpec).empty;
+    errdefer merged.deinit(allocator);
+    try merged.appendSlice(allocator, base);
+
+    for (overlay) |binding| {
+        var replaced = false;
+        for (merged.items, 0..) |existing, idx| {
+            if (!sameBindingIdentity(existing, binding)) continue;
+            merged.items[idx] = binding;
+            replaced = true;
+            break;
+        }
+        if (!replaced) {
+            try merged.append(allocator, binding);
+        }
+    }
+
+    return merged.toOwnedSlice(allocator);
 }
 
 fn parseFontHinting(L: *c.lua_State, idx: c_int) ?FontHinting {
@@ -890,7 +1066,7 @@ fn parseRepeatField(L: *c.lua_State, idx: c_int) bool {
     return c.lua_toboolean(L, -1) != 0;
 }
 
-const ModFlag = enum { ctrl, shift, alt, super };
+const ModFlag = enum { ctrl, shift, alt, super, altgr };
 
 fn readModString(L: *c.lua_State, idx: c_int) ?ModFlag {
     var len: usize = 0;
@@ -900,6 +1076,7 @@ fn readModString(L: *c.lua_State, idx: c_int) ?ModFlag {
     if (std.mem.eql(u8, slice, "shift")) return .shift;
     if (std.mem.eql(u8, slice, "alt")) return .alt;
     if (std.mem.eql(u8, slice, "super")) return .super;
+    if (std.mem.eql(u8, slice, "altgr")) return .altgr;
     return null;
 }
 
@@ -909,7 +1086,195 @@ fn applyMod(mods: *input_types.Modifiers, mod_flag: ModFlag) void {
         .shift => mods.shift = true,
         .alt => mods.alt = true,
         .super => mods.super = true,
+        .altgr => mods.altgr = true,
     }
+}
+
+fn warnInvalidValue(path: []const u8, fallback: []const u8) void {
+    std.debug.print("config warning: {s} invalid, using {s}\n", .{ path, fallback });
+}
+
+fn parseConfigFromSnippet(allocator: std.mem.Allocator, source: []const u8) !Config {
+    const L = c.luaL_newstate() orelse return LuaConfigError.LuaInitFailed;
+    defer c.lua_close(L);
+    c.luaL_openlibs(L);
+
+    if (c.luaL_loadbufferx(L, source.ptr, source.len, "config_test", null) != 0) {
+        return LuaConfigError.LuaLoadFailed;
+    }
+    if (c.lua_pcallk(L, 0, 1, 0, 0, null) != 0) {
+        return LuaConfigError.LuaRunFailed;
+    }
+
+    return parseConfigFromStack(allocator, L);
+}
+
+test "mergeKeybinds fills gaps and preserves unmatched defaults" {
+    const allocator = std.testing.allocator;
+    const defaults = [_]input_actions.BindSpec{
+        .{
+            .scope = .editor,
+            .key = .c,
+            .mods = .{ .ctrl = true },
+            .action = .copy,
+            .repeat = false,
+        },
+        .{
+            .scope = .editor,
+            .key = .up,
+            .mods = .{ .shift = true, .alt = true },
+            .action = .editor_add_caret_up,
+            .repeat = false,
+        },
+    };
+    const overlay = [_]input_actions.BindSpec{
+        .{
+            .scope = .editor,
+            .key = .v,
+            .mods = .{ .ctrl = true },
+            .action = .paste,
+            .repeat = false,
+        },
+    };
+
+    const merged = try mergeKeybinds(allocator, &defaults, &overlay);
+    defer allocator.free(merged);
+
+    try std.testing.expectEqual(@as(usize, 3), merged.len);
+    try std.testing.expectEqual(input_actions.ActionKind.copy, merged[0].action);
+    try std.testing.expectEqual(input_actions.ActionKind.editor_add_caret_up, merged[1].action);
+    try std.testing.expectEqual(input_actions.ActionKind.paste, merged[2].action);
+}
+
+test "mergeKeybinds overrides by scope key and exact mods" {
+    const allocator = std.testing.allocator;
+    const defaults = [_]input_actions.BindSpec{
+        .{
+            .scope = .editor,
+            .key = .c,
+            .mods = .{ .ctrl = true },
+            .action = .copy,
+            .repeat = false,
+        },
+    };
+    const overlay = [_]input_actions.BindSpec{
+        .{
+            .scope = .editor,
+            .key = .c,
+            .mods = .{ .ctrl = true },
+            .action = .cut,
+            .repeat = false,
+        },
+    };
+
+    const merged = try mergeKeybinds(allocator, &defaults, &overlay);
+    defer allocator.free(merged);
+
+    try std.testing.expectEqual(@as(usize, 1), merged.len);
+    try std.testing.expectEqual(input_actions.ActionKind.cut, merged[0].action);
+}
+
+test "mergeKeybinds treats altgr as part of binding identity" {
+    const allocator = std.testing.allocator;
+    const defaults = [_]input_actions.BindSpec{
+        .{
+            .scope = .editor,
+            .key = .e,
+            .mods = .{ .ctrl = true, .alt = true, .altgr = true },
+            .action = .copy,
+            .repeat = false,
+        },
+    };
+    const overlay = [_]input_actions.BindSpec{
+        .{
+            .scope = .editor,
+            .key = .e,
+            .mods = .{ .ctrl = true, .alt = true, .altgr = false },
+            .action = .cut,
+            .repeat = false,
+        },
+    };
+
+    const merged = try mergeKeybinds(allocator, &defaults, &overlay);
+    defer allocator.free(merged);
+
+    try std.testing.expectEqual(@as(usize, 2), merged.len);
+    try std.testing.expectEqual(input_actions.ActionKind.copy, merged[0].action);
+    try std.testing.expectEqual(input_actions.ActionKind.cut, merged[1].action);
+}
+
+test "parseConfigFromSnippet warns-and-defaults invalid font rendering values" {
+    const allocator = std.testing.allocator;
+    var config = try parseConfigFromSnippet(allocator,
+        \\return {
+        \\  font_rendering = {
+        \\    lcd = "bad",
+        \\    hinting = "weird",
+        \\    autohint = "bad",
+        \\    glyph_overflow = "bad",
+        \\    text = {
+        \\      gamma = -1,
+        \\      contrast = 0,
+        \\      linear_correction = "bad",
+        \\    },
+        \\  },
+        \\}
+    );
+    defer freeConfig(allocator, &config);
+
+    try std.testing.expectEqual(false, config.font_lcd.?);
+    try std.testing.expectEqual(FontHinting.default, config.font_hinting.?);
+    try std.testing.expectEqual(false, config.font_autohint.?);
+    try std.testing.expectEqual(GlyphOverflowPolicy.when_followed_by_space, config.font_glyph_overflow.?);
+    try std.testing.expectEqual(@as(f32, 1.0), config.text_gamma.?);
+    try std.testing.expectEqual(@as(f32, 1.0), config.text_contrast.?);
+    try std.testing.expectEqual(true, config.text_linear_correction.?);
+}
+
+test "parseConfigFromSnippet parses altgr keybind modifiers" {
+    const allocator = std.testing.allocator;
+    var config = try parseConfigFromSnippet(allocator,
+        \\return {
+        \\  keybinds = {
+        \\    editor = {
+        \\      { key = "e", mods = { "ctrl", "alt", "altgr" }, action = "copy" },
+        \\    },
+        \\  },
+        \\}
+    );
+    defer freeConfig(allocator, &config);
+
+    try std.testing.expect(config.keybinds != null);
+    try std.testing.expectEqual(@as(usize, 1), config.keybinds.?.len);
+    try std.testing.expect(config.keybinds.?[0].mods.ctrl);
+    try std.testing.expect(config.keybinds.?[0].mods.alt);
+    try std.testing.expect(config.keybinds.?[0].mods.altgr);
+}
+
+test "parseConfigFromSnippet defaults invalid focus reporting and budgets" {
+    const allocator = std.testing.allocator;
+    var config = try parseConfigFromSnippet(allocator,
+        \\return {
+        \\  editor = {
+        \\    render = {
+        \\      highlight_budget = -10,
+        \\      width_budget = "bad",
+        \\    },
+        \\  },
+        \\  terminal = {
+        \\    focus_reporting = {
+        \\      window = "bad",
+        \\      pane = "bad",
+        \\    },
+        \\  },
+        \\}
+    );
+    defer freeConfig(allocator, &config);
+
+    try std.testing.expectEqual(@as(usize, 0), config.editor_highlight_budget.?);
+    try std.testing.expectEqual(@as(usize, 0), config.editor_width_budget.?);
+    try std.testing.expectEqual(true, config.terminal_focus_report_window.?);
+    try std.testing.expectEqual(false, config.terminal_focus_report_pane.?);
 }
 
 fn findUserConfigPath(allocator: std.mem.Allocator) LuaConfigError!?[]u8 {

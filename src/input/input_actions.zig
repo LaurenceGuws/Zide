@@ -98,8 +98,8 @@ pub const InputRouter = struct {
             _ = self.actions.append(self.allocator, .{ .kind = binding.action, .consumed = false }) catch {};
             if (log.enabled_file or log.enabled_console) {
                 log.logf(
-                    "action={s} key={s} scope={s} focus={s} shift={d} ctrl={d} alt={d} super={d} repeat={d}",
-                    .{ actionName(binding.action), @tagName(binding.key), @tagName(binding.scope), @tagName(focus), @intFromBool(binding.mods.shift), @intFromBool(binding.mods.ctrl), @intFromBool(binding.mods.alt), @intFromBool(binding.mods.super), @intFromBool(binding.repeat) },
+                    "action={s} key={s} scope={s} focus={s} shift={d} ctrl={d} alt={d} super={d} altgr={d} repeat={d}",
+                    .{ actionName(binding.action), @tagName(binding.key), @tagName(binding.scope), @tagName(focus), @intFromBool(binding.mods.shift), @intFromBool(binding.mods.ctrl), @intFromBool(binding.mods.alt), @intFromBool(binding.mods.super), @intFromBool(binding.mods.altgr), @intFromBool(binding.repeat) },
                 );
             }
         }
@@ -124,7 +124,8 @@ fn modsMatch(expected: shared_types.input.Modifiers, actual: shared_types.input.
     return expected.shift == actual.shift and
         expected.ctrl == actual.ctrl and
         expected.alt == actual.alt and
-        expected.super == actual.super;
+        expected.super == actual.super and
+        expected.altgr == actual.altgr;
 }
 
 fn actionName(kind: ActionKind) []const u8 {
