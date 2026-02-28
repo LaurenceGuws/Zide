@@ -93,6 +93,9 @@ pub const Theme = struct {
     namespace: Color = Color{ .r = 231, .g = 193, .b = 115 },
     label: Color = Color.orange,
     error_token: Color = Color.red,
+    preproc: Color = Color{ .r = 143, .g = 188, .b = 187 },
+    macro: Color = Color{ .r = 180, .g = 142, .b = 173 },
+    escape: Color = Color{ .r = 136, .g = 192, .b = 208 },
 
     // Optional override for terminal ANSI colors 0-15
     ansi_colors: ?[16]Color = null,

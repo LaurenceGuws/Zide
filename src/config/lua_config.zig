@@ -135,6 +135,9 @@ pub const ThemeConfig = struct {
     namespace: ?Color = null,
     label: ?Color = null,
     error_token: ?Color = null,
+    preproc: ?Color = null,
+    macro: ?Color = null,
+    escape: ?Color = null,
     ansi_colors: [16]?Color = .{null} ** 16,
 };
 
@@ -1558,6 +1561,9 @@ fn mergeThemeConfig(base: *ThemeConfig, overlay: ThemeConfig) void {
     if (overlay.namespace) |color| base.namespace = color;
     if (overlay.label) |color| base.label = color;
     if (overlay.error_token) |color| base.error_token = color;
+    if (overlay.preproc) |color| base.preproc = color;
+    if (overlay.macro) |color| base.macro = color;
+    if (overlay.escape) |color| base.escape = color;
     for (0..16) |i| {
         if (overlay.ansi_colors[i]) |color| base.ansi_colors[i] = color;
     }
@@ -1598,6 +1604,9 @@ pub fn applyThemeConfig(theme: *Theme, overlay: ThemeConfig) void {
     if (overlay.namespace) |color| theme.namespace = color;
     if (overlay.label) |color| theme.label = color;
     if (overlay.error_token) |color| theme.error_token = color;
+    if (overlay.preproc) |color| theme.preproc = color;
+    if (overlay.macro) |color| theme.macro = color;
+    if (overlay.escape) |color| theme.escape = color;
     if (theme.ansi_colors) |*colors| {
         for (0..16) |i| {
             if (overlay.ansi_colors[i]) |color| colors[i] = color;
@@ -1683,6 +1692,9 @@ fn parseThemeSyntaxTable(L: *c.lua_State, idx: c_int, theme: *ThemeConfig) void 
     parseColorField(L, idx, "label", &theme.label);
     parseColorField(L, idx, "error", &theme.error_token);
     parseColorField(L, idx, "error_token", &theme.error_token);
+    parseColorField(L, idx, "preproc", &theme.preproc);
+    parseColorField(L, idx, "macro", &theme.macro);
+    parseColorField(L, idx, "escape", &theme.escape);
 }
 
 fn parseColorField(L: *c.lua_State, idx: c_int, field: [:0]const u8, out: *?Color) void {

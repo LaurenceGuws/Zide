@@ -1099,6 +1099,9 @@ const Theme = struct {
     namespace: Color = Color{ .r = 139, .g = 233, .b = 253 },
     label: Color = Color{ .r = 139, .g = 233, .b = 253 },
     error_token: Color = Color{ .r = 255, .g = 85, .b = 85 },
+    preproc: Color = Color{ .r = 143, .g = 188, .b = 187 },
+    macro: Color = Color{ .r = 180, .g = 142, .b = 173 },
+    escape: Color = Color{ .r = 136, .g = 192, .b = 208 },
 };
 
 const DrawLog = struct {

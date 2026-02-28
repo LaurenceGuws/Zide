@@ -30,6 +30,9 @@ pub const TokenKind = enum(u8) {
     label = 14,
     link = 15,
     error_token = 16,
+    preproc = 17,
+    macro = 18,
+    escape = 19,
 };
 
 pub const HighlightToken = struct {
@@ -790,6 +793,10 @@ fn appendHighlightTokens(
 fn mapCaptureKind(name: []const u8) TokenKind {
     if (std.mem.startsWith(u8, name, "comment")) return .comment;
     if (std.mem.indexOf(u8, name, "builtin") != null) return .builtin;
+    if (std.mem.startsWith(u8, name, "preproc")) return .preproc;
+    if (std.mem.startsWith(u8, name, "keyword.directive")) return .preproc;
+    if (std.mem.startsWith(u8, name, "function.macro")) return .macro;
+    if (std.mem.startsWith(u8, name, "string.escape")) return .escape;
     if (std.mem.startsWith(u8, name, "string")) return .string;
     if (std.mem.startsWith(u8, name, "markup.link")) return .link;
     if (std.mem.startsWith(u8, name, "markup")) return .string;
@@ -866,6 +873,8 @@ fn mapCaptureKind(name: []const u8) TokenKind {
 
     if (std.mem.eql(u8, name, "diff.plus")) return .operator;
     if (std.mem.eql(u8, name, "diff.minus")) return .operator;
+    if (std.mem.eql(u8, name, "define")) return .preproc;
+    if (std.mem.eql(u8, name, "charset")) return .escape;
     return .plain;
 }
 
@@ -2145,6 +2154,10 @@ test "map capture kind covers common alias captures" {
     try std.testing.expectEqual(TokenKind.function, mapCaptureKind("func"));
     try std.testing.expectEqual(TokenKind.variable, mapCaptureKind("argument"));
     try std.testing.expectEqual(TokenKind.operator, mapCaptureKind("diff.plus"));
+    try std.testing.expectEqual(TokenKind.preproc, mapCaptureKind("define"));
+    try std.testing.expectEqual(TokenKind.preproc, mapCaptureKind("keyword.directive"));
+    try std.testing.expectEqual(TokenKind.macro, mapCaptureKind("function.macro"));
+    try std.testing.expectEqual(TokenKind.escape, mapCaptureKind("string.escape"));
 }
 
 test "predicates + priority metadata filter highlights" {

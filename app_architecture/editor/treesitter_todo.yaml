@@ -38,6 +38,7 @@ treesitter_todo:
         - "Overlap splitting now resolves competing captures by priority and produces non-overlapping segments."
         - "Capture mapping treats markup.link.* as a link token kind."
         - "Capture taxonomy now maps common non-standard alias captures (e.g. import/cImport/none/annotation/func/argument/diff.plus) to concrete token kinds instead of falling back to plain."
+        - "Added dedicated token kinds/colors for preprocessor, macro, and escape captures to increase syntax granularity without query-side changes."
         - "Rendering now respects conceal/url metadata (conceal hides or replaces token text; url forces link color)."
     - id: TS-03
       status: in_progress
