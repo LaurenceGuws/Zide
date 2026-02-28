@@ -93,10 +93,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
  - Scrollback view cache + reflow resizing are still in progress; expect instability during the redesign.
 
 ### In-Progress (Uncommitted)
-- Editor uncommitted progress:
-  - Search scaffold + navigation + regex entrypoint + render overlays.
-  - Tree-sitter render-order stability tests and shared comparator rollout.
-  - Test harness updates for highlight replay/input/reflow API drift.
+- None currently.
 - Workspace note:
   - `.github/workflows/ci.yml` is intentionally deleted for this pet project (do not restore unless user asks).
 

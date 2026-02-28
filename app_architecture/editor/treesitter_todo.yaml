@@ -2,10 +2,17 @@ treesitter_todo:
   scope:
     description: "Tree-sitter integration for syntax highlighting and semantic metadata."
     priorities:
+      - "core-first highlight correctness and deterministic ordering"
       - "match Neovim query/capture semantics for highlight metadata"
       - "incremental updates based on changed ranges"
       - "low-latency highlight application with stable priorities"
       - "query + capture caching per language"
+  execution_policy:
+    rule: "stabilize baseline highlight path before broadening advanced query features"
+    baseline_focus:
+      - "immediate/cached render parity"
+      - "metadata correctness (priority/conceal/url)"
+      - "incremental invalidation reliability"
   references:
     neovim:
       - reference_repos/editors/neovim/runtime/doc/treesitter.txt
@@ -57,6 +64,7 @@ treesitter_todo:
       status: in_progress
       title: "Injected languages"
       notes:
+        - "Keep scope constrained while TS-02/03/04/06 baseline stability is still being hardened."
         - "Support language injections in queries."
         - "Maintain highlight order so injected nodes override parents."
         - "Extend query packaging + runtime loading beyond highlights.scm (injections, locals, tags, textobjects, indents) per language."
