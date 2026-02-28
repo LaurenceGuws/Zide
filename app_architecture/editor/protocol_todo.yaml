@@ -95,6 +95,7 @@ editor_protocol_todo:
         - "Plain unmodified left/right movement now explicitly collapses mixed multi-range selection sets to directional edges while preserving the caret set."
         - "Plain unmodified up/down movement now mirrors that collapse policy for mixed multi-range selection sets (up -> start edges, down -> end edges)."
         - "Large visual move/extend jump size is now editor-configurable (`editor.large_cursor_jump_rows`) instead of hardcoded."
+        - "App-level regression now covers a combined routed large-extend + large-move action sequence through the shared visual-step repeater, including configured jump sizes and step direction."
         - "Ctrl+up/down now route as larger visual cursor jumps (five visual rows per step), alongside existing ctrl+left/right word jumps."
         - "Paste semantics are now explicit: plain multi-selection paste broadcasts one payload to every selection, while rectangular selections trim CRLF row endings, preserve trailing empty rows, repeat a single row, map exact row counts 1:1, cycle clipboard rows when counts mismatch, and interpret visual columns via cluster boundaries plus core visual widths (tabs, combining marks, wide glyphs) instead of raw bytes."
         - "Editor-core rectangular expansion now has a cluster-provider entrypoint so non-widget callers can use the same cluster-aware visual-column mapping as view/widget selection code."

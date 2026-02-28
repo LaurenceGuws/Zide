@@ -2447,6 +2447,55 @@ test "applyRepeatedVisualDelta steps until blocked" {
     try std.testing.expectEqual(@as(usize, 3), ctx.steps);
 }
 
+test "routed large visual actions apply configured step sequence" {
+    const Ctx = struct {
+        dirs: [16]i32 = [_]i32{0} ** 16,
+        len: usize = 0,
+        fn push(self: *@This(), dir: i32) bool {
+            if (self.len >= self.dirs.len) return false;
+            self.dirs[self.len] = dir;
+            self.len += 1;
+            return true;
+        }
+    };
+
+    var ctx = Ctx{};
+
+    const down_delta = AppState.visualExtendDeltaForAction(.editor_extend_large_down, 4) orelse return error.TestUnexpectedResult;
+    const moved_down = AppState.applyRepeatedVisualDelta(
+        down_delta,
+        @ptrCast(&ctx),
+        struct {
+            fn step(raw: *anyopaque, dir: i32) bool {
+                const payload: *Ctx = @ptrCast(@alignCast(raw));
+                return payload.push(dir);
+            }
+        }.step,
+    );
+    try std.testing.expect(moved_down);
+
+    const up_delta = AppState.visualMoveDeltaForAction(.editor_move_large_up, 2) orelse return error.TestUnexpectedResult;
+    const moved_up = AppState.applyRepeatedVisualDelta(
+        up_delta,
+        @ptrCast(&ctx),
+        struct {
+            fn step(raw: *anyopaque, dir: i32) bool {
+                const payload: *Ctx = @ptrCast(@alignCast(raw));
+                return payload.push(dir);
+            }
+        }.step,
+    );
+    try std.testing.expect(moved_up);
+
+    try std.testing.expectEqual(@as(usize, 6), ctx.len);
+    try std.testing.expectEqual(@as(i32, 1), ctx.dirs[0]);
+    try std.testing.expectEqual(@as(i32, 1), ctx.dirs[1]);
+    try std.testing.expectEqual(@as(i32, 1), ctx.dirs[2]);
+    try std.testing.expectEqual(@as(i32, 1), ctx.dirs[3]);
+    try std.testing.expectEqual(@as(i32, -1), ctx.dirs[4]);
+    try std.testing.expectEqual(@as(i32, -1), ctx.dirs[5]);
+}
+
 test "direct editor action helper routes word and line selection actions" {
     const allocator = std.testing.allocator;
 
