@@ -39,3 +39,26 @@ Make mouse hit-testing correct on Wayland fractional scaling by pulling the comp
 
 **Decision reference**
 - Decision logged in `app_architecture/DECISIONS.md` on 2026-01-15; implementation landed, validation still pending.
+
+## Terminal backend embeddability / FFI bridge
+
+**Goal**
+Turn terminal modularity into a real host boundary: a desktop-first, UI-free bridge around the existing PTY/protocol/snapshot backend.
+
+**Scope**
+- lock exported bridge shape
+- define event and snapshot ownership contracts
+- add a minimal Python `ctypes` smoke host
+- install a bridge C header for non-Python consumers
+
+**Status (last updated: 2026-02-28)**
+- [x] Added `app_architecture/terminal/ffi_bridge_todo.yaml`
+- [x] Added bridge design baseline
+- [x] Added event inventory baseline
+- [~] Exported C ABI surface (minimal opaque-handle slice landed)
+- [x] Python smoke host against real bridge
+- [x] Installed C header for bridge consumers
+- [x] Separate PTY-backed verifier for bridge-owned shell startup
+
+**Decision reference**
+- See `app_architecture/terminal/FFI_BRIDGE_DESIGN.md`.
