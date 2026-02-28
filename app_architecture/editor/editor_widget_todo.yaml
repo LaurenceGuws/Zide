@@ -94,6 +94,7 @@ editor_widget_todo:
         - "Large file open strategy now uses size-threshold mmap on supported platforms with read-to-alloc fallback."
         - "Horizontal scrollbar width behavior is now viewport/budget scoped only; full-buffer width scanning path removed."
         - "Rope now keeps a bounded line-start cache (with eviction + edit invalidation) to reduce repeated line offset lookups during rendering/scroll paths."
+        - "Headless editor perf harness added (`zig build perf-editor-headless`) with raw open/rss, line-start throughput, and viewport-pass metrics for large-file optimization loops."
         - "Rope undo/redo implemented (per-op text snapshots)."
         - "Undo batching: adjacent inserts/deletes merge (rope)."
         - "Undo grouping hooks added (begin/end group)."

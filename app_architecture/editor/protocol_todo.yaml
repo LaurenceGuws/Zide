@@ -49,6 +49,7 @@ editor_protocol_todo:
         - "Decision: rope/piece-tree."
         - "File-backed `TextStore` initialization now avoids load-time duplication by handing read buffers directly to rope ownership."
         - "Large-file open path now supports threshold-based mmap (with fallback) and rope line-start lookups now use bounded caching with eviction."
+        - "Headless perf harness now provides raw large-file metrics (`zig build perf-editor-headless`) for open cost, line-start query throughput, and viewport-pass throughput."
       references:
         - reference_repos/text/ropey/src/rope.rs
         - reference_repos/text/xi-rope/src/engine.rs

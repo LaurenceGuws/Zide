@@ -451,6 +451,25 @@ pub fn build(b: *std.Build) void {
     const terminal_replay_step = b.step("test-terminal-replay", "Run terminal replay harness");
     terminal_replay_step.dependOn(&run_terminal_replay.step);
 
+    const editor_perf_headless = b.addExecutable(.{
+        .name = "editor-perf-headless",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/editor_perf_main.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    const run_editor_perf_headless = b.addRunArtifact(editor_perf_headless);
+    if (b.args) |args| {
+        run_editor_perf_headless.addArgs(args);
+    }
+    const editor_perf_headless_step = b.step(
+        "perf-editor-headless",
+        "Run headless editor large-file performance harness",
+    );
+    editor_perf_headless_step.dependOn(&run_editor_perf_headless.step);
+
     const terminal_kitty_query_tests = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/terminal_kitty_query_parse_tests.zig"),
