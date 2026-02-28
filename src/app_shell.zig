@@ -272,6 +272,10 @@ pub const Shell = struct {
         self.renderer.drawText(text, x, y, color);
     }
 
+    pub fn drawTextOnBg(self: *Shell, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
+        self.renderer.drawTextOnBg(text, x, y, color, bg);
+    }
+
     pub fn drawTextSized(self: *Shell, text: []const u8, x: f32, y: f32, size: f32, color: Color) void {
         self.renderer.drawTextSized(text, x, y, size, color);
     }

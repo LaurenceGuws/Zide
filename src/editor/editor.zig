@@ -528,12 +528,20 @@ pub const Editor = struct {
     }
 
     fn noteTextChanged(self: *Editor) void {
-        self.modified = true;
-        self.invalidateLineWidthCache();
-        self.change_tick +|= 1;
+        self.noteTextChangedBase();
         if (self.search_query != null) {
             self.recomputeSearchMatches() catch {};
         }
+    }
+
+    fn noteTextChangedNoSearchRefresh(self: *Editor) void {
+        self.noteTextChangedBase();
+    }
+
+    fn noteTextChangedBase(self: *Editor) void {
+        self.modified = true;
+        self.invalidateLineWidthCache();
+        self.change_tick +|= 1;
     }
 
     fn noteHighlightDirtyRange(self: *Editor, start_byte: usize, end_byte: usize) void {
@@ -589,6 +597,35 @@ pub const Editor = struct {
             .row = @as(u32, @intCast(line)),
             .column = @as(u32, @intCast(byte_offset - line_start)),
         };
+    }
+
+    fn replaceByteRangeInternal(
+        self: *Editor,
+        start: usize,
+        end: usize,
+        replacement: []const u8,
+        refresh_search: bool,
+    ) !void {
+        const len = end - start;
+        if (len > 0) {
+            const start_point = self.pointForByte(start);
+            const end_point = self.pointForByte(end);
+            try self.buffer.deleteRange(start, len);
+            self.applyHighlightEdit(start, end, start, start_point, end_point);
+        }
+        if (replacement.len > 0) {
+            const insert_point = self.pointForByte(start);
+            try self.buffer.insertBytes(start, replacement);
+            self.applyHighlightEdit(start, start, start + replacement.len, insert_point, insert_point);
+        }
+        self.setCursorOffsetNoClear(start + replacement.len);
+        self.selection = null;
+        self.clearSelections();
+        if (refresh_search) {
+            self.noteTextChanged();
+        } else {
+            self.noteTextChangedNoSearchRefresh();
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -882,6 +919,9 @@ pub const Editor = struct {
             }
             self.invalidateLineWidthCache();
             self.change_tick +|= 1;
+            if (self.search_query != null) {
+                self.recomputeSearchMatches() catch {};
+            }
         }
         return result.changed;
     }
@@ -910,6 +950,9 @@ pub const Editor = struct {
             }
             self.invalidateLineWidthCache();
             self.change_tick +|= 1;
+            if (self.search_query != null) {
+                self.recomputeSearchMatches() catch {};
+            }
         }
         return result.changed;
     }
@@ -1032,7 +1075,7 @@ pub const Editor = struct {
             self.clearSearchState();
             return;
         }
-        try self.recomputeSearchMatches();
+        try self.recomputeSearchMatchesPrefer(self.cursor.offset);
     }
 
     pub fn setSearchQueryRegex(self: *Editor, query: ?[]const u8) !void {
@@ -1051,17 +1094,33 @@ pub const Editor = struct {
             self.clearSearchState();
             return;
         }
-        try self.recomputeSearchMatches();
+        try self.recomputeSearchMatchesPrefer(self.cursor.offset);
     }
 
     pub fn searchMatches(self: *const Editor) []const SearchMatch {
         return self.search_matches.items;
     }
 
+    pub fn searchQuery(self: *const Editor) ?[]const u8 {
+        return self.search_query;
+    }
+
     pub fn searchActiveMatch(self: *const Editor) ?SearchMatch {
         const idx = self.search_active orelse return null;
         if (idx >= self.search_matches.items.len) return null;
         return self.search_matches.items[idx];
+    }
+
+    pub fn searchActiveIndex(self: *const Editor) ?usize {
+        const idx = self.search_active orelse return null;
+        if (idx >= self.search_matches.items.len) return null;
+        return idx;
+    }
+
+    pub fn focusSearchActiveMatch(self: *Editor) bool {
+        if (self.searchActiveMatch() == null) return false;
+        self.jumpToSearchActive();
+        return true;
     }
 
     pub fn activateNextSearchMatch(self: *Editor) bool {
@@ -1086,11 +1145,54 @@ pub const Editor = struct {
         return true;
     }
 
+    pub fn replaceActiveSearchMatch(self: *Editor, replacement: []const u8) !bool {
+        const active_idx = self.search_active orelse return false;
+        if (active_idx >= self.search_matches.items.len) return false;
+        const active = self.search_matches.items[active_idx];
+
+        self.beginUndoGroup();
+        errdefer self.endUndoGroup() catch {};
+        try self.replaceByteRangeInternal(active.start, active.end, replacement, false);
+        try self.recomputeSearchMatches();
+        self.search_active = self.findSearchMatchAtOrAfter(active.start + replacement.len);
+        if (self.search_active != null) {
+            self.jumpToSearchActive();
+        }
+        try self.endUndoGroup();
+        return true;
+    }
+
+    pub fn replaceAllSearchMatches(self: *Editor, replacement: []const u8) !usize {
+        if (self.search_matches.items.len == 0) return 0;
+
+        const matches = try self.allocator.dupe(SearchMatch, self.search_matches.items);
+        defer self.allocator.free(matches);
+
+        self.beginUndoGroup();
+        errdefer self.endUndoGroup() catch {};
+        var idx = matches.len;
+        while (idx > 0) {
+            idx -= 1;
+            const match = matches[idx];
+            try self.replaceByteRangeInternal(match.start, match.end, replacement, false);
+        }
+        try self.recomputeSearchMatches();
+        try self.endUndoGroup();
+        return matches.len;
+    }
+
     fn jumpToSearchActive(self: *Editor) void {
         const active = self.searchActiveMatch() orelse return;
         self.setCursorOffsetNoClear(active.start);
         self.selection = null;
         self.clearSelections();
+    }
+
+    fn findSearchMatchAtOrAfter(self: *const Editor, offset: usize) ?usize {
+        for (self.search_matches.items, 0..) |match, idx| {
+            if (match.start >= offset) return idx;
+        }
+        return null;
     }
 
     fn clearSearchState(self: *Editor) void {
@@ -1100,6 +1202,11 @@ pub const Editor = struct {
     }
 
     fn recomputeSearchMatches(self: *Editor) !void {
+        const preferred = if (self.searchActiveMatch()) |active| active.start else self.cursor.offset;
+        try self.recomputeSearchMatchesPrefer(preferred);
+    }
+
+    fn recomputeSearchMatchesPrefer(self: *Editor, preferred_offset: usize) !void {
         self.search_matches.clearRetainingCapacity();
         const query = self.search_query orelse {
             self.search_active = null;
@@ -1141,9 +1248,17 @@ pub const Editor = struct {
             },
         }
 
-        self.search_active = if (self.search_matches.items.len > 0) 0 else null;
+        self.search_active = self.pickSearchActiveIndex(preferred_offset);
         self.search_epoch +|= 1;
         if (total > 0) self.noteHighlightDirtyRange(0, total - 1);
+    }
+
+    fn pickSearchActiveIndex(self: *const Editor, preferred_offset: usize) ?usize {
+        if (self.search_matches.items.len == 0) return null;
+        for (self.search_matches.items, 0..) |match, idx| {
+            if (match.start >= preferred_offset) return idx;
+        }
+        return 0;
     }
 
     fn regexMatchLengthAt(pattern: []const u8, text: []const u8, start: usize) ?usize {

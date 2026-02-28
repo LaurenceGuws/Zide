@@ -37,6 +37,14 @@ pub fn computeScrollbarThumb(scrollbar_y: f32, track_h: f32, visible_lines: usiz
 }
 
 pub fn drawTruncatedText(shell: *Shell, text: []const u8, x: f32, y: f32, color: Color, max_width: f32) TruncResult {
+    return drawTruncatedTextImpl(shell, text, x, y, color, max_width, null);
+}
+
+pub fn drawTruncatedTextOnBg(shell: *Shell, text: []const u8, x: f32, y: f32, color: Color, bg: Color, max_width: f32) TruncResult {
+    return drawTruncatedTextImpl(shell, text, x, y, color, max_width, bg);
+}
+
+fn drawTruncatedTextImpl(shell: *Shell, text: []const u8, x: f32, y: f32, color: Color, max_width: f32, bg: ?Color) TruncResult {
     if (max_width <= 0 or text.len == 0) {
         return .{ .drawn_width = 0, .truncated = text.len > 0, .drawn_len = 0 };
     }
@@ -79,7 +87,11 @@ pub fn drawTruncatedText(shell: *Shell, text: []const u8, x: f32, y: f32, color:
         }
     }
 
-    shell.drawText(buf[0..out_len], x, y, color);
+    if (bg) |background| {
+        shell.drawTextOnBg(buf[0..out_len], x, y, color, background);
+    } else {
+        shell.drawText(buf[0..out_len], x, y, color);
+    }
     return .{
         .drawn_width = @as(f32, @floatFromInt(out_len)) * shell.charWidth(),
         .truncated = truncated,

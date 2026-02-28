@@ -149,6 +149,22 @@ fn applyRendererFontRenderingConfig(shell: *Shell, config: *const config_mod.Con
 }
 
 const AppState = struct {
+    const SearchPanelState = struct {
+        active: bool,
+        query: std.ArrayList(u8),
+
+        fn init(_: std.mem.Allocator) SearchPanelState {
+            return .{
+                .active = false,
+                .query = std.ArrayList(u8).empty,
+            };
+        }
+
+        fn deinit(self: *SearchPanelState, allocator: std.mem.Allocator) void {
+            self.query.deinit(allocator);
+        }
+    };
+
     allocator: std.mem.Allocator,
     shell: *Shell,
     options_bar: OptionsBar,
@@ -229,6 +245,7 @@ const AppState = struct {
     font_sample_auto_close_frames: u64,
     font_sample_close_pending: bool,
     font_sample_screenshot_path: ?[]const u8,
+    search_panel: SearchPanelState,
 
     fn isDarkTheme(theme: *const app_shell.Theme) bool {
         const r = @as(u32, theme.background.r);
@@ -468,6 +485,7 @@ const AppState = struct {
                 0,
             .font_sample_close_pending = false,
             .font_sample_screenshot_path = if (app_mode == .font_sample) envSlice("ZIDE_FONT_SAMPLE_SCREENSHOT") else null,
+            .search_panel = SearchPanelState.init(allocator),
         };
         if (app_mode == .font_sample) {
             state.font_sample_view = try font_sample_view_mod.FontSampleView.init(allocator, shell.rendererPtr());
@@ -504,6 +522,7 @@ const AppState = struct {
         self.editor_cluster_cache.deinit();
         self.grammar_manager.deinit();
         self.input_router.deinit();
+        self.search_panel.deinit(self.allocator);
         if (self.perf_file_path) |path| {
             self.allocator.free(path);
         }
@@ -547,6 +566,103 @@ const AppState = struct {
         const line_len = editor.lineLen(clamped_line);
         const clamped_col = @min(col0, line_len);
         editor.setCursor(clamped_line, clamped_col);
+    }
+
+    fn activeEditor(self: *AppState) ?*Editor {
+        if (self.editors.items.len == 0) return null;
+        const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
+        return self.editors.items[editor_idx];
+    }
+
+    fn openSearchPanel(self: *AppState, editor: *Editor) !void {
+        self.search_panel.active = true;
+        self.search_panel.query.clearRetainingCapacity();
+        if (editor.searchQuery()) |query| {
+            try self.search_panel.query.appendSlice(self.allocator, query);
+        }
+    }
+
+    fn closeSearchPanel(self: *AppState) void {
+        self.search_panel.active = false;
+    }
+
+    fn syncEditorSearchQuery(self: *AppState, editor: *Editor) !void {
+        if (self.search_panel.query.items.len == 0) {
+            try editor.setSearchQuery(null);
+            return;
+        }
+        try editor.setSearchQuery(self.search_panel.query.items);
+    }
+
+    fn popSearchQueryScalar(self: *AppState) void {
+        if (self.search_panel.query.items.len == 0) return;
+        var idx = self.search_panel.query.items.len - 1;
+        while (idx > 0 and (self.search_panel.query.items[idx] & 0b1100_0000) == 0b1000_0000) : (idx -= 1) {}
+        self.search_panel.query.items.len = idx;
+    }
+
+    fn handleSearchPanelInput(self: *AppState, editor: *Editor, input_batch: *shared_types.input.InputBatch) !bool {
+        if (!self.search_panel.active) return false;
+
+        var handled = false;
+        var query_changed = false;
+
+        const searchAction = struct {
+            fn run(target_editor: *Editor, forward: bool) bool {
+                const active = target_editor.searchActiveMatch() orelse return false;
+                if (target_editor.cursor.offset != active.start) {
+                    return target_editor.focusSearchActiveMatch();
+                }
+                return if (forward)
+                    target_editor.activateNextSearchMatch()
+                else
+                    target_editor.activatePrevSearchMatch();
+            }
+        }.run;
+
+        if (input_batch.keyPressed(.escape)) {
+            self.closeSearchPanel();
+            return true;
+        }
+
+        if (input_batch.keyPressed(.enter) or input_batch.keyPressed(.kp_enter)) {
+            if (input_batch.mods.shift) {
+                _ = searchAction(editor, false);
+            } else {
+                _ = searchAction(editor, true);
+            }
+            return true;
+        }
+
+        if (input_batch.keyPressed(.f3)) {
+            if (input_batch.mods.shift) {
+                _ = searchAction(editor, false);
+            } else {
+                _ = searchAction(editor, true);
+            }
+            return true;
+        }
+
+        if (input_batch.keyPressed(.backspace) or input_batch.keyRepeated(.backspace)) {
+            self.popSearchQueryScalar();
+            query_changed = true;
+            handled = true;
+        }
+
+        for (input_batch.events.items) |event| {
+            if (event != .text) continue;
+            const text = event.text.utf8Slice();
+            if (text.len == 0) continue;
+            try self.search_panel.query.appendSlice(self.allocator, text);
+            query_changed = true;
+            handled = true;
+        }
+
+        if (query_changed) {
+            try self.syncEditorSearchQuery(editor);
+        }
+
+        return handled;
     }
 
     fn isProbablyTextFile(path: []const u8) bool {
@@ -1032,6 +1148,23 @@ const AppState = struct {
                             handled_shortcut = true;
                         }
                     },
+                    .editor_search_open => {
+                        try self.openSearchPanel(editor);
+                        self.needs_redraw = true;
+                        handled_shortcut = true;
+                    },
+                    .editor_search_next => {
+                        if (editor.activateNextSearchMatch()) {
+                            self.needs_redraw = true;
+                            handled_shortcut = true;
+                        }
+                    },
+                    .editor_search_prev => {
+                        if (editor.activatePrevSearchMatch()) {
+                            self.needs_redraw = true;
+                            handled_shortcut = true;
+                        }
+                    },
                     else => {},
                 }
             }
@@ -1363,10 +1496,22 @@ const AppState = struct {
         }
 
         // Update active view
+        var search_panel_consumed_input = false;
+        if (self.search_panel.active) {
+            if (self.activeEditor()) |editor| {
+                if (try self.handleSearchPanelInput(editor, input_batch)) {
+                    self.editor_cluster_cache.clear();
+                    self.needs_redraw = true;
+                    self.metrics.noteInput(now);
+                    search_panel_consumed_input = true;
+                }
+            }
+        }
+
         if (self.app_mode != .terminal and self.active_kind == .editor and self.editors.items.len > 0) {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache, self.editor_wrap);
-            if (try widget.handleInput(shell, layout.editor.height, input_batch)) {
+            if (!search_panel_consumed_input and try widget.handleInput(shell, layout.editor.height, input_batch)) {
                 self.editor_cluster_cache.clear();
                 self.needs_redraw = true;
                 self.metrics.noteInput(now);
@@ -1499,7 +1644,7 @@ const AppState = struct {
                 self.needs_redraw = true;
             }
             if (self.active_kind == .terminal) {
-                if (try term_widget.handleInput(
+                if (!search_panel_consumed_input and try term_widget.handleInput(
                     shell,
                     term_x,
                     term_y_draw,
@@ -1527,7 +1672,7 @@ const AppState = struct {
                     }
                 }
             } else {
-                if (try term_widget.handleInput(
+                if (!search_panel_consumed_input and try term_widget.handleInput(
                     shell,
                     term_x,
                     term_y_draw,
@@ -1843,17 +1988,36 @@ const AppState = struct {
         if (self.app_mode != .terminal and self.editors.items.len > 0) {
             shell.setTheme(self.editor_theme);
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
-            var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache, self.editor_wrap);
-            widget.drawCached(
-                shell,
-                &self.editor_render_cache,
-                layout.editor.x,
-                layout.editor.y,
-                layout.editor.width,
-                layout.editor.height,
-                self.frame_id,
-                self.last_input,
-            );
+            const editor = self.editors.items[editor_idx];
+            if (self.search_panel.active) {
+                if (self.search_panel.query.items.len == 0) {
+                    editor.setSearchQuery(null) catch {};
+                } else {
+                    editor.setSearchQuery(self.search_panel.query.items) catch {};
+                }
+            }
+            var widget = EditorWidget.initWithCache(editor, &self.editor_cluster_cache, self.editor_wrap);
+            if (self.search_panel.active) {
+                widget.draw(
+                    shell,
+                    layout.editor.x,
+                    layout.editor.y,
+                    layout.editor.width,
+                    layout.editor.height,
+                    self.last_input,
+                );
+            } else {
+                widget.drawCached(
+                    shell,
+                    &self.editor_render_cache,
+                    layout.editor.x,
+                    layout.editor.y,
+                    layout.editor.width,
+                    layout.editor.height,
+                    self.frame_id,
+                    self.last_input,
+                );
+            }
         }
 
         // Draw terminal if shown
@@ -1904,6 +2068,15 @@ const AppState = struct {
                 editor.cursor.line,
                 editor.cursor.col,
                 editor.modified,
+                if (self.search_panel.active)
+                    .{
+                        .active = true,
+                        .query = self.search_panel.query.items,
+                        .match_count = editor.searchMatches().len,
+                        .active_index = editor.searchActiveIndex(),
+                    }
+                else
+                    null,
             );
         }
 

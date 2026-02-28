@@ -156,6 +156,16 @@ test "editor line width cache uses grapheme clusters when provided" {
     try std.testing.expectEqual(@as(usize, 2), editor.lineWidthCached(0, line, &clusters));
 }
 
+test "text event utf8Slice returns live struct bytes" {
+    const event: shared_types.input.TextEvent = .{
+        .codepoint = 'd',
+        .utf8_len = 1,
+        .utf8 = .{ 'd', 0, 0, 0 },
+    };
+
+    try std.testing.expectEqualStrings("d", event.utf8Slice());
+}
+
 test "editor selection normalization merges overlaps" {
     const allocator = std.testing.allocator;
     var fixture = try EditorFixture.init(allocator);
@@ -790,6 +800,47 @@ test "editor search next/prev moves active match and cursor" {
     try std.testing.expectEqual(@as(usize, 0), editor.cursor.offset);
 }
 
+test "editor search query picks first match at or after cursor" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("alpha beta alpha beta");
+    editor.setCursor(0, 6);
+    try editor.setSearchQuery("beta");
+
+    const active = editor.searchActiveMatch() orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 6), active.start);
+
+    editor.setCursor(0, 11);
+    try editor.setSearchQuery("beta");
+    const next_active = editor.searchActiveMatch() orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 17), next_active.start);
+}
+
+test "editor focus search active match jumps without advancing" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("alpha beta alpha");
+    editor.setCursor(0, 6);
+    try editor.setSearchQuery("alpha");
+
+    const active = editor.searchActiveMatch() orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 11), active.start);
+    try std.testing.expectEqual(@as(usize, 6), editor.cursor.offset);
+
+    try std.testing.expect(editor.focusSearchActiveMatch());
+    try std.testing.expectEqual(@as(usize, 11), editor.cursor.offset);
+
+    try std.testing.expect(editor.activateNextSearchMatch());
+    const wrapped = editor.searchActiveMatch() orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 0), wrapped.start);
+}
+
 test "editor regex search finds pattern matches" {
     const allocator = std.testing.allocator;
     var fixture = try EditorFixture.init(allocator);
@@ -805,6 +856,99 @@ test "editor regex search finds pattern matches" {
     try std.testing.expectEqual(@as(usize, 7), matches[0].end);
     try std.testing.expectEqual(@as(usize, 8), matches[1].start);
     try std.testing.expectEqual(@as(usize, 11), matches[1].end);
+}
+
+test "editor replace active search match advances to next result" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("alpha beta alpha");
+    try editor.setSearchQuery("alpha");
+
+    try std.testing.expect(try editor.replaceActiveSearchMatch("omega"));
+
+    const after = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after);
+    try std.testing.expectEqualStrings("omega beta alpha", after);
+
+    const active = editor.searchActiveMatch() orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 11), active.start);
+    try std.testing.expectEqual(@as(usize, 11), editor.cursor.offset);
+
+    try std.testing.expect(try editor.undo());
+    const undone = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(undone);
+    try std.testing.expectEqualStrings("alpha beta alpha", undone);
+    try std.testing.expectEqual(@as(usize, 2), editor.searchMatches().len);
+}
+
+test "editor replace all search matches is grouped undo" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("foo bar foo baz foo");
+    try editor.setSearchQuery("foo");
+
+    try std.testing.expectEqual(@as(usize, 3), try editor.replaceAllSearchMatches("qux"));
+
+    const after = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after);
+    try std.testing.expectEqualStrings("qux bar qux baz qux", after);
+    try std.testing.expectEqual(@as(usize, 0), editor.searchMatches().len);
+
+    try std.testing.expect(try editor.undo());
+    const undone = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(undone);
+    try std.testing.expectEqualStrings("foo bar foo baz foo", undone);
+    try std.testing.expectEqual(@as(usize, 3), editor.searchMatches().len);
+}
+
+test "editor undo redo refreshes search matches" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("alpha beta beta");
+    try editor.setSearchQuery("beta");
+    try std.testing.expectEqual(@as(usize, 2), editor.searchMatches().len);
+
+    editor.selection = .{
+        .start = .{ .line = 0, .col = 11, .offset = 11 },
+        .end = .{ .line = 0, .col = 15, .offset = 15 },
+    };
+    try editor.deleteSelection();
+    try std.testing.expectEqual(@as(usize, 1), editor.searchMatches().len);
+
+    try std.testing.expect(try editor.undo());
+    try std.testing.expectEqual(@as(usize, 2), editor.searchMatches().len);
+
+    try std.testing.expect(try editor.redo());
+    try std.testing.expectEqual(@as(usize, 1), editor.searchMatches().len);
+}
+
+test "editor search recompute preserves active match nearest previous position" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("alpha beta alpha beta");
+    try editor.setSearchQuery("beta");
+    try std.testing.expect(editor.activateNextSearchMatch());
+
+    const before = editor.searchActiveMatch() orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 17), before.start);
+
+    editor.setCursor(0, 0);
+    try editor.insertText("X");
+
+    const after = editor.searchActiveMatch() orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 18), after.start);
 }
 
 test "editor immediate and cached draw agree for conceal/url highlights" {
