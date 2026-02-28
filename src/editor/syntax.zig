@@ -1717,14 +1717,53 @@ const QueryCache = struct {
         errdefer self.allocator.free(capture_kinds);
         const capture_noop = try self.allocator.alloc(bool, capture_count);
         errdefer self.allocator.free(capture_noop);
+        var skipped_count: usize = 0;
+        var plain_count: usize = 0;
+        var mapped_count: usize = 0;
+        var plain_examples = std.ArrayList(u8).empty;
+        defer plain_examples.deinit(self.allocator);
+        const max_plain_examples: usize = 8;
+        var plain_examples_written: usize = 0;
         for (capture_kinds, 0..) |*entry, i| {
             var name_len: u32 = 0;
             const name_ptr = c.ts_query_capture_name_for_id(query, @as(u32, @intCast(i)), &name_len);
             const name = name_ptr[0..name_len];
             const kind = mapCaptureKind(name);
-            capture_noop[i] = shouldSkipCapture(name) or kind == .plain;
+            const skip = shouldSkipCapture(name);
+            capture_noop[i] = skip or kind == .plain;
+            if (skip) {
+                skipped_count += 1;
+            } else if (kind == .plain) {
+                plain_count += 1;
+                if (plain_examples_written < max_plain_examples) {
+                    if (plain_examples_written > 0) {
+                        plain_examples.appendSlice(self.allocator, ", ") catch {};
+                    }
+                    plain_examples.appendSlice(self.allocator, name) catch {};
+                    plain_examples_written += 1;
+                }
+            } else {
+                mapped_count += 1;
+            }
             entry.* = kind;
         }
+        const effective_count = mapped_count + plain_count;
+        const plain_pct = if (effective_count > 0)
+            (@as(f64, @floatFromInt(plain_count)) * 100.0) / @as(f64, @floatFromInt(effective_count))
+        else
+            0.0;
+        log.logf(
+            "query capture coverage lang={s} name={s} mapped={d} plain={d} skipped={d} plain_pct={d:.1} plain_examples=\"{s}\"",
+            .{
+                language_name,
+                query_name,
+                mapped_count,
+                plain_count,
+                skipped_count,
+                plain_pct,
+                plain_examples.items,
+            },
+        );
 
         const bundle = try self.allocator.create(QueryBundle);
         errdefer self.allocator.destroy(bundle);
