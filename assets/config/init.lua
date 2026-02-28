@@ -66,7 +66,8 @@ return {
     },
 
     -- App shell configuration.
-    -- Note: editor and terminal may use different font stacks.
+    -- Current runtime uses one effective font stack across app/editor/terminal.
+    -- If multiple font blocks are set, precedence is: terminal.font > editor.font > app.font.
     app = {
         font = {
             path = "assets/fonts/JetBrainsMonoNerdFont-Regular.ttf",
@@ -76,7 +77,7 @@ return {
 
     -- Font rendering configuration.
     -- These settings affect rasterization/shaping and text blending quality.
-    -- Note: changes currently require restart.
+    -- Changes can be reloaded; font path/size changes are still restart-oriented.
     font_rendering = {
         -- Rasterization
         -- lcd: enable subpixel (LCD) rendering path. Not final; use cautiously.
@@ -118,13 +119,15 @@ return {
             -- highlight_budget = 120,
             -- width_budget = 120,
         },
-        -- Optional override (same font as app/terminal for now).
+        -- Optional override. Current runtime still resolves one shared effective font
+        -- stack using precedence: terminal.font > editor.font > app.font.
         -- font = { path = "/usr/share/fonts/...", size = 16 },
     },
 
     -- Terminal configuration.
     terminal = {
-        -- Optional override (same font as app/editor for now).
+        -- Optional override. Current runtime still resolves one shared effective font
+        -- stack using precedence: terminal.font > editor.font > app.font.
         -- font = { path = "/usr/share/fonts/...", size = 16 },
 
         -- Ligature strategy (kitty-style semantics):
@@ -162,10 +165,15 @@ return {
     },
 
     -- Keybindings (keycode-based). Key names match `shared_types.input.Key` tags.
+    -- Supported mods: "ctrl", "shift", "alt", "super", "altgr".
+    -- "altgr" is an advanced desktop/layout-specific modifier; use it deliberately.
     -- Example:
     --   { key = "b", mods = { "ctrl" }, action = "toggle_terminal" }
     -- Use ["repeat"] = true for repeatable actions (zoom, undo).
+    -- By default user/project configs fill gaps on top of these bindings.
+    -- Set `no_defaults = true` in an override config to replace the default set entirely.
     keybinds = {
+        -- no_defaults = false,
         global = {
             -- Config hot reload.
             { key = "n", mods = { "ctrl" }, action = "new_editor" },
