@@ -15,6 +15,11 @@ const c = ts_api.c_api;
 
 /// High-level editor state wrapping a text buffer
 pub const Editor = struct {
+    pub const ClusterProvider = struct {
+        ctx: *anyopaque,
+        getClusters: *const fn (ctx: *anyopaque, line_idx: usize, line_text: []const u8) ?[]const u32,
+    };
+
     const StoredSelection = struct {
         start_offset: usize,
         end_offset: usize,
@@ -638,14 +643,26 @@ pub const Editor = struct {
     }
 
     pub fn expandRectSelectionVisual(self: *Editor, start_line: usize, end_line: usize, start_col_vis: usize, end_col_vis: usize) !void {
+        return self.expandRectSelectionVisualWithClusters(start_line, end_line, start_col_vis, end_col_vis, null);
+    }
+
+    pub fn expandRectSelectionVisualWithClusters(
+        self: *Editor,
+        start_line: usize,
+        end_line: usize,
+        start_col_vis: usize,
+        end_col_vis: usize,
+        provider: ?*const ClusterProvider,
+    ) !void {
         if (start_line > end_line) return;
         var line = start_line;
         while (line <= end_line) : (line += 1) {
             const line_start = self.buffer.lineStart(line);
             const line_text = try self.getLineAlloc(line);
             defer self.allocator.free(line_text);
-            const start_byte = self.byteIndexForVisualColumn(line_text, start_col_vis);
-            const end_byte = self.byteIndexForVisualColumn(line_text, end_col_vis);
+            const clusters = if (provider) |cluster_provider| cluster_provider.getClusters(cluster_provider.ctx, line, line_text) else null;
+            const start_byte = self.byteIndexForVisualColumn(line_text, start_col_vis, clusters);
+            const end_byte = self.byteIndexForVisualColumn(line_text, end_col_vis, clusters);
             const start = CursorPos{ .line = line, .col = start_byte, .offset = line_start + start_byte };
             const end = CursorPos{ .line = line, .col = end_byte, .offset = line_start + end_byte };
             try self.addRectSelection(start, end);
@@ -660,6 +677,11 @@ pub const Editor = struct {
                 return a.start.offset > b.start.offset;
             }
         }.lessThan);
+    }
+
+    fn duplicateNormalizedSelectionsDescending(self: *Editor) ![]Selection {
+        try self.normalizeSelectionsDescending();
+        return self.allocator.dupe(Selection, self.selections.items);
     }
 
     pub fn addCaretUp(self: *Editor) !bool {
@@ -906,9 +928,9 @@ pub const Editor = struct {
         self.selection = .{ .start = anchor, .end = target };
     }
 
-    fn byteIndexForVisualColumn(self: *Editor, line_text: []const u8, column: usize) usize {
+    fn byteIndexForVisualColumn(self: *Editor, line_text: []const u8, column: usize, clusters: ?[]const u32) usize {
         _ = self;
-        return text_columns.byteIndexForVisualColumn(line_text, column);
+        return text_columns.byteIndexForVisualColumnWithClusters(line_text, column, clusters);
     }
 
     fn updateCursorPosition(self: *Editor) void {
@@ -1054,12 +1076,13 @@ pub const Editor = struct {
             }
             _ = try self.beginTrackedUndoGroup();
             errdefer self.endTrackedUndoGroup() catch {};
-            try self.normalizeSelectionsDescending();
+            const selections = try self.duplicateNormalizedSelectionsDescending();
+            defer self.allocator.free(selections);
             const bytes = [_]u8{char};
             var caret_offsets = std.ArrayList(usize).empty;
             defer caret_offsets.deinit(self.allocator);
             var primary_offset = self.cursor.offset;
-            for (self.selections.items) |sel| {
+            for (selections) |sel| {
                 const norm = sel.normalized();
                 const len = norm.end.offset - norm.start.offset;
                 if (len > 0) {
@@ -1137,13 +1160,14 @@ pub const Editor = struct {
             }
             _ = try self.beginTrackedUndoGroup();
             errdefer self.endTrackedUndoGroup() catch {};
-            try self.normalizeSelectionsDescending();
+            const selections = try self.duplicateNormalizedSelectionsDescending();
+            defer self.allocator.free(selections);
             var caret_offsets = std.ArrayList(usize).empty;
             defer caret_offsets.deinit(self.allocator);
             var primary_offset = self.cursor.offset;
             const rect_lines = try self.rectangularPasteLines(text);
             defer if (rect_lines) |lines| self.allocator.free(lines);
-            for (self.selections.items) |sel| {
+            for (selections) |sel| {
                 const norm = sel.normalized();
                 const len = norm.end.offset - norm.start.offset;
                 if (len > 0) {
@@ -1156,7 +1180,7 @@ pub const Editor = struct {
                 }
                 const insert_start = norm.start.offset;
                 const replacement = if (rect_lines) |lines|
-                    lines[self.selections.items.len - 1 - caret_offsets.items.len]
+                    lines[selections.len - 1 - caret_offsets.items.len]
                 else
                     text;
                 const insert_point = self.pointForByte(insert_start);
@@ -1237,12 +1261,13 @@ pub const Editor = struct {
         if (self.selections.items.len > 0) {
             _ = try self.beginTrackedUndoGroup();
             errdefer self.endTrackedUndoGroup() catch {};
-            try self.normalizeSelectionsDescending();
+            const selections = try self.duplicateNormalizedSelectionsDescending();
+            defer self.allocator.free(selections);
             var changed = false;
             var caret_offsets = std.ArrayList(usize).empty;
             defer caret_offsets.deinit(self.allocator);
             var primary_offset = self.cursor.offset;
-            for (self.selections.items) |sel| {
+            for (selections) |sel| {
                 const norm = sel.normalized();
                 var delete_start = norm.start.offset;
                 var delete_len: usize = norm.end.offset - norm.start.offset;
@@ -1324,12 +1349,13 @@ pub const Editor = struct {
         if (self.selections.items.len > 0) {
             _ = try self.beginTrackedUndoGroup();
             errdefer self.endTrackedUndoGroup() catch {};
-            try self.normalizeSelectionsDescending();
+            const selections = try self.duplicateNormalizedSelectionsDescending();
+            defer self.allocator.free(selections);
             var changed = false;
             var caret_offsets = std.ArrayList(usize).empty;
             defer caret_offsets.deinit(self.allocator);
             var primary_offset = self.cursor.offset;
-            for (self.selections.items) |sel| {
+            for (selections) |sel| {
                 const norm = sel.normalized();
                 const delete_start = norm.start.offset;
                 var delete_len: usize = norm.end.offset - norm.start.offset;
@@ -1384,12 +1410,13 @@ pub const Editor = struct {
         if (self.selections.items.len > 0) {
             _ = try self.beginTrackedUndoGroup();
             errdefer self.endTrackedUndoGroup() catch {};
-            try self.normalizeSelectionsDescending();
+            const selections = try self.duplicateNormalizedSelectionsDescending();
+            defer self.allocator.free(selections);
             var changed = false;
             var caret_offsets = std.ArrayList(usize).empty;
             defer caret_offsets.deinit(self.allocator);
             var primary_offset = self.cursor.offset;
-            for (self.selections.items) |sel| {
+            for (selections) |sel| {
                 const norm = sel.normalized();
                 const len = norm.end.offset - norm.start.offset;
                 if (len > 0) {

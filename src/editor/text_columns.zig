@@ -40,6 +40,42 @@ pub fn visualWidth(text: []const u8) usize {
     return visualColumnForByteIndex(text, text.len);
 }
 
+pub fn visualColumnForByteIndexWithClusters(text: []const u8, byte_index: usize, clusters: ?[]const u32) usize {
+    if (clusters) |cluster_offsets| {
+        if (cluster_offsets.len == 0) return visualColumnForByteIndex(text, byte_index);
+        const target = @min(byte_index, text.len);
+        var vis: usize = 0;
+        var idx: usize = 0;
+        while (idx < cluster_offsets.len) : (idx += 1) {
+            const start = @min(@as(usize, cluster_offsets[idx]), text.len);
+            const end = if (idx + 1 < cluster_offsets.len) @min(@as(usize, cluster_offsets[idx + 1]), text.len) else text.len;
+            if (target <= start) return vis;
+            if (target < end) return vis;
+            vis += visualWidth(text[start..end]);
+        }
+        return vis;
+    }
+    return visualColumnForByteIndex(text, byte_index);
+}
+
+pub fn byteIndexForVisualColumnWithClusters(text: []const u8, column: usize, clusters: ?[]const u32) usize {
+    if (clusters) |cluster_offsets| {
+        if (cluster_offsets.len == 0) return byteIndexForVisualColumn(text, column);
+        var vis: usize = 0;
+        var idx: usize = 0;
+        while (idx < cluster_offsets.len) : (idx += 1) {
+            const start = @min(@as(usize, cluster_offsets[idx]), text.len);
+            const end = if (idx + 1 < cluster_offsets.len) @min(@as(usize, cluster_offsets[idx + 1]), text.len) else text.len;
+            const width = visualWidth(text[start..end]);
+            if (vis >= column) return start;
+            if (vis + width > column) return start;
+            vis += width;
+        }
+        return text.len;
+    }
+    return byteIndexForVisualColumn(text, column);
+}
+
 pub fn cellWidthForCodepoint(cp: u21, col: usize) usize {
     if (cp == '\t') {
         const tab_width: usize = 4;
