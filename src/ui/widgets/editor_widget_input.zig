@@ -133,8 +133,7 @@ pub fn handleHorizontalScrollbarInput(
     const visible_lines = @as(usize, @intFromFloat(height / shell.charHeight()));
     if (visible_lines == 0) return false;
 
-    const scan = widget.editor.advanceMaxLineWidthCache(64);
-    const max_visible_width = scan.max;
+    const max_visible_width = widget.editor.maxLineWidthCached();
     if (max_visible_width <= cols) return false;
 
     const show_vscroll = widget.editor.lineCount() > visible_lines;
