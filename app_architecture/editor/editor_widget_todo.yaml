@@ -90,6 +90,7 @@ editor_widget_todo:
         - "Add line index cache via in-tree aggregates or partitioning."
         - "Core rope ops implemented in src/editor/rope.zig."
         - "Rope now used as the sole text model."
+        - "File-open path now transfers the read buffer into rope ownership (`Rope.initOwnedOriginal`) instead of duplicating the full file bytes again."
         - "Rope undo/redo implemented (per-op text snapshots)."
         - "Undo batching: adjacent inserts/deletes merge (rope)."
         - "Undo grouping hooks added (begin/end group)."

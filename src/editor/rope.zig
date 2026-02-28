@@ -24,6 +24,7 @@ pub const Rope = struct {
     allocator: std.mem.Allocator,
     root: ?*Node,
     original: []const u8,
+    owns_original: bool,
     add: std.ArrayList(u8),
     undo_stack: std.ArrayList(UndoOp),
     redo_stack: std.ArrayList(UndoOp),
@@ -36,10 +37,12 @@ pub const Rope = struct {
 
     pub fn init(allocator: std.mem.Allocator, initial: []const u8) !*Rope {
         var rope = try allocator.create(Rope);
+        errdefer allocator.destroy(rope);
         rope.* = .{
             .allocator = allocator,
             .root = null,
             .original = try allocator.dupe(u8, initial),
+            .owns_original = true,
             .add = .{},
             .undo_stack = .{},
             .redo_stack = .{},
@@ -47,14 +50,37 @@ pub const Rope = struct {
             .group_depth = 0,
             .group_dirty = false,
         };
+        errdefer allocator.free(rope.original);
         if (initial.len > 0) {
             rope.root = try rope.createLeafNode(.original, 0, initial.len);
         }
         return rope;
     }
 
+    pub fn initOwnedOriginal(allocator: std.mem.Allocator, original: []u8) !*Rope {
+        var rope = try allocator.create(Rope);
+        errdefer allocator.destroy(rope);
+        rope.* = .{
+            .allocator = allocator,
+            .root = null,
+            .original = original,
+            .owns_original = true,
+            .add = .{},
+            .undo_stack = .{},
+            .redo_stack = .{},
+            .history_suspended = false,
+            .group_depth = 0,
+            .group_dirty = false,
+        };
+        errdefer allocator.free(original);
+        if (original.len > 0) {
+            rope.root = try rope.createLeafNode(.original, 0, original.len);
+        }
+        return rope;
+    }
+
     pub fn deinit(self: *Rope) void {
-        if (self.original.len > 0) {
+        if (self.owns_original) {
             self.allocator.free(self.original);
         }
         self.add.deinit(self.allocator);
@@ -872,4 +898,16 @@ test "rope undo groups multiple edits" {
     const redo_text = try rope.readRangeAlloc(0, rope.totalLen());
     defer allocator.free(redo_text);
     try std.testing.expectEqualStrings("hi!!", redo_text);
+}
+
+test "rope owned original init avoids duplicate copy" {
+    const allocator = std.testing.allocator;
+    const original = try allocator.dupe(u8, "owned");
+    var rope = try Rope.initOwnedOriginal(allocator, original);
+    defer rope.deinit();
+
+    try std.testing.expectEqual(@intFromPtr(original.ptr), @intFromPtr(rope.original.ptr));
+    const text = try rope.readRangeAlloc(0, rope.totalLen());
+    defer allocator.free(text);
+    try std.testing.expectEqualStrings("owned", text);
 }
