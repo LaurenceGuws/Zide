@@ -28,6 +28,10 @@ void zide_editor_destroy(ZideEditorHandle *handle);
 
 int zide_editor_set_text(ZideEditorHandle *handle, const uint8_t *bytes, size_t len);
 int zide_editor_insert_text(ZideEditorHandle *handle, const uint8_t *bytes, size_t len);
+int zide_editor_replace_range(ZideEditorHandle *handle, size_t start, size_t end, const uint8_t *bytes, size_t len);
+int zide_editor_delete_range(ZideEditorHandle *handle, size_t start, size_t end);
+int zide_editor_begin_undo_group(ZideEditorHandle *handle);
+int zide_editor_end_undo_group(ZideEditorHandle *handle);
 int zide_editor_text_alloc(ZideEditorHandle *handle, ZideEditorStringBuffer *out_string);
 void zide_editor_string_free(ZideEditorStringBuffer *string);
 

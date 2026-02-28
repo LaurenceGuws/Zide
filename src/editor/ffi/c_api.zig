@@ -20,6 +20,22 @@ pub fn zide_editor_insert_text(handle: ?*ZideEditorHandle, bytes: ?[*]const u8, 
     return @intFromEnum(bridge.insertText(handle, bytes, len));
 }
 
+pub fn zide_editor_replace_range(handle: ?*ZideEditorHandle, start: usize, end: usize, bytes: ?[*]const u8, len: usize) c_int {
+    return @intFromEnum(bridge.replaceRange(handle, start, end, bytes, len));
+}
+
+pub fn zide_editor_delete_range(handle: ?*ZideEditorHandle, start: usize, end: usize) c_int {
+    return @intFromEnum(bridge.deleteRange(handle, start, end));
+}
+
+pub fn zide_editor_begin_undo_group(handle: ?*ZideEditorHandle) c_int {
+    return @intFromEnum(bridge.beginUndoGroup(handle));
+}
+
+pub fn zide_editor_end_undo_group(handle: ?*ZideEditorHandle) c_int {
+    return @intFromEnum(bridge.endUndoGroup(handle));
+}
+
 pub fn zide_editor_text_alloc(handle: ?*ZideEditorHandle, out_string: *ZideEditorStringBuffer) c_int {
     return @intFromEnum(bridge.textAlloc(handle, out_string));
 }

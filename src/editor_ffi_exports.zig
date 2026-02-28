@@ -16,6 +16,28 @@ pub export fn zide_editor_insert_text(handle: ?*c_api.ZideEditorHandle, bytes: ?
     return c_api.zide_editor_insert_text(handle, bytes, len);
 }
 
+pub export fn zide_editor_replace_range(
+    handle: ?*c_api.ZideEditorHandle,
+    start: usize,
+    end: usize,
+    bytes: ?[*]const u8,
+    len: usize,
+) c_int {
+    return c_api.zide_editor_replace_range(handle, start, end, bytes, len);
+}
+
+pub export fn zide_editor_delete_range(handle: ?*c_api.ZideEditorHandle, start: usize, end: usize) c_int {
+    return c_api.zide_editor_delete_range(handle, start, end);
+}
+
+pub export fn zide_editor_begin_undo_group(handle: ?*c_api.ZideEditorHandle) c_int {
+    return c_api.zide_editor_begin_undo_group(handle);
+}
+
+pub export fn zide_editor_end_undo_group(handle: ?*c_api.ZideEditorHandle) c_int {
+    return c_api.zide_editor_end_undo_group(handle);
+}
+
 pub export fn zide_editor_text_alloc(handle: ?*c_api.ZideEditorHandle, out_string: *c_api.ZideEditorStringBuffer) c_int {
     return c_api.zide_editor_text_alloc(handle, out_string);
 }
