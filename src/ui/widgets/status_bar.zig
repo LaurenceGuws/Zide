@@ -41,11 +41,11 @@ pub const StatusBar = struct {
 
         // Mode indicator
         const mode_bg = if (std.mem.eql(u8, mode, "INSERT"))
-            Color.green
+            theme.string
         else if (std.mem.eql(u8, mode, "VISUAL"))
-            Color.purple
+            theme.keyword
         else
-            Color.cyan;
+            theme.function;
 
         const mode_width: f32 = 80 * scale;
         const text_y: f32 = y + (self.height - shell.charHeight()) / 2;
@@ -55,13 +55,13 @@ pub const StatusBar = struct {
         const mode_hover = mouse.x >= 0 and mouse.x <= mode_width and mouse.y >= y and mouse.y <= y + self.height;
         const mode_bg_final = if (mode_hover and pressed) theme.ui_pressed else if (mode_hover) theme.ui_hover else mode_bg;
         shell.drawRect(0, @intFromFloat(y), @intFromFloat(mode_width), @intFromFloat(self.height), mode_bg_final);
-        shell.drawText(mode, text_x, text_y, if (mode_hover) theme.foreground else Color.black);
+        shell.drawText(mode, text_x, text_y, if (mode_hover) theme.ui_text else theme.background);
 
         // File path
         var x: f32 = 88 * scale;
         if (file_path) |path| {
             const available = pos_start - 16 * scale - x;
-            const result = common.drawTruncatedText(shell, path, x, text_y, theme.foreground, available);
+            const result = common.drawTruncatedText(shell, path, x, text_y, theme.ui_text, available);
             const in_path = mouse.x >= x and mouse.x <= x + result.drawn_width and
                 mouse.y >= y and mouse.y <= y + self.height;
             if (result.truncated and in_path) {
@@ -84,6 +84,6 @@ pub const StatusBar = struct {
             const bg = if (pressed) theme.ui_pressed else theme.ui_hover;
             shell.drawRect(@intFromFloat(pos_start - 4 * scale), @intFromFloat(y + 2 * scale), @intFromFloat(pos_width + 8 * scale), @intFromFloat(self.height - 4 * scale), bg);
         }
-        shell.drawText(pos_str, pos_start, text_y, if (pos_hover) theme.foreground else theme.comment_color);
+        shell.drawText(pos_str, pos_start, text_y, if (pos_hover) theme.ui_text else theme.ui_text_inactive);
     }
 };

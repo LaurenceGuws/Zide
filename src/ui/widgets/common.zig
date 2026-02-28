@@ -143,5 +143,5 @@ pub fn drawTooltip(shell: *Shell, text: []const u8, x: f32, y: f32) void {
 
     shell.drawRect(@intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(w), @intFromFloat(h), theme.ui_panel_overlay);
     shell.drawRectOutline(@intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(w), @intFromFloat(h), theme.ui_border);
-    shell.drawText(text, draw_x + padding, draw_y + padding, theme.foreground);
+    shell.drawText(text, draw_x + padding, draw_y + padding, theme.ui_text);
 }

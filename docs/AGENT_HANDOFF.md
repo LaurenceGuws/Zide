@@ -16,7 +16,11 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 ## Handoff (High-Level)
 
 ### Current Focus
-- Font rendering strategy (terminal + editor): make our text rendering competitive with kitty/ghostty-tier quality.
+- The active streams of work have diversified recently into terminal FFI bridge, config subsystem maturation, and editor multi-selection:
+  - **Terminal FFI Bridge**: Base bridge landed with python smoke host (`app_architecture/terminal/ffi_bridge_todo.yaml`).
+  - **Config Subsystem**: Parser hardened, reload truth aligned, and subsystem contract formalized (`app_architecture/config_todo.yaml`, `app_architecture/CONFIG.md`).
+  - **Editor Multi-cursor**: Carets preserved across edits, multi-caret vertical expansion shortcuts routed via Lua keybinds (`app_architecture/editor/editor_widget_todo.yaml`, `app_architecture/editor/protocol_todo.yaml`).
+- Font rendering strategy (terminal + editor) is also an ongoing priority: make our text rendering competitive with kitty/ghostty-tier quality.
   - Primary stress font: `assets/fonts/IosevkaTermNerdFont-Regular.ttf` (still under iteration); JetBrainsMono is the secondary sanity font.
   - Source of truth: `app_architecture/ui/font_rendering_todo.yaml`
   - Key files: `src/ui/terminal_font.zig`, `src/ui/renderer/gl_backend.zig`, `src/ui/renderer/font_manager.zig`, `src/ui/renderer/terminal_glyphs.zig`, `src/ui/widgets/terminal_widget_draw.zig`
@@ -31,6 +35,9 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - SDL3 migration remains the baseline; keep parity stable while UI changes land (see `app_architecture/ui/sdl3_migration_todo.yaml`).
 
 ### Recent Changes (High-Level)
+- Editor multi-selection carets are now preserved during edits, with multi-caret vertical expansion shortcuts routed via Lua keybinds (`editor_add_caret_up` / `editor_add_caret_down`).
+- Config subsystem contract established: `app_architecture/CONFIG.md` and `app_architecture/config_todo.yaml` define parser/runtime/reload behavior. Config reload now live-applies font rendering changes.
+- Terminal FFI bridge baseline landed (`src/terminal/ffi/bridge.zig`): stable snapshot export, PTY ABI, event queue, and a standalone Python ctypes smoke host.
 - Terminal replay harness now supports `--update-goldens` for snapshot refresh.
 - New replay fixtures for gping/nvim overlay + vttest wraparound; goldens updated.
 - Modularization extractions: render cache, palette/dynamic colors, OSC helpers (semantic, clipboard, CWD, hyperlink, title), input helpers (mouse, key encoding).

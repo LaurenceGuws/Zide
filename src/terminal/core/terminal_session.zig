@@ -374,6 +374,18 @@ pub const TerminalSession = struct {
         self.primary.updateDefaultColors(old_attrs, new_attrs);
         self.alt.updateDefaultColors(old_attrs, new_attrs);
         self.history.updateDefaultColors(old_attrs.fg, old_attrs.bg, new_attrs.fg, new_attrs.bg);
+        self.force_full_damage.store(true, .release);
+    }
+
+    pub fn setAnsiColors(self: *TerminalSession, colors: [16]types.Color) void {
+        self.lock();
+        defer self.unlock();
+        for (0..16) |i| {
+            self.palette_default[i] = colors[i];
+            self.palette_current[i] = colors[i];
+        }
+        self.force_full_damage.store(true, .release);
+        self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
     pub fn deinit(self: *TerminalSession) void {
@@ -1322,7 +1334,12 @@ pub const TerminalSession = struct {
     }
 
     pub fn markDirty(self: *TerminalSession) void {
+        self.lock();
+        defer self.unlock();
         self.activeScreen().markDirtyAll();
+        self.inactiveScreen().markDirtyAll();
+        _ = self.output_generation.fetchAdd(1, .acq_rel);
+        self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 };
 

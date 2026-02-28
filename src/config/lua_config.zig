@@ -56,6 +56,9 @@ pub const Config = struct {
     text_contrast: ?f32,
     text_linear_correction: ?bool,
     theme: ?ThemeConfig,
+    app_theme: ?ThemeConfig,
+    editor_theme: ?ThemeConfig,
+    terminal_theme: ?ThemeConfig,
     keybinds_no_defaults: ?bool,
     keybinds: ?[]input_actions.BindSpec,
 };
@@ -114,6 +117,8 @@ pub const ThemeConfig = struct {
     ui_accent: ?Color = null,
     ui_border: ?Color = null,
     ui_modified: ?Color = null,
+    ui_text: ?Color = null,
+    ui_text_inactive: ?Color = null,
     comment_color: ?Color = null,
     string: ?Color = null,
     keyword: ?Color = null,
@@ -129,6 +134,7 @@ pub const ThemeConfig = struct {
     namespace: ?Color = null,
     label: ?Color = null,
     error_token: ?Color = null,
+    ansi_colors: [16]?Color = .{null} ** 16,
 };
 
 pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
@@ -163,6 +169,9 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
         .text_contrast = null,
         .text_linear_correction = null,
         .theme = null,
+        .app_theme = null,
+        .editor_theme = null,
+        .terminal_theme = null,
         .keybinds_no_defaults = null,
         .keybinds = null,
     };
@@ -335,6 +344,33 @@ fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) voi
             base.theme = overlay_theme;
         }
     }
+    if (overlay.app_theme) |overlay_theme| {
+        if (base.app_theme) |base_theme| {
+            var merged = base_theme;
+            mergeThemeConfig(&merged, overlay_theme);
+            base.app_theme = merged;
+        } else {
+            base.app_theme = overlay_theme;
+        }
+    }
+    if (overlay.editor_theme) |overlay_theme| {
+        if (base.editor_theme) |base_theme| {
+            var merged = base_theme;
+            mergeThemeConfig(&merged, overlay_theme);
+            base.editor_theme = merged;
+        } else {
+            base.editor_theme = overlay_theme;
+        }
+    }
+    if (overlay.terminal_theme) |overlay_theme| {
+        if (base.terminal_theme) |base_theme| {
+            var merged = base_theme;
+            mergeThemeConfig(&merged, overlay_theme);
+            base.terminal_theme = merged;
+        } else {
+            base.terminal_theme = overlay_theme;
+        }
+    }
     if (overlay.keybinds) |binds| {
         if (overlay.keybinds_no_defaults == true or base.keybinds == null) {
             if (base.keybinds) |old| allocator.free(old);
@@ -400,6 +436,9 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             .text_contrast = null,
             .text_linear_correction = null,
             .theme = null,
+            .app_theme = null,
+            .editor_theme = null,
+            .terminal_theme = null,
             .keybinds_no_defaults = null,
             .keybinds = null,
         };
@@ -438,6 +477,9 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     var text_contrast: ?f32 = null;
     var text_linear_correction: ?bool = null;
     var theme: ?ThemeConfig = null;
+    var app_theme: ?ThemeConfig = null;
+    var editor_theme: ?ThemeConfig = null;
+    var terminal_theme: ?ThemeConfig = null;
     var keybinds_no_defaults: ?bool = null;
     var keybinds: ?[]input_actions.BindSpec = null;
 
@@ -504,6 +546,12 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
 
     _ = c.lua_getfield(L, -1, "editor");
     if (c.lua_istable(L, -1)) {
+        _ = c.lua_getfield(L, -1, "theme");
+        if (c.lua_istable(L, -1)) {
+            editor_theme = try parseThemeFromTable(L, -1);
+        }
+        c.lua_pop(L, 1);
+
         _ = c.lua_getfield(L, -1, "font");
         if (c.lua_isstring(L, -1) != 0) {
             editor_font_path = try luaStringToOwned(allocator, L, -1);
@@ -582,6 +630,12 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
 
     _ = c.lua_getfield(L, -1, "app");
     if (c.lua_istable(L, -1)) {
+        _ = c.lua_getfield(L, -1, "theme");
+        if (c.lua_istable(L, -1)) {
+            app_theme = try parseThemeFromTable(L, -1);
+        }
+        c.lua_pop(L, 1);
+
         _ = c.lua_getfield(L, -1, "font");
         if (c.lua_isstring(L, -1) != 0) {
             app_font_path = try luaStringToOwned(allocator, L, -1);
@@ -594,6 +648,12 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
 
     _ = c.lua_getfield(L, -1, "terminal");
     if (c.lua_istable(L, -1)) {
+        _ = c.lua_getfield(L, -1, "theme");
+        if (c.lua_istable(L, -1)) {
+            terminal_theme = try parseThemeFromTable(L, -1);
+        }
+        c.lua_pop(L, 1);
+
         _ = c.lua_getfield(L, -1, "font");
         if (c.lua_isstring(L, -1) != 0) {
             terminal_font_path = try luaStringToOwned(allocator, L, -1);
@@ -854,6 +914,9 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         .text_contrast = text_contrast,
         .text_linear_correction = text_linear_correction,
         .theme = theme,
+        .app_theme = app_theme,
+        .editor_theme = editor_theme,
+        .terminal_theme = terminal_theme,
         .keybinds_no_defaults = keybinds_no_defaults,
         .keybinds = keybinds,
     };
@@ -1440,6 +1503,8 @@ fn mergeThemeConfig(base: *ThemeConfig, overlay: ThemeConfig) void {
     if (overlay.ui_accent) |color| base.ui_accent = color;
     if (overlay.ui_border) |color| base.ui_border = color;
     if (overlay.ui_modified) |color| base.ui_modified = color;
+    if (overlay.ui_text) |color| base.ui_text = color;
+    if (overlay.ui_text_inactive) |color| base.ui_text_inactive = color;
     if (overlay.comment_color) |color| base.comment_color = color;
     if (overlay.string) |color| base.string = color;
     if (overlay.keyword) |color| base.keyword = color;
@@ -1455,6 +1520,9 @@ fn mergeThemeConfig(base: *ThemeConfig, overlay: ThemeConfig) void {
     if (overlay.namespace) |color| base.namespace = color;
     if (overlay.label) |color| base.label = color;
     if (overlay.error_token) |color| base.error_token = color;
+    for (0..16) |i| {
+        if (overlay.ansi_colors[i]) |color| base.ansi_colors[i] = color;
+    }
 }
 
 pub fn applyThemeConfig(theme: *Theme, overlay: ThemeConfig) void {
@@ -1475,6 +1543,8 @@ pub fn applyThemeConfig(theme: *Theme, overlay: ThemeConfig) void {
     if (overlay.ui_accent) |color| theme.ui_accent = color;
     if (overlay.ui_border) |color| theme.ui_border = color;
     if (overlay.ui_modified) |color| theme.ui_modified = color;
+    if (overlay.ui_text) |color| theme.ui_text = color;
+    if (overlay.ui_text_inactive) |color| theme.ui_text_inactive = color;
     if (overlay.comment_color) |color| theme.comment_color = color;
     if (overlay.string) |color| theme.string = color;
     if (overlay.keyword) |color| theme.keyword = color;
@@ -1490,6 +1560,23 @@ pub fn applyThemeConfig(theme: *Theme, overlay: ThemeConfig) void {
     if (overlay.namespace) |color| theme.namespace = color;
     if (overlay.label) |color| theme.label = color;
     if (overlay.error_token) |color| theme.error_token = color;
+    if (theme.ansi_colors) |*colors| {
+        for (0..16) |i| {
+            if (overlay.ansi_colors[i]) |color| colors[i] = color;
+        }
+    } else {
+        var has_any = false;
+        for (0..16) |i| {
+            if (overlay.ansi_colors[i] != null) has_any = true;
+        }
+        if (has_any) {
+            var colors = [_]Color{.{ .r = 0, .g = 0, .b = 0 }} ** 16;
+            for (0..16) |i| {
+                if (overlay.ansi_colors[i]) |color| colors[i] = color;
+            }
+            theme.ansi_colors = colors;
+        }
+    }
 }
 
 fn parseThemeFromTable(L: *c.lua_State, idx: c_int) LuaConfigError!ThemeConfig {
@@ -1530,6 +1617,13 @@ fn parseThemePaletteTable(L: *c.lua_State, idx: c_int, theme: *ThemeConfig) void
     parseColorField(L, idx, "ui_accent", &theme.ui_accent);
     parseColorField(L, idx, "ui_border", &theme.ui_border);
     parseColorField(L, idx, "ui_modified", &theme.ui_modified);
+    parseColorField(L, idx, "ui_text", &theme.ui_text);
+    parseColorField(L, idx, "ui_text_inactive", &theme.ui_text_inactive);
+
+    inline for (0..16) |i| {
+        const key = std.fmt.comptimePrint("color{d}", .{i});
+        parseColorField(L, idx, key, &theme.ansi_colors[i]);
+    }
 }
 
 fn parseThemeSyntaxTable(L: *c.lua_State, idx: c_int, theme: *ThemeConfig) void {

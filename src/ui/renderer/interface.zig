@@ -74,6 +74,8 @@ pub const Theme = struct {
     ui_accent: Color = Color.purple,
     ui_border: Color = Color.light_gray,
     ui_modified: Color = Color.orange,
+    ui_text: Color = Color.fg,
+    ui_text_inactive: Color = Color.comment,
 
     // Syntax colors
     comment_color: Color = Color.comment,
@@ -91,4 +93,7 @@ pub const Theme = struct {
     namespace: Color = Color{ .r = 231, .g = 193, .b = 115 },
     label: Color = Color.orange,
     error_token: Color = Color.red,
+
+    // Optional override for terminal ANSI colors 0-15
+    ansi_colors: ?[16]Color = null,
 };

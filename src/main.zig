@@ -161,6 +161,11 @@ const AppState = struct {
     terminals: std.ArrayList(*TerminalSession),
     terminal_widgets: std.ArrayList(TerminalWidget),
 
+    // Themes
+    app_theme: app_shell.Theme,
+    editor_theme: app_shell.Theme,
+    terminal_theme: app_shell.Theme,
+
     // Current focus
     active_tab: usize,
     active_kind: enum { editor, terminal },
@@ -235,7 +240,7 @@ const AppState = struct {
     }
 
     fn notifyTerminalColorSchemeChanged(self: *AppState) !void {
-        const dark = isDarkTheme(self.shell.theme());
+        const dark = isDarkTheme(&self.terminal_theme);
         for (self.terminal_widgets.items) |*widget| {
             _ = try widget.session.reportColorSchemeChanged(dark);
         }
@@ -275,6 +280,9 @@ const AppState = struct {
                 .text_contrast = null,
                 .text_linear_correction = null,
                 .theme = null,
+                .app_theme = null,
+                .editor_theme = null,
+                .terminal_theme = null,
                 .keybinds_no_defaults = null,
                 .keybinds = null,
             };
@@ -326,10 +334,8 @@ const AppState = struct {
                 shell.rendererPtr().setFontConfig(font_path, font_size) catch {};
             }
         }
-        if (config.theme) |theme_config| {
-            var theme = shell.theme().*;
-            config_mod.applyThemeConfig(&theme, theme_config);
-            shell.setTheme(theme);
+        if (config.app_theme != null or config.editor_theme != null or config.terminal_theme != null or config.theme != null) {
+            // Wait, we need to defer theme initialization to AppState so let's do it right before AppState init
         }
         _ = try shell.refreshUiScale();
         const app_log = app_logger.logger("app.core");
@@ -368,6 +374,22 @@ const AppState = struct {
             terminal_cursor_style = cursor_style;
         }
 
+        var base_theme = shell.theme().*;
+        if (config.theme) |global_theme| {
+            config_mod.applyThemeConfig(&base_theme, global_theme);
+        }
+
+        var app_theme = base_theme;
+        if (config.app_theme) |t| config_mod.applyThemeConfig(&app_theme, t);
+
+        var editor_theme = base_theme;
+        if (config.editor_theme) |t| config_mod.applyThemeConfig(&editor_theme, t);
+
+        var terminal_theme = base_theme;
+        if (config.terminal_theme) |t| config_mod.applyThemeConfig(&terminal_theme, t);
+
+        shell.setTheme(app_theme); // Default to app theme
+
         var grammar_manager = try grammar_manager_mod.GrammarManager.init(allocator);
         errdefer grammar_manager.deinit();
 
@@ -382,6 +404,9 @@ const AppState = struct {
             .editors = .empty,
             .terminals = .empty,
             .terminal_widgets = .empty,
+            .app_theme = app_theme,
+            .editor_theme = editor_theme,
+            .terminal_theme = terminal_theme,
             .active_tab = 0,
             .active_kind = if (app_mode == .terminal) .terminal else .editor,
             .mode = "NORMAL",
@@ -553,7 +578,7 @@ const AppState = struct {
         const initial_grid = self.terminalGridSize(layout.terminal.width, layout.terminal.height, 80, 24);
         const cols: u16 = initial_grid.cols;
         const rows: u16 = initial_grid.rows;
-        const theme = shell.theme();
+        const theme = &self.terminal_theme;
 
         const term = try TerminalSession.initWithOptions(self.allocator, rows, cols, .{
             .scrollback_rows = self.terminal_scrollback_rows,
@@ -571,6 +596,13 @@ const AppState = struct {
                 .b = theme.background.b,
             },
         );
+        if (theme.ansi_colors) |ansi| {
+            var colors: [16]term_types.Color = undefined;
+            for (ansi, 0..) |c, i| {
+                colors[i] = term_types.Color{ .r = c.r, .g = c.g, .b = c.b };
+            }
+            term.setAnsiColors(colors);
+        }
         term.setCellSize(
             @intFromFloat(shell.terminalCellWidth()),
             @intFromFloat(shell.terminalCellHeight()),
@@ -1612,11 +1644,50 @@ const AppState = struct {
         if (config.sdl_log_level) |level| {
             app_shell.setSdlLogLevel(level);
         }
-        if (config.theme) |theme_config| {
-            var theme = self.shell.theme().*;
-            config_mod.applyThemeConfig(&theme, theme_config);
-            self.shell.setTheme(theme);
-            try self.notifyTerminalColorSchemeChanged();
+        if (config.theme != null or config.app_theme != null or config.editor_theme != null or config.terminal_theme != null) {
+            var base_theme = self.shell.theme().*; // use whatever is currently base, or we might need to recreate from default?
+            // Actually it's better to just apply them on top of the existing theme states.
+            if (config.theme) |t| config_mod.applyThemeConfig(&base_theme, t);
+
+            if (config.theme != null or config.app_theme != null) {
+                if (config.theme) |t| config_mod.applyThemeConfig(&self.app_theme, t);
+                if (config.app_theme) |t| config_mod.applyThemeConfig(&self.app_theme, t);
+                self.shell.setTheme(self.app_theme);
+            }
+            if (config.theme != null or config.editor_theme != null) {
+                if (config.theme) |t| config_mod.applyThemeConfig(&self.editor_theme, t);
+                if (config.editor_theme) |t| config_mod.applyThemeConfig(&self.editor_theme, t);
+                self.editor_render_cache.clear();
+                self.editor_cluster_cache.clear();
+            }
+            if (config.theme != null or config.terminal_theme != null) {
+                if (config.theme) |t| config_mod.applyThemeConfig(&self.terminal_theme, t);
+                if (config.terminal_theme) |t| config_mod.applyThemeConfig(&self.terminal_theme, t);
+                try self.notifyTerminalColorSchemeChanged();
+                for (self.terminals.items) |term| {
+                    term.setDefaultColors(
+                        term_types.Color{
+                            .r = self.terminal_theme.foreground.r,
+                            .g = self.terminal_theme.foreground.g,
+                            .b = self.terminal_theme.foreground.b,
+                        },
+                        term_types.Color{
+                            .r = self.terminal_theme.background.r,
+                            .g = self.terminal_theme.background.g,
+                            .b = self.terminal_theme.background.b,
+                        },
+                    );
+                    if (self.terminal_theme.ansi_colors) |ansi| {
+                        var colors: [16]term_types.Color = undefined;
+                        for (ansi, 0..) |c, i| {
+                            colors[i] = term_types.Color{ .r = c.r, .g = c.g, .b = c.b };
+                        }
+                        term.setAnsiColors(colors);
+                    }
+                    term.markDirty();
+                }
+            }
+            self.needs_redraw = true;
         }
 
         self.editor_wrap = config.editor_wrap orelse self.editor_wrap;
@@ -1760,6 +1831,7 @@ const AppState = struct {
         var tab_tooltip: ?widgets_common.Tooltip = null;
 
         if (self.app_mode == .ide) {
+            shell.setTheme(self.app_theme);
             // Draw options bar
             self.options_bar.draw(shell, layout.window.width);
 
@@ -1769,6 +1841,7 @@ const AppState = struct {
 
         // Draw editor
         if (self.app_mode != .terminal and self.editors.items.len > 0) {
+            shell.setTheme(self.editor_theme);
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache, self.editor_wrap);
             widget.drawCached(
@@ -1789,9 +1862,11 @@ const AppState = struct {
 
             // Terminal separator
             if (self.app_mode == .ide) {
-                shell.drawRect(@intFromFloat(layout.terminal.x), @intFromFloat(term_y), @intFromFloat(layout.terminal.width), 2, app_shell.Color.light_gray);
+                shell.setTheme(self.app_theme);
+                shell.drawRect(@intFromFloat(layout.terminal.x), @intFromFloat(term_y), @intFromFloat(layout.terminal.width), 2, self.app_theme.ui_border);
             }
 
+            shell.setTheme(self.terminal_theme);
             var term_widget = &self.terminal_widgets.items[0];
             const term_offset_y: f32 = if (self.app_mode == .ide) 2 else 0;
             const term_height = if (self.app_mode == .ide) @max(0, layout.terminal.height - 2) else layout.terminal.height;
@@ -1810,12 +1885,14 @@ const AppState = struct {
         }
 
         if (self.app_mode == .ide) {
+            shell.setTheme(self.app_theme);
             // Draw side navigation bar (covers terminal icon overflow)
             self.side_nav.draw(shell, layout.side_nav.height, layout.side_nav.y);
         }
 
         // Draw status bar LAST so it spans full width over everything
         if (self.app_mode == .ide and self.editors.items.len > 0) {
+            shell.setTheme(self.app_theme);
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             const editor = self.editors.items[editor_idx];
             self.status_bar.draw(
