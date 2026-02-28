@@ -1,4 +1,5 @@
 comptime {
+    _ = @import("main.zig");
     _ = @import("editor_tests.zig");
     _ = @import("editor_snapshot_tests.zig");
     _ = @import("highlight_replay_tests.zig");

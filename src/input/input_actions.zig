@@ -30,6 +30,16 @@ pub const ActionKind = enum {
     terminal_scrollback_pager,
     editor_add_caret_up,
     editor_add_caret_down,
+    editor_move_word_left,
+    editor_move_word_right,
+    editor_extend_left,
+    editor_extend_right,
+    editor_extend_line_start,
+    editor_extend_line_end,
+    editor_extend_word_left,
+    editor_extend_word_right,
+    editor_extend_up,
+    editor_extend_down,
     editor_search_open,
     editor_search_next,
     editor_search_prev,
@@ -151,6 +161,16 @@ fn actionName(kind: ActionKind) []const u8 {
         .terminal_scrollback_pager => "terminal_scrollback_pager",
         .editor_add_caret_up => "editor_add_caret_up",
         .editor_add_caret_down => "editor_add_caret_down",
+        .editor_move_word_left => "editor_move_word_left",
+        .editor_move_word_right => "editor_move_word_right",
+        .editor_extend_left => "editor_extend_left",
+        .editor_extend_right => "editor_extend_right",
+        .editor_extend_line_start => "editor_extend_line_start",
+        .editor_extend_line_end => "editor_extend_line_end",
+        .editor_extend_word_left => "editor_extend_word_left",
+        .editor_extend_word_right => "editor_extend_word_right",
+        .editor_extend_up => "editor_extend_up",
+        .editor_extend_down => "editor_extend_down",
         .editor_search_open => "editor_search_open",
         .editor_search_next => "editor_search_next",
         .editor_search_prev => "editor_search_prev",
@@ -266,6 +286,89 @@ test "input router routes editor search actions by scope and modifiers" {
     router.route(&batch, .editor);
     try std.testing.expectEqual(@as(usize, 1), router.actionsSlice().len);
     try std.testing.expectEqual(ActionKind.editor_search_prev, router.actionsSlice()[0].kind);
+}
+
+test "input router routes editor movement actions by scope and modifiers" {
+    const allocator = std.testing.allocator;
+    var router = InputRouter.init(allocator);
+    defer router.deinit();
+
+    var batch = shared_types.input.InputBatch.init(allocator);
+    defer batch.deinit();
+
+    router.setBindings(&.{
+        .{
+            .scope = .editor,
+            .key = .left,
+            .mods = .{ .ctrl = true },
+            .action = .editor_move_word_left,
+            .repeat = true,
+        },
+        .{
+            .scope = .editor,
+            .key = .right,
+            .mods = .{ .ctrl = true, .shift = true },
+            .action = .editor_extend_word_right,
+            .repeat = true,
+        },
+        .{
+            .scope = .editor,
+            .key = .home,
+            .mods = .{ .shift = true },
+            .action = .editor_extend_line_start,
+            .repeat = true,
+        },
+        .{
+            .scope = .editor,
+            .key = .up,
+            .mods = .{ .shift = true },
+            .action = .editor_extend_up,
+            .repeat = true,
+        },
+    });
+
+    try batch.append(.{ .key = .{
+        .key = .left,
+        .mods = .{ .ctrl = true },
+        .pressed = true,
+        .repeated = false,
+    } });
+    router.route(&batch, .editor);
+    try std.testing.expectEqual(@as(usize, 1), router.actionsSlice().len);
+    try std.testing.expectEqual(ActionKind.editor_move_word_left, router.actionsSlice()[0].kind);
+
+    batch.clear();
+    try batch.append(.{ .key = .{
+        .key = .right,
+        .mods = .{ .ctrl = true, .shift = true },
+        .pressed = true,
+        .repeated = false,
+    } });
+    router.route(&batch, .editor);
+    try std.testing.expectEqual(@as(usize, 1), router.actionsSlice().len);
+    try std.testing.expectEqual(ActionKind.editor_extend_word_right, router.actionsSlice()[0].kind);
+
+    batch.clear();
+    try batch.append(.{ .key = .{
+        .key = .home,
+        .mods = .{ .shift = true },
+        .pressed = true,
+        .repeated = true,
+    } });
+    router.route(&batch, .editor);
+    try std.testing.expectEqual(@as(usize, 1), router.actionsSlice().len);
+    try std.testing.expectEqual(ActionKind.editor_extend_line_start, router.actionsSlice()[0].kind);
+
+    batch.clear();
+    try batch.append(.{ .key = .{
+        .key = .up,
+        .mods = .{ .shift = true },
+        .pressed = true,
+        .repeated = false,
+    } });
+    router.route(&batch, .editor);
+    try std.testing.expectEqual(@as(usize, 1), router.actionsSlice().len);
+    try std.testing.expectEqual(ActionKind.editor_extend_up, router.actionsSlice()[0].kind);
 }
 
 test "input router treats altgr as part of exact modifier identity" {

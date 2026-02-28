@@ -144,4 +144,16 @@ pub const TextStore = struct {
     pub fn endUndoGroup(self: *TextStore) !void {
         try self.rope.endUndoGroup();
     }
+
+    pub fn annotateLastUndoState(self: *TextStore, before_state: ?u64, after_state: ?u64) void {
+        self.rope.annotateLastUndoState(before_state, after_state);
+    }
+
+    pub fn annotateCurrentUndoGroupBefore(self: *TextStore, before_state: u64) void {
+        self.rope.annotateCurrentUndoGroupBefore(before_state);
+    }
+
+    pub fn annotateClosedUndoGroupAfter(self: *TextStore, after_state: u64) void {
+        self.rope.annotateClosedUndoGroupAfter(after_state);
+    }
 };

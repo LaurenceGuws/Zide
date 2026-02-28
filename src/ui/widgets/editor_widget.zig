@@ -479,7 +479,24 @@ pub const EditorWidget = struct {
         var buf_b: [4096]u8 = undefined;
         var scratch_a = LineScratch{ .buf = buf_a[0..] };
         var scratch_b = LineScratch{ .buf = buf_b[0..] };
-        return cursor_mod.moveCursorVisual(self.editor, delta, cols, self.wrap_enabled, &provider, &scratch_a, &scratch_b);
+        return cursor_mod.moveCaretSetVisual(self.editor, delta, cols, self.wrap_enabled, &provider, &scratch_a, &scratch_b) catch false;
+    }
+
+    pub fn extendSelectionVisual(self: *EditorWidget, shell: *Shell, delta: i32) bool {
+        const cols = self.viewportColumns(shell);
+        var ctx = CursorLineCtx{ .widget = self, .r = shell };
+        const provider = LineProvider{
+            .ctx = &ctx,
+            .getLineText = cursorLineText,
+            .getClusters = cursorClusters,
+            .freeLineText = cursorFreeLineText,
+            .freeClusters = cursorFreeClusters,
+        };
+        var buf_a: [4096]u8 = undefined;
+        var buf_b: [4096]u8 = undefined;
+        var scratch_a = LineScratch{ .buf = buf_a[0..] };
+        var scratch_b = LineScratch{ .buf = buf_b[0..] };
+        return cursor_mod.extendSelectionVisual(self.editor, delta, cols, self.wrap_enabled, &provider, &scratch_a, &scratch_b);
     }
 };
 
