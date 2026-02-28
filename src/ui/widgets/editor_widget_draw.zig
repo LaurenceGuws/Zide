@@ -533,7 +533,6 @@ fn appendHighlightedLineSegmentOps(
 ) bool {
     if (seg_start >= seg_end or line_text.len == 0) return true;
 
-    const log = app_logger.logger("editor.highlight");
     var ok = true;
     var cursor = seg_start;
     for (tokens) |token| {
@@ -571,7 +570,6 @@ fn appendHighlightedLineSegmentOps(
         if (token.url != null) {
             color = r.theme.link;
         }
-        logHighlightSlice(log, token.kind, line_start + slice_start, line_start + slice_end, color);
         if (conceal_text) |ctext| {
             if (ctext.len > 0) {
                 const bg = selectionOverlapBg(slice_start, slice_end, base_bg, selection_bg, sel_ranges);
@@ -654,14 +652,7 @@ pub fn draw(
         if (total_lines > 0 and start_line < total_lines) {
             const range_start = widget.editor.lineStart(start_line);
             const range_end = if (end_line < total_lines) widget.editor.lineStart(end_line) else widget.editor.totalLen();
-            const log = app_logger.logger("editor.highlight");
-            log.logf(
-                "highlight batch start lines={d}-{d} bytes={d}-{d}",
-                .{ start_line, end_line, range_start, range_end },
-            );
-            const t_start = std.time.nanoTimestamp();
             const tokens_opt: ?[]HighlightToken = highlighter.highlightRange(range_start, range_end, widget.editor.allocator) catch null;
-            const elapsed_ns = std.time.nanoTimestamp() - t_start;
             if (tokens_opt) |tokens| {
                 highlight_tokens = tokens;
                 highlight_tokens_allocated = true;
@@ -669,17 +660,6 @@ pub fn draw(
                     std.sort.heap(HighlightToken, highlight_tokens, {}, highlightTokenLessThan);
                 }
             }
-            log.logf(
-                "highlight batch lines={d}-{d} bytes={d}-{d} tokens={d} time_us={d}",
-                .{
-                    start_line,
-                    end_line,
-                    range_start,
-                    range_end,
-                    highlight_tokens.len,
-                    @as(i64, @intCast(@divTrunc(elapsed_ns, 1000))),
-                },
-            );
         }
     }
     defer if (highlight_tokens_allocated) widget.editor.allocator.free(highlight_tokens);
@@ -1833,7 +1813,6 @@ fn drawHighlightedLineSegment(
 ) void {
     if (seg_start >= seg_end or line_text.len == 0) return;
 
-    const log = app_logger.logger("editor.highlight");
     var cursor = seg_start;
     for (tokens) |token| {
         if (token.end <= line_start + seg_start or token.start >= line_start + seg_end) continue;
@@ -1869,7 +1848,6 @@ fn drawHighlightedLineSegment(
         if (token.url != null) {
             color = r.theme.link;
         }
-        logHighlightSlice(log, token.kind, line_start + slice_start, line_start + slice_end, color);
         if (conceal_text) |text| {
             if (text.len > 0) {
                 const bg = selectionOverlapBg(slice_start, slice_end, base_bg, selection_bg, sel_ranges);
@@ -1947,11 +1925,4 @@ fn colorForToken(r: anytype, kind: TokenKind) @TypeOf(r.theme.foreground) {
         .type_builtin => r.theme.type_builtin,
         else => r.theme.foreground,
     };
-}
-
-fn logHighlightSlice(log: anytype, kind: TokenKind, start: usize, end: usize, color: anytype) void {
-    log.logf(
-        "highlight apply kind={s} bytes={d}-{d} color=rgba({d},{d},{d},{d})",
-        .{ @tagName(kind), start, end, color.r, color.g, color.b, color.a },
-    );
 }
