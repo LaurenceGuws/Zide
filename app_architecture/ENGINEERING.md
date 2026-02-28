@@ -32,6 +32,7 @@ Goal: keep memory and threading safe and boring. These rules are simple on purpo
 
 - If C returns a heap allocation, wrap it and free it in `deinit` or a paired `free*` function.
 - For any FFI API that returns a buffer to the caller, document the required free function in the same file.
+- For snapshot/event style FFI APIs, name the paired release functions explicitly in both the ABI doc and the smoke host (`snapshot_acquire`/`snapshot_release`, `event_drain`/`events_free`).
 - Always clean up partial state with `errdefer` when constructing C resources.
 
 ## Review checklist (quick)

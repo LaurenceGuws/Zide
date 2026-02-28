@@ -19,6 +19,12 @@ Quick map of where to look for common needs.
 - `app_architecture/APP_LAYERING.md` — module boundaries and import rules.
 - `app_architecture/editor/DESIGN.md` — editor architecture + references.
 - `app_architecture/terminal/DESIGN.md` — terminal architecture + decisions.
+- `app_architecture/terminal/ffi_bridge_todo.yaml` — terminal backend embeddability / FFI bridge plan.
+- `app_architecture/terminal/FFI_BRIDGE_DESIGN.md` — terminal bridge shape, ownership model, and smoke-host plan.
+- `app_architecture/terminal/FFI_EVENT_INVENTORY.md` — host-facing terminal events and export classification.
+- `app_architecture/terminal/FFI_EVENT_ABI.md` — exported event buffer layout, payload semantics, and ownership rules.
+- `app_architecture/terminal/FFI_SNAPSHOT_ABI.md` — exported snapshot layout and ownership rules.
+- `app_architecture/terminal/FFI_PTY_ABI.md` — PTY/session ownership model for the bridge.
 - `app_architecture/terminal/DAMAGE_TRACKING.md` — terminal damage/dirty tracking notes + todo.
 - `app_architecture/DECISIONS.md` — decision log.
 - `app_architecture/ENGINEERING.md` — engineering guidelines (ownership, threading, FFI).

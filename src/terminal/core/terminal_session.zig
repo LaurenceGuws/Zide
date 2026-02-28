@@ -427,6 +427,10 @@ pub const TerminalSession = struct {
         try pty_io.start(self, shell);
     }
 
+    pub fn startNoThreads(self: *TerminalSession, shell: ?[:0]const u8) !void {
+        try pty_io.startNoThreads(self, shell);
+    }
+
     pub fn poll(self: *TerminalSession) !void {
         self.maybeUpdateChildExit();
         return pty_io.poll(self);
@@ -721,6 +725,15 @@ pub const TerminalSession = struct {
         }
     }
 
+    pub fn sendBytes(self: *TerminalSession, bytes: []const u8) !void {
+        if (bytes.len == 0) return;
+        if (self.pty) |*pty| {
+            self.pty_write_mutex.lock();
+            defer self.pty_write_mutex.unlock();
+            _ = try pty.write(bytes);
+        }
+    }
+
     pub fn reportFocusChanged(self: *TerminalSession, focused: bool) !bool {
         if (!self.focusReportingEnabled()) return false;
         if (self.pty) |*pty| {
@@ -810,6 +823,14 @@ pub const TerminalSession = struct {
 
     pub fn handleCsi(self: *TerminalSession, action: csi_mod.CsiAction) void {
         parser_hooks.handleCsi(self, action);
+    }
+
+    pub fn feedOutputBytes(self: *TerminalSession, bytes: []const u8) void {
+        if (bytes.len == 0) return;
+        self.parser.handleSlice(self, bytes);
+        _ = self.output_generation.fetchAdd(1, .acq_rel);
+        self.force_full_damage.store(true, .release);
+        self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
     pub fn resetState(self: *TerminalSession) void {
@@ -1179,6 +1200,10 @@ pub const TerminalSession = struct {
 
     pub fn currentCwd(self: *const TerminalSession) []const u8 {
         return self.cwd;
+    }
+
+    pub fn currentTitle(self: *const TerminalSession) []const u8 {
+        return self.title;
     }
 
     pub fn clearDirty(self: *TerminalSession) void {

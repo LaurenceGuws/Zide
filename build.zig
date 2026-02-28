@@ -253,6 +253,41 @@ pub fn build(b: *std.Build) void {
     run_step.dependOn(&run_cmd.step);
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Terminal FFI bridge
+    // ─────────────────────────────────────────────────────────────────────────
+    const terminal_ffi = b.addLibrary(.{
+        .name = "zide-terminal-ffi",
+        .linkage = .dynamic,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/terminal_ffi_exports.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    terminal_ffi.addIncludePath(b.path("vendor"));
+    terminal_ffi.addCSourceFile(.{
+        .file = b.path("src/c/stb_image.c"),
+        .flags = &.{"-std=c99"},
+    });
+    if (target_os == .windows) {
+        terminal_ffi.linkSystemLibrary("user32");
+        terminal_ffi.linkSystemLibrary("shell32");
+    } else if (target_os == .macos) {
+        terminal_ffi.linkFramework("Cocoa");
+    } else {
+        terminal_ffi.linkSystemLibrary("m");
+        terminal_ffi.linkSystemLibrary("pthread");
+        terminal_ffi.linkSystemLibrary("dl");
+        terminal_ffi.linkSystemLibrary("rt");
+    }
+    const install_terminal_ffi = b.addInstallArtifact(terminal_ffi, .{});
+    const install_terminal_ffi_header = b.addInstallFile(b.path("include/zide_terminal_ffi.h"), "include/zide_terminal_ffi.h");
+    const terminal_ffi_step = b.step("build-terminal-ffi", "Build the terminal FFI shared library");
+    terminal_ffi_step.dependOn(&install_terminal_ffi.step);
+    terminal_ffi_step.dependOn(&install_terminal_ffi_header.step);
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Tests
     // ─────────────────────────────────────────────────────────────────────────
     const unit_tests = b.addTest(.{
@@ -434,6 +469,47 @@ pub fn build(b: *std.Build) void {
         "Run project-integrated terminal focus reporting tests",
     );
     terminal_focus_reporting_tests_step.dependOn(&run_terminal_focus_reporting_tests.step);
+
+    const terminal_ffi_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/terminal_ffi_smoke_tests.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    terminal_ffi_tests.addIncludePath(b.path("vendor"));
+    terminal_ffi_tests.addCSourceFile(.{
+        .file = b.path("src/c/stb_image.c"),
+        .flags = &.{"-std=c99"},
+    });
+    const run_terminal_ffi_tests = b.addRunArtifact(terminal_ffi_tests);
+    const terminal_ffi_tests_step = b.step(
+        "test-terminal-ffi",
+        "Run terminal FFI bridge tests",
+    );
+    terminal_ffi_tests_step.dependOn(&run_terminal_ffi_tests.step);
+
+    const terminal_ffi_pty_smoke = b.addExecutable(.{
+        .name = "terminal-ffi-pty-smoke",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/terminal_ffi_pty_smoke.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    terminal_ffi_pty_smoke.addIncludePath(b.path("vendor"));
+    terminal_ffi_pty_smoke.addCSourceFile(.{
+        .file = b.path("src/c/stb_image.c"),
+        .flags = &.{"-std=c99"},
+    });
+    const run_terminal_ffi_pty_smoke = b.addRunArtifact(terminal_ffi_pty_smoke);
+    const terminal_ffi_pty_smoke_step = b.step(
+        "test-terminal-ffi-pty",
+        "Run PTY-backed terminal FFI smoke",
+    );
+    terminal_ffi_pty_smoke_step.dependOn(&run_terminal_ffi_pty_smoke.step);
 
     const terminal_import_check = b.addExecutable(.{
         .name = "terminal-import-check",

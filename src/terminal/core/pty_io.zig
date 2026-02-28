@@ -24,6 +24,17 @@ pub fn start(self: anytype, shell: ?[:0]const u8) !void {
     }
 }
 
+pub fn startNoThreads(self: anytype, shell: ?[:0]const u8) !void {
+    const size = PtySize{
+        .rows = self.primary.grid.rows,
+        .cols = self.primary.grid.cols,
+        .cell_width = self.cell_width,
+        .cell_height = self.cell_height,
+    };
+    const pty = try Pty.init(self.allocator, size, shell);
+    self.pty = pty;
+}
+
 pub fn poll(self: anytype) !void {
     const input_pressure = self.input_pressure.load(.acquire);
     if (self.read_thread != null) {
