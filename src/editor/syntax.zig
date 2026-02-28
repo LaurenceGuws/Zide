@@ -819,6 +819,53 @@ fn mapCaptureKind(name: []const u8) TokenKind {
     if (std.mem.startsWith(u8, name, "parameter")) return .variable;
     if (std.mem.startsWith(u8, name, "variable")) return .variable;
     if (std.mem.startsWith(u8, name, "error")) return .error_token;
+
+    // Common alias captures used by upstream query packs (especially nvim-treesitter).
+    if (std.mem.eql(u8, name, "none")) return .constant;
+    if (std.mem.eql(u8, name, "import")) return .keyword;
+    if (std.mem.eql(u8, name, "cImport")) return .keyword;
+    if (std.mem.eql(u8, name, "include")) return .keyword;
+    if (std.mem.eql(u8, name, "use")) return .keyword;
+    if (std.mem.eql(u8, name, "package")) return .keyword;
+
+    if (std.mem.eql(u8, name, "if")) return .keyword;
+    if (std.mem.eql(u8, name, "else")) return .keyword;
+    if (std.mem.eql(u8, name, "for")) return .keyword;
+    if (std.mem.eql(u8, name, "while")) return .keyword;
+    if (std.mem.eql(u8, name, "try")) return .keyword;
+    if (std.mem.eql(u8, name, "catch")) return .keyword;
+    if (std.mem.eql(u8, name, "finally")) return .keyword;
+    if (std.mem.eql(u8, name, "throw")) return .keyword;
+    if (std.mem.eql(u8, name, "return")) return .keyword;
+    if (std.mem.eql(u8, name, "as")) return .keyword;
+    if (std.mem.eql(u8, name, "async")) return .keyword;
+    if (std.mem.eql(u8, name, "var")) return .keyword;
+
+    if (std.mem.eql(u8, name, "private")) return .keyword;
+    if (std.mem.eql(u8, name, "protected")) return .keyword;
+    if (std.mem.eql(u8, name, "public")) return .keyword;
+    if (std.mem.eql(u8, name, "protocol")) return .keyword;
+
+    if (std.mem.eql(u8, name, "annotation")) return .attribute;
+    if (std.mem.eql(u8, name, "deprecated")) return .attribute;
+    if (std.mem.eql(u8, name, "diagnostic")) return .attribute;
+    if (std.mem.eql(u8, name, "meta")) return .attribute;
+    if (std.mem.eql(u8, name, "nodiscard")) return .attribute;
+    if (std.mem.eql(u8, name, "noreturn")) return .attribute;
+
+    if (std.mem.eql(u8, name, "func")) return .function;
+    if (std.mem.eql(u8, name, "callback")) return .function;
+    if (std.mem.eql(u8, name, "handler")) return .function;
+
+    if (std.mem.eql(u8, name, "arg")) return .variable;
+    if (std.mem.eql(u8, name, "argument")) return .variable;
+    if (std.mem.eql(u8, name, "param")) return .variable;
+    if (std.mem.eql(u8, name, "prop")) return .variable;
+    if (std.mem.eql(u8, name, "local")) return .variable;
+    if (std.mem.eql(u8, name, "identifier")) return .variable;
+
+    if (std.mem.eql(u8, name, "diff.plus")) return .operator;
+    if (std.mem.eql(u8, name, "diff.minus")) return .operator;
     return .plain;
 }
 
@@ -2089,6 +2136,16 @@ fn stringOptEqual(a: ?[]const u8, b: ?[]const u8) bool {
 }
 
 extern "c" fn tree_sitter_zig() *const c.TSLanguage;
+
+test "map capture kind covers common alias captures" {
+    try std.testing.expectEqual(TokenKind.keyword, mapCaptureKind("import"));
+    try std.testing.expectEqual(TokenKind.keyword, mapCaptureKind("cImport"));
+    try std.testing.expectEqual(TokenKind.constant, mapCaptureKind("none"));
+    try std.testing.expectEqual(TokenKind.attribute, mapCaptureKind("annotation"));
+    try std.testing.expectEqual(TokenKind.function, mapCaptureKind("func"));
+    try std.testing.expectEqual(TokenKind.variable, mapCaptureKind("argument"));
+    try std.testing.expectEqual(TokenKind.operator, mapCaptureKind("diff.plus"));
+}
 
 test "predicates + priority metadata filter highlights" {
     const allocator = std.testing.allocator;

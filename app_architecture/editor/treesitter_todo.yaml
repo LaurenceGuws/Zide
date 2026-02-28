@@ -37,6 +37,7 @@ treesitter_todo:
         - "Implemented priority metadata parsing via #set!; tokens carry priority/metadata (not yet used for conceal/url)."
         - "Overlap splitting now resolves competing captures by priority and produces non-overlapping segments."
         - "Capture mapping treats markup.link.* as a link token kind."
+        - "Capture taxonomy now maps common non-standard alias captures (e.g. import/cImport/none/annotation/func/argument/diff.plus) to concrete token kinds instead of falling back to plain."
         - "Rendering now respects conceal/url metadata (conceal hides or replaces token text; url forces link color)."
     - id: TS-03
       status: in_progress
