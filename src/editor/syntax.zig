@@ -73,6 +73,100 @@ const InjectedLanguage = struct {
     injection_query: ?*InjectionQuery,
 };
 
+const PlainCaptureEntry = struct {
+    name: []u8,
+    hits: usize,
+};
+
+const PlainCaptureSampler = struct {
+    allocator: std.mem.Allocator,
+    language_name: []const u8,
+    entries: std.ArrayList(PlainCaptureEntry),
+    total_hits: usize,
+    next_report_threshold: usize,
+
+    pub fn init(allocator: std.mem.Allocator, language_name: []const u8) PlainCaptureSampler {
+        return .{
+            .allocator = allocator,
+            .language_name = language_name,
+            .entries = std.ArrayList(PlainCaptureEntry).empty,
+            .total_hits = 0,
+            .next_report_threshold = 128,
+        };
+    }
+
+    pub fn deinit(self: *PlainCaptureSampler) void {
+        self.logSummary("final");
+        for (self.entries.items) |entry| {
+            self.allocator.free(entry.name);
+        }
+        self.entries.deinit(self.allocator);
+    }
+
+    pub fn observe(self: *PlainCaptureSampler, capture_name: []const u8) void {
+        for (self.entries.items) |*entry| {
+            if (!std.mem.eql(u8, entry.name, capture_name)) continue;
+            entry.hits += 1;
+            self.total_hits += 1;
+            self.maybeLogSample();
+            return;
+        }
+
+        const owned_name = self.allocator.dupe(u8, capture_name) catch return;
+        self.entries.append(self.allocator, .{
+            .name = owned_name,
+            .hits = 1,
+        }) catch {
+            self.allocator.free(owned_name);
+            return;
+        };
+        self.total_hits += 1;
+        self.maybeLogSample();
+    }
+
+    fn maybeLogSample(self: *PlainCaptureSampler) void {
+        if (self.total_hits < self.next_report_threshold) return;
+        self.logSummary("sample");
+        if (self.next_report_threshold <= (std.math.maxInt(usize) / 2)) {
+            self.next_report_threshold *= 2;
+        }
+    }
+
+    fn logSummary(self: *PlainCaptureSampler, phase: []const u8) void {
+        if (self.entries.items.len == 0 or self.total_hits == 0) return;
+        const log = app_logger.logger("editor.highlight");
+        var top = std.ArrayList(PlainCaptureEntry).empty;
+        defer top.deinit(self.allocator);
+        top.appendSlice(self.allocator, self.entries.items) catch return;
+        std.sort.heap(PlainCaptureEntry, top.items, {}, struct {
+            fn lessThan(_: void, a: PlainCaptureEntry, b: PlainCaptureEntry) bool {
+                if (a.hits != b.hits) return a.hits > b.hits;
+                return std.mem.order(u8, a.name, b.name) == .lt;
+            }
+        }.lessThan);
+
+        var buf = std.ArrayList(u8).empty;
+        defer buf.deinit(self.allocator);
+        const top_count: usize = @min(top.items.len, 8);
+        for (top.items[0..top_count], 0..) |entry, i| {
+            if (i > 0) {
+                buf.appendSlice(self.allocator, ", ") catch return;
+            }
+            buf.writer(self.allocator).print("{s}:{d}", .{ entry.name, entry.hits }) catch return;
+        }
+        log.logf(
+            "runtime unmapped captures phase={s} lang={s} total_hits={d} distinct={d} top=\"{s}\"",
+            .{
+                phase,
+                self.language_name,
+                self.total_hits,
+                self.entries.items.len,
+                buf.items,
+            },
+        );
+    }
+};
+
 const max_injection_depth: usize = 6;
 const injection_priority_bias: i32 = 100000;
 
@@ -102,6 +196,7 @@ pub const SyntaxHighlighter = struct {
     cursor: *c.TSQueryCursor,
     read_buffer: []u8,
     injected_languages: std.StringHashMap(*InjectedLanguage),
+    plain_capture_sampler: PlainCaptureSampler,
 
     pub fn destroy(self: *SyntaxHighlighter) void {
         if (self.tree) |tree| {
@@ -110,6 +205,7 @@ pub const SyntaxHighlighter = struct {
         c.ts_query_cursor_delete(self.cursor);
         c.ts_parser_delete(self.parser);
         self.destroyInjectedLanguages();
+        self.plain_capture_sampler.deinit();
         self.allocator.free(self.read_buffer);
         self.allocator.destroy(self);
     }
@@ -295,6 +391,7 @@ pub const SyntaxHighlighter = struct {
             depth,
             allocator,
             tokens,
+            &self.plain_capture_sampler,
         );
 
         if (injection_query == null) return;
@@ -638,6 +735,7 @@ pub fn createHighlighter(
         .cursor = cursor,
         .read_buffer = read_buffer,
         .injected_languages = injected_languages,
+        .plain_capture_sampler = PlainCaptureSampler.init(allocator, language_name),
     };
 
     _ = self.reparse();
@@ -728,6 +826,7 @@ fn appendHighlightTokens(
     depth: usize,
     allocator: std.mem.Allocator,
     tokens: *std.ArrayList(HighlightToken),
+    plain_capture_sampler: *PlainCaptureSampler,
 ) !void {
     const root = c.ts_tree_root_node(tree);
     _ = c.ts_query_cursor_set_byte_range(cursor, range_start, range_end);
@@ -769,7 +868,12 @@ fn appendHighlightTokens(
             const start_b = c.ts_node_start_byte(node);
             const end_b = c.ts_node_end_byte(node);
             if (end_b <= range_start or start_b >= range_end) continue;
-            if (query_bundle.capture_noop[capture.index]) continue;
+            if (query_bundle.capture_noop[capture.index]) {
+                if (query_bundle.capture_kinds[capture.index] == .plain) {
+                    plain_capture_sampler.observe(query_bundle.capture_names[capture.index]);
+                }
+                continue;
+            }
             const token_kind = query_bundle.capture_kinds[capture.index];
             const meta = capture_meta[capture.index];
             const base_priority = if (meta.has_priority) meta.priority else match_meta.priority;
@@ -1691,6 +1795,7 @@ fn simpleRegexMatchQuestion(
 
 const QueryBundle = struct {
     query: *c.TSQuery,
+    capture_names: [][]const u8,
     capture_kinds: []TokenKind,
     capture_noop: []bool,
     query_source: []u8,
@@ -1773,6 +1878,14 @@ const QueryCache = struct {
         errdefer self.allocator.free(capture_kinds);
         const capture_noop = try self.allocator.alloc(bool, capture_count);
         errdefer self.allocator.free(capture_noop);
+        const capture_names = try self.allocator.alloc([]const u8, capture_count);
+        var capture_names_loaded: usize = 0;
+        errdefer {
+            for (capture_names[0..capture_names_loaded]) |capture_name| {
+                self.allocator.free(capture_name);
+            }
+            self.allocator.free(capture_names);
+        }
         var skipped_count: usize = 0;
         var plain_count: usize = 0;
         var mapped_count: usize = 0;
@@ -1784,6 +1897,8 @@ const QueryCache = struct {
             var name_len: u32 = 0;
             const name_ptr = c.ts_query_capture_name_for_id(query, @as(u32, @intCast(i)), &name_len);
             const name = name_ptr[0..name_len];
+            capture_names[i] = try self.allocator.dupe(u8, name);
+            capture_names_loaded += 1;
             const kind = mapCaptureKind(name);
             const skip = shouldSkipCapture(name);
             capture_noop[i] = skip or kind == .plain;
@@ -1825,6 +1940,7 @@ const QueryCache = struct {
         errdefer self.allocator.destroy(bundle);
         bundle.* = .{
             .query = query,
+            .capture_names = capture_names,
             .capture_kinds = capture_kinds,
             .capture_noop = capture_noop,
             .query_source = query_text,
