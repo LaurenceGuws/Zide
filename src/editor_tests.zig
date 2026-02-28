@@ -2,6 +2,7 @@ const std = @import("std");
 const Editor = @import("editor/editor.zig").Editor;
 const grammar_manager_mod = @import("editor/grammar_manager.zig");
 const shared_types = @import("types/mod.zig");
+const renderer_mod = @import("ui/renderer.zig");
 
 const EditorFixture = struct {
     grammar_manager: grammar_manager_mod.GrammarManager,
@@ -218,6 +219,95 @@ test "editor insert across rectangular selections" {
     try std.testing.expectEqualStrings("oXe\ntXo\ntXree", after);
 }
 
+test "editor insert across rectangular selections preserves caret set" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("one\ntwo\nthree");
+    try editor.expandRectSelection(0, 2, 1, 2);
+    try editor.insertChar('X');
+
+    try std.testing.expectEqual(@as(usize, 3), editor.selectionCount());
+
+    const first = editor.selectionAt(0) orelse return error.TestUnexpectedResult;
+    const second = editor.selectionAt(1) orelse return error.TestUnexpectedResult;
+    const third = editor.selectionAt(2) orelse return error.TestUnexpectedResult;
+
+    try std.testing.expect(first.isEmpty());
+    try std.testing.expect(second.isEmpty());
+    try std.testing.expect(third.isEmpty());
+    try std.testing.expectEqual(@as(usize, 2), first.start.offset);
+    try std.testing.expectEqual(@as(usize, 6), second.start.offset);
+    try std.testing.expectEqual(@as(usize, 10), third.start.offset);
+}
+
+test "editor delete across selections preserves caret set" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("abcdef");
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 1, .offset = 1 },
+        .end = .{ .line = 0, .col = 2, .offset = 2 },
+    });
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 4, .offset = 4 },
+        .end = .{ .line = 0, .col = 6, .offset = 6 },
+    });
+
+    try editor.deleteSelection();
+
+    const after = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after);
+    try std.testing.expectEqualStrings("acd", after);
+    try std.testing.expectEqual(@as(usize, 2), editor.selectionCount());
+
+    const first = editor.selectionAt(0) orelse return error.TestUnexpectedResult;
+    const second = editor.selectionAt(1) orelse return error.TestUnexpectedResult;
+    try std.testing.expect(first.isEmpty());
+    try std.testing.expect(second.isEmpty());
+    try std.testing.expectEqual(@as(usize, 1), first.start.offset);
+    try std.testing.expectEqual(@as(usize, 3), second.start.offset);
+}
+
+test "editor add caret down duplicates current caret by line" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("one\ntwo\nthree");
+    editor.setCursor(0, 1);
+
+    try std.testing.expect(try editor.addCaretDown());
+    try std.testing.expectEqual(@as(usize, 1), editor.selectionCount());
+    const added = editor.selectionAt(0) orelse return error.TestUnexpectedResult;
+    try std.testing.expect(added.isEmpty());
+    try std.testing.expectEqual(@as(usize, 5), added.start.offset);
+}
+
+test "editor add caret down duplicates all current carets" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("one\ntwo\nthree");
+    editor.setCursor(0, 1);
+    try std.testing.expect(try editor.addCaretDown());
+    try std.testing.expect(try editor.addCaretDown());
+
+    try std.testing.expectEqual(@as(usize, 2), editor.selectionCount());
+    const first = editor.selectionAt(0) orelse return error.TestUnexpectedResult;
+    const second = editor.selectionAt(1) orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 5), first.start.offset);
+    try std.testing.expectEqual(@as(usize, 9), second.start.offset);
+}
+
 const draw_mod = @import("ui/widgets/editor_widget_draw.zig");
 const editor_render = @import("editor/render/renderer_ops.zig");
 const cache_mod = @import("editor/render/cache.zig");
@@ -295,6 +385,7 @@ const FakeRenderer = struct {
     height: i32,
     char_width: f32,
     char_height: f32,
+    editor_disable_ligatures: renderer_mod.TerminalDisableLigaturesStrategy,
     theme: Theme,
     log: DrawLog,
     editor_texture_created: bool,
@@ -306,6 +397,7 @@ const FakeRenderer = struct {
             .height = height,
             .char_width = char_width,
             .char_height = char_height,
+            .editor_disable_ligatures = .never,
             .theme = .{},
             .log = DrawLog.init(allocator),
             .editor_texture_created = false,
@@ -362,6 +454,14 @@ const FakeRenderer = struct {
         _ = y;
     }
 
+    pub fn setTextInputRect(self: *FakeRenderer, x: i32, y: i32, w: i32, h: i32) void {
+        _ = self;
+        _ = x;
+        _ = y;
+        _ = w;
+        _ = h;
+    }
+
     pub fn clearLog(self: *FakeRenderer) void {
         self.log.data.clearRetainingCapacity();
     }
@@ -383,6 +483,22 @@ const FakeRenderer = struct {
     }
 
     pub fn drawTextMonospace(self: *FakeRenderer, text: []const u8, x: f32, y: f32, color: Color) void {
+        self.drawText(text, x, y, color);
+    }
+
+    pub fn drawTextMonospacePolicy(self: *FakeRenderer, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool) void {
+        _ = disable_programming_ligatures;
+        self.drawText(text, x, y, color);
+    }
+
+    pub fn drawTextMonospaceOnBg(self: *FakeRenderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
+        _ = bg;
+        self.drawText(text, x, y, color);
+    }
+
+    pub fn drawTextMonospaceOnBgPolicy(self: *FakeRenderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color, disable_programming_ligatures: bool) void {
+        _ = bg;
+        _ = disable_programming_ligatures;
         self.drawText(text, x, y, color);
     }
 
@@ -449,7 +565,8 @@ test "editor render snapshot baseline" {
         .wrap_enabled = false,
     };
 
-    draw_mod.draw(&widget, &renderer, 0, 0, 320, 200);
+    const input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
+    draw_mod.draw(&widget, &renderer, 0, 0, 320, 200, input);
 
     const expected =
         "rect 0 0 50 200 #21222CFF\n" ++
@@ -462,6 +579,41 @@ test "editor render snapshot baseline" {
         "rect 74 16 2 16 #F8F8F2FF\n";
 
     try std.testing.expectEqualStrings(expected, renderer.log.data.items);
+}
+
+test "editor render draws extra carets for zero-length selections" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("abcdef");
+    editor.setCursor(0, 2);
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 1, .offset = 1 },
+        .end = .{ .line = 0, .col = 1, .offset = 1 },
+    });
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 4, .offset = 4 },
+        .end = .{ .line = 0, .col = 4, .offset = 4 },
+    });
+
+    var renderer = FakeRenderer.init(allocator, 320, 32, 8, 16);
+    defer renderer.deinit();
+
+    var widget = FakeWidget{
+        .editor = editor,
+        .gutter_width = 0,
+        .wrap_enabled = false,
+    };
+
+    const input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
+    draw_mod.draw(&widget, &renderer, 0, 0, 320, 32, input);
+
+    const log = renderer.log.data.items;
+    try std.testing.expect(std.mem.indexOf(u8, log, "rect 66 0 2 16 #F8F8F2FF\n") != null);
+    try std.testing.expect(std.mem.indexOf(u8, log, "rect 74 0 2 16 #F8F8F2FF\n") != null);
+    try std.testing.expect(std.mem.indexOf(u8, log, "rect 90 0 2 16 #F8F8F2FF\n") != null);
 }
 
 test "editor cached render snapshot baseline" {
@@ -504,6 +656,44 @@ test "editor cached render snapshot baseline" {
         "rect 74 16 2 16 #F8F8F2FF\n";
 
     try std.testing.expectEqualStrings(expected, renderer.log.data.items);
+}
+
+test "editor cached render draws extra carets for zero-length selections" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("abcdef");
+    editor.setCursor(0, 2);
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 1, .offset = 1 },
+        .end = .{ .line = 0, .col = 1, .offset = 1 },
+    });
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 4, .offset = 4 },
+        .end = .{ .line = 0, .col = 4, .offset = 4 },
+    });
+
+    var renderer = FakeRenderer.init(allocator, 320, 32, 8, 16);
+    defer renderer.deinit();
+
+    var widget = FakeWidget{
+        .editor = editor,
+        .gutter_width = 0,
+        .wrap_enabled = false,
+    };
+
+    var cache = cache_mod.EditorRenderCache.init(allocator, 256);
+    defer cache.deinit();
+
+    const input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
+    draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 32, 1, input);
+
+    const log = renderer.log.data.items;
+    try std.testing.expect(std.mem.indexOf(u8, log, "rect 66 0 2 16 #F8F8F2FF\n") != null);
+    try std.testing.expect(std.mem.indexOf(u8, log, "rect 74 0 2 16 #F8F8F2FF\n") != null);
+    try std.testing.expect(std.mem.indexOf(u8, log, "rect 90 0 2 16 #F8F8F2FF\n") != null);
 }
 
 test "editor render cache dirty line update" {

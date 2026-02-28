@@ -396,6 +396,101 @@ pub const Editor = struct {
         }.lessThan);
     }
 
+    pub fn addCaretUp(self: *Editor) !bool {
+        return self.addCaretVertical(-1);
+    }
+
+    pub fn addCaretDown(self: *Editor) !bool {
+        return self.addCaretVertical(1);
+    }
+
+    fn addCaretVertical(self: *Editor, delta: i32) !bool {
+        if (delta == 0) return false;
+        if (self.selection != null) return false;
+        for (self.selections.items) |sel| {
+            if (!sel.normalized().isEmpty()) return false;
+        }
+
+        var caret_offsets = std.ArrayList(usize).empty;
+        defer caret_offsets.deinit(self.allocator);
+
+        try caret_offsets.append(self.allocator, self.cursor.offset);
+        for (self.selections.items) |sel| {
+            const caret = sel.normalized();
+            if (caret.start.offset == self.cursor.offset) continue;
+            if (std.mem.indexOfScalar(usize, caret_offsets.items, caret.start.offset) != null) continue;
+            try caret_offsets.append(self.allocator, caret.start.offset);
+        }
+
+        var added_any = false;
+        for (caret_offsets.items) |offset| {
+            const caret = self.cursorPosForOffset(offset);
+            const target_line = if (delta < 0) blk: {
+                if (caret.line == 0) continue;
+                break :blk caret.line - 1;
+            } else blk: {
+                if (caret.line + 1 >= self.buffer.lineCount()) continue;
+                break :blk caret.line + 1;
+            };
+            const target_col = @min(caret.col, self.buffer.lineLen(target_line));
+            const target_offset = self.buffer.lineStart(target_line) + target_col;
+            if (target_offset == self.cursor.offset) continue;
+            if (std.mem.indexOfScalar(usize, caret_offsets.items, target_offset) != null) continue;
+            try self.selections.append(self.allocator, .{
+                .start = .{
+                    .line = target_line,
+                    .col = target_col,
+                    .offset = target_offset,
+                },
+                .end = .{
+                    .line = target_line,
+                    .col = target_col,
+                    .offset = target_offset,
+                },
+            });
+            try caret_offsets.append(self.allocator, target_offset);
+            added_any = true;
+        }
+
+        if (added_any) {
+            try self.normalizeSelections();
+        }
+        return added_any;
+    }
+
+    fn cursorPosForOffset(self: *Editor, offset: usize) CursorPos {
+        const line = self.buffer.lineIndexForOffset(offset);
+        const line_start = self.buffer.lineStart(line);
+        return .{
+            .line = line,
+            .col = offset - line_start,
+            .offset = offset,
+        };
+    }
+
+    fn shiftCaretOffsets(caret_offsets: *std.ArrayList(usize), delta: isize) void {
+        if (delta == 0) return;
+        for (caret_offsets.items) |*offset| {
+            const shifted = @as(isize, @intCast(offset.*)) + delta;
+            offset.* = @intCast(shifted);
+        }
+    }
+
+    fn restoreCaretSelections(self: *Editor, caret_offsets: []const usize) !void {
+        self.clearSelections();
+        for (caret_offsets) |offset| {
+            const caret = self.cursorPosForOffset(offset);
+            try self.selections.append(self.allocator, .{
+                .start = caret,
+                .end = caret,
+            });
+        }
+        try self.normalizeSelections();
+        if (self.selections.items.len > 0) {
+            self.cursor = self.selections.items[0].start;
+        }
+    }
+
     fn updateCursorPosition(self: *Editor) void {
         self.cursor.line = self.buffer.lineIndexForOffset(self.cursor.offset);
         const line_start = self.buffer.lineStart(self.cursor.line);
@@ -479,6 +574,8 @@ pub const Editor = struct {
             errdefer self.endUndoGroup() catch {};
             try self.normalizeSelectionsDescending();
             const bytes = [_]u8{char};
+            var caret_offsets = std.ArrayList(usize).empty;
+            defer caret_offsets.deinit(self.allocator);
             for (self.selections.items) |sel| {
                 const norm = sel.normalized();
                 const len = norm.end.offset - norm.start.offset;
@@ -494,12 +591,11 @@ pub const Editor = struct {
                 const insert_point = self.pointForByte(insert_start);
                 try self.buffer.insertBytes(insert_start, &bytes);
                 self.applyHighlightEdit(insert_start, insert_start, insert_start + 1, insert_point, insert_point);
-                self.cursor = norm.start;
-                self.cursor.offset += 1;
-                self.updateCursorPosition();
+                shiftCaretOffsets(&caret_offsets, 1 - @as(isize, @intCast(len)));
+                try caret_offsets.append(self.allocator, insert_start + 1);
             }
             self.noteTextChanged();
-            self.clearSelections();
+            try self.restoreCaretSelections(caret_offsets.items);
             try self.endUndoGroup();
             return;
         }
@@ -534,6 +630,8 @@ pub const Editor = struct {
             self.beginUndoGroup();
             errdefer self.endUndoGroup() catch {};
             try self.normalizeSelectionsDescending();
+            var caret_offsets = std.ArrayList(usize).empty;
+            defer caret_offsets.deinit(self.allocator);
             for (self.selections.items) |sel| {
                 const norm = sel.normalized();
                 const len = norm.end.offset - norm.start.offset;
@@ -549,10 +647,11 @@ pub const Editor = struct {
                 const insert_point = self.pointForByte(insert_start);
                 try self.buffer.insertBytes(insert_start, text);
                 self.applyHighlightEdit(insert_start, insert_start, insert_start + text.len, insert_point, insert_point);
-                self.cursor = norm.start;
+                shiftCaretOffsets(&caret_offsets, @as(isize, @intCast(text.len)) - @as(isize, @intCast(len)));
+                try caret_offsets.append(self.allocator, insert_start + text.len);
             }
             self.noteTextChanged();
-            self.clearSelections();
+            try self.restoreCaretSelections(caret_offsets.items);
             try self.endUndoGroup();
             return;
         }
@@ -625,10 +724,9 @@ pub const Editor = struct {
             errdefer self.endUndoGroup() catch {};
             try self.normalizeSelectionsDescending();
             var changed = false;
-            var idx: usize = self.selections.items.len;
-            while (idx > 0) {
-                idx -= 1;
-                const sel = self.selections.items[idx];
+            var caret_offsets = std.ArrayList(usize).empty;
+            defer caret_offsets.deinit(self.allocator);
+            for (self.selections.items) |sel| {
                 const norm = sel.normalized();
                 const len = norm.end.offset - norm.start.offset;
                 if (len > 0) {
@@ -638,12 +736,13 @@ pub const Editor = struct {
                     const end_point = self.pointForByte(end);
                     try self.buffer.deleteRange(start, len);
                     self.applyHighlightEdit(start, end, start, start_point, end_point);
-                    self.cursor = norm.start;
                     changed = true;
                 }
+                shiftCaretOffsets(&caret_offsets, -@as(isize, @intCast(len)));
+                try caret_offsets.append(self.allocator, norm.start.offset);
             }
             if (changed) self.noteTextChanged();
-            self.clearSelections();
+            try self.restoreCaretSelections(caret_offsets.items);
             self.selection = null;
             try self.endUndoGroup();
             return;
