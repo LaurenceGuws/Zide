@@ -7,6 +7,8 @@ const c = ts_api.c_api;
 const TextStore = text_store.TextStore;
 const HighlightToken = syntax_mod.HighlightToken;
 
+extern "c" fn tree_sitter_zig() *const ts_api.c_api.TSLanguage;
+
 const Edit = struct {
     needle: ?[]const u8,
     delete_len: usize,
@@ -164,6 +166,20 @@ fn compareHighlights(
     }
 }
 
+fn createTestZigHighlighter(
+    allocator: std.mem.Allocator,
+    store: *TextStore,
+) !*syntax_mod.SyntaxHighlighter {
+    return syntax_mod.createHighlighterForLanguage(
+        allocator,
+        store,
+        "zig",
+        tree_sitter_zig(),
+        .{},
+        null,
+    );
+}
+
 test "incremental edits match full reparse highlights" {
     const allocator = std.testing.allocator;
     const initial = "const foo = 1;\nconst bar = 2;\n";
@@ -171,9 +187,9 @@ test "incremental edits match full reparse highlights" {
     var store = try TextStore.init(allocator, initial);
     defer store.deinit();
 
-    const incremental = try syntax_mod.createZigHighlighter(allocator, store);
+    const incremental = try createTestZigHighlighter(allocator, store);
     defer incremental.destroy();
-    const full = try syntax_mod.createZigHighlighter(allocator, store);
+    const full = try createTestZigHighlighter(allocator, store);
     defer full.destroy();
 
     try compareHighlights(store, incremental, full, allocator);
@@ -208,9 +224,9 @@ test "incremental edits match full reparse highlights with multiline delete" {
     var store = try TextStore.init(allocator, initial);
     defer store.deinit();
 
-    const incremental = try syntax_mod.createZigHighlighter(allocator, store);
+    const incremental = try createTestZigHighlighter(allocator, store);
     defer incremental.destroy();
-    const full = try syntax_mod.createZigHighlighter(allocator, store);
+    const full = try createTestZigHighlighter(allocator, store);
     defer full.destroy();
 
     try compareHighlights(store, incremental, full, allocator);
@@ -247,9 +263,9 @@ test "incremental edits match full reparse highlights with larger fixture" {
     var store = try TextStore.init(allocator, initial);
     defer store.deinit();
 
-    const incremental = try syntax_mod.createZigHighlighter(allocator, store);
+    const incremental = try createTestZigHighlighter(allocator, store);
     defer incremental.destroy();
-    const full = try syntax_mod.createZigHighlighter(allocator, store);
+    const full = try createTestZigHighlighter(allocator, store);
     defer full.destroy();
 
     try compareHighlights(store, incremental, full, allocator);
@@ -279,7 +295,7 @@ test "applyEdit dirty ranges cover edited lines" {
     var store = try TextStore.init(allocator, initial);
     defer store.deinit();
 
-    const highlighter = try syntax_mod.createZigHighlighter(allocator, store);
+    const highlighter = try createTestZigHighlighter(allocator, store);
     defer highlighter.destroy();
 
     const needle = "beta";

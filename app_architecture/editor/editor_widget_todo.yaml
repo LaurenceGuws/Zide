@@ -100,6 +100,7 @@ editor_widget_todo:
         - "Large-file initial rope chunk size is tuned to ~4KiB (>=8MiB files) to improve open/RSS while keeping line query latency sub-microsecond scale."
         - "Large-file guard: syntax highlighter initialization is skipped at/above 8MiB to prevent UI-thread full-document tree-sitter parse stalls on open."
         - "When tree-sitter is skipped for very large files, editor draw now applies a lightweight language-agnostic fallback tokenizer (comments/strings/numbers) so syntax coloring remains available without parse stalls."
+        - "Runtime grammar/highlighter setup removed Zig-only tree-sitter special casing; editor now uses uniform grammar-manager loading flow."
         - "Rope undo/redo implemented (per-op text snapshots)."
         - "Undo batching: adjacent inserts/deletes merge (rope)."
         - "Undo grouping hooks added (begin/end group)."
