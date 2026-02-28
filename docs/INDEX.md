@@ -33,7 +33,8 @@ Quick map of where to look for common needs.
 ## Setup + usage
 - `README.md` — user-facing overview.
 - `app_architecture/BOOTSTRAP.md` — dependencies, bootstrap, build, run, test.
-- `app_architecture/CONFIG.md` — config (currently logging-only POC).
+- `app_architecture/CONFIG.md` — Lua config subsystem: parser surface, merge rules, runtime consumers, and reload truth.
+- `app_architecture/config_todo.yaml` — config subsystem tracker: contract drift, reload gaps, validation, and binding semantics.
 - `docs/DEPENDENCIES.md` — native dependency setup (vcpkg + system packages).
 - `docs/terminal/compatibility.md` — current beta terminal support surface, TERM identity, and terminfo install instructions.
 

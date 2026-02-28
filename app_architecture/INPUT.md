@@ -27,6 +27,10 @@ References:
 - Bindings are keycode‑based and use `shared_types.input.Key` enum names (e.g. `equal`, `kp_add`, `grave`).
 - Modifiers are `ctrl`, `shift`, `alt`, `super` and are matched exactly.
 - Use `["repeat"] = true` in Lua to enable key repeat for a binding.
+- By default override configs merge onto the built-in binding set and fill gaps.
+- Set `keybinds.no_defaults = true` in an override config to replace built-in bindings entirely.
+- Lua keybind modifiers are exact-match and currently support `ctrl`, `shift`, `alt`, `super`, and `altgr`.
+- `altgr` is supported as an advanced desktop modifier. It should be used deliberately for layout-specific bindings, not as the default shortcut style in general examples.
 - Editor bindings now include copy/cut/paste (Ctrl+C/X/V) and route via the input router.
 
 ## Plan (Todo)

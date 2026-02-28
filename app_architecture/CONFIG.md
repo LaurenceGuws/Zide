@@ -1,150 +1,204 @@
-# Configuration (POC)
+# Configuration
 
-Zide supports a minimal Lua config for logging only (POC).
+Lua config is a core early-development subsystem. It is not limited to logging anymore.
 
-## File locations
+This document describes the current config surface as implemented today: parser shape, merge rules, runtime consumers, and reload behavior. Treat it as the current development contract, not a final frozen user API.
+
+## Source Of Truth
+
+Parser and merge logic:
+- `src/config/lua_config.zig`
+
+Runtime application:
+- `src/main.zig`
+- `src/ui/renderer.zig`
+- `src/ui/widgets/editor_widget*.zig`
+- `src/ui/widgets/terminal_widget*.zig`
+- `src/input/input_actions.zig`
+
+Defaults reference:
+- `assets/config/init.lua`
+
+Tracker:
+- `app_architecture/config_todo.yaml`
+
+## File Load Order
 
 Zide loads config in this order:
 
-1) `assets/config/init.lua` (system defaults)
-2) User config:
-   - Linux: `$XDG_CONFIG_HOME/zide/init.lua` (fallback `~/.config/zide/init.lua`)
+1. `assets/config/init.lua`
+2. User config:
+   - Linux: `${XDG_CONFIG_HOME:-~/.config}/zide/init.lua`
    - macOS: `~/Library/Application Support/Zide/init.lua`
    - Windows: `%APPDATA%\\Zide\\init.lua`
-3) `.zide.lua` in the current working directory (project override)
+3. Project override: `./.zide.lua`
 
-## Logging config
+Later layers override earlier ones.
 
-Config should return a table:
+## Merge Rules
 
-```lua
-return {
-  log = {
-    enable = {
-      "app.core",
-      "terminal.core",
-      "terminal.metrics",
-      "terminal.alt",
-      "terminal.io",
-      "terminal.csi",
-      "terminal.sgr",
-      "terminal.osc",
-      "terminal.font",
-    },
-    -- file = { "terminal.metrics" },
-    -- console = { "app.core" },
-  }
-}
-```
+- Scalar fields: later non-null value wins.
+- `theme`: merged field-by-field, so partial palette/syntax overrides are supported.
+- `keybinds`: merged by binding identity by default.
+  - Identity is `scope + key + exact mods`.
+  - Override bindings replace matching defaults.
+  - Non-matching defaults remain available.
+- `keybinds.no_defaults = true`: replace inherited bindings instead of filling gaps.
 
-You can also return a string:
+## Status Labels
 
-```lua
-return {
-  log = "all"
-}
-```
+This doc uses these status labels:
+- `reloadable`: applied at startup and re-applied on config reload.
+- `restart-only`: parsed at reload time, but runtime does not fully re-apply it.
+- `partial`: supported, but with an important caveat or mismatch.
+- `legacy`: accepted for compatibility or historical reasons; not the preferred public shape.
 
-Supported values:
-- `all` — enable all loggers
-- `none` — disable all loggers
-- comma-separated list (via `enable` array)
-- `file` / `console` arrays for per-destination control
+## Config Matrix
 
-Common logger tags:
-- `app.core`
-- `terminal.core`
-- `terminal.metrics`
-- `terminal.alt` (alt-screen timing)
-- `terminal.io` (PTY IO timing)
-- `terminal.csi` (CSI trace)
-- `terminal.sgr` (SGR trace)
-- `terminal.osc` (OSC trace)
-- `terminal.font`
+### `log`
 
-## SDL logging
+| Lua path | Meaning | Runtime consumer | Status | Notes |
+|---|---|---|---|---|
+| `log = "all"|"none"|"tag1,tag2"` | File + console filter shorthand | `src/main.zig` logger setup | `reloadable` | String shorthand applies to both sinks. |
+| `log.file` | File logger filter | `src/main.zig` logger setup | `reloadable` | |
+| `log.console` | Console logger filter | `src/main.zig` logger setup | `reloadable` | |
+| `log.enable` | Backfill for file/console when one or both are unset | `src/main.zig` logger setup | `reloadable` | Convenience form. |
 
-```lua
-return {
-  sdl = { log_level = "warning" }
-}
-```
+### `sdl`
 
-Accepted `log_level` values: `none`, `critical`, `error`, `warning`/`warn`, `info`, `debug`, `trace`.
+| Lua path | Meaning | Runtime consumer | Status | Notes |
+|---|---|---|---|---|
+| `sdl.log_level` | SDL log verbosity | `src/main.zig` -> app shell SDL logger | `reloadable` | Accepted values: `none`, `critical`, `error`, `warning`/`warn`, `info`, `debug`, `trace`. |
+| `raylib.log_level` | Legacy alias for SDL log verbosity | `src/config/lua_config.zig` | `legacy` | Accepted if `sdl` is absent. Should be documented as compat only. |
 
-## Theme config
+### `theme`
 
-Theme applies across the app shell, editor, and terminal.
+| Lua path | Meaning | Runtime consumer | Status | Notes |
+|---|---|---|---|---|
+| `theme.palette.*` | Shared app/editor/terminal palette colors | `src/main.zig`, renderer, editor/terminal/widgets | `reloadable` | Supports hex colors or `{ r, g, b, a }`. |
+| `theme.syntax.*` | Editor syntax colors | `src/ui/widgets/editor_widget_draw.zig` | `reloadable` | Used by token coloring. |
+| flat `theme.<field>` | Alias form for palette/syntax fields | `src/config/lua_config.zig` | `legacy` | Nested `palette` / `syntax` is the preferred shape. |
+| alias syntax keys | `comment_color`, `builtin_color`, `error_token` | `src/config/lua_config.zig` | `legacy` | Accepted alongside `comment`, `builtin`, `error`. |
 
-```lua
-return {
-  theme = {
-    palette = {
-      background = "#242933",
-      foreground = "#BBC3D4",
-      selection = "#3B4252",
-      cursor = "#D8DEE9",
-      link = "#81A1C1",
-      line_number = "#4C566A",
-      line_number_bg = "#1E222A",
-      current_line = "#191D24",
-      ui_bar_bg = "#1E1F29",
-      ui_panel_bg = "#181921",
-      ui_panel_overlay = "#181921EB",
-      ui_hover = "#3B4252",
-      ui_pressed = "#3A3C4E",
-      ui_tab_inactive_bg = "#232430",
-      ui_accent = "#BE9DB8",
-      ui_border = "#434C5E",
-      ui_modified = "#D08770",
-    },
-    syntax = {
-      comment = "#4C566A",
-      string = "#A3BE8C",
-      keyword = "#D08770",
-      number = "#BE9DB8",
-      ["function"] = "#88C0D0",
-      variable = "#BBC3D4",
-      type_name = "#EBCB8B",
-      operator = "#BBC3D4",
-      builtin = "#5E81AC",
-      punctuation = "#60728A",
-      constant = "#BE9DB8",
-      attribute = "#8FBCBB",
-      namespace = "#E7C173",
-      label = "#D08770",
-      error = "#C5727A",
-    },
-  }
-}
-```
+### `app`
 
-## Font config
+| Lua path | Meaning | Runtime consumer | Status | Notes |
+|---|---|---|---|---|
+| `app.font.path` / `app.font.size` | Base font choice | `src/main.zig` -> renderer font setup | `partial` | Parsed separately, but current runtime collapses app/editor/terminal font choice to one effective font. |
 
-Editor + terminal currently share the same font stack. You can set it under `app.font`
-or override it under `editor.font` / `terminal.font` (last one wins).
+### `editor`
 
-```lua
-return {
-  app = {
-    font = { path = "assets/fonts/JetBrainsMonoNerdFont-Regular.ttf", size = 16 },
-  },
-  editor = {
-    -- font = { path = "/usr/share/fonts/...", size = 16 },
-  },
-  terminal = {
-    -- font = { path = "/usr/share/fonts/...", size = 16 },
-  },
-}
-```
+| Lua path | Meaning | Runtime consumer | Status | Notes |
+|---|---|---|---|---|
+| `editor.font.path` / `editor.font.size` | Editor font override | `src/main.zig` -> renderer font setup | `partial` | Same shared-font caveat as `app.font`. |
+| `editor.wrap` | Soft wrap | `src/main.zig`, editor widget/layout/input | `reloadable` | Defaults to `false`. |
+| `editor.disable_ligatures` | Editor ligature strategy | `src/main.zig` -> renderer/editor draw | `reloadable` | Current values: `never`, `cursor`, `always`. |
+| `editor.font_features` | Editor OpenType features | `src/main.zig` -> renderer/editor draw | `reloadable` | Falls back to terminal font features when unset. |
+| `editor.render.highlight_budget` | Highlight precompute budget | `src/main.zig` editor precompute path | `reloadable` | `0` disables precompute. |
+| `editor.render.width_budget` | Width precompute budget | `src/main.zig` editor precompute path | `reloadable` | `0` disables precompute. |
 
-## Env fallback
+### `terminal`
 
-Env fallbacks:
-- `ZIDE_LOG` applies to both file and console if no config is present.
-- `ZIDE_LOG_FILE` / `ZIDE_LOG_CONSOLE` override per destination.
+| Lua path | Meaning | Runtime consumer | Status | Notes |
+|---|---|---|---|---|
+| `terminal.font.path` / `terminal.font.size` | Terminal font override | `src/main.zig` -> renderer font setup | `partial` | Same shared-font caveat as `app.font`. |
+| `terminal.disable_ligatures` | Terminal ligature strategy | `src/main.zig` -> renderer/terminal draw | `reloadable` | Current values: `never`, `cursor`, `always`. |
+| `terminal.font_features` | Terminal OpenType features | `src/main.zig` -> renderer/terminal draw | `reloadable` | |
+| `terminal.blink` | Cursor blink policy | `src/main.zig` -> terminal widget | `reloadable` | Preferred values: `kitty`, `off`. Boolean shorthand also accepted. |
+| `terminal.scrollback` | Scrollback cap | `src/main.zig` -> new terminal sessions | `partial` | Reload updates future session init options, not existing scrollback history. |
+| `terminal.cursor.shape` | Default cursor shape | `src/main.zig` -> terminal session init / reload | `reloadable` | `block`, `underline`, `bar`. |
+| `terminal.cursor.blink` | Default cursor blink flag | `src/main.zig` -> terminal session init / reload | `reloadable` | |
+| `terminal.focus_reporting.window` | Window-focus CSI `?1004` gating | `src/main.zig` -> terminal widget | `reloadable` | |
+| `terminal.focus_reporting.pane` | Pane-focus CSI `?1004` gating | `src/main.zig` -> terminal widget | `reloadable` | |
+| `terminal.focus_reporting = true/false` | Shorthand for both focus sources | `src/config/lua_config.zig` | `reloadable` | Convenience form. |
 
-## Defaults reference policy
+### `font_rendering`
 
-`assets/config/init.lua` is the authoritative defaults reference. Any change to a default
-configuration option must update this file and this document in the same change.
+| Lua path | Meaning | Runtime consumer | Status | Notes |
+|---|---|---|---|---|
+| `font_rendering.lcd` | LCD/subpixel raster path | `src/main.zig` -> renderer font rendering options | `reloadable` | Reload rebuilds fonts and refreshes terminal sizing. |
+| `font_rendering.hinting` | FreeType hinting mode | `src/main.zig` -> renderer font rendering options | `reloadable` | |
+| `font_rendering.autohint` | Force FreeType autohinter | `src/main.zig` -> renderer font rendering options | `reloadable` | |
+| `font_rendering.glyph_overflow` | Glyph overflow policy | `src/main.zig` -> renderer font rendering options | `reloadable` | |
+| `font_rendering.text.gamma` | Coverage gamma | `src/main.zig` -> renderer text config | `reloadable` | |
+| `font_rendering.text.contrast` | Coverage contrast | `src/main.zig` -> renderer text config | `reloadable` | |
+| `font_rendering.text.linear_correction` | Linear blending correction toggle | `src/main.zig` -> renderer text config | `reloadable` | |
+
+### `keybinds`
+
+| Lua path | Meaning | Runtime consumer | Status | Notes |
+|---|---|---|---|---|
+| `keybinds.no_defaults` | Replace inherited bindings instead of merging | `src/config/lua_config.zig` merge path | `reloadable` | Default behavior is fill-gaps merge. |
+| `keybinds.global[]` | App-scope routed actions | `src/main.zig` -> `InputRouter` | `reloadable` | |
+| `keybinds.editor[]` | Editor-scope routed actions | `src/main.zig` -> `InputRouter` | `reloadable` | |
+| `keybinds.terminal[]` | Terminal-scope routed actions | `src/main.zig` -> `InputRouter` | `reloadable` | |
+| binding `key` | SDL3 keycode-style key name | input router | `reloadable` | Key names track `shared_types.input.Key` tags. |
+| binding `mods` | Exact modifier set | input router | `reloadable` | Lua parser supports `ctrl`, `shift`, `alt`, `super`, and `altgr`; matching is exact. |
+| binding `action` | Semantic action id | input router + main dispatch | `reloadable` | |
+| binding `repeat` | Repeatable binding flag | input router | `reloadable` | |
+
+## Known Mismatches
+
+### Shared-font reality vs per-domain config shape
+
+The parser stores separate `app.font`, `editor.font`, and `terminal.font`, but runtime currently chooses one effective font stack with precedence:
+
+1. `terminal.font`
+2. `editor.font`
+3. `app.font`
+
+That means the current Lua surface is more expressive than the actual runtime behavior. This is a real subsystem gap, not just a docs issue.
+
+### Hot reload is not full reload
+
+Current reload support is intentionally partial:
+- theme, keybinds, wrap, ligature settings, cursor/blink policy, and focus reporting are re-applied.
+- font path/size changes are parsed, but effectively restart-only.
+
+### Validation behavior is improving, but not finished
+
+Current parser policy is moving toward warn-and-default for explicit invalid values.
+
+This is already true for:
+- `terminal.scrollback`
+- `terminal.cursor.shape`
+- `terminal.cursor.blink`
+- `sdl.log_level`
+- ligature strategy fields
+- `terminal.blink`
+- `font_rendering.*`
+
+Coverage is still incomplete and tracked in `CFG-04-01`.
+
+### Modifier support drift
+
+The internal input model includes `altgr`, and Lua keybind parsing/matching now treats it as part of exact modifier identity.
+
+Current policy: `altgr` is supported as an advanced desktop modifier for exact-match bindings. It is not the preferred default binding style for mainstream examples, but it is part of the public early-development config surface.
+
+## Preferred Public Shape Right Now
+
+For current config examples and docs, prefer:
+- nested `theme.palette` / `theme.syntax`
+- `sdl.log_level`, not `raylib.log_level`
+- string values for `terminal.blink` (`kitty`, `off`), not boolean shorthand
+- partial override configs that rely on merge-by-default keybind behavior
+- `app.font` as the base public font knob
+- `editor.font` / `terminal.font` only when an override is intentionally taking precedence over the shared runtime font choice
+
+This reflects the current runtime truth and mirrors the conservative direction used by reference terminals: do not advertise separate font stacks until runtime ownership, rebuild behavior, and docs are all real.
+
+## Testing And Maintenance Rules
+
+Any config-surface change should update all of:
+- `assets/config/init.lua`
+- `app_architecture/CONFIG.md`
+- `app_architecture/config_todo.yaml` when it changes status/coverage
+
+For runtime behavior changes, also verify:
+- startup application path in `src/main.zig`
+- reload behavior in `reloadConfig()`
+- any affected input/editor/terminal/widget path
+
+Dedicated subsystem test target:
+- `zig build test-config`
