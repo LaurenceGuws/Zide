@@ -475,6 +475,13 @@ pub fn build(b: *std.Build) void {
     );
     editor_perf_headless_step.dependOn(&run_editor_perf_headless.step);
 
+    const editor_perf_gate_cmd = b.addSystemCommand(&.{ "bash", "tools/perf_editor_gate.sh" });
+    const editor_perf_gate_step = b.step(
+        "perf-editor-gate",
+        "Run repeatable editor performance gate against stress fixtures",
+    );
+    editor_perf_gate_step.dependOn(&editor_perf_gate_cmd.step);
+
     const terminal_kitty_query_tests = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/terminal_kitty_query_parse_tests.zig"),
