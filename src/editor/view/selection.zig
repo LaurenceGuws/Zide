@@ -1,5 +1,6 @@
 const std = @import("std");
 const editor_mod = @import("../editor.zig");
+const text_columns = @import("../text_columns.zig");
 
 const Editor = editor_mod.Editor;
 
@@ -65,7 +66,7 @@ pub fn visualColumnForByteIndex(text: []const u8, byte_index: usize, cluster_off
         while (idx < clusters.len and clusters[idx] < target) : (idx += 1) {}
         return idx;
     }
-    return utf8ColumnForByteIndex(text, byte_index);
+    return text_columns.visualColumnForByteIndex(text, byte_index);
 }
 
 pub fn byteIndexForVisualColumn(text: []const u8, column: usize, cluster_offsets: ?[]const u32) usize {
@@ -74,7 +75,7 @@ pub fn byteIndexForVisualColumn(text: []const u8, column: usize, cluster_offsets
         if (column >= clusters.len) return text.len;
         return @min(@as(usize, clusters[column]), text.len);
     }
-    return utf8ByteIndexForColumn(text, column);
+    return text_columns.byteIndexForVisualColumn(text, column);
 }
 
 fn addSelectionRange(ranges: *[8]SelectionRange, count: *usize, start_col: usize, end_col: usize) void {
@@ -84,44 +85,12 @@ fn addSelectionRange(ranges: *[8]SelectionRange, count: *usize, start_col: usize
     count.* += 1;
 }
 
-fn utf8ColumnForByteIndex(line_text: []const u8, byte_index: usize) usize {
-    if (byte_index == 0 or line_text.len == 0) return 0;
-    const target = @min(byte_index, line_text.len);
-    var it = std.unicode.Utf8View.initUnchecked(line_text).iterator();
-    var col: usize = 0;
-    var idx: usize = 0;
-    while (it.nextCodepointSlice()) |slice| {
-        const next_idx = idx + slice.len;
-        if (target < next_idx) return col;
-        idx = next_idx;
-        const cp = std.unicode.utf8Decode(slice) catch 0xFFFD;
-        col += cellWidthForCodepoint(cp, col);
-    }
-    return col;
-}
-
 fn utf8ByteIndexForColumn(line_text: []const u8, column: usize) usize {
-    if (column == 0 or line_text.len == 0) return 0;
-    var it = std.unicode.Utf8View.initUnchecked(line_text).iterator();
-    var col: usize = 0;
-    var idx: usize = 0;
-    while (it.nextCodepointSlice()) |slice| {
-        if (col >= column) return idx;
-        const cp = std.unicode.utf8Decode(slice) catch 0xFFFD;
-        const width = cellWidthForCodepoint(cp, col);
-        if (col + width > column) return idx;
-        idx += slice.len;
-        col += width;
-    }
-    return line_text.len;
+    return text_columns.byteIndexForVisualColumn(line_text, column);
 }
 
-fn cellWidthForCodepoint(cp: u21, col: usize) usize {
-    if (cp == '\t') {
-        const tab_width: usize = 4;
-        return tab_width - (col % tab_width);
-    }
-    return 1;
+fn utf8ColumnForByteIndex(line_text: []const u8, byte_index: usize) usize {
+    return text_columns.visualColumnForByteIndex(line_text, byte_index);
 }
 
 test "utf8 column mapping" {
@@ -129,14 +98,14 @@ test "utf8 column mapping" {
     try std.testing.expectEqual(@as(usize, 0), utf8ColumnForByteIndex(s, 0));
     try std.testing.expectEqual(@as(usize, 1), utf8ColumnForByteIndex(s, 1));
     try std.testing.expectEqual(@as(usize, 1), utf8ColumnForByteIndex(s, 3));
-    try std.testing.expectEqual(@as(usize, 2), utf8ColumnForByteIndex(s, 5));
-    try std.testing.expectEqual(@as(usize, 3), utf8ColumnForByteIndex(s, 6));
+    try std.testing.expectEqual(@as(usize, 3), utf8ColumnForByteIndex(s, 5));
+    try std.testing.expectEqual(@as(usize, 4), utf8ColumnForByteIndex(s, 6));
 
     try std.testing.expectEqual(@as(usize, 0), utf8ByteIndexForColumn(s, 0));
     try std.testing.expectEqual(@as(usize, 1), utf8ByteIndexForColumn(s, 1));
-    try std.testing.expectEqual(@as(usize, 5), utf8ByteIndexForColumn(s, 2));
-    try std.testing.expectEqual(@as(usize, 6), utf8ByteIndexForColumn(s, 3));
-    try std.testing.expectEqual(@as(usize, s.len), utf8ByteIndexForColumn(s, 4));
+    try std.testing.expectEqual(@as(usize, 1), utf8ByteIndexForColumn(s, 2));
+    try std.testing.expectEqual(@as(usize, 5), utf8ByteIndexForColumn(s, 3));
+    try std.testing.expectEqual(@as(usize, 6), utf8ByteIndexForColumn(s, 4));
     try std.testing.expectEqual(@as(usize, s.len), utf8ByteIndexForColumn(s, 5));
 }
 
