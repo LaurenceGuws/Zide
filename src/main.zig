@@ -238,6 +238,7 @@ const AppState = struct {
     app_logger: Logger,
     last_metrics_log_time: f64,
     editor_wrap: bool,
+    editor_large_jump_rows: usize,
     editor_highlight_budget: ?usize,
     editor_width_budget: ?usize,
     perf_mode: bool,
@@ -279,6 +280,7 @@ const AppState = struct {
                 .log_console_filter = null,
                 .sdl_log_level = null,
                 .editor_wrap = null,
+                .editor_large_jump_rows = null,
                 .editor_highlight_budget = null,
                 .editor_width_budget = null,
                 .app_font_path = null,
@@ -475,6 +477,7 @@ const AppState = struct {
             .app_logger = app_log,
             .last_metrics_log_time = 0,
             .editor_wrap = config.editor_wrap orelse false,
+            .editor_large_jump_rows = config.editor_large_jump_rows orelse 5,
             .editor_highlight_budget = config.editor_highlight_budget,
             .editor_width_budget = config.editor_width_budget,
             .perf_mode = perf_mode,
@@ -647,22 +650,39 @@ const AppState = struct {
         return appended;
     }
 
-    fn visualExtendDeltaForAction(action: input_actions.ActionKind) ?i32 {
+    fn visualExtendDeltaForAction(action: input_actions.ActionKind, jump_rows: usize) ?i32 {
+        const jump: i32 = @intCast(jump_rows);
         return switch (action) {
             .editor_extend_up => -1,
             .editor_extend_down => 1,
-            .editor_extend_large_up => -5,
-            .editor_extend_large_down => 5,
+            .editor_extend_large_up => -jump,
+            .editor_extend_large_down => jump,
             else => null,
         };
     }
 
-    fn visualMoveDeltaForAction(action: input_actions.ActionKind) ?i32 {
+    fn visualMoveDeltaForAction(action: input_actions.ActionKind, jump_rows: usize) ?i32 {
+        const jump: i32 = @intCast(jump_rows);
         return switch (action) {
-            .editor_move_large_up => -5,
-            .editor_move_large_down => 5,
+            .editor_move_large_up => -jump,
+            .editor_move_large_down => jump,
             else => null,
         };
+    }
+
+    fn applyRepeatedVisualDelta(
+        delta: i32,
+        ctx: *anyopaque,
+        step_fn: *const fn (ctx: *anyopaque, step: i32) bool,
+    ) bool {
+        var changed = false;
+        var remaining = if (delta < 0) -delta else delta;
+        const step: i32 = if (delta < 0) -1 else 1;
+        while (remaining > 0) : (remaining -= 1) {
+            if (!step_fn(ctx, step)) break;
+            changed = true;
+        }
+        return changed;
     }
 
     fn applyDirectEditorAction(editor: *Editor, action: input_actions.ActionKind) bool {
@@ -1240,14 +1260,22 @@ const AppState = struct {
                         }
                     },
                     .editor_move_large_up, .editor_move_large_down => {
-                        const delta = visualMoveDeltaForAction(action.kind).?;
-                        var moved = false;
-                        var remaining = if (delta < 0) -delta else delta;
-                        const step: i32 = if (delta < 0) -1 else 1;
-                        while (remaining > 0) : (remaining -= 1) {
-                            if (!editor_widget.moveCursorVisual(shell, step)) break;
-                            moved = true;
-                        }
+                        const delta = visualMoveDeltaForAction(action.kind, self.editor_large_jump_rows).?;
+                        const Ctx = struct {
+                            widget: *EditorWidget,
+                            shell: *Shell,
+                        };
+                        var ctx = Ctx{ .widget = &editor_widget, .shell = shell };
+                        const moved = applyRepeatedVisualDelta(
+                            delta,
+                            @ptrCast(&ctx),
+                            struct {
+                                fn step(raw: *anyopaque, dir: i32) bool {
+                                    const payload: *Ctx = @ptrCast(@alignCast(raw));
+                                    return payload.widget.moveCursorVisual(payload.shell, dir);
+                                }
+                            }.step,
+                        );
                         if (moved) {
                             editor_widget.ensureCursorVisible(shell, action_layout.editor.height);
                             self.needs_redraw = true;
@@ -1255,14 +1283,22 @@ const AppState = struct {
                         }
                     },
                     .editor_extend_up, .editor_extend_down, .editor_extend_large_up, .editor_extend_large_down => {
-                        const delta = visualExtendDeltaForAction(action.kind).?;
-                        var extended = false;
-                        var remaining = if (delta < 0) -delta else delta;
-                        const step: i32 = if (delta < 0) -1 else 1;
-                        while (remaining > 0) : (remaining -= 1) {
-                            if (!editor_widget.extendSelectionVisual(shell, step)) break;
-                            extended = true;
-                        }
+                        const delta = visualExtendDeltaForAction(action.kind, self.editor_large_jump_rows).?;
+                        const Ctx = struct {
+                            widget: *EditorWidget,
+                            shell: *Shell,
+                        };
+                        var ctx = Ctx{ .widget = &editor_widget, .shell = shell };
+                        const extended = applyRepeatedVisualDelta(
+                            delta,
+                            @ptrCast(&ctx),
+                            struct {
+                                fn step(raw: *anyopaque, dir: i32) bool {
+                                    const payload: *Ctx = @ptrCast(@alignCast(raw));
+                                    return payload.widget.extendSelectionVisual(payload.shell, dir);
+                                }
+                            }.step,
+                        );
                         if (extended) {
                             editor_widget.ensureCursorVisible(shell, action_layout.editor.height);
                             self.needs_redraw = true;
@@ -1958,6 +1994,7 @@ const AppState = struct {
         }
 
         self.editor_wrap = config.editor_wrap orelse self.editor_wrap;
+        self.editor_large_jump_rows = config.editor_large_jump_rows orelse self.editor_large_jump_rows;
         if (config.editor_highlight_budget != null) {
             self.editor_highlight_budget = config.editor_highlight_budget;
         }
@@ -2372,17 +2409,42 @@ test "search panel text helper appends utf8 input events" {
 }
 
 test "visual extend action helper maps routed editor actions" {
-    try std.testing.expectEqual(@as(?i32, -1), AppState.visualExtendDeltaForAction(.editor_extend_up));
-    try std.testing.expectEqual(@as(?i32, 1), AppState.visualExtendDeltaForAction(.editor_extend_down));
-    try std.testing.expectEqual(@as(?i32, -5), AppState.visualExtendDeltaForAction(.editor_extend_large_up));
-    try std.testing.expectEqual(@as(?i32, 5), AppState.visualExtendDeltaForAction(.editor_extend_large_down));
-    try std.testing.expectEqual(@as(?i32, null), AppState.visualExtendDeltaForAction(.editor_extend_right));
+    try std.testing.expectEqual(@as(?i32, -1), AppState.visualExtendDeltaForAction(.editor_extend_up, 5));
+    try std.testing.expectEqual(@as(?i32, 1), AppState.visualExtendDeltaForAction(.editor_extend_down, 5));
+    try std.testing.expectEqual(@as(?i32, -5), AppState.visualExtendDeltaForAction(.editor_extend_large_up, 5));
+    try std.testing.expectEqual(@as(?i32, 5), AppState.visualExtendDeltaForAction(.editor_extend_large_down, 5));
+    try std.testing.expectEqual(@as(?i32, -9), AppState.visualExtendDeltaForAction(.editor_extend_large_up, 9));
+    try std.testing.expectEqual(@as(?i32, null), AppState.visualExtendDeltaForAction(.editor_extend_right, 5));
 }
 
 test "visual move action helper maps routed editor actions" {
-    try std.testing.expectEqual(@as(?i32, -5), AppState.visualMoveDeltaForAction(.editor_move_large_up));
-    try std.testing.expectEqual(@as(?i32, 5), AppState.visualMoveDeltaForAction(.editor_move_large_down));
-    try std.testing.expectEqual(@as(?i32, null), AppState.visualMoveDeltaForAction(.editor_move_word_right));
+    try std.testing.expectEqual(@as(?i32, -5), AppState.visualMoveDeltaForAction(.editor_move_large_up, 5));
+    try std.testing.expectEqual(@as(?i32, 5), AppState.visualMoveDeltaForAction(.editor_move_large_down, 5));
+    try std.testing.expectEqual(@as(?i32, 12), AppState.visualMoveDeltaForAction(.editor_move_large_down, 12));
+    try std.testing.expectEqual(@as(?i32, null), AppState.visualMoveDeltaForAction(.editor_move_word_right, 5));
+}
+
+test "applyRepeatedVisualDelta steps until blocked" {
+    const Ctx = struct {
+        steps: usize,
+        limit: usize,
+    };
+    var ctx = Ctx{ .steps = 0, .limit = 3 };
+    const moved = AppState.applyRepeatedVisualDelta(
+        8,
+        @ptrCast(&ctx),
+        struct {
+            fn step(raw: *anyopaque, dir: i32) bool {
+                _ = dir;
+                const payload: *Ctx = @ptrCast(@alignCast(raw));
+                if (payload.steps >= payload.limit) return false;
+                payload.steps += 1;
+                return true;
+            }
+        }.step,
+    );
+    try std.testing.expect(moved);
+    try std.testing.expectEqual(@as(usize, 3), ctx.steps);
 }
 
 test "direct editor action helper routes word and line selection actions" {

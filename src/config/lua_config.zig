@@ -30,6 +30,7 @@ pub const Config = struct {
     log_console_filter: ?[]u8,
     sdl_log_level: ?c_int,
     editor_wrap: ?bool,
+    editor_large_jump_rows: ?usize,
     editor_highlight_budget: ?usize,
     editor_width_budget: ?usize,
     app_font_path: ?[]u8,
@@ -143,6 +144,7 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
         .log_console_filter = null,
         .sdl_log_level = null,
         .editor_wrap = null,
+        .editor_large_jump_rows = null,
         .editor_highlight_budget = null,
         .editor_width_budget = null,
         .app_font_path = null,
@@ -254,6 +256,9 @@ fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) voi
     }
     if (overlay.editor_wrap != null) {
         base.editor_wrap = overlay.editor_wrap;
+    }
+    if (overlay.editor_large_jump_rows != null) {
+        base.editor_large_jump_rows = overlay.editor_large_jump_rows;
     }
     if (overlay.editor_highlight_budget != null) {
         base.editor_highlight_budget = overlay.editor_highlight_budget;
@@ -410,6 +415,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             .log_console_filter = null,
             .sdl_log_level = null,
             .editor_wrap = null,
+            .editor_large_jump_rows = null,
             .editor_highlight_budget = null,
             .editor_width_budget = null,
             .app_font_path = null,
@@ -451,6 +457,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     var log_console_filter: ?[]u8 = null;
     var sdl_log_level: ?c_int = null;
     var editor_wrap: ?bool = null;
+    var editor_large_jump_rows: ?usize = null;
     var editor_highlight_budget: ?usize = null;
     var editor_width_budget: ?usize = null;
     var app_font_path: ?[]u8 = null;
@@ -587,6 +594,22 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         } else if (!c.lua_isnil(L, -1)) {
             warnInvalidValue("editor.wrap", "false");
             editor_wrap = false;
+        }
+        c.lua_pop(L, 1);
+
+        _ = c.lua_getfield(L, -1, "large_cursor_jump_rows");
+        if (c.lua_isnumber(L, -1) != 0) {
+            var is_num: c_int = 0;
+            const value = c.lua_tointegerx(L, -1, &is_num);
+            if (is_num != 0 and value > 0) {
+                editor_large_jump_rows = @intCast(value);
+            } else {
+                warnInvalidValue("editor.large_cursor_jump_rows", "5");
+                editor_large_jump_rows = 5;
+            }
+        } else if (!c.lua_isnil(L, -1)) {
+            warnInvalidValue("editor.large_cursor_jump_rows", "5");
+            editor_large_jump_rows = 5;
         }
         c.lua_pop(L, 1);
 
@@ -888,6 +911,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         .log_console_filter = log_console_filter,
         .sdl_log_level = sdl_log_level,
         .editor_wrap = editor_wrap,
+        .editor_large_jump_rows = editor_large_jump_rows,
         .editor_highlight_budget = editor_highlight_budget,
         .editor_width_budget = editor_width_budget,
         .app_font_path = app_font_path,
@@ -1338,6 +1362,20 @@ test "parseConfigFromSnippet defaults invalid focus reporting and budgets" {
     try std.testing.expectEqual(@as(usize, 0), config.editor_width_budget.?);
     try std.testing.expectEqual(true, config.terminal_focus_report_window.?);
     try std.testing.expectEqual(false, config.terminal_focus_report_pane.?);
+}
+
+test "parseConfigFromSnippet parses editor large cursor jump rows" {
+    const allocator = std.testing.allocator;
+    var config = try parseConfigFromSnippet(allocator,
+        \\return {
+        \\  editor = {
+        \\    large_cursor_jump_rows = 9,
+        \\  },
+        \\}
+    );
+    defer freeConfig(allocator, &config);
+
+    try std.testing.expectEqual(@as(usize, 9), config.editor_large_jump_rows.?);
 }
 
 fn findUserConfigPath(allocator: std.mem.Allocator) LuaConfigError!?[]u8 {

@@ -532,6 +532,32 @@ test "editor extend word right preserves existing multi-range anchors" {
     try std.testing.expectEqual(@as(usize, 17), editor.selectionAt(0).?.end.offset);
 }
 
+test "editor move right collapses mixed multi-range selection set to right edges" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("alpha beta\ngamma");
+    editor.setCursor(0, 6);
+    editor.selection = .{
+        .start = .{ .line = 0, .col = 0, .offset = 0 },
+        .end = .{ .line = 0, .col = 6, .offset = 6 },
+    };
+    try editor.addSelection(.{
+        .start = .{ .line = 1, .col = 0, .offset = 11 },
+        .end = .{ .line = 1, .col = 5, .offset = 16 },
+    });
+
+    editor.moveCursorRight();
+
+    try std.testing.expect(editor.selection == null);
+    try std.testing.expectEqual(@as(usize, 6), editor.cursor.offset);
+    try std.testing.expectEqual(@as(usize, 1), editor.selectionCount());
+    try std.testing.expectEqual(@as(usize, 16), editor.selectionAt(0).?.start.offset);
+    try std.testing.expectEqual(@as(usize, 16), editor.selectionAt(0).?.end.offset);
+}
+
 test "editor move to line end preserves zero-length caret set" {
     const allocator = std.testing.allocator;
     var fixture = try EditorFixture.init(allocator);

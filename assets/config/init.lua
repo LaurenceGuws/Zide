@@ -186,6 +186,8 @@ return {
         -- theme = {
         --     palette = { background = "#2E3440" },
         -- },
+        -- Number of visual rows used by Ctrl+Up/Down and Ctrl+Shift+Up/Down.
+        large_cursor_jump_rows = 5,
         -- Soft wrap long lines.
         wrap = false,
         -- Ligature strategy (matches terminal semantics):

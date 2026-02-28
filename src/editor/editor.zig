@@ -288,6 +288,21 @@ pub const Editor = struct {
             self.moveCaretSetHorizontal(-1) catch {};
             return;
         }
+        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
+            var collapsed = std.ArrayList(usize).empty;
+            defer collapsed.deinit(self.allocator);
+            if (self.selection) |sel| {
+                self.tryAppendCollapseOffset(&collapsed, sel.normalized().start.offset);
+            } else {
+                self.tryAppendCollapseOffset(&collapsed, self.cursor.offset);
+            }
+            for (self.selections.items) |sel| {
+                self.tryAppendCollapseOffset(&collapsed, sel.normalized().start.offset);
+            }
+            self.restoreCaretSelections(collapsed.items, collapsed.items[0]) catch {};
+            self.selection = null;
+            return;
+        }
         if (self.cursor.offset == 0) return;
         self.cursor.offset -= 1;
         self.updateCursorPosition();
@@ -299,6 +314,21 @@ pub const Editor = struct {
     pub fn moveCursorRight(self: *Editor) void {
         if (self.hasOnlyCaretSelections()) {
             self.moveCaretSetHorizontal(1) catch {};
+            return;
+        }
+        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
+            var collapsed = std.ArrayList(usize).empty;
+            defer collapsed.deinit(self.allocator);
+            if (self.selection) |sel| {
+                self.tryAppendCollapseOffset(&collapsed, sel.normalized().end.offset);
+            } else {
+                self.tryAppendCollapseOffset(&collapsed, self.cursor.offset);
+            }
+            for (self.selections.items) |sel| {
+                self.tryAppendCollapseOffset(&collapsed, sel.normalized().end.offset);
+            }
+            self.restoreCaretSelections(collapsed.items, collapsed.items[0]) catch {};
+            self.selection = null;
             return;
         }
         const total = self.buffer.totalLen();
@@ -410,6 +440,11 @@ pub const Editor = struct {
             try anchors.append(self.allocator, sel.start.offset);
             try heads.append(self.allocator, sel.end.offset);
         }
+    }
+
+    fn tryAppendCollapseOffset(self: *Editor, offsets: *std.ArrayList(usize), offset: usize) void {
+        if (std.mem.indexOfScalar(usize, offsets.items, offset) != null) return;
+        offsets.append(self.allocator, offset) catch {};
     }
 
     fn extendSelectionSetWithHeads(self: *Editor, target_heads: []const usize) !void {
