@@ -476,6 +476,35 @@ test "editor move left preserves zero-length caret set" {
     try std.testing.expectEqual(@as(usize, 4), editor.selectionAt(1).?.start.offset);
 }
 
+test "editor extend left preserves multi-caret set as ranges" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("abcdef");
+    editor.setCursor(0, 3);
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 1, .offset = 1 },
+        .end = .{ .line = 0, .col = 1, .offset = 1 },
+    });
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 5, .offset = 5 },
+        .end = .{ .line = 0, .col = 5, .offset = 5 },
+    });
+
+    editor.extendSelectionLeft();
+
+    try std.testing.expectEqual(@as(usize, 2), editor.cursor.offset);
+    try std.testing.expectEqual(@as(usize, 3), editor.selection.?.start.offset);
+    try std.testing.expectEqual(@as(usize, 2), editor.selection.?.end.offset);
+    try std.testing.expectEqual(@as(usize, 2), editor.selectionCount());
+    try std.testing.expectEqual(@as(usize, 1), editor.selectionAt(0).?.start.offset);
+    try std.testing.expectEqual(@as(usize, 0), editor.selectionAt(0).?.end.offset);
+    try std.testing.expectEqual(@as(usize, 5), editor.selectionAt(1).?.start.offset);
+    try std.testing.expectEqual(@as(usize, 4), editor.selectionAt(1).?.end.offset);
+}
+
 test "editor move to line end preserves zero-length caret set" {
     const allocator = std.testing.allocator;
     var fixture = try EditorFixture.init(allocator);
@@ -703,6 +732,32 @@ test "editor visual selection extend follows logical lines when wrap is disabled
     try std.testing.expect(widget.extendSelectionVisual(&renderer, 1));
     try std.testing.expect(editor.selection == null);
     try std.testing.expectEqual(@as(usize, 6), editor.cursor.offset);
+}
+
+test "editor visual selection extend preserves multi-caret set" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("one\ntwo\nthree");
+    editor.setCursor(0, 1);
+    try editor.addSelection(.{
+        .start = .{ .line = 1, .col = 1, .offset = 5 },
+        .end = .{ .line = 1, .col = 1, .offset = 5 },
+    });
+
+    var renderer = FakeRenderer.init(allocator, 320, 200, 8, 16);
+    defer renderer.deinit();
+    var widget = FakeWidget{ .editor = editor, .gutter_width = 0, .wrap_enabled = false };
+
+    try std.testing.expect(widget.extendSelectionVisual(&renderer, 1));
+    try std.testing.expectEqual(@as(usize, 5), editor.cursor.offset);
+    try std.testing.expectEqual(@as(usize, 1), editor.selection.?.start.offset);
+    try std.testing.expectEqual(@as(usize, 5), editor.selection.?.end.offset);
+    try std.testing.expectEqual(@as(usize, 1), editor.selectionCount());
+    try std.testing.expectEqual(@as(usize, 5), editor.selectionAt(0).?.start.offset);
+    try std.testing.expectEqual(@as(usize, 9), editor.selectionAt(0).?.end.offset);
 }
 
 const draw_mod = @import("ui/widgets/editor_widget_draw.zig");

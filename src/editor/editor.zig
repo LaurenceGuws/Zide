@@ -385,27 +385,84 @@ pub const Editor = struct {
     }
 
     pub fn extendSelectionLeft(self: *Editor) void {
+        if (self.hasOnlyCaretSelections()) {
+            var target_offsets = self.collectCaretOffsets() catch return;
+            defer target_offsets.deinit(self.allocator);
+            for (target_offsets.items) |*offset| {
+                if (offset.* > 0) offset.* -= 1;
+            }
+            self.extendCaretSetToOffsets(target_offsets.items) catch {};
+            return;
+        }
         self.extendPrimarySelectionToOffset(if (self.cursor.offset > 0) self.cursor.offset - 1 else 0);
     }
 
     pub fn extendSelectionRight(self: *Editor) void {
+        if (self.hasOnlyCaretSelections()) {
+            var target_offsets = self.collectCaretOffsets() catch return;
+            defer target_offsets.deinit(self.allocator);
+            const total = self.buffer.totalLen();
+            for (target_offsets.items) |*offset| {
+                if (offset.* < total) offset.* += 1;
+            }
+            self.extendCaretSetToOffsets(target_offsets.items) catch {};
+            return;
+        }
         const total = self.buffer.totalLen();
         self.extendPrimarySelectionToOffset(if (self.cursor.offset < total) self.cursor.offset + 1 else total);
     }
 
     pub fn extendSelectionToLineStart(self: *Editor) void {
+        if (self.hasOnlyCaretSelections()) {
+            var target_offsets = self.collectCaretOffsets() catch return;
+            defer target_offsets.deinit(self.allocator);
+            for (target_offsets.items) |*offset| {
+                const caret = self.cursorPosForOffset(offset.*);
+                offset.* = self.buffer.lineStart(caret.line);
+            }
+            self.extendCaretSetToOffsets(target_offsets.items) catch {};
+            return;
+        }
         self.extendPrimarySelectionToOffset(self.buffer.lineStart(self.cursor.line));
     }
 
     pub fn extendSelectionToLineEnd(self: *Editor) void {
+        if (self.hasOnlyCaretSelections()) {
+            var target_offsets = self.collectCaretOffsets() catch return;
+            defer target_offsets.deinit(self.allocator);
+            for (target_offsets.items) |*offset| {
+                const caret = self.cursorPosForOffset(offset.*);
+                offset.* = self.buffer.lineStart(caret.line) + self.buffer.lineLen(caret.line);
+            }
+            self.extendCaretSetToOffsets(target_offsets.items) catch {};
+            return;
+        }
         self.extendPrimarySelectionToOffset(self.buffer.lineStart(self.cursor.line) + self.buffer.lineLen(self.cursor.line));
     }
 
     pub fn extendSelectionWordLeft(self: *Editor) void {
+        if (self.hasOnlyCaretSelections()) {
+            var target_offsets = self.collectCaretOffsets() catch return;
+            defer target_offsets.deinit(self.allocator);
+            for (target_offsets.items) |*offset| {
+                offset.* = self.wordLeftOffset(offset.*);
+            }
+            self.extendCaretSetToOffsets(target_offsets.items) catch {};
+            return;
+        }
         self.extendPrimarySelectionToOffset(self.wordLeftOffset(self.cursor.offset));
     }
 
     pub fn extendSelectionWordRight(self: *Editor) void {
+        if (self.hasOnlyCaretSelections()) {
+            var target_offsets = self.collectCaretOffsets() catch return;
+            defer target_offsets.deinit(self.allocator);
+            for (target_offsets.items) |*offset| {
+                offset.* = self.wordRightOffset(offset.*);
+            }
+            self.extendCaretSetToOffsets(target_offsets.items) catch {};
+            return;
+        }
         self.extendPrimarySelectionToOffset(self.wordRightOffset(self.cursor.offset));
     }
 
@@ -821,6 +878,32 @@ pub const Editor = struct {
         }
     }
 
+    pub fn restoreExtendedCaretSelections(self: *Editor, anchor_offsets: []const usize, target_offsets: []const usize) !void {
+        std.debug.assert(anchor_offsets.len == target_offsets.len);
+        std.debug.assert(anchor_offsets.len > 0);
+
+        self.preferred_visual_col = null;
+        self.clearSelections();
+
+        const primary_anchor = self.cursorPosForOffset(anchor_offsets[0]);
+        const primary_target = self.cursorPosForOffset(target_offsets[0]);
+        self.cursor = primary_target;
+        self.selection = if (primary_anchor.offset == primary_target.offset)
+            null
+        else
+            .{ .start = primary_anchor, .end = primary_target };
+
+        var idx: usize = 1;
+        while (idx < anchor_offsets.len) : (idx += 1) {
+            const anchor = self.cursorPosForOffset(anchor_offsets[idx]);
+            const target = self.cursorPosForOffset(target_offsets[idx]);
+            try self.selections.append(self.allocator, if (anchor.offset == target.offset)
+                .{ .start = target, .end = target }
+            else
+                .{ .start = anchor, .end = target });
+        }
+    }
+
     fn moveCaretSetHorizontal(self: *Editor, delta: isize) !void {
         var caret_offsets = try self.collectCaretOffsets();
         defer caret_offsets.deinit(self.allocator);
@@ -871,6 +954,12 @@ pub const Editor = struct {
         self.preferred_visual_col = null;
         self.selection = null;
         try self.restoreCaretSelections(caret_offsets.items, caret_offsets.items[0]);
+    }
+
+    fn extendCaretSetToOffsets(self: *Editor, target_offsets: []const usize) !void {
+        var anchor_offsets = try self.collectCaretOffsets();
+        defer anchor_offsets.deinit(self.allocator);
+        try self.restoreExtendedCaretSelections(anchor_offsets.items, target_offsets);
     }
 
     fn adjustPrimaryOffsetForReplacement(primary_offset: *usize, start: usize, end: usize, replacement_len: usize) void {
