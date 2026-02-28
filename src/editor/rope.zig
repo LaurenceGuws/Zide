@@ -21,11 +21,18 @@ pub const Node = struct {
 };
 
 pub const Rope = struct {
+    const LineStartCacheEntry = struct {
+        offset: usize,
+        last_used_tick: u64,
+    };
+
     allocator: std.mem.Allocator,
     root: ?*Node,
     original: []const u8,
     owns_original: bool,
     add: std.ArrayList(u8),
+    line_start_cache: std.AutoHashMap(usize, LineStartCacheEntry),
+    line_start_tick: u64,
     undo_stack: std.ArrayList(UndoOp),
     redo_stack: std.ArrayList(UndoOp),
     history_suspended: bool,
@@ -34,6 +41,7 @@ pub const Rope = struct {
     const target_leaf_bytes: usize = 2048;
     const max_undo_bytes: usize = 8 * 1024 * 1024;
     const max_undo_ops: usize = 1000;
+    const max_line_start_cache_entries: usize = 8192;
 
     pub fn init(allocator: std.mem.Allocator, initial: []const u8) !*Rope {
         var rope = try allocator.create(Rope);
@@ -44,6 +52,8 @@ pub const Rope = struct {
             .original = try allocator.dupe(u8, initial),
             .owns_original = true,
             .add = .{},
+            .line_start_cache = std.AutoHashMap(usize, LineStartCacheEntry).init(allocator),
+            .line_start_tick = 0,
             .undo_stack = .{},
             .redo_stack = .{},
             .history_suspended = false,
@@ -51,6 +61,7 @@ pub const Rope = struct {
             .group_dirty = false,
         };
         errdefer allocator.free(rope.original);
+        errdefer rope.line_start_cache.deinit();
         if (initial.len > 0) {
             rope.root = try rope.createLeafNode(.original, 0, initial.len);
         }
@@ -66,6 +77,8 @@ pub const Rope = struct {
             .original = original,
             .owns_original = true,
             .add = .{},
+            .line_start_cache = std.AutoHashMap(usize, LineStartCacheEntry).init(allocator),
+            .line_start_tick = 0,
             .undo_stack = .{},
             .redo_stack = .{},
             .history_suspended = false,
@@ -73,6 +86,7 @@ pub const Rope = struct {
             .group_dirty = false,
         };
         errdefer allocator.free(original);
+        errdefer rope.line_start_cache.deinit();
         if (original.len > 0) {
             rope.root = try rope.createLeafNode(.original, 0, original.len);
         }
@@ -88,12 +102,15 @@ pub const Rope = struct {
             .original = original,
             .owns_original = false,
             .add = .{},
+            .line_start_cache = std.AutoHashMap(usize, LineStartCacheEntry).init(allocator),
+            .line_start_tick = 0,
             .undo_stack = .{},
             .redo_stack = .{},
             .history_suspended = false,
             .group_depth = 0,
             .group_dirty = false,
         };
+        errdefer rope.line_start_cache.deinit();
         if (original.len > 0) {
             rope.root = try rope.createLeafNode(.original, 0, original.len);
         }
@@ -105,6 +122,7 @@ pub const Rope = struct {
             self.allocator.free(self.original);
         }
         self.add.deinit(self.allocator);
+        self.line_start_cache.deinit();
         freeUndoStack(self, &self.undo_stack);
         freeUndoStack(self, &self.redo_stack);
         if (self.root) |root| {
@@ -357,6 +375,7 @@ pub const Rope = struct {
         var merged = try self.join(parts.left, new_leaf);
         merged = try self.join(merged, parts.right);
         self.root = merged;
+        invalidateLineStartCache(self);
     }
 
     fn deleteRangeNoHistory(self: *Rope, start: usize, len: usize) !void {
@@ -369,6 +388,7 @@ pub const Rope = struct {
             self.destroyNode(mid);
         }
         self.root = try self.join(parts.left, tail.right);
+        invalidateLineStartCache(self);
     }
 
     pub fn readRange(self: *Rope, start: usize, out: []u8) usize {
@@ -401,8 +421,15 @@ pub const Rope = struct {
         if (line_index == 0) return 0;
         const total_lines = self.lineCount();
         if (line_index >= total_lines) return self.totalLen();
+        self.line_start_tick +|= 1;
+        if (self.line_start_cache.getPtr(line_index)) |entry| {
+            entry.last_used_tick = self.line_start_tick;
+            return entry.offset;
+        }
         const newline_offset = self.findNthNewline(self.root, line_index);
-        return newline_offset + 1;
+        const offset = newline_offset + 1;
+        rememberLineStart(self, line_index, offset);
+        return offset;
     }
 
     pub fn lineLen(self: *Rope, line_index: usize) usize {
@@ -796,6 +823,40 @@ fn clearHistory(self: *Rope) void {
     }
 }
 
+fn invalidateLineStartCache(self: *Rope) void {
+    self.line_start_cache.clearRetainingCapacity();
+}
+
+fn rememberLineStart(self: *Rope, line_index: usize, offset: usize) void {
+    self.line_start_cache.put(line_index, .{
+        .offset = offset,
+        .last_used_tick = self.line_start_tick,
+    }) catch return;
+    evictLineStartCache(self);
+}
+
+fn evictLineStartCache(self: *Rope) void {
+    if (self.line_start_cache.count() <= Rope.max_line_start_cache_entries) return;
+    const target = @max(@as(usize, 1), Rope.max_line_start_cache_entries * 3 / 4);
+    const age_window = @max(@as(u64, 1), @as(u64, @intCast(Rope.max_line_start_cache_entries / 2)));
+    const cutoff = self.line_start_tick -| age_window;
+    var remove_keys = std.ArrayList(usize).empty;
+    defer remove_keys.deinit(self.allocator);
+    var it = self.line_start_cache.iterator();
+    while (it.next()) |entry| {
+        if (entry.value_ptr.last_used_tick <= cutoff) {
+            remove_keys.append(self.allocator, entry.key_ptr.*) catch break;
+        }
+    }
+    for (remove_keys.items) |key| {
+        _ = self.line_start_cache.remove(key);
+        if (self.line_start_cache.count() <= target) return;
+    }
+    if (self.line_start_cache.count() > target) {
+        self.line_start_cache.clearRetainingCapacity();
+    }
+}
+
 fn boundaryOp(self: *Rope) !UndoOp {
     const empty = try self.allocator.alloc(u8, 0);
     return UndoOp{ .kind = .boundary, .pos = 0, .text = empty };
@@ -944,4 +1005,25 @@ test "rope borrowed original init does not take ownership" {
     const text = try rope.readRangeAlloc(0, rope.totalLen());
     defer allocator.free(text);
     try std.testing.expectEqualStrings("borrowed", text);
+}
+
+test "rope line start cache stays bounded and invalidates on edit" {
+    const allocator = std.testing.allocator;
+    var text = std.ArrayList(u8).empty;
+    defer text.deinit(allocator);
+    for (0..12000) |_| {
+        try text.append(allocator, 'x');
+        try text.append(allocator, '\n');
+    }
+
+    var rope = try Rope.init(allocator, text.items);
+    defer rope.deinit();
+
+    for (1..12000) |line| {
+        _ = rope.lineStart(line);
+    }
+    try std.testing.expect(rope.line_start_cache.count() <= Rope.max_line_start_cache_entries);
+
+    try rope.insert(0, "prefix\n");
+    try std.testing.expectEqual(@as(usize, 0), rope.line_start_cache.count());
 }
