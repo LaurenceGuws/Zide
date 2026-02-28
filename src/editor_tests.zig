@@ -6,6 +6,7 @@ const ts_api = @import("editor/treesitter_api.zig");
 const shared_types = @import("types/mod.zig");
 const renderer_mod = @import("ui/renderer.zig");
 const cursor_mod = @import("editor/view/cursor.zig");
+const Selection = @import("editor/types.zig").Selection;
 
 extern "c" fn tree_sitter_zig() *const ts_api.c_api.TSLanguage;
 
@@ -166,6 +167,72 @@ test "editor undo redo restores multi-caret selection set" {
     try std.testing.expectEqual(@as(usize, 2), editor.selectionCount());
     try std.testing.expectEqual(@as(usize, 2), editor.selectionAt(0).?.start.offset);
     try std.testing.expectEqual(@as(usize, 8), editor.selectionAt(1).?.start.offset);
+}
+
+test "editor undo redo restores mixed non-empty range state and primary ownership" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("alpha beta\ngamma delta\nomega");
+    editor.setCursor(0, 10);
+    editor.selection = .{
+        .start = .{ .line = 0, .col = 10, .offset = 10 },
+        .end = .{ .line = 0, .col = 6, .offset = 6 },
+    };
+    try editor.addSelection(.{
+        .start = .{ .line = 1, .col = 11, .offset = 22 },
+        .end = .{ .line = 1, .col = 6, .offset = 17 },
+    });
+
+    try editor.insertText("X");
+
+    const after_edit = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after_edit);
+    const after_edit_cursor = editor.cursor.offset;
+    const after_edit_primary = editor.selection;
+    var after_edit_aux: [8]Selection = undefined;
+    const after_edit_aux_len = editor.selectionCount();
+    try std.testing.expect(after_edit_aux_len <= after_edit_aux.len);
+    for (0..after_edit_aux_len) |idx| {
+        after_edit_aux[idx] = editor.selectionAt(idx) orelse return error.TestUnexpectedResult;
+    }
+
+    try std.testing.expect(try editor.undo());
+    const after_undo = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after_undo);
+    try std.testing.expectEqualStrings("alpha beta\ngamma delta\nomega", after_undo);
+    try std.testing.expectEqual(@as(usize, 10), editor.cursor.offset);
+    const undo_primary = editor.selection orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 10), undo_primary.start.offset);
+    try std.testing.expectEqual(@as(usize, 6), undo_primary.end.offset);
+    try std.testing.expectEqual(@as(usize, 1), editor.selectionCount());
+    const undo_aux = editor.selectionAt(0) orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 22), undo_aux.start.offset);
+    try std.testing.expectEqual(@as(usize, 17), undo_aux.end.offset);
+
+    try std.testing.expect(try editor.redo());
+    const after_redo = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after_redo);
+    try std.testing.expectEqualStrings(after_edit, after_redo);
+    try std.testing.expectEqual(after_edit_cursor, editor.cursor.offset);
+    if (after_edit_primary) |sel| {
+        const cur = editor.selection orelse return error.TestUnexpectedResult;
+        try std.testing.expectEqual(sel.start.offset, cur.start.offset);
+        try std.testing.expectEqual(sel.end.offset, cur.end.offset);
+        try std.testing.expectEqual(sel.is_rectangular, cur.is_rectangular);
+    } else {
+        try std.testing.expect(editor.selection == null);
+    }
+    try std.testing.expectEqual(after_edit_aux_len, editor.selectionCount());
+    for (0..after_edit_aux_len) |idx| {
+        const cur = editor.selectionAt(idx) orelse return error.TestUnexpectedResult;
+        const expected = after_edit_aux[idx];
+        try std.testing.expectEqual(expected.start.offset, cur.start.offset);
+        try std.testing.expectEqual(expected.end.offset, cur.end.offset);
+        try std.testing.expectEqual(expected.is_rectangular, cur.is_rectangular);
+    }
 }
 
 test "editor line width cache counts utf8 codepoints" {

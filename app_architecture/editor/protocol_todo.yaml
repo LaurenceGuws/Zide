@@ -62,6 +62,7 @@ editor_protocol_todo:
         - "Editor widget groups edits per input tick to avoid over-merging inserts."
         - "Undo/redo now returns cursor offset; editor syncs cursor to undo/redo location."
         - "Editor now layers selection/caret snapshots onto undo/redo so multi-caret edits restore the pre/post caret set instead of only a scalar cursor offset."
+        - "Mixed non-empty multi-range states now have explicit undo/redo regression coverage, including reversed anchor/head orientation and primary-cursor ownership restoration across edit->undo->redo."
       references:
         - reference_repos/editors/helix/helix-core/src/transaction.rs
         - reference_repos/editors/neovim/src/nvim/undo.c
