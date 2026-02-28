@@ -460,6 +460,11 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
+    editor_perf_headless.linkLibrary(treesitter);
+    editor_perf_headless.linkLibrary(ts_zig);
+    editor_perf_headless.addIncludePath(b.path("vendor"));
+    editor_perf_headless.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
+    editor_perf_headless.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
     const run_editor_perf_headless = b.addRunArtifact(editor_perf_headless);
     if (b.args) |args| {
         run_editor_perf_headless.addArgs(args);
