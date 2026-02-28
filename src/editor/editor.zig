@@ -14,6 +14,19 @@ const c = ts_api.c_api;
 
 /// High-level editor state wrapping a text buffer
 pub const Editor = struct {
+    const StoredSelection = struct {
+        start_offset: usize,
+        end_offset: usize,
+        is_rectangular: bool = false,
+    };
+
+    const UndoSelectionState = struct {
+        id: u64,
+        cursor_offset: usize,
+        selection: ?StoredSelection,
+        selections: []StoredSelection,
+    };
+
     pub const SearchMatch = struct {
         start: usize,
         end: usize,
@@ -52,6 +65,8 @@ pub const Editor = struct {
     modified: bool,
     tab_width: usize,
     grammar_manager: *grammar_manager_mod.GrammarManager,
+    undo_selection_states: std.ArrayList(UndoSelectionState),
+    next_undo_selection_state_id: u64,
 
     pub fn init(allocator: std.mem.Allocator, grammar_manager: *grammar_manager_mod.GrammarManager) !*Editor {
         const buffer = try text_store.TextStore.init(allocator, "");
@@ -93,6 +108,8 @@ pub const Editor = struct {
             .modified = false,
             .tab_width = 4,
             .grammar_manager = grammar_manager,
+            .undo_selection_states = .empty,
+            .next_undo_selection_state_id = 1,
         };
         return editor;
     }
@@ -108,6 +125,10 @@ pub const Editor = struct {
             self.allocator.free(query);
         }
         self.search_matches.deinit(self.allocator);
+        for (self.undo_selection_states.items) |state| {
+            self.allocator.free(state.selections);
+        }
+        self.undo_selection_states.deinit(self.allocator);
         self.selections.deinit(self.allocator);
         self.line_width_cache.deinit();
         self.buffer.deinit();
@@ -125,7 +146,6 @@ pub const Editor = struct {
         const end = self.highlight_dirty_end_line orelse (start + 1);
         self.highlight_dirty_start_line = null;
         self.highlight_dirty_end_line = null;
-        self.clearSearchState();
         return .{ .start_line = start, .end_line = end };
     }
 
@@ -249,11 +269,19 @@ pub const Editor = struct {
         return .{ .max = self.max_line_width_cache, .complete = self.max_line_width_scan_complete };
     }
 
+    pub fn maxLineWidthCached(self: *const Editor) usize {
+        return self.max_line_width_cache;
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Cursor movement
     // ─────────────────────────────────────────────────────────────────────────
 
     pub fn moveCursorLeft(self: *Editor) void {
+        if (self.hasOnlyCaretSelections()) {
+            self.moveCaretSetHorizontal(-1) catch {};
+            return;
+        }
         if (self.cursor.offset == 0) return;
         self.cursor.offset -= 1;
         self.updateCursorPosition();
@@ -263,6 +291,10 @@ pub const Editor = struct {
     }
 
     pub fn moveCursorRight(self: *Editor) void {
+        if (self.hasOnlyCaretSelections()) {
+            self.moveCaretSetHorizontal(1) catch {};
+            return;
+        }
         const total = self.buffer.totalLen();
         if (self.cursor.offset >= total) return;
         self.cursor.offset += 1;
@@ -273,6 +305,7 @@ pub const Editor = struct {
     }
 
     pub fn moveCursorUp(self: *Editor) void {
+        if (self.hasOnlyCaretSelections()) return;
         if (self.cursor.line == 0) return;
         const target_col = self.cursor.col;
         self.cursor.line -= 1;
@@ -285,6 +318,7 @@ pub const Editor = struct {
     }
 
     pub fn moveCursorDown(self: *Editor) void {
+        if (self.hasOnlyCaretSelections()) return;
         const line_count = self.buffer.lineCount();
         if (self.cursor.line + 1 >= line_count) return;
         const target_col = self.cursor.col;
@@ -298,6 +332,10 @@ pub const Editor = struct {
     }
 
     pub fn moveCursorToLineStart(self: *Editor) void {
+        if (self.hasOnlyCaretSelections()) {
+            self.moveCaretSetToLineBoundary(true) catch {};
+            return;
+        }
         self.cursor.col = 0;
         self.updateCursorOffset();
         self.preferred_visual_col = null;
@@ -306,12 +344,63 @@ pub const Editor = struct {
     }
 
     pub fn moveCursorToLineEnd(self: *Editor) void {
+        if (self.hasOnlyCaretSelections()) {
+            self.moveCaretSetToLineBoundary(false) catch {};
+            return;
+        }
         const line_len = self.buffer.lineLen(self.cursor.line);
         self.cursor.col = line_len;
         self.updateCursorOffset();
         self.preferred_visual_col = null;
         self.selection = null;
         self.clearSelections();
+    }
+
+    pub fn moveCursorWordLeft(self: *Editor) void {
+        if (self.hasOnlyCaretSelections()) {
+            self.moveCaretSetByWord(true) catch {};
+            return;
+        }
+        const target = self.wordLeftOffset(self.cursor.offset);
+        self.setCursorOffsetNoClear(target);
+        self.selection = null;
+        self.clearSelections();
+    }
+
+    pub fn moveCursorWordRight(self: *Editor) void {
+        if (self.hasOnlyCaretSelections()) {
+            self.moveCaretSetByWord(false) catch {};
+            return;
+        }
+        const target = self.wordRightOffset(self.cursor.offset);
+        self.setCursorOffsetNoClear(target);
+        self.selection = null;
+        self.clearSelections();
+    }
+
+    pub fn extendSelectionLeft(self: *Editor) void {
+        self.extendPrimarySelectionToOffset(if (self.cursor.offset > 0) self.cursor.offset - 1 else 0);
+    }
+
+    pub fn extendSelectionRight(self: *Editor) void {
+        const total = self.buffer.totalLen();
+        self.extendPrimarySelectionToOffset(if (self.cursor.offset < total) self.cursor.offset + 1 else total);
+    }
+
+    pub fn extendSelectionToLineStart(self: *Editor) void {
+        self.extendPrimarySelectionToOffset(self.buffer.lineStart(self.cursor.line));
+    }
+
+    pub fn extendSelectionToLineEnd(self: *Editor) void {
+        self.extendPrimarySelectionToOffset(self.buffer.lineStart(self.cursor.line) + self.buffer.lineLen(self.cursor.line));
+    }
+
+    pub fn extendSelectionWordLeft(self: *Editor) void {
+        self.extendPrimarySelectionToOffset(self.wordLeftOffset(self.cursor.offset));
+    }
+
+    pub fn extendSelectionWordRight(self: *Editor) void {
+        self.extendPrimarySelectionToOffset(self.wordRightOffset(self.cursor.offset));
     }
 
     pub fn setCursor(self: *Editor, line: usize, col: usize) void {
@@ -346,6 +435,134 @@ pub const Editor = struct {
 
     pub fn clearSelections(self: *Editor) void {
         self.selections.clearRetainingCapacity();
+    }
+
+    pub fn primaryCaret(self: *Editor) CursorPos {
+        return self.cursor;
+    }
+
+    pub fn auxiliaryCaretCount(self: *Editor) usize {
+        return self.selections.items.len;
+    }
+
+    pub fn auxiliaryCaretAt(self: *Editor, index: usize) ?CursorPos {
+        if (index >= self.selections.items.len) return null;
+        const sel = self.selections.items[index].normalized();
+        if (!sel.isEmpty()) return null;
+        return sel.start;
+    }
+
+    fn storedSelectionFromSelection(sel: Selection) StoredSelection {
+        return .{
+            .start_offset = sel.start.offset,
+            .end_offset = sel.end.offset,
+            .is_rectangular = sel.is_rectangular,
+        };
+    }
+
+    fn selectionFromStored(self: *Editor, stored: StoredSelection) Selection {
+        const total = self.buffer.totalLen();
+        const start = self.cursorPosForOffset(@min(stored.start_offset, total));
+        const end = self.cursorPosForOffset(@min(stored.end_offset, total));
+        return .{
+            .start = start,
+            .end = end,
+            .is_rectangular = stored.is_rectangular,
+        };
+    }
+
+    fn rectangularPasteLines(self: *Editor, text: []const u8) !?[][]const u8 {
+        if (self.selections.items.len == 0) return null;
+        for (self.selections.items) |sel| {
+            if (!sel.is_rectangular) return null;
+        }
+
+        var line_count: usize = 1;
+        for (text) |byte| {
+            if (byte == '\n') line_count += 1;
+        }
+        var clipboard_lines = try self.allocator.alloc([]const u8, line_count);
+        errdefer self.allocator.free(clipboard_lines);
+        var start: usize = 0;
+        var line_idx: usize = 0;
+        for (text, 0..) |byte, idx| {
+            if (byte != '\n') continue;
+            const raw = text[start..idx];
+            clipboard_lines[line_idx] = if (raw.len > 0 and raw[raw.len - 1] == '\r') raw[0 .. raw.len - 1] else raw;
+            line_idx += 1;
+            start = idx + 1;
+        }
+        const raw_tail = text[start..];
+        clipboard_lines[line_idx] = if (raw_tail.len > 0 and raw_tail[raw_tail.len - 1] == '\r') raw_tail[0 .. raw_tail.len - 1] else raw_tail;
+
+        const lines = try self.allocator.alloc([]const u8, self.selections.items.len);
+        errdefer self.allocator.free(lines);
+        if (clipboard_lines.len == 1) {
+            for (lines) |*line| {
+                line.* = clipboard_lines[0];
+            }
+        } else if (clipboard_lines.len == self.selections.items.len) {
+            for (lines, clipboard_lines) |*line, clip_line| {
+                line.* = clip_line;
+            }
+        } else {
+            for (lines, 0..) |*line, idx| {
+                line.* = clipboard_lines[idx % clipboard_lines.len];
+            }
+        }
+        self.allocator.free(clipboard_lines);
+        return lines;
+    }
+
+    fn captureUndoSelectionState(self: *Editor) !u64 {
+        const id = self.next_undo_selection_state_id;
+        self.next_undo_selection_state_id +|= 1;
+
+        var extra = try self.allocator.alloc(StoredSelection, self.selections.items.len);
+        for (self.selections.items, 0..) |sel, idx| {
+            extra[idx] = storedSelectionFromSelection(sel);
+        }
+
+        try self.undo_selection_states.append(self.allocator, .{
+            .id = id,
+            .cursor_offset = self.cursor.offset,
+            .selection = if (self.selection) |sel| storedSelectionFromSelection(sel) else null,
+            .selections = extra,
+        });
+        return id;
+    }
+
+    fn restoreUndoSelectionState(self: *Editor, state_id: u64) !bool {
+        for (self.undo_selection_states.items) |state| {
+            if (state.id != state_id) continue;
+            const total = self.buffer.totalLen();
+            self.cursor = self.cursorPosForOffset(@min(state.cursor_offset, total));
+            self.preferred_visual_col = null;
+            self.selection = if (state.selection) |sel| self.selectionFromStored(sel) else null;
+            self.clearSelections();
+            for (state.selections) |sel| {
+                try self.selections.append(self.allocator, self.selectionFromStored(sel));
+            }
+            return true;
+        }
+        return false;
+    }
+
+    fn annotateLastUndoSelectionState(self: *Editor, before_id: u64, after_id: u64) void {
+        self.buffer.annotateLastUndoState(before_id, after_id);
+    }
+
+    fn beginTrackedUndoGroup(self: *Editor) !u64 {
+        const before_id = try self.captureUndoSelectionState();
+        self.buffer.beginUndoGroup();
+        self.buffer.annotateCurrentUndoGroupBefore(before_id);
+        return before_id;
+    }
+
+    fn endTrackedUndoGroup(self: *Editor) !void {
+        const after_id = try self.captureUndoSelectionState();
+        try self.buffer.endUndoGroup();
+        self.buffer.annotateClosedUndoGroupAfter(after_id);
     }
 
     pub fn addSelection(self: *Editor, selection: Selection) !void {
@@ -407,6 +624,21 @@ pub const Editor = struct {
             const end_clamped = @min(end_col, line_len);
             const start = CursorPos{ .line = line, .col = start_clamped, .offset = line_start + start_clamped };
             const end = CursorPos{ .line = line, .col = end_clamped, .offset = line_start + end_clamped };
+            try self.addRectSelection(start, end);
+        }
+    }
+
+    pub fn expandRectSelectionVisual(self: *Editor, start_line: usize, end_line: usize, start_col_vis: usize, end_col_vis: usize) !void {
+        if (start_line > end_line) return;
+        var line = start_line;
+        while (line <= end_line) : (line += 1) {
+            const line_start = self.buffer.lineStart(line);
+            const line_text = try self.getLineAlloc(line);
+            defer self.allocator.free(line_text);
+            const start_byte = self.byteIndexForVisualColumn(line_text, start_col_vis);
+            const end_byte = self.byteIndexForVisualColumn(line_text, end_col_vis);
+            const start = CursorPos{ .line = line, .col = start_byte, .offset = line_start + start_byte };
+            const end = CursorPos{ .line = line, .col = end_byte, .offset = line_start + end_byte };
             try self.addRectSelection(start, end);
         }
     }
@@ -501,19 +733,193 @@ pub const Editor = struct {
         }
     }
 
-    fn restoreCaretSelections(self: *Editor, caret_offsets: []const usize) !void {
+    fn hasOnlyCaretSelections(self: *Editor) bool {
+        if (self.selections.items.len == 0) return false;
+        for (self.selections.items) |sel| {
+            if (!sel.normalized().isEmpty()) return false;
+        }
+        return true;
+    }
+
+    fn collectCaretOffsets(self: *Editor) !std.ArrayList(usize) {
+        var caret_offsets = std.ArrayList(usize).empty;
+        errdefer caret_offsets.deinit(self.allocator);
+
+        try caret_offsets.append(self.allocator, self.cursor.offset);
+        for (self.selections.items) |sel| {
+            const caret = sel.normalized();
+            if (!caret.isEmpty()) continue;
+            if (std.mem.indexOfScalar(usize, caret_offsets.items, caret.start.offset) != null) continue;
+            try caret_offsets.append(self.allocator, caret.start.offset);
+        }
+        return caret_offsets;
+    }
+
+    fn collectCaretOffsetsDescending(self: *Editor) !std.ArrayList(usize) {
+        const caret_offsets = try self.collectCaretOffsets();
+        std.sort.block(usize, caret_offsets.items, {}, struct {
+            fn lessThan(_: void, a: usize, b: usize) bool {
+                return a > b;
+            }
+        }.lessThan);
+        return caret_offsets;
+    }
+
+    fn restoreCaretSelections(self: *Editor, caret_offsets: []const usize, primary_offset: usize) !void {
         self.clearSelections();
+        self.cursor = self.cursorPosForOffset(primary_offset);
         for (caret_offsets) |offset| {
+            if (offset == primary_offset) continue;
             const caret = self.cursorPosForOffset(offset);
             try self.selections.append(self.allocator, .{
                 .start = caret,
                 .end = caret,
             });
         }
-        try self.normalizeSelections();
         if (self.selections.items.len > 0) {
-            self.cursor = self.selections.items[0].start;
+            try self.normalizeSelections();
+            var idx: usize = 0;
+            while (idx < self.selections.items.len) {
+                if (self.selections.items[idx].start.offset == primary_offset and self.selections.items[idx].isEmpty()) {
+                    _ = self.selections.orderedRemove(idx);
+                } else {
+                    idx += 1;
+                }
+            }
         }
+    }
+
+    fn moveCaretSetHorizontal(self: *Editor, delta: isize) !void {
+        var caret_offsets = try self.collectCaretOffsets();
+        defer caret_offsets.deinit(self.allocator);
+        const primary_offset = caret_offsets.items[0];
+
+        const total = self.buffer.totalLen();
+        for (caret_offsets.items) |*offset| {
+            if (delta < 0) {
+                if (offset.* > 0) offset.* -= 1;
+            } else if (delta > 0) {
+                if (offset.* < total) offset.* += 1;
+            }
+        }
+
+        self.preferred_visual_col = null;
+        self.selection = null;
+        try self.restoreCaretSelections(caret_offsets.items, if (delta < 0) if (primary_offset > 0) primary_offset - 1 else 0 else @min(primary_offset + 1, total));
+    }
+
+    fn moveCaretSetToLineBoundary(self: *Editor, to_start: bool) !void {
+        var caret_offsets = try self.collectCaretOffsets();
+        defer caret_offsets.deinit(self.allocator);
+        var primary_offset = caret_offsets.items[0];
+
+        for (caret_offsets.items) |*offset| {
+            const caret = self.cursorPosForOffset(offset.*);
+            if (to_start) {
+                offset.* = self.buffer.lineStart(caret.line);
+            } else {
+                offset.* = self.buffer.lineStart(caret.line) + self.buffer.lineLen(caret.line);
+            }
+            if (offset == &caret_offsets.items[0]) primary_offset = offset.*;
+        }
+
+        self.preferred_visual_col = null;
+        self.selection = null;
+        try self.restoreCaretSelections(caret_offsets.items, primary_offset);
+    }
+
+    fn moveCaretSetByWord(self: *Editor, left: bool) !void {
+        var caret_offsets = try self.collectCaretOffsets();
+        defer caret_offsets.deinit(self.allocator);
+
+        for (caret_offsets.items) |*offset| {
+            offset.* = if (left) self.wordLeftOffset(offset.*) else self.wordRightOffset(offset.*);
+        }
+
+        self.preferred_visual_col = null;
+        self.selection = null;
+        try self.restoreCaretSelections(caret_offsets.items, caret_offsets.items[0]);
+    }
+
+    fn adjustPrimaryOffsetForReplacement(primary_offset: *usize, start: usize, end: usize, replacement_len: usize) void {
+        const deleted_len = end - start;
+        if (primary_offset.* > end) {
+            primary_offset.* = @intCast(@as(isize, @intCast(primary_offset.*)) + @as(isize, @intCast(replacement_len)) - @as(isize, @intCast(deleted_len)));
+        } else if (primary_offset.* >= start) {
+            primary_offset.* = start + replacement_len;
+        }
+    }
+
+    fn isWordByte(byte: u8) bool {
+        return std.ascii.isAlphanumeric(byte) or byte == '_';
+    }
+
+    fn byteAt(self: *Editor, offset: usize) ?u8 {
+        if (offset >= self.buffer.totalLen()) return null;
+        var buf: [1]u8 = undefined;
+        return if (self.buffer.readRange(offset, &buf) == 1) buf[0] else null;
+    }
+
+    fn wordLeftOffset(self: *Editor, offset: usize) usize {
+        if (offset == 0) return 0;
+        var idx = offset - 1;
+        while (idx > 0) : (idx -= 1) {
+            const byte = self.byteAt(idx) orelse break;
+            if (isWordByte(byte)) break;
+        }
+        while (idx > 0) {
+            const prev = self.byteAt(idx - 1) orelse break;
+            if (!isWordByte(prev)) break;
+            idx -= 1;
+        }
+        return idx;
+    }
+
+    fn wordRightOffset(self: *Editor, offset: usize) usize {
+        const total = self.buffer.totalLen();
+        var idx = offset;
+        while (idx < total) : (idx += 1) {
+            const byte = self.byteAt(idx) orelse break;
+            if (!isWordByte(byte)) break;
+        }
+        while (idx < total) : (idx += 1) {
+            const byte = self.byteAt(idx) orelse break;
+            if (isWordByte(byte)) break;
+        }
+        return idx;
+    }
+
+    fn extendPrimarySelectionToOffset(self: *Editor, target_offset: usize) void {
+        const anchor = if (self.selection) |sel| sel.normalized().start else self.cursor;
+        const target = self.cursorPosForOffset(target_offset);
+        self.cursor = target;
+        self.preferred_visual_col = null;
+        self.clearSelections();
+        if (anchor.offset == target.offset) {
+            self.selection = null;
+            return;
+        }
+        self.selection = .{ .start = anchor, .end = target };
+    }
+
+    fn byteIndexForVisualColumn(self: *Editor, line_text: []const u8, column: usize) usize {
+        _ = self;
+        if (column == 0 or line_text.len == 0) return 0;
+        var it = std.unicode.Utf8View.initUnchecked(line_text).iterator();
+        var col: usize = 0;
+        var idx: usize = 0;
+        while (it.nextCodepointSlice()) |slice| {
+            if (col >= column) return idx;
+            const cp = std.unicode.utf8Decode(slice) catch 0xFFFD;
+            const width = if (cp == '\t') blk: {
+                const tab_width: usize = 4;
+                break :blk tab_width - (col % tab_width);
+            } else 1;
+            if (col + width > column) return idx;
+            idx += slice.len;
+            col += width;
+        }
+        return line_text.len;
     }
 
     fn updateCursorPosition(self: *Editor) void {
@@ -635,12 +1041,35 @@ pub const Editor = struct {
     pub fn insertChar(self: *Editor, char: u8) !void {
         self.preferred_visual_col = null;
         if (self.selections.items.len > 0) {
-            self.beginUndoGroup();
-            errdefer self.endUndoGroup() catch {};
+            if (self.hasOnlyCaretSelections()) {
+                _ = try self.beginTrackedUndoGroup();
+                errdefer self.endTrackedUndoGroup() catch {};
+                var caret_offsets = try self.collectCaretOffsetsDescending();
+                defer caret_offsets.deinit(self.allocator);
+                var new_offsets = std.ArrayList(usize).empty;
+                defer new_offsets.deinit(self.allocator);
+                var primary_offset = self.cursor.offset;
+                const bytes = [_]u8{char};
+                for (caret_offsets.items) |offset| {
+                    const insert_point = self.pointForByte(offset);
+                    try self.buffer.insertBytes(offset, &bytes);
+                    self.applyHighlightEdit(offset, offset, offset + 1, insert_point, insert_point);
+                    adjustPrimaryOffsetForReplacement(&primary_offset, offset, offset, 1);
+                    shiftCaretOffsets(&new_offsets, 1);
+                    try new_offsets.append(self.allocator, offset + 1);
+                }
+                self.noteTextChanged();
+                try self.restoreCaretSelections(new_offsets.items, primary_offset);
+                try self.endTrackedUndoGroup();
+                return;
+            }
+            _ = try self.beginTrackedUndoGroup();
+            errdefer self.endTrackedUndoGroup() catch {};
             try self.normalizeSelectionsDescending();
             const bytes = [_]u8{char};
             var caret_offsets = std.ArrayList(usize).empty;
             defer caret_offsets.deinit(self.allocator);
+            var primary_offset = self.cursor.offset;
             for (self.selections.items) |sel| {
                 const norm = sel.normalized();
                 const len = norm.end.offset - norm.start.offset;
@@ -657,16 +1086,17 @@ pub const Editor = struct {
                 try self.buffer.insertBytes(insert_start, &bytes);
                 self.applyHighlightEdit(insert_start, insert_start, insert_start + 1, insert_point, insert_point);
                 shiftCaretOffsets(&caret_offsets, 1 - @as(isize, @intCast(len)));
+                adjustPrimaryOffsetForReplacement(&primary_offset, norm.start.offset, norm.end.offset, 1);
                 try caret_offsets.append(self.allocator, insert_start + 1);
             }
             self.noteTextChanged();
-            try self.restoreCaretSelections(caret_offsets.items);
-            try self.endUndoGroup();
+            try self.restoreCaretSelections(caret_offsets.items, primary_offset);
+            try self.endTrackedUndoGroup();
             return;
         }
         if (self.selection != null) {
-            self.beginUndoGroup();
-            errdefer self.endUndoGroup() catch {};
+            _ = try self.beginTrackedUndoGroup();
+            errdefer self.endTrackedUndoGroup() catch {};
             try self.deleteSelection();
             const bytes = [_]u8{char};
             const insert_start = self.cursor.offset;
@@ -676,9 +1106,10 @@ pub const Editor = struct {
             self.cursor.offset += 1;
             self.updateCursorPosition();
             self.noteTextChanged();
-            try self.endUndoGroup();
+            try self.endTrackedUndoGroup();
             return;
         }
+        const before_id = try self.captureUndoSelectionState();
         const bytes = [_]u8{char};
         const insert_start = self.cursor.offset;
         const insert_point = self.pointForByte(insert_start);
@@ -687,16 +1118,42 @@ pub const Editor = struct {
         self.cursor.offset += 1;
         self.updateCursorPosition();
         self.noteTextChanged();
+        const after_id = try self.captureUndoSelectionState();
+        self.annotateLastUndoSelectionState(before_id, after_id);
     }
 
     pub fn insertText(self: *Editor, text: []const u8) !void {
         self.preferred_visual_col = null;
         if (self.selections.items.len > 0) {
-            self.beginUndoGroup();
-            errdefer self.endUndoGroup() catch {};
+            if (self.hasOnlyCaretSelections()) {
+                _ = try self.beginTrackedUndoGroup();
+                errdefer self.endTrackedUndoGroup() catch {};
+                var caret_offsets = try self.collectCaretOffsetsDescending();
+                defer caret_offsets.deinit(self.allocator);
+                var new_offsets = std.ArrayList(usize).empty;
+                defer new_offsets.deinit(self.allocator);
+                var primary_offset = self.cursor.offset;
+                for (caret_offsets.items) |offset| {
+                    const insert_point = self.pointForByte(offset);
+                    try self.buffer.insertBytes(offset, text);
+                    self.applyHighlightEdit(offset, offset, offset + text.len, insert_point, insert_point);
+                    adjustPrimaryOffsetForReplacement(&primary_offset, offset, offset, text.len);
+                    shiftCaretOffsets(&new_offsets, @intCast(text.len));
+                    try new_offsets.append(self.allocator, offset + text.len);
+                }
+                self.noteTextChanged();
+                try self.restoreCaretSelections(new_offsets.items, primary_offset);
+                try self.endTrackedUndoGroup();
+                return;
+            }
+            _ = try self.beginTrackedUndoGroup();
+            errdefer self.endTrackedUndoGroup() catch {};
             try self.normalizeSelectionsDescending();
             var caret_offsets = std.ArrayList(usize).empty;
             defer caret_offsets.deinit(self.allocator);
+            var primary_offset = self.cursor.offset;
+            const rect_lines = try self.rectangularPasteLines(text);
+            defer if (rect_lines) |lines| self.allocator.free(lines);
             for (self.selections.items) |sel| {
                 const norm = sel.normalized();
                 const len = norm.end.offset - norm.start.offset;
@@ -709,20 +1166,25 @@ pub const Editor = struct {
                     self.applyHighlightEdit(start, end, start, start_point, end_point);
                 }
                 const insert_start = norm.start.offset;
+                const replacement = if (rect_lines) |lines|
+                    lines[self.selections.items.len - 1 - caret_offsets.items.len]
+                else
+                    text;
                 const insert_point = self.pointForByte(insert_start);
-                try self.buffer.insertBytes(insert_start, text);
-                self.applyHighlightEdit(insert_start, insert_start, insert_start + text.len, insert_point, insert_point);
-                shiftCaretOffsets(&caret_offsets, @as(isize, @intCast(text.len)) - @as(isize, @intCast(len)));
-                try caret_offsets.append(self.allocator, insert_start + text.len);
+                try self.buffer.insertBytes(insert_start, replacement);
+                self.applyHighlightEdit(insert_start, insert_start, insert_start + replacement.len, insert_point, insert_point);
+                shiftCaretOffsets(&caret_offsets, @as(isize, @intCast(replacement.len)) - @as(isize, @intCast(len)));
+                adjustPrimaryOffsetForReplacement(&primary_offset, norm.start.offset, norm.end.offset, replacement.len);
+                try caret_offsets.append(self.allocator, insert_start + replacement.len);
             }
             self.noteTextChanged();
-            try self.restoreCaretSelections(caret_offsets.items);
-            try self.endUndoGroup();
+            try self.restoreCaretSelections(caret_offsets.items, primary_offset);
+            try self.endTrackedUndoGroup();
             return;
         }
         if (self.selection != null) {
-            self.beginUndoGroup();
-            errdefer self.endUndoGroup() catch {};
+            _ = try self.beginTrackedUndoGroup();
+            errdefer self.endTrackedUndoGroup() catch {};
             try self.deleteSelection();
             const insert_start = self.cursor.offset;
             const insert_point = self.pointForByte(insert_start);
@@ -731,9 +1193,10 @@ pub const Editor = struct {
             self.cursor.offset += text.len;
             self.updateCursorPosition();
             self.noteTextChanged();
-            try self.endUndoGroup();
+            try self.endTrackedUndoGroup();
             return;
         }
+        const before_id = try self.captureUndoSelectionState();
         const insert_start = self.cursor.offset;
         const insert_point = self.pointForByte(insert_start);
         try self.buffer.insertBytes(insert_start, text);
@@ -741,6 +1204,8 @@ pub const Editor = struct {
         self.cursor.offset += text.len;
         self.updateCursorPosition();
         self.noteTextChanged();
+        const after_id = try self.captureUndoSelectionState();
+        self.annotateLastUndoSelectionState(before_id, after_id);
     }
 
     pub fn insertNewline(self: *Editor) !void {
@@ -749,11 +1214,77 @@ pub const Editor = struct {
 
     pub fn deleteCharBackward(self: *Editor) !void {
         self.preferred_visual_col = null;
+        if (self.hasOnlyCaretSelections()) {
+            _ = try self.beginTrackedUndoGroup();
+            errdefer self.endTrackedUndoGroup() catch {};
+            var caret_offsets = try self.collectCaretOffsetsDescending();
+            defer caret_offsets.deinit(self.allocator);
+            var new_offsets = std.ArrayList(usize).empty;
+            defer new_offsets.deinit(self.allocator);
+            var primary_offset = self.cursor.offset;
+            var changed = false;
+            for (caret_offsets.items) |offset| {
+                if (offset == 0) {
+                    try new_offsets.append(self.allocator, 0);
+                    continue;
+                }
+                const delete_start = offset - 1;
+                const delete_end = offset;
+                const start_point = self.pointForByte(delete_start);
+                const end_point = self.pointForByte(delete_end);
+                try self.buffer.deleteRange(delete_start, 1);
+                self.applyHighlightEdit(delete_start, delete_end, delete_start, start_point, end_point);
+                adjustPrimaryOffsetForReplacement(&primary_offset, delete_start, delete_end, 0);
+                shiftCaretOffsets(&new_offsets, -1);
+                try new_offsets.append(self.allocator, delete_start);
+                changed = true;
+            }
+            if (changed) self.noteTextChanged();
+            try self.restoreCaretSelections(new_offsets.items, primary_offset);
+            self.selection = null;
+            try self.endTrackedUndoGroup();
+            return;
+        }
+        if (self.selections.items.len > 0) {
+            _ = try self.beginTrackedUndoGroup();
+            errdefer self.endTrackedUndoGroup() catch {};
+            try self.normalizeSelectionsDescending();
+            var changed = false;
+            var caret_offsets = std.ArrayList(usize).empty;
+            defer caret_offsets.deinit(self.allocator);
+            var primary_offset = self.cursor.offset;
+            for (self.selections.items) |sel| {
+                const norm = sel.normalized();
+                var delete_start = norm.start.offset;
+                var delete_len: usize = norm.end.offset - norm.start.offset;
+                if (delete_len == 0 and delete_start > 0) {
+                    delete_start -= 1;
+                    delete_len = 1;
+                }
+                if (delete_len > 0) {
+                    const delete_end = delete_start + delete_len;
+                    const start_point = self.pointForByte(delete_start);
+                    const end_point = self.pointForByte(delete_end);
+                    try self.buffer.deleteRange(delete_start, delete_len);
+                    self.applyHighlightEdit(delete_start, delete_end, delete_start, start_point, end_point);
+                    changed = true;
+                }
+                shiftCaretOffsets(&caret_offsets, -@as(isize, @intCast(delete_len)));
+                adjustPrimaryOffsetForReplacement(&primary_offset, delete_start, delete_start + delete_len, 0);
+                try caret_offsets.append(self.allocator, delete_start);
+            }
+            if (changed) self.noteTextChanged();
+            try self.restoreCaretSelections(caret_offsets.items, primary_offset);
+            self.selection = null;
+            try self.endTrackedUndoGroup();
+            return;
+        }
         if (self.selection) |_| {
             try self.deleteSelection();
             return;
         }
         if (self.cursor.offset == 0) return;
+        const before_id = try self.captureUndoSelectionState();
         const start = self.cursor.offset - 1;
         const end = self.cursor.offset;
         const start_point = self.pointForByte(start);
@@ -763,16 +1294,84 @@ pub const Editor = struct {
         self.cursor.offset -= 1;
         self.updateCursorPosition();
         self.noteTextChanged();
+        const after_id = try self.captureUndoSelectionState();
+        self.annotateLastUndoSelectionState(before_id, after_id);
     }
 
     pub fn deleteCharForward(self: *Editor) !void {
         self.preferred_visual_col = null;
+        if (self.hasOnlyCaretSelections()) {
+            _ = try self.beginTrackedUndoGroup();
+            errdefer self.endTrackedUndoGroup() catch {};
+            var caret_offsets = try self.collectCaretOffsetsDescending();
+            defer caret_offsets.deinit(self.allocator);
+            var new_offsets = std.ArrayList(usize).empty;
+            defer new_offsets.deinit(self.allocator);
+            var primary_offset = self.cursor.offset;
+            var changed = false;
+            const total = self.buffer.totalLen();
+            for (caret_offsets.items) |offset| {
+                if (offset >= total) {
+                    try new_offsets.append(self.allocator, offset);
+                    continue;
+                }
+                const delete_start = offset;
+                const delete_end = offset + 1;
+                const start_point = self.pointForByte(delete_start);
+                const end_point = self.pointForByte(delete_end);
+                try self.buffer.deleteRange(delete_start, 1);
+                self.applyHighlightEdit(delete_start, delete_end, delete_start, start_point, end_point);
+                adjustPrimaryOffsetForReplacement(&primary_offset, delete_start, delete_end, 0);
+                shiftCaretOffsets(&new_offsets, -1);
+                try new_offsets.append(self.allocator, delete_start);
+                changed = true;
+            }
+            if (changed) self.noteTextChanged();
+            try self.restoreCaretSelections(new_offsets.items, primary_offset);
+            self.selection = null;
+            try self.endTrackedUndoGroup();
+            return;
+        }
+        if (self.selections.items.len > 0) {
+            _ = try self.beginTrackedUndoGroup();
+            errdefer self.endTrackedUndoGroup() catch {};
+            try self.normalizeSelectionsDescending();
+            var changed = false;
+            var caret_offsets = std.ArrayList(usize).empty;
+            defer caret_offsets.deinit(self.allocator);
+            var primary_offset = self.cursor.offset;
+            for (self.selections.items) |sel| {
+                const norm = sel.normalized();
+                const delete_start = norm.start.offset;
+                var delete_len: usize = norm.end.offset - norm.start.offset;
+                if (delete_len == 0 and delete_start < self.buffer.totalLen()) {
+                    delete_len = 1;
+                }
+                if (delete_len > 0) {
+                    const delete_end = delete_start + delete_len;
+                    const start_point = self.pointForByte(delete_start);
+                    const end_point = self.pointForByte(delete_end);
+                    try self.buffer.deleteRange(delete_start, delete_len);
+                    self.applyHighlightEdit(delete_start, delete_end, delete_start, start_point, end_point);
+                    changed = true;
+                }
+                shiftCaretOffsets(&caret_offsets, -@as(isize, @intCast(delete_len)));
+                adjustPrimaryOffsetForReplacement(&primary_offset, delete_start, delete_start + delete_len, 0);
+                try caret_offsets.append(self.allocator, delete_start);
+            }
+            if (changed) self.noteTextChanged();
+            try self.restoreCaretSelections(caret_offsets.items, primary_offset);
+            self.selection = null;
+            try self.endTrackedUndoGroup();
+            return;
+        }
         if (self.selection) |_| {
             try self.deleteSelection();
             return;
         }
         const total = self.buffer.totalLen();
         if (self.cursor.offset >= total) return;
+        const before_id = try self.captureUndoSelectionState();
         const start = self.cursor.offset;
         const end = self.cursor.offset + 1;
         const start_point = self.pointForByte(start);
@@ -780,17 +1379,27 @@ pub const Editor = struct {
         try self.buffer.deleteRange(start, 1);
         self.applyHighlightEdit(start, end, start, start_point, end_point);
         self.noteTextChanged();
+        const after_id = try self.captureUndoSelectionState();
+        self.annotateLastUndoSelectionState(before_id, after_id);
     }
 
     pub fn deleteSelection(self: *Editor) !void {
         self.preferred_visual_col = null;
+        if (self.hasOnlyCaretSelections()) {
+            var caret_offsets = try self.collectCaretOffsets();
+            defer caret_offsets.deinit(self.allocator);
+            try self.restoreCaretSelections(caret_offsets.items, self.cursor.offset);
+            self.selection = null;
+            return;
+        }
         if (self.selections.items.len > 0) {
-            self.beginUndoGroup();
-            errdefer self.endUndoGroup() catch {};
+            _ = try self.beginTrackedUndoGroup();
+            errdefer self.endTrackedUndoGroup() catch {};
             try self.normalizeSelectionsDescending();
             var changed = false;
             var caret_offsets = std.ArrayList(usize).empty;
             defer caret_offsets.deinit(self.allocator);
+            var primary_offset = self.cursor.offset;
             for (self.selections.items) |sel| {
                 const norm = sel.normalized();
                 const len = norm.end.offset - norm.start.offset;
@@ -804,15 +1413,17 @@ pub const Editor = struct {
                     changed = true;
                 }
                 shiftCaretOffsets(&caret_offsets, -@as(isize, @intCast(len)));
+                adjustPrimaryOffsetForReplacement(&primary_offset, norm.start.offset, norm.end.offset, 0);
                 try caret_offsets.append(self.allocator, norm.start.offset);
             }
             if (changed) self.noteTextChanged();
-            try self.restoreCaretSelections(caret_offsets.items);
+            try self.restoreCaretSelections(caret_offsets.items, primary_offset);
             self.selection = null;
-            try self.endUndoGroup();
+            try self.endTrackedUndoGroup();
             return;
         }
         if (self.selection) |sel| {
+            const before_id = try self.captureUndoSelectionState();
             const norm = sel.normalized();
             const len = norm.end.offset - norm.start.offset;
             if (len > 0) {
@@ -826,6 +1437,8 @@ pub const Editor = struct {
                 self.noteTextChanged();
             }
             self.selection = null;
+            const after_id = try self.captureUndoSelectionState();
+            self.annotateLastUndoSelectionState(before_id, after_id);
         }
     }
 
@@ -865,19 +1478,19 @@ pub const Editor = struct {
 
         var out = std.ArrayList(u8).empty;
         errdefer out.deinit(self.allocator);
-        var idx: usize = 0;
-        while (idx < merged.items.len) : (idx += 1) {
-            const sel = merged.items[idx];
+        var emitted_any = false;
+        for (merged.items) |sel| {
             if (sel.isEmpty()) continue;
             const norm = sel.normalized();
             const len = norm.end.offset - norm.start.offset;
             if (len == 0) continue;
             const chunk = try self.buffer.readRangeAlloc(norm.start.offset, len);
             defer self.allocator.free(chunk);
-            try out.appendSlice(self.allocator, chunk);
-            if (idx + 1 < merged.items.len) {
+            if (emitted_any) {
                 try out.append(self.allocator, '\n');
             }
+            try out.appendSlice(self.allocator, chunk);
+            emitted_any = true;
         }
 
         return try out.toOwnedSlice(self.allocator);
@@ -903,14 +1516,25 @@ pub const Editor = struct {
             log.logf("undo ok", .{});
         }
         if (result.changed) {
-            if (result.cursor) |cursor_offset| {
+            if (result.state) |state_id| {
+                if (!(try self.restoreUndoSelectionState(state_id)) and result.cursor != null) {
+                    const clamped = @min(result.cursor.?, self.buffer.totalLen());
+                    self.setCursorOffsetNoClear(clamped);
+                    self.selection = null;
+                    self.clearSelections();
+                }
+            } else if (result.cursor) |cursor_offset| {
                 const clamped = @min(cursor_offset, self.buffer.totalLen());
                 self.setCursorOffsetNoClear(clamped);
+                self.selection = null;
+                self.clearSelections();
             } else {
                 if (self.cursor.offset > self.buffer.totalLen()) {
                     self.cursor.offset = self.buffer.totalLen();
                 }
                 self.updateCursorPosition();
+                self.selection = null;
+                self.clearSelections();
             }
             if (self.highlighter) |h| {
                 _ = h.reparseFull();
@@ -934,14 +1558,25 @@ pub const Editor = struct {
             log.logf("redo ok", .{});
         }
         if (result.changed) {
-            if (result.cursor) |cursor_offset| {
+            if (result.state) |state_id| {
+                if (!(try self.restoreUndoSelectionState(state_id)) and result.cursor != null) {
+                    const clamped = @min(result.cursor.?, self.buffer.totalLen());
+                    self.setCursorOffsetNoClear(clamped);
+                    self.selection = null;
+                    self.clearSelections();
+                }
+            } else if (result.cursor) |cursor_offset| {
                 const clamped = @min(cursor_offset, self.buffer.totalLen());
                 self.setCursorOffsetNoClear(clamped);
+                self.selection = null;
+                self.clearSelections();
             } else {
                 if (self.cursor.offset > self.buffer.totalLen()) {
                     self.cursor.offset = self.buffer.totalLen();
                 }
                 self.updateCursorPosition();
+                self.selection = null;
+                self.clearSelections();
             }
             if (self.highlighter) |h| {
                 _ = h.reparseFull();
@@ -1150,15 +1785,15 @@ pub const Editor = struct {
         if (active_idx >= self.search_matches.items.len) return false;
         const active = self.search_matches.items[active_idx];
 
-        self.beginUndoGroup();
-        errdefer self.endUndoGroup() catch {};
+        _ = try self.beginTrackedUndoGroup();
+        errdefer self.endTrackedUndoGroup() catch {};
         try self.replaceByteRangeInternal(active.start, active.end, replacement, false);
         try self.recomputeSearchMatches();
         self.search_active = self.findSearchMatchAtOrAfter(active.start + replacement.len);
         if (self.search_active != null) {
             self.jumpToSearchActive();
         }
-        try self.endUndoGroup();
+        try self.endTrackedUndoGroup();
         return true;
     }
 
@@ -1168,8 +1803,8 @@ pub const Editor = struct {
         const matches = try self.allocator.dupe(SearchMatch, self.search_matches.items);
         defer self.allocator.free(matches);
 
-        self.beginUndoGroup();
-        errdefer self.endUndoGroup() catch {};
+        _ = try self.beginTrackedUndoGroup();
+        errdefer self.endTrackedUndoGroup() catch {};
         var idx = matches.len;
         while (idx > 0) {
             idx -= 1;
@@ -1177,7 +1812,7 @@ pub const Editor = struct {
             try self.replaceByteRangeInternal(match.start, match.end, replacement, false);
         }
         try self.recomputeSearchMatches();
-        try self.endUndoGroup();
+        try self.endTrackedUndoGroup();
         return matches.len;
     }
 

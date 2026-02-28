@@ -61,6 +61,7 @@ editor_protocol_todo:
         - "Editor groups selection replace (delete + insert) into one undo."
         - "Editor widget groups edits per input tick to avoid over-merging inserts."
         - "Undo/redo now returns cursor offset; editor syncs cursor to undo/redo location."
+        - "Editor now layers selection/caret snapshots onto undo/redo so multi-caret edits restore the pre/post caret set instead of only a scalar cursor offset."
       references:
         - reference_repos/editors/helix/helix-core/src/transaction.rs
         - reference_repos/editors/neovim/src/nvim/undo.c
@@ -75,6 +76,17 @@ editor_protocol_todo:
         - "Rectangular selection editing: insert/delete per line."
         - "Broadcast insert/delete now preserves the selection set as zero-length carets instead of clearing it."
         - "Multi-caret vertical expansion now has keycode-routed editor actions (`editor_add_caret_up` / `editor_add_caret_down`) instead of widget-local shortcut branches."
+        - "Backspace/delete-forward now apply across the multi-caret selection set with grouped undo, including mixed caret/range cases."
+        - "Caret-only movement now preserves the multi-caret selection set for left/right/home/end and widget-routed visual up/down."
+        - "selectionTextAlloc now skips zero-length carets cleanly so multi-selection copy/cut does not emit trailing blank separators."
+        - "Primary cursor ownership now survives multi-caret restore/edit paths instead of always snapping to the first normalized caret."
+        - "Caret storage is now more explicit: `cursor` is the primary caret, while zero-length entries in `selections` are auxiliary carets instead of duplicating the primary caret into both places."
+        - "Editor core now exposes explicit primary/auxiliary caret accessors so new multi-caret features can stop reaching into raw `cursor` + `selections` ad hoc."
+        - "Editor core now exposes baseline word-wise navigation and selection-expanding movement APIs."
+        - "Rectangular selection copy/move semantics are now explicit: copy yields per-line column slices, and plain cursor movement collapses the rectangular set."
+        - "Word-wise and expanding movement now route through the keybind/input-router layer (`editor_move_word_*`, `editor_extend_*`) instead of being editor-only APIs."
+        - "Visual vertical selection growth now routes through keybind actions (`editor_extend_up` / `editor_extend_down`) and has app-level dispatch coverage plus regression coverage for both wrapped visual rows and plain logical-line movement."
+        - "Paste semantics are now explicit: plain multi-selection paste broadcasts one payload to every selection, while rectangular selections trim CRLF row endings, preserve trailing empty rows, repeat a single row, map exact row counts 1:1, cycle clipboard rows when counts mismatch, and now interpret tabbed column selections against visual columns instead of raw bytes."
         - "Column selection and editing."
       references:
         - reference_repos/editors/helix/helix-core/src/selection.rs
@@ -96,6 +108,8 @@ editor_protocol_todo:
         - "Search query/recompute now picks or preserves the active match nearest the cursor/previous active location instead of always resetting to the first hit."
         - "IDE status bar now exposes a live literal search field (`Ctrl+F`), with `Enter`/`F3` next and `Shift+Enter`/`Shift+F3` previous navigation."
         - "Status-bar search text now renders against the real bar background so light-theme search input stays legible under linear text correction."
+        - "Cached editor rendering now preserves search state; taking highlight dirty ranges no longer clears active query/matches during draw."
+        - "Search-panel key routing now has app-level tests, and editor draw no longer initializes highlighters or advances max-width scans as paint-time side effects."
         - "Current priority: harden baseline literal/regex correctness + replace semantics before adding Find-in-files UX layers."
       references:
         - reference_repos/editors/neovim/src/nvim/search.c

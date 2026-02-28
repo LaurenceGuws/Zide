@@ -169,8 +169,23 @@ fn selectionBandForRowBand(band: RowBand) RowBand {
 
 fn searchHighlightColor(theme: anytype) @TypeOf(theme.selection) {
     var color = if (@hasField(@TypeOf(theme), "ui_accent")) theme.ui_accent else theme.selection;
-    color.a = 96;
+    color.a = 80;
     return color;
+}
+
+fn activeSearchHighlightColor(theme: anytype) @TypeOf(theme.selection) {
+    var color = if (@hasField(@TypeOf(theme), "ui_accent")) theme.ui_accent else theme.selection;
+    color.a = 152;
+    return color;
+}
+
+fn searchActiveByteRange(editor: anytype) ?ByteRange {
+    const active = editor.searchActiveMatch() orelse return null;
+    return .{ .start = active.start, .end = active.end };
+}
+
+fn rangeContains(haystack: ByteRange, needle: ByteRange) bool {
+    return needle.start >= haystack.start and needle.end <= haystack.end;
 }
 
 fn flushDrawList(list: *EditorDrawList, r: anytype) void {
@@ -634,7 +649,6 @@ pub fn draw(
 
     var highlight_tokens: []HighlightToken = &[_]HighlightToken{};
     var highlight_tokens_allocated = false;
-    widget.editor.ensureHighlighter();
     if (widget.editor.highlighter) |highlighter| {
         if (total_lines > 0 and start_line < total_lines) {
             const range_start = widget.editor.lineStart(start_line);
@@ -807,6 +821,7 @@ pub fn draw(
             );
             if (search_count > 0) {
                 const search_color = searchHighlightColor(r.theme);
+                const active_search = searchActiveByteRange(widget.editor);
                 const search_band = selectionBandForRowBand(seg_band);
                 for (search_ranges[0..search_count]) |match| {
                     const local_start = match.start - line_start;
@@ -814,12 +829,13 @@ pub fn draw(
                     const sx = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_start, text_start_x);
                     const ex = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_end, text_start_x);
                     if (ex <= sx) continue;
+                    const draw_color = if (active_search) |active| if (rangeContains(active, match)) activeSearchHighlightColor(r.theme) else search_color else search_color;
                     r.drawRect(
                         @intFromFloat(sx),
                         search_band.y_i,
                         @intFromFloat(ex - sx),
                         search_band.h_i,
-                        search_color,
+                        draw_color,
                     );
                 }
             }
@@ -916,10 +932,10 @@ pub fn draw(
 
     if (!widget.wrap_enabled) {
         const vscroll_w: f32 = if (show_vscroll) 12 else 0;
-        const scan = widget.editor.advanceMaxLineWidthCache(128);
-        if (scan.max > cols) {
+        const max_line_width = widget.editor.maxLineWidthCached();
+        if (max_line_width > cols) {
             draw_list.clear();
-            drawHorizontalScrollbar(widget, r, x, y, width, height, scan.max, cols, vscroll_w, &draw_list);
+            drawHorizontalScrollbar(widget, r, x, y, width, height, max_line_width, cols, vscroll_w, &draw_list);
             flushDrawList(&draw_list, r);
         }
         if (show_vscroll) {
@@ -974,11 +990,6 @@ pub fn drawCached(
         selectionStateHash(widget.editor),
     );
     if (texture_changed) force_redraw = true;
-
-    if (widget.editor.takeHighlightDirtyRange()) |range| {
-        const end_line = @min(range.end_line, total_lines);
-        cache.invalidateHighlightRange(range.start_line, end_line);
-    }
 
     var any_dirty = force_redraw;
 
@@ -1135,6 +1146,7 @@ pub fn drawCached(
                     );
                     if (search_count > 0) {
                         const search_color = searchHighlightColor(r.theme);
+                        const active_search = searchActiveByteRange(widget.editor);
                         const search_band = selectionBandForRowBand(seg_band);
                         for (search_ranges[0..search_count]) |match| {
                             const local_start = match.start - line_start;
@@ -1142,7 +1154,8 @@ pub fn drawCached(
                             const sx = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_start, origin_x + widget.gutter_width + 8 * r.uiScaleFactor());
                             const ex = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_end, origin_x + widget.gutter_width + 8 * r.uiScaleFactor());
                             if (ex <= sx) continue;
-                            list_ok = list_ok and addRectOp(draw_list, sx, search_band.y_f, ex - sx, search_band.h_f, search_color);
+                            const draw_color = if (active_search) |active| if (rangeContains(active, match)) activeSearchHighlightColor(r.theme) else search_color else search_color;
+                            list_ok = list_ok and addRectOp(draw_list, sx, search_band.y_f, ex - sx, search_band.h_f, draw_color);
                         }
                     }
 
@@ -1333,14 +1346,14 @@ pub fn drawCached(
 
     if (!widget.wrap_enabled) {
         const vscroll_w: f32 = if (show_vscroll) 12 else 0;
-        const scan = widget.editor.advanceMaxLineWidthCache(128);
-        const scroll_hash = hashScrollState(scan.max, cols, widget.editor.scroll_col, visible_lines, total_lines, widget.editor.scroll_line, show_vscroll);
+        const max_line_width = widget.editor.maxLineWidthCached();
+        const scroll_hash = hashScrollState(max_line_width, cols, widget.editor.scroll_col, visible_lines, total_lines, widget.editor.scroll_line, show_vscroll);
         if (force_redraw or cache.scrollDirty(scroll_hash)) {
             any_dirty = true;
             if (r.beginEditorTexture()) {
-                if (scan.max > cols) {
+                if (max_line_width > cols) {
                     draw_list.clear();
-                    drawHorizontalScrollbar(widget, r, origin_x, origin_y, width, height, scan.max, cols, vscroll_w, draw_list);
+                    drawHorizontalScrollbar(widget, r, origin_x, origin_y, width, height, max_line_width, cols, vscroll_w, draw_list);
                     flushDrawList(draw_list, r);
                 }
                 if (show_vscroll) {
@@ -1379,7 +1392,6 @@ pub fn precomputeHighlightTokens(
     const r = shell.rendererPtr();
     if (budget_lines == 0) return;
     if (height <= 0) return;
-    widget.editor.ensureHighlighter();
     if (widget.editor.highlighter == null) return;
     const total_lines = widget.editor.lineCount();
     if (total_lines == 0) return;

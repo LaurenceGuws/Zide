@@ -5,6 +5,7 @@ const syntax_mod = @import("editor/syntax.zig");
 const ts_api = @import("editor/treesitter_api.zig");
 const shared_types = @import("types/mod.zig");
 const renderer_mod = @import("ui/renderer.zig");
+const cursor_mod = @import("editor/view/cursor.zig");
 
 extern "c" fn tree_sitter_zig() *const ts_api.c_api.TSLanguage;
 
@@ -127,6 +128,44 @@ test "editor undo redo updates cursor offset" {
     try std.testing.expectEqualStrings("word1", after_redo);
     try std.testing.expectEqual(@as(usize, 5), editor.cursor.offset);
     try std.testing.expectEqual(@as(usize, 5), editor.cursor.col);
+}
+
+test "editor undo redo restores multi-caret selection set" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("abcdef");
+    editor.setCursor(0, 3);
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 1, .offset = 1 },
+        .end = .{ .line = 0, .col = 1, .offset = 1 },
+    });
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 5, .offset = 5 },
+        .end = .{ .line = 0, .col = 5, .offset = 5 },
+    });
+
+    try editor.insertChar('X');
+
+    try std.testing.expect(try editor.undo());
+    const after_undo = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after_undo);
+    try std.testing.expectEqualStrings("abcdef", after_undo);
+    try std.testing.expectEqual(@as(usize, 3), editor.cursor.offset);
+    try std.testing.expectEqual(@as(usize, 2), editor.selectionCount());
+    try std.testing.expectEqual(@as(usize, 1), editor.selectionAt(0).?.start.offset);
+    try std.testing.expectEqual(@as(usize, 5), editor.selectionAt(1).?.start.offset);
+
+    try std.testing.expect(try editor.redo());
+    const after_redo = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after_redo);
+    try std.testing.expectEqualStrings("aXbcXdeXf", after_redo);
+    try std.testing.expectEqual(@as(usize, 5), editor.cursor.offset);
+    try std.testing.expectEqual(@as(usize, 2), editor.selectionCount());
+    try std.testing.expectEqual(@as(usize, 2), editor.selectionAt(0).?.start.offset);
+    try std.testing.expectEqual(@as(usize, 8), editor.selectionAt(1).?.start.offset);
 }
 
 test "editor line width cache counts utf8 codepoints" {
@@ -278,6 +317,64 @@ test "editor delete across selections preserves caret set" {
     const after = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
     defer allocator.free(after);
     try std.testing.expectEqualStrings("acd", after);
+    try std.testing.expectEqual(@as(usize, 1), editor.selectionCount());
+
+    const first = editor.selectionAt(0) orelse return error.TestUnexpectedResult;
+    try std.testing.expect(first.isEmpty());
+    try std.testing.expectEqual(@as(usize, 1), first.start.offset);
+    try std.testing.expectEqual(@as(usize, 3), editor.cursor.offset);
+}
+
+test "editor backspace across zero-length carets preserves caret set" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("abcdef");
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 2, .offset = 2 },
+        .end = .{ .line = 0, .col = 2, .offset = 2 },
+    });
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 5, .offset = 5 },
+        .end = .{ .line = 0, .col = 5, .offset = 5 },
+    });
+
+    try editor.deleteCharBackward();
+
+    const after = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after);
+    try std.testing.expectEqualStrings("acd", after);
+    try std.testing.expectEqual(@as(usize, 1), editor.selectionCount());
+
+    const first = editor.selectionAt(0) orelse return error.TestUnexpectedResult;
+    try std.testing.expect(first.isEmpty());
+    try std.testing.expectEqual(@as(usize, 1), first.start.offset);
+    try std.testing.expectEqual(@as(usize, 3), editor.cursor.offset);
+}
+
+test "editor delete forward across zero-length carets preserves caret set" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("abcdef");
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 1, .offset = 1 },
+        .end = .{ .line = 0, .col = 1, .offset = 1 },
+    });
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 4, .offset = 4 },
+        .end = .{ .line = 0, .col = 4, .offset = 4 },
+    });
+
+    try editor.deleteCharForward();
+
+    const after = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after);
+    try std.testing.expectEqualStrings("acdf", after);
     try std.testing.expectEqual(@as(usize, 2), editor.selectionCount());
 
     const first = editor.selectionAt(0) orelse return error.TestUnexpectedResult;
@@ -286,6 +383,38 @@ test "editor delete across selections preserves caret set" {
     try std.testing.expect(second.isEmpty());
     try std.testing.expectEqual(@as(usize, 1), first.start.offset);
     try std.testing.expectEqual(@as(usize, 3), second.start.offset);
+    try std.testing.expectEqual(@as(usize, 4), editor.cursor.offset);
+}
+
+test "editor backspace across mixed range and caret broadcasts both" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("abcdef");
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 1, .offset = 1 },
+        .end = .{ .line = 0, .col = 3, .offset = 3 },
+    });
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 5, .offset = 5 },
+        .end = .{ .line = 0, .col = 5, .offset = 5 },
+    });
+
+    try editor.deleteCharBackward();
+
+    const after = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after);
+    try std.testing.expectEqualStrings("adf", after);
+    try std.testing.expectEqual(@as(usize, 2), editor.selectionCount());
+
+    const first = editor.selectionAt(0) orelse return error.TestUnexpectedResult;
+    const second = editor.selectionAt(1) orelse return error.TestUnexpectedResult;
+    try std.testing.expect(first.isEmpty());
+    try std.testing.expect(second.isEmpty());
+    try std.testing.expectEqual(@as(usize, 1), first.start.offset);
+    try std.testing.expectEqual(@as(usize, 2), second.start.offset);
 }
 
 test "editor add caret down duplicates current caret by line" {
@@ -320,6 +449,227 @@ test "editor add caret down duplicates all current carets" {
     const second = editor.selectionAt(1) orelse return error.TestUnexpectedResult;
     try std.testing.expectEqual(@as(usize, 5), first.start.offset);
     try std.testing.expectEqual(@as(usize, 9), second.start.offset);
+}
+
+test "editor move left preserves zero-length caret set" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("abcdef");
+    editor.setCursor(0, 3);
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 1, .offset = 1 },
+        .end = .{ .line = 0, .col = 1, .offset = 1 },
+    });
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 5, .offset = 5 },
+        .end = .{ .line = 0, .col = 5, .offset = 5 },
+    });
+
+    editor.moveCursorLeft();
+
+    try std.testing.expectEqual(@as(usize, 2), editor.cursor.offset);
+    try std.testing.expectEqual(@as(usize, 2), editor.selectionCount());
+    try std.testing.expectEqual(@as(usize, 0), editor.selectionAt(0).?.start.offset);
+    try std.testing.expectEqual(@as(usize, 4), editor.selectionAt(1).?.start.offset);
+}
+
+test "editor move to line end preserves zero-length caret set" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("ab\ncdef\nghi");
+    editor.setCursor(0, 1);
+    try editor.addSelection(.{
+        .start = .{ .line = 1, .col = 1, .offset = 4 },
+        .end = .{ .line = 1, .col = 1, .offset = 4 },
+    });
+    try editor.addSelection(.{
+        .start = .{ .line = 2, .col = 0, .offset = 8 },
+        .end = .{ .line = 2, .col = 0, .offset = 8 },
+    });
+
+    editor.moveCursorToLineEnd();
+
+    try std.testing.expectEqual(@as(usize, 2), editor.cursor.offset);
+    try std.testing.expectEqual(@as(usize, 2), editor.selectionCount());
+    try std.testing.expectEqual(@as(usize, 7), editor.selectionAt(0).?.start.offset);
+    try std.testing.expectEqual(@as(usize, 11), editor.selectionAt(1).?.start.offset);
+}
+
+test "editor insert across caret set preserves primary cursor ownership" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("abcdef");
+    editor.setCursor(0, 3);
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 1, .offset = 1 },
+        .end = .{ .line = 0, .col = 1, .offset = 1 },
+    });
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 5, .offset = 5 },
+        .end = .{ .line = 0, .col = 5, .offset = 5 },
+    });
+
+    try editor.insertChar('X');
+
+    try std.testing.expectEqual(@as(usize, 5), editor.cursor.offset);
+    try std.testing.expectEqual(@as(usize, 2), editor.selectionCount());
+    try std.testing.expectEqual(@as(usize, 2), editor.selectionAt(0).?.start.offset);
+    try std.testing.expectEqual(@as(usize, 8), editor.selectionAt(1).?.start.offset);
+}
+
+test "editor caret accessors expose primary and auxiliary carets separately" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("abcdef");
+    editor.setCursor(0, 3);
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 1, .offset = 1 },
+        .end = .{ .line = 0, .col = 1, .offset = 1 },
+    });
+    try editor.addSelection(.{
+        .start = .{ .line = 0, .col = 5, .offset = 5 },
+        .end = .{ .line = 0, .col = 5, .offset = 5 },
+    });
+
+    try std.testing.expectEqual(@as(usize, 3), editor.primaryCaret().offset);
+    try std.testing.expectEqual(@as(usize, 2), editor.auxiliaryCaretCount());
+    try std.testing.expectEqual(@as(usize, 1), editor.auxiliaryCaretAt(0).?.offset);
+    try std.testing.expectEqual(@as(usize, 5), editor.auxiliaryCaretAt(1).?.offset);
+    try std.testing.expect(editor.auxiliaryCaretAt(2) == null);
+}
+
+test "editor word movement advances by word boundaries" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("alpha beta_gamma  delta");
+    editor.setCursor(0, 0);
+    editor.moveCursorWordRight();
+    try std.testing.expectEqual(@as(usize, 6), editor.cursor.offset);
+    editor.moveCursorWordRight();
+    try std.testing.expectEqual(@as(usize, 18), editor.cursor.offset);
+    editor.moveCursorWordLeft();
+    try std.testing.expectEqual(@as(usize, 6), editor.cursor.offset);
+}
+
+test "editor extend selection word right uses current cursor as anchor" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("alpha beta");
+    editor.setCursor(0, 0);
+    editor.extendSelectionWordRight();
+
+    const sel = editor.selection orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 0), sel.start.offset);
+    try std.testing.expectEqual(@as(usize, 6), sel.end.offset);
+    try std.testing.expectEqual(@as(usize, 6), editor.cursor.offset);
+}
+
+test "editor extend selection to line end" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("alpha\nbeta");
+    editor.setCursor(0, 2);
+    editor.extendSelectionToLineEnd();
+
+    const sel = editor.selection orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 2), sel.start.offset);
+    try std.testing.expectEqual(@as(usize, 5), sel.end.offset);
+    try std.testing.expectEqual(@as(usize, 5), editor.cursor.offset);
+}
+
+test "editor visual move down preserves zero-length caret set" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("one\ntwo\nthree");
+    editor.setCursor(0, 1);
+    try editor.addSelection(.{
+        .start = .{ .line = 1, .col = 1, .offset = 5 },
+        .end = .{ .line = 1, .col = 1, .offset = 5 },
+    });
+
+    var renderer = FakeRenderer.init(allocator, 320, 64, 8, 16);
+    defer renderer.deinit();
+    var widget = FakeWidget{ .editor = editor, .gutter_width = 0, .wrap_enabled = false };
+
+    try std.testing.expect(try widget.moveCursorVisual(&renderer, 1));
+    try std.testing.expectEqual(@as(usize, 5), editor.cursor.offset);
+    try std.testing.expectEqual(@as(usize, 2), editor.selectionCount());
+    try std.testing.expectEqual(@as(usize, 5), editor.selectionAt(0).?.start.offset);
+    try std.testing.expectEqual(@as(usize, 9), editor.selectionAt(1).?.start.offset);
+}
+
+test "editor visual selection extend follows wrapped segments" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("abcdefghij");
+    editor.setCursor(0, 1);
+
+    var renderer = FakeRenderer.init(allocator, 74, 200, 8, 16);
+    defer renderer.deinit();
+    var widget = FakeWidget{ .editor = editor, .gutter_width = 50, .wrap_enabled = true };
+
+    try std.testing.expect(widget.extendSelectionVisual(&renderer, 1));
+    const down_sel = editor.selection orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 1), down_sel.start.offset);
+    try std.testing.expectEqual(@as(usize, 4), down_sel.end.offset);
+    try std.testing.expectEqual(@as(usize, 4), editor.cursor.offset);
+
+    try std.testing.expect(widget.extendSelectionVisual(&renderer, 1));
+    const next_sel = editor.selection orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 1), next_sel.start.offset);
+    try std.testing.expectEqual(@as(usize, 7), next_sel.end.offset);
+    try std.testing.expectEqual(@as(usize, 7), editor.cursor.offset);
+}
+
+test "editor visual selection extend follows logical lines when wrap is disabled" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("abcd\nef\nghij");
+    editor.setCursor(1, 1);
+
+    var renderer = FakeRenderer.init(allocator, 320, 200, 8, 16);
+    defer renderer.deinit();
+    var widget = FakeWidget{ .editor = editor, .gutter_width = 0, .wrap_enabled = false };
+
+    try std.testing.expect(widget.extendSelectionVisual(&renderer, -1));
+    const up_sel = editor.selection orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 6), up_sel.start.offset);
+    try std.testing.expectEqual(@as(usize, 1), up_sel.end.offset);
+    try std.testing.expectEqual(@as(usize, 1), editor.cursor.offset);
+
+    try std.testing.expect(widget.extendSelectionVisual(&renderer, 1));
+    try std.testing.expect(editor.selection == null);
+    try std.testing.expectEqual(@as(usize, 6), editor.cursor.offset);
 }
 
 const draw_mod = @import("ui/widgets/editor_widget_draw.zig");
@@ -559,6 +909,116 @@ const FakeWidget = struct {
         out_slice.* = null;
         out_owned.* = false;
     }
+
+    pub fn moveCursorVisual(self: *FakeWidget, r: *FakeRenderer, delta: i32) !bool {
+        const cols = self.viewportColumns(r);
+
+        const Ctx = struct {
+            widget: *FakeWidget,
+            renderer: *FakeRenderer,
+        };
+        const ctx = Ctx{ .widget = self, .renderer = r };
+
+        const provider = cursor_mod.LineProvider{
+            .ctx = @constCast(&ctx),
+            .getLineText = struct {
+                fn call(raw_ctx: *anyopaque, line_idx: usize, scratch: *cursor_mod.LineScratch) cursor_mod.LineSlice {
+                    const payload: *Ctx = @ptrCast(@alignCast(raw_ctx));
+                    _ = payload.renderer;
+                    const editor = payload.widget.editor;
+                    const line_len = editor.lineLen(line_idx);
+                    if (line_len <= scratch.buf.len) {
+                        const len = editor.getLine(line_idx, scratch.buf);
+                        return .{ .text = scratch.buf[0..len], .owned = null };
+                    }
+                    const owned = editor.getLineAlloc(line_idx) catch return .{ .text = &[_]u8{}, .owned = null };
+                    return .{ .text = owned, .owned = owned };
+                }
+            }.call,
+            .getClusters = struct {
+                fn call(raw_ctx: *anyopaque, line_idx: usize, line_text: []const u8) cursor_mod.ClusterSlice {
+                    const payload: *Ctx = @ptrCast(@alignCast(raw_ctx));
+                    var slice: ?[]const u32 = null;
+                    var owned = false;
+                    payload.widget.clusterOffsets(payload.renderer, line_idx, line_text, &slice, &owned);
+                    return .{ .clusters = slice, .owned = owned };
+                }
+            }.call,
+            .freeLineText = struct {
+                fn call(raw_ctx: *anyopaque, owned: []u8) void {
+                    const payload: *Ctx = @ptrCast(@alignCast(raw_ctx));
+                    payload.widget.editor.allocator.free(owned);
+                }
+            }.call,
+            .freeClusters = struct {
+                fn call(raw_ctx: *anyopaque, owned: []const u32) void {
+                    const payload: *Ctx = @ptrCast(@alignCast(raw_ctx));
+                    payload.widget.editor.allocator.free(owned);
+                }
+            }.call,
+        };
+
+        var buf_a: [4096]u8 = undefined;
+        var buf_b: [4096]u8 = undefined;
+        var scratch_a = cursor_mod.LineScratch{ .buf = buf_a[0..] };
+        var scratch_b = cursor_mod.LineScratch{ .buf = buf_b[0..] };
+        return cursor_mod.moveCaretSetVisual(self.editor, delta, cols, self.wrap_enabled, &provider, &scratch_a, &scratch_b);
+    }
+
+    pub fn extendSelectionVisual(self: *FakeWidget, r: *FakeRenderer, delta: i32) bool {
+        const cols = self.viewportColumns(r);
+
+        const Ctx = struct {
+            widget: *FakeWidget,
+            renderer: *FakeRenderer,
+        };
+        const ctx = Ctx{ .widget = self, .renderer = r };
+
+        const provider = cursor_mod.LineProvider{
+            .ctx = @constCast(&ctx),
+            .getLineText = struct {
+                fn call(raw_ctx: *anyopaque, line_idx: usize, scratch: *cursor_mod.LineScratch) cursor_mod.LineSlice {
+                    const payload: *Ctx = @ptrCast(@alignCast(raw_ctx));
+                    _ = payload.renderer;
+                    const editor = payload.widget.editor;
+                    const line_len = editor.lineLen(line_idx);
+                    if (line_len <= scratch.buf.len) {
+                        const len = editor.getLine(line_idx, scratch.buf);
+                        return .{ .text = scratch.buf[0..len], .owned = null };
+                    }
+                    const owned = editor.getLineAlloc(line_idx) catch return .{ .text = &[_]u8{}, .owned = null };
+                    return .{ .text = owned, .owned = owned };
+                }
+            }.call,
+            .getClusters = struct {
+                fn call(raw_ctx: *anyopaque, line_idx: usize, line_text: []const u8) cursor_mod.ClusterSlice {
+                    const payload: *Ctx = @ptrCast(@alignCast(raw_ctx));
+                    var slice: ?[]const u32 = null;
+                    var owned = false;
+                    payload.widget.clusterOffsets(payload.renderer, line_idx, line_text, &slice, &owned);
+                    return .{ .clusters = slice, .owned = owned };
+                }
+            }.call,
+            .freeLineText = struct {
+                fn call(raw_ctx: *anyopaque, owned: []u8) void {
+                    const payload: *Ctx = @ptrCast(@alignCast(raw_ctx));
+                    payload.widget.editor.allocator.free(owned);
+                }
+            }.call,
+            .freeClusters = struct {
+                fn call(raw_ctx: *anyopaque, owned: []const u32) void {
+                    const payload: *Ctx = @ptrCast(@alignCast(raw_ctx));
+                    payload.widget.editor.allocator.free(owned);
+                }
+            }.call,
+        };
+
+        var buf_a: [4096]u8 = undefined;
+        var buf_b: [4096]u8 = undefined;
+        var scratch_a = cursor_mod.LineScratch{ .buf = buf_a[0..] };
+        var scratch_b = cursor_mod.LineScratch{ .buf = buf_b[0..] };
+        return cursor_mod.extendSelectionVisual(self.editor, delta, cols, self.wrap_enabled, &provider, &scratch_a, &scratch_b);
+    }
 };
 
 fn textOpsOnly(allocator: std.mem.Allocator, log: []const u8) ![]u8 {
@@ -757,6 +1217,106 @@ test "editor render cache dirty line update" {
     try std.testing.expect(std.mem.indexOf(u8, log, "two") != null);
 }
 
+test "editor render cache redraws on search change" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("alpha beta alpha");
+
+    var renderer = FakeRenderer.init(allocator, 320, 32, 8, 16);
+    defer renderer.deinit();
+
+    var widget = FakeWidget{ .editor = editor, .gutter_width = 0, .wrap_enabled = false };
+    var cache = cache_mod.EditorRenderCache.init(allocator, 256);
+    defer cache.deinit();
+    const input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
+
+    draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 32, 1, input);
+    renderer.clearLog();
+    draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 32, 2, input);
+    try std.testing.expectEqual(@as(usize, 0), renderer.log.data.items.len);
+
+    try editor.setSearchQuery("alpha");
+    draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 32, 3, input);
+    try std.testing.expect(renderer.log.data.items.len > 0);
+    try std.testing.expect(std.mem.indexOf(u8, renderer.log.data.items, "#44475A98") != null);
+}
+
+test "editor render cache redraws on selection change" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("alpha beta");
+
+    var renderer = FakeRenderer.init(allocator, 320, 32, 8, 16);
+    defer renderer.deinit();
+
+    var widget = FakeWidget{ .editor = editor, .gutter_width = 0, .wrap_enabled = false };
+    var cache = cache_mod.EditorRenderCache.init(allocator, 256);
+    defer cache.deinit();
+    const input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
+
+    draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 32, 1, input);
+    renderer.clearLog();
+    draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 32, 2, input);
+    try std.testing.expectEqual(@as(usize, 0), renderer.log.data.items.len);
+
+    editor.selection = .{
+        .start = .{ .line = 0, .col = 0, .offset = 0 },
+        .end = .{ .line = 0, .col = 5, .offset = 5 },
+    };
+    draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 32, 3, input);
+    try std.testing.expect(renderer.log.data.items.len > 0);
+    try std.testing.expect(std.mem.indexOf(u8, renderer.log.data.items, "#44475AFF") != null);
+}
+
+test "editor render cache redraws on highlight epoch change" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("const foo = bar;\n");
+
+    var renderer = FakeRenderer.init(allocator, 320, 32, 8, 16);
+    defer renderer.deinit();
+    var widget = FakeWidget{ .editor = editor, .gutter_width = 0, .wrap_enabled = false };
+    var cache = cache_mod.EditorRenderCache.init(allocator, 256);
+    defer cache.deinit();
+    const input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
+
+    draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 32, 1, input);
+    renderer.clearLog();
+    draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 32, 2, input);
+    try std.testing.expectEqual(@as(usize, 0), renderer.log.data.items.len);
+
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const query =
+        \\((identifier) @keyword (#eq? @keyword "foo"))
+    ;
+    try tmp.dir.writeFile(.{ .sub_path = "highlights.scm", .data = query });
+    const query_path = try tmp.dir.realpathAlloc(allocator, "highlights.scm");
+    defer allocator.free(query_path);
+
+    editor.highlighter = try syntax_mod.createHighlighterForLanguage(
+        allocator,
+        editor.buffer,
+        "zig",
+        tree_sitter_zig(),
+        .{ .highlights = query_path },
+        null,
+    );
+    editor.highlight_epoch +|= 1;
+    draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 32, 3, input);
+    try std.testing.expect(renderer.log.data.items.len > 0);
+    try std.testing.expect(std.mem.indexOf(u8, renderer.log.data.items, "#FF79C6FF") != null);
+}
+
 test "editor search query scaffold tracks matches" {
     const allocator = std.testing.allocator;
     var fixture = try EditorFixture.init(allocator);
@@ -839,6 +1399,25 @@ test "editor focus search active match jumps without advancing" {
     try std.testing.expect(editor.activateNextSearchMatch());
     const wrapped = editor.searchActiveMatch() orelse return error.TestUnexpectedResult;
     try std.testing.expectEqual(@as(usize, 0), wrapped.start);
+}
+
+test "taking highlight dirty range preserves search state" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("alpha beta alpha");
+    try editor.setSearchQuery("alpha");
+    try std.testing.expectEqual(@as(usize, 2), editor.searchMatches().len);
+
+    const dirty = editor.takeHighlightDirtyRange() orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 0), dirty.start_line);
+    try std.testing.expectEqual(@as(usize, 1), dirty.end_line);
+    try std.testing.expectEqual(@as(usize, 2), editor.searchMatches().len);
+
+    const active = editor.searchActiveMatch() orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 0), active.start);
 }
 
 test "editor regex search finds pattern matches" {
@@ -1000,4 +1579,34 @@ test "editor immediate and cached draw agree for conceal/url highlights" {
     try std.testing.expectEqualStrings(immediate_text, cached_text);
     try std.testing.expect(std.mem.indexOf(u8, immediate_text, "\"X\" #FF79C6FF") != null);
     try std.testing.expect(std.mem.indexOf(u8, immediate_text, "\"bar\" #8BE9FDFF") != null);
+}
+
+test "editor immediate and cached draw distinguish active search match" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("alpha beta alpha");
+    try editor.setSearchQuery("alpha");
+
+    const input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
+    var widget = FakeWidget{ .editor = editor, .gutter_width = 0, .wrap_enabled = false };
+
+    var immediate_renderer = FakeRenderer.init(allocator, 320, 32, 8, 16);
+    defer immediate_renderer.deinit();
+    draw_mod.draw(&widget, &immediate_renderer, 0, 0, 320, 32, input);
+
+    var cached_renderer = FakeRenderer.init(allocator, 320, 32, 8, 16);
+    defer cached_renderer.deinit();
+    var cache = cache_mod.EditorRenderCache.init(allocator, 256);
+    defer cache.deinit();
+    draw_mod.drawCached(&widget, &cached_renderer, &cache, 0, 0, 320, 32, 1, input);
+
+    const immediate_log = immediate_renderer.log.data.items;
+    const cached_log = cached_renderer.log.data.items;
+    try std.testing.expect(std.mem.indexOf(u8, immediate_log, "#44475A98") != null);
+    try std.testing.expect(std.mem.indexOf(u8, immediate_log, "#44475A50") != null);
+    try std.testing.expect(std.mem.indexOf(u8, cached_log, "#44475A98") != null);
+    try std.testing.expect(std.mem.indexOf(u8, cached_log, "#44475A50") != null);
 }

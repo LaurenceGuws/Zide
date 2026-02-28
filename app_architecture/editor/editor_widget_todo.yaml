@@ -100,11 +100,12 @@ editor_widget_todo:
         - reference_repos/text/scintilla/src/CellBuffer.cxx
 
     - id: ED-02
-      status: todo
+      status: in_progress
       title: "Undo/redo batching + history model"
       notes:
         - "Group edits by command and merge adjacent inserts."
         - "Expose undo checkpoints for macros and multi-step ops."
+        - "Editor now snapshots selection/caret state around edits so undo/redo can restore multi-caret layouts, not only a single cursor offset."
       references:
         - reference_repos/editors/helix/helix-core/src/transaction.rs
         - reference_repos/editors/neovim/src/nvim/undo.c
@@ -132,6 +133,16 @@ editor_widget_todo:
         - "Cursor up/down moves across wrapped segments."
         - "Mouse wheel scrolls by visual rows in soft-wrap mode."
         - "Editor text rendering uses monospace advances to align cursor columns with glyph positions."
+        - "Backspace/delete-forward now broadcast across the zero-length multi-caret selection set instead of only editing the primary cursor."
+        - "Left/right/home/end and visual up/down now preserve the zero-length multi-caret set instead of collapsing to the primary cursor."
+        - "Multi-selection copy now skips empty carets without emitting stray separator newlines."
+        - "Primary caret ownership is now preserved across multi-caret restore paths instead of silently promoting the first normalized caret."
+        - "The editor model now treats `cursor` as the primary caret and keeps auxiliary zero-length carets only in `selections`, rather than duplicating the primary caret into the auxiliary set."
+        - "Editor core now exposes explicit primary/auxiliary caret accessors on top of that model so future multi-caret work can avoid raw storage coupling."
+        - "Core word-left/word-right and selection-expanding movement APIs now exist in the editor engine."
+        - "Word-wise and expanding movement now route through the Lua keybind/input-router layer instead of staying editor-only helpers."
+        - "Visual `Shift+Up/Down` selection growth now routes through widget/view helpers, has app-level dispatch coverage, and is covered in both wrapped and non-wrapped movement paths."
+        - "Rectangular selection clipboard semantics are now regression-tested as per-line column slices, and cursor movement explicitly collapses column selections."
       references:
         - reference_repos/editors/helix/helix-core/src/selection.rs
         - reference_repos/editors/kakoune/src/selection.cc
@@ -174,6 +185,9 @@ editor_widget_todo:
         - "Active search match selection now follows cursor/query context and stays stable across recomputes instead of snapping back to the first hit."
         - "Status bar now hosts the first search query entry UI, with default keybinds for open/next/prev search."
         - "Status-bar search text now uses background-aware text rendering so the light theme keeps typed queries readable."
+        - "Cached editor draw no longer wipes live search state while consuming highlight dirty ranges; search overlays/counts work without the temporary immediate-draw fallback."
+        - "Highlight-dirty cache invalidation is now handed off before widget draw, keeping the cached editor render path read-only with respect to editor state."
+        - "Highlighter initialization and max-line-width scanning now run before draw; cached/immediate editor widget rendering no longer mutates core editor state during paint."
       references:
         - reference_repos/editors/neovim/src/nvim/search.c
         - reference_repos/editors/lapce/lapce-app/src/find.rs
@@ -259,10 +273,11 @@ editor_widget_todo:
         - reference_repos/editors/xi-editor/rust/core-lib/src/editor.rs
 
     - id: ED-13
-      status: todo
+      status: in_progress
       title: "Clipboard + multi-line paste handling"
       notes:
         - "Preserve indentation and line endings."
+        - "Baseline paste semantics now split plain multi-selection paste from column paste: plain sets broadcast one payload, while rectangular selections trim CRLF row endings, preserve trailing empty rows, repeat a single row, map exact row counts 1:1, cycle clipboard rows when counts mismatch, and treat tabbed rectangles in visual columns instead of byte columns."
       references:
         - reference_repos/editors/neovim/src/nvim/clipboard.c
         - reference_repos/editors/zed/crates/editor/src/editor.rs

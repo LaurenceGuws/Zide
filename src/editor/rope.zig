@@ -142,13 +142,14 @@ pub const Rope = struct {
     pub const UndoResult = struct {
         changed: bool,
         cursor: ?usize,
+        state: ?u64,
     };
 
     pub fn undo(self: *Rope) !UndoResult {
-        if (self.undo_stack.items.len == 0) return .{ .changed = false, .cursor = null };
+        if (self.undo_stack.items.len == 0) return .{ .changed = false, .cursor = null, .state = null };
         self.history_suspended = true;
         defer self.history_suspended = false;
-        const first = self.undo_stack.pop() orelse return .{ .changed = false, .cursor = null };
+        const first = self.undo_stack.pop() orelse return .{ .changed = false, .cursor = null, .state = null };
         if (first.kind != .boundary) {
             const cursor_pos = undoCursorPos(first);
             switch (first.kind) {
@@ -157,7 +158,7 @@ pub const Rope = struct {
                 .boundary => {},
             }
             try self.redo_stack.append(self.allocator, first);
-            return .{ .changed = true, .cursor = cursor_pos };
+            return .{ .changed = true, .cursor = cursor_pos, .state = first.before_state };
         }
 
         const end_marker = first;
@@ -172,7 +173,7 @@ pub const Rope = struct {
                     try self.redo_stack.append(self.allocator, temp_op);
                 }
                 try self.redo_stack.append(self.allocator, end_marker);
-                return .{ .changed = temp.items.len > 0, .cursor = cursor_pos };
+                return .{ .changed = temp.items.len > 0, .cursor = cursor_pos, .state = end_marker.before_state orelse op.before_state };
             }
             cursor_pos = undoCursorPos(op);
             switch (op.kind) {
@@ -187,14 +188,14 @@ pub const Rope = struct {
         for (temp.items) |temp_op| {
             try self.redo_stack.append(self.allocator, temp_op);
         }
-        return .{ .changed = temp.items.len > 0, .cursor = cursor_pos };
+        return .{ .changed = temp.items.len > 0, .cursor = cursor_pos, .state = null };
     }
 
     pub fn redo(self: *Rope) !UndoResult {
-        if (self.redo_stack.items.len == 0) return .{ .changed = false, .cursor = null };
+        if (self.redo_stack.items.len == 0) return .{ .changed = false, .cursor = null, .state = null };
         self.history_suspended = true;
         defer self.history_suspended = false;
-        const first = self.redo_stack.pop() orelse return .{ .changed = false, .cursor = null };
+        const first = self.redo_stack.pop() orelse return .{ .changed = false, .cursor = null, .state = null };
         if (first.kind != .boundary) {
             const cursor_pos = redoCursorPos(first);
             switch (first.kind) {
@@ -203,7 +204,7 @@ pub const Rope = struct {
                 .boundary => {},
             }
             try self.undo_stack.append(self.allocator, first);
-            return .{ .changed = true, .cursor = cursor_pos };
+            return .{ .changed = true, .cursor = cursor_pos, .state = first.after_state };
         }
 
         const end_marker = first;
@@ -218,7 +219,7 @@ pub const Rope = struct {
                     try self.undo_stack.append(self.allocator, temp_op);
                 }
                 try self.undo_stack.append(self.allocator, end_marker);
-                return .{ .changed = temp.items.len > 0, .cursor = cursor_pos };
+                return .{ .changed = temp.items.len > 0, .cursor = cursor_pos, .state = end_marker.after_state };
             }
             cursor_pos = redoCursorPos(op);
             switch (op.kind) {
@@ -232,7 +233,7 @@ pub const Rope = struct {
         for (temp.items) |temp_op| {
             try self.undo_stack.append(self.allocator, temp_op);
         }
-        return .{ .changed = temp.items.len > 0, .cursor = cursor_pos };
+        return .{ .changed = temp.items.len > 0, .cursor = cursor_pos, .state = null };
     }
 
     pub fn beginUndoGroup(self: *Rope) void {
@@ -270,6 +271,32 @@ pub const Rope = struct {
                 }
             }
         }
+    }
+
+    pub fn annotateLastUndoState(self: *Rope, before_state: ?u64, after_state: ?u64) void {
+        if (self.undo_stack.items.len == 0) return;
+        const last = &self.undo_stack.items[self.undo_stack.items.len - 1];
+        if (last.kind == .boundary) return;
+        if (before_state) |id| {
+            if (last.before_state == null) last.before_state = id;
+        }
+        if (after_state) |id| {
+            last.after_state = id;
+        }
+    }
+
+    pub fn annotateCurrentUndoGroupBefore(self: *Rope, before_state: u64) void {
+        if (self.undo_stack.items.len == 0) return;
+        const last = &self.undo_stack.items[self.undo_stack.items.len - 1];
+        if (last.kind != .boundary) return;
+        last.before_state = before_state;
+    }
+
+    pub fn annotateClosedUndoGroupAfter(self: *Rope, after_state: u64) void {
+        if (self.undo_stack.items.len == 0) return;
+        const last = &self.undo_stack.items[self.undo_stack.items.len - 1];
+        if (last.kind != .boundary) return;
+        last.after_state = after_state;
     }
 
     fn insertNoHistory(self: *Rope, offset: usize, data: []const u8) !void {
@@ -662,6 +689,8 @@ const UndoOp = struct {
     kind: UndoKind,
     pos: usize,
     text: []u8,
+    before_state: ?u64 = null,
+    after_state: ?u64 = null,
 };
 
 fn undoCursorPos(op: UndoOp) usize {

@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const std = @import("std");
 
 var log_file: ?std.fs.File = null;
@@ -102,7 +103,10 @@ fn isEnabled(name: []const u8, filter_override: ?[]const u8, env_key: [:0]const 
         if (std.c.getenv("ZIDE_LOG")) |env_all| {
             break :blk std.mem.sliceTo(env_all, 0);
         }
-        const env = std.c.getenv(env_key) orelse return true;
+        const env = std.c.getenv(env_key) orelse {
+            if (builtin.is_test) return false;
+            return true;
+        };
         break :blk std.mem.sliceTo(env, 0);
     };
     if (raw.len == 0) return false;

@@ -149,6 +149,14 @@ fn applyRendererFontRenderingConfig(shell: *Shell, config: *const config_mod.Con
 }
 
 const AppState = struct {
+    const SearchPanelCommand = enum {
+        none,
+        close,
+        next,
+        prev,
+        backspace,
+    };
+
     const SearchPanelState = struct {
         active: bool,
         query: std.ArrayList(u8),
@@ -586,6 +594,19 @@ const AppState = struct {
         self.search_panel.active = false;
     }
 
+    fn consumeEditorHighlightDirtyRange(self: *AppState, editor: *Editor) void {
+        const total_lines = editor.lineCount();
+        if (editor.takeHighlightDirtyRange()) |range| {
+            const end_line = @min(range.end_line, total_lines);
+            self.editor_render_cache.invalidateHighlightRange(range.start_line, end_line);
+        }
+    }
+
+    fn prepareEditorForDisplay(self: *AppState, editor: *Editor) void {
+        self.consumeEditorHighlightDirtyRange(editor);
+        editor.ensureHighlighter();
+    }
+
     fn syncEditorSearchQuery(self: *AppState, editor: *Editor) !void {
         if (self.search_panel.query.items.len == 0) {
             try editor.setSearchQuery(null);
@@ -599,6 +620,39 @@ const AppState = struct {
         var idx = self.search_panel.query.items.len - 1;
         while (idx > 0 and (self.search_panel.query.items[idx] & 0b1100_0000) == 0b1000_0000) : (idx -= 1) {}
         self.search_panel.query.items.len = idx;
+    }
+
+    fn searchPanelCommand(input_batch: *const shared_types.input.InputBatch) SearchPanelCommand {
+        if (input_batch.keyPressed(.escape)) return .close;
+        if (input_batch.keyPressed(.enter) or input_batch.keyPressed(.kp_enter) or input_batch.keyPressed(.f3)) {
+            return if (input_batch.mods.shift) .prev else .next;
+        }
+        if (input_batch.keyPressed(.backspace) or input_batch.keyRepeated(.backspace)) return .backspace;
+        return .none;
+    }
+
+    fn appendSearchPanelTextEvents(
+        allocator: std.mem.Allocator,
+        query: *std.ArrayList(u8),
+        input_batch: *const shared_types.input.InputBatch,
+    ) !bool {
+        var appended = false;
+        for (input_batch.events.items) |event| {
+            if (event != .text) continue;
+            const text = event.text.utf8Slice();
+            if (text.len == 0) continue;
+            try query.appendSlice(allocator, text);
+            appended = true;
+        }
+        return appended;
+    }
+
+    fn visualExtendDeltaForAction(action: input_actions.ActionKind) ?i32 {
+        return switch (action) {
+            .editor_extend_up => -1,
+            .editor_extend_down => 1,
+            else => null,
+        };
     }
 
     fn handleSearchPanelInput(self: *AppState, editor: *Editor, input_batch: *shared_types.input.InputBatch) !bool {
@@ -620,40 +674,28 @@ const AppState = struct {
             }
         }.run;
 
-        if (input_batch.keyPressed(.escape)) {
-            self.closeSearchPanel();
-            return true;
-        }
-
-        if (input_batch.keyPressed(.enter) or input_batch.keyPressed(.kp_enter)) {
-            if (input_batch.mods.shift) {
-                _ = searchAction(editor, false);
-            } else {
+        switch (searchPanelCommand(input_batch)) {
+            .close => {
+                self.closeSearchPanel();
+                return true;
+            },
+            .next => {
                 _ = searchAction(editor, true);
-            }
-            return true;
-        }
-
-        if (input_batch.keyPressed(.f3)) {
-            if (input_batch.mods.shift) {
+                return true;
+            },
+            .prev => {
                 _ = searchAction(editor, false);
-            } else {
-                _ = searchAction(editor, true);
-            }
-            return true;
+                return true;
+            },
+            .backspace => {
+                self.popSearchQueryScalar();
+                query_changed = true;
+                handled = true;
+            },
+            .none => {},
         }
 
-        if (input_batch.keyPressed(.backspace) or input_batch.keyRepeated(.backspace)) {
-            self.popSearchQueryScalar();
-            query_changed = true;
-            handled = true;
-        }
-
-        for (input_batch.events.items) |event| {
-            if (event != .text) continue;
-            const text = event.text.utf8Slice();
-            if (text.len == 0) continue;
-            try self.search_panel.query.appendSlice(self.allocator, text);
+        if (try appendSearchPanelTextEvents(self.allocator, &self.search_panel.query, input_batch)) {
             query_changed = true;
             handled = true;
         }
@@ -1086,6 +1128,8 @@ const AppState = struct {
         if (focus == .editor and self.editors.items.len > 0) {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             const editor = self.editors.items[editor_idx];
+            var editor_widget = EditorWidget.initWithCache(editor, &self.editor_cluster_cache, self.editor_wrap);
+            const action_layout = self.computeLayout(@floatFromInt(r.width), @floatFromInt(r.height));
             for (self.input_router.actionsSlice()) |action| {
                 switch (action.kind) {
                     .copy => {
@@ -1144,6 +1188,54 @@ const AppState = struct {
                     },
                     .editor_add_caret_down => {
                         if (try editor.addCaretDown()) {
+                            self.needs_redraw = true;
+                            handled_shortcut = true;
+                        }
+                    },
+                    .editor_move_word_left => {
+                        editor.moveCursorWordLeft();
+                        self.needs_redraw = true;
+                        handled_shortcut = true;
+                    },
+                    .editor_move_word_right => {
+                        editor.moveCursorWordRight();
+                        self.needs_redraw = true;
+                        handled_shortcut = true;
+                    },
+                    .editor_extend_left => {
+                        editor.extendSelectionLeft();
+                        self.needs_redraw = true;
+                        handled_shortcut = true;
+                    },
+                    .editor_extend_right => {
+                        editor.extendSelectionRight();
+                        self.needs_redraw = true;
+                        handled_shortcut = true;
+                    },
+                    .editor_extend_line_start => {
+                        editor.extendSelectionToLineStart();
+                        self.needs_redraw = true;
+                        handled_shortcut = true;
+                    },
+                    .editor_extend_line_end => {
+                        editor.extendSelectionToLineEnd();
+                        self.needs_redraw = true;
+                        handled_shortcut = true;
+                    },
+                    .editor_extend_word_left => {
+                        editor.extendSelectionWordLeft();
+                        self.needs_redraw = true;
+                        handled_shortcut = true;
+                    },
+                    .editor_extend_word_right => {
+                        editor.extendSelectionWordRight();
+                        self.needs_redraw = true;
+                        handled_shortcut = true;
+                    },
+                    .editor_extend_up, .editor_extend_down => {
+                        const delta = visualExtendDeltaForAction(action.kind).?;
+                        if (editor_widget.extendSelectionVisual(shell, delta)) {
+                            editor_widget.ensureCursorVisible(shell, action_layout.editor.height);
                             self.needs_redraw = true;
                             handled_shortcut = true;
                         }
@@ -1613,6 +1705,7 @@ const AppState = struct {
             }
 
             if (layout.editor.width > 0 and layout.editor.height > 0) {
+                self.prepareEditorForDisplay(widget.editor);
                 const visible_lines = @as(usize, @intFromFloat(layout.editor.height / r.char_height));
                 const default_budget = if (visible_lines > 0) visible_lines + 1 else 0;
                 const highlight_budget = self.editor_highlight_budget orelse default_budget;
@@ -1989,35 +2082,18 @@ const AppState = struct {
             shell.setTheme(self.editor_theme);
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             const editor = self.editors.items[editor_idx];
-            if (self.search_panel.active) {
-                if (self.search_panel.query.items.len == 0) {
-                    editor.setSearchQuery(null) catch {};
-                } else {
-                    editor.setSearchQuery(self.search_panel.query.items) catch {};
-                }
-            }
+            self.prepareEditorForDisplay(editor);
             var widget = EditorWidget.initWithCache(editor, &self.editor_cluster_cache, self.editor_wrap);
-            if (self.search_panel.active) {
-                widget.draw(
-                    shell,
-                    layout.editor.x,
-                    layout.editor.y,
-                    layout.editor.width,
-                    layout.editor.height,
-                    self.last_input,
-                );
-            } else {
-                widget.drawCached(
-                    shell,
-                    &self.editor_render_cache,
-                    layout.editor.x,
-                    layout.editor.y,
-                    layout.editor.width,
-                    layout.editor.height,
-                    self.frame_id,
-                    self.last_input,
-                );
-            }
+            widget.drawCached(
+                shell,
+                &self.editor_render_cache,
+                layout.editor.x,
+                layout.editor.y,
+                layout.editor.width,
+                layout.editor.height,
+                self.frame_id,
+                self.last_input,
+            );
         }
 
         // Draw terminal if shown
@@ -2194,7 +2270,7 @@ test "editor cursor movement" {
     var grammar_manager = try grammar_manager_mod.GrammarManager.init(allocator);
     defer grammar_manager.deinit();
 
-    var editor = try Editor.init(allocator, &grammar_manager);
+    const editor = try Editor.init(allocator, &grammar_manager);
     defer editor.deinit();
 
     try editor.insertText("Line 1\nLine 2\nLine 3");
@@ -2219,4 +2295,108 @@ test "AppState.isDarkTheme classifies background luma" {
     var light_theme = app_shell.Theme{};
     light_theme.background = .{ .r = 245, .g = 245, .b = 245 };
     try std.testing.expect(!AppState.isDarkTheme(&light_theme));
+}
+
+test "search panel command maps navigation keys" {
+    const allocator = std.testing.allocator;
+    var batch = shared_types.input.InputBatch.init(allocator);
+    defer batch.deinit();
+
+    batch.key_pressed[@intFromEnum(shared_types.input.Key.enter)] = true;
+    try std.testing.expectEqual(AppState.SearchPanelCommand.next, AppState.searchPanelCommand(&batch));
+
+    batch.clear();
+    batch.key_pressed[@intFromEnum(shared_types.input.Key.f3)] = true;
+    batch.mods.shift = true;
+    try std.testing.expectEqual(AppState.SearchPanelCommand.prev, AppState.searchPanelCommand(&batch));
+
+    batch.clear();
+    batch.key_pressed[@intFromEnum(shared_types.input.Key.escape)] = true;
+    try std.testing.expectEqual(AppState.SearchPanelCommand.close, AppState.searchPanelCommand(&batch));
+
+    batch.clear();
+    batch.key_repeated[@intFromEnum(shared_types.input.Key.backspace)] = true;
+    try std.testing.expectEqual(AppState.SearchPanelCommand.backspace, AppState.searchPanelCommand(&batch));
+}
+
+test "search panel text helper appends utf8 input events" {
+    const allocator = std.testing.allocator;
+    var batch = shared_types.input.InputBatch.init(allocator);
+    defer batch.deinit();
+
+    var query = std.ArrayList(u8).empty;
+    defer query.deinit(allocator);
+
+    try batch.append(.{ .text = .{
+        .codepoint = 'a',
+        .utf8_len = 1,
+        .utf8 = .{ 'a', 0, 0, 0 },
+    } });
+    try batch.append(.{ .text = .{
+        .codepoint = 0x00E9,
+        .utf8_len = 2,
+        .utf8 = .{ 0xC3, 0xA9, 0, 0 },
+    } });
+
+    try std.testing.expect(try AppState.appendSearchPanelTextEvents(allocator, &query, &batch));
+    try std.testing.expectEqualStrings("a\xC3\xA9", query.items);
+}
+
+test "visual extend action helper maps routed editor actions" {
+    try std.testing.expectEqual(@as(?i32, -1), AppState.visualExtendDeltaForAction(.editor_extend_up));
+    try std.testing.expectEqual(@as(?i32, 1), AppState.visualExtendDeltaForAction(.editor_extend_down));
+    try std.testing.expectEqual(@as(?i32, null), AppState.visualExtendDeltaForAction(.editor_extend_right));
+}
+
+test "openSearchPanel restores editor query and clears stale panel text" {
+    const allocator = std.testing.allocator;
+
+    var grammar_manager = try grammar_manager_mod.GrammarManager.init(allocator);
+    defer grammar_manager.deinit();
+
+    var editor = try Editor.init(allocator, &grammar_manager);
+    defer editor.deinit();
+    try editor.setSearchQuery("alpha");
+
+    var app: AppState = undefined;
+    app.allocator = allocator;
+    app.search_panel = AppState.SearchPanelState.init(allocator);
+    defer app.search_panel.deinit(allocator);
+
+    try app.search_panel.query.appendSlice(allocator, "stale");
+    try app.openSearchPanel(editor);
+
+    try std.testing.expect(app.search_panel.active);
+    try std.testing.expectEqualStrings("alpha", app.search_panel.query.items);
+}
+
+test "search panel reopen preserves synced query through editor state" {
+    const allocator = std.testing.allocator;
+
+    var grammar_manager = try grammar_manager_mod.GrammarManager.init(allocator);
+    defer grammar_manager.deinit();
+
+    const editor = try Editor.init(allocator, &grammar_manager);
+    defer editor.deinit();
+
+    var app: AppState = undefined;
+    app.allocator = allocator;
+    app.search_panel = AppState.SearchPanelState.init(allocator);
+    defer app.search_panel.deinit(allocator);
+
+    try app.openSearchPanel(editor);
+    try app.search_panel.query.appendSlice(allocator, "beta");
+    try app.syncEditorSearchQuery(editor);
+    app.closeSearchPanel();
+
+    try std.testing.expect(!app.search_panel.active);
+    try std.testing.expectEqualStrings("beta", app.search_panel.query.items);
+
+    app.search_panel.query.clearRetainingCapacity();
+    try app.search_panel.query.appendSlice(allocator, "junk");
+    try app.openSearchPanel(editor);
+
+    try std.testing.expect(app.search_panel.active);
+    try std.testing.expectEqualStrings("beta", app.search_panel.query.items);
+    try std.testing.expectEqualStrings("beta", editor.searchQuery().?);
 }
