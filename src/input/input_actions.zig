@@ -32,6 +32,8 @@ pub const ActionKind = enum {
     editor_add_caret_down,
     editor_move_word_left,
     editor_move_word_right,
+    editor_move_large_up,
+    editor_move_large_down,
     editor_extend_left,
     editor_extend_right,
     editor_extend_line_start,
@@ -163,6 +165,8 @@ fn actionName(kind: ActionKind) []const u8 {
         .editor_add_caret_down => "editor_add_caret_down",
         .editor_move_word_left => "editor_move_word_left",
         .editor_move_word_right => "editor_move_word_right",
+        .editor_move_large_up => "editor_move_large_up",
+        .editor_move_large_down => "editor_move_large_down",
         .editor_extend_left => "editor_extend_left",
         .editor_extend_right => "editor_extend_right",
         .editor_extend_line_start => "editor_extend_line_start",
@@ -306,6 +310,13 @@ test "input router routes editor movement actions by scope and modifiers" {
         },
         .{
             .scope = .editor,
+            .key = .up,
+            .mods = .{ .ctrl = true },
+            .action = .editor_move_large_up,
+            .repeat = true,
+        },
+        .{
+            .scope = .editor,
             .key = .right,
             .mods = .{ .ctrl = true, .shift = true },
             .action = .editor_extend_word_right,
@@ -336,6 +347,17 @@ test "input router routes editor movement actions by scope and modifiers" {
     router.route(&batch, .editor);
     try std.testing.expectEqual(@as(usize, 1), router.actionsSlice().len);
     try std.testing.expectEqual(ActionKind.editor_move_word_left, router.actionsSlice()[0].kind);
+
+    batch.clear();
+    try batch.append(.{ .key = .{
+        .key = .up,
+        .mods = .{ .ctrl = true },
+        .pressed = true,
+        .repeated = false,
+    } });
+    router.route(&batch, .editor);
+    try std.testing.expectEqual(@as(usize, 1), router.actionsSlice().len);
+    try std.testing.expectEqual(ActionKind.editor_move_large_up, router.actionsSlice()[0].kind);
 
     batch.clear();
     try batch.append(.{ .key = .{

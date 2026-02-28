@@ -284,6 +284,8 @@ return {
             { key = "v", mods = { "ctrl" }, action = "paste" },
             { key = "left", mods = { "ctrl" }, action = "editor_move_word_left", ["repeat"] = true },
             { key = "right", mods = { "ctrl" }, action = "editor_move_word_right", ["repeat"] = true },
+            { key = "up", mods = { "ctrl" }, action = "editor_move_large_up", ["repeat"] = true },
+            { key = "down", mods = { "ctrl" }, action = "editor_move_large_down", ["repeat"] = true },
             { key = "left", mods = { "shift" }, action = "editor_extend_left", ["repeat"] = true },
             { key = "right", mods = { "shift" }, action = "editor_extend_right", ["repeat"] = true },
             { key = "home", mods = { "shift" }, action = "editor_extend_line_start", ["repeat"] = true },
