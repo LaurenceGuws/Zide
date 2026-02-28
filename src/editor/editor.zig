@@ -342,6 +342,21 @@ pub const Editor = struct {
 
     pub fn moveCursorUp(self: *Editor) void {
         if (self.hasOnlyCaretSelections()) return;
+        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
+            var collapsed = std.ArrayList(usize).empty;
+            defer collapsed.deinit(self.allocator);
+            if (self.selection) |sel| {
+                self.tryAppendCollapseOffset(&collapsed, sel.normalized().start.offset);
+            } else {
+                self.tryAppendCollapseOffset(&collapsed, self.cursor.offset);
+            }
+            for (self.selections.items) |sel| {
+                self.tryAppendCollapseOffset(&collapsed, sel.normalized().start.offset);
+            }
+            self.restoreCaretSelections(collapsed.items, collapsed.items[0]) catch {};
+            self.selection = null;
+            return;
+        }
         if (self.cursor.line == 0) return;
         const target_col = self.cursor.col;
         self.cursor.line -= 1;
@@ -355,6 +370,21 @@ pub const Editor = struct {
 
     pub fn moveCursorDown(self: *Editor) void {
         if (self.hasOnlyCaretSelections()) return;
+        if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
+            var collapsed = std.ArrayList(usize).empty;
+            defer collapsed.deinit(self.allocator);
+            if (self.selection) |sel| {
+                self.tryAppendCollapseOffset(&collapsed, sel.normalized().end.offset);
+            } else {
+                self.tryAppendCollapseOffset(&collapsed, self.cursor.offset);
+            }
+            for (self.selections.items) |sel| {
+                self.tryAppendCollapseOffset(&collapsed, sel.normalized().end.offset);
+            }
+            self.restoreCaretSelections(collapsed.items, collapsed.items[0]) catch {};
+            self.selection = null;
+            return;
+        }
         const line_count = self.buffer.lineCount();
         if (self.cursor.line + 1 >= line_count) return;
         const target_col = self.cursor.col;

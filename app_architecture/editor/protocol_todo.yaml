@@ -93,6 +93,7 @@ editor_protocol_todo:
         - "Ctrl+Shift+up/down now route as large visual selection extension jumps (five visual rows), matching the large ctrl+up/down cursor jumps."
         - "Extend actions now preserve existing multi-range anchor/head pairs across the full selection set, not only zero-length carets."
         - "Plain unmodified left/right movement now explicitly collapses mixed multi-range selection sets to directional edges while preserving the caret set."
+        - "Plain unmodified up/down movement now mirrors that collapse policy for mixed multi-range selection sets (up -> start edges, down -> end edges)."
         - "Large visual move/extend jump size is now editor-configurable (`editor.large_cursor_jump_rows`) instead of hardcoded."
         - "Ctrl+up/down now route as larger visual cursor jumps (five visual rows per step), alongside existing ctrl+left/right word jumps."
         - "Paste semantics are now explicit: plain multi-selection paste broadcasts one payload to every selection, while rectangular selections trim CRLF row endings, preserve trailing empty rows, repeat a single row, map exact row counts 1:1, cycle clipboard rows when counts mismatch, and interpret visual columns via cluster boundaries plus core visual widths (tabs, combining marks, wide glyphs) instead of raw bytes."
