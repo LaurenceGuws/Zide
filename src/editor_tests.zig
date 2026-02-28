@@ -235,6 +235,110 @@ test "editor undo redo restores mixed non-empty range state and primary ownershi
     }
 }
 
+test "editor undo redo restores mixed rectangular and primary selection state" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("abcd\nefgh\nijkl");
+    editor.selection = .{
+        .start = .{ .line = 0, .col = 3, .offset = 3 },
+        .end = .{ .line = 0, .col = 1, .offset = 1 },
+    };
+    try editor.expandRectSelection(0, 2, 1, 3);
+
+    try editor.insertText("ZZ\nYY\nXX");
+
+    const after_edit = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after_edit);
+    const after_edit_cursor = editor.cursor.offset;
+    const after_edit_primary = editor.selection;
+    var after_edit_aux: [8]Selection = undefined;
+    const after_edit_aux_len = editor.selectionCount();
+    try std.testing.expect(after_edit_aux_len <= after_edit_aux.len);
+    for (0..after_edit_aux_len) |idx| {
+        after_edit_aux[idx] = editor.selectionAt(idx) orelse return error.TestUnexpectedResult;
+    }
+
+    try std.testing.expect(try editor.undo());
+    const after_undo = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after_undo);
+    try std.testing.expectEqualStrings("abcd\nefgh\nijkl", after_undo);
+    const undo_primary = editor.selection orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 3), undo_primary.start.offset);
+    try std.testing.expectEqual(@as(usize, 1), undo_primary.end.offset);
+    try std.testing.expectEqual(@as(usize, 3), editor.selectionCount());
+    for (0..editor.selectionCount()) |idx| {
+        try std.testing.expect(editor.selectionAt(idx).?.is_rectangular);
+    }
+
+    try std.testing.expect(try editor.redo());
+    const after_redo = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after_redo);
+    try std.testing.expectEqualStrings(after_edit, after_redo);
+    try std.testing.expectEqual(after_edit_cursor, editor.cursor.offset);
+    if (after_edit_primary) |sel| {
+        const cur = editor.selection orelse return error.TestUnexpectedResult;
+        try std.testing.expectEqual(sel.start.offset, cur.start.offset);
+        try std.testing.expectEqual(sel.end.offset, cur.end.offset);
+        try std.testing.expectEqual(sel.is_rectangular, cur.is_rectangular);
+    } else {
+        try std.testing.expect(editor.selection == null);
+    }
+    try std.testing.expectEqual(after_edit_aux_len, editor.selectionCount());
+    for (0..after_edit_aux_len) |idx| {
+        const cur = editor.selectionAt(idx) orelse return error.TestUnexpectedResult;
+        const expected = after_edit_aux[idx];
+        try std.testing.expectEqual(expected.start.offset, cur.start.offset);
+        try std.testing.expectEqual(expected.end.offset, cur.end.offset);
+        try std.testing.expectEqual(expected.is_rectangular, cur.is_rectangular);
+    }
+}
+
+test "editor undo redo restores wrap-driven visual selection history" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("abcdefghij");
+    editor.setCursor(0, 1);
+
+    var renderer = FakeRenderer.init(allocator, 74, 200, 8, 16);
+    defer renderer.deinit();
+    var widget = FakeWidget{ .editor = editor, .gutter_width = 50, .wrap_enabled = true };
+
+    try std.testing.expect(widget.extendSelectionVisual(&renderer, 1));
+    try std.testing.expect(widget.extendSelectionVisual(&renderer, 1));
+    const before_edit_sel = editor.selection orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 1), before_edit_sel.start.offset);
+    try std.testing.expectEqual(@as(usize, 7), before_edit_sel.end.offset);
+    try std.testing.expectEqual(@as(usize, 7), editor.cursor.offset);
+
+    try editor.insertText("X");
+
+    const after_edit = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after_edit);
+    const after_edit_cursor = editor.cursor.offset;
+
+    try std.testing.expect(try editor.undo());
+    const after_undo = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after_undo);
+    try std.testing.expectEqualStrings("abcdefghij", after_undo);
+    const undo_sel = editor.selection orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 1), undo_sel.start.offset);
+    try std.testing.expectEqual(@as(usize, 7), undo_sel.end.offset);
+    try std.testing.expectEqual(@as(usize, 7), editor.cursor.offset);
+
+    try std.testing.expect(try editor.redo());
+    const after_redo = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(after_redo);
+    try std.testing.expectEqualStrings(after_edit, after_redo);
+    try std.testing.expectEqual(after_edit_cursor, editor.cursor.offset);
+    try std.testing.expect(editor.selection == null);
+}
+
 test "editor line width cache counts utf8 codepoints" {
     const allocator = std.testing.allocator;
     var fixture = try EditorFixture.init(allocator);
