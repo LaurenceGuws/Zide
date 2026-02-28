@@ -116,6 +116,38 @@ fn shellSingleQuoteAlloc(allocator: std.mem.Allocator, value: []const u8) ![]u8 
     return out.toOwnedSlice(allocator);
 }
 
+fn buildFontRenderingOptions(config: *const config_mod.Config) terminal_font_mod.RenderingOptions {
+    var font_opts: terminal_font_mod.RenderingOptions = .{};
+    if (config.font_lcd) |v| font_opts.lcd = v;
+    if (parseEnvBool("ZIDE_FONT_RENDERING_LCD")) |v| font_opts.lcd = v;
+    if (config.font_autohint) |v| font_opts.autohint = v;
+    if (config.font_hinting) |mode| {
+        font_opts.hinting = switch (mode) {
+            .default => .default,
+            .none => .none,
+            .light => .light,
+            .normal => .normal,
+        };
+    }
+    if (config.font_glyph_overflow) |policy| {
+        font_opts.glyph_overflow = switch (policy) {
+            .when_followed_by_space => .when_followed_by_space,
+            .never => .never,
+            .always => .always,
+        };
+    }
+    return font_opts;
+}
+
+fn applyRendererFontRenderingConfig(shell: *Shell, config: *const config_mod.Config, rebuild_fonts: bool) !void {
+    const renderer = shell.rendererPtr();
+    renderer.setFontRenderingOptions(buildFontRenderingOptions(config));
+    renderer.setTextRenderingConfig(config.text_gamma, config.text_contrast, config.text_linear_correction);
+    if (rebuild_fonts) {
+        try renderer.setFontConfig(null, null);
+    }
+}
+
 const AppState = struct {
     allocator: std.mem.Allocator,
     shell: *Shell,
@@ -243,6 +275,7 @@ const AppState = struct {
                 .text_contrast = null,
                 .text_linear_correction = null,
                 .theme = null,
+                .keybinds_no_defaults = null,
                 .keybinds = null,
             };
         };
@@ -266,27 +299,7 @@ const AppState = struct {
         errdefer shell.deinit(allocator);
 
         // Apply font rendering knobs before (re)loading fonts.
-        var font_opts: terminal_font_mod.RenderingOptions = .{};
-        if (config.font_lcd) |v| font_opts.lcd = v;
-        if (parseEnvBool("ZIDE_FONT_RENDERING_LCD")) |v| font_opts.lcd = v;
-        if (config.font_autohint) |v| font_opts.autohint = v;
-        if (config.font_hinting) |mode| {
-            font_opts.hinting = switch (mode) {
-                .default => .default,
-                .none => .none,
-                .light => .light,
-                .normal => .normal,
-            };
-        }
-        if (config.font_glyph_overflow) |policy| {
-            font_opts.glyph_overflow = switch (policy) {
-                .when_followed_by_space => .when_followed_by_space,
-                .never => .never,
-                .always => .always,
-            };
-        }
-        shell.rendererPtr().setFontRenderingOptions(font_opts);
-        shell.rendererPtr().setTextRenderingConfig(config.text_gamma, config.text_contrast, config.text_linear_correction);
+        try applyRendererFontRenderingConfig(shell, &config, false);
         shell.rendererPtr().setTerminalLigatureConfig(
             if (config.terminal_disable_ligatures) |v| switch (v) {
                 .never => .never,
@@ -1604,6 +1617,16 @@ const AppState = struct {
 
         if (config.keybinds) |binds| {
             self.input_router.setBindings(binds);
+        }
+
+        if (config.font_lcd != null or config.font_hinting != null or config.font_autohint != null or
+            config.font_glyph_overflow != null or config.text_gamma != null or
+            config.text_contrast != null or config.text_linear_correction != null)
+        {
+            try applyRendererFontRenderingConfig(self.shell, &config, true);
+            try self.refreshTerminalSizing();
+            self.needs_redraw = true;
+            log.logStdout("reload font_rendering applied", .{});
         }
 
         if (config.terminal_blink_style) |blink_style| {

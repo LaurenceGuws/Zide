@@ -375,6 +375,49 @@ pub fn build(b: *std.Build) void {
     const editor_test_step = b.step("test-editor", "Run editor-specific tests");
     editor_test_step.dependOn(&run_editor_tests.step);
 
+    const config_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/config_tests.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    if (use_vcpkg) {
+        config_tests.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
+        config_tests.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
+    }
+    config_tests.linkSystemLibrary("SDL3");
+    config_tests.linkSystemLibrary("freetype");
+    config_tests.linkSystemLibrary("harfbuzz");
+    config_tests.linkSystemLibrary("lua");
+    if (target_os == .linux) {
+        config_tests.linkSystemLibrary("GL");
+        config_tests.linkSystemLibrary("fontconfig");
+    } else if (target_os == .windows) {
+        config_tests.linkSystemLibrary("opengl32");
+    } else if (target_os == .macos) {
+        config_tests.linkFramework("OpenGL");
+    }
+    config_tests.addIncludePath(b.path("vendor"));
+    if (!use_vcpkg) {
+        config_tests.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
+        config_tests.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
+        config_tests.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
+        if (target_os == .linux) {
+            config_tests.addIncludePath(.{ .cwd_relative = "/usr/include/SDL3" });
+            config_tests.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
+        }
+    }
+    config_tests.addCSourceFile(.{
+        .file = b.path("src/c/stb_image.c"),
+        .flags = &.{"-std=c99"},
+    });
+
+    const run_config_tests = b.addRunArtifact(config_tests);
+    const config_test_step = b.step("test-config", "Run Lua config parser/merge tests");
+    config_test_step.dependOn(&run_config_tests.step);
+
     const terminal_replay_exe = b.addExecutable(.{
         .name = "terminal-replay",
         .root_module = b.createModule(.{
