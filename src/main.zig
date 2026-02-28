@@ -655,6 +655,14 @@ const AppState = struct {
         };
     }
 
+    fn visualMoveDeltaForAction(action: input_actions.ActionKind) ?i32 {
+        return switch (action) {
+            .editor_move_large_up => -5,
+            .editor_move_large_down => 5,
+            else => null,
+        };
+    }
+
     fn applyDirectEditorAction(editor: *Editor, action: input_actions.ActionKind) bool {
         switch (action) {
             .editor_move_word_left => editor.moveCursorWordLeft(),
@@ -1225,6 +1233,21 @@ const AppState = struct {
                     .editor_extend_word_right,
                     => {
                         if (applyDirectEditorAction(editor, action.kind)) {
+                            self.needs_redraw = true;
+                            handled_shortcut = true;
+                        }
+                    },
+                    .editor_move_large_up, .editor_move_large_down => {
+                        const delta = visualMoveDeltaForAction(action.kind).?;
+                        var moved = false;
+                        var remaining = if (delta < 0) -delta else delta;
+                        const step: i32 = if (delta < 0) -1 else 1;
+                        while (remaining > 0) : (remaining -= 1) {
+                            if (!editor_widget.moveCursorVisual(shell, step)) break;
+                            moved = true;
+                        }
+                        if (moved) {
+                            editor_widget.ensureCursorVisible(shell, action_layout.editor.height);
                             self.needs_redraw = true;
                             handled_shortcut = true;
                         }
@@ -2343,6 +2366,12 @@ test "visual extend action helper maps routed editor actions" {
     try std.testing.expectEqual(@as(?i32, -1), AppState.visualExtendDeltaForAction(.editor_extend_up));
     try std.testing.expectEqual(@as(?i32, 1), AppState.visualExtendDeltaForAction(.editor_extend_down));
     try std.testing.expectEqual(@as(?i32, null), AppState.visualExtendDeltaForAction(.editor_extend_right));
+}
+
+test "visual move action helper maps routed editor actions" {
+    try std.testing.expectEqual(@as(?i32, -5), AppState.visualMoveDeltaForAction(.editor_move_large_up));
+    try std.testing.expectEqual(@as(?i32, 5), AppState.visualMoveDeltaForAction(.editor_move_large_down));
+    try std.testing.expectEqual(@as(?i32, null), AppState.visualMoveDeltaForAction(.editor_move_word_right));
 }
 
 test "direct editor action helper routes word and line selection actions" {

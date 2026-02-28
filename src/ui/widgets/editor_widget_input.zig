@@ -29,13 +29,14 @@ pub fn handleMouseClick(
 pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *shared_types.input.InputBatch) !bool {
     var handled = false;
     var chars_inserted: usize = 0;
-    const plain_key_input = !input_batch.mods.ctrl and !input_batch.mods.alt and !input_batch.mods.super;
+    const plain_text_input = !input_batch.mods.ctrl and !input_batch.mods.alt and !input_batch.mods.super;
+    const plain_nav_input = plain_text_input and !input_batch.mods.shift;
 
     // Character input
     for (input_batch.events.items) |event| {
         if (event == .text) {
             const char = event.text.codepoint;
-            if (plain_key_input and char >= 32 and char < 127) {
+            if (plain_text_input and char >= 32 and char < 127) {
                 try widget.editor.insertChar(@intCast(char));
                 handled = true;
                 chars_inserted += 1;
@@ -48,46 +49,46 @@ pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *sh
     }
 
     // Control keys
-    if (plain_key_input and input_batch.keyPressed(.enter)) {
+    if (plain_text_input and input_batch.keyPressed(.enter)) {
         try widget.editor.insertNewline();
         handled = true;
         app_logger.logger("editor.input").logf("key=enter", .{});
-    } else if (plain_key_input and (input_batch.keyPressed(.backspace) or input_batch.keyRepeated(.backspace))) {
+    } else if (plain_text_input and (input_batch.keyPressed(.backspace) or input_batch.keyRepeated(.backspace))) {
         try widget.editor.deleteCharBackward();
         handled = true;
         app_logger.logger("editor.input").logf("key=backspace", .{});
-    } else if (plain_key_input and (input_batch.keyPressed(.delete) or input_batch.keyRepeated(.delete))) {
+    } else if (plain_text_input and (input_batch.keyPressed(.delete) or input_batch.keyRepeated(.delete))) {
         try widget.editor.deleteCharForward();
         handled = true;
         app_logger.logger("editor.input").logf("key=delete", .{});
-    } else if (plain_key_input and (input_batch.keyPressed(.up) or input_batch.keyRepeated(.up))) {
+    } else if (plain_nav_input and (input_batch.keyPressed(.up) or input_batch.keyRepeated(.up))) {
         if (widget.moveCursorVisual(shell, -1)) {
             widget.ensureCursorVisible(shell, height);
             handled = true;
             app_logger.logger("editor.input").logf("key=up", .{});
         }
-    } else if (plain_key_input and (input_batch.keyPressed(.down) or input_batch.keyRepeated(.down))) {
+    } else if (plain_nav_input and (input_batch.keyPressed(.down) or input_batch.keyRepeated(.down))) {
         if (widget.moveCursorVisual(shell, 1)) {
             widget.ensureCursorVisible(shell, height);
             handled = true;
             app_logger.logger("editor.input").logf("key=down", .{});
         }
-    } else if (plain_key_input and (input_batch.keyPressed(.left) or input_batch.keyRepeated(.left))) {
+    } else if (plain_nav_input and (input_batch.keyPressed(.left) or input_batch.keyRepeated(.left))) {
         widget.editor.moveCursorLeft();
         widget.ensureCursorVisible(shell, height);
         handled = true;
         app_logger.logger("editor.input").logf("key=left", .{});
-    } else if (plain_key_input and (input_batch.keyPressed(.right) or input_batch.keyRepeated(.right))) {
+    } else if (plain_nav_input and (input_batch.keyPressed(.right) or input_batch.keyRepeated(.right))) {
         widget.editor.moveCursorRight();
         widget.ensureCursorVisible(shell, height);
         handled = true;
         app_logger.logger("editor.input").logf("key=right", .{});
-    } else if (plain_key_input and (input_batch.keyPressed(.home) or input_batch.keyRepeated(.home))) {
+    } else if (plain_nav_input and (input_batch.keyPressed(.home) or input_batch.keyRepeated(.home))) {
         widget.editor.moveCursorToLineStart();
         widget.ensureCursorVisible(shell, height);
         handled = true;
         app_logger.logger("editor.input").logf("key=home", .{});
-    } else if (plain_key_input and (input_batch.keyPressed(.end) or input_batch.keyRepeated(.end))) {
+    } else if (plain_nav_input and (input_batch.keyPressed(.end) or input_batch.keyRepeated(.end))) {
         widget.editor.moveCursorToLineEnd();
         widget.ensureCursorVisible(shell, height);
         handled = true;
