@@ -839,6 +839,34 @@ test "editor visual selection extend follows logical lines when wrap is disabled
     try std.testing.expectEqual(@as(usize, 6), editor.cursor.offset);
 }
 
+test "editor large visual extend then move sequence updates offsets" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("aa\nbb\ncc\ndd");
+    editor.setCursor(0, 1);
+
+    var renderer = FakeRenderer.init(allocator, 320, 200, 8, 16);
+    defer renderer.deinit();
+    var widget = FakeWidget{ .editor = editor, .gutter_width = 0, .wrap_enabled = false };
+
+    // Simulate Ctrl+Shift+Down with jump_rows = 2.
+    try std.testing.expect(widget.extendSelectionVisual(&renderer, 1));
+    try std.testing.expect(widget.extendSelectionVisual(&renderer, 1));
+    const sel = editor.selection orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 1), sel.start.offset);
+    try std.testing.expectEqual(@as(usize, 7), sel.end.offset);
+    try std.testing.expectEqual(@as(usize, 7), editor.cursor.offset);
+
+    // Simulate Ctrl+Up with jump_rows = 1 and verify collapse to moved caret.
+    try std.testing.expect(try widget.moveCursorVisual(&renderer, -1));
+    try std.testing.expect(editor.selection == null);
+    try std.testing.expectEqual(@as(usize, 4), editor.cursor.offset);
+    try std.testing.expectEqual(@as(usize, 0), editor.selectionCount());
+}
+
 test "editor visual selection extend preserves multi-caret set" {
     const allocator = std.testing.allocator;
     var fixture = try EditorFixture.init(allocator);
