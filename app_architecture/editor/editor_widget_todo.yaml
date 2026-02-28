@@ -99,6 +99,7 @@ editor_widget_todo:
         - "Initial rope file-load tree now chunks original text into balanced leaf nodes instead of one giant leaf, dramatically reducing lineStart/query cost on large files."
         - "Large-file initial rope chunk size is tuned to ~4KiB (>=8MiB files) to improve open/RSS while keeping line query latency sub-microsecond scale."
         - "Large-file guard: syntax highlighter initialization is skipped at/above 8MiB to prevent UI-thread full-document tree-sitter parse stalls on open."
+        - "When tree-sitter is skipped for very large `.zig` files, editor draw now applies a lightweight keyword/number/string/comment fallback tokenizer so syntax coloring remains available without parse stalls."
         - "Rope undo/redo implemented (per-op text snapshots)."
         - "Undo batching: adjacent inserts/deletes merge (rope)."
         - "Undo grouping hooks added (begin/end group)."

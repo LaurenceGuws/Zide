@@ -15,6 +15,7 @@ const EditorDrawList = draw_list_mod.EditorDrawList;
 const TextOp = draw_list_mod.TextOp;
 const RectOp = draw_list_mod.RectOp;
 const CursorOp = draw_list_mod.CursorOp;
+const large_file_fallback_threshold_bytes: usize = 8 * 1024 * 1024;
 
 fn packColor(color: anytype) u32 {
     return @as(u32, color.r) | (@as(u32, color.g) << 8) | (@as(u32, color.b) << 16) | (@as(u32, color.a) << 24);
@@ -732,6 +733,12 @@ pub fn draw(
             }
             tokens = highlight_tokens[token_idx..line_token_end];
         }
+        var fallback_tokens_buf: [32]HighlightToken = undefined;
+        var effective_tokens = tokens;
+        if (tokens.len == 0 and shouldUseLargeFileZigFallback(widget.editor)) {
+            const fallback_count = buildZigFallbackTokens(line_text, line_start, &fallback_tokens_buf);
+            effective_tokens = fallback_tokens_buf[0..fallback_count];
+        }
 
         var ranges: [8]SelectionRange = undefined;
         var range_count: usize = 0;
@@ -856,7 +863,7 @@ pub fn draw(
             else
                 0;
 
-            if (tokens.len == 0) {
+            if (effective_tokens.len == 0) {
                 drawTextSliceWithSelectionBg(
                     r,
                     text_start_x,
@@ -882,7 +889,7 @@ pub fn draw(
                     seg_start_byte,
                     seg_end_byte,
                     seg_start_col,
-                    tokens,
+                    effective_tokens,
                     base_bg,
                     r.theme.selection,
                     sel_bytes[0..sel_count],
@@ -1036,6 +1043,12 @@ pub fn drawCached(
             line_text_hash,
             widget.editor.highlight_epoch,
         );
+        var fallback_tokens_buf: [32]HighlightToken = undefined;
+        var effective_tokens = tokens;
+        if (tokens.len == 0 and shouldUseLargeFileZigFallback(widget.editor)) {
+            const fallback_count = buildZigFallbackTokens(line_text, line_start, &fallback_tokens_buf);
+            effective_tokens = fallback_tokens_buf[0..fallback_count];
+        }
 
         var ranges: [8]SelectionRange = undefined;
         var range_count: usize = 0;
@@ -1082,7 +1095,7 @@ pub fn drawCached(
                 ranges[0..range_count],
                 seg_start_col,
                 seg_end_col,
-                tokens,
+                effective_tokens,
                 line_start,
                 is_current,
                 seg == cursor_seg,
@@ -1176,7 +1189,7 @@ pub fn drawCached(
                         0;
 
                     const text_start_x = origin_x + widget.gutter_width + 8 * r.uiScaleFactor();
-                    if (tokens.len == 0) {
+                    if (effective_tokens.len == 0) {
                         list_ok = list_ok and addTextSliceOpsWithSelectionBg(
                             draw_list,
                             r,
@@ -1204,7 +1217,7 @@ pub fn drawCached(
                             seg_start_byte,
                             seg_end_byte,
                             seg_start_col,
-                            tokens,
+                            effective_tokens,
                             base_bg,
                             r.theme.selection,
                             seg_start_byte,
@@ -1289,7 +1302,7 @@ pub fn drawCached(
                             }
                         }
 
-                        if (tokens.len == 0) {
+                        if (effective_tokens.len == 0) {
                             const seg_base_bg = base_bg;
                             if (sel_count == 0) {
                                 r.drawTextMonospaceOnBgPolicy(line_text[seg_start_byte..seg_end_byte], text_start_x, seg_y, r.theme.foreground, seg_base_bg, disable_programming_ligatures);
@@ -1320,7 +1333,7 @@ pub fn drawCached(
                                 seg_start_byte,
                                 seg_end_byte,
                                 seg_start_col,
-                                tokens,
+                                effective_tokens,
                                 base_bg,
                                 r.theme.selection,
                                 sel_bytes[0..sel_count],
@@ -1380,6 +1393,135 @@ pub fn hashLine(text: []const u8) u64 {
         h *%= 1099511628211;
     }
     return h;
+}
+
+fn shouldUseLargeFileZigFallback(editor: anytype) bool {
+    if (editor.highlighter != null) return false;
+    if (editor.totalLen() < large_file_fallback_threshold_bytes) return false;
+    const path = editor.file_path orelse return false;
+    return std.mem.endsWith(u8, path, ".zig");
+}
+
+fn isIdentStart(ch: u8) bool {
+    return (ch >= 'a' and ch <= 'z') or (ch >= 'A' and ch <= 'Z') or ch == '_';
+}
+
+fn isIdentContinue(ch: u8) bool {
+    return isIdentStart(ch) or (ch >= '0' and ch <= '9');
+}
+
+fn isDigit(ch: u8) bool {
+    return ch >= '0' and ch <= '9';
+}
+
+fn zigKeywordKind(word: []const u8) TokenKind {
+    if (std.mem.eql(u8, word, "const") or
+        std.mem.eql(u8, word, "var") or
+        std.mem.eql(u8, word, "fn") or
+        std.mem.eql(u8, word, "pub") or
+        std.mem.eql(u8, word, "return") or
+        std.mem.eql(u8, word, "if") or
+        std.mem.eql(u8, word, "else") or
+        std.mem.eql(u8, word, "for") or
+        std.mem.eql(u8, word, "while") or
+        std.mem.eql(u8, word, "switch") or
+        std.mem.eql(u8, word, "break") or
+        std.mem.eql(u8, word, "continue") or
+        std.mem.eql(u8, word, "struct") or
+        std.mem.eql(u8, word, "enum") or
+        std.mem.eql(u8, word, "union") or
+        std.mem.eql(u8, word, "opaque") or
+        std.mem.eql(u8, word, "error") or
+        std.mem.eql(u8, word, "try") or
+        std.mem.eql(u8, word, "catch") or
+        std.mem.eql(u8, word, "defer") or
+        std.mem.eql(u8, word, "errdefer") or
+        std.mem.eql(u8, word, "comptime") or
+        std.mem.eql(u8, word, "inline") or
+        std.mem.eql(u8, word, "noinline"))
+    {
+        return .keyword;
+    }
+    return .plain;
+}
+
+fn buildZigFallbackTokens(line_text: []const u8, line_start: usize, out: []HighlightToken) usize {
+    var count: usize = 0;
+    var i: usize = 0;
+    while (i < line_text.len and count < out.len) {
+        const ch = line_text[i];
+        if (ch == '/' and i + 1 < line_text.len and line_text[i + 1] == '/') {
+            out[count] = .{
+                .start = line_start + i,
+                .end = line_start + line_text.len,
+                .kind = .comment,
+                .priority = 0,
+                .conceal = null,
+                .url = null,
+                .conceal_lines = false,
+            };
+            count += 1;
+            break;
+        }
+        if (ch == '"') {
+            var j = i + 1;
+            while (j < line_text.len) : (j += 1) {
+                if (line_text[j] == '"' and line_text[j - 1] != '\\') {
+                    j += 1;
+                    break;
+                }
+            }
+            out[count] = .{
+                .start = line_start + i,
+                .end = line_start + @min(j, line_text.len),
+                .kind = .string,
+                .priority = 0,
+                .conceal = null,
+                .url = null,
+                .conceal_lines = false,
+            };
+            count += 1;
+            i = @min(j, line_text.len);
+            continue;
+        }
+        if (isDigit(ch)) {
+            var j = i + 1;
+            while (j < line_text.len and (isDigit(line_text[j]) or line_text[j] == '_')) : (j += 1) {}
+            out[count] = .{
+                .start = line_start + i,
+                .end = line_start + j,
+                .kind = .number,
+                .priority = 0,
+                .conceal = null,
+                .url = null,
+                .conceal_lines = false,
+            };
+            count += 1;
+            i = j;
+            continue;
+        }
+        if (isIdentStart(ch)) {
+            var j = i + 1;
+            while (j < line_text.len and isIdentContinue(line_text[j])) : (j += 1) {}
+            const kind = zigKeywordKind(line_text[i..j]);
+            if (kind != .plain) {
+                out[count] = .{
+                    .start = line_start + i,
+                    .end = line_start + j,
+                    .kind = kind,
+                    .priority = 0,
+                    .conceal = null,
+                    .url = null,
+                    .conceal_lines = false,
+                };
+                count += 1;
+            }
+            i = j;
+            continue;
+        }
+        i += 1;
+    }
+    return count;
 }
 
 pub fn precomputeHighlightTokens(
