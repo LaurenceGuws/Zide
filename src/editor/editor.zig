@@ -15,6 +15,8 @@ const c = ts_api.c_api;
 
 /// High-level editor state wrapping a text buffer
 pub const Editor = struct {
+    const highlighter_large_file_threshold_bytes: usize = 8 * 1024 * 1024;
+
     pub const ClusterProvider = struct {
         ctx: *anyopaque,
         getClusters: *const fn (ctx: *anyopaque, line_idx: usize, line_text: []const u8) ?[]const u32,
@@ -58,6 +60,7 @@ pub const Editor = struct {
     highlight_dirty_start_line: ?usize,
     highlight_dirty_end_line: ?usize,
     highlight_pending: bool,
+    highlight_disabled_for_large_file: bool,
     search_query: ?[]u8,
     search_matches: std.ArrayList(SearchMatch),
     search_active: ?usize,
@@ -99,6 +102,7 @@ pub const Editor = struct {
             .highlight_dirty_start_line = null,
             .highlight_dirty_end_line = null,
             .highlight_pending = false,
+            .highlight_disabled_for_large_file = buffer.totalLen() >= highlighter_large_file_threshold_bytes,
             .search_query = null,
             .search_matches = .empty,
             .search_active = null,
@@ -182,6 +186,7 @@ pub const Editor = struct {
         self.modified = false;
         self.highlight_dirty_start_line = null;
         self.highlight_dirty_end_line = null;
+        self.highlight_disabled_for_large_file = self.buffer.totalLen() >= highlighter_large_file_threshold_bytes;
 
         self.scheduleHighlighter(path);
     }
@@ -204,7 +209,12 @@ pub const Editor = struct {
         }
         self.file_path = try self.allocator.dupe(u8, path);
         self.modified = false;
-        try self.tryInitHighlighter(path);
+        self.highlight_disabled_for_large_file = self.buffer.totalLen() >= highlighter_large_file_threshold_bytes;
+        if (!self.highlight_disabled_for_large_file) {
+            try self.tryInitHighlighter(path);
+        } else {
+            self.highlight_pending = false;
+        }
     }
 
     pub fn invalidateLineWidthCache(self: *Editor) void {
@@ -1796,6 +1806,21 @@ pub const Editor = struct {
 
     fn scheduleHighlighter(self: *Editor, path: ?[]const u8) void {
         const log = app_logger.logger("editor.highlight");
+        if (self.highlight_disabled_for_large_file) {
+            if (self.highlighter) |h| {
+                h.destroy();
+                self.highlighter = null;
+            }
+            self.highlight_epoch +|= 1;
+            self.highlight_dirty_start_line = null;
+            self.highlight_dirty_end_line = null;
+            self.highlight_pending = false;
+            log.logf(
+                "highlight skipped large_file bytes={d} threshold={d} path=\"{s}\"",
+                .{ self.buffer.totalLen(), highlighter_large_file_threshold_bytes, path orelse "" },
+            );
+            return;
+        }
         if (syntax_registry_mod.SyntaxRegistry.resolveLanguage(path) == null) {
             if (self.highlighter) |h| {
                 h.destroy();
@@ -1857,6 +1882,7 @@ pub const Editor = struct {
     }
 
     pub fn ensureHighlighter(self: *Editor) void {
+        if (self.highlight_disabled_for_large_file) return;
         if (!self.highlight_pending) return;
         self.tryInitHighlighter(self.file_path) catch {};
     }

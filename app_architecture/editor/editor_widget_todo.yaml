@@ -98,6 +98,7 @@ editor_widget_todo:
         - "Headless harness now includes an `editor-scroll` scenario that exercises core editor scroll progression + line width cache paths without SDL/UI."
         - "Initial rope file-load tree now chunks original text into balanced leaf nodes instead of one giant leaf, dramatically reducing lineStart/query cost on large files."
         - "Large-file initial rope chunk size is tuned to ~4KiB (>=8MiB files) to improve open/RSS while keeping line query latency sub-microsecond scale."
+        - "Large-file guard: syntax highlighter initialization is skipped at/above 8MiB to prevent UI-thread full-document tree-sitter parse stalls on open."
         - "Rope undo/redo implemented (per-op text snapshots)."
         - "Undo batching: adjacent inserts/deletes merge (rope)."
         - "Undo grouping hooks added (begin/end group)."
