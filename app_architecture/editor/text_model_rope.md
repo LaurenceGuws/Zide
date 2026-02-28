@@ -8,6 +8,8 @@ Status (2026-01-27):
 - Rope is the sole text model (`src/editor/rope.zig` + `src/editor/text_store.zig`).
 - Rope undo/redo is implemented with per-op text snapshots.
 - Undo batching merges adjacent inserts/deletes; undo groups are supported.
+- File-open path now transfers ownership of the loaded file buffer into rope
+  (`Rope.initOwnedOriginal`) to avoid duplicating large initial contents.
 
 ## Current state (summary)
 - Text buffer is a rope/piece‑tree with per-node aggregates for byte length and

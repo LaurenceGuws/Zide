@@ -47,6 +47,7 @@ editor_protocol_todo:
       notes:
         - "Audit complete; see app_architecture/editor/DESIGN.md."
         - "Decision: rope/piece-tree."
+        - "File-backed `TextStore` initialization now avoids load-time duplication by handing read buffers directly to rope ownership."
       references:
         - reference_repos/text/ropey/src/rope.rs
         - reference_repos/text/xi-rope/src/engine.rs

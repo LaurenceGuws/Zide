@@ -8,6 +8,7 @@ pub const TextStore = struct {
 
     pub fn init(allocator: std.mem.Allocator, initial: []const u8) !*TextStore {
         const store = try allocator.create(TextStore);
+        errdefer allocator.destroy(store);
         store.* = .{
             .allocator = allocator,
             .rope = try rope_mod.Rope.init(allocator, initial),
@@ -24,13 +25,13 @@ pub const TextStore = struct {
         const t_read_start = std.time.nanoTimestamp();
         const data = try file.readToEndAlloc(allocator, @as(usize, @intCast(stat.size)));
         const t_read_end = std.time.nanoTimestamp();
-        defer allocator.free(data);
 
         const t_rope_start = std.time.nanoTimestamp();
         const store = try allocator.create(TextStore);
+        errdefer allocator.destroy(store);
         store.* = .{
             .allocator = allocator,
-            .rope = try rope_mod.Rope.init(allocator, data),
+            .rope = try rope_mod.Rope.initOwnedOriginal(allocator, data),
         };
         const t_rope_end = std.time.nanoTimestamp();
 
