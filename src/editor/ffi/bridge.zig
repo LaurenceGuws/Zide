@@ -85,6 +85,53 @@ pub fn insertText(handle: ?*ZideEditorHandle, bytes: ?[*]const u8, len: usize) S
     return .ok;
 }
 
+pub fn replaceRange(
+    handle: ?*ZideEditorHandle,
+    start: usize,
+    end: usize,
+    bytes: ?[*]const u8,
+    len: usize,
+) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    if (end < start) return .invalid_argument;
+    const replacement = ptrLen(bytes, len) orelse return .invalid_argument;
+    const editor = h.editor;
+    const total = editor.totalLen();
+    if (end > total) return .invalid_argument;
+
+    editor.buffer.beginUndoGroup();
+    if (end > start) {
+        editor.buffer.deleteRange(start, end - start) catch |err| return mapError(err);
+    }
+    if (replacement.len > 0) {
+        editor.buffer.insertBytes(start, replacement) catch |err| return mapError(err);
+    }
+    editor.buffer.endUndoGroup() catch |err| return mapError(err);
+
+    editor.setCursorOffsetNoClear(start + replacement.len);
+    editor.selection = null;
+    editor.clearSelections();
+    editor.invalidateLineWidthCache();
+    editor.modified = true;
+    return .ok;
+}
+
+pub fn deleteRange(handle: ?*ZideEditorHandle, start: usize, end: usize) Status {
+    return replaceRange(handle, start, end, null, 0);
+}
+
+pub fn beginUndoGroup(handle: ?*ZideEditorHandle) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    h.editor.buffer.beginUndoGroup();
+    return .ok;
+}
+
+pub fn endUndoGroup(handle: ?*ZideEditorHandle) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    h.editor.buffer.endUndoGroup() catch |err| return mapError(err);
+    return .ok;
+}
+
 pub fn textAlloc(handle: ?*ZideEditorHandle, out_string: *StringBuffer) Status {
     out_string.* = .{};
     const h = fromOpaque(handle) orelse return .invalid_argument;
