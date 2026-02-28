@@ -84,9 +84,9 @@ editor_protocol_todo:
         - "Editor core now exposes explicit primary/auxiliary caret accessors so new multi-caret features can stop reaching into raw `cursor` + `selections` ad hoc."
         - "Editor core now exposes baseline word-wise navigation and selection-expanding movement APIs."
         - "Rectangular selection copy/move semantics are now explicit: copy yields per-line column slices, and plain cursor movement collapses the rectangular set."
-        - "Word-wise and expanding movement now route through the keybind/input-router layer (`editor_move_word_*`, `editor_extend_*`) instead of being editor-only APIs."
+        - "Word-wise and expanding movement now route through the keybind/input-router layer (`editor_move_word_*`, `editor_extend_*`) instead of being editor-only APIs, and app-level helper coverage now exists for the direct word/line-boundary extend actions."
         - "Visual vertical selection growth now routes through keybind actions (`editor_extend_up` / `editor_extend_down`) and has app-level dispatch coverage plus regression coverage for both wrapped visual rows and plain logical-line movement."
-        - "Paste semantics are now explicit: plain multi-selection paste broadcasts one payload to every selection, while rectangular selections trim CRLF row endings, preserve trailing empty rows, repeat a single row, map exact row counts 1:1, cycle clipboard rows when counts mismatch, and now interpret tabbed column selections against visual columns instead of raw bytes."
+        - "Paste semantics are now explicit: plain multi-selection paste broadcasts one payload to every selection, while rectangular selections trim CRLF row endings, preserve trailing empty rows, repeat a single row, map exact row counts 1:1, cycle clipboard rows when counts mismatch, and now interpret visual columns with tabs, combining marks, and wide glyphs instead of raw bytes."
         - "Column selection and editing."
       references:
         - reference_repos/editors/helix/helix-core/src/selection.rs

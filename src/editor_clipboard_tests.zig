@@ -183,6 +183,23 @@ test "visual rectangular selection with tabs pastes against visual columns" {
     try std.testing.expectEqualStrings("\tXYc\n\tXYf", text);
 }
 
+test "visual rectangular selection with combining and wide glyphs pastes by cell columns" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("e\u{0301}界z\na界bc");
+    editor.setCursor(0, 0);
+    try editor.expandRectSelectionVisual(0, 1, 1, 3);
+
+    try editor.insertText("QQ");
+
+    const text = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    defer allocator.free(text);
+    try std.testing.expectEqualStrings("e\u{0301}QQz\naQQbc", text);
+}
+
 test "plain multi-selection paste broadcasts the same text" {
     const allocator = std.testing.allocator;
     var fixture = try EditorFixture.init(allocator);

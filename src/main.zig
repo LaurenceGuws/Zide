@@ -655,6 +655,21 @@ const AppState = struct {
         };
     }
 
+    fn applyDirectEditorAction(editor: *Editor, action: input_actions.ActionKind) bool {
+        switch (action) {
+            .editor_move_word_left => editor.moveCursorWordLeft(),
+            .editor_move_word_right => editor.moveCursorWordRight(),
+            .editor_extend_left => editor.extendSelectionLeft(),
+            .editor_extend_right => editor.extendSelectionRight(),
+            .editor_extend_line_start => editor.extendSelectionToLineStart(),
+            .editor_extend_line_end => editor.extendSelectionToLineEnd(),
+            .editor_extend_word_left => editor.extendSelectionWordLeft(),
+            .editor_extend_word_right => editor.extendSelectionWordRight(),
+            else => return false,
+        }
+        return true;
+    }
+
     fn handleSearchPanelInput(self: *AppState, editor: *Editor, input_batch: *shared_types.input.InputBatch) !bool {
         if (!self.search_panel.active) return false;
 
@@ -1192,45 +1207,19 @@ const AppState = struct {
                             handled_shortcut = true;
                         }
                     },
-                    .editor_move_word_left => {
-                        editor.moveCursorWordLeft();
-                        self.needs_redraw = true;
-                        handled_shortcut = true;
-                    },
-                    .editor_move_word_right => {
-                        editor.moveCursorWordRight();
-                        self.needs_redraw = true;
-                        handled_shortcut = true;
-                    },
-                    .editor_extend_left => {
-                        editor.extendSelectionLeft();
-                        self.needs_redraw = true;
-                        handled_shortcut = true;
-                    },
-                    .editor_extend_right => {
-                        editor.extendSelectionRight();
-                        self.needs_redraw = true;
-                        handled_shortcut = true;
-                    },
-                    .editor_extend_line_start => {
-                        editor.extendSelectionToLineStart();
-                        self.needs_redraw = true;
-                        handled_shortcut = true;
-                    },
-                    .editor_extend_line_end => {
-                        editor.extendSelectionToLineEnd();
-                        self.needs_redraw = true;
-                        handled_shortcut = true;
-                    },
-                    .editor_extend_word_left => {
-                        editor.extendSelectionWordLeft();
-                        self.needs_redraw = true;
-                        handled_shortcut = true;
-                    },
-                    .editor_extend_word_right => {
-                        editor.extendSelectionWordRight();
-                        self.needs_redraw = true;
-                        handled_shortcut = true;
+                    .editor_move_word_left,
+                    .editor_move_word_right,
+                    .editor_extend_left,
+                    .editor_extend_right,
+                    .editor_extend_line_start,
+                    .editor_extend_line_end,
+                    .editor_extend_word_left,
+                    .editor_extend_word_right,
+                    => {
+                        if (applyDirectEditorAction(editor, action.kind)) {
+                            self.needs_redraw = true;
+                            handled_shortcut = true;
+                        }
                     },
                     .editor_extend_up, .editor_extend_down => {
                         const delta = visualExtendDeltaForAction(action.kind).?;
@@ -2346,6 +2335,30 @@ test "visual extend action helper maps routed editor actions" {
     try std.testing.expectEqual(@as(?i32, -1), AppState.visualExtendDeltaForAction(.editor_extend_up));
     try std.testing.expectEqual(@as(?i32, 1), AppState.visualExtendDeltaForAction(.editor_extend_down));
     try std.testing.expectEqual(@as(?i32, null), AppState.visualExtendDeltaForAction(.editor_extend_right));
+}
+
+test "direct editor action helper routes word and line selection actions" {
+    const allocator = std.testing.allocator;
+
+    var grammar_manager = try grammar_manager_mod.GrammarManager.init(allocator);
+    defer grammar_manager.deinit();
+
+    const editor = try Editor.init(allocator, &grammar_manager);
+    defer editor.deinit();
+
+    try editor.insertText("alpha beta\ngamma");
+    editor.setCursor(0, 2);
+
+    try std.testing.expect(AppState.applyDirectEditorAction(editor, .editor_extend_line_end));
+    try std.testing.expectEqual(@as(usize, 2), editor.selection.?.start.offset);
+    try std.testing.expectEqual(@as(usize, 10), editor.selection.?.end.offset);
+
+    editor.setCursor(0, 0);
+    try std.testing.expect(AppState.applyDirectEditorAction(editor, .editor_extend_word_right));
+    try std.testing.expectEqual(@as(usize, 0), editor.selection.?.start.offset);
+    try std.testing.expectEqual(@as(usize, 6), editor.selection.?.end.offset);
+
+    try std.testing.expect(!AppState.applyDirectEditorAction(editor, .editor_search_open));
 }
 
 test "openSearchPanel restores editor query and clears stale panel text" {

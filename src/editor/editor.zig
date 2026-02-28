@@ -1,5 +1,6 @@
 const std = @import("std");
 const text_store = @import("text_store.zig");
+const text_columns = @import("text_columns.zig");
 const types = @import("types.zig");
 const syntax_mod = @import("syntax.zig");
 const ts_api = @import("treesitter_api.zig");
@@ -442,14 +443,22 @@ pub const Editor = struct {
     }
 
     pub fn auxiliaryCaretCount(self: *Editor) usize {
-        return self.selections.items.len;
+        var count: usize = 0;
+        for (self.selections.items) |sel| {
+            if (sel.normalized().isEmpty()) count += 1;
+        }
+        return count;
     }
 
     pub fn auxiliaryCaretAt(self: *Editor, index: usize) ?CursorPos {
-        if (index >= self.selections.items.len) return null;
-        const sel = self.selections.items[index].normalized();
-        if (!sel.isEmpty()) return null;
-        return sel.start;
+        var seen: usize = 0;
+        for (self.selections.items) |sel| {
+            const norm = sel.normalized();
+            if (!norm.isEmpty()) continue;
+            if (seen == index) return norm.start;
+            seen += 1;
+        }
+        return null;
     }
 
     fn storedSelectionFromSelection(sel: Selection) StoredSelection {
@@ -664,19 +673,18 @@ pub const Editor = struct {
     fn addCaretVertical(self: *Editor, delta: i32) !bool {
         if (delta == 0) return false;
         if (self.selection != null) return false;
-        for (self.selections.items) |sel| {
-            if (!sel.normalized().isEmpty()) return false;
-        }
+        if (self.auxiliaryCaretCount() != self.selections.items.len) return false;
 
         var caret_offsets = std.ArrayList(usize).empty;
         defer caret_offsets.deinit(self.allocator);
 
-        try caret_offsets.append(self.allocator, self.cursor.offset);
-        for (self.selections.items) |sel| {
-            const caret = sel.normalized();
-            if (caret.start.offset == self.cursor.offset) continue;
-            if (std.mem.indexOfScalar(usize, caret_offsets.items, caret.start.offset) != null) continue;
-            try caret_offsets.append(self.allocator, caret.start.offset);
+        try caret_offsets.append(self.allocator, self.primaryCaret().offset);
+        var idx: usize = 0;
+        while (idx < self.auxiliaryCaretCount()) : (idx += 1) {
+            const caret = self.auxiliaryCaretAt(idx) orelse continue;
+            if (caret.offset == self.primaryCaret().offset) continue;
+            if (std.mem.indexOfScalar(usize, caret_offsets.items, caret.offset) != null) continue;
+            try caret_offsets.append(self.allocator, caret.offset);
         }
 
         var added_any = false;
@@ -734,23 +742,19 @@ pub const Editor = struct {
     }
 
     fn hasOnlyCaretSelections(self: *Editor) bool {
-        if (self.selections.items.len == 0) return false;
-        for (self.selections.items) |sel| {
-            if (!sel.normalized().isEmpty()) return false;
-        }
-        return true;
+        return self.auxiliaryCaretCount() > 0 and self.auxiliaryCaretCount() == self.selections.items.len;
     }
 
     fn collectCaretOffsets(self: *Editor) !std.ArrayList(usize) {
         var caret_offsets = std.ArrayList(usize).empty;
         errdefer caret_offsets.deinit(self.allocator);
 
-        try caret_offsets.append(self.allocator, self.cursor.offset);
-        for (self.selections.items) |sel| {
-            const caret = sel.normalized();
-            if (!caret.isEmpty()) continue;
-            if (std.mem.indexOfScalar(usize, caret_offsets.items, caret.start.offset) != null) continue;
-            try caret_offsets.append(self.allocator, caret.start.offset);
+        try caret_offsets.append(self.allocator, self.primaryCaret().offset);
+        var idx: usize = 0;
+        while (idx < self.auxiliaryCaretCount()) : (idx += 1) {
+            const caret = self.auxiliaryCaretAt(idx) orelse continue;
+            if (std.mem.indexOfScalar(usize, caret_offsets.items, caret.offset) != null) continue;
+            try caret_offsets.append(self.allocator, caret.offset);
         }
         return caret_offsets;
     }
@@ -904,22 +908,7 @@ pub const Editor = struct {
 
     fn byteIndexForVisualColumn(self: *Editor, line_text: []const u8, column: usize) usize {
         _ = self;
-        if (column == 0 or line_text.len == 0) return 0;
-        var it = std.unicode.Utf8View.initUnchecked(line_text).iterator();
-        var col: usize = 0;
-        var idx: usize = 0;
-        while (it.nextCodepointSlice()) |slice| {
-            if (col >= column) return idx;
-            const cp = std.unicode.utf8Decode(slice) catch 0xFFFD;
-            const width = if (cp == '\t') blk: {
-                const tab_width: usize = 4;
-                break :blk tab_width - (col % tab_width);
-            } else 1;
-            if (col + width > column) return idx;
-            idx += slice.len;
-            col += width;
-        }
-        return line_text.len;
+        return text_columns.byteIndexForVisualColumn(line_text, column);
     }
 
     fn updateCursorPosition(self: *Editor) void {
