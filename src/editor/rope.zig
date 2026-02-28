@@ -33,6 +33,8 @@ pub const Rope = struct {
     group_depth: u32,
     group_dirty: bool,
     const target_leaf_bytes: usize = 2048;
+    const initial_leaf_bytes: usize = 4096;
+    const large_file_threshold_bytes: usize = 8 * 1024 * 1024;
     const max_undo_bytes: usize = 8 * 1024 * 1024;
     const max_undo_ops: usize = 1000;
     const max_line_start_cache_entries: usize = 8192;
@@ -457,12 +459,13 @@ pub const Rope = struct {
 
     fn buildInitialTree(self: *Rope, buffer: BufferKind, total_len: usize) !?*Node {
         if (total_len == 0) return null;
+        const leaf_bytes = if (total_len >= large_file_threshold_bytes) initial_leaf_bytes else target_leaf_bytes;
         var leaves = std.ArrayList(*Node).empty;
         defer leaves.deinit(self.allocator);
 
         var start: usize = 0;
-        while (start < total_len) : (start += target_leaf_bytes) {
-            const leaf_len = @min(target_leaf_bytes, total_len - start);
+        while (start < total_len) : (start += leaf_bytes) {
+            const leaf_len = @min(leaf_bytes, total_len - start);
             const leaf = try self.createLeafNode(buffer, start, leaf_len);
             try leaves.append(self.allocator, leaf);
         }

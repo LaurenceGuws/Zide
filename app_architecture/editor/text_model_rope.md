@@ -15,8 +15,10 @@ Status (2026-01-27):
 - Rope line-start lookups now use a bounded cache with eviction and edit-time
   invalidation to reduce repeated line offset traversals.
 - Initial rope construction now chunks the original buffer into balanced
-  ~2KiB leaves, avoiding pathological large-leaf line scanning during
+  leaves, avoiding pathological large-leaf line scanning during
   `lineStart`/offset queries.
+  - Current tuning: large files (>= 8MiB) use ~4KiB initial leaves as a
+    compromise between open/RSS cost and line query latency.
 
 ## Current state (summary)
 - Text buffer is a rope/piece‑tree with per-node aggregates for byte length and
