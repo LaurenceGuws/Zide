@@ -149,6 +149,7 @@ editor_widget_todo:
         - "Ctrl+Shift+up/down now route as large visual selection-extension jumps (five rows), matching ctrl+up/down movement."
         - "Multi-range extend now preserves existing anchor/head pairs across the whole selection set instead of only supporting the zero-length-caret starting case."
         - "Plain unmodified left/right now explicitly collapse mixed multi-range selections to directional edges while preserving the full caret set."
+        - "Plain unmodified up/down now mirror that same mixed multi-range collapse policy (up -> start edges, down -> end edges)."
         - "Large visual move/extend jump size is now configurable via `editor.large_cursor_jump_rows`."
         - "Ctrl+up/down now route as larger visual cursor jumps (five visual rows), complementing ctrl+left/right word jumps."
         - "Rectangular selection clipboard semantics are now regression-tested as per-line column slices, and cursor movement explicitly collapses column selections."
