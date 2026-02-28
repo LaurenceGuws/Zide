@@ -21,18 +21,12 @@ pub const Node = struct {
 };
 
 pub const Rope = struct {
-    const LineStartCacheEntry = struct {
-        offset: usize,
-        last_used_tick: u64,
-    };
-
     allocator: std.mem.Allocator,
     root: ?*Node,
     original: []const u8,
     owns_original: bool,
     add: std.ArrayList(u8),
-    line_start_cache: std.AutoHashMap(usize, LineStartCacheEntry),
-    line_start_tick: u64,
+    line_start_cache: std.AutoHashMap(usize, usize),
     undo_stack: std.ArrayList(UndoOp),
     redo_stack: std.ArrayList(UndoOp),
     history_suspended: bool,
@@ -52,8 +46,7 @@ pub const Rope = struct {
             .original = try allocator.dupe(u8, initial),
             .owns_original = true,
             .add = .{},
-            .line_start_cache = std.AutoHashMap(usize, LineStartCacheEntry).init(allocator),
-            .line_start_tick = 0,
+            .line_start_cache = std.AutoHashMap(usize, usize).init(allocator),
             .undo_stack = .{},
             .redo_stack = .{},
             .history_suspended = false,
@@ -63,7 +56,7 @@ pub const Rope = struct {
         errdefer allocator.free(rope.original);
         errdefer rope.line_start_cache.deinit();
         if (initial.len > 0) {
-            rope.root = try rope.createLeafNode(.original, 0, initial.len);
+            rope.root = try rope.buildInitialTree(.original, initial.len);
         }
         return rope;
     }
@@ -77,8 +70,7 @@ pub const Rope = struct {
             .original = original,
             .owns_original = true,
             .add = .{},
-            .line_start_cache = std.AutoHashMap(usize, LineStartCacheEntry).init(allocator),
-            .line_start_tick = 0,
+            .line_start_cache = std.AutoHashMap(usize, usize).init(allocator),
             .undo_stack = .{},
             .redo_stack = .{},
             .history_suspended = false,
@@ -88,7 +80,7 @@ pub const Rope = struct {
         errdefer allocator.free(original);
         errdefer rope.line_start_cache.deinit();
         if (original.len > 0) {
-            rope.root = try rope.createLeafNode(.original, 0, original.len);
+            rope.root = try rope.buildInitialTree(.original, original.len);
         }
         return rope;
     }
@@ -102,8 +94,7 @@ pub const Rope = struct {
             .original = original,
             .owns_original = false,
             .add = .{},
-            .line_start_cache = std.AutoHashMap(usize, LineStartCacheEntry).init(allocator),
-            .line_start_tick = 0,
+            .line_start_cache = std.AutoHashMap(usize, usize).init(allocator),
             .undo_stack = .{},
             .redo_stack = .{},
             .history_suspended = false,
@@ -112,7 +103,7 @@ pub const Rope = struct {
         };
         errdefer rope.line_start_cache.deinit();
         if (original.len > 0) {
-            rope.root = try rope.createLeafNode(.original, 0, original.len);
+            rope.root = try rope.buildInitialTree(.original, original.len);
         }
         return rope;
     }
@@ -421,10 +412,8 @@ pub const Rope = struct {
         if (line_index == 0) return 0;
         const total_lines = self.lineCount();
         if (line_index >= total_lines) return self.totalLen();
-        self.line_start_tick +|= 1;
-        if (self.line_start_cache.getPtr(line_index)) |entry| {
-            entry.last_used_tick = self.line_start_tick;
-            return entry.offset;
+        if (self.line_start_cache.get(line_index)) |offset| {
+            return offset;
         }
         const newline_offset = self.findNthNewline(self.root, line_index);
         const offset = newline_offset + 1;
@@ -464,6 +453,29 @@ pub const Rope = struct {
             .height = 1,
         };
         return node;
+    }
+
+    fn buildInitialTree(self: *Rope, buffer: BufferKind, total_len: usize) !?*Node {
+        if (total_len == 0) return null;
+        var leaves = std.ArrayList(*Node).empty;
+        defer leaves.deinit(self.allocator);
+
+        var start: usize = 0;
+        while (start < total_len) : (start += target_leaf_bytes) {
+            const leaf_len = @min(target_leaf_bytes, total_len - start);
+            const leaf = try self.createLeafNode(buffer, start, leaf_len);
+            try leaves.append(self.allocator, leaf);
+        }
+        return self.buildTreeFromLeaves(leaves.items);
+    }
+
+    fn buildTreeFromLeaves(self: *Rope, leaves: []*Node) !?*Node {
+        if (leaves.len == 0) return null;
+        if (leaves.len == 1) return leaves[0];
+        const mid = leaves.len / 2;
+        const left = try self.buildTreeFromLeaves(leaves[0..mid]);
+        const right = try self.buildTreeFromLeaves(leaves[mid..]);
+        return try self.createInternalNode(left, right);
     }
 
     fn createInternalNode(self: *Rope, left: ?*Node, right: ?*Node) !*Node {
@@ -828,33 +840,12 @@ fn invalidateLineStartCache(self: *Rope) void {
 }
 
 fn rememberLineStart(self: *Rope, line_index: usize, offset: usize) void {
-    self.line_start_cache.put(line_index, .{
-        .offset = offset,
-        .last_used_tick = self.line_start_tick,
-    }) catch return;
-    evictLineStartCache(self);
-}
-
-fn evictLineStartCache(self: *Rope) void {
-    if (self.line_start_cache.count() <= Rope.max_line_start_cache_entries) return;
-    const target = @max(@as(usize, 1), Rope.max_line_start_cache_entries * 3 / 4);
-    const age_window = @max(@as(u64, 1), @as(u64, @intCast(Rope.max_line_start_cache_entries / 2)));
-    const cutoff = self.line_start_tick -| age_window;
-    var remove_keys = std.ArrayList(usize).empty;
-    defer remove_keys.deinit(self.allocator);
-    var it = self.line_start_cache.iterator();
-    while (it.next()) |entry| {
-        if (entry.value_ptr.last_used_tick <= cutoff) {
-            remove_keys.append(self.allocator, entry.key_ptr.*) catch break;
+    if (!self.line_start_cache.contains(line_index)) {
+        if (self.line_start_cache.count() >= Rope.max_line_start_cache_entries) {
+            self.line_start_cache.clearRetainingCapacity();
         }
     }
-    for (remove_keys.items) |key| {
-        _ = self.line_start_cache.remove(key);
-        if (self.line_start_cache.count() <= target) return;
-    }
-    if (self.line_start_cache.count() > target) {
-        self.line_start_cache.clearRetainingCapacity();
-    }
+    self.line_start_cache.put(line_index, offset) catch return;
 }
 
 fn boundaryOp(self: *Rope) !UndoOp {
