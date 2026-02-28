@@ -364,8 +364,6 @@ pub const SyntaxHighlighter = struct {
 
         var out = try tokens.toOwnedSlice(allocator);
         out = try splitHighlightOverlaps(allocator, out);
-        const log = app_logger.logger("editor.highlight");
-        log.logf("highlight range bytes={d}-{d} tokens={d}", .{ range_start, range_end, out.len });
         return out;
     }
 
