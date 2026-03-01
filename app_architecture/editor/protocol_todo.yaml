@@ -56,6 +56,7 @@ editor_protocol_todo:
         - "Query-load coverage logging now reports mapped/plain/skipped capture counts and sample unmapped capture names (`editor.highlight`) to guide finer token taxonomy work."
         - "Editor FFI bridge baseline started: opaque-handle C ABI for create/destroy, set/get text, insert, cursor offset, undo/redo, and length queries (`src/editor/ffi/{bridge,c_api}.zig`, `include/zide_editor_ffi.h`)."
         - "Editor FFI surface now includes range edits + undo grouping, multicursor caret set/get, and search/replace query/match/navigation operations for foreign-host integration."
+        - "Python ctypes smoke host now mirrors terminal FFI workflow at `examples/editor_ffi_smoke/` for quick non-UI ABI validation."
       references:
         - reference_repos/text/ropey/src/rope.rs
         - reference_repos/text/xi-rope/src/engine.rs
