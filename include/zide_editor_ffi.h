@@ -23,6 +23,10 @@ typedef struct ZideEditorStringBuffer {
     void *_ctx;
 } ZideEditorStringBuffer;
 
+typedef struct ZideEditorCaretOffset {
+    size_t offset;
+} ZideEditorCaretOffset;
+
 int zide_editor_create(ZideEditorHandle **out_handle);
 void zide_editor_destroy(ZideEditorHandle *handle);
 
@@ -36,6 +40,16 @@ int zide_editor_text_alloc(ZideEditorHandle *handle, ZideEditorStringBuffer *out
 void zide_editor_string_free(ZideEditorStringBuffer *string);
 
 int zide_editor_set_cursor_offset(ZideEditorHandle *handle, size_t offset);
+int zide_editor_primary_caret_offset(ZideEditorHandle *handle, size_t *out_offset);
+int zide_editor_aux_caret_count(ZideEditorHandle *handle, size_t *out_count);
+int zide_editor_aux_caret_get(ZideEditorHandle *handle, size_t index, size_t *out_offset);
+int zide_editor_clear_selections(ZideEditorHandle *handle);
+int zide_editor_set_carets(
+    ZideEditorHandle *handle,
+    size_t primary_offset,
+    const ZideEditorCaretOffset *aux,
+    size_t aux_count
+);
 int zide_editor_cursor_offset(ZideEditorHandle *handle, size_t *out_offset);
 
 int zide_editor_undo(ZideEditorHandle *handle, uint8_t *out_changed);

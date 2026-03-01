@@ -1,6 +1,7 @@
 const std = @import("std");
 const editor_mod = @import("../editor.zig");
 const grammar_manager_mod = @import("../grammar_manager.zig");
+const editor_types = @import("../types.zig");
 
 pub const Status = enum(c_int) {
     ok = 0,
@@ -15,6 +16,10 @@ pub const StringBuffer = extern struct {
     ptr: ?[*]const u8 = null,
     len: usize = 0,
     _ctx: ?*anyopaque = null,
+};
+
+pub const CaretOffset = extern struct {
+    offset: usize,
 };
 
 const Handle = struct {
@@ -172,6 +177,61 @@ pub fn setCursorOffset(handle: ?*ZideEditorHandle, offset: usize) Status {
     return .ok;
 }
 
+pub fn primaryCaretOffset(handle: ?*ZideEditorHandle, out_offset: *usize) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    out_offset.* = h.editor.primaryCaret().offset;
+    return .ok;
+}
+
+pub fn auxiliaryCaretCount(handle: ?*ZideEditorHandle, out_count: *usize) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    out_count.* = h.editor.auxiliaryCaretCount();
+    return .ok;
+}
+
+pub fn auxiliaryCaretGet(handle: ?*ZideEditorHandle, index: usize, out_offset: *usize) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    const caret = h.editor.auxiliaryCaretAt(index) orelse return .invalid_argument;
+    out_offset.* = caret.offset;
+    return .ok;
+}
+
+pub fn clearSelections(handle: ?*ZideEditorHandle) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    h.editor.selection = null;
+    h.editor.clearSelections();
+    return .ok;
+}
+
+pub fn setCarets(
+    handle: ?*ZideEditorHandle,
+    primary_offset: usize,
+    aux: ?[*]const CaretOffset,
+    aux_count: usize,
+) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    const aux_slice = ptrLenTyped(CaretOffset, aux, aux_count) orelse return .invalid_argument;
+    const editor = h.editor;
+    const total = editor.totalLen();
+    const primary = @min(primary_offset, total);
+
+    editor.setCursorOffsetNoClear(primary);
+    editor.selection = null;
+    editor.clearSelections();
+    for (aux_slice) |entry| {
+        const aux_offset = @min(entry.offset, total);
+        if (aux_offset == primary) continue;
+        const pos = cursorPosForOffset(editor, aux_offset);
+        editor.addSelection(.{
+            .start = pos,
+            .end = pos,
+            .is_rectangular = false,
+        }) catch return .out_of_memory;
+    }
+    editor.normalizeSelections() catch return .out_of_memory;
+    return .ok;
+}
+
 pub fn cursorOffset(handle: ?*ZideEditorHandle, out_offset: *usize) Status {
     const h = fromOpaque(handle) orelse return .invalid_argument;
     out_offset.* = h.editor.cursor.offset;
@@ -208,6 +268,24 @@ fn ptrLen(ptr: ?[*]const u8, len: usize) ?[]const u8 {
     if (len == 0) return &[_]u8{};
     const raw = ptr orelse return null;
     return raw[0..len];
+}
+
+fn ptrLenTyped(comptime T: type, ptr: ?[*]const T, len: usize) ?[]const T {
+    if (len == 0) return &[_]T{};
+    const raw = ptr orelse return null;
+    return raw[0..len];
+}
+
+fn cursorPosForOffset(editor: *editor_mod.Editor, offset: usize) editor_types.CursorPos {
+    const total = editor.totalLen();
+    const clamped = @min(offset, total);
+    const line = editor.buffer.lineIndexForOffset(clamped);
+    const line_start = editor.buffer.lineStart(line);
+    return .{
+        .line = line,
+        .col = clamped - line_start,
+        .offset = clamped,
+    };
 }
 
 fn toOpaque(handle: *Handle) *ZideEditorHandle {
