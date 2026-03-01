@@ -161,6 +161,11 @@ Not exported yet:
 Reason:
 - these are either not yet normalized for FFI or would expand scope beyond the first useful bridge slice
 
+Note:
+- explicit copied scrollback export is now provided via the dedicated buffer API
+  (`zide_terminal_scrollback_count`, `zide_terminal_scrollback_acquire`, `zide_terminal_scrollback_release`)
+  so snapshot ABI remains viewport-only while hosts can consume history through a separate ownership contract.
+
 ## Host guidance
 
 Recommended host behavior:
@@ -179,7 +184,6 @@ Do not:
 
 After the baseline copy-based path is proven, consider:
 - diff-oriented row exports
-- explicit scrollback export
 - optional zero-copy pinned snapshot handles
 - hyperlink and selection side tables
 - kitty image metadata export if a real host needs it
