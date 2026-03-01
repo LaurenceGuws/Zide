@@ -55,6 +55,7 @@ editor_protocol_todo:
         - "Runtime tree-sitter loading no longer has Zig-only special-case branches; grammar resolution now follows the same cache/pack path for all languages."
         - "Query-load coverage logging now reports mapped/plain/skipped capture counts and sample unmapped capture names (`editor.highlight`) to guide finer token taxonomy work."
         - "Editor FFI bridge baseline started: opaque-handle C ABI for create/destroy, set/get text, insert, cursor offset, undo/redo, and length queries (`src/editor/ffi/{bridge,c_api}.zig`, `include/zide_editor_ffi.h`)."
+        - "Editor FFI surface now includes range edits + undo grouping, multicursor caret set/get, and search/replace query/match/navigation operations for foreign-host integration."
       references:
         - reference_repos/text/ropey/src/rope.rs
         - reference_repos/text/xi-rope/src/engine.rs
