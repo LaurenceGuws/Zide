@@ -19,8 +19,21 @@ fn csiIntermediatesEq(action: parser_csi.CsiAction, bytes: []const u8) bool {
     return std.mem.eql(u8, action.intermediates[0..action.intermediates_len], bytes);
 }
 
+fn effectiveCsiParamCount(action: parser_csi.CsiAction) usize {
+    const raw_count = @min(@as(usize, action.count) + 1, parser_csi.max_params);
+    if (action.count == 0 and action.params[0] == 0) return 0;
+    return raw_count;
+}
+
+fn effectiveSgrParamCount(action: parser_csi.CsiAction) usize {
+    const raw_count = @min(@as(usize, action.count) + 1, parser_csi.max_params);
+    if (action.count == 0 and action.params[0] == 0) return 1;
+    return raw_count;
+}
+
 pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
     const log = app_logger.logger("terminal.csi");
+    const csi_param_count = effectiveCsiParamCount(action);
     if (log.enabled_file or log.enabled_console) {
         log.logf(
             "csi final={c} leader={c} private={d} interm={s} count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
@@ -29,7 +42,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 if (action.leader == 0) '.' else action.leader,
                 @as(u8, @intFromBool(action.private)),
                 action.intermediates[0..action.intermediates_len],
-                action.count,
+                csi_param_count,
                 action.params[0],
                 action.params[1],
                 action.params[2],
@@ -50,8 +63,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
         );
     }
     const p = action.params;
-    const count = action.count;
-    const param_len: u8 = if (count == 0 and p[0] == 0) 0 else count + 1;
+    const param_len = csi_param_count;
     const get = struct {
         fn at(params: [parser_csi.max_params]i32, idx: u8, default: i32) i32 {
             return if (idx < parser_csi.max_params) params[idx] else default;
@@ -637,14 +649,13 @@ pub fn writeWindowOpCellPixelsReply(pty: anytype, cell_h: u16, cell_w: u16) bool
 pub fn applySgr(self: anytype, action: parser_csi.CsiAction) void {
     const screen = self.activeScreen();
     const params = action.params;
-    const total = params.len;
-    const n_params: usize = if (action.count == 0 and params[0] == 0) 1 else @min(@as(usize, action.count + 1), total);
+    const n_params = effectiveSgrParamCount(action);
     const log = app_logger.logger("terminal.sgr");
     if (log.enabled_file or log.enabled_console) {
         log.logf(
             "sgr count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
             .{
-                action.count,
+                n_params,
                 params[0],
                 params[1],
                 params[2],
