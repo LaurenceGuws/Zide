@@ -2,6 +2,7 @@ const bridge = @import("bridge.zig");
 
 pub const ZideEditorHandle = bridge.ZideEditorHandle;
 pub const ZideEditorStringBuffer = bridge.StringBuffer;
+pub const ZideEditorCaretOffset = bridge.CaretOffset;
 pub const ZideEditorStatus = bridge.Status;
 
 pub fn zide_editor_create(out_handle: *?*ZideEditorHandle) c_int {
@@ -46,6 +47,31 @@ pub fn zide_editor_string_free(string: *ZideEditorStringBuffer) void {
 
 pub fn zide_editor_set_cursor_offset(handle: ?*ZideEditorHandle, offset: usize) c_int {
     return @intFromEnum(bridge.setCursorOffset(handle, offset));
+}
+
+pub fn zide_editor_primary_caret_offset(handle: ?*ZideEditorHandle, out_offset: *usize) c_int {
+    return @intFromEnum(bridge.primaryCaretOffset(handle, out_offset));
+}
+
+pub fn zide_editor_aux_caret_count(handle: ?*ZideEditorHandle, out_count: *usize) c_int {
+    return @intFromEnum(bridge.auxiliaryCaretCount(handle, out_count));
+}
+
+pub fn zide_editor_aux_caret_get(handle: ?*ZideEditorHandle, index: usize, out_offset: *usize) c_int {
+    return @intFromEnum(bridge.auxiliaryCaretGet(handle, index, out_offset));
+}
+
+pub fn zide_editor_clear_selections(handle: ?*ZideEditorHandle) c_int {
+    return @intFromEnum(bridge.clearSelections(handle));
+}
+
+pub fn zide_editor_set_carets(
+    handle: ?*ZideEditorHandle,
+    primary_offset: usize,
+    aux: ?[*]const ZideEditorCaretOffset,
+    aux_count: usize,
+) c_int {
+    return @intFromEnum(bridge.setCarets(handle, primary_offset, aux, aux_count));
 }
 
 pub fn zide_editor_cursor_offset(handle: ?*ZideEditorHandle, out_offset: *usize) c_int {

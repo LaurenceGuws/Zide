@@ -80,6 +80,36 @@ test "editor ffi validates pointer+len contracts" {
     try std.testing.expectEqual(@as(c_int, 1), c_api.zide_editor_insert_text(handle, null, 1));
 }
 
+test "editor ffi multicursor set/get offsets" {
+    var handle: ?*c_api.ZideEditorHandle = null;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_create(&handle));
+    defer c_api.zide_editor_destroy(handle);
+
+    const text = "aa\nbb\ncc\n";
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_set_text(handle, text.ptr, text.len));
+
+    const aux = [_]c_api.ZideEditorCaretOffset{
+        .{ .offset = 4 },
+        .{ .offset = 7 },
+    };
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_set_carets(handle, 1, &aux, aux.len));
+
+    var primary: usize = 0;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_primary_caret_offset(handle, &primary));
+    try std.testing.expectEqual(@as(usize, 1), primary);
+
+    var aux_count: usize = 0;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_aux_caret_count(handle, &aux_count));
+    try std.testing.expectEqual(aux.len, aux_count);
+
+    var aux0: usize = 0;
+    var aux1: usize = 0;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_aux_caret_get(handle, 0, &aux0));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_aux_caret_get(handle, 1, &aux1));
+    try std.testing.expectEqual(@as(usize, 4), aux0);
+    try std.testing.expectEqual(@as(usize, 7), aux1);
+}
+
 fn ptrBytes(ptr: ?[*]const u8, len: usize) []const u8 {
     if (len == 0) return &[_]u8{};
     return (ptr orelse return &[_]u8{})[0..len];

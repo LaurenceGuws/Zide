@@ -50,6 +50,31 @@ pub export fn zide_editor_set_cursor_offset(handle: ?*c_api.ZideEditorHandle, of
     return c_api.zide_editor_set_cursor_offset(handle, offset);
 }
 
+pub export fn zide_editor_primary_caret_offset(handle: ?*c_api.ZideEditorHandle, out_offset: *usize) c_int {
+    return c_api.zide_editor_primary_caret_offset(handle, out_offset);
+}
+
+pub export fn zide_editor_aux_caret_count(handle: ?*c_api.ZideEditorHandle, out_count: *usize) c_int {
+    return c_api.zide_editor_aux_caret_count(handle, out_count);
+}
+
+pub export fn zide_editor_aux_caret_get(handle: ?*c_api.ZideEditorHandle, index: usize, out_offset: *usize) c_int {
+    return c_api.zide_editor_aux_caret_get(handle, index, out_offset);
+}
+
+pub export fn zide_editor_clear_selections(handle: ?*c_api.ZideEditorHandle) c_int {
+    return c_api.zide_editor_clear_selections(handle);
+}
+
+pub export fn zide_editor_set_carets(
+    handle: ?*c_api.ZideEditorHandle,
+    primary_offset: usize,
+    aux: ?[*]const c_api.ZideEditorCaretOffset,
+    aux_count: usize,
+) c_int {
+    return c_api.zide_editor_set_carets(handle, primary_offset, aux, aux_count);
+}
+
 pub export fn zide_editor_cursor_offset(handle: ?*c_api.ZideEditorHandle, out_offset: *usize) c_int {
     return c_api.zide_editor_cursor_offset(handle, out_offset);
 }
