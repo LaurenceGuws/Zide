@@ -11,6 +11,7 @@ pub const Status = enum(c_int) {
 
 pub const snapshot_abi_version: u32 = 1;
 pub const event_abi_version: u32 = 1;
+pub const scrollback_abi_version: u32 = 1;
 
 pub const EventKind = enum(c_int) {
     none = 0,
@@ -85,6 +86,18 @@ pub const Snapshot = extern struct {
     _ctx: ?*anyopaque = null,
 };
 
+pub const ScrollbackBuffer = extern struct {
+    abi_version: u32 = 0,
+    struct_size: u32 = 0,
+    total_rows: u32 = 0,
+    start_row: u32 = 0,
+    row_count: u32 = 0,
+    cols: u32 = 0,
+    cell_count: usize = 0,
+    cells: ?[*]const Cell = null,
+    _ctx: ?*anyopaque = null,
+};
+
 pub const KeyEvent = extern struct {
     key: u32,
     modifiers: u8,
@@ -143,6 +156,11 @@ const SnapshotOwner = struct {
     cells: []Cell,
     title: []u8,
     cwd: []u8,
+};
+
+const ScrollbackOwner = struct {
+    allocator: std.mem.Allocator,
+    cells: []Cell,
 };
 
 const EventOwner = struct {
@@ -359,6 +377,71 @@ pub fn snapshotRelease(snapshot: *Snapshot) void {
     snapshot.* = .{};
 }
 
+pub fn scrollbackCount(handle: ?*ZideTerminalHandle, out_count: *u32) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    const count = h.session.scrollbackCount();
+    out_count.* = std.math.cast(u32, count) orelse std.math.maxInt(u32);
+    return .ok;
+}
+
+pub fn scrollbackAcquire(handle: ?*ZideTerminalHandle, start_row: u32, max_rows: u32, out_buffer: *ScrollbackBuffer) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    out_buffer.* = .{};
+
+    const total_rows = h.session.scrollbackCount();
+    const start_index: usize = start_row;
+    if (start_index > total_rows) return .invalid_argument;
+
+    const available = total_rows - start_index;
+    const requested = if (max_rows == 0) available else @min(available, @as(usize, max_rows));
+    const cols = h.session.gridCols();
+    const cell_count = requested * cols;
+    const allocator = h.allocator;
+
+    const owner = allocator.create(ScrollbackOwner) catch return .out_of_memory;
+    errdefer allocator.destroy(owner);
+    const cells = allocator.alloc(Cell, cell_count) catch return .out_of_memory;
+    errdefer allocator.free(cells);
+
+    var row_index: usize = 0;
+    while (row_index < requested) : (row_index += 1) {
+        const source_row = h.session.scrollbackRow(start_index + row_index) orelse return .backend_error;
+        if (source_row.len != cols) return .backend_error;
+        const dst_start = row_index * cols;
+        for (source_row, 0..) |cell, col| {
+            cells[dst_start + col] = mapCell(cell);
+        }
+    }
+
+    owner.* = .{
+        .allocator = allocator,
+        .cells = cells,
+    };
+
+    out_buffer.* = .{
+        .abi_version = scrollback_abi_version,
+        .struct_size = @sizeOf(ScrollbackBuffer),
+        .total_rows = std.math.cast(u32, total_rows) orelse std.math.maxInt(u32),
+        .start_row = start_row,
+        .row_count = std.math.cast(u32, requested) orelse std.math.maxInt(u32),
+        .cols = std.math.cast(u32, cols) orelse std.math.maxInt(u32),
+        .cell_count = cell_count,
+        .cells = if (cell_count == 0) null else cells.ptr,
+        ._ctx = owner,
+    };
+    return .ok;
+}
+
+pub fn scrollbackRelease(scrollback: *ScrollbackBuffer) void {
+    const owner = scrollbackOwner(scrollback._ctx) orelse {
+        scrollback.* = .{};
+        return;
+    };
+    owner.allocator.free(owner.cells);
+    owner.allocator.destroy(owner);
+    scrollback.* = .{};
+}
+
 pub fn eventDrain(handle: ?*ZideTerminalHandle, out_events: *EventBuffer) Status {
     const h = fromOpaque(handle) orelse return .invalid_argument;
     out_events.* = .{};
@@ -458,6 +541,10 @@ pub fn eventAbiVersion() u32 {
     return event_abi_version;
 }
 
+pub fn scrollbackAbiVersion() u32 {
+    return scrollback_abi_version;
+}
+
 fn syncDerivedEvents(handle: *Handle) Status {
     syncStringEvent(handle, .title_changed, &handle.last_title, handle.session.currentTitle()) catch |err| return mapError(err);
     syncStringEvent(handle, .cwd_changed, &handle.last_cwd, handle.session.currentCwd()) catch |err| return mapError(err);
@@ -539,6 +626,11 @@ fn snapshotOwner(ctx: ?*anyopaque) ?*SnapshotOwner {
 }
 
 fn eventOwner(ctx: ?*anyopaque) ?*EventOwner {
+    const value = ctx orelse return null;
+    return @ptrCast(@alignCast(value));
+}
+
+fn scrollbackOwner(ctx: ?*anyopaque) ?*ScrollbackOwner {
     const value = ctx orelse return null;
     return @ptrCast(@alignCast(value));
 }

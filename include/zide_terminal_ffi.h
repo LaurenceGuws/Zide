@@ -28,6 +28,7 @@ typedef enum ZideTerminalEventKind {
 enum {
     ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION = 1,
     ZIDE_TERMINAL_EVENT_ABI_VERSION = 1,
+    ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION = 1,
 };
 
 typedef struct ZideTerminalCreateConfig {
@@ -93,6 +94,18 @@ typedef struct ZideTerminalSnapshot {
     void *_ctx;
 } ZideTerminalSnapshot;
 
+typedef struct ZideTerminalScrollbackBuffer {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint32_t total_rows;
+    uint32_t start_row;
+    uint32_t row_count;
+    uint32_t cols;
+    size_t cell_count;
+    const ZideTerminalCell *cells;
+    void *_ctx;
+} ZideTerminalScrollbackBuffer;
+
 typedef struct ZideTerminalKeyEvent {
     uint32_t key;
     uint8_t modifiers;
@@ -142,6 +155,13 @@ int zide_terminal_send_key(ZideTerminalHandle *handle, const ZideTerminalKeyEven
 int zide_terminal_send_mouse(ZideTerminalHandle *handle, const ZideTerminalMouseEvent *event);
 int zide_terminal_snapshot_acquire(ZideTerminalHandle *handle, ZideTerminalSnapshot *out_snapshot);
 void zide_terminal_snapshot_release(ZideTerminalSnapshot *snapshot);
+int zide_terminal_scrollback_count(ZideTerminalHandle *handle, uint32_t *out_count);
+int zide_terminal_scrollback_acquire(
+    ZideTerminalHandle *handle,
+    uint32_t start_row,
+    uint32_t max_rows,
+    ZideTerminalScrollbackBuffer *out_buffer);
+void zide_terminal_scrollback_release(ZideTerminalScrollbackBuffer *scrollback);
 int zide_terminal_event_drain(ZideTerminalHandle *handle, ZideTerminalEventBuffer *out_events);
 void zide_terminal_events_free(ZideTerminalEventBuffer *events);
 uint8_t zide_terminal_is_alive(ZideTerminalHandle *handle);
@@ -151,6 +171,7 @@ void zide_terminal_string_free(ZideTerminalStringBuffer *string);
 int zide_terminal_child_exit_status(ZideTerminalHandle *handle, int32_t *out_code, uint8_t *out_has_status);
 uint32_t zide_terminal_snapshot_abi_version(void);
 uint32_t zide_terminal_event_abi_version(void);
+uint32_t zide_terminal_scrollback_abi_version(void);
 const char *zide_terminal_status_string(int status);
 
 #ifdef __cplusplus

@@ -48,6 +48,18 @@ pub export fn zide_terminal_snapshot_release(snapshot: *c_api.ZideTerminalSnapsh
     c_api.zide_terminal_snapshot_release(snapshot);
 }
 
+pub export fn zide_terminal_scrollback_count(handle: ?*c_api.ZideTerminalHandle, out_count: *u32) c_int {
+    return c_api.zide_terminal_scrollback_count(handle, out_count);
+}
+
+pub export fn zide_terminal_scrollback_acquire(handle: ?*c_api.ZideTerminalHandle, start_row: u32, max_rows: u32, out_buffer: *c_api.ZideTerminalScrollbackBuffer) c_int {
+    return c_api.zide_terminal_scrollback_acquire(handle, start_row, max_rows, out_buffer);
+}
+
+pub export fn zide_terminal_scrollback_release(scrollback: *c_api.ZideTerminalScrollbackBuffer) void {
+    c_api.zide_terminal_scrollback_release(scrollback);
+}
+
 pub export fn zide_terminal_event_drain(handle: ?*c_api.ZideTerminalHandle, out_events: *c_api.ZideTerminalEventBuffer) c_int {
     return c_api.zide_terminal_event_drain(handle, out_events);
 }
@@ -82,6 +94,10 @@ pub export fn zide_terminal_snapshot_abi_version() u32 {
 
 pub export fn zide_terminal_event_abi_version() u32 {
     return c_api.zide_terminal_event_abi_version();
+}
+
+pub export fn zide_terminal_scrollback_abi_version() u32 {
+    return c_api.zide_terminal_scrollback_abi_version();
 }
 
 pub export fn zide_terminal_status_string(status: c_int) [*:0]const u8 {

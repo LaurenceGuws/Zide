@@ -7,6 +7,7 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try app_logger.setFileFilterString("none");
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION, c_api.zide_terminal_snapshot_abi_version());
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_EVENT_ABI_VERSION, c_api.zide_terminal_event_abi_version());
+    try std.testing.expectEqual(c_api.ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION, c_api.zide_terminal_scrollback_abi_version());
 
     var handle: ?*c_api.ZideTerminalHandle = null;
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_create(null, &handle));
@@ -68,6 +69,64 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try std.testing.expect(saw_clipboard);
 }
 
+test "ffi scrollback acquire exports copied rows" {
+    try app_logger.setConsoleFilterString("none");
+    try app_logger.setFileFilterString("none");
+
+    var handle: ?*c_api.ZideTerminalHandle = null;
+    const cfg = c_api.ZideTerminalCreateConfig{
+        .rows = 4,
+        .cols = 12,
+        .scrollback_rows = 128,
+        .cursor_shape = 0,
+        .cursor_blink = 1,
+    };
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_create(&cfg, &handle));
+    defer c_api.zide_terminal_destroy(handle);
+
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_resize(handle, 12, 4, 8, 16));
+
+    const lines =
+        "hist-00\r\n" ++
+        "hist-01\r\n" ++
+        "hist-02\r\n" ++
+        "hist-03\r\n" ++
+        "hist-04\r\n" ++
+        "hist-05\r\n";
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, lines.ptr, lines.len));
+
+    var count: u32 = 0;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_scrollback_count(handle, &count));
+    try std.testing.expect(count > 0);
+
+    var scrollback: c_api.ZideTerminalScrollbackBuffer = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_scrollback_acquire(handle, 0, 0, &scrollback));
+    defer c_api.zide_terminal_scrollback_release(&scrollback);
+
+    try std.testing.expectEqual(c_api.ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION, scrollback.abi_version);
+    try std.testing.expectEqual(@as(u32, @sizeOf(c_api.ZideTerminalScrollbackBuffer)), scrollback.struct_size);
+    try std.testing.expectEqual(count, scrollback.total_rows);
+    try std.testing.expectEqual(@as(u32, 0), scrollback.start_row);
+    try std.testing.expectEqual(count, scrollback.row_count);
+    try std.testing.expectEqual(@as(u32, 12), scrollback.cols);
+    try std.testing.expectEqual(@as(usize, @as(usize, count) * 12), scrollback.cell_count);
+    try std.testing.expect(scrollback.cells != null);
+
+    try std.testing.expect(scrollbackRowContains(&scrollback, 0, "hist-"));
+
+    if (count >= 2) {
+        var one_row: c_api.ZideTerminalScrollbackBuffer = .{};
+        try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_scrollback_acquire(handle, 1, 1, &one_row));
+        defer c_api.zide_terminal_scrollback_release(&one_row);
+        try std.testing.expectEqual(@as(u32, 1), one_row.start_row);
+        try std.testing.expectEqual(@as(u32, 1), one_row.row_count);
+        try std.testing.expectEqual(@as(usize, 12), one_row.cell_count);
+    }
+
+    var invalid: c_api.ZideTerminalScrollbackBuffer = .{};
+    try std.testing.expectEqual(@as(c_int, 1), c_api.zide_terminal_scrollback_acquire(handle, count + 1, 0, &invalid));
+}
+
 test "ffi snapshot and event release zero exported structs" {
     try app_logger.setConsoleFilterString("none");
     try app_logger.setFileFilterString("none");
@@ -83,6 +142,14 @@ test "ffi snapshot and event release zero exported structs" {
     try std.testing.expectEqual(@as(u32, 0), snapshot.struct_size);
     try std.testing.expectEqual(@as(usize, 0), snapshot.cell_count);
     try std.testing.expectEqual(@as(?*anyopaque, null), snapshot._ctx);
+
+    var scrollback: c_api.ZideTerminalScrollbackBuffer = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_scrollback_acquire(handle, 0, 0, &scrollback));
+    c_api.zide_terminal_scrollback_release(&scrollback);
+    try std.testing.expectEqual(@as(u32, 0), scrollback.abi_version);
+    try std.testing.expectEqual(@as(u32, 0), scrollback.struct_size);
+    try std.testing.expectEqual(@as(usize, 0), scrollback.cell_count);
+    try std.testing.expectEqual(@as(?*anyopaque, null), scrollback._ctx);
 
     const vt = "\x1b]0;ffi-title\x07";
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, vt.ptr, vt.len));
@@ -146,4 +213,28 @@ test "ffi child_exit event carries exit code and present flag" {
 fn ptrBytes(ptr: ?[*]const u8, len: usize) []const u8 {
     if (len == 0) return "";
     return (ptr orelse unreachable)[0..len];
+}
+
+fn scrollbackRowContains(scrollback: *const c_api.ZideTerminalScrollbackBuffer, row: usize, needle: []const u8) bool {
+    if (scrollback.cells == null or scrollback.cols == 0) return false;
+    const cols: usize = @intCast(scrollback.cols);
+    const start = row * cols;
+    const cells = scrollback.cells.?[0..scrollback.cell_count];
+    if (start + cols > cells.len) return false;
+
+    var line: [256]u8 = [_]u8{0} ** 256;
+    var len: usize = 0;
+    for (cells[start .. start + cols]) |cell| {
+        if (cell.width == 0) continue;
+        const cp = cell.codepoint;
+        const ch: u8 = if (cp == 0 or cp > 0x7f) ' ' else @intCast(cp);
+        if (len < line.len) {
+            line[len] = ch;
+            len += 1;
+        }
+    }
+    while (len > 0 and line[len - 1] == ' ') {
+        len -= 1;
+    }
+    return std.mem.indexOf(u8, line[0..len], needle) != null;
 }

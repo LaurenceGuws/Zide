@@ -3,10 +3,12 @@ const bridge = @import("bridge.zig");
 pub const ZideTerminalHandle = bridge.ZideTerminalHandle;
 pub const ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION = bridge.snapshot_abi_version;
 pub const ZIDE_TERMINAL_EVENT_ABI_VERSION = bridge.event_abi_version;
+pub const ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION = bridge.scrollback_abi_version;
 pub const ZideTerminalCreateConfig = bridge.CreateConfig;
 pub const ZideTerminalColor = bridge.Color;
 pub const ZideTerminalCell = bridge.Cell;
 pub const ZideTerminalSnapshot = bridge.Snapshot;
+pub const ZideTerminalScrollbackBuffer = bridge.ScrollbackBuffer;
 pub const ZideTerminalKeyEvent = bridge.KeyEvent;
 pub const ZideTerminalMouseEvent = bridge.MouseEvent;
 pub const ZideTerminalEvent = bridge.Event;
@@ -63,6 +65,18 @@ pub fn zide_terminal_snapshot_release(snapshot: *ZideTerminalSnapshot) void {
     bridge.snapshotRelease(snapshot);
 }
 
+pub fn zide_terminal_scrollback_count(handle: ?*ZideTerminalHandle, out_count: *u32) c_int {
+    return @intFromEnum(bridge.scrollbackCount(handle, out_count));
+}
+
+pub fn zide_terminal_scrollback_acquire(handle: ?*ZideTerminalHandle, start_row: u32, max_rows: u32, out_buffer: *ZideTerminalScrollbackBuffer) c_int {
+    return @intFromEnum(bridge.scrollbackAcquire(handle, start_row, max_rows, out_buffer));
+}
+
+pub fn zide_terminal_scrollback_release(scrollback: *ZideTerminalScrollbackBuffer) void {
+    bridge.scrollbackRelease(scrollback);
+}
+
 pub fn zide_terminal_event_drain(handle: ?*ZideTerminalHandle, out_events: *ZideTerminalEventBuffer) c_int {
     return @intFromEnum(bridge.eventDrain(handle, out_events));
 }
@@ -97,6 +111,10 @@ pub fn zide_terminal_snapshot_abi_version() u32 {
 
 pub fn zide_terminal_event_abi_version() u32 {
     return bridge.eventAbiVersion();
+}
+
+pub fn zide_terminal_scrollback_abi_version() u32 {
+    return bridge.scrollbackAbiVersion();
 }
 
 pub fn zide_terminal_status_string(status: c_int) [*:0]const u8 {

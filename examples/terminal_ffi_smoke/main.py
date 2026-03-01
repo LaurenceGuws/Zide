@@ -80,6 +80,20 @@ class Snapshot(ctypes.Structure):
     ]
 
 
+class ScrollbackBuffer(ctypes.Structure):
+    _fields_ = [
+        ("abi_version", ctypes.c_uint32),
+        ("struct_size", ctypes.c_uint32),
+        ("total_rows", ctypes.c_uint32),
+        ("start_row", ctypes.c_uint32),
+        ("row_count", ctypes.c_uint32),
+        ("cols", ctypes.c_uint32),
+        ("cell_count", ctypes.c_size_t),
+        ("cells", ctypes.POINTER(Cell)),
+        ("_ctx", ctypes.c_void_p),
+    ]
+
+
 class Event(ctypes.Structure):
     _fields_ = [
         ("kind", ctypes.c_int),
@@ -124,6 +138,17 @@ def load_library(path: Path):
     lib.zide_terminal_snapshot_acquire.restype = ctypes.c_int
     lib.zide_terminal_snapshot_release.argtypes = [ctypes.POINTER(Snapshot)]
     lib.zide_terminal_snapshot_release.restype = None
+    lib.zide_terminal_scrollback_count.argtypes = [HandlePtr, ctypes.POINTER(ctypes.c_uint32)]
+    lib.zide_terminal_scrollback_count.restype = ctypes.c_int
+    lib.zide_terminal_scrollback_acquire.argtypes = [
+        HandlePtr,
+        ctypes.c_uint32,
+        ctypes.c_uint32,
+        ctypes.POINTER(ScrollbackBuffer),
+    ]
+    lib.zide_terminal_scrollback_acquire.restype = ctypes.c_int
+    lib.zide_terminal_scrollback_release.argtypes = [ctypes.POINTER(ScrollbackBuffer)]
+    lib.zide_terminal_scrollback_release.restype = None
     lib.zide_terminal_event_drain.argtypes = [HandlePtr, ctypes.POINTER(EventBuffer)]
     lib.zide_terminal_event_drain.restype = ctypes.c_int
     lib.zide_terminal_events_free.argtypes = [ctypes.POINTER(EventBuffer)]
@@ -142,6 +167,8 @@ def load_library(path: Path):
     lib.zide_terminal_snapshot_abi_version.restype = ctypes.c_uint32
     lib.zide_terminal_event_abi_version.argtypes = []
     lib.zide_terminal_event_abi_version.restype = ctypes.c_uint32
+    lib.zide_terminal_scrollback_abi_version.argtypes = []
+    lib.zide_terminal_scrollback_abi_version.restype = ctypes.c_uint32
     lib.zide_terminal_status_string.argtypes = [ctypes.c_int]
     lib.zide_terminal_status_string.restype = ctypes.c_char_p
     return lib
@@ -167,6 +194,21 @@ def render_first_row(snapshot: Snapshot) -> str:
     return "".join(chars).rstrip()
 
 
+def render_scrollback_row(scrollback: ScrollbackBuffer, row: int) -> str:
+    if not scrollback.cells:
+        return ""
+    cols = int(scrollback.cols)
+    start = row * cols
+    chars: list[str] = []
+    for col in range(cols):
+        cell = scrollback.cells[start + col]
+        if cell.width == 0:
+            continue
+        cp = int(cell.codepoint)
+        chars.append(" " if cp == 0 else chr(cp))
+    return "".join(chars).rstrip()
+
+
 def run_smoke(lib_path: Path) -> int:
     lib = load_library(lib_path)
     handle = HandlePtr()
@@ -185,6 +227,11 @@ def run_smoke(lib_path: Path) -> int:
         status = lib.zide_terminal_feed_output(handle, vt_buf, len(vt))
         if status != STATUS_OK:
             raise RuntimeError(f"feed_output failed: {status}")
+        history = b"".join([f"hist-{i:02d}\r\n".encode("ascii") for i in range(20)])
+        history_buf = (ctypes.c_uint8 * len(history)).from_buffer_copy(history)
+        status = lib.zide_terminal_feed_output(handle, history_buf, len(history))
+        if status != STATUS_OK:
+            raise RuntimeError(f"feed_output(history) failed: {status}")
 
         snapshot = Snapshot()
         status = lib.zide_terminal_snapshot_acquire(handle, ctypes.byref(snapshot))
@@ -214,7 +261,7 @@ def run_smoke(lib_path: Path) -> int:
 
             print("ffi smoke ok")
             print(
-                f"snapshot_abi={lib.zide_terminal_snapshot_abi_version()} event_abi={lib.zide_terminal_event_abi_version()}"
+                f"snapshot_abi={lib.zide_terminal_snapshot_abi_version()} event_abi={lib.zide_terminal_event_abi_version()} scrollback_abi={lib.zide_terminal_scrollback_abi_version()}"
             )
             print(f"status_ok={lib.zide_terminal_status_string(STATUS_OK).decode()} status_unknown={lib.zide_terminal_status_string(99).decode()}")
             print(f"size={snapshot.rows}x{snapshot.cols} cells={snapshot.cell_count}")
@@ -231,6 +278,25 @@ def run_smoke(lib_path: Path) -> int:
                 raise RuntimeError("getter mismatch")
         finally:
             lib.zide_terminal_snapshot_release(ctypes.byref(snapshot))
+
+        scrollback_count = ctypes.c_uint32(0)
+        if lib.zide_terminal_scrollback_count(handle, ctypes.byref(scrollback_count)) != STATUS_OK:
+            raise RuntimeError("scrollback_count failed")
+        if scrollback_count.value == 0:
+            raise RuntimeError("expected scrollback rows")
+        scrollback = ScrollbackBuffer()
+        status = lib.zide_terminal_scrollback_acquire(handle, 0, min(2, scrollback_count.value), ctypes.byref(scrollback))
+        if status != STATUS_OK:
+            raise RuntimeError(f"scrollback_acquire failed: {status}")
+        try:
+            scrollback_row0 = render_scrollback_row(scrollback, 0)
+            print(
+                f"scrollback_total={scrollback.total_rows} window=({scrollback.start_row},{scrollback.row_count}) cols={scrollback.cols} row0={scrollback_row0!r}"
+            )
+            if "hist-" not in scrollback_row0:
+                raise RuntimeError("unexpected scrollback row content")
+        finally:
+            lib.zide_terminal_scrollback_release(ctypes.byref(scrollback))
 
         events = EventBuffer()
         status = lib.zide_terminal_event_drain(handle, ctypes.byref(events))
