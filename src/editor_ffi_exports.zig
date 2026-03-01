@@ -95,6 +95,56 @@ pub export fn zide_editor_total_len(handle: ?*c_api.ZideEditorHandle, out_len: *
     return c_api.zide_editor_total_len(handle, out_len);
 }
 
+pub export fn zide_editor_search_set_query(handle: ?*c_api.ZideEditorHandle, bytes: ?[*]const u8, len: usize, use_regex: u8) c_int {
+    return c_api.zide_editor_search_set_query(handle, bytes, len, use_regex);
+}
+
+pub export fn zide_editor_search_match_count(handle: ?*c_api.ZideEditorHandle, out_count: *usize) c_int {
+    return c_api.zide_editor_search_match_count(handle, out_count);
+}
+
+pub export fn zide_editor_search_match_get(
+    handle: ?*c_api.ZideEditorHandle,
+    index: usize,
+    out_match: *c_api.ZideEditorSearchMatch,
+) c_int {
+    return c_api.zide_editor_search_match_get(handle, index, out_match);
+}
+
+pub export fn zide_editor_search_active_index(
+    handle: ?*c_api.ZideEditorHandle,
+    out_index: *usize,
+    out_has_active: *u8,
+) c_int {
+    return c_api.zide_editor_search_active_index(handle, out_index, out_has_active);
+}
+
+pub export fn zide_editor_search_next(handle: ?*c_api.ZideEditorHandle, out_activated: *u8) c_int {
+    return c_api.zide_editor_search_next(handle, out_activated);
+}
+
+pub export fn zide_editor_search_prev(handle: ?*c_api.ZideEditorHandle, out_activated: *u8) c_int {
+    return c_api.zide_editor_search_prev(handle, out_activated);
+}
+
+pub export fn zide_editor_search_replace_active(
+    handle: ?*c_api.ZideEditorHandle,
+    bytes: ?[*]const u8,
+    len: usize,
+    out_replaced: *u8,
+) c_int {
+    return c_api.zide_editor_search_replace_active(handle, bytes, len, out_replaced);
+}
+
+pub export fn zide_editor_search_replace_all(
+    handle: ?*c_api.ZideEditorHandle,
+    bytes: ?[*]const u8,
+    len: usize,
+    out_count: *usize,
+) c_int {
+    return c_api.zide_editor_search_replace_all(handle, bytes, len, out_count);
+}
+
 pub export fn zide_editor_status_string(status: c_int) [*:0]const u8 {
     return c_api.zide_editor_status_string(status);
 }

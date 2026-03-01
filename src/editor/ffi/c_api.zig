@@ -3,6 +3,7 @@ const bridge = @import("bridge.zig");
 pub const ZideEditorHandle = bridge.ZideEditorHandle;
 pub const ZideEditorStringBuffer = bridge.StringBuffer;
 pub const ZideEditorCaretOffset = bridge.CaretOffset;
+pub const ZideEditorSearchMatch = bridge.SearchMatch;
 pub const ZideEditorStatus = bridge.Status;
 
 pub fn zide_editor_create(out_handle: *?*ZideEditorHandle) c_int {
@@ -92,6 +93,38 @@ pub fn zide_editor_line_count(handle: ?*ZideEditorHandle, out_lines: *usize) c_i
 
 pub fn zide_editor_total_len(handle: ?*ZideEditorHandle, out_len: *usize) c_int {
     return @intFromEnum(bridge.totalLen(handle, out_len));
+}
+
+pub fn zide_editor_search_set_query(handle: ?*ZideEditorHandle, bytes: ?[*]const u8, len: usize, use_regex: u8) c_int {
+    return @intFromEnum(bridge.searchSetQuery(handle, bytes, len, use_regex));
+}
+
+pub fn zide_editor_search_match_count(handle: ?*ZideEditorHandle, out_count: *usize) c_int {
+    return @intFromEnum(bridge.searchMatchCount(handle, out_count));
+}
+
+pub fn zide_editor_search_match_get(handle: ?*ZideEditorHandle, index: usize, out_match: *ZideEditorSearchMatch) c_int {
+    return @intFromEnum(bridge.searchMatchGet(handle, index, out_match));
+}
+
+pub fn zide_editor_search_active_index(handle: ?*ZideEditorHandle, out_index: *usize, out_has_active: *u8) c_int {
+    return @intFromEnum(bridge.searchActiveIndex(handle, out_index, out_has_active));
+}
+
+pub fn zide_editor_search_next(handle: ?*ZideEditorHandle, out_activated: *u8) c_int {
+    return @intFromEnum(bridge.searchNext(handle, out_activated));
+}
+
+pub fn zide_editor_search_prev(handle: ?*ZideEditorHandle, out_activated: *u8) c_int {
+    return @intFromEnum(bridge.searchPrev(handle, out_activated));
+}
+
+pub fn zide_editor_search_replace_active(handle: ?*ZideEditorHandle, bytes: ?[*]const u8, len: usize, out_replaced: *u8) c_int {
+    return @intFromEnum(bridge.searchReplaceActive(handle, bytes, len, out_replaced));
+}
+
+pub fn zide_editor_search_replace_all(handle: ?*ZideEditorHandle, bytes: ?[*]const u8, len: usize, out_count: *usize) c_int {
+    return @intFromEnum(bridge.searchReplaceAll(handle, bytes, len, out_count));
 }
 
 pub fn zide_editor_status_string(status: c_int) [*:0]const u8 {

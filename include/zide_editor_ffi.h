@@ -27,6 +27,11 @@ typedef struct ZideEditorCaretOffset {
     size_t offset;
 } ZideEditorCaretOffset;
 
+typedef struct ZideEditorSearchMatch {
+    size_t start;
+    size_t end;
+} ZideEditorSearchMatch;
+
 int zide_editor_create(ZideEditorHandle **out_handle);
 void zide_editor_destroy(ZideEditorHandle *handle);
 
@@ -57,6 +62,15 @@ int zide_editor_redo(ZideEditorHandle *handle, uint8_t *out_changed);
 
 int zide_editor_line_count(ZideEditorHandle *handle, size_t *out_lines);
 int zide_editor_total_len(ZideEditorHandle *handle, size_t *out_len);
+
+int zide_editor_search_set_query(ZideEditorHandle *handle, const uint8_t *bytes, size_t len, uint8_t use_regex);
+int zide_editor_search_match_count(ZideEditorHandle *handle, size_t *out_count);
+int zide_editor_search_match_get(ZideEditorHandle *handle, size_t index, ZideEditorSearchMatch *out_match);
+int zide_editor_search_active_index(ZideEditorHandle *handle, size_t *out_index, uint8_t *out_has_active);
+int zide_editor_search_next(ZideEditorHandle *handle, uint8_t *out_activated);
+int zide_editor_search_prev(ZideEditorHandle *handle, uint8_t *out_activated);
+int zide_editor_search_replace_active(ZideEditorHandle *handle, const uint8_t *bytes, size_t len, uint8_t *out_replaced);
+int zide_editor_search_replace_all(ZideEditorHandle *handle, const uint8_t *bytes, size_t len, size_t *out_count);
 
 const char *zide_editor_status_string(int status);
 

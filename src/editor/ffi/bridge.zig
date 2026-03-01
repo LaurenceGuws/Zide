@@ -22,6 +22,11 @@ pub const CaretOffset = extern struct {
     offset: usize,
 };
 
+pub const SearchMatch = extern struct {
+    start: usize,
+    end: usize,
+};
+
 const Handle = struct {
     allocator: std.mem.Allocator,
     grammar_manager: grammar_manager_mod.GrammarManager,
@@ -261,6 +266,82 @@ pub fn lineCount(handle: ?*ZideEditorHandle, out_lines: *usize) Status {
 pub fn totalLen(handle: ?*ZideEditorHandle, out_len: *usize) Status {
     const h = fromOpaque(handle) orelse return .invalid_argument;
     out_len.* = h.editor.totalLen();
+    return .ok;
+}
+
+pub fn searchSetQuery(handle: ?*ZideEditorHandle, bytes: ?[*]const u8, len: usize, use_regex: u8) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    const editor = h.editor;
+    if (len == 0) {
+        if (use_regex != 0) {
+            editor.setSearchQueryRegex(null) catch |err| return mapError(err);
+        } else {
+            editor.setSearchQuery(null) catch |err| return mapError(err);
+        }
+        return .ok;
+    }
+    const query = ptrLen(bytes, len) orelse return .invalid_argument;
+    if (use_regex != 0) {
+        editor.setSearchQueryRegex(query) catch |err| return mapError(err);
+    } else {
+        editor.setSearchQuery(query) catch |err| return mapError(err);
+    }
+    return .ok;
+}
+
+pub fn searchMatchCount(handle: ?*ZideEditorHandle, out_count: *usize) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    out_count.* = h.editor.searchMatches().len;
+    return .ok;
+}
+
+pub fn searchMatchGet(handle: ?*ZideEditorHandle, index: usize, out_match: *SearchMatch) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    const matches = h.editor.searchMatches();
+    if (index >= matches.len) return .invalid_argument;
+    out_match.* = .{
+        .start = matches[index].start,
+        .end = matches[index].end,
+    };
+    return .ok;
+}
+
+pub fn searchActiveIndex(handle: ?*ZideEditorHandle, out_index: *usize, out_has_active: *u8) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    if (h.editor.searchActiveIndex()) |idx| {
+        out_index.* = idx;
+        out_has_active.* = 1;
+    } else {
+        out_index.* = 0;
+        out_has_active.* = 0;
+    }
+    return .ok;
+}
+
+pub fn searchNext(handle: ?*ZideEditorHandle, out_activated: *u8) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    out_activated.* = @intFromBool(h.editor.activateNextSearchMatch());
+    return .ok;
+}
+
+pub fn searchPrev(handle: ?*ZideEditorHandle, out_activated: *u8) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    out_activated.* = @intFromBool(h.editor.activatePrevSearchMatch());
+    return .ok;
+}
+
+pub fn searchReplaceActive(handle: ?*ZideEditorHandle, bytes: ?[*]const u8, len: usize, out_replaced: *u8) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    const replacement = ptrLen(bytes, len) orelse return .invalid_argument;
+    const replaced = h.editor.replaceActiveSearchMatch(replacement) catch |err| return mapError(err);
+    out_replaced.* = @intFromBool(replaced);
+    return .ok;
+}
+
+pub fn searchReplaceAll(handle: ?*ZideEditorHandle, bytes: ?[*]const u8, len: usize, out_count: *usize) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    const replacement = ptrLen(bytes, len) orelse return .invalid_argument;
+    out_count.* = h.editor.replaceAllSearchMatches(replacement) catch |err| return mapError(err);
     return .ok;
 }
 

@@ -110,6 +110,42 @@ test "editor ffi multicursor set/get offsets" {
     try std.testing.expectEqual(@as(usize, 7), aux1);
 }
 
+test "editor ffi search and replace flow" {
+    var handle: ?*c_api.ZideEditorHandle = null;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_create(&handle));
+    defer c_api.zide_editor_destroy(handle);
+
+    const text = "foo bar foo baz";
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_set_text(handle, text.ptr, text.len));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_search_set_query(handle, "foo".ptr, 3, 0));
+
+    var count: usize = 0;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_search_match_count(handle, &count));
+    try std.testing.expectEqual(@as(usize, 2), count);
+
+    var m0: c_api.ZideEditorSearchMatch = .{ .start = 0, .end = 0 };
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_search_match_get(handle, 0, &m0));
+    try std.testing.expectEqual(@as(usize, 0), m0.start);
+    try std.testing.expectEqual(@as(usize, 3), m0.end);
+
+    var activated: u8 = 0;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_search_next(handle, &activated));
+    try std.testing.expectEqual(@as(u8, 1), activated);
+
+    var replaced: u8 = 0;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_search_replace_active(handle, "qux".ptr, 3, &replaced));
+    try std.testing.expectEqual(@as(u8, 1), replaced);
+
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_search_set_query(handle, "ba.".ptr, 3, 1));
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_search_match_count(handle, &count));
+    try std.testing.expectEqual(@as(usize, 2), count);
+
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_search_set_query(handle, "foo".ptr, 3, 0));
+    var replaced_all: usize = 0;
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_editor_search_replace_all(handle, "x".ptr, 1, &replaced_all));
+    try std.testing.expectEqual(@as(usize, 1), replaced_all);
+}
+
 fn ptrBytes(ptr: ?[*]const u8, len: usize) []const u8 {
     if (len == 0) return &[_]u8{};
     return (ptr orelse return &[_]u8{})[0..len];
