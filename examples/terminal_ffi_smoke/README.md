@@ -25,7 +25,8 @@ If the bridge is painful to bind from Python, the ABI is probably too clever.
 3. resize it through the bridge
 4. acquire a snapshot
 5. verify dimensions, cell count, title/cwd pointers, and initial row data
-6. drain events and verify ownership/release paths
+6. acquire a scrollback window and verify copied row content
+7. drain events and verify ownership/release paths
 7. destroy the session
 
 This is intentionally a no-PTY smoke today.
