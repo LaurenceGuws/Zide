@@ -95,6 +95,9 @@ Required operations for milestone 1:
 - `zide_terminal_send_mouse(handle, mouse_event)`
 - `zide_terminal_snapshot_acquire(handle, out_snapshot)`
 - `zide_terminal_snapshot_release(snapshot)`
+- `zide_terminal_scrollback_count(handle, out_count)`
+- `zide_terminal_scrollback_acquire(handle, start_row, max_rows, out_buffer)`
+- `zide_terminal_scrollback_release(out_buffer)`
 - `zide_terminal_event_drain(handle, out_events)`
 - `zide_terminal_events_free(events)`
 - `zide_terminal_current_title(handle, out_string)`
@@ -103,6 +106,7 @@ Required operations for milestone 1:
 - `zide_terminal_child_exit_status(handle, out_code, out_has_status)`
 - `zide_terminal_snapshot_abi_version()`
 - `zide_terminal_event_abi_version()`
+- `zide_terminal_scrollback_abi_version()`
 - `zide_terminal_status_string(status)`
 
 The initial API should stay synchronous and polling-based.
