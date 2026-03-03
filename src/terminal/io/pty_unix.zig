@@ -137,6 +137,15 @@ pub const Pty = struct {
         return true;
     }
 
+    pub fn hasForegroundProcessOutsideShell(self: *Pty) bool {
+        const shell_pid = self.child_pid orelse return false;
+        const shell_pgrp = c.getpgid(shell_pid);
+        if (shell_pgrp <= 0) return false;
+        const foreground_pgrp = c.tcgetpgrp(@intCast(self.master_fd));
+        if (foreground_pgrp <= 0) return false;
+        return foreground_pgrp != shell_pgrp;
+    }
+
     pub fn hasData(self: *Pty) bool {
         var fds = [1]posix.pollfd{
             .{

@@ -174,6 +174,12 @@ const AppState = struct {
         }
     };
 
+    const TerminalCloseModalLayout = struct {
+        card: layout_types.Rect,
+        confirm_button: layout_types.Rect,
+        cancel_button: layout_types.Rect,
+    };
+
     allocator: std.mem.Allocator,
     shell: *Shell,
     options_bar: OptionsBar,
@@ -257,6 +263,7 @@ const AppState = struct {
     font_sample_close_pending: bool,
     font_sample_screenshot_path: ?[]const u8,
     search_panel: SearchPanelState,
+    terminal_close_confirm_tab: ?terminal_mod.TerminalTabId,
 
     fn isDarkTheme(theme: *const app_shell.Theme) bool {
         const r = @as(u32, theme.background.r);
@@ -507,6 +514,7 @@ const AppState = struct {
             .font_sample_close_pending = false,
             .font_sample_screenshot_path = if (app_mode == .font_sample) envSlice("ZIDE_FONT_SAMPLE_SCREENSHOT") else null,
             .search_panel = SearchPanelState.init(allocator),
+            .terminal_close_confirm_tab = null,
         };
         if (app_mode == .font_sample) {
             state.font_sample_view = try font_sample_view_mod.FontSampleView.init(allocator, shell.rendererPtr());
@@ -865,11 +873,135 @@ const AppState = struct {
         };
     }
 
+    fn terminalCloseConfirmActive(self: *AppState) bool {
+        if (self.terminal_close_confirm_tab == null) return false;
+        if (self.terminal_workspace) |*workspace| {
+            if (workspace.activeTabId()) |active_id| {
+                return active_id == self.terminal_close_confirm_tab.?;
+            }
+        }
+        self.terminal_close_confirm_tab = null;
+        return false;
+    }
+
+    fn clearTerminalCloseConfirm(self: *AppState) void {
+        self.terminal_close_confirm_tab = null;
+    }
+
+    fn terminalCloseModalLayout(self: *AppState, layout: layout_types.WidgetLayout) TerminalCloseModalLayout {
+        const scale = self.shell.uiScaleFactor();
+        const margin = 24.0 * scale;
+        const desired_w = 540.0 * scale;
+        const card_w = @max(280.0 * scale, @min(desired_w, layout.window.width - margin * 2.0));
+        const card_h = 150.0 * scale;
+        const card_x = layout.window.x + (layout.window.width - card_w) / 2.0;
+        const card_y = layout.window.y + (layout.window.height - card_h) / 2.0;
+
+        const button_h = 34.0 * scale;
+        const confirm_w = 178.0 * scale;
+        const cancel_w = 128.0 * scale;
+        const button_gap = 10.0 * scale;
+        const button_y = card_y + card_h - button_h - 14.0 * scale;
+        const confirm_x = card_x + card_w - confirm_w - 14.0 * scale;
+        const cancel_x = confirm_x - cancel_w - button_gap;
+
+        return .{
+            .card = .{
+                .x = card_x,
+                .y = card_y,
+                .width = card_w,
+                .height = card_h,
+            },
+            .confirm_button = .{
+                .x = confirm_x,
+                .y = button_y,
+                .width = confirm_w,
+                .height = button_h,
+            },
+            .cancel_button = .{
+                .x = cancel_x,
+                .y = button_y,
+                .width = cancel_w,
+                .height = button_h,
+            },
+        };
+    }
+
+    fn pointInRect(x: f32, y: f32, rect: layout_types.Rect) bool {
+        return x >= rect.x and x <= rect.x + rect.width and y >= rect.y and y <= rect.y + rect.height;
+    }
+
+    fn handleTerminalCloseConfirmInput(
+        self: *AppState,
+        input_batch: *shared_types.input.InputBatch,
+        layout: layout_types.WidgetLayout,
+        now: f64,
+    ) !bool {
+        if (!self.terminalCloseConfirmActive()) return false;
+
+        const close_action_pressed = blk: {
+            for (self.input_router.actionsSlice()) |action| {
+                if (action.kind == .terminal_close_tab) break :blk true;
+            }
+            break :blk false;
+        };
+
+        const confirm_pressed = close_action_pressed or
+            input_batch.keyPressed(.enter) or
+            input_batch.keyPressed(.kp_enter) or
+            (input_batch.keyPressed(.y) and input_batch.mods.isEmpty());
+        const cancel_pressed = input_batch.keyPressed(.escape) or
+            (input_batch.keyPressed(.n) and input_batch.mods.isEmpty());
+
+        if (confirm_pressed) {
+            if (try self.closeActiveTerminalTab()) {
+                self.needs_redraw = true;
+            }
+            self.metrics.noteInput(now);
+            return true;
+        }
+        if (cancel_pressed) {
+            self.clearTerminalCloseConfirm();
+            self.needs_redraw = true;
+            self.metrics.noteInput(now);
+            return true;
+        }
+
+        if (input_batch.mousePressed(.left)) {
+            const modal = self.terminalCloseModalLayout(layout);
+            const mx = input_batch.mouse_pos.x;
+            const my = input_batch.mouse_pos.y;
+            if (pointInRect(mx, my, modal.confirm_button)) {
+                if (try self.closeActiveTerminalTab()) {
+                    self.needs_redraw = true;
+                }
+                self.metrics.noteInput(now);
+                return true;
+            }
+            if (pointInRect(mx, my, modal.cancel_button)) {
+                self.clearTerminalCloseConfirm();
+                self.needs_redraw = true;
+                self.metrics.noteInput(now);
+                return true;
+            }
+            if (!pointInRect(mx, my, modal.card)) {
+                self.clearTerminalCloseConfirm();
+                self.needs_redraw = true;
+                self.metrics.noteInput(now);
+                return true;
+            }
+            return true;
+        }
+
+        return false;
+    }
+
     fn focusTerminalTabByIndex(self: *AppState, index: usize) bool {
         if (self.app_mode != .terminal) return false;
         if (self.terminal_workspace) |*workspace| {
             if (!workspace.activateIndex(index)) return false;
             self.tab_bar.active_index = workspace.activeIndex();
+            self.clearTerminalCloseConfirm();
             if (self.activeTerminalWidget()) |widget| {
                 widget.invalidateTextureCache();
             }
@@ -884,6 +1016,7 @@ const AppState = struct {
             const changed = if (next) workspace.activateNext() else workspace.activatePrev();
             if (!changed) return false;
             self.tab_bar.active_index = workspace.activeIndex();
+            self.clearTerminalCloseConfirm();
             if (self.activeTerminalWidget()) |widget| {
                 widget.invalidateTextureCache();
             }
@@ -892,16 +1025,35 @@ const AppState = struct {
         return false;
     }
 
+    fn terminalTabCloseNeedsConfirm(session: *TerminalSession) bool {
+        return session.shouldConfirmClose();
+    }
+
     fn closeActiveTerminalTab(self: *AppState) !bool {
         if (self.app_mode != .terminal) return false;
         if (self.terminal_workspace) |*workspace| {
             if (workspace.tabCount() == 0) return false;
+            if (workspace.activeTabId()) |active_tab_id| {
+                if (workspace.activeSession()) |active_session| {
+                    const requires_confirm = terminalTabCloseNeedsConfirm(active_session);
+                    if (requires_confirm) {
+                        const confirm_matches = self.terminal_close_confirm_tab != null and
+                            self.terminal_close_confirm_tab.? == active_tab_id;
+                        if (!confirm_matches) {
+                            self.terminal_close_confirm_tab = active_tab_id;
+                            self.needs_redraw = true;
+                            return false;
+                        }
+                    }
+                }
+            }
             const active_idx = workspace.activeIndex();
             if (active_idx < self.terminal_widgets.items.len) {
                 self.terminal_widgets.items[active_idx].deinit();
                 _ = self.terminal_widgets.orderedRemove(active_idx);
             }
             if (!workspace.closeActiveTab()) return false;
+            self.clearTerminalCloseConfirm();
             if (workspace.tabCount() == 0) {
                 self.shell.requestClose();
             } else {
@@ -1310,6 +1462,7 @@ const AppState = struct {
             try self.syncTerminalModeTabBar();
         }
         const now = app_shell.getTime();
+        _ = self.terminalCloseConfirmActive();
         const focus = if (self.app_mode == .terminal or self.active_kind == .terminal) input_actions.FocusKind.terminal else input_actions.FocusKind.editor;
         self.input_router.route(input_batch, focus);
         var suppress_terminal_shortcuts = false;
@@ -1321,6 +1474,9 @@ const AppState = struct {
                 handled_shortcut = true;
             }
         }
+        const live_layout = self.computeLayout(@floatFromInt(r.width), @floatFromInt(r.height));
+        if (try self.handleTerminalCloseConfirmInput(input_batch, live_layout, now)) return;
+        const terminal_close_modal_active = self.terminalCloseConfirmActive();
         for (self.input_router.actionsSlice()) |action| {
             if (focus != .terminal) continue;
             switch (action.kind) {
@@ -1328,7 +1484,7 @@ const AppState = struct {
                 else => {},
             }
         }
-        if (focus == .terminal and (self.app_mode == .terminal or self.show_terminal) and self.terminalTabCount() > 0) {
+        if (!terminal_close_modal_active and focus == .terminal and (self.app_mode == .terminal or self.show_terminal) and self.terminalTabCount() > 0) {
             if (self.activeTerminalWidget()) |term_widget| {
                 const pane_focused_now = true;
                 if (self.last_terminal_pane_focus_reported == null or self.last_terminal_pane_focus_reported.? != pane_focused_now) {
@@ -1792,10 +1948,17 @@ const AppState = struct {
                     }
                 },
                 .terminal_close_tab => {
-                    if (self.app_mode == .terminal and try self.closeActiveTerminalTab()) {
-                        self.needs_redraw = true;
-                        self.metrics.noteInput(now);
-                        return;
+                    if (self.app_mode == .terminal) {
+                        if (try self.closeActiveTerminalTab()) {
+                            self.needs_redraw = true;
+                            self.metrics.noteInput(now);
+                            return;
+                        }
+                        if (self.terminalCloseConfirmActive()) {
+                            self.needs_redraw = true;
+                            self.metrics.noteInput(now);
+                            return;
+                        }
                     }
                 },
                 .terminal_next_tab => {
@@ -2062,19 +2225,19 @@ const AppState = struct {
                 if (term_widget.updateBlink(now)) {
                     self.needs_redraw = true;
                 }
-                if (self.active_kind == .terminal) {
-                    if (!search_panel_consumed_input and try term_widget.handleInput(
-                        shell,
-                        term_x,
-                        term_y_draw,
-                        layout.terminal.width,
-                        term_draw_height,
-                        true,
-                        &self.terminal_scroll_dragging,
-                        &self.terminal_scroll_grab_offset,
-                        suppress_terminal_shortcuts,
-                        input_batch,
-                    )) {
+            if (self.active_kind == .terminal) {
+                if (!search_panel_consumed_input and try term_widget.handleInput(
+                    shell,
+                    term_x,
+                    term_y_draw,
+                    layout.terminal.width,
+                    term_draw_height,
+                    !terminal_close_modal_active,
+                    &self.terminal_scroll_dragging,
+                    &self.terminal_scroll_grab_offset,
+                    suppress_terminal_shortcuts,
+                    input_batch,
+                )) {
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
                     }
@@ -2368,6 +2531,93 @@ const AppState = struct {
         log.logStdout("config reloaded", .{});
     }
 
+    fn drawTerminalCloseConfirmModal(
+        self: *AppState,
+        shell: *Shell,
+        layout: layout_types.WidgetLayout,
+    ) void {
+        const modal = self.terminalCloseModalLayout(layout);
+        const overlay = app_shell.Color{ .r = 0, .g = 0, .b = 0, .a = 160 };
+        const card_bg = self.app_theme.ui_panel_bg;
+        const card_border = self.app_theme.ui_border;
+        const confirm_bg = app_shell.Color{ .r = 186, .g = 64, .b = 64 };
+        const cancel_bg = self.app_theme.ui_tab_inactive_bg;
+
+        shell.drawRect(
+            @intFromFloat(layout.window.x),
+            @intFromFloat(layout.window.y),
+            @intFromFloat(layout.window.width),
+            @intFromFloat(layout.window.height),
+            overlay,
+        );
+
+        shell.drawRect(
+            @intFromFloat(modal.card.x),
+            @intFromFloat(modal.card.y),
+            @intFromFloat(modal.card.width),
+            @intFromFloat(modal.card.height),
+            card_bg,
+        );
+        shell.drawRectOutline(
+            @intFromFloat(modal.card.x),
+            @intFromFloat(modal.card.y),
+            @intFromFloat(modal.card.width),
+            @intFromFloat(modal.card.height),
+            card_border,
+        );
+
+        const scale = shell.uiScaleFactor();
+        const title = "Close Running Terminal Tab?";
+        const message = "This tab still has a running process. Close anyway?";
+        const title_x = modal.card.x + 16.0 * scale;
+        const title_y = modal.card.y + 14.0 * scale;
+        const msg_y = title_y + shell.charHeight() + 10.0 * scale;
+        shell.drawText(title, title_x, title_y, self.app_theme.ui_text);
+        shell.drawText(message, title_x, msg_y, self.app_theme.ui_text_inactive);
+
+        shell.drawRect(
+            @intFromFloat(modal.cancel_button.x),
+            @intFromFloat(modal.cancel_button.y),
+            @intFromFloat(modal.cancel_button.width),
+            @intFromFloat(modal.cancel_button.height),
+            cancel_bg,
+        );
+        shell.drawRectOutline(
+            @intFromFloat(modal.cancel_button.x),
+            @intFromFloat(modal.cancel_button.y),
+            @intFromFloat(modal.cancel_button.width),
+            @intFromFloat(modal.cancel_button.height),
+            card_border,
+        );
+        shell.drawText(
+            "Cancel (Esc / N)",
+            modal.cancel_button.x + 10.0 * scale,
+            modal.cancel_button.y + (modal.cancel_button.height - shell.charHeight()) / 2.0,
+            self.app_theme.ui_text,
+        );
+
+        shell.drawRect(
+            @intFromFloat(modal.confirm_button.x),
+            @intFromFloat(modal.confirm_button.y),
+            @intFromFloat(modal.confirm_button.width),
+            @intFromFloat(modal.confirm_button.height),
+            confirm_bg,
+        );
+        shell.drawRectOutline(
+            @intFromFloat(modal.confirm_button.x),
+            @intFromFloat(modal.confirm_button.y),
+            @intFromFloat(modal.confirm_button.width),
+            @intFromFloat(modal.confirm_button.height),
+            card_border,
+        );
+        shell.drawText(
+            "Close Tab (Enter / Y)",
+            modal.confirm_button.x + 10.0 * scale,
+            modal.confirm_button.y + (modal.confirm_button.height - shell.charHeight()) / 2.0,
+            app_shell.Color{ .r = 255, .g = 255, .b = 255 },
+        );
+    }
+
     fn draw(self: *AppState) void {
         const shell = self.shell;
 
@@ -2493,6 +2743,10 @@ const AppState = struct {
 
         if (tab_tooltip) |tip| {
             widgets_common.drawTooltip(shell, tip.text, tip.x, tip.y);
+        }
+
+        if (self.app_mode == .terminal and self.terminalCloseConfirmActive()) {
+            self.drawTerminalCloseConfirmModal(shell, layout);
         }
 
         shell.endFrame();
