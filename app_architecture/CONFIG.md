@@ -83,6 +83,8 @@ This doc uses these status labels:
 | flat `theme.<field>` | Alias form for palette/syntax fields | `src/config/lua_config.zig` | `legacy` | Nested `palette` / `syntax` is the preferred shape. |
 | alias syntax keys | `comment_color`, `builtin_color`, `error_token` | `src/config/lua_config.zig` | `legacy` | Accepted alongside `comment`, `builtin`, `error`. |
 
+Reload behavior: app/editor/terminal themes are re-resolved from a canonical shell base theme on each config reload, then per-domain overlays are applied. This avoids drift from repeated incremental overlay application.
+
 ### `app`
 
 | Lua path | Meaning | Runtime consumer | Status | Notes |

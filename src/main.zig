@@ -197,6 +197,7 @@ const AppState = struct {
     app_theme: app_shell.Theme,
     editor_theme: app_shell.Theme,
     terminal_theme: app_shell.Theme,
+    shell_base_theme: app_shell.Theme,
 
     // Current focus
     active_tab: usize,
@@ -272,6 +273,34 @@ const AppState = struct {
         // Integer luma heuristic (BT.601-ish) is enough for ?2031 dark/light signaling.
         const luma = r * 299 + g * 587 + b * 114;
         return luma < 128000;
+    }
+
+    const ResolvedThemes = struct {
+        app: app_shell.Theme,
+        editor: app_shell.Theme,
+        terminal: app_shell.Theme,
+    };
+
+    fn resolveConfigThemes(shell_base_theme: app_shell.Theme, config: *const config_mod.Config) ResolvedThemes {
+        var base_theme = shell_base_theme;
+        if (config.theme) |global_theme| {
+            config_mod.applyThemeConfig(&base_theme, global_theme);
+        }
+
+        var app_theme = base_theme;
+        if (config.app_theme) |t| config_mod.applyThemeConfig(&app_theme, t);
+
+        var editor_theme = base_theme;
+        if (config.editor_theme) |t| config_mod.applyThemeConfig(&editor_theme, t);
+
+        var terminal_theme = base_theme;
+        if (config.terminal_theme) |t| config_mod.applyThemeConfig(&terminal_theme, t);
+
+        return .{
+            .app = app_theme,
+            .editor = editor_theme,
+            .terminal = terminal_theme,
+        };
     }
 
     fn notifyTerminalColorSchemeChanged(self: *AppState) !void {
@@ -410,19 +439,11 @@ const AppState = struct {
             terminal_cursor_style = cursor_style;
         }
 
-        var base_theme = shell.theme().*;
-        if (config.theme) |global_theme| {
-            config_mod.applyThemeConfig(&base_theme, global_theme);
-        }
-
-        var app_theme = base_theme;
-        if (config.app_theme) |t| config_mod.applyThemeConfig(&app_theme, t);
-
-        var editor_theme = base_theme;
-        if (config.editor_theme) |t| config_mod.applyThemeConfig(&editor_theme, t);
-
-        var terminal_theme = base_theme;
-        if (config.terminal_theme) |t| config_mod.applyThemeConfig(&terminal_theme, t);
+        const shell_base_theme = shell.theme().*;
+        const resolved_themes = resolveConfigThemes(shell_base_theme, &config);
+        const app_theme = resolved_themes.app;
+        const editor_theme = resolved_themes.editor;
+        const terminal_theme = resolved_themes.terminal;
 
         shell.setTheme(app_theme); // Default to app theme
 
@@ -451,6 +472,7 @@ const AppState = struct {
             .app_theme = app_theme,
             .editor_theme = editor_theme,
             .terminal_theme = terminal_theme,
+            .shell_base_theme = shell_base_theme,
             .active_tab = 0,
             .active_kind = if (app_mode == .terminal) .terminal else .editor,
             .mode = "NORMAL",
@@ -2375,50 +2397,51 @@ const AppState = struct {
         if (config.sdl_log_level) |level| {
             app_shell.setSdlLogLevel(level);
         }
-        if (config.theme != null or config.app_theme != null or config.editor_theme != null or config.terminal_theme != null) {
-            var base_theme = self.shell.theme().*; // use whatever is currently base, or we might need to recreate from default?
-            // Actually it's better to just apply them on top of the existing theme states.
-            if (config.theme) |t| config_mod.applyThemeConfig(&base_theme, t);
+        {
+            const resolved_themes = resolveConfigThemes(self.shell_base_theme, &config);
+            const app_theme_changed = !std.meta.eql(self.app_theme, resolved_themes.app);
+            const editor_theme_changed = !std.meta.eql(self.editor_theme, resolved_themes.editor);
+            const terminal_theme_changed = !std.meta.eql(self.terminal_theme, resolved_themes.terminal);
 
-            if (config.theme != null or config.app_theme != null) {
-                if (config.theme) |t| config_mod.applyThemeConfig(&self.app_theme, t);
-                if (config.app_theme) |t| config_mod.applyThemeConfig(&self.app_theme, t);
-                self.shell.setTheme(self.app_theme);
-            }
-            if (config.theme != null or config.editor_theme != null) {
-                if (config.theme) |t| config_mod.applyThemeConfig(&self.editor_theme, t);
-                if (config.editor_theme) |t| config_mod.applyThemeConfig(&self.editor_theme, t);
-                self.editor_render_cache.clear();
-                self.editor_cluster_cache.clear();
-            }
-            if (config.theme != null or config.terminal_theme != null) {
-                if (config.theme) |t| config_mod.applyThemeConfig(&self.terminal_theme, t);
-                if (config.terminal_theme) |t| config_mod.applyThemeConfig(&self.terminal_theme, t);
-                try self.notifyTerminalColorSchemeChanged();
-                for (self.terminals.items) |term| {
-                    term.setDefaultColors(
-                        term_types.Color{
-                            .r = self.terminal_theme.foreground.r,
-                            .g = self.terminal_theme.foreground.g,
-                            .b = self.terminal_theme.foreground.b,
-                        },
-                        term_types.Color{
-                            .r = self.terminal_theme.background.r,
-                            .g = self.terminal_theme.background.g,
-                            .b = self.terminal_theme.background.b,
-                        },
-                    );
-                    if (self.terminal_theme.ansi_colors) |ansi| {
-                        var colors: [16]term_types.Color = undefined;
-                        for (ansi, 0..) |c, i| {
-                            colors[i] = term_types.Color{ .r = c.r, .g = c.g, .b = c.b };
-                        }
-                        term.setAnsiColors(colors);
-                    }
-                    term.markDirty();
+            if (app_theme_changed or editor_theme_changed or terminal_theme_changed) {
+                self.app_theme = resolved_themes.app;
+                self.editor_theme = resolved_themes.editor;
+                self.terminal_theme = resolved_themes.terminal;
+
+                if (app_theme_changed) {
+                    self.shell.setTheme(self.app_theme);
                 }
+                if (editor_theme_changed) {
+                    self.editor_render_cache.clear();
+                    self.editor_cluster_cache.clear();
+                }
+                if (terminal_theme_changed) {
+                    try self.notifyTerminalColorSchemeChanged();
+                    for (self.terminals.items) |term| {
+                        term.setDefaultColors(
+                            term_types.Color{
+                                .r = self.terminal_theme.foreground.r,
+                                .g = self.terminal_theme.foreground.g,
+                                .b = self.terminal_theme.foreground.b,
+                            },
+                            term_types.Color{
+                                .r = self.terminal_theme.background.r,
+                                .g = self.terminal_theme.background.g,
+                                .b = self.terminal_theme.background.b,
+                            },
+                        );
+                        if (self.terminal_theme.ansi_colors) |ansi| {
+                            var colors: [16]term_types.Color = undefined;
+                            for (ansi, 0..) |c, i| {
+                                colors[i] = term_types.Color{ .r = c.r, .g = c.g, .b = c.b };
+                            }
+                            term.setAnsiColors(colors);
+                        }
+                        term.markDirty();
+                    }
+                }
+                self.needs_redraw = true;
             }
-            self.needs_redraw = true;
         }
 
         self.editor_wrap = config.editor_wrap orelse self.editor_wrap;
