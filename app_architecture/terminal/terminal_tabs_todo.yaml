@@ -145,6 +145,7 @@ terminal_tabs_todo:
             - "Current baseline opens a terminal-mode confirmation modal for running tabs (confirm/cancel), and requests app shutdown when the last tab is closed in terminal-only mode."
             - "Confirmation modal supports keyboard (`Enter`/`Y` confirm, `Esc`/`N` cancel) and button clicks."
             - "Confirmation gate is now core-driven: confirm when foreground process group differs from shell (Unix), semantic prompt reports command in-flight, or terminal app modes are active (alt-screen/mouse-reporting)."
+            - "Close-path latency for ordinary shells was reduced by decoupling Unix child reap from synchronous UI teardown and tightening PTY read wait granularity during shutdown."
 
     - name: "TABS-03 FFI extension for workspace/tabs"
       tasks:
