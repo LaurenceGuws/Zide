@@ -79,7 +79,7 @@ This doc uses these status labels:
 | `theme.syntax.*` | Global/fallback syntax colors | `src/ui/widgets/editor_widget_draw.zig` | `reloadable` | Used by token coloring. |
 | `app.theme.*` | App-specific theme override | `src/main.zig`, UI chrome widgets | `reloadable` | Overrides global `theme` for UI elements (tabs, status, etc). |
 | `editor.theme.*` | Editor-specific theme override | `src/main.zig`, editor widgets | `reloadable` | Overrides global `theme` for the text editor pane. |
-| `terminal.theme.*` | Terminal-specific theme override | `src/main.zig`, terminal widgets | `reloadable` | Overrides global `theme` for the terminal pane. |
+| `terminal.theme.*` | Terminal-specific theme override | `src/main.zig`, terminal widgets | `reloadable` | Overrides global `theme` for the terminal pane. Supports `palette.color0..color15`, `palette.ansi = { ... }` (indexed or named), and `selection_background` alias. |
 | flat `theme.<field>` | Alias form for palette/syntax fields | `src/config/lua_config.zig` | `legacy` | Nested `palette` / `syntax` is the preferred shape. |
 | alias syntax keys | `comment_color`, `builtin_color`, `error_token` | `src/config/lua_config.zig` | `legacy` | Accepted alongside `comment`, `builtin`, `error`. |
 
