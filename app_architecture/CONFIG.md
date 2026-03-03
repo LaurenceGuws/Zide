@@ -79,11 +79,15 @@ This doc uses these status labels:
 | `theme.syntax.*` | Global/fallback syntax colors | `src/ui/widgets/editor_widget_draw.zig` | `reloadable` | Used by token coloring. |
 | `app.theme.*` | App-specific theme override | `src/main.zig`, UI chrome widgets | `reloadable` | Overrides global `theme` for UI elements (tabs, status, etc). |
 | `editor.theme.*` | Editor-specific theme override | `src/main.zig`, editor widgets | `reloadable` | Overrides global `theme` for the text editor pane. |
+| `editor.theme.groups.*` | nvim-style named highlight groups | `src/config/lua_config.zig` -> editor token theme fields | `reloadable` | Group values accept direct color, `{ fg=... }`, or `{ link=... }`. |
+| `editor.theme.captures.*` | tree-sitter capture-level overrides | `src/config/lua_config.zig` -> editor token theme fields | `reloadable` | Capture keys such as `@keyword.control` are supported. |
+| `editor.theme.links.*` | named highlight links | `src/config/lua_config.zig` -> editor token theme fields | `reloadable` | Link resolution is transitive with depth guard. |
 | `terminal.theme.*` | Terminal-specific theme override | `src/main.zig`, terminal widgets | `reloadable` | Overrides global `theme` for the terminal pane. Supports `palette.color0..color15`, `palette.ansi = { ... }` (indexed or named), and `selection_background` alias. |
 | flat `theme.<field>` | Alias form for palette/syntax fields | `src/config/lua_config.zig` | `legacy` | Nested `palette` / `syntax` is the preferred shape. |
 | alias syntax keys | `comment_color`, `builtin_color`, `error_token` | `src/config/lua_config.zig` | `legacy` | Accepted alongside `comment`, `builtin`, `error`. |
 
 Reload behavior: app/editor/terminal themes are re-resolved from a canonical shell base theme on each config reload, then per-domain overlays are applied. This avoids drift from repeated incremental overlay application.
+Theme import helper: `assets/config/theme_import.lua` provides `from_kitty(path)`, `from_ghostty(path)`, and `merge(...)` to map external terminal themes into Zide's Lua theme shape.
 
 ### `app`
 

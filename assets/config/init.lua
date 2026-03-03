@@ -25,6 +25,11 @@ return {
 
     -- Theme configuration.
     -- Colors accept hex strings (#RRGGBB or #RRGGBBAA) or tables { r = 0, g = 0, b = 0, a = 255 }.
+    -- Optional importer helper:
+    --   local theme_import = dofile("assets/config/theme_import.lua")
+    --   local ghostty_theme = theme_import.from_ghostty("/path/to/ghostty/theme")
+    --   local kitty_theme = theme_import.from_kitty("/path/to/kitty.conf")
+    --   theme = theme_import.merge(ghostty_theme, { syntax = { comment = "#6f7a94" } })
     
     -- Tokyo Night Moon palette defaults.
     theme = {
@@ -185,6 +190,18 @@ return {
         -- Editor-specific theme override.
         -- theme = {
         --     palette = { background = "#2E3440" },
+        --     groups = {
+        --         Comment = "#6f7a94",
+        --         Function = { fg = "#82aaff" },
+        --     },
+        --     captures = {
+        --         ["@keyword.control"] = "#c099ff",
+        --         ["@function.method"] = { link = "Function" },
+        --     },
+        --     links = {
+        --         Statement = "Keyword",
+        --         ["@variable"] = "Statement",
+        --     },
         -- },
         -- Number of visual rows used by Ctrl+Up/Down and Ctrl+Shift+Up/Down.
         large_cursor_jump_rows = 5,
