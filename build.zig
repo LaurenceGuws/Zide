@@ -576,6 +576,37 @@ pub fn build(b: *std.Build) void {
     );
     terminal_focus_reporting_tests_step.dependOn(&run_terminal_focus_reporting_tests.step);
 
+    const terminal_workspace_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/terminal_workspace_tests.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    terminal_workspace_tests.linkSystemLibrary("SDL3");
+    if (target_os == .linux) {
+        terminal_workspace_tests.linkSystemLibrary("GL");
+    } else if (target_os == .windows) {
+        terminal_workspace_tests.linkSystemLibrary("opengl32");
+    } else if (target_os == .macos) {
+        terminal_workspace_tests.linkFramework("OpenGL");
+    }
+    terminal_workspace_tests.addIncludePath(b.path("vendor"));
+    if (target_os == .linux) {
+        terminal_workspace_tests.addIncludePath(.{ .cwd_relative = "/usr/include/SDL3" });
+    }
+    terminal_workspace_tests.addCSourceFile(.{
+        .file = b.path("src/c/stb_image.c"),
+        .flags = &.{"-std=c99"},
+    });
+    const run_terminal_workspace_tests = b.addRunArtifact(terminal_workspace_tests);
+    const terminal_workspace_tests_step = b.step(
+        "test-terminal-workspace",
+        "Run terminal workspace lifecycle tests",
+    );
+    terminal_workspace_tests_step.dependOn(&run_terminal_workspace_tests.step);
+
     const terminal_ffi_tests = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/terminal_ffi_smoke_tests.zig"),

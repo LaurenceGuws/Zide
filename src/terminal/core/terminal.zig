@@ -1,4 +1,5 @@
 const session_mod = @import("terminal_session.zig");
+const workspace_mod = @import("workspace.zig");
 
 pub const KittyImageFormat = session_mod.KittyImageFormat;
 pub const KittyImage = session_mod.KittyImage;
@@ -13,6 +14,10 @@ pub const debugSetCursor = session_mod.debugSetCursor;
 pub const debugFeedBytes = session_mod.debugFeedBytes;
 
 pub const TerminalSession = session_mod.TerminalSession;
+pub const TerminalWorkspace = workspace_mod.TerminalWorkspace;
+pub const TerminalTab = workspace_mod.Tab;
+pub const TerminalTabId = workspace_mod.TabId;
+pub const TerminalTabMetadata = workspace_mod.TabMetadata;
 
 pub const Hyperlink = session_mod.Hyperlink;
 

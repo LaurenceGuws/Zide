@@ -29,6 +29,21 @@ enum {
     ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION = 1,
     ZIDE_TERMINAL_EVENT_ABI_VERSION = 1,
     ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION = 1,
+    ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION = 1,
+};
+
+enum {
+    ZIDE_TERMINAL_GLYPH_CLASS_BOX = 1u << 0,
+    ZIDE_TERMINAL_GLYPH_CLASS_BOX_ROUNDED = 1u << 1,
+    ZIDE_TERMINAL_GLYPH_CLASS_GRAPH = 1u << 2,
+    ZIDE_TERMINAL_GLYPH_CLASS_BRAILLE = 1u << 3,
+    ZIDE_TERMINAL_GLYPH_CLASS_POWERLINE = 1u << 4,
+    ZIDE_TERMINAL_GLYPH_CLASS_POWERLINE_ROUNDED = 1u << 5,
+};
+
+enum {
+    ZIDE_TERMINAL_DAMAGE_POLICY_ADVISORY_BOUNDS = 1u << 0,
+    ZIDE_TERMINAL_DAMAGE_POLICY_FULL_REDRAW_SAFE_DEFAULT = 1u << 1,
 };
 
 typedef struct ZideTerminalCreateConfig {
@@ -143,6 +158,14 @@ typedef struct ZideTerminalStringBuffer {
     void *_ctx;
 } ZideTerminalStringBuffer;
 
+typedef struct ZideTerminalRendererMetadata {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint32_t codepoint;
+    uint32_t glyph_class_flags;
+    uint32_t damage_policy_flags;
+} ZideTerminalRendererMetadata;
+
 int zide_terminal_create(const ZideTerminalCreateConfig *config, ZideTerminalHandle **out_handle);
 void zide_terminal_destroy(ZideTerminalHandle *handle);
 int zide_terminal_start(ZideTerminalHandle *handle, const char *shell);
@@ -172,6 +195,8 @@ int zide_terminal_child_exit_status(ZideTerminalHandle *handle, int32_t *out_cod
 uint32_t zide_terminal_snapshot_abi_version(void);
 uint32_t zide_terminal_event_abi_version(void);
 uint32_t zide_terminal_scrollback_abi_version(void);
+uint32_t zide_terminal_renderer_metadata_abi_version(void);
+int zide_terminal_renderer_metadata(uint32_t codepoint, ZideTerminalRendererMetadata *out_metadata);
 const char *zide_terminal_status_string(int status);
 
 #ifdef __cplusplus

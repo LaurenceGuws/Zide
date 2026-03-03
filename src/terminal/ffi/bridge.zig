@@ -12,6 +12,7 @@ pub const Status = enum(c_int) {
 pub const snapshot_abi_version: u32 = 1;
 pub const event_abi_version: u32 = 1;
 pub const scrollback_abi_version: u32 = 1;
+pub const renderer_metadata_abi_version: u32 = 1;
 
 pub const EventKind = enum(c_int) {
     none = 0,
@@ -19,6 +20,20 @@ pub const EventKind = enum(c_int) {
     cwd_changed = 2,
     clipboard_write = 3,
     child_exit = 4,
+};
+
+pub const GlyphClassFlags = enum(u32) {
+    box = 1 << 0,
+    box_rounded = 1 << 1,
+    graph = 1 << 2,
+    braille = 1 << 3,
+    powerline = 1 << 4,
+    powerline_rounded = 1 << 5,
+};
+
+pub const DamagePolicyFlags = enum(u32) {
+    advisory_bounds = 1 << 0,
+    full_redraw_safe_default = 1 << 1,
 };
 
 pub const ZideTerminalHandle = opaque {};
@@ -121,6 +136,14 @@ pub const Event = extern struct {
     data_len: usize,
     int0: i32,
     int1: i32,
+};
+
+pub const RendererMetadata = extern struct {
+    abi_version: u32 = 0,
+    struct_size: u32 = 0,
+    codepoint: u32 = 0,
+    glyph_class_flags: u32 = 0,
+    damage_policy_flags: u32 = 0,
 };
 
 pub const EventBuffer = extern struct {
@@ -545,6 +568,22 @@ pub fn scrollbackAbiVersion() u32 {
     return scrollback_abi_version;
 }
 
+pub fn rendererMetadataAbiVersion() u32 {
+    return renderer_metadata_abi_version;
+}
+
+pub fn rendererMetadata(codepoint: u32, out_metadata: *RendererMetadata) Status {
+    out_metadata.* = .{
+        .abi_version = renderer_metadata_abi_version,
+        .struct_size = @sizeOf(RendererMetadata),
+        .codepoint = codepoint,
+        .glyph_class_flags = classifyGlyphClassFlags(codepoint),
+        .damage_policy_flags = @intFromEnum(DamagePolicyFlags.advisory_bounds) |
+            @intFromEnum(DamagePolicyFlags.full_redraw_safe_default),
+    };
+    return .ok;
+}
+
 fn syncDerivedEvents(handle: *Handle) Status {
     syncStringEvent(handle, .title_changed, &handle.last_title, handle.session.currentTitle()) catch |err| return mapError(err);
     syncStringEvent(handle, .cwd_changed, &handle.last_cwd, handle.session.currentCwd()) catch |err| return mapError(err);
@@ -665,4 +704,51 @@ fn stringFromSlice(allocator: std.mem.Allocator, value: []const u8, out_string: 
 fn stringOwner(ctx: ?*anyopaque) ?*StringOwner {
     const value = ctx orelse return null;
     return @ptrCast(@alignCast(value));
+}
+
+fn classifyGlyphClassFlags(codepoint: u32) u32 {
+    var flags: u32 = 0;
+    if (isBoxGlyph(codepoint)) flags |= @intFromEnum(GlyphClassFlags.box);
+    if (isRoundedBoxGlyph(codepoint)) flags |= @intFromEnum(GlyphClassFlags.box_rounded);
+    if (isGraphGlyph(codepoint)) flags |= @intFromEnum(GlyphClassFlags.graph);
+    if (isBrailleGlyph(codepoint)) flags |= @intFromEnum(GlyphClassFlags.braille);
+    if (isPowerlineGlyph(codepoint)) flags |= @intFromEnum(GlyphClassFlags.powerline);
+    if (isRoundedPowerlineGlyph(codepoint)) flags |= @intFromEnum(GlyphClassFlags.powerline_rounded);
+    return flags;
+}
+
+fn isBoxGlyph(codepoint: u32) bool {
+    return codepoint >= 0x2500 and codepoint <= 0x259F;
+}
+
+fn isRoundedBoxGlyph(codepoint: u32) bool {
+    return switch (codepoint) {
+        0x256D, 0x256E, 0x256F, 0x2570 => true,
+        else => false,
+    };
+}
+
+fn isGraphGlyph(codepoint: u32) bool {
+    return (codepoint >= 0x2580 and codepoint <= 0x259F) or
+        (codepoint >= 0x2800 and codepoint <= 0x28FF) or
+        (codepoint >= 0x1FB00 and codepoint <= 0x1FBAF) or
+        codepoint == 0x1FBE6 or
+        codepoint == 0x1FBE7;
+}
+
+fn isBrailleGlyph(codepoint: u32) bool {
+    return codepoint >= 0x2800 and codepoint <= 0x28FF;
+}
+
+fn isPowerlineGlyph(codepoint: u32) bool {
+    return (codepoint >= 0xE0B0 and codepoint <= 0xE0BF) or
+        codepoint == 0xE0D6 or
+        codepoint == 0xE0D7;
+}
+
+fn isRoundedPowerlineGlyph(codepoint: u32) bool {
+    return switch (codepoint) {
+        0xE0B4, 0xE0B5, 0xE0B6, 0xE0B7 => true,
+        else => false,
+    };
 }

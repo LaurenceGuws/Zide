@@ -100,6 +100,14 @@ pub export fn zide_terminal_scrollback_abi_version() u32 {
     return c_api.zide_terminal_scrollback_abi_version();
 }
 
+pub export fn zide_terminal_renderer_metadata_abi_version() u32 {
+    return c_api.zide_terminal_renderer_metadata_abi_version();
+}
+
+pub export fn zide_terminal_renderer_metadata(codepoint: u32, out_metadata: *c_api.ZideTerminalRendererMetadata) c_int {
+    return c_api.zide_terminal_renderer_metadata(codepoint, out_metadata);
+}
+
 pub export fn zide_terminal_status_string(status: c_int) [*:0]const u8 {
     return c_api.zide_terminal_status_string(status);
 }

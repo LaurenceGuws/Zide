@@ -159,6 +159,10 @@ pub const TerminalWidget = struct {
         return value;
     }
 
+    pub fn invalidateTextureCache(self: *TerminalWidget) void {
+        self.terminal_texture_ready = false;
+    }
+
     pub fn copySelectionToClipboard(self: *TerminalWidget, shell: *Shell) bool {
         const selection = self.session.selectionState() orelse return false;
         const sel_snapshot = self.session.snapshot();

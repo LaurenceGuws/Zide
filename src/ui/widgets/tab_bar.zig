@@ -43,6 +43,14 @@ pub const TabBar = struct {
         self.tabs.deinit(self.allocator);
     }
 
+    pub fn clearTabs(self: *TabBar) void {
+        for (self.tabs.items) |tab| {
+            self.allocator.free(tab.title);
+        }
+        self.tabs.clearRetainingCapacity();
+        self.active_index = 0;
+    }
+
     pub fn addTab(self: *TabBar, title: []const u8, kind: Tab.Kind) !void {
         const owned_title = try self.allocator.dupe(u8, title);
         errdefer self.allocator.free(owned_title);
@@ -51,6 +59,14 @@ pub const TabBar = struct {
             .kind = kind,
             .modified = false,
         });
+    }
+
+    pub fn setTabTitle(self: *TabBar, index: usize, title: []const u8) !void {
+        if (index >= self.tabs.items.len) return;
+        if (std.mem.eql(u8, self.tabs.items[index].title, title)) return;
+        const owned_title = try self.allocator.dupe(u8, title);
+        self.allocator.free(self.tabs.items[index].title);
+        self.tabs.items[index].title = owned_title;
     }
 
     pub fn updateInput(self: *TabBar, input: shared_types.input.InputSnapshot) void {

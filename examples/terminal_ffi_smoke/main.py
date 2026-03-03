@@ -8,6 +8,14 @@ from pathlib import Path
 STATUS_OK = 0
 EVENT_TITLE_CHANGED = 1
 EVENT_CLIPBOARD_WRITE = 3
+GLYPH_CLASS_BOX = 1 << 0
+GLYPH_CLASS_BOX_ROUNDED = 1 << 1
+GLYPH_CLASS_GRAPH = 1 << 2
+GLYPH_CLASS_BRAILLE = 1 << 3
+GLYPH_CLASS_POWERLINE = 1 << 4
+GLYPH_CLASS_POWERLINE_ROUNDED = 1 << 5
+DAMAGE_POLICY_ADVISORY_BOUNDS = 1 << 0
+DAMAGE_POLICY_FULL_REDRAW_SAFE_DEFAULT = 1 << 1
 
 
 class ZideTerminalHandle(ctypes.Structure):
@@ -120,6 +128,16 @@ class StringBuffer(ctypes.Structure):
     ]
 
 
+class RendererMetadata(ctypes.Structure):
+    _fields_ = [
+        ("abi_version", ctypes.c_uint32),
+        ("struct_size", ctypes.c_uint32),
+        ("codepoint", ctypes.c_uint32),
+        ("glyph_class_flags", ctypes.c_uint32),
+        ("damage_policy_flags", ctypes.c_uint32),
+    ]
+
+
 HandlePtr = ctypes.POINTER(ZideTerminalHandle)
 
 
@@ -169,6 +187,10 @@ def load_library(path: Path):
     lib.zide_terminal_event_abi_version.restype = ctypes.c_uint32
     lib.zide_terminal_scrollback_abi_version.argtypes = []
     lib.zide_terminal_scrollback_abi_version.restype = ctypes.c_uint32
+    lib.zide_terminal_renderer_metadata_abi_version.argtypes = []
+    lib.zide_terminal_renderer_metadata_abi_version.restype = ctypes.c_uint32
+    lib.zide_terminal_renderer_metadata.argtypes = [ctypes.c_uint32, ctypes.POINTER(RendererMetadata)]
+    lib.zide_terminal_renderer_metadata.restype = ctypes.c_int
     lib.zide_terminal_status_string.argtypes = [ctypes.c_int]
     lib.zide_terminal_status_string.restype = ctypes.c_char_p
     return lib
@@ -261,7 +283,7 @@ def run_smoke(lib_path: Path) -> int:
 
             print("ffi smoke ok")
             print(
-                f"snapshot_abi={lib.zide_terminal_snapshot_abi_version()} event_abi={lib.zide_terminal_event_abi_version()} scrollback_abi={lib.zide_terminal_scrollback_abi_version()}"
+                f"snapshot_abi={lib.zide_terminal_snapshot_abi_version()} event_abi={lib.zide_terminal_event_abi_version()} scrollback_abi={lib.zide_terminal_scrollback_abi_version()} renderer_meta_abi={lib.zide_terminal_renderer_metadata_abi_version()}"
             )
             print(f"status_ok={lib.zide_terminal_status_string(STATUS_OK).decode()} status_unknown={lib.zide_terminal_status_string(99).decode()}")
             print(f"size={snapshot.rows}x{snapshot.cols} cells={snapshot.cell_count}")
@@ -278,6 +300,38 @@ def run_smoke(lib_path: Path) -> int:
                 raise RuntimeError("getter mismatch")
         finally:
             lib.zide_terminal_snapshot_release(ctypes.byref(snapshot))
+
+        rounded_box_meta = RendererMetadata()
+        if lib.zide_terminal_renderer_metadata(0x256D, ctypes.byref(rounded_box_meta)) != STATUS_OK:
+            raise RuntimeError("renderer_metadata(rounded box) failed")
+        if (rounded_box_meta.glyph_class_flags & GLYPH_CLASS_BOX) == 0 or (rounded_box_meta.glyph_class_flags & GLYPH_CLASS_BOX_ROUNDED) == 0:
+            raise RuntimeError("rounded box glyph flags missing")
+
+        braille_meta = RendererMetadata()
+        if lib.zide_terminal_renderer_metadata(0x28FF, ctypes.byref(braille_meta)) != STATUS_OK:
+            raise RuntimeError("renderer_metadata(braille) failed")
+        if (braille_meta.glyph_class_flags & GLYPH_CLASS_BRAILLE) == 0 or (braille_meta.glyph_class_flags & GLYPH_CLASS_GRAPH) == 0:
+            raise RuntimeError("braille/graph glyph flags missing")
+
+        rounded_powerline_meta = RendererMetadata()
+        if lib.zide_terminal_renderer_metadata(0xE0B5, ctypes.byref(rounded_powerline_meta)) != STATUS_OK:
+            raise RuntimeError("renderer_metadata(rounded powerline) failed")
+        if (rounded_powerline_meta.glyph_class_flags & GLYPH_CLASS_POWERLINE) == 0 or (
+            rounded_powerline_meta.glyph_class_flags & GLYPH_CLASS_POWERLINE_ROUNDED
+        ) == 0:
+            raise RuntimeError("powerline glyph flags missing")
+        if (rounded_powerline_meta.damage_policy_flags & DAMAGE_POLICY_ADVISORY_BOUNDS) == 0 or (
+            rounded_powerline_meta.damage_policy_flags & DAMAGE_POLICY_FULL_REDRAW_SAFE_DEFAULT
+        ) == 0:
+            raise RuntimeError("damage policy flags missing")
+
+        print(
+            "renderer_metadata "
+            f"box=0x{rounded_box_meta.glyph_class_flags:x} "
+            f"braille=0x{braille_meta.glyph_class_flags:x} "
+            f"powerline=0x{rounded_powerline_meta.glyph_class_flags:x} "
+            f"damage=0x{rounded_powerline_meta.damage_policy_flags:x}"
+        )
 
         scrollback_count = ctypes.c_uint32(0)
         if lib.zide_terminal_scrollback_count(handle, ctypes.byref(scrollback_count)) != STATUS_OK:

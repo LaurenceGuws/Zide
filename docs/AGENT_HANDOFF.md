@@ -18,6 +18,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 ### Current Focus
 - The active streams of work have diversified recently into terminal FFI bridge, config subsystem maturation, and editor multi-selection:
   - **Terminal FFI Bridge**: Base bridge landed with python smoke host (`app_architecture/terminal/ffi_bridge_todo.yaml`).
+  - **Terminal Tabs / Workspace**: New scope track started for battle-testing `--mode terminal` as a daily driver with backend-owned tab lifecycle and FFI follow-on (`app_architecture/terminal/terminal_tabs_todo.yaml`).
   - **Config Subsystem**: Parser hardened, reload truth aligned, and subsystem contract formalized (`app_architecture/config_todo.yaml`, `app_architecture/CONFIG.md`).
   - **Editor Multi-cursor**: Carets preserved across edits, multi-caret vertical expansion shortcuts routed via Lua keybinds (`app_architecture/editor/editor_widget_todo.yaml`, `app_architecture/editor/protocol_todo.yaml`).
 - Font rendering strategy (terminal + editor) is also an ongoing priority: make our text rendering competitive with kitty/ghostty-tier quality.
@@ -53,6 +54,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - Config knobs moved into Lua example config: `assets/config/init.lua` (`font_rendering.*`).
 - Editor parity: selection/current-line/gutter now supply per-text background so correction stays stable.
 - Terminal correctness: combining marks attach to prior cell; renderer can draw a shaped grapheme cluster for a cell.
+- Terminal-only tab baseline landed: backend `TerminalWorkspace` now owns multi-session tab lifecycle for `--mode terminal`, with initial keybind-driven new/close/switch/focus-tab actions and tab bar synchronization.
 - Fixture authority expanded: `fixtures/ui/font_sample/jbmono_iosevka_size{12,14,16,20}.ppm` include multiple background bands.
 - Terminal + editor now support first-class ligature shaping with config controls (`terminal.disable_ligatures`, `terminal.font_features`, `editor.disable_ligatures`, `editor.font_features`).
 - Editor multiline selection overlay seams were fixed and deselect cleanup now invalidates cached overlays correctly.
@@ -82,6 +84,7 @@ Read the relevant `app_architecture/**/_todo.yaml` + design docs for the current
 - UI widget modularization plan: `app_architecture/ui/ui_widget_modularization_todo.yaml`
 - Editor widget roadmap: `app_architecture/editor/editor_widget_todo.yaml`
 - Terminal roadmap + modularization: `app_architecture/terminal/MODULARIZATION_PLAN.md`
+- Terminal tabs/workspace plan: `app_architecture/terminal/terminal_tabs_todo.yaml`
 - Terminal design notes: `app_architecture/terminal/DESIGN.md`
 - Undo loop notes: `app_architecture/ui/DEVELOPMENT_JOURNEY.md` (known issue entry).
 
