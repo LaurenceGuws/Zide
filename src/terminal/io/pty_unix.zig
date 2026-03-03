@@ -350,7 +350,7 @@ test "unix pty smoke prefers zide TERM when bundled terminfo is installed" {
     var output = std.ArrayList(u8).empty;
     defer output.deinit(allocator);
 
-    _ = try pty.write("printf '%s\\n' \"$TERM\"; exit\n");
+    _ = try pty.write("unset HISTFILE; HISTFILE=/dev/null; export HISTFILE; set +o history 2>/dev/null; printf '%s\\n' \"$TERM\"; exit\n");
 
     const start_ms = std.time.milliTimestamp();
     var buf: [4096]u8 = undefined;
