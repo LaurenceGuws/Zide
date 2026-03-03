@@ -52,16 +52,10 @@ pub const Pty = struct {
     pub fn deinit(self: *Pty) void {
         if (self.child_pid) |pid| {
             _ = posix.kill(pid, posix.SIG.TERM) catch {};
-            const start_ms = std.time.milliTimestamp();
-            while (true) {
-                const res = posix.waitpid(pid, posix.W.NOHANG);
-                if (res.pid != 0) break;
-                if (std.time.milliTimestamp() - start_ms > 200) {
-                    _ = posix.kill(pid, posix.SIG.KILL) catch {};
-                    _ = posix.waitpid(pid, 0);
-                    break;
-                }
-                std.Thread.sleep(10 * std.time.ns_per_ms);
+            if (std.Thread.spawn(.{}, reapChildWithDeadline, .{pid})) |thread| {
+                thread.detach();
+            } else |_| {
+                reapChildWithDeadline(pid);
             }
             self.child_pid = null;
         }
@@ -180,6 +174,20 @@ fn waitStatusExited(status: u32) bool {
 fn waitStatusExitCode(status: u32) u8 {
     // Mirrors WEXITSTATUS: high byte holds the exit code.
     return @intCast((status >> 8) & 0xff);
+}
+
+fn reapChildWithDeadline(pid: posix.pid_t) void {
+    const start_ms = std.time.milliTimestamp();
+    while (true) {
+        const res = posix.waitpid(pid, posix.W.NOHANG);
+        if (res.pid != 0) return;
+        if (std.time.milliTimestamp() - start_ms > 200) {
+            _ = posix.kill(pid, posix.SIG.KILL) catch {};
+            _ = posix.waitpid(pid, 0);
+            return;
+        }
+        std.Thread.sleep(10 * std.time.ns_per_ms);
+    }
 }
 
 fn setNonBlocking(fd: posix.fd_t) !void {

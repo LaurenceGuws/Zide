@@ -35,7 +35,7 @@ pub fn readThreadMain(session: anytype) void {
 
     while (session.read_thread_running.load(.acquire)) {
         if (session.pty) |*pty| {
-            if (!pty.waitForData(50)) {
+            if (!pty.waitForData(10)) {
                 continue;
             }
             var processed: usize = 0;
