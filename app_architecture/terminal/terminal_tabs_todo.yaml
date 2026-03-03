@@ -136,13 +136,15 @@ terminal_tabs_todo:
             - "Required baseline: new tab, close tab, next tab, previous tab, activate tab by index."
         - id: TABS-02-03
           title: "Handle tab close edge cases for live processes"
-          status: partial
+          status: done
           files_to_edit:
             - src/main.zig
             - src/terminal/core/workspace.zig
           notes:
             - "Define policy for closing running shells (confirm/force policy), and behavior for last-tab close."
-            - "Current baseline closes immediately and requests app shutdown when the last tab is closed in terminal-only mode."
+            - "Current baseline opens a terminal-mode confirmation modal for running tabs (confirm/cancel), and requests app shutdown when the last tab is closed in terminal-only mode."
+            - "Confirmation modal supports keyboard (`Enter`/`Y` confirm, `Esc`/`N` cancel) and button clicks."
+            - "Confirmation gate is now core-driven: confirm when foreground process group differs from shell (Unix), semantic prompt reports command in-flight, or terminal app modes are active (alt-screen/mouse-reporting)."
 
     - name: "TABS-03 FFI extension for workspace/tabs"
       tasks:

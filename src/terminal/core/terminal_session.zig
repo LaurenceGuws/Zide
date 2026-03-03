@@ -1317,6 +1317,34 @@ pub const TerminalSession = struct {
         return input_snapshot.mouse_mode_x10.load(.acquire) or input_snapshot.mouse_mode_button.load(.acquire) or input_snapshot.mouse_mode_any.load(.acquire);
     }
 
+    pub const CloseConfirmSignals = struct {
+        foreground_process: bool = false,
+        semantic_command: bool = false,
+        alt_screen: bool = false,
+        mouse_reporting: bool = false,
+
+        pub fn any(self: CloseConfirmSignals) bool {
+            return self.foreground_process or self.semantic_command or self.alt_screen or self.mouse_reporting;
+        }
+    };
+
+    pub fn closeConfirmSignals(self: *TerminalSession) CloseConfirmSignals {
+        var signals = CloseConfirmSignals{};
+        if (!self.isAlive()) return signals;
+
+        if (self.pty) |*pty| {
+            signals.foreground_process = pty.hasForegroundProcessOutsideShell();
+        }
+        signals.semantic_command = self.semantic_prompt.input_active or self.semantic_prompt.output_active;
+        signals.alt_screen = self.isAltActive();
+        signals.mouse_reporting = self.mouseReportingEnabled();
+        return signals;
+    }
+
+    pub fn shouldConfirmClose(self: *TerminalSession) bool {
+        return self.closeConfirmSignals().any();
+    }
+
     pub fn isAlive(self: *TerminalSession) bool {
         if (self.pty) |*pty| {
             return pty.isAlive();

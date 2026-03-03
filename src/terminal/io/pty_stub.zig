@@ -26,6 +26,10 @@ pub const Pty = struct {
         return false;
     }
 
+    pub fn hasForegroundProcessOutsideShell(_: *Pty) bool {
+        return false;
+    }
+
     pub fn hasData(_: *Pty) bool {
         return false;
     }
