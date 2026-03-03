@@ -29,6 +29,7 @@ const font_sample_view_mod = @import("ui/font_sample_view.zig");
 
 const Editor = editor_mod.Editor;
 const TerminalSession = terminal_mod.TerminalSession;
+const TerminalWorkspace = terminal_mod.TerminalWorkspace;
 const Metrics = metrics_mod.Metrics;
 const Logger = app_logger.Logger;
 const Shell = app_shell.Shell;
@@ -184,6 +185,7 @@ const AppState = struct {
     editors: std.ArrayList(*Editor),
     terminals: std.ArrayList(*TerminalSession),
     terminal_widgets: std.ArrayList(TerminalWidget),
+    terminal_workspace: ?TerminalWorkspace,
 
     // Themes
     app_theme: app_shell.Theme,
@@ -419,6 +421,13 @@ const AppState = struct {
 
         var grammar_manager = try grammar_manager_mod.GrammarManager.init(allocator);
         errdefer grammar_manager.deinit();
+        const terminal_workspace = if (app_mode == .terminal)
+            TerminalWorkspace.init(allocator, .{
+                .scrollback_rows = config.terminal_scrollback_rows,
+                .cursor_style = terminal_cursor_style,
+            })
+        else
+            null;
 
         const state = try allocator.create(AppState);
         state.* = .{
@@ -431,6 +440,7 @@ const AppState = struct {
             .editors = .empty,
             .terminals = .empty,
             .terminal_widgets = .empty,
+            .terminal_workspace = terminal_workspace,
             .app_theme = app_theme,
             .editor_theme = editor_theme,
             .terminal_theme = terminal_theme,
@@ -522,8 +532,13 @@ const AppState = struct {
             widget.deinit();
         }
         self.terminal_widgets.deinit(self.allocator);
-        for (self.terminals.items) |t| {
-            t.deinit();
+        if (self.terminal_workspace) |*workspace| {
+            workspace.deinit();
+            self.terminal_workspace = null;
+        } else {
+            for (self.terminals.items) |t| {
+                t.deinit();
+            }
         }
         self.terminals.deinit(self.allocator);
 
@@ -775,6 +790,131 @@ const AppState = struct {
         return std.unicode.utf8ValidateSlice(buf[0..n]);
     }
 
+    fn terminalTabCount(self: *const AppState) usize {
+        if (self.app_mode == .terminal) {
+            if (self.terminal_workspace) |workspace| return workspace.tabCount();
+            return 0;
+        }
+        return self.terminals.items.len;
+    }
+
+    fn activeTerminalArrayIndex(self: *const AppState) ?usize {
+        const count = self.terminalTabCount();
+        if (count == 0) return null;
+        if (self.app_mode == .terminal) {
+            if (self.terminal_workspace) |workspace| {
+                return @min(workspace.activeIndex(), count - 1);
+            }
+        }
+        return 0;
+    }
+
+    fn activeTerminalSession(self: *AppState) ?*TerminalSession {
+        const idx = self.activeTerminalArrayIndex() orelse return null;
+        if (self.app_mode == .terminal) {
+            if (self.terminal_workspace) |*workspace| {
+                return workspace.sessionAt(idx);
+            }
+            return null;
+        }
+        return self.terminals.items[idx];
+    }
+
+    fn activeTerminalWidget(self: *AppState) ?*TerminalWidget {
+        const idx = self.activeTerminalArrayIndex() orelse return null;
+        if (idx >= self.terminal_widgets.items.len) return null;
+        return &self.terminal_widgets.items[idx];
+    }
+
+    fn syncTerminalModeTabBar(self: *AppState) !void {
+        if (self.app_mode != .terminal) return;
+        if (self.terminal_workspace) |*workspace| {
+            const count = workspace.tabCount();
+            if (self.tab_bar.tabs.items.len != count) {
+                self.tab_bar.clearTabs();
+                for (0..count) |i| {
+                    const session = workspace.sessionAt(i) orelse continue;
+                    const title = if (session.currentTitle().len > 0) session.currentTitle() else "Terminal";
+                    try self.tab_bar.addTab(title, .terminal);
+                }
+            } else {
+                for (0..count) |i| {
+                    const session = workspace.sessionAt(i) orelse continue;
+                    const title = if (session.currentTitle().len > 0) session.currentTitle() else "Terminal";
+                    try self.tab_bar.setTabTitle(i, title);
+                }
+            }
+            self.tab_bar.active_index = if (count == 0) 0 else @min(workspace.activeIndex(), count - 1);
+        } else {
+            self.tab_bar.clearTabs();
+        }
+    }
+
+    fn terminalFocusIndexForAction(kind: input_actions.ActionKind) ?usize {
+        return switch (kind) {
+            .terminal_focus_tab_1 => 0,
+            .terminal_focus_tab_2 => 1,
+            .terminal_focus_tab_3 => 2,
+            .terminal_focus_tab_4 => 3,
+            .terminal_focus_tab_5 => 4,
+            .terminal_focus_tab_6 => 5,
+            .terminal_focus_tab_7 => 6,
+            .terminal_focus_tab_8 => 7,
+            .terminal_focus_tab_9 => 8,
+            else => null,
+        };
+    }
+
+    fn focusTerminalTabByIndex(self: *AppState, index: usize) bool {
+        if (self.app_mode != .terminal) return false;
+        if (self.terminal_workspace) |*workspace| {
+            if (!workspace.activateIndex(index)) return false;
+            self.tab_bar.active_index = workspace.activeIndex();
+            if (self.activeTerminalWidget()) |widget| {
+                widget.invalidateTextureCache();
+            }
+            return true;
+        }
+        return false;
+    }
+
+    fn cycleTerminalTab(self: *AppState, next: bool) bool {
+        if (self.app_mode != .terminal) return false;
+        if (self.terminal_workspace) |*workspace| {
+            const changed = if (next) workspace.activateNext() else workspace.activatePrev();
+            if (!changed) return false;
+            self.tab_bar.active_index = workspace.activeIndex();
+            if (self.activeTerminalWidget()) |widget| {
+                widget.invalidateTextureCache();
+            }
+            return true;
+        }
+        return false;
+    }
+
+    fn closeActiveTerminalTab(self: *AppState) !bool {
+        if (self.app_mode != .terminal) return false;
+        if (self.terminal_workspace) |*workspace| {
+            if (workspace.tabCount() == 0) return false;
+            const active_idx = workspace.activeIndex();
+            if (active_idx < self.terminal_widgets.items.len) {
+                self.terminal_widgets.items[active_idx].deinit();
+                _ = self.terminal_widgets.orderedRemove(active_idx);
+            }
+            if (!workspace.closeActiveTab()) return false;
+            if (workspace.tabCount() == 0) {
+                self.shell.requestClose();
+            } else {
+                try self.syncTerminalModeTabBar();
+                if (self.activeTerminalWidget()) |widget| {
+                    widget.invalidateTextureCache();
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
     pub fn newTerminal(self: *AppState) !void {
         // Calculate terminal size based on UI
         const shell = self.shell;
@@ -790,6 +930,45 @@ const AppState = struct {
         const cols: u16 = initial_grid.cols;
         const rows: u16 = initial_grid.rows;
         const theme = &self.terminal_theme;
+
+        if (self.app_mode == .terminal) {
+            if (self.terminal_workspace) |*workspace| {
+                _ = try workspace.createTab(rows, cols);
+                const term = workspace.activeSession() orelse return error.TerminalWorkspaceNoActiveTab;
+                term.setDefaultColors(
+                    term_types.Color{
+                        .r = theme.foreground.r,
+                        .g = theme.foreground.g,
+                        .b = theme.foreground.b,
+                    },
+                    term_types.Color{
+                        .r = theme.background.r,
+                        .g = theme.background.g,
+                        .b = theme.background.b,
+                    },
+                );
+                if (theme.ansi_colors) |ansi| {
+                    var colors: [16]term_types.Color = undefined;
+                    for (ansi, 0..) |c, i| {
+                        colors[i] = term_types.Color{ .r = c.r, .g = c.g, .b = c.b };
+                    }
+                    term.setAnsiColors(colors);
+                }
+                term.setCellSize(
+                    @intFromFloat(shell.terminalCellWidth()),
+                    @intFromFloat(shell.terminalCellHeight()),
+                );
+                try term.start(null);
+                var widget = TerminalWidget.init(term, self.terminal_blink_style);
+                widget.setFocusReportSources(self.terminal_focus_report_window_events, self.terminal_focus_report_pane_events);
+                try self.terminal_widgets.append(self.allocator, widget);
+                try self.syncTerminalModeTabBar();
+                try self.notifyTerminalColorSchemeChanged();
+                self.show_terminal = true;
+                return;
+            }
+            return error.TerminalWorkspaceMissing;
+        }
 
         const term = try TerminalSession.initWithOptions(self.allocator, rows, cols, .{
             .scrollback_rows = self.terminal_scrollback_rows,
@@ -851,7 +1030,7 @@ const AppState = struct {
     }
 
     fn refreshTerminalSizing(self: *AppState) !void {
-        if (self.terminals.items.len == 0) return;
+        if (self.terminalTabCount() == 0) return;
         const shell = self.shell;
         const width = @as(f32, @floatFromInt(shell.width()));
         const height = @as(f32, @floatFromInt(shell.height()));
@@ -860,26 +1039,37 @@ const AppState = struct {
         const grid = self.terminalGridSize(layout.terminal.width, effective_height, 1, 1);
         const cols: u16 = grid.cols;
         const rows: u16 = grid.rows;
-        for (self.terminals.items) |term| {
-            term.setCellSize(
-                @intFromFloat(shell.terminalCellWidth()),
-                @intFromFloat(shell.terminalCellHeight()),
-            );
-            try term.resize(rows, cols);
+        if (self.app_mode == .terminal) {
+            if (self.terminal_workspace) |*workspace| {
+                workspace.setCellSizeAll(
+                    @intFromFloat(shell.terminalCellWidth()),
+                    @intFromFloat(shell.terminalCellHeight()),
+                );
+                try workspace.resizeAll(rows, cols);
+            }
+        } else {
+            for (self.terminals.items) |term| {
+                term.setCellSize(
+                    @intFromFloat(shell.terminalCellWidth()),
+                    @intFromFloat(shell.terminalCellHeight()),
+                );
+                try term.resize(rows, cols);
+            }
         }
     }
 
     fn computeLayout(self: *AppState, width: f32, height: f32) layout_types.WidgetLayout {
         switch (self.app_mode) {
             .terminal => {
-                const terminal_h = if (self.show_terminal) height else 0;
+                const tab_bar_h = self.tab_bar.height;
+                const terminal_h = if (self.show_terminal) @max(0, height - tab_bar_h) else 0;
                 return .{
                     .window = .{ .x = 0, .y = 0, .width = width, .height = height },
                     .options_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                    .tab_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+                    .tab_bar = .{ .x = 0, .y = 0, .width = width, .height = tab_bar_h },
                     .side_nav = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
                     .editor = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                    .terminal = .{ .x = 0, .y = 0, .width = width, .height = terminal_h },
+                    .terminal = .{ .x = 0, .y = tab_bar_h, .width = width, .height = terminal_h },
                     .status_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
                 };
             },
@@ -930,9 +1120,10 @@ const AppState = struct {
 
     pub fn run(self: *AppState) !void {
         if (self.app_mode == .terminal) {
-            if (self.terminals.items.len == 0) {
+            if (self.terminalTabCount() == 0) {
                 try self.newTerminal();
             }
+            try self.syncTerminalModeTabBar();
         } else if (self.app_mode == .font_sample) {
             // No initial editor/terminal. The font sample view draws directly.
         } else {
@@ -1115,6 +1306,9 @@ const AppState = struct {
         self.tab_bar.updateInput(self.last_input);
         self.side_nav.updateInput(self.last_input);
         self.status_bar.updateInput(self.last_input);
+        if (self.app_mode == .terminal) {
+            try self.syncTerminalModeTabBar();
+        }
         const now = app_shell.getTime();
         const focus = if (self.app_mode == .terminal or self.active_kind == .terminal) input_actions.FocusKind.terminal else input_actions.FocusKind.editor;
         self.input_router.route(input_batch, focus);
@@ -1134,48 +1328,52 @@ const AppState = struct {
                 else => {},
             }
         }
-        if (focus == .terminal and (self.app_mode == .terminal or self.show_terminal) and self.terminals.items.len > 0) {
-            var term_widget = &self.terminal_widgets.items[0];
-            const pane_focused_now = true;
-            if (self.last_terminal_pane_focus_reported == null or self.last_terminal_pane_focus_reported.? != pane_focused_now) {
-                if (try term_widget.reportFocusChangedFrom(.pane, pane_focused_now)) {
-                    handled_shortcut = true;
+        if (focus == .terminal and (self.app_mode == .terminal or self.show_terminal) and self.terminalTabCount() > 0) {
+            if (self.activeTerminalWidget()) |term_widget| {
+                const pane_focused_now = true;
+                if (self.last_terminal_pane_focus_reported == null or self.last_terminal_pane_focus_reported.? != pane_focused_now) {
+                    if (try term_widget.reportFocusChangedFrom(.pane, pane_focused_now)) {
+                        handled_shortcut = true;
+                    }
+                    self.last_terminal_pane_focus_reported = pane_focused_now;
                 }
-                self.last_terminal_pane_focus_reported = pane_focused_now;
-            }
-            if (input_batch.events.items.len > 0) {
-                term_widget.noteInput(now);
-            }
-            for (self.input_router.actionsSlice()) |action| {
-                switch (action.kind) {
-                    .copy => {
-                        if (term_widget.copySelectionToClipboard(shell)) {
-                            handled_shortcut = true;
-                        }
-                    },
-                    .paste => {
-                        if (term_widget.pasteClipboardFromSystem(shell)) {
-                            handled_shortcut = true;
-                            self.needs_redraw = true;
-                        }
-                    },
-                    .terminal_scrollback_pager => {
-                        if (try self.openTerminalScrollbackInPager(term_widget, self.terminals.items[0])) {
-                            handled_shortcut = true;
-                        }
-                    },
-                    else => {},
+                if (input_batch.events.items.len > 0) {
+                    term_widget.noteInput(now);
+                }
+                for (self.input_router.actionsSlice()) |action| {
+                    switch (action.kind) {
+                        .copy => {
+                            if (term_widget.copySelectionToClipboard(shell)) {
+                                handled_shortcut = true;
+                            }
+                        },
+                        .paste => {
+                            if (term_widget.pasteClipboardFromSystem(shell)) {
+                                handled_shortcut = true;
+                                self.needs_redraw = true;
+                            }
+                        },
+                        .terminal_scrollback_pager => {
+                            if (self.activeTerminalSession()) |term| {
+                                if (try self.openTerminalScrollbackInPager(term_widget, term)) {
+                                    handled_shortcut = true;
+                                }
+                            }
+                        },
+                        else => {},
+                    }
                 }
             }
         }
-        if (!(focus == .terminal and (self.app_mode == .terminal or self.show_terminal) and self.terminals.items.len > 0) and self.terminals.items.len > 0) {
-            var term_widget = &self.terminal_widgets.items[0];
-            const pane_focused_now = false;
-            if (self.last_terminal_pane_focus_reported == null or self.last_terminal_pane_focus_reported.? != pane_focused_now) {
-                if (try term_widget.reportFocusChangedFrom(.pane, pane_focused_now)) {
-                    handled_shortcut = true;
+        if (!(focus == .terminal and (self.app_mode == .terminal or self.show_terminal) and self.terminalTabCount() > 0) and self.terminalTabCount() > 0) {
+            if (self.activeTerminalWidget()) |term_widget| {
+                const pane_focused_now = false;
+                if (self.last_terminal_pane_focus_reported == null or self.last_terminal_pane_focus_reported.? != pane_focused_now) {
+                    if (try term_widget.reportFocusChangedFrom(.pane, pane_focused_now)) {
+                        handled_shortcut = true;
+                    }
+                    self.last_terminal_pane_focus_reported = pane_focused_now;
                 }
-                self.last_terminal_pane_focus_reported = pane_focused_now;
             }
         }
         if (focus == .editor and self.editors.items.len > 0) {
@@ -1350,8 +1548,7 @@ const AppState = struct {
         const height = @as(f32, @floatFromInt(shell.height()));
         const layout = self.computeLayout(width, height);
 
-        if (self.terminals.items.len > 0 and self.terminal_widgets.items.len > 0) {
-            const term_widget = &self.terminal_widgets.items[0];
+        if (self.activeTerminalWidget()) |term_widget| {
             const cache = term_widget.session.renderCache();
             const blink_armed = cache.cursor_visible and cache.cursor_style.blink and cache.scroll_offset == 0;
             if (blink_armed != self.last_cursor_blink_armed) {
@@ -1377,17 +1574,27 @@ const AppState = struct {
 
         if (self.window_resize_pending and (now - self.window_resize_last_time) >= 0.12) {
             self.window_resize_pending = false;
-            if (self.terminals.items.len > 0) {
-                const term = self.terminals.items[0];
+            if (self.terminalTabCount() > 0) {
                 const effective_height = if (self.app_mode == .ide and !self.show_terminal) self.terminal_height else layout.terminal.height;
                 const grid = self.terminalGridSize(layout.terminal.width, effective_height, 1, 1);
                 const cols: u16 = grid.cols;
                 const rows: u16 = grid.rows;
-                term.setCellSize(
-                    @intFromFloat(shell.terminalCellWidth()),
-                    @intFromFloat(shell.terminalCellHeight()),
-                );
-                try term.resize(rows, cols);
+                if (self.app_mode == .terminal) {
+                    if (self.terminal_workspace) |*workspace| {
+                        workspace.setCellSizeAll(
+                            @intFromFloat(shell.terminalCellWidth()),
+                            @intFromFloat(shell.terminalCellHeight()),
+                        );
+                        try workspace.resizeAll(rows, cols);
+                    }
+                } else {
+                    const term = self.terminals.items[0];
+                    term.setCellSize(
+                        @intFromFloat(shell.terminalCellWidth()),
+                        @intFromFloat(shell.terminalCellHeight()),
+                    );
+                    try term.resize(rows, cols);
+                }
             }
             self.needs_redraw = true;
         }
@@ -1575,7 +1782,46 @@ const AppState = struct {
                         return;
                     }
                 },
+                .terminal_new_tab => {
+                    if (self.app_mode == .terminal) {
+                        try self.newTerminal();
+                        try self.syncTerminalModeTabBar();
+                        self.needs_redraw = true;
+                        self.metrics.noteInput(now);
+                        return;
+                    }
+                },
+                .terminal_close_tab => {
+                    if (self.app_mode == .terminal and try self.closeActiveTerminalTab()) {
+                        self.needs_redraw = true;
+                        self.metrics.noteInput(now);
+                        return;
+                    }
+                },
+                .terminal_next_tab => {
+                    if (self.app_mode == .terminal and self.cycleTerminalTab(true)) {
+                        self.needs_redraw = true;
+                        self.metrics.noteInput(now);
+                        return;
+                    }
+                },
+                .terminal_prev_tab => {
+                    if (self.app_mode == .terminal and self.cycleTerminalTab(false)) {
+                        self.needs_redraw = true;
+                        self.metrics.noteInput(now);
+                        return;
+                    }
+                },
                 else => {},
+            }
+            if (self.app_mode == .terminal) {
+                if (terminalFocusIndexForAction(action.kind)) |focus_index| {
+                    if (self.focusTerminalTabByIndex(focus_index)) {
+                        self.needs_redraw = true;
+                        self.metrics.noteInput(now);
+                        return;
+                    }
+                }
             }
         }
         if (handled_zoom) {
@@ -1610,6 +1856,12 @@ const AppState = struct {
                     self.metrics.noteInput(now);
                 }
             } else if (self.app_mode == .terminal) {
+                if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y)) {
+                    if (self.focusTerminalTabByIndex(self.tab_bar.active_index)) {
+                        self.needs_redraw = true;
+                        self.metrics.noteInput(now);
+                    }
+                }
                 self.active_kind = .terminal;
             } else {
                 self.active_kind = .editor;
@@ -1782,82 +2034,95 @@ const AppState = struct {
         }
 
         // Update terminal if shown
-        if (self.app_mode != .editor and self.show_terminal and self.terminals.items.len > 0) {
-            const term = self.terminals.items[0];
-            var term_widget = &self.terminal_widgets.items[0];
-
-            // Only poll PTY if there's data available (non-blocking check)
-            // Skip polling when in deep idle to save CPU
-            if (term.hasData()) {
-                term.setInputPressure(input_batch.events.items.len > 0);
-                try term.poll();
-                self.needs_redraw = true;
-            }
-
-            // Handle terminal input if focused at bottom
-            const term_y_draw = layout.terminal.y + 2;
-            const term_x = layout.terminal.x;
-            const term_draw_height = @max(0, layout.terminal.height - 2);
-            if (term_widget.updateBlink(now)) {
-                self.needs_redraw = true;
-            }
-            if (self.active_kind == .terminal) {
-                if (!search_panel_consumed_input and try term_widget.handleInput(
-                    shell,
-                    term_x,
-                    term_y_draw,
-                    layout.terminal.width,
-                    term_draw_height,
-                    true,
-                    &self.terminal_scroll_dragging,
-                    &self.terminal_scroll_grab_offset,
-                    suppress_terminal_shortcuts,
-                    input_batch,
-                )) {
-                    self.needs_redraw = true;
-                    self.metrics.noteInput(now);
+        if (self.app_mode != .editor and self.show_terminal and self.terminalTabCount() > 0) {
+            if (self.app_mode == .terminal) {
+                if (self.terminal_workspace) |*workspace| {
+                    const polled = try workspace.pollAll(
+                        self.activeTerminalArrayIndex(),
+                        input_batch.events.items.len > 0,
+                    );
+                    if (polled) {
+                        self.needs_redraw = true;
+                    }
                 }
-                if (term_widget.takePendingOpenRequest()) |req| {
-                    defer self.allocator.free(req.path);
-                    if (isProbablyTextFile(req.path)) {
-                        if (req.line != null) {
-                            try self.openFileAt(req.path, req.line.?, req.col);
-                        } else {
-                            try self.openFile(req.path);
-                        }
+            } else if (self.terminals.items.len > 0) {
+                const term = self.terminals.items[0];
+                if (term.hasData()) {
+                    term.setInputPressure(input_batch.events.items.len > 0);
+                    try term.poll();
+                    self.needs_redraw = true;
+                }
+            }
+
+            if (self.activeTerminalWidget()) |term_widget| {
+                const term_offset_y: f32 = if (self.app_mode == .ide) 2 else 0;
+                const term_y_draw = layout.terminal.y + term_offset_y;
+                const term_x = layout.terminal.x;
+                const term_draw_height = if (self.app_mode == .ide) @max(0, layout.terminal.height - 2) else layout.terminal.height;
+                if (term_widget.updateBlink(now)) {
+                    self.needs_redraw = true;
+                }
+                if (self.active_kind == .terminal) {
+                    if (!search_panel_consumed_input and try term_widget.handleInput(
+                        shell,
+                        term_x,
+                        term_y_draw,
+                        layout.terminal.width,
+                        term_draw_height,
+                        true,
+                        &self.terminal_scroll_dragging,
+                        &self.terminal_scroll_grab_offset,
+                        suppress_terminal_shortcuts,
+                        input_batch,
+                    )) {
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
                     }
-                }
-            } else {
-                if (!search_panel_consumed_input and try term_widget.handleInput(
-                    shell,
-                    term_x,
-                    term_y_draw,
-                    layout.terminal.width,
-                    term_draw_height,
-                    false,
-                    &self.terminal_scroll_dragging,
-                    &self.terminal_scroll_grab_offset,
-                    suppress_terminal_shortcuts,
-                    input_batch,
-                )) {
-                    self.needs_redraw = true;
-                    self.metrics.noteInput(now);
-                }
-                if (term_widget.takePendingOpenRequest()) |req| {
-                    defer self.allocator.free(req.path);
-                    if (isProbablyTextFile(req.path)) {
-                        if (req.line != null) {
-                            try self.openFileAt(req.path, req.line.?, req.col);
-                        } else {
-                            try self.openFile(req.path);
+                    if (term_widget.takePendingOpenRequest()) |req| {
+                        defer self.allocator.free(req.path);
+                        if (isProbablyTextFile(req.path)) {
+                            if (req.line != null) {
+                                try self.openFileAt(req.path, req.line.?, req.col);
+                            } else {
+                                try self.openFile(req.path);
+                            }
+                            self.needs_redraw = true;
+                            self.metrics.noteInput(now);
                         }
+                    }
+                } else {
+                    if (!search_panel_consumed_input and try term_widget.handleInput(
+                        shell,
+                        term_x,
+                        term_y_draw,
+                        layout.terminal.width,
+                        term_draw_height,
+                        false,
+                        &self.terminal_scroll_dragging,
+                        &self.terminal_scroll_grab_offset,
+                        suppress_terminal_shortcuts,
+                        input_batch,
+                    )) {
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
                     }
+                    if (term_widget.takePendingOpenRequest()) |req| {
+                        defer self.allocator.free(req.path);
+                        if (isProbablyTextFile(req.path)) {
+                            if (req.line != null) {
+                                try self.openFileAt(req.path, req.line.?, req.col);
+                            } else {
+                                try self.openFile(req.path);
+                            }
+                            self.needs_redraw = true;
+                            self.metrics.noteInput(now);
+                        }
+                    }
                 }
             }
+        }
+        if (self.app_mode == .terminal) {
+            try self.syncTerminalModeTabBar();
         }
     }
 
@@ -2141,6 +2406,9 @@ const AppState = struct {
 
             // Draw tab bar
             tab_tooltip = self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
+        } else if (self.app_mode == .terminal) {
+            shell.setTheme(self.app_theme);
+            tab_tooltip = self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
         }
 
         // Draw editor
@@ -2163,7 +2431,7 @@ const AppState = struct {
         }
 
         // Draw terminal if shown
-        if (self.app_mode != .editor and self.show_terminal and self.terminals.items.len > 0) {
+        if (self.app_mode != .editor and self.show_terminal and self.terminalTabCount() > 0) {
             const term_y = layout.terminal.y;
 
             // Terminal separator
@@ -2173,20 +2441,21 @@ const AppState = struct {
             }
 
             shell.setTheme(self.terminal_theme);
-            var term_widget = &self.terminal_widgets.items[0];
-            const term_offset_y: f32 = if (self.app_mode == .ide) 2 else 0;
-            const term_height = if (self.app_mode == .ide) @max(0, layout.terminal.height - 2) else layout.terminal.height;
-            if (layout.terminal.width > 0 and term_height > 0) {
-                shell.beginClip(
-                    @intFromFloat(layout.terminal.x),
-                    @intFromFloat(term_y + term_offset_y),
-                    @intFromFloat(layout.terminal.width),
-                    @intFromFloat(term_height),
-                );
-            }
-            term_widget.draw(shell, layout.terminal.x, term_y + term_offset_y, layout.terminal.width, term_height, self.last_input);
-            if (layout.terminal.width > 0 and term_height > 0) {
-                shell.endClip();
+            if (self.activeTerminalWidget()) |term_widget| {
+                const term_offset_y: f32 = if (self.app_mode == .ide) 2 else 0;
+                const term_height = if (self.app_mode == .ide) @max(0, layout.terminal.height - 2) else layout.terminal.height;
+                if (layout.terminal.width > 0 and term_height > 0) {
+                    shell.beginClip(
+                        @intFromFloat(layout.terminal.x),
+                        @intFromFloat(term_y + term_offset_y),
+                        @intFromFloat(layout.terminal.width),
+                        @intFromFloat(term_height),
+                    );
+                }
+                term_widget.draw(shell, layout.terminal.x, term_y + term_offset_y, layout.terminal.width, term_height, self.last_input);
+                if (layout.terminal.width > 0 and term_height > 0) {
+                    shell.endClip();
+                }
             }
         }
 

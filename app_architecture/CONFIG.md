@@ -137,7 +137,7 @@ This doc uses these status labels:
 | `keybinds.terminal[]` | Terminal-scope routed actions | `src/main.zig` -> `InputRouter` | `reloadable` | |
 | binding `key` | SDL3 keycode-style key name | input router | `reloadable` | Key names track `shared_types.input.Key` tags. |
 | binding `mods` | Exact modifier set | input router | `reloadable` | Lua parser supports `ctrl`, `shift`, `alt`, `super`, and `altgr`; matching is exact. |
-| binding `action` | Semantic action id | input router + main dispatch | `reloadable` | |
+| binding `action` | Semantic action id | input router + main dispatch | `reloadable` | Includes terminal tab actions (`terminal_new_tab`, `terminal_close_tab`, `terminal_next_tab`, `terminal_prev_tab`, `terminal_focus_tab_1..9`). |
 | binding `repeat` | Repeatable binding flag | input router | `reloadable` | |
 
 ## Known Mismatches

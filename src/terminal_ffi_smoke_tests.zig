@@ -8,6 +8,27 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION, c_api.zide_terminal_snapshot_abi_version());
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_EVENT_ABI_VERSION, c_api.zide_terminal_event_abi_version());
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION, c_api.zide_terminal_scrollback_abi_version());
+    try std.testing.expectEqual(c_api.ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION, c_api.zide_terminal_renderer_metadata_abi_version());
+
+    var rounded_box_meta: c_api.ZideTerminalRendererMetadata = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_renderer_metadata(0x256D, &rounded_box_meta));
+    try std.testing.expectEqual(c_api.ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION, rounded_box_meta.abi_version);
+    try std.testing.expectEqual(@as(u32, @sizeOf(c_api.ZideTerminalRendererMetadata)), rounded_box_meta.struct_size);
+    try std.testing.expectEqual(@as(u32, 0x256D), rounded_box_meta.codepoint);
+    try std.testing.expect((rounded_box_meta.glyph_class_flags & @intFromEnum(c_api.ZideTerminalGlyphClassFlags.box)) != 0);
+    try std.testing.expect((rounded_box_meta.glyph_class_flags & @intFromEnum(c_api.ZideTerminalGlyphClassFlags.box_rounded)) != 0);
+
+    var braille_meta: c_api.ZideTerminalRendererMetadata = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_renderer_metadata(0x28FF, &braille_meta));
+    try std.testing.expect((braille_meta.glyph_class_flags & @intFromEnum(c_api.ZideTerminalGlyphClassFlags.braille)) != 0);
+    try std.testing.expect((braille_meta.glyph_class_flags & @intFromEnum(c_api.ZideTerminalGlyphClassFlags.graph)) != 0);
+
+    var rounded_powerline_meta: c_api.ZideTerminalRendererMetadata = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_renderer_metadata(0xE0B5, &rounded_powerline_meta));
+    try std.testing.expect((rounded_powerline_meta.glyph_class_flags & @intFromEnum(c_api.ZideTerminalGlyphClassFlags.powerline)) != 0);
+    try std.testing.expect((rounded_powerline_meta.glyph_class_flags & @intFromEnum(c_api.ZideTerminalGlyphClassFlags.powerline_rounded)) != 0);
+    try std.testing.expect((rounded_powerline_meta.damage_policy_flags & @intFromEnum(c_api.ZideTerminalDamagePolicyFlags.advisory_bounds)) != 0);
+    try std.testing.expect((rounded_powerline_meta.damage_policy_flags & @intFromEnum(c_api.ZideTerminalDamagePolicyFlags.full_redraw_safe_default)) != 0);
 
     var handle: ?*c_api.ZideTerminalHandle = null;
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_create(null, &handle));

@@ -46,6 +46,10 @@ Current header values:
 Current scalar version query:
 - `zide_terminal_snapshot_abi_version() -> 1`
 
+Related renderer metadata helper:
+- `zide_terminal_renderer_metadata_abi_version() -> 1`
+- `zide_terminal_renderer_metadata(codepoint, &metadata)`
+
 ### `ZideTerminalCell`
 
 Fields:
@@ -165,6 +169,18 @@ Note:
 - explicit copied scrollback export is now provided via the dedicated buffer API
   (`zide_terminal_scrollback_count`, `zide_terminal_scrollback_acquire`, `zide_terminal_scrollback_release`)
   so snapshot ABI remains viewport-only while hosts can consume history through a separate ownership contract.
+
+## Renderer metadata helper (beta-safe extension)
+
+To reduce host-side heuristics without changing snapshot or cell layout, bridge exports
+an independent metadata query:
+- input: one Unicode codepoint
+- output: `ZideTerminalRendererMetadata` with:
+  - glyph class flags (`box`, `box_rounded`, `graph`, `braille`, `powerline`, `powerline_rounded`)
+  - damage policy flags (`advisory_bounds`, `full_redraw_safe_default`)
+
+This keeps snapshot ABI stable while giving foreign renderers explicit routing hints for
+special glyph paths and conservative damage handling.
 
 ## Host guidance
 

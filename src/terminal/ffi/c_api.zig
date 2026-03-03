@@ -4,6 +4,7 @@ pub const ZideTerminalHandle = bridge.ZideTerminalHandle;
 pub const ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION = bridge.snapshot_abi_version;
 pub const ZIDE_TERMINAL_EVENT_ABI_VERSION = bridge.event_abi_version;
 pub const ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION = bridge.scrollback_abi_version;
+pub const ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION = bridge.renderer_metadata_abi_version;
 pub const ZideTerminalCreateConfig = bridge.CreateConfig;
 pub const ZideTerminalColor = bridge.Color;
 pub const ZideTerminalCell = bridge.Cell;
@@ -14,8 +15,11 @@ pub const ZideTerminalMouseEvent = bridge.MouseEvent;
 pub const ZideTerminalEvent = bridge.Event;
 pub const ZideTerminalEventBuffer = bridge.EventBuffer;
 pub const ZideTerminalStringBuffer = bridge.StringBuffer;
+pub const ZideTerminalRendererMetadata = bridge.RendererMetadata;
 pub const ZideTerminalStatus = bridge.Status;
 pub const ZideTerminalEventKind = bridge.EventKind;
+pub const ZideTerminalGlyphClassFlags = bridge.GlyphClassFlags;
+pub const ZideTerminalDamagePolicyFlags = bridge.DamagePolicyFlags;
 
 pub fn zide_terminal_create(config: ?*const ZideTerminalCreateConfig, out_handle: *?*ZideTerminalHandle) c_int {
     return @intFromEnum(bridge.create(config, out_handle));
@@ -115,6 +119,14 @@ pub fn zide_terminal_event_abi_version() u32 {
 
 pub fn zide_terminal_scrollback_abi_version() u32 {
     return bridge.scrollbackAbiVersion();
+}
+
+pub fn zide_terminal_renderer_metadata_abi_version() u32 {
+    return bridge.rendererMetadataAbiVersion();
+}
+
+pub fn zide_terminal_renderer_metadata(codepoint: u32, out_metadata: *ZideTerminalRendererMetadata) c_int {
+    return @intFromEnum(bridge.rendererMetadata(codepoint, out_metadata));
 }
 
 pub fn zide_terminal_status_string(status: c_int) [*:0]const u8 {
