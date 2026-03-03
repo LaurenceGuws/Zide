@@ -214,6 +214,12 @@ return {
     -- Terminal configuration.
     terminal = {
         -- Terminal-specific theme override.
+        -- Supports full terminal palette overrides suitable for kitty/ghostty style themes.
+        -- You can use:
+        --   palette.color0..palette.color15
+        --   palette.ansi = { "#..", ... }            -- 1..16 => color0..color15
+        --   palette.ansi = { black = "#..", bright_red = "#.." }
+        --   palette.selection_background = "#.."      -- alias of `selection`
         -- theme = {
         --     palette = { background = "#000000" },
         -- },

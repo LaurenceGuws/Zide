@@ -1659,6 +1659,8 @@ fn parseThemePaletteTable(L: *c.lua_State, idx: c_int, theme: *ThemeConfig) void
     parseColorField(L, idx, "background", &theme.background);
     parseColorField(L, idx, "foreground", &theme.foreground);
     parseColorField(L, idx, "selection", &theme.selection);
+    parseColorField(L, idx, "selection_background", &theme.selection);
+    parseColorField(L, idx, "selection-background", &theme.selection);
     parseColorField(L, idx, "cursor", &theme.cursor);
     parseColorField(L, idx, "link", &theme.link);
     parseColorField(L, idx, "line_number", &theme.line_number);
@@ -1680,6 +1682,44 @@ fn parseThemePaletteTable(L: *c.lua_State, idx: c_int, theme: *ThemeConfig) void
         const key = std.fmt.comptimePrint("color{d}", .{i});
         parseColorField(L, idx, key, &theme.ansi_colors[i]);
     }
+
+    parseNamedAnsiColors(L, idx, &theme.ansi_colors);
+
+    _ = c.lua_getfield(L, idx, "ansi");
+    if (c.lua_istable(L, -1) != 0) {
+        parseIndexedAnsiColors(L, -1, &theme.ansi_colors);
+        parseNamedAnsiColors(L, -1, &theme.ansi_colors);
+    }
+    c.lua_pop(L, 1);
+}
+
+fn parseIndexedAnsiColors(L: *c.lua_State, idx: c_int, ansi_colors: *[16]?Color) void {
+    for (0..16) |i| {
+        _ = c.lua_rawgeti(L, idx, @as(c.lua_Integer, @intCast(i + 1)));
+        if (parseColorFromValue(L, -1)) |color| {
+            ansi_colors[i] = color;
+        }
+        c.lua_pop(L, 1);
+    }
+}
+
+fn parseNamedAnsiColors(L: *c.lua_State, idx: c_int, ansi_colors: *[16]?Color) void {
+    parseColorField(L, idx, "black", &ansi_colors[0]);
+    parseColorField(L, idx, "red", &ansi_colors[1]);
+    parseColorField(L, idx, "green", &ansi_colors[2]);
+    parseColorField(L, idx, "yellow", &ansi_colors[3]);
+    parseColorField(L, idx, "blue", &ansi_colors[4]);
+    parseColorField(L, idx, "magenta", &ansi_colors[5]);
+    parseColorField(L, idx, "cyan", &ansi_colors[6]);
+    parseColorField(L, idx, "white", &ansi_colors[7]);
+    parseColorField(L, idx, "bright_black", &ansi_colors[8]);
+    parseColorField(L, idx, "bright_red", &ansi_colors[9]);
+    parseColorField(L, idx, "bright_green", &ansi_colors[10]);
+    parseColorField(L, idx, "bright_yellow", &ansi_colors[11]);
+    parseColorField(L, idx, "bright_blue", &ansi_colors[12]);
+    parseColorField(L, idx, "bright_magenta", &ansi_colors[13]);
+    parseColorField(L, idx, "bright_cyan", &ansi_colors[14]);
+    parseColorField(L, idx, "bright_white", &ansi_colors[15]);
 }
 
 fn parseThemeSyntaxTable(L: *c.lua_State, idx: c_int, theme: *ThemeConfig) void {
