@@ -100,6 +100,7 @@ app_mode_layering_todo:
           notes:
             - "Must preserve terminal tab behavior, close modal policy, and focus reporting."
             - "In progress: terminal tab shortcut intents (`create/close/next/prev/focus`) now route through `TerminalMode` adapter alongside runtime behavior."
+            - "In progress: terminal tab drag reorder (`move`) and tab-click focus (`activate`) now route through adapter intents; parity diagnostics are available via `app.mode.parity` logging."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress
