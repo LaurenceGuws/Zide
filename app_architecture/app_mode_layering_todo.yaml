@@ -206,6 +206,7 @@ app_mode_layering_todo:
             - "In progress: run-loop perf stop/completion callback predicates are now collapsed into `AppState.shouldStopForPerfFrame(...)` and `AppState.onPerfCompleteFrame(...)`."
             - "In progress: run-loop `run_one_frame` and `run_main_loop` callback wiring is now collapsed into `AppState.runOneFrame(...)` and `AppState.runMainLoop(...)`."
             - "In progress: run-startup callback wiring now delegates through `AppState.initializeRunModeState(...)` (removed inline init callback body from `run()`)."
+            - "In progress: run-main-loop hook wiring moved from `main.zig` into `src/app/run_main_loop_hooks_runtime.zig` (`run`); `AppState.runMainLoop(...)` now delegates with a thin `runOneFrame` callback."
             - "In progress: update-frame callback hook body moved from `main.zig` into `src/app/update_frame_hooks_runtime.zig` (`handle`); `AppState.handleUpdateFrame(...)` is now a thin delegator."
             - "In progress: frame-render/idle hook body moved from `main.zig` into `src/app/frame_render_idle_hooks_runtime.zig` (`handle`); `AppState.handleFrameRenderAndIdle(...)` is now a thin delegator."
             - "In progress: pre-input runtime delegation in `main.zig` now uses named AppState shims for reconcile/layout/redraw hooks (`routeReconcileTerminalCloseModalActiveFromCtx`, `routeComputeLayoutFromCtx`, `routeMarkRedrawFromCtx`) instead of inline callback structs."

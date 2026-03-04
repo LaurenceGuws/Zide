@@ -59,6 +59,7 @@ const app_post_preinput_hooks_runtime = @import("app/post_preinput_hooks_runtime
 const app_update_frame_hooks_runtime = @import("app/update_frame_hooks_runtime.zig");
 const app_update_driver = @import("app/update_driver.zig");
 const app_run_loop_driver = @import("app/run_loop_driver.zig");
+const app_run_main_loop_hooks_runtime = @import("app/run_main_loop_hooks_runtime.zig");
 const app_reload_config_runtime = @import("app/reload_config_runtime.zig");
 const app_run_mode_init = @import("app/run_mode_init.zig");
 const app_prepare_run_frame_runtime = @import("app/prepare_run_frame_runtime.zig");
@@ -994,16 +995,16 @@ const AppState = struct {
     }
 
     fn runMainLoop(self: *AppState) !void {
-        try app_run_loop_driver.runMainLoop(
+        try app_run_main_loop_hooks_runtime.run(
             self.shell,
             @ptrCast(self),
             .{
                 .run_one_frame = struct {
-                    fn inner(one_frame_raw: *anyopaque) !bool {
-                        const one_frame_state: *AppState = @ptrCast(@alignCast(one_frame_raw));
-                        return try one_frame_state.runOneFrame();
+                    fn call(raw: *anyopaque) !bool {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        return try state.runOneFrame();
                     }
-                }.inner,
+                }.call,
             },
         );
     }
