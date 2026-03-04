@@ -79,7 +79,7 @@ app_mode_layering_todo:
       tasks:
         - id: MODE-01-01
           title: "Extract terminal mode backend implementation"
-          status: todo
+          status: in_progress
           files_to_add:
             - src/app/modes/backend/terminal_mode.zig
           files_to_edit:
@@ -89,7 +89,7 @@ app_mode_layering_todo:
             - "Must preserve terminal tab behavior, close modal policy, and focus reporting."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
-          status: todo
+          status: in_progress
           files_to_add:
             - src/app/modes/backend/editor_mode.zig
           files_to_edit:
