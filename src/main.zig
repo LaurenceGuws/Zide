@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_bootstrap = @import("app/bootstrap.zig");
 const app_editor_actions = @import("app/editor_actions.zig");
+const app_open_file_runtime = @import("app/open_file_runtime.zig");
 const app_editor_intent_route = @import("app/editor_intent_route.zig");
 const app_editor_create_intent_runtime = @import("app/editor_create_intent_runtime.zig");
 const app_editor_display_prepare = @import("app/editor_display_prepare.zig");
@@ -540,37 +541,11 @@ const AppState = struct {
     }
 
     pub fn openFile(self: *AppState, path: []const u8) !void {
-        _ = try app_editor_create_intent_runtime.routeCreateAndSync(self);
-        const editor = try Editor.init(self.allocator, &self.grammar_manager);
-        try editor.openFile(path);
-        try self.editors.append(self.allocator, editor);
-
-        // Extract filename for tab title
-        const filename = std.fs.path.basename(path);
-        try self.tab_bar.addTab(filename, .editor);
-        self.active_tab = self.tab_bar.tabs.items.len - 1;
-        self.active_kind = .editor;
-        try app_mode_adapter_sync_runtime.sync(self);
+        try app_open_file_runtime.open(self, path);
     }
 
     pub fn openFileAt(self: *AppState, path: []const u8, line_1: usize, col_1: ?usize) !void {
-        _ = try app_editor_create_intent_runtime.routeCreateAndSync(self);
-        const editor = try Editor.init(self.allocator, &self.grammar_manager);
-        try editor.openFile(path);
-        try self.editors.append(self.allocator, editor);
-
-        const filename = std.fs.path.basename(path);
-        try self.tab_bar.addTab(filename, .editor);
-        self.active_tab = self.tab_bar.tabs.items.len - 1;
-        self.active_kind = .editor;
-        try app_mode_adapter_sync_runtime.sync(self);
-
-        const line0 = if (line_1 > 0) line_1 - 1 else 0;
-        const col0 = if (col_1) |c1| (if (c1 > 0) c1 - 1 else 0) else 0;
-        const clamped_line = @min(line0, editor.lineCount() -| 1);
-        const line_len = editor.lineLen(clamped_line);
-        const clamped_col = @min(col0, line_len);
-        editor.setCursor(clamped_line, clamped_col);
+        try app_open_file_runtime.openAt(self, path, line_1, col_1);
     }
 
     pub fn newTerminal(self: *AppState) !void {
