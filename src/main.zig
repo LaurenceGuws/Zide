@@ -534,7 +534,15 @@ const AppState = struct {
     }
 
     pub fn newEditor(self: *AppState) !void {
-        _ = try app_editor_intent_route.routeCreateAndSync(@ptrCast(self), routeEditorTabActionFromCtx);
+        _ = try app_editor_intent_route.routeCreateAndSync(
+            @ptrCast(self),
+            struct {
+                fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    try app_tab_action_apply_runtime.applyEditorAndSync(state, action);
+                }
+            }.call,
+        );
         const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try self.editors.append(self.allocator, editor);
         try self.tab_bar.addTab("untitled", .editor);
@@ -544,7 +552,15 @@ const AppState = struct {
     }
 
     pub fn openFile(self: *AppState, path: []const u8) !void {
-        _ = try app_editor_intent_route.routeCreateAndSync(@ptrCast(self), routeEditorTabActionFromCtx);
+        _ = try app_editor_intent_route.routeCreateAndSync(
+            @ptrCast(self),
+            struct {
+                fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    try app_tab_action_apply_runtime.applyEditorAndSync(state, action);
+                }
+            }.call,
+        );
         const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try editor.openFile(path);
         try self.editors.append(self.allocator, editor);
@@ -558,7 +574,15 @@ const AppState = struct {
     }
 
     pub fn openFileAt(self: *AppState, path: []const u8, line_1: usize, col_1: ?usize) !void {
-        _ = try app_editor_intent_route.routeCreateAndSync(@ptrCast(self), routeEditorTabActionFromCtx);
+        _ = try app_editor_intent_route.routeCreateAndSync(
+            @ptrCast(self),
+            struct {
+                fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    try app_tab_action_apply_runtime.applyEditorAndSync(state, action);
+                }
+            }.call,
+        );
         const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try editor.openFile(path);
         try self.editors.append(self.allocator, editor);
@@ -609,7 +633,12 @@ const AppState = struct {
             .close,
             &self.terminal_workspace,
             @ptrCast(self),
-            routeTerminalTabActionFromCtx,
+            struct {
+                fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    try app_tab_action_apply_runtime.applyTerminalAndSync(state, action);
+                }
+            }.call,
         );
         if (try app_terminal_close_active_runtime.closeActive(
             self,
@@ -704,16 +733,6 @@ const AppState = struct {
         return app_terminal_shortcut_runtime.handleIntent(intent, now, @ptrCast(self), hooks);
     }
 
-    fn routeTerminalTabActionFromCtx(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        try app_tab_action_apply_runtime.applyTerminalAndSync(state, action);
-    }
-
-    fn routeEditorTabActionFromCtx(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        try app_tab_action_apply_runtime.applyEditorAndSync(state, action);
-    }
-
     fn handleIdeMousePressedRouting(
         self: *AppState,
         layout: layout_types.WidgetLayout,
@@ -728,7 +747,12 @@ const AppState = struct {
             _ = try app_editor_intent_route.routeActivateByIndexAndSync(
                 self.active_tab,
                 @ptrCast(self),
-                routeEditorTabActionFromCtx,
+                struct {
+                    fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try app_tab_action_apply_runtime.applyEditorAndSync(state, action);
+                    }
+                }.call,
             );
             self.needs_redraw = true;
             self.metrics.noteInput(now);
@@ -779,7 +803,12 @@ const AppState = struct {
             .activate,
             &self.terminal_workspace,
             @ptrCast(self),
-            routeTerminalTabActionFromCtx,
+            struct {
+                fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    try app_tab_action_apply_runtime.applyTerminalAndSync(state, action);
+                }
+            }.call,
         );
     }
 
@@ -826,7 +855,12 @@ const AppState = struct {
                         .activate,
                         self.tab_bar.terminalTabIdAtVisual(self.tab_bar.active_index),
                         @ptrCast(self),
-                        routeTerminalTabActionFromCtx,
+                        struct {
+                            fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                                const state: *AppState = @ptrCast(@alignCast(raw));
+                                try app_tab_action_apply_runtime.applyTerminalAndSync(state, action);
+                            }
+                        }.call,
                     );
                     if (app_terminal_tab_navigation_runtime.focusByIndex(self, self.tab_bar.active_index)) {
                         self.needs_redraw = true;
@@ -1473,7 +1507,12 @@ const AppState = struct {
                                             .close,
                                             &inner_state.terminal_workspace,
                                             @ptrCast(inner_state),
-                                            routeTerminalTabActionFromCtx,
+                                            struct {
+                                                fn call(route_raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                                                    const route_state: *AppState = @ptrCast(@alignCast(route_raw));
+                                                    try app_tab_action_apply_runtime.applyTerminalAndSync(route_state, action);
+                                                }
+                                            }.call,
                                         );
                                     }
                                 }.inner,
