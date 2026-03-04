@@ -24,6 +24,14 @@ pub fn isEditorOnly(app_mode: app_bootstrap.AppMode) bool {
     return app_mode == .editor;
 }
 
+pub fn isIde(app_mode: app_bootstrap.AppMode) bool {
+    return app_mode == .ide;
+}
+
+pub fn isFontSample(app_mode: app_bootstrap.AppMode) bool {
+    return app_mode == .font_sample;
+}
+
 pub fn supportsEditorSurface(app_mode: app_bootstrap.AppMode) bool {
     return app_mode != .terminal and app_mode != .font_sample;
 }
@@ -38,6 +46,10 @@ pub fn routedActiveMode(app_mode: app_bootstrap.AppMode, active: ActiveMode) Act
         .editor => .editor,
         else => active,
     };
+}
+
+pub fn canToggleTerminal(app_mode: app_bootstrap.AppMode) bool {
+    return isIde(app_mode);
 }
 
 pub const IdeHost = struct {
@@ -163,4 +175,8 @@ test "mode policy helpers route focused mode deterministically" {
     try std.testing.expect(supportsTerminalSurface(.ide));
     try std.testing.expect(!supportsEditorSurface(.terminal));
     try std.testing.expect(!supportsTerminalSurface(.editor));
+    try std.testing.expect(isIde(.ide));
+    try std.testing.expect(isFontSample(.font_sample));
+    try std.testing.expect(canToggleTerminal(.ide));
+    try std.testing.expect(!canToggleTerminal(.terminal));
 }
