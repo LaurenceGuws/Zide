@@ -949,181 +949,6 @@ const AppState = struct {
         }
     }
 
-    const PreInputShortcutResult = struct {
-        suppress_terminal_shortcuts: bool,
-        terminal_close_modal_active: bool,
-        handled_shortcut: bool,
-        consumed: bool,
-    };
-
-    fn handlePreInputShortcutFrame(
-        self: *AppState,
-        shell: *Shell,
-        r: anytype,
-        input_batch: *shared_types.input.InputBatch,
-        focus: input_actions.FocusKind,
-        now: f64,
-    ) !PreInputShortcutResult {
-        var handled_shortcut = app_reload_config_shortcut_runtime.handle(
-            self.input_router.actionsSlice(),
-            @ptrCast(self),
-            .{
-                .reload = struct {
-                    fn call(raw: *anyopaque) !void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        try app_reload_config_runtime.handle(
-                            state,
-                            raw,
-                            .{
-                                .refresh_terminal_sizing = struct {
-                                    fn cb(cb_raw: *anyopaque) !void {
-                                        const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
-                                        try app_terminal_refresh_sizing_runtime.handle(
-                                            cb_state,
-                                            cb_state.app_mode,
-                                            &cb_state.terminal_workspace,
-                                            cb_state.terminals.items,
-                                            cb_state.show_terminal,
-                                            cb_state.terminal_height,
-                                            cb_state.shell,
-                                        );
-                                    }
-                                }.cb,
-                                .apply_current_tab_bar_width_mode = struct {
-                                    fn cb(cb_raw: *anyopaque) void {
-                                        const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
-                                        cb_state.applyCurrentTabBarWidthMode();
-                                    }
-                                }.cb,
-                            },
-                        );
-                    }
-                }.call,
-                .show_notice = struct {
-                    fn call(raw: *anyopaque, success: bool) void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        const notice = app_config_reload_notice_state.arm(app_shell.getTime(), success);
-                        state.config_reload_notice_success = notice.success;
-                        state.config_reload_notice_until = notice.until;
-                        state.needs_redraw = true;
-                    }
-                }.call,
-            },
-        );
-        const live_layout = app_ui_layout_runtime.computeLayout(self, @floatFromInt(r.width), @floatFromInt(r.height));
-        if (app_terminal_close_confirm_active_runtime.reconcile(self)) {
-            if (try app_terminal_close_confirm_input.handleInput(
-                self.input_router.actionsSlice(),
-                input_batch,
-                live_layout,
-                self.shell.uiScaleFactor(),
-                now,
-                @ptrCast(self),
-                struct {
-                    fn call(raw: *anyopaque, decision: app_modes.ide.TerminalCloseConfirmDecision, at: f64) !bool {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        return try app_terminal_close_confirm_decision_runtime.applyDecision(
-                            state,
-                            decision,
-                            at,
-                            raw,
-                            .{
-                                .route_close_intent_and_sync = struct {
-                                    fn inner(inner_raw: *anyopaque) !void {
-                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                        _ = try app_terminal_intent_route_runtime.routeActiveAndSync(inner_state, .close);
-                                    }
-                                }.inner,
-                                .close_active_terminal_tab = struct {
-                                    fn inner(inner_raw: *anyopaque) !bool {
-                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                        return try app_terminal_close_active_runtime.closeActive(
-                                            inner_state,
-                                            @ptrCast(inner_state),
-                                            .{
-                                                .sync_terminal_mode_tab_bar = struct {
-                                                    fn call(cb_raw: *anyopaque) !void {
-                                                        const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
-                                                        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(cb_state);
-                                                    }
-                                                }.call,
-                                            },
-                                        );
-                                    }
-                                }.inner,
-                                .note_input = struct {
-                                    fn inner(inner_raw: *anyopaque, inner_at: f64) void {
-                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                        inner_state.metrics.noteInput(inner_at);
-                                    }
-                                }.inner,
-                            },
-                        );
-                    }
-                }.call,
-            )) {
-                return .{
-                    .suppress_terminal_shortcuts = false,
-                    .terminal_close_modal_active = app_terminal_close_confirm_active_runtime.reconcile(self),
-                    .handled_shortcut = handled_shortcut,
-                    .consumed = true,
-                };
-            }
-        }
-
-        const terminal_close_modal_active = app_terminal_close_confirm_active_runtime.reconcile(self);
-        const suppress_terminal_shortcuts = app_terminal_shortcut_suppress.forFocus(focus, self.input_router.actionsSlice());
-
-        if (!terminal_close_modal_active and focus == .terminal and app_terminal_surface_gate.hasTerminalInputScopeWithTabs(self.app_mode, self.show_terminal, self.terminal_workspace, self.terminals.items.len)) {
-            const clipboard_result = try app_terminal_clipboard_shortcuts_frame.handle(
-                self.input_router.actionsSlice(),
-                self.allocator,
-                self.app_mode,
-                &self.terminal_workspace,
-                self.terminals.items,
-                self.terminal_widgets.items,
-                shell,
-                input_batch.events.items.len,
-                now,
-            );
-            if (clipboard_result.needs_redraw) self.needs_redraw = true;
-            if (clipboard_result.handled) {
-                handled_shortcut = true;
-            }
-        }
-
-        if (focus == .editor) {
-            const action_layout = app_ui_layout_runtime.computeLayout(self, @floatFromInt(r.width), @floatFromInt(r.height));
-            if (self.editors.items.len > 0) {
-                const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
-                const editor = self.editors.items[editor_idx];
-                const editor_shortcut_result = try app_editor_shortcuts_frame.handle(
-                    self.input_router.actionsSlice(),
-                    self.allocator,
-                    shell,
-                    action_layout,
-                    editor,
-                    &self.editor_cluster_cache,
-                    self.editor_wrap,
-                    self.editor_large_jump_rows,
-                    &self.search_panel.active,
-                    &self.search_panel.query,
-                );
-                if (editor_shortcut_result.needs_redraw) self.needs_redraw = true;
-                if (editor_shortcut_result.handled) {
-                    handled_shortcut = true;
-                }
-            }
-        }
-
-        return .{
-            .suppress_terminal_shortcuts = suppress_terminal_shortcuts,
-            .terminal_close_modal_active = terminal_close_modal_active,
-            .handled_shortcut = handled_shortcut,
-            .consumed = false,
-        };
-    }
-
     fn tickConfigReloadNoticeFrame(self: *AppState, now: f64) void {
         const still_visible = app_config_reload_notice_state.isVisible(self.config_reload_notice_until, now);
         if (still_visible) {
@@ -1339,12 +1164,164 @@ const AppState = struct {
                                                                                         at: f64,
                                                                                     ) !app_update_prelude_frame_runtime.PreInputResult {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        const pre_input = try inner_state.handlePreInputShortcutFrame(frame_shell, frame_shell.rendererPtr(), frame_input_batch, focus, at);
+                                                                                        const r = frame_shell.rendererPtr();
+                                                                                        var handled_shortcut = app_reload_config_shortcut_runtime.handle(
+                                                                                            inner_state.input_router.actionsSlice(),
+                                                                                            @ptrCast(inner_state),
+                                                                                            .{
+                                                                                                .reload = struct {
+                                                                                                    fn call(reload_raw: *anyopaque) !void {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(reload_raw));
+                                                                                                        try app_reload_config_runtime.handle(
+                                                                                                            state,
+                                                                                                            reload_raw,
+                                                                                                            .{
+                                                                                                                .refresh_terminal_sizing = struct {
+                                                                                                                    fn cb(resize_raw: *anyopaque) !void {
+                                                                                                                        const cb_state: *AppState = @ptrCast(@alignCast(resize_raw));
+                                                                                                                        try app_terminal_refresh_sizing_runtime.handle(
+                                                                                                                            cb_state,
+                                                                                                                            cb_state.app_mode,
+                                                                                                                            &cb_state.terminal_workspace,
+                                                                                                                            cb_state.terminals.items,
+                                                                                                                            cb_state.show_terminal,
+                                                                                                                            cb_state.terminal_height,
+                                                                                                                            cb_state.shell,
+                                                                                                                        );
+                                                                                                                    }
+                                                                                                                }.cb,
+                                                                                                                .apply_current_tab_bar_width_mode = struct {
+                                                                                                                    fn cb(width_raw: *anyopaque) void {
+                                                                                                                        const cb_state: *AppState = @ptrCast(@alignCast(width_raw));
+                                                                                                                        cb_state.applyCurrentTabBarWidthMode();
+                                                                                                                    }
+                                                                                                                }.cb,
+                                                                                                            },
+                                                                                                        );
+                                                                                                    }
+                                                                                                }.call,
+                                                                                                .show_notice = struct {
+                                                                                                    fn call(notice_raw: *anyopaque, success: bool) void {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(notice_raw));
+                                                                                                        const notice = app_config_reload_notice_state.arm(app_shell.getTime(), success);
+                                                                                                        state.config_reload_notice_success = notice.success;
+                                                                                                        state.config_reload_notice_until = notice.until;
+                                                                                                        state.needs_redraw = true;
+                                                                                                    }
+                                                                                                }.call,
+                                                                                            },
+                                                                                        );
+                                                                                        const live_layout = app_ui_layout_runtime.computeLayout(inner_state, @floatFromInt(r.width), @floatFromInt(r.height));
+                                                                                        if (app_terminal_close_confirm_active_runtime.reconcile(inner_state)) {
+                                                                                            if (try app_terminal_close_confirm_input.handleInput(
+                                                                                                inner_state.input_router.actionsSlice(),
+                                                                                                frame_input_batch,
+                                                                                                live_layout,
+                                                                                                inner_state.shell.uiScaleFactor(),
+                                                                                                at,
+                                                                                                @ptrCast(inner_state),
+                                                                                                struct {
+                                                                                                    fn call(decision_raw: *anyopaque, decision: app_modes.ide.TerminalCloseConfirmDecision, decision_at: f64) !bool {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(decision_raw));
+                                                                                                        return try app_terminal_close_confirm_decision_runtime.applyDecision(
+                                                                                                            state,
+                                                                                                            decision,
+                                                                                                            decision_at,
+                                                                                                            decision_raw,
+                                                                                                            .{
+                                                                                                                .route_close_intent_and_sync = struct {
+                                                                                                                    fn inner(close_route_raw: *anyopaque) !void {
+                                                                                                                        const inner_state2: *AppState = @ptrCast(@alignCast(close_route_raw));
+                                                                                                                        _ = try app_terminal_intent_route_runtime.routeActiveAndSync(inner_state2, .close);
+                                                                                                                    }
+                                                                                                                }.inner,
+                                                                                                                .close_active_terminal_tab = struct {
+                                                                                                                    fn inner(close_active_raw: *anyopaque) !bool {
+                                                                                                                        const inner_state2: *AppState = @ptrCast(@alignCast(close_active_raw));
+                                                                                                                        return try app_terminal_close_active_runtime.closeActive(
+                                                                                                                            inner_state2,
+                                                                                                                            @ptrCast(inner_state2),
+                                                                                                                            .{
+                                                                                                                                .sync_terminal_mode_tab_bar = struct {
+                                                                                                                                    fn call(sync_raw: *anyopaque) !void {
+                                                                                                                                        const cb_state: *AppState = @ptrCast(@alignCast(sync_raw));
+                                                                                                                                        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(cb_state);
+                                                                                                                                    }
+                                                                                                                                }.call,
+                                                                                                                            },
+                                                                                                                        );
+                                                                                                                    }
+                                                                                                                }.inner,
+                                                                                                                .note_input = struct {
+                                                                                                                    fn inner(note_raw: *anyopaque, inner_at: f64) void {
+                                                                                                                        const inner_state2: *AppState = @ptrCast(@alignCast(note_raw));
+                                                                                                                        inner_state2.metrics.noteInput(inner_at);
+                                                                                                                    }
+                                                                                                                }.inner,
+                                                                                                            },
+                                                                                                        );
+                                                                                                    }
+                                                                                                }.call,
+                                                                                            )) {
+                                                                                                return .{
+                                                                                                    .suppress_terminal_shortcuts = false,
+                                                                                                    .terminal_close_modal_active = app_terminal_close_confirm_active_runtime.reconcile(inner_state),
+                                                                                                    .handled_shortcut = handled_shortcut,
+                                                                                                    .consumed = true,
+                                                                                                };
+                                                                                            }
+                                                                                        }
+
+                                                                                        const terminal_close_modal_active = app_terminal_close_confirm_active_runtime.reconcile(inner_state);
+                                                                                        const suppress_terminal_shortcuts = app_terminal_shortcut_suppress.forFocus(focus, inner_state.input_router.actionsSlice());
+
+                                                                                        if (!terminal_close_modal_active and focus == .terminal and app_terminal_surface_gate.hasTerminalInputScopeWithTabs(inner_state.app_mode, inner_state.show_terminal, inner_state.terminal_workspace, inner_state.terminals.items.len)) {
+                                                                                            const clipboard_result = try app_terminal_clipboard_shortcuts_frame.handle(
+                                                                                                inner_state.input_router.actionsSlice(),
+                                                                                                inner_state.allocator,
+                                                                                                inner_state.app_mode,
+                                                                                                &inner_state.terminal_workspace,
+                                                                                                inner_state.terminals.items,
+                                                                                                inner_state.terminal_widgets.items,
+                                                                                                frame_shell,
+                                                                                                frame_input_batch.events.items.len,
+                                                                                                at,
+                                                                                            );
+                                                                                            if (clipboard_result.needs_redraw) inner_state.needs_redraw = true;
+                                                                                            if (clipboard_result.handled) {
+                                                                                                handled_shortcut = true;
+                                                                                            }
+                                                                                        }
+
+                                                                                        if (focus == .editor) {
+                                                                                            const action_layout = app_ui_layout_runtime.computeLayout(inner_state, @floatFromInt(r.width), @floatFromInt(r.height));
+                                                                                            if (inner_state.editors.items.len > 0) {
+                                                                                                const editor_idx = @min(inner_state.active_tab, inner_state.editors.items.len - 1);
+                                                                                                const editor = inner_state.editors.items[editor_idx];
+                                                                                                const editor_shortcut_result = try app_editor_shortcuts_frame.handle(
+                                                                                                    inner_state.input_router.actionsSlice(),
+                                                                                                    inner_state.allocator,
+                                                                                                    frame_shell,
+                                                                                                    action_layout,
+                                                                                                    editor,
+                                                                                                    &inner_state.editor_cluster_cache,
+                                                                                                    inner_state.editor_wrap,
+                                                                                                    inner_state.editor_large_jump_rows,
+                                                                                                    &inner_state.search_panel.active,
+                                                                                                    &inner_state.search_panel.query,
+                                                                                                );
+                                                                                                if (editor_shortcut_result.needs_redraw) inner_state.needs_redraw = true;
+                                                                                                if (editor_shortcut_result.handled) {
+                                                                                                    handled_shortcut = true;
+                                                                                                }
+                                                                                            }
+                                                                                        }
+
                                                                                         return .{
-                                                                                            .suppress_terminal_shortcuts = pre_input.suppress_terminal_shortcuts,
-                                                                                            .terminal_close_modal_active = pre_input.terminal_close_modal_active,
-                                                                                            .handled_shortcut = pre_input.handled_shortcut,
-                                                                                            .consumed = pre_input.consumed,
+                                                                                            .suppress_terminal_shortcuts = suppress_terminal_shortcuts,
+                                                                                            .terminal_close_modal_active = terminal_close_modal_active,
+                                                                                            .handled_shortcut = handled_shortcut,
+                                                                                            .consumed = false,
                                                                                         };
                                                                                     }
                                                                                 }.inner,
