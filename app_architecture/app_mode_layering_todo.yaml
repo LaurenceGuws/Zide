@@ -152,6 +152,7 @@ app_mode_layering_todo:
             - "In progress: tab-bar width mode apply policy moved from `main.zig` into `src/app/tab_bar_width.zig` (`applyForMode`)."
             - "In progress: routed editor action helpers moved from `main.zig` into `src/app/editor_actions.zig` (`visual*DeltaForAction`, `applyRepeatedVisualDelta`, `applyDirectEditorAction`, `applyCaretEditorAction`)."
             - "In progress: search-panel input parsing helpers moved from `main.zig` into `src/app/search_panel_input.zig` (`SearchPanelCommand`, `searchPanelCommand`, `appendSearchPanelTextEvents`)."
+            - "In progress: search-panel state/query helpers moved from `main.zig` into `src/app/search_panel_state.zig` (`openPanel`, `closePanel`, `syncEditorSearchQuery`, `popQueryScalar`)."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress
