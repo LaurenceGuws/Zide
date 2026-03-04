@@ -48,6 +48,7 @@ const app_post_preinput_frame = @import("app/post_preinput_frame.zig");
 const app_interactive_frame = @import("app/interactive_frame.zig");
 const app_update_driver = @import("app/update_driver.zig");
 const app_run_loop_driver = @import("app/run_loop_driver.zig");
+const app_reload_config_runtime = @import("app/reload_config_runtime.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
@@ -2543,171 +2544,24 @@ const AppState = struct {
     }
 
     fn reloadConfig(self: *AppState) !void {
-        const log = app_logger.logger("config.reload");
-        var config = try config_mod.loadConfig(self.allocator);
-        defer config_mod.freeConfig(self.allocator, &config);
-
-        if (config.log_file_filter) |filter| {
-            app_logger.setFileFilterString(filter) catch {};
-        }
-        if (config.log_console_filter) |filter| {
-            app_logger.setConsoleFilterString(filter) catch {};
-        }
-        if (config.sdl_log_level) |level| {
-            app_shell.setSdlLogLevel(level);
-        }
-        {
-            const resolved_themes = app_theme_utils.resolveConfigThemes(self.shell_base_theme, &config);
-            const app_theme_changed = !std.meta.eql(self.app_theme, resolved_themes.app);
-            const editor_theme_changed = !std.meta.eql(self.editor_theme, resolved_themes.editor);
-            const terminal_theme_changed = !std.meta.eql(self.terminal_theme, resolved_themes.terminal);
-
-            if (app_theme_changed or editor_theme_changed or terminal_theme_changed) {
-                self.app_theme = resolved_themes.app;
-                self.editor_theme = resolved_themes.editor;
-                self.terminal_theme = resolved_themes.terminal;
-
-                if (app_theme_changed) {
-                    self.shell.setTheme(self.app_theme);
-                }
-                if (editor_theme_changed) {
-                    self.editor_render_cache.clear();
-                    self.editor_cluster_cache.clear();
-                }
-                if (terminal_theme_changed) {
-                    try app_terminal_theme_apply.notifyColorSchemeChanged(&self.terminal_widgets, &self.terminal_theme);
-                    app_terminal_theme_apply.applyThemeToWidgets(&self.terminal_widgets, &self.terminal_theme);
-                }
-                self.needs_redraw = true;
-            }
-        }
-
-        self.editor_wrap = config.editor_wrap orelse self.editor_wrap;
-        self.editor_large_jump_rows = config.editor_large_jump_rows orelse self.editor_large_jump_rows;
-        if (config.editor_highlight_budget != null) {
-            self.editor_highlight_budget = config.editor_highlight_budget;
-        }
-        if (config.editor_width_budget != null) {
-            self.editor_width_budget = config.editor_width_budget;
-        }
-
-        if (config.keybinds) |binds| {
-            self.input_router.setBindings(binds);
-        }
-
-        if (config.font_lcd != null or config.font_hinting != null or config.font_autohint != null or
-            config.font_glyph_overflow != null or config.text_gamma != null or
-            config.text_contrast != null or config.text_linear_correction != null)
-        {
-            try app_font_rendering.applyRendererFontRenderingConfig(self.shell, &config, true);
-            try self.refreshTerminalSizing();
-            self.needs_redraw = true;
-            log.logStdout("reload font_rendering applied", .{});
-        }
-
-        if (config.terminal_blink_style) |blink_style| {
-            self.terminal_blink_style = switch (blink_style) {
-                .kitty => .kitty,
-                .off => .off,
-            };
-            for (self.terminal_widgets.items) |*widget| {
-                widget.blink_style = self.terminal_blink_style;
-            }
-        }
-
-        if (config.terminal_disable_ligatures != null or config.terminal_font_features != null) {
-            self.shell.rendererPtr().setTerminalLigatureConfig(
-                if (config.terminal_disable_ligatures) |v| switch (v) {
-                    .never => .never,
-                    .cursor => .cursor,
-                    .always => .always,
-                } else null,
-                config.terminal_font_features,
-            );
-            self.needs_redraw = true;
-            log.logStdout("reload terminal ligatures strategy={s} features={s}", .{
-                if (config.terminal_disable_ligatures) |v| @tagName(v) else "(unchanged)",
-                config.terminal_font_features orelse "(unchanged)",
-            });
-        }
-
-        if (config.editor_disable_ligatures != null or config.editor_font_features != null) {
-            self.shell.rendererPtr().setEditorLigatureConfig(
-                if (config.editor_disable_ligatures) |v| switch (v) {
-                    .never => .never,
-                    .cursor => .cursor,
-                    .always => .always,
-                } else null,
-                config.editor_font_features,
-            );
-            self.needs_redraw = true;
-            log.logStdout("reload editor.disable_ligatures={s} editor.font_features={s}", .{
-                if (config.editor_disable_ligatures) |v| @tagName(v) else "(unchanged)",
-                config.editor_font_features orelse "(unchanged)",
-            });
-        }
-
-        if (config.terminal_cursor_shape != null or config.terminal_cursor_blink != null) {
-            var cursor_style = term_types.default_cursor_style;
-            if (config.terminal_cursor_shape) |shape| {
-                cursor_style.shape = shape;
-            }
-            if (config.terminal_cursor_blink) |blink| {
-                cursor_style.blink = blink;
-            }
-            self.terminal_cursor_style = cursor_style;
-            for (self.terminals.items) |term| {
-                term.primary.cursor_style = cursor_style;
-                term.alt.cursor_style = cursor_style;
-                term.force_full_damage.store(true, .release);
-                term.updateViewCacheForScroll();
-            }
-            self.needs_redraw = true;
-            log.logStdout("reload terminal cursor shape={s} blink={any}", .{ @tagName(cursor_style.shape), cursor_style.blink });
-        }
-
-        if (config.terminal_scrollback_rows != null) {
-            self.terminal_scrollback_rows = config.terminal_scrollback_rows;
-            log.logStdout("reload note: terminal scrollback cap applies to new sessions", .{});
-        }
-        if (config.terminal_tab_bar_show_single_tab != null) {
-            self.terminal_tab_bar_show_single_tab = config.terminal_tab_bar_show_single_tab.?;
-            self.needs_redraw = true;
-            log.logStdout("reload terminal.tab_bar.show_single_tab={any}", .{
-                self.terminal_tab_bar_show_single_tab,
-            });
-        }
-        if (config.editor_tab_bar_width_mode != null) {
-            self.editor_tab_bar_width_mode = app_tab_bar_width.mapMode(config.editor_tab_bar_width_mode);
-            self.needs_redraw = true;
-            log.logStdout("reload editor.tab_bar.width_mode={s}", .{@tagName(self.editor_tab_bar_width_mode)});
-        }
-        if (config.terminal_tab_bar_width_mode != null) {
-            self.terminal_tab_bar_width_mode = app_tab_bar_width.mapMode(config.terminal_tab_bar_width_mode);
-            self.needs_redraw = true;
-            log.logStdout("reload terminal.tab_bar.width_mode={s}", .{@tagName(self.terminal_tab_bar_width_mode)});
-        }
-        self.applyCurrentTabBarWidthMode();
-        if (config.terminal_focus_report_window != null or config.terminal_focus_report_pane != null) {
-            if (config.terminal_focus_report_window) |v| self.terminal_focus_report_window_events = v;
-            if (config.terminal_focus_report_pane) |v| self.terminal_focus_report_pane_events = v;
-            for (self.terminal_widgets.items) |*widget| {
-                widget.setFocusReportSources(self.terminal_focus_report_window_events, self.terminal_focus_report_pane_events);
-            }
-            log.logStdout("reload terminal.focus_reporting window={any} pane={any}", .{
-                self.terminal_focus_report_window_events,
-                self.terminal_focus_report_pane_events,
-            });
-        }
-
-        if (config.app_font_path != null or config.app_font_size != null or
-            config.editor_font_path != null or config.editor_font_size != null or
-            config.terminal_font_path != null or config.terminal_font_size != null)
-        {
-            log.logStdout("reload note: font changes require restart", .{});
-        }
-
-        log.logStdout("config reloaded", .{});
+        try app_reload_config_runtime.handle(
+            self,
+            @ptrCast(self),
+            .{
+                .refresh_terminal_sizing = struct {
+                    fn call(raw: *anyopaque) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.refreshTerminalSizing();
+                    }
+                }.call,
+                .apply_current_tab_bar_width_mode = struct {
+                    fn call(raw: *anyopaque) void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        state.applyCurrentTabBarWidthMode();
+                    }
+                }.call,
+            },
+        );
     }
 
     fn draw(self: *AppState) void {
