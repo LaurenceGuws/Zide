@@ -2191,14 +2191,20 @@ const AppState = struct {
         }
 
         if (app_modes.ide.canDriveTerminalTabDrag(self.app_mode)) {
-            if (self.terminalTabBarVisible() and input_batch.mouseDown(.left)) {
-                if (self.tab_bar.updateDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width, true)) {
-                    self.needs_redraw = true;
-                    self.metrics.noteInput(now);
-                }
+            const drag_frame = app_modes.ide.processTabDragFrame(
+                &self.tab_bar,
+                input_batch,
+                mouse,
+                layout.tab_bar.x,
+                layout.tab_bar.y,
+                layout.tab_bar.width,
+                self.terminalTabBarVisible(),
+            );
+            if (drag_frame.updated) {
+                self.needs_redraw = true;
+                self.metrics.noteInput(now);
             }
-            if (self.terminalTabBarVisible() and input_batch.mouseReleased(.left)) {
-                const drag_end = self.tab_bar.endDrag();
+            if (drag_frame.release) |drag_end| {
                 const release_plan = app_modes.ide.terminalTabDragReleasePlan(drag_end);
                 if (release_plan.intent) |intent| {
                     try self.routeTerminalTabActionAndSync(intent);
@@ -2221,14 +2227,20 @@ const AppState = struct {
             }
         }
         if (app_modes.ide.isIde(self.app_mode)) {
-            if (input_batch.mouseDown(.left)) {
-                if (self.tab_bar.updateDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width, true)) {
-                    self.needs_redraw = true;
-                    self.metrics.noteInput(now);
-                }
+            const drag_frame = app_modes.ide.processTabDragFrame(
+                &self.tab_bar,
+                input_batch,
+                mouse,
+                layout.tab_bar.x,
+                layout.tab_bar.y,
+                layout.tab_bar.width,
+                true,
+            );
+            if (drag_frame.updated) {
+                self.needs_redraw = true;
+                self.metrics.noteInput(now);
             }
-            if (input_batch.mouseReleased(.left)) {
-                const drag_end = self.tab_bar.endDrag();
+            if (drag_frame.release) |drag_end| {
                 const release_plan = app_modes.ide.ideEditorTabDragReleasePlan(drag_end);
                 if (release_plan.intent) |intent| {
                     try self.routeEditorTabActionAndSync(intent);
