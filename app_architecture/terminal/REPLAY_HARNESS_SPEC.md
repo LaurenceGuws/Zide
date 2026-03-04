@@ -133,3 +133,35 @@ If not accessible via public API, use test-only debug access:
 
 Notes:
 - Scrollback push ordering aligned with Ghostty/Kitty; `scrollback_push` golden updated.
+
+## Mode extraction fixture authority (blocking)
+
+These replay fixtures are regression authority for app-mode extraction work. Any change in these fixtures during extraction-only slices is a blocking failure unless the slice is explicitly re-scoped as behavioral.
+
+### MODE-01 backend extraction
+- Blocking harness command: `zig build test-terminal-replay -- --all`
+- Blocking fixture scope:
+  - `fixtures/terminal/**/*.golden`
+  - `fixtures/terminal/encoder/**/*.golden`
+- Blocking assertion domains:
+  - VT parse/apply semantics (cursor/grid/attrs/scrollback/alt-screen)
+  - OSC state (title/cwd/default colors/clipboard where represented)
+  - selection snapshots exercised by harness-api fixtures
+  - encoder byte outputs (CSI-u and related key encoding)
+
+### MODE-02 IDE composition extraction
+- Blocking harness command: `zig build test-terminal-replay -- --all`
+- Blocking fixture scope: same as MODE-01.
+- Additional requirement:
+  - No fixture drift is allowed from MODE-01 baselines during composition-only routing refactors.
+
+### MODE-03 build-time focused binaries
+- Blocking harness command: `zig build test-terminal-replay -- --all`
+- Blocking fixture scope: same as MODE-01.
+- Additional requirement:
+  - Focused entry-point wiring must not alter replay snapshots relative to the full IDE entry path.
+
+### MODE-04 compatibility rollout
+- Blocking harness command: `zig build test-terminal-replay -- --all`
+- Release gate:
+  - Replay fixture set above remains the canonical source of truth for terminal behavioral compatibility across mode-layering rollout.
