@@ -2051,38 +2051,42 @@ const AppState = struct {
 
         // Tab bar click handling
         if (input_batch.mousePressed(.left)) {
-            if (app_modes.ide.isIde(self.app_mode)) {
-                const tab_bar_y = self.options_bar.height;
-                if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.side_nav.width, tab_bar_y, layout.tab_bar.width)) {
-                    // Tab was clicked
-                    self.active_tab = self.tab_bar.active_index;
-                    self.needs_redraw = true;
-                    self.metrics.noteInput(now);
-                }
+            switch (app_modes.ide.mouseClickRoute(self.app_mode)) {
+                .ide => {
+                    const tab_bar_y = self.options_bar.height;
+                    if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.side_nav.width, tab_bar_y, layout.tab_bar.width)) {
+                        // Tab was clicked
+                        self.active_tab = self.tab_bar.active_index;
+                        self.needs_redraw = true;
+                        self.metrics.noteInput(now);
+                    }
 
-                const editor_x = layout.editor.x;
-                const editor_y = layout.editor.y;
-                const in_editor = mouse.x >= editor_x and mouse.x <= editor_x + layout.editor.width and
-                    mouse.y >= editor_y and mouse.y <= editor_y + layout.editor.height;
+                    const editor_x = layout.editor.x;
+                    const editor_y = layout.editor.y;
+                    const in_editor = mouse.x >= editor_x and mouse.x <= editor_x + layout.editor.width and
+                        mouse.y >= editor_y and mouse.y <= editor_y + layout.editor.height;
 
-                const in_terminal = layout.terminal.height > 0 and mouse.y >= term_y and mouse.y <= term_y + layout.terminal.height;
+                    const in_terminal = layout.terminal.height > 0 and mouse.y >= term_y and mouse.y <= term_y + layout.terminal.height;
 
-                if (in_terminal and self.show_terminal) {
+                    if (in_terminal and self.show_terminal) {
+                        self.active_kind = .terminal;
+                        self.needs_redraw = true;
+                        self.metrics.noteInput(now);
+                    } else if (in_editor) {
+                        self.active_kind = .editor;
+                        self.needs_redraw = true;
+                        self.metrics.noteInput(now);
+                    }
+                },
+                .terminal => {
+                    if (self.terminalTabBarVisible()) {
+                        _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
+                    }
                     self.active_kind = .terminal;
-                    self.needs_redraw = true;
-                    self.metrics.noteInput(now);
-                } else if (in_editor) {
+                },
+                .editor => {
                     self.active_kind = .editor;
-                    self.needs_redraw = true;
-                    self.metrics.noteInput(now);
-                }
-            } else if (app_modes.ide.isTerminalOnly(self.app_mode)) {
-                if (self.terminalTabBarVisible()) {
-                    _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
-                }
-                self.active_kind = .terminal;
-            } else {
-                self.active_kind = .editor;
+                },
             }
 
             if (self.mouse_debug) {
@@ -2122,7 +2126,7 @@ const AppState = struct {
             }
         }
 
-            if (app_modes.ide.isTerminalOnly(self.app_mode)) {
+        if (app_modes.ide.canDriveTerminalTabDrag(self.app_mode)) {
             if (self.terminalTabBarVisible() and input_batch.mouseDown(.left)) {
                 if (self.tab_bar.updateDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width, true)) {
                     self.needs_redraw = true;

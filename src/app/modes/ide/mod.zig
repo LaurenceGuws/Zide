@@ -3,6 +3,7 @@ const layout_policy = @import("layout_policy.zig");
 
 pub const IdeHost = host.IdeHost;
 pub const ActiveMode = host.ActiveMode;
+pub const MouseClickRoute = host.MouseClickRoute;
 pub const initialActiveMode = host.initialActiveMode;
 pub const initialTerminalVisibility = host.initialTerminalVisibility;
 pub const isTerminalOnly = host.isTerminalOnly;
@@ -21,6 +22,8 @@ pub const terminalTabBarVisible = host.terminalTabBarVisible;
 pub const canCreateEditorFromShortcut = host.canCreateEditorFromShortcut;
 pub const canHandleTerminalTabShortcuts = host.canHandleTerminalTabShortcuts;
 pub const canHandleTerminalTabFocusShortcuts = host.canHandleTerminalTabFocusShortcuts;
+pub const mouseClickRoute = host.mouseClickRoute;
+pub const canDriveTerminalTabDrag = host.canDriveTerminalTabDrag;
 pub const computeLayoutForMode = layout_policy.computeLayoutForMode;
 pub const configReloadNoticeY = layout_policy.configReloadNoticeY;
 pub const terminalEffectiveHeightForSizing = layout_policy.terminalEffectiveHeightForSizing;
