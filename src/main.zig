@@ -575,10 +575,6 @@ const AppState = struct {
         editor.setCursor(clamped_line, clamped_col);
     }
 
-    pub fn syncTerminalModeTabBar(self: *AppState) !void {
-        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(self);
-    }
-
     pub fn newTerminal(self: *AppState) !void {
         // Calculate terminal size based on UI
         const shell = self.shell;

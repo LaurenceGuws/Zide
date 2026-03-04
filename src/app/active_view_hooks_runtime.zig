@@ -3,6 +3,7 @@ const app_active_view_runtime = @import("active_view_runtime.zig");
 const app_editor_frame_hooks_runtime = @import("editor_frame_hooks_runtime.zig");
 const app_bootstrap = @import("bootstrap.zig");
 const app_modes = @import("modes/mod.zig");
+const app_terminal_tab_bar_sync_runtime = @import("terminal_tab_bar_sync_runtime.zig");
 const app_shell = @import("../app_shell.zig");
 const shared_types = @import("../types/mod.zig");
 
@@ -101,7 +102,7 @@ pub fn handle(
             .sync_terminal_tab_bar = struct {
                 fn call(raw: *anyopaque) !void {
                     const s: State = @ptrCast(@alignCast(raw));
-                    try s.syncTerminalModeTabBar();
+                    try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(s);
                 }
             }.call,
         },
