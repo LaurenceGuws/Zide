@@ -60,6 +60,7 @@ pub fn handleInput(
     const scroll_log = app_logger.logger("terminal.scroll");
     const altmeta_log = app_logger.logger("terminal.input.altmeta");
     const mousemap_log = app_logger.logger("terminal.ui.mousemap");
+    const key_log = app_logger.logger("terminal.input.keys");
 
     const r = shell.rendererPtr();
     const hit_cell_w = @as(f32, @floatFromInt(@max(1, @as(i32, @intFromFloat(std.math.round(r.terminal_cell_width))))));
@@ -387,6 +388,17 @@ pub fn handleInput(
         }.apply;
 
         if (allow_terminal_key) {
+            if ((key_log.enabled_file or key_log.enabled_console) and input_batch.events.items.len > 0) {
+                key_log.logf(
+                    "frame key_mode_flags={d} report_text={d} auto_repeat={d} events={d}",
+                    .{
+                        key_mode_flags,
+                        @intFromBool(report_text_enabled),
+                        @intFromBool(self.session.autoRepeatEnabled()),
+                        input_batch.events.items.len,
+                    },
+                );
+            }
             for (input_batch.events.items) |event| {
                 if (event != .focus) continue;
                 if (try self.reportFocusChangedFrom(.window, event.focus)) {
@@ -394,50 +406,53 @@ pub fn handleInput(
                 }
             }
 
-            var handled_keys: [32]shared_types.input.Key = undefined;
-            var handled_key_count: usize = 0;
-            const markHandled = struct {
-                fn apply(keys: *[32]shared_types.input.Key, count: *usize, key: shared_types.input.Key) void {
-                    if (count.* >= keys.len) return;
-                    keys[count.*] = key;
-                    count.* += 1;
-                }
-            }.apply;
-            const wasHandled = struct {
-                fn apply(keys: *const [32]shared_types.input.Key, count: usize, key: shared_types.input.Key) bool {
-                    var idx: usize = 0;
-                    while (idx < count) : (idx += 1) {
-                        if (keys[idx] == key) return true;
-                    }
-                    return false;
-                }
-            }.apply;
-            const isRepeatKey = struct {
-                fn apply(key: shared_types.input.Key) bool {
-                    return key_encoder.isRepeatKey(key);
-                }
-            }.apply;
-
             for (input_batch.events.items) |event| {
                 if (event != .key) continue;
                 const key = event.key.key;
+                if (key_log.enabled_file or key_log.enabled_console) {
+                    key_log.logf(
+                        "event key={d} pressed={d} repeated={d} mods(s={d} a={d} c={d} g={d} super={d})",
+                        .{
+                            @intFromEnum(key),
+                            @intFromBool(event.key.pressed),
+                            @intFromBool(event.key.repeated),
+                            @intFromBool(event.key.mods.shift),
+                            @intFromBool(event.key.mods.alt),
+                            @intFromBool(event.key.mods.ctrl),
+                            @intFromBool(event.key.mods.altgr),
+                            @intFromBool(event.key.mods.super),
+                        },
+                    );
+                }
                 if (suppress_shortcuts and ctrl and shift and (key == .c or key == .v)) {
+                    if (key_log.enabled_file or key_log.enabled_console) {
+                        key_log.logf("skip key={d} reason=suppress_shortcuts", .{ @intFromEnum(key) });
+                    }
                     continue;
                 }
                 if (!event.key.pressed) {
                     if (!report_text_enabled and isModifierKey(key)) {
+                        if (key_log.enabled_file or key_log.enabled_console) {
+                            key_log.logf("skip key={d} reason=modifier_release_without_report_text", .{ @intFromEnum(key) });
+                        }
                         continue;
                     }
                     if (report_text_enabled) {
                         if (key_encoder.baseCharForKey(key)) |base_char| {
                             clearLiveState(self);
                             try self.session.sendCharActionWithMetadata(base_char, mod, .release, keyAltMeta(r, altmeta_log, event.key, base_char));
+                            if (key_log.enabled_file or key_log.enabled_console) {
+                                key_log.logf("send char key={d} action=release base_char={d}", .{ @intFromEnum(key), base_char });
+                            }
                             handled = true;
                             skip_chars = true;
                             continue;
                         }
                     }
                     const handled_release = try applyTerminalKey(self, key, mod, .release);
+                    if (key_log.enabled_file or key_log.enabled_console) {
+                        key_log.logf("send key={d} action=release handled={d}", .{ @intFromEnum(key), @intFromBool(handled_release) });
+                    }
                     if (handled_release) {
                         clearLiveState(self);
                         handled = true;
@@ -445,21 +460,26 @@ pub fn handleInput(
                     }
                     continue;
                 }
-                if (isRepeatKey(key) and event.key.pressed) {
-                    continue;
-                }
                 const action: terminal_mod.KeyAction = if (event.key.repeated) .repeat else .press;
                 if (action == .repeat and !self.session.autoRepeatEnabled()) {
+                    if (key_log.enabled_file or key_log.enabled_console) {
+                        key_log.logf("skip key={d} action=repeat reason=auto_repeat_disabled", .{ @intFromEnum(key) });
+                    }
                     continue;
                 }
                 if (!report_text_enabled and isModifierKey(key)) {
+                    if (key_log.enabled_file or key_log.enabled_console) {
+                        key_log.logf("skip key={d} action={s} reason=modifier_without_report_text", .{ @intFromEnum(key), @tagName(action) });
+                    }
                     continue;
                 }
                 if (report_text_enabled) {
                     if (key_encoder.baseCharForKey(key)) |base_char| {
                         clearLiveState(self);
                         try self.session.sendCharActionWithMetadata(base_char, mod, action, keyAltMeta(r, altmeta_log, event.key, base_char));
-                        markHandled(&handled_keys, &handled_key_count, key);
+                        if (key_log.enabled_file or key_log.enabled_console) {
+                            key_log.logf("send char key={d} action={s} base_char={d}", .{ @intFromEnum(key), @tagName(action), base_char });
+                        }
                         handled = true;
                         skip_chars = true;
                         continue;
@@ -467,10 +487,12 @@ pub fn handleInput(
                 }
 
                 const handled_key = try applyTerminalKey(self, key, mod, action);
+                if (key_log.enabled_file or key_log.enabled_console) {
+                    key_log.logf("send key={d} action={s} handled={d}", .{ @intFromEnum(key), @tagName(action), @intFromBool(handled_key) });
+                }
 
                 if (handled_key) {
                     clearLiveState(self);
-                    markHandled(&handled_keys, &handled_key_count, key);
                     handled = true;
                     skip_chars = true;
                     continue;
@@ -478,21 +500,9 @@ pub fn handleInput(
 
                 if (!report_text_enabled and (ctrl or alt)) {
                     if (try key_encoder.sendCharForKey(self.session, key, mod, action, ctrl, alt)) {
-                        clearLiveState(self);
-                        markHandled(&handled_keys, &handled_key_count, key);
-                        handled = true;
-                        skip_chars = true;
-                    }
-                }
-            }
-
-            for (key_encoder.repeat_keys) |key| {
-                if (wasHandled(&handled_keys, handled_key_count, key)) continue;
-                if (input_batch.keyReleased(key)) continue;
-                if (input_batch.keyPressed(key) or input_batch.keyRepeated(key)) {
-                    const action: terminal_mod.KeyAction = if (input_batch.keyRepeated(key)) .repeat else .press;
-                    if (action == .repeat and !self.session.autoRepeatEnabled()) continue;
-                    if (try applyTerminalKey(self, key, mod, action)) {
+                        if (key_log.enabled_file or key_log.enabled_console) {
+                            key_log.logf("send ctrl_alt_char key={d} action={s}", .{ @intFromEnum(key), @tagName(action) });
+                        }
                         clearLiveState(self);
                         handled = true;
                         skip_chars = true;
