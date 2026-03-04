@@ -51,6 +51,7 @@ const app_reload_config_runtime = @import("app/reload_config_runtime.zig");
 const app_run_mode_init = @import("app/run_mode_init.zig");
 const app_prepare_run_frame_runtime = @import("app/prepare_run_frame_runtime.zig");
 const app_frame_render_idle_runtime = @import("app/frame_render_idle_runtime.zig");
+const app_update_prelude_frame_runtime = @import("app/update_prelude_frame_runtime.zig");
 const app_terminal_tab_navigation_runtime = @import("app/terminal_tab_navigation_runtime.zig");
 const app_terminal_close_active_runtime = @import("app/terminal_close_active_runtime.zig");
 const app_terminal_close_confirm_actions_runtime = @import("app/terminal_close_confirm_actions_runtime.zig");
@@ -2005,24 +2006,72 @@ const AppState = struct {
         shell: *Shell,
         input_batch: *shared_types.input.InputBatch,
     ) !?UpdatePreludeResult {
-        const r = shell.rendererPtr();
-        self.last_input = input_batch.snapshot();
-
-        if (self.handleFontSampleFrame(r, input_batch)) return null;
-        try self.handleWidgetInputFrame();
-        const now = app_shell.getTime();
-        self.tickConfigReloadNoticeFrame(now);
-        const focus = self.routeInputForCurrentFocus(input_batch);
-        const pre_input = try self.handlePreInputShortcutFrame(shell, r, input_batch, focus, now);
-        if (pre_input.consumed) return null;
-        if (pre_input.handled_shortcut) {
-            self.metrics.noteInput(now);
-        }
+        const result = (try app_update_prelude_frame_runtime.handle(
+            shell,
+            input_batch,
+            @ptrCast(self),
+            .{
+                .handle_font_sample_frame = struct {
+                    fn call(raw: *anyopaque, frame_shell: *Shell, frame_input_batch: *shared_types.input.InputBatch) bool {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        return state.handleFontSampleFrame(frame_shell.rendererPtr(), frame_input_batch);
+                    }
+                }.call,
+                .handle_widget_input_frame = struct {
+                    fn call(raw: *anyopaque) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.handleWidgetInputFrame();
+                    }
+                }.call,
+                .tick_config_reload_notice_frame = struct {
+                    fn call(raw: *anyopaque, at: f64) void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        state.tickConfigReloadNoticeFrame(at);
+                    }
+                }.call,
+                .route_input_for_current_focus = struct {
+                    fn call(raw: *anyopaque, frame_input_batch: *shared_types.input.InputBatch) input_actions.FocusKind {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        return state.routeInputForCurrentFocus(frame_input_batch);
+                    }
+                }.call,
+                .handle_pre_input_shortcut_frame = struct {
+                    fn call(
+                        raw: *anyopaque,
+                        frame_shell: *Shell,
+                        frame_input_batch: *shared_types.input.InputBatch,
+                        focus: input_actions.FocusKind,
+                        at: f64,
+                    ) !app_update_prelude_frame_runtime.PreInputResult {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        const pre_input = try state.handlePreInputShortcutFrame(frame_shell, frame_shell.rendererPtr(), frame_input_batch, focus, at);
+                        return .{
+                            .suppress_terminal_shortcuts = pre_input.suppress_terminal_shortcuts,
+                            .terminal_close_modal_active = pre_input.terminal_close_modal_active,
+                            .handled_shortcut = pre_input.handled_shortcut,
+                            .consumed = pre_input.consumed,
+                        };
+                    }
+                }.call,
+                .note_input = struct {
+                    fn call(raw: *anyopaque, at: f64) void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        state.metrics.noteInput(at);
+                    }
+                }.call,
+                .set_last_input_snapshot = struct {
+                    fn call(raw: *anyopaque, snapshot: shared_types.input.InputSnapshot) void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        state.last_input = snapshot;
+                    }
+                }.call,
+            },
+        )) orelse return null;
 
         return .{
-            .now = now,
-            .suppress_terminal_shortcuts = pre_input.suppress_terminal_shortcuts,
-            .terminal_close_modal_active = pre_input.terminal_close_modal_active,
+            .now = result.now,
+            .suppress_terminal_shortcuts = result.suppress_terminal_shortcuts,
+            .terminal_close_modal_active = result.terminal_close_modal_active,
         };
     }
 
