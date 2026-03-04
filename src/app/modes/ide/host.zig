@@ -8,6 +8,12 @@ pub const ActiveMode = enum {
     terminal,
 };
 
+pub const MouseClickRoute = enum {
+    ide,
+    terminal,
+    editor,
+};
+
 pub fn initialActiveMode(app_mode: app_bootstrap.AppMode) ActiveMode {
     return if (app_mode == .terminal) .terminal else .editor;
 }
@@ -87,6 +93,18 @@ pub fn canHandleTerminalTabShortcuts(app_mode: app_bootstrap.AppMode) bool {
 }
 
 pub fn canHandleTerminalTabFocusShortcuts(app_mode: app_bootstrap.AppMode) bool {
+    return isTerminalOnly(app_mode);
+}
+
+pub fn mouseClickRoute(app_mode: app_bootstrap.AppMode) MouseClickRoute {
+    return switch (app_mode) {
+        .ide => .ide,
+        .terminal => .terminal,
+        else => .editor,
+    };
+}
+
+pub fn canDriveTerminalTabDrag(app_mode: app_bootstrap.AppMode) bool {
     return isTerminalOnly(app_mode);
 }
 
@@ -237,4 +255,9 @@ test "mode policy helpers route focused mode deterministically" {
     try std.testing.expect(!canHandleTerminalTabShortcuts(.editor));
     try std.testing.expect(canHandleTerminalTabFocusShortcuts(.terminal));
     try std.testing.expect(!canHandleTerminalTabFocusShortcuts(.ide));
+    try std.testing.expectEqual(MouseClickRoute.ide, mouseClickRoute(.ide));
+    try std.testing.expectEqual(MouseClickRoute.terminal, mouseClickRoute(.terminal));
+    try std.testing.expectEqual(MouseClickRoute.editor, mouseClickRoute(.editor));
+    try std.testing.expect(canDriveTerminalTabDrag(.terminal));
+    try std.testing.expect(!canDriveTerminalTabDrag(.ide));
 }
