@@ -167,6 +167,7 @@ editor_widget_todo:
         - "Rectangular selection clipboard semantics are now regression-tested as per-line column slices, and cursor movement explicitly collapses column selections."
         - "Editor-core rectangular expansion now has a cluster-provider variant so non-widget callers can reuse the same cluster-aware visual-column rules as widget/view selection mapping."
         - "Cluster-aware rectangular editing is now regression-tested for both replacement and deletion, including the editor-core cluster-provider path."
+        - "Editor scrollbar geometry is now computed in one shared module and reused by both draw and input paths, reducing hitbox/visual drift and duplicated math."
       references:
         - reference_repos/editors/helix/helix-core/src/selection.rs
         - reference_repos/editors/kakoune/src/selection.cc

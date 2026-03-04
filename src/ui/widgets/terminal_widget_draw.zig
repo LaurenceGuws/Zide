@@ -147,11 +147,38 @@ pub fn draw(
     const base_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(x)))));
     const base_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(y)))));
 
-    const scrollbar_w: f32 = 10;
+    const scale = shell.uiScaleFactor();
+    const scrollbar_base_w: f32 = common.scrollbarHoverWidth(scale);
+    const scrollbar_hover_w: f32 = scrollbar_base_w + @max(@as(f32, 1), 2 * scale);
+    const scrollbar_hit_margin: f32 = common.scrollbarHitMargin(scale);
+    const scrollbar_proximity: f32 = common.scrollbarProximityRange(scale);
+    const mouse = input.mouse_pos;
+    const in_scroll_y = mouse.y >= y and mouse.y <= y + height;
+    const dist_from_right = (x + width) - mouse.x;
+    const proximity_raw: f32 = if (in_scroll_y and dist_from_right <= scrollbar_proximity and dist_from_right >= -scrollbar_hit_margin)
+        (1.0 - std.math.clamp(dist_from_right / scrollbar_proximity, 0.0, 1.0))
+    else
+        0.0;
+    const show_scrollbar = !cache.alt_active and !self.session.mouseReportingEnabled() and total_lines > rows;
+    const proximity_t = common.smoothstep01(proximity_raw);
+    const hover_target: f32 = if (show_scrollbar)
+        (if (self.scrollbar_drag_active) 1.0 else proximity_t)
+    else
+        0.0;
+    const anim_dt: f32 = blk: {
+        if (self.scrollbar_anim_last_time <= 0) {
+            self.scrollbar_anim_last_time = blink_time;
+            break :blk 0;
+        }
+        const dt = std.math.clamp(blink_time - self.scrollbar_anim_last_time, 0.0, 0.1);
+        self.scrollbar_anim_last_time = blink_time;
+        break :blk @floatCast(dt);
+    };
+    self.scrollbar_hover_anim = common.expApproach(self.scrollbar_hover_anim, hover_target, anim_dt, 18.0);
+    const scrollbar_w: f32 = common.lerp(scrollbar_base_w, scrollbar_hover_w, self.scrollbar_hover_anim);
     const scrollbar_x = x + width - scrollbar_w;
     const scrollbar_y = y;
     const scrollbar_h = height;
-    const show_scrollbar = !cache.alt_active and !self.session.mouseReportingEnabled() and total_lines > rows;
     self.hover.dirty = false;
     const hover_link_id = hover_mod.hoverLinkId(&self.hover);
 

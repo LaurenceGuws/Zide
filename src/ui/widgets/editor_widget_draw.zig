@@ -6,7 +6,7 @@ const metrics_mod = @import("../../editor/view/metrics.zig");
 const cache_mod = @import("../../editor/render/cache.zig");
 const draw_list_mod = @import("../../editor/render/draw_list.zig");
 const app_logger = @import("../../app_logger.zig");
-const common = @import("common.zig");
+const scrollbar_mod = @import("editor_scrollbar.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
 const TokenKind = syntax_mod.TokenKind;
@@ -642,7 +642,6 @@ pub fn draw(
     var cursor_draw_y: ?f32 = null;
     var max_visible_width: usize = 0;
     const cols = widget.viewportColumns(shell);
-    const show_vscroll = !widget.wrap_enabled and total_lines > visible_lines;
     var draw_list = EditorDrawList.init(widget.editor.allocator);
     defer draw_list.deinit();
 
@@ -918,18 +917,7 @@ pub fn draw(
     }
 
     if (!widget.wrap_enabled) {
-        const vscroll_w: f32 = if (show_vscroll) 12 else 0;
-        const max_line_width = widget.editor.maxLineWidthCached();
-        if (max_line_width > cols) {
-            draw_list.clear();
-            drawHorizontalScrollbar(widget, r, x, y, width, height, max_line_width, cols, vscroll_w, &draw_list);
-            flushDrawList(&draw_list, r);
-        }
-        if (show_vscroll) {
-            draw_list.clear();
-            drawVerticalScrollbar(widget, r, x, y, width, height, visible_lines, total_lines, &draw_list);
-            flushDrawList(&draw_list, r);
-        }
+        drawEditorScrollbars(widget, r, x, y, width, height, visible_lines, total_lines, cols, input.mouse_pos, &draw_list);
     }
 }
 
@@ -944,7 +932,6 @@ pub fn drawCached(
     frame_id: u64,
     input: anytype,
 ) void {
-    _ = input;
     const r = shell.rendererPtr();
     widget.gutter_width = 50 * r.uiScaleFactor();
     if (width <= 0 or height <= 0) return;
@@ -954,7 +941,6 @@ pub fn drawCached(
     const total_lines = widget.editor.lineCount();
     const cols = widget.viewportColumns(shell);
     if (cols == 0) return;
-    const show_vscroll = !widget.wrap_enabled and total_lines > visible_lines;
 
     const draw_x = x;
     const draw_y = y;
@@ -1337,32 +1323,70 @@ pub fn drawCached(
         }
     }
 
-    if (!widget.wrap_enabled) {
-        const vscroll_w: f32 = if (show_vscroll) 12 else 0;
-        const max_line_width = widget.editor.maxLineWidthCached();
-        const scroll_hash = hashScrollState(max_line_width, cols, widget.editor.scroll_col, visible_lines, total_lines, widget.editor.scroll_line, show_vscroll);
-        if (force_redraw or cache.scrollDirty(scroll_hash)) {
-            any_dirty = true;
-            if (r.beginEditorTexture()) {
-                if (max_line_width > cols) {
-                    draw_list.clear();
-                    drawHorizontalScrollbar(widget, r, origin_x, origin_y, width, height, max_line_width, cols, vscroll_w, draw_list);
-                    flushDrawList(draw_list, r);
-                }
-                if (show_vscroll) {
-                    draw_list.clear();
-                    drawVerticalScrollbar(widget, r, origin_x, origin_y, width, height, visible_lines, total_lines, draw_list);
-                    flushDrawList(draw_list, r);
-                }
-                r.endEditorTexture();
-            }
-        }
-    }
-
     if (any_dirty or force_redraw) {
         r.drawEditorTexture(draw_x, draw_y);
     } else {
         r.drawEditorTexture(draw_x, draw_y);
+    }
+
+    // Draw scrollbars as final overlays (outside cached editor texture) to avoid
+    // stale dirty-region artifacts when geometry changes frame-to-frame.
+    if (!widget.wrap_enabled) {
+        drawEditorScrollbars(widget, r, draw_x, draw_y, width, height, visible_lines, total_lines, cols, input.mouse_pos, null);
+    }
+}
+
+fn drawEditorScrollbars(
+    widget: anytype,
+    r: anytype,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+    visible_lines: usize,
+    total_lines: usize,
+    cols: usize,
+    mouse: anytype,
+    list: ?*EditorDrawList,
+) void {
+    const scale = r.uiScaleFactor();
+    const max_line_width = widget.editor.maxLineWidthCached();
+
+    const h = scrollbar_mod.computeHorizontal(
+        scale,
+        widget.gutter_width,
+        x,
+        y,
+        width,
+        height,
+        mouse,
+        max_line_width,
+        cols,
+        total_lines,
+        visible_lines,
+        widget.editor.scroll_col,
+        false,
+    );
+    if (h.visible) {
+        if (widget.editor.scroll_col != h.effective_scroll_col) widget.editor.scroll_col = h.effective_scroll_col;
+        drawHorizontalScrollbar(r, h, list);
+    }
+
+    const v = scrollbar_mod.computeVertical(
+        scale,
+        x,
+        y,
+        width,
+        height,
+        mouse,
+        visible_lines,
+        total_lines,
+        widget.editor.scroll_line,
+        false,
+    );
+    if (v.visible) {
+        if (widget.editor.scroll_line != v.effective_scroll_line) widget.editor.scroll_line = v.effective_scroll_line;
+        drawVerticalScrollbar(r, v, list);
     }
 }
 
@@ -1684,113 +1708,53 @@ fn hashScrollState(
     return h;
 }
 
-fn drawHorizontalScrollbar(
-    widget: anytype,
-    r: anytype,
-    x: f32,
-    y: f32,
-    width: f32,
-    height: f32,
-    max_visible_width: usize,
-    cols: usize,
-    vscroll_w: f32,
-    list: ?*EditorDrawList,
-) void {
-    if (width <= 0 or height <= 0 or cols == 0) return;
-    if (max_visible_width <= cols) return;
-    const scale = r.uiScaleFactor();
-    const track_h: f32 = 16 * scale;
-    const track_y = y + height - track_h;
-    const track_x = x + widget.gutter_width;
-    const track_w = @max(@as(f32, 1), width - widget.gutter_width - vscroll_w);
-    const max_scroll = max_visible_width - cols;
-    if (widget.editor.scroll_col > max_scroll) {
-        widget.editor.scroll_col = max_scroll;
-    }
-
-    const min_thumb_w: f32 = 32 * scale;
-    const thumb_w = @max(min_thumb_w, track_w * (@as(f32, @floatFromInt(cols)) / @as(f32, @floatFromInt(max_visible_width))));
-    const available = @max(@as(f32, 1), track_w - thumb_w);
-    const ratio = if (max_scroll > 0)
-        @as(f32, @floatFromInt(widget.editor.scroll_col)) / @as(f32, @floatFromInt(max_scroll))
-    else
-        0.0;
-    const thumb_x = track_x + available * ratio;
-
+fn drawHorizontalScrollbar(r: anytype, h: scrollbar_mod.HorizontalGeometry, list: ?*EditorDrawList) void {
     if (list) |ops| {
-        _ = addRectOp(ops, track_x, track_y, track_w, track_h, r.theme.line_number_bg);
+        _ = addRectOp(ops, h.track_x, h.track_max_y, h.track_w, h.track_max_h, r.theme.line_number_bg);
     } else {
         r.drawRect(
-            @intFromFloat(track_x),
-            @intFromFloat(track_y),
-            @intFromFloat(track_w),
-            @intFromFloat(track_h),
+            @intFromFloat(h.track_x),
+            @intFromFloat(h.track_max_y),
+            @intFromFloat(h.track_w),
+            @intFromFloat(h.track_max_h),
             r.theme.line_number_bg,
         );
     }
-    const inset: f32 = @max(1, 2 * scale);
+    const inset: f32 = @max(1, 2 * r.uiScaleFactor());
     if (list) |ops| {
-        _ = addRectOp(ops, thumb_x, track_y + inset, thumb_w, track_h - inset * 2, r.theme.selection);
+        _ = addRectOp(ops, h.thumb_x, h.track_y + inset, h.thumb_w, h.track_h - inset * 2, r.theme.selection);
     } else {
         r.drawRect(
-            @intFromFloat(thumb_x),
-            @intFromFloat(track_y + inset),
-            @intFromFloat(thumb_w),
-            @intFromFloat(track_h - inset * 2),
+            @intFromFloat(h.thumb_x),
+            @intFromFloat(h.track_y + inset),
+            @intFromFloat(h.thumb_w),
+            @intFromFloat(h.track_h - inset * 2),
             r.theme.selection,
         );
     }
 }
 
-fn drawVerticalScrollbar(
-    widget: anytype,
-    r: anytype,
-    x: f32,
-    y: f32,
-    width: f32,
-    height: f32,
-    visible_lines: usize,
-    total_lines: usize,
-    list: ?*EditorDrawList,
-) void {
-    if (total_lines <= visible_lines or width <= 0 or height <= 0) return;
-    const scale = r.uiScaleFactor();
-    const scrollbar_w: f32 = 16 * scale;
-    const scrollbar_x = x + width - scrollbar_w;
-    const scrollbar_y = y;
-    const scrollbar_h = height;
-    const max_scroll = total_lines - visible_lines;
-    if (widget.editor.scroll_line > max_scroll) {
-        widget.editor.scroll_line = max_scroll;
-    }
-
-    const ratio = if (max_scroll > 0)
-        @as(f32, @floatFromInt(widget.editor.scroll_line)) / @as(f32, @floatFromInt(max_scroll))
-    else
-        0.0;
-    const min_thumb_h: f32 = 32 * scale;
-    const thumb = common.computeScrollbarThumb(scrollbar_y, scrollbar_h, visible_lines, total_lines, min_thumb_h, ratio);
-
+fn drawVerticalScrollbar(r: anytype, v: scrollbar_mod.VerticalGeometry, list: ?*EditorDrawList) void {
     if (list) |ops| {
-        _ = addRectOp(ops, scrollbar_x, scrollbar_y, scrollbar_w, scrollbar_h, r.theme.line_number_bg);
+        _ = addRectOp(ops, v.scrollbar_x, v.scrollbar_y, v.scrollbar_w, v.scrollbar_h, r.theme.line_number_bg);
     } else {
         r.drawRect(
-            @intFromFloat(scrollbar_x),
-            @intFromFloat(scrollbar_y),
-            @intFromFloat(scrollbar_w),
-            @intFromFloat(scrollbar_h),
+            @intFromFloat(v.scrollbar_x),
+            @intFromFloat(v.scrollbar_y),
+            @intFromFloat(v.scrollbar_w),
+            @intFromFloat(v.scrollbar_h),
             r.theme.line_number_bg,
         );
     }
-    const inset: f32 = @max(1, 2 * scale);
+    const inset: f32 = @max(1, 2 * r.uiScaleFactor());
     if (list) |ops| {
-        _ = addRectOp(ops, scrollbar_x + inset, thumb.thumb_y, scrollbar_w - inset * 2, thumb.thumb_h, r.theme.selection);
+        _ = addRectOp(ops, v.scrollbar_x + inset, v.thumb.thumb_y, v.scrollbar_w - inset * 2, v.thumb.thumb_h, r.theme.selection);
     } else {
         r.drawRect(
-            @intFromFloat(scrollbar_x + inset),
-            @intFromFloat(thumb.thumb_y),
-            @intFromFloat(scrollbar_w - inset * 2),
-            @intFromFloat(thumb.thumb_h),
+            @intFromFloat(v.scrollbar_x + inset),
+            @intFromFloat(v.thumb.thumb_y),
+            @intFromFloat(v.scrollbar_w - inset * 2),
+            @intFromFloat(v.thumb.thumb_h),
             r.theme.selection,
         );
     }
