@@ -22,6 +22,7 @@ const app_terminal_shortcut_policy = @import("app/terminal_shortcut_policy.zig")
 const app_terminal_shortcut_runtime = @import("app/terminal_shortcut_runtime.zig");
 const app_terminal_tab_intents = @import("app/terminal_tab_intents.zig");
 const app_terminal_resize = @import("app/terminal_resize.zig");
+const app_visible_terminal_frame = @import("app/visible_terminal_frame.zig");
 const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
 const app_terminal_close_confirm_state = @import("app/terminal_close_confirm_state.zig");
 const app_terminal_close_confirm_runtime = @import("app/terminal_close_confirm_runtime.zig");
@@ -1130,38 +1131,63 @@ const AppState = struct {
         terminal_close_modal_active: bool,
         now: f64,
     ) !void {
-        if (!app_terminal_surface_gate.hasVisibleTerminalTabs(self.app_mode, self.show_terminal, self.terminal_workspace, self.terminals.items.len)) return;
-
-        try self.pollVisibleTerminalSessions(input_batch);
-        if (app_terminal_active_widget.resolveActive(
+        const result = try app_visible_terminal_frame.handle(
             self.app_mode,
+            self.show_terminal,
             &self.terminal_workspace,
             self.terminals.items.len,
             self.terminal_widgets.items,
-        )) |term_widget| {
-            const strip = app_modes.ide.terminalStrip(self.app_mode, layout.terminal.height);
-            const term_y_draw = layout.terminal.y + strip.offset_y;
-            const term_x = layout.terminal.x;
-            const term_draw_height = strip.draw_height;
-            if (term_widget.updateBlink(now)) {
-                self.needs_redraw = true;
-            }
-            const suppress_terminal_input_for_tab_drag = app_modes.ide.suppressTerminalInputForTabDrag(self.app_mode, self.tab_bar.isDragging());
-            const allow_terminal_input = self.active_kind == .terminal and !terminal_close_modal_active and !suppress_terminal_input_for_tab_drag;
-            try self.handleTerminalWidgetInput(
-                term_widget,
-                shell,
-                term_x,
-                term_y_draw,
-                layout.terminal.width,
-                term_draw_height,
-                allow_terminal_input,
-                suppress_terminal_shortcuts,
-                input_batch,
-                search_panel_consumed_input,
-                now,
-            );
-        }
+            self.tab_bar.isDragging(),
+            self.active_kind,
+            shell,
+            layout,
+            input_batch,
+            search_panel_consumed_input,
+            suppress_terminal_shortcuts,
+            terminal_close_modal_active,
+            now,
+            @ptrCast(self),
+            .{
+                .poll_visible_sessions = struct {
+                    fn call(raw: *anyopaque, batch: *shared_types.input.InputBatch) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.pollVisibleTerminalSessions(batch);
+                    }
+                }.call,
+                .handle_terminal_widget_input = struct {
+                    fn call(
+                        raw: *anyopaque,
+                        term_widget: *TerminalWidget,
+                        frame_shell: *Shell,
+                        term_x: f32,
+                        term_y_draw: f32,
+                        term_width: f32,
+                        term_draw_height: f32,
+                        allow_terminal_input: bool,
+                        frame_suppress_terminal_shortcuts: bool,
+                        frame_input_batch: *shared_types.input.InputBatch,
+                        frame_search_panel_consumed_input: bool,
+                        frame_now: f64,
+                    ) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.handleTerminalWidgetInput(
+                            term_widget,
+                            frame_shell,
+                            term_x,
+                            term_y_draw,
+                            term_width,
+                            term_draw_height,
+                            allow_terminal_input,
+                            frame_suppress_terminal_shortcuts,
+                            frame_input_batch,
+                            frame_search_panel_consumed_input,
+                            frame_now,
+                        );
+                    }
+                }.call,
+            },
+        );
+        if (result.needs_redraw) self.needs_redraw = true;
     }
 
     fn logMouseDebugClick(self: *AppState, shell: *Shell) void {
