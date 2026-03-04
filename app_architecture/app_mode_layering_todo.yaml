@@ -100,6 +100,7 @@ app_mode_layering_todo:
           notes:
             - "Must preserve terminal tab behavior, close modal policy, and focus reporting."
             - "In progress: terminal tab shortcut intents (`create/close/next/prev/focus`) now route through `TerminalMode` adapter alongside runtime behavior."
+            - "In progress: terminal shortcut action decoding (`new/close/next/prev/focus`) is centralized in `src/app/modes/ide/terminal_shortcuts.zig`; `main.zig` now dispatches through one `handleTerminalShortcutIntent(...)` route."
             - "In progress: terminal tab drag reorder (`move`) and tab-click focus (`activate`) now route through adapter intents; parity diagnostics are available via `app.mode.parity` logging."
             - "In progress: close-confirm intent emission now routes through shared tab-action helpers; focused unit tests cover close/reorder intent helper behavior."
             - "In progress: terminal action emission is being consolidated through `routeTerminalTabActionAndSync(...)` to reduce duplicated adapter sync logic."
