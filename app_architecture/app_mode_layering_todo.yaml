@@ -202,6 +202,7 @@ app_mode_layering_todo:
             - "In progress: repeated terminal surface/input gating conditions in `main.zig` now route through `src/app/terminal_surface_gate.zig` helpers."
             - "In progress: terminal clipboard shortcut action dispatch (`copy`/`paste`/`scrollback_pager`) moved from `main.zig` loop branches into `src/app/terminal_clipboard_shortcuts_runtime.zig` (`handle`)."
             - "In progress: terminal clipboard shortcut runtime-context + hook wiring moved from `main.zig` into `src/app/terminal_clipboard_shortcuts.zig` (`handle`), leaving `main.zig` with one delegation call."
+            - "In progress: terminal clipboard shortcut frame orchestration (`active widget resolve`, `noteInput`, runtime call) moved from `main.zig` into `src/app/terminal_clipboard_shortcuts_frame.zig` (`handle`)."
             - "In progress: terminal shortcut suppression policy for focused copy/paste conflicts moved from `main.zig` into `src/app/terminal_shortcut_suppress.zig` (`forFocus`)."
             - "In progress: trivial close-confirm state clear helper was removed from `main.zig`; callsites now update `terminal_close_confirm_tab` directly to reduce local wrapper noise."
             - "In progress: single-use terminal shortcut suppression wrapper was removed from `main.zig`; pre-input frame path now calls `terminal_shortcut_suppress.forFocus(...)` directly."
