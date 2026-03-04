@@ -3,6 +3,7 @@ const app_bootstrap = @import("app/bootstrap.zig");
 const app_config_reload_notice_state = @import("app/config_reload_notice_state.zig");
 const app_editor_actions = @import("app/editor_actions.zig");
 const app_editor_intent_route = @import("app/editor_intent_route.zig");
+const app_editor_display_prepare = @import("app/editor_display_prepare.zig");
 const app_editor_seed = @import("app/editor_seed.zig");
 const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
@@ -541,12 +542,7 @@ const AppState = struct {
     }
 
     fn prepareEditorForDisplay(self: *AppState, editor: *Editor) void {
-        const total_lines = editor.lineCount();
-        if (editor.takeHighlightDirtyRange()) |range| {
-            const end_line = @min(range.end_line, total_lines);
-            self.editor_render_cache.invalidateHighlightRange(range.start_line, end_line);
-        }
-        editor.ensureHighlighter();
+        app_editor_display_prepare.prepare(editor, &self.editor_render_cache);
     }
 
     fn handleSearchPanelInput(self: *AppState, editor: *Editor, input_batch: *shared_types.input.InputBatch) !bool {
