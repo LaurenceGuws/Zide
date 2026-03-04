@@ -45,6 +45,7 @@ const app_window_resize_event_frame = @import("app/window_resize_event_frame.zig
 const app_deferred_terminal_resize_frame = @import("app/deferred_terminal_resize_frame.zig");
 const app_cursor_blink_frame = @import("app/cursor_blink_frame.zig");
 const app_post_preinput_frame = @import("app/post_preinput_frame.zig");
+const app_interactive_frame = @import("app/interactive_frame.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
@@ -1920,21 +1921,75 @@ const AppState = struct {
         terminal_close_modal_active: bool,
         now: f64,
     ) !void {
-        if (try self.handleInputActionsFrame(shell, now)) {
-            return;
-        }
-
-        try self.handleMousePressedFrame(shell, frame.layout, frame.mouse, frame.term_y, input_batch, now);
-        try self.handleTabDragFrame(input_batch, frame.layout, frame.mouse, now);
-
-        try self.handleActiveViewFrame(
+        try app_interactive_frame.handle(
             shell,
-            frame.layout,
-            frame.mouse,
+            .{
+                .layout = frame.layout,
+                .mouse = frame.mouse,
+                .term_y = frame.term_y,
+            },
             input_batch,
             suppress_terminal_shortcuts,
             terminal_close_modal_active,
             now,
+            @ptrCast(self),
+            .{
+                .handle_input_actions = struct {
+                    fn call(raw: *anyopaque, frame_shell: *Shell, at: f64) !bool {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        return try state.handleInputActionsFrame(frame_shell, at);
+                    }
+                }.call,
+                .handle_mouse_pressed = struct {
+                    fn call(
+                        raw: *anyopaque,
+                        frame_shell: *Shell,
+                        layout: layout_types.WidgetLayout,
+                        mouse: shared_types.input.MousePos,
+                        term_y: f32,
+                        frame_input_batch: *shared_types.input.InputBatch,
+                        at: f64,
+                    ) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.handleMousePressedFrame(frame_shell, layout, mouse, term_y, frame_input_batch, at);
+                    }
+                }.call,
+                .handle_tab_drag = struct {
+                    fn call(
+                        raw: *anyopaque,
+                        frame_input_batch: *shared_types.input.InputBatch,
+                        layout: layout_types.WidgetLayout,
+                        mouse: shared_types.input.MousePos,
+                        at: f64,
+                    ) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.handleTabDragFrame(frame_input_batch, layout, mouse, at);
+                    }
+                }.call,
+                .handle_active_view = struct {
+                    fn call(
+                        raw: *anyopaque,
+                        frame_shell: *Shell,
+                        layout: layout_types.WidgetLayout,
+                        mouse: shared_types.input.MousePos,
+                        frame_input_batch: *shared_types.input.InputBatch,
+                        frame_suppress_terminal_shortcuts: bool,
+                        frame_terminal_close_modal_active: bool,
+                        at: f64,
+                    ) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.handleActiveViewFrame(
+                            frame_shell,
+                            layout,
+                            mouse,
+                            frame_input_batch,
+                            frame_suppress_terminal_shortcuts,
+                            frame_terminal_close_modal_active,
+                            at,
+                        );
+                    }
+                }.call,
+            },
         );
     }
 
