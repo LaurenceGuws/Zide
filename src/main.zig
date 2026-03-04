@@ -731,12 +731,7 @@ const AppState = struct {
         return app_terminal_intent_route.routeCloseByTabIdAndSync(
             active_tab_id,
             @ptrCast(self),
-            struct {
-                fn route(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
-                    const state: *AppState = @ptrCast(@alignCast(raw));
-                    try state.routeTerminalTabActionAndSync(action);
-                }
-            }.route,
+            routeTerminalTabActionFromCtx,
         );
     }
 
@@ -854,12 +849,7 @@ const AppState = struct {
         return app_tab_action_route.routeOptionalTabAction(
             tab_action,
             @ptrCast(self),
-            struct {
-                fn route(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
-                    const state: *AppState = @ptrCast(@alignCast(raw));
-                    try state.routeEditorTabActionAndSync(action);
-                }
-            }.route,
+            routeEditorTabActionFromCtx,
         );
     }
 
@@ -885,13 +875,18 @@ const AppState = struct {
         return app_terminal_intent_route.routeActivateByTabIdAndSync(
             tab_id,
             @ptrCast(self),
-            struct {
-                fn route(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
-                    const state: *AppState = @ptrCast(@alignCast(raw));
-                    try state.routeTerminalTabActionAndSync(action);
-                }
-            }.route,
+            routeTerminalTabActionFromCtx,
         );
+    }
+
+    fn routeTerminalTabActionFromCtx(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        try state.routeTerminalTabActionAndSync(action);
+    }
+
+    fn routeEditorTabActionFromCtx(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        try state.routeEditorTabActionAndSync(action);
     }
 
     fn routeTerminalActiveWorkspaceTabIntent(self: *AppState) !void {
