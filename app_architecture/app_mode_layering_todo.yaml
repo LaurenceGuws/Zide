@@ -121,7 +121,7 @@ app_mode_layering_todo:
       tasks:
         - id: MODE-03-01
           title: "Add separate executable roots for terminal/editor/full IDE"
-          status: todo
+          status: in_progress
           files_to_edit:
             - build.zig
           files_to_add:
