@@ -1893,7 +1893,7 @@ const AppState = struct {
         for (self.input_router.actionsSlice()) |action| {
             switch (action.kind) {
                 .new_editor => {
-                    if (!app_modes.ide.isTerminalOnly(self.app_mode)) {
+                    if (app_modes.ide.canCreateEditorFromShortcut(self.app_mode)) {
                         try self.newEditor();
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
@@ -1997,7 +1997,7 @@ const AppState = struct {
                     }
                 },
                 .terminal_new_tab => {
-                    if (app_modes.ide.isTerminalOnly(self.app_mode)) {
+                    if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) {
                         try self.newTerminal();
                         try self.syncTerminalModeTabBar();
                         self.needs_redraw = true;
@@ -2006,7 +2006,7 @@ const AppState = struct {
                     }
                 },
                 .terminal_close_tab => {
-                    if (app_modes.ide.isTerminalOnly(self.app_mode)) {
+                    if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) {
                         if (try self.closeActiveTerminalTab()) {
                             self.needs_redraw = true;
                             self.metrics.noteInput(now);
@@ -2020,14 +2020,14 @@ const AppState = struct {
                     }
                 },
                 .terminal_next_tab => {
-                    if (app_modes.ide.isTerminalOnly(self.app_mode) and self.cycleTerminalTab(true)) {
+                    if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode) and self.cycleTerminalTab(true)) {
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
                         return;
                     }
                 },
                 .terminal_prev_tab => {
-                    if (app_modes.ide.isTerminalOnly(self.app_mode) and self.cycleTerminalTab(false)) {
+                    if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode) and self.cycleTerminalTab(false)) {
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
                         return;
@@ -2035,7 +2035,7 @@ const AppState = struct {
                 },
                 else => {},
             }
-            if (app_modes.ide.isTerminalOnly(self.app_mode)) {
+            if (app_modes.ide.canHandleTerminalTabFocusShortcuts(self.app_mode)) {
                 if (terminalFocusIndexForAction(action.kind)) |focus_index| {
                     if (self.focusTerminalTabByIndex(focus_index)) {
                         self.needs_redraw = true;
