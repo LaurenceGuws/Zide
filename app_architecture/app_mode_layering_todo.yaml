@@ -247,6 +247,7 @@ app_mode_layering_todo:
             - "In progress: mouse debug click logging moved from `main.zig` into `src/app/mouse_debug_log.zig` (`log`), and post-active-view workspace/tab-bar sync is now inlined at the single callsite (removed `postFrameModeSync` wrapper)."
             - "In progress: `main.zig` no longer keeps `setActiveKindAndSyncIfChanged`; mouse-routing callsites now inline active-kind transitions + adapter sync directly."
             - "In progress: `main.zig` no longer keeps `routeTerminalTabActionAndSync` / `routeEditorTabActionAndSync`; terminal/editor tab-action apply + adapter sync are now inlined at runtime/test callsites and context shims."
+            - "In progress: `main.zig` no longer keeps `syncTerminalModeTabBar`; workspace->tab-bar projection + adapter sync are now inlined at the remaining callsites (startup, widget-input update, close-confirm hooks, active-view frame, and terminal creation)."
             - "In progress: reload-config shortcut action-loop dispatch moved from `main.zig` into `src/app/reload_config_shortcut_runtime.zig` (`handle`) with callback hooks."
             - "In progress: single-use reload-config callback shims were removed from `main.zig`; pre-input path now supplies inline callbacks directly to `reload_config_shortcut_runtime.handle(...)`."
             - "In progress: terminal shortcut suppression policy for focused copy/paste conflicts moved from `main.zig` into `src/app/terminal_shortcut_suppress.zig` (`forFocus`)."
