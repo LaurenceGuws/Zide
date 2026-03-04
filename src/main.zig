@@ -20,6 +20,7 @@ const app_terminal_close_confirm_draw = @import("app/terminal_close_confirm_draw
 const app_search_panel_input = @import("app/search_panel_input.zig");
 const app_search_panel_state = @import("app/search_panel_state.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
+const app_tab_action_route = @import("app/tab_action_route.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
 const app_runner = @import("app/runner.zig");
 const app_signals = @import("app/signals.zig");
@@ -727,11 +728,16 @@ const AppState = struct {
         self: *AppState,
         tab_action: ?app_modes.shared.actions.TabAction,
     ) !bool {
-        if (tab_action) |action| {
-            try self.routeTerminalTabActionAndSync(action);
-            return true;
-        }
-        return false;
+        return app_tab_action_route.routeOptionalTabAction(
+            tab_action,
+            @ptrCast(self),
+            struct {
+                fn route(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    try state.routeTerminalTabActionAndSync(action);
+                }
+            }.route,
+        );
     }
 
     fn routeTerminalCloseIntentByTabIdAndSync(self: *AppState, active_tab_id: ?u64) !bool {
@@ -830,11 +836,16 @@ const AppState = struct {
         self: *AppState,
         tab_action: ?app_modes.shared.actions.TabAction,
     ) !bool {
-        if (tab_action) |action| {
-            try self.routeEditorTabActionAndSync(action);
-            return true;
-        }
-        return false;
+        return app_tab_action_route.routeOptionalTabAction(
+            tab_action,
+            @ptrCast(self),
+            struct {
+                fn route(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    try state.routeEditorTabActionAndSync(action);
+                }
+            }.route,
+        );
     }
 
     fn routeEditorCreateIntentAndSync(self: *AppState) !void {
