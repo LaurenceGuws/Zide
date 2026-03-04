@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_bootstrap = @import("app/bootstrap.zig");
+const app_font_rendering = @import("app/font_rendering.zig");
 const app_runner = @import("app/runner.zig");
 const app_signals = @import("app/signals.zig");
 const terminal_scrollback_pager = @import("app/terminal_scrollback_pager.zig");
@@ -13,7 +14,6 @@ const editor_render_cache_mod = @import("editor/render/cache.zig");
 const grammar_manager_mod = @import("editor/grammar_manager.zig");
 const app_logger = @import("app_logger.zig");
 const config_mod = @import("config/lua_config.zig");
-const terminal_font_mod = @import("ui/terminal_font.zig");
 
 // Terminal modules
 const terminal_mod = @import("terminal/core/terminal.zig");
@@ -47,38 +47,6 @@ const EditorRenderCache = editor_render_cache_mod.EditorRenderCache;
 const TerminalWidget = widgets.TerminalWidget;
 
 pub const AppMode = app_bootstrap.AppMode;
-
-fn buildFontRenderingOptions(config: *const config_mod.Config) terminal_font_mod.RenderingOptions {
-    var font_opts: terminal_font_mod.RenderingOptions = .{};
-    if (config.font_lcd) |v| font_opts.lcd = v;
-    if (app_bootstrap.parseEnvBool("ZIDE_FONT_RENDERING_LCD")) |v| font_opts.lcd = v;
-    if (config.font_autohint) |v| font_opts.autohint = v;
-    if (config.font_hinting) |mode| {
-        font_opts.hinting = switch (mode) {
-            .default => .default,
-            .none => .none,
-            .light => .light,
-            .normal => .normal,
-        };
-    }
-    if (config.font_glyph_overflow) |policy| {
-        font_opts.glyph_overflow = switch (policy) {
-            .when_followed_by_space => .when_followed_by_space,
-            .never => .never,
-            .always => .always,
-        };
-    }
-    return font_opts;
-}
-
-fn applyRendererFontRenderingConfig(shell: *Shell, config: *const config_mod.Config, rebuild_fonts: bool) !void {
-    const renderer = shell.rendererPtr();
-    renderer.setFontRenderingOptions(buildFontRenderingOptions(config));
-    renderer.setTextRenderingConfig(config.text_gamma, config.text_contrast, config.text_linear_correction);
-    if (rebuild_fonts) {
-        try renderer.setFontConfig(null, null);
-    }
-}
 
 const AppState = struct {
     const SearchPanelCommand = enum {
@@ -369,7 +337,7 @@ const AppState = struct {
         errdefer shell.deinit(allocator);
 
         // Apply font rendering knobs before (re)loading fonts.
-        try applyRendererFontRenderingConfig(shell, &config, false);
+        try app_font_rendering.applyRendererFontRenderingConfig(shell, &config, false);
         shell.rendererPtr().setTerminalLigatureConfig(
             if (config.terminal_disable_ligatures) |v| switch (v) {
                 .never => .never,
@@ -2979,7 +2947,7 @@ const AppState = struct {
             config.font_glyph_overflow != null or config.text_gamma != null or
             config.text_contrast != null or config.text_linear_correction != null)
         {
-            try applyRendererFontRenderingConfig(self.shell, &config, true);
+            try app_font_rendering.applyRendererFontRenderingConfig(self.shell, &config, true);
             try self.refreshTerminalSizing();
             self.needs_redraw = true;
             log.logStdout("reload font_rendering applied", .{});
