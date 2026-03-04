@@ -1131,6 +1131,84 @@ const AppState = struct {
         _ = try self.setActiveKindAndSyncIfChanged(.editor);
     }
 
+    fn handleTerminalTabDragInput(
+        self: *AppState,
+        input_batch: *shared_types.input.InputBatch,
+        layout: layout_types.WidgetLayout,
+        mouse: shared_types.input.MousePos,
+        now: f64,
+    ) !void {
+        const drag_frame = app_modes.ide.processTabDragFrame(
+            &self.tab_bar,
+            input_batch,
+            mouse,
+            layout.tab_bar.x,
+            layout.tab_bar.y,
+            layout.tab_bar.width,
+            self.terminalTabBarVisible(),
+        );
+        if (drag_frame.updated) {
+            self.needs_redraw = true;
+            self.metrics.noteInput(now);
+        }
+        if (drag_frame.release) |drag_end| {
+            const release_plan = app_modes.ide.terminalTabDragReleasePlan(drag_end);
+            if (release_plan.intent) |intent| {
+                try self.routeTerminalTabActionAndSync(intent);
+            }
+            if (release_plan.handle_click) {
+                if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width)) {
+                    if (self.tab_bar.terminalTabIdAtVisual(self.tab_bar.active_index)) |focused_tab_id| {
+                        try self.routeTerminalTabActionAndSync(.{ .activate = focused_tab_id });
+                    }
+                    if (self.focusTerminalTabByIndex(self.tab_bar.active_index)) {
+                        self.needs_redraw = true;
+                        self.metrics.noteInput(now);
+                    }
+                }
+            }
+            if (release_plan.mark_redraw) {
+                self.needs_redraw = true;
+                self.metrics.noteInput(now);
+            }
+        }
+    }
+
+    fn handleIdeTabDragInput(
+        self: *AppState,
+        input_batch: *shared_types.input.InputBatch,
+        layout: layout_types.WidgetLayout,
+        mouse: shared_types.input.MousePos,
+        now: f64,
+    ) !void {
+        const drag_frame = app_modes.ide.processTabDragFrame(
+            &self.tab_bar,
+            input_batch,
+            mouse,
+            layout.tab_bar.x,
+            layout.tab_bar.y,
+            layout.tab_bar.width,
+            true,
+        );
+        if (drag_frame.updated) {
+            self.needs_redraw = true;
+            self.metrics.noteInput(now);
+        }
+        if (drag_frame.release) |drag_end| {
+            const release_plan = app_modes.ide.ideEditorTabDragReleasePlan(drag_end);
+            if (release_plan.intent) |intent| {
+                try self.routeEditorTabActionAndSync(intent);
+                if (release_plan.sync_active_tab) {
+                    self.active_tab = self.tab_bar.active_index;
+                }
+                if (release_plan.mark_redraw) {
+                    self.needs_redraw = true;
+                    self.metrics.noteInput(now);
+                }
+            }
+        }
+    }
+
     fn logModeAdapterParity(self: *AppState) void {
         const log = app_logger.logger("app.mode.parity");
         if (!log.enabled_file and !log.enabled_console) return;
@@ -2214,68 +2292,10 @@ const AppState = struct {
         }
 
         if (app_modes.ide.canDriveTerminalTabDrag(self.app_mode)) {
-            const drag_frame = app_modes.ide.processTabDragFrame(
-                &self.tab_bar,
-                input_batch,
-                mouse,
-                layout.tab_bar.x,
-                layout.tab_bar.y,
-                layout.tab_bar.width,
-                self.terminalTabBarVisible(),
-            );
-            if (drag_frame.updated) {
-                self.needs_redraw = true;
-                self.metrics.noteInput(now);
-            }
-            if (drag_frame.release) |drag_end| {
-                const release_plan = app_modes.ide.terminalTabDragReleasePlan(drag_end);
-                if (release_plan.intent) |intent| {
-                    try self.routeTerminalTabActionAndSync(intent);
-                }
-                if (release_plan.handle_click) {
-                    if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width)) {
-                        if (self.tab_bar.terminalTabIdAtVisual(self.tab_bar.active_index)) |focused_tab_id| {
-                            try self.routeTerminalTabActionAndSync(.{ .activate = focused_tab_id });
-                        }
-                        if (self.focusTerminalTabByIndex(self.tab_bar.active_index)) {
-                            self.needs_redraw = true;
-                            self.metrics.noteInput(now);
-                        }
-                    }
-                }
-                if (release_plan.mark_redraw) {
-                    self.needs_redraw = true;
-                    self.metrics.noteInput(now);
-                }
-            }
+            try self.handleTerminalTabDragInput(input_batch, layout, mouse, now);
         }
         if (app_modes.ide.isIde(self.app_mode)) {
-            const drag_frame = app_modes.ide.processTabDragFrame(
-                &self.tab_bar,
-                input_batch,
-                mouse,
-                layout.tab_bar.x,
-                layout.tab_bar.y,
-                layout.tab_bar.width,
-                true,
-            );
-            if (drag_frame.updated) {
-                self.needs_redraw = true;
-                self.metrics.noteInput(now);
-            }
-            if (drag_frame.release) |drag_end| {
-                const release_plan = app_modes.ide.ideEditorTabDragReleasePlan(drag_end);
-                if (release_plan.intent) |intent| {
-                    try self.routeEditorTabActionAndSync(intent);
-                    if (release_plan.sync_active_tab) {
-                        self.active_tab = self.tab_bar.active_index;
-                    }
-                    if (release_plan.mark_redraw) {
-                        self.needs_redraw = true;
-                        self.metrics.noteInput(now);
-                    }
-                }
-            }
+            try self.handleIdeTabDragInput(input_batch, layout, mouse, now);
         }
 
         // Update active view
