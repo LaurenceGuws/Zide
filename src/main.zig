@@ -463,7 +463,7 @@ const AppState = struct {
 
         var grammar_manager = try grammar_manager_mod.GrammarManager.init(allocator);
         errdefer grammar_manager.deinit();
-        const terminal_workspace = if (app_mode == .terminal)
+        const terminal_workspace = if (app_modes.ide.isTerminalOnly(app_mode))
             TerminalWorkspace.init(allocator, .{
                 .scrollback_rows = config.terminal_scrollback_rows,
                 .cursor_style = terminal_cursor_style,
@@ -548,16 +548,16 @@ const AppState = struct {
             .app_mode = app_mode,
             .input_router = input_actions.InputRouter.init(allocator),
             .font_sample_view = null,
-            .font_sample_auto_close_frames = if (app_mode == .font_sample)
+            .font_sample_auto_close_frames = if (app_modes.ide.isFontSample(app_mode))
                 app_bootstrap.parseEnvU64("ZIDE_FONT_SAMPLE_FRAMES", 0)
             else
                 0,
             .font_sample_close_pending = false,
-            .font_sample_screenshot_path = if (app_mode == .font_sample) app_bootstrap.envSlice("ZIDE_FONT_SAMPLE_SCREENSHOT") else null,
+            .font_sample_screenshot_path = if (app_modes.ide.isFontSample(app_mode)) app_bootstrap.envSlice("ZIDE_FONT_SAMPLE_SCREENSHOT") else null,
             .search_panel = SearchPanelState.init(allocator),
             .terminal_close_confirm_tab = null,
         };
-        if (app_mode == .font_sample) {
+        if (app_modes.ide.isFontSample(app_mode)) {
             state.font_sample_view = try font_sample_view_mod.FontSampleView.init(allocator, shell.rendererPtr());
         }
         if (config.keybinds) |binds| {
@@ -1367,12 +1367,12 @@ const AppState = struct {
     }
 
     pub fn run(self: *AppState) !void {
-        if (self.app_mode == .terminal) {
+        if (app_modes.ide.isTerminalOnly(self.app_mode)) {
             if (self.terminalTabCount() == 0) {
                 try self.newTerminal();
             }
             try self.syncTerminalModeTabBar();
-        } else if (self.app_mode == .font_sample) {
+        } else if (app_modes.ide.isFontSample(self.app_mode)) {
             // No initial editor/terminal. The font sample view draws directly.
         } else {
             if (self.perf_mode and self.perf_file_path != null) {
@@ -1538,7 +1538,7 @@ const AppState = struct {
         const r = shell.rendererPtr();
         self.last_input = input_batch.snapshot();
 
-        if (self.app_mode == .font_sample) {
+        if (app_modes.ide.isFontSample(self.app_mode)) {
             if (self.font_sample_auto_close_frames > 0 and self.frame_id >= self.font_sample_auto_close_frames) {
                 self.font_sample_close_pending = true;
                 self.needs_redraw = true;
@@ -1554,7 +1554,7 @@ const AppState = struct {
         self.tab_bar.updateInput(self.last_input);
         self.side_nav.updateInput(self.last_input);
         self.status_bar.updateInput(self.last_input);
-        if (self.app_mode == .terminal) {
+        if (app_modes.ide.isTerminalOnly(self.app_mode)) {
             try self.syncTerminalModeTabBar();
         }
         const now = app_shell.getTime();
@@ -2015,7 +2015,7 @@ const AppState = struct {
                     handled_zoom = true;
                 },
                 .toggle_terminal => {
-                    if (self.app_mode == .ide) {
+                    if (app_modes.ide.canToggleTerminal(self.app_mode)) {
                         if (self.show_terminal) {
                             self.show_terminal = false;
                         } else {
@@ -2397,7 +2397,7 @@ const AppState = struct {
                 }
             }
         }
-        if (self.app_mode == .terminal) {
+        if (app_modes.ide.isTerminalOnly(self.app_mode)) {
             try self.syncTerminalModeTabBar();
         }
     }
@@ -2806,7 +2806,7 @@ const AppState = struct {
 
         shell.beginFrame();
 
-        if (self.app_mode == .font_sample) {
+        if (app_modes.ide.isFontSample(self.app_mode)) {
             if (self.font_sample_view) |*view| {
                 view.draw(shell);
             }
@@ -2832,7 +2832,7 @@ const AppState = struct {
         const layout = self.computeLayout(width, height);
         var tab_tooltip: ?widgets_common.Tooltip = null;
 
-        if (self.app_mode == .ide) {
+        if (app_modes.ide.isIde(self.app_mode)) {
             self.applyCurrentTabBarWidthMode();
             shell.setTheme(self.app_theme);
             // Draw options bar
@@ -2897,14 +2897,14 @@ const AppState = struct {
             }
         }
 
-        if (self.app_mode == .ide) {
+        if (app_modes.ide.isIde(self.app_mode)) {
             shell.setTheme(self.app_theme);
             // Draw side navigation bar (covers terminal icon overflow)
             self.side_nav.draw(shell, layout.side_nav.height, layout.side_nav.y);
         }
 
         // Draw status bar LAST so it spans full width over everything
-        if (self.app_mode == .ide and self.editors.items.len > 0) {
+        if (app_modes.ide.isIde(self.app_mode) and self.editors.items.len > 0) {
             shell.setTheme(self.app_theme);
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             const editor = self.editors.items[editor_idx];
@@ -2933,7 +2933,7 @@ const AppState = struct {
             widgets_common.drawTooltip(shell, tip.text, tip.x, tip.y);
         }
 
-        if (self.app_mode == .terminal and self.terminalCloseConfirmActive()) {
+        if (app_modes.ide.isTerminalOnly(self.app_mode) and self.terminalCloseConfirmActive()) {
             self.drawTerminalCloseConfirmModal(shell, layout);
         }
         self.drawConfigReloadNotice(shell, layout);
