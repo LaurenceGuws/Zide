@@ -159,6 +159,7 @@ app_mode_layering_todo:
             - "In progress: terminal theme apply helpers moved from `main.zig` into `src/app/terminal_theme_apply.zig` (`setSessionPalette`, `notifyColorSchemeChanged`, `applyThemeToWidgets`)."
             - "In progress: terminal session startup/widget bootstrap dedup moved from `main.zig` into `src/app/terminal_session_bootstrap.zig` (`startSessionWithShellCellSize`, `initWidget`)."
             - "In progress: terminal grid-size math moved from `main.zig` into `src/app/terminal_grid.zig` (`compute`)."
+            - "In progress: terminal resize apply mechanics moved from `main.zig` into `src/app/terminal_resize.zig` (`resizeWorkspaceWithShellCellSize`, `resizeSessionWithShellCellSize`, `resizeSessionsWithShellCellSize`)."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress
