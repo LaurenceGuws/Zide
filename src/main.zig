@@ -38,9 +38,9 @@ const app_mouse_debug_log = @import("app/mouse_debug_log.zig");
 const app_mouse_pressed_frame = @import("app/mouse_pressed_frame.zig");
 const app_mouse_pressed_routing_runtime = @import("app/mouse_pressed_routing_runtime.zig");
 const app_input_actions_frame_runtime = @import("app/input_actions_frame_runtime.zig");
+const app_tab_drag_input_runtime = @import("app/tab_drag_input_runtime.zig");
 const app_pointer_activity_frame = @import("app/pointer_activity_frame.zig");
 const app_shortcut_action_runtime = @import("app/shortcut_action_runtime.zig");
-const app_tab_drag_frame = @import("app/tab_drag_frame.zig");
 const app_terminal_split_resize_frame = @import("app/terminal_split_resize_frame.zig");
 const app_window_resize_event_frame = @import("app/window_resize_event_frame.zig");
 const app_deferred_terminal_resize_frame = @import("app/deferred_terminal_resize_frame.zig");
@@ -1491,101 +1491,60 @@ const AppState = struct {
                                                                                         at: f64,
                                                                                     ) !void {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        try app_tab_drag_frame.handle(
+                                                                                        try app_tab_drag_input_runtime.handle(
                                                                                             inner_state.app_mode,
+                                                                                            &inner_state.tab_bar,
+                                                                                            app_terminal_tabs_runtime.barVisible(
+                                                                                                inner_state.app_mode,
+                                                                                                inner_state.terminal_tab_bar_show_single_tab,
+                                                                                                inner_state.terminal_workspace,
+                                                                                                inner_state.terminals.items.len,
+                                                                                            ),
+                                                                                            &inner_state.active_tab,
                                                                                             frame_input_batch,
                                                                                             layout,
                                                                                             mouse,
                                                                                             at,
                                                                                             @ptrCast(inner_state),
                                                                                             .{
-                                                                                                .handle_terminal_tab_drag_input = struct {
-                                                                                                    fn call(
-                                                                                                        route_raw: *anyopaque,
-                                                                                                        drag_input_batch: *shared_types.input.InputBatch,
-                                                                                                        drag_layout: layout_types.WidgetLayout,
-                                                                                                        drag_mouse: shared_types.input.MousePos,
-                                                                                                        drag_now: f64,
-                                                                                                    ) !void {
-                                                                                                        const state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        const drag_frame = app_modes.ide.processTabDragFrame(
-                                                                                                            &state.tab_bar,
-                                                                                                            drag_input_batch,
-                                                                                                            drag_mouse,
-                                                                                                            drag_layout.tab_bar.x,
-                                                                                                            drag_layout.tab_bar.y,
-                                                                                                            drag_layout.tab_bar.width,
-                                                                                                            app_terminal_tabs_runtime.barVisible(
-                                                                                                                state.app_mode,
-                                                                                                                state.terminal_tab_bar_show_single_tab,
-                                                                                                                state.terminal_workspace,
-                                                                                                                state.terminals.items.len,
-                                                                                                            ),
-                                                                                                        );
-                                                                                                        if (drag_frame.updated) {
-                                                                                                            state.needs_redraw = true;
-                                                                                                            state.metrics.noteInput(drag_now);
-                                                                                                        }
-                                                                                                        if (drag_frame.release) |drag_end| {
-                                                                                                            const release_plan = app_modes.ide.terminalTabDragReleasePlan(drag_end);
-                                                                                                            if (release_plan.intent) |intent| {
-                                                                                                                try app_tab_action_apply_runtime.applyTerminalAndSync(state, intent);
-                                                                                                            }
-                                                                                                            if (release_plan.handle_click) {
-                                                                                                                if (state.tab_bar.handleClick(drag_mouse.x, drag_mouse.y, drag_layout.tab_bar.x, drag_layout.tab_bar.y, drag_layout.tab_bar.width)) {
-                                                                                                                    _ = try app_terminal_intent_route_runtime.routeByTabIdAndSync(
-                                                                                                                        state,
-                                                                                                                        .activate,
-                                                                                                                        state.tab_bar.terminalTabIdAtVisual(state.tab_bar.active_index),
-                                                                                                                    );
-                                                                                                                    if (app_terminal_tab_navigation_runtime.focusByIndex(state, state.tab_bar.active_index)) {
-                                                                                                                        state.needs_redraw = true;
-                                                                                                                        state.metrics.noteInput(drag_now);
-                                                                                                                    }
-                                                                                                                }
-                                                                                                            }
-                                                                                                            if (release_plan.mark_redraw) {
-                                                                                                                state.needs_redraw = true;
-                                                                                                                state.metrics.noteInput(drag_now);
-                                                                                                            }
-                                                                                                        }
+                                                                                                .apply_terminal_action = struct {
+                                                                                                    fn call(hook_raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(hook_raw));
+                                                                                                        try app_tab_action_apply_runtime.applyTerminalAndSync(state, action);
                                                                                                     }
                                                                                                 }.call,
-                                                                                                .handle_ide_tab_drag_input = struct {
-                                                                                                    fn call(
-                                                                                                        route_raw: *anyopaque,
-                                                                                                        drag_input_batch: *shared_types.input.InputBatch,
-                                                                                                        drag_layout: layout_types.WidgetLayout,
-                                                                                                        drag_mouse: shared_types.input.MousePos,
-                                                                                                        drag_now: f64,
-                                                                                                    ) !void {
-                                                                                                        const state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        const drag_frame = app_modes.ide.processTabDragFrame(
-                                                                                                            &state.tab_bar,
-                                                                                                            drag_input_batch,
-                                                                                                            drag_mouse,
-                                                                                                            drag_layout.tab_bar.x,
-                                                                                                            drag_layout.tab_bar.y,
-                                                                                                            drag_layout.tab_bar.width,
-                                                                                                            true,
+                                                                                                .route_activate_by_tab_id = struct {
+                                                                                                    fn call(hook_raw: *anyopaque, tab_id: ?u64) !void {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(hook_raw));
+                                                                                                        _ = try app_terminal_intent_route_runtime.routeByTabIdAndSync(
+                                                                                                            state,
+                                                                                                            .activate,
+                                                                                                            tab_id,
                                                                                                         );
-                                                                                                        if (drag_frame.updated) {
-                                                                                                            state.needs_redraw = true;
-                                                                                                            state.metrics.noteInput(drag_now);
-                                                                                                        }
-                                                                                                        if (drag_frame.release) |drag_end| {
-                                                                                                            const release_plan = app_modes.ide.ideEditorTabDragReleasePlan(drag_end);
-                                                                                                            if (release_plan.intent) |intent| {
-                                                                                                                try app_tab_action_apply_runtime.applyEditorAndSync(state, intent);
-                                                                                                                if (release_plan.sync_active_tab) {
-                                                                                                                    state.active_tab = state.tab_bar.active_index;
-                                                                                                                }
-                                                                                                                if (release_plan.mark_redraw) {
-                                                                                                                    state.needs_redraw = true;
-                                                                                                                    state.metrics.noteInput(drag_now);
-                                                                                                                }
-                                                                                                            }
-                                                                                                        }
+                                                                                                    }
+                                                                                                }.call,
+                                                                                                .focus_terminal_tab_index = struct {
+                                                                                                    fn call(hook_raw: *anyopaque, index: usize) bool {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(hook_raw));
+                                                                                                        return app_terminal_tab_navigation_runtime.focusByIndex(state, index);
+                                                                                                    }
+                                                                                                }.call,
+                                                                                                .apply_editor_action = struct {
+                                                                                                    fn call(hook_raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(hook_raw));
+                                                                                                        try app_tab_action_apply_runtime.applyEditorAndSync(state, action);
+                                                                                                    }
+                                                                                                }.call,
+                                                                                                .mark_redraw = struct {
+                                                                                                    fn call(hook_raw: *anyopaque) void {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(hook_raw));
+                                                                                                        state.needs_redraw = true;
+                                                                                                    }
+                                                                                                }.call,
+                                                                                                .note_input = struct {
+                                                                                                    fn call(hook_raw: *anyopaque, t: f64) void {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(hook_raw));
+                                                                                                        state.metrics.noteInput(t);
                                                                                                     }
                                                                                                 }.call,
                                                                                             },
