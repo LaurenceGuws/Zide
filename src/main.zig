@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const app_bootstrap = @import("app/bootstrap.zig");
 const app_runner = @import("app/runner.zig");
 const app_signals = @import("app/signals.zig");
+const app_modes = @import("app/modes/mod.zig");
 
 // Editor modules
 const editor_mod = @import("editor/editor.zig");
@@ -146,7 +147,7 @@ const AppState = struct {
 
     // Current focus
     active_tab: usize,
-    active_kind: enum { editor, terminal },
+    active_kind: app_modes.ide.ActiveMode,
 
     // UI state
     mode: []const u8,
@@ -487,9 +488,9 @@ const AppState = struct {
             .terminal_theme = terminal_theme,
             .shell_base_theme = shell_base_theme,
             .active_tab = 0,
-            .active_kind = if (app_mode == .terminal) .terminal else .editor,
+            .active_kind = app_modes.ide.initialActiveMode(app_mode),
             .mode = "NORMAL",
-            .show_terminal = app_mode == .terminal,
+            .show_terminal = app_modes.ide.initialTerminalVisibility(app_mode),
             .terminal_height = 200,
             .terminal_blink_style = terminal_blink_style,
             .terminal_cursor_style = terminal_cursor_style,
@@ -1161,9 +1162,9 @@ const AppState = struct {
         const width = @as(f32, @floatFromInt(shell.width()));
         const height = @as(f32, @floatFromInt(shell.height()));
         const layout = self.computeLayout(width, height);
-        if (self.app_mode == .terminal) {
+        if (app_modes.ide.isTerminalOnly(self.app_mode)) {
             self.active_kind = .terminal;
-        } else if (self.app_mode == .editor) {
+        } else if (app_modes.ide.isEditorOnly(self.app_mode)) {
             self.active_kind = .editor;
         }
         const initial_grid = self.terminalGridSize(layout.terminal.width, layout.terminal.height, 80, 24);
@@ -1566,7 +1567,8 @@ const AppState = struct {
             }
         }
         _ = self.terminalCloseConfirmActive();
-        const focus = if (self.app_mode == .terminal or self.active_kind == .terminal) input_actions.FocusKind.terminal else input_actions.FocusKind.editor;
+        const routed_active = app_modes.ide.routedActiveMode(self.app_mode, self.active_kind);
+        const focus = if (routed_active == .terminal) input_actions.FocusKind.terminal else input_actions.FocusKind.editor;
         self.input_router.route(input_batch, focus);
         var suppress_terminal_shortcuts = false;
         var handled_shortcut = false;
@@ -2190,7 +2192,7 @@ const AppState = struct {
             }
         }
 
-        if (self.app_mode != .terminal and self.active_kind == .editor and self.editors.items.len > 0) {
+        if (app_modes.ide.supportsEditorSurface(self.app_mode) and self.active_kind == .editor and self.editors.items.len > 0) {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache, self.editor_wrap);
             if (!search_panel_consumed_input and try widget.handleInput(shell, layout.editor.height, input_batch)) {
@@ -2307,7 +2309,7 @@ const AppState = struct {
         }
 
         // Update terminal if shown
-        if (self.app_mode != .editor and self.show_terminal and self.terminalTabCount() > 0) {
+        if (app_modes.ide.supportsTerminalSurface(self.app_mode) and self.show_terminal and self.terminalTabCount() > 0) {
             if (self.app_mode == .terminal) {
                 if (self.terminal_workspace) |*workspace| {
                     const polled = try workspace.pollAll(
@@ -2848,7 +2850,7 @@ const AppState = struct {
         }
 
         // Draw editor
-        if (self.app_mode != .terminal and self.editors.items.len > 0) {
+        if (app_modes.ide.supportsEditorSurface(self.app_mode) and self.editors.items.len > 0) {
             shell.setTheme(self.editor_theme);
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             const editor = self.editors.items[editor_idx];
@@ -2867,7 +2869,7 @@ const AppState = struct {
         }
 
         // Draw terminal if shown
-        if (self.app_mode != .editor and self.show_terminal and self.terminalTabCount() > 0) {
+        if (app_modes.ide.supportsTerminalSurface(self.app_mode) and self.show_terminal and self.terminalTabCount() > 0) {
             const term_y = layout.terminal.y;
 
             // Terminal separator

@@ -1,11 +1,44 @@
 const std = @import("std");
 const shared = @import("../shared/mod.zig");
 const backend = @import("../backend/mod.zig");
+const app_bootstrap = @import("../../bootstrap.zig");
 
 pub const ActiveMode = enum {
     editor,
     terminal,
 };
+
+pub fn initialActiveMode(app_mode: app_bootstrap.AppMode) ActiveMode {
+    return if (app_mode == .terminal) .terminal else .editor;
+}
+
+pub fn initialTerminalVisibility(app_mode: app_bootstrap.AppMode) bool {
+    return app_mode == .terminal;
+}
+
+pub fn isTerminalOnly(app_mode: app_bootstrap.AppMode) bool {
+    return app_mode == .terminal;
+}
+
+pub fn isEditorOnly(app_mode: app_bootstrap.AppMode) bool {
+    return app_mode == .editor;
+}
+
+pub fn supportsEditorSurface(app_mode: app_bootstrap.AppMode) bool {
+    return app_mode != .terminal and app_mode != .font_sample;
+}
+
+pub fn supportsTerminalSurface(app_mode: app_bootstrap.AppMode) bool {
+    return app_mode != .editor and app_mode != .font_sample;
+}
+
+pub fn routedActiveMode(app_mode: app_bootstrap.AppMode, active: ActiveMode) ActiveMode {
+    return switch (app_mode) {
+        .terminal => .terminal,
+        .editor => .editor,
+        else => active,
+    };
+}
 
 pub const IdeHost = struct {
     allocator: std.mem.Allocator,
@@ -120,4 +153,14 @@ test "ide host active snapshot follows focus routing" {
     _ = try host.applyAction(.{ .tab = .create }); // terminal
     snap = try host.snapshotActive();
     try std.testing.expectEqual(shared.types.ModeKind.terminal, snap.mode);
+}
+
+test "mode policy helpers route focused mode deterministically" {
+    try std.testing.expectEqual(ActiveMode.terminal, routedActiveMode(.terminal, .editor));
+    try std.testing.expectEqual(ActiveMode.editor, routedActiveMode(.editor, .terminal));
+    try std.testing.expectEqual(ActiveMode.terminal, routedActiveMode(.ide, .terminal));
+    try std.testing.expect(supportsEditorSurface(.ide));
+    try std.testing.expect(supportsTerminalSurface(.ide));
+    try std.testing.expect(!supportsEditorSurface(.terminal));
+    try std.testing.expect(!supportsTerminalSurface(.editor));
 }
