@@ -817,15 +817,23 @@ const AppState = struct {
         try self.syncModeAdaptersFromTabBar();
     }
 
-    fn applyEditorModeTabAction(self: *AppState, tab_action: app_modes.shared.actions.TabAction) void {
-        if (!app_modes.ide.supportsEditorSurface(self.app_mode)) return;
-        const contract = self.editor_mode_adapter.asContract();
-        _ = contract.applyAction(self.allocator, .{ .tab = tab_action }) catch {};
+    fn routeEditorTabActionAndSync(self: *AppState, tab_action: app_modes.shared.actions.TabAction) !void {
+        if (app_modes.ide.supportsEditorSurface(self.app_mode)) {
+            const contract = self.editor_mode_adapter.asContract();
+            _ = contract.applyAction(self.allocator, .{ .tab = tab_action }) catch {};
+        }
+        try self.syncModeAdaptersFromTabBar();
     }
 
-    fn routeEditorTabActionAndSync(self: *AppState, tab_action: app_modes.shared.actions.TabAction) !void {
-        self.applyEditorModeTabAction(tab_action);
-        try self.syncModeAdaptersFromTabBar();
+    fn routeOptionalEditorTabActionAndSync(
+        self: *AppState,
+        tab_action: ?app_modes.shared.actions.TabAction,
+    ) !bool {
+        if (tab_action) |action| {
+            try self.routeEditorTabActionAndSync(action);
+            return true;
+        }
+        return false;
     }
 
     fn setActiveKindAndSyncIfChanged(self: *AppState, kind: app_modes.ide.ActiveMode) !bool {
@@ -837,7 +845,7 @@ const AppState = struct {
 
     fn activateEditorTabAtCurrentIndex(self: *AppState, now: f64) !void {
         self.active_tab = self.tab_bar.active_index;
-        try self.routeEditorTabActionAndSync(.{ .activate_by_index = self.active_tab });
+        _ = try self.routeOptionalEditorTabActionAndSync(.{ .activate_by_index = self.active_tab });
         self.needs_redraw = true;
         self.metrics.noteInput(now);
     }
