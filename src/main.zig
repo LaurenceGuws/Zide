@@ -2080,13 +2080,9 @@ const AppState = struct {
                 else => {},
             }
             if (app_modes.ide.canHandleTerminalTabFocusShortcuts(self.app_mode)) {
-                if (app_modes.ide.terminalFocusIntentForAction(action.kind)) |intent| {
-                    try self.routeTerminalTabActionAndSync(intent);
-                    const focus_index = switch (intent) {
-                        .activate_by_index => |idx| idx,
-                        else => unreachable,
-                    };
-                    if (self.focusTerminalTabByIndex(focus_index)) {
+                if (app_modes.ide.terminalFocusRouteForAction(action.kind)) |route| {
+                    try self.routeTerminalTabActionAndSync(route.intent);
+                    if (self.focusTerminalTabByIndex(route.index)) {
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
                         return;
