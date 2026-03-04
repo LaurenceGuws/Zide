@@ -117,7 +117,7 @@ fn shellSingleQuoteAlloc(allocator: std.mem.Allocator, value: []const u8) ![]u8 
 fn buildFontRenderingOptions(config: *const config_mod.Config) terminal_font_mod.RenderingOptions {
     var font_opts: terminal_font_mod.RenderingOptions = .{};
     if (config.font_lcd) |v| font_opts.lcd = v;
-    if (parseEnvBool("ZIDE_FONT_RENDERING_LCD")) |v| font_opts.lcd = v;
+    if (app_bootstrap.parseEnvBool("ZIDE_FONT_RENDERING_LCD")) |v| font_opts.lcd = v;
     if (config.font_autohint) |v| font_opts.autohint = v;
     if (config.font_hinting) |mode| {
         font_opts.hinting = switch (mode) {
@@ -431,8 +431,8 @@ const AppState = struct {
             app_shell.setSdlLogLevel(level);
         }
 
-        const window_width = parseEnvI32("ZIDE_WINDOW_WIDTH", 1280);
-        const window_height = parseEnvI32("ZIDE_WINDOW_HEIGHT", 720);
+        const window_width = app_bootstrap.parseEnvI32("ZIDE_WINDOW_WIDTH", 1280);
+        const window_height = app_bootstrap.parseEnvI32("ZIDE_WINDOW_HEIGHT", 720);
         const shell = try Shell.init(allocator, window_width, window_height, "Zide - Zig IDE");
         errdefer shell.deinit(allocator);
 
@@ -480,11 +480,11 @@ const AppState = struct {
             null;
         const perf_mode = perf_file_path != null;
         const perf_frames_total: u64 = if (perf_mode)
-            parseEnvU64("ZIDE_EDITOR_PERF_FRAMES", 240)
+            app_bootstrap.parseEnvU64("ZIDE_EDITOR_PERF_FRAMES", 240)
         else
             0;
         const perf_scroll_delta: i32 = if (perf_mode)
-            @intCast(parseEnvU64("ZIDE_EDITOR_PERF_SCROLL", 3))
+            @intCast(app_bootstrap.parseEnvU64("ZIDE_EDITOR_PERF_SCROLL", 3))
         else
             0;
 
@@ -600,11 +600,11 @@ const AppState = struct {
             .input_router = input_actions.InputRouter.init(allocator),
             .font_sample_view = null,
             .font_sample_auto_close_frames = if (app_mode == .font_sample)
-                parseEnvU64("ZIDE_FONT_SAMPLE_FRAMES", 0)
+                app_bootstrap.parseEnvU64("ZIDE_FONT_SAMPLE_FRAMES", 0)
             else
                 0,
             .font_sample_close_pending = false,
-            .font_sample_screenshot_path = if (app_mode == .font_sample) envSlice("ZIDE_FONT_SAMPLE_SCREENSHOT") else null,
+            .font_sample_screenshot_path = if (app_mode == .font_sample) app_bootstrap.envSlice("ZIDE_FONT_SAMPLE_SCREENSHOT") else null,
             .search_panel = SearchPanelState.init(allocator),
             .terminal_close_confirm_tab = null,
         };
@@ -2862,8 +2862,8 @@ const AppState = struct {
             }
             if (self.font_sample_close_pending) {
                 if (self.font_sample_screenshot_path) |path| {
-                    const screenshot_w = parseEnvI32("ZIDE_FONT_SAMPLE_SCREENSHOT_WIDTH", 0);
-                    const screenshot_h = parseEnvI32("ZIDE_FONT_SAMPLE_SCREENSHOT_HEIGHT", 0);
+                    const screenshot_w = app_bootstrap.parseEnvI32("ZIDE_FONT_SAMPLE_SCREENSHOT_WIDTH", 0);
+                    const screenshot_h = app_bootstrap.parseEnvI32("ZIDE_FONT_SAMPLE_SCREENSHOT_HEIGHT", 0);
                     if (screenshot_w > 0 and screenshot_h > 0) {
                         shell.rendererPtr().dumpWindowScreenshotPpmSized(path, screenshot_w, screenshot_h) catch {};
                     } else {
@@ -3013,36 +3013,6 @@ pub fn main() !void {
     }.call);
 }
 
-fn parseEnvU64(env_key: [:0]const u8, default_value: u64) u64 {
-    const raw = std.c.getenv(env_key) orelse return default_value;
-    const slice = std.mem.sliceTo(raw, 0);
-    if (slice.len == 0) return default_value;
-    return std.fmt.parseInt(u64, slice, 10) catch default_value;
-}
-
-fn parseEnvI32(env_key: [:0]const u8, default_value: i32) i32 {
-    const raw = std.c.getenv(env_key) orelse return default_value;
-    const slice = std.mem.sliceTo(raw, 0);
-    if (slice.len == 0) return default_value;
-    const parsed = std.fmt.parseInt(i32, slice, 10) catch return default_value;
-    return if (parsed > 0) parsed else default_value;
-}
-
-fn parseEnvBool(env_key: [:0]const u8) ?bool {
-    const raw = std.c.getenv(env_key) orelse return null;
-    const slice = std.mem.sliceTo(raw, 0);
-    if (slice.len == 0) return null;
-    if (std.mem.eql(u8, slice, "1") or std.ascii.eqlIgnoreCase(slice, "true") or std.ascii.eqlIgnoreCase(slice, "yes") or std.ascii.eqlIgnoreCase(slice, "on")) return true;
-    if (std.mem.eql(u8, slice, "0") or std.ascii.eqlIgnoreCase(slice, "false") or std.ascii.eqlIgnoreCase(slice, "no") or std.ascii.eqlIgnoreCase(slice, "off")) return false;
-    return null;
-}
-
-fn envSlice(env_key: [:0]const u8) ?[]const u8 {
-    const raw = std.c.getenv(env_key) orelse return null;
-    const slice = std.mem.sliceTo(raw, 0);
-    if (slice.len == 0) return null;
-    return slice;
-}
 
 // Tests
 test "buffer basic operations" {
