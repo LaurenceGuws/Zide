@@ -41,6 +41,7 @@ const app_pointer_activity_frame = @import("app/pointer_activity_frame.zig");
 const app_shortcut_action_runtime = @import("app/shortcut_action_runtime.zig");
 const app_tab_drag_frame = @import("app/tab_drag_frame.zig");
 const app_terminal_split_resize_frame = @import("app/terminal_split_resize_frame.zig");
+const app_window_resize_event_frame = @import("app/window_resize_event_frame.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
@@ -1727,14 +1728,13 @@ const AppState = struct {
 
     fn handleWindowResizeEventFrame(self: *AppState, shell: *Shell, now: f64) !void {
         _ = now;
-        if (!app_shell.isWindowResized()) return;
-        _ = shell.refreshWindowMetrics("window-event");
-        if (try shell.refreshUiScale()) {
-            self.applyUiScale();
-        }
-        self.window_resize_pending = true;
-        self.window_resize_last_time = app_shell.getTime();
-        self.needs_redraw = true;
+        const result = try app_window_resize_event_frame.handle(
+            shell,
+            &self.window_resize_pending,
+            &self.window_resize_last_time,
+        );
+        if (result.ui_scale_changed) self.applyUiScale();
+        if (result.needs_redraw) self.needs_redraw = true;
     }
 
     fn handleCursorBlinkArmingFrame(self: *AppState, now: f64) void {
