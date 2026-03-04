@@ -9,6 +9,7 @@ const app_font_rendering = @import("app/font_rendering.zig");
 const app_config_reload_notice = @import("app/config_reload_notice.zig");
 const app_terminal_grid = @import("app/terminal_grid.zig");
 const app_terminal_runtime_intents = @import("app/terminal_runtime_intents.zig");
+const app_terminal_active_session = @import("app/terminal_active_session.zig");
 const app_terminal_tab_ops = @import("app/terminal_tab_ops.zig");
 const app_terminal_shortcut_policy = @import("app/terminal_shortcut_policy.zig");
 const app_terminal_shortcut_runtime = @import("app/terminal_shortcut_runtime.zig");
@@ -1495,20 +1496,11 @@ const AppState = struct {
                         }
                     },
                     .terminal_scrollback_pager => {
-                        const idx = app_terminal_tabs.activeIndex(
+                        const term = app_terminal_active_session.resolveActive(
                             self.app_mode,
-                            self.terminal_workspace,
-                            app_terminal_tabs.count(self.app_mode, self.terminal_workspace, self.terminals.items.len),
+                            &self.terminal_workspace,
+                            self.terminals.items,
                         ) orelse continue;
-                        const term: *TerminalSession = blk: {
-                            if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-                                if (self.terminal_workspace) |*workspace| {
-                                    if (workspace.sessionAt(idx)) |session| break :blk session;
-                                }
-                                continue;
-                            }
-                            break :blk self.terminals.items[idx];
-                        };
                         if (try terminal_scrollback_pager.openInPager(self.allocator, term_widget, term)) {
                             handled = true;
                         }
