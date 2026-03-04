@@ -3,6 +3,7 @@ const layout_policy = @import("layout_policy.zig");
 const tab_intents = @import("tab_intents.zig");
 const parity = @import("parity.zig");
 const projections = @import("projections.zig");
+const terminal_close_confirm = @import("terminal_close_confirm.zig");
 
 pub const IdeHost = host.IdeHost;
 pub const ActiveMode = host.ActiveMode;
@@ -45,3 +46,6 @@ pub const KindParity = parity.KindParity;
 pub const evaluateKind = parity.evaluateKind;
 pub const buildTabProjections = projections.buildTabProjections;
 pub const activeProjectionForTabBar = projections.activeProjectionForTabBar;
+pub const TerminalCloseConfirmLayout = terminal_close_confirm.ModalLayout;
+pub const TerminalCloseConfirmDecision = terminal_close_confirm.Decision;
+pub const decideTerminalCloseConfirmInput = terminal_close_confirm.decideInput;

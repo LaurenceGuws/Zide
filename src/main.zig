@@ -120,11 +120,7 @@ const AppState = struct {
         }
     };
 
-    const TerminalCloseModalLayout = struct {
-        card: layout_types.Rect,
-        confirm_button: layout_types.Rect,
-        cancel_button: layout_types.Rect,
-    };
+    const TerminalCloseModalLayout = app_modes.ide.TerminalCloseConfirmLayout;
 
     allocator: std.mem.Allocator,
     shell: *Shell,
@@ -1132,10 +1128,6 @@ const AppState = struct {
         };
     }
 
-    fn pointInRect(x: f32, y: f32, rect: layout_types.Rect) bool {
-        return x >= rect.x and x <= rect.x + rect.width and y >= rect.y and y <= rect.y + rect.height;
-    }
-
     fn handleTerminalCloseConfirmInput(
         self: *AppState,
         input_batch: *shared_types.input.InputBatch,
@@ -1144,60 +1136,30 @@ const AppState = struct {
     ) !bool {
         if (!self.terminalCloseConfirmActive()) return false;
 
-        const close_action_pressed = blk: {
-            for (self.input_router.actionsSlice()) |action| {
-                if (action.kind == .terminal_close_tab) break :blk true;
-            }
-            break :blk false;
-        };
-
-        const confirm_pressed = close_action_pressed or
-            input_batch.keyPressed(.enter) or
-            input_batch.keyPressed(.kp_enter) or
-            (input_batch.keyPressed(.y) and input_batch.mods.isEmpty());
-        const cancel_pressed = input_batch.keyPressed(.escape) or
-            (input_batch.keyPressed(.n) and input_batch.mods.isEmpty());
-
-        if (confirm_pressed) {
-            self.applyTerminalCloseIntentForActiveWorkspaceTab();
-            if (try self.closeActiveTerminalTab()) {
-                self.needs_redraw = true;
-            }
-            self.metrics.noteInput(now);
-            return true;
-        }
-        if (cancel_pressed) {
-            self.clearTerminalCloseConfirm();
-            self.needs_redraw = true;
-            self.metrics.noteInput(now);
-            return true;
-        }
-
-        if (input_batch.mousePressed(.left)) {
-            const modal = self.terminalCloseModalLayout(layout);
-            const mx = input_batch.mouse_pos.x;
-            const my = input_batch.mouse_pos.y;
-            if (pointInRect(mx, my, modal.confirm_button)) {
+        const modal = self.terminalCloseModalLayout(layout);
+        switch (app_modes.ide.decideTerminalCloseConfirmInput(
+            self.input_router.actionsSlice(),
+            input_batch,
+            modal,
+        )) {
+            .confirm => {
                 self.applyTerminalCloseIntentForActiveWorkspaceTab();
                 if (try self.closeActiveTerminalTab()) {
                     self.needs_redraw = true;
                 }
                 self.metrics.noteInput(now);
                 return true;
-            }
-            if (pointInRect(mx, my, modal.cancel_button)) {
+            },
+            .cancel => {
                 self.clearTerminalCloseConfirm();
                 self.needs_redraw = true;
                 self.metrics.noteInput(now);
                 return true;
-            }
-            if (!pointInRect(mx, my, modal.card)) {
-                self.clearTerminalCloseConfirm();
-                self.needs_redraw = true;
-                self.metrics.noteInput(now);
+            },
+            .consume => {
                 return true;
-            }
-            return true;
+            },
+            .none => {},
         }
 
         return false;
