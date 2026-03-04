@@ -67,3 +67,41 @@ pub fn syncTerminalModeFromViews(
     try mode.syncFromSnapshot(allocator, snapshot);
 }
 
+test "bridge sync editor mode from tab views" {
+    const allocator = std.testing.allocator;
+    var mode = modes.backend.EditorMode.init(allocator);
+    defer mode.deinit(allocator);
+
+    const views = [_]TabView{
+        .{ .id = 10, .title = "A", .alive = true },
+        .{ .id = 12, .title = "B", .alive = false },
+    };
+    try syncEditorModeFromViews(&mode, allocator, views[0..], 12);
+
+    const snap = try mode.asContract().snapshot(allocator);
+    try std.testing.expectEqual(@as(usize, 2), snap.tabs.len);
+    try std.testing.expectEqual(@as(?modes.shared.types.TabId, 12), snap.active_tab);
+    try std.testing.expectEqualStrings("A", snap.tabs[0].title);
+    try std.testing.expectEqualStrings("B", snap.tabs[1].title);
+    try std.testing.expectEqual(false, snap.tabs[1].alive);
+}
+
+test "bridge sync terminal mode from tab views" {
+    const allocator = std.testing.allocator;
+    var mode = modes.backend.TerminalMode.init(allocator);
+    defer mode.deinit(allocator);
+
+    const views = [_]TabView{
+        .{ .id = 1, .title = "T1", .alive = true },
+        .{ .id = 2, .title = "T2", .alive = true },
+        .{ .id = 3, .title = "T3", .alive = true },
+    };
+    try syncTerminalModeFromViews(&mode, allocator, views[0..], 2);
+
+    const snap = try mode.asContract().snapshot(allocator);
+    try std.testing.expectEqual(@as(usize, 3), snap.tabs.len);
+    try std.testing.expectEqual(@as(?modes.shared.types.TabId, 2), snap.active_tab);
+    try std.testing.expectEqualStrings("T1", snap.tabs[0].title);
+    try std.testing.expectEqualStrings("T2", snap.tabs[1].title);
+    try std.testing.expectEqualStrings("T3", snap.tabs[2].title);
+}
