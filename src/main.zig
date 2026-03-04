@@ -1209,6 +1209,116 @@ const AppState = struct {
         }
     }
 
+    fn handleEditorScrollbarInput(
+        self: *AppState,
+        widget: *EditorWidget,
+        shell: *Shell,
+        layout: layout_types.WidgetLayout,
+        mouse: shared_types.input.MousePos,
+        input_batch: *shared_types.input.InputBatch,
+        now: f64,
+    ) bool {
+        const editor_x = layout.editor.x;
+        const editor_y = layout.editor.y;
+        const mouse_shell = app_shell.MousePos{ .x = mouse.x, .y = mouse.y };
+        const hscroll_handled = widget.handleHorizontalScrollbarInput(
+            shell,
+            editor_x,
+            editor_y,
+            layout.editor.width,
+            layout.editor.height,
+            mouse_shell,
+            &self.editor_hscroll_dragging,
+            &self.editor_hscroll_grab_offset,
+            input_batch,
+        );
+        const vscroll_handled = widget.handleVerticalScrollbarInput(
+            shell,
+            editor_x,
+            editor_y,
+            layout.editor.width,
+            layout.editor.height,
+            mouse_shell,
+            &self.editor_vscroll_dragging,
+            &self.editor_vscroll_grab_offset,
+            input_batch,
+        );
+        if (hscroll_handled or vscroll_handled) {
+            self.needs_redraw = true;
+            self.metrics.noteInput(now);
+        }
+        return hscroll_handled or vscroll_handled;
+    }
+
+    fn handleEditorMouseSelectionInput(
+        self: *AppState,
+        widget: *EditorWidget,
+        shell: *Shell,
+        layout: layout_types.WidgetLayout,
+        mouse: shared_types.input.MousePos,
+        input_batch: *shared_types.input.InputBatch,
+        scrollbar_blocking: bool,
+        now: f64,
+    ) void {
+        const editor_x = layout.editor.x;
+        const editor_y = layout.editor.y;
+        const in_editor = mouse.x >= editor_x and mouse.x <= editor_x + layout.editor.width and
+            mouse.y >= editor_y and mouse.y <= editor_y + layout.editor.height;
+        const alt = input_batch.mods.alt;
+
+        if (!scrollbar_blocking and input_batch.mousePressed(.left) and in_editor) {
+            if (widget.cursorFromMouse(shell, editor_x, editor_y, layout.editor.width, layout.editor.height, mouse.x, mouse.y, false)) |pos| {
+                widget.editor.setCursor(pos.line, pos.col);
+                widget.editor.selection = null;
+                widget.editor.clearSelections();
+                self.editor_dragging = true;
+                self.editor_drag_start = pos;
+                self.editor_drag_rect = alt;
+                if (alt) {
+                    widget.editor.expandRectSelection(pos.line, pos.line, pos.col, pos.col) catch {};
+                } else {
+                    widget.editor.selection = .{ .start = pos, .end = pos };
+                }
+                self.needs_redraw = true;
+                self.metrics.noteInput(now);
+            }
+        }
+
+        if (!scrollbar_blocking and self.editor_dragging and input_batch.mouseDown(.left)) {
+            if (widget.cursorFromMouse(shell, editor_x, editor_y, layout.editor.width, layout.editor.height, mouse.x, mouse.y, true)) |pos| {
+                widget.editor.setCursorNoClear(pos.line, pos.col);
+                if (self.editor_drag_rect) {
+                    widget.editor.clearSelections();
+                    const start_line = @min(self.editor_drag_start.line, pos.line);
+                    const end_line = @max(self.editor_drag_start.line, pos.line);
+                    const start_col = @min(self.editor_drag_start.col, pos.col);
+                    const end_col = @max(self.editor_drag_start.col, pos.col);
+                    widget.editor.expandRectSelection(start_line, end_line, start_col, end_col) catch {};
+                    widget.editor.selection = null;
+                } else {
+                    widget.editor.selection = .{ .start = self.editor_drag_start, .end = pos };
+                    widget.editor.clearSelections();
+                }
+                self.needs_redraw = true;
+                self.metrics.noteInput(now);
+            }
+        }
+
+        if (self.editor_dragging and input_batch.mouseReleased(.left)) {
+            self.editor_dragging = false;
+            if (!self.editor_drag_rect) {
+                if (widget.editor.selection) |sel| {
+                    if (sel.start.offset == sel.end.offset) {
+                        widget.editor.selection = null;
+                    }
+                }
+            } else if (widget.editor.selectionCount() == 0) {
+                widget.editor.selection = null;
+            }
+            self.needs_redraw = true;
+        }
+    }
+
     fn logModeAdapterParity(self: *AppState) void {
         const log = app_logger.logger("app.mode.parity");
         if (!log.enabled_file and !log.enabled_console) return;
@@ -2325,95 +2435,8 @@ const AppState = struct {
                 self.metrics.noteInput(now);
                 self.perf_frames_done +|= 1;
             }
-            const editor_x = layout.editor.x;
-            const editor_y = layout.editor.y;
-            const in_editor = mouse.x >= editor_x and mouse.x <= editor_x + layout.editor.width and
-                mouse.y >= editor_y and mouse.y <= editor_y + layout.editor.height;
-            const alt = input_batch.mods.alt;
-            const mouse_shell = app_shell.MousePos{ .x = mouse.x, .y = mouse.y };
-            const scrollbar_handled = widget.handleHorizontalScrollbarInput(
-                shell,
-                editor_x,
-                editor_y,
-                layout.editor.width,
-                layout.editor.height,
-                mouse_shell,
-                &self.editor_hscroll_dragging,
-                &self.editor_hscroll_grab_offset,
-                input_batch,
-            );
-            const vscroll_handled = widget.handleVerticalScrollbarInput(
-                shell,
-                editor_x,
-                editor_y,
-                layout.editor.width,
-                layout.editor.height,
-                mouse_shell,
-                &self.editor_vscroll_dragging,
-                &self.editor_vscroll_grab_offset,
-                input_batch,
-            );
-            const scrollbar_blocking = scrollbar_handled or vscroll_handled;
-            if (scrollbar_handled) {
-                self.needs_redraw = true;
-                self.metrics.noteInput(now);
-            }
-            if (vscroll_handled) {
-                self.needs_redraw = true;
-                self.metrics.noteInput(now);
-            }
-
-            if (!scrollbar_blocking and input_batch.mousePressed(.left) and in_editor) {
-                if (widget.cursorFromMouse(shell, editor_x, editor_y, layout.editor.width, layout.editor.height, mouse.x, mouse.y, false)) |pos| {
-                    widget.editor.setCursor(pos.line, pos.col);
-                    widget.editor.selection = null;
-                    widget.editor.clearSelections();
-                    self.editor_dragging = true;
-                    self.editor_drag_start = pos;
-                    self.editor_drag_rect = alt;
-                    if (alt) {
-                        widget.editor.expandRectSelection(pos.line, pos.line, pos.col, pos.col) catch {};
-                    } else {
-                        widget.editor.selection = .{ .start = pos, .end = pos };
-                    }
-                    self.needs_redraw = true;
-                    self.metrics.noteInput(now);
-                }
-            }
-
-            if (!scrollbar_blocking and self.editor_dragging and input_batch.mouseDown(.left)) {
-                if (widget.cursorFromMouse(shell, editor_x, editor_y, layout.editor.width, layout.editor.height, mouse.x, mouse.y, true)) |pos| {
-                    widget.editor.setCursorNoClear(pos.line, pos.col);
-                    if (self.editor_drag_rect) {
-                        widget.editor.clearSelections();
-                        const start_line = @min(self.editor_drag_start.line, pos.line);
-                        const end_line = @max(self.editor_drag_start.line, pos.line);
-                        const start_col = @min(self.editor_drag_start.col, pos.col);
-                        const end_col = @max(self.editor_drag_start.col, pos.col);
-                        widget.editor.expandRectSelection(start_line, end_line, start_col, end_col) catch {};
-                        widget.editor.selection = null;
-                    } else {
-                        widget.editor.selection = .{ .start = self.editor_drag_start, .end = pos };
-                        widget.editor.clearSelections();
-                    }
-                    self.needs_redraw = true;
-                    self.metrics.noteInput(now);
-                }
-            }
-
-            if (self.editor_dragging and input_batch.mouseReleased(.left)) {
-                self.editor_dragging = false;
-                if (!self.editor_drag_rect) {
-                    if (widget.editor.selection) |sel| {
-                        if (sel.start.offset == sel.end.offset) {
-                            widget.editor.selection = null;
-                        }
-                    }
-                } else if (widget.editor.selectionCount() == 0) {
-                    widget.editor.selection = null;
-                }
-                self.needs_redraw = true;
-            }
+            const scrollbar_blocking = self.handleEditorScrollbarInput(&widget, shell, layout, mouse, input_batch, now);
+            self.handleEditorMouseSelectionInput(&widget, shell, layout, mouse, input_batch, scrollbar_blocking, now);
 
             if (layout.editor.width > 0 and layout.editor.height > 0) {
                 self.prepareEditorForDisplay(widget.editor);

@@ -121,6 +121,7 @@ app_mode_layering_todo:
             - "In progress: active kind switching + adapter sync now routes through `setActiveKindAndSyncIfChanged(...)` helper in `main.zig` (mouse route branches deduped)."
             - "In progress: mouse pressed route branches (`ide`/`terminal`/`editor`) are now factored into dedicated AppState helpers to keep the input loop thin."
             - "In progress: terminal and IDE tab-drag input paths are now factored into dedicated AppState handlers, leaving the input loop to orchestration only."
+            - "In progress: editor scrollbar + mouse-selection/drag input orchestration is now factored into dedicated AppState helpers."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress
