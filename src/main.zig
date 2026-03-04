@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const app_bootstrap = @import("app/bootstrap.zig");
 
 // Editor modules
 const editor_mod = @import("editor/editor.zig");
@@ -42,12 +43,7 @@ const EditorClusterCache = widgets.EditorClusterCache;
 const EditorRenderCache = editor_render_cache_mod.EditorRenderCache;
 const TerminalWidget = widgets.TerminalWidget;
 
-const AppMode = enum {
-    ide,
-    editor,
-    terminal,
-    font_sample,
-};
+const AppMode = app_bootstrap.AppMode;
 
 var sigint_requested = std.atomic.Value(bool).init(false);
 
@@ -3002,47 +2998,11 @@ pub fn main() !void {
 
     installSignalHandlers();
 
-    const app_mode = parseAppMode(allocator);
+    const app_mode = app_bootstrap.parseAppMode(allocator);
     var app = try AppState.init(allocator, app_mode);
     defer app.deinit();
 
     try app.run();
-}
-
-fn parseAppMode(allocator: std.mem.Allocator) AppMode {
-    const args = std.process.argsAlloc(allocator) catch return .ide;
-    defer std.process.argsFree(allocator, args);
-
-    var i: usize = 1;
-    while (i < args.len) : (i += 1) {
-        const arg = args[i];
-        if (std.mem.eql(u8, arg, "--terminal") or std.mem.eql(u8, arg, "terminal")) {
-            return .terminal;
-        }
-        if (std.mem.eql(u8, arg, "--editor") or std.mem.eql(u8, arg, "editor")) {
-            return .editor;
-        }
-        if (std.mem.eql(u8, arg, "--ide") or std.mem.eql(u8, arg, "ide")) {
-            return .ide;
-        }
-        if (std.mem.startsWith(u8, arg, "--mode=")) {
-            const value = arg["--mode=".len..];
-            if (modeFromArg(value)) |mode| return mode;
-        } else if (std.mem.eql(u8, arg, "--mode") and i + 1 < args.len) {
-            i += 1;
-            if (modeFromArg(args[i])) |mode| return mode;
-        }
-    }
-
-    return .ide;
-}
-
-fn modeFromArg(value: []const u8) ?AppMode {
-    if (std.mem.eql(u8, value, "terminal")) return .terminal;
-    if (std.mem.eql(u8, value, "editor")) return .editor;
-    if (std.mem.eql(u8, value, "ide")) return .ide;
-    if (std.mem.eql(u8, value, "font") or std.mem.eql(u8, value, "fonts") or std.mem.eql(u8, value, "font-sample")) return .font_sample;
-    return null;
 }
 
 fn parseEnvU64(env_key: [:0]const u8, default_value: u64) u64 {
