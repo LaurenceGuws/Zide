@@ -1,3 +1,4 @@
+const std = @import("std");
 const app_bootstrap = @import("bootstrap.zig");
 const root = @import("root");
 
@@ -16,3 +17,10 @@ pub inline fn hasFocusedMode() bool {
     return comptime focused_mode != null;
 }
 
+test "mode_build defaults to runtime mode when no focused root mode is declared" {
+    try std.testing.expect(!hasFocusedMode());
+    try std.testing.expectEqual(AppMode.ide, effectiveMode(.ide));
+    try std.testing.expectEqual(AppMode.editor, effectiveMode(.editor));
+    try std.testing.expectEqual(AppMode.terminal, effectiveMode(.terminal));
+    try std.testing.expectEqual(AppMode.font_sample, effectiveMode(.font_sample));
+}
