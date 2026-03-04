@@ -1542,13 +1542,23 @@ const AppState = struct {
             },
         );
         const live_layout = self.computeLayout(@floatFromInt(r.width), @floatFromInt(r.height));
-        if (try self.handleTerminalCloseConfirmInput(input_batch, live_layout, now)) {
-            return .{
-                .suppress_terminal_shortcuts = false,
-                .terminal_close_modal_active = self.terminalCloseConfirmActive(),
-                .handled_shortcut = handled_shortcut,
-                .consumed = true,
-            };
+        if (self.terminalCloseConfirmActive()) {
+            if (try app_terminal_close_confirm_input.handleInput(
+                self.input_router.actionsSlice(),
+                input_batch,
+                live_layout,
+                self.shell.uiScaleFactor(),
+                now,
+                @ptrCast(self),
+                applyTerminalCloseConfirmDecisionFromCtx,
+            )) {
+                return .{
+                    .suppress_terminal_shortcuts = false,
+                    .terminal_close_modal_active = self.terminalCloseConfirmActive(),
+                    .handled_shortcut = handled_shortcut,
+                    .consumed = true,
+                };
+            }
         }
 
         const terminal_close_modal_active = self.terminalCloseConfirmActive();
@@ -2022,24 +2032,6 @@ const AppState = struct {
     fn requestCancelTerminalCloseFromModalFromCtx(raw: *anyopaque, at: f64) !bool {
         const state: *AppState = @ptrCast(@alignCast(raw));
         return state.requestCancelTerminalCloseFromModal(at);
-    }
-
-    fn handleTerminalCloseConfirmInput(
-        self: *AppState,
-        input_batch: *shared_types.input.InputBatch,
-        layout: layout_types.WidgetLayout,
-        now: f64,
-    ) !bool {
-        if (!self.terminalCloseConfirmActive()) return false;
-        return app_terminal_close_confirm_input.handleInput(
-            self.input_router.actionsSlice(),
-            input_batch,
-            layout,
-            self.shell.uiScaleFactor(),
-            now,
-            @ptrCast(self),
-            applyTerminalCloseConfirmDecisionFromCtx,
-        );
     }
 
     fn applyTerminalCloseConfirmDecisionFromCtx(
