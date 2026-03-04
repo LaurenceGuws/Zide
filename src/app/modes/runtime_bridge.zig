@@ -72,3 +72,72 @@ test "runtime bridge syncs editor and terminal buckets" {
     try std.testing.expectEqual(@as(?modes.shared.types.TabId, 2), terminal_snap.active_tab);
 }
 
+test "runtime bridge tracks projection transitions across sync passes" {
+    const allocator = std.testing.allocator;
+    var editor = modes.backend.EditorMode.init(allocator);
+    defer editor.deinit(allocator);
+    var terminal = modes.backend.TerminalMode.init(allocator);
+    defer terminal.deinit(allocator);
+
+    const initial = [_]AppTabProjection{
+        .{ .kind = .editor, .id = 10, .title = "e1", .alive = true },
+        .{ .kind = .editor, .id = 11, .title = "e2", .alive = true },
+        .{ .kind = .terminal, .id = 21, .title = "t1", .alive = true },
+    };
+    try syncModesFromProjections(
+        allocator,
+        &editor,
+        &terminal,
+        initial[0..],
+        .{ .kind = .editor, .id = 11 },
+    );
+
+    var editor_snap = try editor.asContract().snapshot(allocator);
+    var terminal_snap = try terminal.asContract().snapshot(allocator);
+    try std.testing.expectEqual(@as(usize, 2), editor_snap.tabs.len);
+    try std.testing.expectEqual(@as(usize, 1), terminal_snap.tabs.len);
+    try std.testing.expectEqual(@as(?modes.shared.types.TabId, 11), editor_snap.active_tab);
+    try std.testing.expectEqual(@as(?modes.shared.types.TabId, null), terminal_snap.active_tab);
+
+    const reordered = [_]AppTabProjection{
+        .{ .kind = .terminal, .id = 21, .title = "t1", .alive = true },
+        .{ .kind = .editor, .id = 11, .title = "e2", .alive = true },
+        .{ .kind = .editor, .id = 10, .title = "e1", .alive = true },
+        .{ .kind = .terminal, .id = 22, .title = "t2", .alive = true },
+    };
+    try syncModesFromProjections(
+        allocator,
+        &editor,
+        &terminal,
+        reordered[0..],
+        .{ .kind = .terminal, .id = 22 },
+    );
+
+    editor_snap = try editor.asContract().snapshot(allocator);
+    terminal_snap = try terminal.asContract().snapshot(allocator);
+    try std.testing.expectEqual(@as(usize, 2), editor_snap.tabs.len);
+    try std.testing.expectEqual(@as(usize, 2), terminal_snap.tabs.len);
+    try std.testing.expectEqual(@as(?modes.shared.types.TabId, null), editor_snap.active_tab);
+    try std.testing.expectEqual(@as(?modes.shared.types.TabId, 22), terminal_snap.active_tab);
+    try std.testing.expectEqual(@as(modes.shared.types.TabId, 21), terminal_snap.tabs[0].id);
+    try std.testing.expectEqual(@as(modes.shared.types.TabId, 22), terminal_snap.tabs[1].id);
+
+    const after_close = [_]AppTabProjection{
+        .{ .kind = .editor, .id = 11, .title = "e2", .alive = true },
+        .{ .kind = .terminal, .id = 21, .title = "t1", .alive = true },
+    };
+    try syncModesFromProjections(
+        allocator,
+        &editor,
+        &terminal,
+        after_close[0..],
+        .{ .kind = .terminal, .id = 21 },
+    );
+
+    editor_snap = try editor.asContract().snapshot(allocator);
+    terminal_snap = try terminal.asContract().snapshot(allocator);
+    try std.testing.expectEqual(@as(usize, 1), editor_snap.tabs.len);
+    try std.testing.expectEqual(@as(usize, 1), terminal_snap.tabs.len);
+    try std.testing.expectEqual(@as(?modes.shared.types.TabId, null), editor_snap.active_tab);
+    try std.testing.expectEqual(@as(?modes.shared.types.TabId, 21), terminal_snap.active_tab);
+}
