@@ -4,6 +4,7 @@ const app_editor_actions = @import("app/editor_actions.zig");
 const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
 const app_search_panel_input = @import("app/search_panel_input.zig");
+const app_search_panel_state = @import("app/search_panel_state.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
 const app_runner = @import("app/runner.zig");
@@ -526,18 +527,6 @@ const AppState = struct {
         return self.editors.items[editor_idx];
     }
 
-    fn openSearchPanel(self: *AppState, editor: *Editor) !void {
-        self.search_panel.active = true;
-        self.search_panel.query.clearRetainingCapacity();
-        if (editor.searchQuery()) |query| {
-            try self.search_panel.query.appendSlice(self.allocator, query);
-        }
-    }
-
-    fn closeSearchPanel(self: *AppState) void {
-        self.search_panel.active = false;
-    }
-
     fn consumeEditorHighlightDirtyRange(self: *AppState, editor: *Editor) void {
         const total_lines = editor.lineCount();
         if (editor.takeHighlightDirtyRange()) |range| {
@@ -549,21 +538,6 @@ const AppState = struct {
     fn prepareEditorForDisplay(self: *AppState, editor: *Editor) void {
         self.consumeEditorHighlightDirtyRange(editor);
         editor.ensureHighlighter();
-    }
-
-    fn syncEditorSearchQuery(self: *AppState, editor: *Editor) !void {
-        if (self.search_panel.query.items.len == 0) {
-            try editor.setSearchQuery(null);
-            return;
-        }
-        try editor.setSearchQuery(self.search_panel.query.items);
-    }
-
-    fn popSearchQueryScalar(self: *AppState) void {
-        if (self.search_panel.query.items.len == 0) return;
-        var idx = self.search_panel.query.items.len - 1;
-        while (idx > 0 and (self.search_panel.query.items[idx] & 0b1100_0000) == 0b1000_0000) : (idx -= 1) {}
-        self.search_panel.query.items.len = idx;
     }
 
     fn handleSearchPanelInput(self: *AppState, editor: *Editor, input_batch: *shared_types.input.InputBatch) !bool {
@@ -587,7 +561,7 @@ const AppState = struct {
 
         switch (app_search_panel_input.searchPanelCommand(input_batch)) {
             .close => {
-                self.closeSearchPanel();
+                app_search_panel_state.closePanel(&self.search_panel.active);
                 return true;
             },
             .next => {
@@ -599,7 +573,7 @@ const AppState = struct {
                 return true;
             },
             .backspace => {
-                self.popSearchQueryScalar();
+                app_search_panel_state.popQueryScalar(&self.search_panel.query);
                 query_changed = true;
                 handled = true;
             },
@@ -612,7 +586,7 @@ const AppState = struct {
         }
 
         if (query_changed) {
-            try self.syncEditorSearchQuery(editor);
+            try app_search_panel_state.syncEditorSearchQuery(editor, &self.search_panel.query);
         }
 
         return handled;
@@ -1688,7 +1662,12 @@ const AppState = struct {
                     }
                 },
                 .editor_search_open => {
-                    try self.openSearchPanel(editor);
+                    try app_search_panel_state.openPanel(
+                        self.allocator,
+                        &self.search_panel.active,
+                        &self.search_panel.query,
+                        editor,
+                    );
                     self.needs_redraw = true;
                     handled = true;
                 },
@@ -3457,7 +3436,7 @@ test "openSearchPanel restores editor query and clears stale panel text" {
     defer app.search_panel.deinit(allocator);
 
     try app.search_panel.query.appendSlice(allocator, "stale");
-    try app.openSearchPanel(editor);
+    try app_search_panel_state.openPanel(allocator, &app.search_panel.active, &app.search_panel.query, editor);
 
     try std.testing.expect(app.search_panel.active);
     try std.testing.expectEqualStrings("alpha", app.search_panel.query.items);
@@ -3477,17 +3456,17 @@ test "search panel reopen preserves synced query through editor state" {
     app.search_panel = AppState.SearchPanelState.init(allocator);
     defer app.search_panel.deinit(allocator);
 
-    try app.openSearchPanel(editor);
+    try app_search_panel_state.openPanel(allocator, &app.search_panel.active, &app.search_panel.query, editor);
     try app.search_panel.query.appendSlice(allocator, "beta");
-    try app.syncEditorSearchQuery(editor);
-    app.closeSearchPanel();
+    try app_search_panel_state.syncEditorSearchQuery(editor, &app.search_panel.query);
+    app_search_panel_state.closePanel(&app.search_panel.active);
 
     try std.testing.expect(!app.search_panel.active);
     try std.testing.expectEqualStrings("beta", app.search_panel.query.items);
 
     app.search_panel.query.clearRetainingCapacity();
     try app.search_panel.query.appendSlice(allocator, "junk");
-    try app.openSearchPanel(editor);
+    try app_search_panel_state.openPanel(allocator, &app.search_panel.active, &app.search_panel.query, editor);
 
     try std.testing.expect(app.search_panel.active);
     try std.testing.expectEqualStrings("beta", app.search_panel.query.items);
