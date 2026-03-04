@@ -44,6 +44,7 @@ const app_search_panel_state = @import("app/search_panel_state.zig");
 const app_mouse_debug_log = @import("app/mouse_debug_log.zig");
 const app_mouse_pressed_frame = @import("app/mouse_pressed_frame.zig");
 const app_mouse_pressed_routing_runtime = @import("app/mouse_pressed_routing_runtime.zig");
+const app_mouse_pressed_hooks_runtime = @import("app/mouse_pressed_hooks_runtime.zig");
 const app_input_actions_frame_runtime = @import("app/input_actions_frame_runtime.zig");
 const app_tab_drag_input_runtime = @import("app/tab_drag_input_runtime.zig");
 const app_active_view_runtime = @import("app/active_view_runtime.zig");
@@ -842,6 +843,26 @@ const AppState = struct {
         );
     }
 
+    fn handleMousePressedFrame(
+        self: *AppState,
+        frame_shell: *Shell,
+        layout: layout_types.WidgetLayout,
+        mouse: shared_types.input.MousePos,
+        term_y: f32,
+        frame_input_batch: *shared_types.input.InputBatch,
+        at: f64,
+    ) !void {
+        try app_mouse_pressed_hooks_runtime.handle(
+            self,
+            frame_shell,
+            layout,
+            mouse,
+            term_y,
+            frame_input_batch,
+            at,
+        );
+    }
+
     fn handleActiveViewFrame(
         self: *AppState,
         frame_shell: *Shell,
@@ -1248,115 +1269,13 @@ const AppState = struct {
                                                                                         at: f64,
                                                                                     ) !void {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        _ = frame_shell;
-                                                                                        try app_mouse_pressed_frame.handle(
-                                                                                            inner_state.app_mode,
-                                                                                            frame_input_batch,
+                                                                                        try inner_state.handleMousePressedFrame(
+                                                                                            frame_shell,
                                                                                             layout,
                                                                                             mouse,
                                                                                             term_y,
+                                                                                            frame_input_batch,
                                                                                             at,
-                                                                                            @ptrCast(inner_state),
-                                                                                            .{
-                                                                                                .handle_ide_mouse_pressed_routing = struct {
-                                                                                                    fn call(
-                                                                                                        route_raw: *anyopaque,
-                                                                                                        frame_layout: layout_types.WidgetLayout,
-                                                                                                        frame_mouse: shared_types.input.MousePos,
-                                                                                                        frame_term_y: f32,
-                                                                                                        frame_now: f64,
-                                                                                                    ) !void {
-                                                                                                        const state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        const result = try app_mouse_pressed_routing_runtime.handleIde(
-                                                                                                            &state.tab_bar,
-                                                                                                            state.options_bar.height,
-                                                                                                            frame_layout,
-                                                                                                            frame_mouse,
-                                                                                                            frame_term_y,
-                                                                                                            state.show_terminal,
-                                                                                                            &state.active_tab,
-                                                                                                            &state.active_kind,
-                                                                                                            @ptrCast(state),
-                                                                                                            .{
-                                                                                                                .route_editor_activate_by_index = struct {
-                                                                                                                    fn call(hook_raw: *anyopaque, index: usize) !void {
-                                                                                                                        const hook_state: *AppState = @ptrCast(@alignCast(hook_raw));
-                                                                                                                        _ = try app_editor_intent_route.routeActivateByIndexAndSync(
-                                                                                                                            index,
-                                                                                                                            @ptrCast(hook_state),
-                                                                                                                            struct {
-                                                                                                                                fn inner(activate_raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
-                                                                                                                                    const route_state: *AppState = @ptrCast(@alignCast(activate_raw));
-                                                                                                                                    try app_tab_action_apply_runtime.applyEditorAndSync(route_state, action);
-                                                                                                                                }
-                                                                                                                            }.inner,
-                                                                                                                        );
-                                                                                                                    }
-                                                                                                                }.call,
-                                                                                                                .sync_mode_adapters = struct {
-                                                                                                                    fn call(hook_raw: *anyopaque) !void {
-                                                                                                                        const hook_state: *AppState = @ptrCast(@alignCast(hook_raw));
-                                                                                                                        try app_mode_adapter_sync_runtime.sync(hook_state);
-                                                                                                                    }
-                                                                                                                }.call,
-                                                                                                            },
-                                                                                                        );
-                                                                                                        if (result.needs_redraw) state.needs_redraw = true;
-                                                                                                        if (result.note_input) state.metrics.noteInput(frame_now);
-                                                                                                    }
-                                                                                                }.call,
-                                                                                                .handle_terminal_mouse_pressed_routing = struct {
-                                                                                                    fn call(
-                                                                                                        route_raw: *anyopaque,
-                                                                                                        frame_layout: layout_types.WidgetLayout,
-                                                                                                        frame_mouse: shared_types.input.MousePos,
-                                                                                                    ) !void {
-                                                                                                        const state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        _ = try app_mouse_pressed_routing_runtime.handleTerminal(
-                                                                                                            &state.tab_bar,
-                                                                                                            frame_layout,
-                                                                                                            frame_mouse,
-                                                                                                            app_terminal_tabs_runtime.barVisible(
-                                                                                                                state.app_mode,
-                                                                                                                state.terminal_tab_bar_show_single_tab,
-                                                                                                                state.terminal_workspace,
-                                                                                                                state.terminals.items.len,
-                                                                                                            ),
-                                                                                                            &state.active_kind,
-                                                                                                            @ptrCast(state),
-                                                                                                            .{
-                                                                                                                .sync_mode_adapters = struct {
-                                                                                                                    fn call(hook_raw: *anyopaque) !void {
-                                                                                                                        const hook_state: *AppState = @ptrCast(@alignCast(hook_raw));
-                                                                                                                        try app_mode_adapter_sync_runtime.sync(hook_state);
-                                                                                                                    }
-                                                                                                                }.call,
-                                                                                                                .route_terminal_activate = struct {
-                                                                                                                    fn call(hook_raw: *anyopaque) !void {
-                                                                                                                        const hook_state: *AppState = @ptrCast(@alignCast(hook_raw));
-                                                                                                                        _ = try app_terminal_intent_route_runtime.routeActiveAndSync(hook_state, .activate);
-                                                                                                                    }
-                                                                                                                }.call,
-                                                                                                            },
-                                                                                                        );
-                                                                                                    }
-                                                                                                }.call,
-                                                                                                .handle_editor_mouse_pressed_routing = struct {
-                                                                                                    fn call(route_raw: *anyopaque) !void {
-                                                                                                        const state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        if (state.active_kind != .editor) {
-                                                                                                            state.active_kind = .editor;
-                                                                                                            try app_mode_adapter_sync_runtime.sync(state);
-                                                                                                        }
-                                                                                                    }
-                                                                                                }.call,
-                                                                                                .log_mouse_debug_click = struct {
-                                                                                                    fn call(route_raw: *anyopaque) void {
-                                                                                                        const state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        app_mouse_debug_log.log(state.shell, state.mouse_debug);
-                                                                                                    }
-                                                                                                }.call,
-                                                                                            },
                                                                                         );
                                                                                     }
                                                                                 }.inner,
