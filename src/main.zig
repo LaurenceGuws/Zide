@@ -1193,6 +1193,14 @@ const AppState = struct {
         );
     }
 
+    fn shouldStopForPerfFrame(self: *AppState) bool {
+        return self.perf_mode and self.perf_frames_done >= self.perf_frames_total and self.perf_frames_total > 0;
+    }
+
+    fn onPerfCompleteFrame(self: *AppState) void {
+        self.perf_logger.logf("perf complete frames={d}", .{self.perf_frames_done});
+    }
+
     pub fn newTerminal(self: *AppState) !void {
         // Calculate terminal size based on UI
         const shell = self.shell;
@@ -1312,13 +1320,13 @@ const AppState = struct {
                                                 .should_stop_for_perf = struct {
                                                     fn step(step_raw: *anyopaque) bool {
                                                         const step_state: *AppState = @ptrCast(@alignCast(step_raw));
-                                                        return step_state.perf_mode and step_state.perf_frames_done >= step_state.perf_frames_total and step_state.perf_frames_total > 0;
+                                                        return step_state.shouldStopForPerfFrame();
                                                     }
                                                 }.step,
                                                 .on_perf_complete = struct {
                                                     fn step(step_raw: *anyopaque) void {
                                                         const step_state: *AppState = @ptrCast(@alignCast(step_raw));
-                                                        step_state.perf_logger.logf("perf complete frames={d}", .{step_state.perf_frames_done});
+                                                        step_state.onPerfCompleteFrame();
                                                     }
                                                 }.step,
                                             },
