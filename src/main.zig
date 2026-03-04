@@ -50,6 +50,7 @@ const app_update_driver = @import("app/update_driver.zig");
 const app_run_loop_driver = @import("app/run_loop_driver.zig");
 const app_reload_config_runtime = @import("app/reload_config_runtime.zig");
 const app_run_mode_init = @import("app/run_mode_init.zig");
+const app_prepare_run_frame_runtime = @import("app/prepare_run_frame_runtime.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
@@ -79,7 +80,6 @@ const widgets = @import("ui/widgets.zig");
 const widgets_common = @import("ui/widgets/common.zig");
 const editor_draw = @import("ui/widgets/editor_widget_draw.zig");
 const layout_types = shared_types.layout;
-const input_builder = @import("input/input_builder.zig");
 const input_actions = @import("input/input_actions.zig");
 const font_sample_view_mod = @import("ui/font_sample_view.zig");
 
@@ -2337,31 +2337,7 @@ const AppState = struct {
     const RunFrameSetup = app_run_loop_driver.FrameSetup;
 
     fn prepareRunFrame(self: *AppState) !?RunFrameSetup {
-        const poll_start = app_shell.getTime();
-        app_shell.pollInputEvents();
-        const poll_end = app_shell.getTime();
-        if (self.shell.shouldClose()) return null;
-        if (app_signals.requested()) {
-            self.shell.requestClose();
-            return null;
-        }
-
-        const build_start = app_shell.getTime();
-        const input_batch = input_builder.buildInputBatch(self.allocator, self.shell);
-        const build_end = app_shell.getTime();
-
-        self.frame_id +|= 1;
-        if (!app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-            self.editor_cluster_cache.beginFrame(self.frame_id);
-        }
-
-        self.metrics.beginFrame(app_shell.getTime());
-
-        return .{
-            .input_batch = input_batch,
-            .poll_ms = (poll_end - poll_start) * 1000.0,
-            .build_ms = (build_end - build_start) * 1000.0,
-        };
+        return try app_prepare_run_frame_runtime.prepare(self);
     }
 
     fn runOneFrame(self: *AppState) !bool {
