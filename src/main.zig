@@ -463,7 +463,7 @@ const AppState = struct {
 
         var grammar_manager = try grammar_manager_mod.GrammarManager.init(allocator);
         errdefer grammar_manager.deinit();
-        const terminal_workspace = if (app_modes.ide.isTerminalOnly(app_mode))
+        const terminal_workspace = if (app_modes.ide.shouldUseTerminalWorkspace(app_mode))
             TerminalWorkspace.init(allocator, .{
                 .scrollback_rows = config.terminal_scrollback_rows,
                 .cursor_style = terminal_cursor_style,
@@ -841,7 +841,7 @@ const AppState = struct {
     }
 
     fn terminalTabCount(self: *const AppState) usize {
-        if (app_modes.ide.isTerminalOnly(self.app_mode)) {
+        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
             if (self.terminal_workspace) |workspace| return workspace.tabCount();
             return 0;
         }
@@ -859,7 +859,7 @@ const AppState = struct {
     fn activeTerminalArrayIndex(self: *const AppState) ?usize {
         const count = self.terminalTabCount();
         if (count == 0) return null;
-        if (app_modes.ide.isTerminalOnly(self.app_mode)) {
+        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
             if (self.terminal_workspace) |workspace| {
                 return @min(workspace.activeIndex(), count - 1);
             }
@@ -869,7 +869,7 @@ const AppState = struct {
 
     fn activeTerminalSession(self: *AppState) ?*TerminalSession {
         const idx = self.activeTerminalArrayIndex() orelse return null;
-        if (app_modes.ide.isTerminalOnly(self.app_mode)) {
+        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
             if (self.terminal_workspace) |*workspace| {
                 return workspace.sessionAt(idx);
             }
@@ -885,7 +885,7 @@ const AppState = struct {
     }
 
     fn syncTerminalModeTabBar(self: *AppState) !void {
-        if (!app_modes.ide.isTerminalOnly(self.app_mode)) return;
+        if (!app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) return;
         if (self.terminal_workspace) |*workspace| {
             const count = workspace.tabCount();
             var has_non_terminal = false;
@@ -1085,7 +1085,7 @@ const AppState = struct {
     }
 
     fn focusTerminalTabByIndex(self: *AppState, index: usize) bool {
-        if (!app_modes.ide.isTerminalOnly(self.app_mode)) return false;
+        if (!app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) return false;
         if (self.terminal_workspace) |*workspace| {
             const tab_id = self.tab_bar.terminalTabIdAtVisual(index) orelse return false;
             if (!workspace.activateTab(tab_id)) return false;
@@ -1100,7 +1100,7 @@ const AppState = struct {
     }
 
     fn cycleTerminalTab(self: *AppState, next: bool) bool {
-        if (!app_modes.ide.isTerminalOnly(self.app_mode)) return false;
+        if (!app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) return false;
         if (self.terminal_workspace) |*workspace| {
             const changed = if (next) workspace.activateNext() else workspace.activatePrev();
             if (!changed) return false;
@@ -1121,7 +1121,7 @@ const AppState = struct {
     }
 
     fn closeActiveTerminalTab(self: *AppState) !bool {
-        if (!app_modes.ide.isTerminalOnly(self.app_mode)) return false;
+        if (!app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) return false;
         if (self.terminal_workspace) |*workspace| {
             if (workspace.tabCount() == 0) return false;
             if (workspace.activeTabId()) |active_tab_id| {
@@ -1164,7 +1164,7 @@ const AppState = struct {
         const width = @as(f32, @floatFromInt(shell.width()));
         const height = @as(f32, @floatFromInt(shell.height()));
         const layout = self.computeLayout(width, height);
-        if (app_modes.ide.isTerminalOnly(self.app_mode)) {
+        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
             self.active_kind = .terminal;
         } else if (app_modes.ide.isEditorOnly(self.app_mode)) {
             self.active_kind = .editor;
@@ -1174,7 +1174,7 @@ const AppState = struct {
         const rows: u16 = initial_grid.rows;
         const theme = &self.terminal_theme;
 
-        if (app_modes.ide.isTerminalOnly(self.app_mode)) {
+        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
             if (self.terminal_workspace) |*workspace| {
                 _ = try workspace.createTab(rows, cols);
                 const term = workspace.activeSession() orelse return error.TerminalWorkspaceNoActiveTab;
@@ -1294,7 +1294,7 @@ const AppState = struct {
         const grid = self.terminalGridSize(layout.terminal.width, effective_height, 1, 1);
         const cols: u16 = grid.cols;
         const rows: u16 = grid.rows;
-        if (app_modes.ide.isTerminalOnly(self.app_mode)) {
+        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
             if (self.terminal_workspace) |*workspace| {
                 workspace.setCellSizeAll(
                     @intFromFloat(shell.terminalCellWidth()),
@@ -1329,7 +1329,7 @@ const AppState = struct {
     }
 
     pub fn run(self: *AppState) !void {
-        if (app_modes.ide.isTerminalOnly(self.app_mode)) {
+        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
             if (self.terminalTabCount() == 0) {
                 try self.newTerminal();
             }
@@ -1390,7 +1390,7 @@ const AppState = struct {
             defer input_batch.deinit();
 
             self.frame_id +|= 1;
-            if (!app_modes.ide.isTerminalOnly(self.app_mode)) {
+            if (!app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
                 self.editor_cluster_cache.beginFrame(self.frame_id);
             }
 
@@ -1516,7 +1516,7 @@ const AppState = struct {
         self.tab_bar.updateInput(self.last_input);
         self.side_nav.updateInput(self.last_input);
         self.status_bar.updateInput(self.last_input);
-        if (app_modes.ide.isTerminalOnly(self.app_mode)) {
+        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
             try self.syncTerminalModeTabBar();
         }
         const now = app_shell.getTime();
@@ -1793,7 +1793,7 @@ const AppState = struct {
                 const grid = self.terminalGridSize(layout.terminal.width, effective_height, 1, 1);
                 const cols: u16 = grid.cols;
                 const rows: u16 = grid.rows;
-                if (app_modes.ide.isTerminalOnly(self.app_mode)) {
+                if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
                     if (self.terminal_workspace) |*workspace| {
                         workspace.setCellSizeAll(
                             @intFromFloat(shell.terminalCellWidth()),
@@ -2281,7 +2281,7 @@ const AppState = struct {
 
         // Update terminal if shown
         if (app_modes.ide.supportsTerminalSurface(self.app_mode) and self.show_terminal and self.terminalTabCount() > 0) {
-            if (app_modes.ide.isTerminalOnly(self.app_mode)) {
+            if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
                 if (self.terminal_workspace) |*workspace| {
                     const polled = try workspace.pollAll(
                         self.activeTerminalArrayIndex(),
@@ -2368,7 +2368,7 @@ const AppState = struct {
                 }
             }
         }
-        if (app_modes.ide.isTerminalOnly(self.app_mode)) {
+        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
             try self.syncTerminalModeTabBar();
         }
     }
@@ -2811,7 +2811,7 @@ const AppState = struct {
 
             // Draw tab bar
             tab_tooltip = self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
-        } else if (app_modes.ide.isTerminalOnly(self.app_mode)) {
+        } else if (app_modes.ide.useTerminalTabBarWidthMode(self.app_mode)) {
             self.applyCurrentTabBarWidthMode();
             const tab_theme = self.terminalTabBarTheme();
             shell.setTheme(tab_theme);
