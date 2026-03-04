@@ -1201,6 +1201,59 @@ const AppState = struct {
         self.perf_logger.logf("perf complete frames={d}", .{self.perf_frames_done});
     }
 
+    fn runOneFrame(self: *AppState) !bool {
+        return try app_run_loop_driver.runOneFrame(
+            @ptrCast(self),
+            .{
+                .prepare_run_frame = struct {
+                    fn step(step_raw: *anyopaque) !?app_run_loop_driver.FrameSetup {
+                        const step_state: *AppState = @ptrCast(@alignCast(step_raw));
+                        return try app_prepare_run_frame_runtime.prepare(step_state);
+                    }
+                }.step,
+                .update = struct {
+                    fn step(step_raw: *anyopaque, input_batch: *shared_types.input.InputBatch) !void {
+                        const step_state: *AppState = @ptrCast(@alignCast(step_raw));
+                        try step_state.handleUpdateFrame(input_batch);
+                    }
+                }.step,
+                .handle_frame_render_and_idle = struct {
+                    fn step(step_raw: *anyopaque, input_batch: *shared_types.input.InputBatch, poll_ms: f64, build_ms: f64, update_ms: f64) void {
+                        const step_state: *AppState = @ptrCast(@alignCast(step_raw));
+                        step_state.handleFrameRenderAndIdle(input_batch, poll_ms, build_ms, update_ms);
+                    }
+                }.step,
+                .should_stop_for_perf = struct {
+                    fn step(step_raw: *anyopaque) bool {
+                        const step_state: *AppState = @ptrCast(@alignCast(step_raw));
+                        return step_state.shouldStopForPerfFrame();
+                    }
+                }.step,
+                .on_perf_complete = struct {
+                    fn step(step_raw: *anyopaque) void {
+                        const step_state: *AppState = @ptrCast(@alignCast(step_raw));
+                        step_state.onPerfCompleteFrame();
+                    }
+                }.step,
+            },
+        );
+    }
+
+    fn runMainLoop(self: *AppState) !void {
+        try app_run_loop_driver.runMainLoop(
+            self.shell,
+            @ptrCast(self),
+            .{
+                .run_one_frame = struct {
+                    fn inner(one_frame_raw: *anyopaque) !bool {
+                        const one_frame_state: *AppState = @ptrCast(@alignCast(one_frame_raw));
+                        return try one_frame_state.runOneFrame();
+                    }
+                }.inner,
+            },
+        );
+    }
+
     pub fn newTerminal(self: *AppState) !void {
         // Calculate terminal size based on UI
         const shell = self.shell;
@@ -1290,51 +1343,7 @@ const AppState = struct {
                 .run_main_loop = struct {
                     fn call(raw: *anyopaque) !void {
                         const run_state: *AppState = @ptrCast(@alignCast(raw));
-                        try app_run_loop_driver.runMainLoop(
-                            run_state.shell,
-                            raw,
-                            .{
-                                .run_one_frame = struct {
-                                    fn inner(one_frame_raw: *anyopaque) !bool {
-                                        return try app_run_loop_driver.runOneFrame(
-                                            one_frame_raw,
-                                            .{
-                                                .prepare_run_frame = struct {
-                                                    fn step(step_raw: *anyopaque) !?app_run_loop_driver.FrameSetup {
-                                                        const step_state: *AppState = @ptrCast(@alignCast(step_raw));
-                                                        return try app_prepare_run_frame_runtime.prepare(step_state);
-                                                    }
-                                                }.step,
-                                                .update = struct {
-                                                    fn step(step_raw: *anyopaque, input_batch: *shared_types.input.InputBatch) !void {
-                                                        const step_state: *AppState = @ptrCast(@alignCast(step_raw));
-                                                        try step_state.handleUpdateFrame(input_batch);
-                                                    }
-                                                }.step,
-                                                .handle_frame_render_and_idle = struct {
-                                                    fn step(step_raw: *anyopaque, input_batch: *shared_types.input.InputBatch, poll_ms: f64, build_ms: f64, update_ms: f64) void {
-                                                        const step_state: *AppState = @ptrCast(@alignCast(step_raw));
-                                                        step_state.handleFrameRenderAndIdle(input_batch, poll_ms, build_ms, update_ms);
-                                                    }
-                                                }.step,
-                                                .should_stop_for_perf = struct {
-                                                    fn step(step_raw: *anyopaque) bool {
-                                                        const step_state: *AppState = @ptrCast(@alignCast(step_raw));
-                                                        return step_state.shouldStopForPerfFrame();
-                                                    }
-                                                }.step,
-                                                .on_perf_complete = struct {
-                                                    fn step(step_raw: *anyopaque) void {
-                                                        const step_state: *AppState = @ptrCast(@alignCast(step_raw));
-                                                        step_state.onPerfCompleteFrame();
-                                                    }
-                                                }.step,
-                                            },
-                                        );
-                                    }
-                                }.inner,
-                            },
-                        );
+                        try run_state.runMainLoop();
                     }
                 }.call,
             },
