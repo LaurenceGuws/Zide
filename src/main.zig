@@ -12,6 +12,7 @@ const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
 const app_terminal_grid = @import("app/terminal_grid.zig");
 const app_terminal_runtime_intents = @import("app/terminal_runtime_intents.zig");
+const app_terminal_intent_route_runtime = @import("app/terminal_intent_route_runtime.zig");
 const app_terminal_active_widget = @import("app/terminal_active_widget.zig");
 const app_terminal_clipboard_shortcuts_frame = @import("app/terminal_clipboard_shortcuts_frame.zig");
 const app_terminal_tab_bar_sync_runtime = @import("app/terminal_tab_bar_sync_runtime.zig");
@@ -606,17 +607,7 @@ const AppState = struct {
     }
 
     fn requestCloseActiveTerminalTab(self: *AppState, now: f64) !bool {
-        _ = try app_terminal_runtime_intents.routeForActiveWorkspaceTabAndSync(
-            .close,
-            &self.terminal_workspace,
-            @ptrCast(self),
-            struct {
-                fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
-                    const state: *AppState = @ptrCast(@alignCast(raw));
-                    try app_tab_action_apply_runtime.applyTerminalAndSync(state, action);
-                }
-            }.call,
-        );
+        _ = try app_terminal_intent_route_runtime.routeActiveAndSync(self, .close);
         if (try app_terminal_close_active_runtime.closeActive(
             self,
             @ptrCast(self),
@@ -776,17 +767,7 @@ const AppState = struct {
             self.active_kind = .terminal;
             try app_mode_adapter_sync_runtime.sync(self);
         }
-        _ = try app_terminal_runtime_intents.routeForActiveWorkspaceTabAndSync(
-            .activate,
-            &self.terminal_workspace,
-            @ptrCast(self),
-            struct {
-                fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
-                    const state: *AppState = @ptrCast(@alignCast(raw));
-                    try app_tab_action_apply_runtime.applyTerminalAndSync(state, action);
-                }
-            }.call,
-        );
+        _ = try app_terminal_intent_route_runtime.routeActiveAndSync(self, .activate);
     }
 
     fn handleEditorMousePressedRouting(self: *AppState) !void {
@@ -828,16 +809,10 @@ const AppState = struct {
             }
             if (release_plan.handle_click) {
                 if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width)) {
-                    _ = try app_terminal_runtime_intents.routeByTabIdAndSync(
+                    _ = try app_terminal_intent_route_runtime.routeByTabIdAndSync(
+                        self,
                         .activate,
                         self.tab_bar.terminalTabIdAtVisual(self.tab_bar.active_index),
-                        @ptrCast(self),
-                        struct {
-                            fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
-                                const state: *AppState = @ptrCast(@alignCast(raw));
-                                try app_tab_action_apply_runtime.applyTerminalAndSync(state, action);
-                            }
-                        }.call,
                     );
                     if (app_terminal_tab_navigation_runtime.focusByIndex(self, self.tab_bar.active_index)) {
                         self.needs_redraw = true;
@@ -1480,17 +1455,7 @@ const AppState = struct {
                                 .route_close_intent_and_sync = struct {
                                     fn inner(inner_raw: *anyopaque) !void {
                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                        _ = try app_terminal_runtime_intents.routeForActiveWorkspaceTabAndSync(
-                                            .close,
-                                            &inner_state.terminal_workspace,
-                                            @ptrCast(inner_state),
-                                            struct {
-                                                fn call(route_raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
-                                                    const route_state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                    try app_tab_action_apply_runtime.applyTerminalAndSync(route_state, action);
-                                                }
-                                            }.call,
-                                        );
+                                        _ = try app_terminal_intent_route_runtime.routeActiveAndSync(inner_state, .close);
                                     }
                                 }.inner,
                                 .close_active_terminal_tab = struct {
