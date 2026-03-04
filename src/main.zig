@@ -10,6 +10,7 @@ const app_config_reload_notice = @import("app/config_reload_notice.zig");
 const app_terminal_grid = @import("app/terminal_grid.zig");
 const app_terminal_runtime_intents = @import("app/terminal_runtime_intents.zig");
 const app_terminal_active_session = @import("app/terminal_active_session.zig");
+const app_terminal_tab_bar_sync = @import("app/terminal_tab_bar_sync.zig");
 const app_terminal_tab_ops = @import("app/terminal_tab_ops.zig");
 const app_terminal_shortcut_policy = @import("app/terminal_shortcut_policy.zig");
 const app_terminal_shortcut_runtime = @import("app/terminal_shortcut_runtime.zig");
@@ -592,64 +593,7 @@ const AppState = struct {
 
     fn syncTerminalModeTabBar(self: *AppState) !void {
         if (!app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) return;
-        if (self.terminal_workspace) |*workspace| {
-            const count = workspace.tabCount();
-            var has_non_terminal = false;
-            for (self.tab_bar.tabs.items) |tab| {
-                if (tab.kind != .terminal) {
-                    has_non_terminal = true;
-                    break;
-                }
-            }
-            if (has_non_terminal) {
-                self.tab_bar.clearTabs();
-            }
-
-            // Remove tabs that no longer exist in workspace.
-            var i: usize = self.tab_bar.tabs.items.len;
-            while (i > 0) {
-                i -= 1;
-                const tab = self.tab_bar.tabs.items[i];
-                if (tab.kind != .terminal) {
-                    self.tab_bar.removeTabAt(i);
-                    continue;
-                }
-                const tab_id = tab.terminal_tab_id orelse {
-                    self.tab_bar.removeTabAt(i);
-                    continue;
-                };
-                var found = false;
-                for (0..count) |widx| {
-                    if (workspace.tabIdAt(widx)) |wid| {
-                        if (wid == tab_id) {
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-                if (!found) self.tab_bar.removeTabAt(i);
-            }
-
-            // Add missing tabs and refresh titles while preserving current visual order.
-            for (0..count) |widx| {
-                const tab_id = workspace.tabIdAt(widx) orelse continue;
-                const session = workspace.sessionAt(widx) orelse continue;
-                const title = if (session.currentTitle().len > 0) session.currentTitle() else "Terminal";
-                if (self.tab_bar.indexOfTerminalTabId(tab_id)) |bar_idx| {
-                    try self.tab_bar.setTabTitle(bar_idx, title);
-                } else {
-                    try self.tab_bar.addTerminalTab(title, tab_id);
-                }
-            }
-
-            if (workspace.activeTabId()) |active_id| {
-                self.tab_bar.active_index = self.tab_bar.indexOfTerminalTabId(active_id) orelse 0;
-            } else {
-                self.tab_bar.active_index = 0;
-            }
-        } else {
-            self.tab_bar.clearTabs();
-        }
+        try app_terminal_tab_bar_sync.syncFromWorkspace(&self.tab_bar, &self.terminal_workspace);
         try self.syncModeAdaptersFromTabBar();
     }
 
