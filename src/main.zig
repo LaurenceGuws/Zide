@@ -790,28 +790,24 @@ const AppState = struct {
         return true;
     }
 
+    fn canHandleTerminalShortcutIntent(self: *AppState, intent: app_modes.ide.TerminalShortcutIntent) bool {
+        return switch (intent) {
+            .focus => app_modes.ide.canHandleTerminalTabFocusShortcuts(self.app_mode),
+            else => app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode),
+        };
+    }
+
     fn handleTerminalShortcutIntent(
         self: *AppState,
         intent: app_modes.ide.TerminalShortcutIntent,
         now: f64,
     ) !bool {
+        if (!self.canHandleTerminalShortcutIntent(intent)) return false;
         return switch (intent) {
-            .create => blk: {
-                if (!app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) break :blk false;
-                break :blk try self.requestCreateTerminalTab(now);
-            },
-            .close => blk: {
-                if (!app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) break :blk false;
-                break :blk try self.requestCloseActiveTerminalTab(now);
-            },
-            .cycle => |dir| blk: {
-                if (!app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) break :blk false;
-                break :blk try self.requestCycleTerminalTabWithIntent(dir, now);
-            },
-            .focus => |route| blk: {
-                if (!app_modes.ide.canHandleTerminalTabFocusShortcuts(self.app_mode)) break :blk false;
-                break :blk try self.requestFocusTerminalTabWithIntent(route, now);
-            },
+            .create => self.requestCreateTerminalTab(now),
+            .close => self.requestCloseActiveTerminalTab(now),
+            .cycle => |dir| self.requestCycleTerminalTabWithIntent(dir, now),
+            .focus => |route| self.requestFocusTerminalTabWithIntent(route, now),
         };
     }
 
