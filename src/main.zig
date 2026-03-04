@@ -1498,6 +1498,50 @@ const AppState = struct {
         }
     }
 
+    fn logMouseDebugClick(self: *AppState, shell: *Shell) void {
+        if (!self.mouse_debug) return;
+        const r = shell.rendererPtr();
+        const raw = r.getMousePosRaw();
+        const scaled = r.getMousePos();
+        const dpi = r.getDpiScale();
+        const screen = r.getScreenSize();
+        const render = r.getRenderSize();
+        const monitor = r.getMonitorSize();
+        const scale_screen = if (render.x > 0) screen.x / render.x else 1.0;
+        const scale_render = if (screen.x > 0) render.x / screen.x else 1.0;
+        const via_screen = r.getMousePosScaled(scale_screen);
+        const via_render = r.getMousePosScaled(scale_render);
+
+        std.debug.print(
+            "mouse click raw({d:.1},{d:.1}) scaled({d:.1},{d:.1}) dpi({d:.2},{d:.2}) scr({d:.0}x{d:.0}) ren({d:.0}x{d:.0}) mon({d:.0}x{d:.0}) via_screen({d:.1},{d:.1}) via_render({d:.1},{d:.1}) scale({d:.2})\n",
+            .{
+                raw.x,
+                raw.y,
+                scaled.x,
+                scaled.y,
+                dpi.x,
+                dpi.y,
+                screen.x,
+                screen.y,
+                render.x,
+                render.y,
+                monitor.x,
+                monitor.y,
+                via_screen.x,
+                via_screen.y,
+                via_render.x,
+                via_render.y,
+                shell.mouseScale().x,
+            },
+        );
+    }
+
+    fn postFrameModeSync(self: *AppState) !void {
+        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
+            try self.syncTerminalModeTabBar();
+        }
+    }
+
     fn logModeAdapterParity(self: *AppState) void {
         const log = app_logger.logger("app.mode.parity");
         if (!log.enabled_file and !log.enabled_console) return;
@@ -2542,42 +2586,7 @@ const AppState = struct {
                 .terminal => try self.handleTerminalMousePressedRouting(layout, mouse),
                 .editor => try self.handleEditorMousePressedRouting(),
             }
-
-            if (self.mouse_debug) {
-                const raw = r.getMousePosRaw();
-                const scaled = r.getMousePos();
-                const dpi = r.getDpiScale();
-                const screen = r.getScreenSize();
-                const render = r.getRenderSize();
-                const monitor = r.getMonitorSize();
-                const scale_screen = if (render.x > 0) screen.x / render.x else 1.0;
-                const scale_render = if (screen.x > 0) render.x / screen.x else 1.0;
-                const via_screen = r.getMousePosScaled(scale_screen);
-                const via_render = r.getMousePosScaled(scale_render);
-
-                std.debug.print(
-                    "mouse click raw({d:.1},{d:.1}) scaled({d:.1},{d:.1}) dpi({d:.2},{d:.2}) scr({d:.0}x{d:.0}) ren({d:.0}x{d:.0}) mon({d:.0}x{d:.0}) via_screen({d:.1},{d:.1}) via_render({d:.1},{d:.1}) scale({d:.2})\n",
-                    .{
-                        raw.x,
-                        raw.y,
-                        scaled.x,
-                        scaled.y,
-                        dpi.x,
-                        dpi.y,
-                        screen.x,
-                        screen.y,
-                        render.x,
-                        render.y,
-                        monitor.x,
-                        monitor.y,
-                        via_screen.x,
-                        via_screen.y,
-                        via_render.x,
-                        via_render.y,
-                        shell.mouseScale().x,
-                    },
-                );
-            }
+            self.logMouseDebugClick(shell);
         }
 
         if (app_modes.ide.canDriveTerminalTabDrag(self.app_mode)) {
@@ -2602,9 +2611,7 @@ const AppState = struct {
             terminal_close_modal_active,
             now,
         );
-        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-            try self.syncTerminalModeTabBar();
-        }
+        try self.postFrameModeSync();
     }
 
     fn openTerminalScrollbackInPager(self: *AppState, term_widget: *TerminalWidget, term: *TerminalSession) !bool {
