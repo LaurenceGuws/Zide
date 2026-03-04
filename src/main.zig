@@ -728,24 +728,20 @@ const AppState = struct {
         self.logModeAdapterParity();
     }
 
-    fn routeTerminalCloseIntentByTabIdAndSync(self: *AppState, active_tab_id: ?u64) !bool {
-        return app_terminal_intent_route.routeCloseByTabIdAndSync(
-            active_tab_id,
-            @ptrCast(self),
-            routeTerminalTabActionFromCtx,
-        );
-    }
-
-    fn routeTerminalCloseIntentForActiveWorkspaceTabAndSync(self: *AppState) !bool {
-        return app_terminal_workspace_route.routeActiveTabId(
+    fn requestCloseActiveTerminalTab(self: *AppState, now: f64) !bool {
+        _ = try app_terminal_workspace_route.routeActiveTabId(
             &self.terminal_workspace,
             @ptrCast(self),
-            routeTerminalCloseIntentByTabIdFromCtx,
+            struct {
+                fn call(raw: *anyopaque, tab_id: ?u64) !bool {
+                    return app_terminal_intent_route.routeCloseByTabIdAndSync(
+                        tab_id,
+                        raw,
+                        routeTerminalTabActionFromCtx,
+                    );
+                }
+            }.call,
         );
-    }
-
-    fn requestCloseActiveTerminalTab(self: *AppState, now: f64) !bool {
-        _ = try self.routeTerminalCloseIntentForActiveWorkspaceTabAndSync();
         if (try self.closeActiveTerminalTab()) {
             self.needs_redraw = true;
             self.metrics.noteInput(now);
@@ -836,14 +832,6 @@ const AppState = struct {
         self.metrics.noteInput(now);
     }
 
-    fn routeTerminalActivateIntentByTabIdAndSync(self: *AppState, tab_id: ?u64) !bool {
-        return app_terminal_intent_route.routeActivateByTabIdAndSync(
-            tab_id,
-            @ptrCast(self),
-            routeTerminalTabActionFromCtx,
-        );
-    }
-
     fn routeTerminalTabActionFromCtx(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
         const state: *AppState = @ptrCast(@alignCast(raw));
         try state.routeTerminalTabActionAndSync(action);
@@ -852,24 +840,6 @@ const AppState = struct {
     fn routeEditorTabActionFromCtx(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
         const state: *AppState = @ptrCast(@alignCast(raw));
         try state.routeEditorTabActionAndSync(action);
-    }
-
-    fn routeTerminalActiveWorkspaceTabIntent(self: *AppState) !void {
-        _ = try app_terminal_workspace_route.routeActiveTabId(
-            &self.terminal_workspace,
-            @ptrCast(self),
-            routeTerminalActivateIntentByTabIdFromCtx,
-        );
-    }
-
-    fn routeTerminalCloseIntentByTabIdFromCtx(raw: *anyopaque, tab_id: ?u64) !bool {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        return state.routeTerminalCloseIntentByTabIdAndSync(tab_id);
-    }
-
-    fn routeTerminalActivateIntentByTabIdFromCtx(raw: *anyopaque, tab_id: ?u64) !bool {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        return state.routeTerminalActivateIntentByTabIdAndSync(tab_id);
     }
 
     fn handleIdeMousePressedRouting(
@@ -914,7 +884,19 @@ const AppState = struct {
             _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
         }
         _ = try self.setActiveKindAndSyncIfChanged(.terminal);
-        try self.routeTerminalActiveWorkspaceTabIntent();
+        _ = try app_terminal_workspace_route.routeActiveTabId(
+            &self.terminal_workspace,
+            @ptrCast(self),
+            struct {
+                fn call(raw: *anyopaque, tab_id: ?u64) !bool {
+                    return app_terminal_intent_route.routeActivateByTabIdAndSync(
+                        tab_id,
+                        raw,
+                        routeTerminalTabActionFromCtx,
+                    );
+                }
+            }.call,
+        );
     }
 
     fn handleEditorMousePressedRouting(self: *AppState) !void {
@@ -948,8 +930,10 @@ const AppState = struct {
             }
             if (release_plan.handle_click) {
                 if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width)) {
-                    _ = try self.routeTerminalActivateIntentByTabIdAndSync(
+                    _ = try app_terminal_intent_route.routeActivateByTabIdAndSync(
                         self.tab_bar.terminalTabIdAtVisual(self.tab_bar.active_index),
+                        @ptrCast(self),
+                        routeTerminalTabActionFromCtx,
                     );
                     if (self.focusTerminalTabByIndex(self.tab_bar.active_index)) {
                         self.needs_redraw = true;
@@ -2207,7 +2191,19 @@ const AppState = struct {
     }
 
     fn requestConfirmTerminalCloseFromModal(self: *AppState, now: f64) !bool {
-        _ = try self.routeTerminalCloseIntentForActiveWorkspaceTabAndSync();
+        _ = try app_terminal_workspace_route.routeActiveTabId(
+            &self.terminal_workspace,
+            @ptrCast(self),
+            struct {
+                fn call(raw: *anyopaque, tab_id: ?u64) !bool {
+                    return app_terminal_intent_route.routeCloseByTabIdAndSync(
+                        tab_id,
+                        raw,
+                        routeTerminalTabActionFromCtx,
+                    );
+                }
+            }.call,
+        );
         if (try self.closeActiveTerminalTab()) {
             self.needs_redraw = true;
         }
@@ -3367,7 +3363,7 @@ fn deinitTestAppStateForTerminalTabRouting(app: *AppState, allocator: std.mem.Al
     app.terminal_mode_adapter.deinit(allocator);
 }
 
-test "routeTerminalCloseIntentByTabIdAndSync emits only when tab id is present" {
+test "terminal close intent routing emits only when tab id is present" {
     const allocator = std.testing.allocator;
     var app = try initTestAppStateForTerminalTabRouting(allocator);
     defer deinitTestAppStateForTerminalTabRouting(&app, allocator);
@@ -3377,8 +3373,26 @@ test "routeTerminalCloseIntentByTabIdAndSync emits only when tab id is present" 
     app.tab_bar.active_index = 1;
     try app.syncModeAdaptersFromTabBar();
 
-    try std.testing.expect(try app.routeTerminalCloseIntentByTabIdAndSync(202));
-    try std.testing.expect(!try app.routeTerminalCloseIntentByTabIdAndSync(null));
+    try std.testing.expect(try app_terminal_intent_route.routeCloseByTabIdAndSync(
+        202,
+        @ptrCast(&app),
+        struct {
+            fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                const state: *AppState = @ptrCast(@alignCast(raw));
+                try state.routeTerminalTabActionAndSync(action);
+            }
+        }.call,
+    ));
+    try std.testing.expect(!try app_terminal_intent_route.routeCloseByTabIdAndSync(
+        null,
+        @ptrCast(&app),
+        struct {
+            fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                const state: *AppState = @ptrCast(@alignCast(raw));
+                try state.routeTerminalTabActionAndSync(action);
+            }
+        }.call,
+    ));
 }
 
 test "routeTerminalTabActionAndSync keeps terminal mode aligned with reordered tab bar" {
@@ -3411,7 +3425,7 @@ test "routeTerminalTabActionAndSync keeps terminal mode aligned with reordered t
     try std.testing.expectEqual(@as(u64, 33), snap.tabs[2].id);
 }
 
-test "routeTerminalActivateIntentByTabIdAndSync emits only when tab id exists" {
+test "terminal activate intent routing emits only when tab id exists" {
     const allocator = std.testing.allocator;
     var app = try initTestAppStateForTerminalTabRouting(allocator);
     defer deinitTestAppStateForTerminalTabRouting(&app, allocator);
@@ -3421,8 +3435,26 @@ test "routeTerminalActivateIntentByTabIdAndSync emits only when tab id exists" {
     app.tab_bar.active_index = 0;
     try app.syncModeAdaptersFromTabBar();
 
-    try std.testing.expect(!try app.routeTerminalActivateIntentByTabIdAndSync(null));
-    try std.testing.expect(try app.routeTerminalActivateIntentByTabIdAndSync(1002));
+    try std.testing.expect(!try app_terminal_intent_route.routeActivateByTabIdAndSync(
+        null,
+        @ptrCast(&app),
+        struct {
+            fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                const state: *AppState = @ptrCast(@alignCast(raw));
+                try state.routeTerminalTabActionAndSync(action);
+            }
+        }.call,
+    ));
+    try std.testing.expect(try app_terminal_intent_route.routeActivateByTabIdAndSync(
+        1002,
+        @ptrCast(&app),
+        struct {
+            fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                const state: *AppState = @ptrCast(@alignCast(raw));
+                try state.routeTerminalTabActionAndSync(action);
+            }
+        }.call,
+    ));
 }
 
 test "requestCancelTerminalCloseFromModal clears pending tab and marks redraw" {
