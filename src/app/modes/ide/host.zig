@@ -108,6 +108,22 @@ pub fn canDriveTerminalTabDrag(app_mode: app_bootstrap.AppMode) bool {
     return isTerminalOnly(app_mode);
 }
 
+pub fn canResizeTerminalSplit(app_mode: app_bootstrap.AppMode, show_terminal: bool) bool {
+    return isIde(app_mode) and show_terminal;
+}
+
+pub fn shouldRenderTerminalSeparator(app_mode: app_bootstrap.AppMode) bool {
+    return isIde(app_mode);
+}
+
+pub fn suppressTerminalInputForTabDrag(app_mode: app_bootstrap.AppMode, tab_dragging: bool) bool {
+    return isTerminalOnly(app_mode) and tab_dragging;
+}
+
+pub fn shouldShowTerminalCloseConfirmModal(app_mode: app_bootstrap.AppMode, confirm_active: bool) bool {
+    return isTerminalOnly(app_mode) and confirm_active;
+}
+
 pub const IdeHost = struct {
     allocator: std.mem.Allocator,
     editor: shared.contracts.ModeContract,
@@ -260,4 +276,13 @@ test "mode policy helpers route focused mode deterministically" {
     try std.testing.expectEqual(MouseClickRoute.editor, mouseClickRoute(.editor));
     try std.testing.expect(canDriveTerminalTabDrag(.terminal));
     try std.testing.expect(!canDriveTerminalTabDrag(.ide));
+    try std.testing.expect(canResizeTerminalSplit(.ide, true));
+    try std.testing.expect(!canResizeTerminalSplit(.ide, false));
+    try std.testing.expect(!canResizeTerminalSplit(.terminal, true));
+    try std.testing.expect(shouldRenderTerminalSeparator(.ide));
+    try std.testing.expect(!shouldRenderTerminalSeparator(.terminal));
+    try std.testing.expect(suppressTerminalInputForTabDrag(.terminal, true));
+    try std.testing.expect(!suppressTerminalInputForTabDrag(.ide, true));
+    try std.testing.expect(shouldShowTerminalCloseConfirmModal(.terminal, true));
+    try std.testing.expect(!shouldShowTerminalCloseConfirmModal(.ide, true));
 }

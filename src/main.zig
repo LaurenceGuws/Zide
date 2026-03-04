@@ -1851,7 +1851,7 @@ const AppState = struct {
         self.last_ctrl_down = ctrl_down;
 
         // Terminal resize by dragging separator
-        if (app_modes.ide.isIde(self.app_mode) and self.show_terminal) {
+        if (app_modes.ide.canResizeTerminalSplit(self.app_mode, self.show_terminal)) {
             const separator_y = layout.terminal.y;
             const hit_zone: f32 = 6;
             const over_separator = mouse.y >= separator_y - hit_zone and mouse.y <= separator_y + hit_zone;
@@ -2309,7 +2309,7 @@ const AppState = struct {
                     self.needs_redraw = true;
                 }
                 if (self.active_kind == .terminal) {
-                    const suppress_terminal_input_for_tab_drag = app_modes.ide.isTerminalOnly(self.app_mode) and self.tab_bar.isDragging();
+                    const suppress_terminal_input_for_tab_drag = app_modes.ide.suppressTerminalInputForTabDrag(self.app_mode, self.tab_bar.isDragging());
                     if (!search_panel_consumed_input and try term_widget.handleInput(
                         shell,
                         term_x,
@@ -2844,7 +2844,7 @@ const AppState = struct {
             const term_y = layout.terminal.y;
 
             // Terminal separator
-            if (app_modes.ide.usesIdeTerminalStrip(self.app_mode)) {
+            if (app_modes.ide.shouldRenderTerminalSeparator(self.app_mode)) {
                 shell.setTheme(self.app_theme);
                 shell.drawRect(@intFromFloat(layout.terminal.x), @intFromFloat(term_y), @intFromFloat(layout.terminal.width), 2, self.app_theme.ui_border);
             }
@@ -2905,7 +2905,7 @@ const AppState = struct {
             widgets_common.drawTooltip(shell, tip.text, tip.x, tip.y);
         }
 
-        if (app_modes.ide.isTerminalOnly(self.app_mode) and self.terminalCloseConfirmActive()) {
+        if (app_modes.ide.shouldShowTerminalCloseConfirmModal(self.app_mode, self.terminalCloseConfirmActive())) {
             self.drawTerminalCloseConfirmModal(shell, layout);
         }
         self.drawConfigReloadNotice(shell, layout);
