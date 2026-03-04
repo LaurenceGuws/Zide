@@ -102,7 +102,7 @@ app_mode_layering_todo:
       tasks:
         - id: MODE-02-01
           title: "Add thin IDE host composition wrapper"
-          status: todo
+          status: in_progress
           files_to_add:
             - src/app/modes/ide/host.zig
           files_to_edit:
