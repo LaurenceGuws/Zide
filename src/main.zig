@@ -13,7 +13,7 @@ const app_terminal_grid = @import("app/terminal_grid.zig");
 const app_terminal_runtime_intents = @import("app/terminal_runtime_intents.zig");
 const app_terminal_active_widget = @import("app/terminal_active_widget.zig");
 const app_terminal_clipboard_shortcuts_frame = @import("app/terminal_clipboard_shortcuts_frame.zig");
-const app_terminal_tab_bar_sync = @import("app/terminal_tab_bar_sync.zig");
+const app_terminal_tab_bar_sync_runtime = @import("app/terminal_tab_bar_sync_runtime.zig");
 const app_terminal_tabs_runtime = @import("app/terminal_tabs_runtime.zig");
 const app_terminal_surface_gate = @import("app/terminal_surface_gate.zig");
 const app_terminal_shortcut_suppress = @import("app/terminal_shortcut_suppress.zig");
@@ -618,9 +618,7 @@ const AppState = struct {
                 .sync_terminal_mode_tab_bar = struct {
                     fn call(raw: *anyopaque) !void {
                         const state: *AppState = @ptrCast(@alignCast(raw));
-                        if (!app_modes.ide.shouldUseTerminalWorkspace(state.app_mode)) return;
-                        try app_terminal_tab_bar_sync.syncFromWorkspace(&state.tab_bar, &state.terminal_workspace);
-                        try app_mode_adapter_sync_runtime.sync(state);
+                        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(state);
                     }
                 }.call,
             },
@@ -641,10 +639,7 @@ const AppState = struct {
         app_tab_action_apply.applyTerminal(self.allocator, self.app_mode, &self.terminal_mode_adapter, .create);
         try app_mode_adapter_sync_runtime.sync(self);
         try self.newTerminal();
-        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-            try app_terminal_tab_bar_sync.syncFromWorkspace(&self.tab_bar, &self.terminal_workspace);
-            try app_mode_adapter_sync_runtime.sync(self);
-        }
+        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(self);
         self.needs_redraw = true;
         self.metrics.noteInput(now);
         return true;
@@ -1300,10 +1295,7 @@ const AppState = struct {
             terminal_close_modal_active,
             now,
         );
-        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-            try app_terminal_tab_bar_sync.syncFromWorkspace(&self.tab_bar, &self.terminal_workspace);
-            try app_mode_adapter_sync_runtime.sync(self);
-        }
+        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(self);
     }
 
     fn handleShortcutAction(
@@ -1507,9 +1499,7 @@ const AppState = struct {
                                                 .sync_terminal_mode_tab_bar = struct {
                                                     fn call(cb_raw: *anyopaque) !void {
                                                         const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
-                                                        if (!app_modes.ide.shouldUseTerminalWorkspace(cb_state.app_mode)) return;
-                                                        try app_terminal_tab_bar_sync.syncFromWorkspace(&cb_state.tab_bar, &cb_state.terminal_workspace);
-                                                        try app_mode_adapter_sync_runtime.sync(cb_state);
+                                                        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(cb_state);
                                                     }
                                                 }.call,
                                             },
@@ -1613,10 +1603,7 @@ const AppState = struct {
         self.tab_bar.updateInput(self.last_input);
         self.side_nav.updateInput(self.last_input);
         self.status_bar.updateInput(self.last_input);
-        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-            try app_terminal_tab_bar_sync.syncFromWorkspace(&self.tab_bar, &self.terminal_workspace);
-            try app_mode_adapter_sync_runtime.sync(self);
-        }
+        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(self);
     }
 
     fn tickConfigReloadNoticeFrame(self: *AppState, now: f64) void {
@@ -1911,10 +1898,7 @@ const AppState = struct {
                     self.terminal_focus_report_pane_events,
                 );
                 try self.terminal_widgets.append(self.allocator, widget);
-                if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-                    try app_terminal_tab_bar_sync.syncFromWorkspace(&self.tab_bar, &self.terminal_workspace);
-                    try app_mode_adapter_sync_runtime.sync(self);
-                }
+                try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(self);
                 try app_terminal_theme_apply.notifyColorSchemeChanged(&self.terminal_widgets, &self.terminal_theme);
                 self.show_terminal = true;
                 return;
@@ -1969,9 +1953,7 @@ const AppState = struct {
                                 .sync_terminal_mode_tab_bar = struct {
                                     fn cb(cb_raw: *anyopaque) !void {
                                         const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
-                                        if (!app_modes.ide.shouldUseTerminalWorkspace(cb_state.app_mode)) return;
-                                        try app_terminal_tab_bar_sync.syncFromWorkspace(&cb_state.tab_bar, &cb_state.terminal_workspace);
-                                        try app_mode_adapter_sync_runtime.sync(cb_state);
+                                        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(cb_state);
                                     }
                                 }.cb,
                                 .open_file = struct {
