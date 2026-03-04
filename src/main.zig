@@ -903,21 +903,59 @@ const AppState = struct {
         if (self.app_mode != .terminal) return;
         if (self.terminal_workspace) |*workspace| {
             const count = workspace.tabCount();
-            if (self.tab_bar.tabs.items.len != count) {
-                self.tab_bar.clearTabs();
-                for (0..count) |i| {
-                    const session = workspace.sessionAt(i) orelse continue;
-                    const title = if (session.currentTitle().len > 0) session.currentTitle() else "Terminal";
-                    try self.tab_bar.addTab(title, .terminal);
-                }
-            } else {
-                for (0..count) |i| {
-                    const session = workspace.sessionAt(i) orelse continue;
-                    const title = if (session.currentTitle().len > 0) session.currentTitle() else "Terminal";
-                    try self.tab_bar.setTabTitle(i, title);
+            var has_non_terminal = false;
+            for (self.tab_bar.tabs.items) |tab| {
+                if (tab.kind != .terminal) {
+                    has_non_terminal = true;
+                    break;
                 }
             }
-            self.tab_bar.active_index = if (count == 0) 0 else @min(workspace.activeIndex(), count - 1);
+            if (has_non_terminal) {
+                self.tab_bar.clearTabs();
+            }
+
+            // Remove tabs that no longer exist in workspace.
+            var i: usize = self.tab_bar.tabs.items.len;
+            while (i > 0) {
+                i -= 1;
+                const tab = self.tab_bar.tabs.items[i];
+                if (tab.kind != .terminal) {
+                    self.tab_bar.removeTabAt(i);
+                    continue;
+                }
+                const tab_id = tab.terminal_tab_id orelse {
+                    self.tab_bar.removeTabAt(i);
+                    continue;
+                };
+                var found = false;
+                for (0..count) |widx| {
+                    if (workspace.tabIdAt(widx)) |wid| {
+                        if (wid == tab_id) {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if (!found) self.tab_bar.removeTabAt(i);
+            }
+
+            // Add missing tabs and refresh titles while preserving current visual order.
+            for (0..count) |widx| {
+                const tab_id = workspace.tabIdAt(widx) orelse continue;
+                const session = workspace.sessionAt(widx) orelse continue;
+                const title = if (session.currentTitle().len > 0) session.currentTitle() else "Terminal";
+                if (self.tab_bar.indexOfTerminalTabId(tab_id)) |bar_idx| {
+                    try self.tab_bar.setTabTitle(bar_idx, title);
+                } else {
+                    try self.tab_bar.addTerminalTab(title, tab_id);
+                }
+            }
+
+            if (workspace.activeTabId()) |active_id| {
+                self.tab_bar.active_index = self.tab_bar.indexOfTerminalTabId(active_id) orelse 0;
+            } else {
+                self.tab_bar.active_index = 0;
+            }
         } else {
             self.tab_bar.clearTabs();
         }
@@ -1064,8 +1102,9 @@ const AppState = struct {
     fn focusTerminalTabByIndex(self: *AppState, index: usize) bool {
         if (self.app_mode != .terminal) return false;
         if (self.terminal_workspace) |*workspace| {
-            if (!workspace.activateIndex(index)) return false;
-            self.tab_bar.active_index = workspace.activeIndex();
+            const tab_id = self.tab_bar.terminalTabIdAtVisual(index) orelse return false;
+            if (!workspace.activateTab(tab_id)) return false;
+            self.tab_bar.active_index = self.tab_bar.indexOfTerminalTabId(tab_id) orelse self.tab_bar.active_index;
             self.clearTerminalCloseConfirm();
             if (self.activeTerminalWidget()) |widget| {
                 widget.invalidateTextureCache();
@@ -1080,7 +1119,9 @@ const AppState = struct {
         if (self.terminal_workspace) |*workspace| {
             const changed = if (next) workspace.activateNext() else workspace.activatePrev();
             if (!changed) return false;
-            self.tab_bar.active_index = workspace.activeIndex();
+            if (workspace.activeTabId()) |active_id| {
+                self.tab_bar.active_index = self.tab_bar.indexOfTerminalTabId(active_id) orelse self.tab_bar.active_index;
+            }
             self.clearTerminalCloseConfirm();
             if (self.activeTerminalWidget()) |widget| {
                 widget.invalidateTextureCache();
@@ -2066,12 +2107,7 @@ const AppState = struct {
                     self.metrics.noteInput(now);
                 }
             } else if (self.app_mode == .terminal) {
-                if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y)) {
-                    if (self.focusTerminalTabByIndex(self.tab_bar.active_index)) {
-                        self.needs_redraw = true;
-                        self.metrics.noteInput(now);
-                    }
-                }
+                _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y);
                 self.active_kind = .terminal;
             } else {
                 self.active_kind = .editor;
@@ -2111,6 +2147,30 @@ const AppState = struct {
                         shell.mouseScale().x,
                     },
                 );
+            }
+        }
+
+        if (self.app_mode == .terminal) {
+            if (input_batch.mouseDown(.left)) {
+                if (self.tab_bar.updateDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, true)) {
+                    self.needs_redraw = true;
+                    self.metrics.noteInput(now);
+                }
+            }
+            if (input_batch.mouseReleased(.left)) {
+                const drag_end = self.tab_bar.endDrag();
+                if (drag_end.active and !drag_end.moved) {
+                    if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y)) {
+                        if (self.focusTerminalTabByIndex(self.tab_bar.active_index)) {
+                            self.needs_redraw = true;
+                            self.metrics.noteInput(now);
+                        }
+                    }
+                }
+                if (drag_end.active) {
+                    self.needs_redraw = true;
+                    self.metrics.noteInput(now);
+                }
             }
         }
 
@@ -2272,19 +2332,20 @@ const AppState = struct {
                 if (term_widget.updateBlink(now)) {
                     self.needs_redraw = true;
                 }
-            if (self.active_kind == .terminal) {
-                if (!search_panel_consumed_input and try term_widget.handleInput(
-                    shell,
-                    term_x,
-                    term_y_draw,
-                    layout.terminal.width,
-                    term_draw_height,
-                    !terminal_close_modal_active,
-                    &self.terminal_scroll_dragging,
-                    &self.terminal_scroll_grab_offset,
-                    suppress_terminal_shortcuts,
-                    input_batch,
-                )) {
+                if (self.active_kind == .terminal) {
+                    const suppress_terminal_input_for_tab_drag = self.app_mode == .terminal and self.tab_bar.isDragging();
+                    if (!search_panel_consumed_input and try term_widget.handleInput(
+                        shell,
+                        term_x,
+                        term_y_draw,
+                        layout.terminal.width,
+                        term_draw_height,
+                        !terminal_close_modal_active and !suppress_terminal_input_for_tab_drag,
+                        &self.terminal_scroll_dragging,
+                        &self.terminal_scroll_grab_offset,
+                        suppress_terminal_shortcuts,
+                        input_batch,
+                    )) {
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
                     }
