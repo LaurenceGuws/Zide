@@ -956,10 +956,7 @@ pub fn build(b: *std.Build) void {
     mode_gates_step.dependOn(app_import_check_step);
     mode_gates_step.dependOn(input_import_check_step);
     mode_gates_step.dependOn(editor_import_check_step);
-    mode_gates_step.dependOn(run_step);
-    mode_gates_step.dependOn(run_mode_terminal_step);
-    mode_gates_step.dependOn(run_mode_editor_step);
-    mode_gates_step.dependOn(run_mode_ide_step);
+    mode_gates_step.dependOn(b.getInstallStep());
     mode_gates_step.dependOn(terminal_replay_all_step);
 
     const grammar_update = b.addExecutable(.{
