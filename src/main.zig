@@ -85,6 +85,7 @@ const editor_draw = @import("ui/widgets/editor_widget_draw.zig");
 const layout_types = shared_types.layout;
 const input_actions = @import("input/input_actions.zig");
 const font_sample_view_mod = @import("ui/font_sample_view.zig");
+const app_state_mod = @import("app/app_state.zig");
 
 const Editor = editor_mod.Editor;
 const TerminalSession = terminal_mod.TerminalSession;
@@ -101,149 +102,8 @@ const EditorClusterCache = widgets.EditorClusterCache;
 const EditorRenderCache = editor_render_cache_mod.EditorRenderCache;
 const TerminalWidget = widgets.TerminalWidget;
 
-pub const AppMode = app_bootstrap.AppMode;
-
-const AppState = struct {
-    const SearchPanelState = struct {
-        active: bool,
-        query: std.ArrayList(u8),
-
-        fn init(_: std.mem.Allocator) SearchPanelState {
-            return .{
-                .active = false,
-                .query = std.ArrayList(u8).empty,
-            };
-        }
-
-        fn deinit(self: *SearchPanelState, allocator: std.mem.Allocator) void {
-            self.query.deinit(allocator);
-        }
-    };
-
-    const TerminalCloseModalLayout = app_modes.ide.TerminalCloseConfirmLayout;
-
-    allocator: std.mem.Allocator,
-    shell: *Shell,
-    options_bar: OptionsBar,
-    tab_bar: TabBar,
-    side_nav: SideNav,
-    status_bar: StatusBar,
-
-    // Active views
-    editors: std.ArrayList(*Editor),
-    terminals: std.ArrayList(*TerminalSession),
-    terminal_widgets: std.ArrayList(TerminalWidget),
-    terminal_workspace: ?TerminalWorkspace,
-
-    // Themes
-    app_theme: app_shell.Theme,
-    editor_theme: app_shell.Theme,
-    terminal_theme: app_shell.Theme,
-    shell_base_theme: app_shell.Theme,
-
-    // Current focus
-    active_tab: usize,
-    active_kind: app_modes.ide.ActiveMode,
-
-    // UI state
-    mode: []const u8,
-    show_terminal: bool,
-    terminal_height: f32,
-    terminal_blink_style: TerminalWidget.BlinkStyle,
-    terminal_cursor_style: ?term_types.CursorStyle,
-    terminal_scrollback_rows: ?usize,
-    editor_tab_bar_width_mode: TabBar.WidthMode,
-    terminal_tab_bar_show_single_tab: bool,
-    terminal_tab_bar_width_mode: TabBar.WidthMode,
-    terminal_focus_report_window_events: bool,
-    terminal_focus_report_pane_events: bool,
-    last_terminal_pane_focus_reported: ?bool,
-    config_reload_notice_until: f64,
-    config_reload_notice_success: bool,
-
-    // Dirty tracking for efficient rendering
-    needs_redraw: bool,
-    idle_frames: u32, // Count frames without activity for adaptive sleep
-    last_mouse_pos: app_shell.MousePos,
-    resizing_terminal: bool,
-    resize_start_y: f32,
-    resize_start_height: f32,
-    window_resize_pending: bool,
-    window_resize_last_time: f64,
-    mouse_debug: bool,
-    terminal_scroll_dragging: bool,
-    terminal_scroll_grab_offset: f32,
-    last_mouse_redraw_time: f64,
-    last_ctrl_down: bool,
-    editor_dragging: bool,
-    editor_drag_start: types.CursorPos,
-    editor_drag_rect: bool,
-    editor_hscroll_dragging: bool,
-    editor_hscroll_grab_offset: f32,
-    editor_vscroll_dragging: bool,
-    editor_vscroll_grab_offset: f32,
-    editor_cluster_cache: EditorClusterCache,
-    editor_render_cache: EditorRenderCache,
-    grammar_manager: grammar_manager_mod.GrammarManager,
-    last_cursor_blink_on: bool,
-    last_cursor_blink_armed: bool,
-    frame_id: u64,
-    metrics: Metrics,
-    metrics_logger: Logger,
-    input_latency_logger: Logger,
-    app_logger: Logger,
-    last_metrics_log_time: f64,
-    editor_wrap: bool,
-    editor_large_jump_rows: usize,
-    editor_highlight_budget: ?usize,
-    editor_width_budget: ?usize,
-    perf_mode: bool,
-    perf_frames_total: u64,
-    perf_frames_done: u64,
-    perf_scroll_delta: i32,
-    perf_file_path: ?[]u8,
-    perf_logger: Logger,
-    last_input: shared_types.input.InputSnapshot,
-    app_mode: AppMode,
-    input_router: input_actions.InputRouter,
-    editor_mode_adapter: app_modes.backend.EditorMode,
-    terminal_mode_adapter: app_modes.backend.TerminalMode,
-    font_sample_view: ?font_sample_view_mod.FontSampleView,
-    font_sample_auto_close_frames: u64,
-    font_sample_close_pending: bool,
-    font_sample_screenshot_path: ?[]const u8,
-    search_panel: SearchPanelState,
-    terminal_close_confirm_tab: ?terminal_mod.TerminalTabId,
-
-    pub fn init(allocator: std.mem.Allocator, app_mode: AppMode) !*AppState {
-        return try app_init_runtime.init(AppState, allocator, app_mode);
-    }
-
-    pub fn deinit(self: *AppState) void {
-        app_deinit_runtime.handle(self);
-    }
-
-    pub fn newEditor(self: *AppState) !void {
-        try app_new_editor_runtime.handle(self);
-    }
-
-    pub fn openFile(self: *AppState, path: []const u8) !void {
-        try app_open_file_runtime.open(self, path);
-    }
-
-    pub fn openFileAt(self: *AppState, path: []const u8, line_1: usize, col_1: ?usize) !void {
-        try app_open_file_runtime.openAt(self, path, line_1, col_1);
-    }
-
-    pub fn newTerminal(self: *AppState) !void {
-        try app_new_terminal_runtime.handle(self);
-    }
-
-    pub fn run(self: *AppState) !void {
-        try app_run_entry_hooks_runtime.run(self);
-    }
-
-};
+pub const AppMode = app_state_mod.AppMode;
+const AppState = app_state_mod.AppState;
 
 pub fn runWithMode(allocator: std.mem.Allocator, app_mode: AppMode) !void {
     var app = try AppState.init(allocator, app_mode);
