@@ -619,7 +619,7 @@ const AppState = struct {
     }
 
     pub fn newEditor(self: *AppState) !void {
-        self.applyEditorModeTabAction(.create);
+        try self.routeEditorTabActionAndSync(.create);
         const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try self.editors.append(self.allocator, editor);
         try self.tab_bar.addTab("untitled", .editor);
@@ -629,7 +629,7 @@ const AppState = struct {
     }
 
     pub fn openFile(self: *AppState, path: []const u8) !void {
-        self.applyEditorModeTabAction(.create);
+        try self.routeEditorTabActionAndSync(.create);
         const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try editor.openFile(path);
         try self.editors.append(self.allocator, editor);
@@ -643,7 +643,7 @@ const AppState = struct {
     }
 
     pub fn openFileAt(self: *AppState, path: []const u8, line_1: usize, col_1: ?usize) !void {
-        self.applyEditorModeTabAction(.create);
+        try self.routeEditorTabActionAndSync(.create);
         const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try editor.openFile(path);
         try self.editors.append(self.allocator, editor);
@@ -1015,6 +1015,11 @@ const AppState = struct {
         if (!app_modes.ide.supportsEditorSurface(self.app_mode)) return;
         const contract = self.editor_mode_adapter.asContract();
         _ = contract.applyAction(self.allocator, .{ .tab = tab_action }) catch {};
+    }
+
+    fn routeEditorTabActionAndSync(self: *AppState, tab_action: app_modes.shared.actions.TabAction) !void {
+        self.applyEditorModeTabAction(tab_action);
+        try self.syncModeAdaptersFromTabBar();
     }
 
     fn terminalCloseIntentForActiveTab(active_tab_id: ?u64) ?app_modes.shared.actions.TabAction {
@@ -2251,7 +2256,7 @@ const AppState = struct {
             }
             if (app_modes.ide.canHandleTerminalTabFocusShortcuts(self.app_mode)) {
                 if (terminalFocusIndexForAction(action.kind)) |focus_index| {
-                    self.applyTerminalModeTabAction(.{ .activate_by_index = focus_index });
+                    try self.routeTerminalTabActionAndSync(.{ .activate_by_index = focus_index });
                     if (self.focusTerminalTabByIndex(focus_index)) {
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
@@ -2273,8 +2278,7 @@ const AppState = struct {
                     if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.side_nav.width, tab_bar_y, layout.tab_bar.width)) {
                         // Tab was clicked
                         self.active_tab = self.tab_bar.active_index;
-                        self.applyEditorModeTabAction(.{ .activate_by_index = self.active_tab });
-                        try self.syncModeAdaptersFromTabBar();
+                        try self.routeEditorTabActionAndSync(.{ .activate_by_index = self.active_tab });
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
                     }
@@ -2312,7 +2316,7 @@ const AppState = struct {
                     }
                     if (self.terminal_workspace) |*workspace| {
                         if (workspace.activeTabId()) |active_tab_id| {
-                            self.applyTerminalModeTabAction(.{ .activate = active_tab_id });
+                            try self.routeTerminalTabActionAndSync(.{ .activate = active_tab_id });
                         }
                     }
                 },
@@ -2400,14 +2404,13 @@ const AppState = struct {
             if (input_batch.mouseReleased(.left)) {
                 const drag_end = self.tab_bar.endDrag();
                 if (drag_end.active and drag_end.moved and drag_end.from_index != drag_end.to_index) {
-                    self.applyEditorModeTabAction(.{
+                    try self.routeEditorTabActionAndSync(.{
                         .move = .{
                             .from_index = drag_end.from_index,
                             .to_index = drag_end.to_index,
                         },
                     });
                     self.active_tab = self.tab_bar.active_index;
-                    try self.syncModeAdaptersFromTabBar();
                     self.needs_redraw = true;
                     self.metrics.noteInput(now);
                 }
