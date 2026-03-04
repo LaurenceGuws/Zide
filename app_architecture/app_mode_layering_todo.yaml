@@ -125,6 +125,7 @@ app_mode_layering_todo:
             - "In progress: terminal widget input + pending-open request handling is now deduplicated via dedicated AppState helpers."
             - "In progress: editor visible-cache precompute and terminal polling are now routed through dedicated AppState helpers."
             - "In progress: search-panel input consumption for the frame is now factored into `handleSearchPanelFrameInput(...)`."
+            - "In progress: active editor-frame and visible terminal-frame orchestration are now each routed through dedicated AppState helpers."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress

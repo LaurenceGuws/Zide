@@ -1430,6 +1430,74 @@ const AppState = struct {
         return false;
     }
 
+    fn handleActiveEditorFrame(
+        self: *AppState,
+        shell: *Shell,
+        layout: layout_types.WidgetLayout,
+        mouse: shared_types.input.MousePos,
+        input_batch: *shared_types.input.InputBatch,
+        search_panel_consumed_input: bool,
+        now: f64,
+    ) !void {
+        if (!app_modes.ide.supportsEditorSurface(self.app_mode) or self.active_kind != .editor or self.editors.items.len == 0) return;
+
+        const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
+        var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache, self.editor_wrap);
+        if (!search_panel_consumed_input and try widget.handleInput(shell, layout.editor.height, input_batch)) {
+            self.editor_cluster_cache.clear();
+            self.needs_redraw = true;
+            self.metrics.noteInput(now);
+        }
+        if (self.perf_mode and self.perf_frames_done < self.perf_frames_total) {
+            widget.scrollVisual(shell, self.perf_scroll_delta);
+            self.needs_redraw = true;
+            self.metrics.noteInput(now);
+            self.perf_frames_done +|= 1;
+        }
+        const scrollbar_blocking = self.handleEditorScrollbarInput(&widget, shell, layout, mouse, input_batch, now);
+        self.handleEditorMouseSelectionInput(&widget, shell, layout, mouse, input_batch, scrollbar_blocking, now);
+        self.precomputeEditorVisibleCaches(&widget, shell, layout);
+    }
+
+    fn handleVisibleTerminalFrame(
+        self: *AppState,
+        shell: *Shell,
+        layout: layout_types.WidgetLayout,
+        input_batch: *shared_types.input.InputBatch,
+        search_panel_consumed_input: bool,
+        suppress_terminal_shortcuts: bool,
+        terminal_close_modal_active: bool,
+        now: f64,
+    ) !void {
+        if (!app_modes.ide.supportsTerminalSurface(self.app_mode) or !self.show_terminal or self.terminalTabCount() == 0) return;
+
+        try self.pollVisibleTerminalSessions(input_batch);
+        if (self.activeTerminalWidget()) |term_widget| {
+            const strip = app_modes.ide.terminalStrip(self.app_mode, layout.terminal.height);
+            const term_y_draw = layout.terminal.y + strip.offset_y;
+            const term_x = layout.terminal.x;
+            const term_draw_height = strip.draw_height;
+            if (term_widget.updateBlink(now)) {
+                self.needs_redraw = true;
+            }
+            const suppress_terminal_input_for_tab_drag = app_modes.ide.suppressTerminalInputForTabDrag(self.app_mode, self.tab_bar.isDragging());
+            const allow_terminal_input = self.active_kind == .terminal and !terminal_close_modal_active and !suppress_terminal_input_for_tab_drag;
+            try self.handleTerminalWidgetInput(
+                term_widget,
+                shell,
+                term_x,
+                term_y_draw,
+                layout.terminal.width,
+                term_draw_height,
+                allow_terminal_input,
+                suppress_terminal_shortcuts,
+                input_batch,
+                search_panel_consumed_input,
+                now,
+            );
+        }
+    }
+
     fn logModeAdapterParity(self: *AppState) void {
         const log = app_logger.logger("app.mode.parity");
         if (!log.enabled_file and !log.enabled_console) return;
@@ -2522,53 +2590,18 @@ const AppState = struct {
         // Update active view
         const search_panel_consumed_input = try self.handleSearchPanelFrameInput(input_batch, now);
 
-        if (app_modes.ide.supportsEditorSurface(self.app_mode) and self.active_kind == .editor and self.editors.items.len > 0) {
-            const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
-            var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache, self.editor_wrap);
-            if (!search_panel_consumed_input and try widget.handleInput(shell, layout.editor.height, input_batch)) {
-                self.editor_cluster_cache.clear();
-                self.needs_redraw = true;
-                self.metrics.noteInput(now);
-            }
-            if (self.perf_mode and self.perf_frames_done < self.perf_frames_total) {
-                widget.scrollVisual(shell, self.perf_scroll_delta);
-                self.needs_redraw = true;
-                self.metrics.noteInput(now);
-                self.perf_frames_done +|= 1;
-            }
-            const scrollbar_blocking = self.handleEditorScrollbarInput(&widget, shell, layout, mouse, input_batch, now);
-            self.handleEditorMouseSelectionInput(&widget, shell, layout, mouse, input_batch, scrollbar_blocking, now);
-            self.precomputeEditorVisibleCaches(&widget, shell, layout);
-        }
+        try self.handleActiveEditorFrame(shell, layout, mouse, input_batch, search_panel_consumed_input, now);
 
         // Update terminal if shown
-        if (app_modes.ide.supportsTerminalSurface(self.app_mode) and self.show_terminal and self.terminalTabCount() > 0) {
-            try self.pollVisibleTerminalSessions(input_batch);
-            if (self.activeTerminalWidget()) |term_widget| {
-                const strip = app_modes.ide.terminalStrip(self.app_mode, layout.terminal.height);
-                const term_y_draw = layout.terminal.y + strip.offset_y;
-                const term_x = layout.terminal.x;
-                const term_draw_height = strip.draw_height;
-                if (term_widget.updateBlink(now)) {
-                    self.needs_redraw = true;
-                }
-                const suppress_terminal_input_for_tab_drag = app_modes.ide.suppressTerminalInputForTabDrag(self.app_mode, self.tab_bar.isDragging());
-                const allow_terminal_input = self.active_kind == .terminal and !terminal_close_modal_active and !suppress_terminal_input_for_tab_drag;
-                try self.handleTerminalWidgetInput(
-                    term_widget,
-                    shell,
-                    term_x,
-                    term_y_draw,
-                    layout.terminal.width,
-                    term_draw_height,
-                    allow_terminal_input,
-                    suppress_terminal_shortcuts,
-                    input_batch,
-                    search_panel_consumed_input,
-                    now,
-                );
-            }
-        }
+        try self.handleVisibleTerminalFrame(
+            shell,
+            layout,
+            input_batch,
+            search_panel_consumed_input,
+            suppress_terminal_shortcuts,
+            terminal_close_modal_active,
+            now,
+        );
         if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
             try self.syncTerminalModeTabBar();
         }
