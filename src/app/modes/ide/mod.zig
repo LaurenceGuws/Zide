@@ -52,4 +52,5 @@ pub const buildTabProjections = projections.buildTabProjections;
 pub const activeProjectionForTabBar = projections.activeProjectionForTabBar;
 pub const TerminalCloseConfirmLayout = terminal_close_confirm.ModalLayout;
 pub const TerminalCloseConfirmDecision = terminal_close_confirm.Decision;
+pub const terminalCloseConfirmModalLayout = terminal_close_confirm.modalLayout;
 pub const decideTerminalCloseConfirmInput = terminal_close_confirm.decideInput;
