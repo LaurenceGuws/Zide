@@ -1354,16 +1354,6 @@ const AppState = struct {
         consumed: bool,
     };
 
-    fn reloadConfigFromCtx(raw: *anyopaque) !void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        try state.reloadConfig();
-    }
-
-    fn showConfigReloadNoticeFromCtx(raw: *anyopaque, success: bool) void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        state.showConfigReloadNotice(success);
-    }
-
     fn handleEditorShortcutActionsFrame(
         self: *AppState,
         shell: *Shell,
@@ -1537,8 +1527,18 @@ const AppState = struct {
             self.input_router.actionsSlice(),
             @ptrCast(self),
             .{
-                .reload = reloadConfigFromCtx,
-                .show_notice = showConfigReloadNoticeFromCtx,
+                .reload = struct {
+                    fn call(raw: *anyopaque) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.reloadConfig();
+                    }
+                }.call,
+                .show_notice = struct {
+                    fn call(raw: *anyopaque, success: bool) void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        state.showConfigReloadNotice(success);
+                    }
+                }.call,
             },
         );
         const live_layout = self.computeLayout(@floatFromInt(r.width), @floatFromInt(r.height));
