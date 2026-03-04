@@ -1153,6 +1153,11 @@ const AppState = struct {
             (input_batch.keyPressed(.n) and input_batch.mods.isEmpty());
 
         if (confirm_pressed) {
+            if (self.terminal_workspace) |*workspace| {
+                if (workspace.activeTabId()) |active_tab_id| {
+                    self.applyTerminalModeTabAction(.{ .close = active_tab_id });
+                }
+            }
             if (try self.closeActiveTerminalTab()) {
                 self.needs_redraw = true;
             }
@@ -1171,6 +1176,11 @@ const AppState = struct {
             const mx = input_batch.mouse_pos.x;
             const my = input_batch.mouse_pos.y;
             if (pointInRect(mx, my, modal.confirm_button)) {
+                if (self.terminal_workspace) |*workspace| {
+                    if (workspace.activeTabId()) |active_tab_id| {
+                        self.applyTerminalModeTabAction(.{ .close = active_tab_id });
+                    }
+                }
                 if (try self.closeActiveTerminalTab()) {
                     self.needs_redraw = true;
                 }
