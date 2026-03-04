@@ -108,6 +108,7 @@ app_mode_layering_todo:
             - "In progress: terminal close-intent emission is centralized via `applyTerminalCloseIntentForActiveWorkspaceTab()` in `main.zig` (deduped shortcut + confirm paths)."
             - "In progress: terminal focus-tab action-to-index mapping moved from `main.zig` into `src/app/modes/ide/tab_intents.zig`."
             - "In progress: terminal close-confirm input decision logic moved from `main.zig` into `src/app/modes/ide/terminal_close_confirm.zig`."
+            - "In progress: terminal tab drag end decision helpers moved from `main.zig` into `src/app/modes/ide/tab_drag.zig`."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress

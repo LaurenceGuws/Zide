@@ -2240,15 +2240,10 @@ const AppState = struct {
             }
             if (self.terminalTabBarVisible() and input_batch.mouseReleased(.left)) {
                 const drag_end = self.tab_bar.endDrag();
-                if (app_modes.ide.reorderIntentForDrag(.{
-                    .active = drag_end.active,
-                    .moved = drag_end.moved,
-                    .from_index = drag_end.from_index,
-                    .to_index = drag_end.to_index,
-                })) |intent| {
+                if (app_modes.ide.reorderIntentForDragEnd(drag_end)) |intent| {
                     try self.routeTerminalTabActionAndSync(intent);
                 }
-                if (drag_end.active and !drag_end.moved) {
+                if (app_modes.ide.shouldHandleClickAfterDragEnd(drag_end)) {
                     if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width)) {
                         if (self.tab_bar.terminalTabIdAtVisual(self.tab_bar.active_index)) |focused_tab_id| {
                             try self.routeTerminalTabActionAndSync(.{ .activate = focused_tab_id });
@@ -2259,7 +2254,7 @@ const AppState = struct {
                         }
                     }
                 }
-                if (drag_end.active) {
+                if (app_modes.ide.shouldMarkRedrawAfterDragEnd(drag_end)) {
                     self.needs_redraw = true;
                     self.metrics.noteInput(now);
                 }
