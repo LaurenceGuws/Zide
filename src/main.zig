@@ -210,6 +210,8 @@ const AppState = struct {
     last_input: shared_types.input.InputSnapshot,
     app_mode: AppMode,
     input_router: input_actions.InputRouter,
+    editor_mode_adapter: app_modes.backend.EditorMode,
+    terminal_mode_adapter: app_modes.backend.TerminalMode,
     font_sample_view: ?font_sample_view_mod.FontSampleView,
     font_sample_auto_close_frames: u64,
     font_sample_close_pending: bool,
@@ -470,6 +472,12 @@ const AppState = struct {
             })
         else
             null;
+        const bootstrap_opts = app_modes.backend.bootstrap.BootstrapOptions{
+            .seed_editor_tab = false,
+            .seed_terminal_tab = false,
+        };
+        const editor_mode_adapter = try app_modes.backend.bootstrap.initEditorMode(allocator, bootstrap_opts);
+        const terminal_mode_adapter = try app_modes.backend.bootstrap.initTerminalMode(allocator, bootstrap_opts);
 
         const state = try allocator.create(AppState);
         state.* = .{
@@ -547,6 +555,8 @@ const AppState = struct {
             .last_input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{}),
             .app_mode = app_mode,
             .input_router = input_actions.InputRouter.init(allocator),
+            .editor_mode_adapter = editor_mode_adapter,
+            .terminal_mode_adapter = terminal_mode_adapter,
             .font_sample_view = null,
             .font_sample_auto_close_frames = if (app_modes.ide.isFontSample(app_mode))
                 app_bootstrap.parseEnvU64("ZIDE_FONT_SAMPLE_FRAMES", 0)
@@ -598,6 +608,8 @@ const AppState = struct {
         self.editor_cluster_cache.deinit();
         self.grammar_manager.deinit();
         self.input_router.deinit();
+        self.editor_mode_adapter.deinit(self.allocator);
+        self.terminal_mode_adapter.deinit(self.allocator);
         self.search_panel.deinit(self.allocator);
         if (self.perf_file_path) |path| {
             self.allocator.free(path);
@@ -612,6 +624,7 @@ const AppState = struct {
         try self.tab_bar.addTab("untitled", .editor);
         self.active_tab = self.tab_bar.tabs.items.len - 1;
         self.active_kind = .editor;
+        try self.syncModeAdaptersFromTabBar();
     }
 
     pub fn openFile(self: *AppState, path: []const u8) !void {
@@ -624,6 +637,7 @@ const AppState = struct {
         try self.tab_bar.addTab(filename, .editor);
         self.active_tab = self.tab_bar.tabs.items.len - 1;
         self.active_kind = .editor;
+        try self.syncModeAdaptersFromTabBar();
     }
 
     pub fn openFileAt(self: *AppState, path: []const u8, line_1: usize, col_1: ?usize) !void {
@@ -635,6 +649,7 @@ const AppState = struct {
         try self.tab_bar.addTab(filename, .editor);
         self.active_tab = self.tab_bar.tabs.items.len - 1;
         self.active_kind = .editor;
+        try self.syncModeAdaptersFromTabBar();
 
         const line0 = if (line_1 > 0) line_1 - 1 else 0;
         const col0 = if (col_1) |c1| (if (c1 > 0) c1 - 1 else 0) else 0;
@@ -944,6 +959,47 @@ const AppState = struct {
         } else {
             self.tab_bar.clearTabs();
         }
+        try self.syncModeAdaptersFromTabBar();
+    }
+
+    fn syncModeAdaptersFromTabBar(self: *AppState) !void {
+        var projections = std.ArrayList(app_modes.runtime_bridge.AppTabProjection).empty;
+        defer projections.deinit(self.allocator);
+
+        for (self.tab_bar.tabs.items) |tab| {
+            const projection: app_modes.runtime_bridge.AppTabProjection = .{
+                .kind = switch (tab.kind) {
+                    .editor => .editor,
+                    .terminal => .terminal,
+                },
+                .id = tab.id,
+                .title = tab.title,
+                .alive = true,
+            };
+            try projections.append(self.allocator, projection);
+        }
+
+        const active_projection: app_modes.runtime_bridge.ActiveProjection = .{
+            .kind = self.active_kind,
+            .id = if (self.tab_bar.tabs.items.len > 0 and self.tab_bar.active_index < self.tab_bar.tabs.items.len)
+                self.tab_bar.tabs.items[self.tab_bar.active_index].id
+            else
+                null,
+        };
+
+        try app_modes.runtime_bridge.syncModesFromProjections(
+            self.allocator,
+            &self.editor_mode_adapter,
+            &self.terminal_mode_adapter,
+            projections.items,
+            active_projection,
+        );
+    }
+
+    fn applyTerminalModeTabAction(self: *AppState, tab_action: app_modes.shared.actions.TabAction) void {
+        if (!app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) return;
+        const contract = self.terminal_mode_adapter.asContract();
+        _ = contract.applyAction(self.allocator, .{ .tab = tab_action }) catch {};
     }
 
     fn terminalFocusIndexForAction(kind: input_actions.ActionKind) ?usize {
@@ -1998,6 +2054,7 @@ const AppState = struct {
                 },
                 .terminal_new_tab => {
                     if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) {
+                        self.applyTerminalModeTabAction(.create);
                         try self.newTerminal();
                         try self.syncTerminalModeTabBar();
                         self.needs_redraw = true;
@@ -2007,6 +2064,11 @@ const AppState = struct {
                 },
                 .terminal_close_tab => {
                     if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) {
+                        if (self.terminal_workspace) |*workspace| {
+                            if (workspace.activeTabId()) |active_tab_id| {
+                                self.applyTerminalModeTabAction(.{ .close = active_tab_id });
+                            }
+                        }
                         if (try self.closeActiveTerminalTab()) {
                             self.needs_redraw = true;
                             self.metrics.noteInput(now);
@@ -2021,6 +2083,7 @@ const AppState = struct {
                 },
                 .terminal_next_tab => {
                     if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode) and self.cycleTerminalTab(true)) {
+                        self.applyTerminalModeTabAction(.next);
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
                         return;
@@ -2028,6 +2091,7 @@ const AppState = struct {
                 },
                 .terminal_prev_tab => {
                     if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode) and self.cycleTerminalTab(false)) {
+                        self.applyTerminalModeTabAction(.prev);
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
                         return;
@@ -2037,6 +2101,7 @@ const AppState = struct {
             }
             if (app_modes.ide.canHandleTerminalTabFocusShortcuts(self.app_mode)) {
                 if (terminalFocusIndexForAction(action.kind)) |focus_index| {
+                    self.applyTerminalModeTabAction(.{ .activate_by_index = focus_index });
                     if (self.focusTerminalTabByIndex(focus_index)) {
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
