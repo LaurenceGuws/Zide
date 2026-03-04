@@ -3,6 +3,7 @@ const app_bootstrap = @import("app/bootstrap.zig");
 const app_editor_actions = @import("app/editor_actions.zig");
 const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
+const app_config_reload_notice = @import("app/config_reload_notice.zig");
 const app_search_panel_input = @import("app/search_panel_input.zig");
 const app_search_panel_state = @import("app/search_panel_state.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
@@ -2844,57 +2845,6 @@ const AppState = struct {
         log.logStdout("config reloaded", .{});
     }
 
-    fn drawConfigReloadNotice(self: *AppState, shell: *Shell, layout: layout_types.WidgetLayout) void {
-        const now = app_shell.getTime();
-        if (now >= self.config_reload_notice_until) return;
-
-        const text = if (self.config_reload_notice_success) "Config reloaded" else "Config reload failed";
-        const scale = shell.uiScaleFactor();
-        const pad_x = 10.0 * scale;
-        const pad_y = 6.0 * scale;
-        const text_w = @as(f32, @floatFromInt(text.len)) * shell.charWidth();
-        const notice_w = text_w + pad_x * 2.0;
-        const notice_h = shell.charHeight() + pad_y * 2.0;
-        const margin = 10.0 * scale;
-        const x = layout.window.width - notice_w - margin;
-        const y = app_modes.ide.configReloadNoticeY(
-            self.app_mode,
-            self.terminalTabBarVisible(),
-            layout,
-            margin,
-        );
-
-        const bg = if (self.config_reload_notice_success)
-            self.app_theme.ui_accent
-        else
-            app_shell.Color{ .r = 186, .g = 64, .b = 64 };
-        const fg = if (self.config_reload_notice_success)
-            self.app_theme.background
-        else
-            app_shell.Color{ .r = 255, .g = 255, .b = 255 };
-
-        shell.drawRect(
-            @intFromFloat(x),
-            @intFromFloat(y),
-            @intFromFloat(notice_w),
-            @intFromFloat(notice_h),
-            bg,
-        );
-        shell.drawRectOutline(
-            @intFromFloat(x),
-            @intFromFloat(y),
-            @intFromFloat(notice_w),
-            @intFromFloat(notice_h),
-            self.app_theme.ui_border,
-        );
-        shell.drawText(
-            text,
-            x + pad_x,
-            y + (notice_h - shell.charHeight()) / 2.0,
-            fg,
-        );
-    }
-
     fn drawTerminalCloseConfirmModal(
         self: *AppState,
         shell: *Shell,
@@ -3118,7 +3068,15 @@ const AppState = struct {
         if (app_modes.ide.shouldShowTerminalCloseConfirmModal(self.app_mode, self.terminalCloseConfirmActive())) {
             self.drawTerminalCloseConfirmModal(shell, layout);
         }
-        self.drawConfigReloadNotice(shell, layout);
+        app_config_reload_notice.draw(
+            shell,
+            layout,
+            self.app_mode,
+            self.terminalTabBarVisible(),
+            self.config_reload_notice_until,
+            self.config_reload_notice_success,
+            self.app_theme,
+        );
 
         shell.endFrame();
     }

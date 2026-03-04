@@ -153,6 +153,7 @@ app_mode_layering_todo:
             - "In progress: routed editor action helpers moved from `main.zig` into `src/app/editor_actions.zig` (`visual*DeltaForAction`, `applyRepeatedVisualDelta`, `applyDirectEditorAction`, `applyCaretEditorAction`)."
             - "In progress: search-panel input parsing helpers moved from `main.zig` into `src/app/search_panel_input.zig` (`SearchPanelCommand`, `searchPanelCommand`, `appendSearchPanelTextEvents`)."
             - "In progress: search-panel state/query helpers moved from `main.zig` into `src/app/search_panel_state.zig` (`openPanel`, `closePanel`, `syncEditorSearchQuery`, `popQueryScalar`)."
+            - "In progress: config-reload notice drawing moved from `main.zig` into `src/app/config_reload_notice.zig` (`draw`)."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress
