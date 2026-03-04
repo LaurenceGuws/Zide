@@ -15,6 +15,14 @@ pub const Decision = enum {
     consume,
 };
 
+pub fn reconcilePendingTab(pending_tab: ?u64, active_tab: ?u64) ?u64 {
+    if (pending_tab == null) return null;
+    if (active_tab) |active_id| {
+        if (active_id == pending_tab.?) return pending_tab;
+    }
+    return null;
+}
+
 pub fn modalLayout(layout: shared_types.layout.WidgetLayout, ui_scale: f32) ModalLayout {
     const margin = 24.0 * ui_scale;
     const desired_w = 540.0 * ui_scale;
@@ -140,4 +148,11 @@ test "terminal close confirm modal layout stays within window and buttons are in
     try std.testing.expect(modal.card.y + modal.card.height <= layout.window.y + layout.window.height);
     try std.testing.expect(pointInRect(modal.confirm_button.x, modal.confirm_button.y, modal.card));
     try std.testing.expect(pointInRect(modal.cancel_button.x, modal.cancel_button.y, modal.card));
+}
+
+test "terminal close confirm reconcile keeps only active pending tab id" {
+    try std.testing.expectEqual(@as(?u64, null), reconcilePendingTab(null, null));
+    try std.testing.expectEqual(@as(?u64, null), reconcilePendingTab(7, null));
+    try std.testing.expectEqual(@as(?u64, null), reconcilePendingTab(7, 8));
+    try std.testing.expectEqual(@as(?u64, 7), reconcilePendingTab(7, 7));
 }
