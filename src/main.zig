@@ -219,15 +219,6 @@ const AppState = struct {
     search_panel: SearchPanelState,
     terminal_close_confirm_tab: ?terminal_mod.TerminalTabId,
 
-    fn applyCurrentTabBarWidthMode(self: *AppState) void {
-        app_tab_bar_width.applyForMode(
-            &self.tab_bar,
-            self.app_mode,
-            self.editor_tab_bar_width_mode,
-            self.terminal_tab_bar_width_mode,
-        );
-    }
-
     pub fn init(allocator: std.mem.Allocator, app_mode: AppMode) !*AppState {
         var config = config_mod.loadConfig(allocator) catch |err| blk: {
             std.debug.print("config load error: {any}\n", .{err});
@@ -486,12 +477,22 @@ const AppState = struct {
                 .apply_current_tab_bar_width_mode = struct {
                     fn call(raw: *anyopaque) void {
                         const cb_state: *AppState = @ptrCast(@alignCast(raw));
-                        cb_state.applyCurrentTabBarWidthMode();
+                        app_tab_bar_width.applyForMode(
+                            &cb_state.tab_bar,
+                            cb_state.app_mode,
+                            cb_state.editor_tab_bar_width_mode,
+                            cb_state.terminal_tab_bar_width_mode,
+                        );
                     }
                 }.call,
             },
         );
-        state.applyCurrentTabBarWidthMode();
+        app_tab_bar_width.applyForMode(
+            &state.tab_bar,
+            state.app_mode,
+            state.editor_tab_bar_width_mode,
+            state.terminal_tab_bar_width_mode,
+        );
 
         return state;
     }
@@ -834,7 +835,12 @@ const AppState = struct {
                                                                                                                 .apply_current_tab_bar_width_mode = struct {
                                                                                                                     fn cb(width_raw: *anyopaque) void {
                                                                                                                         const cb_state: *AppState = @ptrCast(@alignCast(width_raw));
-                                                                                                                        cb_state.applyCurrentTabBarWidthMode();
+                                                                                                                        app_tab_bar_width.applyForMode(
+                                                                                                                            &cb_state.tab_bar,
+                                                                                                                            cb_state.app_mode,
+                                                                                                                            cb_state.editor_tab_bar_width_mode,
+                                                                                                                            cb_state.terminal_tab_bar_width_mode,
+                                                                                                                        );
                                                                                                                     }
                                                                                                                 }.cb,
                                                                                                             },
@@ -1007,7 +1013,12 @@ const AppState = struct {
                                                                                                 .apply_current_tab_bar_width_mode = struct {
                                                                                                     fn call(scale_raw: *anyopaque) void {
                                                                                                         const cb_state: *AppState = @ptrCast(@alignCast(scale_raw));
-                                                                                                        cb_state.applyCurrentTabBarWidthMode();
+                                                                                                        app_tab_bar_width.applyForMode(
+                                                                                                            &cb_state.tab_bar,
+                                                                                                            cb_state.app_mode,
+                                                                                                            cb_state.editor_tab_bar_width_mode,
+                                                                                                            cb_state.terminal_tab_bar_width_mode,
+                                                                                                        );
                                                                                                     }
                                                                                                 }.call,
                                                                                             },
@@ -1046,7 +1057,12 @@ const AppState = struct {
                                                                                                     .apply_current_tab_bar_width_mode = struct {
                                                                                                         fn call(scale_raw: *anyopaque) void {
                                                                                                             const cb_state: *AppState = @ptrCast(@alignCast(scale_raw));
-                                                                                                            cb_state.applyCurrentTabBarWidthMode();
+                                                                                                            app_tab_bar_width.applyForMode(
+                                                                                                                &cb_state.tab_bar,
+                                                                                                                cb_state.app_mode,
+                                                                                                                cb_state.editor_tab_bar_width_mode,
+                                                                                                                cb_state.terminal_tab_bar_width_mode,
+                                                                                                            );
                                                                                                         }
                                                                                                     }.call,
                                                                                                 },
@@ -1906,7 +1922,12 @@ const AppState = struct {
                                                                                 .apply_current_tab_bar_width_mode = struct {
                                                                                     fn inner(inner_raw: *anyopaque) void {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        inner_state.applyCurrentTabBarWidthMode();
+                                                                                        app_tab_bar_width.applyForMode(
+                                                                                            &inner_state.tab_bar,
+                                                                                            inner_state.app_mode,
+                                                                                            inner_state.editor_tab_bar_width_mode,
+                                                                                            inner_state.terminal_tab_bar_width_mode,
+                                                                                        );
                                                                                     }
                                                                                 }.inner,
                                                                                 .terminal_close_confirm_active = struct {
