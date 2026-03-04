@@ -2184,6 +2184,7 @@ const AppState = struct {
             switch (app_modes.ide.mouseClickRoute(self.app_mode)) {
                 .ide => {
                     const tab_bar_y = self.options_bar.height;
+                    _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.side_nav.width, tab_bar_y, layout.tab_bar.width);
                     if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.side_nav.width, tab_bar_y, layout.tab_bar.width)) {
                         // Tab was clicked
                         self.active_tab = self.tab_bar.active_index;
@@ -2306,6 +2307,29 @@ const AppState = struct {
                     }
                 }
                 if (drag_end.active) {
+                    self.needs_redraw = true;
+                    self.metrics.noteInput(now);
+                }
+            }
+        }
+        if (app_modes.ide.isIde(self.app_mode)) {
+            if (input_batch.mouseDown(.left)) {
+                if (self.tab_bar.updateDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width, true)) {
+                    self.needs_redraw = true;
+                    self.metrics.noteInput(now);
+                }
+            }
+            if (input_batch.mouseReleased(.left)) {
+                const drag_end = self.tab_bar.endDrag();
+                if (drag_end.active and drag_end.moved and drag_end.from_index != drag_end.to_index) {
+                    self.applyEditorModeTabAction(.{
+                        .move = .{
+                            .from_index = drag_end.from_index,
+                            .to_index = drag_end.to_index,
+                        },
+                    });
+                    self.active_tab = self.tab_bar.active_index;
+                    try self.syncModeAdaptersFromTabBar();
                     self.needs_redraw = true;
                     self.metrics.noteInput(now);
                 }
