@@ -2298,65 +2298,6 @@ const AppState = struct {
         );
     }
 
-    const RunFrameSetup = app_run_loop_driver.FrameSetup;
-
-    fn prepareRunFrame(self: *AppState) !?RunFrameSetup {
-        return try app_prepare_run_frame_runtime.prepare(self);
-    }
-
-    fn runOneFrame(self: *AppState) !bool {
-        return try app_run_loop_driver.runOneFrame(
-            @ptrCast(self),
-            .{
-                .prepare_run_frame = struct {
-                    fn call(raw: *anyopaque) !?app_run_loop_driver.FrameSetup {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        return try state.prepareRunFrame();
-                    }
-                }.call,
-                .update = struct {
-                    fn call(raw: *anyopaque, input_batch: *shared_types.input.InputBatch) !void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        try state.update(input_batch);
-                    }
-                }.call,
-                .handle_frame_render_and_idle = struct {
-                    fn call(raw: *anyopaque, input_batch: *shared_types.input.InputBatch, poll_ms: f64, build_ms: f64, update_ms: f64) void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        state.handleFrameRenderAndIdle(input_batch, poll_ms, build_ms, update_ms);
-                    }
-                }.call,
-                .should_stop_for_perf = struct {
-                    fn call(raw: *anyopaque) bool {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        return state.perf_mode and state.perf_frames_done >= state.perf_frames_total and state.perf_frames_total > 0;
-                    }
-                }.call,
-                .on_perf_complete = struct {
-                    fn call(raw: *anyopaque) void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        state.perf_logger.logf("perf complete frames={d}", .{state.perf_frames_done});
-                    }
-                }.call,
-            },
-        );
-    }
-
-    fn runMainLoop(self: *AppState) !void {
-        try app_run_loop_driver.runMainLoop(
-            self.shell,
-            @ptrCast(self),
-            .{
-                .run_one_frame = struct {
-                    fn call(raw: *anyopaque) !bool {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        return try state.runOneFrame();
-                    }
-                }.call,
-            },
-        );
-    }
-
     pub fn run(self: *AppState) !void {
         try app_run_entry_runtime.run(
             @ptrCast(self),
@@ -2370,7 +2311,51 @@ const AppState = struct {
                 .run_main_loop = struct {
                     fn call(raw: *anyopaque) !void {
                         const state: *AppState = @ptrCast(@alignCast(raw));
-                        try state.runMainLoop();
+                        try app_run_loop_driver.runMainLoop(
+                            state.shell,
+                            raw,
+                            .{
+                                .run_one_frame = struct {
+                                    fn inner(inner_raw: *anyopaque) !bool {
+                                        return try app_run_loop_driver.runOneFrame(
+                                            inner_raw,
+                                            .{
+                                                .prepare_run_frame = struct {
+                                                    fn step(step_raw: *anyopaque) !?app_run_loop_driver.FrameSetup {
+                                                        const step_state: *AppState = @ptrCast(@alignCast(step_raw));
+                                                        return try app_prepare_run_frame_runtime.prepare(step_state);
+                                                    }
+                                                }.step,
+                                                .update = struct {
+                                                    fn step(step_raw: *anyopaque, input_batch: *shared_types.input.InputBatch) !void {
+                                                        const step_state: *AppState = @ptrCast(@alignCast(step_raw));
+                                                        try step_state.update(input_batch);
+                                                    }
+                                                }.step,
+                                                .handle_frame_render_and_idle = struct {
+                                                    fn step(step_raw: *anyopaque, input_batch: *shared_types.input.InputBatch, poll_ms: f64, build_ms: f64, update_ms: f64) void {
+                                                        const step_state: *AppState = @ptrCast(@alignCast(step_raw));
+                                                        step_state.handleFrameRenderAndIdle(input_batch, poll_ms, build_ms, update_ms);
+                                                    }
+                                                }.step,
+                                                .should_stop_for_perf = struct {
+                                                    fn step(step_raw: *anyopaque) bool {
+                                                        const step_state: *AppState = @ptrCast(@alignCast(step_raw));
+                                                        return step_state.perf_mode and step_state.perf_frames_done >= step_state.perf_frames_total and step_state.perf_frames_total > 0;
+                                                    }
+                                                }.step,
+                                                .on_perf_complete = struct {
+                                                    fn step(step_raw: *anyopaque) void {
+                                                        const step_state: *AppState = @ptrCast(@alignCast(step_raw));
+                                                        step_state.perf_logger.logf("perf complete frames={d}", .{step_state.perf_frames_done});
+                                                    }
+                                                }.step,
+                                            },
+                                        );
+                                    }
+                                }.inner,
+                            },
+                        );
                     }
                 }.call,
             },
@@ -2401,15 +2386,11 @@ const AppState = struct {
                 .maybe_log_metrics = struct {
                     fn call(raw: *anyopaque, at: f64) void {
                         const state: *AppState = @ptrCast(@alignCast(raw));
-                        state.maybeLogMetrics(at);
+                        app_metrics_log_runtime.maybeLog(state, at);
                     }
                 }.call,
             },
         );
-    }
-
-    fn maybeLogMetrics(self: *AppState, now: f64) void {
-        app_metrics_log_runtime.maybeLog(self, now);
     }
 
     fn update(self: *AppState, input_batch: *shared_types.input.InputBatch) !void {
