@@ -991,6 +991,14 @@ const AppState = struct {
         _ = contract.applyAction(self.allocator, .{ .tab = tab_action }) catch {};
     }
 
+    fn applyTerminalCloseIntentForActiveWorkspaceTab(self: *AppState) void {
+        if (self.terminal_workspace) |*workspace| {
+            if (app_modes.ide.closeIntentForActiveTab(workspace.activeTabId())) |intent| {
+                self.applyTerminalModeTabAction(intent);
+            }
+        }
+    }
+
     fn routeTerminalTabActionAndSync(self: *AppState, tab_action: app_modes.shared.actions.TabAction) !void {
         self.applyTerminalModeTabAction(tab_action);
         try self.syncModeAdaptersFromTabBar();
@@ -1166,11 +1174,7 @@ const AppState = struct {
             (input_batch.keyPressed(.n) and input_batch.mods.isEmpty());
 
         if (confirm_pressed) {
-            if (self.terminal_workspace) |*workspace| {
-                if (app_modes.ide.closeIntentForActiveTab(workspace.activeTabId())) |intent| {
-                    self.applyTerminalModeTabAction(intent);
-                }
-            }
+            self.applyTerminalCloseIntentForActiveWorkspaceTab();
             if (try self.closeActiveTerminalTab()) {
                 self.needs_redraw = true;
             }
@@ -1189,11 +1193,7 @@ const AppState = struct {
             const mx = input_batch.mouse_pos.x;
             const my = input_batch.mouse_pos.y;
             if (pointInRect(mx, my, modal.confirm_button)) {
-                if (self.terminal_workspace) |*workspace| {
-                    if (app_modes.ide.closeIntentForActiveTab(workspace.activeTabId())) |intent| {
-                        self.applyTerminalModeTabAction(intent);
-                    }
-                }
+                self.applyTerminalCloseIntentForActiveWorkspaceTab();
                 if (try self.closeActiveTerminalTab()) {
                     self.needs_redraw = true;
                 }
@@ -2142,11 +2142,7 @@ const AppState = struct {
                 },
                 .terminal_close_tab => {
                     if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) {
-                        if (self.terminal_workspace) |*workspace| {
-                            if (app_modes.ide.closeIntentForActiveTab(workspace.activeTabId())) |intent| {
-                                self.applyTerminalModeTabAction(intent);
-                            }
-                        }
+                        self.applyTerminalCloseIntentForActiveWorkspaceTab();
                         if (try self.closeActiveTerminalTab()) {
                             self.needs_redraw = true;
                             self.metrics.noteInput(now);
