@@ -118,6 +118,7 @@ app_mode_layering_todo:
             - "In progress: IDE editor tab reordering now reuses shared drag-end intent helper (`reorderIntentForDragEnd`)."
             - "In progress: both terminal and IDE-editor drag-release paths now consume shared release plans from `src/app/modes/ide/tab_drag.zig`."
             - "In progress: low-level tab drag frame processing (`mouseDown`/`mouseReleased`) is centralized in `processDragFrame(...)` within `src/app/modes/ide/tab_drag.zig`."
+            - "In progress: active kind switching + adapter sync now routes through `setActiveKindAndSyncIfChanged(...)` helper in `main.zig` (mouse route branches deduped)."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress
