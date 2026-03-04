@@ -1067,6 +1067,13 @@ const AppState = struct {
         try self.syncModeAdaptersFromTabBar();
     }
 
+    fn setActiveKindAndSyncIfChanged(self: *AppState, kind: app_modes.ide.ActiveMode) !bool {
+        if (self.active_kind == kind) return false;
+        self.active_kind = kind;
+        try self.syncModeAdaptersFromTabBar();
+        return true;
+    }
+
     fn logModeAdapterParity(self: *AppState) void {
         const log = app_logger.logger("app.mode.parity");
         if (!log.enabled_file and !log.enabled_console) return;
@@ -2126,16 +2133,12 @@ const AppState = struct {
                     const in_terminal = layout.terminal.height > 0 and mouse.y >= term_y and mouse.y <= term_y + layout.terminal.height;
 
                     if (in_terminal and self.show_terminal) {
-                        if (self.active_kind != .terminal) {
-                            self.active_kind = .terminal;
-                            try self.syncModeAdaptersFromTabBar();
+                        if (try self.setActiveKindAndSyncIfChanged(.terminal)) {
                             self.needs_redraw = true;
                             self.metrics.noteInput(now);
                         }
                     } else if (in_editor) {
-                        if (self.active_kind != .editor) {
-                            self.active_kind = .editor;
-                            try self.syncModeAdaptersFromTabBar();
+                        if (try self.setActiveKindAndSyncIfChanged(.editor)) {
                             self.needs_redraw = true;
                             self.metrics.noteInput(now);
                         }
@@ -2145,10 +2148,7 @@ const AppState = struct {
                     if (self.terminalTabBarVisible()) {
                         _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
                     }
-                    if (self.active_kind != .terminal) {
-                        self.active_kind = .terminal;
-                        try self.syncModeAdaptersFromTabBar();
-                    }
+                    _ = try self.setActiveKindAndSyncIfChanged(.terminal);
                     if (self.terminal_workspace) |*workspace| {
                         if (workspace.activeTabId()) |active_tab_id| {
                             try self.routeTerminalTabActionAndSync(.{ .activate = active_tab_id });
@@ -2156,10 +2156,7 @@ const AppState = struct {
                     }
                 },
                 .editor => {
-                    if (self.active_kind != .editor) {
-                        self.active_kind = .editor;
-                        try self.syncModeAdaptersFromTabBar();
-                    }
+                    _ = try self.setActiveKindAndSyncIfChanged(.editor);
                 },
             }
 
