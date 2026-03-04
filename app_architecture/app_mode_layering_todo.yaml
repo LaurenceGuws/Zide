@@ -233,6 +233,7 @@ app_mode_layering_todo:
             - "In progress: tab-bar/options draw routing moved from `main.zig` into `src/app/tabbar_draw_runtime.zig` (`draw`) with apply-width-mode callback hook."
             - "In progress: draw overlays (terminal close-confirm modal + config reload notice) moved from `main.zig` into `src/app/draw_overlays_runtime.zig` (`draw`)."
             - "In progress: UI scale/layout helpers moved from `main.zig` into `src/app/ui_layout_runtime.zig` (`applyUiScale`, `computeLayout`) with apply-width-mode callback hook."
+            - "In progress: run entry orchestration (`run`) moved from `main.zig` into `src/app/run_entry_runtime.zig` (`run`) with startup/main-loop callbacks; periodic metrics logging moved into `src/app/metrics_log_runtime.zig` (`maybeLog`)."
             - "In progress: reload-config shortcut action-loop dispatch moved from `main.zig` into `src/app/reload_config_shortcut_runtime.zig` (`handle`) with callback hooks."
             - "In progress: single-use reload-config callback shims were removed from `main.zig`; pre-input path now supplies inline callbacks directly to `reload_config_shortcut_runtime.handle(...)`."
             - "In progress: terminal shortcut suppression policy for focused copy/paste conflicts moved from `main.zig` into `src/app/terminal_shortcut_suppress.zig` (`forFocus`)."
