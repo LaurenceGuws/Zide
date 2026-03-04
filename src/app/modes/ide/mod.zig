@@ -1,6 +1,7 @@
 const host = @import("host.zig");
 const layout_policy = @import("layout_policy.zig");
 const tab_intents = @import("tab_intents.zig");
+const tab_drag = @import("tab_drag.zig");
 const parity = @import("parity.zig");
 const projections = @import("projections.zig");
 const terminal_close_confirm = @import("terminal_close_confirm.zig");
@@ -41,6 +42,9 @@ pub const ReorderDragMeta = tab_intents.ReorderDragMeta;
 pub const closeIntentForActiveTab = tab_intents.closeIntentForActiveTab;
 pub const reorderIntentForDrag = tab_intents.reorderIntentForDrag;
 pub const terminalFocusIndexForAction = tab_intents.terminalFocusIndexForAction;
+pub const reorderIntentForDragEnd = tab_drag.reorderIntentForDragEnd;
+pub const shouldHandleClickAfterDragEnd = tab_drag.shouldHandleClickAfterDragEnd;
+pub const shouldMarkRedrawAfterDragEnd = tab_drag.shouldMarkRedrawAfterDragEnd;
 pub const Mismatch = parity.Mismatch;
 pub const KindParity = parity.KindParity;
 pub const evaluateKind = parity.evaluateKind;
