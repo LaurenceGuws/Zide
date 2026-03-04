@@ -3,6 +3,11 @@ const shared_types = @import("../../../types/mod.zig");
 
 const layout_types = shared_types.layout;
 
+pub const TerminalStrip = struct {
+    offset_y: f32,
+    draw_height: f32,
+};
+
 pub fn computeLayoutForMode(
     app_mode: app_bootstrap.AppMode,
     width: f32,
@@ -67,6 +72,29 @@ pub fn computeLayoutForMode(
         .editor = .{ .x = side_nav_width, .y = options_bar_height + tab_bar_height, .width = editor_width, .height = editor_height },
         .terminal = .{ .x = side_nav_width, .y = height - status_bar_height - effective_terminal_h, .width = editor_width, .height = effective_terminal_h },
         .status_bar = .{ .x = 0, .y = height - status_bar_height, .width = width, .height = status_bar_height },
+    };
+}
+
+pub fn terminalEffectiveHeightForSizing(
+    app_mode: app_bootstrap.AppMode,
+    show_terminal: bool,
+    layout_terminal_height: f32,
+    terminal_height: f32,
+) f32 {
+    if (app_mode == .ide and !show_terminal) return terminal_height;
+    return layout_terminal_height;
+}
+
+pub fn terminalStrip(app_mode: app_bootstrap.AppMode, layout_terminal_height: f32) TerminalStrip {
+    if (app_mode == .ide) {
+        return .{
+            .offset_y = 2,
+            .draw_height = @max(0, layout_terminal_height - 2),
+        };
+    }
+    return .{
+        .offset_y = 0,
+        .draw_height = layout_terminal_height,
     };
 }
 

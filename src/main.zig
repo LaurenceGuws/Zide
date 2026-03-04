@@ -1283,7 +1283,12 @@ const AppState = struct {
         const width = @as(f32, @floatFromInt(shell.width()));
         const height = @as(f32, @floatFromInt(shell.height()));
         const layout = self.computeLayout(width, height);
-        const effective_height = if (app_modes.ide.isIde(self.app_mode) and !self.show_terminal) self.terminal_height else layout.terminal.height;
+        const effective_height = app_modes.ide.terminalEffectiveHeightForSizing(
+            self.app_mode,
+            self.show_terminal,
+            layout.terminal.height,
+            self.terminal_height,
+        );
         const grid = self.terminalGridSize(layout.terminal.width, effective_height, 1, 1);
         const cols: u16 = grid.cols;
         const rows: u16 = grid.rows;
@@ -1777,7 +1782,12 @@ const AppState = struct {
         if (self.window_resize_pending and (now - self.window_resize_last_time) >= 0.12) {
             self.window_resize_pending = false;
             if (self.terminalTabCount() > 0) {
-                const effective_height = if (app_modes.ide.isIde(self.app_mode) and !self.show_terminal) self.terminal_height else layout.terminal.height;
+                const effective_height = app_modes.ide.terminalEffectiveHeightForSizing(
+                    self.app_mode,
+                    self.show_terminal,
+                    layout.terminal.height,
+                    self.terminal_height,
+                );
                 const grid = self.terminalGridSize(layout.terminal.width, effective_height, 1, 1);
                 const cols: u16 = grid.cols;
                 const rows: u16 = grid.rows;
@@ -2285,10 +2295,10 @@ const AppState = struct {
             }
 
             if (self.activeTerminalWidget()) |term_widget| {
-                const term_offset_y: f32 = if (app_modes.ide.usesIdeTerminalStrip(self.app_mode)) 2 else 0;
-                const term_y_draw = layout.terminal.y + term_offset_y;
+                const strip = app_modes.ide.terminalStrip(self.app_mode, layout.terminal.height);
+                const term_y_draw = layout.terminal.y + strip.offset_y;
                 const term_x = layout.terminal.x;
-                const term_draw_height = if (app_modes.ide.usesIdeTerminalStrip(self.app_mode)) @max(0, layout.terminal.height - 2) else layout.terminal.height;
+                const term_draw_height = strip.draw_height;
                 if (term_widget.updateBlink(now)) {
                     self.needs_redraw = true;
                 }
@@ -2835,8 +2845,9 @@ const AppState = struct {
 
             shell.setTheme(self.terminal_theme);
             if (self.activeTerminalWidget()) |term_widget| {
-                const term_offset_y: f32 = if (app_modes.ide.usesIdeTerminalStrip(self.app_mode)) 2 else 0;
-                const term_height = if (app_modes.ide.usesIdeTerminalStrip(self.app_mode)) @max(0, layout.terminal.height - 2) else layout.terminal.height;
+                const strip = app_modes.ide.terminalStrip(self.app_mode, layout.terminal.height);
+                const term_offset_y: f32 = strip.offset_y;
+                const term_height = strip.draw_height;
                 if (layout.terminal.width > 0 and term_height > 0) {
                     shell.beginClip(
                         @intFromFloat(layout.terminal.x),
