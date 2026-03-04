@@ -29,6 +29,7 @@ const app_terminal_refresh_sizing_runtime = @import("app/terminal_refresh_sizing
 const app_visible_terminal_frame = @import("app/visible_terminal_frame.zig");
 const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
 const app_terminal_widget_input_runtime = @import("app/terminal_widget_input_runtime.zig");
+const app_terminal_widget_input_hook_runtime = @import("app/terminal_widget_input_hook_runtime.zig");
 const app_terminal_close_confirm_input = @import("app/terminal_close_confirm_input.zig");
 const app_mode_adapter_sync_runtime = @import("app/mode_adapter_sync_runtime.zig");
 const app_terminal_theme_apply = @import("app/terminal_theme_apply.zig");
@@ -1725,7 +1726,7 @@ const AppState = struct {
                                                                                                         term_now: f64,
                                                                                                     ) !void {
                                                                                                         const route_state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        const result = try app_terminal_widget_input_runtime.handle(
+                                                                                                        try app_terminal_widget_input_hook_runtime.handle(
                                                                                                             term_widget,
                                                                                                             term_shell,
                                                                                                             term_x,
@@ -1739,7 +1740,8 @@ const AppState = struct {
                                                                                                             route_state.allocator,
                                                                                                             &route_state.terminal_scroll_dragging,
                                                                                                             &route_state.terminal_scroll_grab_offset,
-                                                                                                            @ptrCast(route_state),
+                                                                                                            term_now,
+                                                                                                            route_raw,
                                                                                                             .{
                                                                                                                 .open_file = struct {
                                                                                                                     fn call(open_raw: *anyopaque, path: []const u8) !void {
@@ -1753,10 +1755,20 @@ const AppState = struct {
                                                                                                                         try state.openFileAt(path, line_1, col_1);
                                                                                                                     }
                                                                                                                 }.call,
+                                                                                                                .mark_redraw = struct {
+                                                                                                                    fn call(mark_raw: *anyopaque) void {
+                                                                                                                        const state: *AppState = @ptrCast(@alignCast(mark_raw));
+                                                                                                                        state.needs_redraw = true;
+                                                                                                                    }
+                                                                                                                }.call,
+                                                                                                                .note_input = struct {
+                                                                                                                    fn call(note_raw: *anyopaque, ts: f64) void {
+                                                                                                                        const state: *AppState = @ptrCast(@alignCast(note_raw));
+                                                                                                                        state.metrics.noteInput(ts);
+                                                                                                                    }
+                                                                                                                }.call,
                                                                                                             },
                                                                                                         );
-                                                                                                        if (result.needs_redraw) route_state.needs_redraw = true;
-                                                                                                        if (result.note_input) route_state.metrics.noteInput(term_now);
                                                                                                     }
                                                                                                 }.call,
                                                                                             },
