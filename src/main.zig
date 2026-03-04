@@ -23,7 +23,6 @@ const app_terminal_tab_intents = @import("app/terminal_tab_intents.zig");
 const app_terminal_resize = @import("app/terminal_resize.zig");
 const app_visible_terminal_frame = @import("app/visible_terminal_frame.zig");
 const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
-const app_terminal_close_confirm_state = @import("app/terminal_close_confirm_state.zig");
 const app_terminal_close_confirm_runtime = @import("app/terminal_close_confirm_runtime.zig");
 const app_terminal_close_confirm_input = @import("app/terminal_close_confirm_input.zig");
 const app_mode_adapter_sync = @import("app/mode_adapter_sync.zig");
@@ -60,6 +59,7 @@ const app_ui_layout_runtime = @import("app/ui_layout_runtime.zig");
 const app_terminal_tab_navigation_runtime = @import("app/terminal_tab_navigation_runtime.zig");
 const app_terminal_close_active_runtime = @import("app/terminal_close_active_runtime.zig");
 const app_terminal_close_confirm_actions_runtime = @import("app/terminal_close_confirm_actions_runtime.zig");
+const app_terminal_close_confirm_active_runtime = @import("app/terminal_close_confirm_active_runtime.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
@@ -2080,12 +2080,7 @@ const AppState = struct {
     }
 
     fn terminalCloseConfirmActive(self: *AppState) bool {
-        const state = app_terminal_close_confirm_state.reconcileActiveState(
-            self.terminal_close_confirm_tab,
-            &self.terminal_workspace,
-        );
-        self.terminal_close_confirm_tab = state.pending;
-        return state.active;
+        return app_terminal_close_confirm_active_runtime.reconcile(self);
     }
 
     fn requestConfirmTerminalCloseFromModal(self: *AppState, now: f64) !bool {
