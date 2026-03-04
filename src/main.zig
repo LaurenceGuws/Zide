@@ -2795,13 +2795,15 @@ const AppState = struct {
         return true;
     }
 
-    pub fn run(self: *AppState) !void {
-        try self.initializeRunModeState();
-
-        // Main loop
+    fn runMainLoop(self: *AppState) !void {
         while (!self.shell.shouldClose()) {
             if (!try self.runOneFrame()) break;
         }
+    }
+
+    pub fn run(self: *AppState) !void {
+        try self.initializeRunModeState();
+        try self.runMainLoop();
     }
 
     fn handleFrameRenderAndIdle(
