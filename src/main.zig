@@ -51,6 +51,7 @@ const app_run_loop_driver = @import("app/run_loop_driver.zig");
 const app_reload_config_runtime = @import("app/reload_config_runtime.zig");
 const app_run_mode_init = @import("app/run_mode_init.zig");
 const app_prepare_run_frame_runtime = @import("app/prepare_run_frame_runtime.zig");
+const app_frame_render_idle_runtime = @import("app/frame_render_idle_runtime.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
@@ -2405,69 +2406,28 @@ const AppState = struct {
         build_ms: f64,
         update_ms: f64,
     ) void {
-        var draw_ms: f64 = 0.0;
-
-        if (self.needs_redraw) {
-            const draw_start = app_shell.getTime();
-            self.draw();
-            const draw_end = app_shell.getTime();
-            draw_ms = (draw_end - draw_start) * 1000.0;
-            self.metrics.recordDraw(draw_start, draw_end);
-            if (self.perf_mode and self.perf_frames_done > 0) {
-                const draw_ms_perf = (draw_end - draw_start) * 1000.0;
-                const editor_idx = if (self.editors.items.len > 0) @min(self.active_tab, self.editors.items.len - 1) else 0;
-                if (self.editors.items.len > 0) {
-                    const editor = self.editors.items[editor_idx];
-                    self.perf_logger.logf(
-                        "frame={d} draw_ms={d:.2} scroll_line={d} scroll_row_offset={d} scroll_col={d}",
-                        .{ self.perf_frames_done, draw_ms_perf, editor.scroll_line, editor.scroll_row_offset, editor.scroll_col },
-                    );
-                } else {
-                    self.perf_logger.logf("frame={d} draw_ms={d:.2}", .{ self.perf_frames_done, draw_ms_perf });
-                }
-            }
-            self.maybeLogMetrics(draw_end);
-            self.needs_redraw = false;
-            self.idle_frames = 0;
-            if (self.input_latency_logger.enabled_file or self.input_latency_logger.enabled_console) {
-                if (input_batch.events.items.len > 0) {
-                    const total_ms = poll_ms + build_ms + update_ms + draw_ms;
-                    if (total_ms >= 1.0) {
-                        self.input_latency_logger.logf(
-                            "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2}",
-                            .{ poll_ms, build_ms, update_ms, draw_ms },
-                        );
+        app_frame_render_idle_runtime.handle(
+            self,
+            @ptrCast(self),
+            input_batch,
+            poll_ms,
+            build_ms,
+            update_ms,
+            .{
+                .draw = struct {
+                    fn call(raw: *anyopaque) void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        state.draw();
                     }
-                }
-            }
-            return;
-        }
-
-        self.idle_frames +|= 1;
-        if (self.input_latency_logger.enabled_file or self.input_latency_logger.enabled_console) {
-            if (input_batch.events.items.len > 0) {
-                const total_ms = poll_ms + build_ms + update_ms;
-                if (total_ms >= 1.0) {
-                    self.input_latency_logger.logf(
-                        "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms=0.00",
-                        .{ poll_ms, build_ms, update_ms },
-                    );
-                }
-            }
-        }
-
-        const uptime = app_shell.getTime();
-        const sleep_ms: f64 = if (uptime < 3.0)
-            0.016
-        else if (self.idle_frames < 10)
-            0.016
-        else if (self.idle_frames < 60)
-            0.033
-        else
-            0.100;
-
-        app_shell.waitTime(sleep_ms);
-        self.maybeLogMetrics(app_shell.getTime());
+                }.call,
+                .maybe_log_metrics = struct {
+                    fn call(raw: *anyopaque, at: f64) void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        state.maybeLogMetrics(at);
+                    }
+                }.call,
+            },
+        );
     }
 
     fn maybeLogMetrics(self: *AppState, now: f64) void {

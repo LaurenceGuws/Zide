@@ -221,6 +221,7 @@ app_mode_layering_todo:
             - "In progress: full config-reload application flow moved from `main.zig` into `src/app/reload_config_runtime.zig` (`handle(state)`), leaving `main` with delegation only."
             - "In progress: run-mode startup initialization flow moved from `main.zig` into `src/app/run_mode_init.zig` (`initialize`) with callback hooks for terminal/editor/perf startup routes."
             - "In progress: per-frame run setup flow moved from `main.zig` into `src/app/prepare_run_frame_runtime.zig` (`prepare`) including event poll, close/signal gate, input-batch build, editor cluster frame begin, and metrics frame begin."
+            - "In progress: frame render/idle latency flow moved from `main.zig` into `src/app/frame_render_idle_runtime.zig` (`handle`) including redraw path, perf draw logging, input-latency logging, idle backoff, and metrics tick hooks."
             - "In progress: reload-config shortcut action-loop dispatch moved from `main.zig` into `src/app/reload_config_shortcut_runtime.zig` (`handle`) with callback hooks."
             - "In progress: single-use reload-config callback shims were removed from `main.zig`; pre-input path now supplies inline callbacks directly to `reload_config_shortcut_runtime.handle(...)`."
             - "In progress: terminal shortcut suppression policy for focused copy/paste conflicts moved from `main.zig` into `src/app/terminal_shortcut_suppress.zig` (`forFocus`)."
