@@ -62,7 +62,7 @@ const app_run_loop_driver = @import("app/run_loop_driver.zig");
 const app_run_main_loop_hooks_runtime = @import("app/run_main_loop_hooks_runtime.zig");
 const app_run_one_frame_hooks_runtime = @import("app/run_one_frame_hooks_runtime.zig");
 const app_reload_config_runtime = @import("app/reload_config_runtime.zig");
-const app_run_mode_init = @import("app/run_mode_init.zig");
+const app_run_mode_init_hooks_runtime = @import("app/run_mode_init_hooks_runtime.zig");
 const app_prepare_run_frame_runtime = @import("app/prepare_run_frame_runtime.zig");
 const app_frame_render_idle_hooks_runtime = @import("app/frame_render_idle_hooks_runtime.zig");
 const app_update_prelude_frame_runtime = @import("app/update_prelude_frame_runtime.zig");
@@ -593,6 +593,21 @@ const AppState = struct {
         editor.setCursor(clamped_line, clamped_col);
     }
 
+    fn syncTerminalModeTabBar(self: *AppState) !void {
+        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(self);
+    }
+
+    fn routeTerminalTabCount(self: *AppState) usize {
+        return app_terminal_tabs_runtime.count(self.app_mode, self.terminal_workspace, self.terminals.items.len);
+    }
+
+    fn seedDefaultWelcomeBufferIfNeeded(self: *AppState) !void {
+        if (self.editors.items.len > 0) {
+            const editor = self.editors.items[0];
+            try app_editor_seed.seedDefaultWelcomeBuffer(editor);
+        }
+    }
+
     fn routeOpenFileFromCtx(raw: *anyopaque, path: []const u8) !void {
         const state: *AppState = @ptrCast(@alignCast(raw));
         try state.openFile(path);
@@ -605,7 +620,7 @@ const AppState = struct {
 
     fn routeSyncTerminalTabBarFromCtx(raw: *anyopaque) !void {
         const state: *AppState = @ptrCast(@alignCast(raw));
-        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(state);
+        try state.syncTerminalModeTabBar();
     }
 
     fn routeNewEditorFromCtx(raw: *anyopaque) !void {
@@ -620,15 +635,12 @@ const AppState = struct {
 
     fn routeSeedDefaultWelcomeBufferFromCtx(raw: *anyopaque) !void {
         const state: *AppState = @ptrCast(@alignCast(raw));
-        if (state.editors.items.len > 0) {
-            const editor = state.editors.items[0];
-            try app_editor_seed.seedDefaultWelcomeBuffer(editor);
-        }
+        try state.seedDefaultWelcomeBufferIfNeeded();
     }
 
     fn routeTerminalTabCountFromCtx(raw: *anyopaque) usize {
         const state: *AppState = @ptrCast(@alignCast(raw));
-        return app_terminal_tabs_runtime.count(state.app_mode, state.terminal_workspace, state.terminals.items.len);
+        return state.routeTerminalTabCount();
     }
 
     fn routeRefreshTerminalSizingFromCtx(raw: *anyopaque) !void {
@@ -1011,20 +1023,17 @@ const AppState = struct {
     }
 
     fn initializeRunModeState(self: *AppState) !void {
-        try app_run_mode_init.initialize(
-            self.app_mode,
-            self.perf_mode,
-            self.perf_file_path,
-            @ptrCast(self),
-            .{
-                .terminal_tab_count = routeTerminalTabCountFromCtx,
-                .new_terminal = routeNewTerminalFromCtx,
-                .sync_terminal_mode_tab_bar = routeSyncTerminalTabBarFromCtx,
-                .open_file = routeOpenFileFromCtx,
-                .new_editor = routeNewEditorFromCtx,
-                .seed_default_welcome_buffer = routeSeedDefaultWelcomeBufferFromCtx,
-            },
-        );
+        try app_run_mode_init_hooks_runtime.handle(self);
+    }
+
+    fn routeInitializeRunModeStateFromCtx(raw: *anyopaque) !void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        try state.initializeRunModeState();
+    }
+
+    fn routeRunMainLoopFromCtx(raw: *anyopaque) !void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        try state.runMainLoop();
     }
 
     pub fn newTerminal(self: *AppState) !void {
@@ -1094,18 +1103,8 @@ const AppState = struct {
         try app_run_entry_hooks_runtime.run(
             @ptrCast(self),
             .{
-                .initialize_run_mode_state = struct {
-                    fn call(raw: *anyopaque) !void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        try state.initializeRunModeState();
-                    }
-                }.call,
-                .run_main_loop = struct {
-                    fn call(raw: *anyopaque) !void {
-                        const run_state: *AppState = @ptrCast(@alignCast(raw));
-                        try run_state.runMainLoop();
-                    }
-                }.call,
+                .initialize_run_mode_state = routeInitializeRunModeStateFromCtx,
+                .run_main_loop = routeRunMainLoopFromCtx,
             },
         );
     }
