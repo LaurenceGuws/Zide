@@ -43,7 +43,7 @@ const EditorClusterCache = widgets.EditorClusterCache;
 const EditorRenderCache = editor_render_cache_mod.EditorRenderCache;
 const TerminalWidget = widgets.TerminalWidget;
 
-const AppMode = app_bootstrap.AppMode;
+pub const AppMode = app_bootstrap.AppMode;
 
 var sigint_requested = std.atomic.Value(bool).init(false);
 
@@ -2991,18 +2991,25 @@ const AppState = struct {
     }
 };
 
+pub fn runWithMode(allocator: std.mem.Allocator, app_mode: AppMode) !void {
+    var app = try AppState.init(allocator, app_mode);
+    defer app.deinit();
+
+    try app.run();
+}
+
+pub fn runFromArgs(allocator: std.mem.Allocator) !void {
+    const app_mode = app_bootstrap.parseAppMode(allocator);
+    try runWithMode(allocator, app_mode);
+}
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
     installSignalHandlers();
-
-    const app_mode = app_bootstrap.parseAppMode(allocator);
-    var app = try AppState.init(allocator, app_mode);
-    defer app.deinit();
-
-    try app.run();
+    try runFromArgs(allocator);
 }
 
 fn parseEnvU64(env_key: [:0]const u8, default_value: u64) u64 {

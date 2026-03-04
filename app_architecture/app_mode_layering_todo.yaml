@@ -111,7 +111,7 @@ app_mode_layering_todo:
             - "IDE layer should compose backend modes and keep policy-only logic."
         - id: MODE-02-02
           title: "Move residual mode-switching logic out of main app file"
-          status: todo
+          status: in_progress
           files_to_edit:
             - src/main.zig
           notes:
