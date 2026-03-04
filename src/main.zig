@@ -49,6 +49,7 @@ const app_interactive_frame = @import("app/interactive_frame.zig");
 const app_update_driver = @import("app/update_driver.zig");
 const app_run_loop_driver = @import("app/run_loop_driver.zig");
 const app_reload_config_runtime = @import("app/reload_config_runtime.zig");
+const app_run_mode_init = @import("app/run_mode_init.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
@@ -2284,29 +2285,53 @@ const AppState = struct {
     }
 
     fn initializeRunModeState(self: *AppState) !void {
-        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-            if (app_terminal_tabs_runtime.count(self.app_mode, self.terminal_workspace, self.terminals.items.len) == 0) {
-                try self.newTerminal();
-            }
-            try self.syncTerminalModeTabBar();
-            return;
-        }
-
-        if (app_modes.ide.isFontSample(self.app_mode)) {
-            return;
-        }
-
-        if (self.perf_mode and self.perf_file_path != null) {
-            try self.openFile(self.perf_file_path.?);
-            return;
-        }
-
-        try self.newEditor();
-
-        if (self.editors.items.len > 0) {
-            const editor = self.editors.items[0];
-            try app_editor_seed.seedDefaultWelcomeBuffer(editor);
-        }
+        try app_run_mode_init.initialize(
+            self.app_mode,
+            self.perf_mode,
+            self.perf_file_path,
+            @ptrCast(self),
+            .{
+                .terminal_tab_count = struct {
+                    fn call(raw: *anyopaque) usize {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        return app_terminal_tabs_runtime.count(state.app_mode, state.terminal_workspace, state.terminals.items.len);
+                    }
+                }.call,
+                .new_terminal = struct {
+                    fn call(raw: *anyopaque) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.newTerminal();
+                    }
+                }.call,
+                .sync_terminal_mode_tab_bar = struct {
+                    fn call(raw: *anyopaque) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.syncTerminalModeTabBar();
+                    }
+                }.call,
+                .open_file = struct {
+                    fn call(raw: *anyopaque, path: []const u8) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.openFile(path);
+                    }
+                }.call,
+                .new_editor = struct {
+                    fn call(raw: *anyopaque) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.newEditor();
+                    }
+                }.call,
+                .seed_default_welcome_buffer = struct {
+                    fn call(raw: *anyopaque) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        if (state.editors.items.len > 0) {
+                            const editor = state.editors.items[0];
+                            try app_editor_seed.seedDefaultWelcomeBuffer(editor);
+                        }
+                    }
+                }.call,
+            },
+        );
     }
 
     const RunFrameSetup = app_run_loop_driver.FrameSetup;
