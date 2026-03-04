@@ -24,6 +24,7 @@ This document is the compatibility authority for the app mode layering extractio
 6. `zig build mode-gates`
 
 For local extraction loops, you may run `zig build mode-gates-fast` between commits and reserve `zig build mode-gates` for checkpoint validation.
+Both bundles include `mode-size-check`.
 
 Helper wrapper:
 

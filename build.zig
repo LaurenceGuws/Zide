@@ -951,29 +951,6 @@ pub fn build(b: *std.Build) void {
     const input_import_check_step = b.step("check-input-imports", "Check input module import layering");
     input_import_check_step.dependOn(&run_input_import_check.step);
 
-    const mode_gates_step = b.step("mode-gates", "Run MODE extraction regression gate bundle");
-    mode_gates_step.dependOn(test_step);
-    mode_gates_step.dependOn(terminal_import_check_step);
-    mode_gates_step.dependOn(app_import_check_step);
-    mode_gates_step.dependOn(input_import_check_step);
-    mode_gates_step.dependOn(editor_import_check_step);
-    mode_gates_step.dependOn(b.getInstallStep());
-    mode_gates_step.dependOn(terminal_replay_all_step);
-
-    const mode_gates_fast_step = b.step("mode-gates-fast", "Run fast non-replay MODE extraction gates");
-    mode_gates_fast_step.dependOn(test_step);
-    mode_gates_fast_step.dependOn(terminal_import_check_step);
-    mode_gates_fast_step.dependOn(app_import_check_step);
-    mode_gates_fast_step.dependOn(input_import_check_step);
-    mode_gates_fast_step.dependOn(editor_import_check_step);
-    mode_gates_fast_step.dependOn(b.getInstallStep());
-
-    const mode_smokes_manual_step = b.step("mode-smokes-manual", "Run interactive MODE smokes (manual)");
-    mode_smokes_manual_step.dependOn(run_step);
-    mode_smokes_manual_step.dependOn(run_mode_terminal_step);
-    mode_smokes_manual_step.dependOn(run_mode_editor_step);
-    mode_smokes_manual_step.dependOn(run_mode_ide_step);
-
     const mode_size_report_step = b.step("mode-size-report", "Report focused mode binary sizes");
     mode_size_report_step.dependOn(b.getInstallStep());
     const mode_size_report_cmd = b.addSystemCommand(&.{ "bash", "tools/report_mode_binary_sizes.sh" });
@@ -983,6 +960,31 @@ pub fn build(b: *std.Build) void {
     mode_size_check_step.dependOn(b.getInstallStep());
     const mode_size_check_cmd = b.addSystemCommand(&.{ "bash", "tools/check_mode_binary_sizes.sh" });
     mode_size_check_step.dependOn(&mode_size_check_cmd.step);
+
+    const mode_gates_step = b.step("mode-gates", "Run MODE extraction regression gate bundle");
+    mode_gates_step.dependOn(test_step);
+    mode_gates_step.dependOn(terminal_import_check_step);
+    mode_gates_step.dependOn(app_import_check_step);
+    mode_gates_step.dependOn(input_import_check_step);
+    mode_gates_step.dependOn(editor_import_check_step);
+    mode_gates_step.dependOn(b.getInstallStep());
+    mode_gates_step.dependOn(mode_size_check_step);
+    mode_gates_step.dependOn(terminal_replay_all_step);
+
+    const mode_gates_fast_step = b.step("mode-gates-fast", "Run fast non-replay MODE extraction gates");
+    mode_gates_fast_step.dependOn(test_step);
+    mode_gates_fast_step.dependOn(terminal_import_check_step);
+    mode_gates_fast_step.dependOn(app_import_check_step);
+    mode_gates_fast_step.dependOn(input_import_check_step);
+    mode_gates_fast_step.dependOn(editor_import_check_step);
+    mode_gates_fast_step.dependOn(b.getInstallStep());
+    mode_gates_fast_step.dependOn(mode_size_check_step);
+
+    const mode_smokes_manual_step = b.step("mode-smokes-manual", "Run interactive MODE smokes (manual)");
+    mode_smokes_manual_step.dependOn(run_step);
+    mode_smokes_manual_step.dependOn(run_mode_terminal_step);
+    mode_smokes_manual_step.dependOn(run_mode_editor_step);
+    mode_smokes_manual_step.dependOn(run_mode_ide_step);
 
     const grammar_update = b.addExecutable(.{
         .name = "grammar-update",
