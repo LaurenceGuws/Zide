@@ -1,8 +1,14 @@
 const std = @import("std");
-const tab_bar = @import("../../../ui/widgets/tab_bar.zig");
 const tab_intents = @import("tab_intents.zig");
 const shared = @import("../shared/mod.zig");
 const shared_types = @import("../../../types/mod.zig");
+
+pub const DragEndState = struct {
+    active: bool,
+    moved: bool,
+    from_index: usize,
+    to_index: usize,
+};
 
 pub const ReleasePlan = struct {
     intent: ?shared.actions.TabAction,
@@ -13,11 +19,11 @@ pub const ReleasePlan = struct {
 
 pub const DragFrame = struct {
     updated: bool,
-    release: ?tab_bar.TabBar.DragEndState,
+    release: ?DragEndState,
 };
 
 pub fn processDragFrame(
-    tabs: *tab_bar.TabBar,
+    tabs: anytype,
     input_batch: *const shared_types.input.InputBatch,
     mouse: shared_types.input.MousePos,
     bar_x: f32,
@@ -34,13 +40,22 @@ pub fn processDragFrame(
         frame.updated = tabs.updateDrag(mouse.x, mouse.y, bar_x, bar_y, bar_width, true);
     }
     if (enabled and input_batch.mouseReleased(.left)) {
-        frame.release = tabs.endDrag();
+        frame.release = mapDragEndState(tabs.endDrag());
     }
 
     return frame;
 }
 
-pub fn reorderIntentForDragEnd(drag_end: tab_bar.TabBar.DragEndState) ?shared.actions.TabAction {
+fn mapDragEndState(raw: anytype) DragEndState {
+    return .{
+        .active = raw.active,
+        .moved = raw.moved,
+        .from_index = raw.from_index,
+        .to_index = raw.to_index,
+    };
+}
+
+pub fn reorderIntentForDragEnd(drag_end: DragEndState) ?shared.actions.TabAction {
     return tab_intents.reorderIntentForDrag(.{
         .active = drag_end.active,
         .moved = drag_end.moved,
@@ -49,15 +64,15 @@ pub fn reorderIntentForDragEnd(drag_end: tab_bar.TabBar.DragEndState) ?shared.ac
     });
 }
 
-pub fn shouldHandleClickAfterDragEnd(drag_end: tab_bar.TabBar.DragEndState) bool {
+pub fn shouldHandleClickAfterDragEnd(drag_end: DragEndState) bool {
     return drag_end.active and !drag_end.moved;
 }
 
-pub fn shouldMarkRedrawAfterDragEnd(drag_end: tab_bar.TabBar.DragEndState) bool {
+pub fn shouldMarkRedrawAfterDragEnd(drag_end: DragEndState) bool {
     return drag_end.active;
 }
 
-pub fn terminalReleasePlan(drag_end: tab_bar.TabBar.DragEndState) ReleasePlan {
+pub fn terminalReleasePlan(drag_end: DragEndState) ReleasePlan {
     return .{
         .intent = reorderIntentForDragEnd(drag_end),
         .handle_click = shouldHandleClickAfterDragEnd(drag_end),
@@ -66,7 +81,7 @@ pub fn terminalReleasePlan(drag_end: tab_bar.TabBar.DragEndState) ReleasePlan {
     };
 }
 
-pub fn ideEditorReleasePlan(drag_end: tab_bar.TabBar.DragEndState) ReleasePlan {
+pub fn ideEditorReleasePlan(drag_end: DragEndState) ReleasePlan {
     const intent = reorderIntentForDragEnd(drag_end);
     const moved = intent != null;
     return .{
@@ -78,7 +93,7 @@ pub fn ideEditorReleasePlan(drag_end: tab_bar.TabBar.DragEndState) ReleasePlan {
 }
 
 test "tab drag helper emits reorder intent only for active moved drag" {
-    const none_state: tab_bar.TabBar.DragEndState = .{
+    const none_state: DragEndState = .{
         .active = true,
         .moved = false,
         .from_index = 1,
@@ -86,7 +101,7 @@ test "tab drag helper emits reorder intent only for active moved drag" {
     };
     try std.testing.expectEqual(@as(?shared.actions.TabAction, null), reorderIntentForDragEnd(none_state));
 
-    const moved_state: tab_bar.TabBar.DragEndState = .{
+    const moved_state: DragEndState = .{
         .active = true,
         .moved = true,
         .from_index = 3,
@@ -103,7 +118,7 @@ test "tab drag helper emits reorder intent only for active moved drag" {
 }
 
 test "tab drag helper click and redraw flags follow drag end state" {
-    const click_state: tab_bar.TabBar.DragEndState = .{
+    const click_state: DragEndState = .{
         .active = true,
         .moved = false,
         .from_index = 0,
@@ -112,7 +127,7 @@ test "tab drag helper click and redraw flags follow drag end state" {
     try std.testing.expect(shouldHandleClickAfterDragEnd(click_state));
     try std.testing.expect(shouldMarkRedrawAfterDragEnd(click_state));
 
-    const inactive_state: tab_bar.TabBar.DragEndState = .{
+    const inactive_state: DragEndState = .{
         .active = false,
         .moved = false,
         .from_index = 0,
@@ -123,7 +138,7 @@ test "tab drag helper click and redraw flags follow drag end state" {
 }
 
 test "terminal release plan mirrors existing click+redraw behavior" {
-    const click_state: tab_bar.TabBar.DragEndState = .{
+    const click_state: DragEndState = .{
         .active = true,
         .moved = false,
         .from_index = 0,
@@ -137,7 +152,7 @@ test "terminal release plan mirrors existing click+redraw behavior" {
 }
 
 test "ide editor release plan only marks moved reorder path" {
-    const moved_state: tab_bar.TabBar.DragEndState = .{
+    const moved_state: DragEndState = .{
         .active = true,
         .moved = true,
         .from_index = 2,
@@ -149,7 +164,7 @@ test "ide editor release plan only marks moved reorder path" {
     try std.testing.expect(moved_plan.mark_redraw);
     try std.testing.expect(moved_plan.sync_active_tab);
 
-    const idle_state: tab_bar.TabBar.DragEndState = .{
+    const idle_state: DragEndState = .{
         .active = true,
         .moved = false,
         .from_index = 2,
@@ -163,11 +178,24 @@ test "ide editor release plan only marks moved reorder path" {
 }
 
 test "drag frame helper reports update and release transitions" {
-    var tabs = tab_bar.TabBar.init(std.testing.allocator);
-    defer tabs.deinit();
-    try tabs.addTab("a", .editor);
-    try tabs.addTab("b", .editor);
-    _ = tabs.beginDrag(10, 5, 0, 0, 300);
+    const DummyTabs = struct {
+        updated: bool = false,
+        released: bool = false,
+        pub fn updateDrag(self: *@This(), _: f32, _: f32, _: f32, _: f32, _: f32, _: bool) bool {
+            self.updated = true;
+            return true;
+        }
+        pub fn endDrag(self: *@This()) DragEndState {
+            self.released = true;
+            return .{
+                .active = true,
+                .moved = true,
+                .from_index = 0,
+                .to_index = 1,
+            };
+        }
+    };
+    var tabs = DummyTabs{};
 
     var batch = shared_types.input.InputBatch.init(std.testing.allocator);
     defer batch.deinit();
@@ -175,7 +203,7 @@ test "drag frame helper reports update and release transitions" {
     batch.mouse_pos = .{ .x = 200, .y = 5 };
     var frame = processDragFrame(&tabs, &batch, batch.mouse_pos, 0, 0, 300, true);
     try std.testing.expect(frame.updated);
-    try std.testing.expectEqual(@as(?tab_bar.TabBar.DragEndState, null), frame.release);
+    try std.testing.expectEqual(@as(?DragEndState, null), frame.release);
 
     batch.mouse_down[@intFromEnum(shared_types.input.MouseButton.left)] = false;
     batch.mouse_released[@intFromEnum(shared_types.input.MouseButton.left)] = true;
