@@ -15,6 +15,7 @@ const app_terminal_tab_intents = @import("app/terminal_tab_intents.zig");
 const app_terminal_resize = @import("app/terminal_resize.zig");
 const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
 const app_terminal_close_confirm_state = @import("app/terminal_close_confirm_state.zig");
+const app_terminal_close_confirm_runtime = @import("app/terminal_close_confirm_runtime.zig");
 const app_terminal_theme_apply = @import("app/terminal_theme_apply.zig");
 const app_terminal_tabs = @import("app/terminal_tabs.zig");
 const app_terminal_close_confirm_draw = @import("app/terminal_close_confirm_draw.zig");
@@ -2255,12 +2256,21 @@ const AppState = struct {
         decision: app_modes.ide.TerminalCloseConfirmDecision,
         now: f64,
     ) !bool {
-        return switch (decision) {
-            .confirm => self.requestConfirmTerminalCloseFromModal(now),
-            .cancel => self.requestCancelTerminalCloseFromModal(now),
-            .consume => true,
-            .none => false,
+        const hooks: app_terminal_close_confirm_runtime.RuntimeHooks = .{
+            .confirm = struct {
+                fn call(raw: *anyopaque, at: f64) !bool {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    return state.requestConfirmTerminalCloseFromModal(at);
+                }
+            }.call,
+            .cancel = struct {
+                fn call(raw: *anyopaque, at: f64) !bool {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    return state.requestCancelTerminalCloseFromModal(at);
+                }
+            }.call,
         };
+        return app_terminal_close_confirm_runtime.applyDecision(decision, now, @ptrCast(self), hooks);
     }
 
     fn handleTerminalCloseConfirmInput(
