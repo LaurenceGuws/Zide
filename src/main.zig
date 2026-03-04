@@ -1071,166 +1071,6 @@ const AppState = struct {
         }
     }
 
-    fn handleActiveEditorFrame(
-        self: *AppState,
-        shell: *Shell,
-        layout: layout_types.WidgetLayout,
-        mouse: shared_types.input.MousePos,
-        input_batch: *shared_types.input.InputBatch,
-        search_panel_consumed_input: bool,
-        now: f64,
-    ) !void {
-        const result = try app_active_editor_frame.handle(
-            self.app_mode,
-            self.active_kind,
-            self.editors.items,
-            self.active_tab,
-            &self.editor_cluster_cache,
-            self.editor_wrap,
-            shell,
-            layout,
-            mouse,
-            input_batch,
-            search_panel_consumed_input,
-            self.perf_mode,
-            self.perf_frames_done,
-            self.perf_frames_total,
-            self.perf_scroll_delta,
-            now,
-            @ptrCast(self),
-            .{
-                .handle_editor_scrollbar_input = struct {
-                    fn call(
-                        raw: *anyopaque,
-                        widget: *EditorWidget,
-                        frame_shell: *Shell,
-                        frame_layout: layout_types.WidgetLayout,
-                        frame_mouse: shared_types.input.MousePos,
-                        frame_input_batch: *shared_types.input.InputBatch,
-                        frame_now: f64,
-                    ) bool {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        return state.handleEditorScrollbarInput(
-                            widget,
-                            frame_shell,
-                            frame_layout,
-                            frame_mouse,
-                            frame_input_batch,
-                            frame_now,
-                        );
-                    }
-                }.call,
-                .handle_editor_mouse_selection_input = struct {
-                    fn call(
-                        raw: *anyopaque,
-                        widget: *EditorWidget,
-                        frame_shell: *Shell,
-                        frame_layout: layout_types.WidgetLayout,
-                        frame_mouse: shared_types.input.MousePos,
-                        frame_input_batch: *shared_types.input.InputBatch,
-                        scrollbar_blocking: bool,
-                        frame_now: f64,
-                    ) void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        state.handleEditorMouseSelectionInput(
-                            widget,
-                            frame_shell,
-                            frame_layout,
-                            frame_mouse,
-                            frame_input_batch,
-                            scrollbar_blocking,
-                            frame_now,
-                        );
-                    }
-                }.call,
-                .precompute_editor_visible_caches = struct {
-                    fn call(
-                        raw: *anyopaque,
-                        widget: *EditorWidget,
-                        frame_shell: *Shell,
-                        frame_layout: layout_types.WidgetLayout,
-                    ) void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        state.precomputeEditorVisibleCaches(widget, frame_shell, frame_layout);
-                    }
-                }.call,
-            },
-        );
-        if (result.clear_editor_cluster_cache) self.editor_cluster_cache.clear();
-        if (result.needs_redraw) self.needs_redraw = true;
-        if (result.note_input) self.metrics.noteInput(now);
-        if (result.perf_frames_done_inc) self.perf_frames_done +|= 1;
-    }
-
-    fn handleVisibleTerminalFrame(
-        self: *AppState,
-        shell: *Shell,
-        layout: layout_types.WidgetLayout,
-        input_batch: *shared_types.input.InputBatch,
-        search_panel_consumed_input: bool,
-        suppress_terminal_shortcuts: bool,
-        terminal_close_modal_active: bool,
-        now: f64,
-    ) !void {
-        const result = try app_visible_terminal_frame.handle(
-            self.app_mode,
-            self.show_terminal,
-            &self.terminal_workspace,
-            self.terminals.items.len,
-            self.terminal_widgets.items,
-            self.tab_bar.isDragging(),
-            self.active_kind,
-            shell,
-            layout,
-            input_batch,
-            search_panel_consumed_input,
-            suppress_terminal_shortcuts,
-            terminal_close_modal_active,
-            now,
-            @ptrCast(self),
-            .{
-                .poll_visible_sessions = struct {
-                    fn call(raw: *anyopaque, batch: *shared_types.input.InputBatch) !void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        try state.pollVisibleTerminalSessions(batch);
-                    }
-                }.call,
-                .handle_terminal_widget_input = struct {
-                    fn call(
-                        raw: *anyopaque,
-                        term_widget: *TerminalWidget,
-                        frame_shell: *Shell,
-                        term_x: f32,
-                        term_y_draw: f32,
-                        term_width: f32,
-                        term_draw_height: f32,
-                        allow_terminal_input: bool,
-                        frame_suppress_terminal_shortcuts: bool,
-                        frame_input_batch: *shared_types.input.InputBatch,
-                        frame_search_panel_consumed_input: bool,
-                        frame_now: f64,
-                    ) !void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        try state.handleTerminalWidgetInput(
-                            term_widget,
-                            frame_shell,
-                            term_x,
-                            term_y_draw,
-                            term_width,
-                            term_draw_height,
-                            allow_terminal_input,
-                            frame_suppress_terminal_shortcuts,
-                            frame_input_batch,
-                            frame_search_panel_consumed_input,
-                            frame_now,
-                        );
-                    }
-                }.call,
-            },
-        );
-        if (result.needs_redraw) self.needs_redraw = true;
-    }
-
     const PreInputShortcutResult = struct {
         suppress_terminal_shortcuts: bool,
         terminal_close_modal_active: bool,
@@ -2084,15 +1924,95 @@ const AppState = struct {
                                                                                                 search_panel_consumed_input = true;
                                                                                             }
                                                                                         }
-                                                                                        try inner_state.handleActiveEditorFrame(
+                                                                                        const editor_frame_result = try app_active_editor_frame.handle(
+                                                                                            inner_state.app_mode,
+                                                                                            inner_state.active_kind,
+                                                                                            inner_state.editors.items,
+                                                                                            inner_state.active_tab,
+                                                                                            &inner_state.editor_cluster_cache,
+                                                                                            inner_state.editor_wrap,
                                                                                             frame_shell,
                                                                                             layout,
                                                                                             mouse,
                                                                                             frame_input_batch,
                                                                                             search_panel_consumed_input,
+                                                                                            inner_state.perf_mode,
+                                                                                            inner_state.perf_frames_done,
+                                                                                            inner_state.perf_frames_total,
+                                                                                            inner_state.perf_scroll_delta,
                                                                                             at,
+                                                                                            @ptrCast(inner_state),
+                                                                                            .{
+                                                                                                .handle_editor_scrollbar_input = struct {
+                                                                                                    fn call(
+                                                                                                        route_raw: *anyopaque,
+                                                                                                        widget: *EditorWidget,
+                                                                                                        editor_shell: *Shell,
+                                                                                                        editor_layout: layout_types.WidgetLayout,
+                                                                                                        editor_mouse: shared_types.input.MousePos,
+                                                                                                        editor_input_batch: *shared_types.input.InputBatch,
+                                                                                                        editor_now: f64,
+                                                                                                    ) bool {
+                                                                                                        const route_state: *AppState = @ptrCast(@alignCast(route_raw));
+                                                                                                        return route_state.handleEditorScrollbarInput(
+                                                                                                            widget,
+                                                                                                            editor_shell,
+                                                                                                            editor_layout,
+                                                                                                            editor_mouse,
+                                                                                                            editor_input_batch,
+                                                                                                            editor_now,
+                                                                                                        );
+                                                                                                    }
+                                                                                                }.call,
+                                                                                                .handle_editor_mouse_selection_input = struct {
+                                                                                                    fn call(
+                                                                                                        route_raw: *anyopaque,
+                                                                                                        widget: *EditorWidget,
+                                                                                                        editor_shell: *Shell,
+                                                                                                        editor_layout: layout_types.WidgetLayout,
+                                                                                                        editor_mouse: shared_types.input.MousePos,
+                                                                                                        editor_input_batch: *shared_types.input.InputBatch,
+                                                                                                        scrollbar_blocking: bool,
+                                                                                                        editor_now: f64,
+                                                                                                    ) void {
+                                                                                                        const route_state: *AppState = @ptrCast(@alignCast(route_raw));
+                                                                                                        route_state.handleEditorMouseSelectionInput(
+                                                                                                            widget,
+                                                                                                            editor_shell,
+                                                                                                            editor_layout,
+                                                                                                            editor_mouse,
+                                                                                                            editor_input_batch,
+                                                                                                            scrollbar_blocking,
+                                                                                                            editor_now,
+                                                                                                        );
+                                                                                                    }
+                                                                                                }.call,
+                                                                                                .precompute_editor_visible_caches = struct {
+                                                                                                    fn call(
+                                                                                                        route_raw: *anyopaque,
+                                                                                                        widget: *EditorWidget,
+                                                                                                        editor_shell: *Shell,
+                                                                                                        editor_layout: layout_types.WidgetLayout,
+                                                                                                    ) void {
+                                                                                                        const route_state: *AppState = @ptrCast(@alignCast(route_raw));
+                                                                                                        route_state.precomputeEditorVisibleCaches(widget, editor_shell, editor_layout);
+                                                                                                    }
+                                                                                                }.call,
+                                                                                            },
                                                                                         );
-                                                                                        try inner_state.handleVisibleTerminalFrame(
+                                                                                        if (editor_frame_result.clear_editor_cluster_cache) inner_state.editor_cluster_cache.clear();
+                                                                                        if (editor_frame_result.needs_redraw) inner_state.needs_redraw = true;
+                                                                                        if (editor_frame_result.note_input) inner_state.metrics.noteInput(at);
+                                                                                        if (editor_frame_result.perf_frames_done_inc) inner_state.perf_frames_done +|= 1;
+
+                                                                                        const terminal_frame_result = try app_visible_terminal_frame.handle(
+                                                                                            inner_state.app_mode,
+                                                                                            inner_state.show_terminal,
+                                                                                            &inner_state.terminal_workspace,
+                                                                                            inner_state.terminals.items.len,
+                                                                                            inner_state.terminal_widgets.items,
+                                                                                            inner_state.tab_bar.isDragging(),
+                                                                                            inner_state.active_kind,
                                                                                             frame_shell,
                                                                                             layout,
                                                                                             frame_input_batch,
@@ -2100,7 +2020,48 @@ const AppState = struct {
                                                                                             frame_suppress_terminal_shortcuts,
                                                                                             frame_terminal_close_modal_active,
                                                                                             at,
+                                                                                            @ptrCast(inner_state),
+                                                                                            .{
+                                                                                                .poll_visible_sessions = struct {
+                                                                                                    fn call(route_raw: *anyopaque, poll_batch: *shared_types.input.InputBatch) !void {
+                                                                                                        const route_state: *AppState = @ptrCast(@alignCast(route_raw));
+                                                                                                        try route_state.pollVisibleTerminalSessions(poll_batch);
+                                                                                                    }
+                                                                                                }.call,
+                                                                                                .handle_terminal_widget_input = struct {
+                                                                                                    fn call(
+                                                                                                        route_raw: *anyopaque,
+                                                                                                        term_widget: *TerminalWidget,
+                                                                                                        term_shell: *Shell,
+                                                                                                        term_x: f32,
+                                                                                                        term_y_draw: f32,
+                                                                                                        term_width: f32,
+                                                                                                        term_draw_height: f32,
+                                                                                                        allow_terminal_input: bool,
+                                                                                                        frame_suppress_shortcuts: bool,
+                                                                                                        term_input_batch: *shared_types.input.InputBatch,
+                                                                                                        frame_search_consumed_input: bool,
+                                                                                                        term_now: f64,
+                                                                                                    ) !void {
+                                                                                                        const route_state: *AppState = @ptrCast(@alignCast(route_raw));
+                                                                                                        try route_state.handleTerminalWidgetInput(
+                                                                                                            term_widget,
+                                                                                                            term_shell,
+                                                                                                            term_x,
+                                                                                                            term_y_draw,
+                                                                                                            term_width,
+                                                                                                            term_draw_height,
+                                                                                                            allow_terminal_input,
+                                                                                                            frame_suppress_shortcuts,
+                                                                                                            term_input_batch,
+                                                                                                            frame_search_consumed_input,
+                                                                                                            term_now,
+                                                                                                        );
+                                                                                                    }
+                                                                                                }.call,
+                                                                                            },
                                                                                         );
+                                                                                        if (terminal_frame_result.needs_redraw) inner_state.needs_redraw = true;
                                                                                         try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(inner_state);
                                                                                     }
                                                                                 }.inner,
