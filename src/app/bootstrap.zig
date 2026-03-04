@@ -43,3 +43,33 @@ pub fn modeFromArg(value: []const u8) ?AppMode {
     return null;
 }
 
+pub fn parseEnvU64(env_key: [:0]const u8, default_value: u64) u64 {
+    const raw = std.c.getenv(env_key) orelse return default_value;
+    const slice = std.mem.sliceTo(raw, 0);
+    if (slice.len == 0) return default_value;
+    return std.fmt.parseInt(u64, slice, 10) catch default_value;
+}
+
+pub fn parseEnvI32(env_key: [:0]const u8, default_value: i32) i32 {
+    const raw = std.c.getenv(env_key) orelse return default_value;
+    const slice = std.mem.sliceTo(raw, 0);
+    if (slice.len == 0) return default_value;
+    const parsed = std.fmt.parseInt(i32, slice, 10) catch return default_value;
+    return if (parsed > 0) parsed else default_value;
+}
+
+pub fn parseEnvBool(env_key: [:0]const u8) ?bool {
+    const raw = std.c.getenv(env_key) orelse return null;
+    const slice = std.mem.sliceTo(raw, 0);
+    if (slice.len == 0) return null;
+    if (std.mem.eql(u8, slice, "1") or std.ascii.eqlIgnoreCase(slice, "true") or std.ascii.eqlIgnoreCase(slice, "yes") or std.ascii.eqlIgnoreCase(slice, "on")) return true;
+    if (std.mem.eql(u8, slice, "0") or std.ascii.eqlIgnoreCase(slice, "false") or std.ascii.eqlIgnoreCase(slice, "no") or std.ascii.eqlIgnoreCase(slice, "off")) return false;
+    return null;
+}
+
+pub fn envSlice(env_key: [:0]const u8) ?[]const u8 {
+    const raw = std.c.getenv(env_key) orelse return null;
+    const slice = std.mem.sliceTo(raw, 0);
+    if (slice.len == 0) return null;
+    return slice;
+}
