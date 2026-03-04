@@ -720,12 +720,6 @@ const AppState = struct {
         self.logModeAdapterParity();
     }
 
-    fn applyTerminalModeTabAction(self: *AppState, tab_action: app_modes.shared.actions.TabAction) void {
-        if (!app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) return;
-        const contract = self.terminal_mode_adapter.asContract();
-        _ = contract.applyAction(self.allocator, .{ .tab = tab_action }) catch {};
-    }
-
     fn routeTerminalCloseIntentByTabIdAndSync(self: *AppState, active_tab_id: ?u64) !bool {
         if (app_modes.ide.closeIntentForActiveTab(active_tab_id)) |intent| {
             try self.routeTerminalTabActionAndSync(intent);
@@ -812,7 +806,10 @@ const AppState = struct {
     }
 
     fn routeTerminalTabActionAndSync(self: *AppState, tab_action: app_modes.shared.actions.TabAction) !void {
-        self.applyTerminalModeTabAction(tab_action);
+        if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) {
+            const contract = self.terminal_mode_adapter.asContract();
+            _ = contract.applyAction(self.allocator, .{ .tab = tab_action }) catch {};
+        }
         try self.syncModeAdaptersFromTabBar();
     }
 
