@@ -1,0 +1,157 @@
+app_mode_layering_todo:
+  scope:
+    description: "Split app mode orchestration into shared runtime contracts + backend implementations + thin IDE composition, enabling focused binaries without behavior regressions."
+    goals:
+      - "Reduce `src/main.zig` ownership to bootstrap + host wiring."
+      - "Create a shared public mode layer reusable by terminal-only/editor-only and IDE hosts."
+      - "Keep current runtime `--mode` behavior compatible while preparing build-time focused binaries."
+      - "Enforce regression gates between each extraction slice."
+    non_goals:
+      - "No feature changes to editor or terminal behavior."
+      - "No FFI ABI expansion in this track."
+      - "No renderer architecture redesign in this track."
+
+  layering_model:
+    shared_public_layer:
+      path: "src/app/modes/shared/"
+      responsibilities:
+        - "Mode contracts, action DTOs, shared tab/session abstractions."
+        - "Host-agnostic mode lifecycle and routing interfaces."
+    backend_layer:
+      path: "src/app/modes/backend/"
+      responsibilities:
+        - "Concrete editor and terminal mode implementations."
+        - "Bridges from shared contracts to existing editor/terminal backends."
+    ide_layer:
+      path: "src/app/modes/ide/"
+      responsibilities:
+        - "Thin composition of backend modes for full IDE workflow."
+        - "IDE-only policy switches; no backend ownership."
+
+  zide_integration:
+    entry_points:
+      - src/main.zig
+      - src/input/input_actions.zig
+      - src/ui/widgets/tab_bar.zig
+      - src/ui/widgets/editor_widget.zig
+      - src/ui/widgets/terminal_widget.zig
+      - src/terminal/core/workspace.zig
+      - src/editor/editor.zig
+      - app_architecture/APP_LAYERING.md
+
+  regression_gates:
+    required_after_each_slice:
+      - zig build test
+      - zig build check-app-imports
+      - zig build check-input-imports
+      - zig build check-editor-imports
+    required_mode_smokes:
+      - zig build run
+      - zig build run -- --mode terminal
+      - zig build run -- --mode editor
+      - zig build run -- --mode ide
+    required_backend_regressions:
+      - zig build test-terminal-replay -- --all
+    notes:
+      - "Do not advance to the next slice until all gates pass for the current slice."
+      - "If a gate fails, either fix in-slice or revert that slice before proceeding."
+
+  milestones:
+    - name: "MODE-00 Architecture + contracts"
+      tasks:
+        - id: MODE-00-01
+          title: "Add shared mode contract interfaces and action DTOs"
+          status: todo
+          files_to_add:
+            - src/app/modes/shared/contracts.zig
+            - src/app/modes/shared/actions.zig
+            - src/app/modes/shared/types.zig
+          notes:
+            - "Extraction-only. No behavior deltas."
+        - id: MODE-00-02
+          title: "Document mode-layer boundaries and import constraints"
+          status: todo
+          files_to_edit:
+            - app_architecture/APP_LAYERING.md
+            - app_architecture/app_mode_layering_todo.yaml
+
+    - name: "MODE-01 Backend extraction"
+      tasks:
+        - id: MODE-01-01
+          title: "Extract terminal mode backend implementation"
+          status: todo
+          files_to_add:
+            - src/app/modes/backend/terminal_mode.zig
+          files_to_edit:
+            - src/main.zig
+            - src/terminal/core/workspace.zig
+          notes:
+            - "Must preserve terminal tab behavior, close modal policy, and focus reporting."
+        - id: MODE-01-02
+          title: "Extract editor mode backend implementation"
+          status: todo
+          files_to_add:
+            - src/app/modes/backend/editor_mode.zig
+          files_to_edit:
+            - src/main.zig
+            - src/editor/editor.zig
+          notes:
+            - "Must preserve editor search/selection/scroll behavior."
+
+    - name: "MODE-02 IDE composition layer"
+      tasks:
+        - id: MODE-02-01
+          title: "Add thin IDE host composition wrapper"
+          status: todo
+          files_to_add:
+            - src/app/modes/ide/host.zig
+          files_to_edit:
+            - src/main.zig
+          notes:
+            - "IDE layer should compose backend modes and keep policy-only logic."
+        - id: MODE-02-02
+          title: "Move residual mode-switching logic out of main app file"
+          status: todo
+          files_to_edit:
+            - src/main.zig
+          notes:
+            - "Target: main file owns bootstrap + host startup only."
+
+    - name: "MODE-03 Build-time focused binaries"
+      tasks:
+        - id: MODE-03-01
+          title: "Add separate executable roots for terminal/editor/full IDE"
+          status: todo
+          files_to_edit:
+            - build.zig
+          files_to_add:
+            - src/app/entry_terminal.zig
+            - src/app/entry_editor.zig
+            - src/app/entry_ide.zig
+          notes:
+            - "Keep runtime `--mode` on full IDE binary for compatibility."
+        - id: MODE-03-02
+          title: "Add run/install steps for focused binaries"
+          status: todo
+          files_to_edit:
+            - build.zig
+          notes:
+            - "Expected steps: run-terminal, run-editor, run-ide."
+
+    - name: "MODE-04 Compatibility verification + rollout"
+      tasks:
+        - id: MODE-04-01
+          title: "Capture pre/post compatibility matrix"
+          status: todo
+          files_to_add:
+            - docs/app_mode_layering_validation.md
+          notes:
+            - "Record command matrix and expected outcomes for all modes."
+        - id: MODE-04-02
+          title: "Lock regression fixture authority for mode extraction"
+          status: todo
+          files_to_edit:
+            - app_architecture/terminal/REPLAY_HARNESS_SPEC.md
+            - app_architecture/editor/editor_widget_todo.yaml
+          notes:
+            - "Mark which fixtures/harnesses are blocking for each extraction slice."

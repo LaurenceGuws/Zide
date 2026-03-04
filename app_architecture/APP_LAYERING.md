@@ -21,6 +21,28 @@ the UI rendering stack defined in `app_architecture/ui/DEVELOPMENT_JOURNEY.md`.
 6) **UI Shell**
    - Window lifecycle, global input dispatch, layout + docking + theme.
 
+## Mode Layer Refocus (2026-03)
+
+To support focused binaries with minimal coupling, mode orchestration is being split into three layers:
+
+1) **Shared public mode layer** (`src/app/modes/shared/`)
+   - Host-agnostic contracts, action DTOs, and lifecycle interfaces.
+   - Must not depend on IDE composition details.
+2) **Backend mode layer** (`src/app/modes/backend/`)
+   - Concrete editor and terminal mode implementations.
+   - Bridges shared contracts to current backend ownership (Editor/TerminalWorkspace/Session).
+3) **IDE composition layer** (`src/app/modes/ide/`)
+   - Thin assembly of backend modes for full IDE behavior.
+   - IDE-specific policy only; no backend ownership logic.
+
+Execution authority for this split is tracked in:
+- `app_architecture/app_mode_layering_todo.yaml`
+
+Regression policy for this split:
+- Run compatibility gates after every extraction slice (unit + import checks + mode smokes + terminal replay).
+- Do not proceed to the next layer slice when current-layer gates fail.
+- Keep extraction-only semantics until compatibility matrix is stable.
+
 ## Current Anchors
 - **Editor modularization plan**: `app_architecture/editor/MODULARIZATION_PLAN.md`.
 - **Terminal modularization plan**: `app_architecture/terminal/MODULARIZATION_PLAN.md`.
