@@ -210,6 +210,7 @@ app_mode_layering_todo:
             - "In progress: pointer activity redraw/input heuristics moved from `main.zig` into `src/app/pointer_activity_frame.zig` (`handle`) with explicit mutable state inputs (`last_mouse_pos`, `last_mouse_redraw_time`, `last_ctrl_down`)."
             - "In progress: mouse-pressed frame routing (mode click-route dispatch + debug click logging) moved from `main.zig` into `src/app/mouse_pressed_frame.zig` (`handle`) with AppState callback hooks."
             - "In progress: input-actions frame action-loop traversal moved from `main.zig` into `src/app/input_actions_frame_runtime.zig` (`handle`) with callback routing for per-action shortcut handling."
+            - "In progress: tab-drag frame orchestration (terminal + IDE drag-route gating) moved from `main.zig` into `src/app/tab_drag_frame.zig` (`handle`) with AppState callback hooks."
             - "In progress: reload-config shortcut action-loop dispatch moved from `main.zig` into `src/app/reload_config_shortcut_runtime.zig` (`handle`) with callback hooks."
             - "In progress: single-use reload-config callback shims were removed from `main.zig`; pre-input path now supplies inline callbacks directly to `reload_config_shortcut_runtime.handle(...)`."
             - "In progress: terminal shortcut suppression policy for focused copy/paste conflicts moved from `main.zig` into `src/app/terminal_shortcut_suppress.zig` (`forFocus`)."
