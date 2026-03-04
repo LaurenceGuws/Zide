@@ -228,6 +228,7 @@ app_mode_layering_todo:
             - "In progress: update prelude orchestration moved from `main.zig` into `src/app/update_prelude_frame_runtime.zig` (`handle`) with hook callbacks for font-sample, widget input, config-notice tick, focus routing, and pre-input shortcut handling."
             - "In progress: font-sample draw early-return path moved from `main.zig` into `src/app/font_sample_draw_runtime.zig` (`handle`)."
             - "In progress: editor surface draw block moved from `main.zig` into `src/app/editor_draw_surface_runtime.zig` (`draw`)."
+            - "In progress: terminal surface draw block moved from `main.zig` into `src/app/terminal_draw_surface_runtime.zig` (`draw`), and shell chrome/footer draw block moved into `src/app/shell_chrome_draw_runtime.zig` (`draw`)."
             - "In progress: reload-config shortcut action-loop dispatch moved from `main.zig` into `src/app/reload_config_shortcut_runtime.zig` (`handle`) with callback hooks."
             - "In progress: single-use reload-config callback shims were removed from `main.zig`; pre-input path now supplies inline callbacks directly to `reload_config_shortcut_runtime.handle(...)`."
             - "In progress: terminal shortcut suppression policy for focused copy/paste conflicts moved from `main.zig` into `src/app/terminal_shortcut_suppress.zig` (`forFocus`)."
