@@ -1,13 +1,13 @@
 const std = @import("std");
-const app_entry_runtime = @import("app/app_entry_runtime.zig");
+const focused_entry_runtime = @import("app/focused_entry_runtime.zig");
 const runner = @import("app/runner.zig");
 
-pub const zide_focused_mode = app_entry_runtime.AppMode.ide;
+pub const zide_focused_mode = focused_entry_runtime.AppMode.ide;
 
 pub fn main() !void {
     try runner.runWithGpa(struct {
         fn call(allocator: std.mem.Allocator) !void {
-            try app_entry_runtime.runFocused(allocator);
+            try focused_entry_runtime.run(allocator, .ide);
         }
     }.call);
 }
