@@ -1414,6 +1414,22 @@ const AppState = struct {
         }
     }
 
+    fn handleSearchPanelFrameInput(
+        self: *AppState,
+        input_batch: *shared_types.input.InputBatch,
+        now: f64,
+    ) !bool {
+        if (!self.search_panel.active) return false;
+        const editor = self.activeEditor() orelse return false;
+        if (try self.handleSearchPanelInput(editor, input_batch)) {
+            self.editor_cluster_cache.clear();
+            self.needs_redraw = true;
+            self.metrics.noteInput(now);
+            return true;
+        }
+        return false;
+    }
+
     fn logModeAdapterParity(self: *AppState) void {
         const log = app_logger.logger("app.mode.parity");
         if (!log.enabled_file and !log.enabled_console) return;
@@ -2504,17 +2520,7 @@ const AppState = struct {
         }
 
         // Update active view
-        var search_panel_consumed_input = false;
-        if (self.search_panel.active) {
-            if (self.activeEditor()) |editor| {
-                if (try self.handleSearchPanelInput(editor, input_batch)) {
-                    self.editor_cluster_cache.clear();
-                    self.needs_redraw = true;
-                    self.metrics.noteInput(now);
-                    search_panel_consumed_input = true;
-                }
-            }
-        }
+        const search_panel_consumed_input = try self.handleSearchPanelFrameInput(input_batch, now);
 
         if (app_modes.ide.supportsEditorSurface(self.app_mode) and self.active_kind == .editor and self.editors.items.len > 0) {
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
