@@ -27,6 +27,7 @@ const app_terminal_resize = @import("app/terminal_resize.zig");
 const app_terminal_refresh_sizing_runtime = @import("app/terminal_refresh_sizing_runtime.zig");
 const app_visible_terminal_frame = @import("app/visible_terminal_frame.zig");
 const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
+const app_terminal_widget_input_runtime = @import("app/terminal_widget_input_runtime.zig");
 const app_terminal_close_confirm_input = @import("app/terminal_close_confirm_input.zig");
 const app_mode_adapter_sync_runtime = @import("app/mode_adapter_sync_runtime.zig");
 const app_terminal_theme_apply = @import("app/terminal_theme_apply.zig");
@@ -1787,33 +1788,38 @@ const AppState = struct {
                                                                                                         term_now: f64,
                                                                                                     ) !void {
                                                                                                         const route_state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        if (!frame_search_consumed_input and try term_widget.handleInput(
+                                                                                                        const result = try app_terminal_widget_input_runtime.handle(
+                                                                                                            term_widget,
                                                                                                             term_shell,
                                                                                                             term_x,
                                                                                                             term_y_draw,
                                                                                                             term_width,
                                                                                                             term_draw_height,
                                                                                                             allow_terminal_input,
-                                                                                                            &route_state.terminal_scroll_dragging,
-                                                                                                            &route_state.terminal_scroll_grab_offset,
                                                                                                             frame_suppress_shortcuts,
                                                                                                             term_input_batch,
-                                                                                                        )) {
-                                                                                                            route_state.needs_redraw = true;
-                                                                                                            route_state.metrics.noteInput(term_now);
-                                                                                                        }
-                                                                                                        if (term_widget.takePendingOpenRequest()) |req| {
-                                                                                                            defer route_state.allocator.free(req.path);
-                                                                                                            if (app_file_detect.isProbablyTextFile(req.path)) {
-                                                                                                                if (req.line != null) {
-                                                                                                                    try route_state.openFileAt(req.path, req.line.?, req.col);
-                                                                                                                } else {
-                                                                                                                    try route_state.openFile(req.path);
-                                                                                                                }
-                                                                                                                route_state.needs_redraw = true;
-                                                                                                                route_state.metrics.noteInput(term_now);
-                                                                                                            }
-                                                                                                        }
+                                                                                                            frame_search_consumed_input,
+                                                                                                            route_state.allocator,
+                                                                                                            &route_state.terminal_scroll_dragging,
+                                                                                                            &route_state.terminal_scroll_grab_offset,
+                                                                                                            @ptrCast(route_state),
+                                                                                                            .{
+                                                                                                                .open_file = struct {
+                                                                                                                    fn call(open_raw: *anyopaque, path: []const u8) !void {
+                                                                                                                        const state: *AppState = @ptrCast(@alignCast(open_raw));
+                                                                                                                        try state.openFile(path);
+                                                                                                                    }
+                                                                                                                }.call,
+                                                                                                                .open_file_at = struct {
+                                                                                                                    fn call(open_raw: *anyopaque, path: []const u8, line_1: usize, col_1: ?usize) !void {
+                                                                                                                        const state: *AppState = @ptrCast(@alignCast(open_raw));
+                                                                                                                        try state.openFileAt(path, line_1, col_1);
+                                                                                                                    }
+                                                                                                                }.call,
+                                                                                                            },
+                                                                                                        );
+                                                                                                        if (result.needs_redraw) route_state.needs_redraw = true;
+                                                                                                        if (result.note_input) route_state.metrics.noteInput(term_now);
                                                                                                     }
                                                                                                 }.call,
                                                                                             },
