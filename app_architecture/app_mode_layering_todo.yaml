@@ -103,6 +103,7 @@ app_mode_layering_todo:
             - "In progress: terminal tab drag reorder (`move`) and tab-click focus (`activate`) now route through adapter intents; parity diagnostics are available via `app.mode.parity` logging."
             - "In progress: close-confirm intent emission now routes through shared tab-action helpers; focused unit tests cover close/reorder intent helper behavior."
             - "In progress: terminal action emission is being consolidated through `routeTerminalTabActionAndSync(...)` to reduce duplicated adapter sync logic."
+            - "In progress: pure tab-intent helpers were extracted from `main.zig` into `src/app/modes/ide/tab_intents.zig`."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress
