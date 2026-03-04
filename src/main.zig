@@ -8,9 +8,8 @@ const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
 const app_config_reload_notice = @import("app/config_reload_notice.zig");
 const app_terminal_grid = @import("app/terminal_grid.zig");
-const app_terminal_intent_route = @import("app/terminal_intent_route.zig");
+const app_terminal_runtime_intents = @import("app/terminal_runtime_intents.zig");
 const app_terminal_tab_ops = @import("app/terminal_tab_ops.zig");
-const app_terminal_workspace_route = @import("app/terminal_workspace_route.zig");
 const app_terminal_shortcut_policy = @import("app/terminal_shortcut_policy.zig");
 const app_terminal_shortcut_runtime = @import("app/terminal_shortcut_runtime.zig");
 const app_terminal_tab_intents = @import("app/terminal_tab_intents.zig");
@@ -729,18 +728,11 @@ const AppState = struct {
     }
 
     fn requestCloseActiveTerminalTab(self: *AppState, now: f64) !bool {
-        _ = try app_terminal_workspace_route.routeActiveTabId(
+        _ = try app_terminal_runtime_intents.routeForActiveWorkspaceTabAndSync(
+            .close,
             &self.terminal_workspace,
             @ptrCast(self),
-            struct {
-                fn call(raw: *anyopaque, tab_id: ?u64) !bool {
-                    return app_terminal_intent_route.routeCloseByTabIdAndSync(
-                        tab_id,
-                        raw,
-                        routeTerminalTabActionFromCtx,
-                    );
-                }
-            }.call,
+            routeTerminalTabActionFromCtx,
         );
         if (try self.closeActiveTerminalTab()) {
             self.needs_redraw = true;
@@ -884,18 +876,11 @@ const AppState = struct {
             _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
         }
         _ = try self.setActiveKindAndSyncIfChanged(.terminal);
-        _ = try app_terminal_workspace_route.routeActiveTabId(
+        _ = try app_terminal_runtime_intents.routeForActiveWorkspaceTabAndSync(
+            .activate,
             &self.terminal_workspace,
             @ptrCast(self),
-            struct {
-                fn call(raw: *anyopaque, tab_id: ?u64) !bool {
-                    return app_terminal_intent_route.routeActivateByTabIdAndSync(
-                        tab_id,
-                        raw,
-                        routeTerminalTabActionFromCtx,
-                    );
-                }
-            }.call,
+            routeTerminalTabActionFromCtx,
         );
     }
 
@@ -930,7 +915,8 @@ const AppState = struct {
             }
             if (release_plan.handle_click) {
                 if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width)) {
-                    _ = try app_terminal_intent_route.routeActivateByTabIdAndSync(
+                    _ = try app_terminal_runtime_intents.routeByTabIdAndSync(
+                        .activate,
                         self.tab_bar.terminalTabIdAtVisual(self.tab_bar.active_index),
                         @ptrCast(self),
                         routeTerminalTabActionFromCtx,
@@ -2191,18 +2177,11 @@ const AppState = struct {
     }
 
     fn requestConfirmTerminalCloseFromModal(self: *AppState, now: f64) !bool {
-        _ = try app_terminal_workspace_route.routeActiveTabId(
+        _ = try app_terminal_runtime_intents.routeForActiveWorkspaceTabAndSync(
+            .close,
             &self.terminal_workspace,
             @ptrCast(self),
-            struct {
-                fn call(raw: *anyopaque, tab_id: ?u64) !bool {
-                    return app_terminal_intent_route.routeCloseByTabIdAndSync(
-                        tab_id,
-                        raw,
-                        routeTerminalTabActionFromCtx,
-                    );
-                }
-            }.call,
+            routeTerminalTabActionFromCtx,
         );
         if (try self.closeActiveTerminalTab()) {
             self.needs_redraw = true;
@@ -3373,7 +3352,8 @@ test "terminal close intent routing emits only when tab id is present" {
     app.tab_bar.active_index = 1;
     try app.syncModeAdaptersFromTabBar();
 
-    try std.testing.expect(try app_terminal_intent_route.routeCloseByTabIdAndSync(
+    try std.testing.expect(try app_terminal_runtime_intents.routeByTabIdAndSync(
+        .close,
         202,
         @ptrCast(&app),
         struct {
@@ -3383,7 +3363,8 @@ test "terminal close intent routing emits only when tab id is present" {
             }
         }.call,
     ));
-    try std.testing.expect(!try app_terminal_intent_route.routeCloseByTabIdAndSync(
+    try std.testing.expect(!try app_terminal_runtime_intents.routeByTabIdAndSync(
+        .close,
         null,
         @ptrCast(&app),
         struct {
@@ -3435,7 +3416,8 @@ test "terminal activate intent routing emits only when tab id exists" {
     app.tab_bar.active_index = 0;
     try app.syncModeAdaptersFromTabBar();
 
-    try std.testing.expect(!try app_terminal_intent_route.routeActivateByTabIdAndSync(
+    try std.testing.expect(!try app_terminal_runtime_intents.routeByTabIdAndSync(
+        .activate,
         null,
         @ptrCast(&app),
         struct {
@@ -3445,7 +3427,8 @@ test "terminal activate intent routing emits only when tab id exists" {
             }
         }.call,
     ));
-    try std.testing.expect(try app_terminal_intent_route.routeActivateByTabIdAndSync(
+    try std.testing.expect(try app_terminal_runtime_intents.routeByTabIdAndSync(
+        .activate,
         1002,
         @ptrCast(&app),
         struct {

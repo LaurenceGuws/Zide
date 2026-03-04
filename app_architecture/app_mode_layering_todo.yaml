@@ -130,6 +130,7 @@ app_mode_layering_todo:
             - "In progress: close-confirm runtime decision dispatch moved from `main.zig` into `src/app/terminal_close_confirm_runtime.zig` (`applyDecision(...)`) with callback-hook unit coverage."
             - "In progress: terminal close/activate id-to-intent optional routing moved from `main.zig` into `src/app/terminal_intent_route.zig` (`routeCloseByTabIdAndSync`, `routeActivateByTabIdAndSync`) with focused helper tests."
             - "In progress: redundant AppState wrappers for terminal close/activate/workspace intent routing were removed; callsites now route directly via `src/app/terminal_intent_route.zig` + `src/app/terminal_workspace_route.zig`."
+            - "In progress: workspace-active/tab-id close+activate routing is now centralized in `src/app/terminal_runtime_intents.zig`, removing repeated inline callback structs from `main.zig`."
             - "In progress: repeated AppState tab-action callback casts in `main.zig` are now centralized as shared shims (`routeTerminalTabActionFromCtx`, `routeEditorTabActionFromCtx`)."
             - "In progress: terminal shortcut and close-confirm runtime hook adapters now use named AppState shim functions in `main.zig` (removed repeated inline callback structs)."
             - "In progress: active-workspace tab-id routing moved from `main.zig` into `src/app/terminal_workspace_route.zig` (`routeActiveTabId(...)`) and wired via dedicated AppState tab-id route shims."
