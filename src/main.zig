@@ -2803,7 +2803,7 @@ const AppState = struct {
         const layout = self.computeLayout(width, height);
         var tab_tooltip: ?widgets_common.Tooltip = null;
 
-        if (app_modes.ide.isIde(self.app_mode)) {
+        if (app_modes.ide.canToggleTerminal(self.app_mode)) {
             self.applyCurrentTabBarWidthMode();
             shell.setTheme(self.app_theme);
             // Draw options bar
@@ -2869,14 +2869,14 @@ const AppState = struct {
             }
         }
 
-        if (app_modes.ide.isIde(self.app_mode)) {
+        if (app_modes.ide.canToggleTerminal(self.app_mode)) {
             shell.setTheme(self.app_theme);
             // Draw side navigation bar (covers terminal icon overflow)
             self.side_nav.draw(shell, layout.side_nav.height, layout.side_nav.y);
         }
 
         // Draw status bar LAST so it spans full width over everything
-        if (app_modes.ide.isIde(self.app_mode) and self.editors.items.len > 0) {
+        if (app_modes.ide.canToggleTerminal(self.app_mode) and self.editors.items.len > 0) {
             shell.setTheme(self.app_theme);
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             const editor = self.editors.items[editor_idx];
