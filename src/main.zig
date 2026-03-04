@@ -28,6 +28,7 @@ const app_terminal_tab_intents = @import("app/terminal_tab_intents.zig");
 const app_terminal_resize = @import("app/terminal_resize.zig");
 const app_terminal_refresh_sizing_runtime = @import("app/terminal_refresh_sizing_runtime.zig");
 const app_visible_terminal_frame = @import("app/visible_terminal_frame.zig");
+const app_visible_terminal_frame_hooks_runtime = @import("app/visible_terminal_frame_hooks_runtime.zig");
 const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
 const app_terminal_widget_input_runtime = @import("app/terminal_widget_input_runtime.zig");
 const app_terminal_widget_input_hook_runtime = @import("app/terminal_widget_input_hook_runtime.zig");
@@ -1615,11 +1616,11 @@ const AppState = struct {
                                                                                         if (editor_frame_result.note_input) inner_state.metrics.noteInput(at);
                                                                                         if (editor_frame_result.perf_frames_done_inc) inner_state.perf_frames_done +|= 1;
 
-                                                                                        const terminal_frame_result = try app_visible_terminal_frame.handle(
+                                                                                        try app_visible_terminal_frame_hooks_runtime.handle(
                                                                                             inner_state.app_mode,
                                                                                             inner_state.show_terminal,
                                                                                             &inner_state.terminal_workspace,
-                                                                                            inner_state.terminals.items.len,
+                                                                                            inner_state.terminals.items,
                                                                                             inner_state.terminal_widgets.items,
                                                                                             inner_state.tab_bar.isDragging(),
                                                                                             inner_state.active_kind,
@@ -1630,85 +1631,43 @@ const AppState = struct {
                                                                                             frame_suppress_terminal_shortcuts,
                                                                                             frame_terminal_close_modal_active,
                                                                                             at,
+                                                                                            inner_state.allocator,
+                                                                                            &inner_state.terminal_scroll_dragging,
+                                                                                            &inner_state.terminal_scroll_grab_offset,
                                                                                             @ptrCast(inner_state),
                                                                                             .{
-                                                                                                .poll_visible_sessions = struct {
-                                                                                                    fn call(route_raw: *anyopaque, poll_batch: *shared_types.input.InputBatch) !void {
-                                                                                                        const route_state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        if (try app_poll_visible_terminal_sessions_runtime.handle(
-                                                                                                            route_state.app_mode,
-                                                                                                            route_state.show_terminal,
-                                                                                                            &route_state.terminal_workspace,
-                                                                                                            route_state.terminals.items,
-                                                                                                            poll_batch.events.items.len > 0,
-                                                                                                        )) route_state.needs_redraw = true;
+                                                                                                .open_file = struct {
+                                                                                                    fn call(open_raw: *anyopaque, path: []const u8) !void {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(open_raw));
+                                                                                                        try state.openFile(path);
                                                                                                     }
                                                                                                 }.call,
-                                                                                                .handle_terminal_widget_input = struct {
-                                                                                                    fn call(
-                                                                                                        route_raw: *anyopaque,
-                                                                                                        term_widget: *TerminalWidget,
-                                                                                                        term_shell: *Shell,
-                                                                                                        term_x: f32,
-                                                                                                        term_y_draw: f32,
-                                                                                                        term_width: f32,
-                                                                                                        term_draw_height: f32,
-                                                                                                        allow_terminal_input: bool,
-                                                                                                        frame_suppress_shortcuts: bool,
-                                                                                                        term_input_batch: *shared_types.input.InputBatch,
-                                                                                                        frame_search_consumed_input: bool,
-                                                                                                        term_now: f64,
-                                                                                                    ) !void {
-                                                                                                        const route_state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        try app_terminal_widget_input_hook_runtime.handle(
-                                                                                                            term_widget,
-                                                                                                            term_shell,
-                                                                                                            term_x,
-                                                                                                            term_y_draw,
-                                                                                                            term_width,
-                                                                                                            term_draw_height,
-                                                                                                            allow_terminal_input,
-                                                                                                            frame_suppress_shortcuts,
-                                                                                                            term_input_batch,
-                                                                                                            frame_search_consumed_input,
-                                                                                                            route_state.allocator,
-                                                                                                            &route_state.terminal_scroll_dragging,
-                                                                                                            &route_state.terminal_scroll_grab_offset,
-                                                                                                            term_now,
-                                                                                                            route_raw,
-                                                                                                            .{
-                                                                                                                .open_file = struct {
-                                                                                                                    fn call(open_raw: *anyopaque, path: []const u8) !void {
-                                                                                                                        const state: *AppState = @ptrCast(@alignCast(open_raw));
-                                                                                                                        try state.openFile(path);
-                                                                                                                    }
-                                                                                                                }.call,
-                                                                                                                .open_file_at = struct {
-                                                                                                                    fn call(open_raw: *anyopaque, path: []const u8, line_1: usize, col_1: ?usize) !void {
-                                                                                                                        const state: *AppState = @ptrCast(@alignCast(open_raw));
-                                                                                                                        try state.openFileAt(path, line_1, col_1);
-                                                                                                                    }
-                                                                                                                }.call,
-                                                                                                                .mark_redraw = struct {
-                                                                                                                    fn call(mark_raw: *anyopaque) void {
-                                                                                                                        const state: *AppState = @ptrCast(@alignCast(mark_raw));
-                                                                                                                        state.needs_redraw = true;
-                                                                                                                    }
-                                                                                                                }.call,
-                                                                                                                .note_input = struct {
-                                                                                                                    fn call(note_raw: *anyopaque, ts: f64) void {
-                                                                                                                        const state: *AppState = @ptrCast(@alignCast(note_raw));
-                                                                                                                        state.metrics.noteInput(ts);
-                                                                                                                    }
-                                                                                                                }.call,
-                                                                                                            },
-                                                                                                        );
+                                                                                                .open_file_at = struct {
+                                                                                                    fn call(open_raw: *anyopaque, path: []const u8, line_1: usize, col_1: ?usize) !void {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(open_raw));
+                                                                                                        try state.openFileAt(path, line_1, col_1);
+                                                                                                    }
+                                                                                                }.call,
+                                                                                                .mark_redraw = struct {
+                                                                                                    fn call(mark_raw: *anyopaque) void {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(mark_raw));
+                                                                                                        state.needs_redraw = true;
+                                                                                                    }
+                                                                                                }.call,
+                                                                                                .note_input = struct {
+                                                                                                    fn call(note_raw: *anyopaque, ts: f64) void {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(note_raw));
+                                                                                                        state.metrics.noteInput(ts);
+                                                                                                    }
+                                                                                                }.call,
+                                                                                                .sync_terminal_tab_bar = struct {
+                                                                                                    fn call(sync_raw: *anyopaque) !void {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(sync_raw));
+                                                                                                        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(state);
                                                                                                     }
                                                                                                 }.call,
                                                                                             },
                                                                                         );
-                                                                                        if (terminal_frame_result.needs_redraw) inner_state.needs_redraw = true;
-                                                                                        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(inner_state);
                                                                                     }
                                                                                 }.inner,
                                                                             },

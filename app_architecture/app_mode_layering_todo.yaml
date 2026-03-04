@@ -161,6 +161,7 @@ app_mode_layering_todo:
             - "In progress: active-editor frame hook wiring (scrollbar, mouse selection, visible-cache precompute) moved from `main.zig` into `src/app/editor_frame_hooks_runtime.zig` (`handle`)."
             - "In progress: visible-terminal session polling callback body moved from `main.zig` into `src/app/poll_visible_terminal_sessions_runtime.zig` (`handle`)."
             - "In progress: visible-terminal widget input callback body moved from `main.zig` into `src/app/terminal_widget_input_hook_runtime.zig` (`handle`)."
+            - "In progress: visible-terminal frame hook wiring (poll + widget input + workspace/tab-bar sync) moved from `main.zig` into `src/app/visible_terminal_frame_hooks_runtime.zig` (`handle`)."
             - "In progress: search-panel input consumption for the frame is now factored into `handleSearchPanelFrameInput(...)`."
             - "In progress: active editor-frame and visible terminal-frame orchestration are now each routed through dedicated AppState helpers."
             - "In progress: mouse debug click logging and post-frame workspace sync are now routed through dedicated AppState helpers."
