@@ -740,13 +740,6 @@ const AppState = struct {
         try self.syncModeAdaptersFromTabBar();
     }
 
-    fn setActiveKindAndSyncIfChanged(self: *AppState, kind: app_modes.ide.ActiveMode) !bool {
-        if (self.active_kind == kind) return false;
-        self.active_kind = kind;
-        try self.syncModeAdaptersFromTabBar();
-        return true;
-    }
-
     fn routeTerminalTabActionFromCtx(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
         const state: *AppState = @ptrCast(@alignCast(raw));
         try state.routeTerminalTabActionAndSync(action);
@@ -785,12 +778,16 @@ const AppState = struct {
         const in_terminal = layout.terminal.height > 0 and mouse.y >= term_y and mouse.y <= term_y + layout.terminal.height;
 
         if (in_terminal and self.show_terminal) {
-            if (try self.setActiveKindAndSyncIfChanged(.terminal)) {
+            if (self.active_kind != .terminal) {
+                self.active_kind = .terminal;
+                try self.syncModeAdaptersFromTabBar();
                 self.needs_redraw = true;
                 self.metrics.noteInput(now);
             }
         } else if (in_editor) {
-            if (try self.setActiveKindAndSyncIfChanged(.editor)) {
+            if (self.active_kind != .editor) {
+                self.active_kind = .editor;
+                try self.syncModeAdaptersFromTabBar();
                 self.needs_redraw = true;
                 self.metrics.noteInput(now);
             }
@@ -810,7 +807,10 @@ const AppState = struct {
         )) {
             _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
         }
-        _ = try self.setActiveKindAndSyncIfChanged(.terminal);
+        if (self.active_kind != .terminal) {
+            self.active_kind = .terminal;
+            try self.syncModeAdaptersFromTabBar();
+        }
         _ = try app_terminal_runtime_intents.routeForActiveWorkspaceTabAndSync(
             .activate,
             &self.terminal_workspace,
@@ -820,7 +820,10 @@ const AppState = struct {
     }
 
     fn handleEditorMousePressedRouting(self: *AppState) !void {
-        _ = try self.setActiveKindAndSyncIfChanged(.editor);
+        if (self.active_kind != .editor) {
+            self.active_kind = .editor;
+            try self.syncModeAdaptersFromTabBar();
+        }
     }
 
     fn handleTerminalTabDragInput(
