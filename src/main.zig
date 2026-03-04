@@ -764,7 +764,7 @@ const AppState = struct {
         return switch (intent) {
             .create => blk: {
                 if (!app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) break :blk false;
-                self.applyTerminalModeTabAction(.create);
+                try self.routeTerminalTabActionAndSync(.create);
                 try self.newTerminal();
                 try self.syncTerminalModeTabBar();
                 self.needs_redraw = true;
