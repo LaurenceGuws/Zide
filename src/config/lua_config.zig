@@ -1743,7 +1743,7 @@ fn parseThemePaletteTable(L: *c.lua_State, idx: c_int, theme: *ThemeConfig) void
     parseNamedAnsiColors(L, idx, &theme.ansi_colors);
 
     _ = c.lua_getfield(L, idx, "ansi");
-    if (c.lua_istable(L, -1) != 0) {
+    if (c.lua_istable(L, -1)) {
         parseIndexedAnsiColors(L, -1, &theme.ansi_colors);
         parseNamedAnsiColors(L, -1, &theme.ansi_colors);
     }
@@ -1820,7 +1820,7 @@ fn applyEditorThemeSchema(L: *c.lua_State, idx: c_int, theme: *ThemeConfig) void
 
 fn applyEditorThemeColorSection(L: *c.lua_State, theme_idx: c_int, section_name: [:0]const u8, theme: *ThemeConfig) void {
     _ = c.lua_getfield(L, theme_idx, section_name.ptr);
-    if (c.lua_istable(L, -1) == 0) {
+    if (!c.lua_istable(L, -1)) {
         c.lua_pop(L, 1);
         return;
     }
@@ -1840,7 +1840,7 @@ fn applyEditorThemeColorSection(L: *c.lua_State, theme_idx: c_int, section_name:
 
 fn applyEditorThemeLinkSection(L: *c.lua_State, theme_idx: c_int, section_name: [:0]const u8, theme: *ThemeConfig) void {
     _ = c.lua_getfield(L, theme_idx, section_name.ptr);
-    if (c.lua_istable(L, -1) == 0) {
+    if (!c.lua_istable(L, -1)) {
         c.lua_pop(L, 1);
         return;
     }
@@ -1884,7 +1884,7 @@ fn resolveEditorThemeColorFromSection(
     depth: u8,
 ) ?Color {
     _ = c.lua_getfield(L, theme_idx, section_name.ptr);
-    if (c.lua_istable(L, -1) == 0) {
+    if (!c.lua_istable(L, -1)) {
         c.lua_pop(L, 1);
         return null;
     }
@@ -1907,7 +1907,7 @@ fn resolveEditorThemeColorFromSection(
 
 fn parseEditorThemeColorFromValue(L: *c.lua_State, idx: c_int) ?Color {
     if (parseColorFromValue(L, idx)) |color| return color;
-    if (c.lua_istable(L, idx) == 0) return null;
+    if (!c.lua_istable(L, idx)) return null;
 
     _ = c.lua_getfield(L, idx, "fg");
     if (parseColorFromValue(L, -1)) |color| {
@@ -1953,7 +1953,7 @@ fn editorThemeLinkTargetFromValue(L: *c.lua_State, idx: c_int) ?[]const u8 {
         if (parseHexColor(text) != null) return null;
         return text;
     }
-    if (c.lua_istable(L, idx) == 0) return null;
+    if (!c.lua_istable(L, idx)) return null;
 
     _ = c.lua_getfield(L, idx, "link");
     if (c.lua_isstring(L, -1) != 0) {
@@ -2066,13 +2066,13 @@ fn luaPushStringSlice(L: *c.lua_State, value: []const u8) void {
 fn luaGetTableByNameWithCaptureFallback(L: *c.lua_State, table_idx: c_int, name: []const u8) bool {
     luaPushStringSlice(L, name);
     _ = c.lua_gettable(L, table_idx);
-    if (c.lua_isnil(L, -1) == 0) return true;
+    if (!c.lua_isnil(L, -1)) return true;
     c.lua_pop(L, 1);
 
     if (name.len > 0 and name[0] == '@') {
         luaPushStringSlice(L, name[1..]);
         _ = c.lua_gettable(L, table_idx);
-        if (c.lua_isnil(L, -1) == 0) return true;
+        if (!c.lua_isnil(L, -1)) return true;
         c.lua_pop(L, 1);
     } else {
         var prefixed_buf: [128]u8 = undefined;
@@ -2081,7 +2081,7 @@ fn luaGetTableByNameWithCaptureFallback(L: *c.lua_State, table_idx: c_int, name:
             @memcpy(prefixed_buf[1 .. name.len + 1], name);
             luaPushStringSlice(L, prefixed_buf[0 .. name.len + 1]);
             _ = c.lua_gettable(L, table_idx);
-            if (c.lua_isnil(L, -1) == 0) return true;
+            if (!c.lua_isnil(L, -1)) return true;
             c.lua_pop(L, 1);
         }
     }
