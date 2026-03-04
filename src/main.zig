@@ -619,6 +619,7 @@ const AppState = struct {
     }
 
     pub fn newEditor(self: *AppState) !void {
+        self.applyEditorModeTabAction(.create);
         const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try self.editors.append(self.allocator, editor);
         try self.tab_bar.addTab("untitled", .editor);
@@ -628,6 +629,7 @@ const AppState = struct {
     }
 
     pub fn openFile(self: *AppState, path: []const u8) !void {
+        self.applyEditorModeTabAction(.create);
         const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try editor.openFile(path);
         try self.editors.append(self.allocator, editor);
@@ -641,6 +643,7 @@ const AppState = struct {
     }
 
     pub fn openFileAt(self: *AppState, path: []const u8, line_1: usize, col_1: ?usize) !void {
+        self.applyEditorModeTabAction(.create);
         const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try editor.openFile(path);
         try self.editors.append(self.allocator, editor);
@@ -999,6 +1002,12 @@ const AppState = struct {
     fn applyTerminalModeTabAction(self: *AppState, tab_action: app_modes.shared.actions.TabAction) void {
         if (!app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) return;
         const contract = self.terminal_mode_adapter.asContract();
+        _ = contract.applyAction(self.allocator, .{ .tab = tab_action }) catch {};
+    }
+
+    fn applyEditorModeTabAction(self: *AppState, tab_action: app_modes.shared.actions.TabAction) void {
+        if (!app_modes.ide.supportsEditorSurface(self.app_mode)) return;
+        const contract = self.editor_mode_adapter.asContract();
         _ = contract.applyAction(self.allocator, .{ .tab = tab_action }) catch {};
     }
 
@@ -2122,6 +2131,7 @@ const AppState = struct {
                     if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.side_nav.width, tab_bar_y, layout.tab_bar.width)) {
                         // Tab was clicked
                         self.active_tab = self.tab_bar.active_index;
+                        self.applyEditorModeTabAction(.{ .activate_by_index = self.active_tab });
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
                     }
