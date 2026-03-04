@@ -31,6 +31,11 @@ Helper wrapper:
 - `tools/mode_gates.sh full`
 - `tools/mode_gates.sh manual-smokes`
 
+Binary size tracking:
+
+- `zig build mode-size-report`
+- or `tools/report_mode_binary_sizes.sh` after `zig build`
+
 ## Manual interactive compatibility smokes (run when explicitly requested)
 
 1. `zig build mode-smokes-manual`

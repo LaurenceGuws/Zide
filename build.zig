@@ -974,6 +974,11 @@ pub fn build(b: *std.Build) void {
     mode_smokes_manual_step.dependOn(run_mode_editor_step);
     mode_smokes_manual_step.dependOn(run_mode_ide_step);
 
+    const mode_size_report_step = b.step("mode-size-report", "Report focused mode binary sizes");
+    mode_size_report_step.dependOn(b.getInstallStep());
+    const mode_size_report_cmd = b.addSystemCommand(&.{ "bash", "tools/report_mode_binary_sizes.sh" });
+    mode_size_report_step.dependOn(&mode_size_report_cmd.step);
+
     const grammar_update = b.addExecutable(.{
         .name = "grammar-update",
         .root_module = b.createModule(.{
