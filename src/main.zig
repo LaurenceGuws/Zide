@@ -728,12 +728,7 @@ const AppState = struct {
     }
 
     fn requestCloseActiveTerminalTab(self: *AppState, now: f64) !bool {
-        _ = try app_terminal_runtime_intents.routeForActiveWorkspaceTabAndSync(
-            .close,
-            &self.terminal_workspace,
-            @ptrCast(self),
-            routeTerminalTabActionFromCtx,
-        );
+        _ = try self.routeActiveWorkspaceTerminalIntentAndSync(.close);
         if (try self.closeActiveTerminalTab()) {
             self.needs_redraw = true;
             self.metrics.noteInput(now);
@@ -799,6 +794,31 @@ const AppState = struct {
     fn routeTerminalTabActionAndSync(self: *AppState, tab_action: app_modes.shared.actions.TabAction) !void {
         app_tab_action_apply.applyTerminal(self.allocator, self.app_mode, &self.terminal_mode_adapter, tab_action);
         try self.syncModeAdaptersFromTabBar();
+    }
+
+    fn routeActiveWorkspaceTerminalIntentAndSync(
+        self: *AppState,
+        intent: app_terminal_runtime_intents.Intent,
+    ) !bool {
+        return app_terminal_runtime_intents.routeForActiveWorkspaceTabAndSync(
+            intent,
+            &self.terminal_workspace,
+            @ptrCast(self),
+            routeTerminalTabActionFromCtx,
+        );
+    }
+
+    fn routeTerminalIntentByTabIdAndSync(
+        self: *AppState,
+        intent: app_terminal_runtime_intents.Intent,
+        tab_id: ?u64,
+    ) !bool {
+        return app_terminal_runtime_intents.routeByTabIdAndSync(
+            intent,
+            tab_id,
+            @ptrCast(self),
+            routeTerminalTabActionFromCtx,
+        );
     }
 
     fn routeEditorTabActionAndSync(self: *AppState, tab_action: app_modes.shared.actions.TabAction) !void {
@@ -876,12 +896,7 @@ const AppState = struct {
             _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
         }
         _ = try self.setActiveKindAndSyncIfChanged(.terminal);
-        _ = try app_terminal_runtime_intents.routeForActiveWorkspaceTabAndSync(
-            .activate,
-            &self.terminal_workspace,
-            @ptrCast(self),
-            routeTerminalTabActionFromCtx,
-        );
+        _ = try self.routeActiveWorkspaceTerminalIntentAndSync(.activate);
     }
 
     fn handleEditorMousePressedRouting(self: *AppState) !void {
@@ -915,11 +930,9 @@ const AppState = struct {
             }
             if (release_plan.handle_click) {
                 if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width)) {
-                    _ = try app_terminal_runtime_intents.routeByTabIdAndSync(
+                    _ = try self.routeTerminalIntentByTabIdAndSync(
                         .activate,
                         self.tab_bar.terminalTabIdAtVisual(self.tab_bar.active_index),
-                        @ptrCast(self),
-                        routeTerminalTabActionFromCtx,
                     );
                     if (self.focusTerminalTabByIndex(self.tab_bar.active_index)) {
                         self.needs_redraw = true;
@@ -2177,12 +2190,7 @@ const AppState = struct {
     }
 
     fn requestConfirmTerminalCloseFromModal(self: *AppState, now: f64) !bool {
-        _ = try app_terminal_runtime_intents.routeForActiveWorkspaceTabAndSync(
-            .close,
-            &self.terminal_workspace,
-            @ptrCast(self),
-            routeTerminalTabActionFromCtx,
-        );
+        _ = try self.routeActiveWorkspaceTerminalIntentAndSync(.close);
         if (try self.closeActiveTerminalTab()) {
             self.needs_redraw = true;
         }
