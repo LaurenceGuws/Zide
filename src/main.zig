@@ -540,12 +540,6 @@ const AppState = struct {
         editor.setCursor(clamped_line, clamped_col);
     }
 
-    fn activeEditor(self: *AppState) ?*Editor {
-        if (self.editors.items.len == 0) return null;
-        const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
-        return self.editors.items[editor_idx];
-    }
-
     fn consumeEditorHighlightDirtyRange(self: *AppState, editor: *Editor) void {
         const total_lines = editor.lineCount();
         if (editor.takeHighlightDirtyRange()) |range| {
@@ -692,19 +686,6 @@ const AppState = struct {
         );
     }
 
-    fn routeTerminalIntentByTabIdAndSync(
-        self: *AppState,
-        intent: app_terminal_runtime_intents.Intent,
-        tab_id: ?u64,
-    ) !bool {
-        return app_terminal_runtime_intents.routeByTabIdAndSync(
-            intent,
-            tab_id,
-            @ptrCast(self),
-            routeTerminalTabActionFromCtx,
-        );
-    }
-
     fn routeEditorTabActionAndSync(self: *AppState, tab_action: app_modes.shared.actions.TabAction) !void {
         app_tab_action_apply.applyEditor(self.allocator, self.app_mode, &self.editor_mode_adapter, tab_action);
         try self.syncModeAdaptersFromTabBar();
@@ -715,17 +696,6 @@ const AppState = struct {
         self.active_kind = kind;
         try self.syncModeAdaptersFromTabBar();
         return true;
-    }
-
-    fn activateEditorTabAtCurrentIndex(self: *AppState, now: f64) !void {
-        self.active_tab = self.tab_bar.active_index;
-        _ = try app_editor_intent_route.routeActivateByIndexAndSync(
-            self.active_tab,
-            @ptrCast(self),
-            routeEditorTabActionFromCtx,
-        );
-        self.needs_redraw = true;
-        self.metrics.noteInput(now);
     }
 
     fn routeTerminalTabActionFromCtx(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
@@ -748,7 +718,14 @@ const AppState = struct {
         const tab_bar_y = self.options_bar.height;
         _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.side_nav.width, tab_bar_y, layout.tab_bar.width);
         if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.side_nav.width, tab_bar_y, layout.tab_bar.width)) {
-            try self.activateEditorTabAtCurrentIndex(now);
+            self.active_tab = self.tab_bar.active_index;
+            _ = try app_editor_intent_route.routeActivateByIndexAndSync(
+                self.active_tab,
+                @ptrCast(self),
+                routeEditorTabActionFromCtx,
+            );
+            self.needs_redraw = true;
+            self.metrics.noteInput(now);
         }
 
         const editor_x = layout.editor.x;
@@ -824,9 +801,11 @@ const AppState = struct {
             }
             if (release_plan.handle_click) {
                 if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width)) {
-                    _ = try self.routeTerminalIntentByTabIdAndSync(
+                    _ = try app_terminal_runtime_intents.routeByTabIdAndSync(
                         .activate,
                         self.tab_bar.terminalTabIdAtVisual(self.tab_bar.active_index),
+                        @ptrCast(self),
+                        routeTerminalTabActionFromCtx,
                     );
                     if (self.focusTerminalTabByIndex(self.tab_bar.active_index)) {
                         self.needs_redraw = true;
@@ -1091,7 +1070,8 @@ const AppState = struct {
         now: f64,
     ) !bool {
         if (!self.search_panel.active) return false;
-        const editor = self.activeEditor() orelse return false;
+        if (self.editors.items.len == 0) return false;
+        const editor = self.editors.items[@min(self.active_tab, self.editors.items.len - 1)];
         if (try self.handleSearchPanelInput(editor, input_batch)) {
             self.editor_cluster_cache.clear();
             self.needs_redraw = true;
