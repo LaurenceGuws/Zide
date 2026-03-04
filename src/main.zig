@@ -1407,13 +1407,6 @@ const AppState = struct {
         return handled;
     }
 
-    fn collectSuppressTerminalShortcutsForFocus(
-        self: *AppState,
-        focus: input_actions.FocusKind,
-    ) bool {
-        return app_terminal_shortcut_suppress.forFocus(focus, self.input_router.actionsSlice());
-    }
-
     fn handleTerminalClipboardShortcutsFrame(
         self: *AppState,
         shell: *Shell,
@@ -1655,7 +1648,7 @@ const AppState = struct {
         }
 
         const terminal_close_modal_active = self.terminalCloseConfirmActive();
-        const suppress_terminal_shortcuts = self.collectSuppressTerminalShortcutsForFocus(focus);
+        const suppress_terminal_shortcuts = app_terminal_shortcut_suppress.forFocus(focus, self.input_router.actionsSlice());
 
         if (!terminal_close_modal_active and focus == .terminal and app_terminal_surface_gate.hasTerminalInputScopeWithTabs(self.app_mode, self.show_terminal, self.terminal_workspace, self.terminals.items.len)) {
             if (try self.handleTerminalClipboardShortcutsFrame(shell, input_batch, now)) {
