@@ -53,6 +53,7 @@ const app_prepare_run_frame_runtime = @import("app/prepare_run_frame_runtime.zig
 const app_frame_render_idle_runtime = @import("app/frame_render_idle_runtime.zig");
 const app_update_prelude_frame_runtime = @import("app/update_prelude_frame_runtime.zig");
 const app_font_sample_draw_runtime = @import("app/font_sample_draw_runtime.zig");
+const app_editor_draw_surface_runtime = @import("app/editor_draw_surface_runtime.zig");
 const app_terminal_tab_navigation_runtime = @import("app/terminal_tab_navigation_runtime.zig");
 const app_terminal_close_active_runtime = @import("app/terminal_close_active_runtime.zig");
 const app_terminal_close_confirm_actions_runtime = @import("app/terminal_close_confirm_actions_runtime.zig");
@@ -2589,23 +2590,7 @@ const AppState = struct {
         }
 
         // Draw editor
-        if (app_modes.ide.supportsEditorSurface(self.app_mode) and self.editors.items.len > 0) {
-            shell.setTheme(self.editor_theme);
-            const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
-            const editor = self.editors.items[editor_idx];
-            app_editor_display_prepare.prepare(editor, &self.editor_render_cache);
-            var widget = EditorWidget.initWithCache(editor, &self.editor_cluster_cache, self.editor_wrap);
-            widget.drawCached(
-                shell,
-                &self.editor_render_cache,
-                layout.editor.x,
-                layout.editor.y,
-                layout.editor.width,
-                layout.editor.height,
-                self.frame_id,
-                self.last_input,
-            );
-        }
+        app_editor_draw_surface_runtime.draw(self, shell, layout);
 
         // Draw terminal if shown
         if (app_terminal_surface_gate.hasVisibleTerminalTabs(self.app_mode, self.show_terminal, self.terminal_workspace, self.terminals.items.len)) {
