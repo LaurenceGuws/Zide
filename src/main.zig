@@ -35,6 +35,7 @@ const app_search_panel_state = @import("app/search_panel_state.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
+const app_reload_config_shortcut_runtime = @import("app/reload_config_shortcut_runtime.zig");
 const app_runner = @import("app/runner.zig");
 const app_signals = @import("app/signals.zig");
 const app_modes = @import("app/modes/mod.zig");
@@ -1353,20 +1354,14 @@ const AppState = struct {
         consumed: bool,
     };
 
-    fn handleReloadConfigShortcutFrame(self: *AppState) bool {
-        var handled = false;
-        for (self.input_router.actionsSlice()) |action| {
-            if (action.kind == .reload_config) {
-                self.reloadConfig() catch {
-                    self.showConfigReloadNotice(false);
-                    handled = true;
-                    continue;
-                };
-                self.showConfigReloadNotice(true);
-                handled = true;
-            }
-        }
-        return handled;
+    fn reloadConfigFromCtx(raw: *anyopaque) !void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        try state.reloadConfig();
+    }
+
+    fn showConfigReloadNoticeFromCtx(raw: *anyopaque, success: bool) void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        state.showConfigReloadNotice(success);
     }
 
     fn handleEditorShortcutActionsFrame(
@@ -1538,7 +1533,14 @@ const AppState = struct {
         focus: input_actions.FocusKind,
         now: f64,
     ) !PreInputShortcutResult {
-        var handled_shortcut = self.handleReloadConfigShortcutFrame();
+        var handled_shortcut = app_reload_config_shortcut_runtime.handle(
+            self.input_router.actionsSlice(),
+            @ptrCast(self),
+            .{
+                .reload = reloadConfigFromCtx,
+                .show_notice = showConfigReloadNoticeFromCtx,
+            },
+        );
         const live_layout = self.computeLayout(@floatFromInt(r.width), @floatFromInt(r.height));
         if (try self.handleTerminalCloseConfirmInput(input_batch, live_layout, now)) {
             return .{
