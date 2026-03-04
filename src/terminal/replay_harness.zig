@@ -112,7 +112,13 @@ const ReplayPtyCapture = struct {
         const fds = try std.posix.pipe();
         return .{
             .read_fd = fds[0],
-            .pty = .{ .master_fd = fds[1], .child_pid = null },
+            .pty = .{
+                .master_fd = fds[1],
+                .child_pid = null,
+                .cached_fg_pgrp = 0,
+                .cached_fg_name_len = 0,
+                .cached_fg_name = [_]u8{0} ** 128,
+            },
         };
     }
 

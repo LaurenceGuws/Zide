@@ -1,10 +1,9 @@
 const std = @import("std");
 const runtime_bridge = @import("../runtime_bridge.zig");
 const host = @import("host.zig");
-const tab_bar_mod = @import("../../../ui/widgets/tab_bar.zig");
-const Tab = tab_bar_mod.TabBar.Tab;
 
-fn tabId(tab: Tab) u64 {
+fn tabId(tab: anytype) u64 {
+    const Tab = @TypeOf(tab);
     if (@hasField(Tab, "id")) {
         return tab.id;
     }
@@ -13,7 +12,7 @@ fn tabId(tab: Tab) u64 {
 
 pub fn buildTabProjections(
     allocator: std.mem.Allocator,
-    tabs: []const Tab,
+    tabs: anytype,
 ) !std.ArrayList(runtime_bridge.AppTabProjection) {
     var projections = std.ArrayList(runtime_bridge.AppTabProjection).empty;
     try projections.ensureTotalCapacity(allocator, tabs.len);
@@ -33,7 +32,7 @@ pub fn buildTabProjections(
 
 pub fn activeProjectionForTabBar(
     active_kind: host.ActiveMode,
-    tabs: []const Tab,
+    tabs: anytype,
     active_index: usize,
 ) runtime_bridge.ActiveProjection {
     return .{
