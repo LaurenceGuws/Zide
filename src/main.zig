@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const app_bootstrap = @import("app/bootstrap.zig");
+const app_runner = @import("app/runner.zig");
 
 // Editor modules
 const editor_mod = @import("editor/editor.zig");
@@ -3004,12 +3005,12 @@ pub fn runFromArgs(allocator: std.mem.Allocator) !void {
 }
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-
-    installSignalHandlers();
-    try runFromArgs(allocator);
+    try app_runner.runWithGpa(struct {
+        fn call(allocator: std.mem.Allocator) !void {
+            installSignalHandlers();
+            try runFromArgs(allocator);
+        }
+    }.call);
 }
 
 fn parseEnvU64(env_key: [:0]const u8, default_value: u64) u64 {

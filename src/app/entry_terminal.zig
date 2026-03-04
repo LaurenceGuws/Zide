@@ -1,10 +1,11 @@
 const std = @import("std");
 const app = @import("../main.zig");
+const runner = @import("runner.zig");
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-    try app.runWithMode(allocator, .terminal);
+    try runner.runWithGpa(struct {
+        fn call(allocator: std.mem.Allocator) !void {
+            try app.runWithMode(allocator, .terminal);
+        }
+    }.call);
 }
-
