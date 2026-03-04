@@ -540,16 +540,12 @@ const AppState = struct {
         editor.setCursor(clamped_line, clamped_col);
     }
 
-    fn consumeEditorHighlightDirtyRange(self: *AppState, editor: *Editor) void {
+    fn prepareEditorForDisplay(self: *AppState, editor: *Editor) void {
         const total_lines = editor.lineCount();
         if (editor.takeHighlightDirtyRange()) |range| {
             const end_line = @min(range.end_line, total_lines);
             self.editor_render_cache.invalidateHighlightRange(range.start_line, end_line);
         }
-    }
-
-    fn prepareEditorForDisplay(self: *AppState, editor: *Editor) void {
-        self.consumeEditorHighlightDirtyRange(editor);
         editor.ensureHighlighter();
     }
 
