@@ -194,6 +194,7 @@ app_mode_layering_todo:
             - "In progress: `main.zig` no longer keeps an `activeTerminalSession` wrapper; the only terminal scrollback-pager callsite now resolves active session via `src/app/terminal_tabs.zig` policy inline."
             - "In progress: active terminal session resolution for scrollback-pager routing moved from inline `main.zig` logic into `src/app/terminal_active_session.zig` (`resolveActive`)."
             - "In progress: terminal workspace -> tab-bar reconciliation moved from `main.zig` into `src/app/terminal_tab_bar_sync.zig` (`syncFromWorkspace`)."
+            - "In progress: active terminal widget resolution moved from `main.zig` into `src/app/terminal_active_widget.zig` (`resolveActive`)."
             - "In progress: terminal theme apply helpers moved from `main.zig` into `src/app/terminal_theme_apply.zig` (`setSessionPalette`, `notifyColorSchemeChanged`, `applyThemeToWidgets`)."
             - "In progress: terminal session startup/widget bootstrap dedup moved from `main.zig` into `src/app/terminal_session_bootstrap.zig` (`startSessionWithShellCellSize`, `initWidget`)."
             - "In progress: terminal grid-size math moved from `main.zig` into `src/app/terminal_grid.zig` (`compute`)."
