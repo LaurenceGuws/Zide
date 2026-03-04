@@ -1248,30 +1248,6 @@ const AppState = struct {
         if (result.needs_redraw) self.needs_redraw = true;
     }
 
-    fn handleActiveViewFrame(
-        self: *AppState,
-        shell: *Shell,
-        layout: layout_types.WidgetLayout,
-        mouse: shared_types.input.MousePos,
-        input_batch: *shared_types.input.InputBatch,
-        suppress_terminal_shortcuts: bool,
-        terminal_close_modal_active: bool,
-        now: f64,
-    ) !void {
-        const search_panel_consumed_input = try self.handleSearchPanelFrameInput(input_batch, now);
-        try self.handleActiveEditorFrame(shell, layout, mouse, input_batch, search_panel_consumed_input, now);
-        try self.handleVisibleTerminalFrame(
-            shell,
-            layout,
-            input_batch,
-            search_panel_consumed_input,
-            suppress_terminal_shortcuts,
-            terminal_close_modal_active,
-            now,
-        );
-        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(self);
-    }
-
     fn handleShortcutAction(
         self: *AppState,
         shell: *Shell,
@@ -1314,63 +1290,6 @@ const AppState = struct {
         if (result.note_input) self.metrics.noteInput(now);
         if (result.handled_zoom) handled_zoom.* = true;
         return result.handled;
-    }
-
-    fn handleMousePressedFrame(
-        self: *AppState,
-        shell: *Shell,
-        layout: layout_types.WidgetLayout,
-        mouse: shared_types.input.MousePos,
-        term_y: f32,
-        input_batch: *shared_types.input.InputBatch,
-        now: f64,
-    ) !void {
-        _ = shell;
-        try app_mouse_pressed_frame.handle(
-            self.app_mode,
-            input_batch,
-            layout,
-            mouse,
-            term_y,
-            now,
-            @ptrCast(self),
-            .{
-                .handle_ide_mouse_pressed_routing = struct {
-                    fn call(
-                        raw: *anyopaque,
-                        frame_layout: layout_types.WidgetLayout,
-                        frame_mouse: shared_types.input.MousePos,
-                        frame_term_y: f32,
-                        frame_now: f64,
-                    ) !void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        try state.handleIdeMousePressedRouting(frame_layout, frame_mouse, frame_term_y, frame_now);
-                    }
-                }.call,
-                .handle_terminal_mouse_pressed_routing = struct {
-                    fn call(
-                        raw: *anyopaque,
-                        frame_layout: layout_types.WidgetLayout,
-                        frame_mouse: shared_types.input.MousePos,
-                    ) !void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        try state.handleTerminalMousePressedRouting(frame_layout, frame_mouse);
-                    }
-                }.call,
-                .handle_editor_mouse_pressed_routing = struct {
-                    fn call(raw: *anyopaque) !void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        try state.handleEditorMousePressedRouting();
-                    }
-                }.call,
-                .log_mouse_debug_click = struct {
-                    fn call(raw: *anyopaque) void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        app_mouse_debug_log.log(state.shell, state.mouse_debug);
-                    }
-                }.call,
-            },
-        );
     }
 
     const PreInputShortcutResult = struct {
@@ -1557,49 +1476,6 @@ const AppState = struct {
                 self.needs_redraw = true;
             }
         }
-    }
-
-    fn handleTabDragFrame(
-        self: *AppState,
-        input_batch: *shared_types.input.InputBatch,
-        layout: layout_types.WidgetLayout,
-        mouse: shared_types.input.MousePos,
-        now: f64,
-    ) !void {
-        try app_tab_drag_frame.handle(
-            self.app_mode,
-            input_batch,
-            layout,
-            mouse,
-            now,
-            @ptrCast(self),
-            .{
-                .handle_terminal_tab_drag_input = struct {
-                    fn call(
-                        raw: *anyopaque,
-                        frame_input_batch: *shared_types.input.InputBatch,
-                        frame_layout: layout_types.WidgetLayout,
-                        frame_mouse: shared_types.input.MousePos,
-                        frame_now: f64,
-                    ) !void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        try state.handleTerminalTabDragInput(frame_input_batch, frame_layout, frame_mouse, frame_now);
-                    }
-                }.call,
-                .handle_ide_tab_drag_input = struct {
-                    fn call(
-                        raw: *anyopaque,
-                        frame_input_batch: *shared_types.input.InputBatch,
-                        frame_layout: layout_types.WidgetLayout,
-                        frame_mouse: shared_types.input.MousePos,
-                        frame_now: f64,
-                    ) !void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        try state.handleIdeTabDragInput(frame_input_batch, frame_layout, frame_mouse, frame_now);
-                    }
-                }.call,
-            },
-        );
     }
 
     pub fn newTerminal(self: *AppState) !void {
@@ -2121,7 +1997,52 @@ const AppState = struct {
                                                                                         at: f64,
                                                                                     ) !void {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        try inner_state.handleMousePressedFrame(frame_shell, layout, mouse, term_y, frame_input_batch, at);
+                                                                                        _ = frame_shell;
+                                                                                        try app_mouse_pressed_frame.handle(
+                                                                                            inner_state.app_mode,
+                                                                                            frame_input_batch,
+                                                                                            layout,
+                                                                                            mouse,
+                                                                                            term_y,
+                                                                                            at,
+                                                                                            @ptrCast(inner_state),
+                                                                                            .{
+                                                                                                .handle_ide_mouse_pressed_routing = struct {
+                                                                                                    fn call(
+                                                                                                        route_raw: *anyopaque,
+                                                                                                        frame_layout: layout_types.WidgetLayout,
+                                                                                                        frame_mouse: shared_types.input.MousePos,
+                                                                                                        frame_term_y: f32,
+                                                                                                        frame_now: f64,
+                                                                                                    ) !void {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(route_raw));
+                                                                                                        try state.handleIdeMousePressedRouting(frame_layout, frame_mouse, frame_term_y, frame_now);
+                                                                                                    }
+                                                                                                }.call,
+                                                                                                .handle_terminal_mouse_pressed_routing = struct {
+                                                                                                    fn call(
+                                                                                                        route_raw: *anyopaque,
+                                                                                                        frame_layout: layout_types.WidgetLayout,
+                                                                                                        frame_mouse: shared_types.input.MousePos,
+                                                                                                    ) !void {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(route_raw));
+                                                                                                        try state.handleTerminalMousePressedRouting(frame_layout, frame_mouse);
+                                                                                                    }
+                                                                                                }.call,
+                                                                                                .handle_editor_mouse_pressed_routing = struct {
+                                                                                                    fn call(route_raw: *anyopaque) !void {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(route_raw));
+                                                                                                        try state.handleEditorMousePressedRouting();
+                                                                                                    }
+                                                                                                }.call,
+                                                                                                .log_mouse_debug_click = struct {
+                                                                                                    fn call(route_raw: *anyopaque) void {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(route_raw));
+                                                                                                        app_mouse_debug_log.log(state.shell, state.mouse_debug);
+                                                                                                    }
+                                                                                                }.call,
+                                                                                            },
+                                                                                        );
                                                                                     }
                                                                                 }.inner,
                                                                                 .handle_tab_drag = struct {
@@ -2133,7 +2054,40 @@ const AppState = struct {
                                                                                         at: f64,
                                                                                     ) !void {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        try inner_state.handleTabDragFrame(frame_input_batch, layout, mouse, at);
+                                                                                        try app_tab_drag_frame.handle(
+                                                                                            inner_state.app_mode,
+                                                                                            frame_input_batch,
+                                                                                            layout,
+                                                                                            mouse,
+                                                                                            at,
+                                                                                            @ptrCast(inner_state),
+                                                                                            .{
+                                                                                                .handle_terminal_tab_drag_input = struct {
+                                                                                                    fn call(
+                                                                                                        route_raw: *anyopaque,
+                                                                                                        drag_input_batch: *shared_types.input.InputBatch,
+                                                                                                        drag_layout: layout_types.WidgetLayout,
+                                                                                                        drag_mouse: shared_types.input.MousePos,
+                                                                                                        drag_now: f64,
+                                                                                                    ) !void {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(route_raw));
+                                                                                                        try state.handleTerminalTabDragInput(drag_input_batch, drag_layout, drag_mouse, drag_now);
+                                                                                                    }
+                                                                                                }.call,
+                                                                                                .handle_ide_tab_drag_input = struct {
+                                                                                                    fn call(
+                                                                                                        route_raw: *anyopaque,
+                                                                                                        drag_input_batch: *shared_types.input.InputBatch,
+                                                                                                        drag_layout: layout_types.WidgetLayout,
+                                                                                                        drag_mouse: shared_types.input.MousePos,
+                                                                                                        drag_now: f64,
+                                                                                                    ) !void {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(route_raw));
+                                                                                                        try state.handleIdeTabDragInput(drag_input_batch, drag_layout, drag_mouse, drag_now);
+                                                                                                    }
+                                                                                                }.call,
+                                                                                            },
+                                                                                        );
                                                                                     }
                                                                                 }.inner,
                                                                                 .handle_active_view = struct {
@@ -2148,15 +2102,25 @@ const AppState = struct {
                                                                                         at: f64,
                                                                                     ) !void {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        try inner_state.handleActiveViewFrame(
+                                                                                        const search_panel_consumed_input = try inner_state.handleSearchPanelFrameInput(frame_input_batch, at);
+                                                                                        try inner_state.handleActiveEditorFrame(
                                                                                             frame_shell,
                                                                                             layout,
                                                                                             mouse,
                                                                                             frame_input_batch,
+                                                                                            search_panel_consumed_input,
+                                                                                            at,
+                                                                                        );
+                                                                                        try inner_state.handleVisibleTerminalFrame(
+                                                                                            frame_shell,
+                                                                                            layout,
+                                                                                            frame_input_batch,
+                                                                                            search_panel_consumed_input,
                                                                                             frame_suppress_terminal_shortcuts,
                                                                                             frame_terminal_close_modal_active,
                                                                                             at,
                                                                                         );
+                                                                                        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(inner_state);
                                                                                     }
                                                                                 }.inner,
                                                                             },
