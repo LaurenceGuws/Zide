@@ -104,3 +104,44 @@ pub const TabState = struct {
     }
 };
 
+test "tab state create/activate/close flow" {
+    const allocator = std.testing.allocator;
+    var state = TabState.init("Test");
+    defer state.deinit(allocator);
+
+    try std.testing.expect(try state.applyTabAction(allocator, .create));
+    try std.testing.expectEqual(@as(usize, 1), state.tabs.items.len);
+    try std.testing.expectEqual(@as(?shared.types.TabId, 1), state.active_tab);
+
+    try std.testing.expect(try state.applyTabAction(allocator, .create));
+    try std.testing.expectEqual(@as(usize, 2), state.tabs.items.len);
+    try std.testing.expectEqual(@as(?shared.types.TabId, 2), state.active_tab);
+
+    try std.testing.expect(try state.applyTabAction(allocator, .{ .activate = 1 }));
+    try std.testing.expectEqual(@as(?shared.types.TabId, 1), state.active_tab);
+
+    try std.testing.expect(try state.applyTabAction(allocator, .{ .close = 1 }));
+    try std.testing.expectEqual(@as(usize, 1), state.tabs.items.len);
+    try std.testing.expectEqual(@as(?shared.types.TabId, 2), state.active_tab);
+}
+
+test "tab state move and cycling" {
+    const allocator = std.testing.allocator;
+    var state = TabState.init("Test");
+    defer state.deinit(allocator);
+
+    _ = try state.applyTabAction(allocator, .create); // id=1
+    _ = try state.applyTabAction(allocator, .create); // id=2
+    _ = try state.applyTabAction(allocator, .create); // id=3 active
+    try std.testing.expectEqual(@as(usize, 3), state.tabs.items.len);
+
+    try std.testing.expect(try state.applyTabAction(allocator, .{ .move = .{ .from_index = 2, .to_index = 0 } }));
+    try std.testing.expectEqual(@as(shared.types.TabId, 3), state.tabs.items[0].id);
+    try std.testing.expectEqual(@as(shared.types.TabId, 1), state.tabs.items[1].id);
+    try std.testing.expectEqual(@as(shared.types.TabId, 2), state.tabs.items[2].id);
+
+    try std.testing.expect(try state.applyTabAction(allocator, .prev));
+    try std.testing.expectEqual(@as(?shared.types.TabId, 2), state.active_tab);
+    try std.testing.expect(try state.applyTabAction(allocator, .next));
+    try std.testing.expectEqual(@as(?shared.types.TabId, 3), state.active_tab);
+}
