@@ -226,6 +226,7 @@ app_mode_layering_todo:
             - "In progress: active terminal close flow moved from `main.zig` into `src/app/terminal_close_active_runtime.zig` (`closeActive`) with sync-tab-bar callback hook."
             - "In progress: terminal close-confirm modal confirm/cancel action handlers moved from `main.zig` into `src/app/terminal_close_confirm_actions_runtime.zig` (`requestConfirm`, `requestCancel`) with callback hooks."
             - "In progress: terminal close-confirm active-state reconciliation moved from `main.zig` into `src/app/terminal_close_confirm_active_runtime.zig` (`reconcile`)."
+            - "In progress: terminal close-confirm decision dispatch moved from `main.zig` wrappers into `src/app/terminal_close_confirm_decision_runtime.zig` (`applyDecision`), and pre-input modal callback now routes directly through runtime hooks."
             - "In progress: update prelude orchestration moved from `main.zig` into `src/app/update_prelude_frame_runtime.zig` (`handle`) with hook callbacks for font-sample, widget input, config-notice tick, focus routing, and pre-input shortcut handling."
             - "In progress: font-sample draw early-return path moved from `main.zig` into `src/app/font_sample_draw_runtime.zig` (`handle`)."
             - "In progress: editor surface draw block moved from `main.zig` into `src/app/editor_draw_surface_runtime.zig` (`draw`)."
