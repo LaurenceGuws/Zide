@@ -1,32 +1,28 @@
 const app_run_loop_driver = @import("run_loop_driver.zig");
+const app_run_one_frame_hooks_runtime = @import("run_one_frame_hooks_runtime.zig");
 const app_shell = @import("../app_shell.zig");
 
 const Shell = app_shell.Shell;
 
-pub const Hooks = struct {
-    run_one_frame: *const fn (*anyopaque) anyerror!bool,
-};
-
-const RuntimeCtx = struct {
-    user_ctx: *anyopaque,
-    hooks: Hooks,
-};
-
-pub fn run(shell: *Shell, ctx: *anyopaque, hooks: Hooks) !void {
+pub fn run(state: anytype) !void {
+    const State = @TypeOf(state);
+    const RuntimeCtx = struct {
+        state: State,
+    };
     var runtime_ctx = RuntimeCtx{
-        .user_ctx = ctx,
-        .hooks = hooks,
+        .state = state,
     };
     try app_run_loop_driver.runMainLoop(
-        shell,
+        state.shell,
         @ptrCast(&runtime_ctx),
         .{
             .run_one_frame = struct {
                 fn inner(raw: *anyopaque) !bool {
                     const rc: *RuntimeCtx = @ptrCast(@alignCast(raw));
-                    return try rc.hooks.run_one_frame(rc.user_ctx);
+                    return try app_run_one_frame_hooks_runtime.run(rc.state);
                 }
             }.inner,
         },
     );
+    _ = Shell;
 }

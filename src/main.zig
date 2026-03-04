@@ -9,7 +9,6 @@ const app_editor_frame_hooks_runtime = @import("app/editor_frame_hooks_runtime.z
 const app_editor_visible_caches_runtime = @import("app/editor_visible_caches_runtime.zig");
 const app_active_editor_frame = @import("app/active_editor_frame.zig");
 const app_editor_shortcuts_frame = @import("app/editor_shortcuts_frame.zig");
-const app_editor_seed = @import("app/editor_seed.zig");
 const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
 const app_terminal_grid = @import("app/terminal_grid.zig");
@@ -54,14 +53,9 @@ const app_deferred_terminal_resize_frame = @import("app/deferred_terminal_resize
 const app_cursor_blink_frame = @import("app/cursor_blink_frame.zig");
 const app_post_preinput_frame = @import("app/post_preinput_frame.zig");
 const app_post_preinput_hooks_runtime = @import("app/post_preinput_hooks_runtime.zig");
-const app_update_frame_hooks_runtime = @import("app/update_frame_hooks_runtime.zig");
 const app_update_driver = @import("app/update_driver.zig");
-const app_run_loop_driver = @import("app/run_loop_driver.zig");
 const app_run_main_loop_hooks_runtime = @import("app/run_main_loop_hooks_runtime.zig");
 const app_run_one_frame_hooks_runtime = @import("app/run_one_frame_hooks_runtime.zig");
-const app_run_mode_init_hooks_runtime = @import("app/run_mode_init_hooks_runtime.zig");
-const app_prepare_run_frame_runtime = @import("app/prepare_run_frame_runtime.zig");
-const app_frame_render_idle_hooks_runtime = @import("app/frame_render_idle_hooks_runtime.zig");
 const app_update_prelude_frame_runtime = @import("app/update_prelude_frame_runtime.zig");
 const app_ui_layout_runtime = @import("app/ui_layout_runtime.zig");
 const app_run_entry_hooks_runtime = @import("app/run_entry_hooks_runtime.zig");
@@ -594,17 +588,6 @@ const AppState = struct {
         try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(self);
     }
 
-    fn routeTerminalTabCount(self: *AppState) usize {
-        return app_terminal_tabs_runtime.count(self.app_mode, self.terminal_workspace, self.terminals.items.len);
-    }
-
-    fn seedDefaultWelcomeBufferIfNeeded(self: *AppState) !void {
-        if (self.editors.items.len > 0) {
-            const editor = self.editors.items[0];
-            try app_editor_seed.seedDefaultWelcomeBuffer(editor);
-        }
-    }
-
     fn routeOpenFileFromCtx(raw: *anyopaque, path: []const u8) !void {
         const state: *AppState = @ptrCast(@alignCast(raw));
         try state.openFile(path);
@@ -618,26 +601,6 @@ const AppState = struct {
     fn routeSyncTerminalTabBarFromCtx(raw: *anyopaque) !void {
         const state: *AppState = @ptrCast(@alignCast(raw));
         try state.syncTerminalModeTabBar();
-    }
-
-    fn routeNewEditorFromCtx(raw: *anyopaque) !void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        try state.newEditor();
-    }
-
-    fn routeNewTerminalFromCtx(raw: *anyopaque) !void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        try state.newTerminal();
-    }
-
-    fn routeSeedDefaultWelcomeBufferFromCtx(raw: *anyopaque) !void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        try state.seedDefaultWelcomeBufferIfNeeded();
-    }
-
-    fn routeTerminalTabCountFromCtx(raw: *anyopaque) usize {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        return state.routeTerminalTabCount();
     }
 
     pub fn handlePreInputShortcutFrame(
@@ -816,102 +779,12 @@ const AppState = struct {
         );
     }
 
-    fn handleUpdateFrame(
-        self: *AppState,
-        input_batch: *shared_types.input.InputBatch,
-    ) !void {
-        try app_update_frame_hooks_runtime.handle(self, input_batch);
-    }
-
-    fn handleFrameRenderAndIdle(
-        self: *AppState,
-        input_batch: *shared_types.input.InputBatch,
-        poll_ms: f64,
-        build_ms: f64,
-        update_ms: f64,
-    ) void {
-        app_frame_render_idle_hooks_runtime.handle(self, input_batch, poll_ms, build_ms, update_ms);
-    }
-
-    fn shouldStopForPerfFrame(self: *AppState) bool {
-        return self.perf_mode and self.perf_frames_done >= self.perf_frames_total and self.perf_frames_total > 0;
-    }
-
-    fn onPerfCompleteFrame(self: *AppState) void {
-        self.perf_logger.logf("perf complete frames={d}", .{self.perf_frames_done});
-    }
-
-    fn routePrepareRunFrameFromCtx(raw: *anyopaque) !?app_run_loop_driver.FrameSetup {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        return try app_prepare_run_frame_runtime.prepare(state);
-    }
-
-    fn routeUpdateFrameFromCtx(raw: *anyopaque, input_batch: *shared_types.input.InputBatch) !void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        try state.handleUpdateFrame(input_batch);
-    }
-
-    fn routeHandleFrameRenderAndIdleFromCtx(
-        raw: *anyopaque,
-        input_batch: *shared_types.input.InputBatch,
-        poll_ms: f64,
-        build_ms: f64,
-        update_ms: f64,
-    ) void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        state.handleFrameRenderAndIdle(input_batch, poll_ms, build_ms, update_ms);
-    }
-
-    fn routeShouldStopForPerfFromCtx(raw: *anyopaque) bool {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        return state.shouldStopForPerfFrame();
-    }
-
-    fn routeOnPerfCompleteFromCtx(raw: *anyopaque) void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        state.onPerfCompleteFrame();
-    }
-
-    fn routeRunOneFrameFromCtx(raw: *anyopaque) !bool {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        return try state.runOneFrame();
-    }
-
     fn runOneFrame(self: *AppState) !bool {
-        return try app_run_one_frame_hooks_runtime.run(
-            @ptrCast(self),
-            .{
-                .prepare_run_frame = routePrepareRunFrameFromCtx,
-                .update = routeUpdateFrameFromCtx,
-                .handle_frame_render_and_idle = routeHandleFrameRenderAndIdleFromCtx,
-                .should_stop_for_perf = routeShouldStopForPerfFromCtx,
-                .on_perf_complete = routeOnPerfCompleteFromCtx,
-            },
-        );
+        return try app_run_one_frame_hooks_runtime.run(self);
     }
 
     fn runMainLoop(self: *AppState) !void {
-        try app_run_main_loop_hooks_runtime.run(
-            self.shell,
-            @ptrCast(self),
-            .{
-                .run_one_frame = routeRunOneFrameFromCtx,
-            },
-        );
-    }
-
-    fn initializeRunModeState(self: *AppState) !void {
-        try app_run_mode_init_hooks_runtime.handle(self);
-    }
-
-    fn routeInitializeRunModeStateFromCtx(raw: *anyopaque) !void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        try state.initializeRunModeState();
-    }
-
-    fn routeRunMainLoopFromCtx(raw: *anyopaque) !void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        try state.runMainLoop();
+        try app_run_main_loop_hooks_runtime.run(self);
     }
 
     pub fn newTerminal(self: *AppState) !void {
@@ -978,13 +851,7 @@ const AppState = struct {
     }
 
     pub fn run(self: *AppState) !void {
-        try app_run_entry_hooks_runtime.run(
-            @ptrCast(self),
-            .{
-                .initialize_run_mode_state = routeInitializeRunModeStateFromCtx,
-                .run_main_loop = routeRunMainLoopFromCtx,
-            },
-        );
+        try app_run_entry_hooks_runtime.run(self);
     }
 
 };
