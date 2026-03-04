@@ -1074,6 +1074,25 @@ const AppState = struct {
         return true;
     }
 
+    fn activateEditorTabAtCurrentIndex(self: *AppState, now: f64) !void {
+        self.active_tab = self.tab_bar.active_index;
+        try self.routeEditorTabActionAndSync(.{ .activate_by_index = self.active_tab });
+        self.needs_redraw = true;
+        self.metrics.noteInput(now);
+    }
+
+    fn routeTerminalActiveWorkspaceTabIntent(self: *AppState) !void {
+        if (self.terminal_workspace) |*workspace| {
+            if (workspace.activeTabId()) |active_tab_id| {
+                try self.routeTerminalTabActionAndSync(.{ .activate = active_tab_id });
+            }
+        }
+    }
+
+    fn routeTerminalActivateTabIdIntent(self: *AppState, tab_id: u64) !void {
+        try self.routeTerminalTabActionAndSync(.{ .activate = tab_id });
+    }
+
     fn handleIdeMousePressedRouting(
         self: *AppState,
         layout: layout_types.WidgetLayout,
@@ -1084,11 +1103,7 @@ const AppState = struct {
         const tab_bar_y = self.options_bar.height;
         _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.side_nav.width, tab_bar_y, layout.tab_bar.width);
         if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.side_nav.width, tab_bar_y, layout.tab_bar.width)) {
-            // Tab was clicked
-            self.active_tab = self.tab_bar.active_index;
-            try self.routeEditorTabActionAndSync(.{ .activate_by_index = self.active_tab });
-            self.needs_redraw = true;
-            self.metrics.noteInput(now);
+            try self.activateEditorTabAtCurrentIndex(now);
         }
 
         const editor_x = layout.editor.x;
@@ -1120,11 +1135,7 @@ const AppState = struct {
             _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
         }
         _ = try self.setActiveKindAndSyncIfChanged(.terminal);
-        if (self.terminal_workspace) |*workspace| {
-            if (workspace.activeTabId()) |active_tab_id| {
-                try self.routeTerminalTabActionAndSync(.{ .activate = active_tab_id });
-            }
-        }
+        try self.routeTerminalActiveWorkspaceTabIntent();
     }
 
     fn handleEditorMousePressedRouting(self: *AppState) !void {
@@ -1159,7 +1170,7 @@ const AppState = struct {
             if (release_plan.handle_click) {
                 if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width)) {
                     if (self.tab_bar.terminalTabIdAtVisual(self.tab_bar.active_index)) |focused_tab_id| {
-                        try self.routeTerminalTabActionAndSync(.{ .activate = focused_tab_id });
+                        try self.routeTerminalActivateTabIdIntent(focused_tab_id);
                     }
                     if (self.focusTerminalTabByIndex(self.tab_bar.active_index)) {
                         self.needs_redraw = true;

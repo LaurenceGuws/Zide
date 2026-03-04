@@ -128,6 +128,7 @@ app_mode_layering_todo:
             - "In progress: active editor-frame and visible terminal-frame orchestration are now each routed through dedicated AppState helpers."
             - "In progress: mouse debug click logging and post-frame workspace sync are now routed through dedicated AppState helpers."
             - "In progress: top-level active-view frame orchestration is now collapsed into `handleActiveViewFrame(...)`."
+            - "In progress: editor/terminal tab activation intent emission paths are now routed through dedicated AppState helpers (`activateEditorTabAtCurrentIndex`, `routeTerminalActiveWorkspaceTabIntent`, `routeTerminalActivateTabIdIntent`)."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress
