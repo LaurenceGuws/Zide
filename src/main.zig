@@ -595,16 +595,12 @@ const AppState = struct {
         );
     }
 
-    fn activeTerminalArrayIndex(self: *const AppState) ?usize {
-        return app_terminal_tabs.activeIndex(
+    fn activeTerminalSession(self: *AppState) ?*TerminalSession {
+        const idx = app_terminal_tabs.activeIndex(
             self.app_mode,
             self.terminal_workspace,
             self.terminalTabCount(),
-        );
-    }
-
-    fn activeTerminalSession(self: *AppState) ?*TerminalSession {
-        const idx = self.activeTerminalArrayIndex() orelse return null;
+        ) orelse return null;
         if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
             if (self.terminal_workspace) |*workspace| {
                 return workspace.sessionAt(idx);
@@ -615,7 +611,11 @@ const AppState = struct {
     }
 
     fn activeTerminalWidget(self: *AppState) ?*TerminalWidget {
-        const idx = self.activeTerminalArrayIndex() orelse return null;
+        const idx = app_terminal_tabs.activeIndex(
+            self.app_mode,
+            self.terminal_workspace,
+            self.terminalTabCount(),
+        ) orelse return null;
         if (idx >= self.terminal_widgets.items.len) return null;
         return &self.terminal_widgets.items[idx];
     }
@@ -1145,7 +1145,11 @@ const AppState = struct {
         if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
             if (self.terminal_workspace) |*workspace| {
                 const polled = try workspace.pollAll(
-                    self.activeTerminalArrayIndex(),
+                    app_terminal_tabs.activeIndex(
+                        self.app_mode,
+                        self.terminal_workspace,
+                        self.terminalTabCount(),
+                    ),
                     input_batch.events.items.len > 0,
                 );
                 if (polled) self.needs_redraw = true;
