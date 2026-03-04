@@ -586,15 +586,6 @@ const AppState = struct {
         return handled;
     }
 
-    fn activeTerminalWidget(self: *AppState) ?*TerminalWidget {
-        return app_terminal_active_widget.resolveActive(
-            self.app_mode,
-            &self.terminal_workspace,
-            self.terminals.items.len,
-            self.terminal_widgets.items,
-        );
-    }
-
     fn syncTerminalModeTabBar(self: *AppState) !void {
         if (!app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) return;
         try app_terminal_tab_bar_sync.syncFromWorkspace(&self.tab_bar, &self.terminal_workspace);
@@ -1152,7 +1143,12 @@ const AppState = struct {
         if (!app_terminal_surface_gate.hasVisibleTerminalTabs(self.app_mode, self.show_terminal, self.terminal_workspace, self.terminals.items.len)) return;
 
         try self.pollVisibleTerminalSessions(input_batch);
-        if (self.activeTerminalWidget()) |term_widget| {
+        if (app_terminal_active_widget.resolveActive(
+            self.app_mode,
+            &self.terminal_workspace,
+            self.terminals.items.len,
+            self.terminal_widgets.items,
+        )) |term_widget| {
             const strip = app_modes.ide.terminalStrip(self.app_mode, layout.terminal.height);
             const term_y_draw = layout.terminal.y + strip.offset_y;
             const term_x = layout.terminal.x;
@@ -1411,7 +1407,12 @@ const AppState = struct {
         input_batch: *shared_types.input.InputBatch,
         now: f64,
     ) !bool {
-        if (self.activeTerminalWidget()) |term_widget| {
+        if (app_terminal_active_widget.resolveActive(
+            self.app_mode,
+            &self.terminal_workspace,
+            self.terminals.items.len,
+            self.terminal_widgets.items,
+        )) |term_widget| {
             if (input_batch.events.items.len > 0) {
                 term_widget.noteInput(now);
             }
@@ -1830,7 +1831,12 @@ const AppState = struct {
     }
 
     fn handleCursorBlinkArmingFrame(self: *AppState, now: f64) void {
-        if (self.activeTerminalWidget()) |term_widget| {
+        if (app_terminal_active_widget.resolveActive(
+            self.app_mode,
+            &self.terminal_workspace,
+            self.terminals.items.len,
+            self.terminal_widgets.items,
+        )) |term_widget| {
             const cache = term_widget.session.renderCache();
             const blink_armed = cache.cursor_visible and cache.cursor_style.blink and cache.scroll_offset == 0;
             if (blink_armed != self.last_cursor_blink_armed) {
@@ -2102,7 +2108,12 @@ const AppState = struct {
         );
         if (!changed) return false;
         self.terminal_close_confirm_tab = null;
-        if (self.activeTerminalWidget()) |widget| {
+        if (app_terminal_active_widget.resolveActive(
+            self.app_mode,
+            &self.terminal_workspace,
+            self.terminals.items.len,
+            self.terminal_widgets.items,
+        )) |widget| {
             widget.invalidateTextureCache();
         }
         return true;
@@ -2117,7 +2128,12 @@ const AppState = struct {
         );
         if (!changed) return false;
         self.terminal_close_confirm_tab = null;
-        if (self.activeTerminalWidget()) |widget| {
+        if (app_terminal_active_widget.resolveActive(
+            self.app_mode,
+            &self.terminal_workspace,
+            self.terminals.items.len,
+            self.terminal_widgets.items,
+        )) |widget| {
             widget.invalidateTextureCache();
         }
         return true;
@@ -2151,7 +2167,12 @@ const AppState = struct {
                 self.shell.requestClose();
             } else {
                 try self.syncTerminalModeTabBar();
-                if (self.activeTerminalWidget()) |widget| {
+                if (app_terminal_active_widget.resolveActive(
+                    self.app_mode,
+                    &self.terminal_workspace,
+                    self.terminals.items.len,
+                    self.terminal_widgets.items,
+                )) |widget| {
                     widget.invalidateTextureCache();
                 }
             }
@@ -2734,7 +2755,12 @@ const AppState = struct {
             }
 
             shell.setTheme(self.terminal_theme);
-            if (self.activeTerminalWidget()) |term_widget| {
+            if (app_terminal_active_widget.resolveActive(
+                self.app_mode,
+                &self.terminal_workspace,
+                self.terminals.items.len,
+                self.terminal_widgets.items,
+            )) |term_widget| {
                 const strip = app_modes.ide.terminalStrip(self.app_mode, layout.terminal.height);
                 const term_offset_y: f32 = strip.offset_y;
                 const term_height = strip.draw_height;
