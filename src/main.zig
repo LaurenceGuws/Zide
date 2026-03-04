@@ -54,8 +54,6 @@ const app_cursor_blink_frame = @import("app/cursor_blink_frame.zig");
 const app_post_preinput_frame = @import("app/post_preinput_frame.zig");
 const app_post_preinput_hooks_runtime = @import("app/post_preinput_hooks_runtime.zig");
 const app_update_driver = @import("app/update_driver.zig");
-const app_run_main_loop_hooks_runtime = @import("app/run_main_loop_hooks_runtime.zig");
-const app_run_one_frame_hooks_runtime = @import("app/run_one_frame_hooks_runtime.zig");
 const app_update_prelude_frame_runtime = @import("app/update_prelude_frame_runtime.zig");
 const app_ui_layout_runtime = @import("app/ui_layout_runtime.zig");
 const app_run_entry_hooks_runtime = @import("app/run_entry_hooks_runtime.zig");
@@ -757,14 +755,6 @@ const AppState = struct {
             &self.metrics,
             self,
         );
-    }
-
-    fn runOneFrame(self: *AppState) !bool {
-        return try app_run_one_frame_hooks_runtime.run(self);
-    }
-
-    fn runMainLoop(self: *AppState) !void {
-        try app_run_main_loop_hooks_runtime.run(self);
     }
 
     pub fn newTerminal(self: *AppState) !void {
