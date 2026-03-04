@@ -62,12 +62,10 @@ const app_run_loop_driver = @import("app/run_loop_driver.zig");
 const app_reload_config_runtime = @import("app/reload_config_runtime.zig");
 const app_run_mode_init = @import("app/run_mode_init.zig");
 const app_prepare_run_frame_runtime = @import("app/prepare_run_frame_runtime.zig");
-const app_frame_render_idle_runtime = @import("app/frame_render_idle_runtime.zig");
+const app_frame_render_idle_hooks_runtime = @import("app/frame_render_idle_hooks_runtime.zig");
 const app_update_prelude_frame_runtime = @import("app/update_prelude_frame_runtime.zig");
 const app_ui_layout_runtime = @import("app/ui_layout_runtime.zig");
-const app_metrics_log_runtime = @import("app/metrics_log_runtime.zig");
 const app_run_entry_runtime = @import("app/run_entry_runtime.zig");
-const app_draw_frame_runtime = @import("app/draw_frame_runtime.zig");
 const app_terminal_tab_navigation_runtime = @import("app/terminal_tab_navigation_runtime.zig");
 const app_terminal_close_active_runtime = @import("app/terminal_close_active_runtime.zig");
 const app_terminal_close_confirm_active_runtime = @import("app/terminal_close_confirm_active_runtime.zig");
@@ -946,57 +944,7 @@ const AppState = struct {
         build_ms: f64,
         update_ms: f64,
     ) void {
-        app_frame_render_idle_runtime.handle(
-            self,
-            @ptrCast(self),
-            input_batch,
-            poll_ms,
-            build_ms,
-            update_ms,
-            .{
-                .draw = struct {
-                    fn cb(cb_raw: *anyopaque) void {
-                        const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
-                        app_draw_frame_runtime.draw(
-                            cb_state,
-                            cb_state.shell,
-                            cb_raw,
-                            .{
-                                .compute_layout = struct {
-                                    fn inner(inner_raw: *anyopaque, width: f32, height: f32) layout_types.WidgetLayout {
-                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                        return app_ui_layout_runtime.computeLayout(inner_state, width, height);
-                                    }
-                                }.inner,
-                                .apply_current_tab_bar_width_mode = struct {
-                                    fn inner(inner_raw: *anyopaque) void {
-                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                        app_tab_bar_width.applyForMode(
-                                            &inner_state.tab_bar,
-                                            inner_state.app_mode,
-                                            inner_state.editor_tab_bar_width_mode,
-                                            inner_state.terminal_tab_bar_width_mode,
-                                        );
-                                    }
-                                }.inner,
-                                .terminal_close_confirm_active = struct {
-                                    fn inner(inner_raw: *anyopaque) bool {
-                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                        return app_terminal_close_confirm_active_runtime.reconcile(inner_state);
-                                    }
-                                }.inner,
-                            },
-                        );
-                    }
-                }.cb,
-                .maybe_log_metrics = struct {
-                    fn cb(cb_raw: *anyopaque, at: f64) void {
-                        const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
-                        app_metrics_log_runtime.maybeLog(cb_state, at);
-                    }
-                }.cb,
-            },
-        );
+        app_frame_render_idle_hooks_runtime.handle(self, input_batch, poll_ms, build_ms, update_ms);
     }
 
     fn shouldStopForPerfFrame(self: *AppState) bool {
