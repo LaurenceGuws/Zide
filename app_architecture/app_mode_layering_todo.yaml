@@ -70,10 +70,22 @@ app_mode_layering_todo:
             - "Extraction-only. No behavior deltas."
         - id: MODE-00-02
           title: "Document mode-layer boundaries and import constraints"
-          status: todo
+          status: done
           files_to_edit:
             - app_architecture/APP_LAYERING.md
             - app_architecture/app_mode_layering_todo.yaml
+          notes:
+            - "Shared/backend/ide import allow/deny constraints are now explicitly documented and authoritative."
+            - "Until dedicated checks are added, enforce this task by review + existing import checks."
+        - id: MODE-00-03
+          title: "Extend import checks with mode-layer specific rules"
+          status: todo
+          files_to_edit:
+            - tools/app_import_check.zig
+            - build.zig
+          notes:
+            - "Add explicit rule validation for shared/backend/ide boundaries in `src/app/modes/*`."
+            - "Keep this separate from extraction work; no behavior changes."
 
     - name: "MODE-01 Backend extraction"
       tasks:
