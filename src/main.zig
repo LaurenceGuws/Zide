@@ -1662,76 +1662,6 @@ const AppState = struct {
         );
     }
 
-    fn handlePointerActivityFrame(
-        self: *AppState,
-        input_batch: *shared_types.input.InputBatch,
-        layout: layout_types.WidgetLayout,
-        mouse: shared_types.input.MousePos,
-        now: f64,
-    ) void {
-        const result = app_pointer_activity_frame.handle(
-            self.show_terminal,
-            input_batch,
-            layout,
-            mouse,
-            now,
-            &self.last_mouse_pos,
-            &self.last_mouse_redraw_time,
-            &self.last_ctrl_down,
-        );
-        if (result.needs_redraw) self.needs_redraw = true;
-        if (result.note_input) self.metrics.noteInput(now);
-    }
-
-    fn handleTerminalSplitResizeFrame(
-        self: *AppState,
-        shell: *Shell,
-        input_batch: *shared_types.input.InputBatch,
-        layout: layout_types.WidgetLayout,
-        width: f32,
-        height: f32,
-        now: f64,
-    ) !void {
-        const result = app_terminal_split_resize_frame.handle(
-            self.app_mode,
-            self.show_terminal,
-            input_batch,
-            layout,
-            height,
-            self.options_bar.height,
-            self.tab_bar.height,
-            self.status_bar.height,
-            &self.resizing_terminal,
-            &self.resize_start_y,
-            &self.resize_start_height,
-            self.terminal_height,
-        );
-
-        if (result.new_terminal_height) |new_height| {
-            self.terminal_height = new_height;
-            if (self.terminals.items.len > 0) {
-                const term = self.terminals.items[0];
-                const grid = app_terminal_grid.compute(
-                    width,
-                    self.terminal_height,
-                    self.shell.terminalCellWidth(),
-                    self.shell.terminalCellHeight(),
-                    1,
-                    1,
-                );
-                const cols: u16 = grid.cols;
-                const rows: u16 = grid.rows;
-                term.setCellSize(
-                    @intFromFloat(shell.terminalCellWidth()),
-                    @intFromFloat(shell.terminalCellHeight()),
-                );
-                try term.resize(rows, cols);
-            }
-        }
-        if (result.needs_redraw) self.needs_redraw = true;
-        if (result.note_input) self.metrics.noteInput(now);
-    }
-
     pub fn newTerminal(self: *AppState) !void {
         // Calculate terminal size based on UI
         const shell = self.shell;
@@ -2102,7 +2032,18 @@ const AppState = struct {
                                                                                         at: f64,
                                                                                     ) void {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        inner_state.handlePointerActivityFrame(frame_input_batch, layout, mouse, at);
+                                                                                        const result = app_pointer_activity_frame.handle(
+                                                                                            inner_state.show_terminal,
+                                                                                            frame_input_batch,
+                                                                                            layout,
+                                                                                            mouse,
+                                                                                            at,
+                                                                                            &inner_state.last_mouse_pos,
+                                                                                            &inner_state.last_mouse_redraw_time,
+                                                                                            &inner_state.last_ctrl_down,
+                                                                                        );
+                                                                                        if (result.needs_redraw) inner_state.needs_redraw = true;
+                                                                                        if (result.note_input) inner_state.metrics.noteInput(at);
                                                                                     }
                                                                                 }.inner,
                                                                                 .handle_terminal_split_resize = struct {
@@ -2116,7 +2057,44 @@ const AppState = struct {
                                                                                         at: f64,
                                                                                     ) !void {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        try inner_state.handleTerminalSplitResizeFrame(frame_shell, frame_input_batch, layout, width, height, at);
+                                                                                        const result = app_terminal_split_resize_frame.handle(
+                                                                                            inner_state.app_mode,
+                                                                                            inner_state.show_terminal,
+                                                                                            frame_input_batch,
+                                                                                            layout,
+                                                                                            height,
+                                                                                            inner_state.options_bar.height,
+                                                                                            inner_state.tab_bar.height,
+                                                                                            inner_state.status_bar.height,
+                                                                                            &inner_state.resizing_terminal,
+                                                                                            &inner_state.resize_start_y,
+                                                                                            &inner_state.resize_start_height,
+                                                                                            inner_state.terminal_height,
+                                                                                        );
+
+                                                                                        if (result.new_terminal_height) |new_height| {
+                                                                                            inner_state.terminal_height = new_height;
+                                                                                            if (inner_state.terminals.items.len > 0) {
+                                                                                                const term = inner_state.terminals.items[0];
+                                                                                                const grid = app_terminal_grid.compute(
+                                                                                                    width,
+                                                                                                    inner_state.terminal_height,
+                                                                                                    inner_state.shell.terminalCellWidth(),
+                                                                                                    inner_state.shell.terminalCellHeight(),
+                                                                                                    1,
+                                                                                                    1,
+                                                                                                );
+                                                                                                const cols: u16 = grid.cols;
+                                                                                                const rows: u16 = grid.rows;
+                                                                                                term.setCellSize(
+                                                                                                    @intFromFloat(frame_shell.terminalCellWidth()),
+                                                                                                    @intFromFloat(frame_shell.terminalCellHeight()),
+                                                                                                );
+                                                                                                try term.resize(rows, cols);
+                                                                                            }
+                                                                                        }
+                                                                                        if (result.needs_redraw) inner_state.needs_redraw = true;
+                                                                                        if (result.note_input) inner_state.metrics.noteInput(at);
                                                                                     }
                                                                                 }.inner,
                                                                             },
