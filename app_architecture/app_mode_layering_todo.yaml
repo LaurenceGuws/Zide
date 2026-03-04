@@ -261,9 +261,10 @@ app_mode_layering_todo:
             - "Record command matrix and expected outcomes for all modes."
         - id: MODE-04-02
           title: "Lock regression fixture authority for mode extraction"
-          status: todo
+          status: done
           files_to_edit:
             - app_architecture/terminal/REPLAY_HARNESS_SPEC.md
             - app_architecture/editor/editor_widget_todo.yaml
           notes:
             - "Mark which fixtures/harnesses are blocking for each extraction slice."
+            - "Done: both docs now define blocking fixture/harness authority for MODE-01 through MODE-04 slices."

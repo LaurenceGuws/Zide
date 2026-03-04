@@ -16,6 +16,31 @@ editor_widget_todo:
       - "rendering invariants: immediate vs cached parity + dirty-range correctness"
       - "performance invariants: low-latency typing and bounded cache behavior"
       - "protocol invariants: baseline LSP/editor protocol semantics remain stable"
+  mode_extraction_fixture_authority:
+    purpose: "Regression authority for app-mode extraction slices; extraction-only work must not drift these baselines."
+    blocking_by_slice:
+      MODE-01_backend_extraction:
+        commands:
+          - "zig build test"
+        blocking_domains:
+          - "editor core behavior (cursor/selection/edit/undo invariants)"
+          - "editor widget immediate vs cached draw parity tests"
+          - "editor search/replace baseline tests"
+      MODE-02_ide_composition:
+        commands:
+          - "zig build test"
+        blocking_domains:
+          - "no editor test baseline drift from MODE-01 during composition-only routing moves"
+      MODE-03_build_time_focused_binaries:
+        commands:
+          - "zig build test"
+        blocking_domains:
+          - "focused entry-point wiring must preserve editor test outcomes from full IDE path"
+      MODE-04_compatibility_rollout:
+        commands:
+          - "zig build test"
+        blocking_domains:
+          - "this test set remains canonical compatibility authority for editor behavior through rollout"
   zide_integration:
     entry_points:
       - src/main.zig
