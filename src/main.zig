@@ -2020,12 +2020,12 @@ const AppState = struct {
     }
 
     fn terminalCloseConfirmActive(self: *AppState) bool {
-        const active_tab: ?u64 = if (self.terminal_workspace) |*workspace| workspace.activeTabId() else null;
-        self.terminal_close_confirm_tab = app_terminal_close_confirm_state.reconcilePending(
+        const state = app_terminal_close_confirm_state.reconcileActiveState(
             self.terminal_close_confirm_tab,
-            active_tab,
+            &self.terminal_workspace,
         );
-        return self.terminal_close_confirm_tab != null;
+        self.terminal_close_confirm_tab = state.pending;
+        return state.active;
     }
 
     fn clearTerminalCloseConfirm(self: *AppState) void {
