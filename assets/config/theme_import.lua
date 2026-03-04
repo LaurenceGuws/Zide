@@ -74,6 +74,34 @@ local function set_palette_color(palette, key, raw_value)
         palette.cursor = color
         return
     end
+    if k == "url_color" then
+        palette.link = color
+        return
+    end
+    if k == "tab_bar_background" then
+        palette.ui_bar_bg = color
+        return
+    end
+    if k == "active_tab_background" then
+        palette.ui_accent = color
+        return
+    end
+    if k == "active_tab_foreground" then
+        palette.ui_text = color
+        return
+    end
+    if k == "inactive_tab_background" then
+        palette.ui_tab_inactive_bg = color
+        return
+    end
+    if k == "inactive_tab_foreground" then
+        palette.ui_text_inactive = color
+        return
+    end
+    if k == "active_border_color" then
+        palette.ui_border = color
+        return
+    end
     if k == "background" or k == "foreground" or k == "cursor" or k == "selection" then
         palette[k] = color
         return

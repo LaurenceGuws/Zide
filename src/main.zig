@@ -275,6 +275,49 @@ const AppState = struct {
         return luma < 128000;
     }
 
+    fn terminalTabBarTheme(self: *const AppState) app_shell.Theme {
+        var theme = self.terminal_theme;
+        const base = self.shell_base_theme;
+
+        var fallback_active_tab_bg = self.terminal_theme.background;
+        var fallback_inactive_tab_bg = self.terminal_theme.background;
+        var fallback_inactive_text = self.terminal_theme.foreground;
+        var fallback_border = self.terminal_theme.foreground;
+
+        if (self.terminal_theme.ansi_colors) |ansi| {
+            fallback_active_tab_bg = ansi[4];
+            fallback_inactive_tab_bg = ansi[8];
+            fallback_inactive_text = ansi[7];
+            fallback_border = ansi[8];
+        }
+
+        if (std.meta.eql(theme.ui_bar_bg, base.ui_bar_bg)) {
+            theme.ui_bar_bg = self.terminal_theme.background;
+        }
+        if (std.meta.eql(theme.ui_tab_inactive_bg, base.ui_tab_inactive_bg)) {
+            theme.ui_tab_inactive_bg = fallback_inactive_tab_bg;
+        }
+        if (std.meta.eql(theme.ui_text, base.ui_text)) {
+            theme.ui_text = self.terminal_theme.foreground;
+        }
+        if (std.meta.eql(theme.ui_text_inactive, base.ui_text_inactive)) {
+            theme.ui_text_inactive = fallback_inactive_text;
+        }
+        if (std.meta.eql(theme.ui_border, base.ui_border)) {
+            theme.ui_border = fallback_border;
+        }
+
+        if (std.meta.eql(theme.ui_accent, base.ui_accent)) {
+            theme.ui_accent = fallback_active_tab_bg;
+        }
+
+        // TabBar uses `theme.background` for active-tab fill; in terminal mode we map it
+        // to the tab accent so imported kitty/ghostty tab colors can drive active tab chrome
+        // without changing terminal surface background.
+        theme.background = theme.ui_accent;
+        return theme;
+    }
+
     const ResolvedThemes = struct {
         app: app_shell.Theme,
         editor: app_shell.Theme,
@@ -2680,7 +2723,8 @@ const AppState = struct {
             // Draw tab bar
             tab_tooltip = self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
         } else if (self.app_mode == .terminal) {
-            shell.setTheme(self.app_theme);
+            const tab_theme = self.terminalTabBarTheme();
+            shell.setTheme(tab_theme);
             tab_tooltip = self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
         }
 
