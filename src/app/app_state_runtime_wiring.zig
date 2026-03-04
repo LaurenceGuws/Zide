@@ -13,6 +13,10 @@ pub fn init(comptime AppStateT: type, allocator: std.mem.Allocator, app_mode: Ap
     return try app_init_runtime.init(AppStateT, allocator, app_mode);
 }
 
+pub fn initFocused(comptime AppStateT: type, allocator: std.mem.Allocator, comptime app_mode: AppMode) !*AppStateT {
+    return try app_init_runtime.initFocused(AppStateT, allocator, app_mode);
+}
+
 pub fn deinit(state: anytype) void {
     app_deinit_runtime.handle(state);
 }

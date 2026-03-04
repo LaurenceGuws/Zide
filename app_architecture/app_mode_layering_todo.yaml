@@ -409,6 +409,7 @@ app_mode_layering_todo:
             - "Done: IDE host/layout policy helpers now route all app-mode decisions through compile-time-effective mode resolution (`mode_build.effectiveMode`), enabling broader branch folding in focused binaries."
             - "Done: binary-size visibility added via `zig build mode-size-report` (`tools/report_mode_binary_sizes.sh`) to track focused-binary size reduction as compile-time splitting expands."
             - "Done: focused entrypoints now use compile-time-only app startup (`app_entry_runtime.runFocused`) and no longer pass runtime mode arguments."
+            - "Done: focused app startup now uses a comptime-specialized state initializer (`AppState.initFocused` -> `init_runtime.initFocused`) so mode-dependent init branches fold without runtime mode plumbing."
         - id: MODE-03-02
           title: "Add run/install steps for focused binaries"
           status: done

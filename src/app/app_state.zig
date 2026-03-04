@@ -100,6 +100,10 @@ pub const AppState = struct {
         return try app_state_runtime_wiring.init(AppState, allocator, app_mode);
     }
 
+    pub fn initFocused(allocator: std.mem.Allocator, comptime app_mode: AppMode) !*AppState {
+        return try app_state_runtime_wiring.initFocused(AppState, allocator, app_mode);
+    }
+
     pub fn deinit(self: *AppState) void {
         app_state_runtime_wiring.deinit(self);
     }

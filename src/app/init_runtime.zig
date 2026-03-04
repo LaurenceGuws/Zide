@@ -24,6 +24,21 @@ const EditorClusterCache = widgets.EditorClusterCache;
 const EditorRenderCache = editor_render_cache_mod.EditorRenderCache;
 
 pub fn init(comptime AppStateT: type, allocator: std.mem.Allocator, app_mode: app_bootstrap.AppMode) !*AppStateT {
+    return try initWithMode(AppStateT, allocator, null, app_mode);
+}
+
+pub fn initFocused(comptime AppStateT: type, allocator: std.mem.Allocator, comptime app_mode: app_bootstrap.AppMode) !*AppStateT {
+    return try initWithMode(AppStateT, allocator, app_mode, .ide);
+}
+
+fn initWithMode(
+    comptime AppStateT: type,
+    allocator: std.mem.Allocator,
+    comptime forced_mode: ?app_bootstrap.AppMode,
+    runtime_mode: app_bootstrap.AppMode,
+) !*AppStateT {
+    const app_mode = if (comptime forced_mode) |mode| mode else runtime_mode;
+
     var config = config_mod.loadConfig(allocator) catch |err| blk: {
         std.debug.print("config load error: {any}\n", .{err});
         break :blk config_mod.Config{
