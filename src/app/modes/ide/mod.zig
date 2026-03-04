@@ -2,6 +2,7 @@ const host = @import("host.zig");
 const layout_policy = @import("layout_policy.zig");
 const tab_intents = @import("tab_intents.zig");
 const parity = @import("parity.zig");
+const projections = @import("projections.zig");
 
 pub const IdeHost = host.IdeHost;
 pub const ActiveMode = host.ActiveMode;
@@ -41,3 +42,5 @@ pub const reorderIntentForDrag = tab_intents.reorderIntentForDrag;
 pub const Mismatch = parity.Mismatch;
 pub const KindParity = parity.KindParity;
 pub const evaluateKind = parity.evaluateKind;
+pub const buildTabProjections = projections.buildTabProjections;
+pub const activeProjectionForTabBar = projections.activeProjectionForTabBar;

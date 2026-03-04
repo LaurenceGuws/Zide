@@ -966,16 +966,14 @@ const AppState = struct {
     }
 
     fn syncModeAdaptersFromTabBar(self: *AppState) !void {
-        var projections = try self.buildTabProjections();
+        var projections = try app_modes.ide.buildTabProjections(self.allocator, self.tab_bar.tabs.items);
         defer projections.deinit(self.allocator);
 
-        const active_projection: app_modes.runtime_bridge.ActiveProjection = .{
-            .kind = self.active_kind,
-            .id = if (self.tab_bar.tabs.items.len > 0 and self.tab_bar.active_index < self.tab_bar.tabs.items.len)
-                self.tab_bar.tabs.items[self.tab_bar.active_index].id
-            else
-                null,
-        };
+        const active_projection = app_modes.ide.activeProjectionForTabBar(
+            self.active_kind,
+            self.tab_bar.tabs.items,
+            self.tab_bar.active_index,
+        );
 
         try app_modes.runtime_bridge.syncModesFromProjections(
             self.allocator,
@@ -985,23 +983,6 @@ const AppState = struct {
             active_projection,
         );
         self.logModeAdapterParity();
-    }
-
-    fn buildTabProjections(self: *AppState) !std.ArrayList(app_modes.runtime_bridge.AppTabProjection) {
-        var projections = std.ArrayList(app_modes.runtime_bridge.AppTabProjection).empty;
-        try projections.ensureTotalCapacity(self.allocator, self.tab_bar.tabs.items.len);
-        for (self.tab_bar.tabs.items) |tab| {
-            projections.appendAssumeCapacity(.{
-                .kind = switch (tab.kind) {
-                    .editor => .editor,
-                    .terminal => .terminal,
-                },
-                .id = tab.id,
-                .title = tab.title,
-                .alive = true,
-            });
-        }
-        return projections;
     }
 
     fn applyTerminalModeTabAction(self: *AppState, tab_action: app_modes.shared.actions.TabAction) void {
@@ -1032,16 +1013,14 @@ const AppState = struct {
 
         const editor_snap = self.editor_mode_adapter.asContract().snapshot(self.allocator) catch return;
         const terminal_snap = self.terminal_mode_adapter.asContract().snapshot(self.allocator) catch return;
-        var projections = self.buildTabProjections() catch return;
+        var projections = app_modes.ide.buildTabProjections(self.allocator, self.tab_bar.tabs.items) catch return;
         defer projections.deinit(self.allocator);
 
-        const active_projection: app_modes.runtime_bridge.ActiveProjection = .{
-            .kind = self.active_kind,
-            .id = if (self.tab_bar.tabs.items.len > 0 and self.tab_bar.active_index < self.tab_bar.tabs.items.len)
-                self.tab_bar.tabs.items[self.tab_bar.active_index].id
-            else
-                null,
-        };
+        const active_projection = app_modes.ide.activeProjectionForTabBar(
+            self.active_kind,
+            self.tab_bar.tabs.items,
+            self.tab_bar.active_index,
+        );
 
         const editor_parity = app_modes.ide.evaluateKind(
             projections.items,
