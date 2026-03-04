@@ -18,3 +18,6 @@ pub const hasTerminalInputScope = host.hasTerminalInputScope;
 pub const usesIdeTerminalStrip = host.usesIdeTerminalStrip;
 pub const computeLayoutForMode = layout_policy.computeLayoutForMode;
 pub const configReloadNoticeY = layout_policy.configReloadNoticeY;
+pub const terminalEffectiveHeightForSizing = layout_policy.terminalEffectiveHeightForSizing;
+pub const terminalStrip = layout_policy.terminalStrip;
+pub const TerminalStrip = layout_policy.TerminalStrip;
