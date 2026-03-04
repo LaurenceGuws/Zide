@@ -579,101 +579,6 @@ const AppState = struct {
         editor.setCursor(clamped_line, clamped_col);
     }
 
-    fn requestCloseActiveTerminalTab(self: *AppState, now: f64) !bool {
-        _ = try app_terminal_intent_route_runtime.routeActiveAndSync(self, .close);
-        if (try app_terminal_close_active_runtime.closeActive(
-            self,
-            @ptrCast(self),
-            .{
-                .sync_terminal_mode_tab_bar = struct {
-                    fn call(raw: *anyopaque) !void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(state);
-                    }
-                }.call,
-            },
-        )) {
-            self.needs_redraw = true;
-            self.metrics.noteInput(now);
-            return true;
-        }
-        if (app_terminal_close_confirm_active_runtime.reconcile(self)) {
-            self.needs_redraw = true;
-            self.metrics.noteInput(now);
-            return true;
-        }
-        return false;
-    }
-
-    fn requestCreateTerminalTab(self: *AppState, now: f64) !bool {
-        try app_tab_action_apply_runtime.applyTerminalAndSync(self, .create);
-        try self.newTerminal();
-        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(self);
-        self.needs_redraw = true;
-        self.metrics.noteInput(now);
-        return true;
-    }
-
-    fn requestCycleTerminalTabWithIntent(
-        self: *AppState,
-        dir: app_modes.ide.TerminalShortcutCycleDirection,
-        now: f64,
-    ) !bool {
-        const moved = app_terminal_tab_navigation_runtime.cycle(self, dir == .next);
-        if (!moved) return false;
-        try app_tab_action_apply_runtime.applyTerminalAndSync(self, app_terminal_tab_intents.cycleIntentForDirection(dir));
-        self.needs_redraw = true;
-        self.metrics.noteInput(now);
-        return true;
-    }
-
-    fn requestFocusTerminalTabWithIntent(
-        self: *AppState,
-        route: app_modes.ide.TerminalFocusRoute,
-        now: f64,
-    ) !bool {
-        try app_tab_action_apply_runtime.applyTerminalAndSync(self, route.intent);
-        if (!app_terminal_tab_navigation_runtime.focusByIndex(self, route.index)) return false;
-        self.needs_redraw = true;
-        self.metrics.noteInput(now);
-        return true;
-    }
-
-    fn handleTerminalShortcutIntent(
-        self: *AppState,
-        intent: app_modes.ide.TerminalShortcutIntent,
-        now: f64,
-    ) !bool {
-        if (!app_terminal_shortcut_policy.canHandleIntent(self.app_mode, intent)) return false;
-        const hooks: app_terminal_shortcut_runtime.RuntimeHooks = .{
-            .request_create = struct {
-                fn call(raw: *anyopaque, at: f64) !bool {
-                    const state: *AppState = @ptrCast(@alignCast(raw));
-                    return state.requestCreateTerminalTab(at);
-                }
-            }.call,
-            .request_close = struct {
-                fn call(raw: *anyopaque, at: f64) !bool {
-                    const state: *AppState = @ptrCast(@alignCast(raw));
-                    return state.requestCloseActiveTerminalTab(at);
-                }
-            }.call,
-            .request_cycle = struct {
-                fn call(raw: *anyopaque, dir: app_modes.ide.TerminalShortcutCycleDirection, at: f64) !bool {
-                    const state: *AppState = @ptrCast(@alignCast(raw));
-                    return state.requestCycleTerminalTabWithIntent(dir, at);
-                }
-            }.call,
-            .request_focus = struct {
-                fn call(raw: *anyopaque, route: app_modes.ide.TerminalFocusRoute, at: f64) !bool {
-                    const state: *AppState = @ptrCast(@alignCast(raw));
-                    return state.requestFocusTerminalTabWithIntent(route, at);
-                }
-            }.call,
-        };
-        return app_terminal_shortcut_runtime.handleIntent(intent, now, @ptrCast(self), hooks);
-    }
-
     fn handleIdeMousePressedRouting(
         self: *AppState,
         layout: layout_types.WidgetLayout,
@@ -1756,7 +1661,70 @@ const AppState = struct {
                                                                                                                 .handle_terminal_shortcut_intent = struct {
                                                                                                                     fn call(route_raw: *anyopaque, intent: app_modes.ide.TerminalShortcutIntent, route_at: f64) !bool {
                                                                                                                         const route_state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                                        return try route_state.handleTerminalShortcutIntent(intent, route_at);
+                                                                                                                        if (!app_terminal_shortcut_policy.canHandleIntent(route_state.app_mode, intent)) return false;
+                                                                                                                        const hooks: app_terminal_shortcut_runtime.RuntimeHooks = .{
+                                                                                                                            .request_create = struct {
+                                                                                                                               fn call(hook_raw: *anyopaque, hook_at: f64) !bool {
+                                                                                                                                    const hook_state: *AppState = @ptrCast(@alignCast(hook_raw));
+                                                                                                                                    try app_tab_action_apply_runtime.applyTerminalAndSync(hook_state, .create);
+                                                                                                                                    try hook_state.newTerminal();
+                                                                                                                                    try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(hook_state);
+                                                                                                                                    hook_state.needs_redraw = true;
+                                                                                                                                    hook_state.metrics.noteInput(hook_at);
+                                                                                                                                    return true;
+                                                                                                                               }
+                                                                                                                           }.call,
+                                                                                                                           .request_close = struct {
+                                                                                                                               fn call(hook_raw: *anyopaque, hook_at: f64) !bool {
+                                                                                                                                    const hook_state: *AppState = @ptrCast(@alignCast(hook_raw));
+                                                                                                                                    _ = try app_terminal_intent_route_runtime.routeActiveAndSync(hook_state, .close);
+                                                                                                                                    if (try app_terminal_close_active_runtime.closeActive(
+                                                                                                                                        hook_state,
+                                                                                                                                        @ptrCast(hook_state),
+                                                                                                                                        .{
+                                                                                                                                            .sync_terminal_mode_tab_bar = struct {
+                                                                                                                                                fn inner(sync_raw: *anyopaque) !void {
+                                                                                                                                                    const sync_state: *AppState = @ptrCast(@alignCast(sync_raw));
+                                                                                                                                                    try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(sync_state);
+                                                                                                                                                }
+                                                                                                                                            }.inner,
+                                                                                                                                        },
+                                                                                                                                    )) {
+                                                                                                                                        hook_state.needs_redraw = true;
+                                                                                                                                        hook_state.metrics.noteInput(hook_at);
+                                                                                                                                        return true;
+                                                                                                                                    }
+                                                                                                                                    if (app_terminal_close_confirm_active_runtime.reconcile(hook_state)) {
+                                                                                                                                        hook_state.needs_redraw = true;
+                                                                                                                                        hook_state.metrics.noteInput(hook_at);
+                                                                                                                                        return true;
+                                                                                                                                    }
+                                                                                                                                    return false;
+                                                                                                                               }
+                                                                                                                           }.call,
+                                                                                                                           .request_cycle = struct {
+                                                                                                                               fn call(hook_raw: *anyopaque, dir: app_modes.ide.TerminalShortcutCycleDirection, hook_at: f64) !bool {
+                                                                                                                                    const hook_state: *AppState = @ptrCast(@alignCast(hook_raw));
+                                                                                                                                    const moved = app_terminal_tab_navigation_runtime.cycle(hook_state, dir == .next);
+                                                                                                                                    if (!moved) return false;
+                                                                                                                                    try app_tab_action_apply_runtime.applyTerminalAndSync(hook_state, app_terminal_tab_intents.cycleIntentForDirection(dir));
+                                                                                                                                    hook_state.needs_redraw = true;
+                                                                                                                                    hook_state.metrics.noteInput(hook_at);
+                                                                                                                                    return true;
+                                                                                                                               }
+                                                                                                                           }.call,
+                                                                                                                           .request_focus = struct {
+                                                                                                                               fn call(hook_raw: *anyopaque, route: app_modes.ide.TerminalFocusRoute, hook_at: f64) !bool {
+                                                                                                                                    const hook_state: *AppState = @ptrCast(@alignCast(hook_raw));
+                                                                                                                                    try app_tab_action_apply_runtime.applyTerminalAndSync(hook_state, route.intent);
+                                                                                                                                    if (!app_terminal_tab_navigation_runtime.focusByIndex(hook_state, route.index)) return false;
+                                                                                                                                    hook_state.needs_redraw = true;
+                                                                                                                                    hook_state.metrics.noteInput(hook_at);
+                                                                                                                                    return true;
+                                                                                                                               }
+                                                                                                                           }.call,
+                                                                                                                        };
+                                                                                                                        return app_terminal_shortcut_runtime.handleIntent(intent, route_at, @ptrCast(route_state), hooks);
                                                                                                                     }
                                                                                                                 }.call,
                                                                                                             },
