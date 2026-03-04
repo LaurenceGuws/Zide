@@ -2063,7 +2063,7 @@ const AppState = struct {
                 },
                 .terminal_next_tab => {
                     if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode) and self.cycleTerminalTab(true)) {
-                        self.applyTerminalModeTabAction(.next);
+                        try self.routeTerminalTabActionAndSync(.next);
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
                         return;
@@ -2071,7 +2071,7 @@ const AppState = struct {
                 },
                 .terminal_prev_tab => {
                     if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode) and self.cycleTerminalTab(false)) {
-                        self.applyTerminalModeTabAction(.prev);
+                        try self.routeTerminalTabActionAndSync(.prev);
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
                         return;
