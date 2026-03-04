@@ -98,7 +98,7 @@ pub fn draw(
     var draw_cursor = scroll_offset == 0 and cache.cursor_visible;
     const cursor = if (draw_cursor) cache.cursor else CursorPos{ .row = rows + 1, .col = cols + 1 };
     const cursor_style = cache.cursor_style;
-    if (draw_cursor and cursor_style.blink) {
+    if (draw_cursor and self.ui_focused and cursor_style.blink) {
         if (blink_time >= self.cursor_blink_pause_until) {
             const period: f64 = 0.5;
             const phase = @mod(blink_time, period * 2.0);
@@ -910,6 +910,20 @@ pub fn draw(
     hover_mod.drawHoverUnderlineOverlay(r, base_x, base_y, rows, cols, hover_link_id, view_cells);
 
     if (draw_cursor and rows > 0 and cols > 0 and cursor.row < rows and cursor.col < cols and view_cells.len >= rows * cols) {
+        const cursor_log = app_logger.logger("terminal.cursor");
+        if (cursor_log.enabled_file or cursor_log.enabled_console) {
+            cursor_log.logf(
+                "cursor draw ui_focused={d} shape={s} blink={d} visible={d} row={d} col={d}",
+                .{
+                    @intFromBool(self.ui_focused),
+                    @tagName(cursor_style.shape),
+                    @intFromBool(cursor_style.blink),
+                    @intFromBool(draw_cursor),
+                    cursor.row,
+                    cursor.col,
+                },
+            );
+        }
         const row_cells = rowSlice(view_cells, cols, cursor.row);
         if (row_cells.len != 0) {
             const cell = row_cells[cursor.col];
@@ -960,7 +974,13 @@ pub fn draw(
             };
 
             const cursor_w_i: i32 = cell_w_i * @as(i32, @intCast(cell_width_units));
-            switch (cursor_style.shape) {
+            if (!self.ui_focused) {
+                const border_w: i32 = 1;
+                r.drawRect(cell_x_i, cell_y_i, cursor_w_i, border_w, r.theme.cursor);
+                r.drawRect(cell_x_i, cell_y_i + cell_h_i - border_w, cursor_w_i, border_w, r.theme.cursor);
+                r.drawRect(cell_x_i, cell_y_i, border_w, cell_h_i, r.theme.cursor);
+                r.drawRect(cell_x_i + cursor_w_i - border_w, cell_y_i, border_w, cell_h_i, r.theme.cursor);
+            } else switch (cursor_style.shape) {
                 .block => {
                     if (cell.combining_len > 0) {
                         r.drawTerminalCellGrapheme(

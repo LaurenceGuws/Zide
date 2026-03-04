@@ -54,6 +54,8 @@ pub const TerminalWidget = struct {
     focus_report_window_events: bool = true,
     focus_report_pane_events: bool = false,
     last_focus_reported: ?bool = null,
+    ui_focused: bool = true,
+    ui_window_focused: bool = true,
 
     pub fn init(session: *TerminalSession, blink_style: BlinkStyle) TerminalWidget {
         return .{
@@ -77,6 +79,8 @@ pub const TerminalWidget = struct {
             .focus_report_window_events = true,
             .focus_report_pane_events = false,
             .last_focus_reported = null,
+            .ui_focused = true,
+            .ui_window_focused = true,
         };
     }
 
@@ -86,19 +90,35 @@ pub const TerminalWidget = struct {
     }
 
     pub fn reportFocusChangedFrom(self: *TerminalWidget, source: FocusReportSource, focused: bool) !bool {
+        var ui_changed = false;
+        if (source == .window) {
+            ui_changed = self.ui_window_focused != focused;
+            self.ui_window_focused = focused;
+            self.setUiFocused(self.ui_window_focused);
+        }
+
         const source_enabled = switch (source) {
             .window => self.focus_report_window_events,
             .pane => self.focus_report_pane_events,
         };
-        if (!source_enabled) return false;
+        if (!source_enabled) return ui_changed;
         if (self.last_focus_reported) |last| {
-            if (last == focused) return false;
+            if (last == focused) return ui_changed;
         }
         if (try self.session.reportFocusChanged(focused)) {
             self.last_focus_reported = focused;
             return true;
         }
-        return false;
+        return ui_changed;
+    }
+
+    pub fn setUiFocused(self: *TerminalWidget, focused: bool) void {
+        if (self.ui_focused == focused) return;
+        self.ui_focused = focused;
+        const log = app_logger.logger("terminal.cursor");
+        if (log.enabled_file or log.enabled_console) {
+            log.logf("ui_focus changed focused={d}", .{ @intFromBool(focused) });
+        }
     }
 
     pub fn updateBlink(self: *TerminalWidget, now: f64) bool {
