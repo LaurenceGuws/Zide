@@ -979,6 +979,11 @@ pub fn build(b: *std.Build) void {
     const mode_size_report_cmd = b.addSystemCommand(&.{ "bash", "tools/report_mode_binary_sizes.sh" });
     mode_size_report_step.dependOn(&mode_size_report_cmd.step);
 
+    const mode_size_check_step = b.step("mode-size-check", "Check focused binaries are not larger than main binary");
+    mode_size_check_step.dependOn(b.getInstallStep());
+    const mode_size_check_cmd = b.addSystemCommand(&.{ "bash", "tools/check_mode_binary_sizes.sh" });
+    mode_size_check_step.dependOn(&mode_size_check_cmd.step);
+
     const grammar_update = b.addExecutable(.{
         .name = "grammar-update",
         .root_module = b.createModule(.{
