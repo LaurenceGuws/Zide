@@ -27,6 +27,7 @@ const app_terminal_shortcut_runtime = @import("app/terminal_shortcut_runtime.zig
 const app_terminal_tab_intents = @import("app/terminal_tab_intents.zig");
 const app_terminal_resize = @import("app/terminal_resize.zig");
 const app_terminal_refresh_sizing_runtime = @import("app/terminal_refresh_sizing_runtime.zig");
+const app_pre_input_shortcut_frame_runtime = @import("app/pre_input_shortcut_frame_runtime.zig");
 const app_visible_terminal_frame = @import("app/visible_terminal_frame.zig");
 const app_visible_terminal_frame_hooks_runtime = @import("app/visible_terminal_frame_hooks_runtime.zig");
 const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
@@ -716,86 +717,51 @@ const AppState = struct {
         focus: input_actions.FocusKind,
         at: f64,
     ) !app_update_prelude_frame_runtime.PreInputResult {
-        const r = frame_shell.rendererPtr();
-        var handled_shortcut = app_reload_config_shortcut_runtime.handle(
+        return try app_pre_input_shortcut_frame_runtime.handle(
             self.input_router.actionsSlice(),
+            frame_shell,
+            frame_input_batch,
+            focus,
+            at,
+            self.app_mode,
+            self.show_terminal,
+            &self.terminal_workspace,
+            self.terminals.items,
+            self.terminal_widgets.items,
+            self.allocator,
+            self.editors.items,
+            self.active_tab,
+            &self.editor_cluster_cache,
+            self.editor_wrap,
+            self.editor_large_jump_rows,
+            &self.search_panel.active,
+            &self.search_panel.query,
             @ptrCast(self),
             .{
-                .reload = routeReloadConfigFromCtx,
-                .show_notice = routeShowConfigReloadNoticeFromCtx,
+                .reload_config = routeReloadConfigFromCtx,
+                .show_reload_notice = routeShowConfigReloadNoticeFromCtx,
+                .reconcile_terminal_close_modal_active = struct {
+                    fn call(raw: *anyopaque) bool {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        return app_terminal_close_confirm_active_runtime.reconcile(state);
+                    }
+                }.call,
+                .apply_terminal_close_confirm_decision = routeApplyTerminalCloseConfirmDecisionFromCtx,
+                .compute_layout = struct {
+                    fn call(raw: *anyopaque, w: f32, h: f32) layout_types.WidgetLayout {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        return app_ui_layout_runtime.computeLayout(state, w, h);
+                    }
+                }.call,
+                .mark_redraw = struct {
+                    fn call(raw: *anyopaque) void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        state.needs_redraw = true;
+                    }
+                }.call,
+                .note_input = routeNoteInputFromCtx,
             },
         );
-        const live_layout = app_ui_layout_runtime.computeLayout(self, @floatFromInt(r.width), @floatFromInt(r.height));
-        if (app_terminal_close_confirm_active_runtime.reconcile(self)) {
-            if (try app_terminal_close_confirm_input.handleInput(
-                self.input_router.actionsSlice(),
-                frame_input_batch,
-                live_layout,
-                self.shell.uiScaleFactor(),
-                at,
-                @ptrCast(self),
-                routeApplyTerminalCloseConfirmDecisionFromCtx,
-            )) {
-                return .{
-                    .suppress_terminal_shortcuts = false,
-                    .terminal_close_modal_active = app_terminal_close_confirm_active_runtime.reconcile(self),
-                    .handled_shortcut = handled_shortcut,
-                    .consumed = true,
-                };
-            }
-        }
-
-        const terminal_close_modal_active = app_terminal_close_confirm_active_runtime.reconcile(self);
-        const suppress_terminal_shortcuts = app_terminal_shortcut_suppress.forFocus(focus, self.input_router.actionsSlice());
-
-        if (!terminal_close_modal_active and focus == .terminal and app_terminal_surface_gate.hasTerminalInputScopeWithTabs(self.app_mode, self.show_terminal, self.terminal_workspace, self.terminals.items.len)) {
-            const clipboard_result = try app_terminal_clipboard_shortcuts_frame.handle(
-                self.input_router.actionsSlice(),
-                self.allocator,
-                self.app_mode,
-                &self.terminal_workspace,
-                self.terminals.items,
-                self.terminal_widgets.items,
-                frame_shell,
-                frame_input_batch.events.items.len,
-                at,
-            );
-            if (clipboard_result.needs_redraw) self.needs_redraw = true;
-            if (clipboard_result.handled) {
-                handled_shortcut = true;
-            }
-        }
-
-        if (focus == .editor) {
-            const action_layout = app_ui_layout_runtime.computeLayout(self, @floatFromInt(r.width), @floatFromInt(r.height));
-            if (self.editors.items.len > 0) {
-                const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
-                const editor = self.editors.items[editor_idx];
-                const editor_shortcut_result = try app_editor_shortcuts_frame.handle(
-                    self.input_router.actionsSlice(),
-                    self.allocator,
-                    frame_shell,
-                    action_layout,
-                    editor,
-                    &self.editor_cluster_cache,
-                    self.editor_wrap,
-                    self.editor_large_jump_rows,
-                    &self.search_panel.active,
-                    &self.search_panel.query,
-                );
-                if (editor_shortcut_result.needs_redraw) self.needs_redraw = true;
-                if (editor_shortcut_result.handled) {
-                    handled_shortcut = true;
-                }
-            }
-        }
-
-        return .{
-            .suppress_terminal_shortcuts = suppress_terminal_shortcuts,
-            .terminal_close_modal_active = terminal_close_modal_active,
-            .handled_shortcut = handled_shortcut,
-            .consumed = false,
-        };
     }
 
     pub fn newTerminal(self: *AppState) !void {
