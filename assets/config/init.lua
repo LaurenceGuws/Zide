@@ -289,6 +289,12 @@ return {
         -- blink = "kitty",
         -- Scrollback line cap (min 100, max 100000). Invalid values warn and fall back to 1000.
         scrollback = 1000,
+        -- Tab bar visibility in --mode terminal:
+        -- false: hide tab bar until there are 2+ tabs (default)
+        -- true: always show tab bar, even with a single tab
+        tab_bar = {
+            show_single_tab = false,
+        },
         -- Cursor configuration.
         -- Valid shapes: "block", "underline", "bar". Blink is boolean.
         -- Invalid values warn and fall back to block/true.
