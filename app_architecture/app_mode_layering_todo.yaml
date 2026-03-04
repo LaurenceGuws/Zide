@@ -411,6 +411,7 @@ app_mode_layering_todo:
             - "Done: binary-size guardrail added via `zig build mode-size-check` (`tools/check_mode_binary_sizes.sh`) to ensure focused binaries do not exceed main binary size."
             - "Done: focused entrypoints now use compile-time-only app startup (`app_entry_runtime.runFocused`) and no longer pass runtime mode arguments."
             - "Done: focused app startup now uses a comptime-specialized state initializer (`AppState.initFocused` -> `init_runtime.initFocused`) so mode-dependent init branches fold without runtime mode plumbing."
+            - "Done: focused entry roots now import `app/focused_entry_runtime.zig` directly (instead of the generic app entry runtime), reducing focused-binary runtime graph coupling."
         - id: MODE-03-02
           title: "Add run/install steps for focused binaries"
           status: done
