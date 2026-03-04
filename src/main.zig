@@ -722,12 +722,21 @@ const AppState = struct {
         self.logModeAdapterParity();
     }
 
-    fn routeTerminalCloseIntentByTabIdAndSync(self: *AppState, active_tab_id: ?u64) !bool {
-        if (app_terminal_tab_intents.closeIntentForTabId(active_tab_id)) |intent| {
-            try self.routeTerminalTabActionAndSync(intent);
+    fn routeOptionalTerminalTabActionAndSync(
+        self: *AppState,
+        tab_action: ?app_modes.shared.actions.TabAction,
+    ) !bool {
+        if (tab_action) |action| {
+            try self.routeTerminalTabActionAndSync(action);
             return true;
         }
         return false;
+    }
+
+    fn routeTerminalCloseIntentByTabIdAndSync(self: *AppState, active_tab_id: ?u64) !bool {
+        return self.routeOptionalTerminalTabActionAndSync(
+            app_terminal_tab_intents.closeIntentForTabId(active_tab_id),
+        );
     }
 
     fn routeTerminalCloseIntentForActiveWorkspaceTabAndSync(self: *AppState) !bool {
@@ -834,11 +843,9 @@ const AppState = struct {
     }
 
     fn routeTerminalActivateIntentByTabIdAndSync(self: *AppState, tab_id: ?u64) !bool {
-        if (app_terminal_tab_intents.activateIntentForTabId(tab_id)) |intent| {
-            try self.routeTerminalTabActionAndSync(intent);
-            return true;
-        }
-        return false;
+        return self.routeOptionalTerminalTabActionAndSync(
+            app_terminal_tab_intents.activateIntentForTabId(tab_id),
+        );
     }
 
     fn routeTerminalActiveWorkspaceTabIntent(self: *AppState) !void {
