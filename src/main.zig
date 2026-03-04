@@ -995,6 +995,21 @@ const AppState = struct {
         }
     }
 
+    fn requestCloseActiveTerminalTab(self: *AppState, now: f64) !bool {
+        self.applyTerminalCloseIntentForActiveWorkspaceTab();
+        if (try self.closeActiveTerminalTab()) {
+            self.needs_redraw = true;
+            self.metrics.noteInput(now);
+            return true;
+        }
+        if (self.terminalCloseConfirmActive()) {
+            self.needs_redraw = true;
+            self.metrics.noteInput(now);
+            return true;
+        }
+        return false;
+    }
+
     fn routeTerminalTabActionAndSync(self: *AppState, tab_action: app_modes.shared.actions.TabAction) !void {
         self.applyTerminalModeTabAction(tab_action);
         try self.syncModeAdaptersFromTabBar();
@@ -2048,15 +2063,7 @@ const AppState = struct {
                 },
                 .terminal_close_tab => {
                     if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) {
-                        self.applyTerminalCloseIntentForActiveWorkspaceTab();
-                        if (try self.closeActiveTerminalTab()) {
-                            self.needs_redraw = true;
-                            self.metrics.noteInput(now);
-                            return;
-                        }
-                        if (self.terminalCloseConfirmActive()) {
-                            self.needs_redraw = true;
-                            self.metrics.noteInput(now);
+                        if (try self.requestCloseActiveTerminalTab(now)) {
                             return;
                         }
                     }
