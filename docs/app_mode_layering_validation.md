@@ -20,14 +20,14 @@ This document is the compatibility authority for the app mode layering extractio
 2. `zig build check-app-imports`
 3. `zig build check-input-imports`
 4. `zig build check-editor-imports`
-5. `zig build run`
-6. `zig build run -- --mode terminal`
-7. `zig build run -- --mode editor`
-8. `zig build run -- --mode ide`
-9. `zig build run-terminal`
-10. `zig build run-editor`
-11. `zig build run-ide`
-12. `zig build test-terminal-replay -- --all`
+5. `zig build mode-gates`
+
+## Manual interactive compatibility smokes (run when explicitly requested)
+
+1. `zig build mode-smokes-manual`
+2. `zig build run-terminal`
+3. `zig build run-editor`
+4. `zig build run-ide`
 
 ## Layer-slice validation policy
 
@@ -47,4 +47,3 @@ Use this for each checkpoint commit:
 - `gates_run`: `<list>`
 - `result`: `pass|fail`
 - `notes`: `<compat observations>`
-

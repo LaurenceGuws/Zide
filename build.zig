@@ -959,6 +959,12 @@ pub fn build(b: *std.Build) void {
     mode_gates_step.dependOn(b.getInstallStep());
     mode_gates_step.dependOn(terminal_replay_all_step);
 
+    const mode_smokes_manual_step = b.step("mode-smokes-manual", "Run interactive MODE smokes (manual)");
+    mode_smokes_manual_step.dependOn(run_step);
+    mode_smokes_manual_step.dependOn(run_mode_terminal_step);
+    mode_smokes_manual_step.dependOn(run_mode_editor_step);
+    mode_smokes_manual_step.dependOn(run_mode_ide_step);
+
     const grammar_update = b.addExecutable(.{
         .name = "grammar-update",
         .root_module = b.createModule(.{
