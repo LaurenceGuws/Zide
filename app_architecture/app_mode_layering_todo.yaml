@@ -198,6 +198,7 @@ app_mode_layering_todo:
             - "In progress: run/startup and shortcut callback wiring now reuses named AppState shims for editor/terminal create, open-file, and terminal tab-bar sync (fewer inline callback structs in `main.zig`)."
             - "In progress: run-startup terminal tab-count callback now reuses named AppState shim (`routeTerminalTabCountFromCtx`) instead of inline callback struct."
             - "In progress: update-prelude pre-input shortcut callback block is now delegated to `AppState.handlePreInputShortcutFrame(...)` (inline callback body collapsed; behavior unchanged)."
+            - "In progress: pre-input shortcut reload/notice wiring now reuses named AppState shims (`routeReloadConfigFromCtx`, `routeShowConfigReloadNoticeFromCtx`, `routeRefreshTerminalSizingFromCtx`, `routeApplyCurrentTabBarWidthModeFromCtx`) to reduce nested callback structs."
             - "In progress: config-reload notice drawing moved from `main.zig` into `src/app/config_reload_notice.zig` (`draw`)."
             - "In progress: terminal close-confirm modal drawing moved from `main.zig` into `src/app/terminal_close_confirm_draw.zig` (`draw`)."
             - "In progress: terminal tab count/visibility/active-index policy moved from `main.zig` into `src/app/terminal_tabs.zig` (`count`, `barVisible`, `activeIndex`)."
