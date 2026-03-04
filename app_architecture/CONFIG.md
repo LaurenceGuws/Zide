@@ -101,6 +101,7 @@ Theme import helper: `assets/config/theme_import.lua` provides `from_kitty(path)
 |---|---|---|---|---|
 | `editor.font.path` / `editor.font.size` | Editor font override | `src/main.zig` -> renderer font setup | `partial` | Same shared-font caveat as `app.font`. |
 | `editor.wrap` | Soft wrap | `src/main.zig`, editor widget/layout/input | `reloadable` | Defaults to `false`. |
+| `editor.tab_bar.width_mode` | IDE/editor tab bar width policy | `src/main.zig` + `src/ui/widgets/tab_bar.zig` | `reloadable` | `fixed`, `dynamic`, `label_length`. |
 | `editor.disable_ligatures` | Editor ligature strategy | `src/main.zig` -> renderer/editor draw | `reloadable` | Current values: `never`, `cursor`, `always`. |
 | `editor.font_features` | Editor OpenType features | `src/main.zig` -> renderer/editor draw | `reloadable` | Falls back to terminal font features when unset. |
 | `editor.render.highlight_budget` | Highlight precompute budget | `src/main.zig` editor precompute path | `reloadable` | `0` disables precompute. |
@@ -115,6 +116,7 @@ Theme import helper: `assets/config/theme_import.lua` provides `from_kitty(path)
 | `terminal.font_features` | Terminal OpenType features | `src/main.zig` -> renderer/terminal draw | `reloadable` | |
 | `terminal.blink` | Cursor blink policy | `src/main.zig` -> terminal widget | `reloadable` | Preferred values: `kitty`, `off`. Boolean shorthand also accepted. |
 | `terminal.tab_bar.show_single_tab` | Terminal-mode tab bar visibility when only one tab exists | `src/main.zig` terminal layout/draw/input | `reloadable` | `false` hides the tab bar until at least 2 tabs exist; `true` keeps it visible for one tab. |
+| `terminal.tab_bar.width_mode` | Terminal-mode tab bar width policy | `src/main.zig` + `src/ui/widgets/tab_bar.zig` | `reloadable` | `fixed`, `dynamic`, `label_length`. |
 | `terminal.scrollback` | Scrollback cap | `src/main.zig` -> new terminal sessions | `partial` | Reload updates future session init options, not existing scrollback history. |
 | `terminal.cursor.shape` | Default cursor shape | `src/main.zig` -> terminal session init / reload | `reloadable` | `block`, `underline`, `bar`. |
 | `terminal.cursor.blink` | Default cursor blink flag | `src/main.zig` -> terminal session init / reload | `reloadable` | |

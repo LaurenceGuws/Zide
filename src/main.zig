@@ -210,7 +210,9 @@ const AppState = struct {
     terminal_blink_style: TerminalWidget.BlinkStyle,
     terminal_cursor_style: ?term_types.CursorStyle,
     terminal_scrollback_rows: ?usize,
+    editor_tab_bar_width_mode: TabBar.WidthMode,
     terminal_tab_bar_show_single_tab: bool,
+    terminal_tab_bar_width_mode: TabBar.WidthMode,
     terminal_focus_report_window_events: bool,
     terminal_focus_report_pane_events: bool,
     last_terminal_pane_focus_reported: ?bool,
@@ -354,6 +356,23 @@ const AppState = struct {
         }
     }
 
+    fn mapTabBarWidthMode(mode: ?config_mod.TabBarWidthMode) TabBar.WidthMode {
+        return switch (mode orelse .fixed) {
+            .fixed => .fixed,
+            .dynamic => .dynamic,
+            .label_length => .label_length,
+        };
+    }
+
+    fn applyCurrentTabBarWidthMode(self: *AppState) void {
+        self.tab_bar.setWidthMode(
+            if (self.app_mode == .terminal)
+                self.terminal_tab_bar_width_mode
+            else
+                self.editor_tab_bar_width_mode,
+        );
+    }
+
     pub fn init(allocator: std.mem.Allocator, app_mode: AppMode) !*AppState {
         var config = config_mod.loadConfig(allocator) catch |err| blk: {
             std.debug.print("config load error: {any}\n", .{err});
@@ -379,7 +398,9 @@ const AppState = struct {
                 .terminal_scrollback_rows = null,
                 .terminal_cursor_shape = null,
                 .terminal_cursor_blink = null,
+                .editor_tab_bar_width_mode = null,
                 .terminal_tab_bar_show_single_tab = null,
+                .terminal_tab_bar_width_mode = null,
                 .terminal_focus_report_window = null,
                 .terminal_focus_report_pane = null,
                 .font_lcd = null,
@@ -526,7 +547,9 @@ const AppState = struct {
             .terminal_blink_style = terminal_blink_style,
             .terminal_cursor_style = terminal_cursor_style,
             .terminal_scrollback_rows = config.terminal_scrollback_rows,
+            .editor_tab_bar_width_mode = mapTabBarWidthMode(config.editor_tab_bar_width_mode),
             .terminal_tab_bar_show_single_tab = config.terminal_tab_bar_show_single_tab orelse false,
+            .terminal_tab_bar_width_mode = mapTabBarWidthMode(config.terminal_tab_bar_width_mode),
             .terminal_focus_report_window_events = config.terminal_focus_report_window orelse true,
             .terminal_focus_report_pane_events = config.terminal_focus_report_pane orelse false,
             .last_terminal_pane_focus_reported = null,
@@ -591,6 +614,7 @@ const AppState = struct {
             state.input_router.setBindings(binds);
         }
         state.applyUiScale();
+        state.applyCurrentTabBarWidthMode();
 
         return state;
     }
@@ -1282,6 +1306,7 @@ const AppState = struct {
         self.tab_bar.tab_spacing = @max(1, scale);
         self.status_bar.height = 24 * scale;
         self.side_nav.width = 52 * scale;
+        self.applyCurrentTabBarWidthMode();
     }
 
     fn terminalGridSize(self: *AppState, terminal_width: f32, terminal_height: f32, min_cols: u16, min_rows: u16) struct { cols: u16, rows: u16 } {
@@ -2092,7 +2117,7 @@ const AppState = struct {
         if (input_batch.mousePressed(.left)) {
             if (self.app_mode == .ide) {
                 const tab_bar_y = self.options_bar.height;
-                if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.side_nav.width, tab_bar_y)) {
+                if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.side_nav.width, tab_bar_y, layout.tab_bar.width)) {
                     // Tab was clicked
                     self.active_tab = self.tab_bar.active_index;
                     self.needs_redraw = true;
@@ -2117,7 +2142,7 @@ const AppState = struct {
                 }
             } else if (self.app_mode == .terminal) {
                 if (self.terminalTabBarVisible()) {
-                    _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y);
+                    _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
                 }
                 self.active_kind = .terminal;
             } else {
@@ -2161,9 +2186,9 @@ const AppState = struct {
             }
         }
 
-        if (self.app_mode == .terminal) {
+            if (self.app_mode == .terminal) {
             if (self.terminalTabBarVisible() and input_batch.mouseDown(.left)) {
-                if (self.tab_bar.updateDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, true)) {
+                if (self.tab_bar.updateDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width, true)) {
                     self.needs_redraw = true;
                     self.metrics.noteInput(now);
                 }
@@ -2171,7 +2196,7 @@ const AppState = struct {
             if (self.terminalTabBarVisible() and input_batch.mouseReleased(.left)) {
                 const drag_end = self.tab_bar.endDrag();
                 if (drag_end.active and !drag_end.moved) {
-                    if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y)) {
+                    if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width)) {
                         if (self.focusTerminalTabByIndex(self.tab_bar.active_index)) {
                             self.needs_redraw = true;
                             self.metrics.noteInput(now);
@@ -2639,6 +2664,17 @@ const AppState = struct {
                 self.terminal_tab_bar_show_single_tab,
             });
         }
+        if (config.editor_tab_bar_width_mode != null) {
+            self.editor_tab_bar_width_mode = mapTabBarWidthMode(config.editor_tab_bar_width_mode);
+            self.needs_redraw = true;
+            log.logStdout("reload editor.tab_bar.width_mode={s}", .{@tagName(self.editor_tab_bar_width_mode)});
+        }
+        if (config.terminal_tab_bar_width_mode != null) {
+            self.terminal_tab_bar_width_mode = mapTabBarWidthMode(config.terminal_tab_bar_width_mode);
+            self.needs_redraw = true;
+            log.logStdout("reload terminal.tab_bar.width_mode={s}", .{@tagName(self.terminal_tab_bar_width_mode)});
+        }
+        self.applyCurrentTabBarWidthMode();
         if (config.terminal_focus_report_window != null or config.terminal_focus_report_pane != null) {
             if (config.terminal_focus_report_window) |v| self.terminal_focus_report_window_events = v;
             if (config.terminal_focus_report_pane) |v| self.terminal_focus_report_pane_events = v;
@@ -2780,6 +2816,7 @@ const AppState = struct {
         var tab_tooltip: ?widgets_common.Tooltip = null;
 
         if (self.app_mode == .ide) {
+            self.applyCurrentTabBarWidthMode();
             shell.setTheme(self.app_theme);
             // Draw options bar
             self.options_bar.draw(shell, layout.window.width);
@@ -2787,6 +2824,7 @@ const AppState = struct {
             // Draw tab bar
             tab_tooltip = self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
         } else if (self.app_mode == .terminal) {
+            self.applyCurrentTabBarWidthMode();
             const tab_theme = self.terminalTabBarTheme();
             shell.setTheme(tab_theme);
             if (self.terminalTabBarVisible()) {

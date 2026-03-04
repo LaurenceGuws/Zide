@@ -8,13 +8,22 @@ const Color = app_shell.Color;
 const Tooltip = common.Tooltip;
 
 pub const TabBar = struct {
+    pub const WidthMode = enum {
+        fixed,
+        dynamic,
+        label_length,
+    };
+
     allocator: std.mem.Allocator,
     tabs: std.ArrayList(Tab),
     active_index: usize,
     height: f32,
     tab_width: f32,
     tab_spacing: f32,
+    width_mode: WidthMode,
     last_mouse: shared_types.input.MousePos,
+    last_char_width: f32,
+    last_ui_scale: f32,
     drag_active: bool,
     drag_index: usize,
     drag_moved: bool,
@@ -36,7 +45,10 @@ pub const TabBar = struct {
             .height = 28,
             .tab_width = 150,
             .tab_spacing = 1,
+            .width_mode = .fixed,
             .last_mouse = .{ .x = 0, .y = 0 },
+            .last_char_width = 8,
+            .last_ui_scale = 1,
             .drag_active = false,
             .drag_index = 0,
             .drag_moved = false,
@@ -95,8 +107,14 @@ pub const TabBar = struct {
         self.last_mouse = input.mouse_pos;
     }
 
+    pub fn setWidthMode(self: *TabBar, mode: WidthMode) void {
+        self.width_mode = mode;
+    }
+
     pub fn draw(self: *TabBar, shell: *Shell, x: f32, y: f32, width: f32) ?Tooltip {
         const theme = shell.theme();
+        self.last_char_width = shell.charWidth();
+        self.last_ui_scale = shell.uiScaleFactor();
         // Draw tab bar background
         shell.drawRect(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height), theme.ui_bar_bg);
 
@@ -106,9 +124,24 @@ pub const TabBar = struct {
 
         var tooltip: ?Tooltip = null;
         const mouse = self.last_mouse;
+        const count = self.tabs.items.len;
+        const spacing_total = if (count > 1) self.tab_spacing * @as(f32, @floatFromInt(count - 1)) else 0;
+        const available_for_tabs = @max(0, width - spacing_total);
+
+        var natural_sum: f32 = 0;
+        if (self.width_mode == .label_length) {
+            for (self.tabs.items) |tab| {
+                natural_sum += self.naturalTabWidth(tab, self.last_char_width, self.last_ui_scale);
+            }
+            if (natural_sum <= 0) natural_sum = @as(f32, @floatFromInt(@max(@as(usize, 1), count)));
+        }
 
         var cursor_x: f32 = x;
         for (self.tabs.items, 0..) |tab, i| {
+            var tab_w = self.tabWidthForIndex(i, count, available_for_tabs, natural_sum, self.last_char_width, self.last_ui_scale);
+            if (i + 1 == count and self.width_mode != .fixed) {
+                tab_w = @max(0, x + width - cursor_x);
+            }
             const is_active = i == self.active_index;
             const is_dragging_tab = self.drag_active and i == self.drag_index;
             const tab_y = if (is_dragging_tab) y - @max(1.0, shell.uiScaleFactor() * 2.0) else y;
@@ -122,7 +155,7 @@ pub const TabBar = struct {
             shell.drawRect(
                 @intFromFloat(cursor_x),
                 @intFromFloat(tab_y),
-                @intFromFloat(self.tab_width),
+                @intFromFloat(tab_w),
                 @intFromFloat(tab_h),
                 if (is_dragging_tab) theme.ui_hover else bg,
             );
@@ -133,7 +166,7 @@ pub const TabBar = struct {
                 shell.drawRect(
                     @intFromFloat(cursor_x),
                     @intFromFloat(tab_y + tab_h - border_h),
-                    @intFromFloat(self.tab_width),
+                    @intFromFloat(tab_w),
                     @intFromFloat(border_h),
                     theme.ui_accent,
                 );
@@ -143,7 +176,7 @@ pub const TabBar = struct {
                 shell.drawRect(
                     @intFromFloat(cursor_x),
                     @intFromFloat(tab_y),
-                    @intFromFloat(self.tab_width),
+                    @intFromFloat(tab_w),
                     @intFromFloat(top_h),
                     theme.ui_accent,
                 );
@@ -159,7 +192,7 @@ pub const TabBar = struct {
             }
 
             const prefix_width: f32 = if (tab.modified) shell.charWidth() * 2 else 0;
-            const title_max = self.tab_width - 16 * shell.uiScaleFactor() - prefix_width;
+            const title_max = tab_w - 16 * shell.uiScaleFactor() - prefix_width;
             const result = common.drawTruncatedText(
                 shell,
                 tab.title,
@@ -168,21 +201,21 @@ pub const TabBar = struct {
                 if (is_active) theme.ui_text else theme.ui_text_inactive,
                 title_max,
             );
-            const in_tab = mouse.x >= cursor_x and mouse.x <= cursor_x + self.tab_width and
+            const in_tab = mouse.x >= cursor_x and mouse.x <= cursor_x + tab_w and
                 mouse.y >= y and mouse.y <= y + self.height;
             if (result.truncated and in_tab) {
                 tooltip = .{ .text = tab.title, .x = mouse.x, .y = mouse.y };
             }
 
-            cursor_x += self.tab_width + self.tab_spacing;
+            cursor_x += tab_w + self.tab_spacing;
         }
 
         shell.endClip();
         return tooltip;
     }
 
-    pub fn handleClick(self: *TabBar, x: f32, y: f32, bar_x: f32, bar_y: f32) bool {
-        const clicked_index = self.tabIndexAtPoint(x, y, bar_x, bar_y) orelse return false;
+    pub fn handleClick(self: *TabBar, x: f32, y: f32, bar_x: f32, bar_y: f32, bar_width: f32) bool {
+        const clicked_index = self.tabIndexAtPoint(x, y, bar_x, bar_y, bar_width) orelse return false;
         if (clicked_index < self.tabs.items.len) {
             self.active_index = clicked_index;
             return true;
@@ -228,8 +261,8 @@ pub const TabBar = struct {
         }
     }
 
-    pub fn beginDrag(self: *TabBar, x: f32, y: f32, bar_x: f32, bar_y: f32) bool {
-        const idx = self.tabIndexAtPoint(x, y, bar_x, bar_y) orelse return false;
+    pub fn beginDrag(self: *TabBar, x: f32, y: f32, bar_x: f32, bar_y: f32, bar_width: f32) bool {
+        const idx = self.tabIndexAtPoint(x, y, bar_x, bar_y, bar_width) orelse return false;
         if (idx >= self.tabs.items.len) return false;
         self.drag_active = true;
         self.drag_index = idx;
@@ -237,13 +270,13 @@ pub const TabBar = struct {
         return true;
     }
 
-    pub fn updateDrag(self: *TabBar, x: f32, y: f32, bar_x: f32, bar_y: f32, mouse_down: bool) bool {
+    pub fn updateDrag(self: *TabBar, x: f32, y: f32, bar_x: f32, bar_y: f32, bar_width: f32, mouse_down: bool) bool {
         if (!self.drag_active) return false;
         if (!mouse_down) {
             self.drag_active = false;
             return false;
         }
-        const target = self.tabIndexAtPoint(x, y, bar_x, bar_y) orelse return false;
+        const target = self.tabIndexAtPoint(x, y, bar_x, bar_y, bar_width) orelse return false;
         if (target >= self.tabs.items.len) return false;
         if (target == self.drag_index) return false;
         self.moveTabVisual(self.drag_index, target);
@@ -287,11 +320,59 @@ pub const TabBar = struct {
         }
     }
 
-    fn tabIndexAtPoint(self: *const TabBar, x: f32, y: f32, bar_x: f32, bar_y: f32) ?usize {
+    fn tabIndexAtPoint(self: *const TabBar, x: f32, y: f32, bar_x: f32, bar_y: f32, bar_width: f32) ?usize {
         if (y < bar_y or y > bar_y + self.height) return null;
-        if (x < bar_x) return null;
-        const idx = @as(usize, @intFromFloat((x - bar_x) / (self.tab_width + self.tab_spacing)));
-        if (idx >= self.tabs.items.len) return null;
-        return idx;
+        if (x < bar_x or x > bar_x + bar_width) return null;
+        const count = self.tabs.items.len;
+        if (count == 0) return null;
+
+        const spacing_total = if (count > 1) self.tab_spacing * @as(f32, @floatFromInt(count - 1)) else 0;
+        const available_for_tabs = @max(0, bar_width - spacing_total);
+        var natural_sum: f32 = 0;
+        if (self.width_mode == .label_length) {
+            for (self.tabs.items) |tab| {
+                natural_sum += self.naturalTabWidth(tab, self.last_char_width, self.last_ui_scale);
+            }
+            if (natural_sum <= 0) natural_sum = @as(f32, @floatFromInt(@max(@as(usize, 1), count)));
+        }
+
+        var cursor_x = bar_x;
+        for (0..count) |i| {
+            var tab_w = self.tabWidthForIndex(i, count, available_for_tabs, natural_sum, self.last_char_width, self.last_ui_scale);
+            if (i + 1 == count and self.width_mode != .fixed) {
+                tab_w = @max(0, bar_x + bar_width - cursor_x);
+            }
+            if (x >= cursor_x and x <= cursor_x + tab_w) return i;
+            cursor_x += tab_w + self.tab_spacing;
+        }
+        return null;
+    }
+
+    fn tabWidthForIndex(
+        self: *const TabBar,
+        index: usize,
+        count: usize,
+        available_for_tabs: f32,
+        natural_sum: f32,
+        char_width: f32,
+        ui_scale: f32,
+    ) f32 {
+        if (count == 0) return 0;
+        return switch (self.width_mode) {
+            .fixed => self.tab_width,
+            .dynamic => available_for_tabs / @as(f32, @floatFromInt(count)),
+            .label_length => blk: {
+                const natural = self.naturalTabWidth(self.tabs.items[index], char_width, ui_scale);
+                break :blk if (natural_sum > 0) (available_for_tabs * (natural / natural_sum)) else (available_for_tabs / @as(f32, @floatFromInt(count)));
+            },
+        };
+    }
+
+    fn naturalTabWidth(self: *const TabBar, tab: Tab, char_width: f32, ui_scale: f32) f32 {
+        _ = self;
+        const text_w = @as(f32, @floatFromInt(tab.title.len)) * char_width;
+        const mod_w = if (tab.modified) char_width * 2 else 0;
+        const padding = 16 * ui_scale;
+        return @max(48 * ui_scale, text_w + mod_w + padding);
     }
 };
