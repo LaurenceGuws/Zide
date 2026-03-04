@@ -3291,6 +3291,8 @@ fn initTestAppStateForTerminalTabRouting(allocator: std.mem.Allocator) !AppState
     app.allocator = allocator;
     app.app_mode = .terminal;
     app.active_kind = .terminal;
+    app.metrics = Metrics.init();
+    app.needs_redraw = false;
     app.tab_bar = TabBar.init(allocator);
     app.editor_mode_adapter = try app_modes.backend.bootstrap.initEditorMode(allocator, .{
         .seed_editor_tab = false,
@@ -3366,4 +3368,17 @@ test "routeTerminalActivateIntentByTabIdAndSync emits only when tab id exists" {
 
     try std.testing.expect(!try app.routeTerminalActivateIntentByTabIdAndSync(null));
     try std.testing.expect(try app.routeTerminalActivateIntentByTabIdAndSync(1002));
+}
+
+test "requestCancelTerminalCloseFromModal clears pending tab and marks redraw" {
+    const allocator = std.testing.allocator;
+    var app = try initTestAppStateForTerminalTabRouting(allocator);
+    defer deinitTestAppStateForTerminalTabRouting(&app, allocator);
+
+    app.terminal_close_confirm_tab = 42;
+    app.needs_redraw = false;
+    const consumed = app.requestCancelTerminalCloseFromModal(app_shell.getTime());
+    try std.testing.expect(consumed);
+    try std.testing.expectEqual(@as(?terminal_mod.TerminalTabId, null), app.terminal_close_confirm_tab);
+    try std.testing.expect(app.needs_redraw);
 }
