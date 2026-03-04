@@ -32,6 +32,7 @@ const app_terminal_close_confirm_input = @import("app/terminal_close_confirm_inp
 const app_mode_adapter_sync_runtime = @import("app/mode_adapter_sync_runtime.zig");
 const app_terminal_theme_apply = @import("app/terminal_theme_apply.zig");
 const app_search_panel_input = @import("app/search_panel_input.zig");
+const app_search_panel_frame_runtime = @import("app/search_panel_frame_runtime.zig");
 const app_search_panel_runtime = @import("app/search_panel_runtime.zig");
 const app_search_panel_state = @import("app/search_panel_state.zig");
 const app_mouse_debug_log = @import("app/mouse_debug_log.zig");
@@ -1563,37 +1564,18 @@ const AppState = struct {
                                                                                         at: f64,
                                                                                     ) !void {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        var search_panel_consumed_input = false;
-                                                                                        if (inner_state.search_panel.active and inner_state.editors.items.len > 0) {
-                                                                                            const editor = inner_state.editors.items[@min(inner_state.active_tab, inner_state.editors.items.len - 1)];
-                                                                                            var handled = false;
-                                                                                            var query_changed = false;
-                                                                                            const command_result = app_search_panel_runtime.applyCommand(
-                                                                                                app_search_panel_input.searchPanelCommand(frame_input_batch),
-                                                                                                editor,
-                                                                                                &inner_state.search_panel.active,
-                                                                                                &inner_state.search_panel.query,
-                                                                                            );
-                                                                                            if (command_result.handled and !command_result.query_changed) {
-                                                                                                handled = true;
-                                                                                            } else {
-                                                                                                handled = command_result.handled;
-                                                                                                query_changed = command_result.query_changed;
-                                                                                            }
-                                                                                            if (try app_search_panel_input.appendSearchPanelTextEvents(inner_state.allocator, &inner_state.search_panel.query, frame_input_batch)) {
-                                                                                                query_changed = true;
-                                                                                                handled = true;
-                                                                                            }
-                                                                                            if (query_changed) {
-                                                                                                try app_search_panel_state.syncEditorSearchQuery(editor, &inner_state.search_panel.query);
-                                                                                            }
-                                                                                            if (handled) {
-                                                                                                inner_state.editor_cluster_cache.clear();
-                                                                                                inner_state.needs_redraw = true;
-                                                                                                inner_state.metrics.noteInput(at);
-                                                                                                search_panel_consumed_input = true;
-                                                                                            }
-                                                                                        }
+                                                                                        const search_panel_result = try app_search_panel_frame_runtime.handle(
+                                                                                            inner_state.allocator,
+                                                                                            &inner_state.search_panel.active,
+                                                                                            &inner_state.search_panel.query,
+                                                                                            inner_state.editors.items,
+                                                                                            inner_state.active_tab,
+                                                                                            frame_input_batch,
+                                                                                        );
+                                                                                        if (search_panel_result.clear_editor_cluster_cache) inner_state.editor_cluster_cache.clear();
+                                                                                        if (search_panel_result.needs_redraw) inner_state.needs_redraw = true;
+                                                                                        if (search_panel_result.note_input) inner_state.metrics.noteInput(at);
+                                                                                        const search_panel_consumed_input = search_panel_result.consumed_input;
                                                                                         const editor_frame_result = try app_active_editor_frame.handle(
                                                                                             inner_state.app_mode,
                                                                                             inner_state.active_kind,
