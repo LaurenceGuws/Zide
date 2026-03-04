@@ -1640,28 +1640,6 @@ const AppState = struct {
         );
     }
 
-    fn handleInputActionsFrame(
-        self: *AppState,
-        shell: *Shell,
-        now: f64,
-    ) !bool {
-        _ = shell;
-        return try app_input_actions_frame_runtime.handle(
-            self.input_router.actionsSlice(),
-            now,
-            @ptrCast(self),
-            .{
-                .handle_shortcut_action = struct {
-                    fn call(raw: *anyopaque, kind: input_actions.ActionKind, at: f64, handled_zoom: *bool) !bool {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        const zoom_log = app_logger.logger("ui.zoom.shortcut");
-                        return try state.handleShortcutAction(state.shell, kind, at, handled_zoom, zoom_log);
-                    }
-                }.call,
-            },
-        );
-    }
-
     pub fn newTerminal(self: *AppState) !void {
         // Calculate terminal size based on UI
         const shell = self.shell;
@@ -2134,7 +2112,21 @@ const AppState = struct {
                                                                                 .handle_input_actions = struct {
                                                                                     fn inner(inner_raw: *anyopaque, frame_shell: *Shell, at: f64) !bool {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        return try inner_state.handleInputActionsFrame(frame_shell, at);
+                                                                                        _ = frame_shell;
+                                                                                        return try app_input_actions_frame_runtime.handle(
+                                                                                            inner_state.input_router.actionsSlice(),
+                                                                                            at,
+                                                                                            @ptrCast(inner_state),
+                                                                                            .{
+                                                                                                .handle_shortcut_action = struct {
+                                                                                                    fn call(action_raw: *anyopaque, kind: input_actions.ActionKind, inner_at: f64, handled_zoom: *bool) !bool {
+                                                                                                        const state: *AppState = @ptrCast(@alignCast(action_raw));
+                                                                                                        const zoom_log = app_logger.logger("ui.zoom.shortcut");
+                                                                                                        return try state.handleShortcutAction(state.shell, kind, inner_at, handled_zoom, zoom_log);
+                                                                                                    }
+                                                                                                }.call,
+                                                                                            },
+                                                                                        );
                                                                                     }
                                                                                 }.inner,
                                                                                 .handle_mouse_pressed = struct {
