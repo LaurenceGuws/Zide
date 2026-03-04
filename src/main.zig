@@ -2189,6 +2189,22 @@ const AppState = struct {
         self.terminal_close_confirm_tab = null;
     }
 
+    fn requestConfirmTerminalCloseFromModal(self: *AppState, now: f64) !bool {
+        _ = try self.routeTerminalCloseIntentForActiveWorkspaceTabAndSync();
+        if (try self.closeActiveTerminalTab()) {
+            self.needs_redraw = true;
+        }
+        self.metrics.noteInput(now);
+        return true;
+    }
+
+    fn requestCancelTerminalCloseFromModal(self: *AppState, now: f64) bool {
+        self.clearTerminalCloseConfirm();
+        self.needs_redraw = true;
+        self.metrics.noteInput(now);
+        return true;
+    }
+
     fn handleTerminalCloseConfirmInput(
         self: *AppState,
         input_batch: *shared_types.input.InputBatch,
@@ -2204,18 +2220,10 @@ const AppState = struct {
             modal,
         )) {
             .confirm => {
-                _ = try self.routeTerminalCloseIntentForActiveWorkspaceTabAndSync();
-                if (try self.closeActiveTerminalTab()) {
-                    self.needs_redraw = true;
-                }
-                self.metrics.noteInput(now);
-                return true;
+                return self.requestConfirmTerminalCloseFromModal(now);
             },
             .cancel => {
-                self.clearTerminalCloseConfirm();
-                self.needs_redraw = true;
-                self.metrics.noteInput(now);
-                return true;
+                return self.requestCancelTerminalCloseFromModal(now);
             },
             .consume => {
                 return true;
