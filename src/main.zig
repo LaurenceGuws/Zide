@@ -2269,13 +2269,8 @@ const AppState = struct {
             }
             if (input_batch.mouseReleased(.left)) {
                 const drag_end = self.tab_bar.endDrag();
-                if (drag_end.active and drag_end.moved and drag_end.from_index != drag_end.to_index) {
-                    try self.routeEditorTabActionAndSync(.{
-                        .move = .{
-                            .from_index = drag_end.from_index,
-                            .to_index = drag_end.to_index,
-                        },
-                    });
+                if (app_modes.ide.reorderIntentForDragEnd(drag_end)) |intent| {
+                    try self.routeEditorTabActionAndSync(intent);
                     self.active_tab = self.tab_bar.active_index;
                     self.needs_redraw = true;
                     self.metrics.noteInput(now);
