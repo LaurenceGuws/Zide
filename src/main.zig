@@ -67,7 +67,7 @@ const app_prepare_run_frame_runtime = @import("app/prepare_run_frame_runtime.zig
 const app_frame_render_idle_hooks_runtime = @import("app/frame_render_idle_hooks_runtime.zig");
 const app_update_prelude_frame_runtime = @import("app/update_prelude_frame_runtime.zig");
 const app_ui_layout_runtime = @import("app/ui_layout_runtime.zig");
-const app_run_entry_runtime = @import("app/run_entry_runtime.zig");
+const app_run_entry_hooks_runtime = @import("app/run_entry_hooks_runtime.zig");
 const app_terminal_tab_navigation_runtime = @import("app/terminal_tab_navigation_runtime.zig");
 const app_terminal_close_active_runtime = @import("app/terminal_close_active_runtime.zig");
 const app_terminal_close_confirm_active_runtime = @import("app/terminal_close_confirm_active_runtime.zig");
@@ -1091,7 +1091,7 @@ const AppState = struct {
     }
 
     pub fn run(self: *AppState) !void {
-        try app_run_entry_runtime.run(
+        try app_run_entry_hooks_runtime.run(
             @ptrCast(self),
             .{
                 .initialize_run_mode_state = struct {
