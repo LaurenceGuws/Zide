@@ -24,6 +24,10 @@ pub const EditorMode = struct {
         };
     }
 
+    pub fn syncFromSnapshot(self: *EditorMode, allocator: std.mem.Allocator, snapshot: shared.contracts.ModeSnapshot) !void {
+        try self.tab_state.resetFrom(allocator, snapshot.tabs, snapshot.active_tab);
+    }
+
     fn deinitErased(ptr: *anyopaque, allocator: std.mem.Allocator) void {
         const self: *EditorMode = @ptrCast(@alignCast(ptr));
         self.deinit(allocator);

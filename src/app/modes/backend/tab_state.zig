@@ -17,8 +17,35 @@ pub const TabState = struct {
     }
 
     pub fn deinit(self: *TabState, allocator: std.mem.Allocator) void {
-        for (self.tabs.items) |tab| allocator.free(tab.title);
+        self.clearOwnedTabs(allocator);
         self.tabs.deinit(allocator);
+    }
+
+    pub fn resetFrom(self: *TabState, allocator: std.mem.Allocator, tabs: []const shared.contracts.ModeTab, active_tab: ?shared.types.TabId) !void {
+        self.clearOwnedTabs(allocator);
+        try self.tabs.ensureTotalCapacity(allocator, tabs.len);
+        var max_id: shared.types.TabId = 0;
+        for (tabs) |tab| {
+            const title = try allocator.dupe(u8, tab.title);
+            self.tabs.appendAssumeCapacity(.{
+                .id = tab.id,
+                .title = title,
+                .alive = tab.alive,
+            });
+            if (tab.id > max_id) max_id = tab.id;
+        }
+        if (tabs.len == 0) {
+            self.active_tab = null;
+        } else if (active_tab) |wanted| {
+            if (self.findTabIndex(wanted) != null) {
+                self.active_tab = wanted;
+            } else {
+                self.active_tab = self.tabs.items[0].id;
+            }
+        } else {
+            self.active_tab = self.tabs.items[0].id;
+        }
+        self.next_tab_id = max_id + 1;
     }
 
     pub fn applyTabAction(self: *TabState, allocator: std.mem.Allocator, action: shared.actions.TabAction) !bool {
@@ -101,6 +128,11 @@ pub const TabState = struct {
     fn activeTabIndex(self: *const TabState) ?usize {
         const active = self.active_tab orelse return null;
         return self.findTabIndex(active);
+    }
+
+    fn clearOwnedTabs(self: *TabState, allocator: std.mem.Allocator) void {
+        for (self.tabs.items) |tab| allocator.free(tab.title);
+        self.tabs.clearRetainingCapacity();
     }
 };
 
