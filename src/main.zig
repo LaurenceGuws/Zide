@@ -8,6 +8,7 @@ const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
 const app_config_reload_notice = @import("app/config_reload_notice.zig");
 const app_terminal_grid = @import("app/terminal_grid.zig");
+const app_terminal_intent_route = @import("app/terminal_intent_route.zig");
 const app_terminal_tab_ops = @import("app/terminal_tab_ops.zig");
 const app_terminal_shortcut_policy = @import("app/terminal_shortcut_policy.zig");
 const app_terminal_shortcut_runtime = @import("app/terminal_shortcut_runtime.zig");
@@ -726,12 +727,9 @@ const AppState = struct {
         self.logModeAdapterParity();
     }
 
-    fn routeOptionalTerminalTabActionAndSync(
-        self: *AppState,
-        tab_action: ?app_modes.shared.actions.TabAction,
-    ) !bool {
-        return app_tab_action_route.routeOptionalTabAction(
-            tab_action,
+    fn routeTerminalCloseIntentByTabIdAndSync(self: *AppState, active_tab_id: ?u64) !bool {
+        return app_terminal_intent_route.routeCloseByTabIdAndSync(
+            active_tab_id,
             @ptrCast(self),
             struct {
                 fn route(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
@@ -739,12 +737,6 @@ const AppState = struct {
                     try state.routeTerminalTabActionAndSync(action);
                 }
             }.route,
-        );
-    }
-
-    fn routeTerminalCloseIntentByTabIdAndSync(self: *AppState, active_tab_id: ?u64) !bool {
-        return self.routeOptionalTerminalTabActionAndSync(
-            app_terminal_tab_intents.closeIntentForTabId(active_tab_id),
         );
     }
 
@@ -890,8 +882,15 @@ const AppState = struct {
     }
 
     fn routeTerminalActivateIntentByTabIdAndSync(self: *AppState, tab_id: ?u64) !bool {
-        return self.routeOptionalTerminalTabActionAndSync(
-            app_terminal_tab_intents.activateIntentForTabId(tab_id),
+        return app_terminal_intent_route.routeActivateByTabIdAndSync(
+            tab_id,
+            @ptrCast(self),
+            struct {
+                fn route(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    try state.routeTerminalTabActionAndSync(action);
+                }
+            }.route,
         );
     }
 
