@@ -9,7 +9,6 @@ const app_editor_shortcuts_frame = @import("app/editor_shortcuts_frame.zig");
 const app_editor_seed = @import("app/editor_seed.zig");
 const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
-const app_config_reload_notice = @import("app/config_reload_notice.zig");
 const app_terminal_grid = @import("app/terminal_grid.zig");
 const app_terminal_runtime_intents = @import("app/terminal_runtime_intents.zig");
 const app_terminal_active_widget = @import("app/terminal_active_widget.zig");
@@ -30,7 +29,6 @@ const app_terminal_close_confirm_input = @import("app/terminal_close_confirm_inp
 const app_mode_adapter_sync = @import("app/mode_adapter_sync.zig");
 const app_mode_adapter_parity = @import("app/mode_adapter_parity.zig");
 const app_terminal_theme_apply = @import("app/terminal_theme_apply.zig");
-const app_terminal_close_confirm_draw = @import("app/terminal_close_confirm_draw.zig");
 const app_search_panel_input = @import("app/search_panel_input.zig");
 const app_search_panel_runtime = @import("app/search_panel_runtime.zig");
 const app_search_panel_state = @import("app/search_panel_state.zig");
@@ -57,6 +55,8 @@ const app_editor_draw_surface_runtime = @import("app/editor_draw_surface_runtime
 const app_terminal_draw_surface_runtime = @import("app/terminal_draw_surface_runtime.zig");
 const app_shell_chrome_draw_runtime = @import("app/shell_chrome_draw_runtime.zig");
 const app_tabbar_draw_runtime = @import("app/tabbar_draw_runtime.zig");
+const app_draw_overlays_runtime = @import("app/draw_overlays_runtime.zig");
+const app_ui_layout_runtime = @import("app/ui_layout_runtime.zig");
 const app_terminal_tab_navigation_runtime = @import("app/terminal_tab_navigation_runtime.zig");
 const app_terminal_close_active_runtime = @import("app/terminal_close_active_runtime.zig");
 const app_terminal_close_confirm_actions_runtime = @import("app/terminal_close_confirm_actions_runtime.zig");
@@ -2246,14 +2246,19 @@ const AppState = struct {
     }
 
     fn applyUiScale(self: *AppState) void {
-        const scale = self.shell.uiScaleFactor();
-        self.options_bar.height = 26 * scale;
-        self.tab_bar.height = 28 * scale;
-        self.tab_bar.tab_width = 150 * scale;
-        self.tab_bar.tab_spacing = @max(1, scale);
-        self.status_bar.height = 24 * scale;
-        self.side_nav.width = 52 * scale;
-        self.applyCurrentTabBarWidthMode();
+        app_ui_layout_runtime.applyUiScale(
+            self,
+            self.shell.uiScaleFactor(),
+            @ptrCast(self),
+            .{
+                .apply_current_tab_bar_width_mode = struct {
+                    fn call(raw: *anyopaque) void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        state.applyCurrentTabBarWidthMode();
+                    }
+                }.call,
+            },
+        );
     }
 
     fn showConfigReloadNotice(self: *AppState, success: bool) void {
@@ -2295,23 +2300,7 @@ const AppState = struct {
     }
 
     fn computeLayout(self: *AppState, width: f32, height: f32) layout_types.WidgetLayout {
-        return app_modes.ide.computeLayoutForMode(
-            self.app_mode,
-            width,
-            height,
-            self.options_bar.height,
-            self.tab_bar.height,
-            self.side_nav.width,
-            self.status_bar.height,
-            self.terminal_height,
-            self.show_terminal,
-            app_terminal_tabs_runtime.barVisible(
-                self.app_mode,
-                self.terminal_tab_bar_show_single_tab,
-                self.terminal_workspace,
-                self.terminals.items.len,
-            ),
-        );
+        return app_ui_layout_runtime.computeLayout(self, width, height);
     }
 
     fn initializeRunModeState(self: *AppState) !void {
@@ -2588,22 +2577,19 @@ const AppState = struct {
         app_terminal_draw_surface_runtime.draw(self, shell, layout);
         app_shell_chrome_draw_runtime.draw(self, shell, layout, tab_tooltip);
 
-        if (app_modes.ide.shouldShowTerminalCloseConfirmModal(self.app_mode, self.terminalCloseConfirmActive())) {
-            app_terminal_close_confirm_draw.draw(shell, layout, self.app_theme);
-        }
-        app_config_reload_notice.draw(
+        app_draw_overlays_runtime.draw(
+            self,
             shell,
             layout,
-            self.app_mode,
-            app_terminal_tabs_runtime.barVisible(
-                self.app_mode,
-                self.terminal_tab_bar_show_single_tab,
-                self.terminal_workspace,
-                self.terminals.items.len,
-            ),
-            self.config_reload_notice_until,
-            self.config_reload_notice_success,
-            self.app_theme,
+            @ptrCast(self),
+            .{
+                .terminal_close_confirm_active = struct {
+                    fn call(raw: *anyopaque) bool {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        return state.terminalCloseConfirmActive();
+                    }
+                }.call,
+            },
         );
 
         shell.endFrame();
