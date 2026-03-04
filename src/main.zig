@@ -1577,6 +1577,124 @@ const AppState = struct {
         try self.postFrameModeSync();
     }
 
+    fn handleShortcutAction(
+        self: *AppState,
+        shell: *Shell,
+        kind: input_actions.ActionKind,
+        now: f64,
+        handled_zoom: *bool,
+        zoom_log: Logger,
+    ) !bool {
+        switch (kind) {
+            .new_editor => {
+                if (app_modes.ide.canCreateEditorFromShortcut(self.app_mode)) {
+                    try self.newEditor();
+                    self.needs_redraw = true;
+                    self.metrics.noteInput(now);
+                    return true;
+                }
+            },
+            .zoom_in => {
+                const prev_zoom = shell.userZoomFactor();
+                const prev_target = shell.userZoomTargetFactor();
+                const changed = shell.queueUserZoom(0.1, now);
+                if (changed) self.metrics.noteInput(now);
+                if (zoom_log.enabled_file or zoom_log.enabled_console) {
+                    zoom_log.logf(
+                        "action=zoom_in changed={d} zoom={d:.3}->{d:.3} target={d:.3}->{d:.3} base_font={d:.2} layout_font={d:.2} ui_scale={d:.3} render_scale={d:.3} term_cell={d:.2}x{d:.2}",
+                        .{
+                            @intFromBool(changed),
+                            prev_zoom,
+                            shell.userZoomFactor(),
+                            prev_target,
+                            shell.userZoomTargetFactor(),
+                            shell.baseFontSize(),
+                            shell.fontSize(),
+                            shell.uiScaleFactor(),
+                            shell.renderScaleFactor(),
+                            shell.terminalCellWidth(),
+                            shell.terminalCellHeight(),
+                        },
+                    );
+                }
+                handled_zoom.* = true;
+            },
+            .zoom_out => {
+                const prev_zoom = shell.userZoomFactor();
+                const prev_target = shell.userZoomTargetFactor();
+                const changed = shell.queueUserZoom(-0.1, now);
+                if (changed) self.metrics.noteInput(now);
+                if (zoom_log.enabled_file or zoom_log.enabled_console) {
+                    zoom_log.logf(
+                        "action=zoom_out changed={d} zoom={d:.3}->{d:.3} target={d:.3}->{d:.3} base_font={d:.2} layout_font={d:.2} ui_scale={d:.3} render_scale={d:.3} term_cell={d:.2}x{d:.2}",
+                        .{
+                            @intFromBool(changed),
+                            prev_zoom,
+                            shell.userZoomFactor(),
+                            prev_target,
+                            shell.userZoomTargetFactor(),
+                            shell.baseFontSize(),
+                            shell.fontSize(),
+                            shell.uiScaleFactor(),
+                            shell.renderScaleFactor(),
+                            shell.terminalCellWidth(),
+                            shell.terminalCellHeight(),
+                        },
+                    );
+                }
+                handled_zoom.* = true;
+            },
+            .zoom_reset => {
+                const prev_zoom = shell.userZoomFactor();
+                const prev_target = shell.userZoomTargetFactor();
+                const changed = shell.resetUserZoomTarget(now);
+                if (changed) self.metrics.noteInput(now);
+                if (zoom_log.enabled_file or zoom_log.enabled_console) {
+                    zoom_log.logf(
+                        "action=zoom_reset changed={d} zoom={d:.3}->{d:.3} target={d:.3}->{d:.3} base_font={d:.2} layout_font={d:.2} ui_scale={d:.3} render_scale={d:.3} term_cell={d:.2}x{d:.2}",
+                        .{
+                            @intFromBool(changed),
+                            prev_zoom,
+                            shell.userZoomFactor(),
+                            prev_target,
+                            shell.userZoomTargetFactor(),
+                            shell.baseFontSize(),
+                            shell.fontSize(),
+                            shell.uiScaleFactor(),
+                            shell.renderScaleFactor(),
+                            shell.terminalCellWidth(),
+                            shell.terminalCellHeight(),
+                        },
+                    );
+                }
+                handled_zoom.* = true;
+            },
+            .toggle_terminal => {
+                if (app_modes.ide.canToggleTerminal(self.app_mode)) {
+                    if (self.show_terminal) {
+                        self.show_terminal = false;
+                    } else {
+                        if (self.terminals.items.len == 0) {
+                            try self.newTerminal();
+                        }
+                        self.show_terminal = true;
+                    }
+                    self.needs_redraw = true;
+                    self.metrics.noteInput(now);
+                    return true;
+                }
+            },
+            else => {},
+        }
+
+        if (app_modes.ide.terminalShortcutIntentForAction(kind)) |intent| {
+            if (try self.handleTerminalShortcutIntent(intent, now)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     fn logModeAdapterParity(self: *AppState) void {
         const log = app_logger.logger("app.mode.parity");
         if (!log.enabled_file and !log.enabled_console) return;
@@ -2497,117 +2615,8 @@ const AppState = struct {
         var handled_zoom = false;
         const zoom_log = app_logger.logger("ui.zoom.shortcut");
         for (self.input_router.actionsSlice()) |action| {
-            switch (action.kind) {
-                .new_editor => {
-                    if (app_modes.ide.canCreateEditorFromShortcut(self.app_mode)) {
-                        try self.newEditor();
-                        self.needs_redraw = true;
-                        self.metrics.noteInput(now);
-                        return;
-                    }
-                },
-                .zoom_in => {
-                    const prev_zoom = shell.userZoomFactor();
-                    const prev_target = shell.userZoomTargetFactor();
-                    const changed = shell.queueUserZoom(0.1, now);
-                    if (changed) {
-                        self.metrics.noteInput(now);
-                    }
-                    if (zoom_log.enabled_file or zoom_log.enabled_console) {
-                        zoom_log.logf(
-                            "action=zoom_in changed={d} zoom={d:.3}->{d:.3} target={d:.3}->{d:.3} base_font={d:.2} layout_font={d:.2} ui_scale={d:.3} render_scale={d:.3} term_cell={d:.2}x{d:.2}",
-                            .{
-                                @intFromBool(changed),
-                                prev_zoom,
-                                shell.userZoomFactor(),
-                                prev_target,
-                                shell.userZoomTargetFactor(),
-                                shell.baseFontSize(),
-                                shell.fontSize(),
-                                shell.uiScaleFactor(),
-                                shell.renderScaleFactor(),
-                                shell.terminalCellWidth(),
-                                shell.terminalCellHeight(),
-                            },
-                        );
-                    }
-                    handled_zoom = true;
-                },
-                .zoom_out => {
-                    const prev_zoom = shell.userZoomFactor();
-                    const prev_target = shell.userZoomTargetFactor();
-                    const changed = shell.queueUserZoom(-0.1, now);
-                    if (changed) {
-                        self.metrics.noteInput(now);
-                    }
-                    if (zoom_log.enabled_file or zoom_log.enabled_console) {
-                        zoom_log.logf(
-                            "action=zoom_out changed={d} zoom={d:.3}->{d:.3} target={d:.3}->{d:.3} base_font={d:.2} layout_font={d:.2} ui_scale={d:.3} render_scale={d:.3} term_cell={d:.2}x{d:.2}",
-                            .{
-                                @intFromBool(changed),
-                                prev_zoom,
-                                shell.userZoomFactor(),
-                                prev_target,
-                                shell.userZoomTargetFactor(),
-                                shell.baseFontSize(),
-                                shell.fontSize(),
-                                shell.uiScaleFactor(),
-                                shell.renderScaleFactor(),
-                                shell.terminalCellWidth(),
-                                shell.terminalCellHeight(),
-                            },
-                        );
-                    }
-                    handled_zoom = true;
-                },
-                .zoom_reset => {
-                    const prev_zoom = shell.userZoomFactor();
-                    const prev_target = shell.userZoomTargetFactor();
-                    const changed = shell.resetUserZoomTarget(now);
-                    if (changed) {
-                        self.metrics.noteInput(now);
-                    }
-                    if (zoom_log.enabled_file or zoom_log.enabled_console) {
-                        zoom_log.logf(
-                            "action=zoom_reset changed={d} zoom={d:.3}->{d:.3} target={d:.3}->{d:.3} base_font={d:.2} layout_font={d:.2} ui_scale={d:.3} render_scale={d:.3} term_cell={d:.2}x{d:.2}",
-                            .{
-                                @intFromBool(changed),
-                                prev_zoom,
-                                shell.userZoomFactor(),
-                                prev_target,
-                                shell.userZoomTargetFactor(),
-                                shell.baseFontSize(),
-                                shell.fontSize(),
-                                shell.uiScaleFactor(),
-                                shell.renderScaleFactor(),
-                                shell.terminalCellWidth(),
-                                shell.terminalCellHeight(),
-                            },
-                        );
-                    }
-                    handled_zoom = true;
-                },
-                .toggle_terminal => {
-                    if (app_modes.ide.canToggleTerminal(self.app_mode)) {
-                        if (self.show_terminal) {
-                            self.show_terminal = false;
-                        } else {
-                            if (self.terminals.items.len == 0) {
-                                try self.newTerminal();
-                            }
-                            self.show_terminal = true;
-                        }
-                        self.needs_redraw = true;
-                        self.metrics.noteInput(now);
-                        return;
-                    }
-                },
-                else => {},
-            }
-            if (app_modes.ide.terminalShortcutIntentForAction(action.kind)) |intent| {
-                if (try self.handleTerminalShortcutIntent(intent, now)) {
-                    return;
-                }
+            if (try self.handleShortcutAction(shell, action.kind, now, &handled_zoom, zoom_log)) {
+                return;
             }
         }
         if (handled_zoom) {
