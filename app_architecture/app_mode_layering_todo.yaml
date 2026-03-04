@@ -259,6 +259,7 @@ app_mode_layering_todo:
             - "In progress: single-use input-actions wrapper method was removed from `main.zig`; its action-loop runtime call now runs inline in the `app_interactive_frame` hook wiring."
             - "In progress: single-use update-prelude wrappers (`handleFontSampleFrame`, `handleWidgetInputFrame`, `routeInputForCurrentFocus`) were removed from `main.zig`; their logic now runs inline in the `app_update_prelude_frame_runtime` hook wiring."
             - "In progress: single-use interactive-frame wrappers (`handleMousePressedFrame`, `handleTabDragFrame`, `handleActiveViewFrame`) were removed from `main.zig`; their logic now runs inline in the `app_interactive_frame` hook wiring."
+            - "In progress: single-use action/search wrappers (`handleShortcutAction`, `handleSearchPanelFrameInput`) were removed from `main.zig`; interactive-frame callbacks now execute runtime dispatch and search-panel consumption inline."
             - "In progress: reload-config shortcut action-loop dispatch moved from `main.zig` into `src/app/reload_config_shortcut_runtime.zig` (`handle`) with callback hooks."
             - "In progress: single-use reload-config callback shims were removed from `main.zig`; pre-input path now supplies inline callbacks directly to `reload_config_shortcut_runtime.handle(...)`."
             - "In progress: terminal shortcut suppression policy for focused copy/paste conflicts moved from `main.zig` into `src/app/terminal_shortcut_suppress.zig` (`forFocus`)."

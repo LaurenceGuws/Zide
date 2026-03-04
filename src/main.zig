@@ -1071,23 +1071,6 @@ const AppState = struct {
         }
     }
 
-    fn handleSearchPanelFrameInput(
-        self: *AppState,
-        input_batch: *shared_types.input.InputBatch,
-        now: f64,
-    ) !bool {
-        if (!self.search_panel.active) return false;
-        if (self.editors.items.len == 0) return false;
-        const editor = self.editors.items[@min(self.active_tab, self.editors.items.len - 1)];
-        if (try self.handleSearchPanelInput(editor, input_batch)) {
-            self.editor_cluster_cache.clear();
-            self.needs_redraw = true;
-            self.metrics.noteInput(now);
-            return true;
-        }
-        return false;
-    }
-
     fn handleActiveEditorFrame(
         self: *AppState,
         shell: *Shell,
@@ -1246,50 +1229,6 @@ const AppState = struct {
             },
         );
         if (result.needs_redraw) self.needs_redraw = true;
-    }
-
-    fn handleShortcutAction(
-        self: *AppState,
-        shell: *Shell,
-        kind: input_actions.ActionKind,
-        now: f64,
-        handled_zoom: *bool,
-        zoom_log: Logger,
-    ) !bool {
-        const result = try app_shortcut_action_runtime.handle(
-            kind,
-            self.app_mode,
-            &self.show_terminal,
-            self.terminals.items.len,
-            shell,
-            now,
-            zoom_log,
-            @ptrCast(self),
-            .{
-                .new_editor = struct {
-                    fn call(raw: *anyopaque) !void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        try state.newEditor();
-                    }
-                }.call,
-                .new_terminal = struct {
-                    fn call(raw: *anyopaque) !void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        try state.newTerminal();
-                    }
-                }.call,
-                .handle_terminal_shortcut_intent = struct {
-                    fn call(raw: *anyopaque, intent: app_modes.ide.TerminalShortcutIntent, at: f64) !bool {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        return try state.handleTerminalShortcutIntent(intent, at);
-                    }
-                }.call,
-            },
-        );
-        if (result.needs_redraw) self.needs_redraw = true;
-        if (result.note_input) self.metrics.noteInput(now);
-        if (result.handled_zoom) handled_zoom.* = true;
-        return result.handled;
     }
 
     const PreInputShortcutResult = struct {
@@ -1979,7 +1918,40 @@ const AppState = struct {
                                                                                                     fn call(action_raw: *anyopaque, kind: input_actions.ActionKind, inner_at: f64, handled_zoom: *bool) !bool {
                                                                                                         const state: *AppState = @ptrCast(@alignCast(action_raw));
                                                                                                         const zoom_log = app_logger.logger("ui.zoom.shortcut");
-                                                                                                        return try state.handleShortcutAction(state.shell, kind, inner_at, handled_zoom, zoom_log);
+                                                                                                        const result = try app_shortcut_action_runtime.handle(
+                                                                                                            kind,
+                                                                                                            state.app_mode,
+                                                                                                            &state.show_terminal,
+                                                                                                            state.terminals.items.len,
+                                                                                                            state.shell,
+                                                                                                            inner_at,
+                                                                                                            zoom_log,
+                                                                                                            @ptrCast(state),
+                                                                                                            .{
+                                                                                                                .new_editor = struct {
+                                                                                                                    fn call(route_raw: *anyopaque) !void {
+                                                                                                                        const route_state: *AppState = @ptrCast(@alignCast(route_raw));
+                                                                                                                        try route_state.newEditor();
+                                                                                                                    }
+                                                                                                                }.call,
+                                                                                                                .new_terminal = struct {
+                                                                                                                    fn call(route_raw: *anyopaque) !void {
+                                                                                                                        const route_state: *AppState = @ptrCast(@alignCast(route_raw));
+                                                                                                                        try route_state.newTerminal();
+                                                                                                                    }
+                                                                                                                }.call,
+                                                                                                                .handle_terminal_shortcut_intent = struct {
+                                                                                                                    fn call(route_raw: *anyopaque, intent: app_modes.ide.TerminalShortcutIntent, route_at: f64) !bool {
+                                                                                                                        const route_state: *AppState = @ptrCast(@alignCast(route_raw));
+                                                                                                                        return try route_state.handleTerminalShortcutIntent(intent, route_at);
+                                                                                                                    }
+                                                                                                                }.call,
+                                                                                                            },
+                                                                                                        );
+                                                                                                        if (result.needs_redraw) state.needs_redraw = true;
+                                                                                                        if (result.note_input) state.metrics.noteInput(inner_at);
+                                                                                                        if (result.handled_zoom) handled_zoom.* = true;
+                                                                                                        return result.handled;
                                                                                                     }
                                                                                                 }.call,
                                                                                             },
@@ -2102,7 +2074,16 @@ const AppState = struct {
                                                                                         at: f64,
                                                                                     ) !void {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        const search_panel_consumed_input = try inner_state.handleSearchPanelFrameInput(frame_input_batch, at);
+                                                                                        var search_panel_consumed_input = false;
+                                                                                        if (inner_state.search_panel.active and inner_state.editors.items.len > 0) {
+                                                                                            const editor = inner_state.editors.items[@min(inner_state.active_tab, inner_state.editors.items.len - 1)];
+                                                                                            if (try inner_state.handleSearchPanelInput(editor, frame_input_batch)) {
+                                                                                                inner_state.editor_cluster_cache.clear();
+                                                                                                inner_state.needs_redraw = true;
+                                                                                                inner_state.metrics.noteInput(at);
+                                                                                                search_panel_consumed_input = true;
+                                                                                            }
+                                                                                        }
                                                                                         try inner_state.handleActiveEditorFrame(
                                                                                             frame_shell,
                                                                                             layout,
