@@ -1010,6 +1010,47 @@ const AppState = struct {
         return false;
     }
 
+    fn handleTerminalShortcutIntent(
+        self: *AppState,
+        intent: app_modes.ide.TerminalShortcutIntent,
+        now: f64,
+    ) !bool {
+        return switch (intent) {
+            .create => blk: {
+                if (!app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) break :blk false;
+                self.applyTerminalModeTabAction(.create);
+                try self.newTerminal();
+                try self.syncTerminalModeTabBar();
+                self.needs_redraw = true;
+                self.metrics.noteInput(now);
+                break :blk true;
+            },
+            .close => blk: {
+                if (!app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) break :blk false;
+                break :blk try self.requestCloseActiveTerminalTab(now);
+            },
+            .cycle => |dir| blk: {
+                if (!app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) break :blk false;
+                const moved = self.cycleTerminalTab(dir == .next);
+                if (!moved) break :blk false;
+                try self.routeTerminalTabActionAndSync(if (dir == .next) .next else .prev);
+                self.needs_redraw = true;
+                self.metrics.noteInput(now);
+                break :blk true;
+            },
+            .focus => |route| blk: {
+                if (!app_modes.ide.canHandleTerminalTabFocusShortcuts(self.app_mode)) break :blk false;
+                try self.routeTerminalTabActionAndSync(route.intent);
+                if (self.focusTerminalTabByIndex(route.index)) {
+                    self.needs_redraw = true;
+                    self.metrics.noteInput(now);
+                    break :blk true;
+                }
+                break :blk false;
+            },
+        };
+    }
+
     fn routeTerminalTabActionAndSync(self: *AppState, tab_action: app_modes.shared.actions.TabAction) !void {
         self.applyTerminalModeTabAction(tab_action);
         try self.syncModeAdaptersFromTabBar();
@@ -2051,49 +2092,11 @@ const AppState = struct {
                         return;
                     }
                 },
-                .terminal_new_tab => {
-                    if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) {
-                        self.applyTerminalModeTabAction(.create);
-                        try self.newTerminal();
-                        try self.syncTerminalModeTabBar();
-                        self.needs_redraw = true;
-                        self.metrics.noteInput(now);
-                        return;
-                    }
-                },
-                .terminal_close_tab => {
-                    if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) {
-                        if (try self.requestCloseActiveTerminalTab(now)) {
-                            return;
-                        }
-                    }
-                },
-                .terminal_next_tab => {
-                    if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode) and self.cycleTerminalTab(true)) {
-                        try self.routeTerminalTabActionAndSync(.next);
-                        self.needs_redraw = true;
-                        self.metrics.noteInput(now);
-                        return;
-                    }
-                },
-                .terminal_prev_tab => {
-                    if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode) and self.cycleTerminalTab(false)) {
-                        try self.routeTerminalTabActionAndSync(.prev);
-                        self.needs_redraw = true;
-                        self.metrics.noteInput(now);
-                        return;
-                    }
-                },
                 else => {},
             }
-            if (app_modes.ide.canHandleTerminalTabFocusShortcuts(self.app_mode)) {
-                if (app_modes.ide.terminalFocusRouteForAction(action.kind)) |route| {
-                    try self.routeTerminalTabActionAndSync(route.intent);
-                    if (self.focusTerminalTabByIndex(route.index)) {
-                        self.needs_redraw = true;
-                        self.metrics.noteInput(now);
-                        return;
-                    }
+            if (app_modes.ide.terminalShortcutIntentForAction(action.kind)) |intent| {
+                if (try self.handleTerminalShortcutIntent(intent, now)) {
+                    return;
                 }
             }
         }
