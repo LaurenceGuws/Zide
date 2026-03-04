@@ -42,7 +42,10 @@ fn runWithMode(
             .update = struct {
                 fn step(raw: *anyopaque, input_batch: *shared_types.input.InputBatch) !void {
                     const rc: *RuntimeCtx = @ptrCast(@alignCast(raw));
-                    try app_update_frame_hooks_runtime.handle(rc.state, input_batch);
+                    if (comptime forced_mode != null)
+                        try app_update_frame_hooks_runtime.handleFocused(rc.state, input_batch, app_mode)
+                    else
+                        try app_update_frame_hooks_runtime.handle(rc.state, input_batch);
                 }
             }.step,
             .handle_frame_render_and_idle = struct {

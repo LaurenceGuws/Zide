@@ -309,3 +309,13 @@ pub fn handle(state: anytype, input_batch: *shared_types.input.InputBatch) !void
         },
     );
 }
+
+pub fn handleFocused(
+    state: anytype,
+    input_batch: *shared_types.input.InputBatch,
+    comptime app_mode: @import("bootstrap.zig").AppMode,
+) !void {
+    switch (comptime app_mode) {
+        .terminal, .editor, .ide, .font_sample => try handle(state, input_batch),
+    }
+}
