@@ -47,6 +47,7 @@ const app_mouse_pressed_routing_runtime = @import("app/mouse_pressed_routing_run
 const app_input_actions_frame_runtime = @import("app/input_actions_frame_runtime.zig");
 const app_tab_drag_input_runtime = @import("app/tab_drag_input_runtime.zig");
 const app_active_view_runtime = @import("app/active_view_runtime.zig");
+const app_active_view_hooks_runtime = @import("app/active_view_hooks_runtime.zig");
 const app_pointer_activity_frame = @import("app/pointer_activity_frame.zig");
 const app_shortcut_action_runtime = @import("app/shortcut_action_runtime.zig");
 const app_terminal_split_resize_frame = @import("app/terminal_split_resize_frame.zig");
@@ -851,7 +852,7 @@ const AppState = struct {
         frame_terminal_close_modal_active: bool,
         at: f64,
     ) !void {
-        try app_active_view_runtime.handle(
+        try app_active_view_hooks_runtime.handle(
             self.allocator,
             &self.search_panel.active,
             &self.search_panel.query,
