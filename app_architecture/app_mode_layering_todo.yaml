@@ -264,6 +264,7 @@ app_mode_layering_todo:
             - "In progress: single-use search-panel wrapper (`handleSearchPanelInput`) was removed from `main.zig`; active-view callback now performs search-panel command/text/query-sync handling inline."
             - "In progress: single-use terminal-shortcut wrapper stack (`request*TerminalTab*`, `handleTerminalShortcutIntent`) was removed from `main.zig`; shortcut runtime callback now executes terminal intent policy + create/close/cycle/focus hooks inline."
             - "In progress: single-use pre-input wrapper (`handlePreInputShortcutFrame`) and local result DTO were removed from `main.zig`; update-prelude callback now executes reload/close-confirm/clipboard/editor-shortcut pre-input flow inline."
+            - "In progress: single-use notice/session poll wrappers (`tickConfigReloadNoticeFrame`, `pollVisibleTerminalSessions`) were removed from `main.zig`; update-prelude and active-view callbacks now execute these flows inline."
             - "In progress: reload-config shortcut action-loop dispatch moved from `main.zig` into `src/app/reload_config_shortcut_runtime.zig` (`handle`) with callback hooks."
             - "In progress: single-use reload-config callback shims were removed from `main.zig`; pre-input path now supplies inline callbacks directly to `reload_config_shortcut_runtime.handle(...)`."
             - "In progress: terminal shortcut suppression policy for focused copy/paste conflicts moved from `main.zig` into `src/app/terminal_shortcut_suppress.zig` (`forFocus`)."

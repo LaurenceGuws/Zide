@@ -918,48 +918,6 @@ const AppState = struct {
         editor_draw.precomputeWrapCounts(widget, &self.editor_render_cache, shell, layout.editor.height, width_budget);
     }
 
-    fn pollVisibleTerminalSessions(
-        self: *AppState,
-        input_batch: *shared_types.input.InputBatch,
-    ) !void {
-        if (!app_terminal_surface_gate.hasVisibleTerminalTabs(self.app_mode, self.show_terminal, self.terminal_workspace, self.terminals.items.len)) return;
-
-        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-            if (self.terminal_workspace) |*workspace| {
-                const polled = try workspace.pollAll(
-                    app_terminal_tabs_runtime.activeIndex(
-                        self.app_mode,
-                        self.terminal_workspace,
-                        self.terminals.items.len,
-                    ),
-                    input_batch.events.items.len > 0,
-                );
-                if (polled) self.needs_redraw = true;
-            }
-            return;
-        }
-
-        if (self.terminals.items.len > 0) {
-            const term = self.terminals.items[0];
-            if (term.hasData()) {
-                term.setInputPressure(input_batch.events.items.len > 0);
-                try term.poll();
-                self.needs_redraw = true;
-            }
-        }
-    }
-
-    fn tickConfigReloadNoticeFrame(self: *AppState, now: f64) void {
-        const still_visible = app_config_reload_notice_state.isVisible(self.config_reload_notice_until, now);
-        if (still_visible) {
-            self.needs_redraw = true;
-        } else {
-            if (app_config_reload_notice_state.clearIfExpired(&self.config_reload_notice_until, now)) {
-                self.needs_redraw = true;
-            }
-        }
-    }
-
     pub fn newTerminal(self: *AppState) !void {
         // Calculate terminal size based on UI
         const shell = self.shell;
@@ -1142,7 +1100,12 @@ const AppState = struct {
                                                                                 .tick_config_reload_notice_frame = struct {
                                                                                     fn inner(inner_raw: *anyopaque, at: f64) void {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        inner_state.tickConfigReloadNoticeFrame(at);
+                                                                                        const still_visible = app_config_reload_notice_state.isVisible(inner_state.config_reload_notice_until, at);
+                                                                                        if (still_visible) {
+                                                                                            inner_state.needs_redraw = true;
+                                                                                        } else if (app_config_reload_notice_state.clearIfExpired(&inner_state.config_reload_notice_until, at)) {
+                                                                                            inner_state.needs_redraw = true;
+                                                                                        }
                                                                                     }
                                                                                 }.inner,
                                                                                 .route_input_for_current_focus = struct {
@@ -1964,7 +1927,29 @@ const AppState = struct {
                                                                                                 .poll_visible_sessions = struct {
                                                                                                     fn call(route_raw: *anyopaque, poll_batch: *shared_types.input.InputBatch) !void {
                                                                                                         const route_state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        try route_state.pollVisibleTerminalSessions(poll_batch);
+                                                                                                        if (!app_terminal_surface_gate.hasVisibleTerminalTabs(route_state.app_mode, route_state.show_terminal, route_state.terminal_workspace, route_state.terminals.items.len)) return;
+                                                                                                        if (app_modes.ide.shouldUseTerminalWorkspace(route_state.app_mode)) {
+                                                                                                            if (route_state.terminal_workspace) |*workspace| {
+                                                                                                                const polled = try workspace.pollAll(
+                                                                                                                    app_terminal_tabs_runtime.activeIndex(
+                                                                                                                        route_state.app_mode,
+                                                                                                                        route_state.terminal_workspace,
+                                                                                                                        route_state.terminals.items.len,
+                                                                                                                    ),
+                                                                                                                    poll_batch.events.items.len > 0,
+                                                                                                                );
+                                                                                                                if (polled) route_state.needs_redraw = true;
+                                                                                                            }
+                                                                                                            return;
+                                                                                                        }
+                                                                                                        if (route_state.terminals.items.len > 0) {
+                                                                                                            const term = route_state.terminals.items[0];
+                                                                                                            if (term.hasData()) {
+                                                                                                                term.setInputPressure(poll_batch.events.items.len > 0);
+                                                                                                                try term.poll();
+                                                                                                                route_state.needs_redraw = true;
+                                                                                                            }
+                                                                                                        }
                                                                                                     }
                                                                                                 }.call,
                                                                                                 .handle_terminal_widget_input = struct {
