@@ -43,6 +43,7 @@ const app_tab_drag_frame = @import("app/tab_drag_frame.zig");
 const app_terminal_split_resize_frame = @import("app/terminal_split_resize_frame.zig");
 const app_window_resize_event_frame = @import("app/window_resize_event_frame.zig");
 const app_deferred_terminal_resize_frame = @import("app/deferred_terminal_resize_frame.zig");
+const app_cursor_blink_frame = @import("app/cursor_blink_frame.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
@@ -1739,34 +1740,43 @@ const AppState = struct {
     }
 
     fn handleCursorBlinkArmingFrame(self: *AppState, now: f64) void {
+        var cache: ?app_cursor_blink_frame.Input = null;
         if (app_terminal_active_widget.resolveActive(
             self.app_mode,
             &self.terminal_workspace,
             self.terminals.items.len,
             self.terminal_widgets.items,
         )) |term_widget| {
-            const cache = term_widget.session.renderCache();
-            const blink_armed = cache.cursor_visible and cache.cursor_style.blink and cache.scroll_offset == 0;
-            if (blink_armed != self.last_cursor_blink_armed) {
-                self.last_cursor_blink_armed = blink_armed;
-                const cursor_log = app_logger.logger("terminal.cursor");
-                if (cursor_log.enabled_file or cursor_log.enabled_console) {
-                    cursor_log.logf(
-                        "cursor blink armed={any} visible={any} blink={any} scroll_offset={d}",
-                        .{ blink_armed, cache.cursor_visible, cache.cursor_style.blink, cache.scroll_offset },
-                    );
-                }
-            }
-            if (blink_armed) {
-                const period: f64 = 0.5;
-                const phase = @mod(now, period * 2.0);
-                const blink_on = phase < period;
-                if (blink_on != self.last_cursor_blink_on) {
-                    self.last_cursor_blink_on = blink_on;
-                    self.needs_redraw = true;
-                }
+            const rc = term_widget.session.renderCache();
+            cache = app_cursor_blink_frame.Input{
+                .cursor_visible = rc.cursor_visible,
+                .cursor_blink = rc.cursor_style.blink,
+                .scroll_offset = rc.scroll_offset,
+            };
+        }
+
+        const result = app_cursor_blink_frame.handle(
+            cache,
+            now,
+            &self.last_cursor_blink_armed,
+            &self.last_cursor_blink_on,
+        );
+
+        if (result.blink_armed_changed) {
+            const cursor_log = app_logger.logger("terminal.cursor");
+            if (cursor_log.enabled_file or cursor_log.enabled_console) {
+                cursor_log.logf(
+                    "cursor blink armed={any} visible={any} blink={any} scroll_offset={d}",
+                    .{
+                        result.blink_armed,
+                        cache.?.cursor_visible,
+                        cache.?.cursor_blink,
+                        cache.?.scroll_offset,
+                    },
+                );
             }
         }
+        if (result.needs_redraw) self.needs_redraw = true;
     }
 
     fn handleDeferredTerminalResizeFrame(
