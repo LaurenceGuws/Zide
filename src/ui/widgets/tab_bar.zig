@@ -25,6 +25,7 @@ pub const TabBar = struct {
     last_char_width: f32,
     last_ui_scale: f32,
     drag_active: bool,
+    drag_origin_index: usize,
     drag_index: usize,
     drag_moved: bool,
 
@@ -50,6 +51,7 @@ pub const TabBar = struct {
             .last_char_width = 8,
             .last_ui_scale = 1,
             .drag_active = false,
+            .drag_origin_index = 0,
             .drag_index = 0,
             .drag_moved = false,
         };
@@ -69,6 +71,7 @@ pub const TabBar = struct {
         self.tabs.clearRetainingCapacity();
         self.active_index = 0;
         self.drag_active = false;
+        self.drag_origin_index = 0;
         self.drag_index = 0;
         self.drag_moved = false;
     }
@@ -244,6 +247,7 @@ pub const TabBar = struct {
         if (self.tabs.items.len == 0) {
             self.active_index = 0;
             self.drag_active = false;
+            self.drag_origin_index = 0;
             self.drag_index = 0;
             return;
         }
@@ -265,6 +269,7 @@ pub const TabBar = struct {
         const idx = self.tabIndexAtPoint(x, y, bar_x, bar_y, bar_width) orelse return false;
         if (idx >= self.tabs.items.len) return false;
         self.drag_active = true;
+        self.drag_origin_index = idx;
         self.drag_index = idx;
         self.drag_moved = false;
         return true;
@@ -288,14 +293,19 @@ pub const TabBar = struct {
     pub const DragEndState = struct {
         active: bool,
         moved: bool,
+        from_index: usize,
+        to_index: usize,
     };
 
     pub fn endDrag(self: *TabBar) DragEndState {
         const state = DragEndState{
             .active = self.drag_active,
             .moved = self.drag_moved,
+            .from_index = self.drag_origin_index,
+            .to_index = self.drag_index,
         };
         self.drag_active = false;
+        self.drag_origin_index = 0;
         self.drag_moved = false;
         return state;
     }

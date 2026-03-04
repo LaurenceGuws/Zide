@@ -997,6 +997,7 @@ const AppState = struct {
             projections.items,
             active_projection,
         );
+        self.logModeAdapterParity();
     }
 
     fn applyTerminalModeTabAction(self: *AppState, tab_action: app_modes.shared.actions.TabAction) void {
@@ -1009,6 +1010,51 @@ const AppState = struct {
         if (!app_modes.ide.supportsEditorSurface(self.app_mode)) return;
         const contract = self.editor_mode_adapter.asContract();
         _ = contract.applyAction(self.allocator, .{ .tab = tab_action }) catch {};
+    }
+
+    fn logModeAdapterParity(self: *AppState) void {
+        const log = app_logger.logger("app.mode.parity");
+        if (!log.enabled_file and !log.enabled_console) return;
+
+        const editor_snap = self.editor_mode_adapter.asContract().snapshot(self.allocator) catch return;
+        const terminal_snap = self.terminal_mode_adapter.asContract().snapshot(self.allocator) catch return;
+
+        var expected_editor: usize = 0;
+        var expected_terminal: usize = 0;
+        var active_editor: ?u64 = null;
+        var active_terminal: ?u64 = null;
+        if (self.tab_bar.tabs.items.len > 0 and self.tab_bar.active_index < self.tab_bar.tabs.items.len) {
+            const active = self.tab_bar.tabs.items[self.tab_bar.active_index];
+            if (active.kind == .editor) {
+                active_editor = active.id;
+            } else {
+                active_terminal = active.id;
+            }
+        }
+        for (self.tab_bar.tabs.items) |tab| {
+            switch (tab.kind) {
+                .editor => expected_editor += 1,
+                .terminal => expected_terminal += 1,
+            }
+        }
+
+        if (editor_snap.tabs.len != expected_editor or terminal_snap.tabs.len != expected_terminal or
+            editor_snap.active_tab != active_editor or terminal_snap.active_tab != active_terminal)
+        {
+            log.logf(
+                "adapter parity mismatch editor={d}/{d} active={?d}/{?d} terminal={d}/{d} active={?d}/{?d}",
+                .{
+                    editor_snap.tabs.len,
+                    expected_editor,
+                    editor_snap.active_tab,
+                    active_editor,
+                    terminal_snap.tabs.len,
+                    expected_terminal,
+                    terminal_snap.active_tab,
+                    active_terminal,
+                },
+            );
+        }
     }
 
     fn terminalFocusIndexForAction(kind: input_actions.ActionKind) ?usize {
@@ -2132,6 +2178,7 @@ const AppState = struct {
                         // Tab was clicked
                         self.active_tab = self.tab_bar.active_index;
                         self.applyEditorModeTabAction(.{ .activate_by_index = self.active_tab });
+                        try self.syncModeAdaptersFromTabBar();
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
                     }
@@ -2158,6 +2205,11 @@ const AppState = struct {
                         _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
                     }
                     self.active_kind = .terminal;
+                    if (self.terminal_workspace) |*workspace| {
+                        if (workspace.activeTabId()) |active_tab_id| {
+                            self.applyTerminalModeTabAction(.{ .activate = active_tab_id });
+                        }
+                    }
                 },
                 .editor => {
                     self.active_kind = .editor;
@@ -2210,8 +2262,21 @@ const AppState = struct {
             }
             if (self.terminalTabBarVisible() and input_batch.mouseReleased(.left)) {
                 const drag_end = self.tab_bar.endDrag();
+                if (drag_end.active and drag_end.moved and drag_end.from_index != drag_end.to_index) {
+                    self.applyTerminalModeTabAction(.{
+                        .move = .{
+                            .from_index = drag_end.from_index,
+                            .to_index = drag_end.to_index,
+                        },
+                    });
+                    try self.syncModeAdaptersFromTabBar();
+                }
                 if (drag_end.active and !drag_end.moved) {
                     if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width)) {
+                        if (self.tab_bar.terminalTabIdAtVisual(self.tab_bar.active_index)) |focused_tab_id| {
+                            self.applyTerminalModeTabAction(.{ .activate = focused_tab_id });
+                        }
+                        try self.syncModeAdaptersFromTabBar();
                         if (self.focusTerminalTabByIndex(self.tab_bar.active_index)) {
                             self.needs_redraw = true;
                             self.metrics.noteInput(now);
