@@ -50,6 +50,21 @@ pub fn terminalFocusIntentForAction(kind: input_actions.ActionKind) ?shared.acti
     return null;
 }
 
+pub const TerminalFocusRoute = struct {
+    index: usize,
+    intent: shared.actions.TabAction,
+};
+
+pub fn terminalFocusRouteForAction(kind: input_actions.ActionKind) ?TerminalFocusRoute {
+    if (terminalFocusIndexForAction(kind)) |idx| {
+        return .{
+            .index = idx,
+            .intent = .{ .activate_by_index = idx },
+        };
+    }
+    return null;
+}
+
 test "close intent helper maps optional active tab id" {
     try std.testing.expectEqual(@as(?shared.actions.TabAction, null), closeIntentForActiveTab(null));
 
@@ -106,4 +121,13 @@ test "terminal focus intent helper maps focus actions to activate_by_index" {
         else => return error.TestUnexpectedResult,
     }
     try std.testing.expectEqual(@as(?shared.actions.TabAction, null), terminalFocusIntentForAction(.terminal_new_tab));
+}
+
+test "terminal focus route helper returns both index and intent" {
+    const route = terminalFocusRouteForAction(.terminal_focus_tab_2) orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 1), route.index);
+    switch (route.intent) {
+        .activate_by_index => |idx| try std.testing.expectEqual(@as(usize, 1), idx),
+        else => return error.TestUnexpectedResult,
+    }
 }
