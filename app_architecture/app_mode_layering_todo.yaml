@@ -157,6 +157,7 @@ app_mode_layering_todo:
             - "In progress: terminal close-confirm modal drawing moved from `main.zig` into `src/app/terminal_close_confirm_draw.zig` (`draw`)."
             - "In progress: terminal tab count/visibility/active-index policy moved from `main.zig` into `src/app/terminal_tabs.zig` (`count`, `barVisible`, `activeIndex`)."
             - "In progress: terminal theme apply helpers moved from `main.zig` into `src/app/terminal_theme_apply.zig` (`setSessionPalette`, `notifyColorSchemeChanged`, `applyThemeToWidgets`)."
+            - "In progress: terminal session startup/widget bootstrap dedup moved from `main.zig` into `src/app/terminal_session_bootstrap.zig` (`startSessionWithShellCellSize`, `initWidget`)."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress

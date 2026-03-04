@@ -4,6 +4,7 @@ const app_editor_actions = @import("app/editor_actions.zig");
 const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
 const app_config_reload_notice = @import("app/config_reload_notice.zig");
+const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
 const app_terminal_theme_apply = @import("app/terminal_theme_apply.zig");
 const app_terminal_tabs = @import("app/terminal_tabs.zig");
 const app_terminal_close_confirm_draw = @import("app/terminal_close_confirm_draw.zig");
@@ -2284,13 +2285,13 @@ const AppState = struct {
                 _ = try workspace.createTab(rows, cols);
                 const term = workspace.activeSession() orelse return error.TerminalWorkspaceNoActiveTab;
                 app_terminal_theme_apply.setSessionPalette(term, theme);
-                term.setCellSize(
-                    @intFromFloat(shell.terminalCellWidth()),
-                    @intFromFloat(shell.terminalCellHeight()),
+                try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, shell);
+                const widget = app_terminal_session_bootstrap.initWidget(
+                    term,
+                    self.terminal_blink_style,
+                    self.terminal_focus_report_window_events,
+                    self.terminal_focus_report_pane_events,
                 );
-                try term.start(null);
-                var widget = TerminalWidget.init(term, self.terminal_blink_style);
-                widget.setFocusReportSources(self.terminal_focus_report_window_events, self.terminal_focus_report_pane_events);
                 try self.terminal_widgets.append(self.allocator, widget);
                 try self.syncTerminalModeTabBar();
                 try app_terminal_theme_apply.notifyColorSchemeChanged(&self.terminal_widgets, &self.terminal_theme);
@@ -2305,14 +2306,14 @@ const AppState = struct {
             .cursor_style = self.terminal_cursor_style,
         });
         app_terminal_theme_apply.setSessionPalette(term, theme);
-        term.setCellSize(
-            @intFromFloat(shell.terminalCellWidth()),
-            @intFromFloat(shell.terminalCellHeight()),
-        );
-        try term.start(null);
+        try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, shell);
         try self.terminals.append(self.allocator, term);
-        var widget = TerminalWidget.init(term, self.terminal_blink_style);
-        widget.setFocusReportSources(self.terminal_focus_report_window_events, self.terminal_focus_report_pane_events);
+        const widget = app_terminal_session_bootstrap.initWidget(
+            term,
+            self.terminal_blink_style,
+            self.terminal_focus_report_window_events,
+            self.terminal_focus_report_pane_events,
+        );
         try self.terminal_widgets.append(self.allocator, widget);
         try app_terminal_theme_apply.notifyColorSchemeChanged(&self.terminal_widgets, &self.terminal_theme);
 
