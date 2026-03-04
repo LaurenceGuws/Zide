@@ -12,3 +12,6 @@ pub const supportsEditorSurface = host.supportsEditorSurface;
 pub const supportsTerminalSurface = host.supportsTerminalSurface;
 pub const routedActiveMode = host.routedActiveMode;
 pub const canToggleTerminal = host.canToggleTerminal;
+pub const shouldUseTerminalWorkspace = host.shouldUseTerminalWorkspace;
+pub const hasTerminalInputScope = host.hasTerminalInputScope;
+pub const usesIdeTerminalStrip = host.usesIdeTerminalStrip;
