@@ -1542,6 +1542,30 @@ const AppState = struct {
         }
     }
 
+    fn handleActiveViewFrame(
+        self: *AppState,
+        shell: *Shell,
+        layout: layout_types.WidgetLayout,
+        mouse: shared_types.input.MousePos,
+        input_batch: *shared_types.input.InputBatch,
+        suppress_terminal_shortcuts: bool,
+        terminal_close_modal_active: bool,
+        now: f64,
+    ) !void {
+        const search_panel_consumed_input = try self.handleSearchPanelFrameInput(input_batch, now);
+        try self.handleActiveEditorFrame(shell, layout, mouse, input_batch, search_panel_consumed_input, now);
+        try self.handleVisibleTerminalFrame(
+            shell,
+            layout,
+            input_batch,
+            search_panel_consumed_input,
+            suppress_terminal_shortcuts,
+            terminal_close_modal_active,
+            now,
+        );
+        try self.postFrameModeSync();
+    }
+
     fn logModeAdapterParity(self: *AppState) void {
         const log = app_logger.logger("app.mode.parity");
         if (!log.enabled_file and !log.enabled_console) return;
@@ -2596,22 +2620,15 @@ const AppState = struct {
             try self.handleIdeTabDragInput(input_batch, layout, mouse, now);
         }
 
-        // Update active view
-        const search_panel_consumed_input = try self.handleSearchPanelFrameInput(input_batch, now);
-
-        try self.handleActiveEditorFrame(shell, layout, mouse, input_batch, search_panel_consumed_input, now);
-
-        // Update terminal if shown
-        try self.handleVisibleTerminalFrame(
+        try self.handleActiveViewFrame(
             shell,
             layout,
+            mouse,
             input_batch,
-            search_panel_consumed_input,
             suppress_terminal_shortcuts,
             terminal_close_modal_active,
             now,
         );
-        try self.postFrameModeSync();
     }
 
     fn openTerminalScrollbackInPager(self: *AppState, term_widget: *TerminalWidget, term: *TerminalSession) !bool {
