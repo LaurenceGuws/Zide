@@ -46,6 +46,8 @@ const app_deferred_terminal_resize_frame = @import("app/deferred_terminal_resize
 const app_cursor_blink_frame = @import("app/cursor_blink_frame.zig");
 const app_post_preinput_frame = @import("app/post_preinput_frame.zig");
 const app_interactive_frame = @import("app/interactive_frame.zig");
+const app_update_driver = @import("app/update_driver.zig");
+const app_run_loop_driver = @import("app/run_loop_driver.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
@@ -2306,11 +2308,7 @@ const AppState = struct {
         }
     }
 
-    const RunFrameSetup = struct {
-        input_batch: shared_types.input.InputBatch,
-        poll_ms: f64,
-        build_ms: f64,
-    };
+    const RunFrameSetup = app_run_loop_driver.FrameSetup;
 
     fn prepareRunFrame(self: *AppState) !?RunFrameSetup {
         const poll_start = app_shell.getTime();
@@ -2341,26 +2339,56 @@ const AppState = struct {
     }
 
     fn runOneFrame(self: *AppState) !bool {
-        var frame = (try self.prepareRunFrame()) orelse return false;
-        defer frame.input_batch.deinit();
-
-        const update_start = app_shell.getTime();
-        try self.update(&frame.input_batch);
-        const update_end = app_shell.getTime();
-        const update_ms = (update_end - update_start) * 1000.0;
-        self.handleFrameRenderAndIdle(&frame.input_batch, frame.poll_ms, frame.build_ms, update_ms);
-
-        if (self.perf_mode and self.perf_frames_done >= self.perf_frames_total and self.perf_frames_total > 0) {
-            self.perf_logger.logf("perf complete frames={d}", .{self.perf_frames_done});
-            return false;
-        }
-        return true;
+        return try app_run_loop_driver.runOneFrame(
+            @ptrCast(self),
+            .{
+                .prepare_run_frame = struct {
+                    fn call(raw: *anyopaque) !?app_run_loop_driver.FrameSetup {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        return try state.prepareRunFrame();
+                    }
+                }.call,
+                .update = struct {
+                    fn call(raw: *anyopaque, input_batch: *shared_types.input.InputBatch) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.update(input_batch);
+                    }
+                }.call,
+                .handle_frame_render_and_idle = struct {
+                    fn call(raw: *anyopaque, input_batch: *shared_types.input.InputBatch, poll_ms: f64, build_ms: f64, update_ms: f64) void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        state.handleFrameRenderAndIdle(input_batch, poll_ms, build_ms, update_ms);
+                    }
+                }.call,
+                .should_stop_for_perf = struct {
+                    fn call(raw: *anyopaque) bool {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        return state.perf_mode and state.perf_frames_done >= state.perf_frames_total and state.perf_frames_total > 0;
+                    }
+                }.call,
+                .on_perf_complete = struct {
+                    fn call(raw: *anyopaque) void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        state.perf_logger.logf("perf complete frames={d}", .{state.perf_frames_done});
+                    }
+                }.call,
+            },
+        );
     }
 
     fn runMainLoop(self: *AppState) !void {
-        while (!self.shell.shouldClose()) {
-            if (!try self.runOneFrame()) break;
-        }
+        try app_run_loop_driver.runMainLoop(
+            self.shell,
+            @ptrCast(self),
+            .{
+                .run_one_frame = struct {
+                    fn call(raw: *anyopaque) !bool {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        return try state.runOneFrame();
+                    }
+                }.call,
+            },
+        );
     }
 
     pub fn run(self: *AppState) !void {
@@ -2458,16 +2486,59 @@ const AppState = struct {
     }
 
     fn update(self: *AppState, input_batch: *shared_types.input.InputBatch) !void {
-        const shell = self.shell;
-        const prelude = (try self.handleUpdatePreludeFrame(shell, input_batch)) orelse return;
-        const frame = try self.handlePostPreInputFrame(shell, input_batch, prelude.now);
-        try self.handleInteractiveFrame(
-            shell,
-            frame,
+        try app_update_driver.handle(
+            self.shell,
             input_batch,
-            prelude.suppress_terminal_shortcuts,
-            prelude.terminal_close_modal_active,
-            prelude.now,
+            @ptrCast(self),
+            .{
+                .handle_update_prelude_frame = struct {
+                    fn call(raw: *anyopaque, shell: *Shell, batch: *shared_types.input.InputBatch) !?app_update_driver.Prelude {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        const prelude = (try state.handleUpdatePreludeFrame(shell, batch)) orelse return null;
+                        return .{
+                            .now = prelude.now,
+                            .suppress_terminal_shortcuts = prelude.suppress_terminal_shortcuts,
+                            .terminal_close_modal_active = prelude.terminal_close_modal_active,
+                        };
+                    }
+                }.call,
+                .handle_post_preinput_frame = struct {
+                    fn call(raw: *anyopaque, shell: *Shell, batch: *shared_types.input.InputBatch, now: f64) !app_update_driver.Frame {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        const frame = try state.handlePostPreInputFrame(shell, batch, now);
+                        return .{
+                            .layout = frame.layout,
+                            .mouse = frame.mouse,
+                            .term_y = frame.term_y,
+                        };
+                    }
+                }.call,
+                .handle_interactive_frame = struct {
+                    fn call(
+                        raw: *anyopaque,
+                        shell: *Shell,
+                        frame: app_update_driver.Frame,
+                        batch: *shared_types.input.InputBatch,
+                        suppress_terminal_shortcuts: bool,
+                        terminal_close_modal_active: bool,
+                        now: f64,
+                    ) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.handleInteractiveFrame(
+                            shell,
+                            .{
+                                .layout = frame.layout,
+                                .mouse = frame.mouse,
+                                .term_y = frame.term_y,
+                            },
+                            batch,
+                            suppress_terminal_shortcuts,
+                            terminal_close_modal_active,
+                            now,
+                        );
+                    }
+                }.call,
+            },
         );
     }
 

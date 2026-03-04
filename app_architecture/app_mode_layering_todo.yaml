@@ -217,6 +217,7 @@ app_mode_layering_todo:
             - "In progress: cursor blink frame state transitions (armed/on tracking + redraw decision) moved from `main.zig` into `src/app/cursor_blink_frame.zig` (`handle`) while keeping terminal-cursor diagnostic logging at callsite."
             - "In progress: post-preinput frame orchestration (pending zoom, window resize event, layout compute, cursor blink, deferred resize, pointer activity, split resize) moved from `main.zig` into `src/app/post_preinput_frame.zig` (`handle`) with AppState callback hooks."
             - "In progress: interactive frame orchestration (input actions, mouse pressed routing, tab drag, active view frame) moved from `main.zig` into `src/app/interactive_frame.zig` (`handle`) with AppState callback hooks."
+            - "In progress: top-level update and run-loop orchestration moved from `main.zig` into `src/app/update_driver.zig` and `src/app/run_loop_driver.zig` (hooked delegation for `update()`, `runOneFrame()`, and `runMainLoop()`)."
             - "In progress: reload-config shortcut action-loop dispatch moved from `main.zig` into `src/app/reload_config_shortcut_runtime.zig` (`handle`) with callback hooks."
             - "In progress: single-use reload-config callback shims were removed from `main.zig`; pre-input path now supplies inline callbacks directly to `reload_config_shortcut_runtime.handle(...)`."
             - "In progress: terminal shortcut suppression policy for focused copy/paste conflicts moved from `main.zig` into `src/app/terminal_shortcut_suppress.zig` (`forFocus`)."
