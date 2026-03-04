@@ -1548,33 +1548,6 @@ const AppState = struct {
         };
     }
 
-    fn handleFontSampleFrame(
-        self: *AppState,
-        r: anytype,
-        input_batch: *shared_types.input.InputBatch,
-    ) bool {
-        if (!app_modes.ide.isFontSample(self.app_mode)) return false;
-        if (self.font_sample_auto_close_frames > 0 and self.frame_id >= self.font_sample_auto_close_frames) {
-            self.font_sample_close_pending = true;
-            self.needs_redraw = true;
-            return true;
-        }
-        if (self.font_sample_view) |*view| {
-            if (view.update(r, input_batch)) {
-                self.needs_redraw = true;
-            }
-        }
-        return false;
-    }
-
-    fn handleWidgetInputFrame(self: *AppState) !void {
-        self.options_bar.updateInput(self.last_input);
-        self.tab_bar.updateInput(self.last_input);
-        self.side_nav.updateInput(self.last_input);
-        self.status_bar.updateInput(self.last_input);
-        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(self);
-    }
-
     fn tickConfigReloadNoticeFrame(self: *AppState, now: f64) void {
         const still_visible = app_config_reload_notice_state.isVisible(self.config_reload_notice_until, now);
         if (still_visible) {
@@ -1584,17 +1557,6 @@ const AppState = struct {
                 self.needs_redraw = true;
             }
         }
-    }
-
-    fn routeInputForCurrentFocus(
-        self: *AppState,
-        input_batch: *shared_types.input.InputBatch,
-    ) input_actions.FocusKind {
-        _ = app_terminal_close_confirm_active_runtime.reconcile(self);
-        const routed_active = app_modes.ide.routedActiveMode(self.app_mode, self.active_kind);
-        const focus = if (routed_active == .terminal) input_actions.FocusKind.terminal else input_actions.FocusKind.editor;
-        self.input_router.route(input_batch, focus);
-        return focus;
     }
 
     fn handleTabDragFrame(
@@ -1795,13 +1757,28 @@ const AppState = struct {
                                                                                 .handle_font_sample_frame = struct {
                                                                                     fn inner(inner_raw: *anyopaque, frame_shell: *Shell, frame_input_batch: *shared_types.input.InputBatch) bool {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        return inner_state.handleFontSampleFrame(frame_shell.rendererPtr(), frame_input_batch);
+                                                                                        if (!app_modes.ide.isFontSample(inner_state.app_mode)) return false;
+                                                                                        if (inner_state.font_sample_auto_close_frames > 0 and inner_state.frame_id >= inner_state.font_sample_auto_close_frames) {
+                                                                                            inner_state.font_sample_close_pending = true;
+                                                                                            inner_state.needs_redraw = true;
+                                                                                            return true;
+                                                                                        }
+                                                                                        if (inner_state.font_sample_view) |*view| {
+                                                                                            if (view.update(frame_shell.rendererPtr(), frame_input_batch)) {
+                                                                                                inner_state.needs_redraw = true;
+                                                                                            }
+                                                                                        }
+                                                                                        return false;
                                                                                     }
                                                                                 }.inner,
                                                                                 .handle_widget_input_frame = struct {
                                                                                     fn inner(inner_raw: *anyopaque) !void {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        try inner_state.handleWidgetInputFrame();
+                                                                                        inner_state.options_bar.updateInput(inner_state.last_input);
+                                                                                        inner_state.tab_bar.updateInput(inner_state.last_input);
+                                                                                        inner_state.side_nav.updateInput(inner_state.last_input);
+                                                                                        inner_state.status_bar.updateInput(inner_state.last_input);
+                                                                                        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(inner_state);
                                                                                     }
                                                                                 }.inner,
                                                                                 .tick_config_reload_notice_frame = struct {
@@ -1813,7 +1790,11 @@ const AppState = struct {
                                                                                 .route_input_for_current_focus = struct {
                                                                                     fn inner(inner_raw: *anyopaque, frame_input_batch: *shared_types.input.InputBatch) input_actions.FocusKind {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        return inner_state.routeInputForCurrentFocus(frame_input_batch);
+                                                                                        _ = app_terminal_close_confirm_active_runtime.reconcile(inner_state);
+                                                                                        const routed_active = app_modes.ide.routedActiveMode(inner_state.app_mode, inner_state.active_kind);
+                                                                                        const focus = if (routed_active == .terminal) input_actions.FocusKind.terminal else input_actions.FocusKind.editor;
+                                                                                        inner_state.input_router.route(frame_input_batch, focus);
+                                                                                        return focus;
                                                                                     }
                                                                                 }.inner,
                                                                                 .handle_pre_input_shortcut_frame = struct {
