@@ -216,6 +216,8 @@ const AppState = struct {
     terminal_focus_report_window_events: bool,
     terminal_focus_report_pane_events: bool,
     last_terminal_pane_focus_reported: ?bool,
+    config_reload_notice_until: f64,
+    config_reload_notice_success: bool,
 
     // Dirty tracking for efficient rendering
     needs_redraw: bool,
@@ -553,6 +555,8 @@ const AppState = struct {
             .terminal_focus_report_window_events = config.terminal_focus_report_window orelse true,
             .terminal_focus_report_pane_events = config.terminal_focus_report_pane orelse false,
             .last_terminal_pane_focus_reported = null,
+            .config_reload_notice_until = 0,
+            .config_reload_notice_success = true,
             .needs_redraw = true,
             .idle_frames = 0,
             .last_mouse_pos = .{ .x = -1, .y = -1 },
@@ -1309,6 +1313,12 @@ const AppState = struct {
         self.applyCurrentTabBarWidthMode();
     }
 
+    fn showConfigReloadNotice(self: *AppState, success: bool) void {
+        self.config_reload_notice_success = success;
+        self.config_reload_notice_until = app_shell.getTime() + 2.0;
+        self.needs_redraw = true;
+    }
+
     fn terminalGridSize(self: *AppState, terminal_width: f32, terminal_height: f32, min_cols: u16, min_rows: u16) struct { cols: u16, rows: u16 } {
         // Match terminal widget packing, which uses rounded logical cell steps
         // for row/column placement in offscreen texture updates.
@@ -1602,6 +1612,14 @@ const AppState = struct {
             try self.syncTerminalModeTabBar();
         }
         const now = app_shell.getTime();
+        if (self.config_reload_notice_until > 0) {
+            if (now < self.config_reload_notice_until) {
+                self.needs_redraw = true;
+            } else {
+                self.config_reload_notice_until = 0;
+                self.needs_redraw = true;
+            }
+        }
         _ = self.terminalCloseConfirmActive();
         const focus = if (self.app_mode == .terminal or self.active_kind == .terminal) input_actions.FocusKind.terminal else input_actions.FocusKind.editor;
         self.input_router.route(input_batch, focus);
@@ -1609,8 +1627,12 @@ const AppState = struct {
         var handled_shortcut = false;
         for (self.input_router.actionsSlice()) |action| {
             if (action.kind == .reload_config) {
-                try self.reloadConfig();
-                self.needs_redraw = true;
+                self.reloadConfig() catch {
+                    self.showConfigReloadNotice(false);
+                    handled_shortcut = true;
+                    continue;
+                };
+                self.showConfigReloadNotice(true);
                 handled_shortcut = true;
             }
         }
@@ -2504,10 +2526,7 @@ const AppState = struct {
 
     fn reloadConfig(self: *AppState) !void {
         const log = app_logger.logger("config.reload");
-        var config = config_mod.loadConfig(self.allocator) catch |err| {
-            log.logf("reload failed: {any}", .{err});
-            return;
-        };
+        var config = try config_mod.loadConfig(self.allocator);
         defer config_mod.freeConfig(self.allocator, &config);
 
         if (config.log_file_filter) |filter| {
@@ -2695,6 +2714,57 @@ const AppState = struct {
         }
 
         log.logStdout("config reloaded", .{});
+    }
+
+    fn drawConfigReloadNotice(self: *AppState, shell: *Shell, layout: layout_types.WidgetLayout) void {
+        const now = app_shell.getTime();
+        if (now >= self.config_reload_notice_until) return;
+
+        const text = if (self.config_reload_notice_success) "Config reloaded" else "Config reload failed";
+        const scale = shell.uiScaleFactor();
+        const pad_x = 10.0 * scale;
+        const pad_y = 6.0 * scale;
+        const text_w = @as(f32, @floatFromInt(text.len)) * shell.charWidth();
+        const notice_w = text_w + pad_x * 2.0;
+        const notice_h = shell.charHeight() + pad_y * 2.0;
+        const margin = 10.0 * scale;
+        const x = layout.window.width - notice_w - margin;
+        const y = if (self.app_mode == .terminal and self.terminalTabBarVisible())
+            layout.tab_bar.y + layout.tab_bar.height + margin
+        else if (self.app_mode == .ide)
+            layout.options_bar.y + layout.options_bar.height + margin
+        else
+            margin;
+
+        const bg = if (self.config_reload_notice_success)
+            self.app_theme.ui_accent
+        else
+            app_shell.Color{ .r = 186, .g = 64, .b = 64 };
+        const fg = if (self.config_reload_notice_success)
+            self.app_theme.background
+        else
+            app_shell.Color{ .r = 255, .g = 255, .b = 255 };
+
+        shell.drawRect(
+            @intFromFloat(x),
+            @intFromFloat(y),
+            @intFromFloat(notice_w),
+            @intFromFloat(notice_h),
+            bg,
+        );
+        shell.drawRectOutline(
+            @intFromFloat(x),
+            @intFromFloat(y),
+            @intFromFloat(notice_w),
+            @intFromFloat(notice_h),
+            self.app_theme.ui_border,
+        );
+        shell.drawText(
+            text,
+            x + pad_x,
+            y + (notice_h - shell.charHeight()) / 2.0,
+            fg,
+        );
     }
 
     fn drawTerminalCloseConfirmModal(
@@ -2919,6 +2989,7 @@ const AppState = struct {
         if (self.app_mode == .terminal and self.terminalCloseConfirmActive()) {
             self.drawTerminalCloseConfirmModal(shell, layout);
         }
+        self.drawConfigReloadNotice(shell, layout);
 
         shell.endFrame();
     }
