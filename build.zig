@@ -399,6 +399,79 @@ pub fn build(b: *std.Build) void {
     const run_editor_step = b.step("run-editor", "Run editor-only app entry");
     run_editor_step.dependOn(&run_editor_cmd.step);
 
+    const exe_ide = b.addExecutable(.{
+        .name = "zide-ide",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/app/entry_ide.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    exe_ide.root_module.addOptions("build_options", build_options);
+    exe_ide.linkLibrary(treesitter);
+    exe_ide.linkLibrary(ts_zig);
+    if (use_vcpkg) {
+        exe_ide.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
+        exe_ide.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
+        exe_ide.linkSystemLibrary("freetype");
+        exe_ide.linkSystemLibrary("harfbuzz");
+        exe_ide.linkSystemLibrary("lua");
+        exe_ide.linkSystemLibrary("SDL3");
+    } else {
+        exe_ide.linkSystemLibrary("freetype");
+        exe_ide.linkSystemLibrary("harfbuzz");
+        exe_ide.linkSystemLibrary("lua");
+        exe_ide.linkSystemLibrary("SDL3");
+    }
+    if (target_os == .linux) {
+        exe_ide.linkSystemLibrary("fontconfig");
+    }
+    exe_ide.addIncludePath(b.path("vendor"));
+    exe_ide.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
+    if (!use_vcpkg) {
+        exe_ide.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
+        exe_ide.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
+        exe_ide.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
+        if (target_os == .linux) {
+            exe_ide.addIncludePath(.{ .cwd_relative = "/usr/include/SDL3" });
+            exe_ide.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
+        }
+    }
+    if (target_os == .windows) {
+        exe_ide.linkSystemLibrary("opengl32");
+        exe_ide.linkSystemLibrary("gdi32");
+        exe_ide.linkSystemLibrary("comdlg32");
+        exe_ide.linkSystemLibrary("dwrite");
+        exe_ide.linkSystemLibrary("ole32");
+        exe_ide.linkSystemLibrary("winmm");
+        exe_ide.linkSystemLibrary("user32");
+        exe_ide.linkSystemLibrary("shell32");
+    } else if (target_os == .macos) {
+        exe_ide.linkFramework("OpenGL");
+        exe_ide.linkFramework("Cocoa");
+        exe_ide.linkFramework("IOKit");
+        exe_ide.linkFramework("CoreVideo");
+    } else {
+        exe_ide.linkSystemLibrary("GL");
+        exe_ide.linkSystemLibrary("m");
+        exe_ide.linkSystemLibrary("pthread");
+        exe_ide.linkSystemLibrary("dl");
+        exe_ide.linkSystemLibrary("rt");
+    }
+    exe_ide.addCSourceFile(.{
+        .file = b.path("src/c/stb_image.c"),
+        .flags = &.{"-std=c99"},
+    });
+    b.installArtifact(exe_ide);
+    const run_ide_cmd = b.addRunArtifact(exe_ide);
+    run_ide_cmd.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        run_ide_cmd.addArgs(args);
+    }
+    const run_ide_step = b.step("run-ide", "Run ide-only app entry");
+    run_ide_step.dependOn(&run_ide_cmd.step);
+
     // ─────────────────────────────────────────────────────────────────────────
     // Terminal FFI bridge
     // ─────────────────────────────────────────────────────────────────────────
