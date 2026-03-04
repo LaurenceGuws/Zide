@@ -5,6 +5,7 @@ const app_editor_actions = @import("app/editor_actions.zig");
 const app_editor_intent_route = @import("app/editor_intent_route.zig");
 const app_editor_create_intent_runtime = @import("app/editor_create_intent_runtime.zig");
 const app_editor_display_prepare = @import("app/editor_display_prepare.zig");
+const app_editor_input_runtime = @import("app/editor_input_runtime.zig");
 const app_active_editor_frame = @import("app/active_editor_frame.zig");
 const app_editor_shortcuts_frame = @import("app/editor_shortcuts_frame.zig");
 const app_editor_seed = @import("app/editor_seed.zig");
@@ -1652,36 +1653,22 @@ const AppState = struct {
                                                                                                         editor_now: f64,
                                                                                                     ) bool {
                                                                                                         const route_state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        const editor_x = editor_layout.editor.x;
-                                                                                                        const editor_y = editor_layout.editor.y;
-                                                                                                        const mouse_shell = app_shell.MousePos{ .x = editor_mouse.x, .y = editor_mouse.y };
-                                                                                                        const hscroll_handled = widget.handleHorizontalScrollbarInput(
+                                                                                                        const handled = app_editor_input_runtime.handleScrollbarInput(
+                                                                                                            widget,
                                                                                                             editor_shell,
-                                                                                                            editor_x,
-                                                                                                            editor_y,
-                                                                                                            editor_layout.editor.width,
-                                                                                                            editor_layout.editor.height,
-                                                                                                            mouse_shell,
+                                                                                                            editor_layout,
+                                                                                                            editor_mouse,
+                                                                                                            editor_input_batch,
                                                                                                             &route_state.editor_hscroll_dragging,
                                                                                                             &route_state.editor_hscroll_grab_offset,
-                                                                                                            editor_input_batch,
-                                                                                                        );
-                                                                                                        const vscroll_handled = widget.handleVerticalScrollbarInput(
-                                                                                                            editor_shell,
-                                                                                                            editor_x,
-                                                                                                            editor_y,
-                                                                                                            editor_layout.editor.width,
-                                                                                                            editor_layout.editor.height,
-                                                                                                            mouse_shell,
                                                                                                             &route_state.editor_vscroll_dragging,
                                                                                                             &route_state.editor_vscroll_grab_offset,
-                                                                                                            editor_input_batch,
                                                                                                         );
-                                                                                                        if (hscroll_handled or vscroll_handled) {
+                                                                                                        if (handled) {
                                                                                                             route_state.needs_redraw = true;
                                                                                                             route_state.metrics.noteInput(editor_now);
                                                                                                         }
-                                                                                                        return hscroll_handled or vscroll_handled;
+                                                                                                        return handled;
                                                                                                     }
                                                                                                 }.call,
                                                                                                 .handle_editor_mouse_selection_input = struct {
@@ -1696,63 +1683,21 @@ const AppState = struct {
                                                                                                         editor_now: f64,
                                                                                                     ) void {
                                                                                                         const route_state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        const editor_x = editor_layout.editor.x;
-                                                                                                        const editor_y = editor_layout.editor.y;
-                                                                                                        const in_editor = editor_mouse.x >= editor_x and editor_mouse.x <= editor_x + editor_layout.editor.width and
-                                                                                                            editor_mouse.y >= editor_y and editor_mouse.y <= editor_y + editor_layout.editor.height;
-                                                                                                        const alt = editor_input_batch.mods.alt;
-
-                                                                                                        if (!scrollbar_blocking and editor_input_batch.mousePressed(.left) and in_editor) {
-                                                                                                            if (widget.cursorFromMouse(editor_shell, editor_x, editor_y, editor_layout.editor.width, editor_layout.editor.height, editor_mouse.x, editor_mouse.y, false)) |pos| {
-                                                                                                                widget.editor.setCursor(pos.line, pos.col);
-                                                                                                                widget.editor.selection = null;
-                                                                                                                widget.editor.clearSelections();
-                                                                                                                route_state.editor_dragging = true;
-                                                                                                                route_state.editor_drag_start = pos;
-                                                                                                                route_state.editor_drag_rect = alt;
-                                                                                                                if (alt) {
-                                                                                                                    widget.editor.expandRectSelection(pos.line, pos.line, pos.col, pos.col) catch {};
-                                                                                                                } else {
-                                                                                                                    widget.editor.selection = .{ .start = pos, .end = pos };
-                                                                                                                }
-                                                                                                                route_state.needs_redraw = true;
-                                                                                                                route_state.metrics.noteInput(editor_now);
-                                                                                                            }
-                                                                                                        }
-
-                                                                                                        if (!scrollbar_blocking and route_state.editor_dragging and editor_input_batch.mouseDown(.left)) {
-                                                                                                            if (widget.cursorFromMouse(editor_shell, editor_x, editor_y, editor_layout.editor.width, editor_layout.editor.height, editor_mouse.x, editor_mouse.y, true)) |pos| {
-                                                                                                                widget.editor.setCursorNoClear(pos.line, pos.col);
-                                                                                                                if (route_state.editor_drag_rect) {
-                                                                                                                    widget.editor.clearSelections();
-                                                                                                                    const start_line = @min(route_state.editor_drag_start.line, pos.line);
-                                                                                                                    const end_line = @max(route_state.editor_drag_start.line, pos.line);
-                                                                                                                    const start_col = @min(route_state.editor_drag_start.col, pos.col);
-                                                                                                                    const end_col = @max(route_state.editor_drag_start.col, pos.col);
-                                                                                                                    widget.editor.expandRectSelection(start_line, end_line, start_col, end_col) catch {};
-                                                                                                                    widget.editor.selection = null;
-                                                                                                                } else {
-                                                                                                                    widget.editor.selection = .{ .start = route_state.editor_drag_start, .end = pos };
-                                                                                                                    widget.editor.clearSelections();
-                                                                                                                }
-                                                                                                                route_state.needs_redraw = true;
-                                                                                                                route_state.metrics.noteInput(editor_now);
-                                                                                                            }
-                                                                                                        }
-
-                                                                                                        if (route_state.editor_dragging and editor_input_batch.mouseReleased(.left)) {
-                                                                                                            route_state.editor_dragging = false;
-                                                                                                            if (!route_state.editor_drag_rect) {
-                                                                                                                if (widget.editor.selection) |sel| {
-                                                                                                                    if (sel.start.offset == sel.end.offset) {
-                                                                                                                        widget.editor.selection = null;
-                                                                                                                    }
-                                                                                                                }
-                                                                                                            } else if (widget.editor.selectionCount() == 0) {
-                                                                                                                widget.editor.selection = null;
-                                                                                                            }
-                                                                                                            route_state.needs_redraw = true;
-                                                                                                        }
+                                                                                                        const result = app_editor_input_runtime.handleMouseSelectionInput(
+                                                                                                            widget,
+                                                                                                            editor_shell,
+                                                                                                            editor_layout,
+                                                                                                            editor_mouse,
+                                                                                                            editor_input_batch,
+                                                                                                            scrollbar_blocking,
+                                                                                                            .{
+                                                                                                                .dragging = &route_state.editor_dragging,
+                                                                                                                .drag_start = &route_state.editor_drag_start,
+                                                                                                                .drag_rect = &route_state.editor_drag_rect,
+                                                                                                            },
+                                                                                                        );
+                                                                                                        if (result.needs_redraw) route_state.needs_redraw = true;
+                                                                                                        if (result.note_input) route_state.metrics.noteInput(editor_now);
                                                                                                     }
                                                                                                 }.call,
                                                                                                 .precompute_editor_visible_caches = struct {
