@@ -671,6 +671,44 @@ const AppState = struct {
         state.needs_redraw = true;
     }
 
+    fn routeNoteInputFromCtx(raw: *anyopaque, at: f64) void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        state.metrics.noteInput(at);
+    }
+
+    fn routeActiveTerminalCloseIntentFromCtx(raw: *anyopaque) !void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        _ = try app_terminal_intent_route_runtime.routeActiveAndSync(state, .close);
+    }
+
+    fn routeCloseActiveTerminalTabFromCtx(raw: *anyopaque) !bool {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        return try app_terminal_close_active_runtime.closeActive(
+            state,
+            raw,
+            .{ .sync_terminal_mode_tab_bar = routeSyncTerminalTabBarFromCtx },
+        );
+    }
+
+    fn routeApplyTerminalCloseConfirmDecisionFromCtx(
+        raw: *anyopaque,
+        decision: app_modes.ide.TerminalCloseConfirmDecision,
+        at: f64,
+    ) !bool {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        return try app_terminal_close_confirm_decision_runtime.applyDecision(
+            state,
+            decision,
+            at,
+            raw,
+            .{
+                .route_close_intent_and_sync = routeActiveTerminalCloseIntentFromCtx,
+                .close_active_terminal_tab = routeCloseActiveTerminalTabFromCtx,
+                .note_input = routeNoteInputFromCtx,
+            },
+        );
+    }
+
     fn handlePreInputShortcutFrame(
         self: *AppState,
         frame_shell: *Shell,
@@ -696,41 +734,7 @@ const AppState = struct {
                 self.shell.uiScaleFactor(),
                 at,
                 @ptrCast(self),
-                struct {
-                    fn call(decision_raw: *anyopaque, decision: app_modes.ide.TerminalCloseConfirmDecision, decision_at: f64) !bool {
-                        const state: *AppState = @ptrCast(@alignCast(decision_raw));
-                        return try app_terminal_close_confirm_decision_runtime.applyDecision(
-                            state,
-                            decision,
-                            decision_at,
-                            decision_raw,
-                            .{
-                                .route_close_intent_and_sync = struct {
-                                    fn inner(close_route_raw: *anyopaque) !void {
-                                        const inner_state2: *AppState = @ptrCast(@alignCast(close_route_raw));
-                                        _ = try app_terminal_intent_route_runtime.routeActiveAndSync(inner_state2, .close);
-                                    }
-                                }.inner,
-                                .close_active_terminal_tab = struct {
-                                    fn inner(close_active_raw: *anyopaque) !bool {
-                                        const inner_state2: *AppState = @ptrCast(@alignCast(close_active_raw));
-                                        return try app_terminal_close_active_runtime.closeActive(
-                                            inner_state2,
-                                            @ptrCast(inner_state2),
-                                            .{ .sync_terminal_mode_tab_bar = routeSyncTerminalTabBarFromCtx },
-                                        );
-                                    }
-                                }.inner,
-                                .note_input = struct {
-                                    fn inner(note_raw: *anyopaque, inner_at: f64) void {
-                                        const inner_state2: *AppState = @ptrCast(@alignCast(note_raw));
-                                        inner_state2.metrics.noteInput(inner_at);
-                                    }
-                                }.inner,
-                            },
-                        );
-                    }
-                }.call,
+                routeApplyTerminalCloseConfirmDecisionFromCtx,
             )) {
                 return .{
                     .suppress_terminal_shortcuts = false,
