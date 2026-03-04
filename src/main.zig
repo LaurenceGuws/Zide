@@ -45,12 +45,11 @@ const app_mouse_debug_log = @import("app/mouse_debug_log.zig");
 const app_mouse_pressed_frame = @import("app/mouse_pressed_frame.zig");
 const app_mouse_pressed_routing_runtime = @import("app/mouse_pressed_routing_runtime.zig");
 const app_mouse_pressed_hooks_runtime = @import("app/mouse_pressed_hooks_runtime.zig");
-const app_input_actions_frame_runtime = @import("app/input_actions_frame_runtime.zig");
+const app_input_actions_hooks_runtime = @import("app/input_actions_hooks_runtime.zig");
 const app_tab_drag_input_runtime = @import("app/tab_drag_input_runtime.zig");
 const app_active_view_runtime = @import("app/active_view_runtime.zig");
 const app_active_view_hooks_runtime = @import("app/active_view_hooks_runtime.zig");
 const app_pointer_activity_frame = @import("app/pointer_activity_frame.zig");
-const app_shortcut_action_runtime = @import("app/shortcut_action_runtime.zig");
 const app_terminal_split_resize_frame = @import("app/terminal_split_resize_frame.zig");
 const app_window_resize_event_frame = @import("app/window_resize_event_frame.zig");
 const app_deferred_terminal_resize_frame = @import("app/deferred_terminal_resize_frame.zig");
@@ -776,6 +775,14 @@ const AppState = struct {
         return try app_post_preinput_hooks_runtime.handle(self, shell, batch, now);
     }
 
+    fn handleInputActionsFrame(
+        self: *AppState,
+        frame_shell: *Shell,
+        at: f64,
+    ) !bool {
+        return try app_input_actions_hooks_runtime.handle(self, frame_shell, at);
+    }
+
     fn handleTabDragFrame(
         self: *AppState,
         frame_input_batch: *shared_types.input.InputBatch,
@@ -925,6 +932,267 @@ const AppState = struct {
         );
     }
 
+    fn handleUpdateFrame(
+        self: *AppState,
+        input_batch: *shared_types.input.InputBatch,
+    ) !void {
+        try app_update_driver.handle(
+            self.shell,
+            input_batch,
+            @ptrCast(self),
+            .{
+                .handle_update_prelude_frame = struct {
+                    fn cb(cb_raw: *anyopaque, shell: *Shell, batch: *shared_types.input.InputBatch) !?app_update_driver.Prelude {
+                        const pre = (try app_update_prelude_frame_runtime.handle(
+                            shell,
+                            batch,
+                            cb_raw,
+                            .{
+                                .handle_font_sample_frame = struct {
+                                    fn inner(inner_raw: *anyopaque, frame_shell: *Shell, frame_input_batch: *shared_types.input.InputBatch) bool {
+                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
+                                        if (!app_modes.ide.isFontSample(inner_state.app_mode)) return false;
+                                        if (inner_state.font_sample_auto_close_frames > 0 and inner_state.frame_id >= inner_state.font_sample_auto_close_frames) {
+                                            inner_state.font_sample_close_pending = true;
+                                            inner_state.needs_redraw = true;
+                                            return true;
+                                        }
+                                        if (inner_state.font_sample_view) |*view| {
+                                            if (view.update(frame_shell.rendererPtr(), frame_input_batch)) {
+                                                inner_state.needs_redraw = true;
+                                            }
+                                        }
+                                        return false;
+                                    }
+                                }.inner,
+                                .handle_widget_input_frame = struct {
+                                    fn inner(inner_raw: *anyopaque) !void {
+                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
+                                        inner_state.options_bar.updateInput(inner_state.last_input);
+                                        inner_state.tab_bar.updateInput(inner_state.last_input);
+                                        inner_state.side_nav.updateInput(inner_state.last_input);
+                                        inner_state.status_bar.updateInput(inner_state.last_input);
+                                        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(inner_state);
+                                    }
+                                }.inner,
+                                .tick_config_reload_notice_frame = struct {
+                                    fn inner(inner_raw: *anyopaque, at: f64) void {
+                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
+                                        const still_visible = app_config_reload_notice_state.isVisible(inner_state.config_reload_notice_until, at);
+                                        if (still_visible) {
+                                            inner_state.needs_redraw = true;
+                                        } else if (app_config_reload_notice_state.clearIfExpired(&inner_state.config_reload_notice_until, at)) {
+                                            inner_state.needs_redraw = true;
+                                        }
+                                    }
+                                }.inner,
+                                .route_input_for_current_focus = struct {
+                                    fn inner(inner_raw: *anyopaque, frame_input_batch: *shared_types.input.InputBatch) input_actions.FocusKind {
+                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
+                                        _ = app_terminal_close_confirm_active_runtime.reconcile(inner_state);
+                                        const routed_active = app_modes.ide.routedActiveMode(inner_state.app_mode, inner_state.active_kind);
+                                        const focus = if (routed_active == .terminal) input_actions.FocusKind.terminal else input_actions.FocusKind.editor;
+                                        inner_state.input_router.route(frame_input_batch, focus);
+                                        return focus;
+                                    }
+                                }.inner,
+                                .handle_pre_input_shortcut_frame = struct {
+                                    fn inner(
+                                        inner_raw: *anyopaque,
+                                        frame_shell: *Shell,
+                                        frame_input_batch: *shared_types.input.InputBatch,
+                                        focus: input_actions.FocusKind,
+                                        at: f64,
+                                    ) !app_update_prelude_frame_runtime.PreInputResult {
+                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
+                                        return try inner_state.handlePreInputShortcutFrame(
+                                            frame_shell,
+                                            frame_input_batch,
+                                            focus,
+                                            at,
+                                        );
+                                    }
+                                }.inner,
+                                .note_input = struct {
+                                    fn inner(inner_raw: *anyopaque, at: f64) void {
+                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
+                                        inner_state.metrics.noteInput(at);
+                                    }
+                                }.inner,
+                                .set_last_input_snapshot = struct {
+                                    fn inner(inner_raw: *anyopaque, snapshot: shared_types.input.InputSnapshot) void {
+                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
+                                        inner_state.last_input = snapshot;
+                                    }
+                                }.inner,
+                            },
+                        )) orelse return null;
+                        return .{
+                            .now = pre.now,
+                            .suppress_terminal_shortcuts = pre.suppress_terminal_shortcuts,
+                            .terminal_close_modal_active = pre.terminal_close_modal_active,
+                        };
+                    }
+                }.cb,
+                .handle_post_preinput_frame = struct {
+                    fn cb(cb_raw: *anyopaque, shell: *Shell, batch: *shared_types.input.InputBatch, now: f64) !app_update_driver.Frame {
+                        const state: *AppState = @ptrCast(@alignCast(cb_raw));
+                        return try state.handlePostPreinputFrame(shell, batch, now);
+                    }
+                }.cb,
+                .handle_interactive_frame = struct {
+                    fn cb(
+                        cb_raw: *anyopaque,
+                        shell: *Shell,
+                        frame: app_update_driver.Frame,
+                        batch: *shared_types.input.InputBatch,
+                        suppress_terminal_shortcuts: bool,
+                        terminal_close_modal_active: bool,
+                        now: f64,
+                    ) !void {
+                        try app_interactive_frame.handle(
+                            shell,
+                            .{
+                                .layout = frame.layout,
+                                .mouse = frame.mouse,
+                                .term_y = frame.term_y,
+                            },
+                            batch,
+                            suppress_terminal_shortcuts,
+                            terminal_close_modal_active,
+                            now,
+                            cb_raw,
+                            .{
+                                .handle_input_actions = struct {
+                                    fn inner(inner_raw: *anyopaque, frame_shell: *Shell, at: f64) !bool {
+                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
+                                        return try inner_state.handleInputActionsFrame(frame_shell, at);
+                                    }
+                                }.inner,
+                                .handle_mouse_pressed = struct {
+                                    fn inner(
+                                        inner_raw: *anyopaque,
+                                        frame_shell: *Shell,
+                                        layout: layout_types.WidgetLayout,
+                                        mouse: shared_types.input.MousePos,
+                                        term_y: f32,
+                                        frame_input_batch: *shared_types.input.InputBatch,
+                                        at: f64,
+                                    ) !void {
+                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
+                                        try inner_state.handleMousePressedFrame(
+                                            frame_shell,
+                                            layout,
+                                            mouse,
+                                            term_y,
+                                            frame_input_batch,
+                                            at,
+                                        );
+                                    }
+                                }.inner,
+                                .handle_tab_drag = struct {
+                                    fn inner(
+                                        inner_raw: *anyopaque,
+                                        frame_input_batch: *shared_types.input.InputBatch,
+                                        layout: layout_types.WidgetLayout,
+                                        mouse: shared_types.input.MousePos,
+                                        at: f64,
+                                    ) !void {
+                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
+                                        try inner_state.handleTabDragFrame(frame_input_batch, layout, mouse, at);
+                                    }
+                                }.inner,
+                                .handle_active_view = struct {
+                                    fn inner(
+                                        inner_raw: *anyopaque,
+                                        frame_shell: *Shell,
+                                        layout: layout_types.WidgetLayout,
+                                        mouse: shared_types.input.MousePos,
+                                        frame_input_batch: *shared_types.input.InputBatch,
+                                        frame_suppress_terminal_shortcuts: bool,
+                                        frame_terminal_close_modal_active: bool,
+                                        at: f64,
+                                    ) !void {
+                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
+                                        try inner_state.handleActiveViewFrame(
+                                            frame_shell,
+                                            layout,
+                                            mouse,
+                                            frame_input_batch,
+                                            frame_suppress_terminal_shortcuts,
+                                            frame_terminal_close_modal_active,
+                                            at,
+                                        );
+                                    }
+                                }.inner,
+                            },
+                        );
+                    }
+                }.cb,
+            },
+        );
+    }
+
+    fn handleFrameRenderAndIdle(
+        self: *AppState,
+        input_batch: *shared_types.input.InputBatch,
+        poll_ms: f64,
+        build_ms: f64,
+        update_ms: f64,
+    ) void {
+        app_frame_render_idle_runtime.handle(
+            self,
+            @ptrCast(self),
+            input_batch,
+            poll_ms,
+            build_ms,
+            update_ms,
+            .{
+                .draw = struct {
+                    fn cb(cb_raw: *anyopaque) void {
+                        const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
+                        app_draw_frame_runtime.draw(
+                            cb_state,
+                            cb_state.shell,
+                            cb_raw,
+                            .{
+                                .compute_layout = struct {
+                                    fn inner(inner_raw: *anyopaque, width: f32, height: f32) layout_types.WidgetLayout {
+                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
+                                        return app_ui_layout_runtime.computeLayout(inner_state, width, height);
+                                    }
+                                }.inner,
+                                .apply_current_tab_bar_width_mode = struct {
+                                    fn inner(inner_raw: *anyopaque) void {
+                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
+                                        app_tab_bar_width.applyForMode(
+                                            &inner_state.tab_bar,
+                                            inner_state.app_mode,
+                                            inner_state.editor_tab_bar_width_mode,
+                                            inner_state.terminal_tab_bar_width_mode,
+                                        );
+                                    }
+                                }.inner,
+                                .terminal_close_confirm_active = struct {
+                                    fn inner(inner_raw: *anyopaque) bool {
+                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
+                                        return app_terminal_close_confirm_active_runtime.reconcile(inner_state);
+                                    }
+                                }.inner,
+                            },
+                        );
+                    }
+                }.cb,
+                .maybe_log_metrics = struct {
+                    fn cb(cb_raw: *anyopaque, at: f64) void {
+                        const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
+                        app_metrics_log_runtime.maybeLog(cb_state, at);
+                    }
+                }.cb,
+            },
+        );
+    }
+
     pub fn newTerminal(self: *AppState) !void {
         // Calculate terminal size based on UI
         const shell = self.shell;
@@ -1032,350 +1300,13 @@ const AppState = struct {
                                                 .update = struct {
                                                     fn step(step_raw: *anyopaque, input_batch: *shared_types.input.InputBatch) !void {
                                                         const step_state: *AppState = @ptrCast(@alignCast(step_raw));
-                                                        try app_update_driver.handle(
-                                                            step_state.shell,
-                                                            input_batch,
-                                                            step_raw,
-                                                            .{
-                                                                .handle_update_prelude_frame = struct {
-                                                                    fn cb(cb_raw: *anyopaque, shell: *Shell, batch: *shared_types.input.InputBatch) !?app_update_driver.Prelude {
-                                                                        const pre = (try app_update_prelude_frame_runtime.handle(
-                                                                            shell,
-                                                                            batch,
-                                                                            cb_raw,
-                                                                            .{
-                                                                                .handle_font_sample_frame = struct {
-                                                                                    fn inner(inner_raw: *anyopaque, frame_shell: *Shell, frame_input_batch: *shared_types.input.InputBatch) bool {
-                                                                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        if (!app_modes.ide.isFontSample(inner_state.app_mode)) return false;
-                                                                                        if (inner_state.font_sample_auto_close_frames > 0 and inner_state.frame_id >= inner_state.font_sample_auto_close_frames) {
-                                                                                            inner_state.font_sample_close_pending = true;
-                                                                                            inner_state.needs_redraw = true;
-                                                                                            return true;
-                                                                                        }
-                                                                                        if (inner_state.font_sample_view) |*view| {
-                                                                                            if (view.update(frame_shell.rendererPtr(), frame_input_batch)) {
-                                                                                                inner_state.needs_redraw = true;
-                                                                                            }
-                                                                                        }
-                                                                                        return false;
-                                                                                    }
-                                                                                }.inner,
-                                                                                .handle_widget_input_frame = struct {
-                                                                                    fn inner(inner_raw: *anyopaque) !void {
-                                                                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        inner_state.options_bar.updateInput(inner_state.last_input);
-                                                                                        inner_state.tab_bar.updateInput(inner_state.last_input);
-                                                                                        inner_state.side_nav.updateInput(inner_state.last_input);
-                                                                                        inner_state.status_bar.updateInput(inner_state.last_input);
-                                                                                        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(inner_state);
-                                                                                    }
-                                                                                }.inner,
-                                                                                .tick_config_reload_notice_frame = struct {
-                                                                                    fn inner(inner_raw: *anyopaque, at: f64) void {
-                                                                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        const still_visible = app_config_reload_notice_state.isVisible(inner_state.config_reload_notice_until, at);
-                                                                                        if (still_visible) {
-                                                                                            inner_state.needs_redraw = true;
-                                                                                        } else if (app_config_reload_notice_state.clearIfExpired(&inner_state.config_reload_notice_until, at)) {
-                                                                                            inner_state.needs_redraw = true;
-                                                                                        }
-                                                                                    }
-                                                                                }.inner,
-                                                                                .route_input_for_current_focus = struct {
-                                                                                    fn inner(inner_raw: *anyopaque, frame_input_batch: *shared_types.input.InputBatch) input_actions.FocusKind {
-                                                                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        _ = app_terminal_close_confirm_active_runtime.reconcile(inner_state);
-                                                                                        const routed_active = app_modes.ide.routedActiveMode(inner_state.app_mode, inner_state.active_kind);
-                                                                                        const focus = if (routed_active == .terminal) input_actions.FocusKind.terminal else input_actions.FocusKind.editor;
-                                                                                        inner_state.input_router.route(frame_input_batch, focus);
-                                                                                        return focus;
-                                                                                    }
-                                                                                }.inner,
-                                                                                .handle_pre_input_shortcut_frame = struct {
-                                                                                    fn inner(
-                                                                                        inner_raw: *anyopaque,
-                                                                                        frame_shell: *Shell,
-                                                                                        frame_input_batch: *shared_types.input.InputBatch,
-                                                                                        focus: input_actions.FocusKind,
-                                                                                        at: f64,
-                                                                                    ) !app_update_prelude_frame_runtime.PreInputResult {
-                                                                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        return try inner_state.handlePreInputShortcutFrame(
-                                                                                            frame_shell,
-                                                                                            frame_input_batch,
-                                                                                            focus,
-                                                                                            at,
-                                                                                        );
-                                                                                    }
-                                                                                }.inner,
-                                                                                .note_input = struct {
-                                                                                    fn inner(inner_raw: *anyopaque, at: f64) void {
-                                                                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        inner_state.metrics.noteInput(at);
-                                                                                    }
-                                                                                }.inner,
-                                                                                .set_last_input_snapshot = struct {
-                                                                                    fn inner(inner_raw: *anyopaque, snapshot: shared_types.input.InputSnapshot) void {
-                                                                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        inner_state.last_input = snapshot;
-                                                                                    }
-                                                                                }.inner,
-                                                                            },
-                                                                        )) orelse return null;
-                                                                        return .{
-                                                                            .now = pre.now,
-                                                                            .suppress_terminal_shortcuts = pre.suppress_terminal_shortcuts,
-                                                                            .terminal_close_modal_active = pre.terminal_close_modal_active,
-                                                                        };
-                                                                    }
-                                                                }.cb,
-                                                                .handle_post_preinput_frame = struct {
-                                                                    fn cb(cb_raw: *anyopaque, shell: *Shell, batch: *shared_types.input.InputBatch, now: f64) !app_update_driver.Frame {
-                                                                        const state: *AppState = @ptrCast(@alignCast(cb_raw));
-                                                                        return try state.handlePostPreinputFrame(shell, batch, now);
-                                                                    }
-                                                                }.cb,
-                                                                .handle_interactive_frame = struct {
-                                                                    fn cb(
-                                                                        cb_raw: *anyopaque,
-                                                                        shell: *Shell,
-                                                                        frame: app_update_driver.Frame,
-                                                                        batch: *shared_types.input.InputBatch,
-                                                                        suppress_terminal_shortcuts: bool,
-                                                                        terminal_close_modal_active: bool,
-                                                                        now: f64,
-                                                                    ) !void {
-                                                                        try app_interactive_frame.handle(
-                                                                            shell,
-                                                                            .{
-                                                                                .layout = frame.layout,
-                                                                                .mouse = frame.mouse,
-                                                                                .term_y = frame.term_y,
-                                                                            },
-                                                                            batch,
-                                                                            suppress_terminal_shortcuts,
-                                                                            terminal_close_modal_active,
-                                                                            now,
-                                                                            cb_raw,
-                                                                            .{
-                                                                                .handle_input_actions = struct {
-                                                                                    fn inner(inner_raw: *anyopaque, frame_shell: *Shell, at: f64) !bool {
-                                                                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        _ = frame_shell;
-                                                                                        return try app_input_actions_frame_runtime.handle(
-                                                                                            inner_state.input_router.actionsSlice(),
-                                                                                            at,
-                                                                                            @ptrCast(inner_state),
-                                                                                            .{
-                                                                                                .handle_shortcut_action = struct {
-                                                                                                    fn call(action_raw: *anyopaque, kind: input_actions.ActionKind, inner_at: f64, handled_zoom: *bool) !bool {
-                                                                                                        const state: *AppState = @ptrCast(@alignCast(action_raw));
-                                                                                                        const zoom_log = app_logger.logger("ui.zoom.shortcut");
-                                                                                                        const result = try app_shortcut_action_runtime.handle(
-                                                                                                            kind,
-                                                                                                            state.app_mode,
-                                                                                                            &state.show_terminal,
-                                                                                                            state.terminals.items.len,
-                                                                                                            state.shell,
-                                                                                                            inner_at,
-                                                                                                            zoom_log,
-                                                                                                            @ptrCast(state),
-                                                                                                            .{
-                                                                                                                .new_editor = routeNewEditorFromCtx,
-                                                                                                                .new_terminal = routeNewTerminalFromCtx,
-                                                                                                                .handle_terminal_shortcut_intent = struct {
-                                                                                                                    fn call(route_raw: *anyopaque, intent: app_modes.ide.TerminalShortcutIntent, route_at: f64) !bool {
-                                                                                                                        const route_state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                                        if (!app_terminal_shortcut_policy.canHandleIntent(route_state.app_mode, intent)) return false;
-                                                                                                                        const hooks: app_terminal_shortcut_runtime.RuntimeHooks = .{
-                                                                                                                            .request_create = struct {
-                                                                                                                               fn call(hook_raw: *anyopaque, hook_at: f64) !bool {
-                                                                                                                                    const hook_state: *AppState = @ptrCast(@alignCast(hook_raw));
-                                                                                                                                    try app_tab_action_apply_runtime.applyTerminalAndSync(hook_state, .create);
-                                                                                                                                    try hook_state.newTerminal();
-                                                                                                                                    try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(hook_state);
-                                                                                                                                    hook_state.needs_redraw = true;
-                                                                                                                                    hook_state.metrics.noteInput(hook_at);
-                                                                                                                                    return true;
-                                                                                                                               }
-                                                                                                                           }.call,
-                                                                                                                           .request_close = struct {
-                                                                                                                               fn call(hook_raw: *anyopaque, hook_at: f64) !bool {
-                                                                                                                                    const hook_state: *AppState = @ptrCast(@alignCast(hook_raw));
-                                                                                                                                    _ = try app_terminal_intent_route_runtime.routeActiveAndSync(hook_state, .close);
-                                                                                                                                    if (try app_terminal_close_active_runtime.closeActive(
-                                                                                                                                        hook_state,
-                                                                                                                                        @ptrCast(hook_state),
-                                                                                                                                        .{ .sync_terminal_mode_tab_bar = routeSyncTerminalTabBarFromCtx },
-                                                                                                                                    )) {
-                                                                                                                                        hook_state.needs_redraw = true;
-                                                                                                                                        hook_state.metrics.noteInput(hook_at);
-                                                                                                                                        return true;
-                                                                                                                                    }
-                                                                                                                                    if (app_terminal_close_confirm_active_runtime.reconcile(hook_state)) {
-                                                                                                                                        hook_state.needs_redraw = true;
-                                                                                                                                        hook_state.metrics.noteInput(hook_at);
-                                                                                                                                        return true;
-                                                                                                                                    }
-                                                                                                                                    return false;
-                                                                                                                               }
-                                                                                                                           }.call,
-                                                                                                                           .request_cycle = struct {
-                                                                                                                               fn call(hook_raw: *anyopaque, dir: app_modes.ide.TerminalShortcutCycleDirection, hook_at: f64) !bool {
-                                                                                                                                    const hook_state: *AppState = @ptrCast(@alignCast(hook_raw));
-                                                                                                                                    const moved = app_terminal_tab_navigation_runtime.cycle(hook_state, dir == .next);
-                                                                                                                                    if (!moved) return false;
-                                                                                                                                    try app_tab_action_apply_runtime.applyTerminalAndSync(hook_state, app_terminal_tab_intents.cycleIntentForDirection(dir));
-                                                                                                                                    hook_state.needs_redraw = true;
-                                                                                                                                    hook_state.metrics.noteInput(hook_at);
-                                                                                                                                    return true;
-                                                                                                                               }
-                                                                                                                           }.call,
-                                                                                                                           .request_focus = struct {
-                                                                                                                               fn call(hook_raw: *anyopaque, route: app_modes.ide.TerminalFocusRoute, hook_at: f64) !bool {
-                                                                                                                                    const hook_state: *AppState = @ptrCast(@alignCast(hook_raw));
-                                                                                                                                    try app_tab_action_apply_runtime.applyTerminalAndSync(hook_state, route.intent);
-                                                                                                                                    if (!app_terminal_tab_navigation_runtime.focusByIndex(hook_state, route.index)) return false;
-                                                                                                                                    hook_state.needs_redraw = true;
-                                                                                                                                    hook_state.metrics.noteInput(hook_at);
-                                                                                                                                    return true;
-                                                                                                                               }
-                                                                                                                           }.call,
-                                                                                                                        };
-                                                                                                                        return app_terminal_shortcut_runtime.handleIntent(intent, route_at, @ptrCast(route_state), hooks);
-                                                                                                                    }
-                                                                                                                }.call,
-                                                                                                            },
-                                                                                                        );
-                                                                                                        if (result.needs_redraw) state.needs_redraw = true;
-                                                                                                        if (result.note_input) state.metrics.noteInput(inner_at);
-                                                                                                        if (result.handled_zoom) handled_zoom.* = true;
-                                                                                                        return result.handled;
-                                                                                                    }
-                                                                                                }.call,
-                                                                                            },
-                                                                                        );
-                                                                                    }
-                                                                                }.inner,
-                                                                                .handle_mouse_pressed = struct {
-                                                                                    fn inner(
-                                                                                        inner_raw: *anyopaque,
-                                                                                        frame_shell: *Shell,
-                                                                                        layout: layout_types.WidgetLayout,
-                                                                                        mouse: shared_types.input.MousePos,
-                                                                                        term_y: f32,
-                                                                                        frame_input_batch: *shared_types.input.InputBatch,
-                                                                                        at: f64,
-                                                                                    ) !void {
-                                                                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        try inner_state.handleMousePressedFrame(
-                                                                                            frame_shell,
-                                                                                            layout,
-                                                                                            mouse,
-                                                                                            term_y,
-                                                                                            frame_input_batch,
-                                                                                            at,
-                                                                                        );
-                                                                                    }
-                                                                                }.inner,
-                                                                                .handle_tab_drag = struct {
-                                                                                    fn inner(
-                                                                                        inner_raw: *anyopaque,
-                                                                                        frame_input_batch: *shared_types.input.InputBatch,
-                                                                                        layout: layout_types.WidgetLayout,
-                                                                                        mouse: shared_types.input.MousePos,
-                                                                                        at: f64,
-                                                                                    ) !void {
-                                                                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        try inner_state.handleTabDragFrame(frame_input_batch, layout, mouse, at);
-                                                                                    }
-                                                                                }.inner,
-                                                                                .handle_active_view = struct {
-                                                                                    fn inner(
-                                                                                        inner_raw: *anyopaque,
-                                                                                        frame_shell: *Shell,
-                                                                                        layout: layout_types.WidgetLayout,
-                                                                                        mouse: shared_types.input.MousePos,
-                                                                                        frame_input_batch: *shared_types.input.InputBatch,
-                                                                                        frame_suppress_terminal_shortcuts: bool,
-                                                                                        frame_terminal_close_modal_active: bool,
-                                                                                        at: f64,
-                                                                                    ) !void {
-                                                                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        try inner_state.handleActiveViewFrame(
-                                                                                            frame_shell,
-                                                                                            layout,
-                                                                                            mouse,
-                                                                                            frame_input_batch,
-                                                                                            frame_suppress_terminal_shortcuts,
-                                                                                            frame_terminal_close_modal_active,
-                                                                                            at,
-                                                                                        );
-                                                                                    }
-                                                                                }.inner,
-                                                                            },
-                                                                        );
-                                                                    }
-                                                                }.cb,
-                                                            },
-                                                        );
+                                                        try step_state.handleUpdateFrame(input_batch);
                                                     }
                                                 }.step,
                                                 .handle_frame_render_and_idle = struct {
                                                     fn step(step_raw: *anyopaque, input_batch: *shared_types.input.InputBatch, poll_ms: f64, build_ms: f64, update_ms: f64) void {
                                                         const step_state: *AppState = @ptrCast(@alignCast(step_raw));
-                                                        app_frame_render_idle_runtime.handle(
-                                                            step_state,
-                                                            @ptrCast(step_state),
-                                                            input_batch,
-                                                            poll_ms,
-                                                            build_ms,
-                                                            update_ms,
-                                                            .{
-                                                                .draw = struct {
-                                                                    fn cb(cb_raw: *anyopaque) void {
-                                                                        const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
-                                                                        app_draw_frame_runtime.draw(
-                                                                            cb_state,
-                                                                            cb_state.shell,
-                                                                            cb_raw,
-                                                                            .{
-                                                                                .compute_layout = struct {
-                                                                                    fn inner(inner_raw: *anyopaque, width: f32, height: f32) layout_types.WidgetLayout {
-                                                                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        return app_ui_layout_runtime.computeLayout(inner_state, width, height);
-                                                                                    }
-                                                                                }.inner,
-                                                                                .apply_current_tab_bar_width_mode = struct {
-                                                                                    fn inner(inner_raw: *anyopaque) void {
-                                                                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        app_tab_bar_width.applyForMode(
-                                                                                            &inner_state.tab_bar,
-                                                                                            inner_state.app_mode,
-                                                                                            inner_state.editor_tab_bar_width_mode,
-                                                                                            inner_state.terminal_tab_bar_width_mode,
-                                                                                        );
-                                                                                    }
-                                                                                }.inner,
-                                                                                .terminal_close_confirm_active = struct {
-                                                                                    fn inner(inner_raw: *anyopaque) bool {
-                                                                                        const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        return app_terminal_close_confirm_active_runtime.reconcile(inner_state);
-                                                                                    }
-                                                                                }.inner,
-                                                                            },
-                                                                        );
-                                                                    }
-                                                                }.cb,
-                                                                .maybe_log_metrics = struct {
-                                                                    fn cb(cb_raw: *anyopaque, at: f64) void {
-                                                                        const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
-                                                                        app_metrics_log_runtime.maybeLog(cb_state, at);
-                                                                    }
-                                                                }.cb,
-                                                            },
-                                                        );
+                                                        step_state.handleFrameRenderAndIdle(input_batch, poll_ms, build_ms, update_ms);
                                                     }
                                                 }.step,
                                                 .should_stop_for_perf = struct {
