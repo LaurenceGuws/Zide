@@ -1,2 +1,1 @@
-pub const IdeHost = @import("host.zig").IdeHost;
-
+pub usingnamespace @import("host.zig");
