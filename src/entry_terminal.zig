@@ -1,6 +1,6 @@
 const std = @import("std");
-const app = @import("../main.zig");
-const runner = @import("runner.zig");
+const app = @import("main.zig");
+const runner = @import("app/runner.zig");
 
 pub fn main() !void {
     try runner.runWithGpa(struct {
@@ -9,3 +9,4 @@ pub fn main() !void {
         }
     }.call);
 }
+

@@ -256,7 +256,7 @@ pub fn build(b: *std.Build) void {
     const exe_terminal = b.addExecutable(.{
         .name = "zide-terminal",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("src/app/entry_terminal.zig"),
+            .root_source_file = b.path("src/entry_terminal.zig"),
             .target = target,
             .optimize = optimize,
             .link_libc = true,
@@ -329,7 +329,7 @@ pub fn build(b: *std.Build) void {
     const exe_editor = b.addExecutable(.{
         .name = "zide-editor",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("src/app/entry_editor.zig"),
+            .root_source_file = b.path("src/entry_editor.zig"),
             .target = target,
             .optimize = optimize,
             .link_libc = true,
@@ -402,7 +402,7 @@ pub fn build(b: *std.Build) void {
     const exe_ide = b.addExecutable(.{
         .name = "zide-ide",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("src/app/entry_ide.zig"),
+            .root_source_file = b.path("src/entry_ide.zig"),
             .target = target,
             .optimize = optimize,
             .link_libc = true,
