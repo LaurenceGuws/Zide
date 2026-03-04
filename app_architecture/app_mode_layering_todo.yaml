@@ -142,7 +142,7 @@ app_mode_layering_todo:
       tasks:
         - id: MODE-04-01
           title: "Capture pre/post compatibility matrix"
-          status: todo
+          status: in_progress
           files_to_add:
             - docs/app_mode_layering_validation.md
           notes:
