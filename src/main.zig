@@ -1008,6 +1008,23 @@ const AppState = struct {
         );
     }
 
+    fn initializeRunModeState(self: *AppState) !void {
+        try app_run_mode_init.initialize(
+            self.app_mode,
+            self.perf_mode,
+            self.perf_file_path,
+            @ptrCast(self),
+            .{
+                .terminal_tab_count = routeTerminalTabCountFromCtx,
+                .new_terminal = routeNewTerminalFromCtx,
+                .sync_terminal_mode_tab_bar = routeSyncTerminalTabBarFromCtx,
+                .open_file = routeOpenFileFromCtx,
+                .new_editor = routeNewEditorFromCtx,
+                .seed_default_welcome_buffer = routeSeedDefaultWelcomeBufferFromCtx,
+            },
+        );
+    }
+
     pub fn newTerminal(self: *AppState) !void {
         // Calculate terminal size based on UI
         const shell = self.shell;
@@ -1078,20 +1095,7 @@ const AppState = struct {
                 .initialize_run_mode_state = struct {
                     fn call(raw: *anyopaque) !void {
                         const state: *AppState = @ptrCast(@alignCast(raw));
-                        try app_run_mode_init.initialize(
-                            state.app_mode,
-                            state.perf_mode,
-                            state.perf_file_path,
-                            raw,
-                            .{
-                                .terminal_tab_count = routeTerminalTabCountFromCtx,
-                                .new_terminal = routeNewTerminalFromCtx,
-                                .sync_terminal_mode_tab_bar = routeSyncTerminalTabBarFromCtx,
-                                .open_file = routeOpenFileFromCtx,
-                                .new_editor = routeNewEditorFromCtx,
-                                .seed_default_welcome_buffer = routeSeedDefaultWelcomeBufferFromCtx,
-                            },
-                        );
+                        try state.initializeRunModeState();
                     }
                 }.call,
                 .run_main_loop = struct {
