@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_bootstrap = @import("app/bootstrap.zig");
+const app_config_reload_notice_state = @import("app/config_reload_notice_state.zig");
 const app_editor_actions = @import("app/editor_actions.zig");
 const app_editor_seed = @import("app/editor_seed.zig");
 const app_file_detect = @import("app/file_detect.zig");
@@ -1762,12 +1763,13 @@ const AppState = struct {
     }
 
     fn tickConfigReloadNoticeFrame(self: *AppState, now: f64) void {
-        if (self.config_reload_notice_until <= 0) return;
-        if (now < self.config_reload_notice_until) {
+        const still_visible = app_config_reload_notice_state.isVisible(self.config_reload_notice_until, now);
+        if (still_visible) {
             self.needs_redraw = true;
         } else {
-            self.config_reload_notice_until = 0;
-            self.needs_redraw = true;
+            if (app_config_reload_notice_state.clearIfExpired(&self.config_reload_notice_until, now)) {
+                self.needs_redraw = true;
+            }
         }
     }
 
@@ -2343,8 +2345,9 @@ const AppState = struct {
     }
 
     fn showConfigReloadNotice(self: *AppState, success: bool) void {
-        self.config_reload_notice_success = success;
-        self.config_reload_notice_until = app_shell.getTime() + 2.0;
+        const notice = app_config_reload_notice_state.arm(app_shell.getTime(), success);
+        self.config_reload_notice_success = notice.success;
+        self.config_reload_notice_until = notice.until;
         self.needs_redraw = true;
     }
 
