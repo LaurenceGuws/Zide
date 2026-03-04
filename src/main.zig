@@ -579,27 +579,11 @@ const AppState = struct {
         return handled;
     }
 
-    fn terminalTabCount(self: *const AppState) usize {
-        return app_terminal_tabs.count(
-            self.app_mode,
-            self.terminal_workspace,
-            self.terminals.items.len,
-        );
-    }
-
-    fn terminalTabBarVisible(self: *const AppState) bool {
-        return app_terminal_tabs.barVisible(
-            self.app_mode,
-            self.terminal_tab_bar_show_single_tab,
-            self.terminalTabCount(),
-        );
-    }
-
     fn activeTerminalSession(self: *AppState) ?*TerminalSession {
         const idx = app_terminal_tabs.activeIndex(
             self.app_mode,
             self.terminal_workspace,
-            self.terminalTabCount(),
+            app_terminal_tabs.count(self.app_mode, self.terminal_workspace, self.terminals.items.len),
         ) orelse return null;
         if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
             if (self.terminal_workspace) |*workspace| {
@@ -614,7 +598,7 @@ const AppState = struct {
         const idx = app_terminal_tabs.activeIndex(
             self.app_mode,
             self.terminal_workspace,
-            self.terminalTabCount(),
+            app_terminal_tabs.count(self.app_mode, self.terminal_workspace, self.terminals.items.len),
         ) orelse return null;
         if (idx >= self.terminal_widgets.items.len) return null;
         return &self.terminal_widgets.items[idx];
@@ -868,7 +852,11 @@ const AppState = struct {
         layout: layout_types.WidgetLayout,
         mouse: shared_types.input.MousePos,
     ) !void {
-        if (self.terminalTabBarVisible()) {
+        if (app_terminal_tabs.barVisible(
+            self.app_mode,
+            self.terminal_tab_bar_show_single_tab,
+            app_terminal_tabs.count(self.app_mode, self.terminal_workspace, self.terminals.items.len),
+        )) {
             _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
         }
         _ = try self.setActiveKindAndSyncIfChanged(.terminal);
@@ -893,7 +881,11 @@ const AppState = struct {
             layout.tab_bar.x,
             layout.tab_bar.y,
             layout.tab_bar.width,
-            self.terminalTabBarVisible(),
+            app_terminal_tabs.barVisible(
+                self.app_mode,
+                self.terminal_tab_bar_show_single_tab,
+                app_terminal_tabs.count(self.app_mode, self.terminal_workspace, self.terminals.items.len),
+            ),
         );
         if (drag_frame.updated) {
             self.needs_redraw = true;
@@ -1140,7 +1132,7 @@ const AppState = struct {
         self: *AppState,
         input_batch: *shared_types.input.InputBatch,
     ) !void {
-        if (!app_modes.ide.supportsTerminalSurface(self.app_mode) or !self.show_terminal or self.terminalTabCount() == 0) return;
+        if (!app_modes.ide.supportsTerminalSurface(self.app_mode) or !self.show_terminal or app_terminal_tabs.count(self.app_mode, self.terminal_workspace, self.terminals.items.len) == 0) return;
 
         if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
             if (self.terminal_workspace) |*workspace| {
@@ -1148,7 +1140,7 @@ const AppState = struct {
                     app_terminal_tabs.activeIndex(
                         self.app_mode,
                         self.terminal_workspace,
-                        self.terminalTabCount(),
+                        app_terminal_tabs.count(self.app_mode, self.terminal_workspace, self.terminals.items.len),
                     ),
                     input_batch.events.items.len > 0,
                 );
@@ -1222,7 +1214,7 @@ const AppState = struct {
         terminal_close_modal_active: bool,
         now: f64,
     ) !void {
-        if (!app_modes.ide.supportsTerminalSurface(self.app_mode) or !self.show_terminal or self.terminalTabCount() == 0) return;
+        if (!app_modes.ide.supportsTerminalSurface(self.app_mode) or !self.show_terminal or app_terminal_tabs.count(self.app_mode, self.terminal_workspace, self.terminals.items.len) == 0) return;
 
         try self.pollVisibleTerminalSessions(input_batch);
         if (self.activeTerminalWidget()) |term_widget| {
@@ -1715,7 +1707,7 @@ const AppState = struct {
         const terminal_close_modal_active = self.terminalCloseConfirmActive();
         const suppress_terminal_shortcuts = self.collectSuppressTerminalShortcutsForFocus(focus);
 
-        if (!terminal_close_modal_active and focus == .terminal and app_modes.ide.hasTerminalInputScope(self.app_mode, self.show_terminal) and self.terminalTabCount() > 0) {
+        if (!terminal_close_modal_active and focus == .terminal and app_modes.ide.hasTerminalInputScope(self.app_mode, self.show_terminal) and app_terminal_tabs.count(self.app_mode, self.terminal_workspace, self.terminals.items.len) > 0) {
             if (try self.handleTerminalClipboardShortcutsFrame(shell, input_batch, now)) {
                 handled_shortcut = true;
             }
@@ -1966,7 +1958,7 @@ const AppState = struct {
         if (!self.window_resize_pending or (now - self.window_resize_last_time) < 0.12) return;
 
         self.window_resize_pending = false;
-        if (self.terminalTabCount() > 0) {
+        if (app_terminal_tabs.count(self.app_mode, self.terminal_workspace, self.terminals.items.len) > 0) {
             const effective_height = app_modes.ide.terminalEffectiveHeightForSizing(
                 self.app_mode,
                 self.show_terminal,
@@ -2401,7 +2393,7 @@ const AppState = struct {
     }
 
     fn refreshTerminalSizing(self: *AppState) !void {
-        if (self.terminalTabCount() == 0) return;
+        if (app_terminal_tabs.count(self.app_mode, self.terminal_workspace, self.terminals.items.len) == 0) return;
         const shell = self.shell;
         const width = @as(f32, @floatFromInt(shell.width()));
         const height = @as(f32, @floatFromInt(shell.height()));
@@ -2442,13 +2434,17 @@ const AppState = struct {
             self.status_bar.height,
             self.terminal_height,
             self.show_terminal,
-            self.terminalTabBarVisible(),
+            app_terminal_tabs.barVisible(
+                self.app_mode,
+                self.terminal_tab_bar_show_single_tab,
+                app_terminal_tabs.count(self.app_mode, self.terminal_workspace, self.terminals.items.len),
+            ),
         );
     }
 
     fn initializeRunModeState(self: *AppState) !void {
         if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-            if (self.terminalTabCount() == 0) {
+            if (app_terminal_tabs.count(self.app_mode, self.terminal_workspace, self.terminals.items.len) == 0) {
                 try self.newTerminal();
             }
             try self.syncTerminalModeTabBar();
@@ -2848,7 +2844,11 @@ const AppState = struct {
             self.applyCurrentTabBarWidthMode();
             const tab_theme = app_theme_utils.terminalTabBarTheme(self.terminal_theme, self.shell_base_theme);
             shell.setTheme(tab_theme);
-            if (self.terminalTabBarVisible()) {
+            if (app_terminal_tabs.barVisible(
+                self.app_mode,
+                self.terminal_tab_bar_show_single_tab,
+                app_terminal_tabs.count(self.app_mode, self.terminal_workspace, self.terminals.items.len),
+            )) {
                 tab_tooltip = self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
             }
         }
@@ -2873,7 +2873,7 @@ const AppState = struct {
         }
 
         // Draw terminal if shown
-        if (app_modes.ide.supportsTerminalSurface(self.app_mode) and self.show_terminal and self.terminalTabCount() > 0) {
+        if (app_modes.ide.supportsTerminalSurface(self.app_mode) and self.show_terminal and app_terminal_tabs.count(self.app_mode, self.terminal_workspace, self.terminals.items.len) > 0) {
             const term_y = layout.terminal.y;
 
             // Terminal separator
@@ -2945,7 +2945,11 @@ const AppState = struct {
             shell,
             layout,
             self.app_mode,
-            self.terminalTabBarVisible(),
+            app_terminal_tabs.barVisible(
+                self.app_mode,
+                self.terminal_tab_bar_show_single_tab,
+                app_terminal_tabs.count(self.app_mode, self.terminal_workspace, self.terminals.items.len),
+            ),
             self.config_reload_notice_until,
             self.config_reload_notice_success,
             self.app_theme,
