@@ -756,6 +756,15 @@ const AppState = struct {
         return false;
     }
 
+    fn requestCreateTerminalTab(self: *AppState, now: f64) !bool {
+        try self.routeTerminalTabActionAndSync(.create);
+        try self.newTerminal();
+        try self.syncTerminalModeTabBar();
+        self.needs_redraw = true;
+        self.metrics.noteInput(now);
+        return true;
+    }
+
     fn requestCycleTerminalTabWithIntent(
         self: *AppState,
         dir: app_modes.ide.TerminalShortcutCycleDirection,
@@ -789,12 +798,7 @@ const AppState = struct {
         return switch (intent) {
             .create => blk: {
                 if (!app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) break :blk false;
-                try self.routeTerminalTabActionAndSync(.create);
-                try self.newTerminal();
-                try self.syncTerminalModeTabBar();
-                self.needs_redraw = true;
-                self.metrics.noteInput(now);
-                break :blk true;
+                break :blk try self.requestCreateTerminalTab(now);
             },
             .close => blk: {
                 if (!app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) break :blk false;
