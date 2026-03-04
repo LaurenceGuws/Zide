@@ -74,7 +74,7 @@ To support focused binaries with minimal coupling, mode orchestration is being s
 
 Review/enforcement policy:
 - These constraints are mandatory during refactor slices even when not yet fully tool-enforced.
-- `zig build check-app-imports` is current guardrail; mode-layer-specific rules are tracked as a dedicated follow-up in `app_architecture/app_mode_layering_todo.yaml`.
+- `zig build check-app-imports` now includes explicit mode-layer boundary checks for `src/app/modes/shared`, `backend`, and `ide`.
 
 Execution authority for this split is tracked in:
 - `app_architecture/app_mode_layering_todo.yaml`
