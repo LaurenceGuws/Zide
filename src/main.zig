@@ -623,6 +623,11 @@ const AppState = struct {
         }
     }
 
+    fn routeTerminalTabCountFromCtx(raw: *anyopaque) usize {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        return app_terminal_tabs_runtime.count(state.app_mode, state.terminal_workspace, state.terminals.items.len);
+    }
+
     pub fn newTerminal(self: *AppState) !void {
         // Calculate terminal size based on UI
         const shell = self.shell;
@@ -699,12 +704,7 @@ const AppState = struct {
                             state.perf_file_path,
                             raw,
                             .{
-                                .terminal_tab_count = struct {
-                                    fn cb(cb_raw: *anyopaque) usize {
-                                        const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
-                                        return app_terminal_tabs_runtime.count(cb_state.app_mode, cb_state.terminal_workspace, cb_state.terminals.items.len);
-                                    }
-                                }.cb,
+                                .terminal_tab_count = routeTerminalTabCountFromCtx,
                                 .new_terminal = routeNewTerminalFromCtx,
                                 .sync_terminal_mode_tab_bar = routeSyncTerminalTabBarFromCtx,
                                 .open_file = routeOpenFileFromCtx,

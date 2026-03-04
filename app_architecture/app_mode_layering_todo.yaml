@@ -196,6 +196,7 @@ app_mode_layering_todo:
             - "In progress: active-view per-frame orchestration (search panel + editor frame + visible terminal frame routing) moved from `main.zig` into `src/app/active_view_runtime.zig` (`handle`)."
             - "In progress: active-view runtime open-file/open-file-at/tab-bar-sync callback wiring now uses named AppState shims (removed inline callback structs in `main.zig`)."
             - "In progress: run/startup and shortcut callback wiring now reuses named AppState shims for editor/terminal create, open-file, and terminal tab-bar sync (fewer inline callback structs in `main.zig`)."
+            - "In progress: run-startup terminal tab-count callback now reuses named AppState shim (`routeTerminalTabCountFromCtx`) instead of inline callback struct."
             - "In progress: config-reload notice drawing moved from `main.zig` into `src/app/config_reload_notice.zig` (`draw`)."
             - "In progress: terminal close-confirm modal drawing moved from `main.zig` into `src/app/terminal_close_confirm_draw.zig` (`draw`)."
             - "In progress: terminal tab count/visibility/active-index policy moved from `main.zig` into `src/app/terminal_tabs.zig` (`count`, `barVisible`, `activeIndex`)."
