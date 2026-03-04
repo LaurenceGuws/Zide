@@ -128,6 +128,7 @@ app_mode_layering_todo:
             - "In progress: shared optional tab-action routing helper now has focused unit coverage in `src/app/tab_action_route.zig`."
             - "In progress: terminal shortcut runtime dispatch switch moved from `main.zig` into `src/app/terminal_shortcut_runtime.zig` (`handleIntent(...)`) with callback-hook unit coverage."
             - "In progress: close-confirm runtime decision dispatch moved from `main.zig` into `src/app/terminal_close_confirm_runtime.zig` (`applyDecision(...)`) with callback-hook unit coverage."
+            - "In progress: terminal close/activate id-to-intent optional routing moved from `main.zig` into `src/app/terminal_intent_route.zig` (`routeCloseByTabIdAndSync`, `routeActivateByTabIdAndSync`) with focused helper tests."
             - "In progress: pure tab-intent helpers were extracted from `main.zig` into `src/app/modes/ide/tab_intents.zig`."
             - "In progress: tab projection + active-projection construction moved from `main.zig` into `src/app/modes/ide/projections.zig`."
             - "In progress: terminal close-intent emission is centralized via `applyTerminalCloseIntentForActiveWorkspaceTab()` in `main.zig` (deduped shortcut + confirm paths)."
