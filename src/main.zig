@@ -1732,105 +1732,6 @@ const AppState = struct {
         if (result.note_input) self.metrics.noteInput(now);
     }
 
-    fn handleWindowResizeEventFrame(self: *AppState, shell: *Shell, now: f64) !void {
-        _ = now;
-        const result = try app_window_resize_event_frame.handle(
-            shell,
-            &self.window_resize_pending,
-            &self.window_resize_last_time,
-        );
-        if (result.ui_scale_changed) {
-            app_ui_layout_runtime.applyUiScale(
-                self,
-                self.shell.uiScaleFactor(),
-                @ptrCast(self),
-                .{
-                    .apply_current_tab_bar_width_mode = struct {
-                        fn call(raw: *anyopaque) void {
-                            const cb_state: *AppState = @ptrCast(@alignCast(raw));
-                            cb_state.applyCurrentTabBarWidthMode();
-                        }
-                    }.call,
-                },
-            );
-        }
-        if (result.needs_redraw) self.needs_redraw = true;
-    }
-
-    fn handleCursorBlinkArmingFrame(self: *AppState, now: f64) void {
-        var cache: ?app_cursor_blink_frame.Input = null;
-        if (app_terminal_active_widget.resolveActive(
-            self.app_mode,
-            &self.terminal_workspace,
-            self.terminals.items.len,
-            self.terminal_widgets.items,
-        )) |term_widget| {
-            const rc = term_widget.session.renderCache();
-            cache = app_cursor_blink_frame.Input{
-                .cursor_visible = rc.cursor_visible,
-                .cursor_blink = rc.cursor_style.blink,
-                .scroll_offset = rc.scroll_offset,
-            };
-        }
-
-        const result = app_cursor_blink_frame.handle(
-            cache,
-            now,
-            &self.last_cursor_blink_armed,
-            &self.last_cursor_blink_on,
-        );
-
-        if (result.blink_armed_changed) {
-            const cursor_log = app_logger.logger("terminal.cursor");
-            if (cursor_log.enabled_file or cursor_log.enabled_console) {
-                cursor_log.logf(
-                    "cursor blink armed={any} visible={any} blink={any} scroll_offset={d}",
-                    .{
-                        result.blink_armed,
-                        cache.?.cursor_visible,
-                        cache.?.cursor_blink,
-                        cache.?.scroll_offset,
-                    },
-                );
-            }
-        }
-        if (result.needs_redraw) self.needs_redraw = true;
-    }
-
-    fn handleDeferredTerminalResizeFrame(
-        self: *AppState,
-        shell: *Shell,
-        layout: layout_types.WidgetLayout,
-        now: f64,
-    ) !void {
-        const result = app_deferred_terminal_resize_frame.handle(
-            &self.window_resize_pending,
-            self.window_resize_last_time,
-            now,
-            self.app_mode,
-            self.show_terminal,
-            layout,
-            self.terminal_height,
-            app_terminal_tabs_runtime.count(self.app_mode, self.terminal_workspace, self.terminals.items.len),
-            shell.terminalCellWidth(),
-            shell.terminalCellHeight(),
-        );
-        if (!result.triggered) return;
-
-        if (result.should_resize_terminals) {
-            if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-                if (self.terminal_workspace) |*workspace| {
-                    try app_terminal_resize.resizeWorkspaceWithShellCellSize(workspace, shell, result.rows, result.cols);
-                }
-            } else {
-                const term = self.terminals.items[0];
-                try app_terminal_resize.resizeSessionWithShellCellSize(term, shell, result.rows, result.cols);
-            }
-        }
-        if (result.needs_redraw) self.needs_redraw = true;
-    }
-
-
     pub fn newTerminal(self: *AppState) !void {
         // Calculate terminal size based on UI
         const shell = self.shell;
@@ -2090,7 +1991,28 @@ const AppState = struct {
                                                                                 .handle_window_resize_event = struct {
                                                                                     fn inner(inner_raw: *anyopaque, frame_shell: *Shell, at: f64) !void {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        try inner_state.handleWindowResizeEventFrame(frame_shell, at);
+                                                                                        _ = at;
+                                                                                        const result = try app_window_resize_event_frame.handle(
+                                                                                            frame_shell,
+                                                                                            &inner_state.window_resize_pending,
+                                                                                            &inner_state.window_resize_last_time,
+                                                                                        );
+                                                                                        if (result.ui_scale_changed) {
+                                                                                            app_ui_layout_runtime.applyUiScale(
+                                                                                                inner_state,
+                                                                                                inner_state.shell.uiScaleFactor(),
+                                                                                                @ptrCast(inner_state),
+                                                                                                .{
+                                                                                                    .apply_current_tab_bar_width_mode = struct {
+                                                                                                        fn call(scale_raw: *anyopaque) void {
+                                                                                                            const cb_state: *AppState = @ptrCast(@alignCast(scale_raw));
+                                                                                                            cb_state.applyCurrentTabBarWidthMode();
+                                                                                                        }
+                                                                                                    }.call,
+                                                                                                },
+                                                                                            );
+                                                                                        }
+                                                                                        if (result.needs_redraw) inner_state.needs_redraw = true;
                                                                                     }
                                                                                 }.inner,
                                                                                 .compute_layout = struct {
@@ -2102,13 +2024,73 @@ const AppState = struct {
                                                                                 .handle_cursor_blink_arming = struct {
                                                                                     fn inner(inner_raw: *anyopaque, at: f64) void {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        inner_state.handleCursorBlinkArmingFrame(at);
+                                                                                        var cache: ?app_cursor_blink_frame.Input = null;
+                                                                                        if (app_terminal_active_widget.resolveActive(
+                                                                                            inner_state.app_mode,
+                                                                                            &inner_state.terminal_workspace,
+                                                                                            inner_state.terminals.items.len,
+                                                                                            inner_state.terminal_widgets.items,
+                                                                                        )) |term_widget| {
+                                                                                            const rc = term_widget.session.renderCache();
+                                                                                            cache = app_cursor_blink_frame.Input{
+                                                                                                .cursor_visible = rc.cursor_visible,
+                                                                                                .cursor_blink = rc.cursor_style.blink,
+                                                                                                .scroll_offset = rc.scroll_offset,
+                                                                                            };
+                                                                                        }
+
+                                                                                        const result = app_cursor_blink_frame.handle(
+                                                                                            cache,
+                                                                                            at,
+                                                                                            &inner_state.last_cursor_blink_armed,
+                                                                                            &inner_state.last_cursor_blink_on,
+                                                                                        );
+
+                                                                                        if (result.blink_armed_changed) {
+                                                                                            const cursor_log = app_logger.logger("terminal.cursor");
+                                                                                            if (cursor_log.enabled_file or cursor_log.enabled_console) {
+                                                                                                cursor_log.logf(
+                                                                                                    "cursor blink armed={any} visible={any} blink={any} scroll_offset={d}",
+                                                                                                    .{
+                                                                                                        result.blink_armed,
+                                                                                                        cache.?.cursor_visible,
+                                                                                                        cache.?.cursor_blink,
+                                                                                                        cache.?.scroll_offset,
+                                                                                                    },
+                                                                                                );
+                                                                                            }
+                                                                                        }
+                                                                                        if (result.needs_redraw) inner_state.needs_redraw = true;
                                                                                     }
                                                                                 }.inner,
                                                                                 .handle_deferred_terminal_resize = struct {
                                                                                     fn inner(inner_raw: *anyopaque, frame_shell: *Shell, layout: layout_types.WidgetLayout, at: f64) !void {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        try inner_state.handleDeferredTerminalResizeFrame(frame_shell, layout, at);
+                                                                                        const result = app_deferred_terminal_resize_frame.handle(
+                                                                                            &inner_state.window_resize_pending,
+                                                                                            inner_state.window_resize_last_time,
+                                                                                            at,
+                                                                                            inner_state.app_mode,
+                                                                                            inner_state.show_terminal,
+                                                                                            layout,
+                                                                                            inner_state.terminal_height,
+                                                                                            app_terminal_tabs_runtime.count(inner_state.app_mode, inner_state.terminal_workspace, inner_state.terminals.items.len),
+                                                                                            frame_shell.terminalCellWidth(),
+                                                                                            frame_shell.terminalCellHeight(),
+                                                                                        );
+                                                                                        if (!result.triggered) return;
+
+                                                                                        if (result.should_resize_terminals) {
+                                                                                            if (app_modes.ide.shouldUseTerminalWorkspace(inner_state.app_mode)) {
+                                                                                                if (inner_state.terminal_workspace) |*workspace| {
+                                                                                                    try app_terminal_resize.resizeWorkspaceWithShellCellSize(workspace, frame_shell, result.rows, result.cols);
+                                                                                                }
+                                                                                            } else {
+                                                                                                const term = inner_state.terminals.items[0];
+                                                                                                try app_terminal_resize.resizeSessionWithShellCellSize(term, frame_shell, result.rows, result.cols);
+                                                                                            }
+                                                                                        }
+                                                                                        if (result.needs_redraw) inner_state.needs_redraw = true;
                                                                                     }
                                                                                 }.inner,
                                                                                 .handle_pointer_activity = struct {
