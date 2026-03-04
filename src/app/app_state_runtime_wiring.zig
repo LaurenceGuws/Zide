@@ -40,3 +40,7 @@ pub fn newTerminal(state: anytype) !void {
 pub fn run(state: anytype) !void {
     try app_run_entry_hooks_runtime.run(state);
 }
+
+pub fn runFocused(state: anytype, comptime app_mode: AppMode) !void {
+    try app_run_entry_hooks_runtime.runFocused(state, app_mode);
+}

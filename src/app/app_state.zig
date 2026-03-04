@@ -127,4 +127,8 @@ pub const AppState = struct {
     pub fn run(self: *AppState) !void {
         try app_state_runtime_wiring.run(self);
     }
+
+    pub fn runFocused(self: *AppState, comptime app_mode: AppMode) !void {
+        try app_state_runtime_wiring.runFocused(self, app_mode);
+    }
 };
