@@ -225,6 +225,7 @@ app_mode_layering_todo:
             - "In progress: `AppState.deinit(...)` teardown body moved from `main.zig` into `src/app/deinit_runtime.zig` (`handle`), leaving `main` with a thin delegation."
             - "In progress: `AppState.init(...)` bootstrap/construction body moved from `main.zig` into `src/app/init_runtime.zig` (`init`), leaving `main` with a thin delegation."
             - "In progress: `AppState` type definition (fields + core method delegations) moved from `main.zig` into `src/app/app_state.zig`, leaving `main` with alias imports for app state."
+            - "In progress: `main.zig` now serves as a thin runtime entrypoint; embedded main tests/helpers were moved into `src/main_tests.zig` and included via `test { _ = @import(\"main_tests.zig\"); }`."
             - "In progress: update-frame callback hook body moved from `main.zig` into `src/app/update_frame_hooks_runtime.zig` (`handle`); `AppState.handleUpdateFrame(...)` is now a thin delegator."
             - "In progress: frame-render/idle hook body moved from `main.zig` into `src/app/frame_render_idle_hooks_runtime.zig` (`handle`); `AppState.handleFrameRenderAndIdle(...)` is now a thin delegator."
             - "In progress: pre-input runtime delegation in `main.zig` now uses named AppState shims for reconcile/layout/redraw hooks (`routeReconcileTerminalCloseModalActiveFromCtx`, `routeComputeLayoutFromCtx`, `routeMarkRedrawFromCtx`) instead of inline callback structs."
