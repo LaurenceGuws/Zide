@@ -314,7 +314,7 @@ const AppState = struct {
 
     fn applyCurrentTabBarWidthMode(self: *AppState) void {
         self.tab_bar.setWidthMode(
-            if (app_modes.ide.isTerminalOnly(self.app_mode))
+            if (app_modes.ide.useTerminalTabBarWidthMode(self.app_mode))
                 self.terminal_tab_bar_width_mode
             else
                 self.editor_tab_bar_width_mode,
@@ -849,9 +849,11 @@ const AppState = struct {
     }
 
     fn terminalTabBarVisible(self: *const AppState) bool {
-        if (!app_modes.ide.isTerminalOnly(self.app_mode)) return false;
-        if (self.terminal_tab_bar_show_single_tab) return true;
-        return self.terminalTabCount() >= 2;
+        return app_modes.ide.terminalTabBarVisible(
+            self.app_mode,
+            self.terminal_tab_bar_show_single_tab,
+            self.terminalTabCount(),
+        );
     }
 
     fn activeTerminalArrayIndex(self: *const AppState) ?usize {
