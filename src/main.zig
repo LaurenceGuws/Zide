@@ -35,6 +35,7 @@ const app_terminal_close_confirm_draw = @import("app/terminal_close_confirm_draw
 const app_search_panel_input = @import("app/search_panel_input.zig");
 const app_search_panel_runtime = @import("app/search_panel_runtime.zig");
 const app_search_panel_state = @import("app/search_panel_state.zig");
+const app_mouse_pressed_frame = @import("app/mouse_pressed_frame.zig");
 const app_pointer_activity_frame = @import("app/pointer_activity_frame.zig");
 const app_shortcut_action_runtime = @import("app/shortcut_action_runtime.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
@@ -1376,13 +1377,52 @@ const AppState = struct {
         input_batch: *shared_types.input.InputBatch,
         now: f64,
     ) !void {
-        if (!input_batch.mousePressed(.left)) return;
-        switch (app_modes.ide.mouseClickRoute(self.app_mode)) {
-            .ide => try self.handleIdeMousePressedRouting(layout, mouse, term_y, now),
-            .terminal => try self.handleTerminalMousePressedRouting(layout, mouse),
-            .editor => try self.handleEditorMousePressedRouting(),
-        }
-        self.logMouseDebugClick(shell);
+        _ = shell;
+        try app_mouse_pressed_frame.handle(
+            self.app_mode,
+            input_batch,
+            layout,
+            mouse,
+            term_y,
+            now,
+            @ptrCast(self),
+            .{
+                .handle_ide_mouse_pressed_routing = struct {
+                    fn call(
+                        raw: *anyopaque,
+                        frame_layout: layout_types.WidgetLayout,
+                        frame_mouse: shared_types.input.MousePos,
+                        frame_term_y: f32,
+                        frame_now: f64,
+                    ) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.handleIdeMousePressedRouting(frame_layout, frame_mouse, frame_term_y, frame_now);
+                    }
+                }.call,
+                .handle_terminal_mouse_pressed_routing = struct {
+                    fn call(
+                        raw: *anyopaque,
+                        frame_layout: layout_types.WidgetLayout,
+                        frame_mouse: shared_types.input.MousePos,
+                    ) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.handleTerminalMousePressedRouting(frame_layout, frame_mouse);
+                    }
+                }.call,
+                .handle_editor_mouse_pressed_routing = struct {
+                    fn call(raw: *anyopaque) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.handleEditorMousePressedRouting();
+                    }
+                }.call,
+                .log_mouse_debug_click = struct {
+                    fn call(raw: *anyopaque) void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        state.logMouseDebugClick(state.shell);
+                    }
+                }.call,
+            },
+        );
     }
 
     const PreInputShortcutResult = struct {
