@@ -1,5 +1,6 @@
 const app_modes = @import("modes/mod.zig");
 const app_terminal_grid = @import("terminal_grid.zig");
+const app_terminal_refresh_sizing_runtime = @import("terminal_refresh_sizing_runtime.zig");
 const app_terminal_session_bootstrap = @import("terminal_session_bootstrap.zig");
 const app_terminal_tab_bar_sync_runtime = @import("terminal_tab_bar_sync_runtime.zig");
 const app_terminal_theme_apply = @import("terminal_theme_apply.zig");
@@ -46,6 +47,15 @@ pub fn handle(state: anytype) !void {
             try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(state);
             try app_terminal_theme_apply.notifyColorSchemeChanged(&state.terminal_widgets, &state.terminal_theme);
             state.show_terminal = true;
+            try app_terminal_refresh_sizing_runtime.handle(
+                state,
+                state.app_mode,
+                &state.terminal_workspace,
+                state.terminals.items,
+                state.show_terminal,
+                state.terminal_height,
+                state.shell,
+            );
             return;
         }
         return error.TerminalWorkspaceMissing;
@@ -68,4 +78,13 @@ pub fn handle(state: anytype) !void {
     try app_terminal_theme_apply.notifyColorSchemeChanged(&state.terminal_widgets, &state.terminal_theme);
 
     state.show_terminal = true;
+    try app_terminal_refresh_sizing_runtime.handle(
+        state,
+        state.app_mode,
+        &state.terminal_workspace,
+        state.terminals.items,
+        state.show_terminal,
+        state.terminal_height,
+        state.shell,
+    );
 }
