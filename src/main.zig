@@ -617,13 +617,18 @@ const AppState = struct {
     }
 
     fn requestCloseActiveTerminalTab(self: *AppState, now: f64) !bool {
-        _ = try self.routeActiveWorkspaceTerminalIntentAndSync(.close);
+        _ = try app_terminal_runtime_intents.routeForActiveWorkspaceTabAndSync(
+            .close,
+            &self.terminal_workspace,
+            @ptrCast(self),
+            routeTerminalTabActionFromCtx,
+        );
         if (try self.closeActiveTerminalTab()) {
             self.needs_redraw = true;
             self.metrics.noteInput(now);
             return true;
         }
-        if (self.terminalCloseConfirmActive()) {
+        if (app_terminal_close_confirm_active_runtime.reconcile(self)) {
             self.needs_redraw = true;
             self.metrics.noteInput(now);
             return true;
@@ -645,7 +650,7 @@ const AppState = struct {
         dir: app_modes.ide.TerminalShortcutCycleDirection,
         now: f64,
     ) !bool {
-        const moved = self.cycleTerminalTab(dir == .next);
+        const moved = app_terminal_tab_navigation_runtime.cycle(self, dir == .next);
         if (!moved) return false;
         try self.routeTerminalTabActionAndSync(app_terminal_tab_intents.cycleIntentForDirection(dir));
         self.needs_redraw = true;
@@ -659,7 +664,7 @@ const AppState = struct {
         now: f64,
     ) !bool {
         try self.routeTerminalTabActionAndSync(route.intent);
-        if (!self.focusTerminalTabByIndex(route.index)) return false;
+        if (!app_terminal_tab_navigation_runtime.focusByIndex(self, route.index)) return false;
         self.needs_redraw = true;
         self.metrics.noteInput(now);
         return true;
@@ -703,18 +708,6 @@ const AppState = struct {
     fn routeTerminalTabActionAndSync(self: *AppState, tab_action: app_modes.shared.actions.TabAction) !void {
         app_tab_action_apply.applyTerminal(self.allocator, self.app_mode, &self.terminal_mode_adapter, tab_action);
         try self.syncModeAdaptersFromTabBar();
-    }
-
-    fn routeActiveWorkspaceTerminalIntentAndSync(
-        self: *AppState,
-        intent: app_terminal_runtime_intents.Intent,
-    ) !bool {
-        return app_terminal_runtime_intents.routeForActiveWorkspaceTabAndSync(
-            intent,
-            &self.terminal_workspace,
-            @ptrCast(self),
-            routeTerminalTabActionFromCtx,
-        );
     }
 
     fn routeEditorTabActionAndSync(self: *AppState, tab_action: app_modes.shared.actions.TabAction) !void {
@@ -793,7 +786,12 @@ const AppState = struct {
             _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
         }
         _ = try self.setActiveKindAndSyncIfChanged(.terminal);
-        _ = try self.routeActiveWorkspaceTerminalIntentAndSync(.activate);
+        _ = try app_terminal_runtime_intents.routeForActiveWorkspaceTabAndSync(
+            .activate,
+            &self.terminal_workspace,
+            @ptrCast(self),
+            routeTerminalTabActionFromCtx,
+        );
     }
 
     fn handleEditorMousePressedRouting(self: *AppState) !void {
@@ -838,7 +836,7 @@ const AppState = struct {
                         @ptrCast(self),
                         routeTerminalTabActionFromCtx,
                     );
-                    if (self.focusTerminalTabByIndex(self.tab_bar.active_index)) {
+                    if (app_terminal_tab_navigation_runtime.focusByIndex(self, self.tab_bar.active_index)) {
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
                     }
@@ -1492,7 +1490,7 @@ const AppState = struct {
             },
         );
         const live_layout = app_ui_layout_runtime.computeLayout(self, @floatFromInt(r.width), @floatFromInt(r.height));
-        if (self.terminalCloseConfirmActive()) {
+        if (app_terminal_close_confirm_active_runtime.reconcile(self)) {
             if (try app_terminal_close_confirm_input.handleInput(
                 self.input_router.actionsSlice(),
                 input_batch,
@@ -1512,7 +1510,12 @@ const AppState = struct {
                                 .route_close_intent_and_sync = struct {
                                     fn inner(inner_raw: *anyopaque) !void {
                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                        _ = try inner_state.routeActiveWorkspaceTerminalIntentAndSync(.close);
+                                        _ = try app_terminal_runtime_intents.routeForActiveWorkspaceTabAndSync(
+                                            .close,
+                                            &inner_state.terminal_workspace,
+                                            @ptrCast(inner_state),
+                                            routeTerminalTabActionFromCtx,
+                                        );
                                     }
                                 }.inner,
                                 .close_active_terminal_tab = struct {
@@ -1534,14 +1537,14 @@ const AppState = struct {
             )) {
                 return .{
                     .suppress_terminal_shortcuts = false,
-                    .terminal_close_modal_active = self.terminalCloseConfirmActive(),
+                    .terminal_close_modal_active = app_terminal_close_confirm_active_runtime.reconcile(self),
                     .handled_shortcut = handled_shortcut,
                     .consumed = true,
                 };
             }
         }
 
-        const terminal_close_modal_active = self.terminalCloseConfirmActive();
+        const terminal_close_modal_active = app_terminal_close_confirm_active_runtime.reconcile(self);
         const suppress_terminal_shortcuts = app_terminal_shortcut_suppress.forFocus(focus, self.input_router.actionsSlice());
 
         if (!terminal_close_modal_active and focus == .terminal and app_terminal_surface_gate.hasTerminalInputScopeWithTabs(self.app_mode, self.show_terminal, self.terminal_workspace, self.terminals.items.len)) {
@@ -1638,7 +1641,7 @@ const AppState = struct {
         self: *AppState,
         input_batch: *shared_types.input.InputBatch,
     ) input_actions.FocusKind {
-        _ = self.terminalCloseConfirmActive();
+        _ = app_terminal_close_confirm_active_runtime.reconcile(self);
         const routed_active = app_modes.ide.routedActiveMode(self.app_mode, self.active_kind);
         const focus = if (routed_active == .terminal) input_actions.FocusKind.terminal else input_actions.FocusKind.editor;
         self.input_router.route(input_batch, focus);
@@ -1864,18 +1867,6 @@ const AppState = struct {
         if (result.needs_redraw) self.needs_redraw = true;
     }
 
-
-    fn terminalCloseConfirmActive(self: *AppState) bool {
-        return app_terminal_close_confirm_active_runtime.reconcile(self);
-    }
-
-    fn focusTerminalTabByIndex(self: *AppState, index: usize) bool {
-        return app_terminal_tab_navigation_runtime.focusByIndex(self, index);
-    }
-
-    fn cycleTerminalTab(self: *AppState, next: bool) bool {
-        return app_terminal_tab_navigation_runtime.cycle(self, next);
-    }
 
     fn closeActiveTerminalTab(self: *AppState) !bool {
         return try app_terminal_close_active_runtime.closeActive(
@@ -2363,7 +2354,7 @@ const AppState = struct {
                                                                                 .terminal_close_confirm_active = struct {
                                                                                     fn inner(inner_raw: *anyopaque) bool {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        return inner_state.terminalCloseConfirmActive();
+                                                                                        return app_terminal_close_confirm_active_runtime.reconcile(inner_state);
                                                                                     }
                                                                                 }.inner,
                                                                             },
