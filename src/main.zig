@@ -39,6 +39,7 @@ const app_mouse_pressed_frame = @import("app/mouse_pressed_frame.zig");
 const app_input_actions_frame_runtime = @import("app/input_actions_frame_runtime.zig");
 const app_pointer_activity_frame = @import("app/pointer_activity_frame.zig");
 const app_shortcut_action_runtime = @import("app/shortcut_action_runtime.zig");
+const app_tab_drag_frame = @import("app/tab_drag_frame.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
@@ -1595,12 +1596,40 @@ const AppState = struct {
         mouse: shared_types.input.MousePos,
         now: f64,
     ) !void {
-        if (app_modes.ide.canDriveTerminalTabDrag(self.app_mode)) {
-            try self.handleTerminalTabDragInput(input_batch, layout, mouse, now);
-        }
-        if (app_modes.ide.isIde(self.app_mode)) {
-            try self.handleIdeTabDragInput(input_batch, layout, mouse, now);
-        }
+        try app_tab_drag_frame.handle(
+            self.app_mode,
+            input_batch,
+            layout,
+            mouse,
+            now,
+            @ptrCast(self),
+            .{
+                .handle_terminal_tab_drag_input = struct {
+                    fn call(
+                        raw: *anyopaque,
+                        frame_input_batch: *shared_types.input.InputBatch,
+                        frame_layout: layout_types.WidgetLayout,
+                        frame_mouse: shared_types.input.MousePos,
+                        frame_now: f64,
+                    ) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.handleTerminalTabDragInput(frame_input_batch, frame_layout, frame_mouse, frame_now);
+                    }
+                }.call,
+                .handle_ide_tab_drag_input = struct {
+                    fn call(
+                        raw: *anyopaque,
+                        frame_input_batch: *shared_types.input.InputBatch,
+                        frame_layout: layout_types.WidgetLayout,
+                        frame_mouse: shared_types.input.MousePos,
+                        frame_now: f64,
+                    ) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.handleIdeTabDragInput(frame_input_batch, frame_layout, frame_mouse, frame_now);
+                    }
+                }.call,
+            },
+        );
     }
 
     fn handleInputActionsFrame(
