@@ -2736,82 +2736,88 @@ const AppState = struct {
             const update_start = app_shell.getTime();
             try self.update(&input_batch);
             const update_end = app_shell.getTime();
-            var draw_ms: f64 = 0.0;
             const poll_ms = (poll_end - poll_start) * 1000.0;
             const build_ms = (build_end - build_start) * 1000.0;
             const update_ms = (update_end - update_start) * 1000.0;
-
-            // Only redraw when something changed
-            if (self.needs_redraw) {
-                const draw_start = app_shell.getTime();
-                self.draw();
-                const draw_end = app_shell.getTime();
-                draw_ms = (draw_end - draw_start) * 1000.0;
-                self.metrics.recordDraw(draw_start, draw_end);
-                if (self.perf_mode and self.perf_frames_done > 0) {
-                    const draw_ms_perf = (draw_end - draw_start) * 1000.0;
-                    const editor_idx = if (self.editors.items.len > 0) @min(self.active_tab, self.editors.items.len - 1) else 0;
-                    if (self.editors.items.len > 0) {
-                        const editor = self.editors.items[editor_idx];
-                        self.perf_logger.logf(
-                            "frame={d} draw_ms={d:.2} scroll_line={d} scroll_row_offset={d} scroll_col={d}",
-                            .{ self.perf_frames_done, draw_ms_perf, editor.scroll_line, editor.scroll_row_offset, editor.scroll_col },
-                        );
-                    } else {
-                        self.perf_logger.logf("frame={d} draw_ms={d:.2}", .{ self.perf_frames_done, draw_ms_perf });
-                    }
-                }
-                self.maybeLogMetrics(draw_end);
-                self.needs_redraw = false;
-                self.idle_frames = 0;
-                if (self.input_latency_logger.enabled_file or self.input_latency_logger.enabled_console) {
-                    if (input_batch.events.items.len > 0) {
-                        const total_ms = poll_ms + build_ms + update_ms + draw_ms;
-                        if (total_ms >= 1.0) {
-                            self.input_latency_logger.logf(
-                                "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2}",
-                                .{ poll_ms, build_ms, update_ms, draw_ms },
-                            );
-                        }
-                    }
-                }
-            } else {
-                self.idle_frames +|= 1; // Saturating add
-                if (self.input_latency_logger.enabled_file or self.input_latency_logger.enabled_console) {
-                    if (input_batch.events.items.len > 0) {
-                        const total_ms = poll_ms + build_ms + update_ms;
-                        if (total_ms >= 1.0) {
-                            self.input_latency_logger.logf(
-                                "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms=0.00",
-                                .{ poll_ms, build_ms, update_ms },
-                            );
-                        }
-                    }
-                }
-
-                // Adaptive sleep: longer sleep when idle longer
-                // - Startup grace period: stay responsive for first 3 seconds
-                // - Active: 16ms (~60fps responsiveness)
-                // - Idle: up to 100ms (~10fps, saves CPU)
-                const uptime = app_shell.getTime();
-                const sleep_ms: f64 = if (uptime < 3.0)
-                    0.016 // Startup: stay fully responsive
-                else if (self.idle_frames < 10)
-                    0.016 // First 10 idle frames: stay responsive
-                else if (self.idle_frames < 60)
-                    0.033 // ~30fps check rate
-                else
-                    0.100; // Deep idle: 10fps check rate
-
-                app_shell.waitTime(sleep_ms);
-                self.maybeLogMetrics(app_shell.getTime());
-            }
+            self.handleFrameRenderAndIdle(&input_batch, poll_ms, build_ms, update_ms);
 
             if (self.perf_mode and self.perf_frames_done >= self.perf_frames_total and self.perf_frames_total > 0) {
                 self.perf_logger.logf("perf complete frames={d}", .{self.perf_frames_done});
                 break;
             }
         }
+    }
+
+    fn handleFrameRenderAndIdle(
+        self: *AppState,
+        input_batch: *shared_types.input.InputBatch,
+        poll_ms: f64,
+        build_ms: f64,
+        update_ms: f64,
+    ) void {
+        var draw_ms: f64 = 0.0;
+
+        if (self.needs_redraw) {
+            const draw_start = app_shell.getTime();
+            self.draw();
+            const draw_end = app_shell.getTime();
+            draw_ms = (draw_end - draw_start) * 1000.0;
+            self.metrics.recordDraw(draw_start, draw_end);
+            if (self.perf_mode and self.perf_frames_done > 0) {
+                const draw_ms_perf = (draw_end - draw_start) * 1000.0;
+                const editor_idx = if (self.editors.items.len > 0) @min(self.active_tab, self.editors.items.len - 1) else 0;
+                if (self.editors.items.len > 0) {
+                    const editor = self.editors.items[editor_idx];
+                    self.perf_logger.logf(
+                        "frame={d} draw_ms={d:.2} scroll_line={d} scroll_row_offset={d} scroll_col={d}",
+                        .{ self.perf_frames_done, draw_ms_perf, editor.scroll_line, editor.scroll_row_offset, editor.scroll_col },
+                    );
+                } else {
+                    self.perf_logger.logf("frame={d} draw_ms={d:.2}", .{ self.perf_frames_done, draw_ms_perf });
+                }
+            }
+            self.maybeLogMetrics(draw_end);
+            self.needs_redraw = false;
+            self.idle_frames = 0;
+            if (self.input_latency_logger.enabled_file or self.input_latency_logger.enabled_console) {
+                if (input_batch.events.items.len > 0) {
+                    const total_ms = poll_ms + build_ms + update_ms + draw_ms;
+                    if (total_ms >= 1.0) {
+                        self.input_latency_logger.logf(
+                            "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2}",
+                            .{ poll_ms, build_ms, update_ms, draw_ms },
+                        );
+                    }
+                }
+            }
+            return;
+        }
+
+        self.idle_frames +|= 1;
+        if (self.input_latency_logger.enabled_file or self.input_latency_logger.enabled_console) {
+            if (input_batch.events.items.len > 0) {
+                const total_ms = poll_ms + build_ms + update_ms;
+                if (total_ms >= 1.0) {
+                    self.input_latency_logger.logf(
+                        "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms=0.00",
+                        .{ poll_ms, build_ms, update_ms },
+                    );
+                }
+            }
+        }
+
+        const uptime = app_shell.getTime();
+        const sleep_ms: f64 = if (uptime < 3.0)
+            0.016
+        else if (self.idle_frames < 10)
+            0.016
+        else if (self.idle_frames < 60)
+            0.033
+        else
+            0.100;
+
+        app_shell.waitTime(sleep_ms);
+        self.maybeLogMetrics(app_shell.getTime());
     }
 
     fn maybeLogMetrics(self: *AppState, now: f64) void {
