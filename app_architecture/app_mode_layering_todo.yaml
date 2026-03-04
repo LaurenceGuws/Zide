@@ -197,6 +197,7 @@ app_mode_layering_todo:
             - "In progress: active terminal widget resolution moved from `main.zig` into `src/app/terminal_active_widget.zig` (`resolveActive`)."
             - "In progress: mode-adapter sync and parity diagnostics moved out of `main.zig` into `src/app/mode_adapter_sync.zig` and `src/app/mode_adapter_parity.zig`."
             - "In progress: terminal close-confirm active-state reconciliation (workspace active-tab lookup + pending-tab reconciliation) moved into `src/app/terminal_close_confirm_state.zig` (`reconcileActiveState`)."
+            - "In progress: repeated terminal tab count/visibility/active-index callsite wiring in `main.zig` now routes through `src/app/terminal_tabs_runtime.zig` helpers."
             - "In progress: terminal theme apply helpers moved from `main.zig` into `src/app/terminal_theme_apply.zig` (`setSessionPalette`, `notifyColorSchemeChanged`, `applyThemeToWidgets`)."
             - "In progress: terminal session startup/widget bootstrap dedup moved from `main.zig` into `src/app/terminal_session_bootstrap.zig` (`startSessionWithShellCellSize`, `initWidget`)."
             - "In progress: terminal grid-size math moved from `main.zig` into `src/app/terminal_grid.zig` (`compute`)."
