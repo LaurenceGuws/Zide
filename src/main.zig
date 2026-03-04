@@ -8,6 +8,7 @@ const app_font_rendering = @import("app/font_rendering.zig");
 const app_config_reload_notice = @import("app/config_reload_notice.zig");
 const app_terminal_grid = @import("app/terminal_grid.zig");
 const app_terminal_tab_ops = @import("app/terminal_tab_ops.zig");
+const app_terminal_shortcut_policy = @import("app/terminal_shortcut_policy.zig");
 const app_terminal_resize = @import("app/terminal_resize.zig");
 const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
 const app_terminal_close_confirm_state = @import("app/terminal_close_confirm_state.zig");
@@ -784,19 +785,12 @@ const AppState = struct {
         return true;
     }
 
-    fn canHandleTerminalShortcutIntent(self: *AppState, intent: app_modes.ide.TerminalShortcutIntent) bool {
-        return switch (intent) {
-            .focus => app_modes.ide.canHandleTerminalTabFocusShortcuts(self.app_mode),
-            else => app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode),
-        };
-    }
-
     fn handleTerminalShortcutIntent(
         self: *AppState,
         intent: app_modes.ide.TerminalShortcutIntent,
         now: f64,
     ) !bool {
-        if (!self.canHandleTerminalShortcutIntent(intent)) return false;
+        if (!app_terminal_shortcut_policy.canHandleIntent(self.app_mode, intent)) return false;
         return switch (intent) {
             .create => self.requestCreateTerminalTab(now),
             .close => self.requestCloseActiveTerminalTab(now),
