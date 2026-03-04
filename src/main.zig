@@ -21,6 +21,7 @@ const app_terminal_shortcut_policy = @import("app/terminal_shortcut_policy.zig")
 const app_terminal_shortcut_runtime = @import("app/terminal_shortcut_runtime.zig");
 const app_terminal_tab_intents = @import("app/terminal_tab_intents.zig");
 const app_terminal_resize = @import("app/terminal_resize.zig");
+const app_terminal_refresh_sizing_runtime = @import("app/terminal_refresh_sizing_runtime.zig");
 const app_visible_terminal_frame = @import("app/visible_terminal_frame.zig");
 const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
 const app_terminal_close_confirm_input = @import("app/terminal_close_confirm_input.zig");
@@ -1491,7 +1492,15 @@ const AppState = struct {
                                 .refresh_terminal_sizing = struct {
                                     fn cb(cb_raw: *anyopaque) !void {
                                         const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
-                                        try cb_state.refreshTerminalSizing();
+                                        try app_terminal_refresh_sizing_runtime.handle(
+                                            cb_state,
+                                            cb_state.app_mode,
+                                            &cb_state.terminal_workspace,
+                                            cb_state.terminals.items,
+                                            cb_state.show_terminal,
+                                            cb_state.terminal_height,
+                                            cb_state.shell,
+                                        );
                                     }
                                 }.cb,
                                 .apply_current_tab_bar_width_mode = struct {
@@ -1982,37 +1991,6 @@ const AppState = struct {
         self.show_terminal = true;
     }
 
-    fn refreshTerminalSizing(self: *AppState) !void {
-        if (app_terminal_tabs_runtime.count(self.app_mode, self.terminal_workspace, self.terminals.items.len) == 0) return;
-        const shell = self.shell;
-        const width = @as(f32, @floatFromInt(shell.width()));
-        const height = @as(f32, @floatFromInt(shell.height()));
-        const layout = app_ui_layout_runtime.computeLayout(self, width, height);
-        const effective_height = app_modes.ide.terminalEffectiveHeightForSizing(
-            self.app_mode,
-            self.show_terminal,
-            layout.terminal.height,
-            self.terminal_height,
-        );
-        const grid = app_terminal_grid.compute(
-            layout.terminal.width,
-            effective_height,
-            shell.terminalCellWidth(),
-            shell.terminalCellHeight(),
-            1,
-            1,
-        );
-        const cols: u16 = grid.cols;
-        const rows: u16 = grid.rows;
-        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-            if (self.terminal_workspace) |*workspace| {
-                try app_terminal_resize.resizeWorkspaceWithShellCellSize(workspace, shell, rows, cols);
-            }
-        } else {
-            try app_terminal_resize.resizeSessionsWithShellCellSize(self.terminals.items, shell, rows, cols);
-        }
-    }
-
     pub fn run(self: *AppState) !void {
         try app_run_entry_runtime.run(
             @ptrCast(self),
@@ -2195,7 +2173,15 @@ const AppState = struct {
                                                                                 .refresh_terminal_sizing = struct {
                                                                                     fn inner(inner_raw: *anyopaque) !void {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        try inner_state.refreshTerminalSizing();
+                                                                                        try app_terminal_refresh_sizing_runtime.handle(
+                                                                                            inner_state,
+                                                                                            inner_state.app_mode,
+                                                                                            &inner_state.terminal_workspace,
+                                                                                            inner_state.terminals.items,
+                                                                                            inner_state.show_terminal,
+                                                                                            inner_state.terminal_height,
+                                                                                            inner_state.shell,
+                                                                                        );
                                                                                     }
                                                                                 }.inner,
                                                                                 .handle_window_resize_event = struct {
