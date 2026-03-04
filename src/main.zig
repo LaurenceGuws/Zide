@@ -9,8 +9,8 @@ const app_font_rendering = @import("app/font_rendering.zig");
 const app_config_reload_notice = @import("app/config_reload_notice.zig");
 const app_terminal_grid = @import("app/terminal_grid.zig");
 const app_terminal_runtime_intents = @import("app/terminal_runtime_intents.zig");
-const app_terminal_active_session = @import("app/terminal_active_session.zig");
 const app_terminal_active_widget = @import("app/terminal_active_widget.zig");
+const app_terminal_clipboard_shortcuts = @import("app/terminal_clipboard_shortcuts.zig");
 const app_terminal_tab_bar_sync = @import("app/terminal_tab_bar_sync.zig");
 const app_terminal_tab_ops = @import("app/terminal_tab_ops.zig");
 const app_terminal_tabs_runtime = @import("app/terminal_tabs_runtime.zig");
@@ -24,7 +24,6 @@ const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.z
 const app_terminal_close_confirm_state = @import("app/terminal_close_confirm_state.zig");
 const app_terminal_close_confirm_runtime = @import("app/terminal_close_confirm_runtime.zig");
 const app_terminal_close_confirm_input = @import("app/terminal_close_confirm_input.zig");
-const app_terminal_clipboard_shortcuts_runtime = @import("app/terminal_clipboard_shortcuts_runtime.zig");
 const app_mode_adapter_sync = @import("app/mode_adapter_sync.zig");
 const app_mode_adapter_parity = @import("app/mode_adapter_parity.zig");
 const app_terminal_theme_apply = @import("app/terminal_theme_apply.zig");
@@ -37,7 +36,6 @@ const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
 const app_runner = @import("app/runner.zig");
 const app_signals = @import("app/signals.zig");
-const terminal_scrollback_pager = @import("app/terminal_scrollback_pager.zig");
 const app_modes = @import("app/modes/mod.zig");
 
 // Editor modules
@@ -1417,49 +1415,14 @@ const AppState = struct {
             if (input_batch.events.items.len > 0) {
                 term_widget.noteInput(now);
             }
-            const RuntimeCtx = struct {
-                state: *AppState,
-                shell: *Shell,
-                widget: *TerminalWidget,
-            };
-            var runtime_ctx: RuntimeCtx = .{
-                .state = self,
-                .shell = shell,
-                .widget = term_widget,
-            };
-            const hooks: app_terminal_clipboard_shortcuts_runtime.RuntimeHooks = .{
-                .copy = struct {
-                    fn call(raw: *anyopaque) !bool {
-                        const ctx: *RuntimeCtx = @ptrCast(@alignCast(raw));
-                        return ctx.widget.copySelectionToClipboard(ctx.shell);
-                    }
-                }.call,
-                .paste = struct {
-                    fn call(raw: *anyopaque) !bool {
-                        const ctx: *RuntimeCtx = @ptrCast(@alignCast(raw));
-                        return ctx.widget.pasteClipboardFromSystem(ctx.shell);
-                    }
-                }.call,
-                .scrollback_pager = struct {
-                    fn call(raw: *anyopaque) !bool {
-                        const ctx: *RuntimeCtx = @ptrCast(@alignCast(raw));
-                        const term = app_terminal_active_session.resolveActive(
-                            ctx.state.app_mode,
-                            &ctx.state.terminal_workspace,
-                            ctx.state.terminals.items,
-                        ) orelse return false;
-                        return terminal_scrollback_pager.openInPager(
-                            ctx.state.allocator,
-                            ctx.widget,
-                            term,
-                        );
-                    }
-                }.call,
-            };
-            const result = try app_terminal_clipboard_shortcuts_runtime.handle(
+            const result = try app_terminal_clipboard_shortcuts.handle(
                 self.input_router.actionsSlice(),
-                @ptrCast(&runtime_ctx),
-                hooks,
+                self.allocator,
+                self.app_mode,
+                &self.terminal_workspace,
+                self.terminals.items,
+                shell,
+                term_widget,
             );
             if (result.needs_redraw) self.needs_redraw = true;
             return result.handled;
