@@ -112,6 +112,7 @@ app_mode_layering_todo:
           notes:
             - "Must preserve editor search/selection/scroll behavior."
             - "In progress: editor tab create/activate intents now route through `EditorMode` adapter alongside runtime behavior."
+            - "In progress: IDE tab drag reorder now routes editor `move` intents through the adapter."
 
     - name: "MODE-02 IDE composition layer"
       tasks:
