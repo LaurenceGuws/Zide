@@ -710,6 +710,21 @@ const AppState = struct {
         );
     }
 
+    fn routeReconcileTerminalCloseModalActiveFromCtx(raw: *anyopaque) bool {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        return app_terminal_close_confirm_active_runtime.reconcile(state);
+    }
+
+    fn routeComputeLayoutFromCtx(raw: *anyopaque, w: f32, h: f32) layout_types.WidgetLayout {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        return app_ui_layout_runtime.computeLayout(state, w, h);
+    }
+
+    fn routeMarkRedrawFromCtx(raw: *anyopaque) void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        state.needs_redraw = true;
+    }
+
     fn handlePreInputShortcutFrame(
         self: *AppState,
         frame_shell: *Shell,
@@ -740,25 +755,10 @@ const AppState = struct {
             .{
                 .reload_config = routeReloadConfigFromCtx,
                 .show_reload_notice = routeShowConfigReloadNoticeFromCtx,
-                .reconcile_terminal_close_modal_active = struct {
-                    fn call(raw: *anyopaque) bool {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        return app_terminal_close_confirm_active_runtime.reconcile(state);
-                    }
-                }.call,
+                .reconcile_terminal_close_modal_active = routeReconcileTerminalCloseModalActiveFromCtx,
                 .apply_terminal_close_confirm_decision = routeApplyTerminalCloseConfirmDecisionFromCtx,
-                .compute_layout = struct {
-                    fn call(raw: *anyopaque, w: f32, h: f32) layout_types.WidgetLayout {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        return app_ui_layout_runtime.computeLayout(state, w, h);
-                    }
-                }.call,
-                .mark_redraw = struct {
-                    fn call(raw: *anyopaque) void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        state.needs_redraw = true;
-                    }
-                }.call,
+                .compute_layout = routeComputeLayoutFromCtx,
+                .mark_redraw = routeMarkRedrawFromCtx,
                 .note_input = routeNoteInputFromCtx,
             },
         );
