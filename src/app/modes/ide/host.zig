@@ -64,6 +64,20 @@ pub fn usesIdeTerminalStrip(app_mode: app_bootstrap.AppMode) bool {
     return isIde(app_mode);
 }
 
+pub fn useTerminalTabBarWidthMode(app_mode: app_bootstrap.AppMode) bool {
+    return isTerminalOnly(app_mode);
+}
+
+pub fn terminalTabBarVisible(
+    app_mode: app_bootstrap.AppMode,
+    show_single_tab: bool,
+    tab_count: usize,
+) bool {
+    if (!isTerminalOnly(app_mode)) return false;
+    if (show_single_tab) return true;
+    return tab_count >= 2;
+}
+
 pub const IdeHost = struct {
     allocator: std.mem.Allocator,
     editor: shared.contracts.ModeContract,
@@ -198,4 +212,10 @@ test "mode policy helpers route focused mode deterministically" {
     try std.testing.expect(!hasTerminalInputScope(.editor, false));
     try std.testing.expect(usesIdeTerminalStrip(.ide));
     try std.testing.expect(!usesIdeTerminalStrip(.terminal));
+    try std.testing.expect(useTerminalTabBarWidthMode(.terminal));
+    try std.testing.expect(!useTerminalTabBarWidthMode(.ide));
+    try std.testing.expect(terminalTabBarVisible(.terminal, true, 1));
+    try std.testing.expect(terminalTabBarVisible(.terminal, false, 2));
+    try std.testing.expect(!terminalTabBarVisible(.terminal, false, 1));
+    try std.testing.expect(!terminalTabBarVisible(.ide, true, 4));
 }
