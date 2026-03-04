@@ -1078,21 +1078,6 @@ const AppState = struct {
         }
     }
 
-    fn terminalFocusIndexForAction(kind: input_actions.ActionKind) ?usize {
-        return switch (kind) {
-            .terminal_focus_tab_1 => 0,
-            .terminal_focus_tab_2 => 1,
-            .terminal_focus_tab_3 => 2,
-            .terminal_focus_tab_4 => 3,
-            .terminal_focus_tab_5 => 4,
-            .terminal_focus_tab_6 => 5,
-            .terminal_focus_tab_7 => 6,
-            .terminal_focus_tab_8 => 7,
-            .terminal_focus_tab_9 => 8,
-            else => null,
-        };
-    }
-
     fn terminalCloseConfirmActive(self: *AppState) bool {
         if (self.terminal_close_confirm_tab == null) return false;
         if (self.terminal_workspace) |*workspace| {
@@ -2174,7 +2159,7 @@ const AppState = struct {
                 else => {},
             }
             if (app_modes.ide.canHandleTerminalTabFocusShortcuts(self.app_mode)) {
-                if (terminalFocusIndexForAction(action.kind)) |focus_index| {
+                if (app_modes.ide.terminalFocusIndexForAction(action.kind)) |focus_index| {
                     try self.routeTerminalTabActionAndSync(.{ .activate_by_index = focus_index });
                     if (self.focusTerminalTabByIndex(focus_index)) {
                         self.needs_redraw = true;
