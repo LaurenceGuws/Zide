@@ -22,6 +22,37 @@ pub const ScrollbarThumb = struct {
     thumb_y: f32,
 };
 
+pub fn scrollbarWidth(ui_scale: f32) f32 {
+    return @max(@as(f32, 8), 10 * ui_scale);
+}
+
+pub fn scrollbarHoverWidth(ui_scale: f32) f32 {
+    return @max(@as(f32, 10), 14 * ui_scale);
+}
+
+pub fn scrollbarHitMargin(ui_scale: f32) f32 {
+    return @max(@as(f32, 3), 4 * ui_scale);
+}
+
+pub fn scrollbarProximityRange(ui_scale: f32) f32 {
+    return @max(@as(f32, 16), 22 * ui_scale);
+}
+
+pub fn smoothstep01(t: f32) f32 {
+    const tt = std.math.clamp(t, 0.0, 1.0);
+    return tt * tt * (3.0 - 2.0 * tt);
+}
+
+pub fn lerp(a: f32, b: f32, t: f32) f32 {
+    return a + (b - a) * t;
+}
+
+pub fn expApproach(current: f32, target: f32, dt: f32, speed: f32) f32 {
+    if (dt <= 0) return current;
+    const k = std.math.exp(-speed * dt);
+    return target + (current - target) * k;
+}
+
 pub fn pointInRect(px: f32, py: f32, x: f32, y: f32, w: f32, h: f32) bool {
     return px >= x and px <= x + w and py >= y and py <= y + h;
 }

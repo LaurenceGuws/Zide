@@ -56,6 +56,9 @@ pub const TerminalWidget = struct {
     last_focus_reported: ?bool = null,
     ui_focused: bool = true,
     ui_window_focused: bool = true,
+    scrollbar_hover_anim: f32 = 0,
+    scrollbar_anim_last_time: f64 = 0,
+    scrollbar_drag_active: bool = false,
 
     pub fn init(session: *TerminalSession, blink_style: BlinkStyle) TerminalWidget {
         return .{
@@ -81,6 +84,9 @@ pub const TerminalWidget = struct {
             .last_focus_reported = null,
             .ui_focused = true,
             .ui_window_focused = true,
+            .scrollbar_hover_anim = 0,
+            .scrollbar_anim_last_time = 0,
+            .scrollbar_drag_active = false,
         };
     }
 

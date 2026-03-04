@@ -3,6 +3,7 @@ const scroll_mod = @import("../../editor/view/scroll.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 const common = @import("common.zig");
+const scrollbar_mod = @import("editor_scrollbar.zig");
 
 const Shell = app_shell.Shell;
 
@@ -136,29 +137,28 @@ pub fn handleHorizontalScrollbarInput(
     const max_visible_width = widget.editor.maxLineWidthCached();
     if (max_visible_width <= cols) return false;
 
-    const show_vscroll = widget.editor.lineCount() > visible_lines;
-    const scale = shell.uiScaleFactor();
-    const vscroll_w: f32 = if (show_vscroll) 16 * scale else 0;
-    const track_h: f32 = 16 * scale;
-    const track_y = y + height - track_h;
-    const track_x = x + widget.gutter_width;
-    const track_w = @max(@as(f32, 1), width - widget.gutter_width - vscroll_w);
-    const max_scroll = max_visible_width - cols;
-    if (widget.editor.scroll_col > max_scroll) {
-        widget.editor.scroll_col = max_scroll;
+    const h = scrollbar_mod.computeHorizontal(
+        shell.uiScaleFactor(),
+        widget.gutter_width,
+        x,
+        y,
+        width,
+        height,
+        mouse,
+        max_visible_width,
+        cols,
+        widget.editor.lineCount(),
+        visible_lines,
+        widget.editor.scroll_col,
+        dragging.*,
+    );
+    if (!h.visible) return false;
+    if (widget.editor.scroll_col > h.max_scroll) {
+        widget.editor.scroll_col = h.max_scroll;
     }
 
-    const min_thumb_w: f32 = 24 * scale;
-    const thumb_w = @max(min_thumb_w, track_w * (@as(f32, @floatFromInt(cols)) / @as(f32, @floatFromInt(max_visible_width))));
-    const available = @max(@as(f32, 1), track_w - thumb_w);
-    const ratio = if (max_scroll > 0)
-        @as(f32, @floatFromInt(widget.editor.scroll_col)) / @as(f32, @floatFromInt(max_scroll))
-    else
-        0.0;
-    const thumb_x = track_x + available * ratio;
-
-    const over_track = mouse.x >= track_x and mouse.x <= track_x + track_w and mouse.y >= track_y and mouse.y <= track_y + track_h;
-    const over_thumb = mouse.x >= thumb_x and mouse.x <= thumb_x + thumb_w and mouse.y >= track_y and mouse.y <= track_y + track_h;
+    const over_track = common.pointInRect(mouse.x, mouse.y, h.track_x, h.track_y - h.hit_margin, h.track_w, h.track_h + h.hit_margin);
+    const over_thumb = common.pointInRect(mouse.x, mouse.y, h.thumb_x, h.track_y - h.hit_margin, h.thumb_w, h.track_h + h.hit_margin);
 
     const mouse_down = input_batch.mouseDown(.left);
     const mouse_pressed = input_batch.mousePressed(.left);
@@ -177,13 +177,13 @@ pub fn handleHorizontalScrollbarInput(
     }
     if ((mouse_pressed or (!dragging.* and mouse_down)) and over_track) {
         dragging.* = true;
-        grab_offset.* = if (over_thumb) mouse.x - thumb_x else thumb_w * 0.5;
-        scroll_mod.updateHorizontalScrollFromMouse(widget.editor, mouse.x, track_x, available, grab_offset.*, max_scroll);
+        grab_offset.* = if (over_thumb) mouse.x - h.thumb_x else h.thumb_w * 0.5;
+        scroll_mod.updateHorizontalScrollFromMouse(widget.editor, mouse.x, h.track_x, h.available, grab_offset.*, h.max_scroll);
         return true;
     }
 
     if (dragging.* and mouse_down) {
-        scroll_mod.updateHorizontalScrollFromMouse(widget.editor, mouse.x, track_x, available, grab_offset.*, max_scroll);
+        scroll_mod.updateHorizontalScrollFromMouse(widget.editor, mouse.x, h.track_x, h.available, grab_offset.*, h.max_scroll);
         return true;
     }
 
@@ -209,25 +209,25 @@ pub fn handleVerticalScrollbarInput(
     const total_lines = widget.editor.lineCount();
     if (total_lines <= visible_lines) return false;
 
-    const scale = shell.uiScaleFactor();
-    const scrollbar_w: f32 = 16 * scale;
-    const scrollbar_x = x + width - scrollbar_w;
-    const scrollbar_y = y;
-    const scrollbar_h = height;
-    const max_scroll = total_lines - visible_lines;
-    if (widget.editor.scroll_line > max_scroll) {
-        widget.editor.scroll_line = max_scroll;
+    const v = scrollbar_mod.computeVertical(
+        shell.uiScaleFactor(),
+        x,
+        y,
+        width,
+        height,
+        mouse,
+        visible_lines,
+        total_lines,
+        widget.editor.scroll_line,
+        dragging.*,
+    );
+    if (!v.visible) return false;
+    if (widget.editor.scroll_line > v.max_scroll) {
+        widget.editor.scroll_line = v.max_scroll;
     }
 
-    const ratio = if (max_scroll > 0)
-        @as(f32, @floatFromInt(widget.editor.scroll_line)) / @as(f32, @floatFromInt(max_scroll))
-    else
-        0.0;
-    const min_thumb_h: f32 = 32 * scale;
-    const thumb = common.computeScrollbarThumb(scrollbar_y, scrollbar_h, visible_lines, total_lines, min_thumb_h, ratio);
-
-    const over_track = common.pointInRect(mouse.x, mouse.y, scrollbar_x, scrollbar_y, scrollbar_w, scrollbar_h);
-    const over_thumb = common.pointInRect(mouse.x, mouse.y, scrollbar_x, thumb.thumb_y, scrollbar_w, thumb.thumb_h);
+    const over_track = common.pointInRect(mouse.x, mouse.y, v.scrollbar_x - v.hit_margin, v.scrollbar_y, v.scrollbar_w + v.hit_margin, v.scrollbar_h);
+    const over_thumb = common.pointInRect(mouse.x, mouse.y, v.scrollbar_x - v.hit_margin, v.thumb.thumb_y, v.scrollbar_w + v.hit_margin, v.thumb.thumb_h);
 
     const mouse_down = input_batch.mouseDown(.left);
     const mouse_pressed = input_batch.mousePressed(.left);
@@ -246,13 +246,13 @@ pub fn handleVerticalScrollbarInput(
     }
     if ((mouse_pressed or (!dragging.* and mouse_down)) and over_track) {
         dragging.* = true;
-        grab_offset.* = if (over_thumb) mouse.y - thumb.thumb_y else thumb.thumb_h * 0.5;
-        scroll_mod.updateVerticalScrollFromMouse(widget.editor, mouse.y, scrollbar_y, thumb.available, grab_offset.*, max_scroll);
+        grab_offset.* = if (over_thumb) mouse.y - v.thumb.thumb_y else v.thumb.thumb_h * 0.5;
+        scroll_mod.updateVerticalScrollFromMouse(widget.editor, mouse.y, v.scrollbar_y, v.thumb.available, grab_offset.*, v.max_scroll);
         return true;
     }
 
     if (dragging.* and mouse_down) {
-        scroll_mod.updateVerticalScrollFromMouse(widget.editor, mouse.y, scrollbar_y, thumb.available, grab_offset.*, max_scroll);
+        scroll_mod.updateVerticalScrollFromMouse(widget.editor, mouse.y, v.scrollbar_y, v.thumb.available, grab_offset.*, v.max_scroll);
         return true;
     }
 

@@ -38,9 +38,22 @@ pub fn handleInput(
     }
     defer if (locked) self.session.unlock();
     var handled = false;
+    self.scrollbar_drag_active = scroll_dragging.*;
     const mouse = input_batch.mouse_pos;
     const in_terminal = common.pointInRect(mouse.x, mouse.y, x, y, width, height);
-    const scrollbar_w: f32 = 10;
+    const scale = shell.uiScaleFactor();
+    const scrollbar_base_w: f32 = common.scrollbarHoverWidth(scale);
+    const scrollbar_hover_w: f32 = scrollbar_base_w + @max(@as(f32, 1), 2 * scale);
+    const scrollbar_hit_margin: f32 = common.scrollbarHitMargin(scale);
+    const scrollbar_proximity: f32 = common.scrollbarProximityRange(scale);
+    const in_scroll_y = mouse.y >= y and mouse.y <= y + height;
+    const dist_from_right = (x + width) - mouse.x;
+    const proximity_raw: f32 = if (in_scroll_y and dist_from_right <= scrollbar_proximity and dist_from_right >= -scrollbar_hit_margin)
+        (1.0 - std.math.clamp(dist_from_right / scrollbar_proximity, 0.0, 1.0))
+    else
+        0.0;
+    const proximity_t = common.smoothstep01(proximity_raw);
+    const scrollbar_w: f32 = common.lerp(scrollbar_base_w, scrollbar_hover_w, if (scroll_dragging.*) 1.0 else proximity_t);
     const scrollbar_x = x + width - scrollbar_w;
     const scrollbar_y = y;
     const scrollbar_h = height;
@@ -56,7 +69,14 @@ pub fn handleInput(
     const max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
     const cache = self.session.renderCache();
     const show_scrollbar = !cache.alt_active and !self.session.mouseReportingEnabled() and total_lines > rows;
-    const mouse_on_scrollbar = show_scrollbar and common.pointInRect(mouse.x, mouse.y, scrollbar_x, scrollbar_y, scrollbar_w, scrollbar_h);
+    const mouse_on_scrollbar = show_scrollbar and common.pointInRect(
+        mouse.x,
+        mouse.y,
+        scrollbar_x - scrollbar_hit_margin,
+        scrollbar_y,
+        scrollbar_w + scrollbar_hit_margin,
+        scrollbar_h,
+    );
     const scroll_log = app_logger.logger("terminal.scroll");
     const altmeta_log = app_logger.logger("terminal.input.altmeta");
     const mousemap_log = app_logger.logger("terminal.ui.mousemap");
@@ -535,6 +555,7 @@ pub fn handleInput(
         if (!mouse_reporting and in_terminal and mouse_on_scrollbar) {
             if (input_batch.mousePressed(.left)) {
                 scroll_dragging.* = true;
+                self.scrollbar_drag_active = true;
                 const track_h = scrollbar_h;
                 const min_thumb_h: f32 = 18;
                 const scroll_offset_local = self.session.scrollOffset();
@@ -567,6 +588,7 @@ pub fn handleInput(
                 handled = true;
             } else {
                 scroll_dragging.* = false;
+                self.scrollbar_drag_active = false;
             }
         }
 
@@ -666,5 +688,6 @@ pub fn handleInput(
 
     }
 
+    self.scrollbar_drag_active = scroll_dragging.*;
     return handled;
 }
