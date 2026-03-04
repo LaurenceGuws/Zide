@@ -2746,24 +2746,29 @@ const AppState = struct {
         };
     }
 
+    fn runOneFrame(self: *AppState) !bool {
+        var frame = (try self.prepareRunFrame()) orelse return false;
+        defer frame.input_batch.deinit();
+
+        const update_start = app_shell.getTime();
+        try self.update(&frame.input_batch);
+        const update_end = app_shell.getTime();
+        const update_ms = (update_end - update_start) * 1000.0;
+        self.handleFrameRenderAndIdle(&frame.input_batch, frame.poll_ms, frame.build_ms, update_ms);
+
+        if (self.perf_mode and self.perf_frames_done >= self.perf_frames_total and self.perf_frames_total > 0) {
+            self.perf_logger.logf("perf complete frames={d}", .{self.perf_frames_done});
+            return false;
+        }
+        return true;
+    }
+
     pub fn run(self: *AppState) !void {
         try self.initializeRunModeState();
 
         // Main loop
         while (!self.shell.shouldClose()) {
-            var frame = (try self.prepareRunFrame()) orelse break;
-            defer frame.input_batch.deinit();
-
-            const update_start = app_shell.getTime();
-            try self.update(&frame.input_batch);
-            const update_end = app_shell.getTime();
-            const update_ms = (update_end - update_start) * 1000.0;
-            self.handleFrameRenderAndIdle(&frame.input_batch, frame.poll_ms, frame.build_ms, update_ms);
-
-            if (self.perf_mode and self.perf_frames_done >= self.perf_frames_total and self.perf_frames_total > 0) {
-                self.perf_logger.logf("perf complete frames={d}", .{self.perf_frames_done});
-                break;
-            }
+            if (!try self.runOneFrame()) break;
         }
     }
 
