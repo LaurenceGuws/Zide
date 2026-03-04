@@ -7,7 +7,7 @@ pub const zide_focused_mode = app_entry_runtime.AppMode.terminal;
 pub fn main() !void {
     try runner.runWithGpa(struct {
         fn call(allocator: std.mem.Allocator) !void {
-            try app_entry_runtime.runWithMode(allocator, .terminal);
+            try app_entry_runtime.runFocused(allocator);
         }
     }.call);
 }

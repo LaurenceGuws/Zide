@@ -8,6 +8,15 @@ const app_state_mod = @import("app_state.zig");
 pub const AppMode = app_state_mod.AppMode;
 const AppState = app_state_mod.AppState;
 
+pub fn runFocused(allocator: std.mem.Allocator) !void {
+    const focused_mode = comptime mode_build.focused_mode orelse
+        @compileError("runFocused requires root `zide_focused_mode` declaration");
+    var app = try AppState.init(allocator, focused_mode);
+    defer app.deinit();
+
+    try app.run();
+}
+
 pub fn runWithMode(allocator: std.mem.Allocator, app_mode: AppMode) !void {
     const effective_mode = mode_build.effectiveMode(app_mode);
     var app = try AppState.init(allocator, effective_mode);
