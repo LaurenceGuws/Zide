@@ -960,6 +960,14 @@ pub fn build(b: *std.Build) void {
     mode_gates_step.dependOn(b.getInstallStep());
     mode_gates_step.dependOn(terminal_replay_all_step);
 
+    const mode_gates_fast_step = b.step("mode-gates-fast", "Run fast non-replay MODE extraction gates");
+    mode_gates_fast_step.dependOn(test_step);
+    mode_gates_fast_step.dependOn(terminal_import_check_step);
+    mode_gates_fast_step.dependOn(app_import_check_step);
+    mode_gates_fast_step.dependOn(input_import_check_step);
+    mode_gates_fast_step.dependOn(editor_import_check_step);
+    mode_gates_fast_step.dependOn(b.getInstallStep());
+
     const mode_smokes_manual_step = b.step("mode-smokes-manual", "Run interactive MODE smokes (manual)");
     mode_smokes_manual_step.dependOn(run_step);
     mode_smokes_manual_step.dependOn(run_mode_terminal_step);

@@ -23,6 +23,8 @@ This document is the compatibility authority for the app mode layering extractio
 5. `zig build check-editor-imports`
 6. `zig build mode-gates`
 
+For local extraction loops, you may run `zig build mode-gates-fast` between commits and reserve `zig build mode-gates` for checkpoint validation.
+
 ## Manual interactive compatibility smokes (run when explicitly requested)
 
 1. `zig build mode-smokes-manual`
