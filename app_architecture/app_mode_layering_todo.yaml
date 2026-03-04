@@ -61,7 +61,7 @@ app_mode_layering_todo:
       tasks:
         - id: MODE-00-01
           title: "Add shared mode contract interfaces and action DTOs"
-          status: todo
+          status: done
           files_to_add:
             - src/app/modes/shared/contracts.zig
             - src/app/modes/shared/actions.zig
