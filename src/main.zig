@@ -726,16 +726,23 @@ const AppState = struct {
         _ = contract.applyAction(self.allocator, .{ .tab = tab_action }) catch {};
     }
 
-    fn applyTerminalCloseIntentForActiveWorkspaceTab(self: *AppState) void {
-        if (self.terminal_workspace) |*workspace| {
-            if (app_modes.ide.closeIntentForActiveTab(workspace.activeTabId())) |intent| {
-                self.applyTerminalModeTabAction(intent);
-            }
+    fn routeTerminalCloseIntentByTabIdAndSync(self: *AppState, active_tab_id: ?u64) !bool {
+        if (app_modes.ide.closeIntentForActiveTab(active_tab_id)) |intent| {
+            try self.routeTerminalTabActionAndSync(intent);
+            return true;
         }
+        return false;
+    }
+
+    fn routeTerminalCloseIntentForActiveWorkspaceTabAndSync(self: *AppState) !bool {
+        if (self.terminal_workspace) |*workspace| {
+            return try self.routeTerminalCloseIntentByTabIdAndSync(workspace.activeTabId());
+        }
+        return false;
     }
 
     fn requestCloseActiveTerminalTab(self: *AppState, now: f64) !bool {
-        self.applyTerminalCloseIntentForActiveWorkspaceTab();
+        _ = try self.routeTerminalCloseIntentForActiveWorkspaceTabAndSync();
         if (try self.closeActiveTerminalTab()) {
             self.needs_redraw = true;
             self.metrics.noteInput(now);
@@ -2128,7 +2135,7 @@ const AppState = struct {
             terminal_parity.mismatch != null)
         {
             log.logf(
-                "adapter parity mismatch editor={d}/{d} active={?d}/{?d} e_mismatch_idx={?d} e_id={?d}/{?d} e_title={s}/{s} terminal={d}/{d} active={?d}/{?d} t_mismatch_idx={?d} t_id={?d}/{?d} t_title={s}/{s}",
+                "adapter parity mismatch editor_count={d}/{d} editor_active={?d}/{?d} editor_first_mismatch_idx={?d} editor_first_mismatch_id={?d}/{?d} editor_first_mismatch_title={s}/{s} terminal_count={d}/{d} terminal_active={?d}/{?d} terminal_first_mismatch_idx={?d} terminal_first_mismatch_id={?d}/{?d} terminal_first_mismatch_title={s}/{s}",
                 .{
                     editor_parity.actual_count,
                     editor_parity.expected_count,
@@ -2181,7 +2188,7 @@ const AppState = struct {
             modal,
         )) {
             .confirm => {
-                self.applyTerminalCloseIntentForActiveWorkspaceTab();
+                _ = try self.routeTerminalCloseIntentForActiveWorkspaceTabAndSync();
                 if (try self.closeActiveTerminalTab()) {
                     self.needs_redraw = true;
                 }
@@ -3253,4 +3260,72 @@ test "search panel reopen preserves synced query through editor state" {
     try std.testing.expect(app.search_panel.active);
     try std.testing.expectEqualStrings("beta", app.search_panel.query.items);
     try std.testing.expectEqualStrings("beta", editor.searchQuery().?);
+}
+
+fn initTestAppStateForTerminalTabRouting(allocator: std.mem.Allocator) !AppState {
+    var app: AppState = undefined;
+    app.allocator = allocator;
+    app.app_mode = .terminal;
+    app.active_kind = .terminal;
+    app.tab_bar = TabBar.init(allocator);
+    app.editor_mode_adapter = try app_modes.backend.bootstrap.initEditorMode(allocator, .{
+        .seed_editor_tab = false,
+        .seed_terminal_tab = false,
+    });
+    app.terminal_mode_adapter = try app_modes.backend.bootstrap.initTerminalMode(allocator, .{
+        .seed_editor_tab = false,
+        .seed_terminal_tab = false,
+    });
+    app.terminal_workspace = null;
+    return app;
+}
+
+fn deinitTestAppStateForTerminalTabRouting(app: *AppState, allocator: std.mem.Allocator) void {
+    app.tab_bar.deinit();
+    app.editor_mode_adapter.deinit(allocator);
+    app.terminal_mode_adapter.deinit(allocator);
+}
+
+test "routeTerminalCloseIntentByTabIdAndSync emits only when tab id is present" {
+    const allocator = std.testing.allocator;
+    var app = try initTestAppStateForTerminalTabRouting(allocator);
+    defer deinitTestAppStateForTerminalTabRouting(&app, allocator);
+
+    try app.tab_bar.addTerminalTab("t1", 101);
+    try app.tab_bar.addTerminalTab("t2", 202);
+    app.tab_bar.active_index = 1;
+    try app.syncModeAdaptersFromTabBar();
+
+    try std.testing.expect(try app.routeTerminalCloseIntentByTabIdAndSync(202));
+    try std.testing.expect(!try app.routeTerminalCloseIntentByTabIdAndSync(null));
+}
+
+test "routeTerminalTabActionAndSync keeps terminal mode aligned with reordered tab bar" {
+    const allocator = std.testing.allocator;
+    var app = try initTestAppStateForTerminalTabRouting(allocator);
+    defer deinitTestAppStateForTerminalTabRouting(&app, allocator);
+
+    try app.tab_bar.addTerminalTab("t1", 11);
+    try app.tab_bar.addTerminalTab("t2", 22);
+    try app.tab_bar.addTerminalTab("t3", 33);
+    app.tab_bar.active_index = 1;
+    try app.syncModeAdaptersFromTabBar();
+
+    const moved = app.tab_bar.tabs.orderedRemove(0);
+    try app.tab_bar.tabs.insert(allocator, 1, moved);
+    app.tab_bar.active_index = 0;
+
+    try app.routeTerminalTabActionAndSync(.{
+        .move = .{
+            .from_index = 0,
+            .to_index = 1,
+        },
+    });
+
+    const snap = try app.terminal_mode_adapter.asContract().snapshot(allocator);
+    try std.testing.expectEqual(@as(usize, 3), snap.tabs.len);
+    try std.testing.expectEqual(@as(?u64, 22), snap.active_tab);
+    try std.testing.expectEqual(@as(u64, 22), snap.tabs[0].id);
+    try std.testing.expectEqual(@as(u64, 11), snap.tabs[1].id);
+    try std.testing.expectEqual(@as(u64, 33), snap.tabs[2].id);
 }
