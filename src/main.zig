@@ -969,40 +969,51 @@ const AppState = struct {
         self.perf_logger.logf("perf complete frames={d}", .{self.perf_frames_done});
     }
 
+    fn routePrepareRunFrameFromCtx(raw: *anyopaque) !?app_run_loop_driver.FrameSetup {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        return try app_prepare_run_frame_runtime.prepare(state);
+    }
+
+    fn routeUpdateFrameFromCtx(raw: *anyopaque, input_batch: *shared_types.input.InputBatch) !void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        try state.handleUpdateFrame(input_batch);
+    }
+
+    fn routeHandleFrameRenderAndIdleFromCtx(
+        raw: *anyopaque,
+        input_batch: *shared_types.input.InputBatch,
+        poll_ms: f64,
+        build_ms: f64,
+        update_ms: f64,
+    ) void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        state.handleFrameRenderAndIdle(input_batch, poll_ms, build_ms, update_ms);
+    }
+
+    fn routeShouldStopForPerfFromCtx(raw: *anyopaque) bool {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        return state.shouldStopForPerfFrame();
+    }
+
+    fn routeOnPerfCompleteFromCtx(raw: *anyopaque) void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        state.onPerfCompleteFrame();
+    }
+
+    fn routeRunOneFrameFromCtx(raw: *anyopaque) !bool {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        return try state.runOneFrame();
+    }
+
     fn runOneFrame(self: *AppState) !bool {
         return try app_run_one_frame_hooks_runtime.run(
             @ptrCast(self),
             .{
-                .prepare_run_frame = struct {
-                    fn call(raw: *anyopaque) !?app_run_loop_driver.FrameSetup {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        return try app_prepare_run_frame_runtime.prepare(state);
-                    }
-                }.call,
-                .update = struct {
-                    fn call(raw: *anyopaque, input_batch: *shared_types.input.InputBatch) !void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        try state.handleUpdateFrame(input_batch);
-                    }
-                }.call,
-                .handle_frame_render_and_idle = struct {
-                    fn call(raw: *anyopaque, input_batch: *shared_types.input.InputBatch, poll_ms: f64, build_ms: f64, update_ms: f64) void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        state.handleFrameRenderAndIdle(input_batch, poll_ms, build_ms, update_ms);
-                    }
-                }.call,
-                .should_stop_for_perf = struct {
-                    fn call(raw: *anyopaque) bool {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        return state.shouldStopForPerfFrame();
-                    }
-                }.call,
-                .on_perf_complete = struct {
-                    fn call(raw: *anyopaque) void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        state.onPerfCompleteFrame();
-                    }
-                }.call,
+                .prepare_run_frame = routePrepareRunFrameFromCtx,
+                .update = routeUpdateFrameFromCtx,
+                .handle_frame_render_and_idle = routeHandleFrameRenderAndIdleFromCtx,
+                .should_stop_for_perf = routeShouldStopForPerfFromCtx,
+                .on_perf_complete = routeOnPerfCompleteFromCtx,
             },
         );
     }
@@ -1012,12 +1023,7 @@ const AppState = struct {
             self.shell,
             @ptrCast(self),
             .{
-                .run_one_frame = struct {
-                    fn call(raw: *anyopaque) !bool {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        return try state.runOneFrame();
-                    }
-                }.call,
+                .run_one_frame = routeRunOneFrameFromCtx,
             },
         );
     }
