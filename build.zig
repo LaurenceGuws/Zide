@@ -252,6 +252,24 @@ pub fn build(b: *std.Build) void {
     const run_step = b.step("run", "Run the IDE");
     run_step.dependOn(&run_cmd.step);
 
+    const run_mode_terminal_cmd = b.addRunArtifact(exe);
+    run_mode_terminal_cmd.step.dependOn(b.getInstallStep());
+    run_mode_terminal_cmd.addArgs(&.{ "--mode", "terminal" });
+    const run_mode_terminal_step = b.step("run-mode-terminal", "Run main entry in --mode terminal");
+    run_mode_terminal_step.dependOn(&run_mode_terminal_cmd.step);
+
+    const run_mode_editor_cmd = b.addRunArtifact(exe);
+    run_mode_editor_cmd.step.dependOn(b.getInstallStep());
+    run_mode_editor_cmd.addArgs(&.{ "--mode", "editor" });
+    const run_mode_editor_step = b.step("run-mode-editor", "Run main entry in --mode editor");
+    run_mode_editor_step.dependOn(&run_mode_editor_cmd.step);
+
+    const run_mode_ide_cmd = b.addRunArtifact(exe);
+    run_mode_ide_cmd.step.dependOn(b.getInstallStep());
+    run_mode_ide_cmd.addArgs(&.{ "--mode", "ide" });
+    const run_mode_ide_step = b.step("run-mode-ide", "Run main entry in --mode ide");
+    run_mode_ide_step.dependOn(&run_mode_ide_cmd.step);
+
     // Focused app entrypoints (same app graph for now, fixed mode roots).
     const exe_terminal = b.addExecutable(.{
         .name = "zide-terminal",
@@ -703,6 +721,11 @@ pub fn build(b: *std.Build) void {
     const terminal_replay_step = b.step("test-terminal-replay", "Run terminal replay harness");
     terminal_replay_step.dependOn(&run_terminal_replay.step);
 
+    const run_terminal_replay_all = b.addRunArtifact(terminal_replay_exe);
+    run_terminal_replay_all.addArg("--all");
+    const terminal_replay_all_step = b.step("test-terminal-replay-all", "Run terminal replay harness across all fixtures");
+    terminal_replay_all_step.dependOn(&run_terminal_replay_all.step);
+
     const editor_perf_headless = b.addExecutable(.{
         .name = "editor-perf-headless",
         .root_module = b.createModule(.{
@@ -927,6 +950,17 @@ pub fn build(b: *std.Build) void {
     const run_input_import_check = b.addRunArtifact(app_import_check);
     const input_import_check_step = b.step("check-input-imports", "Check input module import layering");
     input_import_check_step.dependOn(&run_input_import_check.step);
+
+    const mode_gates_step = b.step("mode-gates", "Run MODE extraction regression gate bundle");
+    mode_gates_step.dependOn(test_step);
+    mode_gates_step.dependOn(app_import_check_step);
+    mode_gates_step.dependOn(input_import_check_step);
+    mode_gates_step.dependOn(editor_import_check_step);
+    mode_gates_step.dependOn(run_step);
+    mode_gates_step.dependOn(run_mode_terminal_step);
+    mode_gates_step.dependOn(run_mode_editor_step);
+    mode_gates_step.dependOn(run_mode_ide_step);
+    mode_gates_step.dependOn(terminal_replay_all_step);
 
     const grammar_update = b.addExecutable(.{
         .name = "grammar-update",
