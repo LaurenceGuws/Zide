@@ -210,6 +210,7 @@ const AppState = struct {
     terminal_blink_style: TerminalWidget.BlinkStyle,
     terminal_cursor_style: ?term_types.CursorStyle,
     terminal_scrollback_rows: ?usize,
+    terminal_tab_bar_show_single_tab: bool,
     terminal_focus_report_window_events: bool,
     terminal_focus_report_pane_events: bool,
     last_terminal_pane_focus_reported: ?bool,
@@ -378,6 +379,7 @@ const AppState = struct {
                 .terminal_scrollback_rows = null,
                 .terminal_cursor_shape = null,
                 .terminal_cursor_blink = null,
+                .terminal_tab_bar_show_single_tab = null,
                 .terminal_focus_report_window = null,
                 .terminal_focus_report_pane = null,
                 .font_lcd = null,
@@ -524,6 +526,7 @@ const AppState = struct {
             .terminal_blink_style = terminal_blink_style,
             .terminal_cursor_style = terminal_cursor_style,
             .terminal_scrollback_rows = config.terminal_scrollback_rows,
+            .terminal_tab_bar_show_single_tab = config.terminal_tab_bar_show_single_tab orelse false,
             .terminal_focus_report_window_events = config.terminal_focus_report_window orelse true,
             .terminal_focus_report_pane_events = config.terminal_focus_report_pane orelse false,
             .last_terminal_pane_focus_reported = null,
@@ -869,6 +872,12 @@ const AppState = struct {
             return 0;
         }
         return self.terminals.items.len;
+    }
+
+    fn terminalTabBarVisible(self: *const AppState) bool {
+        if (self.app_mode != .terminal) return false;
+        if (self.terminal_tab_bar_show_single_tab) return true;
+        return self.terminalTabCount() >= 2;
     }
 
     fn activeTerminalArrayIndex(self: *const AppState) ?usize {
@@ -1319,7 +1328,7 @@ const AppState = struct {
     fn computeLayout(self: *AppState, width: f32, height: f32) layout_types.WidgetLayout {
         switch (self.app_mode) {
             .terminal => {
-                const tab_bar_h = self.tab_bar.height;
+                const tab_bar_h = if (self.terminalTabBarVisible()) self.tab_bar.height else 0;
                 const terminal_h = if (self.show_terminal) @max(0, height - tab_bar_h) else 0;
                 return .{
                     .window = .{ .x = 0, .y = 0, .width = width, .height = height },
@@ -2107,7 +2116,9 @@ const AppState = struct {
                     self.metrics.noteInput(now);
                 }
             } else if (self.app_mode == .terminal) {
-                _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y);
+                if (self.terminalTabBarVisible()) {
+                    _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y);
+                }
                 self.active_kind = .terminal;
             } else {
                 self.active_kind = .editor;
@@ -2151,13 +2162,13 @@ const AppState = struct {
         }
 
         if (self.app_mode == .terminal) {
-            if (input_batch.mouseDown(.left)) {
+            if (self.terminalTabBarVisible() and input_batch.mouseDown(.left)) {
                 if (self.tab_bar.updateDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, true)) {
                     self.needs_redraw = true;
                     self.metrics.noteInput(now);
                 }
             }
-            if (input_batch.mouseReleased(.left)) {
+            if (self.terminalTabBarVisible() and input_batch.mouseReleased(.left)) {
                 const drag_end = self.tab_bar.endDrag();
                 if (drag_end.active and !drag_end.moved) {
                     if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y)) {
@@ -2503,7 +2514,8 @@ const AppState = struct {
                 }
                 if (terminal_theme_changed) {
                     try self.notifyTerminalColorSchemeChanged();
-                    for (self.terminals.items) |term| {
+                    for (self.terminal_widgets.items) |*widget| {
+                        const term = widget.session;
                         term.setDefaultColors(
                             term_types.Color{
                                 .r = self.terminal_theme.foreground.r,
@@ -2524,6 +2536,8 @@ const AppState = struct {
                             term.setAnsiColors(colors);
                         }
                         term.markDirty();
+                        term.updateViewCacheForScroll();
+                        widget.invalidateTextureCache();
                     }
                 }
                 self.needs_redraw = true;
@@ -2617,6 +2631,13 @@ const AppState = struct {
         if (config.terminal_scrollback_rows != null) {
             self.terminal_scrollback_rows = config.terminal_scrollback_rows;
             log.logStdout("reload note: terminal scrollback cap applies to new sessions", .{});
+        }
+        if (config.terminal_tab_bar_show_single_tab != null) {
+            self.terminal_tab_bar_show_single_tab = config.terminal_tab_bar_show_single_tab.?;
+            self.needs_redraw = true;
+            log.logStdout("reload terminal.tab_bar.show_single_tab={any}", .{
+                self.terminal_tab_bar_show_single_tab,
+            });
         }
         if (config.terminal_focus_report_window != null or config.terminal_focus_report_pane != null) {
             if (config.terminal_focus_report_window) |v| self.terminal_focus_report_window_events = v;
@@ -2768,7 +2789,9 @@ const AppState = struct {
         } else if (self.app_mode == .terminal) {
             const tab_theme = self.terminalTabBarTheme();
             shell.setTheme(tab_theme);
-            tab_tooltip = self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
+            if (self.terminalTabBarVisible()) {
+                tab_tooltip = self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
+            }
         }
 
         // Draw editor

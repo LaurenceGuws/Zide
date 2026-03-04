@@ -47,6 +47,7 @@ pub const Config = struct {
     terminal_scrollback_rows: ?usize,
     terminal_cursor_shape: ?term_types.CursorShape,
     terminal_cursor_blink: ?bool,
+    terminal_tab_bar_show_single_tab: ?bool,
     terminal_focus_report_window: ?bool,
     terminal_focus_report_pane: ?bool,
     font_lcd: ?bool,
@@ -167,6 +168,7 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
         .terminal_scrollback_rows = null,
         .terminal_cursor_shape = null,
         .terminal_cursor_blink = null,
+        .terminal_tab_bar_show_single_tab = null,
         .terminal_focus_report_window = null,
         .terminal_focus_report_pane = null,
         .font_lcd = null,
@@ -319,6 +321,9 @@ fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) voi
     if (overlay.terminal_cursor_blink != null) {
         base.terminal_cursor_blink = overlay.terminal_cursor_blink;
     }
+    if (overlay.terminal_tab_bar_show_single_tab != null) {
+        base.terminal_tab_bar_show_single_tab = overlay.terminal_tab_bar_show_single_tab;
+    }
     if (overlay.terminal_focus_report_window != null) {
         base.terminal_focus_report_window = overlay.terminal_focus_report_window;
     }
@@ -438,6 +443,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             .terminal_scrollback_rows = null,
             .terminal_cursor_shape = null,
             .terminal_cursor_blink = null,
+            .terminal_tab_bar_show_single_tab = null,
             .terminal_focus_report_window = null,
             .terminal_focus_report_pane = null,
             .font_lcd = null,
@@ -480,6 +486,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     var terminal_scrollback_rows: ?usize = null;
     var terminal_cursor_shape: ?term_types.CursorShape = null;
     var terminal_cursor_blink: ?bool = null;
+    var terminal_tab_bar_show_single_tab: ?bool = null;
     var terminal_focus_report_window: ?bool = null;
     var terminal_focus_report_pane: ?bool = null;
     var font_lcd: ?bool = null;
@@ -774,6 +781,21 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         }
         c.lua_pop(L, 1);
 
+        _ = c.lua_getfield(L, -1, "tab_bar");
+        if (c.lua_istable(L, -1)) {
+            _ = c.lua_getfield(L, -1, "show_single_tab");
+            if (c.lua_isboolean(L, -1)) {
+                terminal_tab_bar_show_single_tab = c.lua_toboolean(L, -1) != 0;
+            } else if (!c.lua_isnil(L, -1)) {
+                warnInvalidValue("terminal.tab_bar.show_single_tab", "false");
+                terminal_tab_bar_show_single_tab = false;
+            }
+            c.lua_pop(L, 1);
+        } else if (!c.lua_isnil(L, -1)) {
+            warnInvalidValue("terminal.tab_bar", "{ show_single_tab = false }");
+        }
+        c.lua_pop(L, 1);
+
         _ = c.lua_getfield(L, -1, "focus_reporting");
         if (c.lua_isboolean(L, -1)) {
             const enabled = c.lua_toboolean(L, -1) != 0;
@@ -936,6 +958,7 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         .terminal_scrollback_rows = terminal_scrollback_rows,
         .terminal_cursor_shape = terminal_cursor_shape,
         .terminal_cursor_blink = terminal_cursor_blink,
+        .terminal_tab_bar_show_single_tab = terminal_tab_bar_show_single_tab,
         .terminal_focus_report_window = terminal_focus_report_window,
         .terminal_focus_report_pane = terminal_focus_report_pane,
         .font_lcd = font_lcd,
