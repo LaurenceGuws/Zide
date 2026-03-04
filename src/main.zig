@@ -756,6 +756,31 @@ const AppState = struct {
         return false;
     }
 
+    fn requestCycleTerminalTabWithIntent(
+        self: *AppState,
+        dir: app_modes.ide.TerminalShortcutCycleDirection,
+        now: f64,
+    ) !bool {
+        const moved = self.cycleTerminalTab(dir == .next);
+        if (!moved) return false;
+        try self.routeTerminalTabActionAndSync(if (dir == .next) .next else .prev);
+        self.needs_redraw = true;
+        self.metrics.noteInput(now);
+        return true;
+    }
+
+    fn requestFocusTerminalTabWithIntent(
+        self: *AppState,
+        route: app_modes.ide.TerminalFocusRoute,
+        now: f64,
+    ) !bool {
+        try self.routeTerminalTabActionAndSync(route.intent);
+        if (!self.focusTerminalTabByIndex(route.index)) return false;
+        self.needs_redraw = true;
+        self.metrics.noteInput(now);
+        return true;
+    }
+
     fn handleTerminalShortcutIntent(
         self: *AppState,
         intent: app_modes.ide.TerminalShortcutIntent,
@@ -777,22 +802,11 @@ const AppState = struct {
             },
             .cycle => |dir| blk: {
                 if (!app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) break :blk false;
-                const moved = self.cycleTerminalTab(dir == .next);
-                if (!moved) break :blk false;
-                try self.routeTerminalTabActionAndSync(if (dir == .next) .next else .prev);
-                self.needs_redraw = true;
-                self.metrics.noteInput(now);
-                break :blk true;
+                break :blk try self.requestCycleTerminalTabWithIntent(dir, now);
             },
             .focus => |route| blk: {
                 if (!app_modes.ide.canHandleTerminalTabFocusShortcuts(self.app_mode)) break :blk false;
-                try self.routeTerminalTabActionAndSync(route.intent);
-                if (self.focusTerminalTabByIndex(route.index)) {
-                    self.needs_redraw = true;
-                    self.metrics.noteInput(now);
-                    break :blk true;
-                }
-                break :blk false;
+                break :blk try self.requestFocusTerminalTabWithIntent(route, now);
             },
         };
     }
