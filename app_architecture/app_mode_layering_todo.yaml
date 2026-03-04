@@ -406,6 +406,7 @@ app_mode_layering_todo:
           notes:
             - "Keep runtime `--mode` on full IDE binary for compatibility."
             - "Done: focused entry roots now declare `zide_focused_mode` at compile time; app bootstrap + mode policy use this root-scoped constant to bypass runtime mode parsing/branch selection in focused binaries."
+            - "Done: IDE host/layout policy helpers now route all app-mode decisions through compile-time-effective mode resolution (`mode_build.effectiveMode`), enabling broader branch folding in focused binaries."
         - id: MODE-03-02
           title: "Add run/install steps for focused binaries"
           status: done

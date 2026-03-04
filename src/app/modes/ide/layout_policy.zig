@@ -1,4 +1,5 @@
 const app_bootstrap = @import("../../bootstrap.zig");
+const mode_build = @import("../../mode_build.zig");
 const shared_types = @import("../../../types/mod.zig");
 
 const layout_types = shared_types.layout;
@@ -20,7 +21,9 @@ pub fn computeLayoutForMode(
     show_terminal: bool,
     terminal_tab_bar_visible: bool,
 ) layout_types.WidgetLayout {
-    switch (app_mode) {
+    const mode = mode_build.effectiveMode(app_mode);
+
+    switch (mode) {
         .terminal => {
             const mode_tab_bar_h = if (terminal_tab_bar_visible) tab_bar_height else 0;
             const mode_terminal_h = if (show_terminal) @max(0, height - mode_tab_bar_h) else 0;
@@ -81,12 +84,12 @@ pub fn terminalEffectiveHeightForSizing(
     layout_terminal_height: f32,
     terminal_height: f32,
 ) f32 {
-    if (app_mode == .ide and !show_terminal) return terminal_height;
+    if (mode_build.effectiveMode(app_mode) == .ide and !show_terminal) return terminal_height;
     return layout_terminal_height;
 }
 
 pub fn terminalStrip(app_mode: app_bootstrap.AppMode, layout_terminal_height: f32) TerminalStrip {
-    if (app_mode == .ide) {
+    if (mode_build.effectiveMode(app_mode) == .ide) {
         return .{
             .offset_y = 2,
             .draw_height = @max(0, layout_terminal_height - 2),
@@ -104,10 +107,11 @@ pub fn configReloadNoticeY(
     layout: layout_types.WidgetLayout,
     margin: f32,
 ) f32 {
-    if (app_mode == .terminal and terminal_tab_bar_visible) {
+    const mode = mode_build.effectiveMode(app_mode);
+    if (mode == .terminal and terminal_tab_bar_visible) {
         return layout.tab_bar.y + layout.tab_bar.height + margin;
     }
-    if (app_mode == .ide) {
+    if (mode == .ide) {
         return layout.options_bar.y + layout.options_bar.height + margin;
     }
     return margin;

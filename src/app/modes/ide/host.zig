@@ -41,11 +41,13 @@ pub fn isFontSample(app_mode: app_bootstrap.AppMode) bool {
 }
 
 pub fn supportsEditorSurface(app_mode: app_bootstrap.AppMode) bool {
-    return app_mode != .terminal and app_mode != .font_sample;
+    const mode = mode_build.effectiveMode(app_mode);
+    return mode != .terminal and mode != .font_sample;
 }
 
 pub fn supportsTerminalSurface(app_mode: app_bootstrap.AppMode) bool {
-    return app_mode != .editor and app_mode != .font_sample;
+    const mode = mode_build.effectiveMode(app_mode);
+    return mode != .editor and mode != .font_sample;
 }
 
 pub fn routedActiveMode(app_mode: app_bootstrap.AppMode, active: ActiveMode) ActiveMode {
@@ -87,7 +89,7 @@ pub fn terminalTabBarVisible(
 }
 
 pub fn canCreateEditorFromShortcut(app_mode: app_bootstrap.AppMode) bool {
-    return app_mode != .terminal;
+    return mode_build.effectiveMode(app_mode) != .terminal;
 }
 
 pub fn canHandleTerminalTabShortcuts(app_mode: app_bootstrap.AppMode) bool {
