@@ -202,6 +202,7 @@ app_mode_layering_todo:
             - "In progress: pre-input terminal close-confirm decision path now reuses named AppState shims (`routeApplyTerminalCloseConfirmDecisionFromCtx`, `routeActiveTerminalCloseIntentFromCtx`, `routeCloseActiveTerminalTabFromCtx`, `routeNoteInputFromCtx`) to reduce nested callback structs."
             - "In progress: pre-input shortcut frame flow moved from `AppState.handlePreInputShortcutFrame(...)` body in `main.zig` into `src/app/pre_input_shortcut_frame_runtime.zig` (`handle`), with `main` delegating via thin hook wiring."
             - "In progress: pre-input runtime delegation in `main.zig` now uses named AppState shims for reconcile/layout/redraw hooks (`routeReconcileTerminalCloseModalActiveFromCtx`, `routeComputeLayoutFromCtx`, `routeMarkRedrawFromCtx`) instead of inline callback structs."
+            - "In progress: update-driver post-preinput callback block is now delegated to `AppState.handlePostPreinputFrame(...)` (inline callback body collapsed; behavior unchanged)."
             - "In progress: config-reload notice drawing moved from `main.zig` into `src/app/config_reload_notice.zig` (`draw`)."
             - "In progress: terminal close-confirm modal drawing moved from `main.zig` into `src/app/terminal_close_confirm_draw.zig` (`draw`)."
             - "In progress: terminal tab count/visibility/active-index policy moved from `main.zig` into `src/app/terminal_tabs.zig` (`count`, `barVisible`, `activeIndex`)."
