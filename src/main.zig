@@ -4,6 +4,7 @@ const app_editor_actions = @import("app/editor_actions.zig");
 const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
 const app_config_reload_notice = @import("app/config_reload_notice.zig");
+const app_terminal_close_confirm_draw = @import("app/terminal_close_confirm_draw.zig");
 const app_search_panel_input = @import("app/search_panel_input.zig");
 const app_search_panel_state = @import("app/search_panel_state.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
@@ -2845,93 +2846,6 @@ const AppState = struct {
         log.logStdout("config reloaded", .{});
     }
 
-    fn drawTerminalCloseConfirmModal(
-        self: *AppState,
-        shell: *Shell,
-        layout: layout_types.WidgetLayout,
-    ) void {
-        const modal = app_modes.ide.terminalCloseConfirmModalLayout(layout, shell.uiScaleFactor());
-        const overlay = app_shell.Color{ .r = 0, .g = 0, .b = 0, .a = 160 };
-        const card_bg = self.app_theme.ui_panel_bg;
-        const card_border = self.app_theme.ui_border;
-        const confirm_bg = app_shell.Color{ .r = 186, .g = 64, .b = 64 };
-        const cancel_bg = self.app_theme.ui_tab_inactive_bg;
-
-        shell.drawRect(
-            @intFromFloat(layout.window.x),
-            @intFromFloat(layout.window.y),
-            @intFromFloat(layout.window.width),
-            @intFromFloat(layout.window.height),
-            overlay,
-        );
-
-        shell.drawRect(
-            @intFromFloat(modal.card.x),
-            @intFromFloat(modal.card.y),
-            @intFromFloat(modal.card.width),
-            @intFromFloat(modal.card.height),
-            card_bg,
-        );
-        shell.drawRectOutline(
-            @intFromFloat(modal.card.x),
-            @intFromFloat(modal.card.y),
-            @intFromFloat(modal.card.width),
-            @intFromFloat(modal.card.height),
-            card_border,
-        );
-
-        const scale = shell.uiScaleFactor();
-        const title = "Close Running Terminal Tab?";
-        const message = "This tab still has a running process. Close anyway?";
-        const title_x = modal.card.x + 16.0 * scale;
-        const title_y = modal.card.y + 14.0 * scale;
-        const msg_y = title_y + shell.charHeight() + 10.0 * scale;
-        shell.drawText(title, title_x, title_y, self.app_theme.ui_text);
-        shell.drawText(message, title_x, msg_y, self.app_theme.ui_text_inactive);
-
-        shell.drawRect(
-            @intFromFloat(modal.cancel_button.x),
-            @intFromFloat(modal.cancel_button.y),
-            @intFromFloat(modal.cancel_button.width),
-            @intFromFloat(modal.cancel_button.height),
-            cancel_bg,
-        );
-        shell.drawRectOutline(
-            @intFromFloat(modal.cancel_button.x),
-            @intFromFloat(modal.cancel_button.y),
-            @intFromFloat(modal.cancel_button.width),
-            @intFromFloat(modal.cancel_button.height),
-            card_border,
-        );
-        shell.drawText(
-            "Cancel (Esc / N)",
-            modal.cancel_button.x + 10.0 * scale,
-            modal.cancel_button.y + (modal.cancel_button.height - shell.charHeight()) / 2.0,
-            self.app_theme.ui_text,
-        );
-
-        shell.drawRect(
-            @intFromFloat(modal.confirm_button.x),
-            @intFromFloat(modal.confirm_button.y),
-            @intFromFloat(modal.confirm_button.width),
-            @intFromFloat(modal.confirm_button.height),
-            confirm_bg,
-        );
-        shell.drawRectOutline(
-            @intFromFloat(modal.confirm_button.x),
-            @intFromFloat(modal.confirm_button.y),
-            @intFromFloat(modal.confirm_button.width),
-            @intFromFloat(modal.confirm_button.height),
-            card_border,
-        );
-        shell.drawText(
-            "Close Tab (Enter / Y)",
-            modal.confirm_button.x + 10.0 * scale,
-            modal.confirm_button.y + (modal.confirm_button.height - shell.charHeight()) / 2.0,
-            app_shell.Color{ .r = 255, .g = 255, .b = 255 },
-        );
-    }
-
     fn draw(self: *AppState) void {
         const shell = self.shell;
 
@@ -3066,7 +2980,7 @@ const AppState = struct {
         }
 
         if (app_modes.ide.shouldShowTerminalCloseConfirmModal(self.app_mode, self.terminalCloseConfirmActive())) {
-            self.drawTerminalCloseConfirmModal(shell, layout);
+            app_terminal_close_confirm_draw.draw(shell, layout, self.app_theme);
         }
         app_config_reload_notice.draw(
             shell,
