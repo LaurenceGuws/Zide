@@ -99,6 +99,7 @@ app_mode_layering_todo:
             - src/terminal/core/workspace.zig
           notes:
             - "Must preserve terminal tab behavior, close modal policy, and focus reporting."
+            - "In progress: terminal tab shortcut intents (`create/close/next/prev/focus`) now route through `TerminalMode` adapter alongside runtime behavior."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress
@@ -109,6 +110,7 @@ app_mode_layering_todo:
             - src/editor/editor.zig
           notes:
             - "Must preserve editor search/selection/scroll behavior."
+            - "In progress: editor tab create/activate intents now route through `EditorMode` adapter alongside runtime behavior."
 
     - name: "MODE-02 IDE composition layer"
       tasks:
