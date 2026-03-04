@@ -54,6 +54,8 @@ const app_frame_render_idle_runtime = @import("app/frame_render_idle_runtime.zig
 const app_update_prelude_frame_runtime = @import("app/update_prelude_frame_runtime.zig");
 const app_font_sample_draw_runtime = @import("app/font_sample_draw_runtime.zig");
 const app_editor_draw_surface_runtime = @import("app/editor_draw_surface_runtime.zig");
+const app_terminal_draw_surface_runtime = @import("app/terminal_draw_surface_runtime.zig");
+const app_shell_chrome_draw_runtime = @import("app/shell_chrome_draw_runtime.zig");
 const app_terminal_tab_navigation_runtime = @import("app/terminal_tab_navigation_runtime.zig");
 const app_terminal_close_active_runtime = @import("app/terminal_close_active_runtime.zig");
 const app_terminal_close_confirm_actions_runtime = @import("app/terminal_close_confirm_actions_runtime.zig");
@@ -2592,76 +2594,8 @@ const AppState = struct {
         // Draw editor
         app_editor_draw_surface_runtime.draw(self, shell, layout);
 
-        // Draw terminal if shown
-        if (app_terminal_surface_gate.hasVisibleTerminalTabs(self.app_mode, self.show_terminal, self.terminal_workspace, self.terminals.items.len)) {
-            const term_y = layout.terminal.y;
-
-            // Terminal separator
-            if (app_modes.ide.shouldRenderTerminalSeparator(self.app_mode)) {
-                shell.setTheme(self.app_theme);
-                shell.drawRect(@intFromFloat(layout.terminal.x), @intFromFloat(term_y), @intFromFloat(layout.terminal.width), 2, self.app_theme.ui_border);
-            }
-
-            shell.setTheme(self.terminal_theme);
-            if (app_terminal_active_widget.resolveActive(
-                self.app_mode,
-                &self.terminal_workspace,
-                self.terminals.items.len,
-                self.terminal_widgets.items,
-            )) |term_widget| {
-                const strip = app_modes.ide.terminalStrip(self.app_mode, layout.terminal.height);
-                const term_offset_y: f32 = strip.offset_y;
-                const term_height = strip.draw_height;
-                if (layout.terminal.width > 0 and term_height > 0) {
-                    shell.beginClip(
-                        @intFromFloat(layout.terminal.x),
-                        @intFromFloat(term_y + term_offset_y),
-                        @intFromFloat(layout.terminal.width),
-                        @intFromFloat(term_height),
-                    );
-                }
-                term_widget.draw(shell, layout.terminal.x, term_y + term_offset_y, layout.terminal.width, term_height, self.last_input);
-                if (layout.terminal.width > 0 and term_height > 0) {
-                    shell.endClip();
-                }
-            }
-        }
-
-        if (app_modes.ide.canToggleTerminal(self.app_mode)) {
-            shell.setTheme(self.app_theme);
-            // Draw side navigation bar (covers terminal icon overflow)
-            self.side_nav.draw(shell, layout.side_nav.height, layout.side_nav.y);
-        }
-
-        // Draw status bar LAST so it spans full width over everything
-        if (app_modes.ide.canToggleTerminal(self.app_mode) and self.editors.items.len > 0) {
-            shell.setTheme(self.app_theme);
-            const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
-            const editor = self.editors.items[editor_idx];
-            self.status_bar.draw(
-                shell,
-                layout.window.width,
-                layout.status_bar.y,
-                self.mode,
-                editor.file_path,
-                editor.cursor.line,
-                editor.cursor.col,
-                editor.modified,
-                if (self.search_panel.active)
-                    .{
-                        .active = true,
-                        .query = self.search_panel.query.items,
-                        .match_count = editor.searchMatches().len,
-                        .active_index = editor.searchActiveIndex(),
-                    }
-                else
-                    null,
-            );
-        }
-
-        if (tab_tooltip) |tip| {
-            widgets_common.drawTooltip(shell, tip.text, tip.x, tip.y);
-        }
+        app_terminal_draw_surface_runtime.draw(self, shell, layout);
+        app_shell_chrome_draw_runtime.draw(self, shell, layout, tab_tooltip);
 
         if (app_modes.ide.shouldShowTerminalCloseConfirmModal(self.app_mode, self.terminalCloseConfirmActive())) {
             app_terminal_close_confirm_draw.draw(shell, layout, self.app_theme);
