@@ -40,6 +40,7 @@ const app_input_actions_frame_runtime = @import("app/input_actions_frame_runtime
 const app_pointer_activity_frame = @import("app/pointer_activity_frame.zig");
 const app_shortcut_action_runtime = @import("app/shortcut_action_runtime.zig");
 const app_tab_drag_frame = @import("app/tab_drag_frame.zig");
+const app_terminal_split_resize_frame = @import("app/terminal_split_resize_frame.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
@@ -1684,51 +1685,44 @@ const AppState = struct {
         height: f32,
         now: f64,
     ) !void {
-        if (!app_modes.ide.canResizeTerminalSplit(self.app_mode, self.show_terminal)) return;
+        const result = app_terminal_split_resize_frame.handle(
+            self.app_mode,
+            self.show_terminal,
+            input_batch,
+            layout,
+            height,
+            self.options_bar.height,
+            self.tab_bar.height,
+            self.status_bar.height,
+            &self.resizing_terminal,
+            &self.resize_start_y,
+            &self.resize_start_height,
+            self.terminal_height,
+        );
 
-        const mouse = input_batch.mouse_pos;
-        const mouse_down = input_batch.mouseDown(.left);
-        const separator_y = layout.terminal.y;
-        const hit_zone: f32 = 6;
-        const over_separator = mouse.y >= separator_y - hit_zone and mouse.y <= separator_y + hit_zone;
-        const max_terminal_h = @max(0, height - self.options_bar.height - self.tab_bar.height - self.status_bar.height);
-
-        if (!self.resizing_terminal and mouse_down and over_separator) {
-            self.resizing_terminal = true;
-            self.resize_start_y = mouse.y;
-            self.resize_start_height = layout.terminal.height;
-            self.needs_redraw = true;
-            self.metrics.noteInput(now);
-        } else if (self.resizing_terminal and mouse_down) {
-            const delta = mouse.y - self.resize_start_y;
-            const min_terminal_h: f32 = 80;
-            const new_height = @max(min_terminal_h, @min(self.resize_start_height - delta, max_terminal_h));
-            if (new_height != self.terminal_height) {
-                self.terminal_height = new_height;
-                if (self.terminals.items.len > 0) {
-                    const term = self.terminals.items[0];
-                    const grid = app_terminal_grid.compute(
-                        width,
-                        self.terminal_height,
-                        self.shell.terminalCellWidth(),
-                        self.shell.terminalCellHeight(),
-                        1,
-                        1,
-                    );
-                    const cols: u16 = grid.cols;
-                    const rows: u16 = grid.rows;
-                    term.setCellSize(
-                        @intFromFloat(shell.terminalCellWidth()),
-                        @intFromFloat(shell.terminalCellHeight()),
-                    );
-                    try term.resize(rows, cols);
-                }
-                self.needs_redraw = true;
-                self.metrics.noteInput(now);
+        if (result.new_terminal_height) |new_height| {
+            self.terminal_height = new_height;
+            if (self.terminals.items.len > 0) {
+                const term = self.terminals.items[0];
+                const grid = app_terminal_grid.compute(
+                    width,
+                    self.terminal_height,
+                    self.shell.terminalCellWidth(),
+                    self.shell.terminalCellHeight(),
+                    1,
+                    1,
+                );
+                const cols: u16 = grid.cols;
+                const rows: u16 = grid.rows;
+                term.setCellSize(
+                    @intFromFloat(shell.terminalCellWidth()),
+                    @intFromFloat(shell.terminalCellHeight()),
+                );
+                try term.resize(rows, cols);
             }
-        } else if (self.resizing_terminal and !mouse_down) {
-            self.resizing_terminal = false;
         }
+        if (result.needs_redraw) self.needs_redraw = true;
+        if (result.note_input) self.metrics.noteInput(now);
     }
 
     fn handleWindowResizeEventFrame(self: *AppState, shell: *Shell, now: f64) !void {
