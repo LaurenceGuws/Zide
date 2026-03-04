@@ -735,11 +735,18 @@ const AppState = struct {
         );
     }
 
-    fn routeTerminalCloseIntentForActiveWorkspaceTabAndSync(self: *AppState) !bool {
+    fn routeActiveWorkspaceTabId(
+        self: *AppState,
+        route_fn: *const fn (self: *AppState, tab_id: ?u64) anyerror!bool,
+    ) !bool {
         if (self.terminal_workspace) |*workspace| {
-            return try self.routeTerminalCloseIntentByTabIdAndSync(workspace.activeTabId());
+            return try route_fn(self, workspace.activeTabId());
         }
         return false;
+    }
+
+    fn routeTerminalCloseIntentForActiveWorkspaceTabAndSync(self: *AppState) !bool {
+        return self.routeActiveWorkspaceTabId(routeTerminalCloseIntentByTabIdAndSync);
     }
 
     fn requestCloseActiveTerminalTab(self: *AppState, now: f64) !bool {
@@ -870,9 +877,7 @@ const AppState = struct {
     }
 
     fn routeTerminalActiveWorkspaceTabIntent(self: *AppState) !void {
-        if (self.terminal_workspace) |*workspace| {
-            _ = try self.routeTerminalActivateIntentByTabIdAndSync(workspace.activeTabId());
-        }
+        _ = try self.routeActiveWorkspaceTabId(routeTerminalActivateIntentByTabIdAndSync);
     }
 
     fn handleIdeMousePressedRouting(
