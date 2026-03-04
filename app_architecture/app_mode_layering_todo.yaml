@@ -153,6 +153,7 @@ app_mode_layering_todo:
             - "In progress: active kind switching + adapter sync now routes through `setActiveKindAndSyncIfChanged(...)` helper in `main.zig` (mouse route branches deduped)."
             - "In progress: mouse pressed route branches (`ide`/`terminal`/`editor`) are now factored into dedicated AppState helpers to keep the input loop thin."
             - "In progress: terminal and IDE tab-drag input paths are now factored into dedicated AppState handlers, leaving the input loop to orchestration only."
+            - "In progress: tab-drag frame hook wiring moved from `main.zig` into `src/app/tab_drag_input_runtime.zig` (`handle`), leaving `main` with a single runtime delegation + thin action hooks."
             - "In progress: editor scrollbar + mouse-selection/drag input orchestration is now factored into dedicated AppState helpers."
             - "In progress: terminal widget input + pending-open request handling is now deduplicated via dedicated AppState helpers."
             - "In progress: editor visible-cache precompute and terminal polling are now routed through dedicated AppState helpers."
