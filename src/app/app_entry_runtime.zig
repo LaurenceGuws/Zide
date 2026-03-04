@@ -11,7 +11,7 @@ const AppState = app_state_mod.AppState;
 pub fn runFocused(allocator: std.mem.Allocator) !void {
     const focused_mode = comptime mode_build.focused_mode orelse
         @compileError("runFocused requires root `zide_focused_mode` declaration");
-    var app = try AppState.init(allocator, focused_mode);
+    var app = try AppState.initFocused(allocator, focused_mode);
     defer app.deinit();
 
     try app.run();
