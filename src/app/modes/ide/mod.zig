@@ -54,3 +54,4 @@ pub const TerminalCloseConfirmLayout = terminal_close_confirm.ModalLayout;
 pub const TerminalCloseConfirmDecision = terminal_close_confirm.Decision;
 pub const terminalCloseConfirmModalLayout = terminal_close_confirm.modalLayout;
 pub const decideTerminalCloseConfirmInput = terminal_close_confirm.decideInput;
+pub const reconcileTerminalCloseConfirmTab = terminal_close_confirm.reconcilePendingTab;

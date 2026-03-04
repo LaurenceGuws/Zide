@@ -1075,14 +1075,12 @@ const AppState = struct {
     }
 
     fn terminalCloseConfirmActive(self: *AppState) bool {
-        if (self.terminal_close_confirm_tab == null) return false;
-        if (self.terminal_workspace) |*workspace| {
-            if (workspace.activeTabId()) |active_id| {
-                return active_id == self.terminal_close_confirm_tab.?;
-            }
-        }
-        self.terminal_close_confirm_tab = null;
-        return false;
+        const active_tab: ?u64 = if (self.terminal_workspace) |*workspace| workspace.activeTabId() else null;
+        self.terminal_close_confirm_tab = app_modes.ide.reconcileTerminalCloseConfirmTab(
+            self.terminal_close_confirm_tab,
+            active_tab,
+        );
+        return self.terminal_close_confirm_tab != null;
     }
 
     fn clearTerminalCloseConfirm(self: *AppState) void {
