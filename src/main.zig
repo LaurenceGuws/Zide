@@ -10,6 +10,7 @@ const app_config_reload_notice = @import("app/config_reload_notice.zig");
 const app_terminal_grid = @import("app/terminal_grid.zig");
 const app_terminal_tab_ops = @import("app/terminal_tab_ops.zig");
 const app_terminal_shortcut_policy = @import("app/terminal_shortcut_policy.zig");
+const app_terminal_shortcut_runtime = @import("app/terminal_shortcut_runtime.zig");
 const app_terminal_tab_intents = @import("app/terminal_tab_intents.zig");
 const app_terminal_resize = @import("app/terminal_resize.zig");
 const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
@@ -808,12 +809,33 @@ const AppState = struct {
         now: f64,
     ) !bool {
         if (!app_terminal_shortcut_policy.canHandleIntent(self.app_mode, intent)) return false;
-        return switch (intent) {
-            .create => self.requestCreateTerminalTab(now),
-            .close => self.requestCloseActiveTerminalTab(now),
-            .cycle => |dir| self.requestCycleTerminalTabWithIntent(dir, now),
-            .focus => |route| self.requestFocusTerminalTabWithIntent(route, now),
+        const hooks: app_terminal_shortcut_runtime.RuntimeHooks = .{
+            .request_create = struct {
+                fn call(raw: *anyopaque, at: f64) !bool {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    return state.requestCreateTerminalTab(at);
+                }
+            }.call,
+            .request_close = struct {
+                fn call(raw: *anyopaque, at: f64) !bool {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    return state.requestCloseActiveTerminalTab(at);
+                }
+            }.call,
+            .request_cycle = struct {
+                fn call(raw: *anyopaque, dir: app_modes.ide.TerminalShortcutCycleDirection, at: f64) !bool {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    return state.requestCycleTerminalTabWithIntent(dir, at);
+                }
+            }.call,
+            .request_focus = struct {
+                fn call(raw: *anyopaque, route: app_modes.ide.TerminalFocusRoute, at: f64) !bool {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    return state.requestFocusTerminalTabWithIntent(route, at);
+                }
+            }.call,
         };
+        return app_terminal_shortcut_runtime.handleIntent(intent, now, @ptrCast(self), hooks);
     }
 
     fn routeTerminalTabActionAndSync(self: *AppState, tab_action: app_modes.shared.actions.TabAction) !void {

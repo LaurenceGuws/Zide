@@ -126,6 +126,7 @@ app_mode_layering_todo:
             - "In progress: editor tab-intent mapping is extracted into `src/app/editor_tab_intents.zig` (`createIntent`, `activateByIndexIntent`) and consumed from `main.zig` routing helpers."
             - "In progress: repeated optional tab-action routing pattern is extracted into `src/app/tab_action_route.zig` (`routeOptionalTabAction`) and reused by terminal/editor optional route helpers in `main.zig`."
             - "In progress: shared optional tab-action routing helper now has focused unit coverage in `src/app/tab_action_route.zig`."
+            - "In progress: terminal shortcut runtime dispatch switch moved from `main.zig` into `src/app/terminal_shortcut_runtime.zig` (`handleIntent(...)`) with callback-hook unit coverage."
             - "In progress: pure tab-intent helpers were extracted from `main.zig` into `src/app/modes/ide/tab_intents.zig`."
             - "In progress: tab projection + active-projection construction moved from `main.zig` into `src/app/modes/ide/projections.zig`."
             - "In progress: terminal close-intent emission is centralized via `applyTerminalCloseIntentForActiveWorkspaceTab()` in `main.zig` (deduped shortcut + confirm paths)."
