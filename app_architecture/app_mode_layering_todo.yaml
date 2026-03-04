@@ -205,6 +205,7 @@ app_mode_layering_todo:
             - "In progress: update-driver post-preinput callback block is now delegated to `AppState.handlePostPreinputFrame(...)` (inline callback body collapsed; behavior unchanged)."
             - "In progress: post-preinput frame method body moved from `main.zig` into `src/app/post_preinput_hooks_runtime.zig` (`handle`); `AppState.handlePostPreinputFrame(...)` is now a thin delegator."
             - "In progress: interactive tab-drag callback block is now delegated to `AppState.handleTabDragFrame(...)` (inline callback body collapsed; behavior unchanged)."
+            - "In progress: interactive active-view callback block is now delegated to `AppState.handleActiveViewFrame(...)` (inline callback body collapsed; behavior unchanged)."
             - "In progress: config-reload notice drawing moved from `main.zig` into `src/app/config_reload_notice.zig` (`draw`)."
             - "In progress: terminal close-confirm modal drawing moved from `main.zig` into `src/app/terminal_close_confirm_draw.zig` (`draw`)."
             - "In progress: terminal tab count/visibility/active-index policy moved from `main.zig` into `src/app/terminal_tabs.zig` (`count`, `barVisible`, `activeIndex`)."
