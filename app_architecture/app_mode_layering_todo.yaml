@@ -132,7 +132,7 @@ app_mode_layering_todo:
             - "Keep runtime `--mode` on full IDE binary for compatibility."
         - id: MODE-03-02
           title: "Add run/install steps for focused binaries"
-          status: todo
+          status: in_progress
           files_to_edit:
             - build.zig
           notes:
