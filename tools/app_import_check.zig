@@ -5,6 +5,9 @@ const Layer = enum {
     terminal_widget,
     app_main,
     shell_renderer,
+    mode_shared,
+    mode_backend,
+    mode_ide,
     editor_core,
     terminal_core,
     shared_types,
@@ -23,12 +26,21 @@ pub fn main() !void {
     const terminal_root = try std.fs.path.join(allocator, &.{ root_path, "src", "terminal" });
     const types_root = try std.fs.path.join(allocator, &.{ root_path, "src", "types" });
     const input_root = try std.fs.path.join(allocator, &.{ root_path, "src", "input" });
+    const app_root = try std.fs.path.join(allocator, &.{ root_path, "src", "app" });
+    const mode_shared_root = try std.fs.path.join(allocator, &.{ root_path, "src", "app", "modes", "shared" });
+    const mode_backend_root = try std.fs.path.join(allocator, &.{ root_path, "src", "app", "modes", "backend" });
+    const mode_ide_root = try std.fs.path.join(allocator, &.{ root_path, "src", "app", "modes", "ide" });
     const ui_root = try std.fs.path.join(allocator, &.{ root_path, "src", "ui" });
     const ui_renderer_path = try std.fs.path.join(allocator, &.{ root_path, "src", "ui", "renderer.zig" });
+    const app_main_path = try std.fs.path.join(allocator, &.{ root_path, "src", "main.zig" });
     const editor_root_sep = try std.mem.concat(allocator, u8, &.{ editor_root, std.fs.path.sep_str });
     const terminal_root_sep = try std.mem.concat(allocator, u8, &.{ terminal_root, std.fs.path.sep_str });
     const types_root_sep = try std.mem.concat(allocator, u8, &.{ types_root, std.fs.path.sep_str });
     const input_root_sep = try std.mem.concat(allocator, u8, &.{ input_root, std.fs.path.sep_str });
+    const app_root_sep = try std.mem.concat(allocator, u8, &.{ app_root, std.fs.path.sep_str });
+    const mode_shared_root_sep = try std.mem.concat(allocator, u8, &.{ mode_shared_root, std.fs.path.sep_str });
+    const mode_backend_root_sep = try std.mem.concat(allocator, u8, &.{ mode_backend_root, std.fs.path.sep_str });
+    const mode_ide_root_sep = try std.mem.concat(allocator, u8, &.{ mode_ide_root, std.fs.path.sep_str });
     const ui_root_sep = try std.mem.concat(allocator, u8, &.{ ui_root, std.fs.path.sep_str });
 
     var had_error = false;
@@ -42,8 +54,13 @@ pub fn main() !void {
         terminal_root_sep,
         types_root_sep,
         input_root_sep,
+        app_root_sep,
+        mode_shared_root_sep,
+        mode_backend_root_sep,
+        mode_ide_root_sep,
         ui_root_sep,
         ui_renderer_path,
+        app_main_path,
         &had_error,
         stderr_file,
     );
@@ -56,8 +73,13 @@ pub fn main() !void {
         terminal_root_sep,
         types_root_sep,
         input_root_sep,
+        app_root_sep,
+        mode_shared_root_sep,
+        mode_backend_root_sep,
+        mode_ide_root_sep,
         ui_root_sep,
         ui_renderer_path,
+        app_main_path,
         &had_error,
         stderr_file,
     );
@@ -70,8 +92,32 @@ pub fn main() !void {
         terminal_root_sep,
         types_root_sep,
         input_root_sep,
+        app_root_sep,
+        mode_shared_root_sep,
+        mode_backend_root_sep,
+        mode_ide_root_sep,
         ui_root_sep,
         ui_renderer_path,
+        app_main_path,
+        &had_error,
+        stderr_file,
+    );
+
+    try checkModeLayerImports(
+        allocator,
+        cwd,
+        root_path,
+        editor_root_sep,
+        terminal_root_sep,
+        types_root_sep,
+        input_root_sep,
+        app_root_sep,
+        mode_shared_root_sep,
+        mode_backend_root_sep,
+        mode_ide_root_sep,
+        ui_root_sep,
+        ui_renderer_path,
+        app_main_path,
         &had_error,
         stderr_file,
     );
@@ -84,8 +130,13 @@ pub fn main() !void {
         terminal_root_sep,
         types_root_sep,
         input_root_sep,
+        app_root_sep,
+        mode_shared_root_sep,
+        mode_backend_root_sep,
+        mode_ide_root_sep,
         ui_root_sep,
         ui_renderer_path,
+        app_main_path,
         "src/main.zig",
         .app_main,
         &had_error,
@@ -100,8 +151,13 @@ pub fn main() !void {
         terminal_root_sep,
         types_root_sep,
         input_root_sep,
+        app_root_sep,
+        mode_shared_root_sep,
+        mode_backend_root_sep,
+        mode_ide_root_sep,
         ui_root_sep,
         ui_renderer_path,
+        app_main_path,
         "src/ui/renderer.zig",
         .shell_renderer,
         &had_error,
@@ -119,8 +175,13 @@ fn checkInputImports(
     terminal_root_sep: []const u8,
     types_root_sep: []const u8,
     input_root_sep: []const u8,
+    app_root_sep: []const u8,
+    mode_shared_root_sep: []const u8,
+    mode_backend_root_sep: []const u8,
+    mode_ide_root_sep: []const u8,
     ui_root_sep: []const u8,
     ui_renderer_path: []const u8,
+    app_main_path: []const u8,
     had_error: *bool,
     stderr_file: std.fs.File,
 ) !void {
@@ -144,8 +205,13 @@ fn checkInputImports(
             terminal_root_sep,
             types_root_sep,
             input_root_sep,
+            app_root_sep,
+            mode_shared_root_sep,
+            mode_backend_root_sep,
+            mode_ide_root_sep,
             ui_root_sep,
             ui_renderer_path,
+            app_main_path,
             .input_support,
             had_error,
             stderr_file,
@@ -161,8 +227,13 @@ fn checkWidgetImports(
     terminal_root_sep: []const u8,
     types_root_sep: []const u8,
     input_root_sep: []const u8,
+    app_root_sep: []const u8,
+    mode_shared_root_sep: []const u8,
+    mode_backend_root_sep: []const u8,
+    mode_ide_root_sep: []const u8,
     ui_root_sep: []const u8,
     ui_renderer_path: []const u8,
+    app_main_path: []const u8,
     had_error: *bool,
     stderr_file: std.fs.File,
 ) !void {
@@ -189,8 +260,13 @@ fn checkWidgetImports(
             terminal_root_sep,
             types_root_sep,
             input_root_sep,
+            app_root_sep,
+            mode_shared_root_sep,
+            mode_backend_root_sep,
+            mode_ide_root_sep,
             ui_root_sep,
             ui_renderer_path,
+            app_main_path,
             from_layer,
             had_error,
             stderr_file,
@@ -206,8 +282,13 @@ fn checkUiImports(
     terminal_root_sep: []const u8,
     types_root_sep: []const u8,
     input_root_sep: []const u8,
+    app_root_sep: []const u8,
+    mode_shared_root_sep: []const u8,
+    mode_backend_root_sep: []const u8,
+    mode_ide_root_sep: []const u8,
     ui_root_sep: []const u8,
     ui_renderer_path: []const u8,
+    app_main_path: []const u8,
     had_error: *bool,
     stderr_file: std.fs.File,
 ) !void {
@@ -233,8 +314,13 @@ fn checkUiImports(
             terminal_root_sep,
             types_root_sep,
             input_root_sep,
+            app_root_sep,
+            mode_shared_root_sep,
+            mode_backend_root_sep,
+            mode_ide_root_sep,
             ui_root_sep,
             ui_renderer_path,
+            app_main_path,
             .shell_renderer,
             had_error,
             stderr_file,
@@ -250,8 +336,13 @@ fn checkFileImports(
     terminal_root_sep: []const u8,
     types_root_sep: []const u8,
     input_root_sep: []const u8,
+    app_root_sep: []const u8,
+    mode_shared_root_sep: []const u8,
+    mode_backend_root_sep: []const u8,
+    mode_ide_root_sep: []const u8,
     ui_root_sep: []const u8,
     ui_renderer_path: []const u8,
+    app_main_path: []const u8,
     rel_path: []const u8,
     from_layer: Layer,
     had_error: *bool,
@@ -267,12 +358,77 @@ fn checkFileImports(
         terminal_root_sep,
         types_root_sep,
         input_root_sep,
+        app_root_sep,
+        mode_shared_root_sep,
+        mode_backend_root_sep,
+        mode_ide_root_sep,
         ui_root_sep,
         ui_renderer_path,
+        app_main_path,
         from_layer,
         had_error,
         stderr_file,
     );
+}
+
+fn checkModeLayerImports(
+    allocator: std.mem.Allocator,
+    cwd: std.fs.Dir,
+    root_path: []const u8,
+    editor_root_sep: []const u8,
+    terminal_root_sep: []const u8,
+    types_root_sep: []const u8,
+    input_root_sep: []const u8,
+    app_root_sep: []const u8,
+    mode_shared_root_sep: []const u8,
+    mode_backend_root_sep: []const u8,
+    mode_ide_root_sep: []const u8,
+    ui_root_sep: []const u8,
+    ui_renderer_path: []const u8,
+    app_main_path: []const u8,
+    had_error: *bool,
+    stderr_file: std.fs.File,
+) !void {
+    const specs = [_]struct { root: []const u8, layer: Layer }{
+        .{ .root = "src/app/modes/shared", .layer = .mode_shared },
+        .{ .root = "src/app/modes/backend", .layer = .mode_backend },
+        .{ .root = "src/app/modes/ide", .layer = .mode_ide },
+    };
+
+    inline for (specs) |spec| {
+        var mode_dir = try cwd.openDir(spec.root, .{ .iterate = true });
+        defer mode_dir.close();
+        var walker = try mode_dir.walk(allocator);
+        defer walker.deinit();
+
+        while (try walker.next()) |entry| {
+            if (entry.kind != .file) continue;
+            if (!std.mem.endsWith(u8, entry.basename, ".zig")) continue;
+
+            const rel_path = try std.fs.path.join(allocator, &.{ spec.root, entry.path });
+            const abs_path = try std.fs.path.join(allocator, &.{ root_path, rel_path });
+            try checkImportsInFile(
+                allocator,
+                cwd,
+                rel_path,
+                abs_path,
+                editor_root_sep,
+                terminal_root_sep,
+                types_root_sep,
+                input_root_sep,
+                app_root_sep,
+                mode_shared_root_sep,
+                mode_backend_root_sep,
+                mode_ide_root_sep,
+                ui_root_sep,
+                ui_renderer_path,
+                app_main_path,
+                spec.layer,
+                had_error,
+                stderr_file,
+            );
+        }
+    }
 }
 
 fn checkImportsInFile(
@@ -284,8 +440,13 @@ fn checkImportsInFile(
     terminal_root_sep: []const u8,
     types_root_sep: []const u8,
     input_root_sep: []const u8,
+    app_root_sep: []const u8,
+    mode_shared_root_sep: []const u8,
+    mode_backend_root_sep: []const u8,
+    mode_ide_root_sep: []const u8,
     ui_root_sep: []const u8,
     ui_renderer_path: []const u8,
+    app_main_path: []const u8,
     from_layer: Layer,
     had_error: *bool,
     stderr_file: std.fs.File,
@@ -304,8 +465,31 @@ fn checkImportsInFile(
         const dir = std.fs.path.dirname(abs_path) orelse continue;
         const resolved = std.fs.path.resolve(allocator, &.{ dir, import_path }) catch continue;
 
-        const to_layer = layerForResolvedPath(resolved, editor_root_sep, terminal_root_sep, types_root_sep, input_root_sep);
-        if (!isAllowed(from_layer, to_layer, resolved, editor_root_sep, terminal_root_sep, types_root_sep, ui_root_sep, ui_renderer_path)) {
+        const to_layer = layerForResolvedPath(
+            resolved,
+            editor_root_sep,
+            terminal_root_sep,
+            types_root_sep,
+            input_root_sep,
+            mode_shared_root_sep,
+            mode_backend_root_sep,
+            mode_ide_root_sep,
+        );
+        if (!isAllowed(
+            from_layer,
+            to_layer,
+            resolved,
+            editor_root_sep,
+            terminal_root_sep,
+            types_root_sep,
+            app_root_sep,
+            mode_shared_root_sep,
+            mode_backend_root_sep,
+            mode_ide_root_sep,
+            ui_root_sep,
+            ui_renderer_path,
+            app_main_path,
+        )) {
             had_error.* = true;
             var line_buf: [2048]u8 = undefined;
             const msg = try std.fmt.bufPrint(
@@ -330,7 +514,13 @@ fn layerForResolvedPath(
     terminal_root: []const u8,
     types_root: []const u8,
     input_root: []const u8,
+    mode_shared_root: []const u8,
+    mode_backend_root: []const u8,
+    mode_ide_root: []const u8,
 ) Layer {
+    if (std.mem.startsWith(u8, path, mode_shared_root)) return .mode_shared;
+    if (std.mem.startsWith(u8, path, mode_backend_root)) return .mode_backend;
+    if (std.mem.startsWith(u8, path, mode_ide_root)) return .mode_ide;
     if (std.mem.startsWith(u8, path, editor_root)) return .editor_core;
     if (std.mem.startsWith(u8, path, terminal_root)) return .terminal_core;
     if (std.mem.startsWith(u8, path, types_root)) return .shared_types;
@@ -345,9 +535,36 @@ fn isAllowed(
     editor_root: []const u8,
     terminal_root: []const u8,
     types_root: []const u8,
+    app_root: []const u8,
+    mode_shared_root: []const u8,
+    mode_backend_root: []const u8,
+    mode_ide_root: []const u8,
     ui_root: []const u8,
     ui_renderer_path: []const u8,
+    app_main_path: []const u8,
 ) bool {
+    if (from == .mode_shared) {
+        if (std.mem.startsWith(u8, resolved, mode_backend_root)) return false;
+        if (std.mem.startsWith(u8, resolved, mode_ide_root)) return false;
+        if (std.mem.startsWith(u8, resolved, editor_root)) return false;
+        if (std.mem.startsWith(u8, resolved, terminal_root)) return false;
+        if (std.mem.startsWith(u8, resolved, ui_root)) return false;
+        if (std.mem.eql(u8, resolved, app_main_path)) return false;
+        if (std.mem.startsWith(u8, resolved, app_root) and !std.mem.startsWith(u8, resolved, mode_shared_root)) return false;
+    }
+    if (from == .mode_backend) {
+        if (std.mem.startsWith(u8, resolved, mode_ide_root)) return false;
+        if (std.mem.eql(u8, resolved, app_main_path)) return false;
+        if (std.mem.eql(u8, resolved, ui_renderer_path)) return false;
+        if (std.mem.startsWith(u8, resolved, ui_root) and std.mem.indexOf(u8, resolved, std.fs.path.sep_str ++ "widgets" ++ std.fs.path.sep_str) != null) return false;
+    }
+    if (from == .mode_ide) {
+        if (std.mem.startsWith(u8, resolved, editor_root)) return false;
+        if (std.mem.startsWith(u8, resolved, terminal_root)) return false;
+        if (std.mem.eql(u8, resolved, ui_renderer_path)) return false;
+        if (std.mem.startsWith(u8, resolved, ui_root) and std.mem.indexOf(u8, resolved, std.fs.path.sep_str ++ "widgets" ++ std.fs.path.sep_str) != null) return false;
+    }
+
     if (from == .app_main and std.mem.eql(u8, resolved, ui_renderer_path)) return false;
     if (from == .shared_types and (to == .editor_core or to == .terminal_core)) return false;
     if (from == .shared_types and std.mem.startsWith(u8, resolved, ui_root)) return false;
@@ -362,6 +579,9 @@ fn isAllowed(
         .shell_renderer => isAllowedShellRenderer(to, resolved, editor_root, types_root),
         .shared_types => to == .shared_types or to == .other,
         .input_support => to == .input_support or to == .shared_types or to == .other,
+        .mode_shared => to == .mode_shared or to == .shared_types or to == .other,
+        .mode_backend => to != .mode_ide,
+        .mode_ide => to != .editor_core and to != .terminal_core,
         .editor_core, .terminal_core, .other => true,
     };
 }
@@ -399,6 +619,9 @@ fn layerName(layer: Layer) []const u8 {
         .terminal_widget => "terminal_widget",
         .app_main => "app_main",
         .shell_renderer => "shell_renderer",
+        .mode_shared => "mode_shared",
+        .mode_backend => "mode_backend",
+        .mode_ide => "mode_ide",
         .editor_core => "editor_core",
         .terminal_core => "terminal_core",
         .shared_types => "shared_types",

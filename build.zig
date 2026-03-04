@@ -921,7 +921,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     const run_app_import_check = b.addRunArtifact(app_import_check);
-    const app_import_check_step = b.step("check-app-imports", "Check app-level import layering");
+    const app_import_check_step = b.step("check-app-imports", "Check app-level and mode-layer import boundaries");
     app_import_check_step.dependOn(&run_app_import_check.step);
 
     const run_input_import_check = b.addRunArtifact(app_import_check);
