@@ -35,6 +35,47 @@ To support focused binaries with minimal coupling, mode orchestration is being s
    - Thin assembly of backend modes for full IDE behavior.
    - IDE-specific policy only; no backend ownership logic.
 
+### Mode-layer import constraints (authoritative)
+
+`src/app/modes/shared/*`
+- Allowed imports:
+  - `std`
+  - shared type/contract modules under `src/app/modes/shared/*`
+  - shared stable types under `src/types/*`
+- Forbidden imports:
+  - `src/app/modes/backend/*`
+  - `src/app/modes/ide/*`
+  - `src/main.zig`
+  - `src/ui/*` (including renderer/widgets)
+  - `src/terminal/*`
+  - `src/editor/*`
+
+`src/app/modes/backend/*`
+- Allowed imports:
+  - `src/app/modes/shared/*`
+  - backend runtime integrations needed for mode ownership:
+    - `src/terminal/*`
+    - `src/editor/*`
+    - selected app host glue modules under `src/app/*` (non-IDE layer)
+- Forbidden imports:
+  - `src/app/modes/ide/*`
+  - direct renderer/widget imports under `src/ui/widgets/*` and `src/ui/renderer.zig`
+  - `src/main.zig` ownership logic
+
+`src/app/modes/ide/*`
+- Allowed imports:
+  - `src/app/modes/shared/*`
+  - `src/app/modes/backend/*`
+  - IDE policy/assembly glue under `src/app/*`
+- Forbidden imports:
+  - direct `src/terminal/*` ownership dependencies
+  - direct `src/editor/*` ownership dependencies
+  - direct UI renderer/widget ownership dependencies
+
+Review/enforcement policy:
+- These constraints are mandatory during refactor slices even when not yet fully tool-enforced.
+- `zig build check-app-imports` is current guardrail; mode-layer-specific rules are tracked as a dedicated follow-up in `app_architecture/app_mode_layering_todo.yaml`.
+
 Execution authority for this split is tracked in:
 - `app_architecture/app_mode_layering_todo.yaml`
 
