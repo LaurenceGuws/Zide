@@ -57,7 +57,7 @@ const app_terminal_tab_navigation_runtime = @import("app/terminal_tab_navigation
 const app_terminal_close_active_runtime = @import("app/terminal_close_active_runtime.zig");
 const app_terminal_close_confirm_active_runtime = @import("app/terminal_close_confirm_active_runtime.zig");
 const app_terminal_close_confirm_decision_runtime = @import("app/terminal_close_confirm_decision_runtime.zig");
-const app_tab_action_apply = @import("app/tab_action_apply.zig");
+const app_tab_action_apply_runtime = @import("app/tab_action_apply_runtime.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
 const app_reload_config_shortcut_runtime = @import("app/reload_config_shortcut_runtime.zig");
@@ -636,8 +636,7 @@ const AppState = struct {
     }
 
     fn requestCreateTerminalTab(self: *AppState, now: f64) !bool {
-        app_tab_action_apply.applyTerminal(self.allocator, self.app_mode, &self.terminal_mode_adapter, .create);
-        try app_mode_adapter_sync_runtime.sync(self);
+        try app_tab_action_apply_runtime.applyTerminalAndSync(self, .create);
         try self.newTerminal();
         try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(self);
         self.needs_redraw = true;
@@ -652,13 +651,7 @@ const AppState = struct {
     ) !bool {
         const moved = app_terminal_tab_navigation_runtime.cycle(self, dir == .next);
         if (!moved) return false;
-        app_tab_action_apply.applyTerminal(
-            self.allocator,
-            self.app_mode,
-            &self.terminal_mode_adapter,
-            app_terminal_tab_intents.cycleIntentForDirection(dir),
-        );
-        try app_mode_adapter_sync_runtime.sync(self);
+        try app_tab_action_apply_runtime.applyTerminalAndSync(self, app_terminal_tab_intents.cycleIntentForDirection(dir));
         self.needs_redraw = true;
         self.metrics.noteInput(now);
         return true;
@@ -669,8 +662,7 @@ const AppState = struct {
         route: app_modes.ide.TerminalFocusRoute,
         now: f64,
     ) !bool {
-        app_tab_action_apply.applyTerminal(self.allocator, self.app_mode, &self.terminal_mode_adapter, route.intent);
-        try app_mode_adapter_sync_runtime.sync(self);
+        try app_tab_action_apply_runtime.applyTerminalAndSync(self, route.intent);
         if (!app_terminal_tab_navigation_runtime.focusByIndex(self, route.index)) return false;
         self.needs_redraw = true;
         self.metrics.noteInput(now);
@@ -714,14 +706,12 @@ const AppState = struct {
 
     fn routeTerminalTabActionFromCtx(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
         const state: *AppState = @ptrCast(@alignCast(raw));
-        app_tab_action_apply.applyTerminal(state.allocator, state.app_mode, &state.terminal_mode_adapter, action);
-        try app_mode_adapter_sync_runtime.sync(state);
+        try app_tab_action_apply_runtime.applyTerminalAndSync(state, action);
     }
 
     fn routeEditorTabActionFromCtx(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
         const state: *AppState = @ptrCast(@alignCast(raw));
-        app_tab_action_apply.applyEditor(state.allocator, state.app_mode, &state.editor_mode_adapter, action);
-        try app_mode_adapter_sync_runtime.sync(state);
+        try app_tab_action_apply_runtime.applyEditorAndSync(state, action);
     }
 
     fn handleIdeMousePressedRouting(
@@ -828,8 +818,7 @@ const AppState = struct {
         if (drag_frame.release) |drag_end| {
             const release_plan = app_modes.ide.terminalTabDragReleasePlan(drag_end);
             if (release_plan.intent) |intent| {
-                app_tab_action_apply.applyTerminal(self.allocator, self.app_mode, &self.terminal_mode_adapter, intent);
-                try app_mode_adapter_sync_runtime.sync(self);
+                try app_tab_action_apply_runtime.applyTerminalAndSync(self, intent);
             }
             if (release_plan.handle_click) {
                 if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width)) {
@@ -875,8 +864,7 @@ const AppState = struct {
         if (drag_frame.release) |drag_end| {
             const release_plan = app_modes.ide.ideEditorTabDragReleasePlan(drag_end);
             if (release_plan.intent) |intent| {
-                app_tab_action_apply.applyEditor(self.allocator, self.app_mode, &self.editor_mode_adapter, intent);
-                try app_mode_adapter_sync_runtime.sync(self);
+                try app_tab_action_apply_runtime.applyEditorAndSync(self, intent);
                 if (release_plan.sync_active_tab) {
                     self.active_tab = self.tab_bar.active_index;
                 }
@@ -2734,8 +2722,7 @@ test "terminal close intent routing emits only when tab id is present" {
         struct {
             fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
                 const state: *AppState = @ptrCast(@alignCast(raw));
-                app_tab_action_apply.applyTerminal(state.allocator, state.app_mode, &state.terminal_mode_adapter, action);
-                try app_mode_adapter_sync_runtime.sync(state);
+                try app_tab_action_apply_runtime.applyTerminalAndSync(state, action);
             }
         }.call,
     ));
@@ -2746,8 +2733,7 @@ test "terminal close intent routing emits only when tab id is present" {
         struct {
             fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
                 const state: *AppState = @ptrCast(@alignCast(raw));
-                app_tab_action_apply.applyTerminal(state.allocator, state.app_mode, &state.terminal_mode_adapter, action);
-                try app_mode_adapter_sync_runtime.sync(state);
+                try app_tab_action_apply_runtime.applyTerminalAndSync(state, action);
             }
         }.call,
     ));
@@ -2768,13 +2754,12 @@ test "terminal tab action apply keeps terminal mode aligned with reordered tab b
     try app.tab_bar.tabs.insert(allocator, 1, moved);
     app.tab_bar.active_index = 0;
 
-    app_tab_action_apply.applyTerminal(app.allocator, app.app_mode, &app.terminal_mode_adapter, .{
+    try app_tab_action_apply_runtime.applyTerminalAndSync(app, .{
         .move = .{
             .from_index = 0,
             .to_index = 1,
         },
     });
-    try app_mode_adapter_sync_runtime.sync(app);
 
     const snap = try app.terminal_mode_adapter.asContract().snapshot(allocator);
     try std.testing.expectEqual(@as(usize, 3), snap.tabs.len);
@@ -2801,8 +2786,7 @@ test "terminal activate intent routing emits only when tab id exists" {
         struct {
             fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
                 const state: *AppState = @ptrCast(@alignCast(raw));
-                app_tab_action_apply.applyTerminal(state.allocator, state.app_mode, &state.terminal_mode_adapter, action);
-                try app_mode_adapter_sync_runtime.sync(state);
+                try app_tab_action_apply_runtime.applyTerminalAndSync(state, action);
             }
         }.call,
     ));
@@ -2813,8 +2797,7 @@ test "terminal activate intent routing emits only when tab id exists" {
         struct {
             fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
                 const state: *AppState = @ptrCast(@alignCast(raw));
-                app_tab_action_apply.applyTerminal(state.allocator, state.app_mode, &state.terminal_mode_adapter, action);
-                try app_mode_adapter_sync_runtime.sync(state);
+                try app_tab_action_apply_runtime.applyTerminalAndSync(state, action);
             }
         }.call,
     ));
