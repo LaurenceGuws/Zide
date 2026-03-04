@@ -119,6 +119,7 @@ app_mode_layering_todo:
             - "In progress: terminal tab-action routing now inlines adapter apply inside `routeTerminalTabActionAndSync(...)` (removed redundant `applyTerminalModeTabAction(...)` wrapper)."
             - "In progress: terminal shortcut capability policy moved from `main.zig` into `src/app/terminal_shortcut_policy.zig` (`canHandleIntent(...)`) to keep shortcut orchestration host-thin."
             - "In progress: terminal tab-intent mapping moved from inline `main.zig` branches into `src/app/terminal_tab_intents.zig` (`closeIntentForTabId`, `cycleIntentForDirection`, `activateIntentForTabId`)."
+            - "In progress: optional terminal tab-intent routing is now deduplicated through `routeOptionalTerminalTabActionAndSync(...)` in `main.zig` (close/activate paths share one route)."
             - "In progress: pure tab-intent helpers were extracted from `main.zig` into `src/app/modes/ide/tab_intents.zig`."
             - "In progress: tab projection + active-projection construction moved from `main.zig` into `src/app/modes/ide/projections.zig`."
             - "In progress: terminal close-intent emission is centralized via `applyTerminalCloseIntentForActiveWorkspaceTab()` in `main.zig` (deduped shortcut + confirm paths)."
