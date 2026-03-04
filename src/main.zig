@@ -2044,10 +2044,6 @@ const AppState = struct {
         return state.active;
     }
 
-    fn clearTerminalCloseConfirm(self: *AppState) void {
-        self.terminal_close_confirm_tab = null;
-    }
-
     fn requestConfirmTerminalCloseFromModal(self: *AppState, now: f64) !bool {
         _ = try self.routeActiveWorkspaceTerminalIntentAndSync(.close);
         if (try self.closeActiveTerminalTab()) {
@@ -2058,7 +2054,7 @@ const AppState = struct {
     }
 
     fn requestCancelTerminalCloseFromModal(self: *AppState, now: f64) bool {
-        self.clearTerminalCloseConfirm();
+        self.terminal_close_confirm_tab = null;
         self.needs_redraw = true;
         self.metrics.noteInput(now);
         return true;
@@ -2149,7 +2145,7 @@ const AppState = struct {
             index,
         );
         if (!changed) return false;
-        self.clearTerminalCloseConfirm();
+        self.terminal_close_confirm_tab = null;
         if (self.activeTerminalWidget()) |widget| {
             widget.invalidateTextureCache();
         }
@@ -2164,7 +2160,7 @@ const AppState = struct {
             next,
         );
         if (!changed) return false;
-        self.clearTerminalCloseConfirm();
+        self.terminal_close_confirm_tab = null;
         if (self.activeTerminalWidget()) |widget| {
             widget.invalidateTextureCache();
         }
@@ -2194,7 +2190,7 @@ const AppState = struct {
                 _ = self.terminal_widgets.orderedRemove(active_idx);
             }
             if (!workspace.closeActiveTab()) return false;
-            self.clearTerminalCloseConfirm();
+            self.terminal_close_confirm_tab = null;
             if (workspace.tabCount() == 0) {
                 self.shell.requestClose();
             } else {
