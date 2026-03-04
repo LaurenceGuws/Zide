@@ -1,6 +1,5 @@
 const std = @import("std");
 const app_bootstrap = @import("app/bootstrap.zig");
-const app_config_reload_notice_state = @import("app/config_reload_notice_state.zig");
 const app_editor_actions = @import("app/editor_actions.zig");
 const app_editor_intent_route = @import("app/editor_intent_route.zig");
 const app_editor_create_intent_runtime = @import("app/editor_create_intent_runtime.zig");
@@ -26,8 +25,7 @@ const app_terminal_shortcut_policy = @import("app/terminal_shortcut_policy.zig")
 const app_terminal_shortcut_runtime = @import("app/terminal_shortcut_runtime.zig");
 const app_terminal_tab_intents = @import("app/terminal_tab_intents.zig");
 const app_terminal_resize = @import("app/terminal_resize.zig");
-const app_terminal_refresh_sizing_runtime = @import("app/terminal_refresh_sizing_runtime.zig");
-const app_pre_input_shortcut_frame_runtime = @import("app/pre_input_shortcut_frame_runtime.zig");
+const app_pre_input_shortcut_hooks_runtime = @import("app/pre_input_shortcut_hooks_runtime.zig");
 const app_visible_terminal_frame = @import("app/visible_terminal_frame.zig");
 const app_visible_terminal_frame_hooks_runtime = @import("app/visible_terminal_frame_hooks_runtime.zig");
 const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
@@ -61,7 +59,6 @@ const app_update_driver = @import("app/update_driver.zig");
 const app_run_loop_driver = @import("app/run_loop_driver.zig");
 const app_run_main_loop_hooks_runtime = @import("app/run_main_loop_hooks_runtime.zig");
 const app_run_one_frame_hooks_runtime = @import("app/run_one_frame_hooks_runtime.zig");
-const app_reload_config_runtime = @import("app/reload_config_runtime.zig");
 const app_run_mode_init_hooks_runtime = @import("app/run_mode_init_hooks_runtime.zig");
 const app_prepare_run_frame_runtime = @import("app/prepare_run_frame_runtime.zig");
 const app_frame_render_idle_hooks_runtime = @import("app/frame_render_idle_hooks_runtime.zig");
@@ -643,102 +640,6 @@ const AppState = struct {
         return state.routeTerminalTabCount();
     }
 
-    fn routeRefreshTerminalSizingFromCtx(raw: *anyopaque) !void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        try app_terminal_refresh_sizing_runtime.handle(
-            state,
-            state.app_mode,
-            &state.terminal_workspace,
-            state.terminals.items,
-            state.show_terminal,
-            state.terminal_height,
-            state.shell,
-        );
-    }
-
-    fn routeApplyCurrentTabBarWidthModeFromCtx(raw: *anyopaque) void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        app_tab_bar_width.applyForMode(
-            &state.tab_bar,
-            state.app_mode,
-            state.editor_tab_bar_width_mode,
-            state.terminal_tab_bar_width_mode,
-        );
-    }
-
-    fn routeReloadConfigFromCtx(raw: *anyopaque) !void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        try app_reload_config_runtime.handle(
-            state,
-            raw,
-            .{
-                .refresh_terminal_sizing = routeRefreshTerminalSizingFromCtx,
-                .apply_current_tab_bar_width_mode = routeApplyCurrentTabBarWidthModeFromCtx,
-            },
-        );
-    }
-
-    fn routeShowConfigReloadNoticeFromCtx(raw: *anyopaque, success: bool) void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        const notice = app_config_reload_notice_state.arm(app_shell.getTime(), success);
-        state.config_reload_notice_success = notice.success;
-        state.config_reload_notice_until = notice.until;
-        state.needs_redraw = true;
-    }
-
-    fn routeNoteInputFromCtx(raw: *anyopaque, at: f64) void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        state.metrics.noteInput(at);
-    }
-
-    fn routeActiveTerminalCloseIntentFromCtx(raw: *anyopaque) !void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        _ = try app_terminal_intent_route_runtime.routeActiveAndSync(state, .close);
-    }
-
-    fn routeCloseActiveTerminalTabFromCtx(raw: *anyopaque) !bool {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        return try app_terminal_close_active_runtime.closeActive(
-            state,
-            raw,
-            .{ .sync_terminal_mode_tab_bar = routeSyncTerminalTabBarFromCtx },
-        );
-    }
-
-    fn routeApplyTerminalCloseConfirmDecisionFromCtx(
-        raw: *anyopaque,
-        decision: app_modes.ide.TerminalCloseConfirmDecision,
-        at: f64,
-    ) !bool {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        return try app_terminal_close_confirm_decision_runtime.applyDecision(
-            state,
-            decision,
-            at,
-            raw,
-            .{
-                .route_close_intent_and_sync = routeActiveTerminalCloseIntentFromCtx,
-                .close_active_terminal_tab = routeCloseActiveTerminalTabFromCtx,
-                .note_input = routeNoteInputFromCtx,
-            },
-        );
-    }
-
-    fn routeReconcileTerminalCloseModalActiveFromCtx(raw: *anyopaque) bool {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        return app_terminal_close_confirm_active_runtime.reconcile(state);
-    }
-
-    fn routeComputeLayoutFromCtx(raw: *anyopaque, w: f32, h: f32) layout_types.WidgetLayout {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        return app_ui_layout_runtime.computeLayout(state, w, h);
-    }
-
-    fn routeMarkRedrawFromCtx(raw: *anyopaque) void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        state.needs_redraw = true;
-    }
-
     pub fn handlePreInputShortcutFrame(
         self: *AppState,
         frame_shell: *Shell,
@@ -746,36 +647,7 @@ const AppState = struct {
         focus: input_actions.FocusKind,
         at: f64,
     ) !app_update_prelude_frame_runtime.PreInputResult {
-        return try app_pre_input_shortcut_frame_runtime.handle(
-            self.input_router.actionsSlice(),
-            frame_shell,
-            frame_input_batch,
-            focus,
-            at,
-            self.app_mode,
-            self.show_terminal,
-            &self.terminal_workspace,
-            self.terminals.items,
-            self.terminal_widgets.items,
-            self.allocator,
-            self.editors.items,
-            self.active_tab,
-            &self.editor_cluster_cache,
-            self.editor_wrap,
-            self.editor_large_jump_rows,
-            &self.search_panel.active,
-            &self.search_panel.query,
-            @ptrCast(self),
-            .{
-                .reload_config = routeReloadConfigFromCtx,
-                .show_reload_notice = routeShowConfigReloadNoticeFromCtx,
-                .reconcile_terminal_close_modal_active = routeReconcileTerminalCloseModalActiveFromCtx,
-                .apply_terminal_close_confirm_decision = routeApplyTerminalCloseConfirmDecisionFromCtx,
-                .compute_layout = routeComputeLayoutFromCtx,
-                .mark_redraw = routeMarkRedrawFromCtx,
-                .note_input = routeNoteInputFromCtx,
-            },
-        );
+        return try app_pre_input_shortcut_hooks_runtime.handle(self, frame_shell, frame_input_batch, focus, at);
     }
 
     pub fn handlePostPreinputFrame(
