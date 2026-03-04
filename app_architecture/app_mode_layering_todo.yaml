@@ -162,6 +162,7 @@ app_mode_layering_todo:
             - "In progress: terminal resize apply mechanics moved from `main.zig` into `src/app/terminal_resize.zig` (`resizeWorkspaceWithShellCellSize`, `resizeSessionWithShellCellSize`, `resizeSessionsWithShellCellSize`)."
             - "In progress: default editor welcome seed content moved from `main.zig` into `src/app/editor_seed.zig` (`seedDefaultWelcomeBuffer`)."
             - "In progress: terminal close-confirm pending/re-arm state helpers moved from `main.zig` into `src/app/terminal_close_confirm_state.zig` (`reconcilePending`, `shouldArmCloseConfirm`)."
+            - "In progress: terminal tab focus/cycle workspace ops moved from `main.zig` into `src/app/terminal_tab_ops.zig` (`focusByVisualIndex`, `cycle`)."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress

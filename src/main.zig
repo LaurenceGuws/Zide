@@ -6,6 +6,7 @@ const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
 const app_config_reload_notice = @import("app/config_reload_notice.zig");
 const app_terminal_grid = @import("app/terminal_grid.zig");
+const app_terminal_tab_ops = @import("app/terminal_tab_ops.zig");
 const app_terminal_resize = @import("app/terminal_resize.zig");
 const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
 const app_terminal_close_confirm_state = @import("app/terminal_close_confirm_state.zig");
@@ -2201,35 +2202,33 @@ const AppState = struct {
     }
 
     fn focusTerminalTabByIndex(self: *AppState, index: usize) bool {
-        if (!app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) return false;
-        if (self.terminal_workspace) |*workspace| {
-            const tab_id = self.tab_bar.terminalTabIdAtVisual(index) orelse return false;
-            if (!workspace.activateTab(tab_id)) return false;
-            self.tab_bar.active_index = self.tab_bar.indexOfTerminalTabId(tab_id) orelse self.tab_bar.active_index;
-            self.clearTerminalCloseConfirm();
-            if (self.activeTerminalWidget()) |widget| {
-                widget.invalidateTextureCache();
-            }
-            return true;
+        const changed = app_terminal_tab_ops.focusByVisualIndex(
+            self.app_mode,
+            &self.terminal_workspace,
+            &self.tab_bar,
+            index,
+        );
+        if (!changed) return false;
+        self.clearTerminalCloseConfirm();
+        if (self.activeTerminalWidget()) |widget| {
+            widget.invalidateTextureCache();
         }
-        return false;
+        return true;
     }
 
     fn cycleTerminalTab(self: *AppState, next: bool) bool {
-        if (!app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) return false;
-        if (self.terminal_workspace) |*workspace| {
-            const changed = if (next) workspace.activateNext() else workspace.activatePrev();
-            if (!changed) return false;
-            if (workspace.activeTabId()) |active_id| {
-                self.tab_bar.active_index = self.tab_bar.indexOfTerminalTabId(active_id) orelse self.tab_bar.active_index;
-            }
-            self.clearTerminalCloseConfirm();
-            if (self.activeTerminalWidget()) |widget| {
-                widget.invalidateTextureCache();
-            }
-            return true;
+        const changed = app_terminal_tab_ops.cycle(
+            self.app_mode,
+            &self.terminal_workspace,
+            &self.tab_bar,
+            next,
+        );
+        if (!changed) return false;
+        self.clearTerminalCloseConfirm();
+        if (self.activeTerminalWidget()) |widget| {
+            widget.invalidateTextureCache();
         }
-        return false;
+        return true;
     }
 
     fn closeActiveTerminalTab(self: *AppState) !bool {
