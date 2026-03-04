@@ -23,6 +23,7 @@ const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.z
 const app_terminal_close_confirm_state = @import("app/terminal_close_confirm_state.zig");
 const app_terminal_close_confirm_runtime = @import("app/terminal_close_confirm_runtime.zig");
 const app_terminal_close_confirm_input = @import("app/terminal_close_confirm_input.zig");
+const app_terminal_clipboard_shortcuts_runtime = @import("app/terminal_clipboard_shortcuts_runtime.zig");
 const app_mode_adapter_sync = @import("app/mode_adapter_sync.zig");
 const app_mode_adapter_parity = @import("app/mode_adapter_parity.zig");
 const app_terminal_theme_apply = @import("app/terminal_theme_apply.zig");
@@ -1430,34 +1431,52 @@ const AppState = struct {
             if (input_batch.events.items.len > 0) {
                 term_widget.noteInput(now);
             }
-            var handled = false;
-            for (self.input_router.actionsSlice()) |action| {
-                switch (action.kind) {
-                    .copy => {
-                        if (term_widget.copySelectionToClipboard(shell)) {
-                            handled = true;
-                        }
-                    },
-                    .paste => {
-                        if (term_widget.pasteClipboardFromSystem(shell)) {
-                            handled = true;
-                            self.needs_redraw = true;
-                        }
-                    },
-                    .terminal_scrollback_pager => {
+            const RuntimeCtx = struct {
+                state: *AppState,
+                shell: *Shell,
+                widget: *TerminalWidget,
+            };
+            var runtime_ctx: RuntimeCtx = .{
+                .state = self,
+                .shell = shell,
+                .widget = term_widget,
+            };
+            const hooks: app_terminal_clipboard_shortcuts_runtime.RuntimeHooks = .{
+                .copy = struct {
+                    fn call(raw: *anyopaque) !bool {
+                        const ctx: *RuntimeCtx = @ptrCast(@alignCast(raw));
+                        return ctx.widget.copySelectionToClipboard(ctx.shell);
+                    }
+                }.call,
+                .paste = struct {
+                    fn call(raw: *anyopaque) !bool {
+                        const ctx: *RuntimeCtx = @ptrCast(@alignCast(raw));
+                        return ctx.widget.pasteClipboardFromSystem(ctx.shell);
+                    }
+                }.call,
+                .scrollback_pager = struct {
+                    fn call(raw: *anyopaque) !bool {
+                        const ctx: *RuntimeCtx = @ptrCast(@alignCast(raw));
                         const term = app_terminal_active_session.resolveActive(
-                            self.app_mode,
-                            &self.terminal_workspace,
-                            self.terminals.items,
-                        ) orelse continue;
-                        if (try terminal_scrollback_pager.openInPager(self.allocator, term_widget, term)) {
-                            handled = true;
-                        }
-                    },
-                    else => {},
-                }
-            }
-            return handled;
+                            ctx.state.app_mode,
+                            &ctx.state.terminal_workspace,
+                            ctx.state.terminals.items,
+                        ) orelse return false;
+                        return terminal_scrollback_pager.openInPager(
+                            ctx.state.allocator,
+                            ctx.widget,
+                            term,
+                        );
+                    }
+                }.call,
+            };
+            const result = try app_terminal_clipboard_shortcuts_runtime.handle(
+                self.input_router.actionsSlice(),
+                @ptrCast(&runtime_ctx),
+                hooks,
+            );
+            if (result.needs_redraw) self.needs_redraw = true;
+            return result.handled;
         }
         return false;
     }

@@ -200,6 +200,7 @@ app_mode_layering_todo:
             - "In progress: terminal close-confirm modal input/layout decision plumbing moved from `main.zig` into `src/app/terminal_close_confirm_input.zig` (`handleInput`)."
             - "In progress: repeated terminal tab count/visibility/active-index callsite wiring in `main.zig` now routes through `src/app/terminal_tabs_runtime.zig` helpers."
             - "In progress: repeated terminal surface/input gating conditions in `main.zig` now route through `src/app/terminal_surface_gate.zig` helpers."
+            - "In progress: terminal clipboard shortcut action dispatch (`copy`/`paste`/`scrollback_pager`) moved from `main.zig` loop branches into `src/app/terminal_clipboard_shortcuts_runtime.zig` (`handle`)."
             - "In progress: terminal theme apply helpers moved from `main.zig` into `src/app/terminal_theme_apply.zig` (`setSessionPalette`, `notifyColorSchemeChanged`, `applyThemeToWidgets`)."
             - "In progress: terminal session startup/widget bootstrap dedup moved from `main.zig` into `src/app/terminal_session_bootstrap.zig` (`startSessionWithShellCellSize`, `initWidget`)."
             - "In progress: terminal grid-size math moved from `main.zig` into `src/app/terminal_grid.zig` (`compute`)."
