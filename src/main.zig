@@ -49,15 +49,10 @@ const app_run_mode_init = @import("app/run_mode_init.zig");
 const app_prepare_run_frame_runtime = @import("app/prepare_run_frame_runtime.zig");
 const app_frame_render_idle_runtime = @import("app/frame_render_idle_runtime.zig");
 const app_update_prelude_frame_runtime = @import("app/update_prelude_frame_runtime.zig");
-const app_font_sample_draw_runtime = @import("app/font_sample_draw_runtime.zig");
-const app_editor_draw_surface_runtime = @import("app/editor_draw_surface_runtime.zig");
-const app_terminal_draw_surface_runtime = @import("app/terminal_draw_surface_runtime.zig");
-const app_shell_chrome_draw_runtime = @import("app/shell_chrome_draw_runtime.zig");
-const app_tabbar_draw_runtime = @import("app/tabbar_draw_runtime.zig");
-const app_draw_overlays_runtime = @import("app/draw_overlays_runtime.zig");
 const app_ui_layout_runtime = @import("app/ui_layout_runtime.zig");
 const app_metrics_log_runtime = @import("app/metrics_log_runtime.zig");
 const app_run_entry_runtime = @import("app/run_entry_runtime.zig");
+const app_draw_frame_runtime = @import("app/draw_frame_runtime.zig");
 const app_terminal_tab_navigation_runtime = @import("app/terminal_tab_navigation_runtime.zig");
 const app_terminal_close_active_runtime = @import("app/terminal_close_active_runtime.zig");
 const app_terminal_close_confirm_actions_runtime = @import("app/terminal_close_confirm_actions_runtime.zig");
@@ -2543,45 +2538,23 @@ const AppState = struct {
     }
 
     fn draw(self: *AppState) void {
-        const shell = self.shell;
-
-        shell.beginFrame();
-
-        if (app_font_sample_draw_runtime.handle(self, shell)) {
-            shell.endFrame();
-            return;
-        }
-
-        const width = @as(f32, @floatFromInt(shell.width()));
-        const height = @as(f32, @floatFromInt(shell.height()));
-        const layout = self.computeLayout(width, height);
-        const tab_tooltip = app_tabbar_draw_runtime.draw(
+        app_draw_frame_runtime.draw(
             self,
-            shell,
-            layout,
+            self.shell,
             @ptrCast(self),
             .{
+                .compute_layout = struct {
+                    fn call(raw: *anyopaque, width: f32, height: f32) layout_types.WidgetLayout {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        return state.computeLayout(width, height);
+                    }
+                }.call,
                 .apply_current_tab_bar_width_mode = struct {
                     fn call(raw: *anyopaque) void {
                         const state: *AppState = @ptrCast(@alignCast(raw));
                         state.applyCurrentTabBarWidthMode();
                     }
                 }.call,
-            },
-        );
-
-        // Draw editor
-        app_editor_draw_surface_runtime.draw(self, shell, layout);
-
-        app_terminal_draw_surface_runtime.draw(self, shell, layout);
-        app_shell_chrome_draw_runtime.draw(self, shell, layout, tab_tooltip);
-
-        app_draw_overlays_runtime.draw(
-            self,
-            shell,
-            layout,
-            @ptrCast(self),
-            .{
                 .terminal_close_confirm_active = struct {
                     fn call(raw: *anyopaque) bool {
                         const state: *AppState = @ptrCast(@alignCast(raw));
@@ -2590,8 +2563,6 @@ const AppState = struct {
                 }.call,
             },
         );
-
-        shell.endFrame();
     }
 };
 
