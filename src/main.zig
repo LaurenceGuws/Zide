@@ -36,6 +36,7 @@ const app_search_panel_runtime = @import("app/search_panel_runtime.zig");
 const app_search_panel_state = @import("app/search_panel_state.zig");
 const app_mouse_debug_log = @import("app/mouse_debug_log.zig");
 const app_mouse_pressed_frame = @import("app/mouse_pressed_frame.zig");
+const app_mouse_pressed_routing_runtime = @import("app/mouse_pressed_routing_runtime.zig");
 const app_input_actions_frame_runtime = @import("app/input_actions_frame_runtime.zig");
 const app_pointer_activity_frame = @import("app/pointer_activity_frame.zig");
 const app_shortcut_action_runtime = @import("app/shortcut_action_runtime.zig");
@@ -1388,46 +1389,42 @@ const AppState = struct {
                                                                                                         frame_now: f64,
                                                                                                     ) !void {
                                                                                                         const state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        const tab_bar_y = state.options_bar.height;
-                                                                                                        _ = state.tab_bar.beginDrag(frame_mouse.x, frame_mouse.y, frame_layout.side_nav.width, tab_bar_y, frame_layout.tab_bar.width);
-                                                                                                        if (state.tab_bar.handleClick(frame_mouse.x, frame_mouse.y, frame_layout.side_nav.width, tab_bar_y, frame_layout.tab_bar.width)) {
-                                                                                                            state.active_tab = state.tab_bar.active_index;
-                                                                                                            _ = try app_editor_intent_route.routeActivateByIndexAndSync(
-                                                                                                                state.active_tab,
-                                                                                                                @ptrCast(state),
-                                                                                                                struct {
-                                                                                                                    fn inner(activate_raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
-                                                                                                                        const route_state: *AppState = @ptrCast(@alignCast(activate_raw));
-                                                                                                                        try app_tab_action_apply_runtime.applyEditorAndSync(route_state, action);
+                                                                                                        const result = try app_mouse_pressed_routing_runtime.handleIde(
+                                                                                                            &state.tab_bar,
+                                                                                                            state.options_bar.height,
+                                                                                                            frame_layout,
+                                                                                                            frame_mouse,
+                                                                                                            frame_term_y,
+                                                                                                            state.show_terminal,
+                                                                                                            &state.active_tab,
+                                                                                                            &state.active_kind,
+                                                                                                            @ptrCast(state),
+                                                                                                            .{
+                                                                                                                .route_editor_activate_by_index = struct {
+                                                                                                                    fn call(hook_raw: *anyopaque, index: usize) !void {
+                                                                                                                        const hook_state: *AppState = @ptrCast(@alignCast(hook_raw));
+                                                                                                                        _ = try app_editor_intent_route.routeActivateByIndexAndSync(
+                                                                                                                            index,
+                                                                                                                            @ptrCast(hook_state),
+                                                                                                                            struct {
+                                                                                                                                fn inner(activate_raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
+                                                                                                                                    const route_state: *AppState = @ptrCast(@alignCast(activate_raw));
+                                                                                                                                    try app_tab_action_apply_runtime.applyEditorAndSync(route_state, action);
+                                                                                                                                }
+                                                                                                                            }.inner,
+                                                                                                                        );
                                                                                                                     }
-                                                                                                                }.inner,
-                                                                                                            );
-                                                                                                            state.needs_redraw = true;
-                                                                                                            state.metrics.noteInput(frame_now);
-                                                                                                        }
-
-                                                                                                        const editor_x = frame_layout.editor.x;
-                                                                                                        const editor_y = frame_layout.editor.y;
-                                                                                                        const in_editor = frame_mouse.x >= editor_x and frame_mouse.x <= editor_x + frame_layout.editor.width and
-                                                                                                            frame_mouse.y >= editor_y and frame_mouse.y <= editor_y + frame_layout.editor.height;
-
-                                                                                                        const in_terminal = frame_layout.terminal.height > 0 and frame_mouse.y >= frame_term_y and frame_mouse.y <= frame_term_y + frame_layout.terminal.height;
-
-                                                                                                        if (in_terminal and state.show_terminal) {
-                                                                                                            if (state.active_kind != .terminal) {
-                                                                                                                state.active_kind = .terminal;
-                                                                                                                try app_mode_adapter_sync_runtime.sync(state);
-                                                                                                                state.needs_redraw = true;
-                                                                                                                state.metrics.noteInput(frame_now);
-                                                                                                            }
-                                                                                                        } else if (in_editor) {
-                                                                                                            if (state.active_kind != .editor) {
-                                                                                                                state.active_kind = .editor;
-                                                                                                                try app_mode_adapter_sync_runtime.sync(state);
-                                                                                                                state.needs_redraw = true;
-                                                                                                                state.metrics.noteInput(frame_now);
-                                                                                                            }
-                                                                                                        }
+                                                                                                                }.call,
+                                                                                                                .sync_mode_adapters = struct {
+                                                                                                                    fn call(hook_raw: *anyopaque) !void {
+                                                                                                                        const hook_state: *AppState = @ptrCast(@alignCast(hook_raw));
+                                                                                                                        try app_mode_adapter_sync_runtime.sync(hook_state);
+                                                                                                                    }
+                                                                                                                }.call,
+                                                                                                            },
+                                                                                                        );
+                                                                                                        if (result.needs_redraw) state.needs_redraw = true;
+                                                                                                        if (result.note_input) state.metrics.noteInput(frame_now);
                                                                                                     }
                                                                                                 }.call,
                                                                                                 .handle_terminal_mouse_pressed_routing = struct {
@@ -1437,19 +1434,33 @@ const AppState = struct {
                                                                                                         frame_mouse: shared_types.input.MousePos,
                                                                                                     ) !void {
                                                                                                         const state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        if (app_terminal_tabs_runtime.barVisible(
-                                                                                                            state.app_mode,
-                                                                                                            state.terminal_tab_bar_show_single_tab,
-                                                                                                            state.terminal_workspace,
-                                                                                                            state.terminals.items.len,
-                                                                                                        )) {
-                                                                                                            _ = state.tab_bar.beginDrag(frame_mouse.x, frame_mouse.y, frame_layout.tab_bar.x, frame_layout.tab_bar.y, frame_layout.tab_bar.width);
-                                                                                                        }
-                                                                                                        if (state.active_kind != .terminal) {
-                                                                                                            state.active_kind = .terminal;
-                                                                                                            try app_mode_adapter_sync_runtime.sync(state);
-                                                                                                        }
-                                                                                                        _ = try app_terminal_intent_route_runtime.routeActiveAndSync(state, .activate);
+                                                                                                        _ = try app_mouse_pressed_routing_runtime.handleTerminal(
+                                                                                                            &state.tab_bar,
+                                                                                                            frame_layout,
+                                                                                                            frame_mouse,
+                                                                                                            app_terminal_tabs_runtime.barVisible(
+                                                                                                                state.app_mode,
+                                                                                                                state.terminal_tab_bar_show_single_tab,
+                                                                                                                state.terminal_workspace,
+                                                                                                                state.terminals.items.len,
+                                                                                                            ),
+                                                                                                            &state.active_kind,
+                                                                                                            @ptrCast(state),
+                                                                                                            .{
+                                                                                                                .sync_mode_adapters = struct {
+                                                                                                                    fn call(hook_raw: *anyopaque) !void {
+                                                                                                                        const hook_state: *AppState = @ptrCast(@alignCast(hook_raw));
+                                                                                                                        try app_mode_adapter_sync_runtime.sync(hook_state);
+                                                                                                                    }
+                                                                                                                }.call,
+                                                                                                                .route_terminal_activate = struct {
+                                                                                                                    fn call(hook_raw: *anyopaque) !void {
+                                                                                                                        const hook_state: *AppState = @ptrCast(@alignCast(hook_raw));
+                                                                                                                        _ = try app_terminal_intent_route_runtime.routeActiveAndSync(hook_state, .activate);
+                                                                                                                    }
+                                                                                                                }.call,
+                                                                                                            },
+                                                                                                        );
                                                                                                     }
                                                                                                 }.call,
                                                                                                 .handle_editor_mouse_pressed_routing = struct {
