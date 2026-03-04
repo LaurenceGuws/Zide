@@ -650,10 +650,30 @@ const AppState = struct {
     ) !bool {
         if (!app_terminal_shortcut_policy.canHandleIntent(self.app_mode, intent)) return false;
         const hooks: app_terminal_shortcut_runtime.RuntimeHooks = .{
-            .request_create = requestCreateTerminalTabFromCtx,
-            .request_close = requestCloseActiveTerminalTabFromCtx,
-            .request_cycle = requestCycleTerminalTabWithIntentFromCtx,
-            .request_focus = requestFocusTerminalTabWithIntentFromCtx,
+            .request_create = struct {
+                fn call(raw: *anyopaque, at: f64) !bool {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    return state.requestCreateTerminalTab(at);
+                }
+            }.call,
+            .request_close = struct {
+                fn call(raw: *anyopaque, at: f64) !bool {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    return state.requestCloseActiveTerminalTab(at);
+                }
+            }.call,
+            .request_cycle = struct {
+                fn call(raw: *anyopaque, dir: app_modes.ide.TerminalShortcutCycleDirection, at: f64) !bool {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    return state.requestCycleTerminalTabWithIntent(dir, at);
+                }
+            }.call,
+            .request_focus = struct {
+                fn call(raw: *anyopaque, route: app_modes.ide.TerminalFocusRoute, at: f64) !bool {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    return state.requestFocusTerminalTabWithIntent(route, at);
+                }
+            }.call,
         };
         return app_terminal_shortcut_runtime.handleIntent(intent, now, @ptrCast(self), hooks);
     }
@@ -1550,7 +1570,12 @@ const AppState = struct {
                 self.shell.uiScaleFactor(),
                 now,
                 @ptrCast(self),
-                applyTerminalCloseConfirmDecisionFromCtx,
+                struct {
+                    fn call(raw: *anyopaque, decision: app_modes.ide.TerminalCloseConfirmDecision, at: f64) !bool {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        return state.applyTerminalCloseConfirmDecision(decision, at);
+                    }
+                }.call,
             )) {
                 return .{
                     .suppress_terminal_shortcuts = false,
@@ -1990,57 +2015,20 @@ const AppState = struct {
         now: f64,
     ) !bool {
         const hooks: app_terminal_close_confirm_runtime.RuntimeHooks = .{
-            .confirm = requestConfirmTerminalCloseFromModalFromCtx,
-            .cancel = requestCancelTerminalCloseFromModalFromCtx,
+            .confirm = struct {
+                fn call(raw: *anyopaque, at: f64) !bool {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    return state.requestConfirmTerminalCloseFromModal(at);
+                }
+            }.call,
+            .cancel = struct {
+                fn call(raw: *anyopaque, at: f64) !bool {
+                    const state: *AppState = @ptrCast(@alignCast(raw));
+                    return state.requestCancelTerminalCloseFromModal(at);
+                }
+            }.call,
         };
         return app_terminal_close_confirm_runtime.applyDecision(decision, now, @ptrCast(self), hooks);
-    }
-
-    fn requestCreateTerminalTabFromCtx(raw: *anyopaque, at: f64) !bool {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        return state.requestCreateTerminalTab(at);
-    }
-
-    fn requestCloseActiveTerminalTabFromCtx(raw: *anyopaque, at: f64) !bool {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        return state.requestCloseActiveTerminalTab(at);
-    }
-
-    fn requestCycleTerminalTabWithIntentFromCtx(
-        raw: *anyopaque,
-        dir: app_modes.ide.TerminalShortcutCycleDirection,
-        at: f64,
-    ) !bool {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        return state.requestCycleTerminalTabWithIntent(dir, at);
-    }
-
-    fn requestFocusTerminalTabWithIntentFromCtx(
-        raw: *anyopaque,
-        route: app_modes.ide.TerminalFocusRoute,
-        at: f64,
-    ) !bool {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        return state.requestFocusTerminalTabWithIntent(route, at);
-    }
-
-    fn requestConfirmTerminalCloseFromModalFromCtx(raw: *anyopaque, at: f64) !bool {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        return state.requestConfirmTerminalCloseFromModal(at);
-    }
-
-    fn requestCancelTerminalCloseFromModalFromCtx(raw: *anyopaque, at: f64) !bool {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        return state.requestCancelTerminalCloseFromModal(at);
-    }
-
-    fn applyTerminalCloseConfirmDecisionFromCtx(
-        raw: *anyopaque,
-        decision: app_modes.ide.TerminalCloseConfirmDecision,
-        now: f64,
-    ) !bool {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        return state.applyTerminalCloseConfirmDecision(decision, now);
     }
 
     fn focusTerminalTabByIndex(self: *AppState, index: usize) bool {
