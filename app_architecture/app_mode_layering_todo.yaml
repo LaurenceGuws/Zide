@@ -141,6 +141,7 @@ app_mode_layering_todo:
             - "In progress: run-startup mode initialization (terminal workspace/font-sample/perf/editor bootstrap) is now collapsed behind `initializeRunModeState(...)`."
             - "In progress: per-frame run-loop setup (event poll, signal close gate, input batch build, frame cache tick, metrics begin) is now collapsed behind `prepareRunFrame(...)`."
             - "In progress: per-frame run execution (update + render/idle + perf-stop gate) is now collapsed behind `runOneFrame(...)`."
+            - "In progress: `update()` prelude path is now collapsed behind `handleUpdatePreludeFrame(...)` (snapshot/font-sample/widget-input/config notice/focus+pre-shortcuts)."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress
