@@ -1319,6 +1319,57 @@ const AppState = struct {
         }
     }
 
+    fn handleTerminalPendingOpenRequest(
+        self: *AppState,
+        term_widget: *TerminalWidget,
+        now: f64,
+    ) !void {
+        if (term_widget.takePendingOpenRequest()) |req| {
+            defer self.allocator.free(req.path);
+            if (isProbablyTextFile(req.path)) {
+                if (req.line != null) {
+                    try self.openFileAt(req.path, req.line.?, req.col);
+                } else {
+                    try self.openFile(req.path);
+                }
+                self.needs_redraw = true;
+                self.metrics.noteInput(now);
+            }
+        }
+    }
+
+    fn handleTerminalWidgetInput(
+        self: *AppState,
+        term_widget: *TerminalWidget,
+        shell: *Shell,
+        term_x: f32,
+        term_y: f32,
+        term_width: f32,
+        term_height: f32,
+        allow_terminal_input: bool,
+        suppress_terminal_shortcuts: bool,
+        input_batch: *shared_types.input.InputBatch,
+        search_panel_consumed_input: bool,
+        now: f64,
+    ) !void {
+        if (!search_panel_consumed_input and try term_widget.handleInput(
+            shell,
+            term_x,
+            term_y,
+            term_width,
+            term_height,
+            allow_terminal_input,
+            &self.terminal_scroll_dragging,
+            &self.terminal_scroll_grab_offset,
+            suppress_terminal_shortcuts,
+            input_batch,
+        )) {
+            self.needs_redraw = true;
+            self.metrics.noteInput(now);
+        }
+        try self.handleTerminalPendingOpenRequest(term_widget, now);
+    }
+
     fn logModeAdapterParity(self: *AppState) void {
         const log = app_logger.logger("app.mode.parity");
         if (!log.enabled_file and !log.enabled_console) return;
@@ -2479,64 +2530,21 @@ const AppState = struct {
                 if (term_widget.updateBlink(now)) {
                     self.needs_redraw = true;
                 }
-                if (self.active_kind == .terminal) {
-                    const suppress_terminal_input_for_tab_drag = app_modes.ide.suppressTerminalInputForTabDrag(self.app_mode, self.tab_bar.isDragging());
-                    if (!search_panel_consumed_input and try term_widget.handleInput(
-                        shell,
-                        term_x,
-                        term_y_draw,
-                        layout.terminal.width,
-                        term_draw_height,
-                        !terminal_close_modal_active and !suppress_terminal_input_for_tab_drag,
-                        &self.terminal_scroll_dragging,
-                        &self.terminal_scroll_grab_offset,
-                        suppress_terminal_shortcuts,
-                        input_batch,
-                    )) {
-                        self.needs_redraw = true;
-                        self.metrics.noteInput(now);
-                    }
-                    if (term_widget.takePendingOpenRequest()) |req| {
-                        defer self.allocator.free(req.path);
-                        if (isProbablyTextFile(req.path)) {
-                            if (req.line != null) {
-                                try self.openFileAt(req.path, req.line.?, req.col);
-                            } else {
-                                try self.openFile(req.path);
-                            }
-                            self.needs_redraw = true;
-                            self.metrics.noteInput(now);
-                        }
-                    }
-                } else {
-                    if (!search_panel_consumed_input and try term_widget.handleInput(
-                        shell,
-                        term_x,
-                        term_y_draw,
-                        layout.terminal.width,
-                        term_draw_height,
-                        false,
-                        &self.terminal_scroll_dragging,
-                        &self.terminal_scroll_grab_offset,
-                        suppress_terminal_shortcuts,
-                        input_batch,
-                    )) {
-                        self.needs_redraw = true;
-                        self.metrics.noteInput(now);
-                    }
-                    if (term_widget.takePendingOpenRequest()) |req| {
-                        defer self.allocator.free(req.path);
-                        if (isProbablyTextFile(req.path)) {
-                            if (req.line != null) {
-                                try self.openFileAt(req.path, req.line.?, req.col);
-                            } else {
-                                try self.openFile(req.path);
-                            }
-                            self.needs_redraw = true;
-                            self.metrics.noteInput(now);
-                        }
-                    }
-                }
+                const suppress_terminal_input_for_tab_drag = app_modes.ide.suppressTerminalInputForTabDrag(self.app_mode, self.tab_bar.isDragging());
+                const allow_terminal_input = self.active_kind == .terminal and !terminal_close_modal_active and !suppress_terminal_input_for_tab_drag;
+                try self.handleTerminalWidgetInput(
+                    term_widget,
+                    shell,
+                    term_x,
+                    term_y_draw,
+                    layout.terminal.width,
+                    term_draw_height,
+                    allow_terminal_input,
+                    suppress_terminal_shortcuts,
+                    input_batch,
+                    search_panel_consumed_input,
+                    now,
+                );
             }
         }
         if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
