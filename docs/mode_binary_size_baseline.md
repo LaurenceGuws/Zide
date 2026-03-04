@@ -11,9 +11,9 @@ Snapshot date: 2026-03-05
 | Binary | Size (bytes) |
 |---|---:|
 | `zide` | 41,595,884 |
-| `zide-terminal` | 41,507,101 |
-| `zide-editor` | 41,508,103 |
-| `zide-ide` | 41,506,678 |
+| `zide-terminal` | 41,507,074 |
+| `zide-editor` | 41,508,060 |
+| `zide-ide` | 41,506,636 |
 
 Notes:
 
