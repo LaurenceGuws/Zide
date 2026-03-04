@@ -15,7 +15,6 @@ const app_terminal_runtime_intents = @import("app/terminal_runtime_intents.zig")
 const app_terminal_active_widget = @import("app/terminal_active_widget.zig");
 const app_terminal_clipboard_shortcuts_frame = @import("app/terminal_clipboard_shortcuts_frame.zig");
 const app_terminal_tab_bar_sync = @import("app/terminal_tab_bar_sync.zig");
-const app_terminal_tab_ops = @import("app/terminal_tab_ops.zig");
 const app_terminal_tabs_runtime = @import("app/terminal_tabs_runtime.zig");
 const app_terminal_surface_gate = @import("app/terminal_surface_gate.zig");
 const app_terminal_shortcut_suppress = @import("app/terminal_shortcut_suppress.zig");
@@ -52,6 +51,8 @@ const app_reload_config_runtime = @import("app/reload_config_runtime.zig");
 const app_run_mode_init = @import("app/run_mode_init.zig");
 const app_prepare_run_frame_runtime = @import("app/prepare_run_frame_runtime.zig");
 const app_frame_render_idle_runtime = @import("app/frame_render_idle_runtime.zig");
+const app_terminal_tab_navigation_runtime = @import("app/terminal_tab_navigation_runtime.zig");
+const app_terminal_close_active_runtime = @import("app/terminal_close_active_runtime.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
@@ -2072,85 +2073,26 @@ const AppState = struct {
     }
 
     fn focusTerminalTabByIndex(self: *AppState, index: usize) bool {
-        const changed = app_terminal_tab_ops.focusByVisualIndex(
-            self.app_mode,
-            &self.terminal_workspace,
-            &self.tab_bar,
-            index,
-        );
-        if (!changed) return false;
-        self.terminal_close_confirm_tab = null;
-        if (app_terminal_active_widget.resolveActive(
-            self.app_mode,
-            &self.terminal_workspace,
-            self.terminals.items.len,
-            self.terminal_widgets.items,
-        )) |widget| {
-            widget.invalidateTextureCache();
-        }
-        return true;
+        return app_terminal_tab_navigation_runtime.focusByIndex(self, index);
     }
 
     fn cycleTerminalTab(self: *AppState, next: bool) bool {
-        const changed = app_terminal_tab_ops.cycle(
-            self.app_mode,
-            &self.terminal_workspace,
-            &self.tab_bar,
-            next,
-        );
-        if (!changed) return false;
-        self.terminal_close_confirm_tab = null;
-        if (app_terminal_active_widget.resolveActive(
-            self.app_mode,
-            &self.terminal_workspace,
-            self.terminals.items.len,
-            self.terminal_widgets.items,
-        )) |widget| {
-            widget.invalidateTextureCache();
-        }
-        return true;
+        return app_terminal_tab_navigation_runtime.cycle(self, next);
     }
 
     fn closeActiveTerminalTab(self: *AppState) !bool {
-        if (!app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) return false;
-        if (self.terminal_workspace) |*workspace| {
-            if (workspace.tabCount() == 0) return false;
-            if (workspace.activeTabId()) |active_tab_id| {
-                if (workspace.activeSession()) |active_session| {
-                    if (app_terminal_close_confirm_state.shouldArmCloseConfirm(
-                        self.terminal_close_confirm_tab,
-                        active_tab_id,
-                        active_session.shouldConfirmClose(),
-                    )) {
-                        self.terminal_close_confirm_tab = active_tab_id;
-                        self.needs_redraw = true;
-                        return false;
+        return try app_terminal_close_active_runtime.closeActive(
+            self,
+            @ptrCast(self),
+            .{
+                .sync_terminal_mode_tab_bar = struct {
+                    fn call(raw: *anyopaque) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.syncTerminalModeTabBar();
                     }
-                }
-            }
-            const active_idx = workspace.activeIndex();
-            if (active_idx < self.terminal_widgets.items.len) {
-                self.terminal_widgets.items[active_idx].deinit();
-                _ = self.terminal_widgets.orderedRemove(active_idx);
-            }
-            if (!workspace.closeActiveTab()) return false;
-            self.terminal_close_confirm_tab = null;
-            if (workspace.tabCount() == 0) {
-                self.shell.requestClose();
-            } else {
-                try self.syncTerminalModeTabBar();
-                if (app_terminal_active_widget.resolveActive(
-                    self.app_mode,
-                    &self.terminal_workspace,
-                    self.terminals.items.len,
-                    self.terminal_widgets.items,
-                )) |widget| {
-                    widget.invalidateTextureCache();
-                }
-            }
-            return true;
-        }
-        return false;
+                }.call,
+            },
+        );
     }
 
     pub fn newTerminal(self: *AppState) !void {
