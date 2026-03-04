@@ -39,6 +39,7 @@ pub const TerminalStrip = layout_policy.TerminalStrip;
 pub const ReorderDragMeta = tab_intents.ReorderDragMeta;
 pub const closeIntentForActiveTab = tab_intents.closeIntentForActiveTab;
 pub const reorderIntentForDrag = tab_intents.reorderIntentForDrag;
+pub const terminalFocusIndexForAction = tab_intents.terminalFocusIndexForAction;
 pub const Mismatch = parity.Mismatch;
 pub const KindParity = parity.KindParity;
 pub const evaluateKind = parity.evaluateKind;

@@ -1,5 +1,6 @@
 const std = @import("std");
 const shared = @import("../shared/mod.zig");
+const input_actions = @import("../../../input/input_actions.zig");
 
 pub const ReorderDragMeta = struct {
     active: bool,
@@ -25,6 +26,21 @@ pub fn reorderIntentForDrag(meta: ReorderDragMeta) ?shared.actions.TabAction {
         };
     }
     return null;
+}
+
+pub fn terminalFocusIndexForAction(kind: input_actions.ActionKind) ?usize {
+    return switch (kind) {
+        .terminal_focus_tab_1 => 0,
+        .terminal_focus_tab_2 => 1,
+        .terminal_focus_tab_3 => 2,
+        .terminal_focus_tab_4 => 3,
+        .terminal_focus_tab_5 => 4,
+        .terminal_focus_tab_6 => 5,
+        .terminal_focus_tab_7 => 6,
+        .terminal_focus_tab_8 => 7,
+        .terminal_focus_tab_9 => 8,
+        else => null,
+    };
 }
 
 test "close intent helper maps optional active tab id" {
@@ -68,4 +84,10 @@ test "reorder intent helper emits only for real drag moves" {
         },
         else => return error.TestUnexpectedResult,
     }
+}
+
+test "terminal focus index helper maps focus actions only" {
+    try std.testing.expectEqual(@as(?usize, 0), terminalFocusIndexForAction(.terminal_focus_tab_1));
+    try std.testing.expectEqual(@as(?usize, 8), terminalFocusIndexForAction(.terminal_focus_tab_9));
+    try std.testing.expectEqual(@as(?usize, null), terminalFocusIndexForAction(.terminal_new_tab));
 }
