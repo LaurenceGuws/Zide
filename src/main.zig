@@ -2,6 +2,7 @@ const std = @import("std");
 const app_bootstrap = @import("app/bootstrap.zig");
 const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
+const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
 const app_runner = @import("app/runner.zig");
 const app_signals = @import("app/signals.zig");
@@ -175,14 +176,6 @@ const AppState = struct {
         for (self.terminal_widgets.items) |*widget| {
             _ = try widget.session.reportColorSchemeChanged(dark);
         }
-    }
-
-    fn mapTabBarWidthMode(mode: ?config_mod.TabBarWidthMode) TabBar.WidthMode {
-        return switch (mode orelse .fixed) {
-            .fixed => .fixed,
-            .dynamic => .dynamic,
-            .label_length => .label_length,
-        };
     }
 
     fn applyCurrentTabBarWidthMode(self: *AppState) void {
@@ -374,9 +367,9 @@ const AppState = struct {
             .terminal_blink_style = terminal_blink_style,
             .terminal_cursor_style = terminal_cursor_style,
             .terminal_scrollback_rows = config.terminal_scrollback_rows,
-            .editor_tab_bar_width_mode = mapTabBarWidthMode(config.editor_tab_bar_width_mode),
+            .editor_tab_bar_width_mode = app_tab_bar_width.mapMode(config.editor_tab_bar_width_mode),
             .terminal_tab_bar_show_single_tab = config.terminal_tab_bar_show_single_tab orelse false,
-            .terminal_tab_bar_width_mode = mapTabBarWidthMode(config.terminal_tab_bar_width_mode),
+            .terminal_tab_bar_width_mode = app_tab_bar_width.mapMode(config.terminal_tab_bar_width_mode),
             .terminal_focus_report_window_events = config.terminal_focus_report_window orelse true,
             .terminal_focus_report_pane_events = config.terminal_focus_report_pane orelse false,
             .last_terminal_pane_focus_reported = null,
@@ -2929,12 +2922,12 @@ const AppState = struct {
             });
         }
         if (config.editor_tab_bar_width_mode != null) {
-            self.editor_tab_bar_width_mode = mapTabBarWidthMode(config.editor_tab_bar_width_mode);
+            self.editor_tab_bar_width_mode = app_tab_bar_width.mapMode(config.editor_tab_bar_width_mode);
             self.needs_redraw = true;
             log.logStdout("reload editor.tab_bar.width_mode={s}", .{@tagName(self.editor_tab_bar_width_mode)});
         }
         if (config.terminal_tab_bar_width_mode != null) {
-            self.terminal_tab_bar_width_mode = mapTabBarWidthMode(config.terminal_tab_bar_width_mode);
+            self.terminal_tab_bar_width_mode = app_tab_bar_width.mapMode(config.terminal_tab_bar_width_mode);
             self.needs_redraw = true;
             log.logStdout("reload terminal.tab_bar.width_mode={s}", .{@tagName(self.terminal_tab_bar_width_mode)});
         }
