@@ -56,6 +56,7 @@ const app_font_sample_draw_runtime = @import("app/font_sample_draw_runtime.zig")
 const app_editor_draw_surface_runtime = @import("app/editor_draw_surface_runtime.zig");
 const app_terminal_draw_surface_runtime = @import("app/terminal_draw_surface_runtime.zig");
 const app_shell_chrome_draw_runtime = @import("app/shell_chrome_draw_runtime.zig");
+const app_tabbar_draw_runtime = @import("app/tabbar_draw_runtime.zig");
 const app_terminal_tab_navigation_runtime = @import("app/terminal_tab_navigation_runtime.zig");
 const app_terminal_close_active_runtime = @import("app/terminal_close_active_runtime.zig");
 const app_terminal_close_confirm_actions_runtime = @import("app/terminal_close_confirm_actions_runtime.zig");
@@ -85,7 +86,6 @@ const shared_types = @import("types/mod.zig");
 // UI modules
 const app_shell = @import("app_shell.zig");
 const widgets = @import("ui/widgets.zig");
-const widgets_common = @import("ui/widgets/common.zig");
 const editor_draw = @import("ui/widgets/editor_widget_draw.zig");
 const layout_types = shared_types.layout;
 const input_actions = @import("input/input_actions.zig");
@@ -2567,29 +2567,20 @@ const AppState = struct {
         const width = @as(f32, @floatFromInt(shell.width()));
         const height = @as(f32, @floatFromInt(shell.height()));
         const layout = self.computeLayout(width, height);
-        var tab_tooltip: ?widgets_common.Tooltip = null;
-
-        if (app_modes.ide.canToggleTerminal(self.app_mode)) {
-            self.applyCurrentTabBarWidthMode();
-            shell.setTheme(self.app_theme);
-            // Draw options bar
-            self.options_bar.draw(shell, layout.window.width);
-
-            // Draw tab bar
-            tab_tooltip = self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
-        } else if (app_modes.ide.useTerminalTabBarWidthMode(self.app_mode)) {
-            self.applyCurrentTabBarWidthMode();
-            const tab_theme = app_theme_utils.terminalTabBarTheme(self.terminal_theme, self.shell_base_theme);
-            shell.setTheme(tab_theme);
-            if (app_terminal_tabs_runtime.barVisible(
-                self.app_mode,
-                self.terminal_tab_bar_show_single_tab,
-                self.terminal_workspace,
-                self.terminals.items.len,
-            )) {
-                tab_tooltip = self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
-            }
-        }
+        const tab_tooltip = app_tabbar_draw_runtime.draw(
+            self,
+            shell,
+            layout,
+            @ptrCast(self),
+            .{
+                .apply_current_tab_bar_width_mode = struct {
+                    fn call(raw: *anyopaque) void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        state.applyCurrentTabBarWidthMode();
+                    }
+                }.call,
+            },
+        );
 
         // Draw editor
         app_editor_draw_surface_runtime.draw(self, shell, layout);
