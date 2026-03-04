@@ -462,6 +462,10 @@ pub const Pty = struct {
         return false;
     }
 
+    pub fn foregroundProcessLabel(_: *Pty) ?[]const u8 {
+        return null;
+    }
+
     pub fn pollExit(self: *Pty) !?i32 {
         const h = self.process_info.hProcess orelse return null;
         var code: win32.DWORD = 0;

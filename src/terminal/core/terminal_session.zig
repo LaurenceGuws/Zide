@@ -1214,7 +1214,12 @@ pub const TerminalSession = struct {
         return self.cwd;
     }
 
-    pub fn currentTitle(self: *const TerminalSession) []const u8 {
+    pub fn currentTitle(self: *TerminalSession) []const u8 {
+        if (self.pty) |*pty| {
+            if (pty.foregroundProcessLabel()) |label| {
+                return label;
+            }
+        }
         return self.title;
     }
 
