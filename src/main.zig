@@ -605,12 +605,6 @@ const AppState = struct {
         return handled;
     }
 
-    fn syncTerminalModeTabBar(self: *AppState) !void {
-        if (!app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) return;
-        try app_terminal_tab_bar_sync.syncFromWorkspace(&self.tab_bar, &self.terminal_workspace);
-        try self.syncModeAdaptersFromTabBar();
-    }
-
     fn syncModeAdaptersFromTabBar(self: *AppState) !void {
         try app_mode_adapter_sync.syncFromTabBar(
             self.allocator,
@@ -644,7 +638,9 @@ const AppState = struct {
                 .sync_terminal_mode_tab_bar = struct {
                     fn call(raw: *anyopaque) !void {
                         const state: *AppState = @ptrCast(@alignCast(raw));
-                        try state.syncTerminalModeTabBar();
+                        if (!app_modes.ide.shouldUseTerminalWorkspace(state.app_mode)) return;
+                        try app_terminal_tab_bar_sync.syncFromWorkspace(&state.tab_bar, &state.terminal_workspace);
+                        try state.syncModeAdaptersFromTabBar();
                     }
                 }.call,
             },
@@ -665,7 +661,10 @@ const AppState = struct {
         app_tab_action_apply.applyTerminal(self.allocator, self.app_mode, &self.terminal_mode_adapter, .create);
         try self.syncModeAdaptersFromTabBar();
         try self.newTerminal();
-        try self.syncTerminalModeTabBar();
+        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
+            try app_terminal_tab_bar_sync.syncFromWorkspace(&self.tab_bar, &self.terminal_workspace);
+            try self.syncModeAdaptersFromTabBar();
+        }
         self.needs_redraw = true;
         self.metrics.noteInput(now);
         return true;
@@ -1322,7 +1321,8 @@ const AppState = struct {
             now,
         );
         if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-            try self.syncTerminalModeTabBar();
+            try app_terminal_tab_bar_sync.syncFromWorkspace(&self.tab_bar, &self.terminal_workspace);
+            try self.syncModeAdaptersFromTabBar();
         }
     }
 
@@ -1527,7 +1527,9 @@ const AppState = struct {
                                                 .sync_terminal_mode_tab_bar = struct {
                                                     fn call(cb_raw: *anyopaque) !void {
                                                         const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
-                                                        try cb_state.syncTerminalModeTabBar();
+                                                        if (!app_modes.ide.shouldUseTerminalWorkspace(cb_state.app_mode)) return;
+                                                        try app_terminal_tab_bar_sync.syncFromWorkspace(&cb_state.tab_bar, &cb_state.terminal_workspace);
+                                                        try cb_state.syncModeAdaptersFromTabBar();
                                                     }
                                                 }.call,
                                             },
@@ -1632,7 +1634,8 @@ const AppState = struct {
         self.side_nav.updateInput(self.last_input);
         self.status_bar.updateInput(self.last_input);
         if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-            try self.syncTerminalModeTabBar();
+            try app_terminal_tab_bar_sync.syncFromWorkspace(&self.tab_bar, &self.terminal_workspace);
+            try self.syncModeAdaptersFromTabBar();
         }
     }
 
@@ -1928,7 +1931,10 @@ const AppState = struct {
                     self.terminal_focus_report_pane_events,
                 );
                 try self.terminal_widgets.append(self.allocator, widget);
-                try self.syncTerminalModeTabBar();
+                if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
+                    try app_terminal_tab_bar_sync.syncFromWorkspace(&self.tab_bar, &self.terminal_workspace);
+                    try self.syncModeAdaptersFromTabBar();
+                }
                 try app_terminal_theme_apply.notifyColorSchemeChanged(&self.terminal_widgets, &self.terminal_theme);
                 self.show_terminal = true;
                 return;
@@ -1983,7 +1989,9 @@ const AppState = struct {
                                 .sync_terminal_mode_tab_bar = struct {
                                     fn cb(cb_raw: *anyopaque) !void {
                                         const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
-                                        try cb_state.syncTerminalModeTabBar();
+                                        if (!app_modes.ide.shouldUseTerminalWorkspace(cb_state.app_mode)) return;
+                                        try app_terminal_tab_bar_sync.syncFromWorkspace(&cb_state.tab_bar, &cb_state.terminal_workspace);
+                                        try cb_state.syncModeAdaptersFromTabBar();
                                     }
                                 }.cb,
                                 .open_file = struct {
