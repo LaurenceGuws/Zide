@@ -1370,6 +1370,50 @@ const AppState = struct {
         try self.handleTerminalPendingOpenRequest(term_widget, now);
     }
 
+    fn precomputeEditorVisibleCaches(
+        self: *AppState,
+        widget: *EditorWidget,
+        shell: *Shell,
+        layout: layout_types.WidgetLayout,
+    ) void {
+        if (layout.editor.width <= 0 or layout.editor.height <= 0) return;
+        self.prepareEditorForDisplay(widget.editor);
+        const visible_lines = @as(usize, @intFromFloat(layout.editor.height / shell.charHeight()));
+        const default_budget = if (visible_lines > 0) visible_lines + 1 else 0;
+        const highlight_budget = self.editor_highlight_budget orelse default_budget;
+        editor_draw.precomputeHighlightTokens(widget, &self.editor_render_cache, shell, layout.editor.height, highlight_budget);
+        const width_budget = self.editor_width_budget orelse highlight_budget;
+        editor_draw.precomputeLineWidths(widget, &self.editor_render_cache, shell, layout.editor.height, width_budget);
+        editor_draw.precomputeWrapCounts(widget, &self.editor_render_cache, shell, layout.editor.height, width_budget);
+    }
+
+    fn pollVisibleTerminalSessions(
+        self: *AppState,
+        input_batch: *shared_types.input.InputBatch,
+    ) !void {
+        if (!app_modes.ide.supportsTerminalSurface(self.app_mode) or !self.show_terminal or self.terminalTabCount() == 0) return;
+
+        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
+            if (self.terminal_workspace) |*workspace| {
+                const polled = try workspace.pollAll(
+                    self.activeTerminalArrayIndex(),
+                    input_batch.events.items.len > 0,
+                );
+                if (polled) self.needs_redraw = true;
+            }
+            return;
+        }
+
+        if (self.terminals.items.len > 0) {
+            const term = self.terminals.items[0];
+            if (term.hasData()) {
+                term.setInputPressure(input_batch.events.items.len > 0);
+                try term.poll();
+                self.needs_redraw = true;
+            }
+        }
+    }
+
     fn logModeAdapterParity(self: *AppState) void {
         const log = app_logger.logger("app.mode.parity");
         if (!log.enabled_file and !log.enabled_console) return;
@@ -2488,40 +2532,12 @@ const AppState = struct {
             }
             const scrollbar_blocking = self.handleEditorScrollbarInput(&widget, shell, layout, mouse, input_batch, now);
             self.handleEditorMouseSelectionInput(&widget, shell, layout, mouse, input_batch, scrollbar_blocking, now);
-
-            if (layout.editor.width > 0 and layout.editor.height > 0) {
-                self.prepareEditorForDisplay(widget.editor);
-                const visible_lines = @as(usize, @intFromFloat(layout.editor.height / r.char_height));
-                const default_budget = if (visible_lines > 0) visible_lines + 1 else 0;
-                const highlight_budget = self.editor_highlight_budget orelse default_budget;
-                editor_draw.precomputeHighlightTokens(&widget, &self.editor_render_cache, shell, layout.editor.height, highlight_budget);
-                const width_budget = self.editor_width_budget orelse highlight_budget;
-                editor_draw.precomputeLineWidths(&widget, &self.editor_render_cache, shell, layout.editor.height, width_budget);
-                editor_draw.precomputeWrapCounts(&widget, &self.editor_render_cache, shell, layout.editor.height, width_budget);
-            }
+            self.precomputeEditorVisibleCaches(&widget, shell, layout);
         }
 
         // Update terminal if shown
         if (app_modes.ide.supportsTerminalSurface(self.app_mode) and self.show_terminal and self.terminalTabCount() > 0) {
-            if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-                if (self.terminal_workspace) |*workspace| {
-                    const polled = try workspace.pollAll(
-                        self.activeTerminalArrayIndex(),
-                        input_batch.events.items.len > 0,
-                    );
-                    if (polled) {
-                        self.needs_redraw = true;
-                    }
-                }
-            } else if (self.terminals.items.len > 0) {
-                const term = self.terminals.items[0];
-                if (term.hasData()) {
-                    term.setInputPressure(input_batch.events.items.len > 0);
-                    try term.poll();
-                    self.needs_redraw = true;
-                }
-            }
-
+            try self.pollVisibleTerminalSessions(input_batch);
             if (self.activeTerminalWidget()) |term_widget| {
                 const strip = app_modes.ide.terminalStrip(self.app_mode, layout.terminal.height);
                 const term_y_draw = layout.terminal.y + strip.offset_y;
