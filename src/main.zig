@@ -623,7 +623,18 @@ const AppState = struct {
             @ptrCast(self),
             routeTerminalTabActionFromCtx,
         );
-        if (try self.closeActiveTerminalTab()) {
+        if (try app_terminal_close_active_runtime.closeActive(
+            self,
+            @ptrCast(self),
+            .{
+                .sync_terminal_mode_tab_bar = struct {
+                    fn call(raw: *anyopaque) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.syncTerminalModeTabBar();
+                    }
+                }.call,
+            },
+        )) {
             self.needs_redraw = true;
             self.metrics.noteInput(now);
             return true;
@@ -1484,7 +1495,10 @@ const AppState = struct {
                 .show_notice = struct {
                     fn call(raw: *anyopaque, success: bool) void {
                         const state: *AppState = @ptrCast(@alignCast(raw));
-                        state.showConfigReloadNotice(success);
+                        const notice = app_config_reload_notice_state.arm(app_shell.getTime(), success);
+                        state.config_reload_notice_success = notice.success;
+                        state.config_reload_notice_until = notice.until;
+                        state.needs_redraw = true;
                     }
                 }.call,
             },
@@ -1521,7 +1535,18 @@ const AppState = struct {
                                 .close_active_terminal_tab = struct {
                                     fn inner(inner_raw: *anyopaque) !bool {
                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                        return try inner_state.closeActiveTerminalTab();
+                                        return try app_terminal_close_active_runtime.closeActive(
+                                            inner_state,
+                                            @ptrCast(inner_state),
+                                            .{
+                                                .sync_terminal_mode_tab_bar = struct {
+                                                    fn call(cb_raw: *anyopaque) !void {
+                                                        const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
+                                                        try cb_state.syncTerminalModeTabBar();
+                                                    }
+                                                }.call,
+                                            },
+                                        );
                                     }
                                 }.inner,
                                 .note_input = struct {
@@ -1868,21 +1893,6 @@ const AppState = struct {
     }
 
 
-    fn closeActiveTerminalTab(self: *AppState) !bool {
-        return try app_terminal_close_active_runtime.closeActive(
-            self,
-            @ptrCast(self),
-            .{
-                .sync_terminal_mode_tab_bar = struct {
-                    fn call(raw: *anyopaque) !void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        try state.syncTerminalModeTabBar();
-                    }
-                }.call,
-            },
-        );
-    }
-
     pub fn newTerminal(self: *AppState) !void {
         // Calculate terminal size based on UI
         const shell = self.shell;
@@ -1960,13 +1970,6 @@ const AppState = struct {
                 }.call,
             },
         );
-    }
-
-    fn showConfigReloadNotice(self: *AppState, success: bool) void {
-        const notice = app_config_reload_notice_state.arm(app_shell.getTime(), success);
-        self.config_reload_notice_success = notice.success;
-        self.config_reload_notice_until = notice.until;
-        self.needs_redraw = true;
     }
 
     fn refreshTerminalSizing(self: *AppState) !void {
