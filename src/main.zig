@@ -15,6 +15,7 @@ const app_terminal_tab_bar_sync = @import("app/terminal_tab_bar_sync.zig");
 const app_terminal_tab_ops = @import("app/terminal_tab_ops.zig");
 const app_terminal_tabs_runtime = @import("app/terminal_tabs_runtime.zig");
 const app_terminal_surface_gate = @import("app/terminal_surface_gate.zig");
+const app_terminal_shortcut_suppress = @import("app/terminal_shortcut_suppress.zig");
 const app_terminal_shortcut_policy = @import("app/terminal_shortcut_policy.zig");
 const app_terminal_shortcut_runtime = @import("app/terminal_shortcut_runtime.zig");
 const app_terminal_tab_intents = @import("app/terminal_tab_intents.zig");
@@ -1410,15 +1411,7 @@ const AppState = struct {
         self: *AppState,
         focus: input_actions.FocusKind,
     ) bool {
-        if (focus != .terminal) return false;
-        var suppress = false;
-        for (self.input_router.actionsSlice()) |action| {
-            switch (action.kind) {
-                .copy, .paste => suppress = true,
-                else => {},
-            }
-        }
-        return suppress;
+        return app_terminal_shortcut_suppress.forFocus(focus, self.input_router.actionsSlice());
     }
 
     fn handleTerminalClipboardShortcutsFrame(
