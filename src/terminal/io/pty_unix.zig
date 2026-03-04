@@ -15,6 +15,9 @@ const c = @cImport({
 pub const Pty = struct {
     master_fd: posix.fd_t,
     child_pid: ?posix.pid_t,
+    cached_fg_pgrp: c.pid_t,
+    cached_fg_name_len: usize,
+    cached_fg_name: [128]u8,
 
     pub fn init(_: std.mem.Allocator, size: PtySize, shell: ?[:0]const u8) !Pty {
         var master_fd: c_int = -1;
@@ -46,6 +49,9 @@ pub const Pty = struct {
         return Pty{
             .master_fd = @intCast(master_fd),
             .child_pid = pid,
+            .cached_fg_pgrp = 0,
+            .cached_fg_name_len = 0,
+            .cached_fg_name = [_]u8{0} ** 128,
         };
     }
 
@@ -140,6 +146,32 @@ pub const Pty = struct {
         return foreground_pgrp != shell_pgrp;
     }
 
+    pub fn foregroundProcessLabel(self: *Pty) ?[]const u8 {
+        if (builtin.os.tag != .linux) return null;
+        const shell_pid = self.child_pid orelse return null;
+        const shell_pgrp = c.getpgid(shell_pid);
+        if (shell_pgrp <= 0) return null;
+        const foreground_pgrp = c.tcgetpgrp(@intCast(self.master_fd));
+        if (foreground_pgrp <= 0 or foreground_pgrp == shell_pgrp) {
+            self.cached_fg_pgrp = 0;
+            self.cached_fg_name_len = 0;
+            return null;
+        }
+        if (foreground_pgrp == self.cached_fg_pgrp and self.cached_fg_name_len > 0) {
+            return self.cached_fg_name[0..self.cached_fg_name_len];
+        }
+
+        if (readForegroundProcessName(foreground_pgrp, &self.cached_fg_name)) |name_len| {
+            self.cached_fg_pgrp = foreground_pgrp;
+            self.cached_fg_name_len = name_len;
+            return self.cached_fg_name[0..name_len];
+        }
+
+        self.cached_fg_pgrp = foreground_pgrp;
+        self.cached_fg_name_len = 0;
+        return null;
+    }
+
     pub fn hasData(self: *Pty) bool {
         var fds = [1]posix.pollfd{
             .{
@@ -164,6 +196,62 @@ pub const Pty = struct {
         return rc > 0 and (fds[0].revents & posix.POLL.IN) != 0;
     }
 };
+
+fn readForegroundProcessName(pgrp: c.pid_t, out_buf: *[128]u8) ?usize {
+    var cmdline_path_buf: [64]u8 = undefined;
+    const cmdline_path = std.fmt.bufPrint(&cmdline_path_buf, "/proc/{d}/cmdline", .{pgrp}) catch return null;
+    if (std.fs.openFileAbsolute(cmdline_path, .{ .mode = .read_only })) |cmdline_file| {
+        defer cmdline_file.close();
+        var cmdline_buf: [1024]u8 = undefined;
+        const n_cmd = cmdline_file.readAll(&cmdline_buf) catch 0;
+        if (n_cmd > 0) {
+            var first_end: usize = 0;
+            while (first_end < n_cmd and cmdline_buf[first_end] != 0) : (first_end += 1) {}
+            if (first_end > 0) {
+                const first = cmdline_buf[0..first_end];
+                const first_base = std.fs.path.basename(first);
+                if (std.mem.eql(u8, first_base, "node") or std.mem.eql(u8, first_base, "nodejs")) {
+                    const second_start = first_end + 1;
+                    if (second_start < n_cmd) {
+                        var second_end = second_start;
+                        while (second_end < n_cmd and cmdline_buf[second_end] != 0) : (second_end += 1) {}
+                        if (second_end > second_start) {
+                            const second = cmdline_buf[second_start..second_end];
+                            const second_base = std.fs.path.basename(second);
+                            if (copyProcessLabel(second_base, out_buf)) |len| return len;
+                        }
+                    }
+                }
+                if (copyProcessLabel(first_base, out_buf)) |len| return len;
+            }
+        }
+    } else |_| {}
+
+    var path_buf: [64]u8 = undefined;
+    const comm_path = std.fmt.bufPrint(&path_buf, "/proc/{d}/comm", .{pgrp}) catch return null;
+    var file = std.fs.openFileAbsolute(comm_path, .{ .mode = .read_only }) catch return null;
+    defer file.close();
+    const n = file.readAll(out_buf) catch return null;
+    if (n == 0) return null;
+    var end = n;
+    while (end > 0 and (out_buf[end - 1] == '\n' or out_buf[end - 1] == '\r' or out_buf[end - 1] == ' ' or out_buf[end - 1] == '\t')) : (end -= 1) {}
+    if (end == 0) return null;
+    return end;
+}
+
+fn copyProcessLabel(label: []const u8, out_buf: *[128]u8) ?usize {
+    if (label.len == 0) return null;
+    var src = label;
+    if (std.mem.lastIndexOfScalar(u8, src, '.')) |dot| {
+        if (dot > 0 and (std.mem.eql(u8, src[dot..], ".js") or std.mem.eql(u8, src[dot..], ".mjs") or std.mem.eql(u8, src[dot..], ".cjs"))) {
+            src = src[0..dot];
+        }
+    }
+    if (src.len == 0) return null;
+    const len = @min(src.len, out_buf.len);
+    std.mem.copyForwards(u8, out_buf[0..len], src[0..len]);
+    return len;
+}
 
 fn waitStatusExited(status: u32) bool {
     // POSIX wait status encoding.
