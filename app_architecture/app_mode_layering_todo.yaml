@@ -155,6 +155,7 @@ app_mode_layering_todo:
             - "In progress: search-panel state/query helpers moved from `main.zig` into `src/app/search_panel_state.zig` (`openPanel`, `closePanel`, `syncEditorSearchQuery`, `popQueryScalar`)."
             - "In progress: config-reload notice drawing moved from `main.zig` into `src/app/config_reload_notice.zig` (`draw`)."
             - "In progress: terminal close-confirm modal drawing moved from `main.zig` into `src/app/terminal_close_confirm_draw.zig` (`draw`)."
+            - "In progress: terminal tab count/visibility/active-index policy moved from `main.zig` into `src/app/terminal_tabs.zig` (`count`, `barVisible`, `activeIndex`)."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress
