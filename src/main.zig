@@ -2241,6 +2241,72 @@ const AppState = struct {
         self.needs_redraw = true;
     }
 
+    const PostPreInputFrameResult = struct {
+        layout: layout_types.WidgetLayout,
+        mouse: shared_types.input.MousePos,
+        term_y: f32,
+    };
+
+    fn handlePostPreInputFrame(
+        self: *AppState,
+        shell: *Shell,
+        input_batch: *shared_types.input.InputBatch,
+        now: f64,
+    ) !PostPreInputFrameResult {
+        if (try shell.applyPendingZoom(now)) {
+            self.applyUiScale();
+            try self.refreshTerminalSizing();
+            self.needs_redraw = true;
+            self.metrics.noteInput(now);
+        }
+        try self.handleWindowResizeEventFrame(shell, now);
+
+        const width = @as(f32, @floatFromInt(shell.width()));
+        const height = @as(f32, @floatFromInt(shell.height()));
+        const layout = self.computeLayout(width, height);
+
+        self.handleCursorBlinkArmingFrame(now);
+        try self.handleDeferredTerminalResizeFrame(shell, layout, now);
+
+        const mouse = input_batch.mouse_pos;
+        const term_y = layout.terminal.y;
+        self.handlePointerActivityFrame(input_batch, layout, mouse, now);
+        try self.handleTerminalSplitResizeFrame(shell, input_batch, layout, layout.terminal.width, height, now);
+
+        return .{
+            .layout = layout,
+            .mouse = mouse,
+            .term_y = term_y,
+        };
+    }
+
+    fn handleInteractiveFrame(
+        self: *AppState,
+        shell: *Shell,
+        frame: PostPreInputFrameResult,
+        input_batch: *shared_types.input.InputBatch,
+        suppress_terminal_shortcuts: bool,
+        terminal_close_modal_active: bool,
+        now: f64,
+    ) !void {
+        if (try self.handleInputActionsFrame(shell, now)) {
+            return;
+        }
+
+        try self.handleMousePressedFrame(shell, frame.layout, frame.mouse, frame.term_y, input_batch, now);
+        try self.handleTabDragFrame(input_batch, frame.layout, frame.mouse, now);
+
+        try self.handleActiveViewFrame(
+            shell,
+            frame.layout,
+            frame.mouse,
+            input_batch,
+            suppress_terminal_shortcuts,
+            terminal_close_modal_active,
+            now,
+        );
+    }
+
     fn logModeAdapterParity(self: *AppState) void {
         const log = app_logger.logger("app.mode.parity");
         if (!log.enabled_file and !log.enabled_console) return;
@@ -2782,39 +2848,10 @@ const AppState = struct {
         if (pre_input.handled_shortcut) {
             self.metrics.noteInput(now);
         }
-        if (try shell.applyPendingZoom(now)) {
-            self.applyUiScale();
-            try self.refreshTerminalSizing();
-            self.needs_redraw = true;
-            self.metrics.noteInput(now);
-        }
-        // Check for window resize (event-based, works with Wayland)
-        try self.handleWindowResizeEventFrame(shell, now);
-
-        const width = @as(f32, @floatFromInt(shell.width()));
-        const height = @as(f32, @floatFromInt(shell.height()));
-        const layout = self.computeLayout(width, height);
-
-        self.handleCursorBlinkArmingFrame(now);
-        try self.handleDeferredTerminalResizeFrame(shell, layout, now);
-
-        // Check for mouse activity + terminal split dragging.
-        const mouse = input_batch.mouse_pos;
-        const term_y = layout.terminal.y;
-        self.handlePointerActivityFrame(input_batch, layout, mouse, now);
-        try self.handleTerminalSplitResizeFrame(shell, input_batch, layout, layout.terminal.width, height, now);
-
-        if (try self.handleInputActionsFrame(shell, now)) {
-            return;
-        }
-
-        try self.handleMousePressedFrame(shell, layout, mouse, term_y, input_batch, now);
-        try self.handleTabDragFrame(input_batch, layout, mouse, now);
-
-        try self.handleActiveViewFrame(
+        const frame = try self.handlePostPreInputFrame(shell, input_batch, now);
+        try self.handleInteractiveFrame(
             shell,
-            layout,
-            mouse,
+            frame,
             input_batch,
             suppress_terminal_shortcuts,
             terminal_close_modal_active,
