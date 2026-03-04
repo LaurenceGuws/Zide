@@ -21,6 +21,7 @@ const app_terminal_theme_apply = @import("app/terminal_theme_apply.zig");
 const app_terminal_tabs = @import("app/terminal_tabs.zig");
 const app_terminal_close_confirm_draw = @import("app/terminal_close_confirm_draw.zig");
 const app_search_panel_input = @import("app/search_panel_input.zig");
+const app_search_panel_runtime = @import("app/search_panel_runtime.zig");
 const app_search_panel_state = @import("app/search_panel_state.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
@@ -556,40 +557,15 @@ const AppState = struct {
 
         var handled = false;
         var query_changed = false;
-
-        const searchAction = struct {
-            fn run(target_editor: *Editor, forward: bool) bool {
-                const active = target_editor.searchActiveMatch() orelse return false;
-                if (target_editor.cursor.offset != active.start) {
-                    return target_editor.focusSearchActiveMatch();
-                }
-                return if (forward)
-                    target_editor.activateNextSearchMatch()
-                else
-                    target_editor.activatePrevSearchMatch();
-            }
-        }.run;
-
-        switch (app_search_panel_input.searchPanelCommand(input_batch)) {
-            .close => {
-                app_search_panel_state.closePanel(&self.search_panel.active);
-                return true;
-            },
-            .next => {
-                _ = searchAction(editor, true);
-                return true;
-            },
-            .prev => {
-                _ = searchAction(editor, false);
-                return true;
-            },
-            .backspace => {
-                app_search_panel_state.popQueryScalar(&self.search_panel.query);
-                query_changed = true;
-                handled = true;
-            },
-            .none => {},
-        }
+        const command_result = app_search_panel_runtime.applyCommand(
+            app_search_panel_input.searchPanelCommand(input_batch),
+            editor,
+            &self.search_panel.active,
+            &self.search_panel.query,
+        );
+        if (command_result.handled and !command_result.query_changed) return true;
+        handled = command_result.handled;
+        query_changed = command_result.query_changed;
 
         if (try app_search_panel_input.appendSearchPanelTextEvents(self.allocator, &self.search_panel.query, input_batch)) {
             query_changed = true;
