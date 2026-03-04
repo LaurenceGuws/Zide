@@ -475,7 +475,19 @@ const AppState = struct {
         if (config.keybinds) |binds| {
             state.input_router.setBindings(binds);
         }
-        state.applyUiScale();
+        app_ui_layout_runtime.applyUiScale(
+            state,
+            state.shell.uiScaleFactor(),
+            @ptrCast(state),
+            .{
+                .apply_current_tab_bar_width_mode = struct {
+                    fn call(raw: *anyopaque) void {
+                        const cb_state: *AppState = @ptrCast(@alignCast(raw));
+                        cb_state.applyCurrentTabBarWidthMode();
+                    }
+                }.call,
+            },
+        );
         state.applyCurrentTabBarWidthMode();
 
         return state;
@@ -1815,7 +1827,21 @@ const AppState = struct {
             &self.window_resize_pending,
             &self.window_resize_last_time,
         );
-        if (result.ui_scale_changed) self.applyUiScale();
+        if (result.ui_scale_changed) {
+            app_ui_layout_runtime.applyUiScale(
+                self,
+                self.shell.uiScaleFactor(),
+                @ptrCast(self),
+                .{
+                    .apply_current_tab_bar_width_mode = struct {
+                        fn call(raw: *anyopaque) void {
+                            const cb_state: *AppState = @ptrCast(@alignCast(raw));
+                            cb_state.applyCurrentTabBarWidthMode();
+                        }
+                    }.call,
+                },
+            );
+        }
         if (result.needs_redraw) self.needs_redraw = true;
     }
 
@@ -1954,22 +1980,6 @@ const AppState = struct {
         try app_terminal_theme_apply.notifyColorSchemeChanged(&self.terminal_widgets, &self.terminal_theme);
 
         self.show_terminal = true;
-    }
-
-    fn applyUiScale(self: *AppState) void {
-        app_ui_layout_runtime.applyUiScale(
-            self,
-            self.shell.uiScaleFactor(),
-            @ptrCast(self),
-            .{
-                .apply_current_tab_bar_width_mode = struct {
-                    fn call(raw: *anyopaque) void {
-                        const state: *AppState = @ptrCast(@alignCast(raw));
-                        state.applyCurrentTabBarWidthMode();
-                    }
-                }.call,
-            },
-        );
     }
 
     fn refreshTerminalSizing(self: *AppState) !void {
@@ -2167,7 +2177,19 @@ const AppState = struct {
                                                                                 .apply_ui_scale = struct {
                                                                                     fn inner(inner_raw: *anyopaque) void {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        inner_state.applyUiScale();
+                                                                                        app_ui_layout_runtime.applyUiScale(
+                                                                                            inner_state,
+                                                                                            inner_state.shell.uiScaleFactor(),
+                                                                                            @ptrCast(inner_state),
+                                                                                            .{
+                                                                                                .apply_current_tab_bar_width_mode = struct {
+                                                                                                    fn call(scale_raw: *anyopaque) void {
+                                                                                                        const cb_state: *AppState = @ptrCast(@alignCast(scale_raw));
+                                                                                                        cb_state.applyCurrentTabBarWidthMode();
+                                                                                                    }
+                                                                                                }.call,
+                                                                                            },
+                                                                                        );
                                                                                     }
                                                                                 }.inner,
                                                                                 .refresh_terminal_sizing = struct {
