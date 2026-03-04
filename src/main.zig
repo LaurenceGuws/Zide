@@ -648,13 +648,6 @@ const AppState = struct {
         _ = try app_terminal_intent_route_runtime.routeActiveAndSync(self, .activate);
     }
 
-    fn handleEditorMousePressedRouting(self: *AppState) !void {
-        if (self.active_kind != .editor) {
-            self.active_kind = .editor;
-            try app_mode_adapter_sync_runtime.sync(self);
-        }
-    }
-
     fn handleTerminalTabDragInput(
         self: *AppState,
         input_batch: *shared_types.input.InputBatch,
@@ -1717,7 +1710,10 @@ const AppState = struct {
                                                                                                 .handle_editor_mouse_pressed_routing = struct {
                                                                                                     fn call(route_raw: *anyopaque) !void {
                                                                                                         const state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        try state.handleEditorMousePressedRouting();
+                                                                                                        if (state.active_kind != .editor) {
+                                                                                                            state.active_kind = .editor;
+                                                                                                            try app_mode_adapter_sync_runtime.sync(state);
+                                                                                                        }
                                                                                                     }
                                                                                                 }.call,
                                                                                                 .log_mouse_debug_click = struct {
