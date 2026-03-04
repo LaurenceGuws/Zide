@@ -1651,7 +1651,7 @@ fn hashSegment(
     if (has_cursor) {
         h ^= 0x9e3779b97f4a7c15;
         h *%= 1099511628211;
-        h ^= @as(u64, cursor_col_vis - cursor_seg_start);
+        h ^= @as(u64, cursor_col_vis -| cursor_seg_start);
         h *%= 1099511628211;
     }
     return h;
