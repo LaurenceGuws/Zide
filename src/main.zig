@@ -605,6 +605,24 @@ const AppState = struct {
         try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(state);
     }
 
+    fn routeNewEditorFromCtx(raw: *anyopaque) !void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        try state.newEditor();
+    }
+
+    fn routeNewTerminalFromCtx(raw: *anyopaque) !void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        try state.newTerminal();
+    }
+
+    fn routeSeedDefaultWelcomeBufferFromCtx(raw: *anyopaque) !void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        if (state.editors.items.len > 0) {
+            const editor = state.editors.items[0];
+            try app_editor_seed.seedDefaultWelcomeBuffer(editor);
+        }
+    }
+
     pub fn newTerminal(self: *AppState) !void {
         // Calculate terminal size based on UI
         const shell = self.shell;
@@ -687,39 +705,11 @@ const AppState = struct {
                                         return app_terminal_tabs_runtime.count(cb_state.app_mode, cb_state.terminal_workspace, cb_state.terminals.items.len);
                                     }
                                 }.cb,
-                                .new_terminal = struct {
-                                    fn cb(cb_raw: *anyopaque) !void {
-                                        const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
-                                        try cb_state.newTerminal();
-                                    }
-                                }.cb,
-                                .sync_terminal_mode_tab_bar = struct {
-                                    fn cb(cb_raw: *anyopaque) !void {
-                                        const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
-                                        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(cb_state);
-                                    }
-                                }.cb,
-                                .open_file = struct {
-                                    fn cb(cb_raw: *anyopaque, path: []const u8) !void {
-                                        const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
-                                        try cb_state.openFile(path);
-                                    }
-                                }.cb,
-                                .new_editor = struct {
-                                    fn cb(cb_raw: *anyopaque) !void {
-                                        const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
-                                        try cb_state.newEditor();
-                                    }
-                                }.cb,
-                                .seed_default_welcome_buffer = struct {
-                                    fn cb(cb_raw: *anyopaque) !void {
-                                        const cb_state: *AppState = @ptrCast(@alignCast(cb_raw));
-                                        if (cb_state.editors.items.len > 0) {
-                                            const editor = cb_state.editors.items[0];
-                                            try app_editor_seed.seedDefaultWelcomeBuffer(editor);
-                                        }
-                                    }
-                                }.cb,
+                                .new_terminal = routeNewTerminalFromCtx,
+                                .sync_terminal_mode_tab_bar = routeSyncTerminalTabBarFromCtx,
+                                .open_file = routeOpenFileFromCtx,
+                                .new_editor = routeNewEditorFromCtx,
+                                .seed_default_welcome_buffer = routeSeedDefaultWelcomeBufferFromCtx,
                             },
                         );
                     }
@@ -896,14 +886,7 @@ const AppState = struct {
                                                                                                                         return try app_terminal_close_active_runtime.closeActive(
                                                                                                                             inner_state2,
                                                                                                                             @ptrCast(inner_state2),
-                                                                                                                            .{
-                                                                                                                                .sync_terminal_mode_tab_bar = struct {
-                                                                                                                                    fn call(sync_raw: *anyopaque) !void {
-                                                                                                                                        const cb_state: *AppState = @ptrCast(@alignCast(sync_raw));
-                                                                                                                                        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(cb_state);
-                                                                                                                                    }
-                                                                                                                                }.call,
-                                                                                                                            },
+                                                                                                                            .{ .sync_terminal_mode_tab_bar = routeSyncTerminalTabBarFromCtx },
                                                                                                                         );
                                                                                                                     }
                                                                                                                 }.inner,
@@ -1288,18 +1271,8 @@ const AppState = struct {
                                                                                                             zoom_log,
                                                                                                             @ptrCast(state),
                                                                                                             .{
-                                                                                                                .new_editor = struct {
-                                                                                                                    fn call(route_raw: *anyopaque) !void {
-                                                                                                                        const route_state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                                        try route_state.newEditor();
-                                                                                                                    }
-                                                                                                                }.call,
-                                                                                                                .new_terminal = struct {
-                                                                                                                    fn call(route_raw: *anyopaque) !void {
-                                                                                                                        const route_state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                                        try route_state.newTerminal();
-                                                                                                                    }
-                                                                                                                }.call,
+                                                                                                                .new_editor = routeNewEditorFromCtx,
+                                                                                                                .new_terminal = routeNewTerminalFromCtx,
                                                                                                                 .handle_terminal_shortcut_intent = struct {
                                                                                                                     fn call(route_raw: *anyopaque, intent: app_modes.ide.TerminalShortcutIntent, route_at: f64) !bool {
                                                                                                                         const route_state: *AppState = @ptrCast(@alignCast(route_raw));
@@ -1323,14 +1296,7 @@ const AppState = struct {
                                                                                                                                     if (try app_terminal_close_active_runtime.closeActive(
                                                                                                                                         hook_state,
                                                                                                                                         @ptrCast(hook_state),
-                                                                                                                                        .{
-                                                                                                                                            .sync_terminal_mode_tab_bar = struct {
-                                                                                                                                                fn inner(sync_raw: *anyopaque) !void {
-                                                                                                                                                    const sync_state: *AppState = @ptrCast(@alignCast(sync_raw));
-                                                                                                                                                    try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(sync_state);
-                                                                                                                                                }
-                                                                                                                                            }.inner,
-                                                                                                                                        },
+                                                                                                                                        .{ .sync_terminal_mode_tab_bar = routeSyncTerminalTabBarFromCtx },
                                                                                                                                     )) {
                                                                                                                                         hook_state.needs_redraw = true;
                                                                                                                                         hook_state.metrics.noteInput(hook_at);
