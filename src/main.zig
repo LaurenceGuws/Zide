@@ -3,6 +3,7 @@ const app_bootstrap = @import("app/bootstrap.zig");
 const app_config_reload_notice_state = @import("app/config_reload_notice_state.zig");
 const app_editor_actions = @import("app/editor_actions.zig");
 const app_editor_intent_route = @import("app/editor_intent_route.zig");
+const app_editor_create_intent_runtime = @import("app/editor_create_intent_runtime.zig");
 const app_editor_display_prepare = @import("app/editor_display_prepare.zig");
 const app_active_editor_frame = @import("app/active_editor_frame.zig");
 const app_editor_shortcuts_frame = @import("app/editor_shortcuts_frame.zig");
@@ -534,15 +535,7 @@ const AppState = struct {
     }
 
     pub fn newEditor(self: *AppState) !void {
-        _ = try app_editor_intent_route.routeCreateAndSync(
-            @ptrCast(self),
-            struct {
-                fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
-                    const state: *AppState = @ptrCast(@alignCast(raw));
-                    try app_tab_action_apply_runtime.applyEditorAndSync(state, action);
-                }
-            }.call,
-        );
+        _ = try app_editor_create_intent_runtime.routeCreateAndSync(self);
         const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try self.editors.append(self.allocator, editor);
         try self.tab_bar.addTab("untitled", .editor);
@@ -552,15 +545,7 @@ const AppState = struct {
     }
 
     pub fn openFile(self: *AppState, path: []const u8) !void {
-        _ = try app_editor_intent_route.routeCreateAndSync(
-            @ptrCast(self),
-            struct {
-                fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
-                    const state: *AppState = @ptrCast(@alignCast(raw));
-                    try app_tab_action_apply_runtime.applyEditorAndSync(state, action);
-                }
-            }.call,
-        );
+        _ = try app_editor_create_intent_runtime.routeCreateAndSync(self);
         const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try editor.openFile(path);
         try self.editors.append(self.allocator, editor);
@@ -574,15 +559,7 @@ const AppState = struct {
     }
 
     pub fn openFileAt(self: *AppState, path: []const u8, line_1: usize, col_1: ?usize) !void {
-        _ = try app_editor_intent_route.routeCreateAndSync(
-            @ptrCast(self),
-            struct {
-                fn call(raw: *anyopaque, action: app_modes.shared.actions.TabAction) !void {
-                    const state: *AppState = @ptrCast(@alignCast(raw));
-                    try app_tab_action_apply_runtime.applyEditorAndSync(state, action);
-                }
-            }.call,
-        );
+        _ = try app_editor_create_intent_runtime.routeCreateAndSync(self);
         const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try editor.openFile(path);
         try self.editors.append(self.allocator, editor);

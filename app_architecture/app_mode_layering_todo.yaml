@@ -252,6 +252,7 @@ app_mode_layering_todo:
             - "In progress: repeated workspace tab-bar projection + adapter-sync pairs now route through `src/app/terminal_tab_bar_sync_runtime.zig` (`syncIfWorkspace`) instead of inline multi-line blocks in `main.zig`."
             - "In progress: repeated tab-action apply+sync pairs now route through `src/app/tab_action_apply_runtime.zig` (`applyTerminalAndSync`, `applyEditorAndSync`) across runtime and focused main-level tests."
             - "In progress: `main.zig` no longer keeps `routeTerminalTabActionFromCtx` / `routeEditorTabActionFromCtx`; intent-routing callsites now supply inline callbacks that delegate directly to `tab_action_apply_runtime`."
+            - "In progress: repeated editor-create intent routing in `newEditor/openFile/openFileAt` now routes through `src/app/editor_create_intent_runtime.zig` (`routeCreateAndSync`)."
             - "In progress: reload-config shortcut action-loop dispatch moved from `main.zig` into `src/app/reload_config_shortcut_runtime.zig` (`handle`) with callback hooks."
             - "In progress: single-use reload-config callback shims were removed from `main.zig`; pre-input path now supplies inline callbacks directly to `reload_config_shortcut_runtime.handle(...)`."
             - "In progress: terminal shortcut suppression policy for focused copy/paste conflicts moved from `main.zig` into `src/app/terminal_shortcut_suppress.zig` (`forFocus`)."
