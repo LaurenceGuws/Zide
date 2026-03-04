@@ -1,4 +1,5 @@
 const host = @import("host.zig");
+const layout_policy = @import("layout_policy.zig");
 
 pub const IdeHost = host.IdeHost;
 pub const ActiveMode = host.ActiveMode;
@@ -15,3 +16,5 @@ pub const canToggleTerminal = host.canToggleTerminal;
 pub const shouldUseTerminalWorkspace = host.shouldUseTerminalWorkspace;
 pub const hasTerminalInputScope = host.hasTerminalInputScope;
 pub const usesIdeTerminalStrip = host.usesIdeTerminalStrip;
+pub const computeLayoutForMode = layout_policy.computeLayoutForMode;
+pub const configReloadNoticeY = layout_policy.configReloadNoticeY;

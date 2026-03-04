@@ -1307,63 +1307,18 @@ const AppState = struct {
     }
 
     fn computeLayout(self: *AppState, width: f32, height: f32) layout_types.WidgetLayout {
-        switch (self.app_mode) {
-            .terminal => {
-                const tab_bar_h = if (self.terminalTabBarVisible()) self.tab_bar.height else 0;
-                const terminal_h = if (self.show_terminal) @max(0, height - tab_bar_h) else 0;
-                return .{
-                    .window = .{ .x = 0, .y = 0, .width = width, .height = height },
-                    .options_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                    .tab_bar = .{ .x = 0, .y = 0, .width = width, .height = tab_bar_h },
-                    .side_nav = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                    .editor = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                    .terminal = .{ .x = 0, .y = tab_bar_h, .width = width, .height = terminal_h },
-                    .status_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                };
-            },
-            .editor => {
-                return .{
-                    .window = .{ .x = 0, .y = 0, .width = width, .height = height },
-                    .options_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                    .tab_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                    .side_nav = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                    .editor = .{ .x = 0, .y = 0, .width = width, .height = height },
-                    .terminal = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                    .status_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                };
-            },
-            .font_sample => {
-                return .{
-                    .window = .{ .x = 0, .y = 0, .width = width, .height = height },
-                    .options_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                    .tab_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                    .side_nav = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                    .editor = .{ .x = 0, .y = 0, .width = width, .height = height },
-                    .terminal = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                    .status_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-                };
-            },
-            .ide => {},
-        }
-
-        const options_bar_height = self.options_bar.height;
-        const tab_bar_height = self.tab_bar.height;
-        const side_nav_width = self.side_nav.width;
-        const status_bar_height = self.status_bar.height;
-        const max_terminal_h = @max(0, height - options_bar_height - tab_bar_height - status_bar_height);
-        const terminal_h = if (self.show_terminal) @min(self.terminal_height, max_terminal_h) else 0;
-        const editor_height = @max(0, height - options_bar_height - tab_bar_height - status_bar_height - terminal_h);
-        const editor_width = @max(0, width - side_nav_width);
-
-        return .{
-            .window = .{ .x = 0, .y = 0, .width = width, .height = height },
-            .options_bar = .{ .x = 0, .y = 0, .width = width, .height = options_bar_height },
-            .tab_bar = .{ .x = side_nav_width, .y = options_bar_height, .width = editor_width, .height = tab_bar_height },
-            .side_nav = .{ .x = 0, .y = options_bar_height, .width = side_nav_width, .height = height - status_bar_height - options_bar_height },
-            .editor = .{ .x = side_nav_width, .y = options_bar_height + tab_bar_height, .width = editor_width, .height = editor_height },
-            .terminal = .{ .x = side_nav_width, .y = height - status_bar_height - terminal_h, .width = editor_width, .height = terminal_h },
-            .status_bar = .{ .x = 0, .y = height - status_bar_height, .width = width, .height = status_bar_height },
-        };
+        return app_modes.ide.computeLayoutForMode(
+            self.app_mode,
+            width,
+            height,
+            self.options_bar.height,
+            self.tab_bar.height,
+            self.side_nav.width,
+            self.status_bar.height,
+            self.terminal_height,
+            self.show_terminal,
+            self.terminalTabBarVisible(),
+        );
     }
 
     pub fn run(self: *AppState) !void {
@@ -2676,12 +2631,12 @@ const AppState = struct {
         const notice_h = shell.charHeight() + pad_y * 2.0;
         const margin = 10.0 * scale;
         const x = layout.window.width - notice_w - margin;
-        const y = if (app_modes.ide.isTerminalOnly(self.app_mode) and self.terminalTabBarVisible())
-            layout.tab_bar.y + layout.tab_bar.height + margin
-        else if (app_modes.ide.isIde(self.app_mode))
-            layout.options_bar.y + layout.options_bar.height + margin
-        else
-            margin;
+        const y = app_modes.ide.configReloadNoticeY(
+            self.app_mode,
+            self.terminalTabBarVisible(),
+            layout,
+            margin,
+        );
 
         const bg = if (self.config_reload_notice_success)
             self.app_theme.ui_accent
