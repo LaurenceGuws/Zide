@@ -193,6 +193,7 @@ app_mode_layering_todo:
             - "In progress: search-panel command action dispatch moved from `main.zig` into `src/app/search_panel_runtime.zig` (`applyCommand`), leaving `main.zig` with query-sync wiring only."
             - "In progress: search-panel state/query helpers moved from `main.zig` into `src/app/search_panel_state.zig` (`openPanel`, `closePanel`, `syncEditorSearchQuery`, `popQueryScalar`)."
             - "In progress: search-panel per-frame input consumption moved from `main.zig` into `src/app/search_panel_frame_runtime.zig` (`handle`), leaving active-view orchestration with result application only."
+            - "In progress: active-view per-frame orchestration (search panel + editor frame + visible terminal frame routing) moved from `main.zig` into `src/app/active_view_runtime.zig` (`handle`)."
             - "In progress: config-reload notice drawing moved from `main.zig` into `src/app/config_reload_notice.zig` (`draw`)."
             - "In progress: terminal close-confirm modal drawing moved from `main.zig` into `src/app/terminal_close_confirm_draw.zig` (`draw`)."
             - "In progress: terminal tab count/visibility/active-index policy moved from `main.zig` into `src/app/terminal_tabs.zig` (`count`, `barVisible`, `activeIndex`)."
