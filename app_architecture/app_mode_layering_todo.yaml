@@ -106,6 +106,7 @@ app_mode_layering_todo:
             - "In progress: terminal action emission is being consolidated through `routeTerminalTabActionAndSync(...)` to reduce duplicated adapter sync logic."
             - "In progress: terminal close-confirm and shortcut close paths now both emit close intent via shared routed helper (`routeTerminalCloseIntentForActiveWorkspaceTabAndSync(...)`), with focused main-level tests for close-intent and reorder sync routing."
             - "In progress: terminal `next/prev` shortcut actions now route through `routeTerminalTabActionAndSync(...)` (removed direct apply path)."
+            - "In progress: terminal `create` shortcut action now routes through `routeTerminalTabActionAndSync(...)` before workspace/tab-bar mutation, keeping terminal tab intent emission on the shared route."
             - "In progress: parity diagnostics now label first mismatching editor/terminal tab id/title explicitly in `app.mode.parity` logs."
             - "In progress: pure tab-intent helpers were extracted from `main.zig` into `src/app/modes/ide/tab_intents.zig`."
             - "In progress: tab projection + active-projection construction moved from `main.zig` into `src/app/modes/ide/projections.zig`."
