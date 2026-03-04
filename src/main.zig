@@ -1006,10 +1006,34 @@ const AppState = struct {
         _ = contract.applyAction(self.allocator, .{ .tab = tab_action }) catch {};
     }
 
+    fn routeTerminalTabActionAndSync(self: *AppState, tab_action: app_modes.shared.actions.TabAction) !void {
+        self.applyTerminalModeTabAction(tab_action);
+        try self.syncModeAdaptersFromTabBar();
+    }
+
     fn applyEditorModeTabAction(self: *AppState, tab_action: app_modes.shared.actions.TabAction) void {
         if (!app_modes.ide.supportsEditorSurface(self.app_mode)) return;
         const contract = self.editor_mode_adapter.asContract();
         _ = contract.applyAction(self.allocator, .{ .tab = tab_action }) catch {};
+    }
+
+    fn terminalCloseIntentForActiveTab(active_tab_id: ?u64) ?app_modes.shared.actions.TabAction {
+        if (active_tab_id) |id| {
+            return .{ .close = id };
+        }
+        return null;
+    }
+
+    fn terminalReorderIntentForDragEnd(drag_end: TabBar.DragEndState) ?app_modes.shared.actions.TabAction {
+        if (drag_end.active and drag_end.moved and drag_end.from_index != drag_end.to_index) {
+            return .{
+                .move = .{
+                    .from_index = drag_end.from_index,
+                    .to_index = drag_end.to_index,
+                },
+            };
+        }
+        return null;
     }
 
     fn logModeAdapterParity(self: *AppState) void {
@@ -1038,20 +1062,81 @@ const AppState = struct {
             }
         }
 
+        const Mismatch = struct {
+            index: usize,
+            expected_id: ?u64,
+            actual_id: ?u64,
+            expected_title: []const u8,
+            actual_title: []const u8,
+        };
+        const findFirstMismatch = struct {
+            fn run(tabs: []const TabBar.Tab, mode_tabs: []const app_modes.shared.contracts.ModeTab, kind: TabBar.Tab.Kind) ?Mismatch {
+                var expected_idx: usize = 0;
+                for (tabs) |tab| {
+                    if (tab.kind != kind) continue;
+                    if (expected_idx >= mode_tabs.len) {
+                        return .{
+                            .index = expected_idx,
+                            .expected_id = tab.id,
+                            .actual_id = null,
+                            .expected_title = tab.title,
+                            .actual_title = "<missing>",
+                        };
+                    }
+                    const actual = mode_tabs[expected_idx];
+                    if (actual.id != tab.id or !std.mem.eql(u8, actual.title, tab.title)) {
+                        return .{
+                            .index = expected_idx,
+                            .expected_id = tab.id,
+                            .actual_id = actual.id,
+                            .expected_title = tab.title,
+                            .actual_title = actual.title,
+                        };
+                    }
+                    expected_idx += 1;
+                }
+                if (expected_idx < mode_tabs.len) {
+                    const extra = mode_tabs[expected_idx];
+                    return .{
+                        .index = expected_idx,
+                        .expected_id = null,
+                        .actual_id = extra.id,
+                        .expected_title = "<missing>",
+                        .actual_title = extra.title,
+                    };
+                }
+                return null;
+            }
+        }.run;
+
+        const editor_mismatch = findFirstMismatch(self.tab_bar.tabs.items, editor_snap.tabs, .editor);
+        const terminal_mismatch = findFirstMismatch(self.tab_bar.tabs.items, terminal_snap.tabs, .terminal);
+
         if (editor_snap.tabs.len != expected_editor or terminal_snap.tabs.len != expected_terminal or
-            editor_snap.active_tab != active_editor or terminal_snap.active_tab != active_terminal)
+            editor_snap.active_tab != active_editor or terminal_snap.active_tab != active_terminal or
+            editor_mismatch != null or terminal_mismatch != null)
         {
             log.logf(
-                "adapter parity mismatch editor={d}/{d} active={?d}/{?d} terminal={d}/{d} active={?d}/{?d}",
+                "adapter parity mismatch editor={d}/{d} active={?d}/{?d} e_mismatch_idx={?d} e_id={?d}/{?d} e_title={s}/{s} terminal={d}/{d} active={?d}/{?d} t_mismatch_idx={?d} t_id={?d}/{?d} t_title={s}/{s}",
                 .{
                     editor_snap.tabs.len,
                     expected_editor,
                     editor_snap.active_tab,
                     active_editor,
+                    if (editor_mismatch) |m| m.index else null,
+                    if (editor_mismatch) |m| m.actual_id else null,
+                    if (editor_mismatch) |m| m.expected_id else null,
+                    if (editor_mismatch) |m| m.actual_title else "<ok>",
+                    if (editor_mismatch) |m| m.expected_title else "<ok>",
                     terminal_snap.tabs.len,
                     expected_terminal,
                     terminal_snap.active_tab,
                     active_terminal,
+                    if (terminal_mismatch) |m| m.index else null,
+                    if (terminal_mismatch) |m| m.actual_id else null,
+                    if (terminal_mismatch) |m| m.expected_id else null,
+                    if (terminal_mismatch) |m| m.actual_title else "<ok>",
+                    if (terminal_mismatch) |m| m.expected_title else "<ok>",
                 },
             );
         }
@@ -1154,8 +1239,8 @@ const AppState = struct {
 
         if (confirm_pressed) {
             if (self.terminal_workspace) |*workspace| {
-                if (workspace.activeTabId()) |active_tab_id| {
-                    self.applyTerminalModeTabAction(.{ .close = active_tab_id });
+                if (terminalCloseIntentForActiveTab(workspace.activeTabId())) |intent| {
+                    self.applyTerminalModeTabAction(intent);
                 }
             }
             if (try self.closeActiveTerminalTab()) {
@@ -1177,8 +1262,8 @@ const AppState = struct {
             const my = input_batch.mouse_pos.y;
             if (pointInRect(mx, my, modal.confirm_button)) {
                 if (self.terminal_workspace) |*workspace| {
-                    if (workspace.activeTabId()) |active_tab_id| {
-                        self.applyTerminalModeTabAction(.{ .close = active_tab_id });
+                    if (terminalCloseIntentForActiveTab(workspace.activeTabId())) |intent| {
+                        self.applyTerminalModeTabAction(intent);
                     }
                 }
                 if (try self.closeActiveTerminalTab()) {
@@ -2130,8 +2215,8 @@ const AppState = struct {
                 .terminal_close_tab => {
                     if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) {
                         if (self.terminal_workspace) |*workspace| {
-                            if (workspace.activeTabId()) |active_tab_id| {
-                                self.applyTerminalModeTabAction(.{ .close = active_tab_id });
+                            if (terminalCloseIntentForActiveTab(workspace.activeTabId())) |intent| {
+                                self.applyTerminalModeTabAction(intent);
                             }
                         }
                         if (try self.closeActiveTerminalTab()) {
@@ -2285,21 +2370,14 @@ const AppState = struct {
             }
             if (self.terminalTabBarVisible() and input_batch.mouseReleased(.left)) {
                 const drag_end = self.tab_bar.endDrag();
-                if (drag_end.active and drag_end.moved and drag_end.from_index != drag_end.to_index) {
-                    self.applyTerminalModeTabAction(.{
-                        .move = .{
-                            .from_index = drag_end.from_index,
-                            .to_index = drag_end.to_index,
-                        },
-                    });
-                    try self.syncModeAdaptersFromTabBar();
+                if (terminalReorderIntentForDragEnd(drag_end)) |intent| {
+                    try self.routeTerminalTabActionAndSync(intent);
                 }
                 if (drag_end.active and !drag_end.moved) {
                     if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width)) {
                         if (self.tab_bar.terminalTabIdAtVisual(self.tab_bar.active_index)) |focused_tab_id| {
-                            self.applyTerminalModeTabAction(.{ .activate = focused_tab_id });
+                            try self.routeTerminalTabActionAndSync(.{ .activate = focused_tab_id });
                         }
-                        try self.syncModeAdaptersFromTabBar();
                         if (self.focusTerminalTabByIndex(self.tab_bar.active_index)) {
                             self.needs_redraw = true;
                             self.metrics.noteInput(now);
@@ -3447,4 +3525,48 @@ test "search panel reopen preserves synced query through editor state" {
     try std.testing.expect(app.search_panel.active);
     try std.testing.expectEqualStrings("beta", app.search_panel.query.items);
     try std.testing.expectEqualStrings("beta", editor.searchQuery().?);
+}
+
+test "terminal close intent helper maps optional active tab id" {
+    const none = AppState.terminalCloseIntentForActiveTab(null);
+    try std.testing.expectEqual(@as(?app_modes.shared.actions.TabAction, null), none);
+
+    const intent = AppState.terminalCloseIntentForActiveTab(42) orelse return error.TestUnexpectedResult;
+    switch (intent) {
+        .close => |id| try std.testing.expectEqual(@as(u64, 42), id),
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "terminal reorder intent helper emits only for real drag moves" {
+    const no_drag = TabBar.DragEndState{
+        .active = false,
+        .moved = false,
+        .from_index = 0,
+        .to_index = 0,
+    };
+    try std.testing.expectEqual(@as(?app_modes.shared.actions.TabAction, null), AppState.terminalReorderIntentForDragEnd(no_drag));
+
+    const click_only = TabBar.DragEndState{
+        .active = true,
+        .moved = false,
+        .from_index = 1,
+        .to_index = 1,
+    };
+    try std.testing.expectEqual(@as(?app_modes.shared.actions.TabAction, null), AppState.terminalReorderIntentForDragEnd(click_only));
+
+    const moved = TabBar.DragEndState{
+        .active = true,
+        .moved = true,
+        .from_index = 3,
+        .to_index = 1,
+    };
+    const intent = AppState.terminalReorderIntentForDragEnd(moved) orelse return error.TestUnexpectedResult;
+    switch (intent) {
+        .move => |mv| {
+            try std.testing.expectEqual(@as(usize, 3), mv.from_index);
+            try std.testing.expectEqual(@as(usize, 1), mv.to_index);
+        },
+        else => return error.TestUnexpectedResult,
+    }
 }
