@@ -1551,13 +1551,6 @@ const AppState = struct {
         }
         if (!terminal_close_modal_active and focus == .terminal and (self.app_mode == .terminal or self.show_terminal) and self.terminalTabCount() > 0) {
             if (self.activeTerminalWidget()) |term_widget| {
-                const pane_focused_now = true;
-                if (self.last_terminal_pane_focus_reported == null or self.last_terminal_pane_focus_reported.? != pane_focused_now) {
-                    if (try term_widget.reportFocusChangedFrom(.pane, pane_focused_now)) {
-                        handled_shortcut = true;
-                    }
-                    self.last_terminal_pane_focus_reported = pane_focused_now;
-                }
                 if (input_batch.events.items.len > 0) {
                     term_widget.noteInput(now);
                 }
@@ -1583,17 +1576,6 @@ const AppState = struct {
                         },
                         else => {},
                     }
-                }
-            }
-        }
-        if (!(focus == .terminal and (self.app_mode == .terminal or self.show_terminal) and self.terminalTabCount() > 0) and self.terminalTabCount() > 0) {
-            if (self.activeTerminalWidget()) |term_widget| {
-                const pane_focused_now = false;
-                if (self.last_terminal_pane_focus_reported == null or self.last_terminal_pane_focus_reported.? != pane_focused_now) {
-                    if (try term_widget.reportFocusChangedFrom(.pane, pane_focused_now)) {
-                        handled_shortcut = true;
-                    }
-                    self.last_terminal_pane_focus_reported = pane_focused_now;
                 }
             }
         }
