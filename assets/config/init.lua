@@ -2,6 +2,32 @@
 -- This file doubles as documentation; values here are active defaults.
 -- Copy it to ~/.config/zide/init.lua or ./.zide.lua to customize.
 
+local function file_exists(path)
+    local f = io.open(path, "r")
+    if f ~= nil then
+        f:close()
+        return true
+    end
+    return false
+end
+
+local home = os.getenv("HOME") or ""
+local theme_import_ok, theme_import = pcall(dofile, "assets/config/theme_import.lua")
+local kitty_theme = nil
+
+if theme_import_ok and type(theme_import) == "table" and type(theme_import.from_kitty) == "function" then
+    local kitty_theme_path = home .. "/.config/kitty/current-theme.conf"
+    local import_ok, imported_theme = pcall(theme_import.from_kitty, kitty_theme_path)
+    if import_ok and type(imported_theme) == "table" then
+        kitty_theme = imported_theme
+    end
+end
+
+local app_font_path = "assets/fonts/JetBrainsMonoNerdFont-Regular.ttf"
+if file_exists("assets/fonts/IosevkaTermNerdFont-Regular.ttf") then
+    app_font_path = "assets/fonts/IosevkaTermNerdFont-Regular.ttf"
+end
+
 return {
     -- Logging configuration.
     -- Options:
@@ -32,7 +58,7 @@ return {
     --   theme = theme_import.merge(ghostty_theme, { syntax = { comment = "#6f7a94" } })
     
     -- Tokyo Night Moon palette defaults.
-    theme = {
+    theme = kitty_theme or {
         palette = {
             background = "#222436",
             foreground = "#c8d3f5",
@@ -156,7 +182,7 @@ return {
         --     palette = { background = "#1E222A" },
         -- },
         font = {
-            path = "assets/fonts/JetBrainsMonoNerdFont-Regular.ttf",
+            path = app_font_path,
             size = 16,
         },
     },
@@ -240,6 +266,7 @@ return {
         -- theme = {
         --     palette = { background = "#000000" },
         -- },
+        theme = kitty_theme,
 
         -- Optional override. Current runtime still resolves one shared effective font
         -- stack using precedence: terminal.font > editor.font > app.font.
@@ -265,7 +292,7 @@ return {
         -- Cursor configuration.
         -- Valid shapes: "block", "underline", "bar". Blink is boolean.
         -- Invalid values warn and fall back to block/true.
-        cursor = { shape = "block", blink = true },
+        cursor = { shape = "bar", blink = true },
 
         -- Focus reporting source controls for CSI ?1004 event emission.
         -- Boolean shorthand applies to both sources:

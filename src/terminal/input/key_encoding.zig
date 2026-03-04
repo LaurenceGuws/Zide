@@ -103,7 +103,7 @@ pub fn sendKittyFunctionKey(
     if (second_field) {
         buf[pos] = ';';
         pos += 1;
-        if (has_mods) {
+        if (has_mods or add_actions) {
             const written_mod = std.fmt.bufPrint(buf[pos..], "{d}", .{mod_value}) catch return false;
             pos += written_mod.len;
         }

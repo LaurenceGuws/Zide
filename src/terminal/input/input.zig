@@ -355,7 +355,7 @@ fn sendCharWithProtocolMeta(
     if (second_field or include_associated_text) {
         buf[pos] = ';';
         pos += 1;
-        if (has_mods) {
+        if (has_mods or add_actions or include_associated_text) {
             const written_mod = std.fmt.bufPrint(buf[pos..], "{d}", .{mod_value}) catch return false;
             pos += written_mod.len;
         }
