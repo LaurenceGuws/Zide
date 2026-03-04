@@ -2,7 +2,7 @@ const std = @import("std");
 const app_bootstrap = @import("app/bootstrap.zig");
 const app_config_reload_notice_state = @import("app/config_reload_notice_state.zig");
 const app_editor_actions = @import("app/editor_actions.zig");
-const app_editor_tab_intents = @import("app/editor_tab_intents.zig");
+const app_editor_intent_route = @import("app/editor_intent_route.zig");
 const app_editor_seed = @import("app/editor_seed.zig");
 const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
@@ -25,7 +25,6 @@ const app_search_panel_input = @import("app/search_panel_input.zig");
 const app_search_panel_state = @import("app/search_panel_state.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
-const app_tab_action_route = @import("app/tab_action_route.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
 const app_runner = @import("app/runner.zig");
 const app_signals = @import("app/signals.zig");
@@ -491,7 +490,7 @@ const AppState = struct {
     }
 
     pub fn newEditor(self: *AppState) !void {
-        try self.routeEditorCreateIntentAndSync();
+        _ = try app_editor_intent_route.routeCreateAndSync(@ptrCast(self), routeEditorTabActionFromCtx);
         const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try self.editors.append(self.allocator, editor);
         try self.tab_bar.addTab("untitled", .editor);
@@ -501,7 +500,7 @@ const AppState = struct {
     }
 
     pub fn openFile(self: *AppState, path: []const u8) !void {
-        try self.routeEditorCreateIntentAndSync();
+        _ = try app_editor_intent_route.routeCreateAndSync(@ptrCast(self), routeEditorTabActionFromCtx);
         const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try editor.openFile(path);
         try self.editors.append(self.allocator, editor);
@@ -515,7 +514,7 @@ const AppState = struct {
     }
 
     pub fn openFileAt(self: *AppState, path: []const u8, line_1: usize, col_1: ?usize) !void {
-        try self.routeEditorCreateIntentAndSync();
+        _ = try app_editor_intent_route.routeCreateAndSync(@ptrCast(self), routeEditorTabActionFromCtx);
         const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try editor.openFile(path);
         try self.editors.append(self.allocator, editor);
@@ -819,21 +818,6 @@ const AppState = struct {
         try self.syncModeAdaptersFromTabBar();
     }
 
-    fn routeOptionalEditorTabActionAndSync(
-        self: *AppState,
-        tab_action: ?app_modes.shared.actions.TabAction,
-    ) !bool {
-        return app_tab_action_route.routeOptionalTabAction(
-            tab_action,
-            @ptrCast(self),
-            routeEditorTabActionFromCtx,
-        );
-    }
-
-    fn routeEditorCreateIntentAndSync(self: *AppState) !void {
-        _ = try self.routeOptionalEditorTabActionAndSync(app_editor_tab_intents.createIntent());
-    }
-
     fn setActiveKindAndSyncIfChanged(self: *AppState, kind: app_modes.ide.ActiveMode) !bool {
         if (self.active_kind == kind) return false;
         self.active_kind = kind;
@@ -843,7 +827,11 @@ const AppState = struct {
 
     fn activateEditorTabAtCurrentIndex(self: *AppState, now: f64) !void {
         self.active_tab = self.tab_bar.active_index;
-        _ = try self.routeOptionalEditorTabActionAndSync(app_editor_tab_intents.activateByIndexIntent(self.active_tab));
+        _ = try app_editor_intent_route.routeActivateByIndexAndSync(
+            self.active_tab,
+            @ptrCast(self),
+            routeEditorTabActionFromCtx,
+        );
         self.needs_redraw = true;
         self.metrics.noteInput(now);
     }
