@@ -953,6 +953,7 @@ pub fn build(b: *std.Build) void {
 
     const mode_gates_step = b.step("mode-gates", "Run MODE extraction regression gate bundle");
     mode_gates_step.dependOn(test_step);
+    mode_gates_step.dependOn(terminal_import_check_step);
     mode_gates_step.dependOn(app_import_check_step);
     mode_gates_step.dependOn(input_import_check_step);
     mode_gates_step.dependOn(editor_import_check_step);

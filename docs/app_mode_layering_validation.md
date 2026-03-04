@@ -17,10 +17,11 @@ This document is the compatibility authority for the app mode layering extractio
 ## Required gates after each extraction checkpoint
 
 1. `zig build test`
-2. `zig build check-app-imports`
-3. `zig build check-input-imports`
-4. `zig build check-editor-imports`
-5. `zig build mode-gates`
+2. `zig build check-terminal-imports`
+3. `zig build check-app-imports`
+4. `zig build check-input-imports`
+5. `zig build check-editor-imports`
+6. `zig build mode-gates`
 
 ## Manual interactive compatibility smokes (run when explicitly requested)
 

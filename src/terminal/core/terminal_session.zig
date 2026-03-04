@@ -833,6 +833,10 @@ pub const TerminalSession = struct {
         parser_hooks.parseKittyGraphics(self, payload);
     }
 
+    pub fn clearAllKittyImages(self: *TerminalSession) void {
+        kitty_mod.clearAllKittyImages(self);
+    }
+
     pub fn handleCsi(self: *TerminalSession, action: csi_mod.CsiAction) void {
         parser_hooks.handleCsi(self, action);
     }

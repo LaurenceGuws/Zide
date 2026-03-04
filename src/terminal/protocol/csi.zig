@@ -1,7 +1,6 @@
 const std = @import("std");
 const types = @import("../model/types.zig");
 const parser_csi = @import("../parser/csi.zig");
-const kitty_mod = @import("../kitty/graphics.zig");
 const app_logger = @import("../../app_logger.zig");
 
 const Color = types.Color;
@@ -542,7 +541,7 @@ fn applyDecstr(self: anytype) void {
 
     // Reset kitty graphics state across both screens as part of DECSTR.
     // This follows foot-style soft reset behavior and avoids hidden-screen leaks.
-    kitty_mod.clearAllKittyImages(self);
+    self.clearAllKittyImages();
 
     const screen = self.activeScreen();
     screen.resetState();
