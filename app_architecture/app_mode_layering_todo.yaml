@@ -102,7 +102,7 @@ app_mode_layering_todo:
       tasks:
         - id: MODE-02-01
           title: "Add thin IDE host composition wrapper"
-          status: in_progress
+          status: done
           files_to_add:
             - src/app/modes/ide/host.zig
           files_to_edit:
@@ -121,7 +121,7 @@ app_mode_layering_todo:
       tasks:
         - id: MODE-03-01
           title: "Add separate executable roots for terminal/editor/full IDE"
-          status: in_progress
+          status: done
           files_to_edit:
             - build.zig
           files_to_add:
@@ -132,7 +132,7 @@ app_mode_layering_todo:
             - "Keep runtime `--mode` on full IDE binary for compatibility."
         - id: MODE-03-02
           title: "Add run/install steps for focused binaries"
-          status: in_progress
+          status: done
           files_to_edit:
             - build.zig
           notes:
@@ -142,7 +142,7 @@ app_mode_layering_todo:
       tasks:
         - id: MODE-04-01
           title: "Capture pre/post compatibility matrix"
-          status: in_progress
+          status: done
           files_to_add:
             - docs/app_mode_layering_validation.md
           notes:
