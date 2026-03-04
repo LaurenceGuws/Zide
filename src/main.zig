@@ -42,6 +42,7 @@ const app_shortcut_action_runtime = @import("app/shortcut_action_runtime.zig");
 const app_tab_drag_frame = @import("app/tab_drag_frame.zig");
 const app_terminal_split_resize_frame = @import("app/terminal_split_resize_frame.zig");
 const app_window_resize_event_frame = @import("app/window_resize_event_frame.zig");
+const app_deferred_terminal_resize_frame = @import("app/deferred_terminal_resize_frame.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
@@ -1774,36 +1775,31 @@ const AppState = struct {
         layout: layout_types.WidgetLayout,
         now: f64,
     ) !void {
-        if (!self.window_resize_pending or (now - self.window_resize_last_time) < 0.12) return;
+        const result = app_deferred_terminal_resize_frame.handle(
+            &self.window_resize_pending,
+            self.window_resize_last_time,
+            now,
+            self.app_mode,
+            self.show_terminal,
+            layout,
+            self.terminal_height,
+            app_terminal_tabs_runtime.count(self.app_mode, self.terminal_workspace, self.terminals.items.len),
+            shell.terminalCellWidth(),
+            shell.terminalCellHeight(),
+        );
+        if (!result.triggered) return;
 
-        self.window_resize_pending = false;
-        if (app_terminal_tabs_runtime.count(self.app_mode, self.terminal_workspace, self.terminals.items.len) > 0) {
-            const effective_height = app_modes.ide.terminalEffectiveHeightForSizing(
-                self.app_mode,
-                self.show_terminal,
-                layout.terminal.height,
-                self.terminal_height,
-            );
-            const grid = app_terminal_grid.compute(
-                layout.terminal.width,
-                effective_height,
-                shell.terminalCellWidth(),
-                shell.terminalCellHeight(),
-                1,
-                1,
-            );
-            const cols: u16 = grid.cols;
-            const rows: u16 = grid.rows;
+        if (result.should_resize_terminals) {
             if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
                 if (self.terminal_workspace) |*workspace| {
-                    try app_terminal_resize.resizeWorkspaceWithShellCellSize(workspace, shell, rows, cols);
+                    try app_terminal_resize.resizeWorkspaceWithShellCellSize(workspace, shell, result.rows, result.cols);
                 }
             } else {
                 const term = self.terminals.items[0];
-                try app_terminal_resize.resizeSessionWithShellCellSize(term, shell, rows, cols);
+                try app_terminal_resize.resizeSessionWithShellCellSize(term, shell, result.rows, result.cols);
             }
         }
-        self.needs_redraw = true;
+        if (result.needs_redraw) self.needs_redraw = true;
     }
 
     const PostPreInputFrameResult = struct {
