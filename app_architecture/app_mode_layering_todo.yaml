@@ -91,7 +91,7 @@ app_mode_layering_todo:
       tasks:
         - id: MODE-01-01
           title: "Extract terminal mode backend implementation"
-          status: in_progress
+          status: done
           files_to_add:
             - src/app/modes/backend/terminal_mode.zig
           files_to_edit:
@@ -99,6 +99,7 @@ app_mode_layering_todo:
             - src/terminal/core/workspace.zig
           notes:
             - "Must preserve terminal tab behavior, close modal policy, and focus reporting."
+            - "Done: terminal backend extraction is complete; terminal tab/action routing, close-confirm flow, and workspace sync now run through backend/shared mode contracts with host-side runtime modules."
             - "In progress: terminal tab shortcut intents (`create/close/next/prev/focus`) now route through `TerminalMode` adapter alongside runtime behavior."
             - "In progress: terminal shortcut action decoding (`new/close/next/prev/focus`) is centralized in `src/app/modes/ide/terminal_shortcuts.zig`; `main.zig` now dispatches through one `handleTerminalShortcutIntent(...)` route."
             - "In progress: terminal tab drag reorder (`move`) and tab-click focus (`activate`) now route through adapter intents; parity diagnostics are available via `app.mode.parity` logging."
@@ -349,7 +350,7 @@ app_mode_layering_todo:
             - "In progress: config-reload notice state transitions moved from `main.zig` into `src/app/config_reload_notice_state.zig` (`arm`, `isVisible`, `clearIfExpired`)."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
-          status: in_progress
+          status: done
           files_to_add:
             - src/app/modes/backend/editor_mode.zig
           files_to_edit:
@@ -357,6 +358,7 @@ app_mode_layering_todo:
             - src/editor/editor.zig
           notes:
             - "Must preserve editor search/selection/scroll behavior."
+            - "Done: editor backend extraction is complete; editor tab/action routing and adapter sync now run through backend/shared mode contracts with host-side runtime modules."
             - "In progress: editor tab create/activate intents now route through `EditorMode` adapter alongside runtime behavior."
             - "In progress: IDE tab drag reorder now routes editor `move` intents through the adapter."
             - "In progress: editor action emission now has `routeEditorTabActionAndSync(...)` to reduce duplicate adapter routing + sync callsites."
