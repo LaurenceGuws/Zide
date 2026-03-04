@@ -52,6 +52,7 @@ const app_run_mode_init = @import("app/run_mode_init.zig");
 const app_prepare_run_frame_runtime = @import("app/prepare_run_frame_runtime.zig");
 const app_frame_render_idle_runtime = @import("app/frame_render_idle_runtime.zig");
 const app_update_prelude_frame_runtime = @import("app/update_prelude_frame_runtime.zig");
+const app_font_sample_draw_runtime = @import("app/font_sample_draw_runtime.zig");
 const app_terminal_tab_navigation_runtime = @import("app/terminal_tab_navigation_runtime.zig");
 const app_terminal_close_active_runtime = @import("app/terminal_close_active_runtime.zig");
 const app_terminal_close_confirm_actions_runtime = @import("app/terminal_close_confirm_actions_runtime.zig");
@@ -2555,23 +2556,7 @@ const AppState = struct {
 
         shell.beginFrame();
 
-        if (app_modes.ide.isFontSample(self.app_mode)) {
-            if (self.font_sample_view) |*view| {
-                view.draw(shell);
-            }
-            if (self.font_sample_close_pending) {
-                if (self.font_sample_screenshot_path) |path| {
-                    const screenshot_w = app_bootstrap.parseEnvI32("ZIDE_FONT_SAMPLE_SCREENSHOT_WIDTH", 0);
-                    const screenshot_h = app_bootstrap.parseEnvI32("ZIDE_FONT_SAMPLE_SCREENSHOT_HEIGHT", 0);
-                    if (screenshot_w > 0 and screenshot_h > 0) {
-                        shell.rendererPtr().dumpWindowScreenshotPpmSized(path, screenshot_w, screenshot_h) catch {};
-                    } else {
-                        shell.rendererPtr().dumpWindowScreenshotPpm(path) catch {};
-                    }
-                }
-                shell.requestClose();
-                self.font_sample_close_pending = false;
-            }
+        if (app_font_sample_draw_runtime.handle(self, shell)) {
             shell.endFrame();
             return;
         }
