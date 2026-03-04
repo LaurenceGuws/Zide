@@ -1,6 +1,7 @@
 const app_modes = @import("modes/mod.zig");
 const app_terminal_active_widget = @import("terminal_active_widget.zig");
 const app_terminal_close_confirm_state = @import("terminal_close_confirm_state.zig");
+const app_terminal_refresh_sizing_runtime = @import("terminal_refresh_sizing_runtime.zig");
 
 pub const Hooks = struct {
     sync_terminal_mode_tab_bar: *const fn (*anyopaque) anyerror!void,
@@ -34,6 +35,15 @@ pub fn closeActive(state: anytype, ctx: *anyopaque, hooks: Hooks) !bool {
             state.shell.requestClose();
         } else {
             try hooks.sync_terminal_mode_tab_bar(ctx);
+            try app_terminal_refresh_sizing_runtime.handle(
+                state,
+                state.app_mode,
+                &state.terminal_workspace,
+                state.terminals.items,
+                state.show_terminal,
+                state.terminal_height,
+                state.shell,
+            );
             if (app_terminal_active_widget.resolveActive(
                 state.app_mode,
                 &state.terminal_workspace,

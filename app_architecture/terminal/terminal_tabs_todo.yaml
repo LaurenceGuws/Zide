@@ -126,6 +126,7 @@ terminal_tabs_todo:
             - "Renderer currently uses a shared terminal offscreen target; tab activation now explicitly invalidates the active widget texture cache to prevent stale cross-tab content."
             - "Theme-reload regression fix: existing terminal content now remaps default-colored fg/bg independently (not only when both matched old defaults), and scrollback cache is invalidated so kitty theme switches + config reload repaint current tabs immediately."
             - "Terminal-mode tab bar visibility is config-gated: `terminal.tab_bar.show_single_tab = false` hides the bar until at least 2 tabs exist; UI draw/input/layout follow the same gate."
+            - "Terminal tab create/close paths now force immediate terminal grid re-sizing so tab-bar visibility transitions (1<->2 tabs) do not leave stale row counts that overflow/clamp the scrollback viewport."
         - id: TABS-02-02
           title: "Add terminal tab actions + default keybinds"
           status: done
