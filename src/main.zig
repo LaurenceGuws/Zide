@@ -22,6 +22,7 @@ const app_terminal_resize = @import("app/terminal_resize.zig");
 const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
 const app_terminal_close_confirm_state = @import("app/terminal_close_confirm_state.zig");
 const app_terminal_close_confirm_runtime = @import("app/terminal_close_confirm_runtime.zig");
+const app_terminal_close_confirm_input = @import("app/terminal_close_confirm_input.zig");
 const app_mode_adapter_sync = @import("app/mode_adapter_sync.zig");
 const app_mode_adapter_parity = @import("app/mode_adapter_parity.zig");
 const app_terminal_theme_apply = @import("app/terminal_theme_apply.zig");
@@ -2108,14 +2109,24 @@ const AppState = struct {
         now: f64,
     ) !bool {
         if (!self.terminalCloseConfirmActive()) return false;
-
-        const modal = app_modes.ide.terminalCloseConfirmModalLayout(layout, self.shell.uiScaleFactor());
-        const decision = app_modes.ide.decideTerminalCloseConfirmInput(
+        return app_terminal_close_confirm_input.handleInput(
             self.input_router.actionsSlice(),
             input_batch,
-            modal,
+            layout,
+            self.shell.uiScaleFactor(),
+            now,
+            @ptrCast(self),
+            applyTerminalCloseConfirmDecisionFromCtx,
         );
-        return self.applyTerminalCloseConfirmDecision(decision, now);
+    }
+
+    fn applyTerminalCloseConfirmDecisionFromCtx(
+        raw: *anyopaque,
+        decision: app_modes.ide.TerminalCloseConfirmDecision,
+        now: f64,
+    ) !bool {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        return state.applyTerminalCloseConfirmDecision(decision, now);
     }
 
     fn focusTerminalTabByIndex(self: *AppState, index: usize) bool {
