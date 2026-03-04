@@ -206,6 +206,7 @@ app_mode_layering_todo:
             - "In progress: editor shortcut frame action-loop dispatch moved from `main.zig` into `src/app/editor_shortcuts_frame.zig` (`handle`) with explicit redraw/handled result reporting."
             - "In progress: active editor-frame orchestration moved from `main.zig` into `src/app/active_editor_frame.zig` (`handle`) with hook callbacks for scrollbar input, mouse selection, and visible-cache precompute."
             - "In progress: visible-terminal frame orchestration moved from `main.zig` into `src/app/visible_terminal_frame.zig` (`handle`) with hook callbacks for session polling and widget input."
+            - "In progress: shortcut action runtime switch (new-editor/zoom/toggle-terminal + terminal intent dispatch) moved from `main.zig` into `src/app/shortcut_action_runtime.zig` (`handle`) with AppState callback hooks."
             - "In progress: reload-config shortcut action-loop dispatch moved from `main.zig` into `src/app/reload_config_shortcut_runtime.zig` (`handle`) with callback hooks."
             - "In progress: single-use reload-config callback shims were removed from `main.zig`; pre-input path now supplies inline callbacks directly to `reload_config_shortcut_runtime.handle(...)`."
             - "In progress: terminal shortcut suppression policy for focused copy/paste conflicts moved from `main.zig` into `src/app/terminal_shortcut_suppress.zig` (`forFocus`)."

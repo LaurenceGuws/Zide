@@ -35,6 +35,7 @@ const app_terminal_close_confirm_draw = @import("app/terminal_close_confirm_draw
 const app_search_panel_input = @import("app/search_panel_input.zig");
 const app_search_panel_runtime = @import("app/search_panel_runtime.zig");
 const app_search_panel_state = @import("app/search_panel_state.zig");
+const app_shortcut_action_runtime = @import("app/shortcut_action_runtime.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
@@ -1329,114 +1330,40 @@ const AppState = struct {
         handled_zoom: *bool,
         zoom_log: Logger,
     ) !bool {
-        switch (kind) {
-            .new_editor => {
-                if (app_modes.ide.canCreateEditorFromShortcut(self.app_mode)) {
-                    try self.newEditor();
-                    self.needs_redraw = true;
-                    self.metrics.noteInput(now);
-                    return true;
-                }
-            },
-            .zoom_in => {
-                const prev_zoom = shell.userZoomFactor();
-                const prev_target = shell.userZoomTargetFactor();
-                const changed = shell.queueUserZoom(0.1, now);
-                if (changed) self.metrics.noteInput(now);
-                if (zoom_log.enabled_file or zoom_log.enabled_console) {
-                    zoom_log.logf(
-                        "action=zoom_in changed={d} zoom={d:.3}->{d:.3} target={d:.3}->{d:.3} base_font={d:.2} layout_font={d:.2} ui_scale={d:.3} render_scale={d:.3} term_cell={d:.2}x{d:.2}",
-                        .{
-                            @intFromBool(changed),
-                            prev_zoom,
-                            shell.userZoomFactor(),
-                            prev_target,
-                            shell.userZoomTargetFactor(),
-                            shell.baseFontSize(),
-                            shell.fontSize(),
-                            shell.uiScaleFactor(),
-                            shell.renderScaleFactor(),
-                            shell.terminalCellWidth(),
-                            shell.terminalCellHeight(),
-                        },
-                    );
-                }
-                handled_zoom.* = true;
-            },
-            .zoom_out => {
-                const prev_zoom = shell.userZoomFactor();
-                const prev_target = shell.userZoomTargetFactor();
-                const changed = shell.queueUserZoom(-0.1, now);
-                if (changed) self.metrics.noteInput(now);
-                if (zoom_log.enabled_file or zoom_log.enabled_console) {
-                    zoom_log.logf(
-                        "action=zoom_out changed={d} zoom={d:.3}->{d:.3} target={d:.3}->{d:.3} base_font={d:.2} layout_font={d:.2} ui_scale={d:.3} render_scale={d:.3} term_cell={d:.2}x{d:.2}",
-                        .{
-                            @intFromBool(changed),
-                            prev_zoom,
-                            shell.userZoomFactor(),
-                            prev_target,
-                            shell.userZoomTargetFactor(),
-                            shell.baseFontSize(),
-                            shell.fontSize(),
-                            shell.uiScaleFactor(),
-                            shell.renderScaleFactor(),
-                            shell.terminalCellWidth(),
-                            shell.terminalCellHeight(),
-                        },
-                    );
-                }
-                handled_zoom.* = true;
-            },
-            .zoom_reset => {
-                const prev_zoom = shell.userZoomFactor();
-                const prev_target = shell.userZoomTargetFactor();
-                const changed = shell.resetUserZoomTarget(now);
-                if (changed) self.metrics.noteInput(now);
-                if (zoom_log.enabled_file or zoom_log.enabled_console) {
-                    zoom_log.logf(
-                        "action=zoom_reset changed={d} zoom={d:.3}->{d:.3} target={d:.3}->{d:.3} base_font={d:.2} layout_font={d:.2} ui_scale={d:.3} render_scale={d:.3} term_cell={d:.2}x{d:.2}",
-                        .{
-                            @intFromBool(changed),
-                            prev_zoom,
-                            shell.userZoomFactor(),
-                            prev_target,
-                            shell.userZoomTargetFactor(),
-                            shell.baseFontSize(),
-                            shell.fontSize(),
-                            shell.uiScaleFactor(),
-                            shell.renderScaleFactor(),
-                            shell.terminalCellWidth(),
-                            shell.terminalCellHeight(),
-                        },
-                    );
-                }
-                handled_zoom.* = true;
-            },
-            .toggle_terminal => {
-                if (app_modes.ide.canToggleTerminal(self.app_mode)) {
-                    if (self.show_terminal) {
-                        self.show_terminal = false;
-                    } else {
-                        if (self.terminals.items.len == 0) {
-                            try self.newTerminal();
-                        }
-                        self.show_terminal = true;
+        const result = try app_shortcut_action_runtime.handle(
+            kind,
+            self.app_mode,
+            &self.show_terminal,
+            self.terminals.items.len,
+            shell,
+            now,
+            zoom_log,
+            @ptrCast(self),
+            .{
+                .new_editor = struct {
+                    fn call(raw: *anyopaque) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.newEditor();
                     }
-                    self.needs_redraw = true;
-                    self.metrics.noteInput(now);
-                    return true;
-                }
+                }.call,
+                .new_terminal = struct {
+                    fn call(raw: *anyopaque) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.newTerminal();
+                    }
+                }.call,
+                .handle_terminal_shortcut_intent = struct {
+                    fn call(raw: *anyopaque, intent: app_modes.ide.TerminalShortcutIntent, at: f64) !bool {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        return try state.handleTerminalShortcutIntent(intent, at);
+                    }
+                }.call,
             },
-            else => {},
-        }
-
-        if (app_modes.ide.terminalShortcutIntentForAction(kind)) |intent| {
-            if (try self.handleTerminalShortcutIntent(intent, now)) {
-                return true;
-            }
-        }
-        return false;
+        );
+        if (result.needs_redraw) self.needs_redraw = true;
+        if (result.note_input) self.metrics.noteInput(now);
+        if (result.handled_zoom) handled_zoom.* = true;
+        return result.handled;
     }
 
     fn handleMousePressedFrame(
