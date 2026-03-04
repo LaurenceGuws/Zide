@@ -143,6 +143,7 @@ app_mode_layering_todo:
             - "In progress: per-frame run execution (update + render/idle + perf-stop gate) is now collapsed behind `runOneFrame(...)`."
             - "In progress: `update()` prelude path is now collapsed behind `handleUpdatePreludeFrame(...)` (snapshot/font-sample/widget-input/config notice/focus+pre-shortcuts)."
             - "In progress: top-level run loop driver is now collapsed behind `runMainLoop(...)`."
+            - "In progress: terminal scrollback pager launch flow moved from `main.zig` into `src/app/terminal_scrollback_pager.zig` (delegated via `openTerminalScrollbackInPager(...)`)."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress
