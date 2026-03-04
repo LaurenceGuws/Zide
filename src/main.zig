@@ -579,21 +579,6 @@ const AppState = struct {
         return handled;
     }
 
-    fn activeTerminalSession(self: *AppState) ?*TerminalSession {
-        const idx = app_terminal_tabs.activeIndex(
-            self.app_mode,
-            self.terminal_workspace,
-            app_terminal_tabs.count(self.app_mode, self.terminal_workspace, self.terminals.items.len),
-        ) orelse return null;
-        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-            if (self.terminal_workspace) |*workspace| {
-                return workspace.sessionAt(idx);
-            }
-            return null;
-        }
-        return self.terminals.items[idx];
-    }
-
     fn activeTerminalWidget(self: *AppState) ?*TerminalWidget {
         const idx = app_terminal_tabs.activeIndex(
             self.app_mode,
@@ -1510,10 +1495,22 @@ const AppState = struct {
                         }
                     },
                     .terminal_scrollback_pager => {
-                        if (self.activeTerminalSession()) |term| {
-                            if (try terminal_scrollback_pager.openInPager(self.allocator, term_widget, term)) {
-                                handled = true;
+                        const idx = app_terminal_tabs.activeIndex(
+                            self.app_mode,
+                            self.terminal_workspace,
+                            app_terminal_tabs.count(self.app_mode, self.terminal_workspace, self.terminals.items.len),
+                        ) orelse continue;
+                        const term: *TerminalSession = blk: {
+                            if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
+                                if (self.terminal_workspace) |*workspace| {
+                                    if (workspace.sessionAt(idx)) |session| break :blk session;
+                                }
+                                continue;
                             }
+                            break :blk self.terminals.items[idx];
+                        };
+                        if (try terminal_scrollback_pager.openInPager(self.allocator, term_widget, term)) {
+                            handled = true;
                         }
                     },
                     else => {},
