@@ -1746,6 +1746,98 @@ const AppState = struct {
         return false;
     }
 
+    fn handlePointerActivityFrame(
+        self: *AppState,
+        input_batch: *shared_types.input.InputBatch,
+        layout: layout_types.WidgetLayout,
+        mouse: shared_types.input.MousePos,
+        now: f64,
+    ) void {
+        const mouse_down = input_batch.mouseDown(.left);
+        const mouse_moved = mouse.x != self.last_mouse_pos.x or mouse.y != self.last_mouse_pos.y;
+        const wheel = input_batch.scroll.y;
+        const mouse_pressed = input_batch.mousePressed(.left) or input_batch.mousePressed(.right);
+        const has_mouse_action = mouse_pressed or wheel != 0 or mouse_down;
+
+        const terminal_visible = self.show_terminal and layout.terminal.height > 0;
+        const term_y = layout.terminal.y;
+        const in_terminal_area = terminal_visible and mouse.y >= term_y;
+        const ctrl_down = input_batch.mods.ctrl;
+
+        if (has_mouse_action) {
+            self.needs_redraw = true;
+            self.metrics.noteInput(now);
+        } else if (mouse_moved) {
+            if (!in_terminal_area) {
+                const interval: f64 = 1.0 / 60.0;
+                if (now - self.last_mouse_redraw_time >= interval) {
+                    self.needs_redraw = true;
+                    self.last_mouse_redraw_time = now;
+                }
+            }
+        }
+        if (in_terminal_area and (ctrl_down != self.last_ctrl_down or (ctrl_down and mouse_moved))) {
+            const interval: f64 = 1.0 / 60.0;
+            if (now - self.last_mouse_redraw_time >= interval) {
+                self.needs_redraw = true;
+                self.last_mouse_redraw_time = now;
+            }
+        }
+        if (mouse_moved) {
+            self.last_mouse_pos = .{ .x = mouse.x, .y = mouse.y };
+        }
+        self.last_ctrl_down = ctrl_down;
+    }
+
+    fn handleTerminalSplitResizeFrame(
+        self: *AppState,
+        shell: *Shell,
+        input_batch: *shared_types.input.InputBatch,
+        layout: layout_types.WidgetLayout,
+        width: f32,
+        height: f32,
+        now: f64,
+    ) !void {
+        if (!app_modes.ide.canResizeTerminalSplit(self.app_mode, self.show_terminal)) return;
+
+        const mouse = input_batch.mouse_pos;
+        const mouse_down = input_batch.mouseDown(.left);
+        const separator_y = layout.terminal.y;
+        const hit_zone: f32 = 6;
+        const over_separator = mouse.y >= separator_y - hit_zone and mouse.y <= separator_y + hit_zone;
+        const max_terminal_h = @max(0, height - self.options_bar.height - self.tab_bar.height - self.status_bar.height);
+
+        if (!self.resizing_terminal and mouse_down and over_separator) {
+            self.resizing_terminal = true;
+            self.resize_start_y = mouse.y;
+            self.resize_start_height = layout.terminal.height;
+            self.needs_redraw = true;
+            self.metrics.noteInput(now);
+        } else if (self.resizing_terminal and mouse_down) {
+            const delta = mouse.y - self.resize_start_y;
+            const min_terminal_h: f32 = 80;
+            const new_height = @max(min_terminal_h, @min(self.resize_start_height - delta, max_terminal_h));
+            if (new_height != self.terminal_height) {
+                self.terminal_height = new_height;
+                if (self.terminals.items.len > 0) {
+                    const term = self.terminals.items[0];
+                    const grid = self.terminalGridSize(width, self.terminal_height, 1, 1);
+                    const cols: u16 = grid.cols;
+                    const rows: u16 = grid.rows;
+                    term.setCellSize(
+                        @intFromFloat(shell.terminalCellWidth()),
+                        @intFromFloat(shell.terminalCellHeight()),
+                    );
+                    try term.resize(rows, cols);
+                }
+                self.needs_redraw = true;
+                self.metrics.noteInput(now);
+            }
+        } else if (self.resizing_terminal and !mouse_down) {
+            self.resizing_terminal = false;
+        }
+    }
+
     fn logModeAdapterParity(self: *AppState) void {
         const log = app_logger.logger("app.mode.parity");
         if (!log.enabled_file and !log.enabled_console) return;
@@ -2588,80 +2680,11 @@ const AppState = struct {
             self.needs_redraw = true;
         }
 
-        // Check for mouse activity (doesn't consume input)
+        // Check for mouse activity + terminal split dragging.
         const mouse = input_batch.mouse_pos;
-        const mouse_down = input_batch.mouseDown(.left);
-        const mouse_moved = mouse.x != self.last_mouse_pos.x or mouse.y != self.last_mouse_pos.y;
-        const wheel = input_batch.scroll.y;
-        const mouse_pressed = input_batch.mousePressed(.left) or input_batch.mousePressed(.right);
-        const has_mouse_action = mouse_pressed or wheel != 0 or mouse_down;
-
-        const terminal_visible = self.show_terminal and layout.terminal.height > 0;
         const term_y = layout.terminal.y;
-        const in_terminal_area = terminal_visible and mouse.y >= term_y;
-        const ctrl_down = input_batch.mods.ctrl;
-
-        if (has_mouse_action) {
-            self.needs_redraw = true;
-            self.metrics.noteInput(now);
-        } else if (mouse_moved) {
-            if (!in_terminal_area) {
-                const interval: f64 = 1.0 / 60.0;
-                if (now - self.last_mouse_redraw_time >= interval) {
-                    self.needs_redraw = true;
-                    self.last_mouse_redraw_time = now;
-                }
-            }
-        }
-        if (in_terminal_area and (ctrl_down != self.last_ctrl_down or (ctrl_down and mouse_moved))) {
-            const interval: f64 = 1.0 / 60.0;
-            if (now - self.last_mouse_redraw_time >= interval) {
-                self.needs_redraw = true;
-                self.last_mouse_redraw_time = now;
-            }
-        }
-        if (mouse_moved) {
-            self.last_mouse_pos = .{ .x = mouse.x, .y = mouse.y };
-        }
-        self.last_ctrl_down = ctrl_down;
-
-        // Terminal resize by dragging separator
-        if (app_modes.ide.canResizeTerminalSplit(self.app_mode, self.show_terminal)) {
-            const separator_y = layout.terminal.y;
-            const hit_zone: f32 = 6;
-            const over_separator = mouse.y >= separator_y - hit_zone and mouse.y <= separator_y + hit_zone;
-            const max_terminal_h = @max(0, height - self.options_bar.height - self.tab_bar.height - self.status_bar.height);
-
-            if (!self.resizing_terminal and mouse_down and over_separator) {
-                self.resizing_terminal = true;
-                self.resize_start_y = mouse.y;
-                self.resize_start_height = layout.terminal.height;
-                self.needs_redraw = true;
-                self.metrics.noteInput(now);
-            } else if (self.resizing_terminal and mouse_down) {
-                const delta = mouse.y - self.resize_start_y;
-                const min_terminal_h: f32 = 80;
-                const new_height = @max(min_terminal_h, @min(self.resize_start_height - delta, max_terminal_h));
-                if (new_height != self.terminal_height) {
-                    self.terminal_height = new_height;
-                    if (self.terminals.items.len > 0) {
-                        const term = self.terminals.items[0];
-                        const grid = self.terminalGridSize(layout.terminal.width, self.terminal_height, 1, 1);
-                        const cols: u16 = grid.cols;
-                        const rows: u16 = grid.rows;
-                        term.setCellSize(
-                            @intFromFloat(shell.terminalCellWidth()),
-                            @intFromFloat(shell.terminalCellHeight()),
-                        );
-                        try term.resize(rows, cols);
-                    }
-                    self.needs_redraw = true;
-                    self.metrics.noteInput(now);
-                }
-            } else if (self.resizing_terminal and !mouse_down) {
-                self.resizing_terminal = false;
-            }
-        }
+        self.handlePointerActivityFrame(input_batch, layout, mouse, now);
+        try self.handleTerminalSplitResizeFrame(shell, input_batch, layout, layout.terminal.width, height, now);
 
         if (try self.handleInputActionsFrame(shell, now)) {
             return;
