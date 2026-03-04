@@ -4,6 +4,7 @@ const app_editor_actions = @import("app/editor_actions.zig");
 const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
 const app_config_reload_notice = @import("app/config_reload_notice.zig");
+const app_terminal_tabs = @import("app/terminal_tabs.zig");
 const app_terminal_close_confirm_draw = @import("app/terminal_close_confirm_draw.zig");
 const app_search_panel_input = @import("app/search_panel_input.zig");
 const app_search_panel_state = @import("app/search_panel_state.zig");
@@ -595,15 +596,15 @@ const AppState = struct {
     }
 
     fn terminalTabCount(self: *const AppState) usize {
-        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-            if (self.terminal_workspace) |workspace| return workspace.tabCount();
-            return 0;
-        }
-        return self.terminals.items.len;
+        return app_terminal_tabs.count(
+            self.app_mode,
+            self.terminal_workspace,
+            self.terminals.items.len,
+        );
     }
 
     fn terminalTabBarVisible(self: *const AppState) bool {
-        return app_modes.ide.terminalTabBarVisible(
+        return app_terminal_tabs.barVisible(
             self.app_mode,
             self.terminal_tab_bar_show_single_tab,
             self.terminalTabCount(),
@@ -611,14 +612,11 @@ const AppState = struct {
     }
 
     fn activeTerminalArrayIndex(self: *const AppState) ?usize {
-        const count = self.terminalTabCount();
-        if (count == 0) return null;
-        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-            if (self.terminal_workspace) |workspace| {
-                return @min(workspace.activeIndex(), count - 1);
-            }
-        }
-        return 0;
+        return app_terminal_tabs.activeIndex(
+            self.app_mode,
+            self.terminal_workspace,
+            self.terminalTabCount(),
+        );
     }
 
     fn activeTerminalSession(self: *AppState) ?*TerminalSession {
