@@ -3383,3 +3383,16 @@ test "requestCancelTerminalCloseFromModal clears pending tab and marks redraw" {
     try std.testing.expectEqual(@as(?terminal_mod.TerminalTabId, null), app.terminal_close_confirm_tab);
     try std.testing.expect(app.needs_redraw);
 }
+
+test "applyTerminalCloseConfirmDecision handles consume and none without mutation" {
+    const allocator = std.testing.allocator;
+    var app = try initTestAppStateForTerminalTabRouting(allocator);
+    defer deinitTestAppStateForTerminalTabRouting(&app, allocator);
+
+    app.needs_redraw = false;
+    try std.testing.expect(try app.applyTerminalCloseConfirmDecision(.consume, app_shell.getTime()));
+    try std.testing.expect(!app.needs_redraw);
+
+    try std.testing.expect(!try app.applyTerminalCloseConfirmDecision(.none, app_shell.getTime()));
+    try std.testing.expect(!app.needs_redraw);
+}
