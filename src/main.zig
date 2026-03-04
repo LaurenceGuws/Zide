@@ -1713,6 +1713,39 @@ const AppState = struct {
         self.logMouseDebugClick(shell);
     }
 
+    fn handleTabDragFrame(
+        self: *AppState,
+        input_batch: *shared_types.input.InputBatch,
+        layout: layout_types.WidgetLayout,
+        mouse: shared_types.input.MousePos,
+        now: f64,
+    ) !void {
+        if (app_modes.ide.canDriveTerminalTabDrag(self.app_mode)) {
+            try self.handleTerminalTabDragInput(input_batch, layout, mouse, now);
+        }
+        if (app_modes.ide.isIde(self.app_mode)) {
+            try self.handleIdeTabDragInput(input_batch, layout, mouse, now);
+        }
+    }
+
+    fn handleInputActionsFrame(
+        self: *AppState,
+        shell: *Shell,
+        now: f64,
+    ) !bool {
+        var handled_zoom = false;
+        const zoom_log = app_logger.logger("ui.zoom.shortcut");
+        for (self.input_router.actionsSlice()) |action| {
+            if (try self.handleShortcutAction(shell, action.kind, now, &handled_zoom, zoom_log)) {
+                return true;
+            }
+        }
+        if (handled_zoom) {
+            return true;
+        }
+        return false;
+    }
+
     fn logModeAdapterParity(self: *AppState) void {
         const log = app_logger.logger("app.mode.parity");
         if (!log.enabled_file and !log.enabled_console) return;
@@ -2630,25 +2663,12 @@ const AppState = struct {
             }
         }
 
-        var handled_zoom = false;
-        const zoom_log = app_logger.logger("ui.zoom.shortcut");
-        for (self.input_router.actionsSlice()) |action| {
-            if (try self.handleShortcutAction(shell, action.kind, now, &handled_zoom, zoom_log)) {
-                return;
-            }
-        }
-        if (handled_zoom) {
+        if (try self.handleInputActionsFrame(shell, now)) {
             return;
         }
 
         try self.handleMousePressedFrame(shell, layout, mouse, term_y, input_batch, now);
-
-        if (app_modes.ide.canDriveTerminalTabDrag(self.app_mode)) {
-            try self.handleTerminalTabDragInput(input_batch, layout, mouse, now);
-        }
-        if (app_modes.ide.isIde(self.app_mode)) {
-            try self.handleIdeTabDragInput(input_batch, layout, mouse, now);
-        }
+        try self.handleTabDragFrame(input_batch, layout, mouse, now);
 
         try self.handleActiveViewFrame(
             shell,
