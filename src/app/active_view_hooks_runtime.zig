@@ -11,12 +11,6 @@ const layout_types = shared_types.layout;
 const input_types = shared_types.input;
 const ActiveMode = app_modes.ide.ActiveMode;
 
-pub const Hooks = struct {
-    open_file: *const fn (*anyopaque, []const u8) anyerror!void,
-    open_file_at: *const fn (*anyopaque, []const u8, usize, ?usize) anyerror!void,
-    sync_terminal_tab_bar: *const fn (*anyopaque) anyerror!void,
-};
-
 pub fn handle(
     allocator: std.mem.Allocator,
     search_panel_active: *bool,
@@ -52,9 +46,9 @@ pub fn handle(
     at: f64,
     needs_redraw: *bool,
     metrics: anytype,
-    ctx: *anyopaque,
-    hooks: Hooks,
+    state: anytype,
 ) !void {
+    const State = @TypeOf(state);
     try app_active_view_runtime.handle(
         allocator,
         search_panel_active,
@@ -90,11 +84,26 @@ pub fn handle(
         at,
         needs_redraw,
         metrics,
-        ctx,
+        @ptrCast(state),
         .{
-            .open_file = hooks.open_file,
-            .open_file_at = hooks.open_file_at,
-            .sync_terminal_tab_bar = hooks.sync_terminal_tab_bar,
+            .open_file = struct {
+                fn call(raw: *anyopaque, path: []const u8) !void {
+                    const s: State = @ptrCast(@alignCast(raw));
+                    try s.openFile(path);
+                }
+            }.call,
+            .open_file_at = struct {
+                fn call(raw: *anyopaque, path: []const u8, line_1: usize, col_1: ?usize) !void {
+                    const s: State = @ptrCast(@alignCast(raw));
+                    try s.openFileAt(path, line_1, col_1);
+                }
+            }.call,
+            .sync_terminal_tab_bar = struct {
+                fn call(raw: *anyopaque) !void {
+                    const s: State = @ptrCast(@alignCast(raw));
+                    try s.syncTerminalModeTabBar();
+                }
+            }.call,
         },
     );
 }

@@ -584,23 +584,8 @@ const AppState = struct {
         editor.setCursor(clamped_line, clamped_col);
     }
 
-    fn syncTerminalModeTabBar(self: *AppState) !void {
+    pub fn syncTerminalModeTabBar(self: *AppState) !void {
         try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(self);
-    }
-
-    fn routeOpenFileFromCtx(raw: *anyopaque, path: []const u8) !void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        try state.openFile(path);
-    }
-
-    fn routeOpenFileAtFromCtx(raw: *anyopaque, path: []const u8, line_1: usize, col_1: ?usize) !void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        try state.openFileAt(path, line_1, col_1);
-    }
-
-    fn routeSyncTerminalTabBarFromCtx(raw: *anyopaque) !void {
-        const state: *AppState = @ptrCast(@alignCast(raw));
-        try state.syncTerminalModeTabBar();
     }
 
     pub fn handlePreInputShortcutFrame(
@@ -770,12 +755,7 @@ const AppState = struct {
             at,
             &self.needs_redraw,
             &self.metrics,
-            @ptrCast(self),
-            .{
-                .open_file = routeOpenFileFromCtx,
-                .open_file_at = routeOpenFileAtFromCtx,
-                .sync_terminal_tab_bar = routeSyncTerminalTabBarFromCtx,
-            },
+            self,
         );
     }
 
