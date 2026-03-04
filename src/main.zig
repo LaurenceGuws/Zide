@@ -628,6 +628,49 @@ const AppState = struct {
         return app_terminal_tabs_runtime.count(state.app_mode, state.terminal_workspace, state.terminals.items.len);
     }
 
+    fn routeRefreshTerminalSizingFromCtx(raw: *anyopaque) !void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        try app_terminal_refresh_sizing_runtime.handle(
+            state,
+            state.app_mode,
+            &state.terminal_workspace,
+            state.terminals.items,
+            state.show_terminal,
+            state.terminal_height,
+            state.shell,
+        );
+    }
+
+    fn routeApplyCurrentTabBarWidthModeFromCtx(raw: *anyopaque) void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        app_tab_bar_width.applyForMode(
+            &state.tab_bar,
+            state.app_mode,
+            state.editor_tab_bar_width_mode,
+            state.terminal_tab_bar_width_mode,
+        );
+    }
+
+    fn routeReloadConfigFromCtx(raw: *anyopaque) !void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        try app_reload_config_runtime.handle(
+            state,
+            raw,
+            .{
+                .refresh_terminal_sizing = routeRefreshTerminalSizingFromCtx,
+                .apply_current_tab_bar_width_mode = routeApplyCurrentTabBarWidthModeFromCtx,
+            },
+        );
+    }
+
+    fn routeShowConfigReloadNoticeFromCtx(raw: *anyopaque, success: bool) void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        const notice = app_config_reload_notice_state.arm(app_shell.getTime(), success);
+        state.config_reload_notice_success = notice.success;
+        state.config_reload_notice_until = notice.until;
+        state.needs_redraw = true;
+    }
+
     fn handlePreInputShortcutFrame(
         self: *AppState,
         frame_shell: *Shell,
@@ -640,51 +683,8 @@ const AppState = struct {
             self.input_router.actionsSlice(),
             @ptrCast(self),
             .{
-                .reload = struct {
-                    fn call(reload_raw: *anyopaque) !void {
-                        const state: *AppState = @ptrCast(@alignCast(reload_raw));
-                        try app_reload_config_runtime.handle(
-                            state,
-                            reload_raw,
-                            .{
-                                .refresh_terminal_sizing = struct {
-                                    fn cb(resize_raw: *anyopaque) !void {
-                                        const cb_state: *AppState = @ptrCast(@alignCast(resize_raw));
-                                        try app_terminal_refresh_sizing_runtime.handle(
-                                            cb_state,
-                                            cb_state.app_mode,
-                                            &cb_state.terminal_workspace,
-                                            cb_state.terminals.items,
-                                            cb_state.show_terminal,
-                                            cb_state.terminal_height,
-                                            cb_state.shell,
-                                        );
-                                    }
-                                }.cb,
-                                .apply_current_tab_bar_width_mode = struct {
-                                    fn cb(width_raw: *anyopaque) void {
-                                        const cb_state: *AppState = @ptrCast(@alignCast(width_raw));
-                                        app_tab_bar_width.applyForMode(
-                                            &cb_state.tab_bar,
-                                            cb_state.app_mode,
-                                            cb_state.editor_tab_bar_width_mode,
-                                            cb_state.terminal_tab_bar_width_mode,
-                                        );
-                                    }
-                                }.cb,
-                            },
-                        );
-                    }
-                }.call,
-                .show_notice = struct {
-                    fn call(notice_raw: *anyopaque, success: bool) void {
-                        const state: *AppState = @ptrCast(@alignCast(notice_raw));
-                        const notice = app_config_reload_notice_state.arm(app_shell.getTime(), success);
-                        state.config_reload_notice_success = notice.success;
-                        state.config_reload_notice_until = notice.until;
-                        state.needs_redraw = true;
-                    }
-                }.call,
+                .reload = routeReloadConfigFromCtx,
+                .show_notice = routeShowConfigReloadNoticeFromCtx,
             },
         );
         const live_layout = app_ui_layout_runtime.computeLayout(self, @floatFromInt(r.width), @floatFromInt(r.height));
