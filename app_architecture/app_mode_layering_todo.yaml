@@ -145,6 +145,7 @@ app_mode_layering_todo:
             - "In progress: top-level run loop driver is now collapsed behind `runMainLoop(...)`."
             - "In progress: terminal scrollback pager launch flow moved from `main.zig` into `src/app/terminal_scrollback_pager.zig` (delegated via `openTerminalScrollbackInPager(...)`)."
             - "In progress: renderer font-rendering config helpers moved from `main.zig` into `src/app/font_rendering.zig` (`buildFontRenderingOptions`, `applyRendererFontRenderingConfig`)."
+            - "In progress: terminal scrollback pager shortcut path now calls `terminal_scrollback_pager.openInPager(...)` directly; redundant AppState wrapper removed."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress

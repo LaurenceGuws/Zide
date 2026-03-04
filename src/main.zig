@@ -1730,7 +1730,7 @@ const AppState = struct {
                     },
                     .terminal_scrollback_pager => {
                         if (self.activeTerminalSession()) |term| {
-                            if (try self.openTerminalScrollbackInPager(term_widget, term)) {
+                            if (try terminal_scrollback_pager.openInPager(self.allocator, term_widget, term)) {
                                 handled = true;
                             }
                         }
@@ -2860,10 +2860,6 @@ const AppState = struct {
             prelude.terminal_close_modal_active,
             prelude.now,
         );
-    }
-
-    fn openTerminalScrollbackInPager(self: *AppState, term_widget: *TerminalWidget, term: *TerminalSession) !bool {
-        return terminal_scrollback_pager.openInPager(self.allocator, term_widget, term);
     }
 
     fn reloadConfig(self: *AppState) !void {
