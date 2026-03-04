@@ -1695,6 +1695,24 @@ const AppState = struct {
         return false;
     }
 
+    fn handleMousePressedFrame(
+        self: *AppState,
+        shell: *Shell,
+        layout: layout_types.WidgetLayout,
+        mouse: shared_types.input.MousePos,
+        term_y: f32,
+        input_batch: *shared_types.input.InputBatch,
+        now: f64,
+    ) !void {
+        if (!input_batch.mousePressed(.left)) return;
+        switch (app_modes.ide.mouseClickRoute(self.app_mode)) {
+            .ide => try self.handleIdeMousePressedRouting(layout, mouse, term_y, now),
+            .terminal => try self.handleTerminalMousePressedRouting(layout, mouse),
+            .editor => try self.handleEditorMousePressedRouting(),
+        }
+        self.logMouseDebugClick(shell);
+    }
+
     fn logModeAdapterParity(self: *AppState) void {
         const log = app_logger.logger("app.mode.parity");
         if (!log.enabled_file and !log.enabled_console) return;
@@ -2623,15 +2641,7 @@ const AppState = struct {
             return;
         }
 
-        // Tab bar click handling
-        if (input_batch.mousePressed(.left)) {
-            switch (app_modes.ide.mouseClickRoute(self.app_mode)) {
-                .ide => try self.handleIdeMousePressedRouting(layout, mouse, term_y, now),
-                .terminal => try self.handleTerminalMousePressedRouting(layout, mouse),
-                .editor => try self.handleEditorMousePressedRouting(),
-            }
-            self.logMouseDebugClick(shell);
-        }
+        try self.handleMousePressedFrame(shell, layout, mouse, term_y, input_batch, now);
 
         if (app_modes.ide.canDriveTerminalTabDrag(self.app_mode)) {
             try self.handleTerminalTabDragInput(input_batch, layout, mouse, now);
