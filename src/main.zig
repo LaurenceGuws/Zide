@@ -23,6 +23,7 @@ const app_terminal_tabs = @import("app/terminal_tabs.zig");
 const app_terminal_close_confirm_draw = @import("app/terminal_close_confirm_draw.zig");
 const app_search_panel_input = @import("app/search_panel_input.zig");
 const app_search_panel_state = @import("app/search_panel_state.zig");
+const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_tab_action_route = @import("app/tab_action_route.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
@@ -809,18 +810,12 @@ const AppState = struct {
     }
 
     fn routeTerminalTabActionAndSync(self: *AppState, tab_action: app_modes.shared.actions.TabAction) !void {
-        if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) {
-            const contract = self.terminal_mode_adapter.asContract();
-            _ = contract.applyAction(self.allocator, .{ .tab = tab_action }) catch {};
-        }
+        app_tab_action_apply.applyTerminal(self.allocator, self.app_mode, &self.terminal_mode_adapter, tab_action);
         try self.syncModeAdaptersFromTabBar();
     }
 
     fn routeEditorTabActionAndSync(self: *AppState, tab_action: app_modes.shared.actions.TabAction) !void {
-        if (app_modes.ide.supportsEditorSurface(self.app_mode)) {
-            const contract = self.editor_mode_adapter.asContract();
-            _ = contract.applyAction(self.allocator, .{ .tab = tab_action }) catch {};
-        }
+        app_tab_action_apply.applyEditor(self.allocator, self.app_mode, &self.editor_mode_adapter, tab_action);
         try self.syncModeAdaptersFromTabBar();
     }
 
