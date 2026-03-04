@@ -20,6 +20,8 @@ const app_terminal_resize = @import("app/terminal_resize.zig");
 const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
 const app_terminal_close_confirm_state = @import("app/terminal_close_confirm_state.zig");
 const app_terminal_close_confirm_runtime = @import("app/terminal_close_confirm_runtime.zig");
+const app_mode_adapter_sync = @import("app/mode_adapter_sync.zig");
+const app_mode_adapter_parity = @import("app/mode_adapter_parity.zig");
 const app_terminal_theme_apply = @import("app/terminal_theme_apply.zig");
 const app_terminal_tabs = @import("app/terminal_tabs.zig");
 const app_terminal_close_confirm_draw = @import("app/terminal_close_confirm_draw.zig");
@@ -598,23 +600,22 @@ const AppState = struct {
     }
 
     fn syncModeAdaptersFromTabBar(self: *AppState) !void {
-        var projections = try app_modes.ide.buildTabProjections(self.allocator, self.tab_bar.tabs.items);
-        defer projections.deinit(self.allocator);
-
-        const active_projection = app_modes.ide.activeProjectionForTabBar(
+        try app_mode_adapter_sync.syncFromTabBar(
+            self.allocator,
             self.active_kind,
             self.tab_bar.tabs.items,
             self.tab_bar.active_index,
-        );
-
-        try app_modes.runtime_bridge.syncModesFromProjections(
-            self.allocator,
             &self.editor_mode_adapter,
             &self.terminal_mode_adapter,
-            projections.items,
-            active_projection,
         );
-        self.logModeAdapterParity();
+        app_mode_adapter_parity.logIfMismatch(
+            self.allocator,
+            self.active_kind,
+            self.tab_bar.tabs.items,
+            self.tab_bar.active_index,
+            &self.editor_mode_adapter,
+            &self.terminal_mode_adapter,
+        );
     }
 
     fn requestCloseActiveTerminalTab(self: *AppState, now: f64) !bool {
@@ -2016,69 +2017,6 @@ const AppState = struct {
             .suppress_terminal_shortcuts = pre_input.suppress_terminal_shortcuts,
             .terminal_close_modal_active = pre_input.terminal_close_modal_active,
         };
-    }
-
-    fn logModeAdapterParity(self: *AppState) void {
-        const log = app_logger.logger("app.mode.parity");
-        if (!log.enabled_file and !log.enabled_console) return;
-
-        const editor_snap = self.editor_mode_adapter.asContract().snapshot(self.allocator) catch return;
-        const terminal_snap = self.terminal_mode_adapter.asContract().snapshot(self.allocator) catch return;
-        var projections = app_modes.ide.buildTabProjections(self.allocator, self.tab_bar.tabs.items) catch return;
-        defer projections.deinit(self.allocator);
-
-        const active_projection = app_modes.ide.activeProjectionForTabBar(
-            self.active_kind,
-            self.tab_bar.tabs.items,
-            self.tab_bar.active_index,
-        );
-
-        const editor_parity = app_modes.ide.evaluateKind(
-            projections.items,
-            .editor,
-            active_projection,
-            editor_snap.tabs,
-            editor_snap.active_tab,
-        );
-        const terminal_parity = app_modes.ide.evaluateKind(
-            projections.items,
-            .terminal,
-            active_projection,
-            terminal_snap.tabs,
-            terminal_snap.active_tab,
-        );
-
-        if (editor_parity.expected_count != editor_parity.actual_count or
-            editor_parity.expected_active != editor_parity.actual_active or
-            editor_parity.mismatch != null or
-            terminal_parity.expected_count != terminal_parity.actual_count or
-            terminal_parity.expected_active != terminal_parity.actual_active or
-            terminal_parity.mismatch != null)
-        {
-            log.logf(
-                "adapter parity mismatch editor_count={d}/{d} editor_active={?d}/{?d} editor_first_mismatch_idx={?d} editor_first_mismatch_id={?d}/{?d} editor_first_mismatch_title={s}/{s} terminal_count={d}/{d} terminal_active={?d}/{?d} terminal_first_mismatch_idx={?d} terminal_first_mismatch_id={?d}/{?d} terminal_first_mismatch_title={s}/{s}",
-                .{
-                    editor_parity.actual_count,
-                    editor_parity.expected_count,
-                    editor_parity.actual_active,
-                    editor_parity.expected_active,
-                    if (editor_parity.mismatch) |m| m.index else null,
-                    if (editor_parity.mismatch) |m| m.actual_id else null,
-                    if (editor_parity.mismatch) |m| m.expected_id else null,
-                    if (editor_parity.mismatch) |m| m.actual_title else "<ok>",
-                    if (editor_parity.mismatch) |m| m.expected_title else "<ok>",
-                    terminal_parity.actual_count,
-                    terminal_parity.expected_count,
-                    terminal_parity.actual_active,
-                    terminal_parity.expected_active,
-                    if (terminal_parity.mismatch) |m| m.index else null,
-                    if (terminal_parity.mismatch) |m| m.actual_id else null,
-                    if (terminal_parity.mismatch) |m| m.expected_id else null,
-                    if (terminal_parity.mismatch) |m| m.actual_title else "<ok>",
-                    if (terminal_parity.mismatch) |m| m.expected_title else "<ok>",
-                },
-            );
-        }
     }
 
     fn terminalCloseConfirmActive(self: *AppState) bool {
