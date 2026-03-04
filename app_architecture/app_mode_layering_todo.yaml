@@ -45,7 +45,7 @@ app_mode_layering_todo:
       - zig build check-app-imports
       - zig build check-input-imports
       - zig build check-editor-imports
-    required_mode_smokes:
+    required_mode_smokes_manual:
       - zig build run
       - zig build run -- --mode terminal
       - zig build run -- --mode editor
@@ -56,7 +56,8 @@ app_mode_layering_todo:
       - "Do not advance to the next slice until all gates pass for the current slice."
       - "If a gate fails, either fix in-slice or revert that slice before proceeding."
       - "Bundle step available: `zig build mode-gates` runs the non-interactive MODE gate set (tests, install/build of app binaries, app/input/editor import checks, and `test-terminal-replay -- --all`)."
-      - "Latest checkpoint validation (2026-03-05): `zig build test`, `zig build check-app-imports`, `zig build check-input-imports`, `zig build check-editor-imports`, mode run smokes (`run`, `--mode terminal`, `--mode editor`, `--mode ide`), and `zig build test-terminal-replay -- --all` all passed."
+      - "Interactive mode smokes are grouped under `zig build mode-smokes-manual` and should be run explicitly when requested."
+      - "Latest checkpoint validation (2026-03-05): `zig build mode-gates` passed (non-interactive bundle: tests, install/build, app/input/editor import checks, and terminal replay `--all`)."
 
   milestones:
     - name: "MODE-00 Architecture + contracts"
