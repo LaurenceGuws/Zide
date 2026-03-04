@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_bootstrap = @import("app/bootstrap.zig");
+const app_editor_actions = @import("app/editor_actions.zig");
 const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
@@ -595,64 +596,6 @@ const AppState = struct {
             appended = true;
         }
         return appended;
-    }
-
-    fn visualExtendDeltaForAction(action: input_actions.ActionKind, jump_rows: usize) ?i32 {
-        const jump: i32 = @intCast(jump_rows);
-        return switch (action) {
-            .editor_extend_up => -1,
-            .editor_extend_down => 1,
-            .editor_extend_large_up => -jump,
-            .editor_extend_large_down => jump,
-            else => null,
-        };
-    }
-
-    fn visualMoveDeltaForAction(action: input_actions.ActionKind, jump_rows: usize) ?i32 {
-        const jump: i32 = @intCast(jump_rows);
-        return switch (action) {
-            .editor_move_large_up => -jump,
-            .editor_move_large_down => jump,
-            else => null,
-        };
-    }
-
-    fn applyRepeatedVisualDelta(
-        delta: i32,
-        ctx: *anyopaque,
-        step_fn: *const fn (ctx: *anyopaque, step: i32) bool,
-    ) bool {
-        var changed = false;
-        var remaining = if (delta < 0) -delta else delta;
-        const step: i32 = if (delta < 0) -1 else 1;
-        while (remaining > 0) : (remaining -= 1) {
-            if (!step_fn(ctx, step)) break;
-            changed = true;
-        }
-        return changed;
-    }
-
-    fn applyDirectEditorAction(editor: *Editor, action: input_actions.ActionKind) bool {
-        switch (action) {
-            .editor_move_word_left => editor.moveCursorWordLeft(),
-            .editor_move_word_right => editor.moveCursorWordRight(),
-            .editor_extend_left => editor.extendSelectionLeft(),
-            .editor_extend_right => editor.extendSelectionRight(),
-            .editor_extend_line_start => editor.extendSelectionToLineStart(),
-            .editor_extend_line_end => editor.extendSelectionToLineEnd(),
-            .editor_extend_word_left => editor.extendSelectionWordLeft(),
-            .editor_extend_word_right => editor.extendSelectionWordRight(),
-            else => return false,
-        }
-        return true;
-    }
-
-    fn applyCaretEditorAction(editor: *Editor, action: input_actions.ActionKind) !bool {
-        return switch (action) {
-            .editor_add_caret_up => try editor.addCaretUp(),
-            .editor_add_caret_down => try editor.addCaretDown(),
-            else => false,
-        };
     }
 
     fn handleSearchPanelInput(self: *AppState, editor: *Editor, input_batch: *shared_types.input.InputBatch) !bool {
@@ -1705,13 +1648,13 @@ const AppState = struct {
                     handled = true;
                 },
                 .editor_add_caret_up => {
-                    if (try applyCaretEditorAction(editor, action.kind)) {
+                    if (try app_editor_actions.applyCaretEditorAction(editor, action.kind)) {
                         self.needs_redraw = true;
                         handled = true;
                     }
                 },
                 .editor_add_caret_down => {
-                    if (try applyCaretEditorAction(editor, action.kind)) {
+                    if (try app_editor_actions.applyCaretEditorAction(editor, action.kind)) {
                         self.needs_redraw = true;
                         handled = true;
                     }
@@ -1725,19 +1668,19 @@ const AppState = struct {
                 .editor_extend_word_left,
                 .editor_extend_word_right,
                 => {
-                    if (applyDirectEditorAction(editor, action.kind)) {
+                    if (app_editor_actions.applyDirectEditorAction(editor, action.kind)) {
                         self.needs_redraw = true;
                         handled = true;
                     }
                 },
                 .editor_move_large_up, .editor_move_large_down => {
-                    const delta = visualMoveDeltaForAction(action.kind, self.editor_large_jump_rows).?;
+                    const delta = app_editor_actions.visualMoveDeltaForAction(action.kind, self.editor_large_jump_rows).?;
                     const Ctx = struct {
                         widget: *EditorWidget,
                         shell: *Shell,
                     };
                     var ctx = Ctx{ .widget = &editor_widget, .shell = shell };
-                    const moved = applyRepeatedVisualDelta(
+                    const moved = app_editor_actions.applyRepeatedVisualDelta(
                         delta,
                         @ptrCast(&ctx),
                         struct {
@@ -1754,13 +1697,13 @@ const AppState = struct {
                     }
                 },
                 .editor_extend_up, .editor_extend_down, .editor_extend_large_up, .editor_extend_large_down => {
-                    const delta = visualExtendDeltaForAction(action.kind, self.editor_large_jump_rows).?;
+                    const delta = app_editor_actions.visualExtendDeltaForAction(action.kind, self.editor_large_jump_rows).?;
                     const Ctx = struct {
                         widget: *EditorWidget,
                         shell: *Shell,
                     };
                     var ctx = Ctx{ .widget = &editor_widget, .shell = shell };
-                    const extended = applyRepeatedVisualDelta(
+                    const extended = app_editor_actions.applyRepeatedVisualDelta(
                         delta,
                         @ptrCast(&ctx),
                         struct {
@@ -3354,19 +3297,19 @@ test "search panel text helper appends utf8 input events" {
 }
 
 test "visual extend action helper maps routed editor actions" {
-    try std.testing.expectEqual(@as(?i32, -1), AppState.visualExtendDeltaForAction(.editor_extend_up, 5));
-    try std.testing.expectEqual(@as(?i32, 1), AppState.visualExtendDeltaForAction(.editor_extend_down, 5));
-    try std.testing.expectEqual(@as(?i32, -5), AppState.visualExtendDeltaForAction(.editor_extend_large_up, 5));
-    try std.testing.expectEqual(@as(?i32, 5), AppState.visualExtendDeltaForAction(.editor_extend_large_down, 5));
-    try std.testing.expectEqual(@as(?i32, -9), AppState.visualExtendDeltaForAction(.editor_extend_large_up, 9));
-    try std.testing.expectEqual(@as(?i32, null), AppState.visualExtendDeltaForAction(.editor_extend_right, 5));
+    try std.testing.expectEqual(@as(?i32, -1), app_editor_actions.visualExtendDeltaForAction(.editor_extend_up, 5));
+    try std.testing.expectEqual(@as(?i32, 1), app_editor_actions.visualExtendDeltaForAction(.editor_extend_down, 5));
+    try std.testing.expectEqual(@as(?i32, -5), app_editor_actions.visualExtendDeltaForAction(.editor_extend_large_up, 5));
+    try std.testing.expectEqual(@as(?i32, 5), app_editor_actions.visualExtendDeltaForAction(.editor_extend_large_down, 5));
+    try std.testing.expectEqual(@as(?i32, -9), app_editor_actions.visualExtendDeltaForAction(.editor_extend_large_up, 9));
+    try std.testing.expectEqual(@as(?i32, null), app_editor_actions.visualExtendDeltaForAction(.editor_extend_right, 5));
 }
 
 test "visual move action helper maps routed editor actions" {
-    try std.testing.expectEqual(@as(?i32, -5), AppState.visualMoveDeltaForAction(.editor_move_large_up, 5));
-    try std.testing.expectEqual(@as(?i32, 5), AppState.visualMoveDeltaForAction(.editor_move_large_down, 5));
-    try std.testing.expectEqual(@as(?i32, 12), AppState.visualMoveDeltaForAction(.editor_move_large_down, 12));
-    try std.testing.expectEqual(@as(?i32, null), AppState.visualMoveDeltaForAction(.editor_move_word_right, 5));
+    try std.testing.expectEqual(@as(?i32, -5), app_editor_actions.visualMoveDeltaForAction(.editor_move_large_up, 5));
+    try std.testing.expectEqual(@as(?i32, 5), app_editor_actions.visualMoveDeltaForAction(.editor_move_large_down, 5));
+    try std.testing.expectEqual(@as(?i32, 12), app_editor_actions.visualMoveDeltaForAction(.editor_move_large_down, 12));
+    try std.testing.expectEqual(@as(?i32, null), app_editor_actions.visualMoveDeltaForAction(.editor_move_word_right, 5));
 }
 
 test "applyRepeatedVisualDelta steps until blocked" {
@@ -3375,7 +3318,7 @@ test "applyRepeatedVisualDelta steps until blocked" {
         limit: usize,
     };
     var ctx = Ctx{ .steps = 0, .limit = 3 };
-    const moved = AppState.applyRepeatedVisualDelta(
+    const moved = app_editor_actions.applyRepeatedVisualDelta(
         8,
         @ptrCast(&ctx),
         struct {
@@ -3406,8 +3349,8 @@ test "routed large visual actions apply configured step sequence" {
 
     var ctx = Ctx{};
 
-    const down_delta = AppState.visualExtendDeltaForAction(.editor_extend_large_down, 4) orelse return error.TestUnexpectedResult;
-    const moved_down = AppState.applyRepeatedVisualDelta(
+    const down_delta = app_editor_actions.visualExtendDeltaForAction(.editor_extend_large_down, 4) orelse return error.TestUnexpectedResult;
+    const moved_down = app_editor_actions.applyRepeatedVisualDelta(
         down_delta,
         @ptrCast(&ctx),
         struct {
@@ -3419,8 +3362,8 @@ test "routed large visual actions apply configured step sequence" {
     );
     try std.testing.expect(moved_down);
 
-    const up_delta = AppState.visualMoveDeltaForAction(.editor_move_large_up, 2) orelse return error.TestUnexpectedResult;
-    const moved_up = AppState.applyRepeatedVisualDelta(
+    const up_delta = app_editor_actions.visualMoveDeltaForAction(.editor_move_large_up, 2) orelse return error.TestUnexpectedResult;
+    const moved_up = app_editor_actions.applyRepeatedVisualDelta(
         up_delta,
         @ptrCast(&ctx),
         struct {
@@ -3453,16 +3396,16 @@ test "direct editor action helper routes word and line selection actions" {
     try editor.insertText("alpha beta\ngamma");
     editor.setCursor(0, 2);
 
-    try std.testing.expect(AppState.applyDirectEditorAction(editor, .editor_extend_line_end));
+    try std.testing.expect(app_editor_actions.applyDirectEditorAction(editor, .editor_extend_line_end));
     try std.testing.expectEqual(@as(usize, 2), editor.selection.?.start.offset);
     try std.testing.expectEqual(@as(usize, 10), editor.selection.?.end.offset);
 
     editor.setCursor(0, 0);
-    try std.testing.expect(AppState.applyDirectEditorAction(editor, .editor_extend_word_right));
+    try std.testing.expect(app_editor_actions.applyDirectEditorAction(editor, .editor_extend_word_right));
     try std.testing.expectEqual(@as(usize, 0), editor.selection.?.start.offset);
     try std.testing.expectEqual(@as(usize, 6), editor.selection.?.end.offset);
 
-    try std.testing.expect(!AppState.applyDirectEditorAction(editor, .editor_search_open));
+    try std.testing.expect(!app_editor_actions.applyDirectEditorAction(editor, .editor_search_open));
 }
 
 test "direct editor action helper routes horizontal selection actions" {
@@ -3477,11 +3420,11 @@ test "direct editor action helper routes horizontal selection actions" {
     try editor.insertText("alpha");
     editor.setCursor(0, 2);
 
-    try std.testing.expect(AppState.applyDirectEditorAction(editor, .editor_extend_left));
+    try std.testing.expect(app_editor_actions.applyDirectEditorAction(editor, .editor_extend_left));
     try std.testing.expectEqual(@as(usize, 2), editor.selection.?.start.offset);
     try std.testing.expectEqual(@as(usize, 1), editor.selection.?.end.offset);
 
-    try std.testing.expect(AppState.applyDirectEditorAction(editor, .editor_extend_right));
+    try std.testing.expect(app_editor_actions.applyDirectEditorAction(editor, .editor_extend_right));
     try std.testing.expect(editor.selection == null);
 }
 
@@ -3497,13 +3440,13 @@ test "direct editor action helper routes word cursor movement actions" {
     try editor.insertText("alpha beta_gamma");
     editor.setCursor(0, 0);
 
-    try std.testing.expect(AppState.applyDirectEditorAction(editor, .editor_move_word_right));
+    try std.testing.expect(app_editor_actions.applyDirectEditorAction(editor, .editor_move_word_right));
     try std.testing.expectEqual(@as(usize, 6), editor.cursor.offset);
 
-    try std.testing.expect(AppState.applyDirectEditorAction(editor, .editor_move_word_right));
+    try std.testing.expect(app_editor_actions.applyDirectEditorAction(editor, .editor_move_word_right));
     try std.testing.expectEqual(@as(usize, 16), editor.cursor.offset);
 
-    try std.testing.expect(AppState.applyDirectEditorAction(editor, .editor_move_word_left));
+    try std.testing.expect(app_editor_actions.applyDirectEditorAction(editor, .editor_move_word_left));
     try std.testing.expectEqual(@as(usize, 6), editor.cursor.offset);
 }
 
@@ -3519,15 +3462,15 @@ test "caret editor action helper routes add-caret actions" {
     try editor.insertText("one\ntwo\nthree");
     editor.setCursor(0, 1);
 
-    try std.testing.expect(try AppState.applyCaretEditorAction(editor, .editor_add_caret_down));
+    try std.testing.expect(try app_editor_actions.applyCaretEditorAction(editor, .editor_add_caret_down));
     try std.testing.expectEqual(@as(usize, 1), editor.auxiliaryCaretCount());
     try std.testing.expectEqual(@as(usize, 5), editor.auxiliaryCaretAt(0).?.offset);
 
-    try std.testing.expect(try AppState.applyCaretEditorAction(editor, .editor_add_caret_down));
+    try std.testing.expect(try app_editor_actions.applyCaretEditorAction(editor, .editor_add_caret_down));
     try std.testing.expectEqual(@as(usize, 2), editor.auxiliaryCaretCount());
     try std.testing.expectEqual(@as(usize, 9), editor.auxiliaryCaretAt(1).?.offset);
 
-    try std.testing.expect(!try AppState.applyCaretEditorAction(editor, .editor_search_open));
+    try std.testing.expect(!try app_editor_actions.applyCaretEditorAction(editor, .editor_search_open));
 }
 
 test "openSearchPanel restores editor query and clears stale panel text" {
