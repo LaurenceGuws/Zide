@@ -2,6 +2,7 @@ const std = @import("std");
 const app_bootstrap = @import("app/bootstrap.zig");
 const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
+const app_theme_utils = @import("app/theme_utils.zig");
 const app_runner = @import("app/runner.zig");
 const app_signals = @import("app/signals.zig");
 const terminal_scrollback_pager = @import("app/terminal_scrollback_pager.zig");
@@ -169,88 +170,8 @@ const AppState = struct {
     search_panel: SearchPanelState,
     terminal_close_confirm_tab: ?terminal_mod.TerminalTabId,
 
-    fn isDarkTheme(theme: *const app_shell.Theme) bool {
-        const r = @as(u32, theme.background.r);
-        const g = @as(u32, theme.background.g);
-        const b = @as(u32, theme.background.b);
-        // Integer luma heuristic (BT.601-ish) is enough for ?2031 dark/light signaling.
-        const luma = r * 299 + g * 587 + b * 114;
-        return luma < 128000;
-    }
-
-    fn terminalTabBarTheme(self: *const AppState) app_shell.Theme {
-        var theme = self.terminal_theme;
-        const base = self.shell_base_theme;
-
-        var fallback_active_tab_bg = self.terminal_theme.background;
-        var fallback_inactive_tab_bg = self.terminal_theme.background;
-        var fallback_inactive_text = self.terminal_theme.foreground;
-        var fallback_border = self.terminal_theme.foreground;
-
-        if (self.terminal_theme.ansi_colors) |ansi| {
-            fallback_active_tab_bg = ansi[4];
-            fallback_inactive_tab_bg = ansi[8];
-            fallback_inactive_text = ansi[7];
-            fallback_border = ansi[8];
-        }
-
-        if (std.meta.eql(theme.ui_bar_bg, base.ui_bar_bg)) {
-            theme.ui_bar_bg = self.terminal_theme.background;
-        }
-        if (std.meta.eql(theme.ui_tab_inactive_bg, base.ui_tab_inactive_bg)) {
-            theme.ui_tab_inactive_bg = fallback_inactive_tab_bg;
-        }
-        if (std.meta.eql(theme.ui_text, base.ui_text)) {
-            theme.ui_text = self.terminal_theme.foreground;
-        }
-        if (std.meta.eql(theme.ui_text_inactive, base.ui_text_inactive)) {
-            theme.ui_text_inactive = fallback_inactive_text;
-        }
-        if (std.meta.eql(theme.ui_border, base.ui_border)) {
-            theme.ui_border = fallback_border;
-        }
-
-        if (std.meta.eql(theme.ui_accent, base.ui_accent)) {
-            theme.ui_accent = fallback_active_tab_bg;
-        }
-
-        // TabBar uses `theme.background` for active-tab fill; in terminal mode we map it
-        // to the tab accent so imported kitty/ghostty tab colors can drive active tab chrome
-        // without changing terminal surface background.
-        theme.background = theme.ui_accent;
-        return theme;
-    }
-
-    const ResolvedThemes = struct {
-        app: app_shell.Theme,
-        editor: app_shell.Theme,
-        terminal: app_shell.Theme,
-    };
-
-    fn resolveConfigThemes(shell_base_theme: app_shell.Theme, config: *const config_mod.Config) ResolvedThemes {
-        var base_theme = shell_base_theme;
-        if (config.theme) |global_theme| {
-            config_mod.applyThemeConfig(&base_theme, global_theme);
-        }
-
-        var app_theme = base_theme;
-        if (config.app_theme) |t| config_mod.applyThemeConfig(&app_theme, t);
-
-        var editor_theme = base_theme;
-        if (config.editor_theme) |t| config_mod.applyThemeConfig(&editor_theme, t);
-
-        var terminal_theme = base_theme;
-        if (config.terminal_theme) |t| config_mod.applyThemeConfig(&terminal_theme, t);
-
-        return .{
-            .app = app_theme,
-            .editor = editor_theme,
-            .terminal = terminal_theme,
-        };
-    }
-
     fn notifyTerminalColorSchemeChanged(self: *AppState) !void {
-        const dark = isDarkTheme(&self.terminal_theme);
+        const dark = app_theme_utils.isDarkTheme(&self.terminal_theme);
         for (self.terminal_widgets.items) |*widget| {
             _ = try widget.session.reportColorSchemeChanged(dark);
         }
@@ -406,7 +327,7 @@ const AppState = struct {
         }
 
         const shell_base_theme = shell.theme().*;
-        const resolved_themes = resolveConfigThemes(shell_base_theme, &config);
+        const resolved_themes = app_theme_utils.resolveConfigThemes(shell_base_theme, &config);
         const app_theme = resolved_themes.app;
         const editor_theme = resolved_themes.editor;
         const terminal_theme = resolved_themes.terminal;
@@ -2863,7 +2784,7 @@ const AppState = struct {
             app_shell.setSdlLogLevel(level);
         }
         {
-            const resolved_themes = resolveConfigThemes(self.shell_base_theme, &config);
+            const resolved_themes = app_theme_utils.resolveConfigThemes(self.shell_base_theme, &config);
             const app_theme_changed = !std.meta.eql(self.app_theme, resolved_themes.app);
             const editor_theme_changed = !std.meta.eql(self.editor_theme, resolved_themes.editor);
             const terminal_theme_changed = !std.meta.eql(self.terminal_theme, resolved_themes.terminal);
@@ -3219,7 +3140,7 @@ const AppState = struct {
             tab_tooltip = self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
         } else if (app_modes.ide.useTerminalTabBarWidthMode(self.app_mode)) {
             self.applyCurrentTabBarWidthMode();
-            const tab_theme = self.terminalTabBarTheme();
+            const tab_theme = app_theme_utils.terminalTabBarTheme(self.terminal_theme, self.shell_base_theme);
             shell.setTheme(tab_theme);
             if (self.terminalTabBarVisible()) {
                 tab_tooltip = self.tab_bar.draw(shell, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
@@ -3384,14 +3305,14 @@ test "editor cursor movement" {
     try std.testing.expectEqual(@as(usize, 6), editor.cursor.col);
 }
 
-test "AppState.isDarkTheme classifies background luma" {
+test "theme utils dark classifier uses background luma" {
     var dark_theme = app_shell.Theme{};
     dark_theme.background = .{ .r = 20, .g = 22, .b = 26 };
-    try std.testing.expect(AppState.isDarkTheme(&dark_theme));
+    try std.testing.expect(app_theme_utils.isDarkTheme(&dark_theme));
 
     var light_theme = app_shell.Theme{};
     light_theme.background = .{ .r = 245, .g = 245, .b = 245 };
-    try std.testing.expect(!AppState.isDarkTheme(&light_theme));
+    try std.testing.expect(!app_theme_utils.isDarkTheme(&light_theme));
 }
 
 test "search panel command maps navigation keys" {
