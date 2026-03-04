@@ -2712,40 +2712,53 @@ const AppState = struct {
         }
     }
 
+    const RunFrameSetup = struct {
+        input_batch: shared_types.input.InputBatch,
+        poll_ms: f64,
+        build_ms: f64,
+    };
+
+    fn prepareRunFrame(self: *AppState) !?RunFrameSetup {
+        const poll_start = app_shell.getTime();
+        app_shell.pollInputEvents();
+        const poll_end = app_shell.getTime();
+        if (self.shell.shouldClose()) return null;
+        if (app_signals.requested()) {
+            self.shell.requestClose();
+            return null;
+        }
+
+        const build_start = app_shell.getTime();
+        const input_batch = input_builder.buildInputBatch(self.allocator, self.shell);
+        const build_end = app_shell.getTime();
+
+        self.frame_id +|= 1;
+        if (!app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
+            self.editor_cluster_cache.beginFrame(self.frame_id);
+        }
+
+        self.metrics.beginFrame(app_shell.getTime());
+
+        return .{
+            .input_batch = input_batch,
+            .poll_ms = (poll_end - poll_start) * 1000.0,
+            .build_ms = (build_end - build_start) * 1000.0,
+        };
+    }
+
     pub fn run(self: *AppState) !void {
         try self.initializeRunModeState();
 
         // Main loop
         while (!self.shell.shouldClose()) {
-            // Poll events first (this updates SDL's input state)
-            const poll_start = app_shell.getTime();
-            app_shell.pollInputEvents();
-            const poll_end = app_shell.getTime();
-            if (self.shell.shouldClose()) break;
-            if (app_signals.requested()) {
-                self.shell.requestClose();
-                break;
-            }
-            const build_start = app_shell.getTime();
-            var input_batch = input_builder.buildInputBatch(self.allocator, self.shell);
-            const build_end = app_shell.getTime();
-            defer input_batch.deinit();
-
-            self.frame_id +|= 1;
-            if (!app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-                self.editor_cluster_cache.beginFrame(self.frame_id);
-            }
-
-            const frame_time = app_shell.getTime();
-            self.metrics.beginFrame(frame_time);
+            var frame = (try self.prepareRunFrame()) orelse break;
+            defer frame.input_batch.deinit();
 
             const update_start = app_shell.getTime();
-            try self.update(&input_batch);
+            try self.update(&frame.input_batch);
             const update_end = app_shell.getTime();
-            const poll_ms = (poll_end - poll_start) * 1000.0;
-            const build_ms = (build_end - build_start) * 1000.0;
             const update_ms = (update_end - update_start) * 1000.0;
-            self.handleFrameRenderAndIdle(&input_batch, poll_ms, build_ms, update_ms);
+            self.handleFrameRenderAndIdle(&frame.input_batch, frame.poll_ms, frame.build_ms, update_ms);
 
             if (self.perf_mode and self.perf_frames_done >= self.perf_frames_total and self.perf_frames_total > 0) {
                 self.perf_logger.logf("perf complete frames={d}", .{self.perf_frames_done});
