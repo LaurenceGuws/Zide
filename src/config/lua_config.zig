@@ -47,7 +47,9 @@ pub const Config = struct {
     terminal_scrollback_rows: ?usize,
     terminal_cursor_shape: ?term_types.CursorShape,
     terminal_cursor_blink: ?bool,
+    editor_tab_bar_width_mode: ?TabBarWidthMode,
     terminal_tab_bar_show_single_tab: ?bool,
+    terminal_tab_bar_width_mode: ?TabBarWidthMode,
     terminal_focus_report_window: ?bool,
     terminal_focus_report_pane: ?bool,
     font_lcd: ?bool,
@@ -87,6 +89,12 @@ pub const TerminalDisableLigaturesStrategy = enum {
     never,
     cursor,
     always,
+};
+
+pub const TabBarWidthMode = enum {
+    fixed,
+    dynamic,
+    label_length,
 };
 
 const terminal_scrollback_default: usize = 1000;
@@ -168,7 +176,9 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
         .terminal_scrollback_rows = null,
         .terminal_cursor_shape = null,
         .terminal_cursor_blink = null,
+        .editor_tab_bar_width_mode = null,
         .terminal_tab_bar_show_single_tab = null,
+        .terminal_tab_bar_width_mode = null,
         .terminal_focus_report_window = null,
         .terminal_focus_report_pane = null,
         .font_lcd = null,
@@ -321,8 +331,14 @@ fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) voi
     if (overlay.terminal_cursor_blink != null) {
         base.terminal_cursor_blink = overlay.terminal_cursor_blink;
     }
+    if (overlay.editor_tab_bar_width_mode != null) {
+        base.editor_tab_bar_width_mode = overlay.editor_tab_bar_width_mode;
+    }
     if (overlay.terminal_tab_bar_show_single_tab != null) {
         base.terminal_tab_bar_show_single_tab = overlay.terminal_tab_bar_show_single_tab;
+    }
+    if (overlay.terminal_tab_bar_width_mode != null) {
+        base.terminal_tab_bar_width_mode = overlay.terminal_tab_bar_width_mode;
     }
     if (overlay.terminal_focus_report_window != null) {
         base.terminal_focus_report_window = overlay.terminal_focus_report_window;
@@ -443,7 +459,9 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
             .terminal_scrollback_rows = null,
             .terminal_cursor_shape = null,
             .terminal_cursor_blink = null,
+            .editor_tab_bar_width_mode = null,
             .terminal_tab_bar_show_single_tab = null,
+            .terminal_tab_bar_width_mode = null,
             .terminal_focus_report_window = null,
             .terminal_focus_report_pane = null,
             .font_lcd = null,
@@ -486,7 +504,9 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
     var terminal_scrollback_rows: ?usize = null;
     var terminal_cursor_shape: ?term_types.CursorShape = null;
     var terminal_cursor_blink: ?bool = null;
+    var editor_tab_bar_width_mode: ?TabBarWidthMode = null;
     var terminal_tab_bar_show_single_tab: ?bool = null;
+    var terminal_tab_bar_width_mode: ?TabBarWidthMode = null;
     var terminal_focus_report_window: ?bool = null;
     var terminal_focus_report_pane: ?bool = null;
     var font_lcd: ?bool = null;
@@ -609,6 +629,26 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         } else if (!c.lua_isnil(L, -1)) {
             warnInvalidValue("editor.wrap", "false");
             editor_wrap = false;
+        }
+        c.lua_pop(L, 1);
+
+        _ = c.lua_getfield(L, -1, "tab_bar");
+        if (c.lua_istable(L, -1)) {
+            _ = c.lua_getfield(L, -1, "width_mode");
+            if (c.lua_isstring(L, -1) != 0) {
+                editor_tab_bar_width_mode = parseTabBarWidthMode(L, -1);
+                if (editor_tab_bar_width_mode == null) {
+                    warnInvalidValue("editor.tab_bar.width_mode", "fixed");
+                    editor_tab_bar_width_mode = .fixed;
+                }
+            } else if (!c.lua_isnil(L, -1)) {
+                warnInvalidValue("editor.tab_bar.width_mode", "fixed");
+                editor_tab_bar_width_mode = .fixed;
+            }
+            c.lua_pop(L, 1);
+        } else if (!c.lua_isnil(L, -1)) {
+            warnInvalidValue("editor.tab_bar", "{ width_mode = \"fixed\" }");
+            editor_tab_bar_width_mode = .fixed;
         }
         c.lua_pop(L, 1);
 
@@ -791,8 +831,22 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
                 terminal_tab_bar_show_single_tab = false;
             }
             c.lua_pop(L, 1);
+
+            _ = c.lua_getfield(L, -1, "width_mode");
+            if (c.lua_isstring(L, -1) != 0) {
+                terminal_tab_bar_width_mode = parseTabBarWidthMode(L, -1);
+                if (terminal_tab_bar_width_mode == null) {
+                    warnInvalidValue("terminal.tab_bar.width_mode", "fixed");
+                    terminal_tab_bar_width_mode = .fixed;
+                }
+            } else if (!c.lua_isnil(L, -1)) {
+                warnInvalidValue("terminal.tab_bar.width_mode", "fixed");
+                terminal_tab_bar_width_mode = .fixed;
+            }
+            c.lua_pop(L, 1);
         } else if (!c.lua_isnil(L, -1)) {
-            warnInvalidValue("terminal.tab_bar", "{ show_single_tab = false }");
+            warnInvalidValue("terminal.tab_bar", "{ show_single_tab = false, width_mode = \"fixed\" }");
+            terminal_tab_bar_width_mode = .fixed;
         }
         c.lua_pop(L, 1);
 
@@ -958,7 +1012,9 @@ fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfig
         .terminal_scrollback_rows = terminal_scrollback_rows,
         .terminal_cursor_shape = terminal_cursor_shape,
         .terminal_cursor_blink = terminal_cursor_blink,
+        .editor_tab_bar_width_mode = editor_tab_bar_width_mode,
         .terminal_tab_bar_show_single_tab = terminal_tab_bar_show_single_tab,
+        .terminal_tab_bar_width_mode = terminal_tab_bar_width_mode,
         .terminal_focus_report_window = terminal_focus_report_window,
         .terminal_focus_report_pane = terminal_focus_report_pane,
         .font_lcd = font_lcd,
@@ -1046,6 +1102,15 @@ fn parseTerminalDisableLigatures(L: *c.lua_State, idx: c_int) ?TerminalDisableLi
     if (std.mem.eql(u8, value, "never")) return .never;
     if (std.mem.eql(u8, value, "cursor")) return .cursor;
     if (std.mem.eql(u8, value, "always")) return .always;
+    return null;
+}
+
+fn parseTabBarWidthMode(L: *c.lua_State, idx: c_int) ?TabBarWidthMode {
+    const value = luaStringToSlice(L, idx);
+    if (value.len == 0) return null;
+    if (std.mem.eql(u8, value, "fixed")) return .fixed;
+    if (std.mem.eql(u8, value, "dynamic")) return .dynamic;
+    if (std.mem.eql(u8, value, "label_length")) return .label_length;
     return null;
 }
 

@@ -233,6 +233,13 @@ return {
         large_cursor_jump_rows = 5,
         -- Soft wrap long lines.
         wrap = false,
+        -- Tab bar width mode (IDE/editor mode):
+        -- "fixed"       = fixed chip width
+        -- "dynamic"     = split available width evenly across tabs
+        -- "label_length"= size by label length and normalize to fill width
+        tab_bar = {
+            width_mode = "fixed",
+        },
         -- Ligature strategy (matches terminal semantics):
         --   "never"  = never disable ligatures (default)
         --   "cursor" = disable programming ligatures under cursor segment
@@ -288,12 +295,17 @@ return {
         -- Blink style: "kitty" (default) or "off".
         -- blink = "kitty",
         -- Scrollback line cap (min 100, max 100000). Invalid values warn and fall back to 1000.
-        scrollback = 1000,
+        scrollback = 10000,
         -- Tab bar visibility in --mode terminal:
         -- false: hide tab bar until there are 2+ tabs (default)
         -- true: always show tab bar, even with a single tab
+        -- width_mode options:
+        --   "fixed"        fixed chip width
+        --   "dynamic"      equal split across available width
+        --   "label_length" label-aware widths normalized to fill bar
         tab_bar = {
             show_single_tab = false,
+            width_mode = "dynamic",
         },
         -- Cursor configuration.
         -- Valid shapes: "block", "underline", "bar". Blink is boolean.
