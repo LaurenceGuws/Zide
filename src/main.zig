@@ -1089,45 +1089,6 @@ const AppState = struct {
         self.terminal_close_confirm_tab = null;
     }
 
-    fn terminalCloseModalLayout(self: *AppState, layout: layout_types.WidgetLayout) TerminalCloseModalLayout {
-        const scale = self.shell.uiScaleFactor();
-        const margin = 24.0 * scale;
-        const desired_w = 540.0 * scale;
-        const card_w = @max(280.0 * scale, @min(desired_w, layout.window.width - margin * 2.0));
-        const card_h = 150.0 * scale;
-        const card_x = layout.window.x + (layout.window.width - card_w) / 2.0;
-        const card_y = layout.window.y + (layout.window.height - card_h) / 2.0;
-
-        const button_h = 34.0 * scale;
-        const confirm_w = 178.0 * scale;
-        const cancel_w = 128.0 * scale;
-        const button_gap = 10.0 * scale;
-        const button_y = card_y + card_h - button_h - 14.0 * scale;
-        const confirm_x = card_x + card_w - confirm_w - 14.0 * scale;
-        const cancel_x = confirm_x - cancel_w - button_gap;
-
-        return .{
-            .card = .{
-                .x = card_x,
-                .y = card_y,
-                .width = card_w,
-                .height = card_h,
-            },
-            .confirm_button = .{
-                .x = confirm_x,
-                .y = button_y,
-                .width = confirm_w,
-                .height = button_h,
-            },
-            .cancel_button = .{
-                .x = cancel_x,
-                .y = button_y,
-                .width = cancel_w,
-                .height = button_h,
-            },
-        };
-    }
-
     fn handleTerminalCloseConfirmInput(
         self: *AppState,
         input_batch: *shared_types.input.InputBatch,
@@ -1136,7 +1097,7 @@ const AppState = struct {
     ) !bool {
         if (!self.terminalCloseConfirmActive()) return false;
 
-        const modal = self.terminalCloseModalLayout(layout);
+        const modal = app_modes.ide.terminalCloseConfirmModalLayout(layout, self.shell.uiScaleFactor());
         switch (app_modes.ide.decideTerminalCloseConfirmInput(
             self.input_router.actionsSlice(),
             input_batch,
@@ -2818,7 +2779,7 @@ const AppState = struct {
         shell: *Shell,
         layout: layout_types.WidgetLayout,
     ) void {
-        const modal = self.terminalCloseModalLayout(layout);
+        const modal = app_modes.ide.terminalCloseConfirmModalLayout(layout, shell.uiScaleFactor());
         const overlay = app_shell.Color{ .r = 0, .g = 0, .b = 0, .a = 160 };
         const card_bg = self.app_theme.ui_panel_bg;
         const card_border = self.app_theme.ui_border;

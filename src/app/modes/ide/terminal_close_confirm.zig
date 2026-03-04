@@ -15,6 +15,44 @@ pub const Decision = enum {
     consume,
 };
 
+pub fn modalLayout(layout: shared_types.layout.WidgetLayout, ui_scale: f32) ModalLayout {
+    const margin = 24.0 * ui_scale;
+    const desired_w = 540.0 * ui_scale;
+    const card_w = @max(280.0 * ui_scale, @min(desired_w, layout.window.width - margin * 2.0));
+    const card_h = 150.0 * ui_scale;
+    const card_x = layout.window.x + (layout.window.width - card_w) / 2.0;
+    const card_y = layout.window.y + (layout.window.height - card_h) / 2.0;
+
+    const button_h = 34.0 * ui_scale;
+    const confirm_w = 178.0 * ui_scale;
+    const cancel_w = 128.0 * ui_scale;
+    const button_gap = 10.0 * ui_scale;
+    const button_y = card_y + card_h - button_h - 14.0 * ui_scale;
+    const confirm_x = card_x + card_w - confirm_w - 14.0 * ui_scale;
+    const cancel_x = confirm_x - cancel_w - button_gap;
+
+    return .{
+        .card = .{
+            .x = card_x,
+            .y = card_y,
+            .width = card_w,
+            .height = card_h,
+        },
+        .confirm_button = .{
+            .x = confirm_x,
+            .y = button_y,
+            .width = confirm_w,
+            .height = button_h,
+        },
+        .cancel_button = .{
+            .x = cancel_x,
+            .y = button_y,
+            .width = cancel_w,
+            .height = button_h,
+        },
+    };
+}
+
 pub fn decideInput(
     actions: []const input_actions.InputAction,
     input_batch: *const shared_types.input.InputBatch,
@@ -84,3 +122,22 @@ test "terminal close confirm decision consumes in-card click and cancels outside
     try std.testing.expectEqual(Decision.cancel, decideInput(&.{}, &batch, modal));
 }
 
+test "terminal close confirm modal layout stays within window and buttons are inside card" {
+    const layout: shared_types.layout.WidgetLayout = .{
+        .window = .{ .x = 0, .y = 0, .width = 800, .height = 600 },
+        .options_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+        .tab_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+        .side_nav = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+        .editor = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+        .terminal = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+        .status_bar = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
+    };
+    const modal = modalLayout(layout, 1.0);
+
+    try std.testing.expect(modal.card.x >= layout.window.x);
+    try std.testing.expect(modal.card.y >= layout.window.y);
+    try std.testing.expect(modal.card.x + modal.card.width <= layout.window.x + layout.window.width);
+    try std.testing.expect(modal.card.y + modal.card.height <= layout.window.y + layout.window.height);
+    try std.testing.expect(pointInRect(modal.confirm_button.x, modal.confirm_button.y, modal.card));
+    try std.testing.expect(pointInRect(modal.cancel_button.x, modal.cancel_button.y, modal.card));
+}
