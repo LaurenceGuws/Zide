@@ -108,7 +108,6 @@ app_mode_layering_todo:
             - "In progress: tab projection + active-projection construction moved from `main.zig` into `src/app/modes/ide/projections.zig`."
             - "In progress: terminal close-intent emission is centralized via `applyTerminalCloseIntentForActiveWorkspaceTab()` in `main.zig` (deduped shortcut + confirm paths)."
             - "In progress: terminal focus-tab action-to-index mapping moved from `main.zig` into `src/app/modes/ide/tab_intents.zig`."
-            - "In progress: terminal focus-tab action now maps to `TabAction.activate_by_index` via `terminalFocusIntentForAction(...)` helper."
             - "In progress: terminal focus-tab shortcut handling now uses typed `terminalFocusRouteForAction(...)` (index + intent) to keep `main.zig` branch decode-free."
             - "In progress: terminal close-confirm input decision logic moved from `main.zig` into `src/app/modes/ide/terminal_close_confirm.zig`."
             - "In progress: terminal close-confirm modal layout math moved from `main.zig` into `src/app/modes/ide/terminal_close_confirm.zig`."
