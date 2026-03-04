@@ -580,23 +580,6 @@ const AppState = struct {
         editor.setCursor(clamped_line, clamped_col);
     }
 
-    fn precomputeEditorVisibleCaches(
-        self: *AppState,
-        widget: *EditorWidget,
-        shell: *Shell,
-        layout: layout_types.WidgetLayout,
-    ) void {
-        if (layout.editor.width <= 0 or layout.editor.height <= 0) return;
-        app_editor_display_prepare.prepare(widget.editor, &self.editor_render_cache);
-        const visible_lines = @as(usize, @intFromFloat(layout.editor.height / shell.charHeight()));
-        const default_budget = if (visible_lines > 0) visible_lines + 1 else 0;
-        const highlight_budget = self.editor_highlight_budget orelse default_budget;
-        editor_draw.precomputeHighlightTokens(widget, &self.editor_render_cache, shell, layout.editor.height, highlight_budget);
-        const width_budget = self.editor_width_budget orelse highlight_budget;
-        editor_draw.precomputeLineWidths(widget, &self.editor_render_cache, shell, layout.editor.height, width_budget);
-        editor_draw.precomputeWrapCounts(widget, &self.editor_render_cache, shell, layout.editor.height, width_budget);
-    }
-
     pub fn newTerminal(self: *AppState) !void {
         // Calculate terminal size based on UI
         const shell = self.shell;
@@ -1780,7 +1763,15 @@ const AppState = struct {
                                                                                                         editor_layout: layout_types.WidgetLayout,
                                                                                                     ) void {
                                                                                                         const route_state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        route_state.precomputeEditorVisibleCaches(widget, editor_shell, editor_layout);
+                                                                                                        if (editor_layout.editor.width <= 0 or editor_layout.editor.height <= 0) return;
+                                                                                                        app_editor_display_prepare.prepare(widget.editor, &route_state.editor_render_cache);
+                                                                                                        const visible_lines = @as(usize, @intFromFloat(editor_layout.editor.height / editor_shell.charHeight()));
+                                                                                                        const default_budget = if (visible_lines > 0) visible_lines + 1 else 0;
+                                                                                                        const highlight_budget = route_state.editor_highlight_budget orelse default_budget;
+                                                                                                        editor_draw.precomputeHighlightTokens(widget, &route_state.editor_render_cache, editor_shell, editor_layout.editor.height, highlight_budget);
+                                                                                                        const width_budget = route_state.editor_width_budget orelse highlight_budget;
+                                                                                                        editor_draw.precomputeLineWidths(widget, &route_state.editor_render_cache, editor_shell, editor_layout.editor.height, width_budget);
+                                                                                                        editor_draw.precomputeWrapCounts(widget, &route_state.editor_render_cache, editor_shell, editor_layout.editor.height, width_budget);
                                                                                                     }
                                                                                                 }.call,
                                                                                             },
