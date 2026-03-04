@@ -850,25 +850,6 @@ const AppState = struct {
         }
     }
 
-    fn handleTerminalPendingOpenRequest(
-        self: *AppState,
-        term_widget: *TerminalWidget,
-        now: f64,
-    ) !void {
-        if (term_widget.takePendingOpenRequest()) |req| {
-            defer self.allocator.free(req.path);
-            if (app_file_detect.isProbablyTextFile(req.path)) {
-                if (req.line != null) {
-                    try self.openFileAt(req.path, req.line.?, req.col);
-                } else {
-                    try self.openFile(req.path);
-                }
-                self.needs_redraw = true;
-                self.metrics.noteInput(now);
-            }
-        }
-    }
-
     fn handleTerminalWidgetInput(
         self: *AppState,
         term_widget: *TerminalWidget,
@@ -898,7 +879,18 @@ const AppState = struct {
             self.needs_redraw = true;
             self.metrics.noteInput(now);
         }
-        try self.handleTerminalPendingOpenRequest(term_widget, now);
+        if (term_widget.takePendingOpenRequest()) |req| {
+            defer self.allocator.free(req.path);
+            if (app_file_detect.isProbablyTextFile(req.path)) {
+                if (req.line != null) {
+                    try self.openFileAt(req.path, req.line.?, req.col);
+                } else {
+                    try self.openFile(req.path);
+                }
+                self.needs_redraw = true;
+                self.metrics.noteInput(now);
+            }
+        }
     }
 
     fn precomputeEditorVisibleCaches(
