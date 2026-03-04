@@ -204,6 +204,7 @@ app_mode_layering_todo:
             - "In progress: `update()` callback wiring inside run-loop driver is now collapsed into `AppState.handleUpdateFrame(...)`, removing the large inline callback tree from `run()`."
             - "In progress: frame-render/idle callback wiring inside run-loop driver is now collapsed into `AppState.handleFrameRenderAndIdle(...)`, removing the large inline draw/metrics callback block from `run()`."
             - "In progress: run-loop perf stop/completion callback predicates are now collapsed into `AppState.shouldStopForPerfFrame(...)` and `AppState.onPerfCompleteFrame(...)`."
+            - "In progress: run-loop `run_one_frame` and `run_main_loop` callback wiring is now collapsed into `AppState.runOneFrame(...)` and `AppState.runMainLoop(...)`."
             - "In progress: pre-input runtime delegation in `main.zig` now uses named AppState shims for reconcile/layout/redraw hooks (`routeReconcileTerminalCloseModalActiveFromCtx`, `routeComputeLayoutFromCtx`, `routeMarkRedrawFromCtx`) instead of inline callback structs."
             - "In progress: update-driver post-preinput callback block is now delegated to `AppState.handlePostPreinputFrame(...)` (inline callback body collapsed; behavior unchanged)."
             - "In progress: post-preinput frame method body moved from `main.zig` into `src/app/post_preinput_hooks_runtime.zig` (`handle`); `AppState.handlePostPreinputFrame(...)` is now a thin delegator."
