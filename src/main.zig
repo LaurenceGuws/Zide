@@ -2,6 +2,7 @@ const std = @import("std");
 const app_bootstrap = @import("app/bootstrap.zig");
 const app_config_reload_notice_state = @import("app/config_reload_notice_state.zig");
 const app_editor_actions = @import("app/editor_actions.zig");
+const app_editor_tab_intents = @import("app/editor_tab_intents.zig");
 const app_editor_seed = @import("app/editor_seed.zig");
 const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
@@ -837,7 +838,7 @@ const AppState = struct {
     }
 
     fn routeEditorCreateIntentAndSync(self: *AppState) !void {
-        _ = try self.routeOptionalEditorTabActionAndSync(.create);
+        _ = try self.routeOptionalEditorTabActionAndSync(app_editor_tab_intents.createIntent());
     }
 
     fn setActiveKindAndSyncIfChanged(self: *AppState, kind: app_modes.ide.ActiveMode) !bool {
@@ -849,7 +850,7 @@ const AppState = struct {
 
     fn activateEditorTabAtCurrentIndex(self: *AppState, now: f64) !void {
         self.active_tab = self.tab_bar.active_index;
-        _ = try self.routeOptionalEditorTabActionAndSync(.{ .activate_by_index = self.active_tab });
+        _ = try self.routeOptionalEditorTabActionAndSync(app_editor_tab_intents.activateByIndexIntent(self.active_tab));
         self.needs_redraw = true;
         self.metrics.noteInput(now);
     }

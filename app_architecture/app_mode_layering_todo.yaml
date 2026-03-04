@@ -123,6 +123,7 @@ app_mode_layering_todo:
             - "In progress: extracted terminal shortcut/intents helper modules now include focused unit tests (`src/app/terminal_shortcut_policy.zig`, `src/app/terminal_tab_intents.zig`)."
             - "In progress: editor tab-action routing now mirrors terminal routing style: adapter apply is inlined in `routeEditorTabActionAndSync(...)`, with optional routing via `routeOptionalEditorTabActionAndSync(...)` for activation paths."
             - "In progress: repeated editor create-intent emissions in `newEditor/openFile/openFileAt` now route through shared helper `routeEditorCreateIntentAndSync(...)`."
+            - "In progress: editor tab-intent mapping is extracted into `src/app/editor_tab_intents.zig` (`createIntent`, `activateByIndexIntent`) and consumed from `main.zig` routing helpers."
             - "In progress: pure tab-intent helpers were extracted from `main.zig` into `src/app/modes/ide/tab_intents.zig`."
             - "In progress: tab projection + active-projection construction moved from `main.zig` into `src/app/modes/ide/projections.zig`."
             - "In progress: terminal close-intent emission is centralized via `applyTerminalCloseIntentForActiveWorkspaceTab()` in `main.zig` (deduped shortcut + confirm paths)."
