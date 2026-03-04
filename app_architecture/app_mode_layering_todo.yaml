@@ -134,6 +134,7 @@ app_mode_layering_todo:
             - "In progress: action-loop orchestration and tab-drag orchestration are each collapsed into dedicated frame helpers (`handleInputActionsFrame`, `handleTabDragFrame`)."
             - "In progress: pointer redraw heuristics and terminal split-resize dragging are now routed through dedicated frame helpers (`handlePointerActivityFrame`, `handleTerminalSplitResizeFrame`)."
             - "In progress: window-resize event handling, cursor blink-arming updates, and deferred terminal resize apply are now routed through dedicated frame helpers."
+            - "In progress: pre-input shortcut/clipboard routing is consolidated via dedicated helpers and `handlePreInputShortcutFrame(...)`."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress

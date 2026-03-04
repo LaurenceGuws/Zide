@@ -1713,6 +1713,282 @@ const AppState = struct {
         self.logMouseDebugClick(shell);
     }
 
+    const PreInputShortcutResult = struct {
+        suppress_terminal_shortcuts: bool,
+        terminal_close_modal_active: bool,
+        handled_shortcut: bool,
+        consumed: bool,
+    };
+
+    fn handleReloadConfigShortcutFrame(self: *AppState) bool {
+        var handled = false;
+        for (self.input_router.actionsSlice()) |action| {
+            if (action.kind == .reload_config) {
+                self.reloadConfig() catch {
+                    self.showConfigReloadNotice(false);
+                    handled = true;
+                    continue;
+                };
+                self.showConfigReloadNotice(true);
+                handled = true;
+            }
+        }
+        return handled;
+    }
+
+    fn collectSuppressTerminalShortcutsForFocus(
+        self: *AppState,
+        focus: input_actions.FocusKind,
+    ) bool {
+        if (focus != .terminal) return false;
+        var suppress = false;
+        for (self.input_router.actionsSlice()) |action| {
+            switch (action.kind) {
+                .copy, .paste => suppress = true,
+                else => {},
+            }
+        }
+        return suppress;
+    }
+
+    fn handleTerminalClipboardShortcutsFrame(
+        self: *AppState,
+        shell: *Shell,
+        input_batch: *shared_types.input.InputBatch,
+        now: f64,
+    ) !bool {
+        if (self.activeTerminalWidget()) |term_widget| {
+            if (input_batch.events.items.len > 0) {
+                term_widget.noteInput(now);
+            }
+            var handled = false;
+            for (self.input_router.actionsSlice()) |action| {
+                switch (action.kind) {
+                    .copy => {
+                        if (term_widget.copySelectionToClipboard(shell)) {
+                            handled = true;
+                        }
+                    },
+                    .paste => {
+                        if (term_widget.pasteClipboardFromSystem(shell)) {
+                            handled = true;
+                            self.needs_redraw = true;
+                        }
+                    },
+                    .terminal_scrollback_pager => {
+                        if (self.activeTerminalSession()) |term| {
+                            if (try self.openTerminalScrollbackInPager(term_widget, term)) {
+                                handled = true;
+                            }
+                        }
+                    },
+                    else => {},
+                }
+            }
+            return handled;
+        }
+        return false;
+    }
+
+    fn handleEditorShortcutActionsFrame(
+        self: *AppState,
+        shell: *Shell,
+        action_layout: layout_types.WidgetLayout,
+    ) !bool {
+        if (self.editors.items.len == 0) return false;
+        const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
+        const editor = self.editors.items[editor_idx];
+        var editor_widget = EditorWidget.initWithCache(editor, &self.editor_cluster_cache, self.editor_wrap);
+        var handled = false;
+
+        for (self.input_router.actionsSlice()) |action| {
+            switch (action.kind) {
+                .copy => {
+                    if (try editor.selectionTextAlloc()) |text| {
+                        defer self.allocator.free(text);
+                        const buf = try self.allocator.alloc(u8, text.len + 1);
+                        defer self.allocator.free(buf);
+                        std.mem.copyForwards(u8, buf[0..text.len], text);
+                        buf[text.len] = 0;
+                        const cstr: [*:0]const u8 = @ptrCast(buf.ptr);
+                        shell.setClipboardText(cstr);
+                        handled = true;
+                    }
+                },
+                .cut => {
+                    if (try editor.selectionTextAlloc()) |text| {
+                        defer self.allocator.free(text);
+                        const buf = try self.allocator.alloc(u8, text.len + 1);
+                        defer self.allocator.free(buf);
+                        std.mem.copyForwards(u8, buf[0..text.len], text);
+                        buf[text.len] = 0;
+                        const cstr: [*:0]const u8 = @ptrCast(buf.ptr);
+                        shell.setClipboardText(cstr);
+                        try editor.deleteSelection();
+                        self.needs_redraw = true;
+                        handled = true;
+                    }
+                },
+                .paste => {
+                    if (shell.getClipboardText()) |clip| {
+                        try editor.insertText(clip);
+                        self.needs_redraw = true;
+                        handled = true;
+                    }
+                },
+                .save => {
+                    try editor.save();
+                    self.needs_redraw = true;
+                    handled = true;
+                },
+                .undo => {
+                    _ = try editor.undo();
+                    self.needs_redraw = true;
+                    handled = true;
+                },
+                .redo => {
+                    _ = try editor.redo();
+                    self.needs_redraw = true;
+                    handled = true;
+                },
+                .editor_add_caret_up => {
+                    if (try applyCaretEditorAction(editor, action.kind)) {
+                        self.needs_redraw = true;
+                        handled = true;
+                    }
+                },
+                .editor_add_caret_down => {
+                    if (try applyCaretEditorAction(editor, action.kind)) {
+                        self.needs_redraw = true;
+                        handled = true;
+                    }
+                },
+                .editor_move_word_left,
+                .editor_move_word_right,
+                .editor_extend_left,
+                .editor_extend_right,
+                .editor_extend_line_start,
+                .editor_extend_line_end,
+                .editor_extend_word_left,
+                .editor_extend_word_right,
+                => {
+                    if (applyDirectEditorAction(editor, action.kind)) {
+                        self.needs_redraw = true;
+                        handled = true;
+                    }
+                },
+                .editor_move_large_up, .editor_move_large_down => {
+                    const delta = visualMoveDeltaForAction(action.kind, self.editor_large_jump_rows).?;
+                    const Ctx = struct {
+                        widget: *EditorWidget,
+                        shell: *Shell,
+                    };
+                    var ctx = Ctx{ .widget = &editor_widget, .shell = shell };
+                    const moved = applyRepeatedVisualDelta(
+                        delta,
+                        @ptrCast(&ctx),
+                        struct {
+                            fn step(raw: *anyopaque, dir: i32) bool {
+                                const payload: *Ctx = @ptrCast(@alignCast(raw));
+                                return payload.widget.moveCursorVisual(payload.shell, dir);
+                            }
+                        }.step,
+                    );
+                    if (moved) {
+                        editor_widget.ensureCursorVisible(shell, action_layout.editor.height);
+                        self.needs_redraw = true;
+                        handled = true;
+                    }
+                },
+                .editor_extend_up, .editor_extend_down, .editor_extend_large_up, .editor_extend_large_down => {
+                    const delta = visualExtendDeltaForAction(action.kind, self.editor_large_jump_rows).?;
+                    const Ctx = struct {
+                        widget: *EditorWidget,
+                        shell: *Shell,
+                    };
+                    var ctx = Ctx{ .widget = &editor_widget, .shell = shell };
+                    const extended = applyRepeatedVisualDelta(
+                        delta,
+                        @ptrCast(&ctx),
+                        struct {
+                            fn step(raw: *anyopaque, dir: i32) bool {
+                                const payload: *Ctx = @ptrCast(@alignCast(raw));
+                                return payload.widget.extendSelectionVisual(payload.shell, dir);
+                            }
+                        }.step,
+                    );
+                    if (extended) {
+                        editor_widget.ensureCursorVisible(shell, action_layout.editor.height);
+                        self.needs_redraw = true;
+                        handled = true;
+                    }
+                },
+                .editor_search_open => {
+                    try self.openSearchPanel(editor);
+                    self.needs_redraw = true;
+                    handled = true;
+                },
+                .editor_search_next => {
+                    if (editor.activateNextSearchMatch()) {
+                        self.needs_redraw = true;
+                        handled = true;
+                    }
+                },
+                .editor_search_prev => {
+                    if (editor.activatePrevSearchMatch()) {
+                        self.needs_redraw = true;
+                        handled = true;
+                    }
+                },
+                else => {},
+            }
+        }
+        return handled;
+    }
+
+    fn handlePreInputShortcutFrame(
+        self: *AppState,
+        shell: *Shell,
+        r: anytype,
+        input_batch: *shared_types.input.InputBatch,
+        focus: input_actions.FocusKind,
+        now: f64,
+    ) !PreInputShortcutResult {
+        var handled_shortcut = self.handleReloadConfigShortcutFrame();
+        const live_layout = self.computeLayout(@floatFromInt(r.width), @floatFromInt(r.height));
+        if (try self.handleTerminalCloseConfirmInput(input_batch, live_layout, now)) {
+            return .{
+                .suppress_terminal_shortcuts = false,
+                .terminal_close_modal_active = self.terminalCloseConfirmActive(),
+                .handled_shortcut = handled_shortcut,
+                .consumed = true,
+            };
+        }
+
+        const terminal_close_modal_active = self.terminalCloseConfirmActive();
+        const suppress_terminal_shortcuts = self.collectSuppressTerminalShortcutsForFocus(focus);
+
+        if (!terminal_close_modal_active and focus == .terminal and app_modes.ide.hasTerminalInputScope(self.app_mode, self.show_terminal) and self.terminalTabCount() > 0) {
+            if (try self.handleTerminalClipboardShortcutsFrame(shell, input_batch, now)) {
+                handled_shortcut = true;
+            }
+        }
+
+        if (focus == .editor) {
+            const action_layout = self.computeLayout(@floatFromInt(r.width), @floatFromInt(r.height));
+            if (try self.handleEditorShortcutActionsFrame(shell, action_layout)) {
+                handled_shortcut = true;
+            }
+        }
+
+        return .{
+            .suppress_terminal_shortcuts = suppress_terminal_shortcuts,
+            .terminal_close_modal_active = terminal_close_modal_active,
+            .handled_shortcut = handled_shortcut,
+            .consumed = false,
+        };
+    }
+
     fn handleTabDragFrame(
         self: *AppState,
         input_batch: *shared_types.input.InputBatch,
@@ -2476,208 +2752,11 @@ const AppState = struct {
         const routed_active = app_modes.ide.routedActiveMode(self.app_mode, self.active_kind);
         const focus = if (routed_active == .terminal) input_actions.FocusKind.terminal else input_actions.FocusKind.editor;
         self.input_router.route(input_batch, focus);
-        var suppress_terminal_shortcuts = false;
-        var handled_shortcut = false;
-        for (self.input_router.actionsSlice()) |action| {
-            if (action.kind == .reload_config) {
-                self.reloadConfig() catch {
-                    self.showConfigReloadNotice(false);
-                    handled_shortcut = true;
-                    continue;
-                };
-                self.showConfigReloadNotice(true);
-                handled_shortcut = true;
-            }
-        }
-        const live_layout = self.computeLayout(@floatFromInt(r.width), @floatFromInt(r.height));
-        if (try self.handleTerminalCloseConfirmInput(input_batch, live_layout, now)) return;
-        const terminal_close_modal_active = self.terminalCloseConfirmActive();
-        for (self.input_router.actionsSlice()) |action| {
-            if (focus != .terminal) continue;
-            switch (action.kind) {
-                .copy, .paste => suppress_terminal_shortcuts = true,
-                else => {},
-            }
-        }
-        if (!terminal_close_modal_active and focus == .terminal and app_modes.ide.hasTerminalInputScope(self.app_mode, self.show_terminal) and self.terminalTabCount() > 0) {
-            if (self.activeTerminalWidget()) |term_widget| {
-                if (input_batch.events.items.len > 0) {
-                    term_widget.noteInput(now);
-                }
-                for (self.input_router.actionsSlice()) |action| {
-                    switch (action.kind) {
-                        .copy => {
-                            if (term_widget.copySelectionToClipboard(shell)) {
-                                handled_shortcut = true;
-                            }
-                        },
-                        .paste => {
-                            if (term_widget.pasteClipboardFromSystem(shell)) {
-                                handled_shortcut = true;
-                                self.needs_redraw = true;
-                            }
-                        },
-                        .terminal_scrollback_pager => {
-                            if (self.activeTerminalSession()) |term| {
-                                if (try self.openTerminalScrollbackInPager(term_widget, term)) {
-                                    handled_shortcut = true;
-                                }
-                            }
-                        },
-                        else => {},
-                    }
-                }
-            }
-        }
-        if (focus == .editor and self.editors.items.len > 0) {
-            const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
-            const editor = self.editors.items[editor_idx];
-            var editor_widget = EditorWidget.initWithCache(editor, &self.editor_cluster_cache, self.editor_wrap);
-            const action_layout = self.computeLayout(@floatFromInt(r.width), @floatFromInt(r.height));
-            for (self.input_router.actionsSlice()) |action| {
-                switch (action.kind) {
-                    .copy => {
-                        if (try editor.selectionTextAlloc()) |text| {
-                            defer self.allocator.free(text);
-                            const buf = try self.allocator.alloc(u8, text.len + 1);
-                            defer self.allocator.free(buf);
-                            std.mem.copyForwards(u8, buf[0..text.len], text);
-                            buf[text.len] = 0;
-                            const cstr: [*:0]const u8 = @ptrCast(buf.ptr);
-                            shell.setClipboardText(cstr);
-                            handled_shortcut = true;
-                        }
-                    },
-                    .cut => {
-                        if (try editor.selectionTextAlloc()) |text| {
-                            defer self.allocator.free(text);
-                            const buf = try self.allocator.alloc(u8, text.len + 1);
-                            defer self.allocator.free(buf);
-                            std.mem.copyForwards(u8, buf[0..text.len], text);
-                            buf[text.len] = 0;
-                            const cstr: [*:0]const u8 = @ptrCast(buf.ptr);
-                            shell.setClipboardText(cstr);
-                            try editor.deleteSelection();
-                            self.needs_redraw = true;
-                            handled_shortcut = true;
-                        }
-                    },
-                    .paste => {
-                        if (shell.getClipboardText()) |clip| {
-                            try editor.insertText(clip);
-                            self.needs_redraw = true;
-                            handled_shortcut = true;
-                        }
-                    },
-                    .save => {
-                        try editor.save();
-                        self.needs_redraw = true;
-                        handled_shortcut = true;
-                    },
-                    .undo => {
-                        _ = try editor.undo();
-                        self.needs_redraw = true;
-                        handled_shortcut = true;
-                    },
-                    .redo => {
-                        _ = try editor.redo();
-                        self.needs_redraw = true;
-                        handled_shortcut = true;
-                    },
-                    .editor_add_caret_up => {
-                        if (try applyCaretEditorAction(editor, action.kind)) {
-                            self.needs_redraw = true;
-                            handled_shortcut = true;
-                        }
-                    },
-                    .editor_add_caret_down => {
-                        if (try applyCaretEditorAction(editor, action.kind)) {
-                            self.needs_redraw = true;
-                            handled_shortcut = true;
-                        }
-                    },
-                    .editor_move_word_left,
-                    .editor_move_word_right,
-                    .editor_extend_left,
-                    .editor_extend_right,
-                    .editor_extend_line_start,
-                    .editor_extend_line_end,
-                    .editor_extend_word_left,
-                    .editor_extend_word_right,
-                    => {
-                        if (applyDirectEditorAction(editor, action.kind)) {
-                            self.needs_redraw = true;
-                            handled_shortcut = true;
-                        }
-                    },
-                    .editor_move_large_up, .editor_move_large_down => {
-                        const delta = visualMoveDeltaForAction(action.kind, self.editor_large_jump_rows).?;
-                        const Ctx = struct {
-                            widget: *EditorWidget,
-                            shell: *Shell,
-                        };
-                        var ctx = Ctx{ .widget = &editor_widget, .shell = shell };
-                        const moved = applyRepeatedVisualDelta(
-                            delta,
-                            @ptrCast(&ctx),
-                            struct {
-                                fn step(raw: *anyopaque, dir: i32) bool {
-                                    const payload: *Ctx = @ptrCast(@alignCast(raw));
-                                    return payload.widget.moveCursorVisual(payload.shell, dir);
-                                }
-                            }.step,
-                        );
-                        if (moved) {
-                            editor_widget.ensureCursorVisible(shell, action_layout.editor.height);
-                            self.needs_redraw = true;
-                            handled_shortcut = true;
-                        }
-                    },
-                    .editor_extend_up, .editor_extend_down, .editor_extend_large_up, .editor_extend_large_down => {
-                        const delta = visualExtendDeltaForAction(action.kind, self.editor_large_jump_rows).?;
-                        const Ctx = struct {
-                            widget: *EditorWidget,
-                            shell: *Shell,
-                        };
-                        var ctx = Ctx{ .widget = &editor_widget, .shell = shell };
-                        const extended = applyRepeatedVisualDelta(
-                            delta,
-                            @ptrCast(&ctx),
-                            struct {
-                                fn step(raw: *anyopaque, dir: i32) bool {
-                                    const payload: *Ctx = @ptrCast(@alignCast(raw));
-                                    return payload.widget.extendSelectionVisual(payload.shell, dir);
-                                }
-                            }.step,
-                        );
-                        if (extended) {
-                            editor_widget.ensureCursorVisible(shell, action_layout.editor.height);
-                            self.needs_redraw = true;
-                            handled_shortcut = true;
-                        }
-                    },
-                    .editor_search_open => {
-                        try self.openSearchPanel(editor);
-                        self.needs_redraw = true;
-                        handled_shortcut = true;
-                    },
-                    .editor_search_next => {
-                        if (editor.activateNextSearchMatch()) {
-                            self.needs_redraw = true;
-                            handled_shortcut = true;
-                        }
-                    },
-                    .editor_search_prev => {
-                        if (editor.activatePrevSearchMatch()) {
-                            self.needs_redraw = true;
-                            handled_shortcut = true;
-                        }
-                    },
-                    else => {},
-                }
-            }
-        }
-        if (handled_shortcut) {
+        const pre_input = try self.handlePreInputShortcutFrame(shell, r, input_batch, focus, now);
+        if (pre_input.consumed) return;
+        const suppress_terminal_shortcuts = pre_input.suppress_terminal_shortcuts;
+        const terminal_close_modal_active = pre_input.terminal_close_modal_active;
+        if (pre_input.handled_shortcut) {
             self.metrics.noteInput(now);
         }
         if (try shell.applyPendingZoom(now)) {
