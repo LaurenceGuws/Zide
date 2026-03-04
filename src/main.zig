@@ -4,6 +4,7 @@ const app_editor_actions = @import("app/editor_actions.zig");
 const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
 const app_config_reload_notice = @import("app/config_reload_notice.zig");
+const app_terminal_grid = @import("app/terminal_grid.zig");
 const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
 const app_terminal_theme_apply = @import("app/terminal_theme_apply.zig");
 const app_terminal_tabs = @import("app/terminal_tabs.zig");
@@ -1885,7 +1886,14 @@ const AppState = struct {
                 self.terminal_height = new_height;
                 if (self.terminals.items.len > 0) {
                     const term = self.terminals.items[0];
-                    const grid = self.terminalGridSize(width, self.terminal_height, 1, 1);
+                    const grid = app_terminal_grid.compute(
+                        width,
+                        self.terminal_height,
+                        self.shell.terminalCellWidth(),
+                        self.shell.terminalCellHeight(),
+                        1,
+                        1,
+                    );
                     const cols: u16 = grid.cols;
                     const rows: u16 = grid.rows;
                     term.setCellSize(
@@ -1956,7 +1964,14 @@ const AppState = struct {
                 layout.terminal.height,
                 self.terminal_height,
             );
-            const grid = self.terminalGridSize(layout.terminal.width, effective_height, 1, 1);
+            const grid = app_terminal_grid.compute(
+                layout.terminal.width,
+                effective_height,
+                shell.terminalCellWidth(),
+                shell.terminalCellHeight(),
+                1,
+                1,
+            );
             const cols: u16 = grid.cols;
             const rows: u16 = grid.rows;
             if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
@@ -2275,7 +2290,14 @@ const AppState = struct {
         } else if (app_modes.ide.isEditorOnly(self.app_mode)) {
             self.active_kind = .editor;
         }
-        const initial_grid = self.terminalGridSize(layout.terminal.width, layout.terminal.height, 80, 24);
+        const initial_grid = app_terminal_grid.compute(
+            layout.terminal.width,
+            layout.terminal.height,
+            shell.terminalCellWidth(),
+            shell.terminalCellHeight(),
+            80,
+            24,
+        );
         const cols: u16 = initial_grid.cols;
         const rows: u16 = initial_grid.rows;
         const theme = &self.terminal_theme;
@@ -2337,18 +2359,6 @@ const AppState = struct {
         self.needs_redraw = true;
     }
 
-    fn terminalGridSize(self: *AppState, terminal_width: f32, terminal_height: f32, min_cols: u16, min_rows: u16) struct { cols: u16, rows: u16 } {
-        // Match terminal widget packing, which uses rounded logical cell steps
-        // for row/column placement in offscreen texture updates.
-        const cell_w = @as(f32, @floatFromInt(@max(1, @as(i32, @intFromFloat(std.math.round(self.shell.terminalCellWidth()))))));
-        const cell_h = @as(f32, @floatFromInt(@max(1, @as(i32, @intFromFloat(std.math.round(self.shell.terminalCellHeight()))))));
-        const cols_f = std.math.floor(@max(0.0, terminal_width) / cell_w);
-        const rows_f = std.math.floor(@max(0.0, terminal_height) / cell_h);
-        const cols_u: u16 = @intFromFloat(@max(@as(f32, @floatFromInt(min_cols)), cols_f));
-        const rows_u: u16 = @intFromFloat(@max(@as(f32, @floatFromInt(min_rows)), rows_f));
-        return .{ .cols = cols_u, .rows = rows_u };
-    }
-
     fn refreshTerminalSizing(self: *AppState) !void {
         if (self.terminalTabCount() == 0) return;
         const shell = self.shell;
@@ -2361,7 +2371,14 @@ const AppState = struct {
             layout.terminal.height,
             self.terminal_height,
         );
-        const grid = self.terminalGridSize(layout.terminal.width, effective_height, 1, 1);
+        const grid = app_terminal_grid.compute(
+            layout.terminal.width,
+            effective_height,
+            shell.terminalCellWidth(),
+            shell.terminalCellHeight(),
+            1,
+            1,
+        );
         const cols: u16 = grid.cols;
         const rows: u16 = grid.rows;
         if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
