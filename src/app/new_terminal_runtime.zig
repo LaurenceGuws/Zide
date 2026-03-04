@@ -1,0 +1,71 @@
+const app_modes = @import("modes/mod.zig");
+const app_terminal_grid = @import("terminal_grid.zig");
+const app_terminal_session_bootstrap = @import("terminal_session_bootstrap.zig");
+const app_terminal_tab_bar_sync_runtime = @import("terminal_tab_bar_sync_runtime.zig");
+const app_terminal_theme_apply = @import("terminal_theme_apply.zig");
+const app_ui_layout_runtime = @import("ui_layout_runtime.zig");
+const terminal_mod = @import("../terminal/core/terminal.zig");
+
+const TerminalSession = terminal_mod.TerminalSession;
+
+pub fn handle(state: anytype) !void {
+    const shell = state.shell;
+    const width = @as(f32, @floatFromInt(shell.width()));
+    const height = @as(f32, @floatFromInt(shell.height()));
+    const layout = app_ui_layout_runtime.computeLayout(state, width, height);
+    if (app_modes.ide.shouldUseTerminalWorkspace(state.app_mode)) {
+        state.active_kind = .terminal;
+    } else if (app_modes.ide.isEditorOnly(state.app_mode)) {
+        state.active_kind = .editor;
+    }
+    const initial_grid = app_terminal_grid.compute(
+        layout.terminal.width,
+        layout.terminal.height,
+        shell.terminalCellWidth(),
+        shell.terminalCellHeight(),
+        80,
+        24,
+    );
+    const cols: u16 = initial_grid.cols;
+    const rows: u16 = initial_grid.rows;
+    const theme = &state.terminal_theme;
+
+    if (app_modes.ide.shouldUseTerminalWorkspace(state.app_mode)) {
+        if (state.terminal_workspace) |*workspace| {
+            _ = try workspace.createTab(rows, cols);
+            const term = workspace.activeSession() orelse return error.TerminalWorkspaceNoActiveTab;
+            app_terminal_theme_apply.setSessionPalette(term, theme);
+            try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, shell);
+            const widget = app_terminal_session_bootstrap.initWidget(
+                term,
+                state.terminal_blink_style,
+                state.terminal_focus_report_window_events,
+                state.terminal_focus_report_pane_events,
+            );
+            try state.terminal_widgets.append(state.allocator, widget);
+            try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(state);
+            try app_terminal_theme_apply.notifyColorSchemeChanged(&state.terminal_widgets, &state.terminal_theme);
+            state.show_terminal = true;
+            return;
+        }
+        return error.TerminalWorkspaceMissing;
+    }
+
+    const term = try TerminalSession.initWithOptions(state.allocator, rows, cols, .{
+        .scrollback_rows = state.terminal_scrollback_rows,
+        .cursor_style = state.terminal_cursor_style,
+    });
+    app_terminal_theme_apply.setSessionPalette(term, theme);
+    try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, shell);
+    try state.terminals.append(state.allocator, term);
+    const widget = app_terminal_session_bootstrap.initWidget(
+        term,
+        state.terminal_blink_style,
+        state.terminal_focus_report_window_events,
+        state.terminal_focus_report_pane_events,
+    );
+    try state.terminal_widgets.append(state.allocator, widget);
+    try app_terminal_theme_apply.notifyColorSchemeChanged(&state.terminal_widgets, &state.terminal_theme);
+
+    state.show_terminal = true;
+}

@@ -11,7 +11,6 @@ const app_active_editor_frame = @import("app/active_editor_frame.zig");
 const app_editor_shortcuts_frame = @import("app/editor_shortcuts_frame.zig");
 const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
-const app_terminal_grid = @import("app/terminal_grid.zig");
 const app_terminal_runtime_intents = @import("app/terminal_runtime_intents.zig");
 const app_terminal_intent_route_runtime = @import("app/terminal_intent_route_runtime.zig");
 const app_terminal_active_widget = @import("app/terminal_active_widget.zig");
@@ -26,12 +25,11 @@ const app_terminal_tab_intents = @import("app/terminal_tab_intents.zig");
 const app_terminal_resize = @import("app/terminal_resize.zig");
 const app_visible_terminal_frame = @import("app/visible_terminal_frame.zig");
 const app_visible_terminal_frame_hooks_runtime = @import("app/visible_terminal_frame_hooks_runtime.zig");
-const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
 const app_terminal_widget_input_runtime = @import("app/terminal_widget_input_runtime.zig");
 const app_terminal_widget_input_hook_runtime = @import("app/terminal_widget_input_hook_runtime.zig");
 const app_terminal_close_confirm_input = @import("app/terminal_close_confirm_input.zig");
 const app_mode_adapter_sync_runtime = @import("app/mode_adapter_sync_runtime.zig");
-const app_terminal_theme_apply = @import("app/terminal_theme_apply.zig");
+const app_new_terminal_runtime = @import("app/new_terminal_runtime.zig");
 const app_poll_visible_terminal_sessions_runtime = @import("app/poll_visible_terminal_sessions_runtime.zig");
 const app_search_panel_input = @import("app/search_panel_input.zig");
 const app_search_panel_frame_runtime = @import("app/search_panel_frame_runtime.zig");
@@ -576,66 +574,7 @@ const AppState = struct {
     }
 
     pub fn newTerminal(self: *AppState) !void {
-        // Calculate terminal size based on UI
-        const shell = self.shell;
-        const width = @as(f32, @floatFromInt(shell.width()));
-        const height = @as(f32, @floatFromInt(shell.height()));
-        const layout = app_ui_layout_runtime.computeLayout(self, width, height);
-        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-            self.active_kind = .terminal;
-        } else if (app_modes.ide.isEditorOnly(self.app_mode)) {
-            self.active_kind = .editor;
-        }
-        const initial_grid = app_terminal_grid.compute(
-            layout.terminal.width,
-            layout.terminal.height,
-            shell.terminalCellWidth(),
-            shell.terminalCellHeight(),
-            80,
-            24,
-        );
-        const cols: u16 = initial_grid.cols;
-        const rows: u16 = initial_grid.rows;
-        const theme = &self.terminal_theme;
-
-        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-            if (self.terminal_workspace) |*workspace| {
-                _ = try workspace.createTab(rows, cols);
-                const term = workspace.activeSession() orelse return error.TerminalWorkspaceNoActiveTab;
-                app_terminal_theme_apply.setSessionPalette(term, theme);
-                try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, shell);
-                const widget = app_terminal_session_bootstrap.initWidget(
-                    term,
-                    self.terminal_blink_style,
-                    self.terminal_focus_report_window_events,
-                    self.terminal_focus_report_pane_events,
-                );
-                try self.terminal_widgets.append(self.allocator, widget);
-                try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(self);
-                try app_terminal_theme_apply.notifyColorSchemeChanged(&self.terminal_widgets, &self.terminal_theme);
-                self.show_terminal = true;
-                return;
-            }
-            return error.TerminalWorkspaceMissing;
-        }
-
-        const term = try TerminalSession.initWithOptions(self.allocator, rows, cols, .{
-            .scrollback_rows = self.terminal_scrollback_rows,
-            .cursor_style = self.terminal_cursor_style,
-        });
-        app_terminal_theme_apply.setSessionPalette(term, theme);
-        try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, shell);
-        try self.terminals.append(self.allocator, term);
-        const widget = app_terminal_session_bootstrap.initWidget(
-            term,
-            self.terminal_blink_style,
-            self.terminal_focus_report_window_events,
-            self.terminal_focus_report_pane_events,
-        );
-        try self.terminal_widgets.append(self.allocator, widget);
-        try app_terminal_theme_apply.notifyColorSchemeChanged(&self.terminal_widgets, &self.terminal_theme);
-
-        self.show_terminal = true;
+        try app_new_terminal_runtime.handle(self);
     }
 
     pub fn run(self: *AppState) !void {
