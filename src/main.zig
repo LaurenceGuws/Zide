@@ -14,6 +14,7 @@ const app_terminal_active_widget = @import("app/terminal_active_widget.zig");
 const app_terminal_tab_bar_sync = @import("app/terminal_tab_bar_sync.zig");
 const app_terminal_tab_ops = @import("app/terminal_tab_ops.zig");
 const app_terminal_tabs_runtime = @import("app/terminal_tabs_runtime.zig");
+const app_terminal_surface_gate = @import("app/terminal_surface_gate.zig");
 const app_terminal_shortcut_policy = @import("app/terminal_shortcut_policy.zig");
 const app_terminal_shortcut_runtime = @import("app/terminal_shortcut_runtime.zig");
 const app_terminal_tab_intents = @import("app/terminal_tab_intents.zig");
@@ -1065,7 +1066,7 @@ const AppState = struct {
         self: *AppState,
         input_batch: *shared_types.input.InputBatch,
     ) !void {
-        if (!app_modes.ide.supportsTerminalSurface(self.app_mode) or !self.show_terminal or app_terminal_tabs_runtime.count(self.app_mode, self.terminal_workspace, self.terminals.items.len) == 0) return;
+        if (!app_terminal_surface_gate.hasVisibleTerminalTabs(self.app_mode, self.show_terminal, self.terminal_workspace, self.terminals.items.len)) return;
 
         if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
             if (self.terminal_workspace) |*workspace| {
@@ -1147,7 +1148,7 @@ const AppState = struct {
         terminal_close_modal_active: bool,
         now: f64,
     ) !void {
-        if (!app_modes.ide.supportsTerminalSurface(self.app_mode) or !self.show_terminal or app_terminal_tabs_runtime.count(self.app_mode, self.terminal_workspace, self.terminals.items.len) == 0) return;
+        if (!app_terminal_surface_gate.hasVisibleTerminalTabs(self.app_mode, self.show_terminal, self.terminal_workspace, self.terminals.items.len)) return;
 
         try self.pollVisibleTerminalSessions(input_batch);
         if (self.activeTerminalWidget()) |term_widget| {
@@ -1643,7 +1644,7 @@ const AppState = struct {
         const terminal_close_modal_active = self.terminalCloseConfirmActive();
         const suppress_terminal_shortcuts = self.collectSuppressTerminalShortcutsForFocus(focus);
 
-        if (!terminal_close_modal_active and focus == .terminal and app_modes.ide.hasTerminalInputScope(self.app_mode, self.show_terminal) and app_terminal_tabs_runtime.count(self.app_mode, self.terminal_workspace, self.terminals.items.len) > 0) {
+        if (!terminal_close_modal_active and focus == .terminal and app_terminal_surface_gate.hasTerminalInputScopeWithTabs(self.app_mode, self.show_terminal, self.terminal_workspace, self.terminals.items.len)) {
             if (try self.handleTerminalClipboardShortcutsFrame(shell, input_batch, now)) {
                 handled_shortcut = true;
             }
@@ -2748,7 +2749,7 @@ const AppState = struct {
         }
 
         // Draw terminal if shown
-        if (app_modes.ide.supportsTerminalSurface(self.app_mode) and self.show_terminal and app_terminal_tabs_runtime.count(self.app_mode, self.terminal_workspace, self.terminals.items.len) > 0) {
+        if (app_terminal_surface_gate.hasVisibleTerminalTabs(self.app_mode, self.show_terminal, self.terminal_workspace, self.terminals.items.len)) {
             const term_y = layout.terminal.y;
 
             // Terminal separator
