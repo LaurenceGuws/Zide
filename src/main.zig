@@ -1,9 +1,9 @@
 const std = @import("std");
 const app_bootstrap = @import("app/bootstrap.zig");
 const app_editor_actions = @import("app/editor_actions.zig");
+const app_deinit_runtime = @import("app/deinit_runtime.zig");
 const app_open_file_runtime = @import("app/open_file_runtime.zig");
 const app_editor_intent_route = @import("app/editor_intent_route.zig");
-const app_editor_create_intent_runtime = @import("app/editor_create_intent_runtime.zig");
 const app_editor_display_prepare = @import("app/editor_display_prepare.zig");
 const app_editor_input_runtime = @import("app/editor_input_runtime.zig");
 const app_editor_frame_hooks_runtime = @import("app/editor_frame_hooks_runtime.zig");
@@ -30,6 +30,7 @@ const app_terminal_widget_input_runtime = @import("app/terminal_widget_input_run
 const app_terminal_widget_input_hook_runtime = @import("app/terminal_widget_input_hook_runtime.zig");
 const app_terminal_close_confirm_input = @import("app/terminal_close_confirm_input.zig");
 const app_mode_adapter_sync_runtime = @import("app/mode_adapter_sync_runtime.zig");
+const app_new_editor_runtime = @import("app/new_editor_runtime.zig");
 const app_new_terminal_runtime = @import("app/new_terminal_runtime.zig");
 const app_poll_visible_terminal_sessions_runtime = @import("app/poll_visible_terminal_sessions_runtime.zig");
 const app_search_panel_input = @import("app/search_panel_input.zig");
@@ -492,52 +493,11 @@ const AppState = struct {
     }
 
     pub fn deinit(self: *AppState) void {
-        if (self.font_sample_view) |*view| {
-            view.deinit();
-        }
-        for (self.editors.items) |e| {
-            e.deinit();
-        }
-        self.editors.deinit(self.allocator);
-
-        for (self.terminal_widgets.items) |*widget| {
-            widget.deinit();
-        }
-        self.terminal_widgets.deinit(self.allocator);
-        if (self.terminal_workspace) |*workspace| {
-            workspace.deinit();
-            self.terminal_workspace = null;
-        } else {
-            for (self.terminals.items) |t| {
-                t.deinit();
-            }
-        }
-        self.terminals.deinit(self.allocator);
-
-        self.tab_bar.deinit();
-        self.shell.deinit(self.allocator);
-        self.editor_render_cache.deinit();
-        self.editor_cluster_cache.deinit();
-        self.grammar_manager.deinit();
-        self.input_router.deinit();
-        self.editor_mode_adapter.deinit(self.allocator);
-        self.terminal_mode_adapter.deinit(self.allocator);
-        self.search_panel.deinit(self.allocator);
-        if (self.perf_file_path) |path| {
-            self.allocator.free(path);
-        }
-        app_logger.deinit();
-        self.allocator.destroy(self);
+        app_deinit_runtime.handle(self);
     }
 
     pub fn newEditor(self: *AppState) !void {
-        _ = try app_editor_create_intent_runtime.routeCreateAndSync(self);
-        const editor = try Editor.init(self.allocator, &self.grammar_manager);
-        try self.editors.append(self.allocator, editor);
-        try self.tab_bar.addTab("untitled", .editor);
-        self.active_tab = self.tab_bar.tabs.items.len - 1;
-        self.active_kind = .editor;
-        try app_mode_adapter_sync_runtime.sync(self);
+        try app_new_editor_runtime.handle(self);
     }
 
     pub fn openFile(self: *AppState, path: []const u8) !void {
