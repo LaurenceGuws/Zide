@@ -2191,20 +2191,29 @@ const AppState = struct {
                     const in_terminal = layout.terminal.height > 0 and mouse.y >= term_y and mouse.y <= term_y + layout.terminal.height;
 
                     if (in_terminal and self.show_terminal) {
-                        self.active_kind = .terminal;
-                        self.needs_redraw = true;
-                        self.metrics.noteInput(now);
+                        if (self.active_kind != .terminal) {
+                            self.active_kind = .terminal;
+                            try self.syncModeAdaptersFromTabBar();
+                            self.needs_redraw = true;
+                            self.metrics.noteInput(now);
+                        }
                     } else if (in_editor) {
-                        self.active_kind = .editor;
-                        self.needs_redraw = true;
-                        self.metrics.noteInput(now);
+                        if (self.active_kind != .editor) {
+                            self.active_kind = .editor;
+                            try self.syncModeAdaptersFromTabBar();
+                            self.needs_redraw = true;
+                            self.metrics.noteInput(now);
+                        }
                     }
                 },
                 .terminal => {
                     if (self.terminalTabBarVisible()) {
                         _ = self.tab_bar.beginDrag(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width);
                     }
-                    self.active_kind = .terminal;
+                    if (self.active_kind != .terminal) {
+                        self.active_kind = .terminal;
+                        try self.syncModeAdaptersFromTabBar();
+                    }
                     if (self.terminal_workspace) |*workspace| {
                         if (workspace.activeTabId()) |active_tab_id| {
                             self.applyTerminalModeTabAction(.{ .activate = active_tab_id });
@@ -2212,7 +2221,10 @@ const AppState = struct {
                     }
                 },
                 .editor => {
-                    self.active_kind = .editor;
+                    if (self.active_kind != .editor) {
+                        self.active_kind = .editor;
+                        try self.syncModeAdaptersFromTabBar();
+                    }
                 },
             }
 
