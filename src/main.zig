@@ -11,7 +11,7 @@ const app_config_reload_notice = @import("app/config_reload_notice.zig");
 const app_terminal_grid = @import("app/terminal_grid.zig");
 const app_terminal_runtime_intents = @import("app/terminal_runtime_intents.zig");
 const app_terminal_active_widget = @import("app/terminal_active_widget.zig");
-const app_terminal_clipboard_shortcuts = @import("app/terminal_clipboard_shortcuts.zig");
+const app_terminal_clipboard_shortcuts_frame = @import("app/terminal_clipboard_shortcuts_frame.zig");
 const app_terminal_tab_bar_sync = @import("app/terminal_tab_bar_sync.zig");
 const app_terminal_tab_ops = @import("app/terminal_tab_ops.zig");
 const app_terminal_tabs_runtime = @import("app/terminal_tabs_runtime.zig");
@@ -1369,36 +1369,6 @@ const AppState = struct {
         return handled;
     }
 
-    fn handleTerminalClipboardShortcutsFrame(
-        self: *AppState,
-        shell: *Shell,
-        input_batch: *shared_types.input.InputBatch,
-        now: f64,
-    ) !bool {
-        if (app_terminal_active_widget.resolveActive(
-            self.app_mode,
-            &self.terminal_workspace,
-            self.terminals.items.len,
-            self.terminal_widgets.items,
-        )) |term_widget| {
-            if (input_batch.events.items.len > 0) {
-                term_widget.noteInput(now);
-            }
-            const result = try app_terminal_clipboard_shortcuts.handle(
-                self.input_router.actionsSlice(),
-                self.allocator,
-                self.app_mode,
-                &self.terminal_workspace,
-                self.terminals.items,
-                shell,
-                term_widget,
-            );
-            if (result.needs_redraw) self.needs_redraw = true;
-            return result.handled;
-        }
-        return false;
-    }
-
     fn handleEditorShortcutActionsFrame(
         self: *AppState,
         shell: *Shell,
@@ -1583,7 +1553,19 @@ const AppState = struct {
         const suppress_terminal_shortcuts = app_terminal_shortcut_suppress.forFocus(focus, self.input_router.actionsSlice());
 
         if (!terminal_close_modal_active and focus == .terminal and app_terminal_surface_gate.hasTerminalInputScopeWithTabs(self.app_mode, self.show_terminal, self.terminal_workspace, self.terminals.items.len)) {
-            if (try self.handleTerminalClipboardShortcutsFrame(shell, input_batch, now)) {
+            const clipboard_result = try app_terminal_clipboard_shortcuts_frame.handle(
+                self.input_router.actionsSlice(),
+                self.allocator,
+                self.app_mode,
+                &self.terminal_workspace,
+                self.terminals.items,
+                self.terminal_widgets.items,
+                shell,
+                input_batch.events.items.len,
+                now,
+            );
+            if (clipboard_result.needs_redraw) self.needs_redraw = true;
+            if (clipboard_result.handled) {
                 handled_shortcut = true;
             }
         }
