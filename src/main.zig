@@ -6,6 +6,7 @@ const app_editor_intent_route = @import("app/editor_intent_route.zig");
 const app_editor_create_intent_runtime = @import("app/editor_create_intent_runtime.zig");
 const app_editor_display_prepare = @import("app/editor_display_prepare.zig");
 const app_editor_input_runtime = @import("app/editor_input_runtime.zig");
+const app_editor_frame_hooks_runtime = @import("app/editor_frame_hooks_runtime.zig");
 const app_editor_visible_caches_runtime = @import("app/editor_visible_caches_runtime.zig");
 const app_active_editor_frame = @import("app/active_editor_frame.zig");
 const app_editor_shortcuts_frame = @import("app/editor_shortcuts_frame.zig");
@@ -1579,7 +1580,7 @@ const AppState = struct {
                                                                                         if (search_panel_result.needs_redraw) inner_state.needs_redraw = true;
                                                                                         if (search_panel_result.note_input) inner_state.metrics.noteInput(at);
                                                                                         const search_panel_consumed_input = search_panel_result.consumed_input;
-                                                                                        const editor_frame_result = try app_active_editor_frame.handle(
+                                                                                        const editor_frame_result = try app_editor_frame_hooks_runtime.handle(
                                                                                             inner_state.app_mode,
                                                                                             inner_state.active_kind,
                                                                                             inner_state.editors.items,
@@ -1596,84 +1597,17 @@ const AppState = struct {
                                                                                             inner_state.perf_frames_total,
                                                                                             inner_state.perf_scroll_delta,
                                                                                             at,
-                                                                                            @ptrCast(inner_state),
+                                                                                            &inner_state.editor_render_cache,
+                                                                                            inner_state.editor_highlight_budget,
+                                                                                            inner_state.editor_width_budget,
                                                                                             .{
-                                                                                                .handle_editor_scrollbar_input = struct {
-                                                                                                    fn call(
-                                                                                                        route_raw: *anyopaque,
-                                                                                                        widget: *EditorWidget,
-                                                                                                        editor_shell: *Shell,
-                                                                                                        editor_layout: layout_types.WidgetLayout,
-                                                                                                        editor_mouse: shared_types.input.MousePos,
-                                                                                                        editor_input_batch: *shared_types.input.InputBatch,
-                                                                                                        editor_now: f64,
-                                                                                                    ) bool {
-                                                                                                        const route_state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        const handled = app_editor_input_runtime.handleScrollbarInput(
-                                                                                                            widget,
-                                                                                                            editor_shell,
-                                                                                                            editor_layout,
-                                                                                                            editor_mouse,
-                                                                                                            editor_input_batch,
-                                                                                                            &route_state.editor_hscroll_dragging,
-                                                                                                            &route_state.editor_hscroll_grab_offset,
-                                                                                                            &route_state.editor_vscroll_dragging,
-                                                                                                            &route_state.editor_vscroll_grab_offset,
-                                                                                                        );
-                                                                                                        if (handled) {
-                                                                                                            route_state.needs_redraw = true;
-                                                                                                            route_state.metrics.noteInput(editor_now);
-                                                                                                        }
-                                                                                                        return handled;
-                                                                                                    }
-                                                                                                }.call,
-                                                                                                .handle_editor_mouse_selection_input = struct {
-                                                                                                    fn call(
-                                                                                                        route_raw: *anyopaque,
-                                                                                                        widget: *EditorWidget,
-                                                                                                        editor_shell: *Shell,
-                                                                                                        editor_layout: layout_types.WidgetLayout,
-                                                                                                        editor_mouse: shared_types.input.MousePos,
-                                                                                                        editor_input_batch: *shared_types.input.InputBatch,
-                                                                                                        scrollbar_blocking: bool,
-                                                                                                        editor_now: f64,
-                                                                                                    ) void {
-                                                                                                        const route_state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        const result = app_editor_input_runtime.handleMouseSelectionInput(
-                                                                                                            widget,
-                                                                                                            editor_shell,
-                                                                                                            editor_layout,
-                                                                                                            editor_mouse,
-                                                                                                            editor_input_batch,
-                                                                                                            scrollbar_blocking,
-                                                                                                            .{
-                                                                                                                .dragging = &route_state.editor_dragging,
-                                                                                                                .drag_start = &route_state.editor_drag_start,
-                                                                                                                .drag_rect = &route_state.editor_drag_rect,
-                                                                                                            },
-                                                                                                        );
-                                                                                                        if (result.needs_redraw) route_state.needs_redraw = true;
-                                                                                                        if (result.note_input) route_state.metrics.noteInput(editor_now);
-                                                                                                    }
-                                                                                                }.call,
-                                                                                                .precompute_editor_visible_caches = struct {
-                                                                                                    fn call(
-                                                                                                        route_raw: *anyopaque,
-                                                                                                        widget: *EditorWidget,
-                                                                                                        editor_shell: *Shell,
-                                                                                                        editor_layout: layout_types.WidgetLayout,
-                                                                                                    ) void {
-                                                                                                        const route_state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        app_editor_visible_caches_runtime.precompute(
-                                                                                                            widget,
-                                                                                                            editor_shell,
-                                                                                                            editor_layout,
-                                                                                                            &route_state.editor_render_cache,
-                                                                                                            route_state.editor_highlight_budget,
-                                                                                                            route_state.editor_width_budget,
-                                                                                                        );
-                                                                                                    }
-                                                                                                }.call,
+                                                                                                .editor_hscroll_dragging = &inner_state.editor_hscroll_dragging,
+                                                                                                .editor_hscroll_grab_offset = &inner_state.editor_hscroll_grab_offset,
+                                                                                                .editor_vscroll_dragging = &inner_state.editor_vscroll_dragging,
+                                                                                                .editor_vscroll_grab_offset = &inner_state.editor_vscroll_grab_offset,
+                                                                                                .editor_dragging = &inner_state.editor_dragging,
+                                                                                                .editor_drag_start = &inner_state.editor_drag_start,
+                                                                                                .editor_drag_rect = &inner_state.editor_drag_rect,
                                                                                             },
                                                                                         );
                                                                                         if (editor_frame_result.clear_editor_cluster_cache) inner_state.editor_cluster_cache.clear();
