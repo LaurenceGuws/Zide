@@ -8,6 +8,5 @@ pub fn run(allocator: std.mem.Allocator, comptime app_mode: AppMode) !void {
     var app = try AppState.initFocused(allocator, app_mode);
     defer app.deinit();
 
-    try app.run();
+    try app.runFocused(app_mode);
 }
-

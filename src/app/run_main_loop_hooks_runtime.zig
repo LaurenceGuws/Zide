@@ -26,3 +26,26 @@ pub fn run(state: anytype) !void {
     );
     _ = Shell;
 }
+
+pub fn runFocused(state: anytype, comptime app_mode: @import("bootstrap.zig").AppMode) !void {
+    const State = @TypeOf(state);
+    const RuntimeCtx = struct {
+        state: State,
+    };
+    var runtime_ctx = RuntimeCtx{
+        .state = state,
+    };
+    try app_run_loop_driver.runMainLoop(
+        state.shell,
+        @ptrCast(&runtime_ctx),
+        .{
+            .run_one_frame = struct {
+                fn inner(raw: *anyopaque) !bool {
+                    const rc: *RuntimeCtx = @ptrCast(@alignCast(raw));
+                    return try app_run_one_frame_hooks_runtime.runFocused(rc.state, app_mode);
+                }
+            }.inner,
+        },
+    );
+    _ = Shell;
+}
