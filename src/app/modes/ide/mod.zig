@@ -1,6 +1,7 @@
 const host = @import("host.zig");
 const layout_policy = @import("layout_policy.zig");
 const tab_intents = @import("tab_intents.zig");
+const parity = @import("parity.zig");
 
 pub const IdeHost = host.IdeHost;
 pub const ActiveMode = host.ActiveMode;
@@ -37,3 +38,6 @@ pub const TerminalStrip = layout_policy.TerminalStrip;
 pub const ReorderDragMeta = tab_intents.ReorderDragMeta;
 pub const closeIntentForActiveTab = tab_intents.closeIntentForActiveTab;
 pub const reorderIntentForDrag = tab_intents.reorderIntentForDrag;
+pub const Mismatch = parity.Mismatch;
+pub const KindParity = parity.KindParity;
+pub const evaluateKind = parity.evaluateKind;

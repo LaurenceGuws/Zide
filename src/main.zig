@@ -966,21 +966,8 @@ const AppState = struct {
     }
 
     fn syncModeAdaptersFromTabBar(self: *AppState) !void {
-        var projections = std.ArrayList(app_modes.runtime_bridge.AppTabProjection).empty;
+        var projections = try self.buildTabProjections();
         defer projections.deinit(self.allocator);
-
-        for (self.tab_bar.tabs.items) |tab| {
-            const projection: app_modes.runtime_bridge.AppTabProjection = .{
-                .kind = switch (tab.kind) {
-                    .editor => .editor,
-                    .terminal => .terminal,
-                },
-                .id = tab.id,
-                .title = tab.title,
-                .alive = true,
-            };
-            try projections.append(self.allocator, projection);
-        }
 
         const active_projection: app_modes.runtime_bridge.ActiveProjection = .{
             .kind = self.active_kind,
@@ -998,6 +985,23 @@ const AppState = struct {
             active_projection,
         );
         self.logModeAdapterParity();
+    }
+
+    fn buildTabProjections(self: *AppState) !std.ArrayList(app_modes.runtime_bridge.AppTabProjection) {
+        var projections = std.ArrayList(app_modes.runtime_bridge.AppTabProjection).empty;
+        try projections.ensureTotalCapacity(self.allocator, self.tab_bar.tabs.items.len);
+        for (self.tab_bar.tabs.items) |tab| {
+            projections.appendAssumeCapacity(.{
+                .kind = switch (tab.kind) {
+                    .editor => .editor,
+                    .terminal => .terminal,
+                },
+                .id = tab.id,
+                .title = tab.title,
+                .alive = true,
+            });
+        }
+        return projections;
     }
 
     fn applyTerminalModeTabAction(self: *AppState, tab_action: app_modes.shared.actions.TabAction) void {
@@ -1028,101 +1032,60 @@ const AppState = struct {
 
         const editor_snap = self.editor_mode_adapter.asContract().snapshot(self.allocator) catch return;
         const terminal_snap = self.terminal_mode_adapter.asContract().snapshot(self.allocator) catch return;
+        var projections = self.buildTabProjections() catch return;
+        defer projections.deinit(self.allocator);
 
-        var expected_editor: usize = 0;
-        var expected_terminal: usize = 0;
-        var active_editor: ?u64 = null;
-        var active_terminal: ?u64 = null;
-        if (self.tab_bar.tabs.items.len > 0 and self.tab_bar.active_index < self.tab_bar.tabs.items.len) {
-            const active = self.tab_bar.tabs.items[self.tab_bar.active_index];
-            if (active.kind == .editor) {
-                active_editor = active.id;
-            } else {
-                active_terminal = active.id;
-            }
-        }
-        for (self.tab_bar.tabs.items) |tab| {
-            switch (tab.kind) {
-                .editor => expected_editor += 1,
-                .terminal => expected_terminal += 1,
-            }
-        }
-
-        const Mismatch = struct {
-            index: usize,
-            expected_id: ?u64,
-            actual_id: ?u64,
-            expected_title: []const u8,
-            actual_title: []const u8,
+        const active_projection: app_modes.runtime_bridge.ActiveProjection = .{
+            .kind = self.active_kind,
+            .id = if (self.tab_bar.tabs.items.len > 0 and self.tab_bar.active_index < self.tab_bar.tabs.items.len)
+                self.tab_bar.tabs.items[self.tab_bar.active_index].id
+            else
+                null,
         };
-        const findFirstMismatch = struct {
-            fn run(tabs: []const TabBar.Tab, mode_tabs: []const app_modes.shared.contracts.ModeTab, kind: TabBar.Tab.Kind) ?Mismatch {
-                var expected_idx: usize = 0;
-                for (tabs) |tab| {
-                    if (tab.kind != kind) continue;
-                    if (expected_idx >= mode_tabs.len) {
-                        return .{
-                            .index = expected_idx,
-                            .expected_id = tab.id,
-                            .actual_id = null,
-                            .expected_title = tab.title,
-                            .actual_title = "<missing>",
-                        };
-                    }
-                    const actual = mode_tabs[expected_idx];
-                    if (actual.id != tab.id or !std.mem.eql(u8, actual.title, tab.title)) {
-                        return .{
-                            .index = expected_idx,
-                            .expected_id = tab.id,
-                            .actual_id = actual.id,
-                            .expected_title = tab.title,
-                            .actual_title = actual.title,
-                        };
-                    }
-                    expected_idx += 1;
-                }
-                if (expected_idx < mode_tabs.len) {
-                    const extra = mode_tabs[expected_idx];
-                    return .{
-                        .index = expected_idx,
-                        .expected_id = null,
-                        .actual_id = extra.id,
-                        .expected_title = "<missing>",
-                        .actual_title = extra.title,
-                    };
-                }
-                return null;
-            }
-        }.run;
 
-        const editor_mismatch = findFirstMismatch(self.tab_bar.tabs.items, editor_snap.tabs, .editor);
-        const terminal_mismatch = findFirstMismatch(self.tab_bar.tabs.items, terminal_snap.tabs, .terminal);
+        const editor_parity = app_modes.ide.evaluateKind(
+            projections.items,
+            .editor,
+            active_projection,
+            editor_snap.tabs,
+            editor_snap.active_tab,
+        );
+        const terminal_parity = app_modes.ide.evaluateKind(
+            projections.items,
+            .terminal,
+            active_projection,
+            terminal_snap.tabs,
+            terminal_snap.active_tab,
+        );
 
-        if (editor_snap.tabs.len != expected_editor or terminal_snap.tabs.len != expected_terminal or
-            editor_snap.active_tab != active_editor or terminal_snap.active_tab != active_terminal or
-            editor_mismatch != null or terminal_mismatch != null)
+        if (editor_parity.expected_count != editor_parity.actual_count or
+            editor_parity.expected_active != editor_parity.actual_active or
+            editor_parity.mismatch != null or
+            terminal_parity.expected_count != terminal_parity.actual_count or
+            terminal_parity.expected_active != terminal_parity.actual_active or
+            terminal_parity.mismatch != null)
         {
             log.logf(
                 "adapter parity mismatch editor={d}/{d} active={?d}/{?d} e_mismatch_idx={?d} e_id={?d}/{?d} e_title={s}/{s} terminal={d}/{d} active={?d}/{?d} t_mismatch_idx={?d} t_id={?d}/{?d} t_title={s}/{s}",
                 .{
-                    editor_snap.tabs.len,
-                    expected_editor,
-                    editor_snap.active_tab,
-                    active_editor,
-                    if (editor_mismatch) |m| m.index else null,
-                    if (editor_mismatch) |m| m.actual_id else null,
-                    if (editor_mismatch) |m| m.expected_id else null,
-                    if (editor_mismatch) |m| m.actual_title else "<ok>",
-                    if (editor_mismatch) |m| m.expected_title else "<ok>",
-                    terminal_snap.tabs.len,
-                    expected_terminal,
-                    terminal_snap.active_tab,
-                    active_terminal,
-                    if (terminal_mismatch) |m| m.index else null,
-                    if (terminal_mismatch) |m| m.actual_id else null,
-                    if (terminal_mismatch) |m| m.expected_id else null,
-                    if (terminal_mismatch) |m| m.actual_title else "<ok>",
-                    if (terminal_mismatch) |m| m.expected_title else "<ok>",
+                    editor_parity.actual_count,
+                    editor_parity.expected_count,
+                    editor_parity.actual_active,
+                    editor_parity.expected_active,
+                    if (editor_parity.mismatch) |m| m.index else null,
+                    if (editor_parity.mismatch) |m| m.actual_id else null,
+                    if (editor_parity.mismatch) |m| m.expected_id else null,
+                    if (editor_parity.mismatch) |m| m.actual_title else "<ok>",
+                    if (editor_parity.mismatch) |m| m.expected_title else "<ok>",
+                    terminal_parity.actual_count,
+                    terminal_parity.expected_count,
+                    terminal_parity.actual_active,
+                    terminal_parity.expected_active,
+                    if (terminal_parity.mismatch) |m| m.index else null,
+                    if (terminal_parity.mismatch) |m| m.actual_id else null,
+                    if (terminal_parity.mismatch) |m| m.expected_id else null,
+                    if (terminal_parity.mismatch) |m| m.actual_title else "<ok>",
+                    if (terminal_parity.mismatch) |m| m.expected_title else "<ok>",
                 },
             );
         }
