@@ -45,6 +45,7 @@ const app_mouse_pressed_frame = @import("app/mouse_pressed_frame.zig");
 const app_mouse_pressed_routing_runtime = @import("app/mouse_pressed_routing_runtime.zig");
 const app_input_actions_frame_runtime = @import("app/input_actions_frame_runtime.zig");
 const app_tab_drag_input_runtime = @import("app/tab_drag_input_runtime.zig");
+const app_active_view_runtime = @import("app/active_view_runtime.zig");
 const app_pointer_activity_frame = @import("app/pointer_activity_frame.zig");
 const app_shortcut_action_runtime = @import("app/shortcut_action_runtime.zig");
 const app_terminal_split_resize_frame = @import("app/terminal_split_resize_frame.zig");
@@ -1569,35 +1570,24 @@ const AppState = struct {
                                                                                         at: f64,
                                                                                     ) !void {
                                                                                         const inner_state: *AppState = @ptrCast(@alignCast(inner_raw));
-                                                                                        const search_panel_result = try app_search_panel_frame_runtime.handle(
+                                                                                        try app_active_view_runtime.handle(
                                                                                             inner_state.allocator,
                                                                                             &inner_state.search_panel.active,
                                                                                             &inner_state.search_panel.query,
                                                                                             inner_state.editors.items,
                                                                                             inner_state.active_tab,
-                                                                                            frame_input_batch,
-                                                                                        );
-                                                                                        if (search_panel_result.clear_editor_cluster_cache) inner_state.editor_cluster_cache.clear();
-                                                                                        if (search_panel_result.needs_redraw) inner_state.needs_redraw = true;
-                                                                                        if (search_panel_result.note_input) inner_state.metrics.noteInput(at);
-                                                                                        const search_panel_consumed_input = search_panel_result.consumed_input;
-                                                                                        const editor_frame_result = try app_editor_frame_hooks_runtime.handle(
                                                                                             inner_state.app_mode,
                                                                                             inner_state.active_kind,
-                                                                                            inner_state.editors.items,
-                                                                                            inner_state.active_tab,
                                                                                             &inner_state.editor_cluster_cache,
                                                                                             inner_state.editor_wrap,
                                                                                             frame_shell,
                                                                                             layout,
                                                                                             mouse,
                                                                                             frame_input_batch,
-                                                                                            search_panel_consumed_input,
                                                                                             inner_state.perf_mode,
-                                                                                            inner_state.perf_frames_done,
+                                                                                            &inner_state.perf_frames_done,
                                                                                             inner_state.perf_frames_total,
                                                                                             inner_state.perf_scroll_delta,
-                                                                                            at,
                                                                                             &inner_state.editor_render_cache,
                                                                                             inner_state.editor_highlight_budget,
                                                                                             inner_state.editor_width_budget,
@@ -1610,30 +1600,19 @@ const AppState = struct {
                                                                                                 .editor_drag_start = &inner_state.editor_drag_start,
                                                                                                 .editor_drag_rect = &inner_state.editor_drag_rect,
                                                                                             },
-                                                                                        );
-                                                                                        if (editor_frame_result.clear_editor_cluster_cache) inner_state.editor_cluster_cache.clear();
-                                                                                        if (editor_frame_result.needs_redraw) inner_state.needs_redraw = true;
-                                                                                        if (editor_frame_result.note_input) inner_state.metrics.noteInput(at);
-                                                                                        if (editor_frame_result.perf_frames_done_inc) inner_state.perf_frames_done +|= 1;
-
-                                                                                        try app_visible_terminal_frame_hooks_runtime.handle(
-                                                                                            inner_state.app_mode,
                                                                                             inner_state.show_terminal,
                                                                                             &inner_state.terminal_workspace,
                                                                                             inner_state.terminals.items,
                                                                                             inner_state.terminal_widgets.items,
                                                                                             inner_state.tab_bar.isDragging(),
-                                                                                            inner_state.active_kind,
-                                                                                            frame_shell,
-                                                                                            layout,
-                                                                                            frame_input_batch,
-                                                                                            search_panel_consumed_input,
                                                                                             frame_suppress_terminal_shortcuts,
                                                                                             frame_terminal_close_modal_active,
-                                                                                            at,
                                                                                             inner_state.allocator,
                                                                                             &inner_state.terminal_scroll_dragging,
                                                                                             &inner_state.terminal_scroll_grab_offset,
+                                                                                            at,
+                                                                                            &inner_state.needs_redraw,
+                                                                                            &inner_state.metrics,
                                                                                             @ptrCast(inner_state),
                                                                                             .{
                                                                                                 .open_file = struct {
@@ -1646,18 +1625,6 @@ const AppState = struct {
                                                                                                     fn call(open_raw: *anyopaque, path: []const u8, line_1: usize, col_1: ?usize) !void {
                                                                                                         const state: *AppState = @ptrCast(@alignCast(open_raw));
                                                                                                         try state.openFileAt(path, line_1, col_1);
-                                                                                                    }
-                                                                                                }.call,
-                                                                                                .mark_redraw = struct {
-                                                                                                    fn call(mark_raw: *anyopaque) void {
-                                                                                                        const state: *AppState = @ptrCast(@alignCast(mark_raw));
-                                                                                                        state.needs_redraw = true;
-                                                                                                    }
-                                                                                                }.call,
-                                                                                                .note_input = struct {
-                                                                                                    fn call(note_raw: *anyopaque, ts: f64) void {
-                                                                                                        const state: *AppState = @ptrCast(@alignCast(note_raw));
-                                                                                                        state.metrics.noteInput(ts);
                                                                                                     }
                                                                                                 }.call,
                                                                                                 .sync_terminal_tab_bar = struct {
