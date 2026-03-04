@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_bootstrap = @import("app/bootstrap.zig");
 const app_editor_actions = @import("app/editor_actions.zig");
+const app_editor_seed = @import("app/editor_seed.zig");
 const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
 const app_config_reload_notice = @import("app/config_reload_notice.zig");
@@ -2420,29 +2421,7 @@ const AppState = struct {
 
         if (self.editors.items.len > 0) {
             const editor = self.editors.items[0];
-            try editor.insertText(
-                \\// Welcome to Zide - A Zig IDE
-                \\//
-                \\// Keyboard shortcuts:
-                \\//   Ctrl+N  - New file
-                \\//   Ctrl+O  - Open file
-                \\//   Ctrl+S  - Save file
-                \\//   Ctrl+Z  - Undo
-                \\//   Ctrl+Y  - Redo
-                \\//   Ctrl+`  - Toggle terminal
-                \\//   Ctrl+Q  - Quit
-                \\//
-                \\// Start typing to begin editing...
-                \\
-                \\const std = @import("std");
-                \\
-                \\pub fn main() !void {
-                \\    std.debug.print("Hello, Zide!\n", .{});
-                \\}
-                \\
-            );
-            editor.cursor = .{ .line = 0, .col = 0, .offset = 0 };
-            editor.modified = false;
+            try app_editor_seed.seedDefaultWelcomeBuffer(editor);
         }
     }
 
