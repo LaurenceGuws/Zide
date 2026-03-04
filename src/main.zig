@@ -1989,6 +1989,56 @@ const AppState = struct {
         };
     }
 
+    fn handleFontSampleFrame(
+        self: *AppState,
+        r: anytype,
+        input_batch: *shared_types.input.InputBatch,
+    ) bool {
+        if (!app_modes.ide.isFontSample(self.app_mode)) return false;
+        if (self.font_sample_auto_close_frames > 0 and self.frame_id >= self.font_sample_auto_close_frames) {
+            self.font_sample_close_pending = true;
+            self.needs_redraw = true;
+            return true;
+        }
+        if (self.font_sample_view) |*view| {
+            if (view.update(r, input_batch)) {
+                self.needs_redraw = true;
+            }
+        }
+        return false;
+    }
+
+    fn handleWidgetInputFrame(self: *AppState) !void {
+        self.options_bar.updateInput(self.last_input);
+        self.tab_bar.updateInput(self.last_input);
+        self.side_nav.updateInput(self.last_input);
+        self.status_bar.updateInput(self.last_input);
+        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
+            try self.syncTerminalModeTabBar();
+        }
+    }
+
+    fn tickConfigReloadNoticeFrame(self: *AppState, now: f64) void {
+        if (self.config_reload_notice_until <= 0) return;
+        if (now < self.config_reload_notice_until) {
+            self.needs_redraw = true;
+        } else {
+            self.config_reload_notice_until = 0;
+            self.needs_redraw = true;
+        }
+    }
+
+    fn routeInputForCurrentFocus(
+        self: *AppState,
+        input_batch: *shared_types.input.InputBatch,
+    ) input_actions.FocusKind {
+        _ = self.terminalCloseConfirmActive();
+        const routed_active = app_modes.ide.routedActiveMode(self.app_mode, self.active_kind);
+        const focus = if (routed_active == .terminal) input_actions.FocusKind.terminal else input_actions.FocusKind.editor;
+        self.input_router.route(input_batch, focus);
+        return focus;
+    }
+
     fn handleTabDragFrame(
         self: *AppState,
         input_batch: *shared_types.input.InputBatch,
@@ -2720,38 +2770,11 @@ const AppState = struct {
         const r = shell.rendererPtr();
         self.last_input = input_batch.snapshot();
 
-        if (app_modes.ide.isFontSample(self.app_mode)) {
-            if (self.font_sample_auto_close_frames > 0 and self.frame_id >= self.font_sample_auto_close_frames) {
-                self.font_sample_close_pending = true;
-                self.needs_redraw = true;
-                return;
-            }
-            if (self.font_sample_view) |*view| {
-                if (view.update(r, input_batch)) {
-                    self.needs_redraw = true;
-                }
-            }
-        }
-        self.options_bar.updateInput(self.last_input);
-        self.tab_bar.updateInput(self.last_input);
-        self.side_nav.updateInput(self.last_input);
-        self.status_bar.updateInput(self.last_input);
-        if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-            try self.syncTerminalModeTabBar();
-        }
+        if (self.handleFontSampleFrame(r, input_batch)) return;
+        try self.handleWidgetInputFrame();
         const now = app_shell.getTime();
-        if (self.config_reload_notice_until > 0) {
-            if (now < self.config_reload_notice_until) {
-                self.needs_redraw = true;
-            } else {
-                self.config_reload_notice_until = 0;
-                self.needs_redraw = true;
-            }
-        }
-        _ = self.terminalCloseConfirmActive();
-        const routed_active = app_modes.ide.routedActiveMode(self.app_mode, self.active_kind);
-        const focus = if (routed_active == .terminal) input_actions.FocusKind.terminal else input_actions.FocusKind.editor;
-        self.input_router.route(input_batch, focus);
+        self.tickConfigReloadNoticeFrame(now);
+        const focus = self.routeInputForCurrentFocus(input_batch);
         const pre_input = try self.handlePreInputShortcutFrame(shell, r, input_batch, focus, now);
         if (pre_input.consumed) return;
         const suppress_terminal_shortcuts = pre_input.suppress_terminal_shortcuts;
