@@ -4,6 +4,7 @@ const app_config_reload_notice_state = @import("app/config_reload_notice_state.z
 const app_editor_actions = @import("app/editor_actions.zig");
 const app_editor_intent_route = @import("app/editor_intent_route.zig");
 const app_editor_display_prepare = @import("app/editor_display_prepare.zig");
+const app_editor_shortcuts_frame = @import("app/editor_shortcuts_frame.zig");
 const app_editor_seed = @import("app/editor_seed.zig");
 const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
@@ -1374,167 +1375,6 @@ const AppState = struct {
         consumed: bool,
     };
 
-    fn handleEditorShortcutActionsFrame(
-        self: *AppState,
-        shell: *Shell,
-        action_layout: layout_types.WidgetLayout,
-    ) !bool {
-        if (self.editors.items.len == 0) return false;
-        const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
-        const editor = self.editors.items[editor_idx];
-        var editor_widget = EditorWidget.initWithCache(editor, &self.editor_cluster_cache, self.editor_wrap);
-        var handled = false;
-
-        for (self.input_router.actionsSlice()) |action| {
-            switch (action.kind) {
-                .copy => {
-                    if (try editor.selectionTextAlloc()) |text| {
-                        defer self.allocator.free(text);
-                        const buf = try self.allocator.alloc(u8, text.len + 1);
-                        defer self.allocator.free(buf);
-                        std.mem.copyForwards(u8, buf[0..text.len], text);
-                        buf[text.len] = 0;
-                        const cstr: [*:0]const u8 = @ptrCast(buf.ptr);
-                        shell.setClipboardText(cstr);
-                        handled = true;
-                    }
-                },
-                .cut => {
-                    if (try editor.selectionTextAlloc()) |text| {
-                        defer self.allocator.free(text);
-                        const buf = try self.allocator.alloc(u8, text.len + 1);
-                        defer self.allocator.free(buf);
-                        std.mem.copyForwards(u8, buf[0..text.len], text);
-                        buf[text.len] = 0;
-                        const cstr: [*:0]const u8 = @ptrCast(buf.ptr);
-                        shell.setClipboardText(cstr);
-                        try editor.deleteSelection();
-                        self.needs_redraw = true;
-                        handled = true;
-                    }
-                },
-                .paste => {
-                    if (shell.getClipboardText()) |clip| {
-                        try editor.insertText(clip);
-                        self.needs_redraw = true;
-                        handled = true;
-                    }
-                },
-                .save => {
-                    try editor.save();
-                    self.needs_redraw = true;
-                    handled = true;
-                },
-                .undo => {
-                    _ = try editor.undo();
-                    self.needs_redraw = true;
-                    handled = true;
-                },
-                .redo => {
-                    _ = try editor.redo();
-                    self.needs_redraw = true;
-                    handled = true;
-                },
-                .editor_add_caret_up => {
-                    if (try app_editor_actions.applyCaretEditorAction(editor, action.kind)) {
-                        self.needs_redraw = true;
-                        handled = true;
-                    }
-                },
-                .editor_add_caret_down => {
-                    if (try app_editor_actions.applyCaretEditorAction(editor, action.kind)) {
-                        self.needs_redraw = true;
-                        handled = true;
-                    }
-                },
-                .editor_move_word_left,
-                .editor_move_word_right,
-                .editor_extend_left,
-                .editor_extend_right,
-                .editor_extend_line_start,
-                .editor_extend_line_end,
-                .editor_extend_word_left,
-                .editor_extend_word_right,
-                => {
-                    if (app_editor_actions.applyDirectEditorAction(editor, action.kind)) {
-                        self.needs_redraw = true;
-                        handled = true;
-                    }
-                },
-                .editor_move_large_up, .editor_move_large_down => {
-                    const delta = app_editor_actions.visualMoveDeltaForAction(action.kind, self.editor_large_jump_rows).?;
-                    const Ctx = struct {
-                        widget: *EditorWidget,
-                        shell: *Shell,
-                    };
-                    var ctx = Ctx{ .widget = &editor_widget, .shell = shell };
-                    const moved = app_editor_actions.applyRepeatedVisualDelta(
-                        delta,
-                        @ptrCast(&ctx),
-                        struct {
-                            fn step(raw: *anyopaque, dir: i32) bool {
-                                const payload: *Ctx = @ptrCast(@alignCast(raw));
-                                return payload.widget.moveCursorVisual(payload.shell, dir);
-                            }
-                        }.step,
-                    );
-                    if (moved) {
-                        editor_widget.ensureCursorVisible(shell, action_layout.editor.height);
-                        self.needs_redraw = true;
-                        handled = true;
-                    }
-                },
-                .editor_extend_up, .editor_extend_down, .editor_extend_large_up, .editor_extend_large_down => {
-                    const delta = app_editor_actions.visualExtendDeltaForAction(action.kind, self.editor_large_jump_rows).?;
-                    const Ctx = struct {
-                        widget: *EditorWidget,
-                        shell: *Shell,
-                    };
-                    var ctx = Ctx{ .widget = &editor_widget, .shell = shell };
-                    const extended = app_editor_actions.applyRepeatedVisualDelta(
-                        delta,
-                        @ptrCast(&ctx),
-                        struct {
-                            fn step(raw: *anyopaque, dir: i32) bool {
-                                const payload: *Ctx = @ptrCast(@alignCast(raw));
-                                return payload.widget.extendSelectionVisual(payload.shell, dir);
-                            }
-                        }.step,
-                    );
-                    if (extended) {
-                        editor_widget.ensureCursorVisible(shell, action_layout.editor.height);
-                        self.needs_redraw = true;
-                        handled = true;
-                    }
-                },
-                .editor_search_open => {
-                    try app_search_panel_state.openPanel(
-                        self.allocator,
-                        &self.search_panel.active,
-                        &self.search_panel.query,
-                        editor,
-                    );
-                    self.needs_redraw = true;
-                    handled = true;
-                },
-                .editor_search_next => {
-                    if (editor.activateNextSearchMatch()) {
-                        self.needs_redraw = true;
-                        handled = true;
-                    }
-                },
-                .editor_search_prev => {
-                    if (editor.activatePrevSearchMatch()) {
-                        self.needs_redraw = true;
-                        handled = true;
-                    }
-                },
-                else => {},
-            }
-        }
-        return handled;
-    }
-
     fn handlePreInputShortcutFrame(
         self: *AppState,
         shell: *Shell,
@@ -1609,8 +1449,25 @@ const AppState = struct {
 
         if (focus == .editor) {
             const action_layout = self.computeLayout(@floatFromInt(r.width), @floatFromInt(r.height));
-            if (try self.handleEditorShortcutActionsFrame(shell, action_layout)) {
-                handled_shortcut = true;
+            if (self.editors.items.len > 0) {
+                const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
+                const editor = self.editors.items[editor_idx];
+                const editor_shortcut_result = try app_editor_shortcuts_frame.handle(
+                    self.input_router.actionsSlice(),
+                    self.allocator,
+                    shell,
+                    action_layout,
+                    editor,
+                    &self.editor_cluster_cache,
+                    self.editor_wrap,
+                    self.editor_large_jump_rows,
+                    &self.search_panel.active,
+                    &self.search_panel.query,
+                );
+                if (editor_shortcut_result.needs_redraw) self.needs_redraw = true;
+                if (editor_shortcut_result.handled) {
+                    handled_shortcut = true;
+                }
             }
         }
 
