@@ -1022,25 +1022,6 @@ const AppState = struct {
         try self.syncModeAdaptersFromTabBar();
     }
 
-    fn terminalCloseIntentForActiveTab(active_tab_id: ?u64) ?app_modes.shared.actions.TabAction {
-        if (active_tab_id) |id| {
-            return .{ .close = id };
-        }
-        return null;
-    }
-
-    fn terminalReorderIntentForDragEnd(drag_end: TabBar.DragEndState) ?app_modes.shared.actions.TabAction {
-        if (drag_end.active and drag_end.moved and drag_end.from_index != drag_end.to_index) {
-            return .{
-                .move = .{
-                    .from_index = drag_end.from_index,
-                    .to_index = drag_end.to_index,
-                },
-            };
-        }
-        return null;
-    }
-
     fn logModeAdapterParity(self: *AppState) void {
         const log = app_logger.logger("app.mode.parity");
         if (!log.enabled_file and !log.enabled_console) return;
@@ -1244,7 +1225,7 @@ const AppState = struct {
 
         if (confirm_pressed) {
             if (self.terminal_workspace) |*workspace| {
-                if (terminalCloseIntentForActiveTab(workspace.activeTabId())) |intent| {
+                if (app_modes.ide.closeIntentForActiveTab(workspace.activeTabId())) |intent| {
                     self.applyTerminalModeTabAction(intent);
                 }
             }
@@ -1267,7 +1248,7 @@ const AppState = struct {
             const my = input_batch.mouse_pos.y;
             if (pointInRect(mx, my, modal.confirm_button)) {
                 if (self.terminal_workspace) |*workspace| {
-                    if (terminalCloseIntentForActiveTab(workspace.activeTabId())) |intent| {
+                    if (app_modes.ide.closeIntentForActiveTab(workspace.activeTabId())) |intent| {
                         self.applyTerminalModeTabAction(intent);
                     }
                 }
@@ -2220,7 +2201,7 @@ const AppState = struct {
                 .terminal_close_tab => {
                     if (app_modes.ide.canHandleTerminalTabShortcuts(self.app_mode)) {
                         if (self.terminal_workspace) |*workspace| {
-                            if (terminalCloseIntentForActiveTab(workspace.activeTabId())) |intent| {
+                            if (app_modes.ide.closeIntentForActiveTab(workspace.activeTabId())) |intent| {
                                 self.applyTerminalModeTabAction(intent);
                             }
                         }
@@ -2374,7 +2355,12 @@ const AppState = struct {
             }
             if (self.terminalTabBarVisible() and input_batch.mouseReleased(.left)) {
                 const drag_end = self.tab_bar.endDrag();
-                if (terminalReorderIntentForDragEnd(drag_end)) |intent| {
+                if (app_modes.ide.reorderIntentForDrag(.{
+                    .active = drag_end.active,
+                    .moved = drag_end.moved,
+                    .from_index = drag_end.from_index,
+                    .to_index = drag_end.to_index,
+                })) |intent| {
                     try self.routeTerminalTabActionAndSync(intent);
                 }
                 if (drag_end.active and !drag_end.moved) {
@@ -3528,48 +3514,4 @@ test "search panel reopen preserves synced query through editor state" {
     try std.testing.expect(app.search_panel.active);
     try std.testing.expectEqualStrings("beta", app.search_panel.query.items);
     try std.testing.expectEqualStrings("beta", editor.searchQuery().?);
-}
-
-test "terminal close intent helper maps optional active tab id" {
-    const none = AppState.terminalCloseIntentForActiveTab(null);
-    try std.testing.expectEqual(@as(?app_modes.shared.actions.TabAction, null), none);
-
-    const intent = AppState.terminalCloseIntentForActiveTab(42) orelse return error.TestUnexpectedResult;
-    switch (intent) {
-        .close => |id| try std.testing.expectEqual(@as(u64, 42), id),
-        else => return error.TestUnexpectedResult,
-    }
-}
-
-test "terminal reorder intent helper emits only for real drag moves" {
-    const no_drag = TabBar.DragEndState{
-        .active = false,
-        .moved = false,
-        .from_index = 0,
-        .to_index = 0,
-    };
-    try std.testing.expectEqual(@as(?app_modes.shared.actions.TabAction, null), AppState.terminalReorderIntentForDragEnd(no_drag));
-
-    const click_only = TabBar.DragEndState{
-        .active = true,
-        .moved = false,
-        .from_index = 1,
-        .to_index = 1,
-    };
-    try std.testing.expectEqual(@as(?app_modes.shared.actions.TabAction, null), AppState.terminalReorderIntentForDragEnd(click_only));
-
-    const moved = TabBar.DragEndState{
-        .active = true,
-        .moved = true,
-        .from_index = 3,
-        .to_index = 1,
-    };
-    const intent = AppState.terminalReorderIntentForDragEnd(moved) orelse return error.TestUnexpectedResult;
-    switch (intent) {
-        .move => |mv| {
-            try std.testing.expectEqual(@as(usize, 3), mv.from_index);
-            try std.testing.expectEqual(@as(usize, 1), mv.to_index);
-        },
-        else => return error.TestUnexpectedResult,
-    }
 }

@@ -1,5 +1,6 @@
 const host = @import("host.zig");
 const layout_policy = @import("layout_policy.zig");
+const tab_intents = @import("tab_intents.zig");
 
 pub const IdeHost = host.IdeHost;
 pub const ActiveMode = host.ActiveMode;
@@ -33,3 +34,6 @@ pub const configReloadNoticeY = layout_policy.configReloadNoticeY;
 pub const terminalEffectiveHeightForSizing = layout_policy.terminalEffectiveHeightForSizing;
 pub const terminalStrip = layout_policy.terminalStrip;
 pub const TerminalStrip = layout_policy.TerminalStrip;
+pub const ReorderDragMeta = tab_intents.ReorderDragMeta;
+pub const closeIntentForActiveTab = tab_intents.closeIntentForActiveTab;
+pub const reorderIntentForDrag = tab_intents.reorderIntentForDrag;
