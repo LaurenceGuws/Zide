@@ -6,6 +6,7 @@ const app_editor_intent_route = @import("app/editor_intent_route.zig");
 const app_editor_create_intent_runtime = @import("app/editor_create_intent_runtime.zig");
 const app_editor_display_prepare = @import("app/editor_display_prepare.zig");
 const app_editor_input_runtime = @import("app/editor_input_runtime.zig");
+const app_editor_visible_caches_runtime = @import("app/editor_visible_caches_runtime.zig");
 const app_active_editor_frame = @import("app/active_editor_frame.zig");
 const app_editor_shortcuts_frame = @import("app/editor_shortcuts_frame.zig");
 const app_editor_seed = @import("app/editor_seed.zig");
@@ -1661,15 +1662,14 @@ const AppState = struct {
                                                                                                         editor_layout: layout_types.WidgetLayout,
                                                                                                     ) void {
                                                                                                         const route_state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        if (editor_layout.editor.width <= 0 or editor_layout.editor.height <= 0) return;
-                                                                                                        app_editor_display_prepare.prepare(widget.editor, &route_state.editor_render_cache);
-                                                                                                        const visible_lines = @as(usize, @intFromFloat(editor_layout.editor.height / editor_shell.charHeight()));
-                                                                                                        const default_budget = if (visible_lines > 0) visible_lines + 1 else 0;
-                                                                                                        const highlight_budget = route_state.editor_highlight_budget orelse default_budget;
-                                                                                                        editor_draw.precomputeHighlightTokens(widget, &route_state.editor_render_cache, editor_shell, editor_layout.editor.height, highlight_budget);
-                                                                                                        const width_budget = route_state.editor_width_budget orelse highlight_budget;
-                                                                                                        editor_draw.precomputeLineWidths(widget, &route_state.editor_render_cache, editor_shell, editor_layout.editor.height, width_budget);
-                                                                                                        editor_draw.precomputeWrapCounts(widget, &route_state.editor_render_cache, editor_shell, editor_layout.editor.height, width_budget);
+                                                                                                        app_editor_visible_caches_runtime.precompute(
+                                                                                                            widget,
+                                                                                                            editor_shell,
+                                                                                                            editor_layout,
+                                                                                                            &route_state.editor_render_cache,
+                                                                                                            route_state.editor_highlight_budget,
+                                                                                                            route_state.editor_width_budget,
+                                                                                                        );
                                                                                                     }
                                                                                                 }.call,
                                                                                             },
