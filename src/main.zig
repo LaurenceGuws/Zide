@@ -590,6 +590,21 @@ const AppState = struct {
         editor.setCursor(clamped_line, clamped_col);
     }
 
+    fn routeOpenFileFromCtx(raw: *anyopaque, path: []const u8) !void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        try state.openFile(path);
+    }
+
+    fn routeOpenFileAtFromCtx(raw: *anyopaque, path: []const u8, line_1: usize, col_1: ?usize) !void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        try state.openFileAt(path, line_1, col_1);
+    }
+
+    fn routeSyncTerminalTabBarFromCtx(raw: *anyopaque) !void {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(state);
+    }
+
     pub fn newTerminal(self: *AppState) !void {
         // Calculate terminal size based on UI
         const shell = self.shell;
@@ -1615,24 +1630,9 @@ const AppState = struct {
                                                                                             &inner_state.metrics,
                                                                                             @ptrCast(inner_state),
                                                                                             .{
-                                                                                                .open_file = struct {
-                                                                                                    fn call(open_raw: *anyopaque, path: []const u8) !void {
-                                                                                                        const state: *AppState = @ptrCast(@alignCast(open_raw));
-                                                                                                        try state.openFile(path);
-                                                                                                    }
-                                                                                                }.call,
-                                                                                                .open_file_at = struct {
-                                                                                                    fn call(open_raw: *anyopaque, path: []const u8, line_1: usize, col_1: ?usize) !void {
-                                                                                                        const state: *AppState = @ptrCast(@alignCast(open_raw));
-                                                                                                        try state.openFileAt(path, line_1, col_1);
-                                                                                                    }
-                                                                                                }.call,
-                                                                                                .sync_terminal_tab_bar = struct {
-                                                                                                    fn call(sync_raw: *anyopaque) !void {
-                                                                                                        const state: *AppState = @ptrCast(@alignCast(sync_raw));
-                                                                                                        try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(state);
-                                                                                                    }
-                                                                                                }.call,
+                                                                                                .open_file = routeOpenFileFromCtx,
+                                                                                                .open_file_at = routeOpenFileAtFromCtx,
+                                                                                                .sync_terminal_tab_bar = routeSyncTerminalTabBarFromCtx,
                                                                                             },
                                                                                         );
                                                                                     }
