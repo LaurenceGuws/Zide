@@ -32,6 +32,7 @@ const app_terminal_widget_input_runtime = @import("app/terminal_widget_input_run
 const app_terminal_close_confirm_input = @import("app/terminal_close_confirm_input.zig");
 const app_mode_adapter_sync_runtime = @import("app/mode_adapter_sync_runtime.zig");
 const app_terminal_theme_apply = @import("app/terminal_theme_apply.zig");
+const app_poll_visible_terminal_sessions_runtime = @import("app/poll_visible_terminal_sessions_runtime.zig");
 const app_search_panel_input = @import("app/search_panel_input.zig");
 const app_search_panel_frame_runtime = @import("app/search_panel_frame_runtime.zig");
 const app_search_panel_runtime = @import("app/search_panel_runtime.zig");
@@ -1699,29 +1700,13 @@ const AppState = struct {
                                                                                                 .poll_visible_sessions = struct {
                                                                                                     fn call(route_raw: *anyopaque, poll_batch: *shared_types.input.InputBatch) !void {
                                                                                                         const route_state: *AppState = @ptrCast(@alignCast(route_raw));
-                                                                                                        if (!app_terminal_surface_gate.hasVisibleTerminalTabs(route_state.app_mode, route_state.show_terminal, route_state.terminal_workspace, route_state.terminals.items.len)) return;
-                                                                                                        if (app_modes.ide.shouldUseTerminalWorkspace(route_state.app_mode)) {
-                                                                                                            if (route_state.terminal_workspace) |*workspace| {
-                                                                                                                const polled = try workspace.pollAll(
-                                                                                                                    app_terminal_tabs_runtime.activeIndex(
-                                                                                                                        route_state.app_mode,
-                                                                                                                        route_state.terminal_workspace,
-                                                                                                                        route_state.terminals.items.len,
-                                                                                                                    ),
-                                                                                                                    poll_batch.events.items.len > 0,
-                                                                                                                );
-                                                                                                                if (polled) route_state.needs_redraw = true;
-                                                                                                            }
-                                                                                                            return;
-                                                                                                        }
-                                                                                                        if (route_state.terminals.items.len > 0) {
-                                                                                                            const term = route_state.terminals.items[0];
-                                                                                                            if (term.hasData()) {
-                                                                                                                term.setInputPressure(poll_batch.events.items.len > 0);
-                                                                                                                try term.poll();
-                                                                                                                route_state.needs_redraw = true;
-                                                                                                            }
-                                                                                                        }
+                                                                                                        if (try app_poll_visible_terminal_sessions_runtime.handle(
+                                                                                                            route_state.app_mode,
+                                                                                                            route_state.show_terminal,
+                                                                                                            &route_state.terminal_workspace,
+                                                                                                            route_state.terminals.items,
+                                                                                                            poll_batch.events.items.len > 0,
+                                                                                                        )) route_state.needs_redraw = true;
                                                                                                     }
                                                                                                 }.call,
                                                                                                 .handle_terminal_widget_input = struct {

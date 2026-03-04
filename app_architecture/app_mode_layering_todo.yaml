@@ -158,6 +158,7 @@ app_mode_layering_todo:
             - "In progress: terminal widget input + pending-open request handling is now deduplicated via dedicated AppState helpers."
             - "In progress: editor visible-cache precompute and terminal polling are now routed through dedicated AppState helpers."
             - "In progress: editor visible-cache precompute callback body moved from `main.zig` into `src/app/editor_visible_caches_runtime.zig` (`precompute`)."
+            - "In progress: visible-terminal session polling callback body moved from `main.zig` into `src/app/poll_visible_terminal_sessions_runtime.zig` (`handle`)."
             - "In progress: search-panel input consumption for the frame is now factored into `handleSearchPanelFrameInput(...)`."
             - "In progress: active editor-frame and visible terminal-frame orchestration are now each routed through dedicated AppState helpers."
             - "In progress: mouse debug click logging and post-frame workspace sync are now routed through dedicated AppState helpers."
