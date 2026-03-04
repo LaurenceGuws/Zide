@@ -2,6 +2,7 @@ const std = @import("std");
 const tab_bar = @import("../../../ui/widgets/tab_bar.zig");
 const tab_intents = @import("tab_intents.zig");
 const shared = @import("../shared/mod.zig");
+const shared_types = @import("../../../types/mod.zig");
 
 pub const ReleasePlan = struct {
     intent: ?shared.actions.TabAction,
@@ -9,6 +10,35 @@ pub const ReleasePlan = struct {
     mark_redraw: bool,
     sync_active_tab: bool,
 };
+
+pub const DragFrame = struct {
+    updated: bool,
+    release: ?tab_bar.TabBar.DragEndState,
+};
+
+pub fn processDragFrame(
+    tabs: *tab_bar.TabBar,
+    input_batch: *const shared_types.input.InputBatch,
+    mouse: shared_types.input.MousePos,
+    bar_x: f32,
+    bar_y: f32,
+    bar_width: f32,
+    enabled: bool,
+) DragFrame {
+    var frame: DragFrame = .{
+        .updated = false,
+        .release = null,
+    };
+
+    if (enabled and input_batch.mouseDown(.left)) {
+        frame.updated = tabs.updateDrag(mouse.x, mouse.y, bar_x, bar_y, bar_width, true);
+    }
+    if (enabled and input_batch.mouseReleased(.left)) {
+        frame.release = tabs.endDrag();
+    }
+
+    return frame;
+}
 
 pub fn reorderIntentForDragEnd(drag_end: tab_bar.TabBar.DragEndState) ?shared.actions.TabAction {
     return tab_intents.reorderIntentForDrag(.{
@@ -130,4 +160,26 @@ test "ide editor release plan only marks moved reorder path" {
     try std.testing.expect(!idle_plan.handle_click);
     try std.testing.expect(!idle_plan.mark_redraw);
     try std.testing.expect(!idle_plan.sync_active_tab);
+}
+
+test "drag frame helper reports update and release transitions" {
+    var tabs = tab_bar.TabBar.init(std.testing.allocator);
+    defer tabs.deinit();
+    try tabs.addTab("a", .editor);
+    try tabs.addTab("b", .editor);
+    _ = tabs.beginDrag(10, 5, 0, 0, 300);
+
+    var batch = shared_types.input.InputBatch.init(std.testing.allocator);
+    defer batch.deinit();
+    batch.mouse_down[@intFromEnum(shared_types.input.MouseButton.left)] = true;
+    batch.mouse_pos = .{ .x = 200, .y = 5 };
+    var frame = processDragFrame(&tabs, &batch, batch.mouse_pos, 0, 0, 300, true);
+    try std.testing.expect(frame.updated);
+    try std.testing.expectEqual(@as(?tab_bar.TabBar.DragEndState, null), frame.release);
+
+    batch.mouse_down[@intFromEnum(shared_types.input.MouseButton.left)] = false;
+    batch.mouse_released[@intFromEnum(shared_types.input.MouseButton.left)] = true;
+    frame = processDragFrame(&tabs, &batch, batch.mouse_pos, 0, 0, 300, true);
+    try std.testing.expect(!frame.updated);
+    try std.testing.expect(frame.release != null);
 }
