@@ -179,11 +179,11 @@ const AppState = struct {
     }
 
     fn applyCurrentTabBarWidthMode(self: *AppState) void {
-        self.tab_bar.setWidthMode(
-            if (app_modes.ide.useTerminalTabBarWidthMode(self.app_mode))
-                self.terminal_tab_bar_width_mode
-            else
-                self.editor_tab_bar_width_mode,
+        app_tab_bar_width.applyForMode(
+            &self.tab_bar,
+            self.app_mode,
+            self.editor_tab_bar_width_mode,
+            self.terminal_tab_bar_width_mode,
         );
     }
 

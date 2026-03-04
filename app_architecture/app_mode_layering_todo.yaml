@@ -149,6 +149,7 @@ app_mode_layering_todo:
             - "In progress: text-file sniffing helper moved from `main.zig` into `src/app/file_detect.zig` (`isProbablyTextFile`)."
             - "In progress: pure theme resolution/chrome helpers moved from `main.zig` into `src/app/theme_utils.zig` (`isDarkTheme`, `terminalTabBarTheme`, `resolveConfigThemes`)."
             - "In progress: tab-bar width mode mapping moved from `main.zig` into `src/app/tab_bar_width.zig` (`mapMode`)."
+            - "In progress: tab-bar width mode apply policy moved from `main.zig` into `src/app/tab_bar_width.zig` (`applyForMode`)."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress
