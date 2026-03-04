@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_bootstrap = @import("app/bootstrap.zig");
+const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
 const app_runner = @import("app/runner.zig");
 const app_signals = @import("app/signals.zig");
@@ -792,21 +793,6 @@ const AppState = struct {
         return handled;
     }
 
-    fn isProbablyTextFile(path: []const u8) bool {
-        var file = if (std.fs.path.isAbsolute(path))
-            std.fs.openFileAbsolute(path, .{ .mode = .read_only }) catch return false
-        else
-            std.fs.cwd().openFile(path, .{ .mode = .read_only }) catch return false;
-        defer file.close();
-        const stat = file.stat() catch return false;
-        if (stat.kind != .file) return false;
-        var buf: [8192]u8 = undefined;
-        const n = file.read(&buf) catch return false;
-        if (n == 0) return true;
-        if (std.mem.indexOfScalar(u8, buf[0..n], 0) != null) return false;
-        return std.unicode.utf8ValidateSlice(buf[0..n]);
-    }
-
     fn terminalTabCount(self: *const AppState) usize {
         if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
             if (self.terminal_workspace) |workspace| return workspace.tabCount();
@@ -1290,7 +1276,7 @@ const AppState = struct {
     ) !void {
         if (term_widget.takePendingOpenRequest()) |req| {
             defer self.allocator.free(req.path);
-            if (isProbablyTextFile(req.path)) {
+            if (app_file_detect.isProbablyTextFile(req.path)) {
                 if (req.line != null) {
                     try self.openFileAt(req.path, req.line.?, req.col);
                 } else {
