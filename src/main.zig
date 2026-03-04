@@ -35,6 +35,7 @@ const app_terminal_close_confirm_draw = @import("app/terminal_close_confirm_draw
 const app_search_panel_input = @import("app/search_panel_input.zig");
 const app_search_panel_runtime = @import("app/search_panel_runtime.zig");
 const app_search_panel_state = @import("app/search_panel_state.zig");
+const app_pointer_activity_frame = @import("app/pointer_activity_frame.zig");
 const app_shortcut_action_runtime = @import("app/shortcut_action_runtime.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
@@ -1586,40 +1587,18 @@ const AppState = struct {
         mouse: shared_types.input.MousePos,
         now: f64,
     ) void {
-        const mouse_down = input_batch.mouseDown(.left);
-        const mouse_moved = mouse.x != self.last_mouse_pos.x or mouse.y != self.last_mouse_pos.y;
-        const wheel = input_batch.scroll.y;
-        const mouse_pressed = input_batch.mousePressed(.left) or input_batch.mousePressed(.right);
-        const has_mouse_action = mouse_pressed or wheel != 0 or mouse_down;
-
-        const terminal_visible = self.show_terminal and layout.terminal.height > 0;
-        const term_y = layout.terminal.y;
-        const in_terminal_area = terminal_visible and mouse.y >= term_y;
-        const ctrl_down = input_batch.mods.ctrl;
-
-        if (has_mouse_action) {
-            self.needs_redraw = true;
-            self.metrics.noteInput(now);
-        } else if (mouse_moved) {
-            if (!in_terminal_area) {
-                const interval: f64 = 1.0 / 60.0;
-                if (now - self.last_mouse_redraw_time >= interval) {
-                    self.needs_redraw = true;
-                    self.last_mouse_redraw_time = now;
-                }
-            }
-        }
-        if (in_terminal_area and (ctrl_down != self.last_ctrl_down or (ctrl_down and mouse_moved))) {
-            const interval: f64 = 1.0 / 60.0;
-            if (now - self.last_mouse_redraw_time >= interval) {
-                self.needs_redraw = true;
-                self.last_mouse_redraw_time = now;
-            }
-        }
-        if (mouse_moved) {
-            self.last_mouse_pos = .{ .x = mouse.x, .y = mouse.y };
-        }
-        self.last_ctrl_down = ctrl_down;
+        const result = app_pointer_activity_frame.handle(
+            self.show_terminal,
+            input_batch,
+            layout,
+            mouse,
+            now,
+            &self.last_mouse_pos,
+            &self.last_mouse_redraw_time,
+            &self.last_ctrl_down,
+        );
+        if (result.needs_redraw) self.needs_redraw = true;
+        if (result.note_input) self.metrics.noteInput(now);
     }
 
     fn handleTerminalSplitResizeFrame(
