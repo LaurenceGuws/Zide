@@ -55,7 +55,7 @@ app_mode_layering_todo:
     notes:
       - "Do not advance to the next slice until all gates pass for the current slice."
       - "If a gate fails, either fix in-slice or revert that slice before proceeding."
-      - "Bundle step available: `zig build mode-gates` runs the full MODE gate set (tests, app/input/editor import checks, run smokes for default/terminal/editor/ide, and `test-terminal-replay -- --all`)."
+      - "Bundle step available: `zig build mode-gates` runs the non-interactive MODE gate set (tests, install/build of app binaries, app/input/editor import checks, and `test-terminal-replay -- --all`)."
       - "Latest checkpoint validation (2026-03-05): `zig build test`, `zig build check-app-imports`, `zig build check-input-imports`, `zig build check-editor-imports`, mode run smokes (`run`, `--mode terminal`, `--mode editor`, `--mode ide`), and `zig build test-terminal-replay -- --all` all passed."
 
   milestones:
