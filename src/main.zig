@@ -4,6 +4,7 @@ const app_editor_actions = @import("app/editor_actions.zig");
 const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
 const app_config_reload_notice = @import("app/config_reload_notice.zig");
+const app_terminal_theme_apply = @import("app/terminal_theme_apply.zig");
 const app_terminal_tabs = @import("app/terminal_tabs.zig");
 const app_terminal_close_confirm_draw = @import("app/terminal_close_confirm_draw.zig");
 const app_search_panel_input = @import("app/search_panel_input.zig");
@@ -168,13 +169,6 @@ const AppState = struct {
     font_sample_screenshot_path: ?[]const u8,
     search_panel: SearchPanelState,
     terminal_close_confirm_tab: ?terminal_mod.TerminalTabId,
-
-    fn notifyTerminalColorSchemeChanged(self: *AppState) !void {
-        const dark = app_theme_utils.isDarkTheme(&self.terminal_theme);
-        for (self.terminal_widgets.items) |*widget| {
-            _ = try widget.session.reportColorSchemeChanged(dark);
-        }
-    }
 
     fn applyCurrentTabBarWidthMode(self: *AppState) void {
         app_tab_bar_width.applyForMode(
@@ -2289,25 +2283,7 @@ const AppState = struct {
             if (self.terminal_workspace) |*workspace| {
                 _ = try workspace.createTab(rows, cols);
                 const term = workspace.activeSession() orelse return error.TerminalWorkspaceNoActiveTab;
-                term.setDefaultColors(
-                    term_types.Color{
-                        .r = theme.foreground.r,
-                        .g = theme.foreground.g,
-                        .b = theme.foreground.b,
-                    },
-                    term_types.Color{
-                        .r = theme.background.r,
-                        .g = theme.background.g,
-                        .b = theme.background.b,
-                    },
-                );
-                if (theme.ansi_colors) |ansi| {
-                    var colors: [16]term_types.Color = undefined;
-                    for (ansi, 0..) |c, i| {
-                        colors[i] = term_types.Color{ .r = c.r, .g = c.g, .b = c.b };
-                    }
-                    term.setAnsiColors(colors);
-                }
+                app_terminal_theme_apply.setSessionPalette(term, theme);
                 term.setCellSize(
                     @intFromFloat(shell.terminalCellWidth()),
                     @intFromFloat(shell.terminalCellHeight()),
@@ -2317,7 +2293,7 @@ const AppState = struct {
                 widget.setFocusReportSources(self.terminal_focus_report_window_events, self.terminal_focus_report_pane_events);
                 try self.terminal_widgets.append(self.allocator, widget);
                 try self.syncTerminalModeTabBar();
-                try self.notifyTerminalColorSchemeChanged();
+                try app_terminal_theme_apply.notifyColorSchemeChanged(&self.terminal_widgets, &self.terminal_theme);
                 self.show_terminal = true;
                 return;
             }
@@ -2328,25 +2304,7 @@ const AppState = struct {
             .scrollback_rows = self.terminal_scrollback_rows,
             .cursor_style = self.terminal_cursor_style,
         });
-        term.setDefaultColors(
-            term_types.Color{
-                .r = theme.foreground.r,
-                .g = theme.foreground.g,
-                .b = theme.foreground.b,
-            },
-            term_types.Color{
-                .r = theme.background.r,
-                .g = theme.background.g,
-                .b = theme.background.b,
-            },
-        );
-        if (theme.ansi_colors) |ansi| {
-            var colors: [16]term_types.Color = undefined;
-            for (ansi, 0..) |c, i| {
-                colors[i] = term_types.Color{ .r = c.r, .g = c.g, .b = c.b };
-            }
-            term.setAnsiColors(colors);
-        }
+        app_terminal_theme_apply.setSessionPalette(term, theme);
         term.setCellSize(
             @intFromFloat(shell.terminalCellWidth()),
             @intFromFloat(shell.terminalCellHeight()),
@@ -2356,7 +2314,7 @@ const AppState = struct {
         var widget = TerminalWidget.init(term, self.terminal_blink_style);
         widget.setFocusReportSources(self.terminal_focus_report_window_events, self.terminal_focus_report_pane_events);
         try self.terminal_widgets.append(self.allocator, widget);
-        try self.notifyTerminalColorSchemeChanged();
+        try app_terminal_theme_apply.notifyColorSchemeChanged(&self.terminal_widgets, &self.terminal_theme);
 
         self.show_terminal = true;
     }
@@ -2685,32 +2643,8 @@ const AppState = struct {
                     self.editor_cluster_cache.clear();
                 }
                 if (terminal_theme_changed) {
-                    try self.notifyTerminalColorSchemeChanged();
-                    for (self.terminal_widgets.items) |*widget| {
-                        const term = widget.session;
-                        term.setDefaultColors(
-                            term_types.Color{
-                                .r = self.terminal_theme.foreground.r,
-                                .g = self.terminal_theme.foreground.g,
-                                .b = self.terminal_theme.foreground.b,
-                            },
-                            term_types.Color{
-                                .r = self.terminal_theme.background.r,
-                                .g = self.terminal_theme.background.g,
-                                .b = self.terminal_theme.background.b,
-                            },
-                        );
-                        if (self.terminal_theme.ansi_colors) |ansi| {
-                            var colors: [16]term_types.Color = undefined;
-                            for (ansi, 0..) |c, i| {
-                                colors[i] = term_types.Color{ .r = c.r, .g = c.g, .b = c.b };
-                            }
-                            term.setAnsiColors(colors);
-                        }
-                        term.markDirty();
-                        term.updateViewCacheForScroll();
-                        widget.invalidateTextureCache();
-                    }
+                    try app_terminal_theme_apply.notifyColorSchemeChanged(&self.terminal_widgets, &self.terminal_theme);
+                    app_terminal_theme_apply.applyThemeToWidgets(&self.terminal_widgets, &self.terminal_theme);
                 }
                 self.needs_redraw = true;
             }
