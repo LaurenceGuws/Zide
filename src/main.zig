@@ -2247,6 +2247,12 @@ const AppState = struct {
         term_y: f32,
     };
 
+    const UpdatePreludeResult = struct {
+        now: f64,
+        suppress_terminal_shortcuts: bool,
+        terminal_close_modal_active: bool,
+    };
+
     fn handlePostPreInputFrame(
         self: *AppState,
         shell: *Shell,
@@ -2305,6 +2311,32 @@ const AppState = struct {
             terminal_close_modal_active,
             now,
         );
+    }
+
+    fn handleUpdatePreludeFrame(
+        self: *AppState,
+        shell: *Shell,
+        input_batch: *shared_types.input.InputBatch,
+    ) !?UpdatePreludeResult {
+        const r = shell.rendererPtr();
+        self.last_input = input_batch.snapshot();
+
+        if (self.handleFontSampleFrame(r, input_batch)) return null;
+        try self.handleWidgetInputFrame();
+        const now = app_shell.getTime();
+        self.tickConfigReloadNoticeFrame(now);
+        const focus = self.routeInputForCurrentFocus(input_batch);
+        const pre_input = try self.handlePreInputShortcutFrame(shell, r, input_batch, focus, now);
+        if (pre_input.consumed) return null;
+        if (pre_input.handled_shortcut) {
+            self.metrics.noteInput(now);
+        }
+
+        return .{
+            .now = now,
+            .suppress_terminal_shortcuts = pre_input.suppress_terminal_shortcuts,
+            .terminal_close_modal_active = pre_input.terminal_close_modal_active,
+        };
     }
 
     fn logModeAdapterParity(self: *AppState) void {
@@ -2863,29 +2895,15 @@ const AppState = struct {
 
     fn update(self: *AppState, input_batch: *shared_types.input.InputBatch) !void {
         const shell = self.shell;
-        const r = shell.rendererPtr();
-        self.last_input = input_batch.snapshot();
-
-        if (self.handleFontSampleFrame(r, input_batch)) return;
-        try self.handleWidgetInputFrame();
-        const now = app_shell.getTime();
-        self.tickConfigReloadNoticeFrame(now);
-        const focus = self.routeInputForCurrentFocus(input_batch);
-        const pre_input = try self.handlePreInputShortcutFrame(shell, r, input_batch, focus, now);
-        if (pre_input.consumed) return;
-        const suppress_terminal_shortcuts = pre_input.suppress_terminal_shortcuts;
-        const terminal_close_modal_active = pre_input.terminal_close_modal_active;
-        if (pre_input.handled_shortcut) {
-            self.metrics.noteInput(now);
-        }
-        const frame = try self.handlePostPreInputFrame(shell, input_batch, now);
+        const prelude = (try self.handleUpdatePreludeFrame(shell, input_batch)) orelse return;
+        const frame = try self.handlePostPreInputFrame(shell, input_batch, prelude.now);
         try self.handleInteractiveFrame(
             shell,
             frame,
             input_batch,
-            suppress_terminal_shortcuts,
-            terminal_close_modal_active,
-            now,
+            prelude.suppress_terminal_shortcuts,
+            prelude.terminal_close_modal_active,
+            prelude.now,
         );
     }
 
