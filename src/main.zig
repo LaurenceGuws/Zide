@@ -44,6 +44,7 @@ const app_terminal_split_resize_frame = @import("app/terminal_split_resize_frame
 const app_window_resize_event_frame = @import("app/window_resize_event_frame.zig");
 const app_deferred_terminal_resize_frame = @import("app/deferred_terminal_resize_frame.zig");
 const app_cursor_blink_frame = @import("app/cursor_blink_frame.zig");
+const app_post_preinput_frame = @import("app/post_preinput_frame.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
@@ -1830,30 +1831,83 @@ const AppState = struct {
         input_batch: *shared_types.input.InputBatch,
         now: f64,
     ) !PostPreInputFrameResult {
-        if (try shell.applyPendingZoom(now)) {
-            self.applyUiScale();
-            try self.refreshTerminalSizing();
-            self.needs_redraw = true;
-            self.metrics.noteInput(now);
-        }
-        try self.handleWindowResizeEventFrame(shell, now);
-
-        const width = @as(f32, @floatFromInt(shell.width()));
-        const height = @as(f32, @floatFromInt(shell.height()));
-        const layout = self.computeLayout(width, height);
-
-        self.handleCursorBlinkArmingFrame(now);
-        try self.handleDeferredTerminalResizeFrame(shell, layout, now);
-
-        const mouse = input_batch.mouse_pos;
-        const term_y = layout.terminal.y;
-        self.handlePointerActivityFrame(input_batch, layout, mouse, now);
-        try self.handleTerminalSplitResizeFrame(shell, input_batch, layout, layout.terminal.width, height, now);
+        const result = try app_post_preinput_frame.handle(
+            shell,
+            input_batch,
+            now,
+            @ptrCast(self),
+            .{
+                .apply_ui_scale = struct {
+                    fn call(raw: *anyopaque) void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        state.applyUiScale();
+                    }
+                }.call,
+                .refresh_terminal_sizing = struct {
+                    fn call(raw: *anyopaque) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.refreshTerminalSizing();
+                    }
+                }.call,
+                .handle_window_resize_event = struct {
+                    fn call(raw: *anyopaque, frame_shell: *Shell, at: f64) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.handleWindowResizeEventFrame(frame_shell, at);
+                    }
+                }.call,
+                .compute_layout = struct {
+                    fn call(raw: *anyopaque, width: f32, height: f32) layout_types.WidgetLayout {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        return state.computeLayout(width, height);
+                    }
+                }.call,
+                .handle_cursor_blink_arming = struct {
+                    fn call(raw: *anyopaque, at: f64) void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        state.handleCursorBlinkArmingFrame(at);
+                    }
+                }.call,
+                .handle_deferred_terminal_resize = struct {
+                    fn call(raw: *anyopaque, frame_shell: *Shell, layout: layout_types.WidgetLayout, at: f64) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.handleDeferredTerminalResizeFrame(frame_shell, layout, at);
+                    }
+                }.call,
+                .handle_pointer_activity = struct {
+                    fn call(
+                        raw: *anyopaque,
+                        frame_input_batch: *shared_types.input.InputBatch,
+                        layout: layout_types.WidgetLayout,
+                        mouse: shared_types.input.MousePos,
+                        at: f64,
+                    ) void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        state.handlePointerActivityFrame(frame_input_batch, layout, mouse, at);
+                    }
+                }.call,
+                .handle_terminal_split_resize = struct {
+                    fn call(
+                        raw: *anyopaque,
+                        frame_shell: *Shell,
+                        frame_input_batch: *shared_types.input.InputBatch,
+                        layout: layout_types.WidgetLayout,
+                        width: f32,
+                        height: f32,
+                        at: f64,
+                    ) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.handleTerminalSplitResizeFrame(frame_shell, frame_input_batch, layout, width, height, at);
+                    }
+                }.call,
+            },
+        );
+        if (result.needs_redraw) self.needs_redraw = true;
+        if (result.note_input) self.metrics.noteInput(now);
 
         return .{
-            .layout = layout,
-            .mouse = mouse,
-            .term_y = term_y,
+            .layout = result.layout,
+            .mouse = result.mouse,
+            .term_y = result.term_y,
         };
     }
 
