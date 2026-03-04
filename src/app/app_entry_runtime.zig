@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_bootstrap = @import("bootstrap.zig");
+const mode_build = @import("mode_build.zig");
 const app_runner = @import("runner.zig");
 const app_signals = @import("signals.zig");
 const app_state_mod = @import("app_state.zig");
@@ -8,7 +9,8 @@ pub const AppMode = app_state_mod.AppMode;
 const AppState = app_state_mod.AppState;
 
 pub fn runWithMode(allocator: std.mem.Allocator, app_mode: AppMode) !void {
-    var app = try AppState.init(allocator, app_mode);
+    const effective_mode = mode_build.effectiveMode(app_mode);
+    var app = try AppState.init(allocator, effective_mode);
     defer app.deinit();
 
     try app.run();

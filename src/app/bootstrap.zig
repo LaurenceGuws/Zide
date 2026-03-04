@@ -1,4 +1,5 @@
 const std = @import("std");
+const mode_build = @import("mode_build.zig");
 
 pub const AppMode = enum {
     ide,
@@ -8,6 +9,8 @@ pub const AppMode = enum {
 };
 
 pub fn parseAppMode(allocator: std.mem.Allocator) AppMode {
+    if (comptime mode_build.focused_mode) |mode| return mode;
+
     const args = std.process.argsAlloc(allocator) catch return .ide;
     defer std.process.argsFree(allocator, args);
 

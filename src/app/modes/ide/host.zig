@@ -2,6 +2,7 @@ const std = @import("std");
 const shared = @import("../shared/mod.zig");
 const backend = @import("../backend/mod.zig");
 const app_bootstrap = @import("../../bootstrap.zig");
+const mode_build = @import("../../mode_build.zig");
 
 pub const ActiveMode = enum {
     editor,
@@ -15,27 +16,28 @@ pub const MouseClickRoute = enum {
 };
 
 pub fn initialActiveMode(app_mode: app_bootstrap.AppMode) ActiveMode {
-    return if (app_mode == .terminal) .terminal else .editor;
+    const mode = mode_build.effectiveMode(app_mode);
+    return if (mode == .terminal) .terminal else .editor;
 }
 
 pub fn initialTerminalVisibility(app_mode: app_bootstrap.AppMode) bool {
-    return app_mode == .terminal;
+    return mode_build.effectiveMode(app_mode) == .terminal;
 }
 
 pub fn isTerminalOnly(app_mode: app_bootstrap.AppMode) bool {
-    return app_mode == .terminal;
+    return mode_build.effectiveMode(app_mode) == .terminal;
 }
 
 pub fn isEditorOnly(app_mode: app_bootstrap.AppMode) bool {
-    return app_mode == .editor;
+    return mode_build.effectiveMode(app_mode) == .editor;
 }
 
 pub fn isIde(app_mode: app_bootstrap.AppMode) bool {
-    return app_mode == .ide;
+    return mode_build.effectiveMode(app_mode) == .ide;
 }
 
 pub fn isFontSample(app_mode: app_bootstrap.AppMode) bool {
-    return app_mode == .font_sample;
+    return mode_build.effectiveMode(app_mode) == .font_sample;
 }
 
 pub fn supportsEditorSurface(app_mode: app_bootstrap.AppMode) bool {
@@ -47,7 +49,7 @@ pub fn supportsTerminalSurface(app_mode: app_bootstrap.AppMode) bool {
 }
 
 pub fn routedActiveMode(app_mode: app_bootstrap.AppMode, active: ActiveMode) ActiveMode {
-    return switch (app_mode) {
+    return switch (mode_build.effectiveMode(app_mode)) {
         .terminal => .terminal,
         .editor => .editor,
         else => active,
@@ -97,7 +99,7 @@ pub fn canHandleTerminalTabFocusShortcuts(app_mode: app_bootstrap.AppMode) bool 
 }
 
 pub fn mouseClickRoute(app_mode: app_bootstrap.AppMode) MouseClickRoute {
-    return switch (app_mode) {
+    return switch (mode_build.effectiveMode(app_mode)) {
         .ide => .ide,
         .terminal => .terminal,
         else => .editor,
