@@ -58,6 +58,7 @@ app_mode_layering_todo:
       - "If a gate fails, either fix in-slice or revert that slice before proceeding."
       - "Bundle step available: `zig build mode-gates` runs the non-interactive MODE gate set (tests, install/build of app binaries, terminal/app/input/editor import checks, and `test-terminal-replay -- --all`)."
       - "Fast bundle step available: `zig build mode-gates-fast` runs non-interactive MODE gates without terminal replay (for local iteration only)."
+      - "Done: both `mode-gates` and `mode-gates-fast` now include `mode-size-check` so focused-binary size regressions fail the gate automatically."
       - "Interactive mode smokes are grouped under `zig build mode-smokes-manual` and should be run explicitly when requested."
       - "Helper wrapper available: `tools/mode_gates.sh {fast|full|manual-smokes}` standardizes MODE gate invocation."
       - "Latest checkpoint validation (2026-03-05): `zig build mode-gates` passed (non-interactive bundle: tests, install/build, terminal/app/input/editor import checks, and terminal replay `--all`)."
