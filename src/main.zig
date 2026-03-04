@@ -4,6 +4,7 @@ const app_config_reload_notice_state = @import("app/config_reload_notice_state.z
 const app_editor_actions = @import("app/editor_actions.zig");
 const app_editor_intent_route = @import("app/editor_intent_route.zig");
 const app_editor_display_prepare = @import("app/editor_display_prepare.zig");
+const app_active_editor_frame = @import("app/active_editor_frame.zig");
 const app_editor_shortcuts_frame = @import("app/editor_shortcuts_frame.zig");
 const app_editor_seed = @import("app/editor_seed.zig");
 const app_file_detect = @import("app/file_detect.zig");
@@ -1101,24 +1102,86 @@ const AppState = struct {
         search_panel_consumed_input: bool,
         now: f64,
     ) !void {
-        if (!app_modes.ide.supportsEditorSurface(self.app_mode) or self.active_kind != .editor or self.editors.items.len == 0) return;
-
-        const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
-        var widget = EditorWidget.initWithCache(self.editors.items[editor_idx], &self.editor_cluster_cache, self.editor_wrap);
-        if (!search_panel_consumed_input and try widget.handleInput(shell, layout.editor.height, input_batch)) {
-            self.editor_cluster_cache.clear();
-            self.needs_redraw = true;
-            self.metrics.noteInput(now);
-        }
-        if (self.perf_mode and self.perf_frames_done < self.perf_frames_total) {
-            widget.scrollVisual(shell, self.perf_scroll_delta);
-            self.needs_redraw = true;
-            self.metrics.noteInput(now);
-            self.perf_frames_done +|= 1;
-        }
-        const scrollbar_blocking = self.handleEditorScrollbarInput(&widget, shell, layout, mouse, input_batch, now);
-        self.handleEditorMouseSelectionInput(&widget, shell, layout, mouse, input_batch, scrollbar_blocking, now);
-        self.precomputeEditorVisibleCaches(&widget, shell, layout);
+        const result = try app_active_editor_frame.handle(
+            self.app_mode,
+            self.active_kind,
+            self.editors.items,
+            self.active_tab,
+            &self.editor_cluster_cache,
+            self.editor_wrap,
+            shell,
+            layout,
+            mouse,
+            input_batch,
+            search_panel_consumed_input,
+            self.perf_mode,
+            self.perf_frames_done,
+            self.perf_frames_total,
+            self.perf_scroll_delta,
+            now,
+            @ptrCast(self),
+            .{
+                .handle_editor_scrollbar_input = struct {
+                    fn call(
+                        raw: *anyopaque,
+                        widget: *EditorWidget,
+                        frame_shell: *Shell,
+                        frame_layout: layout_types.WidgetLayout,
+                        frame_mouse: shared_types.input.MousePos,
+                        frame_input_batch: *shared_types.input.InputBatch,
+                        frame_now: f64,
+                    ) bool {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        return state.handleEditorScrollbarInput(
+                            widget,
+                            frame_shell,
+                            frame_layout,
+                            frame_mouse,
+                            frame_input_batch,
+                            frame_now,
+                        );
+                    }
+                }.call,
+                .handle_editor_mouse_selection_input = struct {
+                    fn call(
+                        raw: *anyopaque,
+                        widget: *EditorWidget,
+                        frame_shell: *Shell,
+                        frame_layout: layout_types.WidgetLayout,
+                        frame_mouse: shared_types.input.MousePos,
+                        frame_input_batch: *shared_types.input.InputBatch,
+                        scrollbar_blocking: bool,
+                        frame_now: f64,
+                    ) void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        state.handleEditorMouseSelectionInput(
+                            widget,
+                            frame_shell,
+                            frame_layout,
+                            frame_mouse,
+                            frame_input_batch,
+                            scrollbar_blocking,
+                            frame_now,
+                        );
+                    }
+                }.call,
+                .precompute_editor_visible_caches = struct {
+                    fn call(
+                        raw: *anyopaque,
+                        widget: *EditorWidget,
+                        frame_shell: *Shell,
+                        frame_layout: layout_types.WidgetLayout,
+                    ) void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        state.precomputeEditorVisibleCaches(widget, frame_shell, frame_layout);
+                    }
+                }.call,
+            },
+        );
+        if (result.clear_editor_cluster_cache) self.editor_cluster_cache.clear();
+        if (result.needs_redraw) self.needs_redraw = true;
+        if (result.note_input) self.metrics.noteInput(now);
+        if (result.perf_frames_done_inc) self.perf_frames_done +|= 1;
     }
 
     fn handleVisibleTerminalFrame(
