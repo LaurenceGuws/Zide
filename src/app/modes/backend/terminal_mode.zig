@@ -24,6 +24,10 @@ pub const TerminalMode = struct {
         };
     }
 
+    pub fn syncFromSnapshot(self: *TerminalMode, allocator: std.mem.Allocator, snapshot: shared.contracts.ModeSnapshot) !void {
+        try self.tab_state.resetFrom(allocator, snapshot.tabs, snapshot.active_tab);
+    }
+
     fn deinitErased(ptr: *anyopaque, allocator: std.mem.Allocator) void {
         const self: *TerminalMode = @ptrCast(@alignCast(ptr));
         self.deinit(allocator);
