@@ -10,6 +10,7 @@ const app_config_reload_notice = @import("app/config_reload_notice.zig");
 const app_terminal_grid = @import("app/terminal_grid.zig");
 const app_terminal_intent_route = @import("app/terminal_intent_route.zig");
 const app_terminal_tab_ops = @import("app/terminal_tab_ops.zig");
+const app_terminal_workspace_route = @import("app/terminal_workspace_route.zig");
 const app_terminal_shortcut_policy = @import("app/terminal_shortcut_policy.zig");
 const app_terminal_shortcut_runtime = @import("app/terminal_shortcut_runtime.zig");
 const app_terminal_tab_intents = @import("app/terminal_tab_intents.zig");
@@ -735,18 +736,12 @@ const AppState = struct {
         );
     }
 
-    fn routeActiveWorkspaceTabId(
-        self: *AppState,
-        route_fn: *const fn (self: *AppState, tab_id: ?u64) anyerror!bool,
-    ) !bool {
-        if (self.terminal_workspace) |*workspace| {
-            return try route_fn(self, workspace.activeTabId());
-        }
-        return false;
-    }
-
     fn routeTerminalCloseIntentForActiveWorkspaceTabAndSync(self: *AppState) !bool {
-        return self.routeActiveWorkspaceTabId(routeTerminalCloseIntentByTabIdAndSync);
+        return app_terminal_workspace_route.routeActiveTabId(
+            &self.terminal_workspace,
+            @ptrCast(self),
+            routeTerminalCloseIntentByTabIdFromCtx,
+        );
     }
 
     fn requestCloseActiveTerminalTab(self: *AppState, now: f64) !bool {
@@ -877,7 +872,21 @@ const AppState = struct {
     }
 
     fn routeTerminalActiveWorkspaceTabIntent(self: *AppState) !void {
-        _ = try self.routeActiveWorkspaceTabId(routeTerminalActivateIntentByTabIdAndSync);
+        _ = try app_terminal_workspace_route.routeActiveTabId(
+            &self.terminal_workspace,
+            @ptrCast(self),
+            routeTerminalActivateIntentByTabIdFromCtx,
+        );
+    }
+
+    fn routeTerminalCloseIntentByTabIdFromCtx(raw: *anyopaque, tab_id: ?u64) !bool {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        return state.routeTerminalCloseIntentByTabIdAndSync(tab_id);
+    }
+
+    fn routeTerminalActivateIntentByTabIdFromCtx(raw: *anyopaque, tab_id: ?u64) !bool {
+        const state: *AppState = @ptrCast(@alignCast(raw));
+        return state.routeTerminalActivateIntentByTabIdAndSync(tab_id);
     }
 
     fn handleIdeMousePressedRouting(
