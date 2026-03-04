@@ -2205,6 +2205,19 @@ const AppState = struct {
         return true;
     }
 
+    fn applyTerminalCloseConfirmDecision(
+        self: *AppState,
+        decision: app_modes.ide.TerminalCloseConfirmDecision,
+        now: f64,
+    ) !bool {
+        return switch (decision) {
+            .confirm => self.requestConfirmTerminalCloseFromModal(now),
+            .cancel => self.requestCancelTerminalCloseFromModal(now),
+            .consume => true,
+            .none => false,
+        };
+    }
+
     fn handleTerminalCloseConfirmInput(
         self: *AppState,
         input_batch: *shared_types.input.InputBatch,
@@ -2214,24 +2227,12 @@ const AppState = struct {
         if (!self.terminalCloseConfirmActive()) return false;
 
         const modal = app_modes.ide.terminalCloseConfirmModalLayout(layout, self.shell.uiScaleFactor());
-        switch (app_modes.ide.decideTerminalCloseConfirmInput(
+        const decision = app_modes.ide.decideTerminalCloseConfirmInput(
             self.input_router.actionsSlice(),
             input_batch,
             modal,
-        )) {
-            .confirm => {
-                return self.requestConfirmTerminalCloseFromModal(now);
-            },
-            .cancel => {
-                return self.requestCancelTerminalCloseFromModal(now);
-            },
-            .consume => {
-                return true;
-            },
-            .none => {},
-        }
-
-        return false;
+        );
+        return self.applyTerminalCloseConfirmDecision(decision, now);
     }
 
     fn focusTerminalTabByIndex(self: *AppState, index: usize) bool {
