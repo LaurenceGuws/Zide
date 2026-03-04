@@ -8,6 +8,7 @@ const app_config_reload_notice = @import("app/config_reload_notice.zig");
 const app_terminal_grid = @import("app/terminal_grid.zig");
 const app_terminal_resize = @import("app/terminal_resize.zig");
 const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
+const app_terminal_close_confirm_state = @import("app/terminal_close_confirm_state.zig");
 const app_terminal_theme_apply = @import("app/terminal_theme_apply.zig");
 const app_terminal_tabs = @import("app/terminal_tabs.zig");
 const app_terminal_close_confirm_draw = @import("app/terminal_close_confirm_draw.zig");
@@ -2151,7 +2152,7 @@ const AppState = struct {
 
     fn terminalCloseConfirmActive(self: *AppState) bool {
         const active_tab: ?u64 = if (self.terminal_workspace) |*workspace| workspace.activeTabId() else null;
-        self.terminal_close_confirm_tab = app_modes.ide.reconcileTerminalCloseConfirmTab(
+        self.terminal_close_confirm_tab = app_terminal_close_confirm_state.reconcilePending(
             self.terminal_close_confirm_tab,
             active_tab,
         );
@@ -2231,25 +2232,20 @@ const AppState = struct {
         return false;
     }
 
-    fn terminalTabCloseNeedsConfirm(session: *TerminalSession) bool {
-        return session.shouldConfirmClose();
-    }
-
     fn closeActiveTerminalTab(self: *AppState) !bool {
         if (!app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) return false;
         if (self.terminal_workspace) |*workspace| {
             if (workspace.tabCount() == 0) return false;
             if (workspace.activeTabId()) |active_tab_id| {
                 if (workspace.activeSession()) |active_session| {
-                    const requires_confirm = terminalTabCloseNeedsConfirm(active_session);
-                    if (requires_confirm) {
-                        const confirm_matches = self.terminal_close_confirm_tab != null and
-                            self.terminal_close_confirm_tab.? == active_tab_id;
-                        if (!confirm_matches) {
-                            self.terminal_close_confirm_tab = active_tab_id;
-                            self.needs_redraw = true;
-                            return false;
-                        }
+                    if (app_terminal_close_confirm_state.shouldArmCloseConfirm(
+                        self.terminal_close_confirm_tab,
+                        active_tab_id,
+                        active_session.shouldConfirmClose(),
+                    )) {
+                        self.terminal_close_confirm_tab = active_tab_id;
+                        self.needs_redraw = true;
+                        return false;
                     }
                 }
             }
