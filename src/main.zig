@@ -56,6 +56,8 @@ const app_shell_chrome_draw_runtime = @import("app/shell_chrome_draw_runtime.zig
 const app_tabbar_draw_runtime = @import("app/tabbar_draw_runtime.zig");
 const app_draw_overlays_runtime = @import("app/draw_overlays_runtime.zig");
 const app_ui_layout_runtime = @import("app/ui_layout_runtime.zig");
+const app_metrics_log_runtime = @import("app/metrics_log_runtime.zig");
+const app_run_entry_runtime = @import("app/run_entry_runtime.zig");
 const app_terminal_tab_navigation_runtime = @import("app/terminal_tab_navigation_runtime.zig");
 const app_terminal_close_active_runtime = @import("app/terminal_close_active_runtime.zig");
 const app_terminal_close_confirm_actions_runtime = @import("app/terminal_close_confirm_actions_runtime.zig");
@@ -2408,8 +2410,23 @@ const AppState = struct {
     }
 
     pub fn run(self: *AppState) !void {
-        try self.initializeRunModeState();
-        try self.runMainLoop();
+        try app_run_entry_runtime.run(
+            @ptrCast(self),
+            .{
+                .initialize_run_mode_state = struct {
+                    fn call(raw: *anyopaque) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.initializeRunModeState();
+                    }
+                }.call,
+                .run_main_loop = struct {
+                    fn call(raw: *anyopaque) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        try state.runMainLoop();
+                    }
+                }.call,
+            },
+        );
     }
 
     fn handleFrameRenderAndIdle(
@@ -2444,20 +2461,7 @@ const AppState = struct {
     }
 
     fn maybeLogMetrics(self: *AppState, now: f64) void {
-        if (!self.metrics_logger.enabled_file) return;
-        if (now - self.last_metrics_log_time < 1.0) return;
-        self.last_metrics_log_time = now;
-        self.metrics_logger.logf(
-            "frame_avg_ms={d:.2} draw_avg_ms={d:.2} input_avg_ms={d:.2} input_max_ms={d:.2} frames={d} redraws={d}",
-            .{
-                self.metrics.frame_ms_avg,
-                self.metrics.draw_ms_avg,
-                self.metrics.input_latency_ms_avg,
-                self.metrics.input_latency_ms_max,
-                self.metrics.frames,
-                self.metrics.redraws,
-            },
-        );
+        app_metrics_log_runtime.maybeLog(self, now);
     }
 
     fn update(self: *AppState, input_batch: *shared_types.input.InputBatch) !void {
