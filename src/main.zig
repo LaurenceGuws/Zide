@@ -9,6 +9,7 @@ const app_config_reload_notice = @import("app/config_reload_notice.zig");
 const app_terminal_grid = @import("app/terminal_grid.zig");
 const app_terminal_tab_ops = @import("app/terminal_tab_ops.zig");
 const app_terminal_shortcut_policy = @import("app/terminal_shortcut_policy.zig");
+const app_terminal_tab_intents = @import("app/terminal_tab_intents.zig");
 const app_terminal_resize = @import("app/terminal_resize.zig");
 const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
 const app_terminal_close_confirm_state = @import("app/terminal_close_confirm_state.zig");
@@ -722,7 +723,7 @@ const AppState = struct {
     }
 
     fn routeTerminalCloseIntentByTabIdAndSync(self: *AppState, active_tab_id: ?u64) !bool {
-        if (app_modes.ide.closeIntentForActiveTab(active_tab_id)) |intent| {
+        if (app_terminal_tab_intents.closeIntentForTabId(active_tab_id)) |intent| {
             try self.routeTerminalTabActionAndSync(intent);
             return true;
         }
@@ -767,7 +768,7 @@ const AppState = struct {
     ) !bool {
         const moved = self.cycleTerminalTab(dir == .next);
         if (!moved) return false;
-        try self.routeTerminalTabActionAndSync(if (dir == .next) .next else .prev);
+        try self.routeTerminalTabActionAndSync(app_terminal_tab_intents.cycleIntentForDirection(dir));
         self.needs_redraw = true;
         self.metrics.noteInput(now);
         return true;
@@ -833,8 +834,8 @@ const AppState = struct {
     }
 
     fn routeTerminalActivateIntentByTabIdAndSync(self: *AppState, tab_id: ?u64) !bool {
-        if (tab_id) |id| {
-            try self.routeTerminalTabActionAndSync(.{ .activate = id });
+        if (app_terminal_tab_intents.activateIntentForTabId(tab_id)) |intent| {
+            try self.routeTerminalTabActionAndSync(intent);
             return true;
         }
         return false;
