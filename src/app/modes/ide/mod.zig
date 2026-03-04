@@ -42,6 +42,7 @@ pub const ReorderDragMeta = tab_intents.ReorderDragMeta;
 pub const closeIntentForActiveTab = tab_intents.closeIntentForActiveTab;
 pub const reorderIntentForDrag = tab_intents.reorderIntentForDrag;
 pub const terminalFocusIndexForAction = tab_intents.terminalFocusIndexForAction;
+pub const terminalFocusIntentForAction = tab_intents.terminalFocusIntentForAction;
 pub const reorderIntentForDragEnd = tab_drag.reorderIntentForDragEnd;
 pub const shouldHandleClickAfterDragEnd = tab_drag.shouldHandleClickAfterDragEnd;
 pub const shouldMarkRedrawAfterDragEnd = tab_drag.shouldMarkRedrawAfterDragEnd;
