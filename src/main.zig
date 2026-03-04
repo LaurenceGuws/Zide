@@ -53,6 +53,7 @@ const app_prepare_run_frame_runtime = @import("app/prepare_run_frame_runtime.zig
 const app_frame_render_idle_runtime = @import("app/frame_render_idle_runtime.zig");
 const app_terminal_tab_navigation_runtime = @import("app/terminal_tab_navigation_runtime.zig");
 const app_terminal_close_active_runtime = @import("app/terminal_close_active_runtime.zig");
+const app_terminal_close_confirm_actions_runtime = @import("app/terminal_close_confirm_actions_runtime.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
@@ -2035,19 +2036,52 @@ const AppState = struct {
     }
 
     fn requestConfirmTerminalCloseFromModal(self: *AppState, now: f64) !bool {
-        _ = try self.routeActiveWorkspaceTerminalIntentAndSync(.close);
-        if (try self.closeActiveTerminalTab()) {
-            self.needs_redraw = true;
-        }
-        self.metrics.noteInput(now);
-        return true;
+        return try app_terminal_close_confirm_actions_runtime.requestConfirm(
+            self,
+            now,
+            @ptrCast(self),
+            .{
+                .route_close_intent_and_sync = struct {
+                    fn call(raw: *anyopaque) !void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        _ = try state.routeActiveWorkspaceTerminalIntentAndSync(.close);
+                    }
+                }.call,
+                .close_active_terminal_tab = struct {
+                    fn call(raw: *anyopaque) !bool {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        return try state.closeActiveTerminalTab();
+                    }
+                }.call,
+                .note_input = struct {
+                    fn call(raw: *anyopaque, at: f64) void {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        state.metrics.noteInput(at);
+                    }
+                }.call,
+            },
+        );
     }
 
     fn requestCancelTerminalCloseFromModal(self: *AppState, now: f64) bool {
-        self.terminal_close_confirm_tab = null;
-        self.needs_redraw = true;
-        self.metrics.noteInput(now);
-        return true;
+        return app_terminal_close_confirm_actions_runtime.requestCancel(
+            self,
+            now,
+            @ptrCast(self),
+            .{
+                .route_close_intent_and_sync = struct {
+                    fn call(_: *anyopaque) !void {}
+                }.call,
+                .close_active_terminal_tab = struct {
+                    fn call(_: *anyopaque) !bool {
+                        return false;
+                    }
+                }.call,
+                .note_input = struct {
+                    fn call(_: *anyopaque, _: f64) void {}
+                }.call,
+            },
+        );
     }
 
     fn applyTerminalCloseConfirmDecision(

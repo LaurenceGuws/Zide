@@ -224,6 +224,7 @@ app_mode_layering_todo:
             - "In progress: frame render/idle latency flow moved from `main.zig` into `src/app/frame_render_idle_runtime.zig` (`handle`) including redraw path, perf draw logging, input-latency logging, idle backoff, and metrics tick hooks."
             - "In progress: terminal tab navigation runtime (`focus/cycle`) moved from `main.zig` into `src/app/terminal_tab_navigation_runtime.zig`, including close-confirm reset + active widget cache invalidation."
             - "In progress: active terminal close flow moved from `main.zig` into `src/app/terminal_close_active_runtime.zig` (`closeActive`) with sync-tab-bar callback hook."
+            - "In progress: terminal close-confirm modal confirm/cancel action handlers moved from `main.zig` into `src/app/terminal_close_confirm_actions_runtime.zig` (`requestConfirm`, `requestCancel`) with callback hooks."
             - "In progress: reload-config shortcut action-loop dispatch moved from `main.zig` into `src/app/reload_config_shortcut_runtime.zig` (`handle`) with callback hooks."
             - "In progress: single-use reload-config callback shims were removed from `main.zig`; pre-input path now supplies inline callbacks directly to `reload_config_shortcut_runtime.handle(...)`."
             - "In progress: terminal shortcut suppression policy for focused copy/paste conflicts moved from `main.zig` into `src/app/terminal_shortcut_suppress.zig` (`forFocus`)."
