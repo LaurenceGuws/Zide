@@ -36,6 +36,7 @@ const app_search_panel_input = @import("app/search_panel_input.zig");
 const app_search_panel_runtime = @import("app/search_panel_runtime.zig");
 const app_search_panel_state = @import("app/search_panel_state.zig");
 const app_mouse_pressed_frame = @import("app/mouse_pressed_frame.zig");
+const app_input_actions_frame_runtime = @import("app/input_actions_frame_runtime.zig");
 const app_pointer_activity_frame = @import("app/pointer_activity_frame.zig");
 const app_shortcut_action_runtime = @import("app/shortcut_action_runtime.zig");
 const app_tab_action_apply = @import("app/tab_action_apply.zig");
@@ -1607,17 +1608,21 @@ const AppState = struct {
         shell: *Shell,
         now: f64,
     ) !bool {
-        var handled_zoom = false;
-        const zoom_log = app_logger.logger("ui.zoom.shortcut");
-        for (self.input_router.actionsSlice()) |action| {
-            if (try self.handleShortcutAction(shell, action.kind, now, &handled_zoom, zoom_log)) {
-                return true;
-            }
-        }
-        if (handled_zoom) {
-            return true;
-        }
-        return false;
+        _ = shell;
+        return try app_input_actions_frame_runtime.handle(
+            self.input_router.actionsSlice(),
+            now,
+            @ptrCast(self),
+            .{
+                .handle_shortcut_action = struct {
+                    fn call(raw: *anyopaque, kind: input_actions.ActionKind, at: f64, handled_zoom: *bool) !bool {
+                        const state: *AppState = @ptrCast(@alignCast(raw));
+                        const zoom_log = app_logger.logger("ui.zoom.shortcut");
+                        return try state.handleShortcutAction(state.shell, kind, at, handled_zoom, zoom_log);
+                    }
+                }.call,
+            },
+        );
     }
 
     fn handlePointerActivityFrame(
