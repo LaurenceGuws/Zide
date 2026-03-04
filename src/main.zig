@@ -541,10 +541,6 @@ const AppState = struct {
         editor.setCursor(clamped_line, clamped_col);
     }
 
-    fn prepareEditorForDisplay(self: *AppState, editor: *Editor) void {
-        app_editor_display_prepare.prepare(editor, &self.editor_render_cache);
-    }
-
     fn handleSearchPanelInput(self: *AppState, editor: *Editor, input_batch: *shared_types.input.InputBatch) !bool {
         if (!self.search_panel.active) return false;
 
@@ -1015,7 +1011,7 @@ const AppState = struct {
         layout: layout_types.WidgetLayout,
     ) void {
         if (layout.editor.width <= 0 or layout.editor.height <= 0) return;
-        self.prepareEditorForDisplay(widget.editor);
+        app_editor_display_prepare.prepare(widget.editor, &self.editor_render_cache);
         const visible_lines = @as(usize, @intFromFloat(layout.editor.height / shell.charHeight()));
         const default_budget = if (visible_lines > 0) visible_lines + 1 else 0;
         const highlight_budget = self.editor_highlight_budget orelse default_budget;
@@ -2702,7 +2698,7 @@ const AppState = struct {
             shell.setTheme(self.editor_theme);
             const editor_idx = @min(self.active_tab, self.editors.items.len - 1);
             const editor = self.editors.items[editor_idx];
-            self.prepareEditorForDisplay(editor);
+            app_editor_display_prepare.prepare(editor, &self.editor_render_cache);
             var widget = EditorWidget.initWithCache(editor, &self.editor_cluster_cache, self.editor_wrap);
             widget.drawCached(
                 shell,

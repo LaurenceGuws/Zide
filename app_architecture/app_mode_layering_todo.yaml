@@ -209,6 +209,7 @@ app_mode_layering_todo:
             - "In progress: additional single-use `main.zig` wrappers (`activeEditor`, `activateEditorTabAtCurrentIndex`, `routeTerminalIntentByTabIdAndSync`) were removed; callsites now invoke shared route helpers directly."
             - "In progress: single-use editor highlight-dirty helper was removed from `main.zig`; `prepareEditorForDisplay(...)` now performs dirty-range consumption directly."
             - "In progress: editor display pre-draw preparation moved from `main.zig` into `src/app/editor_display_prepare.zig` (`prepare`)."
+            - "In progress: one-line `prepareEditorForDisplay` wrapper was removed from `main.zig`; callsites now invoke `editor_display_prepare.prepare(...)` directly."
             - "In progress: terminal theme apply helpers moved from `main.zig` into `src/app/terminal_theme_apply.zig` (`setSessionPalette`, `notifyColorSchemeChanged`, `applyThemeToWidgets`)."
             - "In progress: terminal session startup/widget bootstrap dedup moved from `main.zig` into `src/app/terminal_session_bootstrap.zig` (`startSessionWithShellCellSize`, `initWidget`)."
             - "In progress: terminal grid-size math moved from `main.zig` into `src/app/terminal_grid.zig` (`compute`)."
