@@ -827,16 +827,18 @@ const AppState = struct {
         self.metrics.noteInput(now);
     }
 
-    fn routeTerminalActiveWorkspaceTabIntent(self: *AppState) !void {
-        if (self.terminal_workspace) |*workspace| {
-            if (workspace.activeTabId()) |active_tab_id| {
-                try self.routeTerminalTabActionAndSync(.{ .activate = active_tab_id });
-            }
+    fn routeTerminalActivateIntentByTabIdAndSync(self: *AppState, tab_id: ?u64) !bool {
+        if (tab_id) |id| {
+            try self.routeTerminalTabActionAndSync(.{ .activate = id });
+            return true;
         }
+        return false;
     }
 
-    fn routeTerminalActivateTabIdIntent(self: *AppState, tab_id: u64) !void {
-        try self.routeTerminalTabActionAndSync(.{ .activate = tab_id });
+    fn routeTerminalActiveWorkspaceTabIntent(self: *AppState) !void {
+        if (self.terminal_workspace) |*workspace| {
+            _ = try self.routeTerminalActivateIntentByTabIdAndSync(workspace.activeTabId());
+        }
     }
 
     fn handleIdeMousePressedRouting(
@@ -915,9 +917,9 @@ const AppState = struct {
             }
             if (release_plan.handle_click) {
                 if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width)) {
-                    if (self.tab_bar.terminalTabIdAtVisual(self.tab_bar.active_index)) |focused_tab_id| {
-                        try self.routeTerminalActivateTabIdIntent(focused_tab_id);
-                    }
+                    _ = try self.routeTerminalActivateIntentByTabIdAndSync(
+                        self.tab_bar.terminalTabIdAtVisual(self.tab_bar.active_index),
+                    );
                     if (self.focusTerminalTabByIndex(self.tab_bar.active_index)) {
                         self.needs_redraw = true;
                         self.metrics.noteInput(now);
@@ -3328,4 +3330,18 @@ test "routeTerminalTabActionAndSync keeps terminal mode aligned with reordered t
     try std.testing.expectEqual(@as(u64, 22), snap.tabs[0].id);
     try std.testing.expectEqual(@as(u64, 11), snap.tabs[1].id);
     try std.testing.expectEqual(@as(u64, 33), snap.tabs[2].id);
+}
+
+test "routeTerminalActivateIntentByTabIdAndSync emits only when tab id exists" {
+    const allocator = std.testing.allocator;
+    var app = try initTestAppStateForTerminalTabRouting(allocator);
+    defer deinitTestAppStateForTerminalTabRouting(&app, allocator);
+
+    try app.tab_bar.addTerminalTab("t1", 1001);
+    try app.tab_bar.addTerminalTab("t2", 1002);
+    app.tab_bar.active_index = 0;
+    try app.syncModeAdaptersFromTabBar();
+
+    try std.testing.expect(!try app.routeTerminalActivateIntentByTabIdAndSync(null));
+    try std.testing.expect(try app.routeTerminalActivateIntentByTabIdAndSync(1002));
 }
