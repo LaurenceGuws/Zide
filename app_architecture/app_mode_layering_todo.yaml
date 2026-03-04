@@ -123,14 +123,14 @@ app_mode_layering_todo:
             - "IDE layer should compose backend modes and keep policy-only logic."
         - id: MODE-02-02
           title: "Move residual mode-switching logic out of main app file"
-          status: in_progress
+          status: done
           files_to_edit:
             - src/main.zig
             - src/app/modes/ide/host.zig
             - src/app/modes/ide/layout_policy.zig
           notes:
             - "Target: main file owns bootstrap + host startup only."
-            - "In progress: mode routing, tab policy, terminal strip geometry, layout, and action/shortcut gating have been moved behind `app/modes/ide` helpers."
+            - "Completed: mode routing, tab policy, terminal strip geometry, layout, action/shortcut gating, and mouse routing are now routed through `app/modes/ide` helpers."
 
     - name: "MODE-03 Build-time focused binaries"
       tasks:
