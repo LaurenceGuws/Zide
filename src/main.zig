@@ -3,6 +3,7 @@ const app_bootstrap = @import("app/bootstrap.zig");
 const app_editor_actions = @import("app/editor_actions.zig");
 const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
+const app_search_panel_input = @import("app/search_panel_input.zig");
 const app_tab_bar_width = @import("app/tab_bar_width.zig");
 const app_theme_utils = @import("app/theme_utils.zig");
 const app_runner = @import("app/runner.zig");
@@ -53,14 +54,6 @@ const TerminalWidget = widgets.TerminalWidget;
 pub const AppMode = app_bootstrap.AppMode;
 
 const AppState = struct {
-    const SearchPanelCommand = enum {
-        none,
-        close,
-        next,
-        prev,
-        backspace,
-    };
-
     const SearchPanelState = struct {
         active: bool,
         query: std.ArrayList(u8),
@@ -573,31 +566,6 @@ const AppState = struct {
         self.search_panel.query.items.len = idx;
     }
 
-    fn searchPanelCommand(input_batch: *const shared_types.input.InputBatch) SearchPanelCommand {
-        if (input_batch.keyPressed(.escape)) return .close;
-        if (input_batch.keyPressed(.enter) or input_batch.keyPressed(.kp_enter) or input_batch.keyPressed(.f3)) {
-            return if (input_batch.mods.shift) .prev else .next;
-        }
-        if (input_batch.keyPressed(.backspace) or input_batch.keyRepeated(.backspace)) return .backspace;
-        return .none;
-    }
-
-    fn appendSearchPanelTextEvents(
-        allocator: std.mem.Allocator,
-        query: *std.ArrayList(u8),
-        input_batch: *const shared_types.input.InputBatch,
-    ) !bool {
-        var appended = false;
-        for (input_batch.events.items) |event| {
-            if (event != .text) continue;
-            const text = event.text.utf8Slice();
-            if (text.len == 0) continue;
-            try query.appendSlice(allocator, text);
-            appended = true;
-        }
-        return appended;
-    }
-
     fn handleSearchPanelInput(self: *AppState, editor: *Editor, input_batch: *shared_types.input.InputBatch) !bool {
         if (!self.search_panel.active) return false;
 
@@ -617,7 +585,7 @@ const AppState = struct {
             }
         }.run;
 
-        switch (searchPanelCommand(input_batch)) {
+        switch (app_search_panel_input.searchPanelCommand(input_batch)) {
             .close => {
                 self.closeSearchPanel();
                 return true;
@@ -638,7 +606,7 @@ const AppState = struct {
             .none => {},
         }
 
-        if (try appendSearchPanelTextEvents(self.allocator, &self.search_panel.query, input_batch)) {
+        if (try app_search_panel_input.appendSearchPanelTextEvents(self.allocator, &self.search_panel.query, input_batch)) {
             query_changed = true;
             handled = true;
         }
@@ -3257,20 +3225,20 @@ test "search panel command maps navigation keys" {
     defer batch.deinit();
 
     batch.key_pressed[@intFromEnum(shared_types.input.Key.enter)] = true;
-    try std.testing.expectEqual(AppState.SearchPanelCommand.next, AppState.searchPanelCommand(&batch));
+    try std.testing.expectEqual(app_search_panel_input.SearchPanelCommand.next, app_search_panel_input.searchPanelCommand(&batch));
 
     batch.clear();
     batch.key_pressed[@intFromEnum(shared_types.input.Key.f3)] = true;
     batch.mods.shift = true;
-    try std.testing.expectEqual(AppState.SearchPanelCommand.prev, AppState.searchPanelCommand(&batch));
+    try std.testing.expectEqual(app_search_panel_input.SearchPanelCommand.prev, app_search_panel_input.searchPanelCommand(&batch));
 
     batch.clear();
     batch.key_pressed[@intFromEnum(shared_types.input.Key.escape)] = true;
-    try std.testing.expectEqual(AppState.SearchPanelCommand.close, AppState.searchPanelCommand(&batch));
+    try std.testing.expectEqual(app_search_panel_input.SearchPanelCommand.close, app_search_panel_input.searchPanelCommand(&batch));
 
     batch.clear();
     batch.key_repeated[@intFromEnum(shared_types.input.Key.backspace)] = true;
-    try std.testing.expectEqual(AppState.SearchPanelCommand.backspace, AppState.searchPanelCommand(&batch));
+    try std.testing.expectEqual(app_search_panel_input.SearchPanelCommand.backspace, app_search_panel_input.searchPanelCommand(&batch));
 }
 
 test "search panel text helper appends utf8 input events" {
@@ -3292,7 +3260,7 @@ test "search panel text helper appends utf8 input events" {
         .utf8 = .{ 0xC3, 0xA9, 0, 0 },
     } });
 
-    try std.testing.expect(try AppState.appendSearchPanelTextEvents(allocator, &query, &batch));
+    try std.testing.expect(try app_search_panel_input.appendSearchPanelTextEvents(allocator, &query, &batch));
     try std.testing.expectEqualStrings("a\xC3\xA9", query.items);
 }
 
