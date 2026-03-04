@@ -5,6 +5,7 @@ const app_file_detect = @import("app/file_detect.zig");
 const app_font_rendering = @import("app/font_rendering.zig");
 const app_config_reload_notice = @import("app/config_reload_notice.zig");
 const app_terminal_grid = @import("app/terminal_grid.zig");
+const app_terminal_resize = @import("app/terminal_resize.zig");
 const app_terminal_session_bootstrap = @import("app/terminal_session_bootstrap.zig");
 const app_terminal_theme_apply = @import("app/terminal_theme_apply.zig");
 const app_terminal_tabs = @import("app/terminal_tabs.zig");
@@ -1976,19 +1977,11 @@ const AppState = struct {
             const rows: u16 = grid.rows;
             if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
                 if (self.terminal_workspace) |*workspace| {
-                    workspace.setCellSizeAll(
-                        @intFromFloat(shell.terminalCellWidth()),
-                        @intFromFloat(shell.terminalCellHeight()),
-                    );
-                    try workspace.resizeAll(rows, cols);
+                    try app_terminal_resize.resizeWorkspaceWithShellCellSize(workspace, shell, rows, cols);
                 }
             } else {
                 const term = self.terminals.items[0];
-                term.setCellSize(
-                    @intFromFloat(shell.terminalCellWidth()),
-                    @intFromFloat(shell.terminalCellHeight()),
-                );
-                try term.resize(rows, cols);
+                try app_terminal_resize.resizeSessionWithShellCellSize(term, shell, rows, cols);
             }
         }
         self.needs_redraw = true;
@@ -2383,20 +2376,10 @@ const AppState = struct {
         const rows: u16 = grid.rows;
         if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
             if (self.terminal_workspace) |*workspace| {
-                workspace.setCellSizeAll(
-                    @intFromFloat(shell.terminalCellWidth()),
-                    @intFromFloat(shell.terminalCellHeight()),
-                );
-                try workspace.resizeAll(rows, cols);
+                try app_terminal_resize.resizeWorkspaceWithShellCellSize(workspace, shell, rows, cols);
             }
         } else {
-            for (self.terminals.items) |term| {
-                term.setCellSize(
-                    @intFromFloat(shell.terminalCellWidth()),
-                    @intFromFloat(shell.terminalCellHeight()),
-                );
-                try term.resize(rows, cols);
-            }
+            try app_terminal_resize.resizeSessionsWithShellCellSize(self.terminals.items, shell, rows, cols);
         }
     }
 
