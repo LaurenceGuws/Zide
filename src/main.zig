@@ -1838,6 +1838,83 @@ const AppState = struct {
         }
     }
 
+    fn handleWindowResizeEventFrame(self: *AppState, shell: *Shell, now: f64) !void {
+        _ = now;
+        if (!app_shell.isWindowResized()) return;
+        _ = shell.refreshWindowMetrics("window-event");
+        if (try shell.refreshUiScale()) {
+            self.applyUiScale();
+        }
+        self.window_resize_pending = true;
+        self.window_resize_last_time = app_shell.getTime();
+        self.needs_redraw = true;
+    }
+
+    fn handleCursorBlinkArmingFrame(self: *AppState, now: f64) void {
+        if (self.activeTerminalWidget()) |term_widget| {
+            const cache = term_widget.session.renderCache();
+            const blink_armed = cache.cursor_visible and cache.cursor_style.blink and cache.scroll_offset == 0;
+            if (blink_armed != self.last_cursor_blink_armed) {
+                self.last_cursor_blink_armed = blink_armed;
+                const cursor_log = app_logger.logger("terminal.cursor");
+                if (cursor_log.enabled_file or cursor_log.enabled_console) {
+                    cursor_log.logf(
+                        "cursor blink armed={any} visible={any} blink={any} scroll_offset={d}",
+                        .{ blink_armed, cache.cursor_visible, cache.cursor_style.blink, cache.scroll_offset },
+                    );
+                }
+            }
+            if (blink_armed) {
+                const period: f64 = 0.5;
+                const phase = @mod(now, period * 2.0);
+                const blink_on = phase < period;
+                if (blink_on != self.last_cursor_blink_on) {
+                    self.last_cursor_blink_on = blink_on;
+                    self.needs_redraw = true;
+                }
+            }
+        }
+    }
+
+    fn handleDeferredTerminalResizeFrame(
+        self: *AppState,
+        shell: *Shell,
+        layout: layout_types.WidgetLayout,
+        now: f64,
+    ) !void {
+        if (!self.window_resize_pending or (now - self.window_resize_last_time) < 0.12) return;
+
+        self.window_resize_pending = false;
+        if (self.terminalTabCount() > 0) {
+            const effective_height = app_modes.ide.terminalEffectiveHeightForSizing(
+                self.app_mode,
+                self.show_terminal,
+                layout.terminal.height,
+                self.terminal_height,
+            );
+            const grid = self.terminalGridSize(layout.terminal.width, effective_height, 1, 1);
+            const cols: u16 = grid.cols;
+            const rows: u16 = grid.rows;
+            if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
+                if (self.terminal_workspace) |*workspace| {
+                    workspace.setCellSizeAll(
+                        @intFromFloat(shell.terminalCellWidth()),
+                        @intFromFloat(shell.terminalCellHeight()),
+                    );
+                    try workspace.resizeAll(rows, cols);
+                }
+            } else {
+                const term = self.terminals.items[0];
+                term.setCellSize(
+                    @intFromFloat(shell.terminalCellWidth()),
+                    @intFromFloat(shell.terminalCellHeight()),
+                );
+                try term.resize(rows, cols);
+            }
+        }
+        self.needs_redraw = true;
+    }
+
     fn logModeAdapterParity(self: *AppState) void {
         const log = app_logger.logger("app.mode.parity");
         if (!log.enabled_file and !log.enabled_console) return;
@@ -2610,75 +2687,14 @@ const AppState = struct {
             self.metrics.noteInput(now);
         }
         // Check for window resize (event-based, works with Wayland)
-        if (app_shell.isWindowResized()) {
-            _ = shell.refreshWindowMetrics("window-event");
-            if (try shell.refreshUiScale()) {
-                self.applyUiScale();
-            }
-            self.window_resize_pending = true;
-            self.window_resize_last_time = now;
-            self.needs_redraw = true;
-        }
+        try self.handleWindowResizeEventFrame(shell, now);
 
         const width = @as(f32, @floatFromInt(shell.width()));
         const height = @as(f32, @floatFromInt(shell.height()));
         const layout = self.computeLayout(width, height);
 
-        if (self.activeTerminalWidget()) |term_widget| {
-            const cache = term_widget.session.renderCache();
-            const blink_armed = cache.cursor_visible and cache.cursor_style.blink and cache.scroll_offset == 0;
-            if (blink_armed != self.last_cursor_blink_armed) {
-                self.last_cursor_blink_armed = blink_armed;
-                const cursor_log = app_logger.logger("terminal.cursor");
-                if (cursor_log.enabled_file or cursor_log.enabled_console) {
-                    cursor_log.logf(
-                        "cursor blink armed={any} visible={any} blink={any} scroll_offset={d}",
-                        .{ blink_armed, cache.cursor_visible, cache.cursor_style.blink, cache.scroll_offset },
-                    );
-                }
-            }
-            if (blink_armed) {
-                const period: f64 = 0.5;
-                const phase = @mod(now, period * 2.0);
-                const blink_on = phase < period;
-                if (blink_on != self.last_cursor_blink_on) {
-                    self.last_cursor_blink_on = blink_on;
-                    self.needs_redraw = true;
-                }
-            }
-        }
-
-        if (self.window_resize_pending and (now - self.window_resize_last_time) >= 0.12) {
-            self.window_resize_pending = false;
-            if (self.terminalTabCount() > 0) {
-                const effective_height = app_modes.ide.terminalEffectiveHeightForSizing(
-                    self.app_mode,
-                    self.show_terminal,
-                    layout.terminal.height,
-                    self.terminal_height,
-                );
-                const grid = self.terminalGridSize(layout.terminal.width, effective_height, 1, 1);
-                const cols: u16 = grid.cols;
-                const rows: u16 = grid.rows;
-                if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
-                    if (self.terminal_workspace) |*workspace| {
-                        workspace.setCellSizeAll(
-                            @intFromFloat(shell.terminalCellWidth()),
-                            @intFromFloat(shell.terminalCellHeight()),
-                        );
-                        try workspace.resizeAll(rows, cols);
-                    }
-                } else {
-                    const term = self.terminals.items[0];
-                    term.setCellSize(
-                        @intFromFloat(shell.terminalCellWidth()),
-                        @intFromFloat(shell.terminalCellHeight()),
-                    );
-                    try term.resize(rows, cols);
-                }
-            }
-            self.needs_redraw = true;
-        }
+        self.handleCursorBlinkArmingFrame(now);
+        try self.handleDeferredTerminalResizeFrame(shell, layout, now);
 
         // Check for mouse activity + terminal split dragging.
         const mouse = input_batch.mouse_pos;
