@@ -52,6 +52,18 @@ pub fn canToggleTerminal(app_mode: app_bootstrap.AppMode) bool {
     return isIde(app_mode);
 }
 
+pub fn shouldUseTerminalWorkspace(app_mode: app_bootstrap.AppMode) bool {
+    return isTerminalOnly(app_mode);
+}
+
+pub fn hasTerminalInputScope(app_mode: app_bootstrap.AppMode, show_terminal: bool) bool {
+    return isTerminalOnly(app_mode) or show_terminal;
+}
+
+pub fn usesIdeTerminalStrip(app_mode: app_bootstrap.AppMode) bool {
+    return isIde(app_mode);
+}
+
 pub const IdeHost = struct {
     allocator: std.mem.Allocator,
     editor: shared.contracts.ModeContract,
@@ -179,4 +191,11 @@ test "mode policy helpers route focused mode deterministically" {
     try std.testing.expect(isFontSample(.font_sample));
     try std.testing.expect(canToggleTerminal(.ide));
     try std.testing.expect(!canToggleTerminal(.terminal));
+    try std.testing.expect(shouldUseTerminalWorkspace(.terminal));
+    try std.testing.expect(!shouldUseTerminalWorkspace(.ide));
+    try std.testing.expect(hasTerminalInputScope(.terminal, false));
+    try std.testing.expect(hasTerminalInputScope(.ide, true));
+    try std.testing.expect(!hasTerminalInputScope(.editor, false));
+    try std.testing.expect(usesIdeTerminalStrip(.ide));
+    try std.testing.expect(!usesIdeTerminalStrip(.terminal));
 }
