@@ -579,33 +579,6 @@ const AppState = struct {
         editor.setCursor(clamped_line, clamped_col);
     }
 
-    fn handleSearchPanelInput(self: *AppState, editor: *Editor, input_batch: *shared_types.input.InputBatch) !bool {
-        if (!self.search_panel.active) return false;
-
-        var handled = false;
-        var query_changed = false;
-        const command_result = app_search_panel_runtime.applyCommand(
-            app_search_panel_input.searchPanelCommand(input_batch),
-            editor,
-            &self.search_panel.active,
-            &self.search_panel.query,
-        );
-        if (command_result.handled and !command_result.query_changed) return true;
-        handled = command_result.handled;
-        query_changed = command_result.query_changed;
-
-        if (try app_search_panel_input.appendSearchPanelTextEvents(self.allocator, &self.search_panel.query, input_batch)) {
-            query_changed = true;
-            handled = true;
-        }
-
-        if (query_changed) {
-            try app_search_panel_state.syncEditorSearchQuery(editor, &self.search_panel.query);
-        }
-
-        return handled;
-    }
-
     fn requestCloseActiveTerminalTab(self: *AppState, now: f64) !bool {
         _ = try app_terminal_intent_route_runtime.routeActiveAndSync(self, .close);
         if (try app_terminal_close_active_runtime.closeActive(
@@ -1917,7 +1890,28 @@ const AppState = struct {
                                                                                         var search_panel_consumed_input = false;
                                                                                         if (inner_state.search_panel.active and inner_state.editors.items.len > 0) {
                                                                                             const editor = inner_state.editors.items[@min(inner_state.active_tab, inner_state.editors.items.len - 1)];
-                                                                                            if (try inner_state.handleSearchPanelInput(editor, frame_input_batch)) {
+                                                                                            var handled = false;
+                                                                                            var query_changed = false;
+                                                                                            const command_result = app_search_panel_runtime.applyCommand(
+                                                                                                app_search_panel_input.searchPanelCommand(frame_input_batch),
+                                                                                                editor,
+                                                                                                &inner_state.search_panel.active,
+                                                                                                &inner_state.search_panel.query,
+                                                                                            );
+                                                                                            if (command_result.handled and !command_result.query_changed) {
+                                                                                                handled = true;
+                                                                                            } else {
+                                                                                                handled = command_result.handled;
+                                                                                                query_changed = command_result.query_changed;
+                                                                                            }
+                                                                                            if (try app_search_panel_input.appendSearchPanelTextEvents(inner_state.allocator, &inner_state.search_panel.query, frame_input_batch)) {
+                                                                                                query_changed = true;
+                                                                                                handled = true;
+                                                                                            }
+                                                                                            if (query_changed) {
+                                                                                                try app_search_panel_state.syncEditorSearchQuery(editor, &inner_state.search_panel.query);
+                                                                                            }
+                                                                                            if (handled) {
                                                                                                 inner_state.editor_cluster_cache.clear();
                                                                                                 inner_state.needs_redraw = true;
                                                                                                 inner_state.metrics.noteInput(at);
