@@ -138,6 +138,7 @@ app_mode_layering_todo:
             - "In progress: `update()` prelude (font-sample frame, widget input refresh, config-reload notice tick, and focus-based input routing) is now split into dedicated helpers."
             - "In progress: post-preinput phase and interaction phase in `update()` are now collapsed behind `handlePostPreInputFrame(...)` and `handleInteractiveFrame(...)`."
             - "In progress: run-loop redraw/idle timing and perf/input-latency logging are now collapsed behind `handleFrameRenderAndIdle(...)`."
+            - "In progress: run-startup mode initialization (terminal workspace/font-sample/perf/editor bootstrap) is now collapsed behind `initializeRunModeState(...)`."
         - id: MODE-01-02
           title: "Extract editor mode backend implementation"
           status: in_progress
