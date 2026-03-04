@@ -2664,50 +2664,56 @@ const AppState = struct {
         );
     }
 
-    pub fn run(self: *AppState) !void {
+    fn initializeRunModeState(self: *AppState) !void {
         if (app_modes.ide.shouldUseTerminalWorkspace(self.app_mode)) {
             if (self.terminalTabCount() == 0) {
                 try self.newTerminal();
             }
             try self.syncTerminalModeTabBar();
-        } else if (app_modes.ide.isFontSample(self.app_mode)) {
-            // No initial editor/terminal. The font sample view draws directly.
-        } else {
-            if (self.perf_mode and self.perf_file_path != null) {
-                try self.openFile(self.perf_file_path.?);
-            } else {
-                // Create initial editor
-                try self.newEditor();
-
-                // Insert welcome message
-                if (self.editors.items.len > 0) {
-                    const editor = self.editors.items[0];
-                    try editor.insertText(
-                        \\// Welcome to Zide - A Zig IDE
-                        \\//
-                        \\// Keyboard shortcuts:
-                        \\//   Ctrl+N  - New file
-                        \\//   Ctrl+O  - Open file
-                        \\//   Ctrl+S  - Save file
-                        \\//   Ctrl+Z  - Undo
-                        \\//   Ctrl+Y  - Redo
-                        \\//   Ctrl+`  - Toggle terminal
-                        \\//   Ctrl+Q  - Quit
-                        \\//
-                        \\// Start typing to begin editing...
-                        \\
-                        \\const std = @import("std");
-                        \\
-                        \\pub fn main() !void {
-                        \\    std.debug.print("Hello, Zide!\n", .{});
-                        \\}
-                        \\
-                    );
-                    editor.cursor = .{ .line = 0, .col = 0, .offset = 0 };
-                    editor.modified = false;
-                }
-            }
+            return;
         }
+
+        if (app_modes.ide.isFontSample(self.app_mode)) {
+            return;
+        }
+
+        if (self.perf_mode and self.perf_file_path != null) {
+            try self.openFile(self.perf_file_path.?);
+            return;
+        }
+
+        try self.newEditor();
+
+        if (self.editors.items.len > 0) {
+            const editor = self.editors.items[0];
+            try editor.insertText(
+                \\// Welcome to Zide - A Zig IDE
+                \\//
+                \\// Keyboard shortcuts:
+                \\//   Ctrl+N  - New file
+                \\//   Ctrl+O  - Open file
+                \\//   Ctrl+S  - Save file
+                \\//   Ctrl+Z  - Undo
+                \\//   Ctrl+Y  - Redo
+                \\//   Ctrl+`  - Toggle terminal
+                \\//   Ctrl+Q  - Quit
+                \\//
+                \\// Start typing to begin editing...
+                \\
+                \\const std = @import("std");
+                \\
+                \\pub fn main() !void {
+                \\    std.debug.print("Hello, Zide!\n", .{});
+                \\}
+                \\
+            );
+            editor.cursor = .{ .line = 0, .col = 0, .offset = 0 };
+            editor.modified = false;
+        }
+    }
+
+    pub fn run(self: *AppState) !void {
+        try self.initializeRunModeState();
 
         // Main loop
         while (!self.shell.shouldClose()) {
