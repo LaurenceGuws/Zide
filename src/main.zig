@@ -484,7 +484,7 @@ const AppState = struct {
     }
 
     pub fn newEditor(self: *AppState) !void {
-        try self.routeEditorTabActionAndSync(.create);
+        try self.routeEditorCreateIntentAndSync();
         const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try self.editors.append(self.allocator, editor);
         try self.tab_bar.addTab("untitled", .editor);
@@ -494,7 +494,7 @@ const AppState = struct {
     }
 
     pub fn openFile(self: *AppState, path: []const u8) !void {
-        try self.routeEditorTabActionAndSync(.create);
+        try self.routeEditorCreateIntentAndSync();
         const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try editor.openFile(path);
         try self.editors.append(self.allocator, editor);
@@ -508,7 +508,7 @@ const AppState = struct {
     }
 
     pub fn openFileAt(self: *AppState, path: []const u8, line_1: usize, col_1: ?usize) !void {
-        try self.routeEditorTabActionAndSync(.create);
+        try self.routeEditorCreateIntentAndSync();
         const editor = try Editor.init(self.allocator, &self.grammar_manager);
         try editor.openFile(path);
         try self.editors.append(self.allocator, editor);
@@ -834,6 +834,10 @@ const AppState = struct {
             return true;
         }
         return false;
+    }
+
+    fn routeEditorCreateIntentAndSync(self: *AppState) !void {
+        _ = try self.routeOptionalEditorTabActionAndSync(.create);
     }
 
     fn setActiveKindAndSyncIfChanged(self: *AppState, kind: app_modes.ide.ActiveMode) !bool {
