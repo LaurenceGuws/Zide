@@ -2199,10 +2199,11 @@ const AppState = struct {
             }
             if (self.terminalTabBarVisible() and input_batch.mouseReleased(.left)) {
                 const drag_end = self.tab_bar.endDrag();
-                if (app_modes.ide.reorderIntentForDragEnd(drag_end)) |intent| {
+                const release_plan = app_modes.ide.terminalTabDragReleasePlan(drag_end);
+                if (release_plan.intent) |intent| {
                     try self.routeTerminalTabActionAndSync(intent);
                 }
-                if (app_modes.ide.shouldHandleClickAfterDragEnd(drag_end)) {
+                if (release_plan.handle_click) {
                     if (self.tab_bar.handleClick(mouse.x, mouse.y, layout.tab_bar.x, layout.tab_bar.y, layout.tab_bar.width)) {
                         if (self.tab_bar.terminalTabIdAtVisual(self.tab_bar.active_index)) |focused_tab_id| {
                             try self.routeTerminalTabActionAndSync(.{ .activate = focused_tab_id });
@@ -2213,7 +2214,7 @@ const AppState = struct {
                         }
                     }
                 }
-                if (app_modes.ide.shouldMarkRedrawAfterDragEnd(drag_end)) {
+                if (release_plan.mark_redraw) {
                     self.needs_redraw = true;
                     self.metrics.noteInput(now);
                 }
@@ -2228,11 +2229,16 @@ const AppState = struct {
             }
             if (input_batch.mouseReleased(.left)) {
                 const drag_end = self.tab_bar.endDrag();
-                if (app_modes.ide.reorderIntentForDragEnd(drag_end)) |intent| {
+                const release_plan = app_modes.ide.ideEditorTabDragReleasePlan(drag_end);
+                if (release_plan.intent) |intent| {
                     try self.routeEditorTabActionAndSync(intent);
-                    self.active_tab = self.tab_bar.active_index;
-                    self.needs_redraw = true;
-                    self.metrics.noteInput(now);
+                    if (release_plan.sync_active_tab) {
+                        self.active_tab = self.tab_bar.active_index;
+                    }
+                    if (release_plan.mark_redraw) {
+                        self.needs_redraw = true;
+                        self.metrics.noteInput(now);
+                    }
                 }
             }
         }
