@@ -413,6 +413,7 @@ app_mode_layering_todo:
             - "Done: focused app startup now uses a comptime-specialized state initializer (`AppState.initFocused` -> `init_runtime.initFocused`) so mode-dependent init branches fold without runtime mode plumbing."
             - "Done: focused entry roots now import `app/focused_entry_runtime.zig` directly (instead of the generic app entry runtime), reducing focused-binary runtime graph coupling."
             - "Done: focused run-loop plumbing now has compile-time-specialized paths (`run_entry_hooks_runtime.runFocused`, `run_main_loop_hooks_runtime.runFocused`, `run_one_frame_hooks_runtime.runFocused`, `prepare_run_frame_runtime.prepareFocused`) wired from `focused_entry_runtime` via `AppState.runFocused`."
+            - "Done: focused/non-focused run-loop wrapper duplication is collapsed into shared mode-parameterized helpers (`*WithMode`) to keep focused specialization while shrinking wrapper bloat; latest size snapshot: terminal/editor/ide are ~1.0MB smaller than prior checkpoint."
         - id: MODE-03-02
           title: "Add run/install steps for focused binaries"
           status: done
