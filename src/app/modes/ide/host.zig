@@ -78,6 +78,18 @@ pub fn terminalTabBarVisible(
     return tab_count >= 2;
 }
 
+pub fn canCreateEditorFromShortcut(app_mode: app_bootstrap.AppMode) bool {
+    return app_mode != .terminal;
+}
+
+pub fn canHandleTerminalTabShortcuts(app_mode: app_bootstrap.AppMode) bool {
+    return isTerminalOnly(app_mode);
+}
+
+pub fn canHandleTerminalTabFocusShortcuts(app_mode: app_bootstrap.AppMode) bool {
+    return isTerminalOnly(app_mode);
+}
+
 pub const IdeHost = struct {
     allocator: std.mem.Allocator,
     editor: shared.contracts.ModeContract,
@@ -218,4 +230,11 @@ test "mode policy helpers route focused mode deterministically" {
     try std.testing.expect(terminalTabBarVisible(.terminal, false, 2));
     try std.testing.expect(!terminalTabBarVisible(.terminal, false, 1));
     try std.testing.expect(!terminalTabBarVisible(.ide, true, 4));
+    try std.testing.expect(canCreateEditorFromShortcut(.ide));
+    try std.testing.expect(canCreateEditorFromShortcut(.font_sample));
+    try std.testing.expect(!canCreateEditorFromShortcut(.terminal));
+    try std.testing.expect(canHandleTerminalTabShortcuts(.terminal));
+    try std.testing.expect(!canHandleTerminalTabShortcuts(.editor));
+    try std.testing.expect(canHandleTerminalTabFocusShortcuts(.terminal));
+    try std.testing.expect(!canHandleTerminalTabFocusShortcuts(.ide));
 }
