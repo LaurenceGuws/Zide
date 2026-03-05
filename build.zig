@@ -66,23 +66,6 @@ pub fn build(b: *std.Build) void {
     treesitter.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
     treesitter.addIncludePath(b.path("vendor/tree-sitter/lib/src"));
 
-    // Tree-sitter Zig parser
-    const ts_zig = b.addLibrary(.{
-        .name = "tree-sitter-zig",
-        .linkage = .static,
-        .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-    ts_zig.addCSourceFile(.{
-        .file = b.path("vendor/tree-sitter-zig/src/parser.c"),
-        .flags = &.{"-std=c99"},
-    });
-    ts_zig.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
-    ts_zig.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
-
     // Platform detection
     const target_os = target.result.os.tag;
 
@@ -628,10 +611,8 @@ pub fn build(b: *std.Build) void {
         unit_tests.linkFramework("OpenGL");
     }
     unit_tests.linkLibrary(treesitter);
-    unit_tests.linkLibrary(ts_zig);
     unit_tests.addIncludePath(b.path("vendor"));
     unit_tests.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
-    unit_tests.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
     if (!use_vcpkg) {
         addLinuxSystemSdlInclude(unit_tests, target_os, dep_path);
     }
@@ -667,10 +648,8 @@ pub fn build(b: *std.Build) void {
         editor_tests.linkFramework("OpenGL");
     }
     editor_tests.linkLibrary(treesitter);
-    editor_tests.linkLibrary(ts_zig);
     editor_tests.addIncludePath(b.path("vendor"));
     editor_tests.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
-    editor_tests.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
     if (!use_vcpkg) {
         editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
         editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
@@ -913,10 +892,8 @@ pub fn build(b: *std.Build) void {
         }),
     });
     editor_ffi_tests.linkLibrary(treesitter);
-    editor_ffi_tests.linkLibrary(ts_zig);
     editor_ffi_tests.addIncludePath(b.path("vendor"));
     editor_ffi_tests.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
-    editor_ffi_tests.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
     const run_editor_ffi_tests = b.addRunArtifact(editor_ffi_tests);
     const editor_ffi_tests_step = b.step(
         "test-editor-ffi",
