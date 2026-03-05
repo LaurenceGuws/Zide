@@ -15,6 +15,10 @@ pub fn parseThemeFromLuaState(L: *anyopaque, idx: i32) LuaConfigError!ThemeConfi
     return capi.parseThemeFromLuaState(L, idx);
 }
 
+pub fn parseEditorThemeFromLuaState(L: *anyopaque, idx: i32) LuaConfigError!ThemeConfig {
+    return capi.parseEditorThemeFromLuaState(L, idx);
+}
+
 pub fn parseKeybindsFromLuaState(allocator: std.mem.Allocator, L: *anyopaque, idx: i32) LuaConfigError![]BindSpec {
     return capi.parseKeybindsFromLuaState(allocator, L, idx);
 }
