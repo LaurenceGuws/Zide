@@ -120,6 +120,15 @@ pub fn build(b: *std.Build) void {
     ) orelse "system";
     const lua_source = parseDependencySource(lua_source_raw);
     build_options.addOption([]const u8, "lua_dependency_source", lua_source_raw);
+    const lua_impl = b.option(
+        []const u8,
+        "lua-impl",
+        "Lua config implementation: capi (default) or ziglua",
+    ) orelse "capi";
+    if (!std.mem.eql(u8, lua_impl, "capi") and !std.mem.eql(u8, lua_impl, "ziglua")) {
+        std.debug.panic("invalid -Dlua-impl='{s}' (expected 'capi' or 'ziglua')", .{lua_impl});
+    }
+    build_options.addOption([]const u8, "lua_impl", lua_impl);
 
     // vcpkg support
     //

@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_bootstrap = @import("bootstrap.zig");
+const build_options = @import("build_options");
 const app_font_rendering = @import("font_rendering.zig");
 const app_theme_utils = @import("theme_utils.zig");
 const app_ui_layout_runtime = @import("ui_layout_runtime.zig");
@@ -135,6 +136,13 @@ fn initWithMode(
     _ = try shell.refreshUiScale();
     const app_log = app_logger.logger("app.core");
     app_log.logStdout("logger initialized", .{});
+    app_log.logStdout(
+        "config lua backend: impl={s} dep_source={s}",
+        .{
+            if (@hasDecl(build_options, "lua_impl")) build_options.lua_impl else "capi",
+            if (@hasDecl(build_options, "lua_dependency_source")) build_options.lua_dependency_source else "system",
+        },
+    );
     const metrics_log = app_logger.logger("terminal.metrics");
     const input_latency_log = app_logger.logger("input.latency");
     const perf_log = app_logger.logger("editor.perf");

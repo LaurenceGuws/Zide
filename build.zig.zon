@@ -9,6 +9,10 @@
             .url = "git+https://github.com/castholm/SDL.git#887fa805e40d5c7bb3955ae69b89ed566c6a0471",
             .hash = "sdl-0.4.0+3.4.0-SDL--rq2owEZsySGuHCuVJ9naEvH3i3e_pyUIjziBtJ-",
         },
+        .zlua = .{
+            .url = "git+https://github.com/natecraddock/ziglua?ref=0.6.0#315b7f25efd29d9e2143d6c0ab685bb7f640450f",
+            .hash = "zlua-0.1.0-hGRpCww-BQCx3cX6zbKWfTgOx6B7Peo4P17RK2hm7-xV",
+        },
     },
 
     .paths = .{
