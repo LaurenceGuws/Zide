@@ -66,7 +66,7 @@ fn parseLigatureStrategyFromString(value: []const u8) ?LigatureStrategy {
     return null;
 }
 
-fn parseNativeScalarOverlay(lua: *zlua.Lua, table_index: i32) Config {
+fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_index: i32) !Config {
     var out = lua_shared.emptyConfig();
 
     _ = lua.getField(table_index, "editor_wrap");
@@ -85,6 +85,14 @@ fn parseNativeScalarOverlay(lua: *zlua.Lua, table_index: i32) Config {
     if (lua.isNumber(-1)) {
         if (lua.toInteger(-1)) |v| {
             if (v > 0) out.editor_large_jump_rows = @intCast(v);
+        } else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "terminal_scrollback_rows");
+    if (lua.isNumber(-1)) {
+        if (lua.toInteger(-1)) |v| {
+            if (v > 0) out.terminal_scrollback_rows = @intCast(v);
         } else |_| {}
     }
     lua.pop(1);
@@ -130,6 +138,54 @@ fn parseNativeScalarOverlay(lua: *zlua.Lua, table_index: i32) Config {
     _ = lua.getField(table_index, "text_contrast");
     if (lua.isNumber(-1)) {
         if (lua.toNumber(-1)) |v| out.text_contrast = @floatCast(v) else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "app_font_size");
+    if (lua.isNumber(-1)) {
+        if (lua.toNumber(-1)) |v| out.app_font_size = @floatCast(v) else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "editor_font_size");
+    if (lua.isNumber(-1)) {
+        if (lua.toNumber(-1)) |v| out.editor_font_size = @floatCast(v) else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "terminal_font_size");
+    if (lua.isNumber(-1)) {
+        if (lua.toNumber(-1)) |v| out.terminal_font_size = @floatCast(v) else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "app_font_path");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| out.app_font_path = try allocator.dupe(u8, v) else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "editor_font_path");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| out.editor_font_path = try allocator.dupe(u8, v) else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "terminal_font_path");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| out.terminal_font_path = try allocator.dupe(u8, v) else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "editor_font_features");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| out.editor_font_features = try allocator.dupe(u8, v) else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "terminal_font_features");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| out.terminal_font_features = try allocator.dupe(u8, v) else |_| {}
     }
     lua.pop(1);
 
@@ -218,7 +274,8 @@ pub fn parseConfigFromLuaState(allocator: std.mem.Allocator, L: *anyopaque) LuaC
     lua.pop(2);
 
     var parsed = try capi_bridge.parseConfigFromLuaState(allocator, L);
-    const native_overlay = parseNativeScalarOverlay(lua, table_index);
+    var native_overlay = try parseNativeScalarOverlay(allocator, lua, table_index);
+    defer lua_shared.freeConfig(allocator, &native_overlay);
     lua_shared.mergeConfig(allocator, &parsed, native_overlay);
     return parsed;
 }
