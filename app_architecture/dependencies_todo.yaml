@@ -154,6 +154,7 @@ dependencies_todo:
             - "Checkpoint: keybind parsing is now native in `lua_config_ziglua_parse.zig`; CAPI keybind bridge usage is removed (`uses_capi_keybind_bridge=0`)."
             - "Checkpoint: base theme parsing (`theme`, `app.theme`, `terminal.theme`) is now native in ziglua seam, including palette/syntax/ansi color decoding; only `editor.theme` remains on bridge for schema/link resolution."
             - "Checkpoint: `editor.theme` schema/link resolution is now native; ziglua parser no longer calls CAPI bridge functions (`uses_capi_parse_bridge=0`, `full=0`, `theme=0`, `keybind=0`)."
+            - "Checkpoint: `lua_config_capi_bridge.zig` was removed after ziglua path became fully native; CAPI remains available only as its own backend (`-Dlua-impl=capi`)."
 
     - name: "DEP-04 Tree-sitter packaging decision"
       tasks:
