@@ -198,20 +198,18 @@ pub fn build(b: *std.Build) void {
     if (dep_source == .zig and use_vcpkg) {
         @panic("-Ddep-source=zig is not compatible with --use-vcpkg yet; use -Ddep-source=system");
     }
-    if (lua_source == .zig) {
-        @panic("-Dlua-source=zig is currently blocked: upstream ziglua artifact contract is not stable for direct build.zig artifact lookup in this toolchain.");
-    }
     const sdl_dep = if (dep_source == .zig) b.dependency("sdl", .{
         .target = target,
         .optimize = optimize,
     }) else null;
     const sdl_lib = if (dep_source == .zig) sdl_dep.?.artifact("SDL3") else null;
-    const zlua_dep = if (use_ziglua_impl) b.dependency("zlua", .{
+    const need_zlua_dep = use_ziglua_impl or lua_source == .zig;
+    const zlua_dep = if (need_zlua_dep) b.dependency("zlua", .{
         .target = target,
         .optimize = optimize,
     }) else null;
     const zlua_module = if (use_ziglua_impl) zlua_dep.?.module("zlua") else null;
-    const lua_lib: ?*std.Build.Step.Compile = null;
+    const lua_lib = if (lua_source == .zig) zlua_dep.?.artifact("lua") else null;
     // ─────────────────────────────────────────────────────────────────────────
     // Main executable
     // ─────────────────────────────────────────────────────────────────────────
