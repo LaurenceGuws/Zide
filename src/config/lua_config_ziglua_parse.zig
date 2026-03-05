@@ -15,5 +15,13 @@ pub fn parseConfigFromLuaState(allocator: std.mem.Allocator, L: *anyopaque) LuaC
     if (!lua.isTable(-1)) {
         return LuaConfigError.InvalidConfig;
     }
+
+    const table_index = lua.absIndex(-1);
+    lua.pushNil();
+    if (!lua.next(table_index)) {
+        return lua_shared.emptyConfig();
+    }
+    lua.pop(2);
+
     return capi_bridge.parseConfigFromLuaState(allocator, L);
 }
