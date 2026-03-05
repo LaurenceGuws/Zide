@@ -142,6 +142,7 @@ dependencies_todo:
             - "Checkpoint: native scalar overlay expanded (`terminal_cursor_blink`, `terminal_tab_bar_show_single_tab`, `keybinds_no_defaults`, `font_lcd`, `font_autohint`, `text_linear_correction`, `text_gamma`, `text_contrast`, `editor_tab_bar_width_mode`, `terminal_tab_bar_width_mode`, `terminal_cursor_shape`)."
             - "Checkpoint: native enum-string scalar overlay expanded (`terminal_blink_style`, `terminal_disable_ligatures`, `editor_disable_ligatures`, `font_hinting`, `font_glyph_overflow`)."
             - "Checkpoint: native overlay now includes font path/feature strings and scalar sizes (`app/editor/terminal_font_*`, `terminal_scrollback_rows`) with allocator-safe lifecycle."
+            - "Checkpoint: native overlay now handles log filter fields (`log_file_filter`, `log_console_filter`) and `logs.{file,console,enable}` string/list forms."
 
     - name: "DEP-04 Tree-sitter packaging decision"
       tasks:

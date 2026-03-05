@@ -13,6 +13,34 @@ const GlyphOverflow = std.meta.Child(@TypeOf((@as(Config, undefined)).font_glyph
 const TerminalBlinkStyle = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_blink_style));
 const LigatureStrategy = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_disable_ligatures));
 
+fn replaceOwnedString(allocator: std.mem.Allocator, slot: *?[]u8, value: ?[]u8) void {
+    if (slot.*) |old| allocator.free(old);
+    slot.* = value;
+}
+
+fn parseFilterValueOwned(allocator: std.mem.Allocator, lua: *zlua.Lua, idx: i32) !?[]u8 {
+    if (lua.isString(idx)) {
+        if (lua.toString(idx)) |v| return try allocator.dupe(u8, v) else |_| return null;
+    }
+    if (!lua.isTable(idx)) return null;
+
+    var out = std.ArrayList(u8).empty;
+    errdefer out.deinit(allocator);
+
+    const table_index = lua.absIndex(idx);
+    lua.pushNil();
+    while (lua.next(table_index)) {
+        defer lua.pop(1);
+        if (lua.isString(-1)) {
+            if (lua.toString(-1)) |s| {
+                if (out.items.len > 0) try out.append(allocator, ',');
+                try out.appendSlice(allocator, s);
+            } else |_| {}
+        }
+    }
+    return try out.toOwnedSlice(allocator);
+}
+
 fn parseSdlLogLevelFromString(value: []const u8) ?SdlLogLevel {
     if (std.mem.eql(u8, value, "critical")) return 6;
     if (std.mem.eql(u8, value, "error")) return 5;
@@ -68,6 +96,45 @@ fn parseLigatureStrategyFromString(value: []const u8) ?LigatureStrategy {
 
 fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_index: i32) !Config {
     var out = lua_shared.emptyConfig();
+
+    _ = lua.getField(table_index, "log_file_filter");
+    const log_file_direct = try parseFilterValueOwned(allocator, lua, -1);
+    if (log_file_direct) |v| out.log_file_filter = v;
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "log_console_filter");
+    const log_console_direct = try parseFilterValueOwned(allocator, lua, -1);
+    if (log_console_direct) |v| out.log_console_filter = v;
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "logs");
+    if (lua.isTable(-1)) {
+        const logs_idx = lua.absIndex(-1);
+
+        _ = lua.getField(logs_idx, "file");
+        if (try parseFilterValueOwned(allocator, lua, -1)) |v| replaceOwnedString(allocator, &out.log_file_filter, v);
+        lua.pop(1);
+
+        _ = lua.getField(logs_idx, "console");
+        if (try parseFilterValueOwned(allocator, lua, -1)) |v| replaceOwnedString(allocator, &out.log_console_filter, v);
+        lua.pop(1);
+
+        _ = lua.getField(logs_idx, "enable");
+        if (try parseFilterValueOwned(allocator, lua, -1)) |v| {
+            if (out.log_file_filter == null) {
+                out.log_file_filter = v;
+            } else {
+                allocator.free(v);
+            }
+            if (out.log_console_filter == null) {
+                if (out.log_file_filter) |file_v| {
+                    out.log_console_filter = try allocator.dupe(u8, file_v);
+                }
+            }
+        }
+        lua.pop(1);
+    }
+    lua.pop(1);
 
     _ = lua.getField(table_index, "editor_wrap");
     if (lua.isBoolean(-1)) out.editor_wrap = lua.toBoolean(-1);
