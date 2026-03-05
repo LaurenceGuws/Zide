@@ -6,9 +6,10 @@ Track practical migration details for replacing system-managed native dependenci
 
 ## Current state
 
-- SDL3 and Lua resolve through Zig package manager in normal flow (`castholm/SDL`, `ziglua`).
+- SDL3, Lua, and tree-sitter core resolve through Zig package manager in normal flow (`castholm/SDL`, `ziglua`, `tree_sitter/tree-sitter`).
 - FreeType/HarfBuzz remain system/vcpkg managed.
 - `-Dpath=link|zig` is retained as the migration toggle surface for the next dependency slice.
+- Current active `-Dpath` migration slice: FreeType/HarfBuzz packaging.
 
 ## Implemented package integration
 

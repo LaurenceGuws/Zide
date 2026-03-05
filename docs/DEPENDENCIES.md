@@ -28,7 +28,9 @@ zig build -Dpath=zig
 
 Notes:
 - SDL3 and Lua are now always Zig package managed in normal flow (`castholm/SDL`, `ziglua` artifact `lua`).
-- `-Dpath` is retained as a migration toggle surface for upcoming dependency moves (for example FreeType/HarfBuzz).
+- Tree-sitter core runtime is now also Zig package managed in normal flow (`tree_sitter/tree-sitter`, artifact `tree-sitter`).
+- `-Dpath` is retained as a migration toggle surface for upcoming dependency moves.
+- Current active migration on this toggle: FreeType/HarfBuzz packaging path.
 - Parity checkpoint (March 5, 2026): `zig build` and `zig build -Dpath=zig` both pass on the current Linux path.
 
 Lua implementation status (config parser backend):
