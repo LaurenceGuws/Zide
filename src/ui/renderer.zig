@@ -1826,14 +1826,13 @@ pub const Renderer = struct {
                 self.should_close_flag = true;
             },
             sdl_api.EVENT_WINDOW => {
-                const evt = sdl_api.getWindowEventId(event);
-                window_flags.handleWindowEvent(event.type, evt, &self.should_close_flag, &self.window_resized_flag);
-                if (sdl_api.isFocusGainedEvent(event.type, evt)) {
+                window_flags.handleWindowEvent(event.type, &self.should_close_flag, &self.window_resized_flag);
+                if (sdl_api.isFocusGainedEvent(event.type)) {
                     sdl_api.startTextInput(self.window);
                     text_input.reapplyRect(&self.text_input_state, self.window);
                     _ = self.focus_queue.append(self.allocator, true) catch {};
                 }
-                if (sdl_api.isFocusLostEvent(event.type, evt)) {
+                if (sdl_api.isFocusLostEvent(event.type)) {
                     sdl_api.stopTextInput(self.window);
                     _ = self.focus_queue.append(self.allocator, false) catch {};
                 }
@@ -1841,7 +1840,7 @@ pub const Renderer = struct {
                     window_log.logf(
                         "event={s} data1={d} data2={d}",
                         .{
-                            sdl_api.windowEventName(event.type, evt),
+                            sdl_api.windowEventName(event.type),
                             sdl_api.windowEventData1(event),
                             sdl_api.windowEventData2(event),
                         },
@@ -1976,14 +1975,13 @@ pub const Renderer = struct {
             },
             else => {
                 if (sdl_api.isWindowEventType(event.type)) {
-                    const evt = sdl_api.getWindowEventId(event);
-                    window_flags.handleWindowEvent(event.type, evt, &self.should_close_flag, &self.window_resized_flag);
-                    if (sdl_api.isFocusGainedEvent(event.type, evt)) {
+                    window_flags.handleWindowEvent(event.type, &self.should_close_flag, &self.window_resized_flag);
+                    if (sdl_api.isFocusGainedEvent(event.type)) {
                         sdl_api.startTextInput(self.window);
                         text_input.reapplyRect(&self.text_input_state, self.window);
                         _ = self.focus_queue.append(self.allocator, true) catch {};
                     }
-                    if (sdl_api.isFocusLostEvent(event.type, evt)) {
+                    if (sdl_api.isFocusLostEvent(event.type)) {
                         sdl_api.stopTextInput(self.window);
                         _ = self.focus_queue.append(self.allocator, false) catch {};
                     }
@@ -1991,7 +1989,7 @@ pub const Renderer = struct {
                         window_log.logf(
                             "event={s} data1={d} data2={d}",
                             .{
-                                sdl_api.windowEventName(event.type, evt),
+                                sdl_api.windowEventName(event.type),
                                 sdl_api.windowEventData1(event),
                                 sdl_api.windowEventData2(event),
                             },
