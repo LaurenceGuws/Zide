@@ -359,6 +359,10 @@ pub fn loadConfigFromFile(allocator: std.mem.Allocator, path: []const u8) LuaCon
     return parseConfigFromStack(allocator, L);
 }
 
+pub fn parseConfigFromLuaState(allocator: std.mem.Allocator, L: *anyopaque) LuaConfigError!Config {
+    return parseConfigFromStack(allocator, @ptrCast(@alignCast(L)));
+}
+
 fn parseConfigFromStack(allocator: std.mem.Allocator, L: *c.lua_State) LuaConfigError!Config {
     if (c.lua_isnil(L, -1)) {
         return .{
