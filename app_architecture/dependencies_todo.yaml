@@ -138,6 +138,7 @@ dependencies_todo:
             - "Checkpoint: remaining CAPI parse dependency is isolated behind `lua_config_capi_bridge.zig`; ziglua backend no longer imports full capi module directly."
             - "Checkpoint: ziglua parser seam introduced (`lua_config_ziglua_parse.zig`) and routed from backend loader."
             - "Checkpoint: ziglua parser seam now handles nil/non-table short-circuit natively via zlua before bridge fallback."
+            - "Checkpoint: ziglua parser seam now applies native top-level scalar overlay (`editor_wrap`, `terminal_focus_report_window`, `terminal_focus_report_pane`, `editor_large_jump_rows`, `sdl_log_level`) over bridge parse output."
 
     - name: "DEP-04 Tree-sitter packaging decision"
       tasks:
