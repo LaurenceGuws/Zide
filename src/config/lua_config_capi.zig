@@ -1407,7 +1407,7 @@ pub fn applyThemeConfig(theme: *Theme, overlay: ThemeConfig) void {
     lua_shared.applyThemeConfig(theme, overlay);
 }
 
-fn parseThemeFromTable(L: *c.lua_State, idx: c_int) LuaConfigError!ThemeConfig {
+pub fn parseThemeFromTable(L: *c.lua_State, idx: c_int) LuaConfigError!ThemeConfig {
     var theme: ThemeConfig = .{};
     parseThemePaletteTable(L, idx, &theme);
     parseThemeSyntaxTable(L, idx, &theme);
@@ -1425,6 +1425,11 @@ fn parseThemeFromTable(L: *c.lua_State, idx: c_int) LuaConfigError!ThemeConfig {
     c.lua_pop(L, 1);
 
     return theme;
+}
+
+pub fn parseThemeFromLuaState(L: *anyopaque, idx: i32) LuaConfigError!ThemeConfig {
+    const lua_state: *c.lua_State = @ptrCast(@alignCast(L));
+    return parseThemeFromTable(lua_state, @intCast(idx));
 }
 
 fn parseThemePaletteTable(L: *c.lua_State, idx: c_int, theme: *ThemeConfig) void {

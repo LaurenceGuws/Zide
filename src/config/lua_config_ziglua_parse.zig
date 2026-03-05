@@ -5,6 +5,7 @@ const lua_shared = @import("./lua_config_shared.zig");
 
 pub const LuaConfigError = capi_bridge.LuaConfigError;
 pub const Config = capi_bridge.Config;
+const ThemeConfig = capi_bridge.ThemeConfig;
 const SdlLogLevel = std.meta.Child(@TypeOf((@as(Config, undefined)).sdl_log_level));
 const TabBarWidthMode = std.meta.Child(@TypeOf((@as(Config, undefined)).editor_tab_bar_width_mode));
 const CursorShape = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_cursor_shape));
@@ -136,8 +137,17 @@ fn normalizeScrollback(value: i64) usize {
     return @intCast(value);
 }
 
+fn parseThemeAtStackIndex(lua: *zlua.Lua, idx: i32) LuaConfigError!?ThemeConfig {
+    if (!lua.isTable(idx)) return null;
+    return try capi_bridge.parseThemeFromLuaState(lua, lua.absIndex(idx));
+}
+
 fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_index: i32) !Config {
     var out = lua_shared.emptyConfig();
+
+    _ = lua.getField(table_index, "theme");
+    if (try parseThemeAtStackIndex(lua, -1)) |parsed| out.theme = parsed;
+    lua.pop(1);
 
     _ = lua.getField(table_index, "log_file_filter");
     const log_file_direct = try parseFilterValueOwned(allocator, lua, -1);
@@ -394,6 +404,9 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     _ = lua.getField(table_index, "app");
     if (lua.isTable(-1)) {
         const app_idx = lua.absIndex(-1);
+        _ = lua.getField(app_idx, "theme");
+        if (try parseThemeAtStackIndex(lua, -1)) |parsed| out.app_theme = parsed;
+        lua.pop(1);
         _ = lua.getField(app_idx, "font");
         try parseFontSetting(allocator, lua, -1, &out.app_font_path, &out.app_font_size);
         lua.pop(1);
@@ -418,6 +431,10 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
 
         _ = lua.getField(editor_idx, "font");
         try parseFontSetting(allocator, lua, -1, &out.editor_font_path, &out.editor_font_size);
+        lua.pop(1);
+
+        _ = lua.getField(editor_idx, "theme");
+        if (try parseThemeAtStackIndex(lua, -1)) |parsed| out.editor_theme = parsed;
         lua.pop(1);
 
         _ = lua.getField(editor_idx, "font_features");
@@ -477,6 +494,10 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
 
         _ = lua.getField(terminal_idx, "font");
         try parseFontSetting(allocator, lua, -1, &out.terminal_font_path, &out.terminal_font_size);
+        lua.pop(1);
+
+        _ = lua.getField(terminal_idx, "theme");
+        if (try parseThemeAtStackIndex(lua, -1)) |parsed| out.terminal_theme = parsed;
         lua.pop(1);
 
         _ = lua.getField(terminal_idx, "font_features");
