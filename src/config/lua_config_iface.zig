@@ -15,5 +15,6 @@ pub const TabBarWidthMode = capi.TabBarWidthMode;
 pub const ThemeConfig = capi.ThemeConfig;
 
 pub const LoadConfigFn = fn (allocator: std.mem.Allocator) LuaConfigError!Config;
+pub const EmptyConfigFn = fn () Config;
 pub const FreeConfigFn = fn (allocator: std.mem.Allocator, config: *Config) void;
 pub const ApplyThemeConfigFn = fn (theme: *Theme, overlay: ThemeConfig) void;
