@@ -54,6 +54,18 @@ Track practical migration details for replacing system-managed native dependenci
   - Keep DEP-02 pending and maintain current system/vcpkg text-stack linking.
   - Continue dependency migration with SDL3-only Zig package path as stable baseline.
 
+### FreeType + HarfBuzz (retry status)
+
+- Date: March 6, 2026
+- Attempted approach:
+  - Wired direct package dependencies from `pkg.machengine.org` (`freetype`, `harfbuzz`) behind `-Dpath=zig` using extracted `linkTextStack` / `addTextStackIncludes` hooks.
+- Result:
+  - Reverted to keep build healthy.
+  - Same blocker persists: dependency build scripts call `Build.addStaticLibrary`, which is incompatible with current Zig 0.15.2 API in our environment.
+- Decision:
+  - Keep DEP-02 `in_progress` but blocked.
+  - Keep text stack on system/vcpkg until compatible package revisions (or a patched fork) are selected.
+
 ### Lua
 
 - Candidate package: `natecraddock/ziglua`
