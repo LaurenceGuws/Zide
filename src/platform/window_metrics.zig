@@ -47,12 +47,10 @@ pub fn getDrawableSize(window: *sdl.SDL_Window) DrawableSize {
 }
 
 pub fn getDpiScale(window: *sdl.SDL_Window) iface.MousePos {
-    if (sdl_api.is_sdl3) {
-        const display_scale = sdl_api.getWindowDisplayScale(window);
-        if (display_scale > 0.0) return .{ .x = display_scale, .y = display_scale };
-        const density = sdl_api.getWindowPixelDensity(window);
-        if (density > 0.0) return .{ .x = density, .y = density };
-    }
+    const display_scale = sdl_api.getWindowDisplayScale(window);
+    if (display_scale > 0.0) return .{ .x = display_scale, .y = display_scale };
+    const density = sdl_api.getWindowPixelDensity(window);
+    if (density > 0.0) return .{ .x = density, .y = density };
     const window_size = getWindowSize(window);
     const drawable = getDrawableSize(window);
     if (window_size.w <= 0 or window_size.h <= 0) return .{ .x = 1.0, .y = 1.0 };
@@ -63,12 +61,10 @@ pub fn getDpiScale(window: *sdl.SDL_Window) iface.MousePos {
 }
 
 pub fn getRenderScale(window: *sdl.SDL_Window) f32 {
-    if (sdl_api.is_sdl3) {
-        const display_scale = sdl_api.getWindowDisplayScale(window);
-        if (display_scale > 0.0) return display_scale;
-        const density = sdl_api.getWindowPixelDensity(window);
-        if (density > 0.0) return density;
-    }
+    const display_scale = sdl_api.getWindowDisplayScale(window);
+    if (display_scale > 0.0) return display_scale;
+    const density = sdl_api.getWindowPixelDensity(window);
+    if (density > 0.0) return density;
     const window_size = getWindowSize(window);
     const drawable = getDrawableSize(window);
     if (window_size.w <= 0 or window_size.h <= 0) return 1.0;
