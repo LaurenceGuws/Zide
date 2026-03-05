@@ -880,7 +880,7 @@ fn parseFontTable(
     c.lua_pop(L, 1);
 }
 
-fn parseKeybinds(allocator: std.mem.Allocator, L: *c.lua_State, idx: c_int) LuaConfigError![]input_actions.BindSpec {
+pub fn parseKeybinds(allocator: std.mem.Allocator, L: *c.lua_State, idx: c_int) LuaConfigError![]input_actions.BindSpec {
     var out = std.ArrayList(input_actions.BindSpec).empty;
     errdefer out.deinit(allocator);
 
@@ -889,6 +889,11 @@ fn parseKeybinds(allocator: std.mem.Allocator, L: *c.lua_State, idx: c_int) LuaC
     try parseKeybindScope(allocator, L, idx, "terminal", .terminal, &out);
 
     return out.toOwnedSlice(allocator);
+}
+
+pub fn parseKeybindsFromLuaState(allocator: std.mem.Allocator, L: *anyopaque, idx: i32) LuaConfigError![]input_actions.BindSpec {
+    const lua_state: *c.lua_State = @ptrCast(@alignCast(L));
+    return parseKeybinds(allocator, lua_state, @intCast(idx));
 }
 
 fn parseKeybindScope(
