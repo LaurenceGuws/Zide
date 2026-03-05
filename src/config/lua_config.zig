@@ -26,6 +26,7 @@ pub const TerminalBlinkStyle = iface.TerminalBlinkStyle;
 pub const TerminalDisableLigaturesStrategy = iface.TerminalDisableLigaturesStrategy;
 pub const TabBarWidthMode = iface.TabBarWidthMode;
 pub const ThemeConfig = iface.ThemeConfig;
+pub const uses_capi_parse_bridge = if (@hasDecl(backend, "uses_capi_parse_bridge")) backend.uses_capi_parse_bridge else true;
 
 pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
     return backend.loadConfig(allocator);

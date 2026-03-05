@@ -154,6 +154,8 @@ pub const ThemeConfig = struct {
     ansi_colors: [16]?Color = .{null} ** 16,
 };
 
+pub const uses_capi_parse_bridge = false;
+
 pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
     var config: Config = emptyConfig();
     if (lua_shared.fileExists("assets/config/init.lua")) {
