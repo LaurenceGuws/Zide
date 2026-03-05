@@ -97,10 +97,10 @@ fn initWithMode(
     const app_log = app_logger.logger("app.core");
     app_log.logStdout("logger initialized", .{});
     app_log.logStdout(
-        "config lua backend: impl={s} dep_source={s}",
+        "config lua backend: impl={s} dep_path={s}",
         .{
             "ziglua",
-            build_options.lua_dependency_source,
+            build_options.dependency_path,
         },
     );
     const metrics_log = app_logger.logger("terminal.metrics");

@@ -6,9 +6,9 @@ Track practical migration details for replacing system-managed native dependenci
 
 ## Current state
 
-- `-Ddep-source=system` (default): current system/vcpkg-native behavior.
-- `-Ddep-source=zig`: SDL3 resolves through Zig package manager (`castholm/SDL`), while FreeType/HarfBuzz/Lua remain system/vcpkg managed.
-- Guardrail: `-Ddep-source=zig` is currently incompatible with `-Duse-vcpkg=true`.
+- `-Dpath=link` (default): current system/vcpkg-native behavior.
+- `-Dpath=zig`: SDL3 and Lua resolve through Zig package manager (`castholm/SDL`, `ziglua`), while FreeType/HarfBuzz remain system/vcpkg managed.
+- Guardrail: `-Dpath=zig` is currently incompatible with `-Duse-vcpkg=true`.
 
 ## Implemented package integration
 
@@ -18,12 +18,12 @@ Track practical migration details for replacing system-managed native dependenci
 - Build API used:
   - `const sdl_dep = b.dependency("sdl", .{ .target = target, .optimize = optimize });`
   - `const sdl_lib = sdl_dep.artifact("SDL3");`
-  - Link route selected via `-Ddep-source`.
+  - Link route selected via `-Dpath`.
 - Validation:
   - `zig build`
-  - `zig build -Ddep-source=zig`
+  - `zig build -Dpath=zig`
   - `zig build test`
-  - `zig build test -Ddep-source=zig`
+  - `zig build test -Dpath=zig`
 
 ## Candidate research notes
 
@@ -45,7 +45,7 @@ Track practical migration details for replacing system-managed native dependenci
 - Date: March 5, 2026
 - Attempted approach:
   - Added direct package deps for Mach-hosted `freetype` and `harfbuzz`.
-  - Wired artifacts under `-Ddep-source=zig`.
+  - Wired artifacts under `-Dpath=zig`.
 - Result:
   - Reverted due package build-script/toolchain incompatibility.
   - Error signature: `no field or member function named 'addStaticLibrary' in 'Build'`.
@@ -59,7 +59,7 @@ Track practical migration details for replacing system-managed native dependenci
 - Known compatibility signal:
   - Repository is active and tracks modern Zig.
 - Integration status:
-  - `-Dlua-source=zig` now links Lua via ziglua-provided `lua` artifact.
+  - `-Dpath=zig` now links Lua via ziglua-provided `lua` artifact.
   - Parser path is fully native ziglua.
   - `-Dlua-impl` selector has been removed.
 
@@ -76,7 +76,7 @@ The split is behavior-preserving for default builds and enables independent evol
 - `build.zig` wires ziglua into the compile graph unconditionally for config parsing:
   - Adds dependency via `b.dependency("zlua", ...)`
   - Imports module into app roots as `@import("zlua")`
-- `build.zig` also wires ziglua dependency when `-Dlua-source=zig`:
+- `build.zig` also wires ziglua dependency when `-Dpath=zig`:
   - Links `artifact("lua")` for C API consumers
   - Uses emitted include tree for Lua headers
 - Current status:
