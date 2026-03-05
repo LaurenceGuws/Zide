@@ -14,7 +14,7 @@ pub const c = @cImport({
 });
 
 pub const EVENT_QUIT: c_uint = c.SDL_EVENT_QUIT;
-pub const EVENT_WINDOW: c_uint = if (@hasDecl(c, "SDL_EVENT_WINDOW")) c.SDL_EVENT_WINDOW else c.SDL_EVENT_WINDOW_SHOWN;
+pub const EVENT_WINDOW: c_uint = c.SDL_EVENT_WINDOW_SHOWN;
 pub const EVENT_KEY_DOWN: c_uint = c.SDL_EVENT_KEY_DOWN;
 pub const EVENT_KEY_UP: c_uint = c.SDL_EVENT_KEY_UP;
 pub const EVENT_TEXT_INPUT: c_uint = c.SDL_EVENT_TEXT_INPUT;
@@ -94,7 +94,7 @@ pub fn isWindowEventType(event_type: c_uint) bool {
     return false;
 }
 
-pub fn windowEventName(event_type: c_uint, window_event_id: u8) []const u8 {
+pub fn windowEventName(event_type: c_uint) []const u8 {
     if (@hasDecl(c, "SDL_EVENT_WINDOW_SHOWN") and event_type == c.SDL_EVENT_WINDOW_SHOWN) return "shown";
     if (@hasDecl(c, "SDL_EVENT_WINDOW_HIDDEN") and event_type == c.SDL_EVENT_WINDOW_HIDDEN) return "hidden";
     if (@hasDecl(c, "SDL_EVENT_WINDOW_EXPOSED") and event_type == c.SDL_EVENT_WINDOW_EXPOSED) return "exposed";
@@ -114,33 +114,28 @@ pub fn windowEventName(event_type: c_uint, window_event_id: u8) []const u8 {
     if (@hasDecl(c, "SDL_EVENT_WINDOW_HIT_TEST") and event_type == c.SDL_EVENT_WINDOW_HIT_TEST) return "hit_test";
     if (@hasDecl(c, "SDL_EVENT_WINDOW_DISPLAY_CHANGED") and event_type == c.SDL_EVENT_WINDOW_DISPLAY_CHANGED) return "display_changed";
     if (@hasDecl(c, "SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED") and event_type == c.SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED) return "display_scale_changed";
-    _ = window_event_id;
     return "unknown";
 }
 
-pub fn isResizeEvent(event_type: c_uint, window_event_id: u8) bool {
+pub fn isResizeEvent(event_type: c_uint) bool {
     if (@hasDecl(c, "SDL_EVENT_WINDOW_RESIZED") and event_type == c.SDL_EVENT_WINDOW_RESIZED) return true;
     if (@hasDecl(c, "SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED") and event_type == c.SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) return true;
     if (@hasDecl(c, "SDL_EVENT_WINDOW_SIZE_CHANGED") and event_type == c.SDL_EVENT_WINDOW_SIZE_CHANGED) return true;
     if (@hasDecl(c, "SDL_EVENT_WINDOW_MOVED") and event_type == c.SDL_EVENT_WINDOW_MOVED) return true;
     if (@hasDecl(c, "SDL_EVENT_WINDOW_DISPLAY_CHANGED") and event_type == c.SDL_EVENT_WINDOW_DISPLAY_CHANGED) return true;
     if (@hasDecl(c, "SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED") and event_type == c.SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED) return true;
-    _ = window_event_id;
     return false;
 }
 
-pub fn isCloseEvent(event_type: c_uint, window_event_id: u8) bool {
-    _ = window_event_id;
+pub fn isCloseEvent(event_type: c_uint) bool {
     return @hasDecl(c, "SDL_EVENT_WINDOW_CLOSE_REQUESTED") and event_type == c.SDL_EVENT_WINDOW_CLOSE_REQUESTED;
 }
 
-pub fn isFocusGainedEvent(event_type: c_uint, window_event_id: u8) bool {
-    _ = window_event_id;
+pub fn isFocusGainedEvent(event_type: c_uint) bool {
     return @hasDecl(c, "SDL_EVENT_WINDOW_FOCUS_GAINED") and event_type == c.SDL_EVENT_WINDOW_FOCUS_GAINED;
 }
 
-pub fn isFocusLostEvent(event_type: c_uint, window_event_id: u8) bool {
-    _ = window_event_id;
+pub fn isFocusLostEvent(event_type: c_uint) bool {
     return @hasDecl(c, "SDL_EVENT_WINDOW_FOCUS_LOST") and event_type == c.SDL_EVENT_WINDOW_FOCUS_LOST;
 }
 
@@ -483,11 +478,6 @@ pub fn glSwapWindow(window: *c.SDL_Window) void {
 
 pub fn displayModeRefreshHz(mode: *const c.SDL_DisplayMode) i32 {
     return @intFromFloat(mode.refresh_rate);
-}
-
-pub fn getWindowEventId(event: *const c.SDL_Event) u8 {
-    _ = event;
-    return 0;
 }
 
 pub fn logSetAllPriority(priority: c.SDL_LogPriority) void {
