@@ -17,24 +17,38 @@ pub const TerminalDisableLigaturesStrategy = iface.TerminalDisableLigaturesStrat
 pub const TabBarWidthMode = iface.TabBarWidthMode;
 pub const ThemeConfig = iface.ThemeConfig;
 
+fn loadConfigFromFileZiglua(allocator: std.mem.Allocator, path: []const u8) LuaConfigError!Config {
+    const lua = zlua.Lua.init(allocator) catch return LuaConfigError.LuaInitFailed;
+    defer lua.deinit();
+    lua.openLibs();
+
+    const zpath = allocator.dupeZ(u8, path) catch return LuaConfigError.OutOfMemory;
+    defer allocator.free(zpath);
+
+    switch (zlua.lang) {
+        .lua51, .luajit => lua.loadFile(zpath) catch return LuaConfigError.LuaLoadFailed,
+        else => lua.loadFile(zpath, .binary_text) catch return LuaConfigError.LuaLoadFailed,
+    }
+    lua.protectedCall(.{ .args = 0, .results = 1 }) catch return LuaConfigError.LuaRunFailed;
+    return capi.parseConfigFromLuaState(allocator, @ptrCast(lua));
+}
+
 pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
     var config: Config = emptyConfig();
 
-
-
     if (lua_shared.fileExists("assets/config/init.lua")) {
-        config = try capi.loadConfigFromFile(allocator, "assets/config/init.lua");
+        config = try loadConfigFromFileZiglua(allocator, "assets/config/init.lua");
     }
 
     if (try lua_shared.findUserConfigPath(allocator)) |path| {
         defer allocator.free(path);
-        var user_config = try capi.loadConfigFromFile(allocator, path);
+        var user_config = try loadConfigFromFileZiglua(allocator, path);
         capi.mergeConfig(allocator, &config, user_config);
         lua_shared.freeConfig(allocator, &user_config);
     }
 
     if (lua_shared.fileExists(".zide.lua")) {
-        var project_config = try capi.loadConfigFromFile(allocator, ".zide.lua");
+        var project_config = try loadConfigFromFileZiglua(allocator, ".zide.lua");
         capi.mergeConfig(allocator, &config, project_config);
         lua_shared.freeConfig(allocator, &project_config);
     }

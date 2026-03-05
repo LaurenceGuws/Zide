@@ -132,6 +132,7 @@ dependencies_todo:
             - "Ownership group E (Lua utility + scalar parsers): parseFontHinting, parseGlyphOverflowPolicy, parseTerminalBlink, parseTerminalDisableLigatures, parseTabBarWidthMode, parseCursorShape, parseFontTable, parseLogFiltersFromTable, parseSdlLogLevel, parseColorField, parseColorFromValue, parseHexColor, parseHexByte, parseColorChannel, luaStringToOwned, luaStringToSlice, luaStringListToOwned, luaAbsIndex, luaPushStringSlice, luaGetTableByNameWithCaptureFallback."
             - "Checkpoint: shared pure logic extracted into `lua_config_shared.zig` and used by both backends (`freeConfig`, `applyThemeConfig`) to reduce cross-backend coupling."
             - "Checkpoint: ziglua backend now owns top-level config orchestration (assets/user/project layering) and calls parser/merge helpers directly; no single-call loadConfig delegation remains."
+            - "Checkpoint: ziglua backend now performs Lua state init/library open/file load/protected call through `zlua`; CAPI bridge is currently retained only for stack table parsing + merge helpers."
 
     - name: "DEP-04 Tree-sitter packaging decision"
       tasks:
