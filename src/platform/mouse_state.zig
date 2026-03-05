@@ -1,5 +1,4 @@
 const compositor = @import("compositor.zig");
-const platform_window = @import("window.zig");
 const sdl_api = @import("sdl_api.zig");
 const std = @import("std");
 
@@ -33,14 +32,9 @@ pub fn getScaledPosWithFactor(scale: f32) MousePos {
 }
 
 pub fn computeMouseScale(window: *sdl.SDL_Window) MouseScale {
+    _ = window;
     var sx: f32 = 1.0;
     var sy: f32 = 1.0;
-    if (!sdl_api.is_sdl3) {
-        const window_size = platform_window.getWindowSize(window);
-        const drawable = platform_window.getDrawableSize(window);
-        sx = if (window_size.w > 0) @as(f32, @floatFromInt(drawable.w)) / @as(f32, @floatFromInt(window_size.w)) else 1.0;
-        sy = if (window_size.h > 0) @as(f32, @floatFromInt(drawable.h)) / @as(f32, @floatFromInt(window_size.h)) else 1.0;
-    }
 
     if (compositor.isWayland()) {
         // SDL already reports logical mouse coords; drawable/window ratio matches render scale.

@@ -42,7 +42,6 @@ const glyph_cache = @import("glyph_cache.zig");
 const platform_window = @import("../platform/window.zig");
 const platform_input_events = @import("../platform/input_events.zig");
 const platform_mouse = @import("../platform/mouse_state.zig");
-const platform_window_events = @import("../platform/window_events.zig");
 const build_options = @import("build_options");
 const gl = @import("renderer/gl.zig");
 const sdl_api = @import("../platform/sdl_api.zig");
@@ -1779,8 +1778,8 @@ pub const Renderer = struct {
         const window_log = app_logger.logger("sdl.window");
         if (!sdl_input_env_logged and (input_log.enabled_file or input_log.enabled_console)) {
             input_log.logf(
-                "sdl build_version=sdl3 is_sdl3={d} event_size={d}",
-                .{ @intFromBool(sdl_api.is_sdl3), sdl_api.sdlEventSize() },
+                "sdl build_version=sdl3 event_size={d}",
+                .{sdl_api.sdlEventSize()},
             );
             sdl_input_env_logged = true;
         }
@@ -1804,22 +1803,14 @@ pub const Renderer = struct {
         input_state.resetForFrame(state);
         mouse_wheel.reset(&mouse_wheel_delta);
 
-        if (sdl_api.is_sdl3) {
-            var event: sdl.SDL_Event = undefined;
-            var event_count: usize = 0;
-            while (sdl_api.pollEvent(&event)) {
-                event_count += 1;
-                self.handleEvent(&event, input_log, window_log, state);
-            }
-            if ((input_log.enabled_file or input_log.enabled_console) and event_count > 0) {
-                input_log.logf("sdl3 polled events={d}", .{event_count});
-            }
-            return;
+        var event: sdl.SDL_Event = undefined;
+        var event_count: usize = 0;
+        while (sdl_api.pollEvent(&event)) {
+            event_count += 1;
+            self.handleEvent(&event, input_log, window_log, state);
         }
-
-        const events = input_queue.drain(&self.sdl_input);
-        for (events) |*event| {
-            self.handleEvent(event, input_log, window_log, state);
+        if ((input_log.enabled_file or input_log.enabled_console) and event_count > 0) {
+            input_log.logf("sdl3 polled events={d}", .{event_count});
         }
     }
 
