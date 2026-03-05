@@ -99,8 +99,8 @@ fn initWithMode(
     app_log.logStdout(
         "config lua backend: impl={s} dep_source={s}",
         .{
-            if (@hasDecl(build_options, "lua_impl")) build_options.lua_impl else "capi",
-            if (@hasDecl(build_options, "lua_dependency_source")) build_options.lua_dependency_source else "system",
+            build_options.lua_impl,
+            build_options.lua_dependency_source,
         },
     );
     const metrics_log = app_logger.logger("terminal.metrics");

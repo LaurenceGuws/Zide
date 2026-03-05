@@ -87,6 +87,7 @@ dependencies_todo:
             - "Record compile/runtime parity notes in architecture docs."
             - "2026-03-05 (non-GUI parity): `zig build`, `zig build -Ddep-source=zig`, `zig build test`, and `zig build test -Ddep-source=zig` all passed."
             - "Known caveat remains: `-Ddep-source=zig` is currently not compatible with `-Duse-vcpkg=true`."
+            - "2026-03-05 cleanup: removed remaining SDL2-era runtime branches in input/window paths and switched keyboard/text event access to SDL3-only fields. Retained one guarded DPI symbol call (`SDL_GetDisplayDPI`) for SDL3 header-variant compatibility."
 
     - name: "DEP-02 FreeType/HarfBuzz Zig package path"
       tasks:
@@ -155,6 +156,7 @@ dependencies_todo:
             - "Checkpoint: `editor.theme` schema/link resolution is now native; ziglua parser no longer calls CAPI bridge functions (`uses_capi_parse_bridge=0`, `full=0`, `theme=0`, `keybind=0`)."
             - "Checkpoint: `lua_config_capi_bridge.zig` was removed after ziglua path became fully native; CAPI remains available only as its own backend (`-Dlua-impl=capi`)."
             - "Checkpoint: bridge-era scaffolding was removed (`uses_capi_*` flags, bridge helper exports in capi backend, and bridge-specific startup diagnostics)."
+            - "Checkpoint: build/runtime now hard-wire config parsing to ziglua and remove `-Dlua-impl` selector surface."
 
     - name: "DEP-04 Tree-sitter packaging decision"
       tasks:
