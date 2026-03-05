@@ -1,13 +1,12 @@
 const std = @import("std");
 const syntax_mod = @import("editor/syntax.zig");
 const text_store = @import("editor/text_store.zig");
+const zig_language_mod = @import("editor/zig_language.zig");
 const ts_api = @import("editor/treesitter_api.zig");
 const c = ts_api.c_api;
 
 const TextStore = text_store.TextStore;
 const HighlightToken = syntax_mod.HighlightToken;
-
-extern "c" fn tree_sitter_zig() *const ts_api.c_api.TSLanguage;
 
 const Edit = struct {
     needle: ?[]const u8,
@@ -174,7 +173,7 @@ fn createTestZigHighlighter(
         allocator,
         store,
         "zig",
-        tree_sitter_zig(),
+        zig_language_mod.language(),
         .{},
         null,
     );
