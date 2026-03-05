@@ -1,8 +1,13 @@
 const std = @import("std");
+const default_language_for_unsaved = "zig";
 
 pub const SyntaxRegistry = struct {
+    pub fn defaultLanguage() []const u8 {
+        return default_language_for_unsaved;
+    }
+
     pub fn resolveLanguage(path: ?[]const u8) ?[]const u8 {
-        if (path == null) return "zig";
+        if (path == null) return defaultLanguage();
         const slice = path.?;
         const base = std.fs.path.basename(slice);
 
@@ -230,6 +235,7 @@ fn parseLuaPair(line: []const u8) ?Pair {
 }
 
 test "resolveLanguage matches common extensions" {
+    try std.testing.expectEqualStrings("zig", SyntaxRegistry.resolveLanguage(null).?);
     try std.testing.expectEqualStrings("zig", SyntaxRegistry.resolveLanguage("main.zig").?);
     try std.testing.expectEqualStrings("bash", SyntaxRegistry.resolveLanguage(".bashrc").?);
     try std.testing.expectEqualStrings("bash", SyntaxRegistry.resolveLanguage("script.sh").?);
