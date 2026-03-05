@@ -108,20 +108,20 @@ UI rendering journey: `app_architecture/ui/DEVELOPMENT_JOURNEY.md`.
 zig build
 ```
 
-Dependency source selector:
+Dependency path selector:
 
 ```bash
-# Default (system-managed deps)
-zig build -Ddep-source=system
+# Default path label
+zig build -Dpath=link
 
-# SDL3 from Zig package manager path
-zig build -Ddep-source=zig
+# Alternate migration path label
+zig build -Dpath=zig
 ```
 
 Current scope:
-- `-Ddep-source=zig` switches SDL3 only.
-- FreeType/HarfBuzz/Lua remain system (or vcpkg on Windows).
-- `-Ddep-source=zig` is currently incompatible with `-Duse-vcpkg=true`.
+- SDL3 and Lua are Zig package managed in normal flow.
+- FreeType/HarfBuzz remain system (or vcpkg on Windows).
+- `-Dpath` is reserved as the migration toggle for the next dependency move.
 
 ## Tree-sitter Grammar Packs
 

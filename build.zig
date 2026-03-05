@@ -13,30 +13,24 @@ fn parseDependencyPath(raw: []const u8) DependencySource {
 }
 
 fn linkSdl3(step: *std.Build.Step.Compile, dep_path: DependencySource, sdl_lib: ?*std.Build.Step.Compile) void {
-    switch (dep_path) {
-        .link => step.linkSystemLibrary("SDL3"),
-        .zig => step.linkLibrary(sdl_lib.?),
-    }
+    _ = dep_path;
+    step.linkLibrary(sdl_lib.?);
 }
 
 fn linkLua(step: *std.Build.Step.Compile, dep_path: DependencySource, lua_lib: ?*std.Build.Step.Compile) void {
-    switch (dep_path) {
-        .link => step.linkSystemLibrary("lua"),
-        .zig => step.linkLibrary(lua_lib.?),
-    }
+    _ = dep_path;
+    step.linkLibrary(lua_lib.?);
 }
 
 fn addLinuxSystemSdlInclude(step: *std.Build.Step.Compile, target_os: std.Target.Os.Tag, dep_path: DependencySource) void {
-    if (dep_path == .link and target_os == .linux) {
-        step.addIncludePath(.{ .cwd_relative = "/usr/include/SDL3" });
-    }
+    _ = step;
+    _ = target_os;
+    _ = dep_path;
 }
 
 fn addLuaIncludes(step: *std.Build.Step.Compile, dep_path: DependencySource, lua_lib: ?*std.Build.Step.Compile) void {
-    switch (dep_path) {
-        .link => step.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" }),
-        .zig => step.addIncludePath(lua_lib.?.getEmittedIncludeTree()),
-    }
+    _ = dep_path;
+    step.addIncludePath(lua_lib.?.getEmittedIncludeTree());
 }
 
 pub fn build(b: *std.Build) void {
@@ -178,20 +172,17 @@ pub fn build(b: *std.Build) void {
         @panic("Windows builds require vcpkg. Install deps via manifest mode (./vcpkg_installed) or set VCPKG_ROOT + VCPKG_DEFAULT_TRIPLET, then re-run.");
     }
 
-    if (dep_path == .zig and use_vcpkg) {
-        @panic("-Dpath=zig is not compatible with --use-vcpkg yet; use -Dpath=link");
-    }
-    const sdl_dep = if (dep_path == .zig) b.dependency("sdl", .{
+    const sdl_dep = b.dependency("sdl", .{
         .target = target,
         .optimize = optimize,
-    }) else null;
-    const sdl_lib = if (dep_path == .zig) sdl_dep.?.artifact("SDL3") else null;
+    });
+    const sdl_lib = sdl_dep.artifact("SDL3");
     const zlua_dep = b.dependency("zlua", .{
         .target = target,
         .optimize = optimize,
     });
     const zlua_module = zlua_dep.module("zlua");
-    const lua_lib = if (dep_path == .zig) zlua_dep.artifact("lua") else null;
+    const lua_lib = zlua_dep.artifact("lua");
     // ─────────────────────────────────────────────────────────────────────────
     // Main executable
     // ─────────────────────────────────────────────────────────────────────────
