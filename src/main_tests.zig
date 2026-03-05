@@ -374,7 +374,7 @@ test "terminal close intent routing emits only when tab id is present" {
     try app.tab_bar.addTerminalTab("t1", 101);
     try app.tab_bar.addTerminalTab("t2", 202);
     app.tab_bar.active_index = 1;
-    try app_mode_adapter_sync_runtime.sync(app);
+    try app_mode_adapter_sync_runtime.sync(&app);
 
     try std.testing.expect(try app_terminal_runtime_intents.routeByTabIdAndSync(
         .close,
@@ -409,13 +409,13 @@ test "terminal tab action apply keeps terminal mode aligned with reordered tab b
     try app.tab_bar.addTerminalTab("t2", 22);
     try app.tab_bar.addTerminalTab("t3", 33);
     app.tab_bar.active_index = 1;
-    try app_mode_adapter_sync_runtime.sync(app);
+    try app_mode_adapter_sync_runtime.sync(&app);
 
     const moved = app.tab_bar.tabs.orderedRemove(0);
     try app.tab_bar.tabs.insert(allocator, 1, moved);
     app.tab_bar.active_index = 0;
 
-    try app_tab_action_apply_runtime.applyTerminalAndSync(app, .{
+    try app_tab_action_apply_runtime.applyTerminalAndSync(&app, .{
         .move = .{
             .from_index = 0,
             .to_index = 1,
@@ -438,7 +438,7 @@ test "terminal activate intent routing emits only when tab id exists" {
     try app.tab_bar.addTerminalTab("t1", 1001);
     try app.tab_bar.addTerminalTab("t2", 1002);
     app.tab_bar.active_index = 0;
-    try app_mode_adapter_sync_runtime.sync(app);
+    try app_mode_adapter_sync_runtime.sync(&app);
 
     try std.testing.expect(!try app_terminal_runtime_intents.routeByTabIdAndSync(
         .activate,
@@ -471,7 +471,7 @@ test "requestCancelTerminalCloseFromModal clears pending tab and marks redraw" {
 
     app.terminal_close_confirm_tab = 42;
     app.needs_redraw = false;
-    const consumed = app_terminal_close_confirm_decision_runtime.applyDecision(
+    const consumed = try app_terminal_close_confirm_decision_runtime.applyDecision(
         &app,
         .cancel,
         app_shell.getTime(),
