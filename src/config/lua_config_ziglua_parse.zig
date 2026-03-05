@@ -686,7 +686,6 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     return out;
 }
 
-// Migration seam: replace this bridge call with native ziglua table parsing.
 pub fn parseConfigFromLuaState(allocator: std.mem.Allocator, L: *anyopaque) LuaConfigError!Config {
     const lua: *zlua.Lua = @ptrCast(@alignCast(L));
     if (lua.isNil(-1)) {
@@ -703,9 +702,5 @@ pub fn parseConfigFromLuaState(allocator: std.mem.Allocator, L: *anyopaque) LuaC
     }
     lua.pop(2);
 
-    var parsed = try capi_bridge.parseConfigFromLuaState(allocator, L);
-    var native_overlay = try parseNativeScalarOverlay(allocator, lua, table_index);
-    defer lua_shared.freeConfig(allocator, &native_overlay);
-    lua_shared.mergeConfig(allocator, &parsed, native_overlay);
-    return parsed;
+    return try parseNativeScalarOverlay(allocator, lua, table_index);
 }
