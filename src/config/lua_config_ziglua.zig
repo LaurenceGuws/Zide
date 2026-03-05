@@ -1,6 +1,7 @@
 const std = @import("std");
 const iface = @import("./lua_config_iface.zig");
 const capi = @import("./lua_config_capi.zig");
+const lua_shared = @import("./lua_config_shared.zig");
 
 pub const LuaConfigError = iface.LuaConfigError;
 pub const Config = iface.Config;
@@ -17,9 +18,9 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
 }
 
 pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
-    capi.freeConfig(allocator, config);
+    lua_shared.freeConfig(allocator, config);
 }
 
 pub fn applyThemeConfig(theme: *iface.Theme, overlay: ThemeConfig) void {
-    capi.applyThemeConfig(theme, overlay);
+    lua_shared.applyThemeConfig(theme, overlay);
 }

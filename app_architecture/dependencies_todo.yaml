@@ -130,6 +130,7 @@ dependencies_todo:
             - "Ownership group C (theme parsing): parseThemeFromTable, parseThemePaletteTable, parseIndexedAnsiColors, parseNamedAnsiColors, parseThemeSyntaxTable, applyEditorThemeSchema, applyEditorThemeColorSection, applyEditorThemeLinkSection, resolveEditorThemeColor, resolveEditorThemeColorFromSection, parseEditorThemeColorFromValue, editorThemeLinkTargetFromValue."
             - "Ownership group D (theme mapping/apply): applyThemeConfig, mergeThemeConfig, setThemeColorByEditorName, lookupThemeColorByEditorName, themeColorSlotByEditorName, normalizeEditorThemeName."
             - "Ownership group E (Lua utility + scalar parsers): parseFontHinting, parseGlyphOverflowPolicy, parseTerminalBlink, parseTerminalDisableLigatures, parseTabBarWidthMode, parseCursorShape, parseFontTable, parseLogFiltersFromTable, parseSdlLogLevel, parseColorField, parseColorFromValue, parseHexColor, parseHexByte, parseColorChannel, luaStringToOwned, luaStringToSlice, luaStringListToOwned, luaAbsIndex, luaPushStringSlice, luaGetTableByNameWithCaptureFallback."
+            - "Checkpoint: shared pure logic extracted into `lua_config_shared.zig` and used by both backends (`freeConfig`, `applyThemeConfig`) to reduce cross-backend coupling."
 
     - name: "DEP-04 Tree-sitter packaging decision"
       tasks:
