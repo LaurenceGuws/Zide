@@ -2352,7 +2352,7 @@ test "predicates + priority metadata filter highlights" {
         allocator,
         store,
         "zig",
-        zig_language_mod.language(),
+        try zig_language_mod.language(),
         .{ .highlights = query_path },
         null,
     );
@@ -2479,7 +2479,7 @@ test "match predicate filters captures" {
         allocator,
         store,
         "zig",
-        zig_language_mod.language(),
+        try zig_language_mod.language(),
         .{ .highlights = query_path },
         null,
     );

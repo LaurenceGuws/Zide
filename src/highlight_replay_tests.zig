@@ -173,7 +173,7 @@ fn createTestZigHighlighter(
         allocator,
         store,
         "zig",
-        zig_language_mod.language(),
+        try zig_language_mod.language(),
         .{},
         null,
     );

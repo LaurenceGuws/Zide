@@ -13,6 +13,9 @@ const CursorPos = types.CursorPos;
 const Selection = types.Selection;
 const c = ts_api.c_api;
 
+var grammar_auto_bootstrap_lock: std.Thread.Mutex = .{};
+var grammar_auto_bootstrap_attempted: bool = false;
+
 /// High-level editor state wrapping a text buffer
 pub const Editor = struct {
     const highlighter_large_file_threshold_bytes: usize = 8 * 1024 * 1024;
@@ -1856,8 +1859,17 @@ pub const Editor = struct {
         if (self.highlighter == null) {
             const t_start = std.time.nanoTimestamp();
             log.logf("highlight init start", .{});
-            const grammar = try self.grammar_manager.getOrLoad(lang.?) orelse {
+            const grammar = try self.grammar_manager.getOrLoad(lang.?) orelse blk: {
                 log.logf("highlight missing grammar lang={s}", .{lang.?});
+                if (shouldAutoBootstrapGrammars()) {
+                    if (self.tryAutoBootstrapGrammars()) {
+                        if (try self.grammar_manager.getOrLoad(lang.?)) |loaded| {
+                            log.logf("highlight grammar loaded after bootstrap lang={s}", .{lang.?});
+                            break :blk loaded;
+                        }
+                        log.logf("highlight grammar still missing after bootstrap lang={s}", .{lang.?});
+                    }
+                }
                 return;
             };
             self.highlighter = syntax_mod.createHighlighterForLanguage(
@@ -1879,6 +1891,65 @@ pub const Editor = struct {
                 .{ path orelse "", @as(i64, @intCast(@divTrunc(elapsed_ns, 1000))) },
             );
         }
+    }
+
+    fn tryAutoBootstrapGrammars(self: *Editor) bool {
+        grammar_auto_bootstrap_lock.lock();
+        const should_attempt = !grammar_auto_bootstrap_attempted;
+        if (should_attempt) grammar_auto_bootstrap_attempted = true;
+        grammar_auto_bootstrap_lock.unlock();
+        if (!should_attempt) return false;
+
+        const log = app_logger.logger("editor.grammar");
+        log.logf("auto bootstrap start cmd=\"zig build grammar-update -- --skip-git --continue-on-error\"", .{});
+
+        var child = std.process.Child.init(&.{
+            "zig",
+            "build",
+            "grammar-update",
+            "--",
+            "--skip-git",
+            "--continue-on-error",
+        }, self.allocator);
+        child.stdout_behavior = .Inherit;
+        child.stderr_behavior = .Inherit;
+        const result = child.spawnAndWait() catch |err| {
+            log.logf("auto bootstrap spawn failed err={any}", .{err});
+            return false;
+        };
+        switch (result) {
+            .Exited => |code| {
+                if (code == 0) {
+                    log.logf("auto bootstrap succeeded", .{});
+                    return true;
+                }
+                log.logf("auto bootstrap failed exit_code={d}", .{code});
+                return false;
+            },
+            .Signal => |sig| {
+                log.logf("auto bootstrap failed signal={d}", .{sig});
+                return false;
+            },
+            else => {
+                log.logf("auto bootstrap failed status={any}", .{result});
+                return false;
+            },
+        }
+    }
+
+    fn shouldAutoBootstrapGrammars() bool {
+        return envFlagEnabled("ZIDE_GRAMMAR_AUTO_BOOTSTRAP");
+    }
+
+    fn envFlagEnabled(name: [:0]const u8) bool {
+        const raw = std.c.getenv(name) orelse return false;
+        const value = std.mem.sliceTo(raw, 0);
+        if (std.mem.eql(u8, value, "1")) return true;
+        if (std.mem.eql(u8, value, "true")) return true;
+        if (std.mem.eql(u8, value, "TRUE")) return true;
+        if (std.mem.eql(u8, value, "yes")) return true;
+        if (std.mem.eql(u8, value, "YES")) return true;
+        return false;
     }
 
     pub fn ensureHighlighter(self: *Editor) void {

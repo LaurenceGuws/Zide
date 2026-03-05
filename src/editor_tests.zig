@@ -1703,7 +1703,7 @@ test "editor render cache redraws on highlight epoch change" {
         allocator,
         editor.buffer,
         "zig",
-        zig_language_mod.language(),
+        try zig_language_mod.language(),
         .{ .highlights = query_path },
         null,
     );
@@ -1948,7 +1948,7 @@ test "editor immediate and cached draw agree for conceal/url highlights" {
         allocator,
         editor.buffer,
         "zig",
-        zig_language_mod.language(),
+        try zig_language_mod.language(),
         .{ .highlights = query_path },
         null,
     );
