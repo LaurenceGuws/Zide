@@ -95,12 +95,13 @@ dependencies_todo:
       tasks:
         - id: DEP-02-01
           title: "Add optional Zig-managed FreeType/HarfBuzz backend"
-          status: pending
+          status: in_progress
           notes:
             - "Research baseline captured in `app_architecture/DEPENDENCIES.md` (package API constraints and migration shape)."
             - "2026-03-05 attempt: direct Mach `freetype` + `harfbuzz` package artifacts were wired and then reverted."
             - "Blocker: package build scripts currently fail against our Zig toolchain with `Build.addStaticLibrary` API mismatch."
             - "Keep `-Dpath` as migration surface and revisit DEP-02 once compatible package revisions are identified."
+            - "2026-03-06: extracted build-level text-stack hooks (`linkTextStack`, `addTextStackIncludes`) so future package wiring can be added in one place without per-target churn."
         - id: DEP-02-02
           title: "Validate font shaping/rasterization parity against system path"
           status: pending
@@ -164,22 +165,27 @@ dependencies_todo:
       tasks:
         - id: DEP-04-01
           title: "Evaluate tree-sitter packaging changes vs current vendor strategy"
-          status: pending
+          status: done
           notes:
             - "Adopt only if it clearly improves reproducibility/maintenance."
             - "Vendored `tree-sitter-zig` parser C is no longer linked in build targets."
             - "Zig grammar language pointers now resolve through `src/editor/zig_language.zig` via GrammarManager cache loading."
+            - "2026-03-06: pinned `tree_sitter/tree-sitter` package in `build.zig.zon`."
+            - "2026-03-06: build now links tree-sitter core via package artifact `tree-sitter` in normal flow."
         - id: DEP-04-02
           title: "Decide keep-vendor vs package and document decision"
-          status: pending
+          status: done
+          notes:
+            - "Decision: package-managed tree-sitter core is the primary path; vendored tree-sitter core wiring removed from build graph."
         - id: DEP-04-03
           title: "Auto-bootstrap missing grammars (run/install grammar-update flow)"
-          status: in_progress
+          status: done
           notes:
             - "When runtime grammar lookup fails, provide a guided auto-bootstrap path instead of hard panic."
             - "Design should support non-interactive CI and user-local interactive workflows."
             - "Capture failure policy per mode (terminal/editor/ide) and fallback UX messaging."
             - "2026-03-06: added opt-in runtime hook via `ZIDE_GRAMMAR_AUTO_BOOTSTRAP=1` that attempts one-shot `zig build grammar-update -- --skip-git --continue-on-error` on first missing grammar, then retries load."
+            - "2026-03-06: added one-shot user-visible guidance when grammar remains missing (with/without auto-bootstrap), avoiding repeated spam."
 
     - name: "DEP-05 Default flip readiness"
       tasks:

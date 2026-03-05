@@ -13,6 +13,10 @@
             .url = "git+https://github.com/natecraddock/ziglua?ref=0.6.0#315b7f25efd29d9e2143d6c0ab685bb7f640450f",
             .hash = "zlua-0.1.0-hGRpCww-BQCx3cX6zbKWfTgOx6B7Peo4P17RK2hm7-xV",
         },
+        .tree_sitter = .{
+            .url = "git+https://github.com/tree-sitter/tree-sitter#cf302b07d1cae984068b7eb44a6e44529566a8c9",
+            .hash = "tree_sitter-0.27.0-Tw2sR-O3CwBGzkglYnTjrdGTjwaGZdFND1h1MnLrTYKC",
+        },
     },
 
     .paths = .{

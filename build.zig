@@ -33,6 +33,28 @@ fn addLuaIncludes(step: *std.Build.Step.Compile, dep_path: DependencySource, lua
     step.addIncludePath(lua_lib.?.getEmittedIncludeTree());
 }
 
+fn addTreeSitterIncludes(step: *std.Build.Step.Compile, treesitter_lib: *std.Build.Step.Compile) void {
+    step.addIncludePath(treesitter_lib.getEmittedIncludeTree());
+}
+
+fn linkTextStack(step: *std.Build.Step.Compile, dep_path: DependencySource) void {
+    switch (dep_path) {
+        .link, .zig => {
+            step.linkSystemLibrary("freetype");
+            step.linkSystemLibrary("harfbuzz");
+        },
+    }
+}
+
+fn addTextStackIncludes(step: *std.Build.Step.Compile, use_vcpkg: bool, target_os: std.Target.Os.Tag) void {
+    if (use_vcpkg) return;
+    step.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
+    step.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
+    if (target_os == .linux) {
+        step.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
+    }
+}
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{
         .default_target = if (builtin.os.tag == .windows) .{
@@ -42,29 +64,21 @@ pub fn build(b: *std.Build) void {
         } else .{},
     });
     const optimize = b.standardOptimizeOption(.{});
+    const dep_path_raw = b.option(
+        []const u8,
+        "path",
+        "Dependency path: link (default) or zig package manager",
+    ) orelse "link";
+    const dep_path = parseDependencyPath(dep_path_raw);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Tree-sitter (for syntax highlighting)
     // ─────────────────────────────────────────────────────────────────────────
-    const treesitter = b.addLibrary(.{
-        .name = "tree-sitter",
-        .linkage = .static,
-        .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
+    const tree_sitter_dep = b.dependency("tree_sitter", .{
+        .target = target,
+        .optimize = optimize,
     });
-    treesitter.addCSourceFile(.{
-        .file = b.path("vendor/tree-sitter/lib/src/lib.c"),
-        .flags = &.{
-            "-std=c99",
-            "-D_POSIX_C_SOURCE=200809L",
-            "-D_DEFAULT_SOURCE",
-        },
-    });
-    treesitter.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
-    treesitter.addIncludePath(b.path("vendor/tree-sitter/lib/src"));
+    const treesitter = tree_sitter_dep.artifact("tree-sitter");
 
     // Platform detection
     const target_os = target.result.os.tag;
@@ -83,12 +97,6 @@ pub fn build(b: *std.Build) void {
     }
     const build_options = b.addOptions();
     build_options.addOption([]const u8, "renderer_backend", renderer_backend);
-    const dep_path_raw = b.option(
-        []const u8,
-        "path",
-        "Dependency path: link (default) or zig package manager",
-    ) orelse "link";
-    const dep_path = parseDependencyPath(dep_path_raw);
     build_options.addOption([]const u8, "dependency_path", dep_path_raw);
 
     // vcpkg support
@@ -186,13 +194,11 @@ pub fn build(b: *std.Build) void {
     if (use_vcpkg) {
         exe.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
         exe.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
-        exe.linkSystemLibrary("freetype");
-        exe.linkSystemLibrary("harfbuzz");
+        linkTextStack(exe, dep_path);
         linkLua(exe, dep_path, lua_lib);
         linkSdl3(exe, dep_path, sdl_lib);
     } else {
-        exe.linkSystemLibrary("freetype");
-        exe.linkSystemLibrary("harfbuzz");
+        linkTextStack(exe, dep_path);
         linkLua(exe, dep_path, lua_lib);
         linkSdl3(exe, dep_path, sdl_lib);
     }
@@ -202,15 +208,11 @@ pub fn build(b: *std.Build) void {
 
     // Include paths for @cImport
     exe.addIncludePath(b.path("vendor"));
-    exe.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
+    addTreeSitterIncludes(exe, treesitter);
     if (!use_vcpkg) {
-        exe.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
-        exe.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
+        addTextStackIncludes(exe, use_vcpkg, target_os);
         addLuaIncludes(exe, dep_path, lua_lib);
         addLinuxSystemSdlInclude(exe, target_os, dep_path);
-        if (target_os == .linux) {
-            exe.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
-        }
     }
 
     // Platform-specific linking for the exe
@@ -317,13 +319,11 @@ pub fn build(b: *std.Build) void {
     if (use_vcpkg) {
         exe_terminal.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
         exe_terminal.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
-        exe_terminal.linkSystemLibrary("freetype");
-        exe_terminal.linkSystemLibrary("harfbuzz");
+        linkTextStack(exe_terminal, dep_path);
         linkLua(exe_terminal, dep_path, lua_lib);
         linkSdl3(exe_terminal, dep_path, sdl_lib);
     } else {
-        exe_terminal.linkSystemLibrary("freetype");
-        exe_terminal.linkSystemLibrary("harfbuzz");
+        linkTextStack(exe_terminal, dep_path);
         linkLua(exe_terminal, dep_path, lua_lib);
         linkSdl3(exe_terminal, dep_path, sdl_lib);
     }
@@ -331,14 +331,12 @@ pub fn build(b: *std.Build) void {
         exe_terminal.linkSystemLibrary("fontconfig");
     }
     exe_terminal.addIncludePath(b.path("vendor"));
-    exe_terminal.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
+    addTreeSitterIncludes(exe_terminal, treesitter);
     if (!use_vcpkg) {
-        exe_terminal.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
-        exe_terminal.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
+        addTextStackIncludes(exe_terminal, use_vcpkg, target_os);
         addLuaIncludes(exe_terminal, dep_path, lua_lib);
         if (target_os == .linux) {
             addLinuxSystemSdlInclude(exe_terminal, target_os, dep_path);
-            exe_terminal.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
         }
     }
     if (target_os == .windows) {
@@ -390,13 +388,11 @@ pub fn build(b: *std.Build) void {
     if (use_vcpkg) {
         exe_editor.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
         exe_editor.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
-        exe_editor.linkSystemLibrary("freetype");
-        exe_editor.linkSystemLibrary("harfbuzz");
+        linkTextStack(exe_editor, dep_path);
         linkLua(exe_editor, dep_path, lua_lib);
         linkSdl3(exe_editor, dep_path, sdl_lib);
     } else {
-        exe_editor.linkSystemLibrary("freetype");
-        exe_editor.linkSystemLibrary("harfbuzz");
+        linkTextStack(exe_editor, dep_path);
         linkLua(exe_editor, dep_path, lua_lib);
         linkSdl3(exe_editor, dep_path, sdl_lib);
     }
@@ -404,14 +400,12 @@ pub fn build(b: *std.Build) void {
         exe_editor.linkSystemLibrary("fontconfig");
     }
     exe_editor.addIncludePath(b.path("vendor"));
-    exe_editor.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
+    addTreeSitterIncludes(exe_editor, treesitter);
     if (!use_vcpkg) {
-        exe_editor.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
-        exe_editor.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
+        addTextStackIncludes(exe_editor, use_vcpkg, target_os);
         addLuaIncludes(exe_editor, dep_path, lua_lib);
         if (target_os == .linux) {
             addLinuxSystemSdlInclude(exe_editor, target_os, dep_path);
-            exe_editor.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
         }
     }
     if (target_os == .windows) {
@@ -463,13 +457,11 @@ pub fn build(b: *std.Build) void {
     if (use_vcpkg) {
         exe_ide.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
         exe_ide.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
-        exe_ide.linkSystemLibrary("freetype");
-        exe_ide.linkSystemLibrary("harfbuzz");
+        linkTextStack(exe_ide, dep_path);
         linkLua(exe_ide, dep_path, lua_lib);
         linkSdl3(exe_ide, dep_path, sdl_lib);
     } else {
-        exe_ide.linkSystemLibrary("freetype");
-        exe_ide.linkSystemLibrary("harfbuzz");
+        linkTextStack(exe_ide, dep_path);
         linkLua(exe_ide, dep_path, lua_lib);
         linkSdl3(exe_ide, dep_path, sdl_lib);
     }
@@ -477,14 +469,12 @@ pub fn build(b: *std.Build) void {
         exe_ide.linkSystemLibrary("fontconfig");
     }
     exe_ide.addIncludePath(b.path("vendor"));
-    exe_ide.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
+    addTreeSitterIncludes(exe_ide, treesitter);
     if (!use_vcpkg) {
-        exe_ide.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
-        exe_ide.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
+        addTextStackIncludes(exe_ide, use_vcpkg, target_os);
         addLuaIncludes(exe_ide, dep_path, lua_lib);
         if (target_os == .linux) {
             addLinuxSystemSdlInclude(exe_ide, target_os, dep_path);
-            exe_ide.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
         }
     }
     if (target_os == .windows) {
@@ -568,7 +558,7 @@ pub fn build(b: *std.Build) void {
     });
     editor_ffi.linkLibrary(treesitter);
     editor_ffi.addIncludePath(b.path("vendor"));
-    editor_ffi.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
+    addTreeSitterIncludes(editor_ffi, treesitter);
     if (target_os == .windows) {
         editor_ffi.linkSystemLibrary("user32");
         editor_ffi.linkSystemLibrary("shell32");
@@ -612,7 +602,7 @@ pub fn build(b: *std.Build) void {
     }
     unit_tests.linkLibrary(treesitter);
     unit_tests.addIncludePath(b.path("vendor"));
-    unit_tests.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
+    addTreeSitterIncludes(unit_tests, treesitter);
     if (!use_vcpkg) {
         addLinuxSystemSdlInclude(unit_tests, target_os, dep_path);
     }
@@ -649,15 +639,11 @@ pub fn build(b: *std.Build) void {
     }
     editor_tests.linkLibrary(treesitter);
     editor_tests.addIncludePath(b.path("vendor"));
-    editor_tests.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
+    addTreeSitterIncludes(editor_tests, treesitter);
     if (!use_vcpkg) {
-        editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
-        editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
+        addTextStackIncludes(editor_tests, use_vcpkg, target_os);
         addLuaIncludes(editor_tests, dep_path, lua_lib);
         addLinuxSystemSdlInclude(editor_tests, target_os, dep_path);
-        if (target_os == .linux) {
-            editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
-        }
     }
     editor_tests.addCSourceFile(.{
         .file = b.path("src/c/stb_image.c"),
@@ -681,8 +667,7 @@ pub fn build(b: *std.Build) void {
         config_tests.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
     }
     linkSdl3(config_tests, dep_path, sdl_lib);
-    config_tests.linkSystemLibrary("freetype");
-    config_tests.linkSystemLibrary("harfbuzz");
+    linkTextStack(config_tests, dep_path);
     linkLua(config_tests, dep_path, lua_lib);
     if (target_os == .linux) {
         config_tests.linkSystemLibrary("GL");
@@ -694,12 +679,10 @@ pub fn build(b: *std.Build) void {
     }
     config_tests.addIncludePath(b.path("vendor"));
     if (!use_vcpkg) {
-        config_tests.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
-        config_tests.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
+        addTextStackIncludes(config_tests, use_vcpkg, target_os);
         addLuaIncludes(config_tests, dep_path, lua_lib);
         if (target_os == .linux) {
             addLinuxSystemSdlInclude(config_tests, target_os, dep_path);
-            config_tests.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
         }
     }
     config_tests.addCSourceFile(.{
@@ -758,7 +741,7 @@ pub fn build(b: *std.Build) void {
     });
     editor_perf_headless.linkLibrary(treesitter);
     editor_perf_headless.addIncludePath(b.path("vendor"));
-    editor_perf_headless.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
+    addTreeSitterIncludes(editor_perf_headless, treesitter);
     const run_editor_perf_headless = b.addRunArtifact(editor_perf_headless);
     if (b.args) |args| {
         run_editor_perf_headless.addArgs(args);
@@ -893,7 +876,7 @@ pub fn build(b: *std.Build) void {
     });
     editor_ffi_tests.linkLibrary(treesitter);
     editor_ffi_tests.addIncludePath(b.path("vendor"));
-    editor_ffi_tests.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
+    addTreeSitterIncludes(editor_ffi_tests, treesitter);
     const run_editor_ffi_tests = b.addRunArtifact(editor_ffi_tests);
     const editor_ffi_tests_step = b.step(
         "test-editor-ffi",

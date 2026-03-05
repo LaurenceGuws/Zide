@@ -15,6 +15,8 @@ const c = ts_api.c_api;
 
 var grammar_auto_bootstrap_lock: std.Thread.Mutex = .{};
 var grammar_auto_bootstrap_attempted: bool = false;
+var grammar_missing_notice_lock: std.Thread.Mutex = .{};
+var grammar_missing_notice_emitted: bool = false;
 
 /// High-level editor state wrapping a text buffer
 pub const Editor = struct {
@@ -1868,7 +1870,12 @@ pub const Editor = struct {
                             break :blk loaded;
                         }
                         log.logf("highlight grammar still missing after bootstrap lang={s}", .{lang.?});
+                        self.emitMissingGrammarNotice(true, true, false);
+                    } else {
+                        self.emitMissingGrammarNotice(true, true, false);
                     }
+                } else {
+                    self.emitMissingGrammarNotice(false, false, false);
                 }
                 return;
             };
@@ -1939,6 +1946,33 @@ pub const Editor = struct {
 
     fn shouldAutoBootstrapGrammars() bool {
         return envFlagEnabled("ZIDE_GRAMMAR_AUTO_BOOTSTRAP");
+    }
+
+    fn emitMissingGrammarNotice(
+        self: *Editor,
+        auto_bootstrap_enabled: bool,
+        bootstrap_attempted: bool,
+        bootstrap_succeeded: bool,
+    ) void {
+        _ = self;
+        _ = bootstrap_succeeded;
+
+        grammar_missing_notice_lock.lock();
+        defer grammar_missing_notice_lock.unlock();
+        if (grammar_missing_notice_emitted) return;
+        grammar_missing_notice_emitted = true;
+
+        if (auto_bootstrap_enabled and bootstrap_attempted) {
+            std.debug.print(
+                "zide: tree-sitter grammar missing; auto-bootstrap failed or incomplete. Run `zig build grammar-update` and restart.\n",
+                .{},
+            );
+            return;
+        }
+        std.debug.print(
+            "zide: tree-sitter grammar missing. Run `zig build grammar-update` (or set ZIDE_GRAMMAR_AUTO_BOOTSTRAP=1) and restart.\n",
+            .{},
+        );
     }
 
     fn envFlagEnabled(name: [:0]const u8) bool {
