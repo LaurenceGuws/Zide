@@ -200,7 +200,6 @@ pub fn build(b: *std.Build) void {
 
     // Link C libraries
     exe.linkLibrary(treesitter);
-    exe.linkLibrary(ts_zig);
     if (use_vcpkg) {
         exe.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
         exe.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
@@ -332,7 +331,6 @@ pub fn build(b: *std.Build) void {
     exe_terminal.root_module.addOptions("build_options", build_options);
     exe_terminal.root_module.addImport("zlua", zlua_module);
     exe_terminal.linkLibrary(treesitter);
-    exe_terminal.linkLibrary(ts_zig);
     if (use_vcpkg) {
         exe_terminal.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
         exe_terminal.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
@@ -406,7 +404,6 @@ pub fn build(b: *std.Build) void {
     exe_editor.root_module.addOptions("build_options", build_options);
     exe_editor.root_module.addImport("zlua", zlua_module);
     exe_editor.linkLibrary(treesitter);
-    exe_editor.linkLibrary(ts_zig);
     if (use_vcpkg) {
         exe_editor.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
         exe_editor.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
@@ -480,7 +477,6 @@ pub fn build(b: *std.Build) void {
     exe_ide.root_module.addOptions("build_options", build_options);
     exe_ide.root_module.addImport("zlua", zlua_module);
     exe_ide.linkLibrary(treesitter);
-    exe_ide.linkLibrary(ts_zig);
     if (use_vcpkg) {
         exe_ide.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
         exe_ide.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
@@ -588,10 +584,8 @@ pub fn build(b: *std.Build) void {
         }),
     });
     editor_ffi.linkLibrary(treesitter);
-    editor_ffi.linkLibrary(ts_zig);
     editor_ffi.addIncludePath(b.path("vendor"));
     editor_ffi.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
-    editor_ffi.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
     if (target_os == .windows) {
         editor_ffi.linkSystemLibrary("user32");
         editor_ffi.linkSystemLibrary("shell32");
@@ -784,10 +778,8 @@ pub fn build(b: *std.Build) void {
         }),
     });
     editor_perf_headless.linkLibrary(treesitter);
-    editor_perf_headless.linkLibrary(ts_zig);
     editor_perf_headless.addIncludePath(b.path("vendor"));
     editor_perf_headless.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
-    editor_perf_headless.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
     const run_editor_perf_headless = b.addRunArtifact(editor_perf_headless);
     if (b.args) |args| {
         run_editor_perf_headless.addArgs(args);

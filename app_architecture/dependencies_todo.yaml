@@ -167,7 +167,8 @@ dependencies_todo:
           status: pending
           notes:
             - "Adopt only if it clearly improves reproducibility/maintenance."
-            - "Current code still links vendored `tree-sitter-zig` parser C (`vendor/tree-sitter-zig/src/parser.c`) and runtime/tests call `tree_sitter_zig()` directly."
+            - "Current code still compiles vendored `tree-sitter-zig` parser C (`vendor/tree-sitter-zig/src/parser.c`) for test targets that call `tree_sitter_zig()` directly."
+            - "Runtime binaries no longer link vendored `tree-sitter-zig` directly; runtime highlighting uses GrammarManager-loaded grammars."
         - id: DEP-04-02
           title: "Decide keep-vendor vs package and document decision"
           status: pending
