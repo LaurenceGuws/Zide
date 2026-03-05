@@ -1,7 +1,7 @@
 const std = @import("std");
 const zlua = @import("zlua");
 const iface = @import("./lua_config_iface.zig");
-const capi = @import("./lua_config_capi.zig");
+const capi_bridge = @import("./lua_config_capi_bridge.zig");
 const lua_shared = @import("./lua_config_shared.zig");
 
 comptime {
@@ -31,7 +31,7 @@ fn loadConfigFromFileZiglua(allocator: std.mem.Allocator, path: []const u8) LuaC
         else => lua.loadFile(zpath, .binary_text) catch return LuaConfigError.LuaLoadFailed,
     }
     lua.protectedCall(.{ .args = 0, .results = 1 }) catch return LuaConfigError.LuaRunFailed;
-    return capi.parseConfigFromLuaState(allocator, @ptrCast(lua));
+    return capi_bridge.parseConfigFromLuaState(allocator, @ptrCast(lua));
 }
 
 pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
