@@ -1,6 +1,5 @@
 const std = @import("std");
 const builtin = @import("builtin");
-pub const is_sdl3 = true;
 
 pub const c = @cImport({
     if (builtin.target.os.tag == .windows) {
