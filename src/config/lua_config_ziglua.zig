@@ -43,13 +43,13 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
     if (try lua_shared.findUserConfigPath(allocator)) |path| {
         defer allocator.free(path);
         var user_config = try loadConfigFromFileZiglua(allocator, path);
-        capi.mergeConfig(allocator, &config, user_config);
+        lua_shared.mergeConfig(allocator, &config, user_config);
         lua_shared.freeConfig(allocator, &user_config);
     }
 
     if (lua_shared.fileExists(".zide.lua")) {
         var project_config = try loadConfigFromFileZiglua(allocator, ".zide.lua");
-        capi.mergeConfig(allocator, &config, project_config);
+        lua_shared.mergeConfig(allocator, &config, project_config);
         lua_shared.freeConfig(allocator, &project_config);
     }
 
