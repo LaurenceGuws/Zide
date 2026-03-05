@@ -7,7 +7,7 @@ Track practical migration details for replacing system-managed native dependenci
 ## Current state
 
 - SDL3, Lua, and tree-sitter core resolve through Zig package manager in normal flow (`castholm/SDL`, `ziglua`, `tree_sitter/tree-sitter`).
-- FreeType/HarfBuzz remain system/vcpkg managed.
+- FreeType/HarfBuzz are system/vcpkg in default flow, with a working Zig package path behind `-Dpath=zig`.
 - `-Dpath=link|zig` is retained as the migration toggle surface for the next dependency slice.
 - Current active `-Dpath` migration slice: FreeType/HarfBuzz packaging.
 
@@ -58,13 +58,18 @@ Track practical migration details for replacing system-managed native dependenci
 
 - Date: March 6, 2026
 - Attempted approach:
-  - Wired direct package dependencies from `pkg.machengine.org` (`freetype`, `harfbuzz`) behind `-Dpath=zig` using extracted `linkTextStack` / `addTextStackIncludes` hooks.
+  - Forked and pinned Zig 0.15.2-compatible FreeType/HarfBuzz package repos and wired them behind `-Dpath=zig` using extracted `linkTextStack` / `addTextStackIncludes` hooks.
 - Result:
-  - Reverted to keep build healthy.
-  - Same blocker persists: dependency build scripts call `Build.addStaticLibrary`, which is incompatible with current Zig 0.15.2 API in our environment.
+  - Build path is now healthy and passing with pinned forks.
+  - Required wiring fix in Zide build graph:
+    - resolve FreeType from its own dep handle (not from HarfBuzz dep artifacts),
+    - link zlib (`-lz`) for FreeType gzip support.
 - Decision:
-  - Keep DEP-02 `in_progress` but blocked.
-  - Keep text stack on system/vcpkg until compatible package revisions (or a patched fork) are selected.
+  - Keep DEP-02 `in_progress` (no longer blocked).
+  - Next step is parity validation + replacing forks with upstream-compatible package revisions when available.
+  - Current pinned forks:
+    - `LaurenceGuws/freetype-zig015` (`052a300780531e6ea0ffeafeec28c88eb1bf903a`)
+    - `LaurenceGuws/harfbuzz-zig015` (`68406a28eea39df8c074a38fefc64c5aa23201b7`)
 
 ### Lua
 

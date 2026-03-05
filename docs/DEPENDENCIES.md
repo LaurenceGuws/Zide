@@ -31,7 +31,10 @@ Notes:
 - Tree-sitter core runtime is now also Zig package managed in normal flow (`tree_sitter/tree-sitter`, artifact `tree-sitter`).
 - `-Dpath` is retained as a migration toggle surface for upcoming dependency moves.
 - Current active migration on this toggle: FreeType/HarfBuzz packaging path.
-- Parity checkpoint (March 5, 2026): `zig build` and `zig build -Dpath=zig` both pass on the current Linux path.
+- Parity checkpoint (March 6, 2026): `zig build`, `zig build test`, `zig build -Dpath=zig`, and `zig build test -Dpath=zig` pass on the current Linux path.
+- Current `-Dpath=zig` text stack uses pinned Zig 0.15.2-compatible forks:
+  - FreeType: `LaurenceGuws/freetype-zig015` (`052a300780531e6ea0ffeafeec28c88eb1bf903a`)
+  - HarfBuzz: `LaurenceGuws/harfbuzz-zig015` (`68406a28eea39df8c074a38fefc64c5aa23201b7`)
 
 Lua implementation status (config parser backend):
 - The config parser backend is now fixed to native `ziglua`.

@@ -107,6 +107,9 @@ const PipeCapture = struct {
             .pty = .{
                 .master_fd = fds[1],
                 .child_pid = null,
+                .cached_fg_pgrp = 0,
+                .cached_fg_name_len = 0,
+                .cached_fg_name = [_]u8{0} ** 128,
             },
         };
     }
