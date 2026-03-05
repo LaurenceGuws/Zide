@@ -1,7 +1,12 @@
 const std = @import("std");
+const zlua = @import("zlua");
 const iface = @import("./lua_config_iface.zig");
 const capi = @import("./lua_config_capi.zig");
 const lua_shared = @import("./lua_config_shared.zig");
+
+comptime {
+    _ = zlua.Lua;
+}
 
 pub const LuaConfigError = iface.LuaConfigError;
 pub const Config = iface.Config;
