@@ -17,6 +17,14 @@
             .url = "git+https://github.com/tree-sitter/tree-sitter#cf302b07d1cae984068b7eb44a6e44529566a8c9",
             .hash = "tree_sitter-0.27.0-Tw2sR-O3CwBGzkglYnTjrdGTjwaGZdFND1h1MnLrTYKC",
         },
+        .freetype = .{
+            .url = "git+https://github.com/LaurenceGuws/freetype-zig015#052a300780531e6ea0ffeafeec28c88eb1bf903a",
+            .hash = "freetype-0.0.0-AAAAAH9JcwAvHKzJWBn5sVj335g2wMZnrfZ3qcFXBWPC",
+        },
+        .harfbuzz = .{
+            .url = "git+https://github.com/LaurenceGuws/harfbuzz-zig015#68406a28eea39df8c074a38fefc64c5aa23201b7",
+            .hash = "harfbuzz-0.0.0-AAAAAAdegQDrj2lmaK3ZGsmsHSjQRijAro8AGirCOv_1",
+        },
     },
 
     .paths = .{

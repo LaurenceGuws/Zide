@@ -59,6 +59,7 @@ fn linkTextStack(
             } else {
                 step.linkSystemLibrary("harfbuzz");
             }
+            step.linkSystemLibrary("z");
         },
     }
 }
@@ -214,8 +215,27 @@ pub fn build(b: *std.Build) void {
     });
     const zlua_module = zlua_dep.module("zlua");
     const lua_lib = zlua_dep.artifact("lua");
-    const freetype_lib: ?*std.Build.Step.Compile = null;
-    const harfbuzz_lib: ?*std.Build.Step.Compile = null;
+    const freetype_dep = if (dep_path == .zig and !use_vcpkg)
+        b.dependency("freetype", .{
+            .target = target,
+            .optimize = optimize,
+            .use_system_zlib = true,
+            .enable_brotli = false,
+        })
+    else
+        null;
+    const harfbuzz_dep = if (dep_path == .zig and !use_vcpkg)
+        b.dependency("harfbuzz", .{
+            .target = target,
+            .optimize = optimize,
+            .enable_freetype = true,
+            .freetype_use_system_zlib = true,
+            .freetype_enable_brotli = false,
+        })
+    else
+        null;
+    const freetype_lib: ?*std.Build.Step.Compile = if (freetype_dep) |dep| dep.artifact("freetype") else null;
+    const harfbuzz_lib: ?*std.Build.Step.Compile = if (harfbuzz_dep) |dep| dep.artifact("harfbuzz") else null;
     // ─────────────────────────────────────────────────────────────────────────
     // Main executable
     // ─────────────────────────────────────────────────────────────────────────
