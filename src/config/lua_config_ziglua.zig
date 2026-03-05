@@ -22,18 +22,18 @@ pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
 
 
 
-    if (capi.fileExists("assets/config/init.lua")) {
+    if (lua_shared.fileExists("assets/config/init.lua")) {
         config = try capi.loadConfigFromFile(allocator, "assets/config/init.lua");
     }
 
-    if (try capi.findUserConfigPath(allocator)) |path| {
+    if (try lua_shared.findUserConfigPath(allocator)) |path| {
         defer allocator.free(path);
         var user_config = try capi.loadConfigFromFile(allocator, path);
         capi.mergeConfig(allocator, &config, user_config);
         lua_shared.freeConfig(allocator, &user_config);
     }
 
-    if (capi.fileExists(".zide.lua")) {
+    if (lua_shared.fileExists(".zide.lua")) {
         var project_config = try capi.loadConfigFromFile(allocator, ".zide.lua");
         capi.mergeConfig(allocator, &config, project_config);
         lua_shared.freeConfig(allocator, &project_config);

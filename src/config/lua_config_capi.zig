@@ -156,18 +156,18 @@ pub const ThemeConfig = struct {
 
 pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
     var config: Config = emptyConfig();
-    if (fileExists("assets/config/init.lua")) {
+    if (lua_shared.fileExists("assets/config/init.lua")) {
         config = try loadConfigFromFile(allocator, "assets/config/init.lua");
     }
 
-    if (try findUserConfigPath(allocator)) |path| {
+    if (try lua_shared.findUserConfigPath(allocator)) |path| {
         defer allocator.free(path);
         var user_config = try loadConfigFromFile(allocator, path);
         mergeConfig(allocator, &config, user_config);
         freeConfig(allocator, &user_config);
     }
 
-    if (fileExists(".zide.lua")) {
+    if (lua_shared.fileExists(".zide.lua")) {
         var project_config = try loadConfigFromFile(allocator, ".zide.lua");
         mergeConfig(allocator, &config, project_config);
         freeConfig(allocator, &project_config);
@@ -1498,12 +1498,7 @@ pub fn findUserConfigPath(allocator: std.mem.Allocator) LuaConfigError!?[]u8 {
 }
 
 pub fn fileExists(path: []const u8) bool {
-    if (std.fs.cwd().openFile(path, .{})) |file| {
-        file.close();
-        return true;
-    } else |_| {
-        return false;
-    }
+    return lua_shared.fileExists(path);
 }
 
 fn luaStringToOwned(allocator: std.mem.Allocator, L: *c.lua_State, idx: c_int) LuaConfigError![]u8 {
