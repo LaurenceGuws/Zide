@@ -58,8 +58,10 @@ Track practical migration details for replacing system-managed native dependenci
 - Candidate package: `natecraddock/ziglua`
 - Known compatibility signal:
   - Repository is active and tracks modern Zig.
-- Pending integration check:
-  - Confirm whether Zide can keep existing C API usage while linking via ziglua-provided artifact/module boundary, or whether Lua interaction should be moved to ziglua bindings.
+- Integration status:
+  - `-Dlua-source=zig` now links Lua via ziglua-provided `lua` artifact.
+  - `-Dlua-impl=ziglua` parser path is fully native.
+  - `-Dlua-impl=capi` remains available and can run with either Lua source selector.
 
 ### Lua backend split scaffold (implemented)
 
@@ -78,6 +80,9 @@ The split is behavior-preserving for default builds and enables independent evol
 - `build.zig` now wires ziglua into the compile graph when `-Dlua-impl=ziglua`:
   - Adds dependency via `b.dependency("zlua", ...)`
   - Imports module into app roots as `@import("zlua")`
+- `build.zig` also wires ziglua dependency when `-Dlua-source=zig`:
+  - Links `artifact("lua")` for C API consumers
+  - Uses emitted include tree for Lua headers
 - Current status:
   - ziglua backend config parsing is native (including keybind parsing, base/editor theme parsing, and editor schema/link resolution).
   - Legacy `lua_config_capi_bridge.zig` shim has been removed.

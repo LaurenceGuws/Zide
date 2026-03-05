@@ -39,8 +39,8 @@ zig build -Dlua-source=system
 ```
 
 Current status:
-- `-Dlua-source=zig` is intentionally blocked with a fail-fast error while ziglua artifact wiring is stabilized for this toolchain.
-- Use `-Dlua-source=system` for now.
+- `-Dlua-source=zig` is available and links Lua from the ziglua dependency artifact.
+- `-Dlua-source=system` remains the default path.
 
 Lua implementation selector (config parser backend):
 
