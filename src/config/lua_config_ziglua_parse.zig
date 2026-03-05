@@ -149,6 +149,20 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     if (try parseThemeAtStackIndex(lua, -1)) |parsed| out.theme = parsed;
     lua.pop(1);
 
+    _ = lua.getField(table_index, "log");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| {
+            out.log_file_filter = try allocator.dupe(u8, v);
+            out.log_console_filter = try allocator.dupe(u8, v);
+        } else |_| {}
+    } else if (lua.isTable(-1)) {
+        if (try parseFilterValueOwned(allocator, lua, -1)) |v| {
+            out.log_file_filter = v;
+            out.log_console_filter = try allocator.dupe(u8, v);
+        }
+    }
+    lua.pop(1);
+
     _ = lua.getField(table_index, "log_file_filter");
     const log_file_direct = try parseFilterValueOwned(allocator, lua, -1);
     if (log_file_direct) |v| out.log_file_filter = v;
@@ -252,6 +266,25 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
         lua.pop(1);
     }
     lua.pop(1);
+
+    if (out.sdl_log_level == null) {
+        _ = lua.getField(table_index, "raylib");
+        if (lua.isString(-1)) {
+            if (lua.toString(-1)) |v| {
+                if (parseSdlLogLevelFromString(v)) |lvl| out.sdl_log_level = lvl;
+            } else |_| {}
+        } else if (lua.isTable(-1)) {
+            const raylib_idx = lua.absIndex(-1);
+            _ = lua.getField(raylib_idx, "log_level");
+            if (lua.isString(-1)) {
+                if (lua.toString(-1)) |v| {
+                    if (parseSdlLogLevelFromString(v)) |lvl| out.sdl_log_level = lvl;
+                } else |_| {}
+            }
+            lua.pop(1);
+        }
+        lua.pop(1);
+    }
 
     _ = lua.getField(table_index, "terminal_cursor_blink");
     if (lua.isBoolean(-1)) out.terminal_cursor_blink = lua.toBoolean(-1);
@@ -434,7 +467,9 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
         lua.pop(1);
 
         _ = lua.getField(editor_idx, "theme");
-        if (try parseThemeAtStackIndex(lua, -1)) |parsed| out.editor_theme = parsed;
+        if (lua.isTable(-1)) {
+            out.editor_theme = try capi_bridge.parseEditorThemeFromLuaState(lua, lua.absIndex(-1));
+        }
         lua.pop(1);
 
         _ = lua.getField(editor_idx, "font_features");

@@ -148,6 +148,7 @@ dependencies_todo:
             - "Checkpoint: native overlay now normalizes terminal scrollback range (100..100000 with 1000 default), maps `terminal_blink_style=\"ghostty\"` to `.off`, and parses section forms `sdl.log_level` + `keybinds.no_defaults`."
             - "Checkpoint: ziglua native overlay now parses `theme`, `app.theme`, `editor.theme`, and `terminal.theme` through a dedicated CAPI theme bridge entrypoint (no full-config bridge dependency for these fields)."
             - "Checkpoint: ziglua native overlay now parses `keybinds` table bindings through a dedicated CAPI keybind bridge entrypoint and keeps `keybinds.no_defaults` native."
+            - "Checkpoint: ziglua native overlay now mirrors `log` and `raylib.log_level` compatibility aliases, and parses `editor.theme` via dedicated CAPI editor-theme bridge (schema/link resolution parity)."
 
     - name: "DEP-04 Tree-sitter packaging decision"
       tasks:

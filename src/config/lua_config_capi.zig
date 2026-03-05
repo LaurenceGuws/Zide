@@ -1437,6 +1437,13 @@ pub fn parseThemeFromLuaState(L: *anyopaque, idx: i32) LuaConfigError!ThemeConfi
     return parseThemeFromTable(lua_state, @intCast(idx));
 }
 
+pub fn parseEditorThemeFromLuaState(L: *anyopaque, idx: i32) LuaConfigError!ThemeConfig {
+    const lua_state: *c.lua_State = @ptrCast(@alignCast(L));
+    var parsed = try parseThemeFromTable(lua_state, @intCast(idx));
+    applyEditorThemeSchema(lua_state, @intCast(idx), &parsed);
+    return parsed;
+}
+
 fn parseThemePaletteTable(L: *c.lua_State, idx: c_int, theme: *ThemeConfig) void {
     parseColorField(L, idx, "background", &theme.background);
     parseColorField(L, idx, "foreground", &theme.foreground);
