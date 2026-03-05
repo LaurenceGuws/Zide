@@ -135,6 +135,7 @@ dependencies_todo:
             - "Checkpoint: ziglua backend now performs Lua state init/library open/file load/protected call through `zlua`; CAPI bridge is currently retained only for stack table parsing + merge helpers."
             - "Checkpoint: merge pipeline moved to shared backend utility (`lua_config_shared.mergeConfig` + shared theme overlay merge), removing ziglua dependency on capi merge implementation."
             - "Checkpoint: runtime now logs whether CAPI parse bridge is active (`capi_parse_bridge=0|1`) to make migration state explicit during smoke tests."
+            - "Checkpoint: remaining CAPI parse dependency is isolated behind `lua_config_capi_bridge.zig`; ziglua backend no longer imports full capi module directly."
 
     - name: "DEP-04 Tree-sitter packaging decision"
       tasks:
