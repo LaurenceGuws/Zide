@@ -8,6 +8,10 @@ pub const Config = capi_bridge.Config;
 const SdlLogLevel = std.meta.Child(@TypeOf((@as(Config, undefined)).sdl_log_level));
 const TabBarWidthMode = std.meta.Child(@TypeOf((@as(Config, undefined)).editor_tab_bar_width_mode));
 const CursorShape = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_cursor_shape));
+const FontHinting = std.meta.Child(@TypeOf((@as(Config, undefined)).font_hinting));
+const GlyphOverflow = std.meta.Child(@TypeOf((@as(Config, undefined)).font_glyph_overflow));
+const TerminalBlinkStyle = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_blink_style));
+const LigatureStrategy = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_disable_ligatures));
 
 fn parseSdlLogLevelFromString(value: []const u8) ?SdlLogLevel {
     if (std.mem.eql(u8, value, "critical")) return 6;
@@ -31,6 +35,34 @@ fn parseCursorShapeFromString(value: []const u8) ?CursorShape {
     if (std.mem.eql(u8, value, "block")) return .block;
     if (std.mem.eql(u8, value, "bar")) return .bar;
     if (std.mem.eql(u8, value, "underline")) return .underline;
+    return null;
+}
+
+fn parseFontHintingFromString(value: []const u8) ?FontHinting {
+    if (std.mem.eql(u8, value, "default")) return .default;
+    if (std.mem.eql(u8, value, "none")) return .none;
+    if (std.mem.eql(u8, value, "light")) return .light;
+    if (std.mem.eql(u8, value, "normal")) return .normal;
+    return null;
+}
+
+fn parseGlyphOverflowFromString(value: []const u8) ?GlyphOverflow {
+    if (std.mem.eql(u8, value, "when_followed_by_space")) return .when_followed_by_space;
+    if (std.mem.eql(u8, value, "never")) return .never;
+    if (std.mem.eql(u8, value, "always")) return .always;
+    return null;
+}
+
+fn parseBlinkStyleFromString(value: []const u8) ?TerminalBlinkStyle {
+    if (std.mem.eql(u8, value, "kitty")) return .kitty;
+    if (std.mem.eql(u8, value, "off")) return .off;
+    return null;
+}
+
+fn parseLigatureStrategyFromString(value: []const u8) ?LigatureStrategy {
+    if (std.mem.eql(u8, value, "never")) return .never;
+    if (std.mem.eql(u8, value, "cursor")) return .cursor;
+    if (std.mem.eql(u8, value, "always")) return .always;
     return null;
 }
 
@@ -121,6 +153,46 @@ fn parseNativeScalarOverlay(lua: *zlua.Lua, table_index: i32) Config {
     if (lua.isString(-1)) {
         if (lua.toString(-1)) |v| {
             if (parseCursorShapeFromString(v)) |shape| out.terminal_cursor_shape = shape;
+        } else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "terminal_blink_style");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| {
+            if (parseBlinkStyleFromString(v)) |style| out.terminal_blink_style = style;
+        } else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "terminal_disable_ligatures");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| {
+            if (parseLigatureStrategyFromString(v)) |strategy| out.terminal_disable_ligatures = strategy;
+        } else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "editor_disable_ligatures");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| {
+            if (parseLigatureStrategyFromString(v)) |strategy| out.editor_disable_ligatures = strategy;
+        } else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "font_hinting");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| {
+            if (parseFontHintingFromString(v)) |hint| out.font_hinting = hint;
+        } else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "font_glyph_overflow");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| {
+            if (parseGlyphOverflowFromString(v)) |mode| out.font_glyph_overflow = mode;
         } else |_| {}
     }
     lua.pop(1);
