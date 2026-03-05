@@ -644,6 +644,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
         _ = lua.getField(keybinds_idx, "no_defaults");
         if (lua.isBoolean(-1)) out.keybinds_no_defaults = lua.toBoolean(-1);
         lua.pop(1);
+        out.keybinds = try capi_bridge.parseKeybindsFromLuaState(allocator, lua, keybinds_idx);
     }
     lua.pop(1);
 
