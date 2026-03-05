@@ -207,16 +207,6 @@ pub fn getDisplayBounds(display: i32, rect: *c.SDL_Rect) bool {
     return c.SDL_GetDisplayBounds(@intCast(display), rect);
 }
 
-pub fn getDisplayDpi(display: i32, ddpi: *f32, hdpi: *f32, vdpi: *f32) bool {
-    if (@hasDecl(c, "SDL_GetDisplayDPI")) {
-        return c.SDL_GetDisplayDPI(@intCast(display), ddpi, hdpi, vdpi);
-    }
-    ddpi.* = 0;
-    hdpi.* = 0;
-    vdpi.* = 0;
-    return false;
-}
-
 pub fn getCurrentDisplayMode(display: i32, mode: *c.SDL_DisplayMode) bool {
     const mode_ptr = c.SDL_GetCurrentDisplayMode(@intCast(display));
     if (mode_ptr == null) return false;
