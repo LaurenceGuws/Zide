@@ -129,6 +129,7 @@ pub fn build(b: *std.Build) void {
         std.debug.panic("invalid -Dlua-impl='{s}' (expected 'capi' or 'ziglua')", .{lua_impl});
     }
     build_options.addOption([]const u8, "lua_impl", lua_impl);
+    const use_ziglua_impl = std.mem.eql(u8, lua_impl, "ziglua");
 
     // vcpkg support
     //
@@ -205,6 +206,11 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     }) else null;
     const sdl_lib = if (dep_source == .zig) sdl_dep.?.artifact("SDL3") else null;
+    const zlua_dep = if (use_ziglua_impl) b.dependency("zlua", .{
+        .target = target,
+        .optimize = optimize,
+    }) else null;
+    const zlua_module = if (use_ziglua_impl) zlua_dep.?.module("zlua") else null;
     const lua_lib: ?*std.Build.Step.Compile = null;
     // ─────────────────────────────────────────────────────────────────────────
     // Main executable
@@ -219,6 +225,9 @@ pub fn build(b: *std.Build) void {
         }),
     });
     exe.root_module.addOptions("build_options", build_options);
+    if (zlua_module) |mod| {
+        exe.root_module.addImport("zlua", mod);
+    }
 
     // Link C libraries
     exe.linkLibrary(treesitter);
@@ -352,6 +361,9 @@ pub fn build(b: *std.Build) void {
         }),
     });
     exe_terminal.root_module.addOptions("build_options", build_options);
+    if (zlua_module) |mod| {
+        exe_terminal.root_module.addImport("zlua", mod);
+    }
     exe_terminal.linkLibrary(treesitter);
     exe_terminal.linkLibrary(ts_zig);
     if (use_vcpkg) {
@@ -425,6 +437,9 @@ pub fn build(b: *std.Build) void {
         }),
     });
     exe_editor.root_module.addOptions("build_options", build_options);
+    if (zlua_module) |mod| {
+        exe_editor.root_module.addImport("zlua", mod);
+    }
     exe_editor.linkLibrary(treesitter);
     exe_editor.linkLibrary(ts_zig);
     if (use_vcpkg) {
@@ -498,6 +513,9 @@ pub fn build(b: *std.Build) void {
         }),
     });
     exe_ide.root_module.addOptions("build_options", build_options);
+    if (zlua_module) |mod| {
+        exe_ide.root_module.addImport("zlua", mod);
+    }
     exe_ide.linkLibrary(treesitter);
     exe_ide.linkLibrary(ts_zig);
     if (use_vcpkg) {

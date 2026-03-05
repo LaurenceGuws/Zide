@@ -73,6 +73,13 @@ Track practical migration details for replacing system-managed native dependenci
 
 This split is intentionally behavior-preserving for default builds and enables per-function parallel migration into the ziglua backend without touching callers.
 
+### Ziglua package consumption status
+
+- `build.zig` now wires ziglua into the compile graph when `-Dlua-impl=ziglua`:
+  - Adds dependency via `b.dependency("zlua", ...)`
+  - Imports module into app roots as `@import("zlua")`
+- Current ziglua backend still uses parity delegation for non-migrated Lua parser functions, but dependency wiring is now active (not just declared in `.zon`).
+
 ## Recommended next implementation sequence
 
 1. Add an explicit text-stack source selector (`system|zig`) separate from SDL selector semantics.
