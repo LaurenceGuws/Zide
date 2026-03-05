@@ -16,9 +16,6 @@ pub const WindowMetrics = struct {
     dpi: iface.MousePos,
     display_scale: f32,
     pixel_density: f32,
-    ddpi: f32,
-    hdpi: f32,
-    vdpi: f32,
     refresh_hz: i32,
 };
 
@@ -97,10 +94,6 @@ pub fn collectWindowMetrics(window: *sdl.SDL_Window, reason: []const u8) WindowM
         display_h = rect.h;
     }
 
-    var ddpi: f32 = 0;
-    var hdpi: f32 = 0;
-    var vdpi: f32 = 0;
-    _ = sdl_api.getDisplayDpi(display, &ddpi, &hdpi, &vdpi);
     const dpi = getDpiScale(window);
     const display_scale = sdl_api.getWindowDisplayScale(window);
     const pixel_density = sdl_api.getWindowPixelDensity(window);
@@ -114,7 +107,7 @@ pub fn collectWindowMetrics(window: *sdl.SDL_Window, reason: []const u8) WindowM
     const log = app_logger.logger("sdl.window");
     if (log.enabled_file or log.enabled_console) {
         log.logf(
-            "metrics reason={s} window={d}x{d} drawable={d}x{d} display={d} bounds={d}x{d} dpi_scale={d:.3},{d:.3} display_scale={d:.3} pixel_density={d:.3} dpi={d:.1}/{d:.1}/{d:.1} refresh_hz={d}",
+            "metrics reason={s} window={d}x{d} drawable={d}x{d} display={d} bounds={d}x{d} dpi_scale={d:.3},{d:.3} display_scale={d:.3} pixel_density={d:.3} refresh_hz={d}",
             .{
                 reason,
                 window_size.w,
@@ -128,9 +121,6 @@ pub fn collectWindowMetrics(window: *sdl.SDL_Window, reason: []const u8) WindowM
                 dpi.y,
                 display_scale,
                 pixel_density,
-                ddpi,
-                hdpi,
-                vdpi,
                 refresh_hz,
             },
         );
@@ -147,9 +137,6 @@ pub fn collectWindowMetrics(window: *sdl.SDL_Window, reason: []const u8) WindowM
         .dpi = dpi,
         .display_scale = display_scale,
         .pixel_density = pixel_density,
-        .ddpi = ddpi,
-        .hdpi = hdpi,
-        .vdpi = vdpi,
         .refresh_hz = refresh_hz,
     };
 }
