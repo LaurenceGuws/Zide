@@ -1,6 +1,44 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+const DependencySource = enum {
+    system,
+    zig,
+};
+
+fn parseDependencySource(raw: []const u8) DependencySource {
+    if (std.mem.eql(u8, raw, "system")) return .system;
+    if (std.mem.eql(u8, raw, "zig")) return .zig;
+    std.debug.panic("invalid -Ddep-source='{s}' (expected 'system' or 'zig')", .{raw});
+}
+
+fn linkSdl3(step: *std.Build.Step.Compile, dep_source: DependencySource, sdl_lib: ?*std.Build.Step.Compile) void {
+    switch (dep_source) {
+        .system => step.linkSystemLibrary("SDL3"),
+        .zig => step.linkLibrary(sdl_lib.?),
+    }
+}
+
+fn linkLua(step: *std.Build.Step.Compile, lua_source: DependencySource, lua_lib: ?*std.Build.Step.Compile) void {
+    switch (lua_source) {
+        .system => step.linkSystemLibrary("lua"),
+        .zig => step.linkLibrary(lua_lib.?),
+    }
+}
+
+fn addLinuxSystemSdlInclude(step: *std.Build.Step.Compile, target_os: std.Target.Os.Tag, dep_source: DependencySource) void {
+    if (dep_source == .system and target_os == .linux) {
+        step.addIncludePath(.{ .cwd_relative = "/usr/include/SDL3" });
+    }
+}
+
+fn addLuaIncludes(step: *std.Build.Step.Compile, lua_source: DependencySource, lua_lib: ?*std.Build.Step.Compile) void {
+    switch (lua_source) {
+        .system => step.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" }),
+        .zig => step.addIncludePath(lua_lib.?.getEmittedIncludeTree()),
+    }
+}
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{
         .default_target = if (builtin.os.tag == .windows) .{
@@ -68,6 +106,20 @@ pub fn build(b: *std.Build) void {
     }
     const build_options = b.addOptions();
     build_options.addOption([]const u8, "renderer_backend", renderer_backend);
+    const dep_source_raw = b.option(
+        []const u8,
+        "dep-source",
+        "Dependency source: system (default) or zig package manager",
+    ) orelse "system";
+    const dep_source = parseDependencySource(dep_source_raw);
+    build_options.addOption([]const u8, "dependency_source", dep_source_raw);
+    const lua_source_raw = b.option(
+        []const u8,
+        "lua-source",
+        "Lua dependency source: system (default) or zig package manager",
+    ) orelse "system";
+    const lua_source = parseDependencySource(lua_source_raw);
+    build_options.addOption([]const u8, "lua_dependency_source", lua_source_raw);
 
     // vcpkg support
     //
@@ -133,6 +185,18 @@ pub fn build(b: *std.Build) void {
         @panic("Windows builds require vcpkg. Install deps via manifest mode (./vcpkg_installed) or set VCPKG_ROOT + VCPKG_DEFAULT_TRIPLET, then re-run.");
     }
 
+    if (dep_source == .zig and use_vcpkg) {
+        @panic("-Ddep-source=zig is not compatible with --use-vcpkg yet; use -Ddep-source=system");
+    }
+    if (lua_source == .zig) {
+        @panic("-Dlua-source=zig is currently blocked: upstream ziglua artifact contract is not stable for direct build.zig artifact lookup in this toolchain.");
+    }
+    const sdl_dep = if (dep_source == .zig) b.dependency("sdl", .{
+        .target = target,
+        .optimize = optimize,
+    }) else null;
+    const sdl_lib = if (dep_source == .zig) sdl_dep.?.artifact("SDL3") else null;
+    const lua_lib: ?*std.Build.Step.Compile = null;
     // ─────────────────────────────────────────────────────────────────────────
     // Main executable
     // ─────────────────────────────────────────────────────────────────────────
@@ -155,13 +219,13 @@ pub fn build(b: *std.Build) void {
         exe.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
         exe.linkSystemLibrary("freetype");
         exe.linkSystemLibrary("harfbuzz");
-        exe.linkSystemLibrary("lua");
-        exe.linkSystemLibrary("SDL3");
+        linkLua(exe, lua_source, lua_lib);
+        linkSdl3(exe, dep_source, sdl_lib);
     } else {
         exe.linkSystemLibrary("freetype");
         exe.linkSystemLibrary("harfbuzz");
-        exe.linkSystemLibrary("lua");
-        exe.linkSystemLibrary("SDL3");
+        linkLua(exe, lua_source, lua_lib);
+        linkSdl3(exe, dep_source, sdl_lib);
     }
     if (target_os == .linux) {
         exe.linkSystemLibrary("fontconfig");
@@ -173,10 +237,8 @@ pub fn build(b: *std.Build) void {
     if (!use_vcpkg) {
         exe.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
         exe.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
-        exe.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
-        if (target_os == .linux) {
-            exe.addIncludePath(.{ .cwd_relative = "/usr/include/SDL3" });
-        }
+        addLuaIncludes(exe, lua_source, lua_lib);
+        addLinuxSystemSdlInclude(exe, target_os, dep_source);
         if (target_os == .linux) {
             exe.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
         }
@@ -288,13 +350,13 @@ pub fn build(b: *std.Build) void {
         exe_terminal.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
         exe_terminal.linkSystemLibrary("freetype");
         exe_terminal.linkSystemLibrary("harfbuzz");
-        exe_terminal.linkSystemLibrary("lua");
-        exe_terminal.linkSystemLibrary("SDL3");
+        linkLua(exe_terminal, lua_source, lua_lib);
+        linkSdl3(exe_terminal, dep_source, sdl_lib);
     } else {
         exe_terminal.linkSystemLibrary("freetype");
         exe_terminal.linkSystemLibrary("harfbuzz");
-        exe_terminal.linkSystemLibrary("lua");
-        exe_terminal.linkSystemLibrary("SDL3");
+        linkLua(exe_terminal, lua_source, lua_lib);
+        linkSdl3(exe_terminal, dep_source, sdl_lib);
     }
     if (target_os == .linux) {
         exe_terminal.linkSystemLibrary("fontconfig");
@@ -304,9 +366,9 @@ pub fn build(b: *std.Build) void {
     if (!use_vcpkg) {
         exe_terminal.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
         exe_terminal.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
-        exe_terminal.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
+        addLuaIncludes(exe_terminal, lua_source, lua_lib);
         if (target_os == .linux) {
-            exe_terminal.addIncludePath(.{ .cwd_relative = "/usr/include/SDL3" });
+            addLinuxSystemSdlInclude(exe_terminal, target_os, dep_source);
             exe_terminal.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
         }
     }
@@ -361,13 +423,13 @@ pub fn build(b: *std.Build) void {
         exe_editor.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
         exe_editor.linkSystemLibrary("freetype");
         exe_editor.linkSystemLibrary("harfbuzz");
-        exe_editor.linkSystemLibrary("lua");
-        exe_editor.linkSystemLibrary("SDL3");
+        linkLua(exe_editor, lua_source, lua_lib);
+        linkSdl3(exe_editor, dep_source, sdl_lib);
     } else {
         exe_editor.linkSystemLibrary("freetype");
         exe_editor.linkSystemLibrary("harfbuzz");
-        exe_editor.linkSystemLibrary("lua");
-        exe_editor.linkSystemLibrary("SDL3");
+        linkLua(exe_editor, lua_source, lua_lib);
+        linkSdl3(exe_editor, dep_source, sdl_lib);
     }
     if (target_os == .linux) {
         exe_editor.linkSystemLibrary("fontconfig");
@@ -377,9 +439,9 @@ pub fn build(b: *std.Build) void {
     if (!use_vcpkg) {
         exe_editor.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
         exe_editor.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
-        exe_editor.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
+        addLuaIncludes(exe_editor, lua_source, lua_lib);
         if (target_os == .linux) {
-            exe_editor.addIncludePath(.{ .cwd_relative = "/usr/include/SDL3" });
+            addLinuxSystemSdlInclude(exe_editor, target_os, dep_source);
             exe_editor.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
         }
     }
@@ -434,13 +496,13 @@ pub fn build(b: *std.Build) void {
         exe_ide.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
         exe_ide.linkSystemLibrary("freetype");
         exe_ide.linkSystemLibrary("harfbuzz");
-        exe_ide.linkSystemLibrary("lua");
-        exe_ide.linkSystemLibrary("SDL3");
+        linkLua(exe_ide, lua_source, lua_lib);
+        linkSdl3(exe_ide, dep_source, sdl_lib);
     } else {
         exe_ide.linkSystemLibrary("freetype");
         exe_ide.linkSystemLibrary("harfbuzz");
-        exe_ide.linkSystemLibrary("lua");
-        exe_ide.linkSystemLibrary("SDL3");
+        linkLua(exe_ide, lua_source, lua_lib);
+        linkSdl3(exe_ide, dep_source, sdl_lib);
     }
     if (target_os == .linux) {
         exe_ide.linkSystemLibrary("fontconfig");
@@ -450,9 +512,9 @@ pub fn build(b: *std.Build) void {
     if (!use_vcpkg) {
         exe_ide.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
         exe_ide.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
-        exe_ide.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
+        addLuaIncludes(exe_ide, lua_source, lua_lib);
         if (target_os == .linux) {
-            exe_ide.addIncludePath(.{ .cwd_relative = "/usr/include/SDL3" });
+            addLinuxSystemSdlInclude(exe_ide, target_os, dep_source);
             exe_ide.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
         }
     }
@@ -573,7 +635,7 @@ pub fn build(b: *std.Build) void {
         unit_tests.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
         unit_tests.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
     }
-    unit_tests.linkSystemLibrary("SDL3");
+    linkSdl3(unit_tests, dep_source, sdl_lib);
     if (target_os == .linux) {
         unit_tests.linkSystemLibrary("GL");
     } else if (target_os == .windows) {
@@ -586,8 +648,8 @@ pub fn build(b: *std.Build) void {
     unit_tests.addIncludePath(b.path("vendor"));
     unit_tests.addIncludePath(b.path("vendor/tree-sitter/lib/include"));
     unit_tests.addIncludePath(b.path("vendor/tree-sitter-zig/src"));
-    if (!use_vcpkg and target_os == .linux) {
-        unit_tests.addIncludePath(.{ .cwd_relative = "/usr/include/SDL3" });
+    if (!use_vcpkg) {
+        addLinuxSystemSdlInclude(unit_tests, target_os, dep_source);
     }
     unit_tests.addCSourceFile(.{
         .file = b.path("src/c/stb_image.c"),
@@ -612,7 +674,7 @@ pub fn build(b: *std.Build) void {
         editor_tests.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
         editor_tests.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
     }
-    editor_tests.linkSystemLibrary("SDL3");
+    linkSdl3(editor_tests, dep_source, sdl_lib);
     if (target_os == .linux) {
         editor_tests.linkSystemLibrary("GL");
     } else if (target_os == .windows) {
@@ -628,10 +690,8 @@ pub fn build(b: *std.Build) void {
     if (!use_vcpkg) {
         editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
         editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
-        editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
-        if (target_os == .linux) {
-            editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/SDL3" });
-        }
+        addLuaIncludes(editor_tests, lua_source, lua_lib);
+        addLinuxSystemSdlInclude(editor_tests, target_os, dep_source);
         if (target_os == .linux) {
             editor_tests.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
         }
@@ -657,10 +717,10 @@ pub fn build(b: *std.Build) void {
         config_tests.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
         config_tests.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
     }
-    config_tests.linkSystemLibrary("SDL3");
+    linkSdl3(config_tests, dep_source, sdl_lib);
     config_tests.linkSystemLibrary("freetype");
     config_tests.linkSystemLibrary("harfbuzz");
-    config_tests.linkSystemLibrary("lua");
+    linkLua(config_tests, lua_source, lua_lib);
     if (target_os == .linux) {
         config_tests.linkSystemLibrary("GL");
         config_tests.linkSystemLibrary("fontconfig");
@@ -673,9 +733,9 @@ pub fn build(b: *std.Build) void {
     if (!use_vcpkg) {
         config_tests.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
         config_tests.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
-        config_tests.addIncludePath(.{ .cwd_relative = "/usr/include/lua5.4" });
+        addLuaIncludes(config_tests, lua_source, lua_lib);
         if (target_os == .linux) {
-            config_tests.addIncludePath(.{ .cwd_relative = "/usr/include/SDL3" });
+            addLinuxSystemSdlInclude(config_tests, target_os, dep_source);
             config_tests.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
         }
     }
@@ -697,7 +757,7 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
-    terminal_replay_exe.linkSystemLibrary("SDL3");
+    linkSdl3(terminal_replay_exe, dep_source, sdl_lib);
     if (target_os == .linux) {
         terminal_replay_exe.linkSystemLibrary("GL");
     } else if (target_os == .windows) {
@@ -706,9 +766,7 @@ pub fn build(b: *std.Build) void {
         terminal_replay_exe.linkFramework("OpenGL");
     }
     terminal_replay_exe.addIncludePath(b.path("vendor"));
-    if (target_os == .linux) {
-        terminal_replay_exe.addIncludePath(.{ .cwd_relative = "/usr/include/SDL3" });
-    }
+    addLinuxSystemSdlInclude(terminal_replay_exe, target_os, dep_source);
     terminal_replay_exe.addCSourceFile(.{
         .file = b.path("src/c/stb_image.c"),
         .flags = &.{"-std=c99"},
@@ -765,7 +823,7 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
-    terminal_kitty_query_tests.linkSystemLibrary("SDL3");
+    linkSdl3(terminal_kitty_query_tests, dep_source, sdl_lib);
     if (target_os == .linux) {
         terminal_kitty_query_tests.linkSystemLibrary("GL");
     } else if (target_os == .windows) {
@@ -774,9 +832,7 @@ pub fn build(b: *std.Build) void {
         terminal_kitty_query_tests.linkFramework("OpenGL");
     }
     terminal_kitty_query_tests.addIncludePath(b.path("vendor"));
-    if (target_os == .linux) {
-        terminal_kitty_query_tests.addIncludePath(.{ .cwd_relative = "/usr/include/SDL3" });
-    }
+    addLinuxSystemSdlInclude(terminal_kitty_query_tests, target_os, dep_source);
     terminal_kitty_query_tests.addCSourceFile(.{
         .file = b.path("src/c/stb_image.c"),
         .flags = &.{"-std=c99"},
@@ -796,7 +852,7 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
-    terminal_focus_reporting_tests.linkSystemLibrary("SDL3");
+    linkSdl3(terminal_focus_reporting_tests, dep_source, sdl_lib);
     if (target_os == .linux) {
         terminal_focus_reporting_tests.linkSystemLibrary("GL");
     } else if (target_os == .windows) {
@@ -805,9 +861,7 @@ pub fn build(b: *std.Build) void {
         terminal_focus_reporting_tests.linkFramework("OpenGL");
     }
     terminal_focus_reporting_tests.addIncludePath(b.path("vendor"));
-    if (target_os == .linux) {
-        terminal_focus_reporting_tests.addIncludePath(.{ .cwd_relative = "/usr/include/SDL3" });
-    }
+    addLinuxSystemSdlInclude(terminal_focus_reporting_tests, target_os, dep_source);
     terminal_focus_reporting_tests.addCSourceFile(.{
         .file = b.path("src/c/stb_image.c"),
         .flags = &.{"-std=c99"},
@@ -827,7 +881,7 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
-    terminal_workspace_tests.linkSystemLibrary("SDL3");
+    linkSdl3(terminal_workspace_tests, dep_source, sdl_lib);
     if (target_os == .linux) {
         terminal_workspace_tests.linkSystemLibrary("GL");
     } else if (target_os == .windows) {
@@ -836,9 +890,7 @@ pub fn build(b: *std.Build) void {
         terminal_workspace_tests.linkFramework("OpenGL");
     }
     terminal_workspace_tests.addIncludePath(b.path("vendor"));
-    if (target_os == .linux) {
-        terminal_workspace_tests.addIncludePath(.{ .cwd_relative = "/usr/include/SDL3" });
-    }
+    addLinuxSystemSdlInclude(terminal_workspace_tests, target_os, dep_source);
     terminal_workspace_tests.addCSourceFile(.{
         .file = b.path("src/c/stb_image.c"),
         .flags = &.{"-std=c99"},

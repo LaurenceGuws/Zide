@@ -13,11 +13,13 @@ Quick map of where to look for common needs.
   - `app_architecture/ui/ui_widget_modularization_todo.yaml` — UI widget modularization (TerminalWidget/UI splits).
   - `app_architecture/ui/font_rendering_todo.yaml` — font rendering strategy + implementation plan (kitty/ghostty-tier goals).
   - `app_architecture/ui/sdl3_migration_todo.yaml` — SDL3 migration tracker.
+  - `app_architecture/dependencies_todo.yaml` — Zig-managed dependency migration plan (SDL3/FreeType/HarfBuzz/Lua/tree-sitter).
   - `app_architecture/terminal/terminal_tabs_todo.yaml` — terminal-only tab/workspace lifecycle plan for `--mode terminal` and FFI follow-on.
 
 ## Architecture + design
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md` — renderer plan and per-OS journey.
 - `app_architecture/APP_LAYERING.md` — module boundaries and import rules.
+- `app_architecture/DEPENDENCIES.md` — dependency packaging architecture notes and migration constraints.
 - `app_architecture/editor/DESIGN.md` — editor architecture + references.
 - `app_architecture/terminal/DESIGN.md` — terminal architecture + decisions.
 - `app_architecture/terminal/TERMINAL_WORKSPACE.md` — backend tab/workspace ownership contract for terminal mode.

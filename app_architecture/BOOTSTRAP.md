@@ -108,6 +108,21 @@ UI rendering journey: `app_architecture/ui/DEVELOPMENT_JOURNEY.md`.
 zig build
 ```
 
+Dependency source selector:
+
+```bash
+# Default (system-managed deps)
+zig build -Ddep-source=system
+
+# SDL3 from Zig package manager path
+zig build -Ddep-source=zig
+```
+
+Current scope:
+- `-Ddep-source=zig` switches SDL3 only.
+- FreeType/HarfBuzz/Lua remain system (or vcpkg on Windows).
+- `-Ddep-source=zig` is currently incompatible with `-Duse-vcpkg=true`.
+
 ## Tree-sitter Grammar Packs
 
 ```bash

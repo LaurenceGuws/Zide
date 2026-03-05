@@ -1,0 +1,140 @@
+dependencies_todo:
+  scope:
+    description: "Evaluate and phase in Zig-managed native dependencies to reduce host-package coupling while preserving current runtime behavior."
+    goals:
+      - "Keep system-library builds working during migration."
+      - "Add reproducible Zig package options for SDL3 and other core deps."
+      - "Stage dependency migration behind explicit build flags."
+      - "Document tradeoffs (build time, binary size, platform parity) per step."
+    non_goals:
+      - "No terminal/editor behavior changes in this track."
+      - "No renderer architecture rewrite."
+      - "No forced one-shot switch away from system packages."
+
+  constraints:
+    - "Default developer path remains stable and buildable at each checkpoint."
+    - "Each dependency move must have a rollback path."
+    - "Migration is extraction/wiring first; behavior parity must hold."
+
+  entry_points:
+    - build.zig
+    - build.zig.zon
+    - docs/DEPENDENCIES.md
+    - app_architecture/BOOTSTRAP.md
+
+  external_candidates:
+    sdl3:
+      recommended: "github:castholm/SDL"
+      notes:
+        - "Primary Zig package candidate for SDL3 packaging."
+        - "Wire behind a build option before flipping defaults."
+    freetype_harfbuzz:
+      recommended: "github:hexops/mach-freetype"
+      notes:
+        - "Candidate for Zig-managed FreeType/HarfBuzz integration."
+        - "Validate shaping parity and startup/runtime performance."
+    lua54:
+      recommended: "github:natecraddock/ziglua"
+      notes:
+        - "Candidate for Lua runtime dependency management."
+    treesitter:
+      recommended: "github:tree-sitter/zig-tree-sitter"
+      notes:
+        - "Evaluate only if it materially improves reproducibility vs current vendor flow."
+
+  validation_gates:
+    required_per_slice:
+      - zig build
+      - zig build test
+      - zig build check-app-imports
+      - zig build check-input-imports
+      - zig build check-editor-imports
+    manual_smokes:
+      - zig build run -- --mode terminal
+      - zig build run -- --mode editor
+      - zig build run -- --mode ide
+
+  milestones:
+    - name: "DEP-00 Baseline + build interface"
+      tasks:
+        - id: DEP-00-01
+          title: "Add dependency source selection interface in build config"
+          status: done
+          notes:
+            - "Define one explicit selector (for example: `-Ddep-source=system|zig`)."
+            - "No dependency backend switch yet; interface only."
+        - id: DEP-00-02
+          title: "Document dependency migration policy and rollback expectations"
+          status: done
+          files_to_edit:
+            - docs/DEPENDENCIES.md
+            - app_architecture/BOOTSTRAP.md
+
+    - name: "DEP-01 SDL3 Zig package path"
+      tasks:
+        - id: DEP-01-01
+          title: "Introduce SDL3 Zig package backend behind build selector"
+          status: done
+          notes:
+            - "Keep current system-lib backend intact."
+            - "No behavior changes in runtime code."
+            - "Implemented via `-Ddep-source=zig` with `castholm/SDL` package (`artifact(\"SDL3\")`)."
+            - "Current guardrail: `-Ddep-source=zig` is incompatible with `--use-vcpkg`."
+        - id: DEP-01-02
+          title: "Parity-check system vs Zig SDL3 builds"
+          status: done
+          notes:
+            - "Record compile/runtime parity notes in architecture docs."
+            - "2026-03-05 (non-GUI parity): `zig build`, `zig build -Ddep-source=zig`, `zig build test`, and `zig build test -Ddep-source=zig` all passed."
+            - "Known caveat remains: `-Ddep-source=zig` is currently not compatible with `-Duse-vcpkg=true`."
+
+    - name: "DEP-02 FreeType/HarfBuzz Zig package path"
+      tasks:
+        - id: DEP-02-01
+          title: "Add optional Zig-managed FreeType/HarfBuzz backend"
+          status: pending
+          notes:
+            - "Research baseline captured in `app_architecture/DEPENDENCIES.md` (package API constraints and migration shape)."
+            - "2026-03-05 attempt: direct Mach `freetype` + `harfbuzz` package artifacts were wired and then reverted."
+            - "Blocker: package build scripts currently fail against our Zig toolchain with `Build.addStaticLibrary` API mismatch."
+            - "Keep SDL-only `-Ddep-source=zig` path active; revisit DEP-02 once compatible package revisions are identified."
+        - id: DEP-02-02
+          title: "Validate font shaping/rasterization parity against system path"
+          status: pending
+          notes:
+            - "Use existing terminal/editor/font-sample flows for parity checks."
+
+    - name: "DEP-03 Lua runtime dependency path"
+      tasks:
+        - id: DEP-03-01
+          title: "Add optional Zig-managed Lua backend"
+          status: pending
+          notes:
+            - "2026-03-05: `-Dlua-source=system|zig` selector scaffolded in `build.zig`."
+            - "Current state: `-Dlua-source=zig` is intentionally fail-fast gated due upstream ziglua artifact lookup contract mismatch on this toolchain."
+            - "Builds confirmed: `-Dlua-source=system` and `-Ddep-source=zig -Dlua-source=system` pass."
+        - id: DEP-03-02
+          title: "Validate config reload and Lua API behavior parity"
+          status: pending
+
+    - name: "DEP-04 Tree-sitter packaging decision"
+      tasks:
+        - id: DEP-04-01
+          title: "Evaluate tree-sitter packaging changes vs current vendor strategy"
+          status: pending
+          notes:
+            - "Adopt only if it clearly improves reproducibility/maintenance."
+        - id: DEP-04-02
+          title: "Decide keep-vendor vs package and document decision"
+          status: pending
+
+    - name: "DEP-05 Default flip readiness"
+      tasks:
+        - id: DEP-05-01
+          title: "Define criteria to make Zig-managed deps default"
+          status: pending
+          notes:
+            - "Require successful parity runs and documented platform caveats."
+        - id: DEP-05-02
+          title: "Update docs and developer bootstrap once defaults change"
+          status: pending
