@@ -156,6 +156,22 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     }
     lua.pop(1);
 
+    _ = lua.getField(table_index, "editor_highlight_budget");
+    if (lua.isNumber(-1)) {
+        if (lua.toInteger(-1)) |v| {
+            if (v > 0) out.editor_highlight_budget = @intCast(v);
+        } else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "editor_width_budget");
+    if (lua.isNumber(-1)) {
+        if (lua.toInteger(-1)) |v| {
+            if (v > 0) out.editor_width_budget = @intCast(v);
+        } else |_| {}
+    }
+    lua.pop(1);
+
     _ = lua.getField(table_index, "terminal_scrollback_rows");
     if (lua.isNumber(-1)) {
         if (lua.toInteger(-1)) |v| {
