@@ -99,7 +99,7 @@ fn initWithMode(
     app_log.logStdout(
         "config lua backend: impl={s} dep_source={s}",
         .{
-            build_options.lua_impl,
+            "ziglua",
             build_options.lua_dependency_source,
         },
     );
