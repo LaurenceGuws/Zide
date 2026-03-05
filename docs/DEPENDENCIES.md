@@ -14,23 +14,22 @@ SDL3 is the default build target.
 
 ## Dependency path selector
 
-Build defaults to linked system/vcpkg native libraries:
+Build keeps one migration selector:
 
 ```bash
 zig build -Dpath=link
 ```
 
-Optional Zig package path (SDL3 + Lua):
+Alternate path label:
 
 ```bash
 zig build -Dpath=zig
 ```
 
 Notes:
-- `-Dpath=zig` switches SDL3 and Lua to Zig package backends (`castholm/SDL`, `ziglua` artifact `lua`).
-- FreeType and HarfBuzz remain link-managed in this phase.
-- `-Dpath=zig` is currently incompatible with `-Duse-vcpkg=true`.
-- Parity checkpoint (March 5, 2026): `zig build`, `zig build -Dpath=zig`, `zig build test`, and `zig build test -Dpath=zig` pass on the current Linux path.
+- SDL3 and Lua are now always Zig package managed in normal flow (`castholm/SDL`, `ziglua` artifact `lua`).
+- `-Dpath` is retained as a migration toggle surface for upcoming dependency moves (for example FreeType/HarfBuzz).
+- Parity checkpoint (March 5, 2026): `zig build` and `zig build -Dpath=zig` both pass on the current Linux path.
 
 Lua implementation status (config parser backend):
 - The config parser backend is now fixed to native `ziglua`.

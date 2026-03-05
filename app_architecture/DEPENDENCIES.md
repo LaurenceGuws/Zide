@@ -6,9 +6,9 @@ Track practical migration details for replacing system-managed native dependenci
 
 ## Current state
 
-- `-Dpath=link` (default): current system/vcpkg-native behavior.
-- `-Dpath=zig`: SDL3 and Lua resolve through Zig package manager (`castholm/SDL`, `ziglua`), while FreeType/HarfBuzz remain system/vcpkg managed.
-- Guardrail: `-Dpath=zig` is currently incompatible with `-Duse-vcpkg=true`.
+- SDL3 and Lua resolve through Zig package manager in normal flow (`castholm/SDL`, `ziglua`).
+- FreeType/HarfBuzz remain system/vcpkg managed.
+- `-Dpath=link|zig` is retained as the migration toggle surface for the next dependency slice.
 
 ## Implemented package integration
 
@@ -18,7 +18,7 @@ Track practical migration details for replacing system-managed native dependenci
 - Build API used:
   - `const sdl_dep = b.dependency("sdl", .{ .target = target, .optimize = optimize });`
   - `const sdl_lib = sdl_dep.artifact("SDL3");`
-  - Link route selected via `-Dpath`.
+  - Linked unconditionally in current flow.
 - Validation:
   - `zig build`
   - `zig build -Dpath=zig`
@@ -45,7 +45,7 @@ Track practical migration details for replacing system-managed native dependenci
 - Date: March 5, 2026
 - Attempted approach:
   - Added direct package deps for Mach-hosted `freetype` and `harfbuzz`.
-  - Wired artifacts under `-Dpath=zig`.
+  - Wired artifacts under the migration toggle path.
 - Result:
   - Reverted due package build-script/toolchain incompatibility.
   - Error signature: `no field or member function named 'addStaticLibrary' in 'Build'`.
@@ -59,7 +59,7 @@ Track practical migration details for replacing system-managed native dependenci
 - Known compatibility signal:
   - Repository is active and tracks modern Zig.
 - Integration status:
-  - `-Dpath=zig` now links Lua via ziglua-provided `lua` artifact.
+  - Lua links via ziglua-provided `lua` artifact in normal flow.
   - Parser path is fully native ziglua.
   - `-Dlua-impl` selector has been removed.
 
@@ -76,7 +76,7 @@ The split is behavior-preserving for default builds and enables independent evol
 - `build.zig` wires ziglua into the compile graph unconditionally for config parsing:
   - Adds dependency via `b.dependency("zlua", ...)`
   - Imports module into app roots as `@import("zlua")`
-- `build.zig` also wires ziglua dependency when `-Dpath=zig`:
+- `build.zig` wires ziglua dependency in normal flow:
   - Links `artifact("lua")` for C API consumers
   - Uses emitted include tree for Lua headers
 - Current status:
@@ -86,7 +86,7 @@ The split is behavior-preserving for default builds and enables independent evol
 
 ## Recommended next implementation sequence
 
-1. Add an explicit text-stack source selector (`system|zig`) separate from SDL selector semantics.
+1. Use `-Dpath` as the single migration selector while moving FreeType/HarfBuzz.
 2. Prototype FreeType/HarfBuzz package wiring in a compile-only branch first.
 3. Only after compile parity is stable, run rendering/shaping parity checks.
 4. Stage Lua after text stack so config runtime regressions are isolated.
