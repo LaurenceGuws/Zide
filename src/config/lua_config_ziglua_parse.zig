@@ -1,13 +1,13 @@
 const std = @import("std");
 const zlua = @import("zlua");
-const capi_bridge = @import("./lua_config_capi_bridge.zig");
+const iface = @import("./lua_config_iface.zig");
 const lua_shared = @import("./lua_config_shared.zig");
 const input_actions = @import("../input/input_actions.zig");
 const input_types = @import("../types/input.zig");
 
-pub const LuaConfigError = capi_bridge.LuaConfigError;
-pub const Config = capi_bridge.Config;
-const ThemeConfig = capi_bridge.ThemeConfig;
+pub const LuaConfigError = iface.LuaConfigError;
+pub const Config = iface.Config;
+const ThemeConfig = iface.ThemeConfig;
 const Color = std.meta.Child(@TypeOf((@as(ThemeConfig, undefined)).background));
 const SdlLogLevel = std.meta.Child(@TypeOf((@as(Config, undefined)).sdl_log_level));
 const TabBarWidthMode = std.meta.Child(@TypeOf((@as(Config, undefined)).editor_tab_bar_width_mode));
@@ -333,6 +333,258 @@ fn parseThemeFromTableNative(lua: *zlua.Lua, idx: i32) ThemeConfig {
     lua.pop(1);
 
     return theme;
+}
+
+fn normalizeEditorThemeName(buf: *[96]u8, raw: []const u8) []const u8 {
+    var in_idx: usize = if (raw.len > 0 and raw[0] == '@') 1 else 0;
+    var out_idx: usize = 0;
+    while (in_idx < raw.len and out_idx < buf.len) : (in_idx += 1) {
+        var ch = raw[in_idx];
+        if (ch >= 'A' and ch <= 'Z') ch = ch - 'A' + 'a';
+        if (ch == '-' or ch == ' ') ch = '_';
+        buf[out_idx] = ch;
+        out_idx += 1;
+    }
+    return buf[0..out_idx];
+}
+
+fn themeColorSlotByEditorName(theme: *ThemeConfig, name: []const u8) ?*?Color {
+    var normalized_buf: [96]u8 = undefined;
+    const normalized = normalizeEditorThemeName(&normalized_buf, name);
+
+    if (std.mem.eql(u8, normalized, "normal") or std.mem.eql(u8, normalized, "text")) return &theme.foreground;
+    if (std.mem.eql(u8, normalized, "comment") or std.mem.startsWith(u8, normalized, "comment.")) return &theme.comment_color;
+    if (std.mem.eql(u8, normalized, "string") or std.mem.eql(u8, normalized, "character")) return &theme.string;
+    if (std.mem.eql(u8, normalized, "keyword") or std.mem.eql(u8, normalized, "statement")) return &theme.keyword;
+    if (std.mem.eql(u8, normalized, "number")) return &theme.number;
+    if (std.mem.eql(u8, normalized, "function") or std.mem.eql(u8, normalized, "constructor")) return &theme.function;
+    if (std.mem.eql(u8, normalized, "variable") or std.mem.eql(u8, normalized, "identifier")) return &theme.variable;
+    if (std.mem.eql(u8, normalized, "type") or std.mem.eql(u8, normalized, "typename")) return &theme.type_name;
+    if (std.mem.eql(u8, normalized, "operator")) return &theme.operator;
+    if (std.mem.eql(u8, normalized, "builtin")) return &theme.builtin_color;
+    if (std.mem.eql(u8, normalized, "punctuation") or std.mem.startsWith(u8, normalized, "punctuation.")) return &theme.punctuation;
+    if (std.mem.eql(u8, normalized, "constant") or std.mem.startsWith(u8, normalized, "constant.")) return &theme.constant;
+    if (std.mem.eql(u8, normalized, "attribute") or std.mem.eql(u8, normalized, "tag.attribute")) return &theme.attribute;
+    if (std.mem.eql(u8, normalized, "namespace") or std.mem.eql(u8, normalized, "module")) return &theme.namespace;
+    if (std.mem.eql(u8, normalized, "label")) return &theme.label;
+    if (std.mem.eql(u8, normalized, "error")) return &theme.error_token;
+    if (std.mem.eql(u8, normalized, "preproc")) return &theme.preproc;
+    if (std.mem.eql(u8, normalized, "macro")) return &theme.macro;
+    if (std.mem.eql(u8, normalized, "escape")) return &theme.escape;
+    if (std.mem.eql(u8, normalized, "keyword.control") or std.mem.eql(u8, normalized, "conditional") or std.mem.eql(u8, normalized, "repeat") or std.mem.eql(u8, normalized, "exception")) return &theme.keyword_control;
+    if (std.mem.eql(u8, normalized, "function.method") or std.mem.eql(u8, normalized, "method")) return &theme.function_method;
+    if (std.mem.eql(u8, normalized, "type.builtin")) return &theme.type_builtin;
+    if (std.mem.eql(u8, normalized, "cursorline")) return &theme.current_line;
+    if (std.mem.eql(u8, normalized, "visual") or std.mem.eql(u8, normalized, "selection")) return &theme.selection;
+    if (std.mem.eql(u8, normalized, "linenr") or std.mem.eql(u8, normalized, "line_number")) return &theme.line_number;
+    if (std.mem.eql(u8, normalized, "cursor")) return &theme.cursor;
+    return null;
+}
+
+fn setThemeColorByEditorName(theme: *ThemeConfig, name: []const u8, color: Color) bool {
+    const slot = themeColorSlotByEditorName(theme, name) orelse return false;
+    slot.* = color;
+    return true;
+}
+
+fn lookupThemeColorByEditorName(theme: *const ThemeConfig, name: []const u8) ?Color {
+    var normalized_buf: [96]u8 = undefined;
+    const normalized = normalizeEditorThemeName(&normalized_buf, name);
+
+    if (std.mem.eql(u8, normalized, "normal") or std.mem.eql(u8, normalized, "text")) return theme.foreground;
+    if (std.mem.eql(u8, normalized, "comment") or std.mem.startsWith(u8, normalized, "comment.")) return theme.comment_color;
+    if (std.mem.eql(u8, normalized, "string") or std.mem.eql(u8, normalized, "character")) return theme.string;
+    if (std.mem.eql(u8, normalized, "keyword") or std.mem.eql(u8, normalized, "statement")) return theme.keyword;
+    if (std.mem.eql(u8, normalized, "number")) return theme.number;
+    if (std.mem.eql(u8, normalized, "function") or std.mem.eql(u8, normalized, "constructor")) return theme.function;
+    if (std.mem.eql(u8, normalized, "variable") or std.mem.eql(u8, normalized, "identifier")) return theme.variable;
+    if (std.mem.eql(u8, normalized, "type") or std.mem.eql(u8, normalized, "typename")) return theme.type_name;
+    if (std.mem.eql(u8, normalized, "operator")) return theme.operator;
+    if (std.mem.eql(u8, normalized, "builtin")) return theme.builtin_color;
+    if (std.mem.eql(u8, normalized, "punctuation") or std.mem.startsWith(u8, normalized, "punctuation.")) return theme.punctuation;
+    if (std.mem.eql(u8, normalized, "constant") or std.mem.startsWith(u8, normalized, "constant.")) return theme.constant;
+    if (std.mem.eql(u8, normalized, "attribute") or std.mem.eql(u8, normalized, "tag.attribute")) return theme.attribute;
+    if (std.mem.eql(u8, normalized, "namespace") or std.mem.eql(u8, normalized, "module")) return theme.namespace;
+    if (std.mem.eql(u8, normalized, "label")) return theme.label;
+    if (std.mem.eql(u8, normalized, "error")) return theme.error_token;
+    if (std.mem.eql(u8, normalized, "preproc")) return theme.preproc;
+    if (std.mem.eql(u8, normalized, "macro")) return theme.macro;
+    if (std.mem.eql(u8, normalized, "escape")) return theme.escape;
+    if (std.mem.eql(u8, normalized, "keyword.control") or std.mem.eql(u8, normalized, "conditional") or std.mem.eql(u8, normalized, "repeat") or std.mem.eql(u8, normalized, "exception")) return theme.keyword_control;
+    if (std.mem.eql(u8, normalized, "function.method") or std.mem.eql(u8, normalized, "method")) return theme.function_method;
+    if (std.mem.eql(u8, normalized, "type.builtin")) return theme.type_builtin;
+    if (std.mem.eql(u8, normalized, "cursorline")) return theme.current_line;
+    if (std.mem.eql(u8, normalized, "visual") or std.mem.eql(u8, normalized, "selection")) return theme.selection;
+    if (std.mem.eql(u8, normalized, "linenr") or std.mem.eql(u8, normalized, "line_number")) return theme.line_number;
+    if (std.mem.eql(u8, normalized, "cursor")) return theme.cursor;
+    return null;
+}
+
+fn parseEditorThemeColorFromValue(lua: *zlua.Lua, idx: i32) ?Color {
+    if (parseColorFromValue(lua, idx)) |color| return color;
+    if (!lua.isTable(idx)) return null;
+    const table_idx = lua.absIndex(idx);
+
+    _ = lua.getField(table_idx, "fg");
+    if (parseColorFromValue(lua, -1)) |color| {
+        lua.pop(1);
+        return color;
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_idx, "foreground");
+    if (parseColorFromValue(lua, -1)) |color| {
+        lua.pop(1);
+        return color;
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_idx, "color");
+    if (parseColorFromValue(lua, -1)) |color| {
+        lua.pop(1);
+        return color;
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_idx, "bg");
+    if (parseColorFromValue(lua, -1)) |color| {
+        lua.pop(1);
+        return color;
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_idx, "background");
+    if (parseColorFromValue(lua, -1)) |color| {
+        lua.pop(1);
+        return color;
+    }
+    lua.pop(1);
+
+    return null;
+}
+
+fn editorThemeLinkTargetFromValue(lua: *zlua.Lua, idx: i32) ?[]const u8 {
+    if (lua.isString(idx)) {
+        if (lua.toString(idx)) |text| {
+            if (parseHexColor(text) != null) return null;
+            return text;
+        } else |_| return null;
+    }
+    if (!lua.isTable(idx)) return null;
+
+    _ = lua.getField(idx, "link");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |target| {
+            lua.pop(1);
+            return target;
+        } else |_| {}
+    }
+    lua.pop(1);
+    return null;
+}
+
+fn captureNameMatches(key: []const u8, name: []const u8) bool {
+    if (std.mem.eql(u8, key, name)) return true;
+    if (key.len > 0 and key[0] == '@' and std.mem.eql(u8, key[1..], name)) return true;
+    if (name.len > 0 and name[0] == '@' and std.mem.eql(u8, key, name[1..])) return true;
+    return false;
+}
+
+fn resolveEditorThemeColorFromSection(lua: *zlua.Lua, theme_idx: i32, section_name: [:0]const u8, theme: *const ThemeConfig, name: []const u8, depth: u8) ?Color {
+    _ = lua.getField(theme_idx, section_name);
+    if (!lua.isTable(-1)) {
+        lua.pop(1);
+        return null;
+    }
+    const section_idx = lua.absIndex(-1);
+    var color: ?Color = null;
+
+    lua.pushNil();
+    while (lua.next(section_idx)) {
+        defer lua.pop(1);
+        if (!lua.isString(-2)) continue;
+        if (lua.toString(-2)) |source_name| {
+            if (!captureNameMatches(source_name, name)) continue;
+            color = parseEditorThemeColorFromValue(lua, -1);
+            if (color == null) {
+                if (editorThemeLinkTargetFromValue(lua, -1)) |target_name| {
+                    color = resolveEditorThemeColor(lua, theme_idx, theme, target_name, depth);
+                }
+            }
+            break;
+        } else |_| {}
+    }
+
+    lua.pop(1);
+    return color;
+}
+
+fn resolveEditorThemeColor(lua: *zlua.Lua, theme_idx: i32, theme: *const ThemeConfig, name: []const u8, depth: u8) ?Color {
+    if (depth >= 12 or name.len == 0) return null;
+    if (lookupThemeColorByEditorName(theme, name)) |color| return color;
+    if (resolveEditorThemeColorFromSection(lua, theme_idx, "captures", theme, name, depth + 1)) |color| return color;
+    if (resolveEditorThemeColorFromSection(lua, theme_idx, "groups", theme, name, depth + 1)) |color| return color;
+    if (resolveEditorThemeColorFromSection(lua, theme_idx, "links", theme, name, depth + 1)) |color| return color;
+    return null;
+}
+
+fn applyEditorThemeColorSection(lua: *zlua.Lua, theme_idx: i32, section_name: [:0]const u8, theme: *ThemeConfig) void {
+    _ = lua.getField(theme_idx, section_name);
+    if (!lua.isTable(-1)) {
+        lua.pop(1);
+        return;
+    }
+    const section_idx = lua.absIndex(-1);
+
+    lua.pushNil();
+    while (lua.next(section_idx)) {
+        defer lua.pop(1);
+        if (!lua.isString(-2)) continue;
+        if (lua.toString(-2)) |source_name| {
+            if (parseEditorThemeColorFromValue(lua, -1)) |color| {
+                _ = setThemeColorByEditorName(theme, source_name, color);
+            }
+        } else |_| {}
+    }
+    lua.pop(1);
+}
+
+fn applyEditorThemeLinkSection(lua: *zlua.Lua, theme_idx: i32, section_name: [:0]const u8, theme: *ThemeConfig) void {
+    _ = lua.getField(theme_idx, section_name);
+    if (!lua.isTable(-1)) {
+        lua.pop(1);
+        return;
+    }
+    const section_idx = lua.absIndex(-1);
+
+    lua.pushNil();
+    while (lua.next(section_idx)) {
+        defer lua.pop(1);
+        if (!lua.isString(-2)) continue;
+        if (lua.toString(-2)) |source_name| {
+            if (editorThemeLinkTargetFromValue(lua, -1)) |target_name| {
+                if (resolveEditorThemeColor(lua, theme_idx, theme, target_name, 0)) |color| {
+                    _ = setThemeColorByEditorName(theme, source_name, color);
+                }
+            }
+        } else |_| {}
+    }
+    lua.pop(1);
+}
+
+fn applyEditorThemeSchemaNative(lua: *zlua.Lua, idx: i32, theme: *ThemeConfig) void {
+    const theme_idx = lua.absIndex(idx);
+    applyEditorThemeColorSection(lua, theme_idx, "groups", theme);
+    applyEditorThemeColorSection(lua, theme_idx, "captures", theme);
+    applyEditorThemeLinkSection(lua, theme_idx, "links", theme);
+    applyEditorThemeLinkSection(lua, theme_idx, "groups", theme);
+    applyEditorThemeLinkSection(lua, theme_idx, "captures", theme);
+}
+
+fn parseEditorThemeFromTableNative(lua: *zlua.Lua, idx: i32) ThemeConfig {
+    var parsed = parseThemeFromTableNative(lua, idx);
+    applyEditorThemeSchemaNative(lua, idx, &parsed);
+    return parsed;
 }
 
 fn parseThemeAtStackIndex(lua: *zlua.Lua, idx: i32) LuaConfigError!?ThemeConfig {
@@ -781,7 +1033,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
 
         _ = lua.getField(editor_idx, "theme");
         if (lua.isTable(-1)) {
-            out.editor_theme = try capi_bridge.parseEditorThemeFromLuaState(lua, lua.absIndex(-1));
+            out.editor_theme = parseEditorThemeFromTableNative(lua, -1);
         }
         lua.pop(1);
 
