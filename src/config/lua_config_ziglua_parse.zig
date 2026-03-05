@@ -12,6 +12,9 @@ const FontHinting = std.meta.Child(@TypeOf((@as(Config, undefined)).font_hinting
 const GlyphOverflow = std.meta.Child(@TypeOf((@as(Config, undefined)).font_glyph_overflow));
 const TerminalBlinkStyle = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_blink_style));
 const LigatureStrategy = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_disable_ligatures));
+const terminal_scrollback_default: usize = 1000;
+const terminal_scrollback_min: usize = 100;
+const terminal_scrollback_max: usize = 100000;
 
 fn replaceOwnedString(allocator: std.mem.Allocator, slot: *?[]u8, value: ?[]u8) void {
     if (slot.*) |old| allocator.free(old);
@@ -115,6 +118,7 @@ fn parseGlyphOverflowFromString(value: []const u8) ?GlyphOverflow {
 fn parseBlinkStyleFromString(value: []const u8) ?TerminalBlinkStyle {
     if (std.mem.eql(u8, value, "kitty")) return .kitty;
     if (std.mem.eql(u8, value, "off")) return .off;
+    if (std.mem.eql(u8, value, "ghostty")) return .off;
     return null;
 }
 
@@ -123,6 +127,13 @@ fn parseLigatureStrategyFromString(value: []const u8) ?LigatureStrategy {
     if (std.mem.eql(u8, value, "cursor")) return .cursor;
     if (std.mem.eql(u8, value, "always")) return .always;
     return null;
+}
+
+fn normalizeScrollback(value: i64) usize {
+    if (value < @as(i64, @intCast(terminal_scrollback_min)) or value > @as(i64, @intCast(terminal_scrollback_max))) {
+        return terminal_scrollback_default;
+    }
+    return @intCast(value);
 }
 
 fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_index: i32) !Config {
@@ -206,7 +217,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     _ = lua.getField(table_index, "terminal_scrollback_rows");
     if (lua.isNumber(-1)) {
         if (lua.toInteger(-1)) |v| {
-            if (v > 0) out.terminal_scrollback_rows = @intCast(v);
+            out.terminal_scrollback_rows = normalizeScrollback(v);
         } else |_| {}
     }
     lua.pop(1);
@@ -216,6 +227,19 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
         if (lua.toString(-1)) |v| {
             if (parseSdlLogLevelFromString(v)) |lvl| out.sdl_log_level = lvl;
         } else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "sdl");
+    if (lua.isTable(-1)) {
+        const sdl_idx = lua.absIndex(-1);
+        _ = lua.getField(sdl_idx, "log_level");
+        if (lua.isString(-1)) {
+            if (lua.toString(-1)) |v| {
+                if (parseSdlLogLevelFromString(v)) |lvl| out.sdl_log_level = lvl;
+            } else |_| {}
+        }
+        lua.pop(1);
     }
     lua.pop(1);
 
@@ -483,9 +507,7 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
 
         _ = lua.getField(terminal_idx, "scrollback");
         if (lua.isNumber(-1)) {
-            if (lua.toInteger(-1)) |v| {
-                if (v > 0) out.terminal_scrollback_rows = @intCast(v);
-            } else |_| {}
+            if (lua.toInteger(-1)) |v| out.terminal_scrollback_rows = normalizeScrollback(v) else |_| {}
         }
         lua.pop(1);
 
@@ -591,6 +613,15 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             if (lua.isBoolean(-1)) out.text_linear_correction = lua.toBoolean(-1);
             lua.pop(1);
         }
+        lua.pop(1);
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "keybinds");
+    if (lua.isTable(-1)) {
+        const keybinds_idx = lua.absIndex(-1);
+        _ = lua.getField(keybinds_idx, "no_defaults");
+        if (lua.isBoolean(-1)) out.keybinds_no_defaults = lua.toBoolean(-1);
         lua.pop(1);
     }
     lua.pop(1);
