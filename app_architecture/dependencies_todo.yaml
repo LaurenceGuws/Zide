@@ -108,9 +108,11 @@ dependencies_todo:
             - "2026-03-06 parity checkpoint: `zig build`, `zig build test`, `zig build -Dpath=zig`, `zig build test -Dpath=zig`, `zig build -Dpath=zig test-editor`, `zig build -Dpath=zig check-{app,input,editor}-imports`, `zig build -Dpath=zig test-terminal-workspace`, `zig build -Dpath=zig test-terminal-ffi`, `zig build -Dpath=zig test-terminal-focus-reporting`, and `zig build -Dpath=zig test-terminal-kitty-query-parse` pass."
         - id: DEP-02-02
           title: "Validate font shaping/rasterization parity against system path"
-          status: pending
+          status: in_progress
           notes:
             - "Use existing terminal/editor/font-sample flows for parity checks."
+            - "2026-03-06 non-GUI parity checkpoint: terminal-focused suites pass on both paths (`link` and `zig`): `test-terminal-focus-reporting`, `test-terminal-kitty-query-parse`, `test-terminal-workspace`, `test-terminal-ffi`."
+            - "Remaining work: manual visual parity passes for terminal/editor/font-sample rasterization and shaping behavior."
 
     - name: "DEP-03 Lua runtime dependency path"
       tasks:
