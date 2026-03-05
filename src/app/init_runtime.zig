@@ -97,11 +97,14 @@ fn initWithMode(
     const app_log = app_logger.logger("app.core");
     app_log.logStdout("logger initialized", .{});
     app_log.logStdout(
-        "config lua backend: impl={s} dep_source={s} capi_parse_bridge={d}",
+        "config lua backend: impl={s} dep_source={s} capi_bridge(parse={d},full={d},theme={d},keybind={d})",
         .{
             if (@hasDecl(build_options, "lua_impl")) build_options.lua_impl else "capi",
             if (@hasDecl(build_options, "lua_dependency_source")) build_options.lua_dependency_source else "system",
             @intFromBool(config_mod.uses_capi_parse_bridge),
+            @intFromBool(config_mod.uses_capi_full_config_bridge),
+            @intFromBool(config_mod.uses_capi_theme_bridge),
+            @intFromBool(config_mod.uses_capi_keybind_bridge),
         },
     );
     const metrics_log = app_logger.logger("terminal.metrics");

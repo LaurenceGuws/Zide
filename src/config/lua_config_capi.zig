@@ -155,6 +155,9 @@ pub const ThemeConfig = struct {
 };
 
 pub const uses_capi_parse_bridge = false;
+pub const uses_capi_full_config_bridge = false;
+pub const uses_capi_theme_bridge = false;
+pub const uses_capi_keybind_bridge = false;
 
 pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
     var config: Config = emptyConfig();

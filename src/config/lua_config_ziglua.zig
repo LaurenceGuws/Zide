@@ -17,6 +17,9 @@ pub const TerminalDisableLigaturesStrategy = iface.TerminalDisableLigaturesStrat
 pub const TabBarWidthMode = iface.TabBarWidthMode;
 pub const ThemeConfig = iface.ThemeConfig;
 pub const uses_capi_parse_bridge = true;
+pub const uses_capi_full_config_bridge = false;
+pub const uses_capi_theme_bridge = true;
+pub const uses_capi_keybind_bridge = true;
 
 fn loadConfigFromFileZiglua(allocator: std.mem.Allocator, path: []const u8) LuaConfigError!Config {
     const lua = zlua.Lua.init(allocator) catch return LuaConfigError.LuaInitFailed;

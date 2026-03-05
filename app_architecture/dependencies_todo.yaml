@@ -150,6 +150,7 @@ dependencies_todo:
             - "Checkpoint: ziglua native overlay now parses `keybinds` table bindings through a dedicated CAPI keybind bridge entrypoint and keeps `keybinds.no_defaults` native."
             - "Checkpoint: ziglua native overlay now mirrors `log` and `raylib.log_level` compatibility aliases, and parses `editor.theme` via dedicated CAPI editor-theme bridge (schema/link resolution parity)."
             - "Checkpoint: ziglua backend no longer calls full-config CAPI parse bridge; `parseConfigFromLuaState` now returns native ziglua parse output directly while retaining focused CAPI bridge helpers for themes/keybinds."
+            - "Checkpoint: runtime startup diagnostics now report CAPI bridge granularity (`parse/full/theme/keybind`) to track migration progress explicitly."
 
     - name: "DEP-04 Tree-sitter packaging decision"
       tasks:
