@@ -61,6 +61,18 @@ Track practical migration details for replacing system-managed native dependenci
 - Pending integration check:
   - Confirm whether Zide can keep existing C API usage while linking via ziglua-provided artifact/module boundary, or whether Lua interaction should be moved to ziglua bindings.
 
+### Lua backend split scaffold (implemented)
+
+- `src/config/lua_config_capi.zig`: current production C-API implementation (moved intact).
+- `src/config/lua_config_iface.zig`: canonical public API/type contract for backend parity checks.
+- `src/config/lua_config_ziglua.zig`: ziglua backend placeholder with matching signatures.
+- `src/config/lua_config.zig`: facade/selector routing to backend via build option.
+- Build selector:
+  - `-Dlua-impl=capi` (default)
+  - `-Dlua-impl=ziglua` (compiles; runtime implementation intentionally pending)
+
+This split is intentionally behavior-preserving for default builds and enables per-function parallel migration into the ziglua backend without touching callers.
+
 ## Recommended next implementation sequence
 
 1. Add an explicit text-stack source selector (`system|zig`) separate from SDL selector semantics.

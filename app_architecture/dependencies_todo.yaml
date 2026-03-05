@@ -108,14 +108,27 @@ dependencies_todo:
       tasks:
         - id: DEP-03-01
           title: "Add optional Zig-managed Lua backend"
-          status: pending
+          status: in_progress
           notes:
             - "2026-03-05: `-Dlua-source=system|zig` selector scaffolded in `build.zig`."
             - "Current state: `-Dlua-source=zig` is intentionally fail-fast gated due upstream ziglua artifact lookup contract mismatch on this toolchain."
             - "Builds confirmed: `-Dlua-source=system` and `-Ddep-source=zig -Dlua-source=system` pass."
+            - "2026-03-05: backend split scaffold landed for config parser migration:"
+            - "  - `-Dlua-impl=capi|ziglua` build option with facade selector."
+            - "  - `lua_config_capi.zig` (current), `lua_config_iface.zig` (contract), `lua_config_ziglua.zig` (stub)."
+            - "  - `zig build` and `zig build -Dlua-impl=ziglua` compile successfully."
         - id: DEP-03-02
           title: "Validate config reload and Lua API behavior parity"
           status: pending
+        - id: DEP-03-03
+          title: "Parallel migration plan: move lua_config functions to ziglua backend by ownership groups"
+          status: in_progress
+          notes:
+            - "Ownership group A (lifecycle + merge): loadConfig, freeConfig, mergeConfig, loadConfigFromFile, parseConfigFromStack, parseConfigFromSnippet."
+            - "Ownership group B (keybind parsing): parseKeybinds, parseKeybindScope, parseKeyField, parseModsField, parseActionField, parseRepeatField, readModString, applyMod, sameBindingIdentity, mergeKeybinds."
+            - "Ownership group C (theme parsing): parseThemeFromTable, parseThemePaletteTable, parseIndexedAnsiColors, parseNamedAnsiColors, parseThemeSyntaxTable, applyEditorThemeSchema, applyEditorThemeColorSection, applyEditorThemeLinkSection, resolveEditorThemeColor, resolveEditorThemeColorFromSection, parseEditorThemeColorFromValue, editorThemeLinkTargetFromValue."
+            - "Ownership group D (theme mapping/apply): applyThemeConfig, mergeThemeConfig, setThemeColorByEditorName, lookupThemeColorByEditorName, themeColorSlotByEditorName, normalizeEditorThemeName."
+            - "Ownership group E (Lua utility + scalar parsers): parseFontHinting, parseGlyphOverflowPolicy, parseTerminalBlink, parseTerminalDisableLigatures, parseTabBarWidthMode, parseCursorShape, parseFontTable, parseLogFiltersFromTable, parseSdlLogLevel, parseColorField, parseColorFromValue, parseHexColor, parseHexByte, parseColorChannel, luaStringToOwned, luaStringToSlice, luaStringListToOwned, luaAbsIndex, luaPushStringSlice, luaGetTableByNameWithCaptureFallback."
 
     - name: "DEP-04 Tree-sitter packaging decision"
       tasks:
