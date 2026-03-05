@@ -1,5 +1,6 @@
 const std = @import("std");
 const iface = @import("./lua_config_iface.zig");
+const capi = @import("./lua_config_capi.zig");
 
 pub const LuaConfigError = iface.LuaConfigError;
 pub const Config = iface.Config;
@@ -10,13 +11,15 @@ pub const TerminalDisableLigaturesStrategy = iface.TerminalDisableLigaturesStrat
 pub const TabBarWidthMode = iface.TabBarWidthMode;
 pub const ThemeConfig = iface.ThemeConfig;
 
-pub fn loadConfig(_: std.mem.Allocator) LuaConfigError!Config {
-    @panic("lua_config_ziglua is not implemented yet; use -Dlua-impl=capi");
+pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
+    // Migration baseline: keep behavior parity while ziglua backend is implemented incrementally.
+    return capi.loadConfig(allocator);
 }
 
-pub fn freeConfig(_: std.mem.Allocator, _: *Config) void {}
+pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
+    capi.freeConfig(allocator, config);
+}
 
 pub fn applyThemeConfig(theme: *iface.Theme, overlay: ThemeConfig) void {
-    _ = theme;
-    _ = overlay;
+    capi.applyThemeConfig(theme, overlay);
 }

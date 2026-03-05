@@ -117,6 +117,7 @@ dependencies_todo:
             - "  - `-Dlua-impl=capi|ziglua` build option with facade selector."
             - "  - `lua_config_capi.zig` (current), `lua_config_iface.zig` (contract), `lua_config_ziglua.zig` (stub)."
             - "  - `zig build` and `zig build -Dlua-impl=ziglua` compile successfully."
+            - "  - Baseline runtime parity enabled: ziglua backend currently delegates to capi path while functions are migrated incrementally."
         - id: DEP-03-02
           title: "Validate config reload and Lua API behavior parity"
           status: pending
