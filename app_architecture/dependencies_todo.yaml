@@ -61,7 +61,8 @@ dependencies_todo:
           title: "Add dependency source selection interface in build config"
           status: done
           notes:
-            - "Define one explicit selector (for example: `-Ddep-source=system|zig`)."
+            - "Define one explicit selector."
+            - "Current selector: `-Dpath=link|zig`."
             - "No dependency backend switch yet; interface only."
         - id: DEP-00-02
           title: "Document dependency migration policy and rollback expectations"
@@ -78,15 +79,15 @@ dependencies_todo:
           notes:
             - "Keep current system-lib backend intact."
             - "No behavior changes in runtime code."
-            - "Implemented via `-Ddep-source=zig` with `castholm/SDL` package (`artifact(\"SDL3\")`)."
-            - "Current guardrail: `-Ddep-source=zig` is incompatible with `--use-vcpkg`."
+            - "Implemented via `-Dpath=zig` with `castholm/SDL` package (`artifact(\"SDL3\")`)."
+            - "Current guardrail: `-Dpath=zig` is incompatible with `--use-vcpkg`."
         - id: DEP-01-02
           title: "Parity-check system vs Zig SDL3 builds"
           status: done
           notes:
             - "Record compile/runtime parity notes in architecture docs."
-            - "2026-03-05 (non-GUI parity): `zig build`, `zig build -Ddep-source=zig`, `zig build test`, and `zig build test -Ddep-source=zig` all passed."
-            - "Known caveat remains: `-Ddep-source=zig` is currently not compatible with `-Duse-vcpkg=true`."
+            - "2026-03-05 (non-GUI parity): `zig build`, `zig build -Dpath=zig`, `zig build test`, and `zig build test -Dpath=zig` all passed."
+            - "Known caveat remains: `-Dpath=zig` is currently not compatible with `-Duse-vcpkg=true`."
             - "2026-03-05 cleanup: removed remaining SDL2-era runtime branches in input/window paths and switched keyboard/text event access to SDL3-only fields. Retained one guarded DPI symbol call (`SDL_GetDisplayDPI`) for SDL3 header-variant compatibility."
 
     - name: "DEP-02 FreeType/HarfBuzz Zig package path"
@@ -98,7 +99,7 @@ dependencies_todo:
             - "Research baseline captured in `app_architecture/DEPENDENCIES.md` (package API constraints and migration shape)."
             - "2026-03-05 attempt: direct Mach `freetype` + `harfbuzz` package artifacts were wired and then reverted."
             - "Blocker: package build scripts currently fail against our Zig toolchain with `Build.addStaticLibrary` API mismatch."
-            - "Keep SDL-only `-Ddep-source=zig` path active; revisit DEP-02 once compatible package revisions are identified."
+            - "Keep SDL/Lua `-Dpath=zig` path active; revisit DEP-02 once compatible package revisions are identified."
         - id: DEP-02-02
           title: "Validate font shaping/rasterization parity against system path"
           status: pending
@@ -111,9 +112,9 @@ dependencies_todo:
           title: "Add optional Zig-managed Lua backend"
           status: done
           notes:
-            - "2026-03-05: `-Dlua-source=system|zig` selector scaffolded in `build.zig`."
-            - "2026-03-05: `-Dlua-source=zig` enabled and wired to ziglua `artifact(\"lua\")` + emitted include tree."
-            - "Builds confirmed at migration time: `zig build -Dlua-source=zig` and parser/backend parity checkpoints."
+            - "2026-03-05: Lua source selector scaffolded in `build.zig`."
+            - "2026-03-05: Zig Lua path enabled and wired to ziglua `artifact(\"lua\")` + emitted include tree."
+            - "Builds confirmed at migration time: `zig build -Dpath=zig` and parser/backend parity checkpoints."
             - "2026-03-05: backend split scaffold landed for config parser migration:"
             - "  - Initial phase used a temporary facade selector during migration."
             - "  - Final phase removed selector/fallbacks and kept native ziglua path only."

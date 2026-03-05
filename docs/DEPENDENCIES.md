@@ -12,35 +12,25 @@ Zide depends on the following native libraries:
 
 SDL3 is the default build target.
 
-## Dependency source selector
+## Dependency path selector
 
-Build defaults to system-managed native libraries:
+Build defaults to linked system/vcpkg native libraries:
 
 ```bash
-zig build -Ddep-source=system
+zig build -Dpath=link
 ```
 
-Optional SDL3 Zig package path:
+Optional Zig package path (SDL3 + Lua):
 
 ```bash
-zig build -Ddep-source=zig
+zig build -Dpath=zig
 ```
 
 Notes:
-- `-Ddep-source=zig` currently switches SDL3 to a Zig package backend (`castholm/SDL`).
-- FreeType, HarfBuzz, and Lua remain system/vcpkg managed in this phase.
-- `-Ddep-source=zig` is currently incompatible with `-Duse-vcpkg=true`.
-- Parity checkpoint (March 5, 2026): `zig build`, `zig build -Ddep-source=zig`, `zig build test`, and `zig build test -Ddep-source=zig` all pass on the current Linux path.
-
-Lua source selector (staged):
-
-```bash
-zig build -Dlua-source=system
-```
-
-Current status:
-- `-Dlua-source=zig` is available and links Lua from the ziglua dependency artifact.
-- `-Dlua-source=system` remains the default path.
+- `-Dpath=zig` switches SDL3 and Lua to Zig package backends (`castholm/SDL`, `ziglua` artifact `lua`).
+- FreeType and HarfBuzz remain link-managed in this phase.
+- `-Dpath=zig` is currently incompatible with `-Duse-vcpkg=true`.
+- Parity checkpoint (March 5, 2026): `zig build`, `zig build -Dpath=zig`, `zig build test`, and `zig build test -Dpath=zig` pass on the current Linux path.
 
 Lua implementation status (config parser backend):
 - The config parser backend is now fixed to native `ziglua`.
