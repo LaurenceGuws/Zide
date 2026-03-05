@@ -42,16 +42,9 @@ Current status:
 - `-Dlua-source=zig` is available and links Lua from the ziglua dependency artifact.
 - `-Dlua-source=system` remains the default path.
 
-Lua implementation selector (config parser backend):
-
-```bash
-zig build -Dlua-impl=capi
-zig build -Dlua-impl=ziglua
-```
-
-Current status:
-- `-Dlua-impl=ziglua` is fully implemented and buildable.
-- `-Dlua-impl=capi` remains the default for now.
+Lua implementation status (config parser backend):
+- The config parser backend is now fixed to native `ziglua`.
+- `-Dlua-impl` is no longer a supported build selector.
 
 ## Recommended strategy
 - Linux/macOS: system packages for fast local dev.

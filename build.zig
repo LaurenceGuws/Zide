@@ -120,16 +120,7 @@ pub fn build(b: *std.Build) void {
     ) orelse "system";
     const lua_source = parseDependencySource(lua_source_raw);
     build_options.addOption([]const u8, "lua_dependency_source", lua_source_raw);
-    const lua_impl = b.option(
-        []const u8,
-        "lua-impl",
-        "Lua config implementation: capi (default) or ziglua",
-    ) orelse "capi";
-    if (!std.mem.eql(u8, lua_impl, "capi") and !std.mem.eql(u8, lua_impl, "ziglua")) {
-        std.debug.panic("invalid -Dlua-impl='{s}' (expected 'capi' or 'ziglua')", .{lua_impl});
-    }
-    build_options.addOption([]const u8, "lua_impl", lua_impl);
-    const use_ziglua_impl = std.mem.eql(u8, lua_impl, "ziglua");
+    build_options.addOption([]const u8, "lua_impl", "ziglua");
 
     // vcpkg support
     //
@@ -203,13 +194,12 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     }) else null;
     const sdl_lib = if (dep_source == .zig) sdl_dep.?.artifact("SDL3") else null;
-    const need_zlua_dep = use_ziglua_impl or lua_source == .zig;
-    const zlua_dep = if (need_zlua_dep) b.dependency("zlua", .{
+    const zlua_dep = b.dependency("zlua", .{
         .target = target,
         .optimize = optimize,
-    }) else null;
-    const zlua_module = if (use_ziglua_impl) zlua_dep.?.module("zlua") else null;
-    const lua_lib = if (lua_source == .zig) zlua_dep.?.artifact("lua") else null;
+    });
+    const zlua_module = zlua_dep.module("zlua");
+    const lua_lib = if (lua_source == .zig) zlua_dep.artifact("lua") else null;
     // ─────────────────────────────────────────────────────────────────────────
     // Main executable
     // ─────────────────────────────────────────────────────────────────────────
@@ -223,9 +213,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     exe.root_module.addOptions("build_options", build_options);
-    if (zlua_module) |mod| {
-        exe.root_module.addImport("zlua", mod);
-    }
+    exe.root_module.addImport("zlua", zlua_module);
 
     // Link C libraries
     exe.linkLibrary(treesitter);
@@ -359,9 +347,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     exe_terminal.root_module.addOptions("build_options", build_options);
-    if (zlua_module) |mod| {
-        exe_terminal.root_module.addImport("zlua", mod);
-    }
+    exe_terminal.root_module.addImport("zlua", zlua_module);
     exe_terminal.linkLibrary(treesitter);
     exe_terminal.linkLibrary(ts_zig);
     if (use_vcpkg) {
@@ -435,9 +421,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     exe_editor.root_module.addOptions("build_options", build_options);
-    if (zlua_module) |mod| {
-        exe_editor.root_module.addImport("zlua", mod);
-    }
+    exe_editor.root_module.addImport("zlua", zlua_module);
     exe_editor.linkLibrary(treesitter);
     exe_editor.linkLibrary(ts_zig);
     if (use_vcpkg) {
@@ -511,9 +495,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     exe_ide.root_module.addOptions("build_options", build_options);
-    if (zlua_module) |mod| {
-        exe_ide.root_module.addImport("zlua", mod);
-    }
+    exe_ide.root_module.addImport("zlua", zlua_module);
     exe_ide.linkLibrary(treesitter);
     exe_ide.linkLibrary(ts_zig);
     if (use_vcpkg) {

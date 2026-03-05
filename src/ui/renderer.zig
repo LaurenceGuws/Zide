@@ -1889,7 +1889,7 @@ pub const Renderer = struct {
                 if (input_log.enabled_file or input_log.enabled_console) {
                     input_log.logf("textinput type={d}", .{event.type});
                 }
-                if (sdl_api.is_sdl3 and !sdl3_textinput_layout_logged and (input_log.enabled_file or input_log.enabled_console)) {
+                if (!sdl3_textinput_layout_logged and (input_log.enabled_file or input_log.enabled_console)) {
                     const layout = sdl_api.textInputLayout();
                     input_logging.logTextInputLayout(
                         layout.size,
@@ -1905,11 +1905,7 @@ pub const Renderer = struct {
                 }
                 input_logging.logTextInputPointer(text_len, sdl_api.textInputPointer(event));
                 if (text_len > 0) {
-                    const text_field = event.text;
-                    const text = if (@hasField(@TypeOf(text_field), "text"))
-                        sdl_api.textSpanWithLen(text_field.text, text_len)
-                    else
-                        "";
+                    const text = sdl_api.textSpanWithLen(event.text.text, text_len);
                     input_logging.logTextInputRaw(text);
                 }
             },
@@ -1923,7 +1919,7 @@ pub const Renderer = struct {
                     self.allocator,
                 );
                 input_logging.logTextEditing(edit_info.bytes, edit_info.cursor, edit_info.selection_len);
-                if (sdl_api.is_sdl3 and !sdl3_textediting_layout_logged and (input_log.enabled_file or input_log.enabled_console)) {
+                if (!sdl3_textediting_layout_logged and (input_log.enabled_file or input_log.enabled_console)) {
                     const layout = sdl_api.textEditingLayout();
                     input_logging.logTextEditingLayout(
                         layout.size,
@@ -1948,11 +1944,7 @@ pub const Renderer = struct {
                     sdl_api.textEditingPointer(event),
                 );
                 if (edit_info.bytes > 0) {
-                    const edit_field = event.edit;
-                    const text = if (@hasField(@TypeOf(edit_field), "text"))
-                        sdl_api.textSpanWithLen(edit_field.text, edit_info.bytes)
-                    else
-                        "";
+                    const text = sdl_api.textSpanWithLen(event.edit.text, edit_info.bytes);
                     input_logging.logTextEditingRaw(text, edit_info.cursor, edit_info.selection_len);
                 }
             },

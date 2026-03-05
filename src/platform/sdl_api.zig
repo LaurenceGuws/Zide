@@ -72,83 +72,74 @@ pub fn textEditingLayout() TextEditingLayout {
 }
 
 pub fn isWindowEventType(event_type: c_uint) bool {
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_SHOWN") and event_type == c.SDL_EVENT_WINDOW_SHOWN) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_HIDDEN") and event_type == c.SDL_EVENT_WINDOW_HIDDEN) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_EXPOSED") and event_type == c.SDL_EVENT_WINDOW_EXPOSED) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_MOVED") and event_type == c.SDL_EVENT_WINDOW_MOVED) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_RESIZED") and event_type == c.SDL_EVENT_WINDOW_RESIZED) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED") and event_type == c.SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_SIZE_CHANGED") and event_type == c.SDL_EVENT_WINDOW_SIZE_CHANGED) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_DISPLAY_CHANGED") and event_type == c.SDL_EVENT_WINDOW_DISPLAY_CHANGED) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED") and event_type == c.SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_MINIMIZED") and event_type == c.SDL_EVENT_WINDOW_MINIMIZED) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_MAXIMIZED") and event_type == c.SDL_EVENT_WINDOW_MAXIMIZED) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_RESTORED") and event_type == c.SDL_EVENT_WINDOW_RESTORED) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_ENTER") and event_type == c.SDL_EVENT_WINDOW_ENTER) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_LEAVE") and event_type == c.SDL_EVENT_WINDOW_LEAVE) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_FOCUS_GAINED") and event_type == c.SDL_EVENT_WINDOW_FOCUS_GAINED) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_FOCUS_LOST") and event_type == c.SDL_EVENT_WINDOW_FOCUS_LOST) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_CLOSE_REQUESTED") and event_type == c.SDL_EVENT_WINDOW_CLOSE_REQUESTED) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_TAKE_FOCUS") and event_type == c.SDL_EVENT_WINDOW_TAKE_FOCUS) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_HIT_TEST") and event_type == c.SDL_EVENT_WINDOW_HIT_TEST) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_SHOWN) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_HIDDEN) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_EXPOSED) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_MOVED) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_RESIZED) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_DISPLAY_CHANGED) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_MINIMIZED) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_MAXIMIZED) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_RESTORED) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_MOUSE_ENTER) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_MOUSE_LEAVE) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_FOCUS_GAINED) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_FOCUS_LOST) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_CLOSE_REQUESTED) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_HIT_TEST) return true;
     return false;
 }
 
 pub fn windowEventName(event_type: c_uint) []const u8 {
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_SHOWN") and event_type == c.SDL_EVENT_WINDOW_SHOWN) return "shown";
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_HIDDEN") and event_type == c.SDL_EVENT_WINDOW_HIDDEN) return "hidden";
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_EXPOSED") and event_type == c.SDL_EVENT_WINDOW_EXPOSED) return "exposed";
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_MOVED") and event_type == c.SDL_EVENT_WINDOW_MOVED) return "moved";
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_RESIZED") and event_type == c.SDL_EVENT_WINDOW_RESIZED) return "resized";
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED") and event_type == c.SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) return "size_changed";
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_SIZE_CHANGED") and event_type == c.SDL_EVENT_WINDOW_SIZE_CHANGED) return "size_changed";
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_MINIMIZED") and event_type == c.SDL_EVENT_WINDOW_MINIMIZED) return "minimized";
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_MAXIMIZED") and event_type == c.SDL_EVENT_WINDOW_MAXIMIZED) return "maximized";
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_RESTORED") and event_type == c.SDL_EVENT_WINDOW_RESTORED) return "restored";
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_ENTER") and event_type == c.SDL_EVENT_WINDOW_ENTER) return "enter";
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_LEAVE") and event_type == c.SDL_EVENT_WINDOW_LEAVE) return "leave";
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_FOCUS_GAINED") and event_type == c.SDL_EVENT_WINDOW_FOCUS_GAINED) return "focus_gained";
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_FOCUS_LOST") and event_type == c.SDL_EVENT_WINDOW_FOCUS_LOST) return "focus_lost";
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_CLOSE_REQUESTED") and event_type == c.SDL_EVENT_WINDOW_CLOSE_REQUESTED) return "close";
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_TAKE_FOCUS") and event_type == c.SDL_EVENT_WINDOW_TAKE_FOCUS) return "take_focus";
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_HIT_TEST") and event_type == c.SDL_EVENT_WINDOW_HIT_TEST) return "hit_test";
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_DISPLAY_CHANGED") and event_type == c.SDL_EVENT_WINDOW_DISPLAY_CHANGED) return "display_changed";
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED") and event_type == c.SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED) return "display_scale_changed";
+    if (event_type == c.SDL_EVENT_WINDOW_SHOWN) return "shown";
+    if (event_type == c.SDL_EVENT_WINDOW_HIDDEN) return "hidden";
+    if (event_type == c.SDL_EVENT_WINDOW_EXPOSED) return "exposed";
+    if (event_type == c.SDL_EVENT_WINDOW_MOVED) return "moved";
+    if (event_type == c.SDL_EVENT_WINDOW_RESIZED) return "resized";
+    if (event_type == c.SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) return "size_changed";
+    if (event_type == c.SDL_EVENT_WINDOW_MINIMIZED) return "minimized";
+    if (event_type == c.SDL_EVENT_WINDOW_MAXIMIZED) return "maximized";
+    if (event_type == c.SDL_EVENT_WINDOW_RESTORED) return "restored";
+    if (event_type == c.SDL_EVENT_WINDOW_MOUSE_ENTER) return "enter";
+    if (event_type == c.SDL_EVENT_WINDOW_MOUSE_LEAVE) return "leave";
+    if (event_type == c.SDL_EVENT_WINDOW_FOCUS_GAINED) return "focus_gained";
+    if (event_type == c.SDL_EVENT_WINDOW_FOCUS_LOST) return "focus_lost";
+    if (event_type == c.SDL_EVENT_WINDOW_CLOSE_REQUESTED) return "close";
+    if (event_type == c.SDL_EVENT_WINDOW_HIT_TEST) return "hit_test";
+    if (event_type == c.SDL_EVENT_WINDOW_DISPLAY_CHANGED) return "display_changed";
+    if (event_type == c.SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED) return "display_scale_changed";
     return "unknown";
 }
 
 pub fn isResizeEvent(event_type: c_uint) bool {
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_RESIZED") and event_type == c.SDL_EVENT_WINDOW_RESIZED) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED") and event_type == c.SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_SIZE_CHANGED") and event_type == c.SDL_EVENT_WINDOW_SIZE_CHANGED) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_MOVED") and event_type == c.SDL_EVENT_WINDOW_MOVED) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_DISPLAY_CHANGED") and event_type == c.SDL_EVENT_WINDOW_DISPLAY_CHANGED) return true;
-    if (@hasDecl(c, "SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED") and event_type == c.SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_RESIZED) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_MOVED) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_DISPLAY_CHANGED) return true;
+    if (event_type == c.SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED) return true;
     return false;
 }
 
 pub fn isCloseEvent(event_type: c_uint) bool {
-    return @hasDecl(c, "SDL_EVENT_WINDOW_CLOSE_REQUESTED") and event_type == c.SDL_EVENT_WINDOW_CLOSE_REQUESTED;
+    return event_type == c.SDL_EVENT_WINDOW_CLOSE_REQUESTED;
 }
 
 pub fn isFocusGainedEvent(event_type: c_uint) bool {
-    return @hasDecl(c, "SDL_EVENT_WINDOW_FOCUS_GAINED") and event_type == c.SDL_EVENT_WINDOW_FOCUS_GAINED;
+    return event_type == c.SDL_EVENT_WINDOW_FOCUS_GAINED;
 }
 
 pub fn isFocusLostEvent(event_type: c_uint) bool {
-    return @hasDecl(c, "SDL_EVENT_WINDOW_FOCUS_LOST") and event_type == c.SDL_EVENT_WINDOW_FOCUS_LOST;
+    return event_type == c.SDL_EVENT_WINDOW_FOCUS_LOST;
 }
 
 pub fn windowEventData1(event: *const c.SDL_Event) i32 {
-    const win = event.window;
-    if (@hasField(@TypeOf(win), "data1")) return @intCast(win.data1);
-    return 0;
+    return @intCast(event.window.data1);
 }
 
 pub fn windowEventData2(event: *const c.SDL_Event) i32 {
-    const win = event.window;
-    if (@hasField(@TypeOf(win), "data2")) return @intCast(win.data2);
-    return 0;
+    return @intCast(event.window.data2);
 }
 
 pub fn setHint(name: [*:0]const u8, value: [*:0]const u8) void {
@@ -174,12 +165,7 @@ pub fn glSetAttribute(attr: GlAttr, value: c_int) void {
 }
 
 pub fn createWindow(title: [*:0]const u8, width: c_int, height: c_int) ?*c.SDL_Window {
-    const high_dpi = if (@hasDecl(c, "SDL_WINDOW_HIGH_PIXEL_DENSITY"))
-        @as(c_uint, @intCast(c.SDL_WINDOW_HIGH_PIXEL_DENSITY))
-    else if (@hasDecl(c, "SDL_WINDOW_ALLOW_HIGHDPI"))
-        @as(c_uint, @intCast(c.SDL_WINDOW_ALLOW_HIGHDPI))
-    else
-        0;
+    const high_dpi = @as(c_uint, @intCast(c.SDL_WINDOW_HIGH_PIXEL_DENSITY));
     const base_flags: c_uint = @intCast(c.SDL_WINDOW_OPENGL | c.SDL_WINDOW_RESIZABLE);
     const flags: c_uint = base_flags | high_dpi;
     return c.SDL_CreateWindow(title, width, height, flags);
@@ -194,11 +180,7 @@ pub fn glCreateContext(window: *c.SDL_Window) ?c.SDL_GLContext {
 }
 
 pub fn glDeleteContext(context: c.SDL_GLContext) void {
-    if (@hasDecl(c, "SDL_GL_DestroyContext")) {
-        _ = c.SDL_GL_DestroyContext(context);
-    } else {
-        c.SDL_GL_DeleteContext(context);
-    }
+    _ = c.SDL_GL_DestroyContext(context);
 }
 
 pub fn getWindowSize(window: *c.SDL_Window, w: *c_int, h: *c_int) void {
@@ -206,58 +188,40 @@ pub fn getWindowSize(window: *c.SDL_Window, w: *c_int, h: *c_int) void {
 }
 
 pub fn getDrawableSize(window: *c.SDL_Window, w: *c_int, h: *c_int) void {
-    if (@hasDecl(c, "SDL_GL_GetDrawableSize")) {
-        c.SDL_GL_GetDrawableSize(window, w, h);
-    } else if (@hasDecl(c, "SDL_GetWindowSizeInPixels")) {
-        _ = c.SDL_GetWindowSizeInPixels(window, w, h);
-    } else {
-        getWindowSize(window, w, h);
-    }
+    _ = c.SDL_GetWindowSizeInPixels(window, w, h);
 }
 
 pub fn getWindowDisplayIndex(window: *c.SDL_Window) i32 {
-    if (@hasDecl(c, "SDL_GetDisplayForWindow")) {
-        return @intCast(c.SDL_GetDisplayForWindow(window));
-    }
-    return c.SDL_GetWindowDisplayIndex(window);
+    return @intCast(c.SDL_GetDisplayForWindow(window));
 }
 
 pub fn getWindowDisplayScale(window: *c.SDL_Window) f32 {
-    if (@hasDecl(c, "SDL_GetWindowDisplayScale")) {
-        return c.SDL_GetWindowDisplayScale(window);
-    }
-    return 0.0;
+    return c.SDL_GetWindowDisplayScale(window);
 }
 
 pub fn getWindowPixelDensity(window: *c.SDL_Window) f32 {
-    if (@hasDecl(c, "SDL_GetWindowPixelDensity")) {
-        return c.SDL_GetWindowPixelDensity(window);
-    }
-    return 0.0;
+    return c.SDL_GetWindowPixelDensity(window);
 }
 
 pub fn getDisplayBounds(display: i32, rect: *c.SDL_Rect) bool {
-    if (@hasDecl(c, "SDL_GetDisplayBounds")) {
-        return c.SDL_GetDisplayBounds(@intCast(display), rect);
-    }
-    return false;
+    return c.SDL_GetDisplayBounds(@intCast(display), rect);
 }
 
 pub fn getDisplayDpi(display: i32, ddpi: *f32, hdpi: *f32, vdpi: *f32) bool {
     if (@hasDecl(c, "SDL_GetDisplayDPI")) {
         return c.SDL_GetDisplayDPI(@intCast(display), ddpi, hdpi, vdpi);
     }
+    ddpi.* = 0;
+    hdpi.* = 0;
+    vdpi.* = 0;
     return false;
 }
 
 pub fn getCurrentDisplayMode(display: i32, mode: *c.SDL_DisplayMode) bool {
-    if (@hasDecl(c, "SDL_GetCurrentDisplayMode")) {
-        const mode_ptr = c.SDL_GetCurrentDisplayMode(@intCast(display));
-        if (mode_ptr == null) return false;
-        mode.* = mode_ptr.*;
-        return true;
-    }
-    return false;
+    const mode_ptr = c.SDL_GetCurrentDisplayMode(@intCast(display));
+    if (mode_ptr == null) return false;
+    mode.* = mode_ptr.*;
+    return true;
 }
 
 pub fn startTextInput(window: ?*c.SDL_Window) void {
@@ -285,46 +249,22 @@ pub fn getMouseState(x: *f32, y: *f32) void {
 }
 
 pub fn keyScancode(event: *const c.SDL_Event) i32 {
-    const key = event.key;
-    if (@hasField(@TypeOf(key), "keysym")) {
-        return @intCast(key.keysym.scancode);
-    }
-    if (@hasField(@TypeOf(key), "scancode")) {
-        return @intCast(key.scancode);
-    }
-    return -1;
+    return @intCast(event.key.scancode);
 }
 
 pub fn keySym(event: *const c.SDL_Event) i32 {
-    const key = event.key;
-    if (@hasField(@TypeOf(key), "keysym")) {
-        return @intCast(key.keysym.sym);
-    }
-    if (@hasField(@TypeOf(key), "key")) {
-        return @intCast(key.key);
-    }
-    return 0;
+    return @intCast(event.key.key);
 }
 
 pub fn keyRepeat(event: *const c.SDL_Event) u8 {
-    const key = event.key;
-    if (@hasField(@TypeOf(key), "repeat")) {
-        return if (key.repeat) 1 else 0;
-    }
-    return 0;
+    return if (event.key.repeat) 1 else 0;
 }
 
 pub fn keyModBits(event: *const c.SDL_Event) u32 {
-    const key = event.key;
-    if (@hasField(@TypeOf(key), "mod")) return @intCast(key.mod);
-    if (@hasField(@TypeOf(key), "keysym") and @hasField(@TypeOf(key.keysym), "mod")) {
-        return @intCast(key.keysym.mod);
-    }
-    return 0;
+    return @intCast(event.key.mod);
 }
 
 pub fn keycodeFromScancodeMods(scancode: i32, shift: bool, alt: bool, ctrl: bool, super: bool) i32 {
-    if (!@hasDecl(c, "SDL_GetKeyFromScancode")) return 0;
     var raw_modstate: c_uint = @intCast(c.SDL_KMOD_NONE);
     if (shift) raw_modstate |= @as(c_uint, @intCast(c.SDL_KMOD_SHIFT));
     if (alt) raw_modstate |= @as(c_uint, @intCast(c.SDL_KMOD_ALT));
@@ -353,85 +293,35 @@ pub fn wheelDelta(event: *const c.SDL_Event) f32 {
 }
 
 pub fn textInputSpan(event: *const c.SDL_Event) []const u8 {
-    const text = event.text;
-    if (@hasField(@TypeOf(text), "text")) {
-        return textSpan(text.text);
-    }
-    return "";
+    return textSpan(event.text.text);
 }
 
 pub fn textInputLen(event: *const c.SDL_Event) usize {
-    const text = event.text;
-    if (@hasField(@TypeOf(text), "text")) {
-        if (@hasField(@TypeOf(text), "text_len")) {
-            return @intCast(text.text_len);
-        }
-        if (@hasField(@TypeOf(text), "length")) {
-            return @intCast(text.length);
-        }
-        return textSpan(text.text).len;
-    }
-    return 0;
+    return textSpan(event.text.text).len;
 }
 
 pub fn textInputPointer(event: *const c.SDL_Event) ?usize {
-    const text = event.text;
-    if (@hasField(@TypeOf(text), "text")) {
-        return pointerValue(text.text);
-    }
-    return null;
+    return pointerValue(event.text.text);
 }
 
 pub fn textEditingSpan(event: *const c.SDL_Event) []const u8 {
-    const edit = event.edit;
-    if (@hasField(@TypeOf(edit), "text")) {
-        return textSpan(edit.text);
-    }
-    return "";
+    return textSpan(event.edit.text);
 }
 
 pub fn textEditingLen(event: *const c.SDL_Event) usize {
-    const edit = event.edit;
-    if (@hasField(@TypeOf(edit), "text")) {
-        if (@hasField(@TypeOf(edit), "text_len")) {
-            return @intCast(edit.text_len);
-        }
-        if (@hasField(@TypeOf(edit), "length")) {
-            return @intCast(edit.length);
-        }
-        return textSpan(edit.text).len;
-    }
-    return 0;
+    return textSpan(event.edit.text).len;
 }
 
 pub fn textEditingPointer(event: *const c.SDL_Event) ?usize {
-    const edit = event.edit;
-    if (@hasField(@TypeOf(edit), "text")) {
-        return pointerValue(edit.text);
-    }
-    return null;
+    return pointerValue(event.edit.text);
 }
 
 pub fn textEditingCursor(event: *const c.SDL_Event) i32 {
-    const edit = event.edit;
-    if (@hasField(@TypeOf(edit), "start")) {
-        return @intCast(edit.start);
-    }
-    if (@hasField(@TypeOf(edit), "cursor")) {
-        return @intCast(edit.cursor);
-    }
-    return 0;
+    return @intCast(event.edit.start);
 }
 
 pub fn textEditingSelectionLen(event: *const c.SDL_Event) i32 {
-    const edit = event.edit;
-    if (@hasField(@TypeOf(edit), "length")) {
-        return @intCast(edit.length);
-    }
-    if (@hasField(@TypeOf(edit), "selection_len")) {
-        return @intCast(edit.selection_len);
-    }
-    return 0;
+    return @intCast(event.edit.length);
 }
 
 fn textSpan(field: anytype) []const u8 {
@@ -481,19 +371,11 @@ pub fn displayModeRefreshHz(mode: *const c.SDL_DisplayMode) i32 {
 }
 
 pub fn logSetAllPriority(priority: c.SDL_LogPriority) void {
-    if (@hasDecl(c, "SDL_SetLogPriorities")) {
-        _ = c.SDL_SetLogPriorities(priority);
-    } else {
-        _ = c.SDL_LogSetAllPriority(priority);
-    }
+    _ = c.SDL_SetLogPriorities(priority);
 }
 
 pub fn setTextInputRect(window: ?*c.SDL_Window, rect: *c.SDL_Rect) void {
-    if (@hasDecl(c, "SDL_SetTextInputArea")) {
-        _ = c.SDL_SetTextInputArea(window, rect, 0);
-    } else if (@hasDecl(c, "SDL_SetTextInputRect")) {
-        _ = c.SDL_SetTextInputRect(rect);
-    }
+    _ = c.SDL_SetTextInputArea(window, rect, 0);
 }
 
 pub fn getPerformanceCounter() u64 {
@@ -529,4 +411,4 @@ pub fn freeClipboardData(data: []const u8) void {
     c.SDL_free(@constCast(data.ptr));
 }
 
-pub const scancode_count: usize = if (@hasDecl(c, "SDL_SCANCODE_COUNT")) @intCast(c.SDL_SCANCODE_COUNT) else 512;
+pub const scancode_count: usize = @intCast(c.SDL_SCANCODE_COUNT);

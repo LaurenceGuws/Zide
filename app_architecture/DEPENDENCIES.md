@@ -60,24 +60,20 @@ Track practical migration details for replacing system-managed native dependenci
   - Repository is active and tracks modern Zig.
 - Integration status:
   - `-Dlua-source=zig` now links Lua via ziglua-provided `lua` artifact.
-  - `-Dlua-impl=ziglua` parser path is fully native.
-  - `-Dlua-impl=capi` remains available and can run with either Lua source selector.
+  - Parser path is fully native ziglua.
+  - `-Dlua-impl` selector has been removed.
 
-### Lua backend split scaffold (implemented)
+### Lua backend status
 
-- `src/config/lua_config_capi.zig`: current production C-API implementation (moved intact).
-- `src/config/lua_config_iface.zig`: canonical public API/type contract for backend parity checks.
-- `src/config/lua_config_ziglua.zig`: ziglua backend placeholder with matching signatures.
-- `src/config/lua_config.zig`: facade/selector routing to backend via build option.
-- Build selector:
-  - `-Dlua-impl=capi` (default)
-  - `-Dlua-impl=ziglua` (fully implemented native parser path)
+- `src/config/lua_config_iface.zig`: canonical public API/type contract.
+- `src/config/lua_config_ziglua.zig`: native ziglua implementation.
+- `src/config/lua_config.zig`: thin facade routing directly to ziglua implementation.
 
 The split is behavior-preserving for default builds and enables independent evolution of the two backends.
 
 ### Ziglua package consumption status
 
-- `build.zig` now wires ziglua into the compile graph when `-Dlua-impl=ziglua`:
+- `build.zig` wires ziglua into the compile graph unconditionally for config parsing:
   - Adds dependency via `b.dependency("zlua", ...)`
   - Imports module into app roots as `@import("zlua")`
 - `build.zig` also wires ziglua dependency when `-Dlua-source=zig`:
@@ -86,7 +82,7 @@ The split is behavior-preserving for default builds and enables independent evol
 - Current status:
   - ziglua backend config parsing is native (including keybind parsing, base/editor theme parsing, and editor schema/link resolution).
   - Legacy `lua_config_capi_bridge.zig` shim has been removed.
-  - CAPI backend remains available under `-Dlua-impl=capi`.
+  - No CAPI backend selector remains in build options.
 
 ## Recommended next implementation sequence
 
