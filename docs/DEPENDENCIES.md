@@ -42,6 +42,17 @@ Current status:
 - `-Dlua-source=zig` is intentionally blocked with a fail-fast error while ziglua artifact wiring is stabilized for this toolchain.
 - Use `-Dlua-source=system` for now.
 
+Lua implementation selector (config parser backend):
+
+```bash
+zig build -Dlua-impl=capi
+zig build -Dlua-impl=ziglua
+```
+
+Current status:
+- `-Dlua-impl=ziglua` is fully implemented and buildable.
+- `-Dlua-impl=capi` remains the default for now.
+
 ## Recommended strategy
 - Linux/macOS: system packages for fast local dev.
 - Windows: vcpkg to pin and install native libs consistently.

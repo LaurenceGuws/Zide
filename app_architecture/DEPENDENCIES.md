@@ -69,16 +69,19 @@ Track practical migration details for replacing system-managed native dependenci
 - `src/config/lua_config.zig`: facade/selector routing to backend via build option.
 - Build selector:
   - `-Dlua-impl=capi` (default)
-  - `-Dlua-impl=ziglua` (compiles; runtime implementation intentionally pending)
+  - `-Dlua-impl=ziglua` (fully implemented native parser path)
 
-This split is intentionally behavior-preserving for default builds and enables per-function parallel migration into the ziglua backend without touching callers.
+The split is behavior-preserving for default builds and enables independent evolution of the two backends.
 
 ### Ziglua package consumption status
 
 - `build.zig` now wires ziglua into the compile graph when `-Dlua-impl=ziglua`:
   - Adds dependency via `b.dependency("zlua", ...)`
   - Imports module into app roots as `@import("zlua")`
-- Current ziglua backend still uses parity delegation for non-migrated Lua parser functions, but dependency wiring is now active (not just declared in `.zon`).
+- Current status:
+  - ziglua backend config parsing is native (including keybind parsing, base/editor theme parsing, and editor schema/link resolution).
+  - Legacy `lua_config_capi_bridge.zig` shim has been removed.
+  - CAPI backend remains available under `-Dlua-impl=capi`.
 
 ## Recommended next implementation sequence
 

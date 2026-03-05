@@ -123,7 +123,7 @@ dependencies_todo:
           status: pending
         - id: DEP-03-03
           title: "Parallel migration plan: move lua_config functions to ziglua backend by ownership groups"
-          status: in_progress
+          status: done
           notes:
             - "Ownership group A (lifecycle + merge): loadConfig, freeConfig, mergeConfig, loadConfigFromFile, parseConfigFromStack, parseConfigFromSnippet."
             - "Ownership group B (keybind parsing): parseKeybinds, parseKeybindScope, parseKeyField, parseModsField, parseActionField, parseRepeatField, readModString, applyMod, sameBindingIdentity, mergeKeybinds."
