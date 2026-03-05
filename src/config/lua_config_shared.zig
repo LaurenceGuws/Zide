@@ -5,6 +5,58 @@ pub const Config = iface.Config;
 pub const Theme = iface.Theme;
 pub const ThemeConfig = iface.ThemeConfig;
 
+pub fn fileExists(path: []const u8) bool {
+    if (std.fs.cwd().openFile(path, .{})) |file| {
+        file.close();
+        return true;
+    } else |_| {
+        return false;
+    }
+}
+
+pub fn findUserConfigPath(allocator: std.mem.Allocator) iface.LuaConfigError!?[]u8 {
+    switch (@import("builtin").target.os.tag) {
+        .windows => {
+            const appdata = std.c.getenv("APPDATA") orelse return null;
+            const base = std.mem.sliceTo(appdata, 0);
+            const path = try std.fs.path.join(allocator, &.{ base, "Zide", "init.lua" });
+            if (!fileExists(path)) {
+                allocator.free(path);
+                return null;
+            }
+            return path;
+        },
+        .macos => {
+            const home = std.c.getenv("HOME") orelse return null;
+            const base = std.mem.sliceTo(home, 0);
+            const path = try std.fs.path.join(allocator, &.{ base, "Library", "Application Support", "Zide", "init.lua" });
+            if (!fileExists(path)) {
+                allocator.free(path);
+                return null;
+            }
+            return path;
+        },
+        else => {
+            const xdg = std.c.getenv("XDG_CONFIG_HOME");
+            const home = std.c.getenv("HOME");
+            if (xdg == null and home == null) return null;
+
+            const base = if (xdg) |val| std.mem.sliceTo(val, 0) else blk: {
+                const home_slice = std.mem.sliceTo(home.?, 0);
+                break :blk try std.fs.path.join(allocator, &.{ home_slice, ".config" });
+            };
+            defer if (xdg == null and home != null) allocator.free(base);
+
+            const path = try std.fs.path.join(allocator, &.{ base, "zide", "init.lua" });
+            if (!fileExists(path)) {
+                allocator.free(path);
+                return null;
+            }
+            return path;
+        },
+    }
+}
+
 pub fn emptyConfig() Config {
     return .{
         .log_file_filter = null,
