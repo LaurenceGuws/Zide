@@ -154,11 +154,6 @@ pub const ThemeConfig = struct {
     ansi_colors: [16]?Color = .{null} ** 16,
 };
 
-pub const uses_capi_parse_bridge = false;
-pub const uses_capi_full_config_bridge = false;
-pub const uses_capi_theme_bridge = false;
-pub const uses_capi_keybind_bridge = false;
-
 pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
     var config: Config = emptyConfig();
     if (lua_shared.fileExists("assets/config/init.lua")) {
@@ -894,11 +889,6 @@ pub fn parseKeybinds(allocator: std.mem.Allocator, L: *c.lua_State, idx: c_int) 
     return out.toOwnedSlice(allocator);
 }
 
-pub fn parseKeybindsFromLuaState(allocator: std.mem.Allocator, L: *anyopaque, idx: i32) LuaConfigError![]input_actions.BindSpec {
-    const lua_state: *c.lua_State = @ptrCast(@alignCast(L));
-    return parseKeybinds(allocator, lua_state, @intCast(idx));
-}
-
 fn parseKeybindScope(
     allocator: std.mem.Allocator,
     L: *c.lua_State,
@@ -1433,18 +1423,6 @@ pub fn parseThemeFromTable(L: *c.lua_State, idx: c_int) LuaConfigError!ThemeConf
     c.lua_pop(L, 1);
 
     return theme;
-}
-
-pub fn parseThemeFromLuaState(L: *anyopaque, idx: i32) LuaConfigError!ThemeConfig {
-    const lua_state: *c.lua_State = @ptrCast(@alignCast(L));
-    return parseThemeFromTable(lua_state, @intCast(idx));
-}
-
-pub fn parseEditorThemeFromLuaState(L: *anyopaque, idx: i32) LuaConfigError!ThemeConfig {
-    const lua_state: *c.lua_State = @ptrCast(@alignCast(L));
-    var parsed = try parseThemeFromTable(lua_state, @intCast(idx));
-    applyEditorThemeSchema(lua_state, @intCast(idx), &parsed);
-    return parsed;
 }
 
 fn parseThemePaletteTable(L: *c.lua_State, idx: c_int, theme: *ThemeConfig) void {
