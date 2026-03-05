@@ -220,7 +220,7 @@ pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
     lua_shared.freeConfig(allocator, config);
 }
 
-fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) void {
+pub fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) void {
     if (overlay.log_file_filter) |filter| {
         if (base.log_file_filter) |old| allocator.free(old);
         base.log_file_filter = allocator.dupe(u8, filter) catch base.log_file_filter;
@@ -380,7 +380,7 @@ fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) voi
     }
 }
 
-fn loadConfigFromFile(allocator: std.mem.Allocator, path: []const u8) LuaConfigError!Config {
+pub fn loadConfigFromFile(allocator: std.mem.Allocator, path: []const u8) LuaConfigError!Config {
     const L = c.luaL_newstate() orelse return LuaConfigError.LuaInitFailed;
     defer c.lua_close(L);
     c.luaL_openlibs(L);
@@ -1489,7 +1489,7 @@ test "parseConfigFromSnippet resolves editor theme links transitively" {
     try std.testing.expectEqualDeep(Color{ .r = 0x33, .g = 0x44, .b = 0x55, .a = 0xff }, theme.variable.?);
 }
 
-fn findUserConfigPath(allocator: std.mem.Allocator) LuaConfigError!?[]u8 {
+pub fn findUserConfigPath(allocator: std.mem.Allocator) LuaConfigError!?[]u8 {
     const builtin = @import("builtin");
     switch (builtin.os.tag) {
         .windows => {
@@ -1533,7 +1533,7 @@ fn findUserConfigPath(allocator: std.mem.Allocator) LuaConfigError!?[]u8 {
     }
 }
 
-fn fileExists(path: []const u8) bool {
+pub fn fileExists(path: []const u8) bool {
     if (std.fs.cwd().openFile(path, .{})) |file| {
         file.close();
         return true;
