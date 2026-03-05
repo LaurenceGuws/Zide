@@ -139,6 +139,7 @@ dependencies_todo:
             - "Checkpoint: ziglua parser seam introduced (`lua_config_ziglua_parse.zig`) and routed from backend loader."
             - "Checkpoint: ziglua parser seam now handles nil/non-table short-circuit natively via zlua before bridge fallback."
             - "Checkpoint: ziglua parser seam now applies native top-level scalar overlay (`editor_wrap`, `terminal_focus_report_window`, `terminal_focus_report_pane`, `editor_large_jump_rows`, `sdl_log_level`) over bridge parse output."
+            - "Checkpoint: native scalar overlay expanded (`terminal_cursor_blink`, `terminal_tab_bar_show_single_tab`, `keybinds_no_defaults`, `font_lcd`, `font_autohint`, `text_linear_correction`, `text_gamma`, `text_contrast`, `editor_tab_bar_width_mode`, `terminal_tab_bar_width_mode`, `terminal_cursor_shape`)."
 
     - name: "DEP-04 Tree-sitter packaging decision"
       tasks:
