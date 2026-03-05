@@ -24,49 +24,49 @@ pub const EVENT_MOUSE_WHEEL: c_uint = c.SDL_EVENT_MOUSE_WHEEL;
 
 pub const TextInputLayout = struct {
     size: usize,
-    offset_type: ?usize,
-    offset_reserved: ?usize,
-    offset_timestamp: ?usize,
-    offset_window_id: ?usize,
-    offset_text: ?usize,
+    offset_type: usize,
+    offset_reserved: usize,
+    offset_timestamp: usize,
+    offset_window_id: usize,
+    offset_text: usize,
 };
 
 pub const TextEditingLayout = struct {
     size: usize,
-    offset_type: ?usize,
-    offset_reserved: ?usize,
-    offset_timestamp: ?usize,
-    offset_window_id: ?usize,
-    offset_text: ?usize,
-    offset_start: ?usize,
-    offset_length: ?usize,
-    offset_cursor: ?usize,
-    offset_selection_len: ?usize,
+    offset_type: usize,
+    offset_reserved: usize,
+    offset_timestamp: usize,
+    offset_window_id: usize,
+    offset_text: usize,
+    offset_start: usize,
+    offset_length: usize,
+    offset_cursor: usize,
+    offset_selection_len: usize,
 };
 
 pub fn textInputLayout() TextInputLayout {
     return .{
         .size = @sizeOf(c.SDL_TextInputEvent),
-        .offset_type = fieldOffset(c.SDL_TextInputEvent, "type"),
-        .offset_reserved = fieldOffset(c.SDL_TextInputEvent, "reserved"),
-        .offset_timestamp = fieldOffset(c.SDL_TextInputEvent, "timestamp"),
-        .offset_window_id = fieldOffset(c.SDL_TextInputEvent, "windowID"),
-        .offset_text = fieldOffset(c.SDL_TextInputEvent, "text"),
+        .offset_type = @offsetOf(c.SDL_TextInputEvent, "type"),
+        .offset_reserved = @offsetOf(c.SDL_TextInputEvent, "reserved"),
+        .offset_timestamp = @offsetOf(c.SDL_TextInputEvent, "timestamp"),
+        .offset_window_id = @offsetOf(c.SDL_TextInputEvent, "windowID"),
+        .offset_text = @offsetOf(c.SDL_TextInputEvent, "text"),
     };
 }
 
 pub fn textEditingLayout() TextEditingLayout {
     return .{
         .size = @sizeOf(c.SDL_TextEditingEvent),
-        .offset_type = fieldOffset(c.SDL_TextEditingEvent, "type"),
-        .offset_reserved = fieldOffset(c.SDL_TextEditingEvent, "reserved"),
-        .offset_timestamp = fieldOffset(c.SDL_TextEditingEvent, "timestamp"),
-        .offset_window_id = fieldOffset(c.SDL_TextEditingEvent, "windowID"),
-        .offset_text = fieldOffset(c.SDL_TextEditingEvent, "text"),
-        .offset_start = fieldOffset(c.SDL_TextEditingEvent, "start"),
-        .offset_length = fieldOffset(c.SDL_TextEditingEvent, "length"),
-        .offset_cursor = fieldOffset(c.SDL_TextEditingEvent, "cursor"),
-        .offset_selection_len = fieldOffset(c.SDL_TextEditingEvent, "selection_len"),
+        .offset_type = @offsetOf(c.SDL_TextEditingEvent, "type"),
+        .offset_reserved = @offsetOf(c.SDL_TextEditingEvent, "reserved"),
+        .offset_timestamp = @offsetOf(c.SDL_TextEditingEvent, "timestamp"),
+        .offset_window_id = @offsetOf(c.SDL_TextEditingEvent, "windowID"),
+        .offset_text = @offsetOf(c.SDL_TextEditingEvent, "text"),
+        .offset_start = @offsetOf(c.SDL_TextEditingEvent, "start"),
+        .offset_length = @offsetOf(c.SDL_TextEditingEvent, "length"),
+        .offset_cursor = @offsetOf(c.SDL_TextEditingEvent, "start"),
+        .offset_selection_len = @offsetOf(c.SDL_TextEditingEvent, "length"),
     };
 }
 
@@ -319,13 +319,6 @@ fn textSpan(field: anytype) []const u8 {
         .array => std.mem.span(@as([*:0]const u8, @ptrCast(&field))),
         else => "",
     };
-}
-
-fn fieldOffset(comptime T: type, comptime field: []const u8) ?usize {
-    if (@hasField(T, field)) {
-        return @offsetOf(T, field);
-    }
-    return null;
 }
 
 fn pointerValue(field: anytype) ?usize {
