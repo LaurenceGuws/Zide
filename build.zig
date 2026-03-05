@@ -120,7 +120,6 @@ pub fn build(b: *std.Build) void {
     ) orelse "system";
     const lua_source = parseDependencySource(lua_source_raw);
     build_options.addOption([]const u8, "lua_dependency_source", lua_source_raw);
-    build_options.addOption([]const u8, "lua_impl", "ziglua");
 
     // vcpkg support
     //
