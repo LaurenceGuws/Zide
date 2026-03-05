@@ -169,6 +169,7 @@ dependencies_todo:
             - "Adopt only if it clearly improves reproducibility/maintenance."
             - "Current code still compiles vendored `tree-sitter-zig` parser C (`vendor/tree-sitter-zig/src/parser.c`) for test targets that call `tree_sitter_zig()` directly."
             - "Runtime binaries no longer link vendored `tree-sitter-zig` directly; runtime highlighting uses GrammarManager-loaded grammars."
+            - "Direct symbol usage is now centralized via `src/editor/zig_language.zig` to reduce scatter before packaging migration."
         - id: DEP-04-02
           title: "Decide keep-vendor vs package and document decision"
           status: pending

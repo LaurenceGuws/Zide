@@ -2,13 +2,11 @@ const std = @import("std");
 const Editor = @import("editor/editor.zig").Editor;
 const grammar_manager_mod = @import("editor/grammar_manager.zig");
 const syntax_mod = @import("editor/syntax.zig");
-const ts_api = @import("editor/treesitter_api.zig");
+const zig_language_mod = @import("editor/zig_language.zig");
 const shared_types = @import("types/mod.zig");
 const renderer_mod = @import("ui/renderer.zig");
 const cursor_mod = @import("editor/view/cursor.zig");
 const Selection = @import("editor/types.zig").Selection;
-
-extern "c" fn tree_sitter_zig() *const ts_api.c_api.TSLanguage;
 
 const EditorFixture = struct {
     grammar_manager: grammar_manager_mod.GrammarManager,
@@ -1705,7 +1703,7 @@ test "editor render cache redraws on highlight epoch change" {
         allocator,
         editor.buffer,
         "zig",
-        tree_sitter_zig(),
+        zig_language_mod.language(),
         .{ .highlights = query_path },
         null,
     );
@@ -1950,7 +1948,7 @@ test "editor immediate and cached draw agree for conceal/url highlights" {
         allocator,
         editor.buffer,
         "zig",
-        tree_sitter_zig(),
+        zig_language_mod.language(),
         .{ .highlights = query_path },
         null,
     );

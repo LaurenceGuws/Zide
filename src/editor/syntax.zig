@@ -8,6 +8,7 @@ const TextStore = text_store.TextStore;
 
 const ts_api = @import("treesitter_api.zig");
 const c = ts_api.c_api;
+const zig_language_mod = @import("zig_language.zig");
 
 pub const TSLanguage = ts_api.TSLanguage;
 pub const QueryPaths = grammar_manager_mod.QueryPaths;
@@ -2270,8 +2271,6 @@ fn stringOptEqual(a: ?[]const u8, b: ?[]const u8) bool {
     return std.mem.eql(u8, a.?, b.?);
 }
 
-extern "c" fn tree_sitter_zig() *const c.TSLanguage;
-
 test "map capture kind covers common alias captures" {
     try std.testing.expectEqual(TokenKind.keyword, mapCaptureKind("import"));
     try std.testing.expectEqual(TokenKind.keyword, mapCaptureKind("cImport"));
@@ -2353,7 +2352,7 @@ test "predicates + priority metadata filter highlights" {
         allocator,
         store,
         "zig",
-        tree_sitter_zig(),
+        zig_language_mod.language(),
         .{ .highlights = query_path },
         null,
     );
@@ -2480,7 +2479,7 @@ test "match predicate filters captures" {
         allocator,
         store,
         "zig",
-        tree_sitter_zig(),
+        zig_language_mod.language(),
         .{ .highlights = query_path },
         null,
     );
