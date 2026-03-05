@@ -157,6 +157,7 @@ dependencies_todo:
             - "Checkpoint: `lua_config_capi_bridge.zig` was removed after ziglua path became fully native; CAPI remains available only as its own backend (`-Dlua-impl=capi`)."
             - "Checkpoint: bridge-era scaffolding was removed (`uses_capi_*` flags, bridge helper exports in capi backend, and bridge-specific startup diagnostics)."
             - "Checkpoint: build/runtime now hard-wire config parsing to ziglua and remove `-Dlua-impl` selector surface."
+            - "Checkpoint: `lua_config_iface.zig` now owns config/theme type definitions directly and `lua_config_capi.zig` has been removed from the active source tree."
 
     - name: "DEP-04 Tree-sitter packaging decision"
       tasks:
