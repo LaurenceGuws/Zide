@@ -13,6 +13,7 @@ comptime {
         @compileError("invalid build option lua_impl (expected 'capi' or 'ziglua')");
     }
     if (@TypeOf(backend.loadConfig) != iface.LoadConfigFn) @compileError("lua backend loadConfig signature mismatch");
+    if (@TypeOf(backend.emptyConfig) != iface.EmptyConfigFn) @compileError("lua backend emptyConfig signature mismatch");
     if (@TypeOf(backend.freeConfig) != iface.FreeConfigFn) @compileError("lua backend freeConfig signature mismatch");
     if (@TypeOf(backend.applyThemeConfig) != iface.ApplyThemeConfigFn) @compileError("lua backend applyThemeConfig signature mismatch");
 }
@@ -28,6 +29,10 @@ pub const ThemeConfig = iface.ThemeConfig;
 
 pub fn loadConfig(allocator: std.mem.Allocator) LuaConfigError!Config {
     return backend.loadConfig(allocator);
+}
+
+pub fn emptyConfig() Config {
+    return backend.emptyConfig();
 }
 
 pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
