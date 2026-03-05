@@ -102,7 +102,10 @@ dependencies_todo:
             - "Blocker: package build scripts currently fail against our Zig toolchain with `Build.addStaticLibrary` API mismatch."
             - "Keep `-Dpath` as migration surface and revisit DEP-02 once compatible package revisions are identified."
             - "2026-03-06: extracted build-level text-stack hooks (`linkTextStack`, `addTextStackIncludes`) so future package wiring can be added in one place without per-target churn."
-            - "2026-03-06 retry: attempted direct package wiring via `pkg.machengine.org` `freetype`/`harfbuzz`; still blocked by the same `Build.addStaticLibrary` incompatibility on Zig 0.15.2, so wiring was rolled back to keep build green."
+            - "2026-03-06 retry: initial direct package wiring via `pkg.machengine.org` `freetype`/`harfbuzz` remained blocked by `Build.addStaticLibrary` incompatibility on Zig 0.15.2."
+            - "2026-03-06 follow-up: pinned Zig 0.15.2-compatible forks (`LaurenceGuws/freetype-zig015`, `LaurenceGuws/harfbuzz-zig015`) and re-enabled `-Dpath=zig` text-stack wiring."
+            - "2026-03-06 follow-up: fixed Zide wiring to source freetype from its own dep handle and linked `z` for freetype gzip symbols."
+            - "2026-03-06 parity checkpoint: `zig build`, `zig build test`, `zig build -Dpath=zig`, `zig build test -Dpath=zig`, `zig build -Dpath=zig test-editor`, `zig build -Dpath=zig check-{app,input,editor}-imports`, `zig build -Dpath=zig test-terminal-workspace`, `zig build -Dpath=zig test-terminal-ffi`, `zig build -Dpath=zig test-terminal-focus-reporting`, and `zig build -Dpath=zig test-terminal-kitty-query-parse` pass."
         - id: DEP-02-02
           title: "Validate font shaping/rasterization parity against system path"
           status: pending

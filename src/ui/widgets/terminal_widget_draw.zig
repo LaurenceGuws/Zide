@@ -382,6 +382,7 @@ pub fn draw(
 
                 const buffer = hb.hb_buffer_create();
                 defer hb.hb_buffer_destroy(buffer);
+                hb.hb_buffer_set_content_type(buffer, hb.HB_BUFFER_CONTENT_TYPE_UNICODE);
                 var cc: usize = span_start_col;
                 while (cc < span_end_excl and cc < cols_count) {
                     const ccell = row_cells[cc];

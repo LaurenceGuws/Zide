@@ -1553,6 +1553,7 @@ pub const Renderer = struct {
 
             const buffer = hb.hb_buffer_create();
             defer hb.hb_buffer_destroy(buffer);
+            hb.hb_buffer_set_content_type(buffer, hb.HB_BUFFER_CONTENT_TYPE_UNICODE);
 
             var cp_i = span_start;
             while (cp_i < span_end) : (cp_i += 1) {
