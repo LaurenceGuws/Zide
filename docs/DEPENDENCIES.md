@@ -12,6 +12,36 @@ Zide depends on the following native libraries:
 
 SDL3 is the default build target.
 
+## Dependency source selector
+
+Build defaults to system-managed native libraries:
+
+```bash
+zig build -Ddep-source=system
+```
+
+Optional SDL3 Zig package path:
+
+```bash
+zig build -Ddep-source=zig
+```
+
+Notes:
+- `-Ddep-source=zig` currently switches SDL3 to a Zig package backend (`castholm/SDL`).
+- FreeType, HarfBuzz, and Lua remain system/vcpkg managed in this phase.
+- `-Ddep-source=zig` is currently incompatible with `-Duse-vcpkg=true`.
+- Parity checkpoint (March 5, 2026): `zig build`, `zig build -Ddep-source=zig`, `zig build test`, and `zig build test -Ddep-source=zig` all pass on the current Linux path.
+
+Lua source selector (staged):
+
+```bash
+zig build -Dlua-source=system
+```
+
+Current status:
+- `-Dlua-source=zig` is intentionally blocked with a fail-fast error while ziglua artifact wiring is stabilized for this toolchain.
+- Use `-Dlua-source=system` for now.
+
 ## Recommended strategy
 - Linux/macOS: system packages for fast local dev.
 - Windows: vcpkg to pin and install native libs consistently.
