@@ -68,39 +68,62 @@ fn replyXtgettcap(self: anytype, cap_hex: []const u8) void {
 }
 
 fn writeXtgettcapReply(self: anytype, ok: bool, cap_hex: []const u8, value: ?[]const u8) void {
+    const log = app_logger.logger("terminal.apc");
     var reply = std.ArrayList(u8).empty;
     defer reply.deinit(self.allocator);
 
     const prefix = if (ok) "\x1bP1+r" else "\x1bP0+r";
-    _ = reply.appendSlice(self.allocator, prefix) catch return;
-    _ = reply.appendSlice(self.allocator, cap_hex) catch return;
+    _ = reply.appendSlice(self.allocator, prefix) catch |err| {
+        log.logf(.warning, "xtgettcap reply prefix append failed: {s}", .{@errorName(err)});
+        return;
+    };
+    _ = reply.appendSlice(self.allocator, cap_hex) catch |err| {
+        log.logf(.warning, "xtgettcap reply cap append failed: {s}", .{@errorName(err)});
+        return;
+    };
     if (ok and value != null) {
-        _ = reply.append(self.allocator, '=') catch return;
+        _ = reply.append(self.allocator, '=') catch |err| {
+            log.logf(.warning, "xtgettcap reply separator append failed: {s}", .{@errorName(err)});
+            return;
+        };
         if (!encodeHex(self.allocator, &reply, value.?)) return;
     }
-    _ = reply.appendSlice(self.allocator, "\x1b\\") catch return;
+    _ = reply.appendSlice(self.allocator, "\x1b\\") catch |err| {
+        log.logf(.warning, "xtgettcap reply terminator append failed: {s}", .{@errorName(err)});
+        return;
+    };
     if (self.pty) |*pty_writer| {
         _ = pty_writer.write(reply.items) catch |err| blk: {
-            app_logger.logger("terminal.apc").logf(.warning, "xtgettcap reply write failed len={d} err={s}", .{ reply.items.len, @errorName(err) });
+            log.logf(.warning, "xtgettcap reply write failed len={d} err={s}", .{ reply.items.len, @errorName(err) });
             break :blk 0;
         };
     }
 }
 
 fn writeDecrqssReply(self: anytype, ok: bool, value: ?[]const u8) void {
+    const log = app_logger.logger("terminal.apc");
     var reply = std.ArrayList(u8).empty;
     defer reply.deinit(self.allocator);
 
-    _ = reply.appendSlice(self.allocator, if (ok) "\x1bP1$r" else "\x1bP0$r") catch return;
+    _ = reply.appendSlice(self.allocator, if (ok) "\x1bP1$r" else "\x1bP0$r") catch |err| {
+        log.logf(.warning, "decrqss reply prefix append failed: {s}", .{@errorName(err)});
+        return;
+    };
     if (ok) {
         if (value) |val| {
-            _ = reply.appendSlice(self.allocator, val) catch return;
+            _ = reply.appendSlice(self.allocator, val) catch |err| {
+                log.logf(.warning, "decrqss reply value append failed: {s}", .{@errorName(err)});
+                return;
+            };
         }
     }
-    _ = reply.appendSlice(self.allocator, "\x1b\\") catch return;
+    _ = reply.appendSlice(self.allocator, "\x1b\\") catch |err| {
+        log.logf(.warning, "decrqss reply terminator append failed: {s}", .{@errorName(err)});
+        return;
+    };
     if (self.pty) |*pty_writer| {
         _ = pty_writer.write(reply.items) catch |err| blk: {
-            app_logger.logger("terminal.apc").logf(.warning, "decrqss reply write failed len={d} err={s}", .{ reply.items.len, @errorName(err) });
+            log.logf(.warning, "decrqss reply write failed len={d} err={s}", .{ reply.items.len, @errorName(err) });
             break :blk 0;
         };
     }
@@ -114,6 +137,7 @@ fn xtgettcapValue(name: []const u8) ?[]const u8 {
 }
 
 fn decodeHex(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) bool {
+    const log = app_logger.logger("terminal.apc");
     out.clearRetainingCapacity();
     if (text.len % 2 != 0) return false;
     var i: usize = 0;
@@ -121,16 +145,26 @@ fn decodeHex(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []cons
         const hi = hexNibble(text[i]) orelse return false;
         const lo = hexNibble(text[i + 1]) orelse return false;
         const value: u8 = @as(u8, (hi << 4) | lo);
-        _ = out.append(allocator, value) catch return false;
+        _ = out.append(allocator, value) catch |err| {
+            log.logf(.warning, "dcs decodeHex append failed: {s}", .{@errorName(err)});
+            return false;
+        };
     }
     return true;
 }
 
 fn encodeHex(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) bool {
+    const log = app_logger.logger("terminal.apc");
     const hex = "0123456789ABCDEF";
     for (text) |b| {
-        _ = out.append(allocator, hex[b >> 4]) catch return false;
-        _ = out.append(allocator, hex[b & 0x0f]) catch return false;
+        _ = out.append(allocator, hex[b >> 4]) catch |err| {
+            log.logf(.warning, "dcs encodeHex append hi failed: {s}", .{@errorName(err)});
+            return false;
+        };
+        _ = out.append(allocator, hex[b & 0x0f]) catch |err| {
+            log.logf(.warning, "dcs encodeHex append lo failed: {s}", .{@errorName(err)});
+            return false;
+        };
     }
     return true;
 }
