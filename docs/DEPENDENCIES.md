@@ -12,19 +12,13 @@ Zide depends on the following native libraries:
 
 SDL3 is the default build target.
 
-## Dependency path selector
+## Dependency source policy
 
-Build keeps one migration selector:
-
-```bash
-zig build -Dpath=link
-```
-
-Alternate path label:
-
-```bash
-zig build -Dpath=zig
-```
+Build now uses one stable dependency source policy in normal flow:
+- SDL3: Zig package
+- Lua: Zig package
+- tree-sitter core: Zig package
+- FreeType/HarfBuzz: Zig package on non-vcpkg paths
 
 Binary mode selector (compile-time target isolation):
 
@@ -46,12 +40,10 @@ Behavior:
 - `zig build report-build-all`: runs core mode/bootstrap/policy/target reports in one step.
 
 Notes:
-- SDL3 and Lua are now always Zig package managed in normal flow (`castholm/SDL`, `ziglua` artifact `lua`).
-- Tree-sitter core runtime is now also Zig package managed in normal flow (`tree_sitter/tree-sitter`, artifact `tree-sitter`).
-- `-Dpath` is retained as a migration toggle surface for upcoming dependency moves.
-- Current active migration on this toggle: FreeType/HarfBuzz packaging path.
-- Parity checkpoint (March 6, 2026): `zig build`, `zig build test`, `zig build -Dpath=zig`, and `zig build test -Dpath=zig` pass on the current Linux path.
-- Current `-Dpath=zig` text stack uses pinned Zig 0.15.2-compatible forks:
+- SDL3 and Lua are Zig package managed in normal flow (`castholm/SDL`, `ziglua` artifact `lua`).
+- Tree-sitter core runtime is Zig package managed in normal flow (`tree_sitter/tree-sitter`, artifact `tree-sitter`).
+- FreeType/HarfBuzz are now resolved through Zig package-managed deps on non-vcpkg paths.
+- Current text stack uses pinned Zig 0.15.2-compatible forks:
   - FreeType: `LaurenceGuws/freetype-zig015` (`052a300780531e6ea0ffeafeec28c88eb1bf903a`)
   - HarfBuzz: `LaurenceGuws/harfbuzz-zig015` (`68406a28eea39df8c074a38fefc64c5aa23201b7`)
 

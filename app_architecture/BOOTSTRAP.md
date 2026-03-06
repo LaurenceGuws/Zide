@@ -137,20 +137,10 @@ Mode behavior:
   - `build_utils/ide_graph.zig`: IDE-only extended graph (ffi/tests/tools/gates).
   - `build_utils/step_reports.zig`: focused constructors for build report/check top-level steps.
 
-Dependency path selector:
-
-```bash
-# Default path label
-zig build -Dpath=link
-
-# Alternate migration path label
-zig build -Dpath=zig
-```
-
-Current scope:
-- SDL3 and Lua are Zig package managed in normal flow.
-- FreeType/HarfBuzz remain system (or vcpkg on Windows).
-- `-Dpath` is reserved as the migration toggle for the next dependency move.
+Dependency source scope:
+- SDL3, Lua, and tree-sitter core are Zig package managed in normal flow.
+- FreeType/HarfBuzz are Zig package managed on non-vcpkg paths.
+- Windows continues to use vcpkg integration for platform-native dependency flow.
 
 ## Tree-sitter Grammar Packs
 
