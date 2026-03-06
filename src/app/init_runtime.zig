@@ -6,6 +6,7 @@ const app_theme_utils = @import("theme_utils.zig");
 const app_ui_layout_runtime = @import("ui_layout_runtime.zig");
 const app_tab_bar_width = @import("tab_bar_width.zig");
 const app_modes = @import("modes/mod.zig");
+const app_types = @import("app_state_types.zig");
 const app_shell = @import("../app_shell.zig");
 const app_logger = @import("../app_logger.zig");
 const config_mod = @import("../config/lua_config.zig");
@@ -23,6 +24,31 @@ const TerminalWorkspace = terminal_mod.TerminalWorkspace;
 const Metrics = metrics_mod.Metrics;
 const EditorClusterCache = widgets.EditorClusterCache;
 const EditorRenderCache = editor_render_cache_mod.EditorRenderCache;
+
+fn mapTerminalNewTabStartLocationMode(mode: ?config_mod.TerminalNewTabStartLocationMode) app_types.TerminalNewTabStartLocationMode {
+    return switch (mode orelse .current) {
+        .current => .current,
+        .default => .default,
+    };
+}
+
+fn resolveTerminalDefaultStartLocation(
+    allocator: std.mem.Allocator,
+    configured: ?[]const u8,
+) !?[]u8 {
+    const home = if (std.c.getenv("HOME")) |value| std.mem.sliceTo(value, 0) else null;
+    const raw = configured orelse home orelse return null;
+    if (raw.len == 0) return null;
+
+    if (raw[0] == '~' and home != null) {
+        if (raw.len == 1) return try allocator.dupe(u8, home.?);
+        if (raw.len >= 2 and raw[1] == '/') {
+            return try std.fs.path.join(allocator, &.{ home.?, raw[2..] });
+        }
+    }
+
+    return try allocator.dupe(u8, raw);
+}
 
 pub fn init(comptime AppStateT: type, allocator: std.mem.Allocator, app_mode: app_bootstrap.AppMode) !*AppStateT {
     return try initWithMode(AppStateT, allocator, null, app_mode);
@@ -96,13 +122,7 @@ fn initWithMode(
     _ = try shell.refreshUiScale();
     const app_log = app_logger.logger("app.core");
     app_log.logStdout("logger initialized", .{});
-    app_log.logStdout(
-        "config lua backend: impl={s} dep_path={s}",
-        .{
-            "ziglua",
-            build_options.dependency_path,
-        },
-    );
+    app_log.logStdout("config lua backend: impl={s}", .{"ziglua"});
     const metrics_log = app_logger.logger("terminal.metrics");
     const input_latency_log = app_logger.logger("input.latency");
     const perf_log = app_logger.logger("editor.perf");
@@ -161,6 +181,11 @@ fn initWithMode(
         })
     else
         null;
+    const terminal_default_start_location = try resolveTerminalDefaultStartLocation(
+        allocator,
+        config.terminal_default_start_location,
+    );
+    errdefer if (terminal_default_start_location) |path| allocator.free(path);
     const bootstrap_opts = app_modes.backend.bootstrap.BootstrapOptions{
         .seed_editor_tab = false,
         .seed_terminal_tab = false,
@@ -195,6 +220,8 @@ fn initWithMode(
         .terminal_blink_style = terminal_blink_style,
         .terminal_cursor_style = terminal_cursor_style,
         .terminal_scrollback_rows = config.terminal_scrollback_rows,
+        .terminal_default_start_location = terminal_default_start_location,
+        .terminal_new_tab_start_location = mapTerminalNewTabStartLocationMode(config.terminal_new_tab_start_location),
         .editor_tab_bar_width_mode = app_tab_bar_width.mapMode(config.editor_tab_bar_width_mode),
         .terminal_tab_bar_show_single_tab = config.terminal_tab_bar_show_single_tab orelse false,
         .terminal_tab_bar_width_mode = app_tab_bar_width.mapMode(config.terminal_tab_bar_width_mode),
