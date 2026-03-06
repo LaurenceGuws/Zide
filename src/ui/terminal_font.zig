@@ -1015,7 +1015,12 @@ pub const TerminalFont = struct {
             if (self.upload_buffer_capacity > 0) {
                 self.allocator.free(self.upload_buffer);
             }
-            self.upload_buffer = self.allocator.alloc(u8, needed) catch return null;
+            self.upload_buffer = self.allocator.alloc(u8, needed) catch |err| {
+                if (special_log.enabled_file or special_log.enabled_console) {
+                    special_log.logf(.warning, "special glyph upload buffer alloc failed bytes={d} err={s}", .{ needed, @errorName(err) });
+                }
+                return null;
+            };
             self.upload_buffer_capacity = needed;
         }
         const mask = self.upload_buffer[0..needed];
@@ -1091,7 +1096,12 @@ pub const TerminalFont = struct {
             .width = width,
             .height = height,
         };
-        self.special_glyph_sprites.put(key, sprite) catch return null;
+        self.special_glyph_sprites.put(key, sprite) catch |err| {
+            if (special_log.enabled_file or special_log.enabled_console) {
+                special_log.logf(.warning, "special glyph sprite cache insert failed cp=U+{X} err={s}", .{ codepoint, @errorName(err) });
+            }
+            return null;
+        };
         if (variant == .powerline or isPowerlineCodepoint(codepoint)) {
             special_log.logf(.info, 
                 "sprite_create cp=U+{X} variant={s} path={s} cell={d}x{d} raster={d}x{d} rs={d:.3}",
@@ -1540,11 +1550,21 @@ pub const TerminalFont = struct {
 
         const path = std.mem.sliceTo(@as([*:0]const u8, @ptrCast(file_ptr)), 0);
         if (self.system_faces.getEntry(path)) |entry| {
-            _ = self.system_fallback_by_cp.put(codepoint, @constCast(entry.key_ptr.*)) catch return null;
+            _ = self.system_fallback_by_cp.put(codepoint, @constCast(entry.key_ptr.*)) catch |err| {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(.warning, "fallback cp cache put failed cp={d} path={s} err={s}", .{ codepoint, entry.key_ptr.*, @errorName(err) });
+                }
+                return null;
+            };
             return entry.value_ptr.*;
         }
 
-        const owned = self.allocator.dupe(u8, path) catch return null;
+        const owned = self.allocator.dupe(u8, path) catch |err| {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "fallback path dup failed cp={d} path={s} err={s}", .{ codepoint, path, @errorName(err) });
+            }
+            return null;
+        };
         var keep_owned = false;
         defer if (!keep_owned) self.allocator.free(owned);
 
@@ -1606,9 +1626,15 @@ pub const TerminalFont = struct {
     }
 
     fn ftNewFace(self: *TerminalFont, path: []const u8, out_face: *c.FT_Face) bool {
+        const log = app_logger.logger("terminal.font");
         // FreeType expects a 0-terminated path. Avoid storing the terminator in
         // the hash-map key by allocating a temporary sentinel buffer here.
-        var tmp = self.allocator.alloc(u8, path.len + 1) catch return false;
+        var tmp = self.allocator.alloc(u8, path.len + 1) catch |err| {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "ftNewFace temp path alloc failed len={d} err={s}", .{ path.len + 1, @errorName(err) });
+            }
+            return false;
+        };
         defer self.allocator.free(tmp);
         std.mem.copyForwards(u8, tmp[0..path.len], path);
         tmp[path.len] = 0;
@@ -1623,12 +1649,23 @@ pub const TerminalFont = struct {
     }
 
     fn ftNewFaceFromMemoryFile(self: *TerminalFont, path: []const u8, out_pair: *FacePair) bool {
+        const log = app_logger.logger("terminal.font");
         // Load a file into memory and create a FreeType face from it. This is a
         // fallback for paths that FreeType cannot open directly (encoding or
         // sandbox constraints). The buffer must remain alive.
-        var file = std.fs.openFileAbsolute(path, .{}) catch return false;
+        var file = std.fs.openFileAbsolute(path, .{}) catch |err| {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "ft memory fallback open failed path={s} err={s}", .{ path, @errorName(err) });
+            }
+            return false;
+        };
         defer file.close();
-        const bytes = file.readToEndAlloc(self.allocator, 32 * 1024 * 1024) catch return false;
+        const bytes = file.readToEndAlloc(self.allocator, 32 * 1024 * 1024) catch |err| {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "ft memory fallback read failed path={s} err={s}", .{ path, @errorName(err) });
+            }
+            return false;
+        };
         errdefer self.allocator.free(bytes);
         var face: c.FT_Face = null;
         if (c.FT_New_Memory_Face(self.ft_library, bytes.ptr, @intCast(bytes.len), 0, &face) != 0) {
@@ -1640,9 +1677,15 @@ pub const TerminalFont = struct {
     }
 
     fn windowsFontDir(allocator: std.mem.Allocator) ?[]u8 {
+        const log = app_logger.logger("terminal.font");
         const windir = std.c.getenv("WINDIR") orelse return null;
         const base = std.mem.sliceTo(windir, 0);
-        return std.fs.path.join(allocator, &.{ base, "Fonts" }) catch return null;
+        return std.fs.path.join(allocator, &.{ base, "Fonts" }) catch |err| {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "windows font dir join failed base={s} err={s}", .{ base, @errorName(err) });
+            }
+            return null;
+        };
     }
 
     fn windowsSystemFallback(self: *TerminalFont, codepoint: u32) ?FacePair {
