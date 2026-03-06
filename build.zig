@@ -7,6 +7,7 @@ const target_factory = @import("build_utils/target_factory.zig");
 const step_utils = @import("build_utils/step_utils.zig");
 const vcpkg_paths = @import("build_utils/vcpkg_paths.zig");
 const windows_runtime = @import("build_utils/windows_runtime.zig");
+const app_graph = @import("build_utils/app_graph.zig");
 const ide_graph = @import("build_utils/ide_graph.zig");
 const dependency_resolver = @import("build_utils/dependency_resolver.zig");
 const target_profile = @import("build_utils/target_profile.zig");
@@ -14,65 +15,12 @@ const mode_specs = @import("build_utils/mode_specs.zig");
 const DependencySource = dependency_path.DependencySource;
 const AppLinkContext = app_types.AppLinkContext;
 const parseDependencyPath = dependency_path.parseDependencyPath;
-const addAppExecutable = target_factory.addAppExecutable;
-const configureAppExecutable = target_config.configureAppExecutable;
-const addFocusedModeExecutable = target_factory.addFocusedModeExecutable;
 const resolveVcpkgPaths = vcpkg_paths.resolveVcpkgPaths;
-const addMainModeRunSteps = step_utils.addMainModeRunSteps;
 const MainModeRunSteps = step_utils.MainModeRunSteps;
 const installVcpkgRuntimeDlls = windows_runtime.installVcpkgRuntimeDlls;
+const planIdePrimaryAppGraph = app_graph.planIdePrimaryAppGraph;
+const planFocusedRuntimeAppGraph = app_graph.planFocusedRuntimeAppGraph;
 const planIdeExtendedBuildGraph = ide_graph.planIdeExtendedBuildGraph;
-
-fn planIdePrimaryAppGraph(
-    b: *std.Build,
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-    build_options: *std.Build.Step.Options,
-    zlua_module: *std.Build.Module,
-    app_link_ctx: AppLinkContext,
-    passthrough_args: ?[]const []const u8,
-) MainModeRunSteps {
-    const exe = addAppExecutable(
-        b,
-        target,
-        optimize,
-        build_options,
-        zlua_module,
-        "zide",
-        "src/main.zig",
-    );
-    configureAppExecutable(exe, app_link_ctx, "zide", target_profile.app_main);
-    b.installArtifact(exe);
-    return addMainModeRunSteps(b, b.getInstallStep(), exe, passthrough_args);
-}
-
-fn planFocusedRuntimeAppGraph(
-    b: *std.Build,
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-    build_options: *std.Build.Step.Options,
-    zlua_module: *std.Build.Module,
-    app_link_ctx: AppLinkContext,
-    mode: mode_specs.BuildMode,
-    passthrough_args: ?[]const []const u8,
-) void {
-    const spec = mode_specs.selectedFocusedApp(mode) orelse
-        @panic("dependency policy violation: focused runtime mode requires selected app spec");
-    _ = addFocusedModeExecutable(
-        b,
-        target,
-        optimize,
-        build_options,
-        zlua_module,
-        app_link_ctx,
-        spec.name,
-        spec.root_source_file,
-        spec.profile,
-        spec.run_step_name,
-        spec.run_description,
-        passthrough_args,
-    );
-}
 
 pub fn build(b: *std.Build) void {
     target_profile.assertPolicy();
