@@ -105,7 +105,7 @@ pub fn poll(self: anytype) !void {
             self.state_mutex.unlock();
         }
 
-        if (processed > 0 and (perf_log.enabled_file or perf_log.enabled_console)) {
+        if (processed > 0) {
             const end_ms = std.time.milliTimestamp();
             const elapsed_ms = @as(f64, @floatFromInt(end_ms - start_ms));
             const should_log = elapsed_ms >= 8.0 or queued_bytes >= 1024 * 1024 or processed >= 512 * 1024;
@@ -160,7 +160,7 @@ pub fn poll(self: anytype) !void {
             const elapsed_ms = @as(f64, @floatFromInt(std.time.milliTimestamp() - start_ms));
             io_log.logf(.info, "alt_exit_io_ms={d:.2} bytes={d}", .{ elapsed_ms, processed });
         }
-        if (processed > 0 and (perf_log.enabled_file or perf_log.enabled_console)) {
+        if (processed > 0) {
             const end_ms = std.time.milliTimestamp();
             const elapsed_ms = @as(f64, @floatFromInt(end_ms - start_ms));
             const should_log = elapsed_ms >= 8.0 or processed >= 512 * 1024;

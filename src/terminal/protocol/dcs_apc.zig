@@ -16,11 +16,9 @@ pub fn parseDcs(self: anytype, payload: []const u8) void {
 
 pub fn parseApc(self: anytype, payload: []const u8) void {
     const log = app_logger.logger("terminal.apc");
-    if (log.enabled_file or log.enabled_console) {
-        const max_len: usize = 160;
-        const slice = if (payload.len > max_len) payload[0..max_len] else payload;
-        log.logf(.info, "apc payload len={d} prefix=\"{s}\"", .{ payload.len, slice });
-    }
+    const max_len: usize = 160;
+    const slice = if (payload.len > max_len) payload[0..max_len] else payload;
+    log.logf(.info, "apc payload len={d} prefix=\"{s}\"", .{ payload.len, slice });
     if (payload.len == 0) return;
     if (payload[0] != 'G') return;
     self.parseKittyGraphics(payload[1..]);

@@ -141,7 +141,7 @@ pub const InputRouter = struct {
         for (batch.events.items) |event| {
             if (event == .text) text_events += 1;
         }
-        if (text_events > 0 and (log.enabled_file or log.enabled_console)) {
+        if (text_events > 0) {
             log.logf(.info, "text_input events={d}", .{text_events});
         }
     }

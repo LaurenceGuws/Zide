@@ -16,7 +16,6 @@ pub fn logTextEditing(bytes: usize, cursor: i32, selection: i32) void {
 
 pub fn logTextInputRaw(bytes: []const u8) void {
     const log = app_logger.logger("input.sdl");
-    if (!log.enabled_file and !log.enabled_console) return;
     const preview = if (bytes.len > 32) bytes[0..32] else bytes;
     var buf: [256]u8 = undefined;
     var len: usize = 0;
@@ -38,7 +37,6 @@ pub fn logTextInputLayout(
     offset_text: usize,
 ) void {
     const log = app_logger.logger("input.sdl");
-    if (!log.enabled_file and !log.enabled_console) return;
     log.logf(.info, 
         "textinput layout size={d} event_size={d} type={d} reserved={d} timestamp={d} windowID={d} text={d}",
         .{ size, event_size, offset_type, offset_reserved, offset_timestamp, offset_window_id, offset_text },
@@ -47,7 +45,6 @@ pub fn logTextInputLayout(
 
 pub fn logTextInputPointer(bytes: usize, ptr: ?usize) void {
     const log = app_logger.logger("input.sdl");
-    if (!log.enabled_file and !log.enabled_console) return;
     if (ptr) |addr| {
         log.logf(.info, "textinput ptr=0x{x} bytes={d}", .{ addr, bytes });
     } else {
@@ -57,7 +54,6 @@ pub fn logTextInputPointer(bytes: usize, ptr: ?usize) void {
 
 pub fn logTextEditingRaw(bytes: []const u8, cursor: i32, selection: i32) void {
     const log = app_logger.logger("input.sdl");
-    if (!log.enabled_file and !log.enabled_console) return;
     const preview = if (bytes.len > 32) bytes[0..32] else bytes;
     var buf: [256]u8 = undefined;
     var len: usize = 0;
@@ -83,7 +79,6 @@ pub fn logTextEditingLayout(
     offset_selection_len: usize,
 ) void {
     const log = app_logger.logger("input.sdl");
-    if (!log.enabled_file and !log.enabled_console) return;
     log.logf(.info, 
         "textedit layout size={d} event_size={d} type={d} reserved={d} timestamp={d} windowID={d} text={d} start={d} length={d} cursor={d} selection_len={d}",
         .{ size, event_size, offset_type, offset_reserved, offset_timestamp, offset_window_id, offset_text, offset_start, offset_length, offset_cursor, offset_selection_len },
@@ -92,7 +87,6 @@ pub fn logTextEditingLayout(
 
 pub fn logTextEditingPointer(bytes: usize, cursor: i32, selection: i32, ptr: ?usize) void {
     const log = app_logger.logger("input.sdl");
-    if (!log.enabled_file and !log.enabled_console) return;
     if (ptr) |addr| {
         log.logf(.info, "textedit ptr=0x{x} bytes={d} cursor={d} selection={d}", .{ addr, bytes, cursor, selection });
     } else {
@@ -102,7 +96,6 @@ pub fn logTextEditingPointer(bytes: usize, cursor: i32, selection: i32, ptr: ?us
 
 pub fn logEventBytes(label: []const u8, bytes: []const u8) void {
     const log = app_logger.logger("input.sdl");
-    if (!log.enabled_file and !log.enabled_console) return;
     const preview = if (bytes.len > 64) bytes[0..64] else bytes;
     var buf: [256]u8 = undefined;
     var len: usize = 0;

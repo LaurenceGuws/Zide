@@ -2,7 +2,6 @@ const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 
 pub fn logCsiSequences(log: app_logger.Logger, buf: []const u8) void {
-    if (!(log.enabled_file or log.enabled_console)) return;
     var i: usize = 0;
     while (i + 1 < buf.len) : (i += 1) {
         if (buf[i] != 0x1b or buf[i + 1] != '[') continue;
@@ -162,7 +161,7 @@ pub fn parseThreadMain(session: anytype) void {
             session.output_pending.store(true, .release);
         }
 
-        if (processed > 0 and (perf_log.enabled_file or perf_log.enabled_console)) {
+        if (processed > 0) {
             const end_ms = std.time.milliTimestamp();
             const elapsed_ms = @as(f64, @floatFromInt(end_ms - start_ms));
             const should_log = elapsed_ms >= 8.0 or queued_bytes >= 1024 * 1024 or processed >= 512 * 1024;

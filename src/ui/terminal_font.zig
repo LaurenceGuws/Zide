@@ -451,12 +451,10 @@ pub const TerminalFont = struct {
             ) FacePair {
                 if (fpath) |path_c| {
                     const path_str = std.mem.sliceTo(path_c, 0);
-                    if (log.enabled_file or log.enabled_console) {
-                        if (std.fs.cwd().access(path_str, .{})) |_| {
-                            log.logf(.info, "font load: {s} path={s}", .{ name, path_str });
-                        } else |err| {
-                            log.logf(.info, "font load: {s} path={s} access_err={s}", .{ name, path_str, @errorName(err) });
-                        }
+                    if (std.fs.cwd().access(path_str, .{})) |_| {
+                        log.logf(.info, "font load: {s} path={s}", .{ name, path_str });
+                    } else |err| {
+                        log.logf(.info, "font load: {s} path={s} access_err={s}", .{ name, path_str, @errorName(err) });
                     }
                     var fb_face: c.FT_Face = null;
                     const new_face_err = c.FT_New_Face(library, path_c, 0, &fb_face);
@@ -475,7 +473,7 @@ pub const TerminalFont = struct {
                                 }
                             }
                             _ = c.FT_Select_Size(fb_face, best_idx);
-                        } else if (size_err != 0 and (log.enabled_file or log.enabled_console)) {
+                        } else if (size_err != 0) {
                             log.logf(.info, "font load failed: {s} set_pixel_sizes err={d}", .{ name, size_err });
                         }
                         if (size_err == 0 or (allow_fixed_size and fb_face.*.num_fixed_sizes > 0)) {
@@ -483,11 +481,15 @@ pub const TerminalFont = struct {
                                 applyHbLoadFlags(fb_hb, hb_load_flags_base);
                                 return .{ .face = fb_face, .hb = fb_hb };
                             }
-                                                            log.logf(.info, "font load failed: {s} hb_ft_font_create returned null", .{name});
+                            log.logf(.info, "font load failed: {s} hb_ft_font_create returned null", .{name});
                         }
                         _ = c.FT_Done_Face(fb_face);
-                    } else                         log.logf(.info, "font load failed: {s} FT_New_Face err={d}", .{ name, new_face_err });
-                } else                     log.logf(.info, "font load skipped: {s} path not set", .{name});
+                    } else {
+                        log.logf(.info, "font load failed: {s} FT_New_Face err={d}", .{ name, new_face_err });
+                    }
+                } else {
+                    log.logf(.info, "font load skipped: {s} path not set", .{name});
+                }
                 return .{};
             }
         }.call;
@@ -507,59 +509,59 @@ pub const TerminalFont = struct {
             if (fc.FcInit() != 0) {
                 fc_enabled = true;
                 fc_config = fc.FcConfigGetCurrent();
-            } else                 log.logf(.info, "fontconfig init failed", .{});
+            } else {
+                log.logf(.info, "fontconfig init failed", .{});
+            }
         }
 
-        if (log.enabled_file or log.enabled_console) {
-            const cp_arrow: u32 = 0x21E1; // ⇡
-            const cp_braille: u32 = 0x28FF; // ⣿
-            const cp_emoji: u32 = 0x1F600; // 😀
-            const has_cp = struct {
-                fn call(face_opt: ?c.FT_Face, cp: u32) bool {
-                    if (face_opt) |face| return c.FT_Get_Char_Index(face, cp) != 0;
-                    return false;
-                }
-            }.call;
+        const cp_arrow: u32 = 0x21E1; // ⇡
+        const cp_braille: u32 = 0x28FF; // ⣿
+        const cp_emoji: u32 = 0x1F600; // 😀
+        const has_cp = struct {
+            fn call(face_opt: ?c.FT_Face, cp: u32) bool {
+                if (face_opt) |face| return c.FT_Get_Char_Index(face, cp) != 0;
+                return false;
+            }
+        }.call;
 
-            log.logf(.info, 
-                "font load: primary={d} symbols={d} sym2={d} sym={d} mono={d} sans={d} emoji_color={d} emoji_text={d}",
-                .{
-                    @as(u8, if (ft_face != null) 1 else 0),
-                    @as(u8, if (symbols_pair.face != null) 1 else 0),
-                    @as(u8, if (unicode_symbols2_pair.face != null) 1 else 0),
-                    @as(u8, if (unicode_symbols_pair.face != null) 1 else 0),
-                    @as(u8, if (unicode_mono_pair.face != null) 1 else 0),
-                    @as(u8, if (unicode_sans_pair.face != null) 1 else 0),
-                    @as(u8, if (emoji_color_pair.face != null) 1 else 0),
-                    @as(u8, if (emoji_text_pair.face != null) 1 else 0),
-                },
-            );
-            log.logf(.info, 
-                "glyph coverage: ⇡ p={d} sym={d} s2={d} s={d} m={d} sans={d} | ⣿ p={d} sym={d} s2={d} s={d} m={d} sans={d} | 😀 p={d} sym={d} s2={d} s={d} m={d} sans={d} ec={d} et={d}",
-                .{
-                    @as(u8, if (has_cp(ft_face, cp_arrow)) 1 else 0),
-                    @as(u8, if (has_cp(symbols_pair.face, cp_arrow)) 1 else 0),
-                    @as(u8, if (has_cp(unicode_symbols2_pair.face, cp_arrow)) 1 else 0),
-                    @as(u8, if (has_cp(unicode_symbols_pair.face, cp_arrow)) 1 else 0),
-                    @as(u8, if (has_cp(unicode_mono_pair.face, cp_arrow)) 1 else 0),
-                    @as(u8, if (has_cp(unicode_sans_pair.face, cp_arrow)) 1 else 0),
-                    @as(u8, if (has_cp(ft_face, cp_braille)) 1 else 0),
-                    @as(u8, if (has_cp(symbols_pair.face, cp_braille)) 1 else 0),
-                    @as(u8, if (has_cp(unicode_symbols2_pair.face, cp_braille)) 1 else 0),
-                    @as(u8, if (has_cp(unicode_symbols_pair.face, cp_braille)) 1 else 0),
-                    @as(u8, if (has_cp(unicode_mono_pair.face, cp_braille)) 1 else 0),
-                    @as(u8, if (has_cp(unicode_sans_pair.face, cp_braille)) 1 else 0),
-                    @as(u8, if (has_cp(ft_face, cp_emoji)) 1 else 0),
-                    @as(u8, if (has_cp(symbols_pair.face, cp_emoji)) 1 else 0),
-                    @as(u8, if (has_cp(unicode_symbols2_pair.face, cp_emoji)) 1 else 0),
-                    @as(u8, if (has_cp(unicode_symbols_pair.face, cp_emoji)) 1 else 0),
-                    @as(u8, if (has_cp(unicode_mono_pair.face, cp_emoji)) 1 else 0),
-                    @as(u8, if (has_cp(unicode_sans_pair.face, cp_emoji)) 1 else 0),
-                    @as(u8, if (has_cp(emoji_color_pair.face, cp_emoji)) 1 else 0),
-                    @as(u8, if (has_cp(emoji_text_pair.face, cp_emoji)) 1 else 0),
-                },
-            );
-        }
+        log.logf(.info,
+            "font load: primary={d} symbols={d} sym2={d} sym={d} mono={d} sans={d} emoji_color={d} emoji_text={d}",
+            .{
+                @as(u8, if (ft_face != null) 1 else 0),
+                @as(u8, if (symbols_pair.face != null) 1 else 0),
+                @as(u8, if (unicode_symbols2_pair.face != null) 1 else 0),
+                @as(u8, if (unicode_symbols_pair.face != null) 1 else 0),
+                @as(u8, if (unicode_mono_pair.face != null) 1 else 0),
+                @as(u8, if (unicode_sans_pair.face != null) 1 else 0),
+                @as(u8, if (emoji_color_pair.face != null) 1 else 0),
+                @as(u8, if (emoji_text_pair.face != null) 1 else 0),
+            },
+        );
+        log.logf(.info,
+            "glyph coverage: ⇡ p={d} sym={d} s2={d} s={d} m={d} sans={d} | ⣿ p={d} sym={d} s2={d} s={d} m={d} sans={d} | 😀 p={d} sym={d} s2={d} s={d} m={d} sans={d} ec={d} et={d}",
+            .{
+                @as(u8, if (has_cp(ft_face, cp_arrow)) 1 else 0),
+                @as(u8, if (has_cp(symbols_pair.face, cp_arrow)) 1 else 0),
+                @as(u8, if (has_cp(unicode_symbols2_pair.face, cp_arrow)) 1 else 0),
+                @as(u8, if (has_cp(unicode_symbols_pair.face, cp_arrow)) 1 else 0),
+                @as(u8, if (has_cp(unicode_mono_pair.face, cp_arrow)) 1 else 0),
+                @as(u8, if (has_cp(unicode_sans_pair.face, cp_arrow)) 1 else 0),
+                @as(u8, if (has_cp(ft_face, cp_braille)) 1 else 0),
+                @as(u8, if (has_cp(symbols_pair.face, cp_braille)) 1 else 0),
+                @as(u8, if (has_cp(unicode_symbols2_pair.face, cp_braille)) 1 else 0),
+                @as(u8, if (has_cp(unicode_symbols_pair.face, cp_braille)) 1 else 0),
+                @as(u8, if (has_cp(unicode_mono_pair.face, cp_braille)) 1 else 0),
+                @as(u8, if (has_cp(unicode_sans_pair.face, cp_braille)) 1 else 0),
+                @as(u8, if (has_cp(ft_face, cp_emoji)) 1 else 0),
+                @as(u8, if (has_cp(symbols_pair.face, cp_emoji)) 1 else 0),
+                @as(u8, if (has_cp(unicode_symbols2_pair.face, cp_emoji)) 1 else 0),
+                @as(u8, if (has_cp(unicode_symbols_pair.face, cp_emoji)) 1 else 0),
+                @as(u8, if (has_cp(unicode_mono_pair.face, cp_emoji)) 1 else 0),
+                @as(u8, if (has_cp(unicode_sans_pair.face, cp_emoji)) 1 else 0),
+                @as(u8, if (has_cp(emoji_color_pair.face, cp_emoji)) 1 else 0),
+                @as(u8, if (has_cp(emoji_text_pair.face, cp_emoji)) 1 else 0),
+            },
+        );
 
         const metrics = ft_face.*.size.*.metrics;
         const ascent_raw = @as(f32, @floatFromInt(metrics.ascender)) / 64.0;
