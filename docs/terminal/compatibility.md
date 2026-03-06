@@ -9,12 +9,13 @@ reference terminal implements it.
 
 ## Identity
 
-- Recommended `TERM`: `zide`
+- Recommended `TERM`: `zide-256color`
 - Fallback `TERM`: `xterm-256color`
 - Terminfo source: `terminfo/zide.terminfo`
 - Runtime selection order inside Zide:
-  - `zide` when its terminfo entry is installed
-  - `xterm-kitty` when available but `zide` is not installed
+  - `zide-256color` when available
+  - `xterm-zide` when available
+  - `zide` when available
   - `xterm-256color` as the final fallback
 
 Install the bundled terminfo entry with:
@@ -24,9 +25,8 @@ mkdir -p ~/.terminfo
 tic -x -o ~/.terminfo terminfo/zide.terminfo
 ```
 
-After installation, new shells launched inside Zide will prefer `TERM=zide`.
-If the entry is not installed, Zide falls back to `xterm-kitty` when available,
-otherwise `xterm-256color`.
+After installation, new shells launched inside Zide should prefer `TERM=zide-256color`.
+If the entry is not installed, Zide falls back to `xterm-256color`.
 
 The initial `zide` terminfo entry intentionally keeps `xterm-256color` as its
 base and adds only audited extensions:
@@ -61,8 +61,9 @@ So the current terminfo strategy is:
 ## Capability Discovery
 
 - `TERM`:
-  - primary identity is `zide`
-  - runtime fallback order remains `xterm-kitty`, then `xterm-256color`
+  - primary identity is `zide-256color`
+  - compatibility alias `xterm-zide` is provided by the same terminfo entry
+  - runtime fallback order is `xterm-256color` after Zide-specific identities
 - Primary DA:
   - Zide answers as an xterm-family VT identity for broad compatibility
 - XTGETTCAP (`DCS + q`):
@@ -199,7 +200,7 @@ tic -x -o ~/.terminfo terminfo/zide.terminfo
 Verify the entry is visible:
 
 ```sh
-infocmp zide
+infocmp zide-256color
 ```
 
 Then launch a new shell inside Zide and confirm:
@@ -208,8 +209,8 @@ Then launch a new shell inside Zide and confirm:
 printf '%s\n' "$TERM"
 ```
 
-Expected value is `zide`. If the terminfo entry is not installed yet, expect
-`xterm-kitty` or `xterm-256color` depending on what is available on the host.
+Expected value is `zide-256color` (or `xterm-zide` in compatibility scenarios).
+If the terminfo entry is not installed yet, expect `xterm-256color`.
 
 ## Validation Sources
 

@@ -4,7 +4,7 @@ Date: 2026-02-27
 
 Purpose: define the first embeddable terminal backend surface for Zide.
 
-Status: planning baseline for the beta bridge. This document locks the shape and constraints of the first exported surface before code lands.
+Status: milestone-1 baseline is implemented. This document now describes the active bridge shape and constraints.
 
 ## Why this exists
 
@@ -14,10 +14,10 @@ Zide already has a modular terminal backend:
 - screen model and scrollback
 - immutable render-facing snapshots
 
-What it does not have yet is a productized host boundary. Today the backend is reusable in architecture, but not in packaging:
-- no C ABI
-- no explicit ownership model for foreign callers
-- no standalone smoke consumer outside the Zide UI shell
+What has now landed as a productized host boundary:
+- C ABI exports via `include/zide_terminal_ffi.h`
+- explicit ownership model for foreign callers
+- standalone smoke consumers outside the Zide UI shell
 
 This bridge makes modularity real. If the backend cannot be hosted cleanly outside the current SDL widget stack, the boundary is not finished.
 
@@ -107,6 +107,8 @@ Required operations for milestone 1:
 - `zide_terminal_snapshot_abi_version()`
 - `zide_terminal_event_abi_version()`
 - `zide_terminal_scrollback_abi_version()`
+- `zide_terminal_renderer_metadata_abi_version()`
+- `zide_terminal_renderer_metadata(codepoint, out_metadata)`
 - `zide_terminal_status_string(status)`
 
 The initial API should stay synchronous and polling-based.
@@ -197,26 +199,26 @@ Reason:
 - easy to inspect bytes, structs, and ownership mistakes
 - good fit for opaque-handle and flat-struct validation via `ctypes`
 
-Current smoke flow:
+Current baseline smoke flow:
 1. load the shared library
 2. create a terminal session
 3. resize through the foreign API
-4. feed terminal output bytes through the parser-facing bridge call
+4. feed terminal output bytes through the parser-facing bridge call (`zide_terminal_feed_output`)
 5. acquire a snapshot
 6. inspect title/cwd/cell buffer metadata
 7. drain title/clipboard events
 8. release snapshot and destroy session
 
-Follow-on smoke flow once the embedded PTY path is stabilized:
+Dedicated PTY smoke flow (separate verifier):
 1. use a separate focused verifier
 2. start a shell
 3. send `printf` or `echo`
 4. poll until output arrives
 5. assert output and child exit
 
-Current implementation choice:
+Current implementation split:
 - keep Python `ctypes` as the authoritative no-PTY ownership/lifetime host
-- use a separate Zig verifier executable for PTY-backed startup while the embedded PTY path is being stabilized
+- use a separate Zig verifier executable for PTY-backed startup/polling
 - install a small C header alongside the shared library so non-Python hosts do not reconstruct structs manually
 
 This host is not a product integration. It is contract proof.

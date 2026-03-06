@@ -83,7 +83,7 @@ terminal_ffi_bridge_todo:
       tasks:
         - id: FFI-00-01
           title: "Write bridge design doc and choose the primary exported shape"
-          status: todo
+          status: done
           files_to_add:
             - app_architecture/terminal/FFI_BRIDGE_DESIGN.md
           refs:
@@ -98,7 +98,7 @@ terminal_ffi_bridge_todo:
             - "Expected answer for beta: opaque handles + explicit free functions + flat structs."
         - id: FFI-00-02
           title: "Define bridge success criteria and non-goals"
-          status: todo
+          status: done
           files_to_edit:
             - app_architecture/terminal/FFI_BRIDGE_DESIGN.md
             - app_architecture/PLANNING.md
@@ -232,7 +232,7 @@ terminal_ffi_bridge_todo:
             - "Implemented in `examples/terminal_ffi_smoke/main.py` against `zig-out/lib/libzide-terminal-ffi.so`."
             - "Current smoke proves create/resize/snapshot ownership plus parser-fed title/clipboard event generation; PTY-backed foreign-host smoke remains a separate follow-on slice."
         - id: FFI-04-03
-          title: "Add CI-safe bridge smoke test"
+          title: "Add non-interactive bridge smoke test"
           status: done
           files_to_add:
             - src/terminal_ffi_smoke_tests.zig
@@ -285,10 +285,10 @@ terminal_ffi_bridge_todo:
       - "App layering docs already forbid terminal backend imports from UI/editor layers."
       - "Replay harness and protocol beta surface give the backend a strong correctness base before export work."
     gaps:
-      - "No C ABI or foreign-language-safe ownership model exists yet."
-      - "TerminalSnapshot is still an internal borrowed-slice contract, not an exported bridge contract."
-      - "Host events/actions are implicit across current APIs instead of formalized as a bridge inventory."
-      - "There is no standalone smoke host proving the backend outside Zide's renderer/UI shell."
+      - "Snapshot/event ABIs are baseline and intentionally narrow (title/cwd/clipboard_write/child_exit only for queued events)."
+      - "PTY-backed foreign-host smoke is still a separate stabilization track from the baseline no-PTY contract host."
+      - "Advanced event families (bell, clipboard read requests, open-uri intent, wake notifications) remain deferred."
+      - "Bridge ABI is still beta-level and should not be treated as frozen."
     position:
       - "Treat FFI bridge work as modularity productization: it validates the backend boundary and makes future host integrations credible."
       - "Do not broaden scope into renderer export until the backend bridge is test-backed and boring."

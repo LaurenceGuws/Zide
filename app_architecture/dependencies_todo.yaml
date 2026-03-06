@@ -205,3 +205,20 @@ dependencies_todo:
         - id: DEP-05-02
           title: "Update docs and developer bootstrap once defaults change"
           status: pending
+
+    - name: "DEP-06 Terminal identity + terminfo packaging parity"
+      tasks:
+        - id: DEP-06-01
+          title: "Stabilize terminal TERM identity away from kitty fallback"
+          status: done
+          notes:
+            - "Runtime TERM selection no longer includes xterm-kitty fallback."
+            - "Current preference order: zide-256color -> xterm-zide -> zide -> xterm-256color."
+        - id: DEP-06-02
+          title: "Align bundle vs package terminfo behavior and docs"
+          status: done
+          notes:
+            - "Bundle compiles and ships terminfo payload."
+            - "Bundled TERMINFO export is opt-in (`ZIDE_USE_BUNDLED_TERMINFO=1`)."
+            - "Local package flow installs terminfo entries into `/usr/share/terminfo`."
+            - "Docs updated in `docs/DEPENDENCIES.md`, `app_architecture/DEPENDENCIES.md`, and `docs/terminal/compatibility.md`."

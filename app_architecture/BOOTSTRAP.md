@@ -174,8 +174,7 @@ zig build run
 
 ## Terminal Setup
 
-Install the bundled `zide` terminfo entry for best terminal capability
-detection by shells and TUIs:
+Install the bundled Zide terminfo entry for best terminal capability detection:
 
 ```bash
 mkdir -p ~/.terminfo
@@ -188,8 +187,17 @@ Then start a new shell inside Zide and verify:
 printf '%s\n' "$TERM"
 ```
 
-Expected value is `zide`. If the terminfo entry is not installed yet, Zide
-falls back to `xterm-kitty` when available, otherwise `xterm-256color`.
+Expected value is `zide-256color` (preferred), with `xterm-zide` as compatibility alias.
+
+Runtime TERM fallback order:
+- `zide-256color`
+- `xterm-zide`
+- `zide`
+- `xterm-256color`
+
+Notes:
+- `TERMINFO` may be unset in normal packaged/system installs; this is expected when terminfo is installed under system paths (`/usr/share/terminfo`).
+- Bundled launcher terminfo override is opt-in via `ZIDE_USE_BUNDLED_TERMINFO=1`.
 
 ## Test
 
