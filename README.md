@@ -90,7 +90,7 @@ This is a dev tool workflow (local installs under `~/.local`), not release packa
 ## Dependencies
 
 - Zig package-managed in normal flow: SDL3, Lua, tree-sitter core runtime.
-- Active migration path: FreeType/HarfBuzz under `-Dpath=zig`.
+- Zig package-managed in normal flow: FreeType/HarfBuzz (non-vcpkg paths).
 - Bundled third-party source: `stb_image` C source in-tree.
 - System/runtime package details: see `app_architecture/BOOTSTRAP.md` and `docs/DEPENDENCIES.md`.
 

@@ -2,9 +2,8 @@
 
 ### Current Focus
 - Keep mode-layer extraction stable and continue shrinking `main.zig` ownership through app-runtime module extraction (`app_architecture/app_mode_layering_todo.yaml`).
-- Keep dependency migration robust and documented:
-  - SDL3, Lua, and tree-sitter core are Zig package managed in normal flow.
-  - FreeType/HarfBuzz are the active migration slice on `-Dpath=zig` (`app_architecture/dependencies_todo.yaml`, `app_architecture/DEPENDENCIES.md`).
+- Keep dependency packaging robust and documented:
+  - SDL3, Lua, tree-sitter core, and FreeType/HarfBuzz are Zig package managed in normal flow (non-vcpkg paths).
 - Keep terminal-only distribution healthy:
   - terminal-focused build graph (`-Dmode=terminal`)
   - bundle packaging flow under `tools/bundle_terminal_linux.sh`
@@ -44,5 +43,5 @@
 
 ### Known Risk (High-Level)
 - Focused mode extraction is broad; regressions can hide in runtime wiring if checkpoints are not kept small.
-- `-Dpath=zig` FreeType/HarfBuzz path still needs continued parity attention across environments.
+- FreeType/HarfBuzz pinned package path still needs continued parity attention across environments.
 - Terminal packaging/runtime can drift if terminfo identity docs and launcher behavior are not kept aligned with core.

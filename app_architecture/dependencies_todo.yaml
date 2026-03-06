@@ -61,9 +61,7 @@ dependencies_todo:
           title: "Add dependency source selection interface in build config"
           status: done
           notes:
-            - "Define one explicit selector."
-            - "Current selector: `-Dpath=link|zig`."
-            - "No dependency backend switch yet; interface only."
+            - "Completed historically; selector has since been retired."
         - id: DEP-00-02
           title: "Document dependency migration policy and rollback expectations"
           status: done
@@ -80,14 +78,14 @@ dependencies_todo:
             - "Keep current system-lib backend intact."
             - "Later updated: SDL moved into normal Zig-managed flow."
             - "No behavior changes in runtime code."
-            - "Implemented via `-Dpath=zig` with `castholm/SDL` package (`artifact(\"SDL3\")`)."
-            - "Current state: `-Dpath` no longer gates SDL/Lua; retained for next migration slice."
+            - "Implemented with `castholm/SDL` package (`artifact(\"SDL3\")`)."
+            - "Historical note: this landed before dependency-path selector retirement."
         - id: DEP-01-02
           title: "Parity-check system vs Zig SDL3 builds"
           status: done
           notes:
             - "Record compile/runtime parity notes in architecture docs."
-            - "2026-03-05 (non-GUI parity): `zig build`, `zig build -Dpath=zig`, `zig build test`, and `zig build test -Dpath=zig` all passed."
+            - "2026-03-05 (non-GUI parity): migration-matrix build/test checks passed before selector retirement."
             - "Current caveat line removed after SDL/Lua were moved to normal flow."
             - "2026-03-05 cleanup: removed remaining SDL2-era runtime branches in input/window paths and switched keyboard/text event access to SDL3-only fields. Retained one guarded DPI symbol call (`SDL_GetDisplayDPI`) for SDL3 header-variant compatibility."
 
@@ -95,23 +93,23 @@ dependencies_todo:
       tasks:
         - id: DEP-02-01
           title: "Add optional Zig-managed FreeType/HarfBuzz backend"
-          status: in_progress
+          status: done
           notes:
             - "Research baseline captured in `app_architecture/DEPENDENCIES.md` (package API constraints and migration shape)."
             - "2026-03-05 attempt: direct Mach `freetype` + `harfbuzz` package artifacts were wired and then reverted."
             - "Blocker: package build scripts currently fail against our Zig toolchain with `Build.addStaticLibrary` API mismatch."
-            - "Keep `-Dpath` as migration surface and revisit DEP-02 once compatible package revisions are identified."
+            - "Historical note: this phase originally used a temporary migration selector."
             - "2026-03-06: extracted build-level text-stack hooks (`linkTextStack`, `addTextStackIncludes`) so future package wiring can be added in one place without per-target churn."
             - "2026-03-06 retry: initial direct package wiring via `pkg.machengine.org` `freetype`/`harfbuzz` remained blocked by `Build.addStaticLibrary` incompatibility on Zig 0.15.2."
-            - "2026-03-06 follow-up: pinned Zig 0.15.2-compatible forks (`LaurenceGuws/freetype-zig015`, `LaurenceGuws/harfbuzz-zig015`) and re-enabled `-Dpath=zig` text-stack wiring."
+            - "2026-03-06 follow-up: pinned Zig 0.15.2-compatible forks (`LaurenceGuws/freetype-zig015`, `LaurenceGuws/harfbuzz-zig015`) and enabled package-managed text-stack wiring."
             - "2026-03-06 follow-up: fixed Zide wiring to source freetype from its own dep handle and linked `z` for freetype gzip symbols."
-            - "2026-03-06 parity checkpoint: `zig build`, `zig build test`, `zig build -Dpath=zig`, `zig build test -Dpath=zig`, `zig build -Dpath=zig test-editor`, `zig build -Dpath=zig check-{app,input,editor}-imports`, `zig build -Dpath=zig test-terminal-workspace`, `zig build -Dpath=zig test-terminal-ffi`, `zig build -Dpath=zig test-terminal-focus-reporting`, and `zig build -Dpath=zig test-terminal-kitty-query-parse` pass."
+            - "2026-03-06 parity checkpoint: zig/path matrix was validated before selector retirement."
         - id: DEP-02-02
           title: "Validate font shaping/rasterization parity against system path"
           status: in_progress
           notes:
             - "Use existing terminal/editor/font-sample flows for parity checks."
-            - "2026-03-06 non-GUI parity checkpoint: terminal-focused suites pass on both paths (`link` and `zig`): `test-terminal-focus-reporting`, `test-terminal-kitty-query-parse`, `test-terminal-workspace`, `test-terminal-ffi`."
+            - "2026-03-06 non-GUI parity checkpoint: terminal-focused suites passed across both pre-retirement dependency paths."
             - "Remaining work: manual visual parity passes for terminal/editor/font-sample rasterization and shaping behavior."
 
     - name: "DEP-03 Lua runtime dependency path"
@@ -122,7 +120,7 @@ dependencies_todo:
           notes:
             - "2026-03-05: Lua source migration scaffolded in `build.zig`."
             - "2026-03-05: Zig Lua path enabled and wired to ziglua `artifact(\"lua\")` + emitted include tree."
-            - "Builds confirmed at migration time: `zig build -Dpath=zig` and parser/backend parity checkpoints."
+            - "Builds confirmed at migration time across the migration matrix before selector retirement."
             - "2026-03-05: backend split scaffold landed for config parser migration:"
             - "  - Initial phase used a temporary facade selector during migration."
             - "  - Final phase removed selector/fallbacks and kept native ziglua path only."
@@ -222,3 +220,12 @@ dependencies_todo:
             - "Bundled TERMINFO export is opt-in (`ZIDE_USE_BUNDLED_TERMINFO=1`)."
             - "Local package flow installs terminfo entries into `/usr/share/terminfo`."
             - "Docs updated in `docs/DEPENDENCIES.md`, `app_architecture/DEPENDENCIES.md`, and `docs/terminal/compatibility.md`."
+
+    - name: "DEP-07 Remove dependency-path selector"
+      tasks:
+        - id: DEP-07-01
+          title: "Retire `-Dpath` and legacy link/zig branching"
+          status: done
+          notes:
+            - "Removed `build_utils/dependency_path.zig` and all `dep_path` plumbing."
+            - "Build now uses stable default dependency routing without selector-gated alternate branches."

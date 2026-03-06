@@ -12,7 +12,7 @@ Current state summary:
 - Ongoing extraction track: mode/runtime decomposition to reduce `main.zig` ownership while preserving behavior.
 - Dependency migration baseline has shifted:
   - SDL3, Lua, tree-sitter core are Zig package managed in normal flow.
-  - FreeType/HarfBuzz migration remains the active `-Dpath=zig` slice.
+  - FreeType/HarfBuzz are Zig package managed in normal flow (non-vcpkg paths).
 - Build graph supports focused compile-time app planning (`-Dmode=terminal|editor|ide`).
 - Terminal-only packaging and identity were tightened recently (bundle/runtime/terminfo docs must stay aligned with code).
 

@@ -7,9 +7,8 @@ Track practical migration details for replacing system-managed native dependenci
 ## Current state
 
 - SDL3, Lua, and tree-sitter core resolve through Zig package manager in normal flow (`castholm/SDL`, `ziglua`, `tree_sitter/tree-sitter`).
-- FreeType/HarfBuzz are system (Linux/macOS) and vcpkg (Windows-only automatic path) in default flow, with a working Zig package path behind `-Dpath=zig`.
-- `-Dpath=link|zig` is retained as the migration toggle surface for the next dependency slice.
-- Current active `-Dpath` migration slice: FreeType/HarfBuzz packaging.
+- FreeType/HarfBuzz now also resolve through Zig package manager on non-vcpkg paths.
+- Windows keeps vcpkg integration as the platform-specific dependency path.
 - Build/runtime still link native C/C++ libraries and system libs; package migration changes sourcing/pinning, not language/runtime ABI.
 - `zide-terminal` is now intentionally detached from tree-sitter linking/plumbing; tree-sitter remains linked for main/editor/ide and editor-facing test/ffi targets.
 - Build hygiene guardrail: `zig build check-build-deps` enforces the app target dependency policy in `build.zig` (including terminal no-tree-sitter rule).
@@ -30,9 +29,7 @@ Track practical migration details for replacing system-managed native dependenci
   - Linked unconditionally in current flow.
 - Validation:
   - `zig build`
-  - `zig build -Dpath=zig`
   - `zig build test`
-  - `zig build test -Dpath=zig`
 
 ## Candidate research notes
 
@@ -66,7 +63,7 @@ Track practical migration details for replacing system-managed native dependenci
 
 - Date: March 6, 2026
 - Attempted approach:
-  - Forked and pinned Zig 0.15.2-compatible FreeType/HarfBuzz package repos and wired them behind `-Dpath=zig` using extracted `linkTextStack` / `addTextStackIncludes` hooks.
+  - Forked and pinned Zig 0.15.2-compatible FreeType/HarfBuzz package repos and wired them through extracted `linkTextStack` / `addTextStackIncludes` hooks.
 - Result:
   - Build path is now healthy and passing with pinned forks.
   - Required wiring fix in Zide build graph:
@@ -112,10 +109,10 @@ The split is behavior-preserving for default builds and enables independent evol
 
 ## Recommended next implementation sequence
 
-1. Use `-Dpath` as the single migration selector while moving FreeType/HarfBuzz.
-2. Prototype FreeType/HarfBuzz package wiring in a compile-only branch first.
-3. Only after compile parity is stable, run rendering/shaping parity checks.
-4. Stage Lua after text stack so config runtime regressions are isolated.
+1. Keep FreeType/HarfBuzz pin revisions explicit and updated as upstream catches up.
+2. Continue rendering/shaping parity checks across target environments.
+3. Reduce remaining system-coupled platform links only where safe and measurable.
+4. Keep dependency-policy checks strict so focused binaries stay clean.
 
 ## Non-goals for dependency migration
 
