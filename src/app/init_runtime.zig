@@ -300,6 +300,7 @@ fn initWithMode(
             .query = std.ArrayList(u8).empty,
         },
         .terminal_close_confirm_tab = null,
+        .terminal_window_close_pending = false,
     };
     if (app_modes.ide.isFontSample(app_mode)) {
         state.font_sample_view = try font_sample_view_mod.FontSampleView.init(allocator, shell.rendererPtr());

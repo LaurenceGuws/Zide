@@ -32,6 +32,7 @@ pub fn closeActive(state: anytype, ctx: *anyopaque, hooks: Hooks) !bool {
         if (!workspace.closeActiveTab()) return false;
         state.terminal_close_confirm_tab = null;
         if (workspace.tabCount() == 0) {
+            state.terminal_window_close_pending = false;
             state.shell.requestClose();
         } else {
             try hooks.sync_terminal_mode_tab_bar(ctx);

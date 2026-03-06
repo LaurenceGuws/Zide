@@ -97,6 +97,7 @@ pub const AppState = struct {
     font_sample_screenshot_path: ?[]const u8,
     search_panel: SearchPanelState,
     terminal_close_confirm_tab: ?t.TerminalTabId,
+    terminal_window_close_pending: bool,
 
     pub fn init(allocator: std.mem.Allocator, app_mode: AppMode) !*AppState {
         return try app_state_runtime_wiring.init(AppState, allocator, app_mode);
