@@ -156,6 +156,14 @@ fn linkCommonPlatformGraphics(exe: *std.Build.Step.Compile, target_os: std.Targe
     }
 }
 
+fn addVendorAndStb(step: *std.Build.Step.Compile) void {
+    step.addIncludePath(.{ .cwd_relative = "vendor" });
+    step.addCSourceFile(.{
+        .file = .{ .cwd_relative = "src/c/stb_image.c" },
+        .flags = &.{"-std=c99"},
+    });
+}
+
 fn linkSdlTestGraphics(step: *std.Build.Step.Compile, target_os: std.Target.Os.Tag) void {
     if (target_os == .linux) {
         step.linkSystemLibrary("GL");
@@ -189,7 +197,7 @@ fn configureSdlTestTarget(
     if (include_treesitter) {
         step.linkLibrary(ctx.treesitter);
     }
-    step.addIncludePath(.{ .cwd_relative = "vendor" });
+    addVendorAndStb(step);
     if (include_treesitter) {
         addTreeSitterIncludes(step, ctx.treesitter);
     }
@@ -202,10 +210,6 @@ fn configureSdlTestTarget(
         }
         addLinuxSystemSdlInclude(step, ctx.target_os, ctx.dep_path);
     }
-    step.addCSourceFile(.{
-        .file = .{ .cwd_relative = "src/c/stb_image.c" },
-        .flags = &.{"-std=c99"},
-    });
 }
 
 fn configureAppExecutable(
@@ -234,7 +238,7 @@ fn configureAppExecutable(
     if (ctx.target_os == .linux) {
         exe.linkSystemLibrary("fontconfig");
     }
-    exe.addIncludePath(.{ .cwd_relative = "vendor" });
+    addVendorAndStb(exe);
     if (include_treesitter) {
         addTreeSitterIncludes(exe, ctx.treesitter);
     }
@@ -246,10 +250,6 @@ fn configureAppExecutable(
         }
     }
     linkCommonPlatformGraphics(exe, ctx.target_os);
-    exe.addCSourceFile(.{
-        .file = .{ .cwd_relative = "src/c/stb_image.c" },
-        .flags = &.{"-std=c99"},
-    });
 }
 
 fn addRunStepForArtifact(
@@ -576,11 +576,7 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
-    terminal_ffi.addIncludePath(b.path("vendor"));
-    terminal_ffi.addCSourceFile(.{
-        .file = b.path("src/c/stb_image.c"),
-        .flags = &.{"-std=c99"},
-    });
+    addVendorAndStb(terminal_ffi);
     if (target_os == .windows) {
         terminal_ffi.linkSystemLibrary("user32");
         terminal_ffi.linkSystemLibrary("shell32");
@@ -609,7 +605,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     editor_ffi.linkLibrary(treesitter);
-    editor_ffi.addIncludePath(b.path("vendor"));
+    addVendorAndStb(editor_ffi);
     addTreeSitterIncludes(editor_ffi, treesitter);
     if (target_os == .windows) {
         editor_ffi.linkSystemLibrary("user32");
@@ -784,11 +780,7 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
-    terminal_ffi_tests.addIncludePath(b.path("vendor"));
-    terminal_ffi_tests.addCSourceFile(.{
-        .file = b.path("src/c/stb_image.c"),
-        .flags = &.{"-std=c99"},
-    });
+    addVendorAndStb(terminal_ffi_tests);
     const run_terminal_ffi_tests = b.addRunArtifact(terminal_ffi_tests);
     const terminal_ffi_tests_step = b.step(
         "test-terminal-ffi",
@@ -805,7 +797,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     editor_ffi_tests.linkLibrary(treesitter);
-    editor_ffi_tests.addIncludePath(b.path("vendor"));
+    addVendorAndStb(editor_ffi_tests);
     addTreeSitterIncludes(editor_ffi_tests, treesitter);
     const run_editor_ffi_tests = b.addRunArtifact(editor_ffi_tests);
     const editor_ffi_tests_step = b.step(
@@ -823,11 +815,7 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
-    terminal_ffi_pty_smoke.addIncludePath(b.path("vendor"));
-    terminal_ffi_pty_smoke.addCSourceFile(.{
-        .file = b.path("src/c/stb_image.c"),
-        .flags = &.{"-std=c99"},
-    });
+    addVendorAndStb(terminal_ffi_pty_smoke);
     const run_terminal_ffi_pty_smoke = b.addRunArtifact(terminal_ffi_pty_smoke);
     const terminal_ffi_pty_smoke_step = b.step(
         "test-terminal-ffi-pty",
