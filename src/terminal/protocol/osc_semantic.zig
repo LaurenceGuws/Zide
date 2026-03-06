@@ -143,16 +143,23 @@ fn applySemanticPromptEndInput(self: anytype, text: []const u8) void {
 }
 
 fn applySemanticPromptEndCommand(self: anytype, text: []const u8) void {
+    const log = app_logger.logger("terminal.osc");
     if (text.len == 0) {
         self.semantic_prompt.exit_code = null;
         return;
     }
     if (text.len >= 2 and text[0] == ';') {
         const value = text[1..];
-        self.semantic_prompt.exit_code = std.fmt.parseUnsigned(u8, value, 10) catch null;
+        self.semantic_prompt.exit_code = std.fmt.parseUnsigned(u8, value, 10) catch blk: {
+            log.logf(.debug, "osc semantic exit parse failed value={s}", .{ value });
+            break :blk null;
+        };
         return;
     }
-    self.semantic_prompt.exit_code = std.fmt.parseUnsigned(u8, text, 10) catch null;
+    self.semantic_prompt.exit_code = std.fmt.parseUnsigned(u8, text, 10) catch blk: {
+        log.logf(.debug, "osc semantic exit parse failed value={s}", .{ text });
+        break :blk null;
+    };
 }
 
 fn setSemanticCmdline(self: anytype, value: []const u8) void {
