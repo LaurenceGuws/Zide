@@ -179,6 +179,7 @@ pub const Pty = struct {
     }
 
     pub fn hasData(self: *Pty) bool {
+        const log = app_logger.logger("terminal.io");
         var fds = [1]posix.pollfd{
             .{
                 .fd = self.master_fd,
@@ -186,11 +187,15 @@ pub const Pty = struct {
                 .revents = 0,
             },
         };
-        const rc = posix.poll(&fds, 0) catch return false;
+        const rc = posix.poll(&fds, 0) catch |err| {
+            log.logf(.debug, "pty poll(hasData) failed: {s}", .{@errorName(err)});
+            return false;
+        };
         return rc > 0 and (fds[0].revents & posix.POLL.IN) != 0;
     }
 
     pub fn waitForData(self: *Pty, timeout_ms: i32) bool {
+        const log = app_logger.logger("terminal.io");
         var fds = [1]posix.pollfd{
             .{
                 .fd = self.master_fd,
@@ -198,7 +203,10 @@ pub const Pty = struct {
                 .revents = 0,
             },
         };
-        const rc = posix.poll(&fds, timeout_ms) catch return false;
+        const rc = posix.poll(&fds, timeout_ms) catch |err| {
+            log.logf(.debug, "pty poll(waitForData) failed timeout={d}: {s}", .{ timeout_ms, @errorName(err) });
+            return false;
+        };
         return rc > 0 and (fds[0].revents & posix.POLL.IN) != 0;
     }
 };
@@ -460,10 +468,14 @@ fn terminfoInDir(dir_c: ?[*:0]const u8, name: []const u8) bool {
 }
 
 fn terminfoInDirSlice(dir: []const u8, name: []const u8) bool {
+    const log = app_logger.logger("terminal.env");
     if (dir.len == 0 or name.len == 0) return false;
     var buf: [std.fs.max_path_bytes]u8 = undefined;
     const subdir = name[0];
-    const path = std.fmt.bufPrint(&buf, "{s}/{c}/{s}", .{ dir, subdir, name }) catch return false;
+    const path = std.fmt.bufPrint(&buf, "{s}/{c}/{s}", .{ dir, subdir, name }) catch |err| {
+        log.logf(.warning, "terminfo path format failed dir={s} name={s}: {s}", .{ dir, name, @errorName(err) });
+        return false;
+    };
     if (std.fs.openFileAbsolute(path, .{ .mode = .read_only })) |file| {
         file.close();
         return true;
