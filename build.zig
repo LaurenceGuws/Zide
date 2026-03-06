@@ -267,6 +267,43 @@ fn addRunStepForArtifact(
     return run_step;
 }
 
+fn addFocusedModeExecutable(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    build_options: *std.Build.Step.Options,
+    zlua_module: *std.Build.Module,
+    ctx: AppLinkContext,
+    name: []const u8,
+    root_source_file: []const u8,
+    include_treesitter: bool,
+    run_step_name: []const u8,
+    run_description: []const u8,
+    passthrough_args: ?[]const []const u8,
+) *std.Build.Step.Compile {
+    const exe = addAppExecutable(
+        b,
+        target,
+        optimize,
+        build_options,
+        zlua_module,
+        name,
+        root_source_file,
+    );
+    configureAppExecutable(exe, ctx, name, include_treesitter);
+    b.installArtifact(exe);
+    _ = addRunStepForArtifact(
+        b,
+        b.getInstallStep(),
+        exe,
+        run_step_name,
+        run_description,
+        &.{},
+        passthrough_args,
+    );
+    return exe;
+}
+
 fn addCheckExecutableStep(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
@@ -538,66 +575,48 @@ pub fn build(b: *std.Build) void {
     );
 
     // Focused app entrypoints (same app graph for now, fixed mode roots).
-    const exe_terminal = addAppExecutable(
+    _ = addFocusedModeExecutable(
         b,
         target,
         optimize,
         build_options,
         zlua_module,
+        app_link_ctx,
         "zide-terminal",
         "src/entry_terminal.zig",
-    );
-    configureAppExecutable(exe_terminal, app_link_ctx, "zide-terminal", false);
-    b.installArtifact(exe_terminal);
-    _ = addRunStepForArtifact(
-        b,
-        b.getInstallStep(),
-        exe_terminal,
+        false,
         "run-terminal",
         "Run terminal-only app entry",
-        &.{},
         b.args,
     );
 
-    const exe_editor = addAppExecutable(
+    _ = addFocusedModeExecutable(
         b,
         target,
         optimize,
         build_options,
         zlua_module,
+        app_link_ctx,
         "zide-editor",
         "src/entry_editor.zig",
-    );
-    configureAppExecutable(exe_editor, app_link_ctx, "zide-editor", true);
-    b.installArtifact(exe_editor);
-    _ = addRunStepForArtifact(
-        b,
-        b.getInstallStep(),
-        exe_editor,
+        true,
         "run-editor",
         "Run editor-only app entry",
-        &.{},
         b.args,
     );
 
-    const exe_ide = addAppExecutable(
+    _ = addFocusedModeExecutable(
         b,
         target,
         optimize,
         build_options,
         zlua_module,
+        app_link_ctx,
         "zide-ide",
         "src/entry_ide.zig",
-    );
-    configureAppExecutable(exe_ide, app_link_ctx, "zide-ide", true);
-    b.installArtifact(exe_ide);
-    _ = addRunStepForArtifact(
-        b,
-        b.getInstallStep(),
-        exe_ide,
+        true,
         "run-ide",
         "Run ide-only app entry",
-        &.{},
         b.args,
     );
 
