@@ -500,6 +500,20 @@ pub fn addGateStep(
     return step;
 }
 
+pub fn addSystemCommandStep(
+    b: *std.Build,
+    step_name: []const u8,
+    description: []const u8,
+    cmd_args: []const []const u8,
+    deps: []const *std.Build.Step,
+) *std.Build.Step {
+    const cmd = b.addSystemCommand(cmd_args);
+    const step = b.step(step_name, description);
+    for (deps) |dep| step.dependOn(dep);
+    step.dependOn(&cmd.step);
+    return step;
+}
+
 pub const VcpkgPaths = struct {
     include: ?[]const u8,
     lib: ?[]const u8,
