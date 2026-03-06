@@ -1,3 +1,4 @@
+const std = @import("std");
 const app_modes = @import("modes/mod.zig");
 const app_terminal_grid = @import("terminal_grid.zig");
 const app_terminal_refresh_sizing_runtime = @import("terminal_refresh_sizing_runtime.zig");
@@ -8,6 +9,39 @@ const app_ui_layout_runtime = @import("ui_layout_runtime.zig");
 const terminal_mod = @import("../terminal/core/terminal.zig");
 
 const TerminalSession = terminal_mod.TerminalSession;
+const TerminalWorkspace = terminal_mod.TerminalWorkspace;
+
+const LaunchCwd = struct {
+    value: ?[]const u8 = null,
+    owned: ?[]u8 = null,
+
+    fn deinit(self: *LaunchCwd, allocator: anytype) void {
+        if (self.owned) |path| allocator.free(path);
+        self.* = .{};
+    }
+};
+
+fn fallbackDefaultStartLocation(state: anytype) LaunchCwd {
+    return .{
+        .value = if (state.terminal_default_start_location) |path|
+            if (path.len > 0) path else null
+        else
+            null,
+    };
+}
+
+fn launchCwdForWorkspaceNewTab(state: anytype, workspace: *TerminalWorkspace) !LaunchCwd {
+    switch (state.terminal_new_tab_start_location) {
+        .default => return fallbackDefaultStartLocation(state),
+        .current => {
+            if (workspace.activeSession()) |active| {
+                const cwd = active.currentCwd();
+                if (cwd.len > 0) return .{ .value = cwd };
+            }
+            return fallbackDefaultStartLocation(state);
+        },
+    }
+}
 
 pub fn handle(state: anytype) !void {
     const shell = state.shell;
@@ -33,10 +67,12 @@ pub fn handle(state: anytype) !void {
 
     if (app_modes.ide.shouldUseTerminalWorkspace(state.app_mode)) {
         if (state.terminal_workspace) |*workspace| {
+            var launch_cwd = try launchCwdForWorkspaceNewTab(state, workspace);
+            defer launch_cwd.deinit(state.allocator);
             _ = try workspace.createTab(rows, cols);
             const term = workspace.activeSession() orelse return error.TerminalWorkspaceNoActiveTab;
             app_terminal_theme_apply.setSessionPalette(term, theme);
-            try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, shell);
+            try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, shell, launch_cwd.value);
             const widget = app_terminal_session_bootstrap.initWidget(
                 term,
                 state.terminal_blink_style,
@@ -66,7 +102,9 @@ pub fn handle(state: anytype) !void {
         .cursor_style = state.terminal_cursor_style,
     });
     app_terminal_theme_apply.setSessionPalette(term, theme);
-    try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, shell);
+    var launch_cwd = fallbackDefaultStartLocation(state);
+    defer launch_cwd.deinit(state.allocator);
+    try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, shell, launch_cwd.value);
     try state.terminals.append(state.allocator, term);
     const widget = app_terminal_session_bootstrap.initWidget(
         term,
