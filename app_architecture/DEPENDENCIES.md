@@ -7,7 +7,7 @@ Track practical migration details for replacing system-managed native dependenci
 ## Current state
 
 - SDL3, Lua, and tree-sitter core resolve through Zig package manager in normal flow (`castholm/SDL`, `ziglua`, `tree_sitter/tree-sitter`).
-- FreeType/HarfBuzz are system/vcpkg in default flow, with a working Zig package path behind `-Dpath=zig`.
+- FreeType/HarfBuzz are system (Linux/macOS) and vcpkg (Windows-only automatic path) in default flow, with a working Zig package path behind `-Dpath=zig`.
 - `-Dpath=link|zig` is retained as the migration toggle surface for the next dependency slice.
 - Current active `-Dpath` migration slice: FreeType/HarfBuzz packaging.
 - Build/runtime still link native C/C++ libraries and system libs; package migration changes sourcing/pinning, not language/runtime ABI.

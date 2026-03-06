@@ -137,8 +137,8 @@ windows_impl:
 
   phase_7_ci:
     - id: W7-01
-      title: "Add Windows CI build/test job"
-      status: done
+      title: "Windows CI build/test job (deprecated)"
+      status: obsolete
       notes:
-        - "Added GitHub Actions workflow to run `zig build test` on windows-latest with vcpkg manifest install."
-        - "File: .github/workflows/ci.yml"
+        - "Project policy is no-CI; validation is local/manual."
+        - "Historical CI workflow references are retained only as migration history."
