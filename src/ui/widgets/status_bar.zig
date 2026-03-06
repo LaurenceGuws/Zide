@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
+const app_logger = @import("../../app_logger.zig");
 const common = @import("common.zig");
 const shared_types = @import("../../types/mod.zig");
 
@@ -64,7 +65,13 @@ pub const StatusBar = struct {
 
         // Line/column (reserve space on right)
         var pos_buf: [32]u8 = undefined;
-        const pos_str = std.fmt.bufPrint(&pos_buf, "Ln {d}, Col {d}", .{ line + 1, col + 1 }) catch return;
+        const pos_str = std.fmt.bufPrint(&pos_buf, "Ln {d}, Col {d}", .{ line + 1, col + 1 }) catch |err| {
+            const log = app_logger.logger("ui.status-bar");
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "status bar cursor position format failed err={s}", .{ @errorName(err) });
+            }
+            return;
+        };
         const pos_width = @as(f32, @floatFromInt(pos_str.len)) * shell.charWidth();
         const pos_start = width - pos_width - 16 * scale;
 
