@@ -2,7 +2,7 @@ const std = @import("std");
 const dependency_path = @import("dependency_path.zig");
 
 pub const BuildDependencies = struct {
-    treesitter: *std.Build.Step.Compile,
+    treesitter: ?*std.Build.Step.Compile,
     sdl_lib: *std.Build.Step.Compile,
     zlua_module: *std.Build.Module,
     lua_lib: *std.Build.Step.Compile,
@@ -16,12 +16,16 @@ pub fn resolveDependencies(
     optimize: std.builtin.OptimizeMode,
     dep_path: dependency_path.DependencySource,
     use_vcpkg: bool,
+    need_treesitter: bool,
 ) BuildDependencies {
-    const tree_sitter_dep = b.dependency("tree_sitter", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    const treesitter = tree_sitter_dep.artifact("tree-sitter");
+    const tree_sitter_dep = if (need_treesitter)
+        b.dependency("tree_sitter", .{
+            .target = target,
+            .optimize = optimize,
+        })
+    else
+        null;
+    const treesitter = if (tree_sitter_dep) |dep| dep.artifact("tree-sitter") else null;
 
     const sdl_dep = b.dependency("sdl", .{
         .target = target,

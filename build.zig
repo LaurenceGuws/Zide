@@ -117,6 +117,7 @@ pub fn build(b: *std.Build) void {
         optimize,
         dep_path,
         use_vcpkg,
+        build_mode != .terminal,
     );
     const treesitter = deps.treesitter;
     const sdl_lib = deps.sdl_lib;
@@ -245,9 +246,9 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
-    editor_ffi.linkLibrary(treesitter);
+    editor_ffi.linkLibrary(treesitter.?);
     addVendorAndStb(editor_ffi);
-    addTreeSitterIncludes(editor_ffi, treesitter);
+    addTreeSitterIncludes(editor_ffi, treesitter.?);
     linkFfiPlatform(editor_ffi, target_os);
     const install_editor_ffi = b.addInstallArtifact(editor_ffi, .{});
     const install_editor_ffi_header = b.addInstallFile(b.path("include/zide_editor_ffi.h"), "include/zide_editor_ffi.h");
@@ -331,9 +332,9 @@ pub fn build(b: *std.Build) void {
         "editor-perf-headless",
         "src/editor_perf_main.zig",
     );
-    editor_perf_headless.linkLibrary(treesitter);
+    editor_perf_headless.linkLibrary(treesitter.?);
     editor_perf_headless.addIncludePath(b.path("vendor"));
-    addTreeSitterIncludes(editor_perf_headless, treesitter);
+    addTreeSitterIncludes(editor_perf_headless, treesitter.?);
     const editor_perf_headless_run = addRunArtifactStep(
         b,
         editor_perf_headless,
@@ -391,9 +392,9 @@ pub fn build(b: *std.Build) void {
         optimize,
         "src/editor_ffi_smoke_tests.zig",
     );
-    editor_ffi_tests.linkLibrary(treesitter);
+    editor_ffi_tests.linkLibrary(treesitter.?);
     addVendorAndStb(editor_ffi_tests);
-    addTreeSitterIncludes(editor_ffi_tests, treesitter);
+    addTreeSitterIncludes(editor_ffi_tests, treesitter.?);
     _ = addRunArtifactStep(
         b,
         editor_ffi_tests,
