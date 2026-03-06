@@ -125,6 +125,7 @@ Mode behavior:
 - `ide`: plans full IDE build graph.
 - `terminal` / `editor`: plan only selected app target + run step for lower compile overhead.
 - Build graph moduleization:
+  - `build_utils/bootstrap_graph.zig`: shared build bootstrap/dependency/context setup.
   - `build_utils/app_graph.zig`: primary app graph planners (ide/focused runtime).
   - `build_utils/ide_graph.zig`: IDE-only extended graph (ffi/tests/tools/gates).
 
