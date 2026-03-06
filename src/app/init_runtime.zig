@@ -165,7 +165,10 @@ fn initWithMode(
         .seed_editor_tab = false,
         .seed_terminal_tab = false,
     };
-    const editor_mode_adapter = try app_modes.backend.bootstrap.initEditorMode(allocator, bootstrap_opts);
+    const editor_mode_adapter: ?app_modes.backend.EditorMode = if (app_modes.ide.supportsEditorSurface(app_mode))
+        try app_modes.backend.bootstrap.initEditorMode(allocator, bootstrap_opts)
+    else
+        null;
     const terminal_mode_adapter = try app_modes.backend.bootstrap.initTerminalMode(allocator, bootstrap_opts);
 
     const state = try allocator.create(AppStateT);

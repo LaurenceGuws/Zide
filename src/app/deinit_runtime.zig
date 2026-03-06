@@ -31,7 +31,9 @@ pub fn handle(state: anytype) void {
         grammar_manager.deinit();
     }
     state.input_router.deinit();
-    state.editor_mode_adapter.deinit(state.allocator);
+    if (state.editor_mode_adapter) |*editor_mode_adapter| {
+        editor_mode_adapter.deinit(state.allocator);
+    }
     state.terminal_mode_adapter.deinit(state.allocator);
     state.search_panel.query.deinit(state.allocator);
     if (state.perf_file_path) |path| {
