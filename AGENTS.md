@@ -30,6 +30,13 @@ Follow this workflow for every feature/task:
 - If research was done to create or update a todo item, capture it in the relevant `app_architecture/` doc (not in handoff).
 - See `docs/WORKFLOW.md` for the full workflow + docs usage guide.
 
+## CI policy
+
+- This project does not use CI.
+- CI is explicitly considered counter to the project workflow and should not be introduced.
+- Do not add or suggest GitHub Actions, external CI pipelines, or CI-only gates.
+- Validation is done locally through project build/test commands and manual verification.
+
 ## Logging ownership policy
 
 - `./.zide.lua` logging configuration is owned by the agent, not the user.
