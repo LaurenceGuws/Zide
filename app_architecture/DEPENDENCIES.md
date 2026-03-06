@@ -12,6 +12,7 @@ Track practical migration details for replacing system-managed native dependenci
 - Current active `-Dpath` migration slice: FreeType/HarfBuzz packaging.
 - Build/runtime still link native C/C++ libraries and system libs; package migration changes sourcing/pinning, not language/runtime ABI.
 - `zide-terminal` is now intentionally detached from tree-sitter linking/plumbing; tree-sitter remains linked for main/editor/ide and editor-facing test/ffi targets.
+- Build hygiene guardrail: `zig build check-build-deps` enforces the app target dependency policy in `build.zig` (including terminal no-tree-sitter rule).
 
 ## Implemented package integration
 

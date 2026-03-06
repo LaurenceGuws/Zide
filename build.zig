@@ -875,6 +875,22 @@ pub fn build(b: *std.Build) void {
     const input_import_check_step = b.step("check-input-imports", "Check input module import layering");
     input_import_check_step.dependOn(&run_input_import_check.step);
 
+    const build_dep_policy_check = b.addExecutable(.{
+        .name = "build-dep-policy-check",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/build_dep_policy_check.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_build_dep_policy_check = b.addRunArtifact(build_dep_policy_check);
+    const build_dep_policy_step = b.step("check-build-deps", "Check app target dependency policy wiring");
+    build_dep_policy_step.dependOn(&run_build_dep_policy_check.step);
+
+    const build_dep_report_cmd = b.addSystemCommand(&.{ "bash", "-lc", "rg -n \"configureAppExecutable\\(exe(_terminal|_editor|_ide)?|dependency policy violation\" build.zig" });
+    const build_dep_report_step = b.step("report-build-deps", "Report app target dependency policy wiring");
+    build_dep_report_step.dependOn(&build_dep_report_cmd.step);
+
     const mode_size_report_step = b.step("mode-size-report", "Report focused mode binary sizes");
     mode_size_report_step.dependOn(b.getInstallStep());
     const mode_size_report_cmd = b.addSystemCommand(&.{ "bash", "tools/report_mode_binary_sizes.sh" });
@@ -891,6 +907,7 @@ pub fn build(b: *std.Build) void {
     mode_gates_step.dependOn(app_import_check_step);
     mode_gates_step.dependOn(input_import_check_step);
     mode_gates_step.dependOn(editor_import_check_step);
+    mode_gates_step.dependOn(build_dep_policy_step);
     mode_gates_step.dependOn(b.getInstallStep());
     mode_gates_step.dependOn(mode_size_check_step);
     mode_gates_step.dependOn(terminal_replay_all_step);
@@ -901,6 +918,7 @@ pub fn build(b: *std.Build) void {
     mode_gates_fast_step.dependOn(app_import_check_step);
     mode_gates_fast_step.dependOn(input_import_check_step);
     mode_gates_fast_step.dependOn(editor_import_check_step);
+    mode_gates_fast_step.dependOn(build_dep_policy_step);
     mode_gates_fast_step.dependOn(b.getInstallStep());
     mode_gates_fast_step.dependOn(mode_size_check_step);
 
