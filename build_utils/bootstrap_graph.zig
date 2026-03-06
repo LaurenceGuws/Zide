@@ -7,6 +7,7 @@ const dependency_resolver = @import("dependency_resolver.zig");
 const mode_specs = @import("mode_specs.zig");
 const target_profile = @import("target_profile.zig");
 const step_utils = @import("step_utils.zig");
+const step_reports = @import("step_reports.zig");
 
 const AppLinkContext = app_types.AppLinkContext;
 
@@ -100,25 +101,25 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
     }
     build_options.addOption(bool, "treesitter_enabled", deps.treesitter != null);
 
-    const build_mode_report_step = step_utils.addBuildModeReportStep(
+    const build_mode_report_step = step_reports.addBuildModeReportStep(
         b,
         target,
         optimize,
         build_options,
     );
-    const build_bootstrap_report_step = step_utils.addBuildBootstrapReportStep(
+    const build_bootstrap_report_step = step_reports.addBuildBootstrapReportStep(
         b,
         target,
         optimize,
         build_options,
     );
-    const build_focused_policy_report_step = step_utils.addBuildFocusedModePolicyCheckStep(
+    const build_focused_policy_report_step = step_reports.addBuildFocusedModePolicyCheckStep(
         b,
         target,
         optimize,
         build_options,
     );
-    const build_target_report_step = step_utils.addBuildTargetReportStep(
+    const build_target_report_step = step_reports.addBuildTargetReportStep(
         b,
         target,
         optimize,
