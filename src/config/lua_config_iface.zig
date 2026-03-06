@@ -38,6 +38,11 @@ pub const TerminalDisableLigaturesStrategy = enum {
     always,
 };
 
+pub const TerminalNewTabStartLocationMode = enum {
+    current,
+    default,
+};
+
 pub const TabBarWidthMode = enum {
     fixed,
     dynamic,
@@ -107,6 +112,8 @@ pub const Config = struct {
     terminal_blink_style: ?TerminalBlinkStyle,
     terminal_disable_ligatures: ?TerminalDisableLigaturesStrategy,
     terminal_font_features: ?[]u8,
+    terminal_default_start_location: ?[]u8,
+    terminal_new_tab_start_location: ?TerminalNewTabStartLocationMode,
     terminal_scrollback_rows: ?usize,
     terminal_cursor_shape: ?term_types.CursorShape,
     terminal_cursor_blink: ?bool,

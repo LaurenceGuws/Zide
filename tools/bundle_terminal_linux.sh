@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -lt 2 || $# -gt 3 ]]; then
-  echo "usage: $0 <zide-terminal-bin> <output-dir> [assets-dir]" >&2
+if [[ $# -lt 2 || $# -gt 4 ]]; then
+  echo "usage: $0 <zide-bin> <output-dir> [assets-dir] [mode]" >&2
   exit 2
 fi
 
 BIN_PATH="$1"
 OUT_DIR="$2"
 ASSETS_DIR="${3:-assets}"
+MODE="${4:-auto}"
 BIN_DIR="$OUT_DIR/bin"
 LIB_DIR="$OUT_DIR/lib"
 TERMINFO_DIR="$OUT_DIR/terminfo"
@@ -23,10 +24,65 @@ if [[ ! -d "$ASSETS_DIR" ]]; then
   exit 1
 fi
 
+if [[ "$MODE" == "auto" ]]; then
+  case "$(basename "$BIN_PATH")" in
+    zide-terminal) MODE="terminal" ;;
+    zide-editor) MODE="editor" ;;
+    *) MODE="ide" ;;
+  esac
+fi
+case "$MODE" in
+  terminal|editor|ide) ;;
+  *)
+    echo "invalid mode: $MODE (expected terminal|editor|ide|auto)" >&2
+    exit 1
+    ;;
+esac
+
+copy_assets_for_mode() {
+  local src_root="$1"
+  local dst_root="$2"
+  local mode="$3"
+
+  rm -rf "$dst_root"
+  mkdir -p "$dst_root"
+
+  local -a keep=()
+  case "$mode" in
+    terminal)
+      keep=(
+        config
+        fonts
+        icon
+        terminfo
+      )
+      ;;
+    editor)
+      keep=(
+        config
+        fonts
+        icon
+        queries
+        syntax
+      )
+      ;;
+    ide)
+      cp -a "$src_root/." "$dst_root/"
+      return 0
+      ;;
+  esac
+
+  local entry
+  for entry in "${keep[@]}"; do
+    if [[ -e "$src_root/$entry" ]]; then
+      cp -a "$src_root/$entry" "$dst_root/$entry"
+    fi
+  done
+}
+
 mkdir -p "$BIN_DIR" "$LIB_DIR" "$TERMINFO_DIR"
 cp -f "$BIN_PATH" "$BIN_DIR/zide-terminal"
-rm -rf "$OUT_DIR/assets"
-cp -a "$ASSETS_DIR" "$OUT_DIR/assets"
+copy_assets_for_mode "$ASSETS_DIR" "$OUT_DIR/assets" "$MODE"
 
 # Compile bundled zide terminfo (required for stable TERM=zide behavior).
 if [[ ! -f "terminfo/zide.terminfo" ]]; then
@@ -38,7 +94,7 @@ if ! command -v tic >/dev/null 2>&1; then
   exit 1
 fi
 tic -x -o "$TERMINFO_DIR" "terminfo/zide.terminfo"
-if [[ ! -f "$TERMINFO_DIR/z/zide-256color" && ! -f "$TERMINFO_DIR/z/zide" ]]; then
+if [[ ! -f "$TERMINFO_DIR/x/xterm-zide" && ! -f "$TERMINFO_DIR/z/zide-256color" && ! -f "$TERMINFO_DIR/z/zide" ]]; then
   echo "failed to compile bundled zide terminfo into $TERMINFO_DIR" >&2
   exit 1
 fi
@@ -66,15 +122,25 @@ cat > "$LAUNCHER" <<'EOF'
 set -euo pipefail
 SELF_DIR="$(dirname -- "$(readlink -f -- "$0")")"
 LAUNCH_CWD="${PWD:-$HOME}"
+RUNTIME_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/zide-terminal"
 export LD_LIBRARY_PATH="$SELF_DIR/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-if [[ -f "$SELF_DIR/terminfo/z/zide-256color" || -f "$SELF_DIR/terminfo/z/zide" ]]; then
+if [[ "${ZIDE_USE_BUNDLED_TERMINFO:-0}" == "1" ]] && [[ -f "$SELF_DIR/terminfo/x/xterm-zide" || -f "$SELF_DIR/terminfo/z/zide-256color" || -f "$SELF_DIR/terminfo/z/zide" ]]; then
   export TERMINFO="$SELF_DIR/terminfo"
-  export TERMINFO_DIRS="$SELF_DIR/terminfo${TERMINFO_DIRS:+:$TERMINFO_DIRS}:/usr/share/terminfo:/usr/lib/terminfo:/lib/terminfo:/etc/terminfo"
+  _ZIDE_TERMINFO_DIRS="$SELF_DIR/terminfo${TERMINFO_DIRS:+:$TERMINFO_DIRS}:/usr/share/terminfo:/usr/lib/terminfo:/lib/terminfo:/etc/terminfo"
+  export TERMINFO_DIRS="$_ZIDE_TERMINFO_DIRS"
+  unset _ZIDE_TERMINFO_DIRS
 fi
 export ZIDE_LAUNCH_CWD="$LAUNCH_CWD"
-cd "$SELF_DIR"
+
+mkdir -p "$RUNTIME_DIR"
+ln -sfn "$SELF_DIR/assets" "$RUNTIME_DIR/assets"
+if [[ -f "$SELF_DIR/.zide.lua" ]]; then
+  ln -sfn "$SELF_DIR/.zide.lua" "$RUNTIME_DIR/.zide.lua"
+fi
+
+cd "$RUNTIME_DIR"
 exec "$SELF_DIR/bin/zide-terminal" "$@"
 EOF
 chmod +x "$LAUNCHER"
 
-echo "bundled terminal at: $OUT_DIR"
+echo "bundled terminal at: $OUT_DIR (mode=$MODE)"

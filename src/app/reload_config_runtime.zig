@@ -7,6 +7,32 @@ const app_terminal_theme_apply = @import("terminal_theme_apply.zig");
 const app_theme_utils = @import("theme_utils.zig");
 const config_mod = @import("../config/lua_config.zig");
 const term_types = @import("../terminal/model/types.zig");
+const app_types = @import("app_state_types.zig");
+
+fn mapTerminalNewTabStartLocationMode(mode: ?config_mod.TerminalNewTabStartLocationMode) app_types.TerminalNewTabStartLocationMode {
+    return switch (mode orelse .current) {
+        .current => .current,
+        .default => .default,
+    };
+}
+
+fn resolveTerminalDefaultStartLocation(
+    allocator: std.mem.Allocator,
+    configured: ?[]const u8,
+) !?[]u8 {
+    const home = if (std.c.getenv("HOME")) |value| std.mem.sliceTo(value, 0) else null;
+    const raw = configured orelse home orelse return null;
+    if (raw.len == 0) return null;
+
+    if (raw[0] == '~' and home != null) {
+        if (raw.len == 1) return try allocator.dupe(u8, home.?);
+        if (raw.len >= 2 and raw[1] == '/') {
+            return try std.fs.path.join(allocator, &.{ home.?, raw[2..] });
+        }
+    }
+
+    return try allocator.dupe(u8, raw);
+}
 
 pub const Hooks = struct {
     refresh_terminal_sizing: *const fn (*anyopaque) anyerror!void,
@@ -140,6 +166,21 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
     if (config.terminal_scrollback_rows != null) {
         state.terminal_scrollback_rows = config.terminal_scrollback_rows;
         log.logStdout("reload note: terminal scrollback cap applies to new sessions", .{});
+    }
+    {
+        const next_default_start_location = try resolveTerminalDefaultStartLocation(
+            state.allocator,
+            config.terminal_default_start_location,
+        );
+        if (state.terminal_default_start_location) |old| {
+            state.allocator.free(old);
+        }
+        state.terminal_default_start_location = next_default_start_location;
+        state.terminal_new_tab_start_location = mapTerminalNewTabStartLocationMode(config.terminal_new_tab_start_location);
+        log.logStdout("reload terminal.start_location default={s} new_tab={s}", .{
+            state.terminal_default_start_location orelse "<unset>",
+            @tagName(state.terminal_new_tab_start_location),
+        });
     }
     if (config.terminal_tab_bar_show_single_tab != null) {
         state.terminal_tab_bar_show_single_tab = config.terminal_tab_bar_show_single_tab.?;

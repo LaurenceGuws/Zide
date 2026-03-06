@@ -42,6 +42,9 @@ pub fn handle(state: anytype) void {
     if (state.perf_file_path) |path| {
         state.allocator.free(path);
     }
+    if (state.terminal_default_start_location) |path| {
+        state.allocator.free(path);
+    }
     app_logger.deinit();
     state.allocator.destroy(state);
 }

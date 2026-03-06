@@ -15,6 +15,7 @@ pub const FontHinting = iface.FontHinting;
 pub const GlyphOverflowPolicy = iface.GlyphOverflowPolicy;
 pub const TerminalBlinkStyle = iface.TerminalBlinkStyle;
 pub const TerminalDisableLigaturesStrategy = iface.TerminalDisableLigaturesStrategy;
+pub const TerminalNewTabStartLocationMode = iface.TerminalNewTabStartLocationMode;
 pub const TabBarWidthMode = iface.TabBarWidthMode;
 pub const ThemeConfig = iface.ThemeConfig;
 

@@ -30,3 +30,8 @@ zig-cache/terminal-replay
 # vcpkg (manifest-mode install directory)
 vcpkg_installed/
 /zig-cache
+
+# Local packaging build outputs (keep PKGBUILD/README sources only)
+packaging/local/**/pkg/
+packaging/local/**/src/
+packaging/local/**/*.pkg.tar.*

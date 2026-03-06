@@ -16,6 +16,7 @@ const FontHinting = std.meta.Child(@TypeOf((@as(Config, undefined)).font_hinting
 const GlyphOverflow = std.meta.Child(@TypeOf((@as(Config, undefined)).font_glyph_overflow));
 const TerminalBlinkStyle = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_blink_style));
 const LigatureStrategy = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_disable_ligatures));
+const TerminalNewTabStartLocationMode = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_new_tab_start_location));
 const terminal_scrollback_default: usize = 1000;
 const terminal_scrollback_min: usize = 100;
 const terminal_scrollback_max: usize = 100000;
@@ -130,6 +131,12 @@ fn parseLigatureStrategyFromString(value: []const u8) ?LigatureStrategy {
     if (std.mem.eql(u8, value, "never")) return .never;
     if (std.mem.eql(u8, value, "cursor")) return .cursor;
     if (std.mem.eql(u8, value, "always")) return .always;
+    return null;
+}
+
+fn parseTerminalNewTabStartLocationModeFromString(value: []const u8) ?TerminalNewTabStartLocationMode {
+    if (std.mem.eql(u8, value, "current")) return .current;
+    if (std.mem.eql(u8, value, "default")) return .default;
     return null;
 }
 
@@ -935,6 +942,24 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     }
     lua.pop(1);
 
+    _ = lua.getField(table_index, "terminal_default_start_location");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| {
+            replaceOwnedString(allocator, &out.terminal_default_start_location, try allocator.dupe(u8, v));
+        } else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "terminal_new_tab_start_location");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| {
+            if (parseTerminalNewTabStartLocationModeFromString(v)) |mode| {
+                out.terminal_new_tab_start_location = mode;
+            }
+        } else |_| {}
+    }
+    lua.pop(1);
+
     _ = lua.getField(table_index, "editor_tab_bar_width_mode");
     if (lua.isString(-1)) {
         if (lua.toString(-1)) |v| {
@@ -1180,6 +1205,29 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             lua.pop(1);
             _ = lua.getField(focus_idx, "pane");
             if (lua.isBoolean(-1)) out.terminal_focus_report_pane = lua.toBoolean(-1);
+            lua.pop(1);
+        }
+        lua.pop(1);
+
+        _ = lua.getField(terminal_idx, "start_location");
+        if (lua.isTable(-1)) {
+            const start_location_idx = lua.absIndex(-1);
+            _ = lua.getField(start_location_idx, "default");
+            if (lua.isString(-1)) {
+                if (lua.toString(-1)) |v| {
+                    replaceOwnedString(allocator, &out.terminal_default_start_location, try allocator.dupe(u8, v));
+                } else |_| {}
+            }
+            lua.pop(1);
+
+            _ = lua.getField(start_location_idx, "new_tab");
+            if (lua.isString(-1)) {
+                if (lua.toString(-1)) |v| {
+                    if (parseTerminalNewTabStartLocationModeFromString(v)) |mode| {
+                        out.terminal_new_tab_start_location = mode;
+                    }
+                } else |_| {}
+            }
             lua.pop(1);
         }
         lua.pop(1);

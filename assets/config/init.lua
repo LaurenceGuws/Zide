@@ -296,6 +296,15 @@ return {
         -- blink = "kitty",
         -- Scrollback line cap (min 100, max 100000). Invalid values warn and fall back to 1000.
         scrollback = 10000,
+        -- Terminal start-location policy.
+        -- default: directory used for first terminal startup and as fallback.
+        -- new_tab:
+        --   "current" -> inherit active tab cwd when available (default)
+        --   "default" -> always start tabs at start_location.default
+        start_location = {
+            default = os.getenv("HOME"),
+            new_tab = "current",
+        },
         -- Tab bar visibility in --mode terminal:
         -- false: hide tab bar until there are 2+ tabs (default)
         -- true: always show tab bar, even with a single tab

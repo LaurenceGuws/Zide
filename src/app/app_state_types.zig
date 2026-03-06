@@ -48,6 +48,10 @@ pub const InputRouter = input_actions.InputRouter;
 pub const EditorMode = app_modes.backend.EditorMode;
 pub const TerminalMode = app_modes.backend.TerminalMode;
 pub const FontSampleView = font_sample_view_mod.FontSampleView;
+pub const TerminalNewTabStartLocationMode = enum {
+    current,
+    default,
+};
 
 pub const SearchPanelState = struct {
     active: bool,
