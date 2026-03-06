@@ -304,6 +304,72 @@ fn addFocusedModeExecutable(
     return exe;
 }
 
+fn addSdlConfiguredTest(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    root_source_file: []const u8,
+    build_options: ?*std.Build.Step.Options,
+    ctx: AppLinkContext,
+    include_treesitter: bool,
+    include_text_stack: bool,
+    include_lua: bool,
+    include_fontconfig: bool,
+) *std.Build.Step.Compile {
+    const test_target = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path(root_source_file),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    if (build_options) |opts| {
+        test_target.root_module.addOptions("build_options", opts);
+    }
+    configureSdlTestTarget(
+        test_target,
+        ctx,
+        include_treesitter,
+        include_text_stack,
+        include_lua,
+        include_fontconfig,
+    );
+    return test_target;
+}
+
+fn addSdlConfiguredExecutable(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    name: []const u8,
+    root_source_file: []const u8,
+    ctx: AppLinkContext,
+    include_treesitter: bool,
+    include_text_stack: bool,
+    include_lua: bool,
+    include_fontconfig: bool,
+) *std.Build.Step.Compile {
+    const exe = b.addExecutable(.{
+        .name = name,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path(root_source_file),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    configureSdlTestTarget(
+        exe,
+        ctx,
+        include_treesitter,
+        include_text_stack,
+        include_lua,
+        include_fontconfig,
+    );
+    return exe;
+}
+
 fn addCheckExecutableStep(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
@@ -664,55 +730,63 @@ pub fn build(b: *std.Build) void {
     // ─────────────────────────────────────────────────────────────────────────
     // Tests
     // ─────────────────────────────────────────────────────────────────────────
-    const unit_tests = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-    unit_tests.root_module.addOptions("build_options", build_options);
-    configureSdlTestTarget(unit_tests, app_link_ctx, true, false, false, false);
+    const unit_tests = addSdlConfiguredTest(
+        b,
+        target,
+        optimize,
+        "src/main.zig",
+        build_options,
+        app_link_ctx,
+        true,
+        false,
+        false,
+        false,
+    );
 
     const test_step = addRunArtifactStep(b, unit_tests, "test", "Run unit tests").step;
 
-    const editor_tests_root = b.createModule(.{
-        .root_source_file = b.path("src/tests_main.zig"),
-        .target = target,
-        .optimize = optimize,
-        .link_libc = true,
-    });
-    const editor_tests = b.addTest(.{
-        .root_module = editor_tests_root,
-    });
-    editor_tests_root.addOptions("build_options", build_options);
-    configureSdlTestTarget(editor_tests, app_link_ctx, true, true, true, false);
+    const editor_tests = addSdlConfiguredTest(
+        b,
+        target,
+        optimize,
+        "src/tests_main.zig",
+        build_options,
+        app_link_ctx,
+        true,
+        true,
+        true,
+        false,
+    );
 
     _ = addRunArtifactStep(b, editor_tests, "test-editor", "Run editor-specific tests").step;
 
-    const config_tests = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/config_tests.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-    configureSdlTestTarget(config_tests, app_link_ctx, false, true, true, true);
+    const config_tests = addSdlConfiguredTest(
+        b,
+        target,
+        optimize,
+        "src/config_tests.zig",
+        null,
+        app_link_ctx,
+        false,
+        true,
+        true,
+        true,
+    );
 
     _ = addRunArtifactStep(b, config_tests, "test-config", "Run Lua config parser/merge tests").step;
 
-    const terminal_replay_exe = b.addExecutable(.{
-        .name = "terminal-replay",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/terminal_replay_main.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-    configureSdlTestTarget(terminal_replay_exe, app_link_ctx, false, false, false, false);
+    const terminal_replay_exe = addSdlConfiguredExecutable(
+        b,
+        target,
+        optimize,
+        "terminal-replay",
+        "src/terminal_replay_main.zig",
+        app_link_ctx,
+        false,
+        false,
+        false,
+        false,
+    );
 
     const terminal_replay = addRunArtifactStep(
         b,
@@ -764,15 +838,18 @@ pub fn build(b: *std.Build) void {
     );
     editor_perf_gate_step.dependOn(&editor_perf_gate_cmd.step);
 
-    const terminal_kitty_query_tests = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/terminal_kitty_query_parse_tests.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-    configureSdlTestTarget(terminal_kitty_query_tests, app_link_ctx, false, false, false, false);
+    const terminal_kitty_query_tests = addSdlConfiguredTest(
+        b,
+        target,
+        optimize,
+        "src/terminal_kitty_query_parse_tests.zig",
+        null,
+        app_link_ctx,
+        false,
+        false,
+        false,
+        false,
+    );
     _ = addRunArtifactStep(
         b,
         terminal_kitty_query_tests,
@@ -780,15 +857,18 @@ pub fn build(b: *std.Build) void {
         "Run project-integrated kitty query parse-path tests",
     ).step;
 
-    const terminal_focus_reporting_tests = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/terminal_focus_reporting_tests.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-    configureSdlTestTarget(terminal_focus_reporting_tests, app_link_ctx, false, false, false, false);
+    const terminal_focus_reporting_tests = addSdlConfiguredTest(
+        b,
+        target,
+        optimize,
+        "src/terminal_focus_reporting_tests.zig",
+        null,
+        app_link_ctx,
+        false,
+        false,
+        false,
+        false,
+    );
     _ = addRunArtifactStep(
         b,
         terminal_focus_reporting_tests,
@@ -796,15 +876,18 @@ pub fn build(b: *std.Build) void {
         "Run project-integrated terminal focus reporting tests",
     ).step;
 
-    const terminal_workspace_tests = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/terminal_workspace_tests.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-    configureSdlTestTarget(terminal_workspace_tests, app_link_ctx, false, false, false, false);
+    const terminal_workspace_tests = addSdlConfiguredTest(
+        b,
+        target,
+        optimize,
+        "src/terminal_workspace_tests.zig",
+        null,
+        app_link_ctx,
+        false,
+        false,
+        false,
+        false,
+    );
     _ = addRunArtifactStep(
         b,
         terminal_workspace_tests,
