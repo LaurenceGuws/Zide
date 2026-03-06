@@ -65,6 +65,11 @@ This avoids vendoring large binaries early, while keeping Windows builds reprodu
 
 ## Windows (vcpkg)
 
+Status note (March 6, 2026):
+- vcpkg path is now automatic and Windows-only in build logic.
+- Long-term direction is to deprecate/remove the vcpkg path once Windows dependency packaging is fully migrated to Zig-managed paths.
+- Until that migration is complete, Windows builds still require vcpkg.
+
 ### Install vcpkg
 1) Clone vcpkg:
 ```
@@ -100,9 +105,9 @@ Recommended environment variables:
 - `VCPKG_ROOT` = path to vcpkg repo
 - `VCPKG_DEFAULT_TRIPLET` = `x64-windows`
 
-Build with vcpkg enabled:
+Build:
 ```
- zig build -Duse-vcpkg=true
+ zig build
 ```
 
 On Windows, the build expects vcpkg-provided deps and will look in either:
@@ -113,12 +118,12 @@ If `VCPKG_ROOT` and `VCPKG_DEFAULT_TRIPLET` are set, the build can locate classi
 
 On Windows, use the MSVC target when using the `x64-windows` triplet:
 ```
- zig build -Duse-vcpkg=true -Dvcpkg-triplet=x64-windows -Dtarget=x86_64-windows-msvc
+ zig build -Dvcpkg-triplet=x64-windows -Dtarget=x86_64-windows-msvc
 ```
 
 You can also pass paths explicitly:
 ```
- zig build -Duse-vcpkg=true -Dvcpkg-root=C:\\path\\to\\vcpkg -Dvcpkg-triplet=x64-windows
+ zig build -Dvcpkg-root=C:\\path\\to\\vcpkg -Dvcpkg-triplet=x64-windows
 ```
 
 Then build on Windows:

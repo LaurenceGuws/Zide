@@ -74,10 +74,8 @@ pub fn build(b: *std.Build) void {
     // vcpkg support
     //
     // Windows builds currently rely on vcpkg for SDL3 + text stack.
-    // Default to enabled on Windows so `zig build` produces a runnable build
-    // (assuming `vcpkg install` has been run).
-    const use_vcpkg_opt = b.option(bool, "use-vcpkg", "Use vcpkg for native dependencies");
-    const use_vcpkg = use_vcpkg_opt orelse (target_os == .windows);
+    // This path is target-driven: enabled on Windows, disabled elsewhere.
+    const use_vcpkg = (target_os == .windows);
     const vcpkg_root_opt = b.option([]const u8, "vcpkg-root", "Path to vcpkg root") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_ROOT") catch null;
     const vcpkg_triplet_opt = b.option([]const u8, "vcpkg-triplet", "vcpkg triplet (e.g. x64-windows)") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_DEFAULT_TRIPLET") catch null;
 
@@ -85,7 +83,6 @@ pub fn build(b: *std.Build) void {
         b,
         target,
         target_os,
-        use_vcpkg,
         vcpkg_root_opt,
         vcpkg_triplet_opt,
     );
