@@ -135,6 +135,7 @@ Mode behavior:
   - `build_utils/bootstrap_graph.zig`: shared build bootstrap/dependency/context setup.
   - `build_utils/app_graph.zig`: primary app graph planners (ide/focused runtime).
   - `build_utils/ide_graph.zig`: IDE-only extended graph (ffi/tests/tools/gates).
+  - `build_utils/step_reports.zig`: focused constructors for build report/check top-level steps.
 
 Dependency path selector:
 

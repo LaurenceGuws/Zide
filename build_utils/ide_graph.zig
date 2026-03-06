@@ -5,6 +5,7 @@ const target_profile = @import("target_profile.zig");
 const target_config = @import("target_config.zig");
 const target_factory = @import("target_factory.zig");
 const step_utils = @import("step_utils.zig");
+const step_reports = @import("step_reports.zig");
 
 const AppLinkContext = app_types.AppLinkContext;
 const addTreeSitterIncludes = target_config.addTreeSitterIncludes;
@@ -17,7 +18,7 @@ const addLibcTest = target_factory.addLibcTest;
 const addLibcExecutable = target_factory.addLibcExecutable;
 const addCheckExecutableStep = step_utils.addCheckExecutableStep;
 const addSystemCommandStep = step_utils.addSystemCommandStep;
-const addBuildProfileReportStep = step_utils.addBuildProfileReportStep;
+const addBuildProfileReportStep = step_reports.addBuildProfileReportStep;
 const addGateStep = step_utils.addGateStep;
 const MainModeRunSteps = step_utils.MainModeRunSteps;
 
