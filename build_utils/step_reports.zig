@@ -1,5 +1,17 @@
 const std = @import("std");
 
+pub fn addBuildAllReportsStep(
+    b: *std.Build,
+    deps: []const *std.Build.Step,
+) *std.Build.Step {
+    const step = b.step(
+        "report-build-all",
+        "Run all core build report/check steps",
+    );
+    for (deps) |dep| step.dependOn(dep);
+    return step;
+}
+
 pub fn addBuildProfileReportStep(
     b: *std.Build,
     target: std.Build.ResolvedTarget,

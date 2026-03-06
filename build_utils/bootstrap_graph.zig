@@ -6,7 +6,6 @@ const vcpkg_paths = @import("vcpkg_paths.zig");
 const dependency_resolver = @import("dependency_resolver.zig");
 const mode_specs = @import("mode_specs.zig");
 const target_profile = @import("target_profile.zig");
-const step_utils = @import("step_utils.zig");
 const step_reports = @import("step_reports.zig");
 
 const AppLinkContext = app_types.AppLinkContext;
@@ -125,7 +124,7 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
         optimize,
         build_options,
     );
-    _ = step_utils.addBuildAllReportsStep(
+    _ = step_reports.addBuildAllReportsStep(
         b,
         &.{
             build_mode_report_step,
