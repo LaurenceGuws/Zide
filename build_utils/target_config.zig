@@ -1,6 +1,9 @@
 const std = @import("std");
 const dependency_path = @import("dependency_path.zig");
 const app_types = @import("app_types.zig");
+const links_windows = @import("platform_links_windows.zig");
+const links_linux = @import("platform_links_linux.zig");
+const links_macos = @import("platform_links_macos.zig");
 
 fn linkSdl3(step: *std.Build.Step.Compile, sdl_lib: ?*std.Build.Step.Compile) void {
     step.linkLibrary(sdl_lib.?);
@@ -78,26 +81,10 @@ fn addTextStackIncludes(
 }
 
 fn linkCommonPlatformGraphics(exe: *std.Build.Step.Compile, target_os: std.Target.Os.Tag) void {
-    if (target_os == .windows) {
-        exe.linkSystemLibrary("opengl32");
-        exe.linkSystemLibrary("gdi32");
-        exe.linkSystemLibrary("comdlg32");
-        exe.linkSystemLibrary("dwrite");
-        exe.linkSystemLibrary("ole32");
-        exe.linkSystemLibrary("winmm");
-        exe.linkSystemLibrary("user32");
-        exe.linkSystemLibrary("shell32");
-    } else if (target_os == .macos) {
-        exe.linkFramework("OpenGL");
-        exe.linkFramework("Cocoa");
-        exe.linkFramework("IOKit");
-        exe.linkFramework("CoreVideo");
-    } else {
-        exe.linkSystemLibrary("GL");
-        exe.linkSystemLibrary("m");
-        exe.linkSystemLibrary("pthread");
-        exe.linkSystemLibrary("dl");
-        exe.linkSystemLibrary("rt");
+    switch (target_os) {
+        .windows => links_windows.linkCommonPlatformGraphics(exe),
+        .macos => links_macos.linkCommonPlatformGraphics(exe),
+        else => links_linux.linkCommonPlatformGraphics(exe),
     }
 }
 
@@ -110,26 +97,18 @@ pub fn addVendorAndStb(step: *std.Build.Step.Compile) void {
 }
 
 pub fn linkFfiPlatform(step: *std.Build.Step.Compile, target_os: std.Target.Os.Tag) void {
-    if (target_os == .windows) {
-        step.linkSystemLibrary("user32");
-        step.linkSystemLibrary("shell32");
-    } else if (target_os == .macos) {
-        step.linkFramework("Cocoa");
-    } else {
-        step.linkSystemLibrary("m");
-        step.linkSystemLibrary("pthread");
-        step.linkSystemLibrary("dl");
-        step.linkSystemLibrary("rt");
+    switch (target_os) {
+        .windows => links_windows.linkFfiPlatform(step),
+        .macos => links_macos.linkFfiPlatform(step),
+        else => links_linux.linkFfiPlatform(step),
     }
 }
 
 fn linkSdlTestGraphics(step: *std.Build.Step.Compile, target_os: std.Target.Os.Tag) void {
-    if (target_os == .linux) {
-        step.linkSystemLibrary("GL");
-    } else if (target_os == .windows) {
-        step.linkSystemLibrary("opengl32");
-    } else if (target_os == .macos) {
-        step.linkFramework("OpenGL");
+    switch (target_os) {
+        .windows => links_windows.linkSdlTestGraphics(step),
+        .macos => links_macos.linkSdlTestGraphics(step),
+        else => links_linux.linkSdlTestGraphics(step),
     }
 }
 
