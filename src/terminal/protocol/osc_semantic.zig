@@ -49,6 +49,7 @@ pub fn parseSemanticPrompt(self: anytype, text: []const u8) void {
 }
 
 pub fn parseUserVar(self: anytype, text: []const u8) void {
+    const log = app_logger.logger("terminal.osc");
     const prefix = "SetUserVar=";
     if (!std.mem.startsWith(u8, text, prefix)) return;
     const rest = text[prefix.len..];
@@ -63,10 +64,19 @@ pub fn parseUserVar(self: anytype, text: []const u8) void {
     var decoded = std.ArrayList(u8).empty;
     defer decoded.deinit(self.allocator);
     if (encoded.len > 0) {
-        const decoded_len = std.base64.standard.Decoder.calcSizeForSlice(encoded) catch return;
+        const decoded_len = std.base64.standard.Decoder.calcSizeForSlice(encoded) catch |err| {
+            log.logf(.warning, "osc user var decoded length failed: {s}", .{@errorName(err)});
+            return;
+        };
         if (decoded_len > max_bytes) return;
-        decoded.resize(self.allocator, decoded_len) catch return;
-        _ = std.base64.standard.Decoder.decode(decoded.items, encoded) catch return;
+        decoded.resize(self.allocator, decoded_len) catch |err| {
+            log.logf(.warning, "osc user var decoded buffer resize failed: {s}", .{@errorName(err)});
+            return;
+        };
+        _ = std.base64.standard.Decoder.decode(decoded.items, encoded) catch |err| {
+            log.logf(.warning, "osc user var base64 decode failed: {s}", .{@errorName(err)});
+            return;
+        };
     }
 
     setUserVar(self, name, decoded.items);
@@ -146,16 +156,21 @@ fn applySemanticPromptEndCommand(self: anytype, text: []const u8) void {
 }
 
 fn setSemanticCmdline(self: anytype, value: []const u8) void {
+    const log = app_logger.logger("terminal.osc");
     self.semantic_cmdline.clearRetainingCapacity();
     if (value.len == 0) {
         self.semantic_cmdline_valid = false;
         return;
     }
-    _ = self.semantic_cmdline.appendSlice(self.allocator, value) catch return;
+    _ = self.semantic_cmdline.appendSlice(self.allocator, value) catch |err| {
+        log.logf(.warning, "osc semantic cmdline append failed: {s}", .{@errorName(err)});
+        return;
+    };
     self.semantic_cmdline_valid = true;
 }
 
 fn setSemanticCmdlineUrl(self: anytype, value: []const u8) void {
+    const log = app_logger.logger("terminal.osc");
     var decoded = std.ArrayList(u8).empty;
     defer decoded.deinit(self.allocator);
     if (!osc_util.decodeOscPercent(self.allocator, &decoded, value)) {
@@ -163,7 +178,10 @@ fn setSemanticCmdlineUrl(self: anytype, value: []const u8) void {
         return;
     }
     self.semantic_cmdline.clearRetainingCapacity();
-    _ = self.semantic_cmdline.appendSlice(self.allocator, decoded.items) catch return;
+    _ = self.semantic_cmdline.appendSlice(self.allocator, decoded.items) catch |err| {
+        log.logf(.warning, "osc semantic cmdline url append failed: {s}", .{@errorName(err)});
+        return;
+    };
     self.semantic_cmdline_valid = true;
 }
 
@@ -177,12 +195,18 @@ fn parseBoolFlag(value: []const u8, default_value: bool) bool {
 }
 
 fn setUserVar(self: anytype, name: []const u8, value: []const u8) void {
-    const name_owned = self.allocator.dupe(u8, name) catch return;
-    const value_owned = self.allocator.dupe(u8, value) catch {
+    const log = app_logger.logger("terminal.osc");
+    const name_owned = self.allocator.dupe(u8, name) catch |err| {
+        log.logf(.warning, "osc user var name alloc failed: {s}", .{@errorName(err)});
+        return;
+    };
+    const value_owned = self.allocator.dupe(u8, value) catch |err| {
+        log.logf(.warning, "osc user var value alloc failed: {s}", .{@errorName(err)});
         self.allocator.free(name_owned);
         return;
     };
-    const entry = self.user_vars.getOrPut(name_owned) catch {
+    const entry = self.user_vars.getOrPut(name_owned) catch |err| {
+        log.logf(.warning, "osc user var map insert failed: {s}", .{@errorName(err)});
         self.allocator.free(name_owned);
         self.allocator.free(value_owned);
         return;
