@@ -5,20 +5,18 @@ const app_update_frame_hooks_runtime = @import("update_frame_hooks_runtime.zig")
 const shared_types = @import("../types/mod.zig");
 
 pub fn run(state: anytype) !bool {
-    return try runWithMode(state, null, .ide);
+    return try runWithMode(state, null);
 }
 
 pub fn runFocused(state: anytype, comptime app_mode: @import("bootstrap.zig").AppMode) !bool {
-    return try runWithMode(state, app_mode, .ide);
+    return try runWithMode(state, app_mode);
 }
 
 fn runWithMode(
     state: anytype,
     comptime forced_mode: ?@import("bootstrap.zig").AppMode,
-    runtime_mode_fallback: @import("bootstrap.zig").AppMode,
 ) !bool {
     const app_mode = if (comptime forced_mode) |mode| mode else state.app_mode;
-    _ = runtime_mode_fallback;
 
     const State = @TypeOf(state);
     const RuntimeCtx = struct {

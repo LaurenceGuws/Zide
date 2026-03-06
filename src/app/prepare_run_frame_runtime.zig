@@ -7,20 +7,18 @@ const app_terminal_tab_navigation_runtime = @import("terminal_tab_navigation_run
 const input_builder = @import("../input/input_builder.zig");
 
 pub fn prepare(state: anytype) !?app_run_loop_driver.FrameSetup {
-    return try prepareWithMode(state, null, .ide);
+    return try prepareWithMode(state, null);
 }
 
 pub fn prepareFocused(state: anytype, comptime app_mode: app_bootstrap.AppMode) !?app_run_loop_driver.FrameSetup {
-    return try prepareWithMode(state, app_mode, .ide);
+    return try prepareWithMode(state, app_mode);
 }
 
 fn prepareWithMode(
     state: anytype,
     comptime forced_mode: ?app_bootstrap.AppMode,
-    runtime_mode_fallback: app_bootstrap.AppMode,
 ) !?app_run_loop_driver.FrameSetup {
     const app_mode = if (comptime forced_mode) |mode| mode else state.app_mode;
-    _ = runtime_mode_fallback;
 
     const poll_start = app_shell.getTime();
     app_shell.pollInputEvents();

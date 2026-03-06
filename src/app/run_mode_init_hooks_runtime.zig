@@ -4,20 +4,18 @@ const app_terminal_tabs_runtime = @import("terminal_tabs_runtime.zig");
 const app_modes = @import("modes/mod.zig");
 
 pub fn handle(state: anytype) !void {
-    try handleWithMode(state, null, .ide);
+    try handleWithMode(state, null);
 }
 
 pub fn handleFocused(state: anytype, comptime app_mode: @import("bootstrap.zig").AppMode) !void {
-    try handleWithMode(state, app_mode, .ide);
+    try handleWithMode(state, app_mode);
 }
 
 fn handleWithMode(
     state: anytype,
     comptime forced_mode: ?@import("bootstrap.zig").AppMode,
-    runtime_mode_fallback: @import("bootstrap.zig").AppMode,
 ) !void {
     const app_mode = if (comptime forced_mode) |mode| mode else state.app_mode;
-    _ = runtime_mode_fallback;
 
     var runtime_state = struct {
         app_mode: @TypeOf(app_mode),
