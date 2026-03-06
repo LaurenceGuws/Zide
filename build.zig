@@ -1,6 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const helpers = @import("tools/build_helpers.zig");
+const helpers = @import("build_utils/helpers.zig");
 const DependencySource = helpers.DependencySource;
 const AppLinkContext = helpers.AppLinkContext;
 const parseDependencyPath = helpers.parseDependencyPath;
