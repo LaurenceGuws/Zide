@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const app_logger = @import("../app_logger.zig");
 const widgets = @import("../ui/widgets.zig");
 const terminal_mod = @import("../terminal/core/terminal.zig");
 
@@ -26,6 +27,7 @@ pub fn openInPager(
     term_widget: *TerminalWidget,
     term: *TerminalSession,
 ) !bool {
+    const log = app_logger.logger("terminal.scrollback.pager");
     const text = try term_widget.scrollbackAnsiTextAlloc(allocator);
     defer allocator.free(text);
     if (text.len == 0) return false;
@@ -57,7 +59,10 @@ pub fn openInPager(
             .{abs_path},
         );
         defer allocator.free(cmd);
-        term.sendText(cmd) catch return false;
+        term.sendText(cmd) catch |err| {
+            log.logf(.warning, "open scrollback pager (windows) send failed: {s}", .{@errorName(err)});
+            return false;
+        };
         return true;
     }
 
@@ -88,6 +93,9 @@ pub fn openInPager(
         .{shell_script_path},
     );
     defer allocator.free(cmd);
-    term.sendText(cmd) catch return false;
+    term.sendText(cmd) catch |err| {
+        log.logf(.warning, "open scrollback pager send failed: {s}", .{@errorName(err)});
+        return false;
+    };
     return true;
 }
