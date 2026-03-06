@@ -1,26 +1,31 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const helpers = @import("build_utils/helpers.zig");
-const DependencySource = helpers.DependencySource;
-const AppLinkContext = helpers.AppLinkContext;
-const parseDependencyPath = helpers.parseDependencyPath;
-const addTreeSitterIncludes = helpers.addTreeSitterIncludes;
-const addVendorAndStb = helpers.addVendorAndStb;
-const linkFfiPlatform = helpers.linkFfiPlatform;
-const addAppExecutable = helpers.addAppExecutable;
-const configureAppExecutable = helpers.configureAppExecutable;
-const addRunStepForArtifact = helpers.addRunStepForArtifact;
-const addFocusedModeExecutable = helpers.addFocusedModeExecutable;
-const addSdlConfiguredTest = helpers.addSdlConfiguredTest;
-const addSdlConfiguredExecutable = helpers.addSdlConfiguredExecutable;
-const addCheckExecutableStep = helpers.addCheckExecutableStep;
-const addRunArtifactStep = helpers.addRunArtifactStep;
-const addLibcTest = helpers.addLibcTest;
-const addLibcExecutable = helpers.addLibcExecutable;
-const addGateStep = helpers.addGateStep;
-const resolveVcpkgPaths = helpers.resolveVcpkgPaths;
-const addMainModeRunSteps = helpers.addMainModeRunSteps;
-const addSystemCommandStep = helpers.addSystemCommandStep;
+const dependency_path = @import("build_utils/dependency_path.zig");
+const app_types = @import("build_utils/app_types.zig");
+const target_config = @import("build_utils/target_config.zig");
+const target_factory = @import("build_utils/target_factory.zig");
+const step_utils = @import("build_utils/step_utils.zig");
+const vcpkg_paths = @import("build_utils/vcpkg_paths.zig");
+const DependencySource = dependency_path.DependencySource;
+const AppLinkContext = app_types.AppLinkContext;
+const parseDependencyPath = dependency_path.parseDependencyPath;
+const addTreeSitterIncludes = target_config.addTreeSitterIncludes;
+const addVendorAndStb = target_config.addVendorAndStb;
+const linkFfiPlatform = target_config.linkFfiPlatform;
+const addAppExecutable = target_factory.addAppExecutable;
+const configureAppExecutable = target_config.configureAppExecutable;
+const addRunStepForArtifact = step_utils.addRunStepForArtifact;
+const addFocusedModeExecutable = target_factory.addFocusedModeExecutable;
+const addSdlConfiguredTest = target_factory.addSdlConfiguredTest;
+const addSdlConfiguredExecutable = target_factory.addSdlConfiguredExecutable;
+const addCheckExecutableStep = step_utils.addCheckExecutableStep;
+const addRunArtifactStep = step_utils.addRunArtifactStep;
+const addLibcTest = target_factory.addLibcTest;
+const addLibcExecutable = target_factory.addLibcExecutable;
+const addGateStep = step_utils.addGateStep;
+const resolveVcpkgPaths = vcpkg_paths.resolveVcpkgPaths;
+const addMainModeRunSteps = step_utils.addMainModeRunSteps;
+const addSystemCommandStep = step_utils.addSystemCommandStep;
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{
@@ -76,7 +81,7 @@ pub fn build(b: *std.Build) void {
     const vcpkg_root_opt = b.option([]const u8, "vcpkg-root", "Path to vcpkg root") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_ROOT") catch null;
     const vcpkg_triplet_opt = b.option([]const u8, "vcpkg-triplet", "vcpkg triplet (e.g. x64-windows)") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_DEFAULT_TRIPLET") catch null;
 
-    const vcpkg_paths = resolveVcpkgPaths(
+    const resolved_vcpkg_paths = resolveVcpkgPaths(
         b,
         target,
         target_os,
@@ -84,9 +89,9 @@ pub fn build(b: *std.Build) void {
         vcpkg_root_opt,
         vcpkg_triplet_opt,
     );
-    const vcpkg_include = vcpkg_paths.include;
-    const vcpkg_lib = vcpkg_paths.lib;
-    const vcpkg_bin = vcpkg_paths.bin;
+    const vcpkg_include = resolved_vcpkg_paths.include;
+    const vcpkg_lib = resolved_vcpkg_paths.lib;
+    const vcpkg_bin = resolved_vcpkg_paths.bin;
 
     const sdl_dep = b.dependency("sdl", .{
         .target = target,
