@@ -456,7 +456,13 @@ pub const TerminalSession = struct {
     fn maybeUpdateChildExit(self: *TerminalSession) void {
         if (self.child_exited.load(.acquire)) return;
         if (self.pty) |*pty| {
-            if (pty.pollExit() catch null) |code| {
+            if (pty.pollExit() catch |err| blk: {
+                const log = app_logger.logger("terminal.pty");
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(.warning, "pty pollExit failed err={s}", .{ @errorName(err) });
+                }
+                break :blk null;
+            }) |code| {
                 self.child_exit_code.store(code, .release);
                 self.child_exited.store(true, .release);
 
@@ -1015,6 +1021,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn decrqssReplyInto(self: *TerminalSession, text: []const u8, buf: []u8) ?[]const u8 {
+        const log = app_logger.logger("terminal.apc");
         if (std.mem.eql(u8, text, " q")) {
             const style = self.activeScreen().cursor_style;
             return switch (style.shape) {
@@ -1031,14 +1038,24 @@ pub const TerminalSession = struct {
             return std.fmt.bufPrint(buf, "{d};{d}r", .{
                 screen.scroll_top + 1,
                 screen.scroll_bottom + 1,
-            }) catch null;
+            }) catch |err| {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(.warning, "decrqss r reply format failed err={s}", .{ @errorName(err) });
+                }
+                return null;
+            };
         }
         if (std.mem.eql(u8, text, "s")) {
             const screen = self.activeScreen();
             return std.fmt.bufPrint(buf, "{d};{d}s", .{
                 screen.left_margin + 1,
                 screen.right_margin + 1,
-            }) catch null;
+            }) catch |err| {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(.warning, "decrqss s reply format failed err={s}", .{ @errorName(err) });
+                }
+                return null;
+            };
         }
         return null;
     }
