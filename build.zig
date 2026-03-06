@@ -164,6 +164,20 @@ fn addVendorAndStb(step: *std.Build.Step.Compile) void {
     });
 }
 
+fn linkFfiPlatform(step: *std.Build.Step.Compile, target_os: std.Target.Os.Tag) void {
+    if (target_os == .windows) {
+        step.linkSystemLibrary("user32");
+        step.linkSystemLibrary("shell32");
+    } else if (target_os == .macos) {
+        step.linkFramework("Cocoa");
+    } else {
+        step.linkSystemLibrary("m");
+        step.linkSystemLibrary("pthread");
+        step.linkSystemLibrary("dl");
+        step.linkSystemLibrary("rt");
+    }
+}
+
 fn linkSdlTestGraphics(step: *std.Build.Step.Compile, target_os: std.Target.Os.Tag) void {
     if (target_os == .linux) {
         step.linkSystemLibrary("GL");
@@ -577,17 +591,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     addVendorAndStb(terminal_ffi);
-    if (target_os == .windows) {
-        terminal_ffi.linkSystemLibrary("user32");
-        terminal_ffi.linkSystemLibrary("shell32");
-    } else if (target_os == .macos) {
-        terminal_ffi.linkFramework("Cocoa");
-    } else {
-        terminal_ffi.linkSystemLibrary("m");
-        terminal_ffi.linkSystemLibrary("pthread");
-        terminal_ffi.linkSystemLibrary("dl");
-        terminal_ffi.linkSystemLibrary("rt");
-    }
+    linkFfiPlatform(terminal_ffi, target_os);
     const install_terminal_ffi = b.addInstallArtifact(terminal_ffi, .{});
     const install_terminal_ffi_header = b.addInstallFile(b.path("include/zide_terminal_ffi.h"), "include/zide_terminal_ffi.h");
     const terminal_ffi_step = b.step("build-terminal-ffi", "Build the terminal FFI shared library");
@@ -607,17 +611,7 @@ pub fn build(b: *std.Build) void {
     editor_ffi.linkLibrary(treesitter);
     addVendorAndStb(editor_ffi);
     addTreeSitterIncludes(editor_ffi, treesitter);
-    if (target_os == .windows) {
-        editor_ffi.linkSystemLibrary("user32");
-        editor_ffi.linkSystemLibrary("shell32");
-    } else if (target_os == .macos) {
-        editor_ffi.linkFramework("Cocoa");
-    } else {
-        editor_ffi.linkSystemLibrary("m");
-        editor_ffi.linkSystemLibrary("pthread");
-        editor_ffi.linkSystemLibrary("dl");
-        editor_ffi.linkSystemLibrary("rt");
-    }
+    linkFfiPlatform(editor_ffi, target_os);
     const install_editor_ffi = b.addInstallArtifact(editor_ffi, .{});
     const install_editor_ffi_header = b.addInstallFile(b.path("include/zide_editor_ffi.h"), "include/zide_editor_ffi.h");
     const editor_ffi_step = b.step("build-editor-ffi", "Build the editor FFI shared library");
