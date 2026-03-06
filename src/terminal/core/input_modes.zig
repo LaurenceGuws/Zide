@@ -33,12 +33,16 @@ pub fn keyModeModify(self: anytype, flags: u32, mode: u32) void {
 }
 
 pub fn keyModeQuery(self: anytype) void {
+    const log = app_logger.logger("terminal.input.keys");
     const flags = keyModeFlags(self);
     if (self.pty) |*pty| {
         var buf: [32]u8 = undefined;
-        const seq = std.fmt.bufPrint(&buf, "\x1b[?{d}u", .{flags}) catch return;
+        const seq = std.fmt.bufPrint(&buf, "\x1b[?{d}u", .{flags}) catch |err| {
+            log.logf(.warning, "key mode query format failed flags={d} err={s}", .{ flags, @errorName(err) });
+            return;
+        };
         _ = pty.write(seq) catch |err| blk: {
-            app_logger.logger("terminal.input.keys").logf(.warning, "key mode query write failed flags={d} err={s}", .{ flags, @errorName(err) });
+            log.logf(.warning, "key mode query write failed flags={d} err={s}", .{ flags, @errorName(err) });
             break :blk 0;
         };
     }

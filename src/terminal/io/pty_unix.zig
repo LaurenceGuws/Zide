@@ -212,8 +212,12 @@ pub const Pty = struct {
 };
 
 fn readForegroundProcessName(pgrp: c.pid_t, out_buf: *[128]u8) ?usize {
+    const log = app_logger.logger("terminal.io");
     var cmdline_path_buf: [64]u8 = undefined;
-    const cmdline_path = std.fmt.bufPrint(&cmdline_path_buf, "/proc/{d}/cmdline", .{pgrp}) catch return null;
+    const cmdline_path = std.fmt.bufPrint(&cmdline_path_buf, "/proc/{d}/cmdline", .{pgrp}) catch |err| {
+        log.logf(.debug, "foreground cmdline path format failed pgrp={d}: {s}", .{ pgrp, @errorName(err) });
+        return null;
+    };
     if (std.fs.openFileAbsolute(cmdline_path, .{ .mode = .read_only })) |cmdline_file| {
         defer cmdline_file.close();
         var cmdline_buf: [1024]u8 = undefined;
@@ -242,10 +246,19 @@ fn readForegroundProcessName(pgrp: c.pid_t, out_buf: *[128]u8) ?usize {
     } else |_| {}
 
     var path_buf: [64]u8 = undefined;
-    const comm_path = std.fmt.bufPrint(&path_buf, "/proc/{d}/comm", .{pgrp}) catch return null;
-    var file = std.fs.openFileAbsolute(comm_path, .{ .mode = .read_only }) catch return null;
+    const comm_path = std.fmt.bufPrint(&path_buf, "/proc/{d}/comm", .{pgrp}) catch |err| {
+        log.logf(.debug, "foreground comm path format failed pgrp={d}: {s}", .{ pgrp, @errorName(err) });
+        return null;
+    };
+    var file = std.fs.openFileAbsolute(comm_path, .{ .mode = .read_only }) catch |err| {
+        log.logf(.debug, "foreground comm open failed pgrp={d}: {s}", .{ pgrp, @errorName(err) });
+        return null;
+    };
     defer file.close();
-    const n = file.readAll(out_buf) catch return null;
+    const n = file.readAll(out_buf) catch |err| {
+        log.logf(.debug, "foreground comm read failed pgrp={d}: {s}", .{ pgrp, @errorName(err) });
+        return null;
+    };
     if (n == 0) return null;
     var end = n;
     while (end > 0 and (out_buf[end - 1] == '\n' or out_buf[end - 1] == '\r' or out_buf[end - 1] == ' ' or out_buf[end - 1] == '\t')) : (end -= 1) {}
