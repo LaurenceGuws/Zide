@@ -5,4 +5,4 @@
 - [ ] Add terminal+editor combined smoke script (`examples/ffi_host_combo_smoke/main.py`) that runs: start terminal, acquire snapshot, create editor, set text, query cursor, clean shutdown.
 - [ ] Add one ABI mismatch regression test per bridge (bad `abi_version`, bad `struct_size`) that asserts deterministic error codes.
 - [ ] Add a host-migration checklist section in both smoke READMEs describing minimum required calls and resource free order.
-- [ ] Add a single `zig build` step that runs the combo smoke in CI-safe mode (no PTY dependency) to verify dual-bridge loading/lifetime.
+- [ ] Add a single `zig build` step that runs the combo smoke in non-interactive mode (no PTY dependency) to verify dual-bridge loading/lifetime.

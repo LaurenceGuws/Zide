@@ -190,7 +190,7 @@ dependencies_todo:
           status: done
           notes:
             - "When runtime grammar lookup fails, provide a guided auto-bootstrap path instead of hard panic."
-            - "Design should support non-interactive CI and user-local interactive workflows."
+            - "Design should support non-interactive automation and user-local interactive workflows."
             - "Capture failure policy per mode (terminal/editor/ide) and fallback UX messaging."
             - "2026-03-06: added opt-in runtime hook via `ZIDE_GRAMMAR_AUTO_BOOTSTRAP=1` that attempts one-shot `zig build grammar-update -- --skip-git --continue-on-error` on first missing grammar, then retries load."
             - "2026-03-06: added one-shot user-visible guidance when grammar remains missing (with/without auto-bootstrap), avoiding repeated spam."

@@ -55,6 +55,8 @@ Open a new terminal inside Zide and verify:
 printf '%s\n' "$TERM"
 ```
 
+Expected value is `zide-256color` (preferred), with `xterm-zide` as a compatibility alias when applicable.
+
 UI renderer roadmap:
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md`
 
@@ -87,8 +89,10 @@ This is a dev tool workflow (local installs under `~/.local`), not release packa
 
 ## Dependencies
 
-- Vendored: tree-sitter (runtime + Zig parser), stb_image (PNG decode).
-- System deps: see `app_architecture/BOOTSTRAP.md` for platform packages (freetype, harfbuzz, lua, Wayland/X11, etc.).
+- Zig package-managed in normal flow: SDL3, Lua, tree-sitter core runtime.
+- Active migration path: FreeType/HarfBuzz under `-Dpath=zig`.
+- Bundled third-party source: `stb_image` C source in-tree.
+- System/runtime package details: see `app_architecture/BOOTSTRAP.md` and `docs/DEPENDENCIES.md`.
 
 ## License
 
