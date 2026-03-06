@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_logger = @import("../../app_logger.zig");
 const app_shell = @import("../../app_shell.zig");
 const shared_types = @import("../../types/mod.zig");
 const editor_mod = @import("../../editor/editor.zig");
@@ -466,6 +467,7 @@ pub const EditorWidget = struct {
     }
 
     pub fn moveCursorVisual(self: *EditorWidget, shell: *Shell, delta: i32) bool {
+        const log = app_logger.logger("editor.widget");
         const cols = self.viewportColumns(shell);
         var ctx = CursorLineCtx{ .widget = self, .r = shell };
         const provider = LineProvider{
@@ -479,7 +481,12 @@ pub const EditorWidget = struct {
         var buf_b: [4096]u8 = undefined;
         var scratch_a = LineScratch{ .buf = buf_a[0..] };
         var scratch_b = LineScratch{ .buf = buf_b[0..] };
-        return cursor_mod.moveCaretSetVisual(self.editor, delta, cols, self.wrap_enabled, &provider, &scratch_a, &scratch_b) catch false;
+        return cursor_mod.moveCaretSetVisual(self.editor, delta, cols, self.wrap_enabled, &provider, &scratch_a, &scratch_b) catch |err| blk: {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "moveCursorVisual failed err={s}", .{ @errorName(err) });
+            }
+            break :blk false;
+        };
     }
 
     pub fn extendSelectionVisual(self: *EditorWidget, shell: *Shell, delta: i32) bool {
@@ -538,9 +545,15 @@ pub const ClusterCache = struct {
         hb_font: *hb.hb_font_t,
         text: []const u8,
     ) ?[]const u32 {
+        const log = app_logger.logger("editor.widget");
         if (!hasNonAscii(text)) return null;
         if (self.entries.get(line_idx)) |cached| return cached;
-        const clusters = graphemeClusterOffsets(self.allocator, hb_font, text) catch return null;
+        const clusters = graphemeClusterOffsets(self.allocator, hb_font, text) catch |err| {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "cluster compute failed line={d} err={s}", .{ line_idx, @errorName(err) });
+            }
+            return null;
+        };
         self.entries.put(line_idx, clusters) catch {
             self.allocator.free(clusters);
             return null;
@@ -561,12 +574,18 @@ fn getClusterOffsets(
     line_idx: usize,
     text: []const u8,
 ) ClusterResult {
+    const log = app_logger.logger("editor.widget");
     if (cache) |cluster_cache| {
         const slice = cluster_cache.getOrCompute(line_idx, hb_font, text);
         return .{ .slice = slice, .owned = false };
     }
     if (!hasNonAscii(text)) return .{ .slice = null, .owned = false };
-    const slice = graphemeClusterOffsets(allocator, hb_font, text) catch null;
+    const slice = graphemeClusterOffsets(allocator, hb_font, text) catch |err| blk: {
+        if (log.enabled_file or log.enabled_console) {
+            log.logf(.warning, "cluster offsets compute failed line={d} err={s}", .{ line_idx, @errorName(err) });
+        }
+        break :blk null;
+    };
     return .{ .slice = slice, .owned = slice != null };
 }
 

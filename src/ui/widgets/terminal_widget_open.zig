@@ -308,6 +308,7 @@ const ParsedPath = struct {
 };
 
 fn parsePathAndLocation(token: []const u8) ?ParsedPath {
+    const log = app_logger.logger("terminal.open");
     if (token.len == 0) return null;
     if (std.mem.indexOf(u8, token, "://") != null and !std.mem.startsWith(u8, token, "file://")) return null;
 
@@ -320,13 +321,19 @@ fn parsePathAndLocation(token: []const u8) ?ParsedPath {
     if (std.mem.lastIndexOfScalar(u8, tmp, ':')) |idx2| {
         const tail2 = tmp[idx2 + 1 ..];
         if (tail2.len > 0 and allDigits(tail2)) {
-            const n2 = std.fmt.parseInt(usize, tail2, 10) catch null;
+            const n2 = std.fmt.parseInt(usize, tail2, 10) catch blk: {
+                log.logf(.debug, "parsePathAndLocation parseInt n2 failed tail={s}", .{ tail2 });
+                break :blk null;
+            };
             if (n2 != null) {
                 tmp = tmp[0..idx2];
                 if (std.mem.lastIndexOfScalar(u8, tmp, ':')) |idx1| {
                     const tail1 = tmp[idx1 + 1 ..];
                     if (tail1.len > 0 and allDigits(tail1)) {
-                        const n1 = std.fmt.parseInt(usize, tail1, 10) catch null;
+                        const n1 = std.fmt.parseInt(usize, tail1, 10) catch blk: {
+                            log.logf(.debug, "parsePathAndLocation parseInt n1 failed tail={s}", .{ tail1 });
+                            break :blk null;
+                        };
                         if (n1 != null) {
                             base = tmp[0..idx1];
                             line = n1.?;
