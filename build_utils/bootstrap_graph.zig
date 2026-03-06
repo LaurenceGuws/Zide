@@ -13,6 +13,7 @@ const parseDependencyPath = dependency_path.parseDependencyPath;
 const resolveVcpkgPaths = vcpkg_paths.resolveVcpkgPaths;
 const addBuildModeReportStep = step_utils.addBuildModeReportStep;
 const addBuildBootstrapReportStep = step_utils.addBuildBootstrapReportStep;
+const addBuildFocusedModePolicyCheckStep = step_utils.addBuildFocusedModePolicyCheckStep;
 
 pub const BuildBootstrap = struct {
     target: std.Build.ResolvedTarget,
@@ -108,6 +109,12 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
         build_options,
     );
     _ = addBuildBootstrapReportStep(
+        b,
+        target,
+        optimize,
+        build_options,
+    );
+    _ = addBuildFocusedModePolicyCheckStep(
         b,
         target,
         optimize,
