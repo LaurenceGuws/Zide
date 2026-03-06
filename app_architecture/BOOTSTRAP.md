@@ -178,17 +178,16 @@ Then start a new shell inside Zide and verify:
 printf '%s\n' "$TERM"
 ```
 
-Expected value is `zide-256color` (preferred), with `xterm-zide` as compatibility alias.
+Expected value is `xterm-zide` (preferred), with `zide-256color` as compatibility alias.
 
 Runtime TERM fallback order:
-- `zide-256color`
 - `xterm-zide`
+- `zide-256color`
 - `zide`
 - `xterm-256color`
 
 Notes:
 - `TERMINFO` may be unset in normal packaged/system installs; this is expected when terminfo is installed under system paths (`/usr/share/terminfo`).
-- Bundled launcher terminfo override is opt-in via `ZIDE_USE_BUNDLED_TERMINFO=1`.
 
 ## Test
 

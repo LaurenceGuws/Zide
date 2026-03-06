@@ -211,13 +211,13 @@ dependencies_todo:
           status: done
           notes:
             - "Runtime TERM selection no longer includes xterm-kitty fallback."
-            - "Current preference order: zide-256color -> xterm-zide -> zide -> xterm-256color."
+            - "Current preference order: xterm-zide -> zide-256color -> zide -> xterm-256color."
         - id: DEP-06-02
           title: "Align bundle vs package terminfo behavior and docs"
           status: done
           notes:
             - "Bundle compiles and ships terminfo payload."
-            - "Bundled TERMINFO export is opt-in (`ZIDE_USE_BUNDLED_TERMINFO=1`)."
+            - "Bundled launcher no longer toggles TERMINFO export; packaged flow relies on installed terminfo paths."
             - "Local package flow installs terminfo entries into `/usr/share/terminfo`."
             - "Docs updated in `docs/DEPENDENCIES.md`, `app_architecture/DEPENDENCIES.md`, and `docs/terminal/compatibility.md`."
 

@@ -14,8 +14,8 @@ Track practical migration details for replacing system-managed native dependenci
 - Build hygiene guardrail: `zig build check-build-deps` enforces the app target dependency policy in `build.zig` (including terminal no-tree-sitter rule).
 - Linux terminal bundle (`zig build bundle-terminal`) now compiles/ships project-owned terminfo and launches with stable shell cwd semantics:
   - bundles `zide.terminfo` via `tic -x` into `terminal-bundle/terminfo`,
-  - bundled `TERMINFO`/`TERMINFO_DIRS` export is opt-in (`ZIDE_USE_BUNDLED_TERMINFO=1`),
-  - runtime TERM preference is `zide-256color`, then `xterm-zide`, then `zide`, then `xterm-256color`,
+  - launcher does not force `TERMINFO`/`TERMINFO_DIRS`,
+  - runtime TERM preference is `xterm-zide`, then `zide-256color`, then `zide`, then `xterm-256color`,
   - launcher-provided cwd is applied in PTY child with matching `PWD` sync.
 
 ## Implemented package integration
