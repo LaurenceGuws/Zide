@@ -183,6 +183,8 @@ dependencies_todo:
           status: done
           notes:
             - "Decision: package-managed tree-sitter core is the primary path; vendored tree-sitter core wiring removed from build graph."
+            - "2026-03-06: `zide-terminal` build target no longer links tree-sitter core and no longer adds tree-sitter include plumbing."
+            - "2026-03-06: terminal-focused runtime paths are compile-time gated to avoid pulling editor shortcut/active-view wiring into the terminal target."
         - id: DEP-04-03
           title: "Auto-bootstrap missing grammars (run/install grammar-update flow)"
           status: done
