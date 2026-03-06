@@ -6,6 +6,7 @@ const target_config = @import("build_utils/target_config.zig");
 const target_factory = @import("build_utils/target_factory.zig");
 const step_utils = @import("build_utils/step_utils.zig");
 const vcpkg_paths = @import("build_utils/vcpkg_paths.zig");
+const dependency_resolver = @import("build_utils/dependency_resolver.zig");
 const DependencySource = dependency_path.DependencySource;
 const AppLinkContext = app_types.AppLinkContext;
 const parseDependencyPath = dependency_path.parseDependencyPath;
@@ -46,11 +47,7 @@ pub fn build(b: *std.Build) void {
     // ─────────────────────────────────────────────────────────────────────────
     // Tree-sitter (for syntax highlighting)
     // ─────────────────────────────────────────────────────────────────────────
-    const tree_sitter_dep = b.dependency("tree_sitter", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    const treesitter = tree_sitter_dep.artifact("tree-sitter");
+    // resolved in dependency_resolver below
 
     // Platform detection
     const target_os = target.result.os.tag;
@@ -90,38 +87,19 @@ pub fn build(b: *std.Build) void {
     const vcpkg_lib = resolved_vcpkg_paths.lib;
     const vcpkg_bin = resolved_vcpkg_paths.bin;
 
-    const sdl_dep = b.dependency("sdl", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    const sdl_lib = sdl_dep.artifact("SDL3");
-    const zlua_dep = b.dependency("zlua", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    const zlua_module = zlua_dep.module("zlua");
-    const lua_lib = zlua_dep.artifact("lua");
-    const freetype_dep = if (dep_path == .zig and !use_vcpkg)
-        b.dependency("freetype", .{
-            .target = target,
-            .optimize = optimize,
-            .use_system_zlib = true,
-            .enable_brotli = false,
-        })
-    else
-        null;
-    const harfbuzz_dep = if (dep_path == .zig and !use_vcpkg)
-        b.dependency("harfbuzz", .{
-            .target = target,
-            .optimize = optimize,
-            .enable_freetype = true,
-            .freetype_use_system_zlib = true,
-            .freetype_enable_brotli = false,
-        })
-    else
-        null;
-    const freetype_lib: ?*std.Build.Step.Compile = if (freetype_dep) |dep| dep.artifact("freetype") else null;
-    const harfbuzz_lib: ?*std.Build.Step.Compile = if (harfbuzz_dep) |dep| dep.artifact("harfbuzz") else null;
+    const deps = dependency_resolver.resolveDependencies(
+        b,
+        target,
+        optimize,
+        dep_path,
+        use_vcpkg,
+    );
+    const treesitter = deps.treesitter;
+    const sdl_lib = deps.sdl_lib;
+    const zlua_module = deps.zlua_module;
+    const lua_lib = deps.lua_lib;
+    const freetype_lib = deps.freetype_lib;
+    const harfbuzz_lib = deps.harfbuzz_lib;
     // ─────────────────────────────────────────────────────────────────────────
     // Main executable
     // ─────────────────────────────────────────────────────────────────────────
