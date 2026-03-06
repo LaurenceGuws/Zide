@@ -73,10 +73,14 @@ fn initWithMode(
     defer config_mod.freeConfig(allocator, &config);
 
     if (config.log_file_filter) |filter| {
-        app_logger.setFileFilterString(filter) catch {};
+        app_logger.setFileFilterString(filter) catch |err| {
+            std.debug.print("log file filter parse error: {any}\n", .{err});
+        };
     }
     if (config.log_console_filter) |filter| {
-        app_logger.setConsoleFilterString(filter) catch {};
+        app_logger.setConsoleFilterString(filter) catch |err| {
+            std.debug.print("log console filter parse error: {any}\n", .{err});
+        };
     }
     try app_logger.init();
 
@@ -113,7 +117,9 @@ fn initWithMode(
         const font_path = config.terminal_font_path orelse config.editor_font_path orelse config.app_font_path;
         const font_size = config.terminal_font_size orelse config.editor_font_size orelse config.app_font_size;
         if (font_path != null or font_size != null) {
-            shell.rendererPtr().setFontConfig(font_path, font_size) catch {};
+            shell.rendererPtr().setFontConfig(font_path, font_size) catch |err| {
+                std.debug.print("font config apply error: {any}\n", .{err});
+            };
         }
     }
     if (config.app_theme != null or config.editor_theme != null or config.terminal_theme != null or config.theme != null) {
