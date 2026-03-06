@@ -45,10 +45,14 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
     defer config_mod.freeConfig(state.allocator, &config);
 
     if (config.log_file_filter) |filter| {
-        app_logger.setFileFilterString(filter) catch {};
+        app_logger.setFileFilterString(filter) catch |err| {
+            std.debug.print("reload log file filter parse error: {any}\n", .{err});
+        };
     }
     if (config.log_console_filter) |filter| {
-        app_logger.setConsoleFilterString(filter) catch {};
+        app_logger.setConsoleFilterString(filter) catch |err| {
+            std.debug.print("reload log console filter parse error: {any}\n", .{err});
+        };
     }
     if (config.sdl_log_level) |level| {
         app_shell.setSdlLogLevel(level);
