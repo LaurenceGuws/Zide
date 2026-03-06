@@ -1,4 +1,18 @@
 const target_profile = @import("target_profile.zig");
+const std = @import("std");
+
+pub const BuildMode = enum {
+    ide,
+    terminal,
+    editor,
+};
+
+pub fn parseBuildMode(raw: []const u8) BuildMode {
+    if (std.mem.eql(u8, raw, "ide")) return .ide;
+    if (std.mem.eql(u8, raw, "terminal")) return .terminal;
+    if (std.mem.eql(u8, raw, "editor")) return .editor;
+    @panic("invalid -Dmode (expected: ide, terminal, editor)");
+}
 
 pub const FocusedAppSpec = struct {
     name: []const u8,
@@ -31,6 +45,14 @@ pub const focused_apps = [_]FocusedAppSpec{
         .run_description = "Run ide-only app entry",
     },
 };
+
+pub fn selectedFocusedApp(mode: BuildMode) ?FocusedAppSpec {
+    return switch (mode) {
+        .terminal => focused_apps[0],
+        .editor => focused_apps[1],
+        .ide => null,
+    };
+}
 
 pub const TerminalTestSpec = struct {
     root_source_file: []const u8,

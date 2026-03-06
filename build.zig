@@ -31,19 +31,6 @@ const addMainModeRunSteps = step_utils.addMainModeRunSteps;
 const addSystemCommandStep = step_utils.addSystemCommandStep;
 const MainModeRunSteps = step_utils.MainModeRunSteps;
 
-const BuildMode = enum {
-    ide,
-    terminal,
-    editor,
-};
-
-fn parseBuildMode(raw: []const u8) BuildMode {
-    if (std.mem.eql(u8, raw, "ide")) return .ide;
-    if (std.mem.eql(u8, raw, "terminal")) return .terminal;
-    if (std.mem.eql(u8, raw, "editor")) return .editor;
-    std.debug.panic("invalid -Dmode '{s}' (expected: ide, terminal, editor)", .{raw});
-}
-
 pub fn build(b: *std.Build) void {
     target_profile.assertPolicy();
 
@@ -66,7 +53,7 @@ pub fn build(b: *std.Build) void {
         "Build app mode: ide (default), terminal, editor",
     ) orelse "ide";
     const dep_path = parseDependencyPath(dep_path_raw);
-    const build_mode = parseBuildMode(build_mode_raw);
+    const build_mode = mode_specs.parseBuildMode(build_mode_raw);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Tree-sitter (for syntax highlighting)
@@ -156,13 +143,7 @@ pub fn build(b: *std.Build) void {
         b.installArtifact(exe);
         main_mode_run_steps = addMainModeRunSteps(b, b.getInstallStep(), exe, b.args);
     } else {
-        for (mode_specs.focused_apps) |spec| {
-            const is_selected = switch (build_mode) {
-                .terminal => std.mem.eql(u8, spec.name, "zide-terminal"),
-                .editor => std.mem.eql(u8, spec.name, "zide-editor"),
-                .ide => false,
-            };
-            if (!is_selected) continue;
+        if (mode_specs.selectedFocusedApp(build_mode)) |spec| {
             _ = addFocusedModeExecutable(
                 b,
                 target,
