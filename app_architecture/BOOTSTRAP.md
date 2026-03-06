@@ -44,7 +44,7 @@ brew install zig freetype harfbuzz sdl3
 
 - Install [Zig](https://ziglang.org/download/)
 - Visual Studio Build Tools (for MSVC linker)
-- SDL3 development libraries (vcpkg recommended)
+- SDL3 development libraries (vcpkg required in current Windows path)
 
 #### Windows (vcpkg)
 ```powershell
