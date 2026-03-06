@@ -39,6 +39,11 @@ zig build -Dmode=terminal
 zig build -Dmode=editor
 ```
 
+Behavior:
+- `ide` (default): full IDE app graph (tests/tools/ffi steps available).
+- `terminal`: terminal app graph only (IDE-only graph planning is skipped).
+- `editor`: editor app graph only (IDE-only graph planning is skipped).
+
 Notes:
 - SDL3 and Lua are now always Zig package managed in normal flow (`castholm/SDL`, `ziglua` artifact `lua`).
 - Tree-sitter core runtime is now also Zig package managed in normal flow (`tree_sitter/tree-sitter`, artifact `tree-sitter`).
