@@ -21,18 +21,9 @@ fn distinctFromKnown(candidate: u32, base: ?u32, shifted: ?u32) bool {
 }
 
 pub fn selectThirdAlternate(inputs: ProbeInputs) ?u32 {
-    // If SDL explicitly indicates a non-AltGr alt key is active, avoid inferring
-    // an AltGr-style third field from ctrl+alt probes.
+    // Only trust AltGr-derived probes when SDL explicitly reports AltGr.
+    // This avoids layout guesswork from generic ctrl+alt translations.
     if (inputs.explicit_altgr) {
-        if (inputs.altgr) |cp| {
-            if (distinctFromKnown(cp, inputs.base, inputs.shifted)) return cp;
-        }
-        if (inputs.altgr_shift) |cp| {
-            if (distinctFromKnown(cp, inputs.base, inputs.shifted)) return cp;
-        }
-    } else if (!inputs.explicit_non_altgr_alt) {
-        // No explicit SDL distinction available: keep generic ctrl+alt probing as
-        // a best-effort fallback for layouts that expose AltGr this way.
         if (inputs.altgr) |cp| {
             if (distinctFromKnown(cp, inputs.base, inputs.shifted)) return cp;
         }
@@ -113,14 +104,24 @@ test "selectThirdAlternate skips generic altgr probes for explicit non-altgr alt
     try std.testing.expectEqual(@as(?u32, 0x00e9), got);
 }
 
-test "selectThirdAlternate falls back to generic altgr probes when explicit state missing" {
+test "selectThirdAlternate does not infer altgr probe without explicit altgr" {
     const got = selectThirdAlternate(.{
         .base = 'e',
         .shifted = 'E',
         .event_sym = null,
         .altgr = 0x20AC,
     });
-    try std.testing.expectEqual(@as(?u32, 0x20AC), got);
+    try std.testing.expectEqual(@as(?u32, null), got);
+}
+
+test "selectThirdAlternate uses event_sym when distinct and explicit altgr is missing" {
+    const got = selectThirdAlternate(.{
+        .base = 'e',
+        .shifted = 'E',
+        .event_sym = '@',
+        .altgr = 0x20AC,
+    });
+    try std.testing.expectEqual(@as(?u32, '@'), got);
 }
 
 test "selectThirdAlternate ignores duplicates and returns null" {
