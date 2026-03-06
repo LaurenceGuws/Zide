@@ -886,6 +886,7 @@ pub fn build(b: *std.Build) void {
             "tools/bundle_terminal_linux.sh",
             "zig-out/bin/zide-terminal",
             "zig-out/terminal-bundle",
+            "assets",
         });
         bundle_terminal_step.dependOn(&bundle_terminal_cmd.step);
     }
