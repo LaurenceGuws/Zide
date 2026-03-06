@@ -266,6 +266,51 @@ pub fn addRunStepForArtifact(
     return run_step;
 }
 
+pub const MainModeRunSteps = struct {
+    run: *std.Build.Step,
+    terminal: *std.Build.Step,
+    editor: *std.Build.Step,
+    ide: *std.Build.Step,
+};
+
+pub fn addMainModeRunSteps(
+    b: *std.Build,
+    install_step: *std.Build.Step,
+    exe: *std.Build.Step.Compile,
+    passthrough_args: ?[]const []const u8,
+) MainModeRunSteps {
+    return .{
+        .run = addRunStepForArtifact(b, install_step, exe, "run", "Run the IDE", &.{}, passthrough_args),
+        .terminal = addRunStepForArtifact(
+            b,
+            install_step,
+            exe,
+            "run-mode-terminal",
+            "Run main entry in --mode terminal",
+            &.{ "--mode", "terminal" },
+            null,
+        ),
+        .editor = addRunStepForArtifact(
+            b,
+            install_step,
+            exe,
+            "run-mode-editor",
+            "Run main entry in --mode editor",
+            &.{ "--mode", "editor" },
+            null,
+        ),
+        .ide = addRunStepForArtifact(
+            b,
+            install_step,
+            exe,
+            "run-mode-ide",
+            "Run main entry in --mode ide",
+            &.{ "--mode", "ide" },
+            null,
+        ),
+    };
+}
+
 pub fn addFocusedModeExecutable(
     b: *std.Build,
     target: std.Build.ResolvedTarget,

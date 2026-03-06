@@ -19,6 +19,7 @@ const addLibcTest = helpers.addLibcTest;
 const addLibcExecutable = helpers.addLibcExecutable;
 const addGateStep = helpers.addGateStep;
 const resolveVcpkgPaths = helpers.resolveVcpkgPaths;
+const addMainModeRunSteps = helpers.addMainModeRunSteps;
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{
@@ -178,34 +179,7 @@ pub fn build(b: *std.Build) void {
     // ─────────────────────────────────────────────────────────────────────────
     // Run step
     // ─────────────────────────────────────────────────────────────────────────
-    const run_step = addRunStepForArtifact(b, b.getInstallStep(), exe, "run", "Run the IDE", &.{}, b.args);
-    const run_mode_terminal_step = addRunStepForArtifact(
-        b,
-        b.getInstallStep(),
-        exe,
-        "run-mode-terminal",
-        "Run main entry in --mode terminal",
-        &.{ "--mode", "terminal" },
-        null,
-    );
-    const run_mode_editor_step = addRunStepForArtifact(
-        b,
-        b.getInstallStep(),
-        exe,
-        "run-mode-editor",
-        "Run main entry in --mode editor",
-        &.{ "--mode", "editor" },
-        null,
-    );
-    const run_mode_ide_step = addRunStepForArtifact(
-        b,
-        b.getInstallStep(),
-        exe,
-        "run-mode-ide",
-        "Run main entry in --mode ide",
-        &.{ "--mode", "ide" },
-        null,
-    );
+    const main_mode_run_steps = addMainModeRunSteps(b, b.getInstallStep(), exe, b.args);
 
     // Focused app entrypoints (same app graph for now, fixed mode roots).
     _ = addFocusedModeExecutable(
@@ -615,11 +589,17 @@ pub fn build(b: *std.Build) void {
         },
     );
 
-    const mode_smokes_manual_step = b.step("mode-smokes-manual", "Run interactive MODE smokes (manual)");
-    mode_smokes_manual_step.dependOn(run_step);
-    mode_smokes_manual_step.dependOn(run_mode_terminal_step);
-    mode_smokes_manual_step.dependOn(run_mode_editor_step);
-    mode_smokes_manual_step.dependOn(run_mode_ide_step);
+    _ = addGateStep(
+        b,
+        "mode-smokes-manual",
+        "Run interactive MODE smokes (manual)",
+        &.{
+            main_mode_run_steps.run,
+            main_mode_run_steps.terminal,
+            main_mode_run_steps.editor,
+            main_mode_run_steps.ide,
+        },
+    );
 
     const grammar_update = addLibcExecutable(
         b,
