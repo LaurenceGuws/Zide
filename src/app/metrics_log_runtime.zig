@@ -1,5 +1,4 @@
 pub fn maybeLog(state: anytype, now: f64) void {
-    if (!state.metrics_logger.enabled_file) return;
     if (now - state.last_metrics_log_time < 1.0) return;
     state.last_metrics_log_time = now;
     state.metrics_logger.logf(.info, 

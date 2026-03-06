@@ -1184,39 +1184,33 @@ pub fn draw(
     }
 
     const draw_log = app_logger.logger("terminal.ui.redraw");
-    if (draw_log.enabled_file or draw_log.enabled_console) {
-        const now = app_shell.getTime();
-        const elapsed_ms = time_utils.secondsToMs(now - draw_start);
-        const has_kitty_images = self.kitty.images_view.items.len > 0;
-        if ((elapsed_ms >= 4.0 or has_kitty_images) and (now - self.last_draw_log_time) >= 0.1) {
-            self.last_draw_log_time = now;
-            draw_log.logf(.info, 
-                "draw_ms={d:.2} rows={d} cols={d} history={d} cells={d} kitty_images={d} kitty_placements={d}",
-                .{
-                    elapsed_ms,
-                    rows,
-                    cols,
-                    history_len,
-                    rows * cols,
-                    self.kitty.images_view.items.len,
-                    self.kitty.placements_view.items.len,
-                },
-            );
-        }
+    const now = app_shell.getTime();
+    const elapsed_ms = time_utils.secondsToMs(now - draw_start);
+    const has_kitty_images = self.kitty.images_view.items.len > 0;
+    if ((elapsed_ms >= 4.0 or has_kitty_images) and (now - self.last_draw_log_time) >= 0.1) {
+        self.last_draw_log_time = now;
+        draw_log.logf(.info,
+            "draw_ms={d:.2} rows={d} cols={d} history={d} cells={d} kitty_images={d} kitty_placements={d}",
+            .{
+                elapsed_ms,
+                rows,
+                cols,
+                history_len,
+                rows * cols,
+                self.kitty.images_view.items.len,
+                self.kitty.placements_view.items.len,
+            },
+        );
     }
 
     if (self.bench_enabled) {
         const bench_log = app_logger.logger("terminal.ui.bench");
-        if (bench_log.enabled_file or bench_log.enabled_console) {
-            const now = app_shell.getTime();
-            const elapsed_ms = time_utils.secondsToMs(now - draw_start);
-            if ((now - self.last_bench_log_time) >= 0.1) {
-                self.last_bench_log_time = now;
-                bench_log.logf(.info, 
-                    "draw_ms={d:.2} rows={d} cols={d} upload_images={d} upload_bytes={d}",
-                    .{ elapsed_ms, rows, cols, upload_stats.images, upload_stats.bytes },
-                );
-            }
+        if ((now - self.last_bench_log_time) >= 0.1) {
+            self.last_bench_log_time = now;
+            bench_log.logf(.info,
+                "draw_ms={d:.2} rows={d} cols={d} upload_images={d} upload_bytes={d}",
+                .{ elapsed_ms, rows, cols, upload_stats.images, upload_stats.bytes },
+            );
         }
     }
 }
@@ -1351,7 +1345,7 @@ fn drawShapedGlyph(
     const snapped_y = snapToDevicePixel(draw_y, render_scale);
 
     const jitter_log = app_logger.logger("terminal.font.jitter");
-    if ((jitter_log.enabled_file or jitter_log.enabled_console) and jitterDebugEnabled()) {
+    if (jitterDebugEnabled()) {
         const did_fit_scale = @abs(overflow_scale - 1.0) > 0.001;
         const has_y_offset = hb_pos.y_offset != 0;
         const y_snap_error = draw_y - snapped_y;

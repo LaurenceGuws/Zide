@@ -179,9 +179,7 @@ pub fn handleInput(
         var pixel_y: u32 = @intFromFloat(raw_px_y_f);
         if (grid_px_w > 0) pixel_x = @min(pixel_x, grid_px_w - 1);
         if (grid_px_h > 0) pixel_y = @min(pixel_y, grid_px_h - 1);
-        if ((mousemap_log.enabled_file or mousemap_log.enabled_console) and
-            (input_batch.mousePressed(.left) or input_batch.mousePressed(.middle) or input_batch.mousePressed(.right)))
-        {
+        if (input_batch.mousePressed(.left) or input_batch.mousePressed(.middle) or input_batch.mousePressed(.right)) {
             const screen = r.getScreenSize();
             const render = r.getRenderSize();
             const dpi = r.getDpiScale();
@@ -434,7 +432,7 @@ pub fn handleInput(
         }.apply;
 
         if (allow_terminal_key) {
-            if ((key_log.enabled_file or key_log.enabled_console) and input_batch.events.items.len > 0) {
+            if (input_batch.events.items.len > 0) {
                 key_log.logf(.info, 
                     "frame key_mode_flags={d} report_text={d} auto_repeat={d} events={d}",
                     .{

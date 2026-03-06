@@ -41,30 +41,26 @@ pub fn handle(
         hooks.maybe_log_metrics(ctx, draw_end);
         state.needs_redraw = false;
         state.idle_frames = 0;
-        if (state.input_latency_logger.enabled_file or state.input_latency_logger.enabled_console) {
-            if (input_batch.events.items.len > 0) {
-                const total_ms = poll_ms + build_ms + update_ms + draw_ms;
-                if (total_ms >= 1.0) {
-                    state.input_latency_logger.logf(.info, 
-                        "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2}",
-                        .{ poll_ms, build_ms, update_ms, draw_ms },
-                    );
-                }
+        if (input_batch.events.items.len > 0) {
+            const total_ms = poll_ms + build_ms + update_ms + draw_ms;
+            if (total_ms >= 1.0) {
+                state.input_latency_logger.logf(.info, 
+                    "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2}",
+                    .{ poll_ms, build_ms, update_ms, draw_ms },
+                );
             }
         }
         return;
     }
 
     state.idle_frames +|= 1;
-    if (state.input_latency_logger.enabled_file or state.input_latency_logger.enabled_console) {
-        if (input_batch.events.items.len > 0) {
-            const total_ms = poll_ms + build_ms + update_ms;
-            if (total_ms >= 1.0) {
-                state.input_latency_logger.logf(.info, 
-                    "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms=0.00",
-                    .{ poll_ms, build_ms, update_ms },
-                );
-            }
+    if (input_batch.events.items.len > 0) {
+        const total_ms = poll_ms + build_ms + update_ms;
+        if (total_ms >= 1.0) {
+            state.input_latency_logger.logf(.info, 
+                "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms=0.00",
+                .{ poll_ms, build_ms, update_ms },
+            );
         }
     }
 

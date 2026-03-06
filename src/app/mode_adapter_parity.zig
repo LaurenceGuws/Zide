@@ -11,7 +11,6 @@ pub fn logIfMismatch(
     terminal_mode_adapter: anytype,
 ) void {
     const log = app_logger.logger("app.mode.parity");
-    if (!log.enabled_file and !log.enabled_console) return;
 
     const editor_snap = editor_mode_adapter.asContract().snapshot(allocator) catch |err| {
         log.logf(.warning, "editor adapter snapshot failed: {s}", .{@errorName(err)});

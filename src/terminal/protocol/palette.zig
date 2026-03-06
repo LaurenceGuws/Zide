@@ -189,8 +189,8 @@ fn writeOscColorReply(self: anytype, pty: anytype, code: u8, color: types.Color,
         log.logf(.warning, "osc color reply format failed code={d} err={s}", .{ code, @errorName(err) });
         return;
     };
-            log.logf(.info, "osc reply=\"{s}\"", .{seq});
-        logOscReplyHex(log, seq);
+    log.logf(.info, "osc reply=\"{s}\"", .{seq});
+    logOscReplyHex(log, seq);
     _ = pty.write(seq) catch |err| blk: {
         log.logf(.warning, "osc reply write failed code={d} err={s}", .{ code, @errorName(err) });
         break :blk 0;
@@ -222,7 +222,6 @@ fn writeOscPaletteReply(self: anytype, pty: anytype, idx: u8, color: types.Color
 }
 
 fn logOscReplyHex(log: app_logger.Logger, seq: []const u8) void {
-    if (!(log.enabled_file or log.enabled_console)) return;
     var buf: [512]u8 = undefined;
     var out: []u8 = buf[0..0];
     for (seq) |b| {
