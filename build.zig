@@ -6,6 +6,7 @@ const target_config = @import("build_utils/target_config.zig");
 const target_factory = @import("build_utils/target_factory.zig");
 const step_utils = @import("build_utils/step_utils.zig");
 const vcpkg_paths = @import("build_utils/vcpkg_paths.zig");
+const windows_runtime = @import("build_utils/windows_runtime.zig");
 const dependency_resolver = @import("build_utils/dependency_resolver.zig");
 const target_profile = @import("build_utils/target_profile.zig");
 const mode_specs = @import("build_utils/mode_specs.zig");
@@ -29,7 +30,9 @@ const addGateStep = step_utils.addGateStep;
 const resolveVcpkgPaths = vcpkg_paths.resolveVcpkgPaths;
 const addMainModeRunSteps = step_utils.addMainModeRunSteps;
 const addSystemCommandStep = step_utils.addSystemCommandStep;
+const addBuildProfileReportStep = step_utils.addBuildProfileReportStep;
 const MainModeRunSteps = step_utils.MainModeRunSteps;
+const installVcpkgRuntimeDlls = windows_runtime.installVcpkgRuntimeDlls;
 
 fn planIdePrimaryAppGraph(
     b: *std.Build,
@@ -207,33 +210,8 @@ pub fn build(b: *std.Build) void {
         },
     };
 
-    // On Windows, vcpkg typically provides runtime deps as DLLs in
-    // <triplet>/bin. Copy them next to the installed exe so that launching
-    // `zig-out/bin/zide.exe` works without requiring manual PATH setup.
-    if (use_vcpkg and target_os == .windows and vcpkg_bin != null) {
-        const dlls = [_][]const u8{
-            "SDL3.dll",
-            "freetype.dll",
-            "harfbuzz.dll",
-            "harfbuzz-subset.dll",
-            "lua.dll",
-            "zlib1.dll",
-            "libpng16.dll",
-            "bz2.dll",
-            "brotlicommon.dll",
-            "brotlidec.dll",
-            "brotlienc.dll",
-        };
-        for (dlls) |dll| {
-            const src = b.pathJoin(&.{ vcpkg_bin.?, dll });
-            if (std.fs.cwd().access(src, .{})) |_| {
-                const install_dll = b.addInstallFile(.{ .cwd_relative = src }, b.fmt("bin/{s}", .{dll}));
-                b.getInstallStep().dependOn(&install_dll.step);
-            } else |_| {
-                // Some triplets/configurations may not ship all of these.
-            }
-        }
-    }
+    // On Windows, vcpkg runtime DLLs are installed next to zide.exe.
+    installVcpkgRuntimeDlls(b, target_os, use_vcpkg, vcpkg_bin);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Terminal FFI bridge
@@ -495,25 +473,11 @@ pub fn build(b: *std.Build) void {
         &.{},
     );
 
-    const build_profile_report_exe = b.addExecutable(.{
-        .name = "build-profile-report",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("tools/build_profile_report.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    build_profile_report_exe.root_module.addAnonymousImport("target_profile", .{
-        .root_source_file = b.path("build_utils/target_profile.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    const build_profile_report_run = b.addRunArtifact(build_profile_report_exe);
-    const build_profile_report_step = b.step(
-        "report-build-profiles",
-        "Report active build dependency profiles",
+    const build_profile_report_step = addBuildProfileReportStep(
+        b,
+        target,
+        optimize,
     );
-    build_profile_report_step.dependOn(&build_profile_report_run.step);
 
     _ = addSystemCommandStep(
         b,
