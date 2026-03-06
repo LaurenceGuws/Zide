@@ -20,9 +20,13 @@ pub fn main() !void {
         std.c.getenv("ZIDE_LOG_CONSOLE") == null and
         std.c.getenv("ZIDE_LOG_FILE") == null)
     {
-        app_logger.setConsoleFilterString("terminal.replay") catch {};
+        app_logger.setConsoleFilterString("terminal.replay") catch |err| {
+            std.log.warn("terminal_replay: failed to set console log filter: {s}", .{@errorName(err)});
+        };
     }
-    _ = app_logger.init() catch {};
+    app_logger.init() catch |err| {
+        std.log.warn("terminal_replay: logger init failed: {s}", .{@errorName(err)});
+    };
     defer app_logger.deinit();
 
     const log = app_logger.logger("terminal.replay");

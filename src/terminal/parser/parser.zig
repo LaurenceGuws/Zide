@@ -1,6 +1,7 @@
 const std = @import("std");
 const stream_mod = @import("stream.zig");
 const csi_mod = @import("csi.zig");
+const app_logger = @import("../../app_logger.zig");
 
 pub const Parser = struct {
     allocator: std.mem.Allocator,
@@ -217,7 +218,9 @@ pub const Parser = struct {
                     return;
                 }
                 if (self.osc_buffer.items.len < 4096) {
-                    _ = self.osc_buffer.append(self.allocator, byte) catch {};
+                    self.osc_buffer.append(self.allocator, byte) catch |err| {
+                        app_logger.logger("terminal.parse").logf(.warning, "osc buffer append failed len={d} err={s}", .{ self.osc_buffer.items.len, @errorName(err) });
+                    };
                 }
             },
             .osc_esc => {
@@ -229,7 +232,9 @@ pub const Parser = struct {
                 // Treat stray ESC as ignored and continue.
                 self.osc_state = .osc;
                 if (self.osc_buffer.items.len < 4096) {
-                    _ = self.osc_buffer.append(self.allocator, byte) catch {};
+                    self.osc_buffer.append(self.allocator, byte) catch |err| {
+                        app_logger.logger("terminal.parse").logf(.warning, "osc buffer append failed len={d} err={s}", .{ self.osc_buffer.items.len, @errorName(err) });
+                    };
                 }
             },
         }
@@ -255,7 +260,9 @@ pub const Parser = struct {
                     return;
                 }
                 if (self.apc_buffer.items.len < apc_max_len) {
-                    _ = self.apc_buffer.append(self.allocator, byte) catch {};
+                    self.apc_buffer.append(self.allocator, byte) catch |err| {
+                        app_logger.logger("terminal.parse").logf(.warning, "apc buffer append failed len={d} err={s}", .{ self.apc_buffer.items.len, @errorName(err) });
+                    };
                 }
             },
             .apc_esc => {
@@ -265,7 +272,9 @@ pub const Parser = struct {
                 }
                 self.apc_state = .apc;
                 if (self.apc_buffer.items.len < apc_max_len) {
-                    _ = self.apc_buffer.append(self.allocator, byte) catch {};
+                    self.apc_buffer.append(self.allocator, byte) catch |err| {
+                        app_logger.logger("terminal.parse").logf(.warning, "apc buffer append failed len={d} err={s}", .{ self.apc_buffer.items.len, @errorName(err) });
+                    };
                 }
             },
         }
@@ -286,7 +295,9 @@ pub const Parser = struct {
                     return;
                 }
                 if (self.dcs_buffer.items.len < 4096) {
-                    _ = self.dcs_buffer.append(self.allocator, byte) catch {};
+                    self.dcs_buffer.append(self.allocator, byte) catch |err| {
+                        app_logger.logger("terminal.parse").logf(.warning, "dcs buffer append failed len={d} err={s}", .{ self.dcs_buffer.items.len, @errorName(err) });
+                    };
                 }
             },
             .dcs_esc => {
@@ -296,7 +307,9 @@ pub const Parser = struct {
                 }
                 self.dcs_state = .dcs;
                 if (self.dcs_buffer.items.len < 4096) {
-                    _ = self.dcs_buffer.append(self.allocator, byte) catch {};
+                    self.dcs_buffer.append(self.allocator, byte) catch |err| {
+                        app_logger.logger("terminal.parse").logf(.warning, "dcs buffer append failed len={d} err={s}", .{ self.dcs_buffer.items.len, @errorName(err) });
+                    };
                 }
             },
         }

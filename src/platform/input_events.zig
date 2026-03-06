@@ -1,6 +1,7 @@
 const gl = @import("../ui/renderer/gl.zig");
 const sdl_api = @import("sdl_api.zig");
 const std = @import("std");
+const app_logger = @import("../app_logger.zig");
 
 const sdl = gl.c;
 
@@ -58,7 +59,9 @@ pub fn handleKeyDown(
             .sym = sym,
             .mod_bits = mod_bits,
             .repeated = repeat != 0,
-        }) catch {};
+        }) catch |err| {
+            app_logger.logger("input.sdl").logf(.warning, "keydown queue append failed sc={d} err={s}", .{ sc, @errorName(err) });
+        };
         handled = true;
     }
     return .{ .scancode = sc, .sym = sym, .mod_bits = mod_bits, .repeat = repeat, .handled = handled };
@@ -127,7 +130,9 @@ pub fn handleTextInput(
             .utf8_len = utf8_len,
             .utf8 = utf8,
             .text_is_composed = text_is_composed,
-        }) catch {};
+        }) catch |err| {
+            app_logger.logger("input.sdl").logf(.warning, "text input queue append failed cp={d} err={s}", .{ cp, @errorName(err) });
+        };
     }
     return text.len;
 }
@@ -145,7 +150,10 @@ pub fn handleTextEditing(
     const cursor = sdl_api.textEditingCursor(event);
     const selection_len = sdl_api.textEditingSelectionLen(event);
     composing_text.clearRetainingCapacity();
-    _ = composing_text.appendSlice(allocator, text) catch {};
+    _ = composing_text.appendSlice(allocator, text) catch |err| blk: {
+        app_logger.logger("input.sdl").logf(.warning, "text editing append failed bytes={d} err={s}", .{ text.len, @errorName(err) });
+        break :blk;
+    };
     composing_cursor.* = cursor;
     composing_selection_len.* = selection_len;
     composing_active.* = text.len > 0;

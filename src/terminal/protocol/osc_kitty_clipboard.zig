@@ -231,7 +231,9 @@ fn writeReadData(self: anytype, pty: anytype, terminator: OscTerminator, id: []c
 }
 
 fn appendOscTerminator(self: anytype, seq: *std.ArrayList(u8), terminator: OscTerminator) void {
-    _ = seq.appendSlice(self.allocator, if (terminator == .bel) "\x07" else "\x1b\\") catch {};
+    seq.appendSlice(self.allocator, if (terminator == .bel) "\x07" else "\x1b\\") catch |err| {
+        app_logger.logger("terminal.osc").logf(.warning, "osc5522 terminator append failed err={s}", .{@errorName(err)});
+    };
 }
 
 fn writeSeq(pty: anytype, seq: []const u8) void {
@@ -239,7 +241,10 @@ fn writeSeq(pty: anytype, seq: []const u8) void {
     if (log.enabled_file or log.enabled_console) {
         log.logf(.info, "osc5522 reply=\"{s}\"", .{seq});
     }
-    _ = pty.write(seq) catch {};
+    _ = pty.write(seq) catch |err| blk: {
+        log.logf(.warning, "osc5522 reply write failed len={d} err={s}", .{ seq.len, @errorName(err) });
+        break :blk 0;
+    };
 }
 
 fn sanitizeId(self: anytype, id: []const u8) struct { value: []const u8, owned: bool } {
@@ -247,7 +252,11 @@ fn sanitizeId(self: anytype, id: []const u8) struct { value: []const u8, owned: 
     var out = std.ArrayList(u8).empty;
     for (id) |ch| {
         if ((ch >= 'a' and ch <= 'z') or (ch >= 'A' and ch <= 'Z') or (ch >= '0' and ch <= '9') or ch == '-' or ch == '_' or ch == '+' or ch == '.') {
-            _ = out.append(self.allocator, ch) catch {};
+            out.append(self.allocator, ch) catch |err| {
+                app_logger.logger("terminal.osc").logf(.warning, "osc5522 id sanitize append failed err={s}", .{@errorName(err)});
+                out.deinit(self.allocator);
+                return .{ .value = "", .owned = false };
+            };
         }
     }
     if (out.items.len == 0) {

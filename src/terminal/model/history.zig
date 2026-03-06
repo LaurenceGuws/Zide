@@ -121,23 +121,35 @@ pub const TerminalHistory = struct {
             const line = self.scrollback.lineByIndex(idx) orelse continue;
             const line_len = line.cells.len;
             if (line_len == 0) {
-                _ = self.view_cache.resize(self.allocator, self.view_cache.items.len + @as(usize, cols)) catch {};
+                self.view_cache.resize(self.allocator, self.view_cache.items.len + @as(usize, cols)) catch |err| {
+                    log.logf(.warning, "scroll cache resize failed cols={d} err={s}", .{ cols, @errorName(err) });
+                    return;
+                };
                 const start = self.view_cache.items.len - @as(usize, cols);
                 for (self.view_cache.items[start .. start + @as(usize, cols)]) |*cell| cell.* = default_cell;
-                _ = self.view_wraps.append(self.allocator, line.wrapped) catch {};
+                self.view_wraps.append(self.allocator, line.wrapped) catch |err| {
+                    log.logf(.warning, "scroll cache wraps append failed err={s}", .{@errorName(err)});
+                    return;
+                };
                 self.view_rows += 1;
                 continue;
             }
             var offset: usize = 0;
             while (offset < line_len) : (offset += @as(usize, cols)) {
-                _ = self.view_cache.resize(self.allocator, self.view_cache.items.len + @as(usize, cols)) catch {};
+                self.view_cache.resize(self.allocator, self.view_cache.items.len + @as(usize, cols)) catch |err| {
+                    log.logf(.warning, "scroll cache resize failed cols={d} err={s}", .{ cols, @errorName(err) });
+                    return;
+                };
                 const start = self.view_cache.items.len - @as(usize, cols);
                 for (self.view_cache.items[start .. start + @as(usize, cols)]) |*cell| cell.* = default_cell;
                 const remaining = line_len - offset;
                 const copy_len = if (remaining > @as(usize, cols)) @as(usize, cols) else remaining;
                 std.mem.copyForwards(types.Cell, self.view_cache.items[start .. start + copy_len], line.cells[offset .. offset + copy_len]);
                 const is_last = remaining <= @as(usize, cols);
-                _ = self.view_wraps.append(self.allocator, if (is_last) line.wrapped else true) catch {};
+                self.view_wraps.append(self.allocator, if (is_last) line.wrapped else true) catch |err| {
+                    log.logf(.warning, "scroll cache wraps append failed err={s}", .{@errorName(err)});
+                    return;
+                };
                 self.view_rows += 1;
             }
         }
@@ -213,7 +225,10 @@ pub const TerminalHistory = struct {
                 const new_len = old_len + row_len;
                 const new_cells = self.allocator.realloc(last_line.cells, new_len) catch {
                     last_line.wrapped = false;
-                    _ = self.scrollback.pushLine(row[0..row_len], wrapped) catch {};
+                    _ = self.scrollback.pushLine(row[0..row_len], wrapped) catch |push_err| blk: {
+                        app_logger.logger("terminal.scroll").logf(.warning, "scrollback append fallback push failed len={d} err={s}", .{ row_len, @errorName(push_err) });
+                        break :blk 0;
+                    };
                     self.markScrollbackChanged();
                     return;
                 };
@@ -225,7 +240,10 @@ pub const TerminalHistory = struct {
             }
         }
 
-        _ = self.scrollback.pushLine(row[0..row_len], wrapped) catch {};
+        _ = self.scrollback.pushLine(row[0..row_len], wrapped) catch |err| blk: {
+            app_logger.logger("terminal.scroll").logf(.warning, "scrollback push failed len={d} wrapped={d} err={s}", .{ row_len, @intFromBool(wrapped), @errorName(err) });
+            break :blk 0;
+        };
         self.markScrollbackChanged();
     }
 

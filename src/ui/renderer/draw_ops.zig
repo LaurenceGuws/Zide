@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_logger = @import("../../app_logger.zig");
 const gl = @import("gl.zig");
 const shape_utils = @import("shape_utils.zig");
 const texture_draw = @import("texture_draw.zig");
@@ -113,6 +114,7 @@ fn applyBlendForKind(kind: types.TextureKind) void {
 }
 
 pub fn addBatchQuad(renderer: anytype, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, bg_color: types.Rgba, kind: types.TextureKind) void {
+    const log = app_logger.logger("renderer.batch");
     if (texture.id == 0 or texture.width <= 0 or texture.height <= 0) return;
     const tex_w = @as(f32, @floatFromInt(texture.width));
     const tex_h = @as(f32, @floatFromInt(texture.height));
@@ -145,7 +147,12 @@ pub fn addBatchQuad(renderer: anytype, texture: types.Texture, src: types.Rect, 
         .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
         .{ .x = x0, .y = y1, .u = u_min, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
     };
-    renderer.batch_vertices.appendSlice(renderer.allocator, &verts) catch return;
+    renderer.batch_vertices.appendSlice(renderer.allocator, &verts) catch |err| {
+        if (log.enabled_file or log.enabled_console) {
+            log.logf(.warning, "batch vertices append failed texture={d} err={s}", .{ texture.id, @errorName(err) });
+        }
+        return;
+    };
     if (renderer.batch_draws.items.len > 0) {
         const last_idx = renderer.batch_draws.items.len - 1;
         if (renderer.batch_draws.items[last_idx].texture_id == texture.id and renderer.batch_draws.items[last_idx].kind == kind) {
@@ -153,12 +160,16 @@ pub fn addBatchQuad(renderer: anytype, texture: types.Texture, src: types.Rect, 
             return;
         }
     }
-    _ = renderer.batch_draws.append(renderer.allocator, .{
+    renderer.batch_draws.append(renderer.allocator, .{
         .texture_id = texture.id,
         .kind = kind,
         .start = base,
         .count = 6,
-    }) catch {};
+    }) catch |err| {
+        if (log.enabled_file or log.enabled_console) {
+            log.logf(.warning, "batch draws append failed texture={d} err={s}", .{ texture.id, @errorName(err) });
+        }
+    };
 }
 
 pub fn addTerminalRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {

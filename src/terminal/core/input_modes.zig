@@ -1,5 +1,6 @@
 const std = @import("std");
 const key_encoding = @import("../input/key_encoding.zig");
+const app_logger = @import("../../app_logger.zig");
 
 const supported_key_mode_flags: u32 =
     key_encoding.key_mode_disambiguate |
@@ -36,7 +37,10 @@ pub fn keyModeQuery(self: anytype) void {
     if (self.pty) |*pty| {
         var buf: [32]u8 = undefined;
         const seq = std.fmt.bufPrint(&buf, "\x1b[?{d}u", .{flags}) catch return;
-        _ = pty.write(seq) catch {};
+        _ = pty.write(seq) catch |err| blk: {
+            app_logger.logger("terminal.input.keys").logf(.warning, "key mode query write failed flags={d} err={s}", .{ flags, @errorName(err) });
+            break :blk 0;
+        };
     }
 }
 

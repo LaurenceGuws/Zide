@@ -58,7 +58,9 @@ pub const Pty = struct {
 
     pub fn deinit(self: *Pty) void {
         if (self.child_pid) |pid| {
-            _ = posix.kill(pid, posix.SIG.TERM) catch {};
+            posix.kill(pid, posix.SIG.TERM) catch |err| {
+                app_logger.logger("terminal.env").logf(.warning, "spawn terminate failed pid={d} err={s}", .{ pid, @errorName(err) });
+            };
             if (std.Thread.spawn(.{}, reapChildWithDeadline, .{pid})) |thread| {
                 thread.detach();
             } else |_| {
@@ -92,7 +94,10 @@ pub const Pty = struct {
                             .revents = 0,
                         },
                     };
-                    _ = posix.poll(&fds, 10) catch {};
+                    _ = posix.poll(&fds, 10) catch |poll_err| blk: {
+                        app_logger.logger("terminal.env").logf(.warning, "pty write poll failed err={s}", .{@errorName(poll_err)});
+                        break :blk 0;
+                    };
                     continue;
                 }
                 return err;
@@ -271,7 +276,9 @@ fn reapChildWithDeadline(pid: posix.pid_t) void {
         const res = posix.waitpid(pid, posix.W.NOHANG);
         if (res.pid != 0) return;
         if (std.time.milliTimestamp() - start_ms > 200) {
-            _ = posix.kill(pid, posix.SIG.KILL) catch {};
+            posix.kill(pid, posix.SIG.KILL) catch |err| {
+                app_logger.logger("terminal.env").logf(.warning, "spawn force-kill failed pid={d} err={s}", .{ pid, @errorName(err) });
+            };
             _ = posix.waitpid(pid, 0);
             return;
         }
@@ -285,7 +292,10 @@ fn setNonBlocking(fd: posix.fd_t) !void {
 }
 
 fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
-    _ = posix.setsid() catch {};
+    _ = posix.setsid() catch |err| blk: {
+        app_logger.logger("terminal.env").logf(.warning, "spawn setsid failed err={s}", .{@errorName(err)});
+        break :blk 0;
+    };
     _ = c.ioctl(@intCast(slave_fd), c.TIOCSCTTY, @as(c_ulong, 0));
 
     var termios: c.struct_termios = undefined;
@@ -294,9 +304,15 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
         _ = c.tcsetattr(@intCast(slave_fd), c.TCSANOW, &termios);
     }
 
-    _ = posix.dup2(slave_fd, 0) catch {};
-    _ = posix.dup2(slave_fd, 1) catch {};
-    _ = posix.dup2(slave_fd, 2) catch {};
+    posix.dup2(slave_fd, 0) catch |err| {
+        app_logger.logger("terminal.env").logf(.warning, "spawn dup2 stdin failed err={s}", .{@errorName(err)});
+    };
+    posix.dup2(slave_fd, 1) catch |err| {
+        app_logger.logger("terminal.env").logf(.warning, "spawn dup2 stdout failed err={s}", .{@errorName(err)});
+    };
+    posix.dup2(slave_fd, 2) catch |err| {
+        app_logger.logger("terminal.env").logf(.warning, "spawn dup2 stderr failed err={s}", .{@errorName(err)});
+    };
     if (slave_fd > 2) posix.close(slave_fd);
 
     const shell_path = shell orelse defaultShell();
@@ -376,7 +392,8 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
             env_log.logf(.info, "spawn bash rcfile prepared path={s}", .{rc_path});
             env_log.logf(.info, "spawn exec shell={s} (bash rcfile inject)", .{shell_path});
             const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
-            _ = posix.execvpeZ(shell_path.ptr, &argv, envp) catch {};
+            const exec_err = posix.execvpeZ(shell_path.ptr, &argv, envp);
+            env_log.logf(.warning, "spawn exec shell failed shell={s} err={s}", .{ shell_path, @errorName(exec_err) });
             posix.exit(127);
         } else |err| {
             env_log.logf(.info, "spawn bash rcfile prepare failed path={s} err={s}", .{ rc_path, @errorName(err) });
@@ -390,14 +407,16 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
             shell_path.ptr,
         };
         const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
-        _ = posix.execvpeZ(argv[0].?, &argv, envp) catch {};
+        const exec_err = posix.execvpeZ(argv[0].?, &argv, envp);
+        env_log.logf(.warning, "spawn exec login failed shell={s} err={s}", .{ shell_path, @errorName(exec_err) });
         posix.exit(127);
     }
 
     const argv = [_:null]?[*:0]const u8{shell_path.ptr};
     env_log.logf(.info, "spawn exec shell={s}", .{shell_path});
     const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
-    _ = posix.execvpeZ(shell_path.ptr, &argv, envp) catch {};
+    const exec_err = posix.execvpeZ(shell_path.ptr, &argv, envp);
+    env_log.logf(.warning, "spawn exec shell failed shell={s} err={s}", .{ shell_path, @errorName(exec_err) });
     posix.exit(127);
 }
 
