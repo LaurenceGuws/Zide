@@ -54,6 +54,12 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
             std.debug.print("reload log console filter parse error: {any}\n", .{err});
         };
     }
+    if (config.log_file_level) |level| {
+        app_logger.setFileLevel(level);
+    }
+    if (config.log_console_level) |level| {
+        app_logger.setConsoleLevel(level);
+    }
     if (config.sdl_log_level) |level| {
         app_shell.setSdlLogLevel(level);
     }
@@ -103,7 +109,7 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         try app_font_rendering.applyRendererFontRenderingConfig(state.shell, &config, true);
         try hooks.refresh_terminal_sizing(ctx);
         state.needs_redraw = true;
-        log.logStdout("reload font_rendering applied", .{});
+        log.logStdout(.info, "reload font_rendering applied", .{});
     }
 
     if (config.terminal_blink_style) |blink_style| {
@@ -126,7 +132,7 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
             config.terminal_font_features,
         );
         state.needs_redraw = true;
-        log.logStdout("reload terminal ligatures strategy={s} features={s}", .{
+        log.logStdout(.info, "reload terminal ligatures strategy={s} features={s}", .{
             if (config.terminal_disable_ligatures) |v| @tagName(v) else "(unchanged)",
             config.terminal_font_features orelse "(unchanged)",
         });
@@ -142,7 +148,7 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
             config.editor_font_features,
         );
         state.needs_redraw = true;
-        log.logStdout("reload editor.disable_ligatures={s} editor.font_features={s}", .{
+        log.logStdout(.info, "reload editor.disable_ligatures={s} editor.font_features={s}", .{
             if (config.editor_disable_ligatures) |v| @tagName(v) else "(unchanged)",
             config.editor_font_features orelse "(unchanged)",
         });
@@ -164,12 +170,12 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
             term.updateViewCacheForScroll();
         }
         state.needs_redraw = true;
-        log.logStdout("reload terminal cursor shape={s} blink={any}", .{ @tagName(cursor_style.shape), cursor_style.blink });
+        log.logStdout(.info, "reload terminal cursor shape={s} blink={any}", .{ @tagName(cursor_style.shape), cursor_style.blink });
     }
 
     if (config.terminal_scrollback_rows != null) {
         state.terminal_scrollback_rows = config.terminal_scrollback_rows;
-        log.logStdout("reload note: terminal scrollback cap applies to new sessions", .{});
+        log.logStdout(.info, "reload note: terminal scrollback cap applies to new sessions", .{});
     }
     {
         const next_default_start_location = try resolveTerminalDefaultStartLocation(
@@ -181,7 +187,7 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         }
         state.terminal_default_start_location = next_default_start_location;
         state.terminal_new_tab_start_location = mapTerminalNewTabStartLocationMode(config.terminal_new_tab_start_location);
-        log.logStdout("reload terminal.start_location default={s} new_tab={s}", .{
+        log.logStdout(.info, "reload terminal.start_location default={s} new_tab={s}", .{
             state.terminal_default_start_location orelse "<unset>",
             @tagName(state.terminal_new_tab_start_location),
         });
@@ -189,19 +195,19 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
     if (config.terminal_tab_bar_show_single_tab != null) {
         state.terminal_tab_bar_show_single_tab = config.terminal_tab_bar_show_single_tab.?;
         state.needs_redraw = true;
-        log.logStdout("reload terminal.tab_bar.show_single_tab={any}", .{
+        log.logStdout(.info, "reload terminal.tab_bar.show_single_tab={any}", .{
             state.terminal_tab_bar_show_single_tab,
         });
     }
     if (config.editor_tab_bar_width_mode != null) {
         state.editor_tab_bar_width_mode = app_tab_bar_width.mapMode(config.editor_tab_bar_width_mode);
         state.needs_redraw = true;
-        log.logStdout("reload editor.tab_bar.width_mode={s}", .{@tagName(state.editor_tab_bar_width_mode)});
+        log.logStdout(.info, "reload editor.tab_bar.width_mode={s}", .{@tagName(state.editor_tab_bar_width_mode)});
     }
     if (config.terminal_tab_bar_width_mode != null) {
         state.terminal_tab_bar_width_mode = app_tab_bar_width.mapMode(config.terminal_tab_bar_width_mode);
         state.needs_redraw = true;
-        log.logStdout("reload terminal.tab_bar.width_mode={s}", .{@tagName(state.terminal_tab_bar_width_mode)});
+        log.logStdout(.info, "reload terminal.tab_bar.width_mode={s}", .{@tagName(state.terminal_tab_bar_width_mode)});
     }
     hooks.apply_current_tab_bar_width_mode(ctx);
     if (config.terminal_focus_report_window != null or config.terminal_focus_report_pane != null) {
@@ -210,7 +216,7 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         for (state.terminal_widgets.items) |*widget| {
             widget.setFocusReportSources(state.terminal_focus_report_window_events, state.terminal_focus_report_pane_events);
         }
-        log.logStdout("reload terminal.focus_reporting window={any} pane={any}", .{
+        log.logStdout(.info, "reload terminal.focus_reporting window={any} pane={any}", .{
             state.terminal_focus_report_window_events,
             state.terminal_focus_report_pane_events,
         });
@@ -220,8 +226,8 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         config.editor_font_path != null or config.editor_font_size != null or
         config.terminal_font_path != null or config.terminal_font_size != null)
     {
-        log.logStdout("reload note: font changes require restart", .{});
+        log.logStdout(.info, "reload note: font changes require restart", .{});
     }
 
-    log.logStdout("config reloaded", .{});
+    log.logStdout(.info, "config reloaded", .{});
 }

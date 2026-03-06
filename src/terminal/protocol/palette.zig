@@ -187,7 +187,7 @@ fn writeOscColorReply(self: anytype, pty: anytype, code: u8, color: types.Color,
         .{ code, r16, g16, b16, end },
     ) catch return;
     if (log.enabled_file or log.enabled_console) {
-        log.logf("osc reply=\"{s}\"", .{seq});
+        log.logf(.info, "osc reply=\"{s}\"", .{seq});
         logOscReplyHex(log, seq);
     }
     _ = pty.write(seq) catch {};
@@ -207,7 +207,7 @@ fn writeOscPaletteReply(self: anytype, pty: anytype, idx: u8, color: types.Color
         .{ idx, r16, g16, b16, end },
     ) catch return;
     if (log.enabled_file or log.enabled_console) {
-        log.logf("osc reply=\"{s}\"", .{seq});
+        log.logf(.info, "osc reply=\"{s}\"", .{seq});
         logOscReplyHex(log, seq);
     }
     _ = pty.write(seq) catch {};
@@ -223,5 +223,5 @@ fn logOscReplyHex(log: app_logger.Logger, seq: []const u8) void {
         _ = std.fmt.bufPrint(buf[start..], "{x:0>2} ", .{b}) catch break;
         out = buf[0 .. start + 3];
     }
-    log.logf("osc reply bytes len={d} hex={s}", .{ seq.len, out });
+    log.logf(.info, "osc reply bytes len={d} hex={s}", .{ seq.len, out });
 }

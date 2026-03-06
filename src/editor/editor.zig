@@ -162,7 +162,7 @@ pub const Editor = struct {
 
     pub fn openFile(self: *Editor, path: []const u8) !void {
         const log = app_logger.logger("editor.core");
-        log.logf("openFile path=\"{s}\"", .{path});
+        log.logf(.info, "openFile path=\"{s}\"", .{path});
         // Clean up old state
         if (self.highlighter) |h| {
             h.destroy();
@@ -199,7 +199,7 @@ pub const Editor = struct {
     pub fn save(self: *Editor) !void {
         if (self.file_path) |path| {
             const log = app_logger.logger("editor.core");
-            log.logf("save path=\"{s}\"", .{path});
+            log.logf(.info, "save path=\"{s}\"", .{path});
             try self.buffer.saveToFile(path);
             self.modified = false;
         }
@@ -207,7 +207,7 @@ pub const Editor = struct {
 
     pub fn saveAs(self: *Editor, path: []const u8) !void {
         const log = app_logger.logger("editor.core");
-        log.logf("saveAs path=\"{s}\"", .{path});
+        log.logf(.info, "saveAs path=\"{s}\"", .{path});
         try self.buffer.saveToFile(path);
         if (self.file_path) |old_path| {
             self.allocator.free(old_path);
@@ -1695,7 +1695,7 @@ pub const Editor = struct {
         const result = try self.buffer.undoWithCursor();
         if (result.changed) {
             const log = app_logger.logger("editor.core");
-            log.logf("undo ok", .{});
+            log.logf(.info, "undo ok", .{});
         }
         if (result.changed) {
             if (result.state) |state_id| {
@@ -1737,7 +1737,7 @@ pub const Editor = struct {
         const result = try self.buffer.redoWithCursor();
         if (result.changed) {
             const log = app_logger.logger("editor.core");
-            log.logf("redo ok", .{});
+            log.logf(.info, "redo ok", .{});
         }
         if (result.changed) {
             if (result.state) |state_id| {
@@ -1820,7 +1820,7 @@ pub const Editor = struct {
             self.highlight_dirty_start_line = null;
             self.highlight_dirty_end_line = null;
             self.highlight_pending = false;
-            log.logf(
+            log.logf(.info, 
                 "highlight skipped large_file bytes={d} threshold={d} path=\"{s}\"",
                 .{ self.buffer.totalLen(), highlighter_large_file_threshold_bytes, path orelse "" },
             );
@@ -1835,16 +1835,16 @@ pub const Editor = struct {
             self.highlight_dirty_start_line = null;
             self.highlight_dirty_end_line = null;
             self.highlight_pending = false;
-            log.logf("highlight disabled path=\"{s}\"", .{path orelse ""});
+            log.logf(.info, "highlight disabled path=\"{s}\"", .{path orelse ""});
             return;
         }
         self.highlight_pending = true;
-        log.logf("highlight scheduled path=\"{s}\"", .{path orelse ""});
+        log.logf(.info, "highlight scheduled path=\"{s}\"", .{path orelse ""});
     }
 
     fn tryInitHighlighter(self: *Editor, path: ?[]const u8) !void {
         const log = app_logger.logger("editor.highlight");
-        log.logf("highlight init check path=\"{s}\"", .{path orelse ""});
+        log.logf(.info, "highlight init check path=\"{s}\"", .{path orelse ""});
         self.highlight_pending = false;
         const lang = syntax_registry_mod.SyntaxRegistry.resolveLanguage(path);
         if (lang == null) {
@@ -1855,21 +1855,21 @@ pub const Editor = struct {
             self.highlight_epoch +|= 1;
             self.highlight_dirty_start_line = null;
             self.highlight_dirty_end_line = null;
-            log.logf("highlight disabled path=\"{s}\"", .{path orelse ""});
+            log.logf(.info, "highlight disabled path=\"{s}\"", .{path orelse ""});
             return;
         }
         if (self.highlighter == null) {
             const t_start = std.time.nanoTimestamp();
-            log.logf("highlight init start", .{});
+            log.logf(.info, "highlight init start", .{});
             const grammar = try self.grammar_manager.getOrLoad(lang.?) orelse blk: {
-                log.logf("highlight missing grammar lang={s}", .{lang.?});
+                log.logf(.info, "highlight missing grammar lang={s}", .{lang.?});
                 if (shouldAutoBootstrapGrammars()) {
                     if (self.tryAutoBootstrapGrammars()) {
                         if (try self.grammar_manager.getOrLoad(lang.?)) |loaded| {
-                            log.logf("highlight grammar loaded after bootstrap lang={s}", .{lang.?});
+                            log.logf(.info, "highlight grammar loaded after bootstrap lang={s}", .{lang.?});
                             break :blk loaded;
                         }
-                        log.logf("highlight grammar still missing after bootstrap lang={s}", .{lang.?});
+                        log.logf(.info, "highlight grammar still missing after bootstrap lang={s}", .{lang.?});
                         self.emitMissingGrammarNotice(true, true, false);
                     } else {
                         self.emitMissingGrammarNotice(true, true, false);
@@ -1887,13 +1887,13 @@ pub const Editor = struct {
                 grammar.query_paths,
                 self.grammar_manager,
             ) catch |err| {
-                log.logf("highlight init failed err={any}", .{err});
+                log.logf(.info, "highlight init failed err={any}", .{err});
                 return err;
             };
             self.highlight_epoch +|= 1;
             self.noteHighlightDirtyRange(0, self.buffer.totalLen());
             const elapsed_ns = std.time.nanoTimestamp() - t_start;
-            log.logf(
+            log.logf(.info, 
                 "highlight enabled path=\"{s}\" time_us={d}",
                 .{ path orelse "", @as(i64, @intCast(@divTrunc(elapsed_ns, 1000))) },
             );
@@ -1908,7 +1908,7 @@ pub const Editor = struct {
         if (!should_attempt) return false;
 
         const log = app_logger.logger("editor.grammar");
-        log.logf("auto bootstrap start cmd=\"zig build grammar-update -- --skip-git --continue-on-error\"", .{});
+        log.logf(.info, "auto bootstrap start cmd=\"zig build grammar-update -- --skip-git --continue-on-error\"", .{});
 
         var child = std.process.Child.init(&.{
             "zig",
@@ -1921,24 +1921,24 @@ pub const Editor = struct {
         child.stdout_behavior = .Inherit;
         child.stderr_behavior = .Inherit;
         const result = child.spawnAndWait() catch |err| {
-            log.logf("auto bootstrap spawn failed err={any}", .{err});
+            log.logf(.info, "auto bootstrap spawn failed err={any}", .{err});
             return false;
         };
         switch (result) {
             .Exited => |code| {
                 if (code == 0) {
-                    log.logf("auto bootstrap succeeded", .{});
+                    log.logf(.info, "auto bootstrap succeeded", .{});
                     return true;
                 }
-                log.logf("auto bootstrap failed exit_code={d}", .{code});
+                log.logf(.info, "auto bootstrap failed exit_code={d}", .{code});
                 return false;
             },
             .Signal => |sig| {
-                log.logf("auto bootstrap failed signal={d}", .{sig});
+                log.logf(.info, "auto bootstrap failed signal={d}", .{sig});
                 return false;
             },
             else => {
-                log.logf("auto bootstrap failed status={any}", .{result});
+                log.logf(.info, "auto bootstrap failed status={any}", .{result});
                 return false;
             },
         }

@@ -40,7 +40,7 @@ pub const TextStore = struct {
                 file.handle,
                 0,
             ) catch |err| blk: {
-                log.logf("initFromFile mmap fallback err={s} size={d}", .{ @errorName(err), stat.size });
+                log.logf(.info, "initFromFile mmap fallback err={s} size={d}", .{ @errorName(err), stat.size });
                 break :blk null;
             };
             if (mapped) |mapped_bytes| {
@@ -55,7 +55,7 @@ pub const TextStore = struct {
                     .mapped_original = mapped_bytes,
                 };
                 const t_rope_end = std.time.nanoTimestamp();
-                log.logf(
+                log.logf(.info, 
                     "initFromFile size={d} mmap_ms={d} rope_ms={d} total_ms={d} source=mmap",
                     .{
                         stat.size,
@@ -82,7 +82,7 @@ pub const TextStore = struct {
         };
         const t_rope_end = std.time.nanoTimestamp();
 
-        log.logf(
+        log.logf(.info, 
             "initFromFile size={d} read_ms={d} rope_ms={d} total_ms={d}",
             .{
                 stat.size,

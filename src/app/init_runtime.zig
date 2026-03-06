@@ -82,6 +82,12 @@ fn initWithMode(
             std.debug.print("log console filter parse error: {any}\n", .{err});
         };
     }
+    if (config.log_file_level) |level| {
+        app_logger.setFileLevel(level);
+    }
+    if (config.log_console_level) |level| {
+        app_logger.setConsoleLevel(level);
+    }
     try app_logger.init();
 
     if (config.sdl_log_level) |level| {
@@ -127,8 +133,8 @@ fn initWithMode(
     }
     _ = try shell.refreshUiScale();
     const app_log = app_logger.logger("app.core");
-    app_log.logStdout("logger initialized", .{});
-    app_log.logStdout("config lua backend: impl={s}", .{"ziglua"});
+    app_log.logStdout(.info, "logger initialized", .{});
+    app_log.logStdout(.info, "config lua backend: impl={s}", .{"ziglua"});
     const metrics_log = app_logger.logger("terminal.metrics");
     const input_latency_log = app_logger.logger("input.latency");
     const perf_log = app_logger.logger("editor.perf");

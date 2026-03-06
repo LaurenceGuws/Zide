@@ -158,7 +158,7 @@ const PlainCaptureSampler = struct {
             }
             buf.writer(self.allocator).print("{s}:{d}", .{ entry.name, entry.hits }) catch return;
         }
-        log.logf(
+        log.logf(.info, 
             "runtime unmapped captures phase={s} lang={s} total_hits={d} distinct={d} top=\"{s}\"",
             .{
                 phase,
@@ -1870,7 +1870,7 @@ const QueryCache = struct {
             &error_type,
         ) orelse {
             const log = app_logger.logger("editor.highlight");
-            log.logf(
+            log.logf(.info, 
                 "query parse failed lang={s} name={s} error_type={d} error_offset={d}",
                 .{ language_name, query_name, @as(u32, @intCast(error_type)), error_offset },
             );
@@ -1881,7 +1881,7 @@ const QueryCache = struct {
 
         const capture_count = c.ts_query_capture_count(query);
         const log = app_logger.logger("editor.highlight");
-        log.logf(
+        log.logf(.info, 
             "query loaded lang={s} name={s} bytes={d} captures={d}",
             .{ language_name, query_name, query_text.len, capture_count },
         );
@@ -1934,7 +1934,7 @@ const QueryCache = struct {
             (@as(f64, @floatFromInt(plain_count)) * 100.0) / @as(f64, @floatFromInt(effective_count))
         else
             0.0;
-        log.logf(
+        log.logf(.info, 
             "query capture coverage lang={s} name={s} mapped={d} plain={d} skipped={d} plain_pct={d:.1} plain_examples=\"{s}\"",
             .{
                 language_name,
@@ -2010,7 +2010,7 @@ const InjectionQueryCache = struct {
             &error_type,
         ) orelse {
             const log = app_logger.logger("editor.highlight");
-            log.logf(
+            log.logf(.info, 
                 "injection query parse failed lang={s} error_type={d} error_offset={d}",
                 .{ language_name, @as(u32, @intCast(error_type)), error_offset },
             );
@@ -2065,7 +2065,7 @@ fn loadQueryText(
                 return null;
             }
             const log = app_logger.logger("editor.highlight");
-            log.logf("query source path={s} bytes={d}", .{ path, data.len });
+            log.logf(.info, "query source path={s} bytes={d}", .{ path, data.len });
             return data;
         }
     }
@@ -2079,7 +2079,7 @@ fn loadQueryText(
             allocator.free(data);
             return null;
         }
-        log.logf("query source path=.zide/{s} bytes={d}", .{ rel_path, data.len });
+        log.logf(.info, "query source path=.zide/{s} bytes={d}", .{ rel_path, data.len });
         return data;
     }
 
@@ -2090,7 +2090,7 @@ fn loadQueryText(
                 allocator.free(data);
                 return null;
             }
-            log.logf("query source path={s} bytes={d}", .{ path, data.len });
+            log.logf(.info, "query source path={s} bytes={d}", .{ path, data.len });
             return data;
         }
     }
@@ -2100,7 +2100,7 @@ fn loadQueryText(
             allocator.free(data);
             return null;
         }
-        log.logf("query source path=assets/{s} bytes={d}", .{ rel_path, data.len });
+        log.logf(.info, "query source path=assets/{s} bytes={d}", .{ rel_path, data.len });
         return data;
     }
 

@@ -48,10 +48,10 @@ pub fn main() !void {
     }
 
     switch (mode) {
-        .list => log.logf("mode=list", .{}),
-        .fixture => log.logf("mode=fixture name={s}", .{fixture_name.?}),
-        .all => log.logf("mode=all", .{}),
-        .none => log.logf("mode=none", .{}),
+        .list => log.logf(.info, "mode=list", .{}),
+        .fixture => log.logf(.info, "mode=fixture name={s}", .{fixture_name.?}),
+        .all => log.logf(.info, "mode=all", .{}),
+        .none => log.logf(.info, "mode=none", .{}),
     }
 
     const vt_dir = "fixtures/terminal";
@@ -93,15 +93,15 @@ pub fn main() !void {
 
     if (mode == .all) {
         if (vt_fixtures.len == 0 and encoder_fixtures.len == 0) {
-            log.logf("no fixtures found", .{});
+            log.logf(.info, "no fixtures found", .{});
             return;
         }
         for (vt_fixtures) |*fixture| {
-            log.logf("running fixture {s}", .{fixture.name});
+            log.logf(.info, "running fixture {s}", .{fixture.name});
             try runVtFixture(log, allocator, fixture, update_goldens);
         }
         for (encoder_fixtures) |*fixture| {
-            log.logf("running fixture encoder:{s}", .{fixture.name});
+            log.logf(.info, "running fixture encoder:{s}", .{fixture.name});
             try runEncoderFixture(log, allocator, fixture, update_goldens);
         }
     }
@@ -139,7 +139,7 @@ fn listFixtures(
     encoder_fixtures: []harness.Fixture,
 ) void {
     if (vt_fixtures.len == 0 and encoder_fixtures.len == 0) {
-        log.logf("fixtures: (none)", .{});
+        log.logf(.info, "fixtures: (none)", .{});
         return;
     }
     var out = std.ArrayList(u8).empty;
@@ -154,7 +154,7 @@ fn listFixtures(
         tryAppend(&out, allocator, "encoder:");
         tryAppend(&out, allocator, fixture.name);
     }
-    log.logf("fixtures: {s}", .{out.items});
+    log.logf(.info, "fixtures: {s}", .{out.items});
 }
 
 fn runVtFixture(
@@ -167,11 +167,11 @@ fn runVtFixture(
     defer allocator.free(output);
     const path = try writeOutputFile(allocator, fixture.name, false, output);
     defer allocator.free(path);
-    log.logf("wrote {s}", .{path});
+    log.logf(.info, "wrote {s}", .{path});
     if (update_goldens) {
         const golden_path = try writeGoldenFile(allocator, fixture.name, false, output);
         defer allocator.free(golden_path);
-        log.logf("updated golden {s}", .{golden_path});
+        log.logf(.info, "updated golden {s}", .{golden_path});
         return;
     }
     try compareGolden(fixture.name, fixture.golden, output);
@@ -189,11 +189,11 @@ fn runEncoderFixture(
     defer allocator.free(output);
     const path = try writeOutputFile(allocator, fixture.name, true, output);
     defer allocator.free(path);
-    log.logf("wrote {s}", .{path});
+    log.logf(.info, "wrote {s}", .{path});
     if (update_goldens) {
         const golden_path = try writeGoldenFile(allocator, fixture.name, true, output);
         defer allocator.free(golden_path);
-        log.logf("updated golden {s}", .{golden_path});
+        log.logf(.info, "updated golden {s}", .{golden_path});
         return;
     }
     try compareGolden(fixture.name, fixture.golden, output);

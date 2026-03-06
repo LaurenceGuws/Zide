@@ -2,6 +2,7 @@ const std = @import("std");
 const renderer = @import("../ui/renderer.zig");
 const input_actions = @import("../input/input_actions.zig");
 const term_types = @import("../terminal/model/types.zig");
+const app_logger = @import("../app_logger.zig");
 
 pub const Color = renderer.Color;
 pub const Theme = renderer.Theme;
@@ -96,6 +97,8 @@ pub const ThemeConfig = struct {
 pub const Config = struct {
     log_file_filter: ?[]u8,
     log_console_filter: ?[]u8,
+    log_file_level: ?app_logger.Level = null,
+    log_console_level: ?app_logger.Level = null,
     sdl_log_level: ?c_int,
     editor_wrap: ?bool,
     editor_large_jump_rows: ?usize,

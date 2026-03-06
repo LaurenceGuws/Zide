@@ -230,7 +230,7 @@ pub const KittyState = struct {
         const texture = loadTexture(renderer, image) orelse {
             const log = app_logger.logger("terminal.kitty");
             if (log.enabled_file or log.enabled_console) {
-                log.logf("kitty texture load failed id={d} format={s} bytes={d}", .{ image.id, @tagName(image.format), image.data.len });
+                log.logf(.info, "kitty texture load failed id={d} format={s} bytes={d}", .{ image.id, @tagName(image.format), image.data.len });
             }
             return false;
         };
@@ -243,7 +243,7 @@ pub const KittyState = struct {
         _ = self.textures.put(image.id, stored) catch {};
         const log = app_logger.logger("terminal.kitty");
         if (log.enabled_file or log.enabled_console) {
-            log.logf("kitty texture ok id={d} w={d} h={d}", .{ image.id, texture.width, texture.height });
+            log.logf(.info, "kitty texture ok id={d} w={d} h={d}", .{ image.id, texture.width, texture.height });
         }
         return true;
     }
@@ -253,7 +253,7 @@ pub const KittyState = struct {
             .png => {
                 const log = app_logger.logger("terminal.kitty");
                 if (log.enabled_file or log.enabled_console) {
-                    log.logf("kitty upload skipped: png needs decode id={d}", .{image.id});
+                    log.logf(.info, "kitty upload skipped: png needs decode id={d}", .{image.id});
                 }
                 return null;
             },

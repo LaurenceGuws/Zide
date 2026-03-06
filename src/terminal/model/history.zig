@@ -108,7 +108,7 @@ pub const TerminalHistory = struct {
 
         const log = app_logger.logger("terminal.scroll");
         if (log.enabled_file or log.enabled_console) {
-            log.logf("scroll cache rebuild cols={d} lines={d} gen={d}", .{ cols, self.scrollback.count(), self.scrollback_generation });
+            log.logf(.info, "scroll cache rebuild cols={d} lines={d} gen={d}", .{ cols, self.scrollback.count(), self.scrollback_generation });
         }
 
         self.view_cache.clearRetainingCapacity();
@@ -145,7 +145,7 @@ pub const TerminalHistory = struct {
         self.view_generation = self.scrollback_generation;
 
         if (log.enabled_file or log.enabled_console) {
-            log.logf("scroll cache rows={d} cells={d}", .{ self.view_rows, self.view_cache.items.len });
+            log.logf(.info, "scroll cache rows={d} cells={d}", .{ self.view_rows, self.view_cache.items.len });
         }
     }
 
@@ -240,7 +240,7 @@ pub const TerminalHistory = struct {
         if (start + cols > self.view_cache.items.len) {
             const log = app_logger.logger("terminal.scroll");
             if (log.enabled_file or log.enabled_console) {
-                log.logf("scroll row miss index={d} start={d} cols={d} len={d}", .{ index, start, cols, self.view_cache.items.len });
+                log.logf(.info, "scroll row miss index={d} start={d} cols={d} len={d}", .{ index, start, cols, self.view_cache.items.len });
             }
             return null;
         }

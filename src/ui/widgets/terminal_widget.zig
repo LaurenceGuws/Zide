@@ -123,7 +123,7 @@ pub const TerminalWidget = struct {
         self.ui_focused = focused;
         const log = app_logger.logger("terminal.cursor");
         if (log.enabled_file or log.enabled_console) {
-            log.logf("ui_focus changed focused={d}", .{ @intFromBool(focused) });
+            log.logf(.info, "ui_focus changed focused={d}", .{ @intFromBool(focused) });
         }
     }
 

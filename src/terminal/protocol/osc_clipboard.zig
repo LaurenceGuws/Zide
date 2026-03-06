@@ -59,7 +59,7 @@ fn writeClipboardReply(self: anytype, pty: anytype, selection: []const u8, termi
     _ = seq.appendSlice(self.allocator, end) catch return;
 
     if (log.enabled_file or log.enabled_console) {
-        log.logf("osc reply=\"{s}\"", .{seq.items});
+        log.logf(.info, "osc reply=\"{s}\"", .{seq.items});
     }
     _ = pty.write(seq.items) catch {};
 }

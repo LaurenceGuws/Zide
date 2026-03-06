@@ -1,4 +1,5 @@
 const std = @import("std");
+const log = std.log.scoped(.syntax_registry);
 const default_language_for_unsaved = "zig";
 
 pub const SyntaxRegistry = struct {
@@ -120,13 +121,21 @@ fn loadMaps() *MapTable {
         .injections = std.StringHashMap([]const u8).init(allocator),
     };
 
-    _ = loadLuaMap(allocator, "assets/syntax/generated.lua") catch {};
-    _ = loadLuaMap(allocator, "assets/syntax/overrides.lua") catch {};
+    loadLuaMap(allocator, "assets/syntax/generated.lua") catch |err| {
+        log.warn("failed to load {s}: {s}", .{ "assets/syntax/generated.lua", @errorName(err) });
+    };
+    loadLuaMap(allocator, "assets/syntax/overrides.lua") catch |err| {
+        log.warn("failed to load {s}: {s}", .{ "assets/syntax/overrides.lua", @errorName(err) });
+    };
     if (configSyntaxPath(allocator)) |path| {
-        _ = loadLuaMap(allocator, path) catch {};
+        loadLuaMap(allocator, path) catch |err| {
+            log.warn("failed to load {s}: {s}", .{ path, @errorName(err) });
+        };
         allocator.free(path);
     }
-    _ = loadLuaMap(allocator, ".zide/syntax.lua") catch {};
+    loadLuaMap(allocator, ".zide/syntax.lua") catch |err| {
+        log.warn("failed to load {s}: {s}", .{ ".zide/syntax.lua", @errorName(err) });
+    };
 
     return &map_tables;
 }

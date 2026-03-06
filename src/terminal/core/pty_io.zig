@@ -111,7 +111,7 @@ pub fn poll(self: anytype) !void {
             const should_log = elapsed_ms >= 8.0 or queued_bytes >= 1024 * 1024 or processed >= 512 * 1024;
             if (should_log and (end_ms - self.last_parse_log_ms) >= 100) {
                 self.last_parse_log_ms = end_ms;
-                perf_log.logf("parse_ms={d:.2} bytes={d} queued_bytes={d} input_pressure={any}", .{
+                perf_log.logf(.info, "parse_ms={d:.2} bytes={d} queued_bytes={d} input_pressure={any}", .{
                     elapsed_ms,
                     processed,
                     queued_bytes,
@@ -158,7 +158,7 @@ pub fn poll(self: anytype) !void {
         }
         if (processed > 0 and self.alt_exit_pending.swap(false, .acq_rel)) {
             const elapsed_ms = @as(f64, @floatFromInt(std.time.milliTimestamp() - start_ms));
-            io_log.logf("alt_exit_io_ms={d:.2} bytes={d}", .{ elapsed_ms, processed });
+            io_log.logf(.info, "alt_exit_io_ms={d:.2} bytes={d}", .{ elapsed_ms, processed });
         }
         if (processed > 0 and (perf_log.enabled_file or perf_log.enabled_console)) {
             const end_ms = std.time.milliTimestamp();
@@ -166,7 +166,7 @@ pub fn poll(self: anytype) !void {
             const should_log = elapsed_ms >= 8.0 or processed >= 512 * 1024;
             if (should_log and (end_ms - self.last_parse_log_ms) >= 100) {
                 self.last_parse_log_ms = end_ms;
-                perf_log.logf("parse_ms={d:.2} bytes={d} input_pressure={any}", .{
+                perf_log.logf(.info, "parse_ms={d:.2} bytes={d} input_pressure={any}", .{
                     elapsed_ms,
                     processed,
                     input_pressure,

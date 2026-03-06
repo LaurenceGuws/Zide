@@ -674,7 +674,7 @@ pub const Renderer = struct {
         if (log.enabled_file or log.enabled_console) {
             const layout_size = self.base_font_size * next * self.user_zoom;
             const raster_size = layout_size * next_render;
-            log.logf("ui_scale window={d:.3} render={d:.3}->{d:.3} user_zoom={d:.3} font={d:.2}->{d:.2}", .{
+            log.logf(.info, "ui_scale window={d:.3} render={d:.3}->{d:.3} user_zoom={d:.3} font={d:.2}->{d:.2}", .{
                 next,
                 self.render_scale,
                 next_render,
@@ -682,7 +682,7 @@ pub const Renderer = struct {
                 self.font_size,
                 layout_size,
             });
-            log.logf("ui_scale layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
+            log.logf(.info, "ui_scale layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
         }
         self.ui_scale = next;
         self.render_scale = next_render;
@@ -706,18 +706,18 @@ pub const Renderer = struct {
         if (log.enabled_file or log.enabled_console) {
             const layout_size = self.base_font_size * self.ui_scale * self.user_zoom;
             const raster_size = layout_size * self.render_scale;
-            log.logf("ui_zoom window={d:.3} render={d:.3} user_zoom={d:.3} font={d:.2}->{d:.2}", .{
+            log.logf(.info, "ui_zoom window={d:.3} render={d:.3} user_zoom={d:.3} font={d:.2}->{d:.2}", .{
                 self.ui_scale,
                 self.render_scale,
                 self.user_zoom,
                 self.font_size,
                 layout_size,
             });
-            log.logf("ui_zoom layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
+            log.logf(.info, "ui_zoom layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
         }
         try self.applyFontScale();
         if (log.enabled_file or log.enabled_console) {
-            log.logf(
+            log.logf(.info, 
                 "ui_zoom_effective base={d:.2} ui={d:.3} zoom={d:.3} target={d:.3} render={d:.3} font={d:.2} term_cell={d:.2}x{d:.2}",
                 .{
                     self.base_font_size,
@@ -1778,7 +1778,7 @@ pub const Renderer = struct {
         const input_log = app_logger.logger("input.sdl");
         const window_log = app_logger.logger("sdl.window");
         if (!sdl_input_env_logged and (input_log.enabled_file or input_log.enabled_console)) {
-            input_log.logf(
+            input_log.logf(.info, 
                 "sdl build_version=sdl3 event_size={d}",
                 .{sdl_api.sdlEventSize()},
             );
@@ -1811,7 +1811,7 @@ pub const Renderer = struct {
             self.handleEvent(&event, input_log, window_log, state);
         }
         if ((input_log.enabled_file or input_log.enabled_console) and event_count > 0) {
-            input_log.logf("sdl3 polled events={d}", .{event_count});
+            input_log.logf(.info, "sdl3 polled events={d}", .{event_count});
         }
     }
 
@@ -1838,7 +1838,7 @@ pub const Renderer = struct {
                     _ = self.focus_queue.append(self.allocator, false) catch {};
                 }
                 if (window_log.enabled_file or window_log.enabled_console) {
-                    window_log.logf(
+                    window_log.logf(.info, 
                         "event={s} data1={d} data2={d}",
                         .{
                             sdl_api.windowEventName(event.type),
@@ -1858,7 +1858,7 @@ pub const Renderer = struct {
                     self.allocator,
                 );
                 if (input_log.enabled_file or input_log.enabled_console) {
-                    input_log.logf(
+                    input_log.logf(.info, 
                         "keydown sc={d} sym={d} repeat={d}",
                         .{ key_info.scancode, key_info.sym, key_info.repeat },
                     );
@@ -1871,7 +1871,7 @@ pub const Renderer = struct {
                     self.key_released[0..],
                 );
                 if (input_log.enabled_file or input_log.enabled_console) {
-                    input_log.logf(
+                    input_log.logf(.info, 
                         "keyup sc={d} sym={d}",
                         .{ key_info.scancode, key_info.sym },
                     );
@@ -1888,7 +1888,7 @@ pub const Renderer = struct {
                 input_state.applyTextInputReset(state);
                 input_logging.logTextInput(text_len);
                 if (input_log.enabled_file or input_log.enabled_console) {
-                    input_log.logf("textinput type={d}", .{event.type});
+                    input_log.logf(.info, "textinput type={d}", .{event.type});
                 }
                 if (!sdl3_textinput_layout_logged and (input_log.enabled_file or input_log.enabled_console)) {
                     const layout = sdl_api.textInputLayout();
@@ -1979,7 +1979,7 @@ pub const Renderer = struct {
                         _ = self.focus_queue.append(self.allocator, false) catch {};
                     }
                     if (window_log.enabled_file or window_log.enabled_console) {
-                        window_log.logf(
+                        window_log.logf(.info, 
                             "event={s} data1={d} data2={d}",
                             .{
                                 sdl_api.windowEventName(event.type),

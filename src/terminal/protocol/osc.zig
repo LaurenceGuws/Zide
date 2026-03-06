@@ -16,7 +16,7 @@ pub fn parseOsc(self: anytype, payload: []const u8, terminator: OscTerminator) v
     if (log.enabled_file or log.enabled_console) {
         const max_len: usize = 160;
         const slice = if (payload.len > max_len) payload[0..max_len] else payload;
-        log.logf("osc payload=\"{s}\"", .{slice});
+        log.logf(.info, "osc payload=\"{s}\"", .{slice});
     }
     var i: usize = 0;
     var code: usize = 0;

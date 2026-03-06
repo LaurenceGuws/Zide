@@ -80,7 +80,7 @@ pub const GrammarManager = struct {
         const log = app_logger.logger("editor.grammar");
 
         const latest = try findLatestVersion(self.allocator, self.cache_root, language_name) orelse {
-            log.logf("grammar missing lang={s} root={s}", .{ language_name, self.cache_root });
+            log.logf(.info, "grammar missing lang={s} root={s}", .{ language_name, self.cache_root });
             return null;
         };
         defer self.allocator.free(latest);
@@ -88,11 +88,11 @@ pub const GrammarManager = struct {
         const os_tag = builtin.os.tag;
         const arch = builtin.cpu.arch;
         const os_name = osName(os_tag) orelse {
-            log.logf("grammar unsupported os={s} lang={s}", .{ @tagName(os_tag), language_name });
+            log.logf(.info, "grammar unsupported os={s} lang={s}", .{ @tagName(os_tag), language_name });
             return null;
         };
         const arch_name = archName(arch) orelse {
-            log.logf("grammar unsupported arch={s} lang={s}", .{ @tagName(arch), language_name });
+            log.logf(.info, "grammar unsupported arch={s} lang={s}", .{ @tagName(arch), language_name });
             return null;
         };
         const ext = libExt(os_tag);
@@ -110,13 +110,13 @@ pub const GrammarManager = struct {
         errdefer self.allocator.free(lib_path);
 
         if (!fileExistsAbsolute(lib_path)) {
-            log.logf("grammar lib missing lang={s} path={s}", .{ language_name, lib_path });
+            log.logf(.info, "grammar lib missing lang={s} path={s}", .{ language_name, lib_path });
             self.allocator.free(lib_path);
             return null;
         }
 
         var handle = std.DynLib.open(lib_path) catch |err| {
-            log.logf("grammar dlopen failed lang={s} path={s} err={any}", .{ language_name, lib_path, err });
+            log.logf(.info, "grammar dlopen failed lang={s} path={s} err={any}", .{ language_name, lib_path, err });
             self.allocator.free(lib_path);
             return err;
         };
@@ -126,7 +126,7 @@ pub const GrammarManager = struct {
         defer self.allocator.free(symbol);
 
         const loader = handle.lookup(LanguageFn, symbol) orelse {
-            log.logf("grammar symbol missing lang={s} symbol={s}", .{ language_name, symbol });
+            log.logf(.info, "grammar symbol missing lang={s} symbol={s}", .{ language_name, symbol });
             self.allocator.free(lib_path);
             return null;
         };
@@ -155,7 +155,7 @@ pub const GrammarManager = struct {
         };
 
         try self.loaded.put(name, grammar);
-        log.logf("grammar loaded lang={s} version={s} lib={s}", .{ name, version, lib_path });
+        log.logf(.info, "grammar loaded lang={s} version={s} lib={s}", .{ name, version, lib_path });
         return grammar;
     }
 };

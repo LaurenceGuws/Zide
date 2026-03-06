@@ -65,7 +65,7 @@ pub fn updateHoverState(
         hover_col != state.last_hover_col;
     if (hover_changed) {
         const log = app_logger.logger("terminal.ui.hover");
-        log.logf("ctrl={any} row={d} col={d} link={d}", .{ ctrl, hover_row, hover_col, hover_link_id });
+        log.logf(.info, "ctrl={any} row={d} col={d} link={d}", .{ ctrl, hover_row, hover_col, hover_link_id });
         state.dirty = true;
     }
     state.last_hover_ctrl = ctrl;

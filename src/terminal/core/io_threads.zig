@@ -21,7 +21,7 @@ pub fn logCsiSequences(log: app_logger.Logger, buf: []const u8) void {
                         _ = std.fmt.bufPrint(hex_buf[pos..], "{x:0>2} ", .{sb}) catch break;
                         out = hex_buf[0 .. pos + 3];
                     }
-                    log.logf("csi raw len={d} hex={s}", .{ seq.len, out });
+                    log.logf(.info, "csi raw len={d} hex={s}", .{ seq.len, out });
                 }
                 break;
             }
@@ -57,7 +57,7 @@ pub fn readThreadMain(session: anytype) void {
             }
             if (processed > 0 and session.alt_exit_pending.swap(false, .acq_rel)) {
                 const elapsed_ms = @as(f64, @floatFromInt(std.time.milliTimestamp() - start_ms));
-                io_log.logf("alt_exit_io_ms={d:.2} bytes={d}", .{ elapsed_ms, processed });
+                io_log.logf(.info, "alt_exit_io_ms={d:.2} bytes={d}", .{ elapsed_ms, processed });
             }
         } else {
             break;
@@ -164,7 +164,7 @@ pub fn parseThreadMain(session: anytype) void {
             const should_log = elapsed_ms >= 8.0 or queued_bytes >= 1024 * 1024 or processed >= 512 * 1024;
             if (should_log and (end_ms - session.last_parse_log_ms) >= 100) {
                 session.last_parse_log_ms = end_ms;
-                perf_log.logf("parse_ms={d:.2} bytes={d} queued_bytes={d} input_pressure={any}", .{
+                perf_log.logf(.info, "parse_ms={d:.2} bytes={d} queued_bytes={d} input_pressure={any}", .{
                     elapsed_ms,
                     processed,
                     queued_bytes,
