@@ -1,5 +1,4 @@
 const std = @import("std");
-const dependency_path = @import("dependency_path.zig");
 const app_types = @import("app_types.zig");
 const target_profile = @import("target_profile.zig");
 const links_windows = @import("platform_links_windows.zig");
@@ -28,57 +27,39 @@ fn requireTreeSitter(ctx: app_types.AppLinkContext) *std.Build.Step.Compile {
 
 fn linkTextStack(
     step: *std.Build.Step.Compile,
-    dep_path: dependency_path.DependencySource,
     freetype_lib: ?*std.Build.Step.Compile,
     harfbuzz_lib: ?*std.Build.Step.Compile,
 ) void {
-    switch (dep_path) {
-        .link => {
-            step.linkSystemLibrary("freetype");
-            step.linkSystemLibrary("harfbuzz");
-        },
-        .zig => {
-            if (freetype_lib) |lib| {
-                step.linkLibrary(lib);
-            } else {
-                step.linkSystemLibrary("freetype");
-            }
-            if (harfbuzz_lib) |lib| {
-                step.linkLibrary(lib);
-            } else {
-                step.linkSystemLibrary("harfbuzz");
-            }
-            step.linkSystemLibrary("z");
-        },
+    if (freetype_lib) |lib| {
+        step.linkLibrary(lib);
+    } else {
+        step.linkSystemLibrary("freetype");
     }
+    if (harfbuzz_lib) |lib| {
+        step.linkLibrary(lib);
+    } else {
+        step.linkSystemLibrary("harfbuzz");
+    }
+    step.linkSystemLibrary("z");
 }
 
 fn addTextStackIncludes(
     step: *std.Build.Step.Compile,
     use_vcpkg: bool,
     target_os: std.Target.Os.Tag,
-    dep_path: dependency_path.DependencySource,
     freetype_lib: ?*std.Build.Step.Compile,
     harfbuzz_lib: ?*std.Build.Step.Compile,
 ) void {
     if (use_vcpkg) return;
-    switch (dep_path) {
-        .link => {
-            step.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
-            step.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
-        },
-        .zig => {
-            if (freetype_lib) |lib| {
-                step.addIncludePath(lib.getEmittedIncludeTree());
-            } else {
-                step.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
-            }
-            if (harfbuzz_lib) |lib| {
-                step.addIncludePath(lib.getEmittedIncludeTree());
-            } else {
-                step.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
-            }
-        },
+    if (freetype_lib) |lib| {
+        step.addIncludePath(lib.getEmittedIncludeTree());
+    } else {
+        step.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
+    }
+    if (harfbuzz_lib) |lib| {
+        step.addIncludePath(lib.getEmittedIncludeTree());
+    } else {
+        step.addIncludePath(.{ .cwd_relative = "/usr/include/harfbuzz" });
     }
     if (target_os == .linux) {
         step.addIncludePath(.{ .cwd_relative = "/usr/include/fontconfig" });
@@ -127,7 +108,7 @@ pub fn configureSdlTestTarget(
         step.addIncludePath(.{ .cwd_relative = ctx.vcpkg_include.? });
     }
     linkSdl3(step, ctx.sdl_lib);
-    if (profile.include_text_stack) linkTextStack(step, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
+    if (profile.include_text_stack) linkTextStack(step, ctx.freetype_lib, ctx.harfbuzz_lib);
     if (profile.include_lua) linkLua(step, ctx.lua_lib);
     if (profile.include_fontconfig and ctx.target_os == .linux) {
         step.linkSystemLibrary("fontconfig");
@@ -139,7 +120,7 @@ pub fn configureSdlTestTarget(
     if (profile.include_treesitter) addTreeSitterIncludes(step, requireTreeSitter(ctx));
     if (!ctx.use_vcpkg) {
         if (profile.include_text_stack) {
-            addTextStackIncludes(step, ctx.use_vcpkg, ctx.target_os, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
+            addTextStackIncludes(step, ctx.use_vcpkg, ctx.target_os, ctx.freetype_lib, ctx.harfbuzz_lib);
         }
         if (profile.include_lua) {
             addLuaIncludes(step, ctx.lua_lib);
@@ -162,7 +143,7 @@ pub fn configureAppExecutable(
         exe.addIncludePath(.{ .cwd_relative = ctx.vcpkg_include.? });
     }
     if (profile.include_text_stack) {
-        linkTextStack(exe, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
+        linkTextStack(exe, ctx.freetype_lib, ctx.harfbuzz_lib);
     }
     if (profile.include_lua) {
         linkLua(exe, ctx.lua_lib);
@@ -175,7 +156,7 @@ pub fn configureAppExecutable(
     if (profile.include_treesitter) addTreeSitterIncludes(exe, requireTreeSitter(ctx));
     if (!ctx.use_vcpkg) {
         if (profile.include_text_stack) {
-            addTextStackIncludes(exe, ctx.use_vcpkg, ctx.target_os, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
+            addTextStackIncludes(exe, ctx.use_vcpkg, ctx.target_os, ctx.freetype_lib, ctx.harfbuzz_lib);
         }
         if (profile.include_lua) {
             addLuaIncludes(exe, ctx.lua_lib);
