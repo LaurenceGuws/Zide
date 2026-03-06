@@ -62,10 +62,18 @@ Important:
 
 ## Terminal bundle runtime notes (Linux)
 
-`zig build bundle-terminal` now ships and uses Zide-owned terminfo inside the bundle:
+`zig build bundle-terminal` ships a Zide-owned terminfo payload inside the bundle:
 - Compiles `terminfo/zide.terminfo` with `tic -x` into `terminal-bundle/terminfo`.
-- Launcher exports `TERMINFO` / `TERMINFO_DIRS` with the bundled directory first.
-- PTY chooses `TERM=zide-256color` (alias-compatible with `zide` entry).
+- PTY chooses TERM in this order:
+  - `zide-256color`
+  - `xterm-zide`
+  - `zide`
+  - `xterm-256color`
+
+Launcher behavior:
+- By default, launcher does not force `TERMINFO`.
+- Bundled terminfo export is opt-in via `ZIDE_USE_BUNDLED_TERMINFO=1`.
+- Preferred system install path for packaged runs is `/usr/share/terminfo` (installed by local package flow).
 
 Shell startup consistency for bundled launcher:
 - Launcher captures caller cwd into `ZIDE_LAUNCH_CWD`.
