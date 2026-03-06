@@ -1473,11 +1473,16 @@ pub const TerminalFont = struct {
     fn systemFallback(self: *TerminalFont, codepoint: u32) ?FacePair {
         const os_tag = builtin.target.os.tag;
         if (os_tag != .linux and os_tag != .windows) return null;
+        const log = app_logger.logger("terminal.font");
 
         if (self.system_fallback_by_cp.get(codepoint)) |cached| {
             if (cached) |path| {
                 if (self.system_faces.get(path)) |pair| return pair;
-                _ = self.system_fallback_by_cp.put(codepoint, null) catch {};
+                self.system_fallback_by_cp.put(codepoint, null) catch |err| {
+                    if (log.enabled_file or log.enabled_console) {
+                        log.logf(.warning, "system fallback cache miss reset failed cp={d} err={s}", .{ codepoint, @errorName(err) });
+                    }
+                };
             }
             return null;
         }
@@ -1485,7 +1490,11 @@ pub const TerminalFont = struct {
         if (os_tag == .windows) {
             const pair = self.windowsSystemFallback(codepoint);
             if (pair == null) {
-                _ = self.system_fallback_by_cp.put(codepoint, null) catch {};
+                self.system_fallback_by_cp.put(codepoint, null) catch |err| {
+                    if (log.enabled_file or log.enabled_console) {
+                        log.logf(.warning, "windows fallback cache negative store failed cp={d} err={s}", .{ codepoint, @errorName(err) });
+                    }
+                };
             }
             return pair;
         }
@@ -1510,14 +1519,22 @@ pub const TerminalFont = struct {
         var res: fc.FcResult = fc.FcResultMatch;
         const match = fc.FcFontMatch(self.fc_config, pattern, &res);
         if (match == null) {
-            _ = self.system_fallback_by_cp.put(codepoint, null) catch {};
+            self.system_fallback_by_cp.put(codepoint, null) catch |err| {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(.warning, "fontconfig match miss cache store failed cp={d} err={s}", .{ codepoint, @errorName(err) });
+                }
+            };
             return null;
         }
         defer fc.FcPatternDestroy(match);
 
         var file_ptr: [*c]fc.FcChar8 = null;
         if (fc.FcPatternGetString(match, fc.FC_FILE, 0, &file_ptr) != fc.FcResultMatch) {
-            _ = self.system_fallback_by_cp.put(codepoint, null) catch {};
+            self.system_fallback_by_cp.put(codepoint, null) catch |err| {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(.warning, "fontconfig path lookup miss cache store failed cp={d} err={s}", .{ codepoint, @errorName(err) });
+                }
+            };
             return null;
         }
 
@@ -1533,7 +1550,11 @@ pub const TerminalFont = struct {
 
         var fb_pair: FacePair = .{};
         if (!ftNewFaceFromFile(self, owned, &fb_pair)) {
-            _ = self.system_fallback_by_cp.put(codepoint, null) catch {};
+            self.system_fallback_by_cp.put(codepoint, null) catch |err| {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(.warning, "fallback face load failed cache store failed cp={d} err={s}", .{ codepoint, @errorName(err) });
+                }
+            };
             return null;
         }
         const fb_face = fb_pair.face.?;
@@ -1544,12 +1565,20 @@ pub const TerminalFont = struct {
         }
         if (c.FT_Set_Pixel_Sizes(fb_face, 0, @intFromFloat(self.line_height)) != 0) {
             _ = c.FT_Done_Face(fb_face);
-            _ = self.system_fallback_by_cp.put(codepoint, null) catch {};
+            self.system_fallback_by_cp.put(codepoint, null) catch |err| {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(.warning, "fallback pixel size failed cache store failed cp={d} err={s}", .{ codepoint, @errorName(err) });
+                }
+            };
             return null;
         }
         const fb_hb = c.hb_ft_font_create(fb_face, null) orelse {
             _ = c.FT_Done_Face(fb_face);
-            _ = self.system_fallback_by_cp.put(codepoint, null) catch {};
+            self.system_fallback_by_cp.put(codepoint, null) catch |err| {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(.warning, "fallback hb font create failed cache store failed cp={d} err={s}", .{ codepoint, @errorName(err) });
+                }
+            };
             return null;
         };
         applyHbLoadFlags(fb_hb, self.ft_load_flags_base);
@@ -1559,11 +1588,19 @@ pub const TerminalFont = struct {
             c.hb_font_destroy(fb_hb);
             _ = c.FT_Done_Face(fb_face);
             if (fb_pair.owned_data) |data| self.allocator.free(data);
-            _ = self.system_fallback_by_cp.put(codepoint, null) catch {};
+            self.system_fallback_by_cp.put(codepoint, null) catch |put_err| {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(.warning, "fallback map insert failed and cache-null store failed cp={d} err={s}", .{ codepoint, @errorName(put_err) });
+                }
+            };
             return null;
         };
         keep_owned = true;
-        _ = self.system_fallback_by_cp.put(codepoint, owned) catch {};
+        self.system_fallback_by_cp.put(codepoint, owned) catch |err| {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "fallback cache store failed cp={d} path={s} err={s}", .{ codepoint, owned, @errorName(err) });
+            }
+        };
         result = fb_pair;
         return result;
     }
@@ -1609,6 +1646,7 @@ pub const TerminalFont = struct {
     }
 
     fn windowsSystemFallback(self: *TerminalFont, codepoint: u32) ?FacePair {
+        const log = app_logger.logger("terminal.font");
         const font_dir = windowsFontDir(self.allocator) orelse return null;
         defer self.allocator.free(font_dir);
 
@@ -1629,7 +1667,11 @@ pub const TerminalFont = struct {
 
             // If we've already loaded this face, reuse it.
             if (self.system_faces.getEntry(path)) |entry| {
-                _ = self.system_fallback_by_cp.put(codepoint, @constCast(entry.key_ptr.*)) catch {};
+                self.system_fallback_by_cp.put(codepoint, @constCast(entry.key_ptr.*)) catch |err| {
+                    if (log.enabled_file or log.enabled_console) {
+                        log.logf(.warning, "windows fallback cache store failed cp={d} path={s} err={s}", .{ codepoint, entry.key_ptr.*, @errorName(err) });
+                    }
+                };
                 return entry.value_ptr.*;
             }
 
@@ -1670,7 +1712,11 @@ pub const TerminalFont = struct {
                 self.allocator.free(owned);
                 return null;
             };
-            _ = self.system_fallback_by_cp.put(codepoint, owned) catch {};
+            self.system_fallback_by_cp.put(codepoint, owned) catch |err| {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(.warning, "windows fallback cache store failed cp={d} path={s} err={s}", .{ codepoint, owned, @errorName(err) });
+                }
+            };
             return fb_pair;
         }
 
@@ -1678,7 +1724,11 @@ pub const TerminalFont = struct {
             // If we've already loaded this face, reuse it.
             if (self.system_faces.getEntry(path_utf8)) |entry| {
                 self.allocator.free(path_utf8);
-                _ = self.system_fallback_by_cp.put(codepoint, @constCast(entry.key_ptr.*)) catch {};
+                self.system_fallback_by_cp.put(codepoint, @constCast(entry.key_ptr.*)) catch |err| {
+                    if (log.enabled_file or log.enabled_console) {
+                        log.logf(.warning, "windows dwrite cache store failed cp={d} path={s} err={s}", .{ codepoint, entry.key_ptr.*, @errorName(err) });
+                    }
+                };
                 return entry.value_ptr.*;
             }
 
@@ -1711,7 +1761,11 @@ pub const TerminalFont = struct {
                 if (fb_pair.owned_data) |data| self.allocator.free(data);
                 return null;
             };
-            _ = self.system_fallback_by_cp.put(codepoint, owned) catch {};
+            self.system_fallback_by_cp.put(codepoint, owned) catch |err| {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(.warning, "windows dwrite fallback cache store failed cp={d} path={s} err={s}", .{ codepoint, owned, @errorName(err) });
+                }
+            };
             return fb_pair;
         }
 

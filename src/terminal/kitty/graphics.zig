@@ -498,7 +498,9 @@ fn parseKittyControl(
             };
             if (!handled) {
                 if (parsed_unsigned) |value| {
-                    _ = raw_kv.append(allocator, .{ .key = key, .value = value }) catch {};
+                    raw_kv.append(allocator, .{ .key = key, .value = value }) catch |err| {
+                        app_logger.logger("terminal.kitty").logf(.warning, "kitty control raw kv append failed key={c} err={s}", .{ key, @errorName(err) });
+                    };
                 }
             }
         }
@@ -606,9 +608,13 @@ fn readKittyFile(self: anytype, path: []const u8, size: u32, is_temporary: bool)
         defer f.close();
         defer if (is_temporary) {
             if (std.fs.path.isAbsolute(path)) {
-                _ = std.fs.deleteFileAbsolute(path) catch {};
+                std.fs.deleteFileAbsolute(path) catch |err| {
+                    app_logger.logger("terminal.kitty").logf(.warning, "kitty temp file cleanup failed path={s} err={s}", .{ path, @errorName(err) });
+                };
             } else {
-                _ = std.fs.cwd().deleteFile(path) catch {};
+                std.fs.cwd().deleteFile(path) catch |err| {
+                    app_logger.logger("terminal.kitty").logf(.warning, "kitty temp file cleanup failed path={s} err={s}", .{ path, @errorName(err) });
+                };
             }
         };
         const stat = f.stat() catch return null;
@@ -1202,7 +1208,13 @@ fn storeKittyImage(self: anytype, image: KittyImage) void {
     }
     var stored = image;
     stored.version = version;
-    _ = kitty.images.append(self.allocator, stored) catch {};
+    kitty.images.append(self.allocator, stored) catch |err| {
+        self.allocator.free(stored.data);
+        if (log.enabled_file or log.enabled_console) {
+            log.logf(.warning, "kitty image store failed id={d} err={s}", .{ stored.id, @errorName(err) });
+        }
+        return;
+    };
     kitty.total_bytes += stored.data.len;
     self.activeScreen().grid.markDirtyAll();
     if (log.enabled_file or log.enabled_console) {
@@ -1268,10 +1280,20 @@ fn placeKittyImage(self: anytype, image_id: u32, control: KittyControl) ?[]const
         if (findKittyPlacementIndex(self, image_id, placement_id)) |idx| {
             kitty.placements.items[idx] = placement;
         } else {
-            _ = kitty.placements.append(self.allocator, placement) catch {};
+            kitty.placements.append(self.allocator, placement) catch |err| {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(.warning, "kitty placement append failed id={d} pid={d} err={s}", .{ image_id, placement_id, @errorName(err) });
+                }
+                return "ENOMEM";
+            };
         }
     } else {
-        _ = kitty.placements.append(self.allocator, placement) catch {};
+        kitty.placements.append(self.allocator, placement) catch |err| {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "kitty placement append failed id={d} err={s}", .{ image_id, @errorName(err) });
+            }
+            return "ENOMEM";
+        };
     }
     self.activeScreen().grid.markDirtyAll();
     if (log.enabled_file or log.enabled_console) {
@@ -1631,7 +1653,10 @@ pub fn writeKittyResponse(self: anytype, control: KittyControl, image_id: u32, o
     _ = seq.appendSlice(self.allocator, message) catch return;
     _ = seq.appendSlice(self.allocator, "\x1b\\") catch return;
     if (self.pty) |*pty| {
-        _ = pty.write(seq.items) catch {};
+        _ = pty.write(seq.items) catch |err| blk: {
+            app_logger.logger("terminal.kitty").logf(.warning, "kitty response write failed len={d} err={s}", .{ seq.items.len, @errorName(err) });
+            break :blk 0;
+        };
     }
 }
 

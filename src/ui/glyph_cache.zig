@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_logger = @import("../app_logger.zig");
 const gl = @import("renderer/gl.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const shape_utils = @import("renderer/shape_utils.zig");
@@ -32,6 +33,7 @@ pub const GlyphCache = struct {
     }
 
     pub fn addQuad(self: *GlyphCache, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, bg_color: types.Rgba, kind: types.TextureKind) void {
+        const log = app_logger.logger("renderer.glyph_cache");
         if (texture.id == 0 or texture.width <= 0 or texture.height <= 0) return;
         const tex_w = @as(f32, @floatFromInt(texture.width));
         const tex_h = @as(f32, @floatFromInt(texture.height));
@@ -64,7 +66,12 @@ pub const GlyphCache = struct {
             .{ .x = x1, .y = y1, .u = u_max, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
             .{ .x = x0, .y = y1, .u = u_min, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
         };
-        self.vertices.appendSlice(self.allocator, &verts) catch return;
+        self.vertices.appendSlice(self.allocator, &verts) catch |err| {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "glyph cache vertices append failed texture={d} err={s}", .{ texture.id, @errorName(err) });
+            }
+            return;
+        };
         if (self.draws.items.len > 0) {
             const last_idx = self.draws.items.len - 1;
             if (self.draws.items[last_idx].texture_id == texture.id and self.draws.items[last_idx].kind == kind) {
@@ -72,12 +79,16 @@ pub const GlyphCache = struct {
                 return;
             }
         }
-        _ = self.draws.append(self.allocator, .{
+        self.draws.append(self.allocator, .{
             .texture_id = texture.id,
             .kind = kind,
             .start = base,
             .count = 6,
-        }) catch {};
+        }) catch |err| {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "glyph cache draw append failed texture={d} err={s}", .{ texture.id, @errorName(err) });
+            }
+        };
     }
 
     pub fn addRect(self: *GlyphCache, white_texture: types.Texture, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {

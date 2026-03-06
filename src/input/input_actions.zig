@@ -103,7 +103,9 @@ pub const InputRouter = struct {
 
     pub fn setBindings(self: *InputRouter, bindings: []const BindSpec) void {
         self.bindings.clearRetainingCapacity();
-        _ = self.bindings.appendSlice(self.allocator, bindings) catch {};
+        self.bindings.appendSlice(self.allocator, bindings) catch |err| {
+            app_logger.logger("input.router").logf(.warning, "set bindings failed count={d} err={s}", .{ bindings.len, @errorName(err) });
+        };
     }
 
     pub fn route(self: *InputRouter, batch: *shared_types.input.InputBatch, focus: FocusKind) void {
@@ -127,7 +129,10 @@ pub const InputRouter = struct {
         for (self.bindings.items) |binding| {
             if (!scopeMatches(binding.scope, focus)) continue;
             if (!keyEventMatches(batch, binding)) continue;
-            _ = self.actions.append(self.allocator, .{ .kind = binding.action, .consumed = false }) catch {};
+            self.actions.append(self.allocator, .{ .kind = binding.action, .consumed = false }) catch |err| {
+                app_logger.logger("input.router").logf(.warning, "route action append failed action={s} err={s}", .{ actionName(binding.action), @errorName(err) });
+                continue;
+            };
             if (log.enabled_file or log.enabled_console) {
                 log.logf(.info, 
                     "action={s} key={s} scope={s} focus={s} shift={d} ctrl={d} alt={d} super={d} altgr={d} repeat={d}",

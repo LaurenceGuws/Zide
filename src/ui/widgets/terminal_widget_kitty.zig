@@ -68,9 +68,20 @@ pub const KittyState = struct {
         session_images: []const KittyImage,
         session_placements: []const KittyPlacement,
     ) void {
+        const log = app_logger.logger("terminal.kitty");
         if (rows > 0 and cols > 0) {
-            _ = self.images_view.resize(allocator, session_images.len) catch {};
-            _ = self.placements_view.resize(allocator, session_placements.len) catch {};
+            self.images_view.resize(allocator, session_images.len) catch |err| {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(.warning, "kitty view resize failed field=images len={d} err={s}", .{ session_images.len, @errorName(err) });
+                }
+                return;
+            };
+            self.placements_view.resize(allocator, session_placements.len) catch |err| {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(.warning, "kitty view resize failed field=placements len={d} err={s}", .{ session_placements.len, @errorName(err) });
+                }
+                return;
+            };
             std.mem.copyForwards(KittyImage, self.images_view.items, session_images);
             std.mem.copyForwards(KittyPlacement, self.placements_view.items, session_placements);
         } else {
@@ -80,6 +91,7 @@ pub const KittyState = struct {
     }
 
     pub fn cleanupTextures(self: *KittyState, allocator: std.mem.Allocator, images: []const KittyImage) void {
+        const log = app_logger.logger("terminal.kitty");
         var stale = std.ArrayList(u32).empty;
         defer stale.deinit(allocator);
         var it = self.textures.iterator();
@@ -92,7 +104,12 @@ pub const KittyState = struct {
                 }
             }
             if (!found) {
-                _ = stale.append(allocator, entry.key_ptr.*) catch {};
+                stale.append(allocator, entry.key_ptr.*) catch |err| {
+                    if (log.enabled_file or log.enabled_console) {
+                        log.logf(.warning, "kitty stale list append failed err={s}", .{@errorName(err)});
+                    }
+                    break;
+                };
             }
         }
         for (stale.items) |id| {
@@ -221,9 +238,19 @@ pub const KittyState = struct {
     }
 
     fn enqueueUpload(self: *KittyState, allocator: std.mem.Allocator, image_id: u32) void {
+        const log = app_logger.logger("terminal.kitty");
         if (self.pending_uploads_set.contains(image_id)) return;
-        _ = self.pending_uploads.append(allocator, image_id) catch return;
-        _ = self.pending_uploads_set.put(image_id, {}) catch {};
+        _ = self.pending_uploads.append(allocator, image_id) catch |err| {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "kitty upload queue append failed id={d} err={s}", .{ image_id, @errorName(err) });
+            }
+            return;
+        };
+        self.pending_uploads_set.put(image_id, {}) catch |err| {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "kitty upload set insert failed id={d} err={s}", .{ image_id, @errorName(err) });
+            }
+        };
     }
 
     fn uploadTexture(self: *KittyState, renderer: anytype, image: KittyImage) bool {
@@ -240,8 +267,16 @@ pub const KittyState = struct {
             .height = texture.height,
             .version = image.version,
         };
-        _ = self.textures.put(image.id, stored) catch {};
         const log = app_logger.logger("terminal.kitty");
+        self.textures.put(image.id, stored) catch |err| {
+            if (stored.texture.id != 0) {
+                gl.DeleteTextures(1, &stored.texture.id);
+            }
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "kitty texture map insert failed id={d} err={s}", .{ image.id, @errorName(err) });
+            }
+            return false;
+        };
         if (log.enabled_file or log.enabled_console) {
             log.logf(.info, "kitty texture ok id={d} w={d} h={d}", .{ image.id, texture.width, texture.height });
         }

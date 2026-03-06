@@ -2,6 +2,7 @@ const std = @import("std");
 const types = @import("../model/types.zig");
 const kitty_mod = @import("../kitty/graphics.zig");
 const render_cache_mod = @import("render_cache.zig");
+const app_logger = @import("../../app_logger.zig");
 
 const RenderCache = render_cache_mod.RenderCache;
 const Cell = types.Cell;
@@ -93,14 +94,39 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     }
 
     const view_count = rows * cols;
-    _ = cache.cells.resize(self.allocator, view_count) catch {};
-    _ = cache.dirty_rows.resize(self.allocator, rows) catch {};
-    _ = cache.dirty_cols_start.resize(self.allocator, rows) catch {};
-    _ = cache.dirty_cols_end.resize(self.allocator, rows) catch {};
-    _ = cache.selection_rows.resize(self.allocator, rows) catch {};
-    _ = cache.selection_cols_start.resize(self.allocator, rows) catch {};
-    _ = cache.selection_cols_end.resize(self.allocator, rows) catch {};
-    _ = cache.row_hashes.resize(self.allocator, rows) catch {};
+    const log = app_logger.logger("terminal.view_cache");
+    cache.cells.resize(self.allocator, view_count) catch |err| {
+        log.logf(.warning, "view cache resize failed field=cells view_count={d} err={s}", .{ view_count, @errorName(err) });
+        return;
+    };
+    cache.dirty_rows.resize(self.allocator, rows) catch |err| {
+        log.logf(.warning, "view cache resize failed field=dirty_rows rows={d} err={s}", .{ rows, @errorName(err) });
+        return;
+    };
+    cache.dirty_cols_start.resize(self.allocator, rows) catch |err| {
+        log.logf(.warning, "view cache resize failed field=dirty_cols_start rows={d} err={s}", .{ rows, @errorName(err) });
+        return;
+    };
+    cache.dirty_cols_end.resize(self.allocator, rows) catch |err| {
+        log.logf(.warning, "view cache resize failed field=dirty_cols_end rows={d} err={s}", .{ rows, @errorName(err) });
+        return;
+    };
+    cache.selection_rows.resize(self.allocator, rows) catch |err| {
+        log.logf(.warning, "view cache resize failed field=selection_rows rows={d} err={s}", .{ rows, @errorName(err) });
+        return;
+    };
+    cache.selection_cols_start.resize(self.allocator, rows) catch |err| {
+        log.logf(.warning, "view cache resize failed field=selection_cols_start rows={d} err={s}", .{ rows, @errorName(err) });
+        return;
+    };
+    cache.selection_cols_end.resize(self.allocator, rows) catch |err| {
+        log.logf(.warning, "view cache resize failed field=selection_cols_end rows={d} err={s}", .{ rows, @errorName(err) });
+        return;
+    };
+    cache.row_hashes.resize(self.allocator, rows) catch |err| {
+        log.logf(.warning, "view cache resize failed field=row_hashes rows={d} err={s}", .{ rows, @errorName(err) });
+        return;
+    };
 
     const start_line = if (total_lines > rows + clamped_offset)
         total_lines - rows - clamped_offset
@@ -432,8 +458,15 @@ fn updateKittyViewNoLock(self: anytype, cache: *RenderCache) void {
     const kitty_generation = kitty.generation;
     if (kitty_generation == cache.kitty_generation) return;
 
-    _ = cache.kitty_images.resize(self.allocator, kitty.images.items.len) catch {};
-    _ = cache.kitty_placements.resize(self.allocator, kitty.placements.items.len) catch {};
+    const log = app_logger.logger("terminal.view_cache");
+    cache.kitty_images.resize(self.allocator, kitty.images.items.len) catch |err| {
+        log.logf(.warning, "view cache resize failed field=kitty_images len={d} err={s}", .{ kitty.images.items.len, @errorName(err) });
+        return;
+    };
+    cache.kitty_placements.resize(self.allocator, kitty.placements.items.len) catch |err| {
+        log.logf(.warning, "view cache resize failed field=kitty_placements len={d} err={s}", .{ kitty.placements.items.len, @errorName(err) });
+        return;
+    };
     std.mem.copyForwards(kitty_mod.KittyImage, cache.kitty_images.items, kitty.images.items);
     std.mem.copyForwards(kitty_mod.KittyPlacement, cache.kitty_placements.items, kitty.placements.items);
     if (cache.kitty_placements.items.len > 1) {

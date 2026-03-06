@@ -82,7 +82,9 @@ fn applySemanticPromptOptions(self: anytype, text: []const u8, allow_aid: bool) 
         const value = if (eq) |idx| kv[idx + 1 ..] else "";
         if (allow_aid and std.mem.eql(u8, key, "aid")) {
             self.semantic_prompt_aid.clearRetainingCapacity();
-            _ = self.semantic_prompt_aid.appendSlice(self.allocator, value) catch {};
+            self.semantic_prompt_aid.appendSlice(self.allocator, value) catch |err| {
+                app_logger.logger("terminal.osc").logf(.warning, "osc 133 aid append failed len={d} err={s}", .{ value.len, @errorName(err) });
+            };
             continue;
         }
         if (std.mem.eql(u8, key, "k")) {

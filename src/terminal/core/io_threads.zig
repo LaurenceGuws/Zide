@@ -47,7 +47,9 @@ pub fn readThreadMain(session: anytype) void {
                 processed += n.?;
                 logCsiSequences(io_log, buf[0..n.?]);
                 session.io_mutex.lock();
-                _ = session.io_buffer.appendSlice(session.allocator, buf[0..n.?]) catch {};
+                session.io_buffer.appendSlice(session.allocator, buf[0..n.?]) catch |err| {
+                    io_log.logf(.warning, "io buffer append failed bytes={d} err={s}", .{ n.?, @errorName(err) });
+                };
                 session.io_mutex.unlock();
                 session.io_wait_cond.signal();
                 if (session.parse_thread == null) {
@@ -79,12 +81,14 @@ pub fn parseThreadMain(session: anytype) void {
 
         var queued_bytes: usize = 0;
         session.io_mutex.lock();
-        if (session.io_buffer.items.len > session.io_read_offset) {
-            queued_bytes = session.io_buffer.items.len - session.io_read_offset;
-        } else {
-            if (pending_offset == null) {
-                session.io_wait_cond.timedWait(&session.io_mutex, 10 * std.time.ns_per_ms) catch {};
-            }
+            if (session.io_buffer.items.len > session.io_read_offset) {
+                queued_bytes = session.io_buffer.items.len - session.io_read_offset;
+            } else {
+                if (pending_offset == null) {
+                    session.io_wait_cond.timedWait(&session.io_mutex, 10 * std.time.ns_per_ms) catch |err| {
+                        app_logger.logger("terminal.parse").logf(.warning, "parse wait timedWait failed err={s}", .{@errorName(err)});
+                    };
+                }
             if (!session.parse_thread_running.load(.acquire)) {
                 session.io_mutex.unlock();
                 break;

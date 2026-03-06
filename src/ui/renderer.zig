@@ -1831,11 +1831,19 @@ pub const Renderer = struct {
                 if (sdl_api.isFocusGainedEvent(event.type)) {
                     sdl_api.startTextInput(self.window);
                     text_input.reapplyRect(&self.text_input_state, self.window);
-                    _ = self.focus_queue.append(self.allocator, true) catch {};
+                    self.focus_queue.append(self.allocator, true) catch |err| {
+                        if (window_log.enabled_file or window_log.enabled_console) {
+                            window_log.logf(.warning, "focus queue append failed focused=1 err={s}", .{@errorName(err)});
+                        }
+                    };
                 }
                 if (sdl_api.isFocusLostEvent(event.type)) {
                     sdl_api.stopTextInput(self.window);
-                    _ = self.focus_queue.append(self.allocator, false) catch {};
+                    self.focus_queue.append(self.allocator, false) catch |err| {
+                        if (window_log.enabled_file or window_log.enabled_console) {
+                            window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
+                        }
+                    };
                 }
                 if (window_log.enabled_file or window_log.enabled_console) {
                     window_log.logf(.info, 
@@ -1972,11 +1980,19 @@ pub const Renderer = struct {
                     if (sdl_api.isFocusGainedEvent(event.type)) {
                         sdl_api.startTextInput(self.window);
                         text_input.reapplyRect(&self.text_input_state, self.window);
-                        _ = self.focus_queue.append(self.allocator, true) catch {};
+                        self.focus_queue.append(self.allocator, true) catch |err| {
+                            if (window_log.enabled_file or window_log.enabled_console) {
+                                window_log.logf(.warning, "focus queue append failed focused=1 err={s}", .{@errorName(err)});
+                            }
+                        };
                     }
                     if (sdl_api.isFocusLostEvent(event.type)) {
                         sdl_api.stopTextInput(self.window);
-                        _ = self.focus_queue.append(self.allocator, false) catch {};
+                        self.focus_queue.append(self.allocator, false) catch |err| {
+                            if (window_log.enabled_file or window_log.enabled_console) {
+                                window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
+                            }
+                        };
                     }
                     if (window_log.enabled_file or window_log.enabled_console) {
                         window_log.logf(.info, 

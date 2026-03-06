@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_shell = @import("../app_shell.zig");
 const shared_types = @import("../types/mod.zig");
+const app_logger = @import("../app_logger.zig");
 
 fn sdlModHasAltGr(mod_bits: u32) bool {
     const sdl_ralt_mask: u32 = 0x0200;
@@ -10,6 +11,7 @@ fn sdlModHasAltGr(mod_bits: u32) bool {
 
 pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) shared_types.input.InputBatch {
     var batch = shared_types.input.InputBatch.init(allocator);
+    const log = app_logger.logger("input.batch");
     const r = shell.rendererPtr();
 
     const pos = r.getMousePos();
@@ -160,9 +162,13 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
                     .pressed = true,
                     .scancode = press.scancode,
                     .sym = press.sym,
-                    .sdl_mod_bits = press.mod_bits,
+                .sdl_mod_bits = press.mod_bits,
                 },
-            }) catch {};
+            }) catch |err| {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(.warning, "batch append key failed key={s} err={s}", .{ @tagName(key), @errorName(err) });
+                }
+            };
         }
     }
 
@@ -177,8 +183,12 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
                 .scancode = entry.code,
                 .sym = null,
                 .sdl_mod_bits = null,
-            },
-        }) catch {};
+                },
+        }) catch |err| {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "batch append key release failed key={s} err={s}", .{ @tagName(entry.key), @errorName(err) });
+            }
+        };
     }
 
     while (r.getTextPressed()) |text_press| {
@@ -187,17 +197,30 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
             .utf8_len = text_press.utf8_len,
             .utf8 = text_press.utf8,
             .text_is_composed = text_press.text_is_composed,
-        } }) catch {};
+        } }) catch |err| {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "batch append text failed cp={d} err={s}", .{ text_press.codepoint, @errorName(err) });
+            }
+        };
     }
 
     while (r.getFocusEvent()) |focused| {
-        batch.append(.{ .focus = focused }) catch {};
+        batch.append(.{ .focus = focused }) catch |err| {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "batch append focus failed focused={d} err={s}", .{ @intFromBool(focused), @errorName(err) });
+            }
+        };
     }
 
     const composition = r.getTextComposition();
     if (composition.active and composition.text.len > 0) {
         batch.composing_buffer.clearRetainingCapacity();
-        _ = batch.composing_buffer.appendSlice(allocator, composition.text) catch {};
+        _ = batch.composing_buffer.appendSlice(allocator, composition.text) catch |err| blk: {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "batch composing append failed bytes={d} err={s}", .{ composition.text.len, @errorName(err) });
+            }
+            break :blk 0;
+        };
         batch.composing_text = batch.composing_buffer.items;
         batch.composing_cursor = composition.cursor;
         batch.composing_selection_len = composition.selection_len;

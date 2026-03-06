@@ -80,7 +80,10 @@ fn writeXtgettcapReply(self: anytype, ok: bool, cap_hex: []const u8, value: ?[]c
     }
     _ = reply.appendSlice(self.allocator, "\x1b\\") catch return;
     if (self.pty) |*pty_writer| {
-        _ = pty_writer.write(reply.items) catch {};
+        _ = pty_writer.write(reply.items) catch |err| blk: {
+            app_logger.logger("terminal.apc").logf(.warning, "xtgettcap reply write failed len={d} err={s}", .{ reply.items.len, @errorName(err) });
+            break :blk 0;
+        };
     }
 }
 
@@ -96,7 +99,10 @@ fn writeDecrqssReply(self: anytype, ok: bool, value: ?[]const u8) void {
     }
     _ = reply.appendSlice(self.allocator, "\x1b\\") catch return;
     if (self.pty) |*pty_writer| {
-        _ = pty_writer.write(reply.items) catch {};
+        _ = pty_writer.write(reply.items) catch |err| blk: {
+            app_logger.logger("terminal.apc").logf(.warning, "decrqss reply write failed len={d} err={s}", .{ reply.items.len, @errorName(err) });
+            break :blk 0;
+        };
     }
 }
 

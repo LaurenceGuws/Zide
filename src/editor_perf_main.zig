@@ -43,8 +43,12 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    app_logger.setConsoleFilterString("none") catch {};
-    app_logger.setFileFilterString("none") catch {};
+    app_logger.setConsoleFilterString("none") catch |err| {
+        std.log.warn("editor_perf: failed to set console log filter: {s}", .{@errorName(err)});
+    };
+    app_logger.setFileFilterString("none") catch |err| {
+        std.log.warn("editor_perf: failed to set file log filter: {s}", .{@errorName(err)});
+    };
 
     const config = try parseArgs(allocator);
     defer if (config.file_path) |path| allocator.free(path);

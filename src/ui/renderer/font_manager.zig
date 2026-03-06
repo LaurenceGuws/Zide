@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_logger = @import("../../app_logger.zig");
 const terminal_font_mod = @import("../terminal_font.zig");
 const TerminalFont = terminal_font_mod.TerminalFont;
 const iface = @import("interface.zig");
@@ -49,13 +50,18 @@ pub fn initFonts(renderer: anytype, size: f32) !void {
 }
 
 pub fn loadFont(renderer: anytype, path: [*:0]const u8, size: f32) void {
+    const log = app_logger.logger("renderer.font");
     if (renderer.font_path_owned) |owned| {
         renderer.allocator.free(owned);
         renderer.font_path_owned = null;
     }
     renderer.font_path = path;
     renderer.base_font_size = size;
-    applyFontScale(renderer) catch {};
+    applyFontScale(renderer) catch |err| {
+        if (log.enabled_file or log.enabled_console) {
+            log.logf(.warning, "load font apply scale failed err={s}", .{@errorName(err)});
+        }
+    };
 }
 
 pub fn setFontConfig(renderer: anytype, path: ?[]const u8, size: ?f32) !void {
@@ -93,6 +99,7 @@ pub fn applyFontScale(renderer: anytype) !void {
 }
 
 pub fn fontForSize(renderer: anytype, size: f32) ?*TerminalFont {
+    const log = app_logger.logger("renderer.font");
     if (std.math.approxEqAbs(f32, size, renderer.font_size, 0.01)) return &renderer.terminal_font;
     if (std.math.approxEqAbs(f32, size, renderer.icon_font_size, 0.01)) return &renderer.icon_font;
     const key: u32 = @intFromFloat(std.math.round(size));
@@ -117,6 +124,13 @@ pub fn fontForSize(renderer: anytype, size: f32) ?*TerminalFont {
     };
     font_ptr.render_scale = renderer.render_scale;
     font_ptr.setAtlasFilterPoint();
-    _ = renderer.font_cache.put(key, font_ptr) catch {};
+    renderer.font_cache.put(key, font_ptr) catch |err| {
+        if (log.enabled_file or log.enabled_console) {
+            log.logf(.warning, "font cache insert failed size_key={d} err={s}", .{ key, @errorName(err) });
+        }
+        font_ptr.deinit();
+        renderer.allocator.destroy(font_ptr);
+        return null;
+    };
     return font_ptr;
 }

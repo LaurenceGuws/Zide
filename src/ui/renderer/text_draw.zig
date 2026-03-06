@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_logger = @import("../../app_logger.zig");
 const terminal_font_mod = @import("../terminal_font.zig");
 const types = @import("types.zig");
 
@@ -17,6 +18,7 @@ pub fn drawText(
     color: types.Rgba,
     monospace: bool,
 ) void {
+    const log = app_logger.logger("renderer.text");
     if (text.len == 0) return;
 
     var codepoints = std.ArrayList(u32).empty;
@@ -24,7 +26,12 @@ pub fn drawText(
     var cp_idx: usize = 0;
     while (true) {
         const cp = nextCodepointLossy(text, &cp_idx) orelse break;
-        _ = codepoints.append(allocator, cp) catch {};
+        _ = codepoints.append(allocator, cp) catch |err| blk: {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "text codepoint append failed cp={d} err={s}", .{ cp, @errorName(err) });
+            }
+            break :blk 0;
+        };
     }
     if (codepoints.items.len == 0) return;
 

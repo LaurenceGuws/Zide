@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_logger = @import("../../app_logger.zig");
 const syntax_mod = @import("../syntax.zig");
 const draw_list_mod = @import("draw_list.zig");
 
@@ -147,6 +148,7 @@ pub const EditorRenderCache = struct {
     }
 
     pub fn segmentDirty(self: *EditorRenderCache, key: LineKey, hash: u64) bool {
+        const log = app_logger.logger("editor.render.cache");
         if (self.line_entries.getPtr(key)) |entry| {
             if (entry.hash == hash) {
                 entry.last_used = self.frame_id;
@@ -156,7 +158,11 @@ pub const EditorRenderCache = struct {
             entry.last_used = self.frame_id;
             return true;
         }
-        _ = self.line_entries.put(key, .{ .hash = hash, .last_used = self.frame_id }) catch {};
+        self.line_entries.put(key, .{ .hash = hash, .last_used = self.frame_id }) catch |err| {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "line cache insert failed line={d} seg={d} err={s}", .{ key.line_idx, key.segment_idx, @errorName(err) });
+            }
+        };
         self.maybeEvictLineEntries();
         return true;
     }
@@ -176,6 +182,7 @@ pub const EditorRenderCache = struct {
         line_text_hash: u64,
         highlight_epoch: u64,
     ) []HighlightToken {
+        const log = app_logger.logger("editor.render.cache");
         if (highlighter == null) return &[_]HighlightToken{};
         if (self.highlight_entries.getPtr(line_idx)) |entry| {
             if (entry.text_hash == line_text_hash and entry.epoch == highlight_epoch and entry.line_start == line_start) {
@@ -196,13 +203,17 @@ pub const EditorRenderCache = struct {
 
         const tokens = highlightLine(highlighter.?, line_start, line_end, self.allocator);
         sortTokens(tokens);
-        _ = self.highlight_entries.put(line_idx, .{
+        self.highlight_entries.put(line_idx, .{
             .text_hash = line_text_hash,
             .line_start = line_start,
             .epoch = highlight_epoch,
             .tokens = tokens,
             .last_used = self.frame_id,
-        }) catch {};
+        }) catch |err| {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "highlight cache insert failed line={d} err={s}", .{ line_idx, @errorName(err) });
+            }
+        };
         self.maybeEvictHighlightEntries();
         return tokens;
     }
@@ -258,6 +269,7 @@ pub const EditorRenderCache = struct {
     }
 
     pub fn setWrapLineCount(self: *EditorRenderCache, line_idx: usize, cols: usize, line_width: usize, count: usize) void {
+        const log = app_logger.logger("editor.render.cache");
         if (self.wrap_entries.getPtr(line_idx)) |entry| {
             entry.* = .{
                 .cols = cols,
@@ -267,12 +279,16 @@ pub const EditorRenderCache = struct {
             };
             return;
         }
-        _ = self.wrap_entries.put(line_idx, .{
+        self.wrap_entries.put(line_idx, .{
             .cols = cols,
             .line_width = line_width,
             .count = count,
             .last_used = self.frame_id,
-        }) catch {};
+        }) catch |err| {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "wrap cache insert failed line={d} cols={d} err={s}", .{ line_idx, cols, @errorName(err) });
+            }
+        };
         self.maybeEvictWrapEntries();
     }
 
