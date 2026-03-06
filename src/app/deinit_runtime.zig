@@ -27,7 +27,9 @@ pub fn handle(state: anytype) void {
     state.shell.deinit(state.allocator);
     state.editor_render_cache.deinit();
     state.editor_cluster_cache.deinit();
-    state.grammar_manager.deinit();
+    if (state.grammar_manager) |*grammar_manager| {
+        grammar_manager.deinit();
+    }
     state.input_router.deinit();
     state.editor_mode_adapter.deinit(state.allocator);
     state.terminal_mode_adapter.deinit(state.allocator);

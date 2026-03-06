@@ -146,8 +146,14 @@ fn initWithMode(
 
     shell.setTheme(app_theme);
 
-    var grammar_manager = try grammar_manager_mod.GrammarManager.init(allocator);
-    errdefer grammar_manager.deinit();
+    const grammar_manager: ?grammar_manager_mod.GrammarManager = if (app_modes.ide.supportsEditorSurface(app_mode))
+        blk: {
+            var gm = try grammar_manager_mod.GrammarManager.init(allocator);
+            errdefer gm.deinit();
+            break :blk gm;
+        }
+    else
+        null;
     const terminal_workspace = if (app_modes.ide.shouldUseTerminalWorkspace(app_mode))
         TerminalWorkspace.init(allocator, .{
             .scrollback_rows = config.terminal_scrollback_rows,

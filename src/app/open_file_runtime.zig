@@ -6,8 +6,9 @@ const editor_mod = @import("../editor/editor.zig");
 const Editor = editor_mod.Editor;
 
 pub fn open(state: anytype, path: []const u8) !void {
+    const grammar_manager = if (state.grammar_manager) |*gm| gm else return error.UnsupportedMode;
     _ = try app_editor_create_intent_runtime.routeCreateAndSync(state);
-    const editor = try Editor.init(state.allocator, &state.grammar_manager);
+    const editor = try Editor.init(state.allocator, grammar_manager);
     try editor.openFile(path);
     try state.editors.append(state.allocator, editor);
 
@@ -19,8 +20,9 @@ pub fn open(state: anytype, path: []const u8) !void {
 }
 
 pub fn openAt(state: anytype, path: []const u8, line_1: usize, col_1: ?usize) !void {
+    const grammar_manager = if (state.grammar_manager) |*gm| gm else return error.UnsupportedMode;
     _ = try app_editor_create_intent_runtime.routeCreateAndSync(state);
-    const editor = try Editor.init(state.allocator, &state.grammar_manager);
+    const editor = try Editor.init(state.allocator, grammar_manager);
     try editor.openFile(path);
     try state.editors.append(state.allocator, editor);
 
