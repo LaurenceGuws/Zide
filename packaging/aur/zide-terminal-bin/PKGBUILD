@@ -1,0 +1,23 @@
+pkgname=zide-terminal-bin
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Zide terminal-only binary bundle"
+arch=('x86_64')
+url="https://github.com/zide-dev/zide"
+license=('MIT')
+depends=('bash')
+provides=('zide-terminal')
+conflicts=('zide-terminal')
+
+source=(
+  "zide-terminal-bundle-${pkgver}-linux-x86_64.tar.gz::https://github.com/zide-dev/zide/releases/download/v${pkgver}/zide-terminal-bundle-${pkgver}-linux-x86_64.tar.gz"
+)
+sha256sums=('SKIP')
+
+package() {
+  install -d "${pkgdir}/opt/zide-terminal-bundle"
+  cp -a "${srcdir}/zide-terminal-bundle/." "${pkgdir}/opt/zide-terminal-bundle/"
+
+  install -d "${pkgdir}/usr/bin"
+  ln -s /opt/zide-terminal-bundle/zide-terminal "${pkgdir}/usr/bin/zide-terminal"
+}

@@ -1,0 +1,42 @@
+pkgname=zide-terminal-bin-local
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Local test package: Zide terminal-only ReleaseFast bundle"
+arch=('x86_64')
+url="https://github.com/zide-dev/zide"
+license=('MIT')
+depends=('bash')
+makedepends=('zig' 'ncurses')
+provides=('zide-terminal')
+conflicts=('zide-terminal' 'zide-terminal-bin')
+options=('!debug' '!strip')
+source=()
+sha256sums=()
+
+build() {
+  local repo_root
+  repo_root="$(cd "${startdir}/../../.." && pwd)"
+  cd "${repo_root}"
+  zig build -Dmode=terminal -Doptimize=ReleaseFast
+  bash tools/bundle_terminal_linux.sh zig-out/bin/zide-terminal "${srcdir}/zide-terminal-bundle" assets terminal
+}
+
+package() {
+  install -d "${pkgdir}/opt/zide-terminal-bundle"
+  cp -a "${srcdir}/zide-terminal-bundle/." "${pkgdir}/opt/zide-terminal-bundle/"
+
+  install -d "${pkgdir}/usr/share/terminfo/z"
+  install -d "${pkgdir}/usr/share/terminfo/x"
+  if [[ -f "${srcdir}/zide-terminal-bundle/terminfo/x/xterm-zide" ]]; then
+    install -m 0644 "${srcdir}/zide-terminal-bundle/terminfo/x/xterm-zide" "${pkgdir}/usr/share/terminfo/x/xterm-zide"
+  fi
+  if [[ -f "${srcdir}/zide-terminal-bundle/terminfo/z/zide-256color" ]]; then
+    install -m 0644 "${srcdir}/zide-terminal-bundle/terminfo/z/zide-256color" "${pkgdir}/usr/share/terminfo/z/zide-256color"
+  fi
+  if [[ -f "${srcdir}/zide-terminal-bundle/terminfo/z/zide" ]]; then
+    install -m 0644 "${srcdir}/zide-terminal-bundle/terminfo/z/zide" "${pkgdir}/usr/share/terminfo/z/zide"
+  fi
+
+  install -d "${pkgdir}/usr/bin"
+  ln -s /opt/zide-terminal-bundle/zide-terminal "${pkgdir}/usr/bin/zide-terminal"
+}

@@ -78,6 +78,8 @@ pub fn emptyConfig() Config {
         .terminal_blink_style = null,
         .terminal_disable_ligatures = null,
         .terminal_font_features = null,
+        .terminal_default_start_location = null,
+        .terminal_new_tab_start_location = null,
         .terminal_scrollback_rows = null,
         .terminal_cursor_shape = null,
         .terminal_cursor_blink = null,
@@ -131,6 +133,11 @@ pub fn freeConfig(allocator: std.mem.Allocator, config: *Config) void {
         allocator.free(features);
         config.terminal_font_features = null;
     }
+    if (config.terminal_default_start_location) |path| {
+        allocator.free(path);
+        config.terminal_default_start_location = null;
+    }
+    config.terminal_new_tab_start_location = null;
     if (config.keybinds) |binds| {
         allocator.free(binds);
         config.keybinds = null;
@@ -269,6 +276,11 @@ pub fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config)
         if (base.terminal_font_features) |old| allocator.free(old);
         base.terminal_font_features = allocator.dupe(u8, features) catch base.terminal_font_features;
     }
+    if (overlay.terminal_default_start_location) |path| {
+        if (base.terminal_default_start_location) |old| allocator.free(old);
+        base.terminal_default_start_location = allocator.dupe(u8, path) catch base.terminal_default_start_location;
+    }
+    if (overlay.terminal_new_tab_start_location != null) base.terminal_new_tab_start_location = overlay.terminal_new_tab_start_location;
     if (overlay.terminal_scrollback_rows != null) base.terminal_scrollback_rows = overlay.terminal_scrollback_rows;
     if (overlay.terminal_cursor_shape != null) base.terminal_cursor_shape = overlay.terminal_cursor_shape;
     if (overlay.terminal_cursor_blink != null) base.terminal_cursor_blink = overlay.terminal_cursor_blink;
