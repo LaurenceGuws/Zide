@@ -273,7 +273,9 @@ fn findFixture(fixtures: []harness.Fixture, name: []const u8) ?*harness.Fixture 
 }
 
 fn tryAppend(out: *std.ArrayList(u8), allocator: std.mem.Allocator, text: []const u8) void {
-    _ = out.appendSlice(allocator, text) catch {};
+    out.appendSlice(allocator, text) catch |err| {
+        std.debug.print("terminal_replay: append failed: {s}\n", .{@errorName(err)});
+    };
 }
 
 fn compareGolden(name: []const u8, golden: ?[]const u8, output: []const u8) !void {
