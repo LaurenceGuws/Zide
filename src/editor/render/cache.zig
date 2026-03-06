@@ -160,7 +160,7 @@ pub const EditorRenderCache = struct {
         }
         self.line_entries.put(key, .{ .hash = hash, .last_used = self.frame_id }) catch |err| {
             if (log.enabled_file or log.enabled_console) {
-                log.logf(.warning, "line cache insert failed line={d} seg={d} err={s}", .{ key.line_idx, key.segment_idx, @errorName(err) });
+                log.logf(.warning, "line cache insert failed line={d} seg={d} err={s}", .{ key.line_idx, key.seg_idx, @errorName(err) });
             }
         };
         self.maybeEvictLineEntries();
