@@ -10,6 +10,7 @@ Track practical migration details for replacing system-managed native dependenci
 - FreeType/HarfBuzz are system/vcpkg in default flow, with a working Zig package path behind `-Dpath=zig`.
 - `-Dpath=link|zig` is retained as the migration toggle surface for the next dependency slice.
 - Current active `-Dpath` migration slice: FreeType/HarfBuzz packaging.
+- Build/runtime still link native C/C++ libraries and system libs; package migration changes sourcing/pinning, not language/runtime ABI.
 
 ## Implemented package integration
 

@@ -36,6 +36,11 @@ Notes:
   - FreeType: `LaurenceGuws/freetype-zig015` (`052a300780531e6ea0ffeafeec28c88eb1bf903a`)
   - HarfBuzz: `LaurenceGuws/harfbuzz-zig015` (`68406a28eea39df8c074a38fefc64c5aa23201b7`)
 
+Important:
+- Zig package-managed dependencies are still native C/C++ libraries.
+- The app still links `libc` and platform/system libraries (for example on Linux: `GL`, `fontconfig`, `m`, `pthread`, `dl`, `rt`, and `z` on the zig text-stack path).
+- So this migration reduces host package coupling and version drift, but it is not a pure-Zig runtime/linkage yet.
+
 Lua implementation status (config parser backend):
 - The config parser backend is now fixed to native `ziglua`.
 - `-Dlua-impl` is no longer a supported build selector.
