@@ -128,3 +128,30 @@ pub fn addSystemCommandStep(
     step.dependOn(&cmd.step);
     return step;
 }
+
+pub fn addBuildProfileReportStep(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) *std.Build.Step {
+    const exe = b.addExecutable(.{
+        .name = "build-profile-report",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/build_profile_report.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    exe.root_module.addAnonymousImport("target_profile", .{
+        .root_source_file = b.path("build_utils/target_profile.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const run = b.addRunArtifact(exe);
+    const step = b.step(
+        "report-build-profiles",
+        "Report active build dependency profiles",
+    );
+    step.dependOn(&run.step);
+    return step;
+}
