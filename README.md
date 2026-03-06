@@ -55,7 +55,7 @@ Open a new terminal inside Zide and verify:
 printf '%s\n' "$TERM"
 ```
 
-Expected value is `zide-256color` (preferred), with `xterm-zide` as a compatibility alias when applicable.
+Expected value is `xterm-zide` (preferred), with `zide-256color` as an alternate identity when applicable.
 
 UI renderer roadmap:
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md`

@@ -348,6 +348,41 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
         } else |_| {}
     }
 
+    const shell_base = std.fs.path.basename(shell_path);
+    if (std.mem.eql(u8, shell_base, "bash")) {
+        const pid = c.getpid();
+        var rc_path_buf: [128:0]u8 = undefined;
+        const rc_path = try std.fmt.bufPrintZ(&rc_path_buf, "/tmp/zide-bashrc-{d}", .{pid});
+        if (std.fs.createFileAbsolute(rc_path, .{ .truncate = true, .read = false })) |file| {
+            defer file.close();
+            try file.writeAll(
+                \\[[ -f ~/.bashrc ]] && . ~/.bashrc
+                \\__zide_emit_osc7() {
+                \\  local _host
+                \\  _host="${HOSTNAME:-$(hostname 2>/dev/null || printf localhost)}"
+                \\  printf '\033]7;file://%s%s\007' "$_host" "$PWD"
+                \\}
+                \\if [[ "$(declare -p PROMPT_COMMAND 2>/dev/null)" == "declare -a"* ]]; then
+                \\  PROMPT_COMMAND+=("__zide_emit_osc7")
+                \\else
+                \\  case ";${PROMPT_COMMAND:-};" in
+                \\    *";__zide_emit_osc7;"*) ;;
+                \\    *) PROMPT_COMMAND="${PROMPT_COMMAND:+${PROMPT_COMMAND};}__zide_emit_osc7" ;;
+                \\  esac
+                \\fi
+                \\__zide_emit_osc7
+            );
+            const argv = [_:null]?[*:0]const u8{ shell_path.ptr, "--rcfile", rc_path.ptr, "-i" };
+            env_log.logf("spawn bash rcfile prepared path={s}", .{rc_path});
+            env_log.logf("spawn exec shell={s} (bash rcfile inject)", .{shell_path});
+            const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
+            _ = posix.execvpeZ(shell_path.ptr, &argv, envp) catch {};
+            posix.exit(127);
+        } else |err| {
+            env_log.logf("spawn bash rcfile prepare failed path={s} err={s}", .{ rc_path, @errorName(err) });
+        }
+    }
+
     if (builtin.os.tag == .macos and shell == null) {
         const argv = [_:null]?[*:0]const u8{
             "/usr/bin/login",
@@ -394,8 +429,8 @@ fn terminfoExists(name: []const u8) bool {
 }
 
 fn chooseTermName(existsFn: fn ([]const u8) bool) [:0]const u8 {
-    if (existsFn("zide-256color")) return "zide-256color";
     if (existsFn("xterm-zide")) return "xterm-zide";
+    if (existsFn("zide-256color")) return "zide-256color";
     if (existsFn("zide")) return "zide";
     return "xterm-256color";
 }
@@ -423,13 +458,13 @@ fn getenvOrUnset(name: [*:0]const u8) []const u8 {
     return "<unset>";
 }
 
-test "chooseTermName prefers zide terminfo" {
+test "chooseTermName prefers xterm-zide identity for compatibility" {
     const Exists = struct {
         fn has(name: []const u8) bool {
             return std.mem.eql(u8, name, "xterm-zide") or std.mem.eql(u8, name, "zide-256color") or std.mem.eql(u8, name, "zide");
         }
     };
-    try std.testing.expectEqualStrings("zide-256color", chooseTermName(Exists.has));
+    try std.testing.expectEqualStrings("xterm-zide", chooseTermName(Exists.has));
 }
 
 test "chooseTermName falls back to xterm-256color when zide terminfo is unavailable" {
@@ -441,7 +476,7 @@ test "chooseTermName falls back to xterm-256color when zide terminfo is unavaila
     try std.testing.expectEqualStrings("xterm-256color", chooseTermName(Exists.has));
 }
 
-test "unix pty smoke prefers zide TERM when bundled terminfo is installed" {
+test "unix pty smoke prefers TERM=xterm-zide when bundled terminfo is installed" {
     if (builtin.target.os.tag == .windows) return;
 
     const allocator = std.testing.allocator;
@@ -472,7 +507,7 @@ test "unix pty smoke prefers zide TERM when bundled terminfo is installed" {
     var output = std.ArrayList(u8).empty;
     defer output.deinit(allocator);
 
-    _ = try pty.write("unset HISTFILE; HISTFILE=/dev/null; export HISTFILE; set +o history 2>/dev/null; printf '%s\\n' \"$TERM\"; exit\n");
+    _ = try pty.write("unset HISTFILE; HISTFILE=/dev/null; export HISTFILE; set +o history 2>/dev/null; printf 'TERM=%s\\n' \"$TERM\"; exit\n");
 
     const start_ms = std.time.milliTimestamp();
     var buf: [4096]u8 = undefined;
@@ -482,11 +517,11 @@ test "unix pty smoke prefers zide TERM when bundled terminfo is installed" {
         if (n_opt) |n| {
             if (n == 0) break;
             _ = try output.appendSlice(allocator, buf[0..n]);
-            if (std.mem.indexOf(u8, output.items, "zide") != null) break;
+            if (std.mem.indexOf(u8, output.items, "TERM=xterm-zide") != null) break;
         }
     }
 
-    if (std.mem.indexOf(u8, output.items, "zide") == null) return;
+    try std.testing.expect(std.mem.indexOf(u8, output.items, "TERM=xterm-zide") != null);
 }
 
 test "compiled zide terminfo advertises Ms Setulc and Sync" {
