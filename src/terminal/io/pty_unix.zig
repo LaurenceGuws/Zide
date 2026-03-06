@@ -11,6 +11,8 @@ const c = @cImport({
     @cInclude("termios.h");
     @cInclude("pty.h");
     @cInclude("stdlib.h");
+    @cInclude("signal.h");
+    @cInclude("sys/prctl.h");
 });
 
 pub const Pty = struct {
@@ -58,14 +60,8 @@ pub const Pty = struct {
 
     pub fn deinit(self: *Pty) void {
         if (self.child_pid) |pid| {
-            posix.kill(pid, posix.SIG.TERM) catch |err| {
-                app_logger.logger("terminal.env").logf(.warning, "spawn terminate failed pid={d} err={s}", .{ pid, @errorName(err) });
-            };
-            if (std.Thread.spawn(.{}, reapChildWithDeadline, .{pid})) |thread| {
-                thread.detach();
-            } else |_| {
-                reapChildWithDeadline(pid);
-            }
+            terminateProcessTree(pid);
+            reapChildWithDeadline(pid);
             self.child_pid = null;
         }
         posix.close(self.master_fd);
@@ -123,6 +119,7 @@ pub const Pty = struct {
             const res = posix.waitpid(pid, posix.W.NOHANG);
             if (res.pid != 0) {
                 self.child_pid = null;
+                cleanupSpawnTempFilesForPid(pid);
                 if (waitStatusExited(res.status)) {
                     return @intCast(waitStatusExitCode(res.status));
                 }
@@ -292,18 +289,18 @@ fn waitStatusExitCode(status: u32) u8 {
 }
 
 fn reapChildWithDeadline(pid: posix.pid_t) void {
+    const reap_deadline_ms: i64 = 20;
     const start_ms = std.time.milliTimestamp();
     while (true) {
         const res = posix.waitpid(pid, posix.W.NOHANG);
         if (res.pid != 0) return;
-        if (std.time.milliTimestamp() - start_ms > 200) {
-            posix.kill(pid, posix.SIG.KILL) catch |err| {
-                app_logger.logger("terminal.env").logf(.warning, "spawn force-kill failed pid={d} err={s}", .{ pid, @errorName(err) });
-            };
+        if (std.time.milliTimestamp() - start_ms > reap_deadline_ms) {
+            forceKillProcessTree(pid);
             _ = posix.waitpid(pid, 0);
+            cleanupSpawnTempFilesForPid(pid);
             return;
         }
-        std.Thread.sleep(10 * std.time.ns_per_ms);
+        std.Thread.sleep(2 * std.time.ns_per_ms);
     }
 }
 
@@ -313,8 +310,17 @@ fn setNonBlocking(fd: posix.fd_t) !void {
 }
 
 fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
+    const env_log = app_logger.logger("terminal.env");
+
+    if (builtin.os.tag == .linux) {
+        // Ensure child shells are terminated if Zide dies unexpectedly (panic/kill),
+        // so we don't leak orphan interactive shells/background trees.
+        _ = c.prctl(c.PR_SET_PDEATHSIG, c.SIGTERM);
+        if (c.getppid() == 1) posix.exit(1);
+    }
+
     _ = posix.setsid() catch |err| blk: {
-        app_logger.logger("terminal.env").logf(.warning, "spawn setsid failed err={s}", .{@errorName(err)});
+        env_log.logf(.warning, "spawn setsid failed err={s}", .{@errorName(err)});
         break :blk 0;
     };
     _ = c.ioctl(@intCast(slave_fd), c.TIOCSCTTY, @as(c_ulong, 0));
@@ -337,7 +343,6 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
     if (slave_fd > 2) posix.close(slave_fd);
 
     const shell_path = shell orelse defaultShell();
-    const env_log = app_logger.logger("terminal.env");
 
     const term = chooseTermName(terminfoExists);
     _ = c.setenv("TERM", term, 1);
@@ -447,6 +452,52 @@ fn defaultShell() [:0]const u8 {
     }
     return "/bin/sh";
 }
+
+fn terminateProcessTree(pid: posix.pid_t) void {
+    const log = app_logger.logger("terminal.env");
+    const pgrp = c.getpgid(pid);
+    if (pgrp > 0) {
+        const group_pid: posix.pid_t = -@as(posix.pid_t, @intCast(pgrp));
+        posix.kill(group_pid, posix.SIG.TERM) catch |err| {
+            log.logf(.warning, "spawn terminate group failed pid={d} pgrp={d} err={s}", .{ pid, pgrp, @errorName(err) });
+        };
+    }
+    posix.kill(pid, posix.SIG.TERM) catch |err| {
+        log.logf(.warning, "spawn terminate failed pid={d} err={s}", .{ pid, @errorName(err) });
+    };
+}
+
+fn forceKillProcessTree(pid: posix.pid_t) void {
+    const log = app_logger.logger("terminal.env");
+    const pgrp = c.getpgid(pid);
+    if (pgrp > 0) {
+        const group_pid: posix.pid_t = -@as(posix.pid_t, @intCast(pgrp));
+        posix.kill(group_pid, posix.SIG.KILL) catch |err| {
+            log.logf(.warning, "spawn force-kill group failed pid={d} pgrp={d} err={s}", .{ pid, pgrp, @errorName(err) });
+        };
+    }
+    posix.kill(pid, posix.SIG.KILL) catch |err| {
+        log.logf(.warning, "spawn force-kill failed pid={d} err={s}", .{ pid, @errorName(err) });
+    };
+}
+
+fn cleanupSpawnTempFilesForPid(pid: posix.pid_t) void {
+    const log = app_logger.logger("terminal.env");
+    var bashrc_buf: [128:0]u8 = undefined;
+    const bashrc_path = std.fmt.bufPrintZ(&bashrc_buf, "/tmp/zide-bashrc-{d}", .{pid}) catch return;
+    std.fs.deleteFileAbsolute(bashrc_path) catch |err| switch (err) {
+        error.FileNotFound => {},
+        else => log.logf(.debug, "spawn cleanup failed path={s} err={s}", .{ bashrc_path, @errorName(err) }),
+    };
+
+    var inputrc_buf: [128:0]u8 = undefined;
+    const inputrc_path = std.fmt.bufPrintZ(&inputrc_buf, "/tmp/zide-inputrc-{d}", .{pid}) catch return;
+    std.fs.deleteFileAbsolute(inputrc_path) catch |err| switch (err) {
+        error.FileNotFound => {},
+        else => log.logf(.debug, "spawn cleanup failed path={s} err={s}", .{ inputrc_path, @errorName(err) }),
+    };
+}
+
 
 fn terminfoExists(name: []const u8) bool {
     if (terminfoInDir(std.c.getenv("TERMINFO"), name)) return true;

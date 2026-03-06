@@ -17,6 +17,8 @@ pub fn requestCancel(state: anytype, now: f64, ctx: *anyopaque, hooks: Hooks) bo
     _ = ctx;
     _ = hooks;
     state.terminal_close_confirm_tab = null;
+    state.terminal_window_close_pending = false;
+    state.shell.clearCloseRequest();
     state.needs_redraw = true;
     state.metrics.noteInput(now);
     return true;

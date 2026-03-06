@@ -3,6 +3,7 @@ const app_bootstrap = @import("bootstrap.zig");
 const app_run_loop_driver = @import("run_loop_driver.zig");
 const app_shell = @import("../app_shell.zig");
 const app_signals = @import("signals.zig");
+const app_terminal_tab_navigation_runtime = @import("terminal_tab_navigation_runtime.zig");
 const input_builder = @import("../input/input_builder.zig");
 
 pub fn prepare(state: anytype) !?app_run_loop_driver.FrameSetup {
@@ -24,6 +25,19 @@ fn prepareWithMode(
     const poll_start = app_shell.getTime();
     app_shell.pollInputEvents();
     const poll_end = app_shell.getTime();
+    if (state.shell.shouldClose()) {
+        state.terminal_window_close_pending = true;
+        state.shell.clearCloseRequest();
+    }
+
+    if (state.terminal_window_close_pending) {
+        const allow_close_now = handlePendingTerminalWindowClose(state, app_mode);
+        if (allow_close_now) {
+            state.shell.requestClose();
+            return null;
+        }
+    }
+
     if (state.shell.shouldClose()) return null;
     if (app_signals.requested()) {
         state.shell.requestClose();
@@ -46,4 +60,49 @@ fn prepareWithMode(
         .poll_ms = (poll_end - poll_start) * 1000.0,
         .build_ms = (build_end - build_start) * 1000.0,
     };
+}
+
+fn handlePendingTerminalWindowClose(state: anytype, app_mode: app_bootstrap.AppMode) bool {
+    if (!app_modes.ide.shouldUseTerminalWorkspace(app_mode)) {
+        state.terminal_window_close_pending = false;
+        return true;
+    }
+    if (state.terminal_workspace == null) {
+        state.terminal_window_close_pending = false;
+        return true;
+    }
+
+    var workspace = &state.terminal_workspace.?;
+    if (workspace.tabCount() == 0) {
+        state.terminal_window_close_pending = false;
+        return true;
+    }
+
+    if (state.terminal_close_confirm_tab != null) {
+        // Modal is active and awaiting input.
+        return false;
+    }
+
+    const active_idx = workspace.activeIndex();
+    var next_confirm_idx: ?usize = null;
+    var i: usize = 0;
+    while (i < workspace.tabCount()) : (i += 1) {
+        const session = workspace.sessionAt(i) orelse continue;
+        if (!session.shouldConfirmClose()) continue;
+        next_confirm_idx = i;
+        break;
+    }
+
+    if (next_confirm_idx == null) {
+        state.terminal_window_close_pending = false;
+        return true;
+    }
+
+    const idx = next_confirm_idx.?;
+    if (idx != active_idx) {
+        _ = app_terminal_tab_navigation_runtime.focusByIndex(state, idx);
+    }
+    state.terminal_close_confirm_tab = workspace.activeTabId();
+    state.needs_redraw = true;
+    return false;
 }

@@ -2,6 +2,10 @@ const app_logger = @import("../app_logger.zig");
 const mode_build = @import("mode_build.zig");
 
 pub fn handle(state: anytype) void {
+    // Tear down GUI first so window close is immediate; backend cleanup can
+    // continue after renderer shutdown without keeping the UI visible.
+    state.shell.deinit(state.allocator);
+
     if (state.font_sample_view) |*view| {
         view.deinit();
     }
@@ -27,7 +31,6 @@ pub fn handle(state: anytype) void {
     state.terminals.deinit(state.allocator);
 
     state.tab_bar.deinit();
-    state.shell.deinit(state.allocator);
     state.editor_render_cache.deinit();
     state.editor_cluster_cache.deinit();
     if (state.grammar_manager) |*grammar_manager| {
