@@ -1305,7 +1305,13 @@ fn drawShapedGlyph(
     followed_by_space: bool,
     color: Rgba,
 ) void {
-    const glyph = font.getGlyphById(face, glyph_id, want_color, hb_pos.x_advance) catch return;
+    const glyph = font.getGlyphById(face, glyph_id, want_color, hb_pos.x_advance) catch |err| {
+        const log = app_logger.logger("terminal.draw");
+        if (log.enabled_file or log.enabled_console) {
+            log.logf(.warning, "shaped glyph lookup failed cp=U+{X} glyph_id={d} err={s}", .{ base_codepoint, glyph_id, @errorName(err) });
+        }
+        return;
+    };
     const render_scale = if (font.render_scale > 0.0) font.render_scale else 1.0;
     const inv_scale = 1.0 / render_scale;
     const baseline = y + font.baseline_from_top * inv_scale;

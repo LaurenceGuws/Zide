@@ -1706,29 +1706,57 @@ fn kittyPlacementIntersects(placement: KittyPlacement, row: u16, col: u16) bool 
 }
 
 pub fn writeKittyResponse(self: anytype, control: KittyControl, image_id: u32, ok: bool, message: []const u8) void {
+    const log = app_logger.logger("terminal.kitty");
     if (control.quiet == 2) return;
     if (control.quiet == 1 and ok) return;
     if (self.pty == null) return;
     var seq = std.ArrayList(u8).empty;
     defer seq.deinit(self.allocator);
-    _ = seq.appendSlice(self.allocator, "\x1b_G") catch return;
+    _ = seq.appendSlice(self.allocator, "\x1b_G") catch |err| {
+        log.logf(.warning, "kitty response prefix append failed err={s}", .{ @errorName(err) });
+        return;
+    };
     var needs_comma = false;
     if (image_id != 0) {
-        _ = seq.writer(self.allocator).print("i={d}", .{image_id}) catch return;
+        _ = seq.writer(self.allocator).print("i={d}", .{image_id}) catch |err| {
+            log.logf(.warning, "kitty response image id append failed id={d} err={s}", .{ image_id, @errorName(err) });
+            return;
+        };
         needs_comma = true;
     }
     if (control.image_number) |num| {
-        if (needs_comma) _ = seq.append(self.allocator, ',') catch return;
-        _ = seq.writer(self.allocator).print("I={d}", .{num}) catch return;
+        if (needs_comma) _ = seq.append(self.allocator, ',') catch |err| {
+            log.logf(.warning, "kitty response comma append failed err={s}", .{ @errorName(err) });
+            return;
+        };
+        _ = seq.writer(self.allocator).print("I={d}", .{num}) catch |err| {
+            log.logf(.warning, "kitty response image number append failed num={d} err={s}", .{ num, @errorName(err) });
+            return;
+        };
         needs_comma = true;
     }
     if (control.placement_id) |pid| {
-        if (needs_comma) _ = seq.append(self.allocator, ',') catch return;
-        _ = seq.writer(self.allocator).print("p={d}", .{pid}) catch return;
+        if (needs_comma) _ = seq.append(self.allocator, ',') catch |err| {
+            log.logf(.warning, "kitty response comma append failed err={s}", .{ @errorName(err) });
+            return;
+        };
+        _ = seq.writer(self.allocator).print("p={d}", .{pid}) catch |err| {
+            log.logf(.warning, "kitty response placement id append failed pid={d} err={s}", .{ pid, @errorName(err) });
+            return;
+        };
     }
-    _ = seq.append(self.allocator, ';') catch return;
-    _ = seq.appendSlice(self.allocator, message) catch return;
-    _ = seq.appendSlice(self.allocator, "\x1b\\") catch return;
+    _ = seq.append(self.allocator, ';') catch |err| {
+        log.logf(.warning, "kitty response separator append failed err={s}", .{ @errorName(err) });
+        return;
+    };
+    _ = seq.appendSlice(self.allocator, message) catch |err| {
+        log.logf(.warning, "kitty response message append failed len={d} err={s}", .{ message.len, @errorName(err) });
+        return;
+    };
+    _ = seq.appendSlice(self.allocator, "\x1b\\") catch |err| {
+        log.logf(.warning, "kitty response terminator append failed err={s}", .{ @errorName(err) });
+        return;
+    };
     if (self.pty) |*pty| {
         _ = pty.write(seq.items) catch |err| blk: {
             app_logger.logger("terminal.kitty").logf(.warning, "kitty response write failed len={d} err={s}", .{ seq.items.len, @errorName(err) });
