@@ -295,6 +295,15 @@ pub fn handleInput(
                 return key_encoder.sendKeyAction(widget.session, key, key_mod, action);
             }
         }.apply;
+        const keyModFromEvent = struct {
+            fn apply(key_event: shared_types.input.KeyEvent) terminal_mod.Modifier {
+                var m: terminal_mod.Modifier = terminal_mod.VTERM_MOD_NONE;
+                if (key_event.mods.shift) m |= terminal_mod.VTERM_MOD_SHIFT;
+                if (key_event.mods.alt) m |= terminal_mod.VTERM_MOD_ALT;
+                if (key_event.mods.ctrl) m |= terminal_mod.VTERM_MOD_CTRL;
+                return m;
+            }
+        }.apply;
         const translatedKeyCodepoint = struct {
             fn apply(renderer: anytype, key_event: shared_types.input.KeyEvent, shift_mod: bool) ?u32 {
                 const sc = key_event.scancode orelse return null;
@@ -429,6 +438,7 @@ pub fn handleInput(
             for (input_batch.events.items) |event| {
                 if (event != .key) continue;
                 const key = event.key.key;
+                const event_mod = keyModFromEvent(event.key);
                 if (key_log.enabled_file or key_log.enabled_console) {
                     key_log.logf(
                         "event key={d} pressed={d} repeated={d} mods(s={d} a={d} c={d} g={d} super={d})",
@@ -460,7 +470,7 @@ pub fn handleInput(
                     if (report_text_enabled) {
                         if (key_encoder.baseCharForKey(key)) |base_char| {
                             clearLiveState(self);
-                            try self.session.sendCharActionWithMetadata(base_char, mod, .release, keyAltMeta(r, altmeta_log, event.key, base_char));
+                            try self.session.sendCharActionWithMetadata(base_char, event_mod, .release, keyAltMeta(r, altmeta_log, event.key, base_char));
                             if (key_log.enabled_file or key_log.enabled_console) {
                                 key_log.logf("send char key={d} action=release base_char={d}", .{ @intFromEnum(key), base_char });
                             }
@@ -469,7 +479,7 @@ pub fn handleInput(
                             continue;
                         }
                     }
-                    const handled_release = try applyTerminalKey(self, key, mod, .release);
+                    const handled_release = try applyTerminalKey(self, key, event_mod, .release);
                     if (key_log.enabled_file or key_log.enabled_console) {
                         key_log.logf("send key={d} action=release handled={d}", .{ @intFromEnum(key), @intFromBool(handled_release) });
                     }
@@ -496,7 +506,7 @@ pub fn handleInput(
                 if (report_text_enabled) {
                     if (key_encoder.baseCharForKey(key)) |base_char| {
                         clearLiveState(self);
-                        try self.session.sendCharActionWithMetadata(base_char, mod, action, keyAltMeta(r, altmeta_log, event.key, base_char));
+                        try self.session.sendCharActionWithMetadata(base_char, event_mod, action, keyAltMeta(r, altmeta_log, event.key, base_char));
                         if (key_log.enabled_file or key_log.enabled_console) {
                             key_log.logf("send char key={d} action={s} base_char={d}", .{ @intFromEnum(key), @tagName(action), base_char });
                         }
@@ -506,7 +516,7 @@ pub fn handleInput(
                     }
                 }
 
-                const handled_key = try applyTerminalKey(self, key, mod, action);
+                const handled_key = try applyTerminalKey(self, key, event_mod, action);
                 if (key_log.enabled_file or key_log.enabled_console) {
                     key_log.logf("send key={d} action={s} handled={d}", .{ @intFromEnum(key), @tagName(action), @intFromBool(handled_key) });
                 }
@@ -518,8 +528,8 @@ pub fn handleInput(
                     continue;
                 }
 
-                if (!report_text_enabled and (ctrl or alt)) {
-                    if (try key_encoder.sendCharForKey(self.session, key, mod, action, ctrl, alt)) {
+                if (!report_text_enabled and (event.key.mods.ctrl or event.key.mods.alt)) {
+                    if (try key_encoder.sendCharForKey(self.session, key, event_mod, action, event.key.mods.ctrl, event.key.mods.alt)) {
                         if (key_log.enabled_file or key_log.enabled_console) {
                             key_log.logf("send ctrl_alt_char key={d} action={s}", .{ @intFromEnum(key), @tagName(action) });
                         }

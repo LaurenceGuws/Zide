@@ -268,7 +268,7 @@ pub fn baseCharForKey(key: input_types.Key) ?u32 {
 
 pub fn ctrlAllowsChar(ch: u32) bool {
     return switch (ch) {
-        'a'...'z', 'A'...'Z', '@', '[', '\\', ']', '^', '_', '?', ' ' => true,
+        'a'...'z', 'A'...'Z', '@', '[', '\\', ']', '^', '_', '?', ' ', '/' => true,
         else => false,
     };
 }
