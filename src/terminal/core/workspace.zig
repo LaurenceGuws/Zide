@@ -1,5 +1,6 @@
 const std = @import("std");
 const session_mod = @import("terminal_session.zig");
+const app_logger = @import("../../app_logger.zig");
 
 pub const TerminalSession = session_mod.TerminalSession;
 pub const TabId = u64;
@@ -140,13 +141,17 @@ pub const TerminalWorkspace = struct {
     }
 
     pub fn moveTab(self: *TerminalWorkspace, tab_id: TabId, to_index: usize) bool {
+        const log = app_logger.logger("terminal.workspace");
         const from_index = self.indexOfTabId(tab_id) orelse return false;
         if (to_index >= self.tabs.items.len) return false;
         if (from_index == to_index) return true;
 
         const active_id = self.activeTabId();
         const moved = self.tabs.orderedRemove(from_index);
-        self.tabs.insert(self.allocator, to_index, moved) catch return false;
+        self.tabs.insert(self.allocator, to_index, moved) catch |err| {
+            log.logf(.warning, "move tab insert failed from={d} to={d}: {s}", .{ from_index, to_index, @errorName(err) });
+            return false;
+        };
         if (active_id) |id| {
             self.active_index = self.indexOfTabId(id) orelse 0;
         }

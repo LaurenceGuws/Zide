@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
+const app_logger = @import("../../app_logger.zig");
 const common = @import("common.zig");
 const shared_types = @import("../../types/mod.zig");
 
@@ -315,11 +316,15 @@ pub const TabBar = struct {
     }
 
     fn moveTabVisual(self: *TabBar, from_index: usize, to_index: usize) void {
+        const log = app_logger.logger("ui.tab_bar");
         if (from_index >= self.tabs.items.len or to_index >= self.tabs.items.len) return;
         if (from_index == to_index) return;
 
         const moved = self.tabs.orderedRemove(from_index);
-        self.tabs.insert(self.allocator, to_index, moved) catch return;
+        self.tabs.insert(self.allocator, to_index, moved) catch |err| {
+            log.logf(.warning, "visual tab move insert failed from={d} to={d}: {s}", .{ from_index, to_index, @errorName(err) });
+            return;
+        };
 
         if (self.active_index == from_index) {
             self.active_index = to_index;

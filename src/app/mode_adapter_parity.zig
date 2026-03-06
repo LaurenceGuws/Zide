@@ -13,9 +13,18 @@ pub fn logIfMismatch(
     const log = app_logger.logger("app.mode.parity");
     if (!log.enabled_file and !log.enabled_console) return;
 
-    const editor_snap = editor_mode_adapter.asContract().snapshot(allocator) catch return;
-    const terminal_snap = terminal_mode_adapter.asContract().snapshot(allocator) catch return;
-    var projections = app_modes.ide.buildTabProjections(allocator, tabs) catch return;
+    const editor_snap = editor_mode_adapter.asContract().snapshot(allocator) catch |err| {
+        log.logf(.warning, "editor adapter snapshot failed: {s}", .{@errorName(err)});
+        return;
+    };
+    const terminal_snap = terminal_mode_adapter.asContract().snapshot(allocator) catch |err| {
+        log.logf(.warning, "terminal adapter snapshot failed: {s}", .{@errorName(err)});
+        return;
+    };
+    var projections = app_modes.ide.buildTabProjections(allocator, tabs) catch |err| {
+        log.logf(.warning, "build tab projections failed: {s}", .{@errorName(err)});
+        return;
+    };
     defer projections.deinit(allocator);
 
     const active_projection = app_modes.ide.activeProjectionForTabBar(
@@ -71,4 +80,3 @@ pub fn logIfMismatch(
         );
     }
 }
-
