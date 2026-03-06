@@ -300,19 +300,32 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
     if (slave_fd > 2) posix.close(slave_fd);
 
     const shell_path = shell orelse defaultShell();
-    const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
     const env_log = app_logger.logger("terminal.env");
 
     const term = chooseTermName(terminfoExists);
     _ = c.setenv("TERM", term, 1);
+    if (std.c.getenv("COLORTERM") == null) {
+        _ = c.setenv("COLORTERM", "truecolor", 1);
+    }
     env_log.logf(
-        "spawn begin shell={s} TERM={s} TERMINFO={s} TERMINFO_DIRS={s} launch_cwd={s}",
+        "spawn begin shell={s} TERM={s} COLORTERM={s} TERMINFO={s} TERMINFO_DIRS={s} launch_cwd={s}",
         .{
             shell_path,
             term,
+            getenvOrUnset("COLORTERM"),
             getenvOrUnset("TERMINFO"),
             getenvOrUnset("TERMINFO_DIRS"),
             getenvOrUnset("ZIDE_LAUNCH_CWD"),
+        },
+    );
+    env_log.logf(
+        "spawn color_env TERM={s} COLORTERM={s} FORCE_COLOR={s} CLICOLOR_FORCE={s} NO_COLOR={s}",
+        .{
+            getenvOrUnset("TERM"),
+            getenvOrUnset("COLORTERM"),
+            getenvOrUnset("FORCE_COLOR"),
+            getenvOrUnset("CLICOLOR_FORCE"),
+            getenvOrUnset("NO_COLOR"),
         },
     );
     if (std.c.getenv("ZIDE_LAUNCH_CWD")) |cwd_c| {
@@ -341,12 +354,14 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
             "-pfl",
             shell_path.ptr,
         };
+        const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
         _ = posix.execvpeZ(argv[0].?, &argv, envp) catch {};
         posix.exit(127);
     }
 
     const argv = [_:null]?[*:0]const u8{shell_path.ptr};
     env_log.logf("spawn exec shell={s}", .{shell_path});
+    const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
     _ = posix.execvpeZ(shell_path.ptr, &argv, envp) catch {};
     posix.exit(127);
 }
@@ -380,8 +395,8 @@ fn terminfoExists(name: []const u8) bool {
 
 fn chooseTermName(existsFn: fn ([]const u8) bool) [:0]const u8 {
     if (existsFn("zide-256color")) return "zide-256color";
+    if (existsFn("xterm-zide")) return "xterm-zide";
     if (existsFn("zide")) return "zide";
-    if (existsFn("xterm-kitty")) return "xterm-kitty";
     return "xterm-256color";
 }
 
@@ -411,22 +426,13 @@ fn getenvOrUnset(name: [*:0]const u8) []const u8 {
 test "chooseTermName prefers zide terminfo" {
     const Exists = struct {
         fn has(name: []const u8) bool {
-            return std.mem.eql(u8, name, "zide-256color") or std.mem.eql(u8, name, "zide") or std.mem.eql(u8, name, "xterm-kitty");
+            return std.mem.eql(u8, name, "xterm-zide") or std.mem.eql(u8, name, "zide-256color") or std.mem.eql(u8, name, "zide");
         }
     };
     try std.testing.expectEqualStrings("zide-256color", chooseTermName(Exists.has));
 }
 
-test "chooseTermName falls back to xterm-kitty before xterm-256color" {
-    const Exists = struct {
-        fn has(name: []const u8) bool {
-            return std.mem.eql(u8, name, "xterm-kitty");
-        }
-    };
-    try std.testing.expectEqualStrings("xterm-kitty", chooseTermName(Exists.has));
-}
-
-test "chooseTermName falls back to xterm-256color when no richer terminfo exists" {
+test "chooseTermName falls back to xterm-256color when zide terminfo is unavailable" {
     const Exists = struct {
         fn has(_: []const u8) bool {
             return false;
