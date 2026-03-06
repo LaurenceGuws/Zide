@@ -63,6 +63,12 @@ fn timeOfDayMicrosUtc() struct { h: i64, m: i64, s: i64, us: i64 } {
     return .{ .h = h, .m = m, .s = s, .us = us };
 }
 
+fn writeLogLine(file: std.fs.File, prefix: []const u8, msg: []const u8) !void {
+    try file.writeAll(prefix);
+    try file.writeAll(msg);
+    try file.writeAll("\n");
+}
+
 pub fn init() !void {
     if (log_file != null) return;
     var file = try std.fs.cwd().createFile("zide.log", .{ .truncate = false, .read = false });
@@ -115,9 +121,10 @@ pub const Logger = struct {
             log_mutex.lock();
             defer log_mutex.unlock();
             if (log_file) |file| {
-                _ = file.writeAll(prefix) catch {};
-                _ = file.writeAll(msg) catch {};
-                _ = file.writeAll("\n") catch {};
+                writeLogLine(file, prefix, msg) catch |err| {
+                    log_file = null;
+                    std.debug.print("[app.logger] disabled file sink after write failure: {s}\n", .{@errorName(err)});
+                };
             }
         }
 
@@ -152,9 +159,10 @@ pub const Logger = struct {
             log_mutex.lock();
             defer log_mutex.unlock();
             if (log_file) |file| {
-                _ = file.writeAll(prefix) catch {};
-                _ = file.writeAll(msg) catch {};
-                _ = file.writeAll("\n") catch {};
+                writeLogLine(file, prefix, msg) catch |err| {
+                    log_file = null;
+                    std.debug.print("[app.logger] disabled file sink after write failure: {s}\n", .{@errorName(err)});
+                };
             }
         }
     }
