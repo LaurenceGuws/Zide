@@ -6,6 +6,21 @@ const render_cache_mod = @import("render_cache.zig");
 const RenderCache = render_cache_mod.RenderCache;
 const Cell = types.Cell;
 
+fn rowLastContentCol(row_cells: []const Cell, cols: usize) ?usize {
+    if (cols == 0 or row_cells.len < cols) return null;
+    var last: ?usize = null;
+    var col: usize = 0;
+    while (col < cols) : (col += 1) {
+        const cell = row_cells[col];
+        if (cell.x != 0 or cell.y != 0) continue;
+        if (cell.codepoint == 0 and cell.combining_len == 0) continue;
+        const width_units = @as(usize, @max(@as(u8, 1), cell.width));
+        const end_col = @min(cols - 1, col + width_units - 1);
+        last = end_col;
+    }
+    return last;
+}
+
 pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usize) void {
     const screen = self.activeScreenConst();
     const view = screen.snapshotView();
@@ -148,19 +163,27 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         row = 0;
         while (row < rows) : (row += 1) {
             const global_row = start_line + row;
+            const row_start = row * cols;
+            const row_cells = cache.cells.items[row_start .. row_start + cols];
+            const last_content_col = rowLastContentCol(row_cells, cols);
             if (global_row < start_sel.row or global_row > end_sel.row) {
                 cache.selection_rows.items[row] = false;
                 continue;
             }
             const col_start = if (global_row == start_sel.row) start_sel.col else 0;
             const col_end = if (global_row == end_sel.row) end_sel.col else cols - 1;
-            if (col_end < col_start) {
+            if (last_content_col == null) {
+                cache.selection_rows.items[row] = false;
+                continue;
+            }
+            const clamped_end = @min(col_end, last_content_col.?);
+            if (clamped_end < col_start) {
                 cache.selection_rows.items[row] = false;
                 continue;
             }
             cache.selection_rows.items[row] = true;
             cache.selection_cols_start.items[row] = @intCast(col_start);
-            cache.selection_cols_end.items[row] = @intCast(col_end);
+            cache.selection_cols_end.items[row] = @intCast(clamped_end);
         }
     } else {
         for (cache.selection_rows.items) |*row_selected| {
@@ -208,6 +231,38 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         for (cache.dirty_cols_start.items, cache.dirty_cols_end.items) |*col_start, *col_end| {
             col_start.* = 0;
             col_end.* = if (cols > 0) @intCast(cols - 1) else 0;
+        }
+    }
+
+    if (!needs_full_damage and active_cache.rows == rows and active_cache.cols == cols and active_cache.selection_rows.items.len == rows) {
+        var row_idx: usize = 0;
+        while (row_idx < rows) : (row_idx += 1) {
+            const was_selected = active_cache.selection_rows.items[row_idx];
+            const is_selected = cache.selection_rows.items[row_idx];
+            var changed = was_selected != is_selected;
+            if (!changed and is_selected and active_cache.selection_cols_start.items.len == rows and active_cache.selection_cols_end.items.len == rows) {
+                changed = active_cache.selection_cols_start.items[row_idx] != cache.selection_cols_start.items[row_idx] or
+                    active_cache.selection_cols_end.items[row_idx] != cache.selection_cols_end.items[row_idx];
+            }
+            if (!changed) continue;
+
+            cache.dirty_rows.items[row_idx] = true;
+            cache.dirty_cols_start.items[row_idx] = 0;
+            cache.dirty_cols_end.items[row_idx] = if (cols > 0) @intCast(cols - 1) else 0;
+            if (cache.dirty == .none) {
+                cache.dirty = .partial;
+                cache.damage = .{
+                    .start_row = row_idx,
+                    .end_row = row_idx,
+                    .start_col = 0,
+                    .end_col = if (cols > 0) cols - 1 else 0,
+                };
+            } else if (cache.dirty != .full) {
+                cache.damage.start_row = @min(cache.damage.start_row, row_idx);
+                cache.damage.end_row = @max(cache.damage.end_row, row_idx);
+                cache.damage.start_col = 0;
+                cache.damage.end_col = if (cols > 0) cols - 1 else 0;
+            }
         }
     }
 
