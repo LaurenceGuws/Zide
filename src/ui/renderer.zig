@@ -578,9 +578,7 @@ pub const Renderer = struct {
             raw_slot.* = null;
         }
         raw_slot.* = self.allocator.dupe(u8, raw) catch |err| blk: {
-            if (log.enabled_file or log.enabled_console) {
-                log.logf(.warning, "font feature raw dup failed len={d} err={s}", .{ raw.len, @errorName(err) });
-            }
+                            log.logf(.warning, "font feature raw dup failed len={d} err={s}", .{ raw.len, @errorName(err) });
             break :blk null;
         };
         self.rebuildFontFeaturesList(raw_slot.*, list);
@@ -597,9 +595,7 @@ pub const Renderer = struct {
             var feature: hb.hb_feature_t = undefined;
             if (hb.hb_feature_from_string(token.ptr, @intCast(token.len), &feature) != 0) {
                 list.append(self.allocator, feature) catch |err| {
-                    if (log.enabled_file or log.enabled_console) {
-                        log.logf(.warning, "font feature append failed token={s} err={s}", .{ token, @errorName(err) });
-                    }
+                                            log.logf(.warning, "font feature append failed token={s} err={s}", .{ token, @errorName(err) });
                     return;
                 };
             }
@@ -728,8 +724,7 @@ pub const Renderer = struct {
             log.logf(.info, "ui_zoom layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
         }
         try self.applyFontScale();
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(.info, 
+                    log.logf(.info, 
                 "ui_zoom_effective base={d:.2} ui={d:.3} zoom={d:.3} target={d:.3} render={d:.3} font={d:.2} term_cell={d:.2}x{d:.2}",
                 .{
                     self.base_font_size,
@@ -742,7 +737,6 @@ pub const Renderer = struct {
                     self.terminal_cell_height,
                 },
             );
-        }
         self.last_zoom_apply_time = result.apply_time;
         return true;
     }
@@ -1540,9 +1534,7 @@ pub const Renderer = struct {
                 const seq_len = std.unicode.utf8ByteSequenceLength(first) catch {
                     idx += 1;
                     codepoints.append(self.allocator, 0xFFFD) catch |err| {
-                        if (log.enabled_file or log.enabled_console) {
-                            log.logf(.warning, "shaped text append replacement failed err={s}", .{ @errorName(err) });
-                        }
+                                                    log.logf(.warning, "shaped text append replacement failed err={s}", .{ @errorName(err) });
                         return false;
                     };
                     continue;
@@ -1550,9 +1542,7 @@ pub const Renderer = struct {
                 if (idx + seq_len > text.len) {
                     idx += 1;
                     codepoints.append(self.allocator, 0xFFFD) catch |err| {
-                        if (log.enabled_file or log.enabled_console) {
-                            log.logf(.warning, "shaped text append replacement (truncated utf8) failed err={s}", .{ @errorName(err) });
-                        }
+                                                    log.logf(.warning, "shaped text append replacement (truncated utf8) failed err={s}", .{ @errorName(err) });
                         return false;
                     };
                     continue;
@@ -1560,9 +1550,7 @@ pub const Renderer = struct {
                 const slice = text[idx .. idx + seq_len];
                 const cp = std.unicode.utf8Decode(slice) catch 0xFFFD;
                 codepoints.append(self.allocator, cp) catch |err| {
-                    if (log.enabled_file or log.enabled_console) {
-                        log.logf(.warning, "shaped text codepoint append failed err={s}", .{ @errorName(err) });
-                    }
+                                            log.logf(.warning, "shaped text codepoint append failed err={s}", .{ @errorName(err) });
                     return false;
                 };
                 idx += seq_len;
@@ -1617,15 +1605,11 @@ pub const Renderer = struct {
             self.terminal_shape_first_pen_set.items.len = 0;
             self.terminal_shape_first_pen.items.len = 0;
             self.terminal_shape_first_pen_set.ensureTotalCapacity(self.allocator, span_len) catch |err| {
-                if (log.enabled_file or log.enabled_console) {
-                    log.logf(.warning, "shaped text first-pen-set capacity failed span_len={d} err={s}", .{ span_len, @errorName(err) });
-                }
+                                    log.logf(.warning, "shaped text first-pen-set capacity failed span_len={d} err={s}", .{ span_len, @errorName(err) });
                 return false;
             };
             self.terminal_shape_first_pen.ensureTotalCapacity(self.allocator, span_len) catch |err| {
-                if (log.enabled_file or log.enabled_console) {
-                    log.logf(.warning, "shaped text first-pen capacity failed span_len={d} err={s}", .{ span_len, @errorName(err) });
-                }
+                                    log.logf(.warning, "shaped text first-pen capacity failed span_len={d} err={s}", .{ span_len, @errorName(err) });
                 return false;
             };
             self.terminal_shape_first_pen_set.items.len = span_len;
@@ -1870,21 +1854,16 @@ pub const Renderer = struct {
                     sdl_api.startTextInput(self.window);
                     text_input.reapplyRect(&self.text_input_state, self.window);
                     self.focus_queue.append(self.allocator, true) catch |err| {
-                        if (window_log.enabled_file or window_log.enabled_console) {
-                            window_log.logf(.warning, "focus queue append failed focused=1 err={s}", .{@errorName(err)});
-                        }
+                                                    window_log.logf(.warning, "focus queue append failed focused=1 err={s}", .{@errorName(err)});
                     };
                 }
                 if (sdl_api.isFocusLostEvent(event.type)) {
                     sdl_api.stopTextInput(self.window);
                     self.focus_queue.append(self.allocator, false) catch |err| {
-                        if (window_log.enabled_file or window_log.enabled_console) {
-                            window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
-                        }
+                                                    window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
                     };
                 }
-                if (window_log.enabled_file or window_log.enabled_console) {
-                    window_log.logf(.info, 
+                                    window_log.logf(.info, 
                         "event={s} data1={d} data2={d}",
                         .{
                             sdl_api.windowEventName(event.type),
@@ -1892,7 +1871,6 @@ pub const Renderer = struct {
                             sdl_api.windowEventData2(event),
                         },
                     );
-                }
             },
             sdl_api.EVENT_KEY_DOWN => {
                 const key_info = platform_input_events.handleKeyDown(
@@ -1903,12 +1881,10 @@ pub const Renderer = struct {
                     &self.key_queue,
                     self.allocator,
                 );
-                if (input_log.enabled_file or input_log.enabled_console) {
-                    input_log.logf(.info, 
+                                    input_log.logf(.info, 
                         "keydown sc={d} sym={d} repeat={d}",
                         .{ key_info.scancode, key_info.sym, key_info.repeat },
                     );
-                }
             },
             sdl_api.EVENT_KEY_UP => {
                 const key_info = platform_input_events.handleKeyUp(
@@ -1916,12 +1892,10 @@ pub const Renderer = struct {
                     self.key_down[0..],
                     self.key_released[0..],
                 );
-                if (input_log.enabled_file or input_log.enabled_console) {
-                    input_log.logf(.info, 
+                                    input_log.logf(.info, 
                         "keyup sc={d} sym={d}",
                         .{ key_info.scancode, key_info.sym },
                     );
-                }
             },
             sdl_api.EVENT_TEXT_INPUT => {
                 const text_was_composed = state.composing_active.*;
@@ -1933,9 +1907,7 @@ pub const Renderer = struct {
                 );
                 input_state.applyTextInputReset(state);
                 input_logging.logTextInput(text_len);
-                if (input_log.enabled_file or input_log.enabled_console) {
-                    input_log.logf(.info, "textinput type={d}", .{event.type});
-                }
+                                    input_log.logf(.info, "textinput type={d}", .{event.type});
                 if (!sdl3_textinput_layout_logged and (input_log.enabled_file or input_log.enabled_console)) {
                     const layout = sdl_api.textInputLayout();
                     input_logging.logTextInputLayout(
@@ -2019,21 +1991,16 @@ pub const Renderer = struct {
                         sdl_api.startTextInput(self.window);
                         text_input.reapplyRect(&self.text_input_state, self.window);
                         self.focus_queue.append(self.allocator, true) catch |err| {
-                            if (window_log.enabled_file or window_log.enabled_console) {
-                                window_log.logf(.warning, "focus queue append failed focused=1 err={s}", .{@errorName(err)});
-                            }
+                                                            window_log.logf(.warning, "focus queue append failed focused=1 err={s}", .{@errorName(err)});
                         };
                     }
                     if (sdl_api.isFocusLostEvent(event.type)) {
                         sdl_api.stopTextInput(self.window);
                         self.focus_queue.append(self.allocator, false) catch |err| {
-                            if (window_log.enabled_file or window_log.enabled_console) {
-                                window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
-                            }
+                                                            window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
                         };
                     }
-                    if (window_log.enabled_file or window_log.enabled_console) {
-                        window_log.logf(.info, 
+                                            window_log.logf(.info, 
                             "event={s} data1={d} data2={d}",
                             .{
                                 sdl_api.windowEventName(event.type),
@@ -2041,7 +2008,6 @@ pub const Renderer = struct {
                                 sdl_api.windowEventData2(event),
                             },
                         );
-                    }
                 }
             },
         }

@@ -58,9 +58,7 @@ pub fn loadFont(renderer: anytype, path: [*:0]const u8, size: f32) void {
     renderer.font_path = path;
     renderer.base_font_size = size;
     applyFontScale(renderer) catch |err| {
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(.warning, "load font apply scale failed err={s}", .{@errorName(err)});
-        }
+                    log.logf(.warning, "load font apply scale failed err={s}", .{@errorName(err)});
     };
 }
 
@@ -106,9 +104,7 @@ pub fn fontForSize(renderer: anytype, size: f32) ?*TerminalFont {
     if (renderer.font_cache.get(key)) |font_ptr| return font_ptr;
 
     const font_ptr = renderer.allocator.create(TerminalFont) catch |err| {
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(.warning, "font cache alloc failed size_key={d} err={s}", .{ key, @errorName(err) });
-        }
+                    log.logf(.warning, "font cache alloc failed size_key={d} err={s}", .{ key, @errorName(err) });
         return null;
     };
     font_ptr.* = TerminalFont.init(
@@ -130,9 +126,7 @@ pub fn fontForSize(renderer: anytype, size: f32) ?*TerminalFont {
     font_ptr.render_scale = renderer.render_scale;
     font_ptr.setAtlasFilterPoint();
     renderer.font_cache.put(key, font_ptr) catch |err| {
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(.warning, "font cache insert failed size_key={d} err={s}", .{ key, @errorName(err) });
-        }
+                    log.logf(.warning, "font cache insert failed size_key={d} err={s}", .{ key, @errorName(err) });
         font_ptr.deinit();
         renderer.allocator.destroy(font_ptr);
         return null;

@@ -126,9 +126,7 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
     defer raw_kv.deinit(self.allocator);
     const data = parseKittyControl(self.allocator, payload, &control, &raw_kv);
     if (!validateKittyControl(control)) {
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(.info, "kitty invalid command a={c} data_len={d}", .{ control.action, data.len });
-        }
+                    log.logf(.info, "kitty invalid command a={c} data_len={d}", .{ control.action, data.len });
         writeKittyResponse(self, control, resolveKittyImageId(control) orelse 0, false, "EINVAL");
         return;
     }
@@ -224,9 +222,7 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
     }
 
     const decoded = loadKittyPayload(self, &control, data) orelse {
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(.info, "kitty decode failed len={d}", .{data.len});
-        }
+                    log.logf(.info, "kitty decode failed len={d}", .{data.len});
         clearKittyLoading(kitty, final_image_id);
         writeKittyResponse(self, control, final_image_id, false, "EINVAL");
         return;
@@ -261,9 +257,7 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
     }
 
     const image = buildKittyImage(self, final_image_id, control, final_data) catch |err| {
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(.info, "kitty build failed id={d} format={d} data_len={d}", .{ final_image_id, control.format, final_data.len });
-        }
+                    log.logf(.info, "kitty build failed id={d} format={d} data_len={d}", .{ final_image_id, control.format, final_data.len });
         const message = switch (err) {
             error.BadPng => "EBADPNG",
             else => "EINVAL",
@@ -315,9 +309,7 @@ pub fn handleKittyQueryPayloadSizeReply(self: anytype, control: KittyControl, im
                 "ENODATA:Insufficient image data: {d} < {d}",
                 .{ chunk_len, expected },
             ) catch |err| {
-                if (log.enabled_file or log.enabled_console) {
-                    log.logf(.warning, "kitty query payload size message format failed len={d} expected={d} err={s}", .{ chunk_len, expected, @errorName(err) });
-                }
+                                    log.logf(.warning, "kitty query payload size message format failed len={d} expected={d} err={s}", .{ chunk_len, expected, @errorName(err) });
                 return false;
             };
             writeKittyResponse(self, control, image_id, false, message.items);
@@ -1269,9 +1261,7 @@ fn storeKittyImage(self: anytype, image: KittyImage) void {
             kitty.images.items[idx].version = version;
             kitty.total_bytes += image.data.len;
             self.activeScreen().grid.markDirtyAll();
-            if (log.enabled_file or log.enabled_console) {
-                log.logf(.info, "kitty image updated id={d} format={s} bytes={d}", .{ image.id, @tagName(image.format), image.data.len });
-            }
+                            log.logf(.info, "kitty image updated id={d} format={s} bytes={d}", .{ image.id, @tagName(image.format), image.data.len });
             return;
         }
     }
@@ -1287,16 +1277,12 @@ fn storeKittyImage(self: anytype, image: KittyImage) void {
     stored.version = version;
     kitty.images.append(self.allocator, stored) catch |err| {
         self.allocator.free(stored.data);
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(.warning, "kitty image store failed id={d} err={s}", .{ stored.id, @errorName(err) });
-        }
+                    log.logf(.warning, "kitty image store failed id={d} err={s}", .{ stored.id, @errorName(err) });
         return;
     };
     kitty.total_bytes += stored.data.len;
     self.activeScreen().grid.markDirtyAll();
-    if (log.enabled_file or log.enabled_console) {
-        log.logf(.info, "kitty image stored id={d} format={s} bytes={d}", .{ stored.id, @tagName(stored.format), stored.data.len });
-    }
+            log.logf(.info, "kitty image stored id={d} format={s} bytes={d}", .{ stored.id, @tagName(stored.format), stored.data.len });
 }
 
 fn placeKittyImage(self: anytype, image_id: u32, control: KittyControl) ?[]const u8 {
@@ -1358,24 +1344,18 @@ fn placeKittyImage(self: anytype, image_id: u32, control: KittyControl) ?[]const
             kitty.placements.items[idx] = placement;
         } else {
             kitty.placements.append(self.allocator, placement) catch |err| {
-                if (log.enabled_file or log.enabled_console) {
-                    log.logf(.warning, "kitty placement append failed id={d} pid={d} err={s}", .{ image_id, placement_id, @errorName(err) });
-                }
+                                    log.logf(.warning, "kitty placement append failed id={d} pid={d} err={s}", .{ image_id, placement_id, @errorName(err) });
                 return "ENOMEM";
             };
         }
     } else {
         kitty.placements.append(self.allocator, placement) catch |err| {
-            if (log.enabled_file or log.enabled_console) {
-                log.logf(.warning, "kitty placement append failed id={d} err={s}", .{ image_id, @errorName(err) });
-            }
+                            log.logf(.warning, "kitty placement append failed id={d} err={s}", .{ image_id, @errorName(err) });
             return "ENOMEM";
         };
     }
     self.activeScreen().grid.markDirtyAll();
-    if (log.enabled_file or log.enabled_console) {
-        log.logf(.info, "kitty placed id={d} row={d} col={d} cols={d} rows={d}", .{ image_id, row, col, placement.cols, placement.rows });
-    }
+            log.logf(.info, "kitty placed id={d} row={d} col={d} cols={d} rows={d}", .{ image_id, row, col, placement.cols, placement.rows });
 
     if (control.cursor_movement != 1) {
         const cols = effectiveKittyColumns(self, control, image_id);

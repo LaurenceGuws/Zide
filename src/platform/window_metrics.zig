@@ -105,8 +105,7 @@ pub fn collectWindowMetrics(window: *sdl.SDL_Window, reason: []const u8) WindowM
     }
 
     const log = app_logger.logger("sdl.window");
-    if (log.enabled_file or log.enabled_console) {
-        log.logf(.info, 
+            log.logf(.info, 
             "metrics reason={s} window={d}x{d} drawable={d}x{d} display={d} bounds={d}x{d} dpi_scale={d:.3},{d:.3} display_scale={d:.3} pixel_density={d:.3} refresh_hz={d}",
             .{
                 reason,
@@ -124,7 +123,6 @@ pub fn collectWindowMetrics(window: *sdl.SDL_Window, reason: []const u8) WindowM
                 refresh_hz,
             },
         );
-    }
 
     return .{
         .window_w = window_size.w,

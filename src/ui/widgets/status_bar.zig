@@ -67,9 +67,7 @@ pub const StatusBar = struct {
         var pos_buf: [32]u8 = undefined;
         const pos_str = std.fmt.bufPrint(&pos_buf, "Ln {d}, Col {d}", .{ line + 1, col + 1 }) catch |err| {
             const log = app_logger.logger("ui.status-bar");
-            if (log.enabled_file or log.enabled_console) {
-                log.logf(.warning, "status bar cursor position format failed err={s}", .{ @errorName(err) });
-            }
+                            log.logf(.warning, "status bar cursor position format failed err={s}", .{ @errorName(err) });
             return;
         };
         const pos_width = @as(f32, @floatFromInt(pos_str.len)) * shell.charWidth();

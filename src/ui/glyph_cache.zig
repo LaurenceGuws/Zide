@@ -67,9 +67,7 @@ pub const GlyphCache = struct {
             .{ .x = x0, .y = y1, .u = u_min, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
         };
         self.vertices.appendSlice(self.allocator, &verts) catch |err| {
-            if (log.enabled_file or log.enabled_console) {
-                log.logf(.warning, "glyph cache vertices append failed texture={d} err={s}", .{ texture.id, @errorName(err) });
-            }
+                            log.logf(.warning, "glyph cache vertices append failed texture={d} err={s}", .{ texture.id, @errorName(err) });
             return;
         };
         if (self.draws.items.len > 0) {
@@ -85,9 +83,7 @@ pub const GlyphCache = struct {
             .start = base,
             .count = 6,
         }) catch |err| {
-            if (log.enabled_file or log.enabled_console) {
-                log.logf(.warning, "glyph cache draw append failed texture={d} err={s}", .{ texture.id, @errorName(err) });
-            }
+                            log.logf(.warning, "glyph cache draw append failed texture={d} err={s}", .{ texture.id, @errorName(err) });
         };
     }
 

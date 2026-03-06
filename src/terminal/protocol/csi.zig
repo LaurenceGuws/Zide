@@ -33,8 +33,7 @@ fn effectiveSgrParamCount(action: parser_csi.CsiAction) usize {
 pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
     const log = app_logger.logger("terminal.csi");
     const csi_param_count = effectiveCsiParamCount(action);
-    if (log.enabled_file or log.enabled_console) {
-        log.logf(.info, 
+            log.logf(.info, 
             "csi final={c} leader={c} private={d} interm={s} count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
             .{
                 action.final,
@@ -60,7 +59,6 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                 action.params[15],
             },
         );
-    }
     const p = action.params;
     const param_len = csi_param_count;
     const get = struct {
@@ -713,8 +711,7 @@ pub fn applySgr(self: anytype, action: parser_csi.CsiAction) void {
     const params = action.params;
     const n_params = effectiveSgrParamCount(action);
     const log = app_logger.logger("terminal.sgr");
-    if (log.enabled_file or log.enabled_console) {
-        log.logf(.info, 
+            log.logf(.info, 
             "sgr count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
             .{
                 n_params,
@@ -736,7 +733,6 @@ pub fn applySgr(self: anytype, action: parser_csi.CsiAction) void {
                 params[15],
             },
         );
-    }
     var i: usize = 0;
     while (i < n_params) {
         const p = params[i];

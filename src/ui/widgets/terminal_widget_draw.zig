@@ -939,8 +939,7 @@ pub fn draw(
 
     if (draw_cursor and rows > 0 and cols > 0 and cursor.row < rows and cursor.col < cols and view_cells.len >= rows * cols) {
         const cursor_log = app_logger.logger("terminal.cursor");
-        if (cursor_log.enabled_file or cursor_log.enabled_console) {
-            cursor_log.logf(.info, 
+                    cursor_log.logf(.info, 
                 "cursor draw ui_focused={d} shape={s} blink={d} visible={d} row={d} col={d}",
                 .{
                     @intFromBool(self.ui_focused),
@@ -951,7 +950,6 @@ pub fn draw(
                     cursor.col,
                 },
             );
-        }
         const row_cells = rowSlice(view_cells, cols, cursor.row);
         if (row_cells.len != 0) {
             const cell = row_cells[cursor.col];
@@ -1307,9 +1305,7 @@ fn drawShapedGlyph(
 ) void {
     const glyph = font.getGlyphById(face, glyph_id, want_color, hb_pos.x_advance) catch |err| {
         const log = app_logger.logger("terminal.draw");
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(.warning, "shaped glyph lookup failed cp=U+{X} glyph_id={d} err={s}", .{ base_codepoint, glyph_id, @errorName(err) });
-        }
+                    log.logf(.warning, "shaped glyph lookup failed cp=U+{X} glyph_id={d} err={s}", .{ base_codepoint, glyph_id, @errorName(err) });
         return;
     };
     const render_scale = if (font.render_scale > 0.0) font.render_scale else 1.0;

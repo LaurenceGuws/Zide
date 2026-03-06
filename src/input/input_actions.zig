@@ -133,12 +133,10 @@ pub const InputRouter = struct {
                 app_logger.logger("input.router").logf(.warning, "route action append failed action={s} err={s}", .{ actionName(binding.action), @errorName(err) });
                 continue;
             };
-            if (log.enabled_file or log.enabled_console) {
-                log.logf(.info, 
+                            log.logf(.info, 
                     "action={s} key={s} scope={s} focus={s} shift={d} ctrl={d} alt={d} super={d} altgr={d} repeat={d}",
                     .{ actionName(binding.action), @tagName(binding.key), @tagName(binding.scope), @tagName(focus), @intFromBool(binding.mods.shift), @intFromBool(binding.mods.ctrl), @intFromBool(binding.mods.alt), @intFromBool(binding.mods.super), @intFromBool(binding.mods.altgr), @intFromBool(binding.repeat) },
                 );
-            }
         }
         for (batch.events.items) |event| {
             if (event == .text) text_events += 1;

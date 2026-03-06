@@ -47,8 +47,7 @@ pub fn handle(
             const prev_target = shell.userZoomTargetFactor();
             const changed = shell.queueUserZoom(0.1, now);
             if (changed) out.note_input = true;
-            if (zoom_log.enabled_file or zoom_log.enabled_console) {
-                zoom_log.logf(.info, 
+                            zoom_log.logf(.info, 
                     "action=zoom_in changed={d} zoom={d:.3}->{d:.3} target={d:.3}->{d:.3} base_font={d:.2} layout_font={d:.2} ui_scale={d:.3} render_scale={d:.3} term_cell={d:.2}x{d:.2}",
                     .{
                         @intFromBool(changed),
@@ -64,7 +63,6 @@ pub fn handle(
                         shell.terminalCellHeight(),
                     },
                 );
-            }
             out.handled_zoom = true;
         },
         .zoom_out => {
@@ -72,8 +70,7 @@ pub fn handle(
             const prev_target = shell.userZoomTargetFactor();
             const changed = shell.queueUserZoom(-0.1, now);
             if (changed) out.note_input = true;
-            if (zoom_log.enabled_file or zoom_log.enabled_console) {
-                zoom_log.logf(.info, 
+                            zoom_log.logf(.info, 
                     "action=zoom_out changed={d} zoom={d:.3}->{d:.3} target={d:.3}->{d:.3} base_font={d:.2} layout_font={d:.2} ui_scale={d:.3} render_scale={d:.3} term_cell={d:.2}x{d:.2}",
                     .{
                         @intFromBool(changed),
@@ -89,7 +86,6 @@ pub fn handle(
                         shell.terminalCellHeight(),
                     },
                 );
-            }
             out.handled_zoom = true;
         },
         .zoom_reset => {
@@ -97,8 +93,7 @@ pub fn handle(
             const prev_target = shell.userZoomTargetFactor();
             const changed = shell.resetUserZoomTarget(now);
             if (changed) out.note_input = true;
-            if (zoom_log.enabled_file or zoom_log.enabled_console) {
-                zoom_log.logf(.info, 
+                            zoom_log.logf(.info, 
                     "action=zoom_reset changed={d} zoom={d:.3}->{d:.3} target={d:.3}->{d:.3} base_font={d:.2} layout_font={d:.2} ui_scale={d:.3} render_scale={d:.3} term_cell={d:.2}x{d:.2}",
                     .{
                         @intFromBool(changed),
@@ -114,7 +109,6 @@ pub fn handle(
                         shell.terminalCellHeight(),
                     },
                 );
-            }
             out.handled_zoom = true;
         },
         .toggle_terminal => {

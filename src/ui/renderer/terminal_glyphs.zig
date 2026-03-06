@@ -501,9 +501,7 @@ fn drawPowerlineGlyphAnalytic(
     const log = app_logger.logger("renderer.terminal.glyphs");
     const len: usize = @intCast(iw * ih);
     const mask = std.heap.page_allocator.alloc(u8, len) catch |err| {
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(.warning, "analytic powerline mask alloc failed bytes={d} err={s}", .{ len, @errorName(err) });
-        }
+                    log.logf(.warning, "analytic powerline mask alloc failed bytes={d} err={s}", .{ len, @errorName(err) });
         return;
     };
     defer std.heap.page_allocator.free(mask);

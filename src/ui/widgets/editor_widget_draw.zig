@@ -33,9 +33,7 @@ fn unpackColor(comptime ColorType: type, color: u32) ColorType {
 fn addRectOp(list: *EditorDrawList, x: f32, y: f32, w: f32, h: f32, color: anytype) bool {
     list.add(.{ .rect = RectOp{ .x = x, .y = y, .w = w, .h = h, .color = packColor(color) } }) catch |err| {
         const log = app_logger.logger("editor.draw");
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(.warning, "draw list rect append failed err={s}", .{ @errorName(err) });
-        }
+                    log.logf(.warning, "draw list rect append failed err={s}", .{ @errorName(err) });
         return false;
     };
     return true;
@@ -44,9 +42,7 @@ fn addRectOp(list: *EditorDrawList, x: f32, y: f32, w: f32, h: f32, color: anyty
 fn addTextOp(list: *EditorDrawList, x: f32, y: f32, text: []const u8, color: anytype, disable_programming_ligatures: bool) bool {
     list.add(.{ .text = TextOp{ .x = x, .y = y, .text = text, .color = packColor(color), .bg_color = 0, .disable_programming_ligatures = disable_programming_ligatures } }) catch |err| {
         const log = app_logger.logger("editor.draw");
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(.warning, "draw list text append failed err={s}", .{ @errorName(err) });
-        }
+                    log.logf(.warning, "draw list text append failed err={s}", .{ @errorName(err) });
         return false;
     };
     return true;
@@ -55,9 +51,7 @@ fn addTextOp(list: *EditorDrawList, x: f32, y: f32, text: []const u8, color: any
 fn addTextOpBg(list: *EditorDrawList, x: f32, y: f32, text: []const u8, color: anytype, bg: anytype, disable_programming_ligatures: bool) bool {
     list.add(.{ .text = TextOp{ .x = x, .y = y, .text = text, .color = packColor(color), .bg_color = packColor(bg), .disable_programming_ligatures = disable_programming_ligatures } }) catch |err| {
         const log = app_logger.logger("editor.draw");
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(.warning, "draw list text-bg append failed err={s}", .{ @errorName(err) });
-        }
+                    log.logf(.warning, "draw list text-bg append failed err={s}", .{ @errorName(err) });
         return false;
     };
     return true;
@@ -66,9 +60,7 @@ fn addTextOpBg(list: *EditorDrawList, x: f32, y: f32, text: []const u8, color: a
 fn addCursorOp(list: *EditorDrawList, x: f32, y: f32, h: f32, color: anytype) bool {
     list.add(.{ .cursor = CursorOp{ .x = x, .y = y, .h = h, .color = packColor(color) } }) catch |err| {
         const log = app_logger.logger("editor.draw");
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(.warning, "draw list cursor append failed err={s}", .{ @errorName(err) });
-        }
+                    log.logf(.warning, "draw list cursor append failed err={s}", .{ @errorName(err) });
         return false;
     };
     return true;
@@ -282,9 +274,7 @@ fn addEditorLineBaseOps(
 
     const num_str = std.fmt.bufPrint(num_buf, "{d: >4}", .{line_num + 1}) catch |err| {
         const log = app_logger.logger("editor.draw");
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(.warning, "line number format failed line={d} err={s}", .{ line_num, @errorName(err) });
-        }
+                    log.logf(.warning, "line number format failed line={d} err={s}", .{ line_num, @errorName(err) });
         return false;
     };
     const pad = 4 * r.uiScaleFactor();
@@ -683,9 +673,7 @@ pub fn draw(
             const range_end = if (end_line < total_lines) widget.editor.lineStart(end_line) else widget.editor.totalLen();
             const tokens_opt: ?[]HighlightToken = highlighter.highlightRange(range_start, range_end, widget.editor.allocator) catch |err| blk: {
                 const log = app_logger.logger("editor.draw");
-                if (log.enabled_file or log.enabled_console) {
-                    log.logf(.warning, "highlight range failed start={d} end={d} err={s}", .{ range_start, range_end, @errorName(err) });
-                }
+                                    log.logf(.warning, "highlight range failed start={d} end={d} err={s}", .{ range_start, range_end, @errorName(err) });
                 break :blk null;
             };
             if (tokens_opt) |tokens| {
