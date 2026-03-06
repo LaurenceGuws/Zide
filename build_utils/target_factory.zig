@@ -2,6 +2,7 @@ const std = @import("std");
 const app_types = @import("app_types.zig");
 const target_config = @import("target_config.zig");
 const step_utils = @import("step_utils.zig");
+const target_profile = @import("target_profile.zig");
 
 pub fn addAppExecutable(
     b: *std.Build,
@@ -35,7 +36,7 @@ pub fn addFocusedModeExecutable(
     ctx: app_types.AppLinkContext,
     name: []const u8,
     root_source_file: []const u8,
-    include_treesitter: bool,
+    profile: target_profile.LinkProfile,
     run_step_name: []const u8,
     run_description: []const u8,
     passthrough_args: ?[]const []const u8,
@@ -49,7 +50,7 @@ pub fn addFocusedModeExecutable(
         name,
         root_source_file,
     );
-    target_config.configureAppExecutable(exe, ctx, name, include_treesitter);
+    target_config.configureAppExecutable(exe, ctx, name, profile);
     b.installArtifact(exe);
     _ = step_utils.addRunStepForArtifact(
         b,
@@ -70,10 +71,7 @@ pub fn addSdlConfiguredTest(
     root_source_file: []const u8,
     build_options: ?*std.Build.Step.Options,
     ctx: app_types.AppLinkContext,
-    include_treesitter: bool,
-    include_text_stack: bool,
-    include_lua: bool,
-    include_fontconfig: bool,
+    profile: target_profile.LinkProfile,
 ) *std.Build.Step.Compile {
     const test_target = b.addTest(.{
         .root_module = b.createModule(.{
@@ -89,10 +87,7 @@ pub fn addSdlConfiguredTest(
     target_config.configureSdlTestTarget(
         test_target,
         ctx,
-        include_treesitter,
-        include_text_stack,
-        include_lua,
-        include_fontconfig,
+        profile,
     );
     return test_target;
 }
@@ -104,10 +99,7 @@ pub fn addSdlConfiguredExecutable(
     name: []const u8,
     root_source_file: []const u8,
     ctx: app_types.AppLinkContext,
-    include_treesitter: bool,
-    include_text_stack: bool,
-    include_lua: bool,
-    include_fontconfig: bool,
+    profile: target_profile.LinkProfile,
 ) *std.Build.Step.Compile {
     const exe = b.addExecutable(.{
         .name = name,
@@ -121,10 +113,7 @@ pub fn addSdlConfiguredExecutable(
     target_config.configureSdlTestTarget(
         exe,
         ctx,
-        include_treesitter,
-        include_text_stack,
-        include_lua,
-        include_fontconfig,
+        profile,
     );
     return exe;
 }

@@ -7,6 +7,8 @@ const target_factory = @import("build_utils/target_factory.zig");
 const step_utils = @import("build_utils/step_utils.zig");
 const vcpkg_paths = @import("build_utils/vcpkg_paths.zig");
 const dependency_resolver = @import("build_utils/dependency_resolver.zig");
+const target_profile = @import("build_utils/target_profile.zig");
+const mode_specs = @import("build_utils/mode_specs.zig");
 const DependencySource = dependency_path.DependencySource;
 const AppLinkContext = app_types.AppLinkContext;
 const parseDependencyPath = dependency_path.parseDependencyPath;
@@ -27,8 +29,24 @@ const addGateStep = step_utils.addGateStep;
 const resolveVcpkgPaths = vcpkg_paths.resolveVcpkgPaths;
 const addMainModeRunSteps = step_utils.addMainModeRunSteps;
 const addSystemCommandStep = step_utils.addSystemCommandStep;
+const MainModeRunSteps = step_utils.MainModeRunSteps;
+
+const BuildMode = enum {
+    ide,
+    terminal,
+    editor,
+};
+
+fn parseBuildMode(raw: []const u8) BuildMode {
+    if (std.mem.eql(u8, raw, "ide")) return .ide;
+    if (std.mem.eql(u8, raw, "terminal")) return .terminal;
+    if (std.mem.eql(u8, raw, "editor")) return .editor;
+    std.debug.panic("invalid -Dmode '{s}' (expected: ide, terminal, editor)", .{raw});
+}
 
 pub fn build(b: *std.Build) void {
+    target_profile.assertPolicy();
+
     const target = b.standardTargetOptions(.{
         .default_target = if (builtin.os.tag == .windows) .{
             .cpu_arch = .x86_64,
@@ -42,7 +60,13 @@ pub fn build(b: *std.Build) void {
         "path",
         "Dependency path: link (default) or zig package manager",
     ) orelse "link";
+    const build_mode_raw = b.option(
+        []const u8,
+        "mode",
+        "Build app mode: ide (default), terminal, editor",
+    ) orelse "ide";
     const dep_path = parseDependencyPath(dep_path_raw);
+    const build_mode = parseBuildMode(build_mode_raw);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Tree-sitter (for syntax highlighting)
@@ -116,18 +140,44 @@ pub fn build(b: *std.Build) void {
         .harfbuzz_lib = harfbuzz_lib,
     };
 
-    const exe = addAppExecutable(
-        b,
-        target,
-        optimize,
-        build_options,
-        zlua_module,
-        "zide",
-        "src/main.zig",
-    );
-    configureAppExecutable(exe, app_link_ctx, "zide", true);
-
-    b.installArtifact(exe);
+    var main_mode_run_steps: ?MainModeRunSteps = null;
+    if (build_mode == .ide) {
+        const exe = addAppExecutable(
+            b,
+            target,
+            optimize,
+            build_options,
+            zlua_module,
+            "zide",
+            "src/main.zig",
+        );
+        configureAppExecutable(exe, app_link_ctx, "zide", target_profile.app_main);
+        b.installArtifact(exe);
+        main_mode_run_steps = addMainModeRunSteps(b, b.getInstallStep(), exe, b.args);
+    } else {
+        for (mode_specs.focused_apps) |spec| {
+            const is_selected = switch (build_mode) {
+                .terminal => std.mem.eql(u8, spec.name, "zide-terminal"),
+                .editor => std.mem.eql(u8, spec.name, "zide-editor"),
+                .ide => false,
+            };
+            if (!is_selected) continue;
+            _ = addFocusedModeExecutable(
+                b,
+                target,
+                optimize,
+                build_options,
+                zlua_module,
+                app_link_ctx,
+                spec.name,
+                spec.root_source_file,
+                spec.profile,
+                spec.run_step_name,
+                spec.run_description,
+                b.args,
+            );
+        }
+    }
 
     // On Windows, vcpkg typically provides runtime deps as DLLs in
     // <triplet>/bin. Copy them next to the installed exe so that launching
@@ -156,57 +206,6 @@ pub fn build(b: *std.Build) void {
             }
         }
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Run step
-    // ─────────────────────────────────────────────────────────────────────────
-    const main_mode_run_steps = addMainModeRunSteps(b, b.getInstallStep(), exe, b.args);
-
-    // Focused app entrypoints (same app graph for now, fixed mode roots).
-    _ = addFocusedModeExecutable(
-        b,
-        target,
-        optimize,
-        build_options,
-        zlua_module,
-        app_link_ctx,
-        "zide-terminal",
-        "src/entry_terminal.zig",
-        false,
-        "run-terminal",
-        "Run terminal-only app entry",
-        b.args,
-    );
-
-    _ = addFocusedModeExecutable(
-        b,
-        target,
-        optimize,
-        build_options,
-        zlua_module,
-        app_link_ctx,
-        "zide-editor",
-        "src/entry_editor.zig",
-        true,
-        "run-editor",
-        "Run editor-only app entry",
-        b.args,
-    );
-
-    _ = addFocusedModeExecutable(
-        b,
-        target,
-        optimize,
-        build_options,
-        zlua_module,
-        app_link_ctx,
-        "zide-ide",
-        "src/entry_ide.zig",
-        true,
-        "run-ide",
-        "Run ide-only app entry",
-        b.args,
-    );
 
     // ─────────────────────────────────────────────────────────────────────────
     // Terminal FFI bridge
@@ -259,10 +258,7 @@ pub fn build(b: *std.Build) void {
         "src/main.zig",
         build_options,
         app_link_ctx,
-        true,
-        false,
-        false,
-        false,
+        target_profile.test_unit,
     );
 
     const test_step = addRunArtifactStep(b, unit_tests, "test", "Run unit tests").step;
@@ -274,10 +270,7 @@ pub fn build(b: *std.Build) void {
         "src/tests_main.zig",
         build_options,
         app_link_ctx,
-        true,
-        true,
-        true,
-        false,
+        target_profile.test_editor,
     );
 
     _ = addRunArtifactStep(b, editor_tests, "test-editor", "Run editor-specific tests").step;
@@ -289,10 +282,7 @@ pub fn build(b: *std.Build) void {
         "src/config_tests.zig",
         null,
         app_link_ctx,
-        false,
-        true,
-        true,
-        true,
+        target_profile.test_config,
     );
 
     _ = addRunArtifactStep(b, config_tests, "test-config", "Run Lua config parser/merge tests").step;
@@ -304,10 +294,7 @@ pub fn build(b: *std.Build) void {
         "terminal-replay",
         "src/terminal_replay_main.zig",
         app_link_ctx,
-        false,
-        false,
-        false,
-        false,
+        target_profile.test_terminal_replay,
     );
 
     const terminal_replay = addRunArtifactStep(
@@ -359,62 +346,23 @@ pub fn build(b: *std.Build) void {
         &.{},
     );
 
-    const terminal_kitty_query_tests = addSdlConfiguredTest(
-        b,
-        target,
-        optimize,
-        "src/terminal_kitty_query_parse_tests.zig",
-        null,
-        app_link_ctx,
-        false,
-        false,
-        false,
-        false,
-    );
-    _ = addRunArtifactStep(
-        b,
-        terminal_kitty_query_tests,
-        "test-terminal-kitty-query-parse",
-        "Run project-integrated kitty query parse-path tests",
-    ).step;
-
-    const terminal_focus_reporting_tests = addSdlConfiguredTest(
-        b,
-        target,
-        optimize,
-        "src/terminal_focus_reporting_tests.zig",
-        null,
-        app_link_ctx,
-        false,
-        false,
-        false,
-        false,
-    );
-    _ = addRunArtifactStep(
-        b,
-        terminal_focus_reporting_tests,
-        "test-terminal-focus-reporting",
-        "Run project-integrated terminal focus reporting tests",
-    ).step;
-
-    const terminal_workspace_tests = addSdlConfiguredTest(
-        b,
-        target,
-        optimize,
-        "src/terminal_workspace_tests.zig",
-        null,
-        app_link_ctx,
-        false,
-        false,
-        false,
-        false,
-    );
-    _ = addRunArtifactStep(
-        b,
-        terminal_workspace_tests,
-        "test-terminal-workspace",
-        "Run terminal workspace lifecycle tests",
-    ).step;
+    for (mode_specs.terminal_tests) |spec| {
+        const spec_test = addSdlConfiguredTest(
+            b,
+            target,
+            optimize,
+            spec.root_source_file,
+            null,
+            app_link_ctx,
+            spec.profile,
+        );
+        _ = addRunArtifactStep(
+            b,
+            spec_test,
+            spec.step_name,
+            spec.step_desc,
+        ).step;
+    }
 
     const terminal_ffi_tests = addLibcTest(
         b,
@@ -519,82 +467,108 @@ pub fn build(b: *std.Build) void {
         &.{},
     );
 
-    _ = addSystemCommandStep(
-        b,
-        "mode-size-report",
-        "Report focused mode binary sizes",
-        &.{ "bash", "tools/report_mode_binary_sizes.sh" },
-        &.{b.getInstallStep()},
+    const build_profile_report_exe = b.addExecutable(.{
+        .name = "build-profile-report",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/build_profile_report.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    build_profile_report_exe.root_module.addAnonymousImport("target_profile", .{
+        .root_source_file = b.path("build_utils/target_profile.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const build_profile_report_run = b.addRunArtifact(build_profile_report_exe);
+    const build_profile_report_step = b.step(
+        "report-build-profiles",
+        "Report active build dependency profiles",
     );
+    build_profile_report_step.dependOn(&build_profile_report_run.step);
 
-    if (target_os == .linux) {
+    if (build_mode == .ide) {
         _ = addSystemCommandStep(
             b,
-            "bundle-terminal",
-            "Bundle zide-terminal with resolved shared libs for portable use",
-            &.{
-                "bash",
-                "tools/bundle_terminal_linux.sh",
-                "zig-out/bin/zide-terminal",
-                "zig-out/terminal-bundle",
-                "assets",
-            },
+            "mode-size-report",
+            "Report focused mode binary sizes",
+            &.{ "bash", "tools/report_mode_binary_sizes.sh" },
             &.{b.getInstallStep()},
         );
+
+        if (target_os == .linux) {
+            _ = addSystemCommandStep(
+                b,
+                "bundle-terminal",
+                "Bundle zide-terminal with resolved shared libs for portable use",
+                &.{
+                    "bash",
+                    "tools/bundle_terminal_linux.sh",
+                    "zig-out/bin/zide-terminal",
+                    "zig-out/terminal-bundle",
+                    "assets",
+                },
+                &.{b.getInstallStep()},
+            );
+        }
+
+        const mode_size_check_step = addSystemCommandStep(
+            b,
+            "mode-size-check",
+            "Check focused binaries are not larger than main binary",
+            &.{ "bash", "tools/check_mode_binary_sizes.sh" },
+            &.{b.getInstallStep()},
+        );
+
+        _ = addGateStep(
+            b,
+            "mode-gates",
+            "Run MODE extraction regression gate bundle",
+            &.{
+                test_step,
+                terminal_import_check_step,
+                app_import_check_step,
+                input_import_check_step,
+                editor_import_check_step,
+                build_dep_policy_step,
+                build_profile_report_step,
+                b.getInstallStep(),
+                mode_size_check_step,
+                terminal_replay_all_step,
+            },
+        );
+
+        _ = addGateStep(
+            b,
+            "mode-gates-fast",
+            "Run fast non-replay MODE extraction gates",
+            &.{
+                test_step,
+                terminal_import_check_step,
+                app_import_check_step,
+                input_import_check_step,
+                editor_import_check_step,
+                build_dep_policy_step,
+                build_profile_report_step,
+                b.getInstallStep(),
+                mode_size_check_step,
+            },
+        );
+
+        if (main_mode_run_steps) |steps| {
+            _ = addGateStep(
+                b,
+                "mode-smokes-manual",
+                "Run interactive MODE smokes (manual)",
+                &.{
+                    steps.run,
+                    steps.terminal,
+                    steps.editor,
+                    steps.ide,
+                },
+            );
+        }
     }
-
-    const mode_size_check_step = addSystemCommandStep(
-        b,
-        "mode-size-check",
-        "Check focused binaries are not larger than main binary",
-        &.{ "bash", "tools/check_mode_binary_sizes.sh" },
-        &.{b.getInstallStep()},
-    );
-
-    _ = addGateStep(
-        b,
-        "mode-gates",
-        "Run MODE extraction regression gate bundle",
-        &.{
-            test_step,
-            terminal_import_check_step,
-            app_import_check_step,
-            input_import_check_step,
-            editor_import_check_step,
-            build_dep_policy_step,
-            b.getInstallStep(),
-            mode_size_check_step,
-            terminal_replay_all_step,
-        },
-    );
-
-    _ = addGateStep(
-        b,
-        "mode-gates-fast",
-        "Run fast non-replay MODE extraction gates",
-        &.{
-            test_step,
-            terminal_import_check_step,
-            app_import_check_step,
-            input_import_check_step,
-            editor_import_check_step,
-            build_dep_policy_step,
-            b.getInstallStep(),
-            mode_size_check_step,
-        },
-    );
-
-    _ = addGateStep(
-        b,
-        "mode-smokes-manual",
-        "Run interactive MODE smokes (manual)",
-        &.{
-            main_mode_run_steps.run,
-            main_mode_run_steps.terminal,
-            main_mode_run_steps.editor,
-            main_mode_run_steps.ide,
-        },
-    );
 
     const grammar_update = addLibcExecutable(
         b,

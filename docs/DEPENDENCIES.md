@@ -26,6 +26,19 @@ Alternate path label:
 zig build -Dpath=zig
 ```
 
+Binary mode selector (compile-time target isolation):
+
+```bash
+# default: full IDE binary only
+zig build
+
+# terminal-only binary only
+zig build -Dmode=terminal
+
+# editor-only binary only
+zig build -Dmode=editor
+```
+
 Notes:
 - SDL3 and Lua are now always Zig package managed in normal flow (`castholm/SDL`, `ziglua` artifact `lua`).
 - Tree-sitter core runtime is now also Zig package managed in normal flow (`tree_sitter/tree-sitter`, artifact `tree-sitter`).
