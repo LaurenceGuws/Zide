@@ -453,9 +453,9 @@ pub const TerminalFont = struct {
                     const path_str = std.mem.sliceTo(path_c, 0);
                     if (log.enabled_file or log.enabled_console) {
                         if (std.fs.cwd().access(path_str, .{})) |_| {
-                            log.logf("font load: {s} path={s}", .{ name, path_str });
+                            log.logf(.info, "font load: {s} path={s}", .{ name, path_str });
                         } else |err| {
-                            log.logf("font load: {s} path={s} access_err={s}", .{ name, path_str, @errorName(err) });
+                            log.logf(.info, "font load: {s} path={s} access_err={s}", .{ name, path_str, @errorName(err) });
                         }
                     }
                     var fb_face: c.FT_Face = null;
@@ -476,7 +476,7 @@ pub const TerminalFont = struct {
                             }
                             _ = c.FT_Select_Size(fb_face, best_idx);
                         } else if (size_err != 0 and (log.enabled_file or log.enabled_console)) {
-                            log.logf("font load failed: {s} set_pixel_sizes err={d}", .{ name, size_err });
+                            log.logf(.info, "font load failed: {s} set_pixel_sizes err={d}", .{ name, size_err });
                         }
                         if (size_err == 0 or (allow_fixed_size and fb_face.*.num_fixed_sizes > 0)) {
                             if (c.hb_ft_font_create(fb_face, null)) |fb_hb| {
@@ -484,15 +484,15 @@ pub const TerminalFont = struct {
                                 return .{ .face = fb_face, .hb = fb_hb };
                             }
                             if (log.enabled_file or log.enabled_console) {
-                                log.logf("font load failed: {s} hb_ft_font_create returned null", .{name});
+                                log.logf(.info, "font load failed: {s} hb_ft_font_create returned null", .{name});
                             }
                         }
                         _ = c.FT_Done_Face(fb_face);
                     } else if (log.enabled_file or log.enabled_console) {
-                        log.logf("font load failed: {s} FT_New_Face err={d}", .{ name, new_face_err });
+                        log.logf(.info, "font load failed: {s} FT_New_Face err={d}", .{ name, new_face_err });
                     }
                 } else if (log.enabled_file or log.enabled_console) {
-                    log.logf("font load skipped: {s} path not set", .{name});
+                    log.logf(.info, "font load skipped: {s} path not set", .{name});
                 }
                 return .{};
             }
@@ -514,7 +514,7 @@ pub const TerminalFont = struct {
                 fc_enabled = true;
                 fc_config = fc.FcConfigGetCurrent();
             } else if (log.enabled_file or log.enabled_console) {
-                log.logf("fontconfig init failed", .{});
+                log.logf(.info, "fontconfig init failed", .{});
             }
         }
 
@@ -529,7 +529,7 @@ pub const TerminalFont = struct {
                 }
             }.call;
 
-            log.logf(
+            log.logf(.info, 
                 "font load: primary={d} symbols={d} sym2={d} sym={d} mono={d} sans={d} emoji_color={d} emoji_text={d}",
                 .{
                     @as(u8, if (ft_face != null) 1 else 0),
@@ -542,7 +542,7 @@ pub const TerminalFont = struct {
                     @as(u8, if (emoji_text_pair.face != null) 1 else 0),
                 },
             );
-            log.logf(
+            log.logf(.info, 
                 "glyph coverage: ⇡ p={d} sym={d} s2={d} s={d} m={d} sans={d} | ⣿ p={d} sym={d} s2={d} s={d} m={d} sans={d} | 😀 p={d} sym={d} s2={d} s={d} m={d} sans={d} ec={d} et={d}",
                 .{
                     @as(u8, if (has_cp(ft_face, cp_arrow)) 1 else 0),
@@ -1032,7 +1032,7 @@ pub const TerminalFont = struct {
         }
         if (!rasterized) {
             if (variant == .powerline or isPowerlineCodepoint(codepoint)) {
-                special_log.logf(
+                special_log.logf(.info, 
                     "sprite_create_fail cp=U+{X} reason=rasterize_failed cell={d}x{d} raster={d}x{d} rs={d:.3}",
                     .{ codepoint, cell_w_px, cell_h_px, width, height, rs },
                 );
@@ -1049,7 +1049,7 @@ pub const TerminalFont = struct {
         }
         if (!non_zero) {
             if (variant == .powerline or isPowerlineCodepoint(codepoint)) {
-                special_log.logf(
+                special_log.logf(.info, 
                     "sprite_create_fail cp=U+{X} reason=empty_mask cell={d}x{d} raster={d}x{d} rs={d:.3}",
                     .{ codepoint, cell_w_px, cell_h_px, width, height, rs },
                 );
@@ -1064,7 +1064,7 @@ pub const TerminalFont = struct {
         }
         if (self.pen_y + height + self.padding > self.atlas_height) {
             if (variant == .powerline or isPowerlineCodepoint(codepoint)) {
-                special_log.logf(
+                special_log.logf(.info, 
                     "sprite_create_fail cp=U+{X} reason=atlas_full cell={d}x{d} raster={d}x{d} rs={d:.3}",
                     .{ codepoint, cell_w_px, cell_h_px, width, height, rs },
                 );
@@ -1093,7 +1093,7 @@ pub const TerminalFont = struct {
         };
         self.special_glyph_sprites.put(key, sprite) catch return null;
         if (variant == .powerline or isPowerlineCodepoint(codepoint)) {
-            special_log.logf(
+            special_log.logf(.info, 
                 "sprite_create cp=U+{X} variant={s} path={s} cell={d}x{d} raster={d}x{d} rs={d:.3}",
                 .{ codepoint, @tagName(variant), path_name, cell_w_px, cell_h_px, width, height, rs },
             );

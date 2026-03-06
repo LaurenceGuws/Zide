@@ -4,11 +4,11 @@ const kitty_mod = @import("../kitty/graphics.zig");
 pub fn scrollRegionUp(self: anytype, count: usize) void {
     const log = app_logger.logger("terminal.core");
     const screen = self.activeScreen();
-    log.logf("scroll region up count={d} top={d} bottom={d}", .{ count, screen.scroll_top, screen.scroll_bottom });
-    log.logStdout("scroll region up count={d}", .{count});
+    log.logf(.info, "scroll region up count={d} top={d} bottom={d}", .{ count, screen.scroll_top, screen.scroll_bottom });
+    log.logStdout(.info, "scroll region up count={d}", .{count});
     const trace = app_logger.logger("terminal.trace.scroll");
     if (trace.enabled_file or trace.enabled_console) {
-        trace.logf(
+        trace.logf(.info, 
             "scroll_up count={d} cursor={d},{d} origin={any} region={d}..{d}",
             .{ count, screen.cursor.row, screen.cursor.col, screen.origin_mode, screen.scroll_top, screen.scroll_bottom },
         );
@@ -37,7 +37,7 @@ pub fn scrollRegionDown(self: anytype, count: usize) void {
     const screen = self.activeScreen();
     const trace = app_logger.logger("terminal.trace.scroll");
     if (trace.enabled_file or trace.enabled_console) {
-        trace.logf(
+        trace.logf(.info, 
             "scroll_down count={d} cursor={d},{d} origin={any} region={d}..{d}",
             .{ count, screen.cursor.row, screen.cursor.col, screen.origin_mode, screen.scroll_top, screen.scroll_bottom },
         );
@@ -56,8 +56,8 @@ pub fn scrollRegionDown(self: anytype, count: usize) void {
 pub fn scrollUp(self: anytype) void {
     const log = app_logger.logger("terminal.core");
     const screen = self.activeScreen();
-    log.logf("scroll up rows={d} cols={d}", .{ screen.grid.rows, screen.grid.cols });
-    log.logStdout("scroll up rows={d} cols={d}", .{ screen.grid.rows, screen.grid.cols });
+    log.logf(.info, "scroll up rows={d} cols={d}", .{ screen.grid.rows, screen.grid.cols });
+    log.logStdout(.info, "scroll up rows={d} cols={d}", .{ screen.grid.rows, screen.grid.cols });
     const cols = @as(usize, screen.grid.cols);
     const rows = @as(usize, screen.grid.rows);
     if (rows == 0 or cols == 0) return;
@@ -90,6 +90,6 @@ fn pushScrollbackRow(self: anytype, row: usize) void {
     self.history.pushRow(screen.grid.cells.items[row_start .. row_start + cols], wrapped, screen.defaultCell());
     self.kitty_primary.scrollback_total += 1;
     const log = app_logger.logger("terminal.core");
-    log.logf("scrollback push row={d} total={d}", .{ row, self.history.scrollbackCount() });
-    log.logStdout("scrollback push total={d}", .{self.history.scrollbackCount()});
+    log.logf(.info, "scrollback push row={d} total={d}", .{ row, self.history.scrollbackCount() });
+    log.logStdout(.info, "scrollback push total={d}", .{self.history.scrollbackCount()});
 }

@@ -129,7 +129,7 @@ pub const InputRouter = struct {
             if (!keyEventMatches(batch, binding)) continue;
             _ = self.actions.append(self.allocator, .{ .kind = binding.action, .consumed = false }) catch {};
             if (log.enabled_file or log.enabled_console) {
-                log.logf(
+                log.logf(.info, 
                     "action={s} key={s} scope={s} focus={s} shift={d} ctrl={d} alt={d} super={d} altgr={d} repeat={d}",
                     .{ actionName(binding.action), @tagName(binding.key), @tagName(binding.scope), @tagName(focus), @intFromBool(binding.mods.shift), @intFromBool(binding.mods.ctrl), @intFromBool(binding.mods.alt), @intFromBool(binding.mods.super), @intFromBool(binding.mods.altgr), @intFromBool(binding.repeat) },
                 );
@@ -139,7 +139,7 @@ pub const InputRouter = struct {
             if (event == .text) text_events += 1;
         }
         if (text_events > 0 and (log.enabled_file or log.enabled_console)) {
-            log.logf("text_input events={d}", .{text_events});
+            log.logf(.info, "text_input events={d}", .{text_events});
         }
     }
 };

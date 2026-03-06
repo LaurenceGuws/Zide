@@ -30,12 +30,12 @@ pub fn handle(
             const editor_idx = if (state.editors.items.len > 0) @min(state.active_tab, state.editors.items.len - 1) else 0;
             if (state.editors.items.len > 0) {
                 const editor = state.editors.items[editor_idx];
-                state.perf_logger.logf(
+                state.perf_logger.logf(.info, 
                     "frame={d} draw_ms={d:.2} scroll_line={d} scroll_row_offset={d} scroll_col={d}",
                     .{ state.perf_frames_done, draw_ms_perf, editor.scroll_line, editor.scroll_row_offset, editor.scroll_col },
                 );
             } else {
-                state.perf_logger.logf("frame={d} draw_ms={d:.2}", .{ state.perf_frames_done, draw_ms_perf });
+                state.perf_logger.logf(.info, "frame={d} draw_ms={d:.2}", .{ state.perf_frames_done, draw_ms_perf });
             }
         }
         hooks.maybe_log_metrics(ctx, draw_end);
@@ -45,7 +45,7 @@ pub fn handle(
             if (input_batch.events.items.len > 0) {
                 const total_ms = poll_ms + build_ms + update_ms + draw_ms;
                 if (total_ms >= 1.0) {
-                    state.input_latency_logger.logf(
+                    state.input_latency_logger.logf(.info, 
                         "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2}",
                         .{ poll_ms, build_ms, update_ms, draw_ms },
                     );
@@ -60,7 +60,7 @@ pub fn handle(
         if (input_batch.events.items.len > 0) {
             const total_ms = poll_ms + build_ms + update_ms;
             if (total_ms >= 1.0) {
-                state.input_latency_logger.logf(
+                state.input_latency_logger.logf(.info, 
                     "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms=0.00",
                     .{ poll_ms, build_ms, update_ms },
                 );

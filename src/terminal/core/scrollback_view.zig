@@ -34,8 +34,8 @@ pub fn setScrollOffset(self: anytype, offset: usize) void {
     self.updateViewCacheForScroll();
     const log = app_logger.logger("terminal.core");
     const max_offset = self.history.maxScrollOffset(self.primary.grid.rows);
-    log.logf("set scroll offset={d} max={d}", .{ self.history.scrollOffset(), max_offset });
-    log.logStdout("set scroll offset={d} max={d}", .{ self.history.scrollOffset(), max_offset });
+    log.logf(.info, "set scroll offset={d} max={d}", .{ self.history.scrollOffset(), max_offset });
+    log.logStdout(.info, "set scroll offset={d} max={d}", .{ self.history.scrollOffset(), max_offset });
 }
 
 pub fn scrollBy(self: anytype, delta: isize) void {
@@ -50,6 +50,6 @@ pub fn scrollBy(self: anytype, delta: isize) void {
     self.updateViewCacheForScroll();
     const log = app_logger.logger("terminal.core");
     const max_offset = self.history.maxScrollOffset(self.primary.grid.rows);
-    log.logf("scroll by delta={d} offset={d} max={d}", .{ delta, self.history.scrollOffset(), max_offset });
-    log.logStdout("scroll by delta={d} offset={d} max={d}", .{ delta, self.history.scrollOffset(), max_offset });
+    log.logf(.info, "scroll by delta={d} offset={d} max={d}", .{ delta, self.history.scrollOffset(), max_offset });
+    log.logStdout(.info, "scroll by delta={d} offset={d} max={d}", .{ delta, self.history.scrollOffset(), max_offset });
 }

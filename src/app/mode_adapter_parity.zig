@@ -46,7 +46,7 @@ pub fn logIfMismatch(
         terminal_parity.expected_active != terminal_parity.actual_active or
         terminal_parity.mismatch != null)
     {
-        log.logf(
+        log.logf(.info, 
             "adapter parity mismatch editor_count={d}/{d} editor_active={?d}/{?d} editor_first_mismatch_idx={?d} editor_first_mismatch_id={?d}/{?d} editor_first_mismatch_title={s}/{s} terminal_count={d}/{d} terminal_active={?d}/{?d} terminal_first_mismatch_idx={?d} terminal_first_mismatch_id={?d}/{?d} terminal_first_mismatch_title={s}/{s}",
             .{
                 editor_parity.actual_count,

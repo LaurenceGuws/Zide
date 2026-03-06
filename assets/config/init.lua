@@ -35,11 +35,16 @@ return {
     --   log = "all" / "none" / "... ,editor.perf" for file load + rope init timings
     --   log = { enable = { "app.core", "editor.core", "editor.input", "editor.highlight", "terminal.core", "terminal.metrics", "terminal.alt", "terminal.font", "terminal.font.jitter", "ui.zoom.shortcut", "terminal.io", "terminal.csi", "terminal.sgr", "terminal.osc", "terminal.replay" } }
     --   log = { file = { ... }, console = { ... } }
+    --   logs.file_level / logs.console_level: "critical" | "error" | "warning" | "info" | "debug" | "trace"
     -- If file/console are not set, enable is used for both.
     log = {
         enable = { "app.core", "terminal.core", "ui.zoom.shortcut" },
         -- file = { "terminal.metrics" },
         -- console = { "app.core" },
+    },
+    logs = {
+        file_level = "info",
+        console_level = "info",
     },
     -- terminal.font.jitter is gated by env: ZIDE_TERMINAL_FONT_JITTER=1
 

@@ -383,10 +383,11 @@ fn appendAssociatedTextCodepoints(
     fallback_codepoint: u32,
     alternate_meta: ?types.KeyboardAlternateMetadata,
 ) bool {
+    const fallback_cp = associatedFallbackCodepoint(fallback_codepoint, alternate_meta);
     if (alternate_meta) |meta| {
         if (meta.produced_text_utf8) |text| {
             if (text.len > 0) {
-                var view = std.unicode.Utf8View.init(text) catch return appendAssociatedCodepoint(buf, pos, fallback_codepoint);
+                var view = std.unicode.Utf8View.init(text) catch return appendAssociatedCodepoint(buf, pos, fallback_cp);
                 var it = view.iterator();
                 var wrote_any = false;
                 while (it.nextCodepoint()) |cp| {
@@ -402,7 +403,7 @@ fn appendAssociatedTextCodepoints(
             }
         }
     }
-    return appendAssociatedCodepoint(buf, pos, fallback_codepoint);
+    return appendAssociatedCodepoint(buf, pos, fallback_cp);
 }
 
 fn appendAssociatedCodepoint(buf: []u8, pos: *usize, cp: u32) bool {
@@ -761,13 +762,14 @@ fn associatedTextFieldForTest(
     fallback_codepoint: u32,
     alternate_meta: ?types.KeyboardAlternateMetadata,
 ) ![]u8 {
+    const fallback_cp = associatedFallbackCodepoint(fallback_codepoint, alternate_meta);
     var list: std.ArrayList(u32) = .empty;
     defer list.deinit(allocator);
 
     if (alternate_meta) |meta| {
         if (meta.produced_text_utf8) |text| {
             if (text.len > 0) {
-                var view = std.unicode.Utf8View.init(text) catch return std.fmt.allocPrint(allocator, "{d}", .{fallback_codepoint});
+                var view = std.unicode.Utf8View.init(text) catch return std.fmt.allocPrint(allocator, "{d}", .{fallback_cp});
                 var it = view.iterator();
                 while (it.nextCodepoint()) |cp| {
                     try list.append(allocator, cp);
@@ -785,7 +787,17 @@ fn associatedTextFieldForTest(
         }
     }
 
-    return std.fmt.allocPrint(allocator, "{d}", .{fallback_codepoint});
+    return std.fmt.allocPrint(allocator, "{d}", .{fallback_cp});
+}
+
+fn associatedFallbackCodepoint(
+    fallback_codepoint: u32,
+    alternate_meta: ?types.KeyboardAlternateMetadata,
+) u32 {
+    if (alternate_meta) |meta| {
+        if (meta.base_codepoint) |base| return base;
+    }
+    return fallback_codepoint;
 }
 
 fn encodeCsiWithModBytes(

@@ -1,4 +1,5 @@
 const app_shell = @import("../app_shell.zig");
+const app_logger = @import("../app_logger.zig");
 const shared_types = @import("../types/mod.zig");
 const editor_types = @import("../editor/types.zig");
 const widgets = @import("../ui/widgets.zig");
@@ -67,6 +68,7 @@ pub fn handleMouseSelectionInput(
     scrollbar_blocking: bool,
     selection: SelectionState,
 ) SelectionResult {
+    const log = app_logger.logger("editor.input");
     var out: SelectionResult = .{};
     const editor_x = layout.editor.x;
     const editor_y = layout.editor.y;
@@ -83,7 +85,12 @@ pub fn handleMouseSelectionInput(
             selection.drag_start.* = pos;
             selection.drag_rect.* = alt;
             if (alt) {
-                widget.editor.expandRectSelection(pos.line, pos.line, pos.col, pos.col) catch {};
+                widget.editor.expandRectSelection(pos.line, pos.line, pos.col, pos.col) catch |err| {
+                    log.logf(.warning, 
+                        "expandRectSelection start failed line={d} col={d} err={s}",
+                        .{ pos.line, pos.col, @errorName(err) },
+                    );
+                };
             } else {
                 widget.editor.selection = .{ .start = pos, .end = pos };
             }
@@ -101,7 +108,12 @@ pub fn handleMouseSelectionInput(
                 const end_line = @max(selection.drag_start.line, pos.line);
                 const start_col = @min(selection.drag_start.col, pos.col);
                 const end_col = @max(selection.drag_start.col, pos.col);
-                widget.editor.expandRectSelection(start_line, end_line, start_col, end_col) catch {};
+                widget.editor.expandRectSelection(start_line, end_line, start_col, end_col) catch |err| {
+                    log.logf(.warning, 
+                        "expandRectSelection drag failed start={d}:{d} end={d}:{d} err={s}",
+                        .{ start_line, start_col, end_line, end_col, @errorName(err) },
+                    );
+                };
                 widget.editor.selection = null;
             } else {
                 widget.editor.selection = .{ .start = selection.drag_start.*, .end = pos };

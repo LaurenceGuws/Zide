@@ -682,7 +682,7 @@ pub fn draw(
                                 }
                                 if (variant == .powerline) {
                                     const special_log = app_logger.logger("terminal.glyph.special");
-                                    special_log.logf(
+                                    special_log.logf(.info, 
                                         "sprite_missing cp=U+{X} variant={s} cell={d}x{d}",
                                         .{ cell.codepoint, @tagName(variant), box_w_i, box_h_i },
                                     );
@@ -940,7 +940,7 @@ pub fn draw(
     if (draw_cursor and rows > 0 and cols > 0 and cursor.row < rows and cursor.col < cols and view_cells.len >= rows * cols) {
         const cursor_log = app_logger.logger("terminal.cursor");
         if (cursor_log.enabled_file or cursor_log.enabled_console) {
-            cursor_log.logf(
+            cursor_log.logf(.info, 
                 "cursor draw ui_focused={d} shape={s} blink={d} visible={d} row={d} col={d}",
                 .{
                     @intFromBool(self.ui_focused),
@@ -1175,7 +1175,7 @@ pub fn draw(
         else
             -1.0;
         const log = app_logger.logger("terminal.alt");
-        log.logf("alt_exit_draw_ms={d:.2} exit_to_draw_ms={d:.2} rows={d} cols={d} history={d} scroll_offset={d}", .{
+        log.logf(.info, "alt_exit_draw_ms={d:.2} exit_to_draw_ms={d:.2} rows={d} cols={d} history={d} scroll_offset={d}", .{
             elapsed_ms,
             exit_to_draw_ms,
             rows,
@@ -1192,7 +1192,7 @@ pub fn draw(
         const has_kitty_images = self.kitty.images_view.items.len > 0;
         if ((elapsed_ms >= 4.0 or has_kitty_images) and (now - self.last_draw_log_time) >= 0.1) {
             self.last_draw_log_time = now;
-            draw_log.logf(
+            draw_log.logf(.info, 
                 "draw_ms={d:.2} rows={d} cols={d} history={d} cells={d} kitty_images={d} kitty_placements={d}",
                 .{
                     elapsed_ms,
@@ -1214,7 +1214,7 @@ pub fn draw(
             const elapsed_ms = time_utils.secondsToMs(now - draw_start);
             if ((now - self.last_bench_log_time) >= 0.1) {
                 self.last_bench_log_time = now;
-                bench_log.logf(
+                bench_log.logf(.info, 
                     "draw_ms={d:.2} rows={d} cols={d} upload_images={d} upload_bytes={d}",
                     .{ elapsed_ms, rows, cols, upload_stats.images, upload_stats.bytes },
                 );
@@ -1355,7 +1355,7 @@ fn drawShapedGlyph(
         const y_snap_error = draw_y - snapped_y;
         const large_y_snap = @abs(y_snap_error) >= 0.45;
         if (did_fit_scale or has_y_offset or large_y_snap) {
-            jitter_log.logf(
+            jitter_log.logf(.info, 
                 "cp=U+{X:0>4} gid={d} x={d:.2} y={d:.2} cell_w={d:.2} glyph_w={d:.2} bearing_y={d:.2} y_off_26_6={d} draw_y={d:.3} snap_y={d:.3} snap_err={d:.3} scale={d:.4} fit={d} square_or_wide={d}",
                 .{
                     base_codepoint,

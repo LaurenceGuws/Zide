@@ -2,6 +2,7 @@ const std = @import("std");
 const zlua = @import("zlua");
 const iface = @import("./lua_config_iface.zig");
 const lua_shared = @import("./lua_config_shared.zig");
+const app_logger = @import("../app_logger.zig");
 const input_actions = @import("../input/input_actions.zig");
 const input_types = @import("../types/input.zig");
 
@@ -9,6 +10,7 @@ pub const LuaConfigError = iface.LuaConfigError;
 pub const Config = iface.Config;
 const ThemeConfig = iface.ThemeConfig;
 const Color = std.meta.Child(@TypeOf((@as(ThemeConfig, undefined)).background));
+const LogLevel = std.meta.Child(@TypeOf((@as(Config, undefined)).log_file_level));
 const SdlLogLevel = std.meta.Child(@TypeOf((@as(Config, undefined)).sdl_log_level));
 const TabBarWidthMode = std.meta.Child(@TypeOf((@as(Config, undefined)).editor_tab_bar_width_mode));
 const CursorShape = std.meta.Child(@TypeOf((@as(Config, undefined)).terminal_cursor_shape));
@@ -89,6 +91,10 @@ fn parseSdlLogLevelFromString(value: []const u8) ?SdlLogLevel {
     if (std.mem.eql(u8, value, "debug")) return 2;
     if (std.mem.eql(u8, value, "trace")) return 1;
     return null;
+}
+
+fn parseLoggerLevelFromString(value: []const u8) ?LogLevel {
+    return app_logger.levelFromString(value);
 }
 
 fn parseTabBarWidthModeFromString(value: []const u8) ?TabBarWidthMode {
@@ -745,6 +751,22 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     if (log_console_direct) |v| out.log_console_filter = v;
     lua.pop(1);
 
+    _ = lua.getField(table_index, "log_file_level");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| {
+            if (parseLoggerLevelFromString(v)) |level| out.log_file_level = level;
+        } else |_| {}
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "log_console_level");
+    if (lua.isString(-1)) {
+        if (lua.toString(-1)) |v| {
+            if (parseLoggerLevelFromString(v)) |level| out.log_console_level = level;
+        } else |_| {}
+    }
+    lua.pop(1);
+
     _ = lua.getField(table_index, "logs");
     if (lua.isTable(-1)) {
         const logs_idx = lua.absIndex(-1);
@@ -769,6 +791,22 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
                     out.log_console_filter = try allocator.dupe(u8, file_v);
                 }
             }
+        }
+        lua.pop(1);
+
+        _ = lua.getField(logs_idx, "file_level");
+        if (lua.isString(-1)) {
+            if (lua.toString(-1)) |v| {
+                if (parseLoggerLevelFromString(v)) |level| out.log_file_level = level;
+            } else |_| {}
+        }
+        lua.pop(1);
+
+        _ = lua.getField(logs_idx, "console_level");
+        if (lua.isString(-1)) {
+            if (lua.toString(-1)) |v| {
+                if (parseLoggerLevelFromString(v)) |level| out.log_console_level = level;
+            } else |_| {}
         }
         lua.pop(1);
     }

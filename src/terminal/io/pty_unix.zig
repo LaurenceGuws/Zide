@@ -307,7 +307,7 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
     if (std.c.getenv("COLORTERM") == null) {
         _ = c.setenv("COLORTERM", "truecolor", 1);
     }
-    env_log.logf(
+    env_log.logf(.info, 
         "spawn begin shell={s} TERM={s} COLORTERM={s} TERMINFO={s} TERMINFO_DIRS={s} launch_cwd={s}",
         .{
             shell_path,
@@ -318,7 +318,7 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
             getenvOrUnset("ZIDE_LAUNCH_CWD"),
         },
     );
-    env_log.logf(
+    env_log.logf(.info, 
         "spawn color_env TERM={s} COLORTERM={s} FORCE_COLOR={s} CLICOLOR_FORCE={s} NO_COLOR={s}",
         .{
             getenvOrUnset("TERM"),
@@ -331,11 +331,11 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
     if (std.c.getenv("ZIDE_LAUNCH_CWD")) |cwd_c| {
         const cwd = std.mem.sliceTo(cwd_c, 0);
         posix.chdir(cwd) catch |err| {
-            env_log.logf("spawn chdir failed cwd={s} err={s}", .{ cwd, @errorName(err) });
+            env_log.logf(.info, "spawn chdir failed cwd={s} err={s}", .{ cwd, @errorName(err) });
             return err;
         };
         _ = c.setenv("PWD", cwd_c, 1);
-        env_log.logf("spawn chdir ok cwd={s}", .{cwd});
+        env_log.logf(.info, "spawn chdir ok cwd={s}", .{cwd});
     }
     if (std.c.getenv("INPUTRC") == null) {
         const pid = c.getpid();
@@ -373,13 +373,13 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
                 \\__zide_emit_osc7
             );
             const argv = [_:null]?[*:0]const u8{ shell_path.ptr, "--rcfile", rc_path.ptr, "-i" };
-            env_log.logf("spawn bash rcfile prepared path={s}", .{rc_path});
-            env_log.logf("spawn exec shell={s} (bash rcfile inject)", .{shell_path});
+            env_log.logf(.info, "spawn bash rcfile prepared path={s}", .{rc_path});
+            env_log.logf(.info, "spawn exec shell={s} (bash rcfile inject)", .{shell_path});
             const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
             _ = posix.execvpeZ(shell_path.ptr, &argv, envp) catch {};
             posix.exit(127);
         } else |err| {
-            env_log.logf("spawn bash rcfile prepare failed path={s} err={s}", .{ rc_path, @errorName(err) });
+            env_log.logf(.info, "spawn bash rcfile prepare failed path={s} err={s}", .{ rc_path, @errorName(err) });
         }
     }
 
@@ -395,7 +395,7 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
     }
 
     const argv = [_:null]?[*:0]const u8{shell_path.ptr};
-    env_log.logf("spawn exec shell={s}", .{shell_path});
+    env_log.logf(.info, "spawn exec shell={s}", .{shell_path});
     const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
     _ = posix.execvpeZ(shell_path.ptr, &argv, envp) catch {};
     posix.exit(127);

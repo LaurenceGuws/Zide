@@ -198,8 +198,8 @@ pub const TerminalSession = struct {
         const scrollback_rows = options.scrollback_rows orelse default_scrollback_rows;
         const history = try history_mod.TerminalHistory.init(allocator, scrollback_rows, cols);
         const log = app_logger.logger("terminal.core");
-        log.logf("terminal init rows={d} cols={d} scrollback_max={d}", .{ rows, cols, scrollback_rows });
-        log.logStdout("terminal init rows={d} cols={d}", .{ rows, cols });
+        log.logf(.info, "terminal init rows={d} cols={d} scrollback_max={d}", .{ rows, cols, scrollback_rows });
+        log.logStdout(.info, "terminal init rows={d} cols={d}", .{ rows, cols });
         const palette_default = palette_mod.buildDefaultPalette();
         session.* = .{
             .allocator = allocator,
@@ -462,7 +462,7 @@ pub const TerminalSession = struct {
 
                 const log = app_logger.logger("terminal.pty");
                 if (log.enabled_file or log.enabled_console) {
-                    log.logf("pty child exited code={d}", .{code});
+                    log.logf(.info, "pty child exited code={d}", .{code});
                 }
             }
         }
@@ -515,7 +515,7 @@ pub const TerminalSession = struct {
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
         const app_cursor = input_snapshot.app_cursor_keys.load(.acquire);
         if (log.enabled_file or log.enabled_console) {
-            log.logf("sendKey key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x}", .{
+            log.logf(.info, "sendKey key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x}", .{
                 keyName(key),
                 key,
                 mod,
@@ -559,7 +559,7 @@ pub const TerminalSession = struct {
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
         const app_cursor = input_snapshot.app_cursor_keys.load(.acquire);
         if (log.enabled_file or log.enabled_console) {
-            log.logf("sendKey(meta) key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x} alt_meta={any}", .{
+            log.logf(.info, "sendKey(meta) key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x} alt_meta={any}", .{
                 keyName(key),
                 key,
                 mod,
@@ -608,7 +608,7 @@ pub const TerminalSession = struct {
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
         const app_keypad = input_snapshot.app_keypad.load(.acquire);
         if (log.enabled_file or log.enabled_console) {
-            log.logf("sendKeypad key={s} mod=0x{x} action={s} app_keypad={any} key_mode=0x{x}", .{
+            log.logf(.info, "sendKeypad key={s} mod=0x{x} action={s} app_keypad={any} key_mode=0x{x}", .{
                 keypadKeyName(key),
                 mod,
                 @tagName(action),
@@ -639,7 +639,7 @@ pub const TerminalSession = struct {
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
         if (log.enabled_file or log.enabled_console) {
-            log.logf("sendChar cp={d} mod=0x{x} action={s} key_mode=0x{x}", .{
+            log.logf(.info, "sendChar cp={d} mod=0x{x} action={s} key_mode=0x{x}", .{
                 char,
                 mod,
                 @tagName(action),
@@ -667,7 +667,7 @@ pub const TerminalSession = struct {
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
         if (log.enabled_file or log.enabled_console) {
-            log.logf("sendChar(meta) cp={d} mod=0x{x} action={s} key_mode=0x{x} alt_meta={any}", .{
+            log.logf(.info, "sendChar(meta) cp={d} mod=0x{x} action={s} key_mode=0x{x} alt_meta={any}", .{
                 char,
                 mod,
                 @tagName(action),
@@ -728,7 +728,7 @@ pub const TerminalSession = struct {
         if (text.len == 0) return;
         const log = app_logger.logger("terminal.input");
         if (log.enabled_file or log.enabled_console) {
-            log.logf("sendText len={d}", .{text.len});
+            log.logf(.info, "sendText len={d}", .{text.len});
         }
         if (self.pty) |*pty| {
             self.pty_write_mutex.lock();

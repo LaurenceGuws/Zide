@@ -5,12 +5,70 @@ var log_file: ?std.fs.File = null;
 var log_mutex: std.Thread.Mutex = .{};
 var log_filter_file: ?[]u8 = null;
 var log_filter_console: ?[]u8 = null;
+var log_level_file: Level = .info;
+var log_level_console: Level = .info;
+var log_start_ns: i128 = 0;
+
+pub const Level = enum(u8) {
+    critical = 0,
+    @"error" = 1,
+    warning = 2,
+    info = 3,
+    debug = 4,
+    trace = 5,
+};
+
+pub fn levelFromString(value: []const u8) ?Level {
+    if (std.ascii.eqlIgnoreCase(value, "critical")) return .critical;
+    if (std.ascii.eqlIgnoreCase(value, "error")) return .@"error";
+    if (std.ascii.eqlIgnoreCase(value, "warning") or std.ascii.eqlIgnoreCase(value, "warn")) return .warning;
+    if (std.ascii.eqlIgnoreCase(value, "info")) return .info;
+    if (std.ascii.eqlIgnoreCase(value, "debug")) return .debug;
+    if (std.ascii.eqlIgnoreCase(value, "trace")) return .trace;
+    return null;
+}
+
+fn levelName(level: Level) []const u8 {
+    return switch (level) {
+        .critical => "Critical",
+        .@"error" => "Error",
+        .warning => "Warning",
+        .info => "Info",
+        .debug => "Debug",
+        .trace => "Trace",
+    };
+}
+
+fn shouldEmit(level: Level, min_level: Level) bool {
+    return @intFromEnum(level) <= @intFromEnum(min_level);
+}
+
+fn timestampMicros() i128 {
+    const now = std.time.nanoTimestamp();
+    const base = if (log_start_ns != 0) log_start_ns else now;
+    return @divTrunc(now - base, std.time.ns_per_us);
+}
+
+fn timeOfDayMicrosUtc() struct { h: i64, m: i64, s: i64, us: i64 } {
+    const us_per_day: i64 = 24 * 60 * 60 * 1_000_000;
+    const us_now = std.time.microTimestamp();
+    var day_us = @mod(us_now, us_per_day);
+    if (day_us < 0) day_us += us_per_day;
+    const h = @divTrunc(day_us, 3_600_000_000);
+    day_us -= h * 3_600_000_000;
+    const m = @divTrunc(day_us, 60_000_000);
+    day_us -= m * 60_000_000;
+    const s = @divTrunc(day_us, 1_000_000);
+    const us = day_us - s * 1_000_000;
+    return .{ .h = h, .m = m, .s = s, .us = us };
+}
 
 pub fn init() !void {
     if (log_file != null) return;
     var file = try std.fs.cwd().createFile("zide.log", .{ .truncate = false, .read = false });
     try file.seekFromEnd(0);
     log_file = file;
+    if (log_start_ns == 0) log_start_ns = std.time.nanoTimestamp();
 }
 
 pub fn deinit() void {
@@ -26,6 +84,9 @@ pub fn deinit() void {
         std.heap.c_allocator.free(filter);
     }
     log_filter_console = null;
+    log_level_file = .info;
+    log_level_console = .info;
+    log_start_ns = 0;
 }
 
 pub const Logger = struct {
@@ -33,42 +94,65 @@ pub const Logger = struct {
     enabled_file: bool,
     enabled_console: bool,
 
-    pub fn logf(self: Logger, comptime fmt: []const u8, args: anytype) void {
+    pub fn logf(self: Logger, level: Level, comptime fmt: []const u8, args: anytype) void {
+        const emit_file = self.enabled_file and log_file != null and shouldEmit(level, log_level_file);
+        const emit_console = self.enabled_console and shouldEmit(level, log_level_console);
+        if (!emit_file and !emit_console) return;
+
         var buf: [1024]u8 = undefined;
         const msg = std.fmt.bufPrint(&buf, fmt, args) catch return;
+        const ts_us = timestampMicros();
+        const tod = timeOfDayMicrosUtc();
+        const level_name = levelName(level);
+        var prefix_buf: [128]u8 = undefined;
+        const prefix = std.fmt.bufPrint(
+            &prefix_buf,
+            "[{d:0>2}:{d:0>2}:{d:0>2}.{d:0>6}][+{d}us][{s}][{s}] ",
+            .{ tod.h, tod.m, tod.s, tod.us, ts_us, level_name, self.name },
+        ) catch return;
 
-        if (self.enabled_file and log_file != null) {
+        if (emit_file) {
             log_mutex.lock();
             defer log_mutex.unlock();
             if (log_file) |file| {
-                _ = file.writeAll("[") catch {};
-                _ = file.writeAll(self.name) catch {};
-                _ = file.writeAll("] ") catch {};
+                _ = file.writeAll(prefix) catch {};
                 _ = file.writeAll(msg) catch {};
                 _ = file.writeAll("\n") catch {};
             }
         }
 
-        if (self.enabled_console) {
-            std.debug.print("[{s}] ", .{self.name});
+        if (emit_console) {
+            std.debug.print("{s}", .{prefix});
             std.debug.print("{s}\n", .{msg});
         }
     }
 
-    pub fn logStdout(self: Logger, comptime fmt: []const u8, args: anytype) void {
+    pub fn logStdout(self: Logger, level: Level, comptime fmt: []const u8, args: anytype) void {
+        const emit_file = self.enabled_file and log_file != null and shouldEmit(level, log_level_file);
+        const emit_console = self.enabled_console and shouldEmit(level, log_level_console);
+        if (!emit_file and !emit_console) return;
+
         var buf: [1024]u8 = undefined;
         const msg = std.fmt.bufPrint(&buf, fmt, args) catch return;
-        if (self.enabled_console) {
-            std.debug.print("[{s}] ", .{self.name});
+        const ts_us = timestampMicros();
+        const tod = timeOfDayMicrosUtc();
+        const level_name = levelName(level);
+        var prefix_buf: [128]u8 = undefined;
+        const prefix = std.fmt.bufPrint(
+            &prefix_buf,
+            "[{d:0>2}:{d:0>2}:{d:0>2}.{d:0>6}][+{d}us][{s}][{s}] ",
+            .{ tod.h, tod.m, tod.s, tod.us, ts_us, level_name, self.name },
+        ) catch return;
+
+        if (emit_console) {
+            std.debug.print("{s}", .{prefix});
             std.debug.print("{s}\n", .{msg});
         }
-        if (self.enabled_file and log_file != null) {
+        if (emit_file) {
             log_mutex.lock();
             defer log_mutex.unlock();
             if (log_file) |file| {
-                _ = file.writeAll("[") catch {};
-                _ = file.writeAll(self.name) catch {};
-                _ = file.writeAll("] ") catch {};
+                _ = file.writeAll(prefix) catch {};
                 _ = file.writeAll(msg) catch {};
                 _ = file.writeAll("\n") catch {};
             }
@@ -96,6 +180,14 @@ pub fn setConsoleFilterString(value: []const u8) !void {
         std.heap.c_allocator.free(filter);
     }
     log_filter_console = try std.heap.c_allocator.dupe(u8, value);
+}
+
+pub fn setFileLevel(level: Level) void {
+    log_level_file = level;
+}
+
+pub fn setConsoleLevel(level: Level) void {
+    log_level_console = level;
 }
 
 fn isEnabled(name: []const u8, filter_override: ?[]const u8, env_key: [:0]const u8) bool {

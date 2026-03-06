@@ -79,7 +79,7 @@ pub fn handleCodepoint(self: anytype, codepoint: u32) void {
     if (cp == 0x2502) {
         const log = app_logger.logger("terminal.trace.scope");
         if (log.enabled_file or log.enabled_console) {
-            log.logf(
+            log.logf(.info, 
                 "scope_glyph row={d} col={d} origin={any} scroll_top={d} scroll_bottom={d}",
                 .{ screen.cursor.row, screen.cursor.col, screen.origin_mode, screen.scroll_top, screen.scroll_bottom },
             );

@@ -63,7 +63,7 @@ fn runWithMode(
             .on_perf_complete = struct {
                 fn step(raw: *anyopaque) void {
                     const rc: *RuntimeCtx = @ptrCast(@alignCast(raw));
-                    rc.state.perf_logger.logf("perf complete frames={d}", .{rc.state.perf_frames_done});
+                    rc.state.perf_logger.logf(.info, "perf complete frames={d}", .{rc.state.perf_frames_done});
                 }
             }.step,
         },

@@ -20,7 +20,7 @@ pub fn handleMouseClick(
     if (widget.cursorFromMouse(shell, x, y, width, height, mouse_x, mouse_y, false)) |pos| {
         widget.editor.setCursor(pos.line, pos.col);
         const log = app_logger.logger("editor.input");
-        log.logf("mouse click line={d} col={d}", .{ pos.line, pos.col });
+        log.logf(.info, "mouse click line={d} col={d}", .{ pos.line, pos.col });
         return true;
     }
     return false;
@@ -46,54 +46,54 @@ pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *sh
     }
     if (chars_inserted > 0) {
         const log = app_logger.logger("editor.input");
-        log.logf("chars inserted={d}", .{chars_inserted});
+        log.logf(.info, "chars inserted={d}", .{chars_inserted});
     }
 
     // Control keys
     if (plain_text_input and input_batch.keyPressed(.enter)) {
         try widget.editor.insertNewline();
         handled = true;
-        app_logger.logger("editor.input").logf("key=enter", .{});
+        app_logger.logger("editor.input").logf(.info, "key=enter", .{});
     } else if (plain_text_input and (input_batch.keyPressed(.backspace) or input_batch.keyRepeated(.backspace))) {
         try widget.editor.deleteCharBackward();
         handled = true;
-        app_logger.logger("editor.input").logf("key=backspace", .{});
+        app_logger.logger("editor.input").logf(.info, "key=backspace", .{});
     } else if (plain_text_input and (input_batch.keyPressed(.delete) or input_batch.keyRepeated(.delete))) {
         try widget.editor.deleteCharForward();
         handled = true;
-        app_logger.logger("editor.input").logf("key=delete", .{});
+        app_logger.logger("editor.input").logf(.info, "key=delete", .{});
     } else if (plain_nav_input and (input_batch.keyPressed(.up) or input_batch.keyRepeated(.up))) {
         if (widget.moveCursorVisual(shell, -1)) {
             widget.ensureCursorVisible(shell, height);
             handled = true;
-            app_logger.logger("editor.input").logf("key=up", .{});
+            app_logger.logger("editor.input").logf(.info, "key=up", .{});
         }
     } else if (plain_nav_input and (input_batch.keyPressed(.down) or input_batch.keyRepeated(.down))) {
         if (widget.moveCursorVisual(shell, 1)) {
             widget.ensureCursorVisible(shell, height);
             handled = true;
-            app_logger.logger("editor.input").logf("key=down", .{});
+            app_logger.logger("editor.input").logf(.info, "key=down", .{});
         }
     } else if (plain_nav_input and (input_batch.keyPressed(.left) or input_batch.keyRepeated(.left))) {
         widget.editor.moveCursorLeft();
         widget.ensureCursorVisible(shell, height);
         handled = true;
-        app_logger.logger("editor.input").logf("key=left", .{});
+        app_logger.logger("editor.input").logf(.info, "key=left", .{});
     } else if (plain_nav_input and (input_batch.keyPressed(.right) or input_batch.keyRepeated(.right))) {
         widget.editor.moveCursorRight();
         widget.ensureCursorVisible(shell, height);
         handled = true;
-        app_logger.logger("editor.input").logf("key=right", .{});
+        app_logger.logger("editor.input").logf(.info, "key=right", .{});
     } else if (plain_nav_input and (input_batch.keyPressed(.home) or input_batch.keyRepeated(.home))) {
         widget.editor.moveCursorToLineStart();
         widget.ensureCursorVisible(shell, height);
         handled = true;
-        app_logger.logger("editor.input").logf("key=home", .{});
+        app_logger.logger("editor.input").logf(.info, "key=home", .{});
     } else if (plain_nav_input and (input_batch.keyPressed(.end) or input_batch.keyRepeated(.end))) {
         widget.editor.moveCursorToLineEnd();
         widget.ensureCursorVisible(shell, height);
         handled = true;
-        app_logger.logger("editor.input").logf("key=end", .{});
+        app_logger.logger("editor.input").logf(.info, "key=end", .{});
     }
 
     // Scroll handling
@@ -104,11 +104,11 @@ pub fn handleInput(widget: anytype, shell: *Shell, height: f32, input_batch: *sh
         if (shift and !widget.wrap_enabled) {
             widget.scrollHorizontal(shell, delta);
             handled = true;
-            app_logger.logger("editor.input").logf("hscroll delta={d} scroll_col={d}", .{ delta, widget.editor.scroll_col });
+            app_logger.logger("editor.input").logf(.info, "hscroll delta={d} scroll_col={d}", .{ delta, widget.editor.scroll_col });
         } else {
             widget.scrollVisual(shell, delta);
             handled = true;
-            app_logger.logger("editor.input").logf("scroll delta={d} new_line={d} row_offset={d}", .{ delta, widget.editor.scroll_line, widget.editor.scroll_row_offset });
+            app_logger.logger("editor.input").logf(.info, "scroll delta={d} new_line={d} row_offset={d}", .{ delta, widget.editor.scroll_line, widget.editor.scroll_row_offset });
         }
     }
 

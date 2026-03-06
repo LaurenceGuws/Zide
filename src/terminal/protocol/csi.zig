@@ -34,7 +34,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
     const log = app_logger.logger("terminal.csi");
     const csi_param_count = effectiveCsiParamCount(action);
     if (log.enabled_file or log.enabled_console) {
-        log.logf(
+        log.logf(.info, 
             "csi final={c} leader={c} private={d} interm={s} count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
             .{
                 action.final,
@@ -651,7 +651,7 @@ pub fn applySgr(self: anytype, action: parser_csi.CsiAction) void {
     const n_params = effectiveSgrParamCount(action);
     const log = app_logger.logger("terminal.sgr");
     if (log.enabled_file or log.enabled_console) {
-        log.logf(
+        log.logf(.info, 
             "sgr count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
             .{
                 n_params,

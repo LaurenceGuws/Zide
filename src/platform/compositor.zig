@@ -1,4 +1,5 @@
 const std = @import("std");
+const log = std.log.scoped(.compositor);
 
 pub const Compositor = enum {
     hyprland,
@@ -61,19 +62,25 @@ fn getHyprlandScale(allocator: std.mem.Allocator) ?f32 {
     const stdout = runCommand(allocator, &.{ "hyprctl", "-j", "monitors" }) orelse return null;
     defer allocator.free(stdout);
 
-    var parsed = std.json.parseFromSlice(std.json.Value, allocator, stdout, .{}) catch return null;
+    var parsed = std.json.parseFromSlice(std.json.Value, allocator, stdout, .{}) catch |err| {
+        log.warn("hyprland monitor parse failed: {s}", .{ @errorName(err) });
+        return null;
+    };
     defer parsed.deinit();
 
-    if (parsed.value != .array) return null;
+    if (parsed.value != .array) {
+        log.warn("hyprland monitor parse failed: expected array", .{});
+        return null;
+    }
 
     var fallback_scale: ?f32 = null;
     for (parsed.value.array.items) |item| {
         if (item != .object) continue;
         const obj = item.object;
 
-        if (fallback_scale == null) {
-            if (obj.get("scale")) |val| {
-                fallback_scale = parseScaleValue(val);
+        if (obj.get("scale")) |val| {
+            if (parseScaleValue(val)) |scale| {
+                fallback_scale = if (fallback_scale) |existing| @max(existing, scale) else scale;
             }
         }
 
@@ -107,16 +114,21 @@ fn runCommand(allocator: std.mem.Allocator, argv: []const []const u8) ?[]u8 {
         .allocator = allocator,
         .argv = argv,
         .max_output_bytes = 64 * 1024,
-    }) catch return null;
+    }) catch |err| {
+        log.warn("command failed to run: {s} ({s})", .{ argv[0], @errorName(err) });
+        return null;
+    };
 
     defer allocator.free(result.stderr);
 
     switch (result.term) {
         .Exited => |code| if (code != 0) {
+            log.warn("command exited non-zero: {s} code={d}", .{ argv[0], code });
             allocator.free(result.stdout);
             return null;
         },
         else => {
+            log.warn("command terminated unexpectedly: {s}", .{ argv[0] });
             allocator.free(result.stdout);
             return null;
         },

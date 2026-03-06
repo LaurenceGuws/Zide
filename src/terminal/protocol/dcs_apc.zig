@@ -19,7 +19,7 @@ pub fn parseApc(self: anytype, payload: []const u8) void {
     if (log.enabled_file or log.enabled_console) {
         const max_len: usize = 160;
         const slice = if (payload.len > max_len) payload[0..max_len] else payload;
-        log.logf("apc payload len={d} prefix=\"{s}\"", .{ payload.len, slice });
+        log.logf(.info, "apc payload len={d} prefix=\"{s}\"", .{ payload.len, slice });
     }
     if (payload.len == 0) return;
     if (payload[0] != 'G') return;
