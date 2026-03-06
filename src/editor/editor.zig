@@ -243,7 +243,10 @@ pub const Editor = struct {
                 }
             }
         }
-        self.line_width_cache.put(line_idx, count) catch {};
+        self.line_width_cache.put(line_idx, count) catch |err| {
+            const log = app_logger.logger("editor.core");
+            log.logf(.warning, "line width cache insert failed idx={d}: {s}", .{ line_idx, @errorName(err) });
+        };
         if (count > self.max_line_width_cache) self.max_line_width_cache = count;
         return count;
     }
@@ -257,8 +260,11 @@ pub const Editor = struct {
     // ─────────────────────────────────────────────────────────────────────────
 
     pub fn moveCursorLeft(self: *Editor) void {
+        const log = app_logger.logger("editor.input");
         if (self.hasOnlyCaretSelections()) {
-            self.moveCaretSetHorizontal(-1) catch {};
+            self.moveCaretSetHorizontal(-1) catch |err| {
+                log.logf(.warning, "move caret set left failed: {s}", .{@errorName(err)});
+            };
             return;
         }
         if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
@@ -272,7 +278,9 @@ pub const Editor = struct {
             for (self.selections.items) |sel| {
                 self.tryAppendCollapseOffset(&collapsed, sel.normalized().start.offset);
             }
-            self.restoreCaretSelections(collapsed.items, collapsed.items[0]) catch {};
+            self.restoreCaretSelections(collapsed.items, collapsed.items[0]) catch |err| {
+                log.logf(.warning, "restore collapsed carets (left) failed: {s}", .{@errorName(err)});
+            };
             self.selection = null;
             return;
         }
@@ -285,8 +293,11 @@ pub const Editor = struct {
     }
 
     pub fn moveCursorRight(self: *Editor) void {
+        const log = app_logger.logger("editor.input");
         if (self.hasOnlyCaretSelections()) {
-            self.moveCaretSetHorizontal(1) catch {};
+            self.moveCaretSetHorizontal(1) catch |err| {
+                log.logf(.warning, "move caret set right failed: {s}", .{@errorName(err)});
+            };
             return;
         }
         if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
@@ -300,7 +311,9 @@ pub const Editor = struct {
             for (self.selections.items) |sel| {
                 self.tryAppendCollapseOffset(&collapsed, sel.normalized().end.offset);
             }
-            self.restoreCaretSelections(collapsed.items, collapsed.items[0]) catch {};
+            self.restoreCaretSelections(collapsed.items, collapsed.items[0]) catch |err| {
+                log.logf(.warning, "restore collapsed carets (right) failed: {s}", .{@errorName(err)});
+            };
             self.selection = null;
             return;
         }
@@ -314,6 +327,7 @@ pub const Editor = struct {
     }
 
     pub fn moveCursorUp(self: *Editor) void {
+        const log = app_logger.logger("editor.input");
         if (self.hasOnlyCaretSelections()) return;
         if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
             var collapsed = std.ArrayList(usize).empty;
@@ -326,7 +340,9 @@ pub const Editor = struct {
             for (self.selections.items) |sel| {
                 self.tryAppendCollapseOffset(&collapsed, sel.normalized().start.offset);
             }
-            self.restoreCaretSelections(collapsed.items, collapsed.items[0]) catch {};
+            self.restoreCaretSelections(collapsed.items, collapsed.items[0]) catch |err| {
+                log.logf(.warning, "restore collapsed carets (up) failed: {s}", .{@errorName(err)});
+            };
             self.selection = null;
             return;
         }
@@ -342,6 +358,7 @@ pub const Editor = struct {
     }
 
     pub fn moveCursorDown(self: *Editor) void {
+        const log = app_logger.logger("editor.input");
         if (self.hasOnlyCaretSelections()) return;
         if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
             var collapsed = std.ArrayList(usize).empty;
@@ -354,7 +371,9 @@ pub const Editor = struct {
             for (self.selections.items) |sel| {
                 self.tryAppendCollapseOffset(&collapsed, sel.normalized().end.offset);
             }
-            self.restoreCaretSelections(collapsed.items, collapsed.items[0]) catch {};
+            self.restoreCaretSelections(collapsed.items, collapsed.items[0]) catch |err| {
+                log.logf(.warning, "restore collapsed carets (down) failed: {s}", .{@errorName(err)});
+            };
             self.selection = null;
             return;
         }
@@ -371,8 +390,11 @@ pub const Editor = struct {
     }
 
     pub fn moveCursorToLineStart(self: *Editor) void {
+        const log = app_logger.logger("editor.input");
         if (self.hasOnlyCaretSelections()) {
-            self.moveCaretSetToLineBoundary(true) catch {};
+            self.moveCaretSetToLineBoundary(true) catch |err| {
+                log.logf(.warning, "move caret set to line start failed: {s}", .{@errorName(err)});
+            };
             return;
         }
         self.cursor.col = 0;
@@ -383,8 +405,11 @@ pub const Editor = struct {
     }
 
     pub fn moveCursorToLineEnd(self: *Editor) void {
+        const log = app_logger.logger("editor.input");
         if (self.hasOnlyCaretSelections()) {
-            self.moveCaretSetToLineBoundary(false) catch {};
+            self.moveCaretSetToLineBoundary(false) catch |err| {
+                log.logf(.warning, "move caret set to line end failed: {s}", .{@errorName(err)});
+            };
             return;
         }
         const line_len = self.buffer.lineLen(self.cursor.line);
@@ -396,8 +421,11 @@ pub const Editor = struct {
     }
 
     pub fn moveCursorWordLeft(self: *Editor) void {
+        const log = app_logger.logger("editor.input");
         if (self.hasOnlyCaretSelections()) {
-            self.moveCaretSetByWord(true) catch {};
+            self.moveCaretSetByWord(true) catch |err| {
+                log.logf(.warning, "move caret set word-left failed: {s}", .{@errorName(err)});
+            };
             return;
         }
         const target = self.wordLeftOffset(self.cursor.offset);
@@ -407,8 +435,11 @@ pub const Editor = struct {
     }
 
     pub fn moveCursorWordRight(self: *Editor) void {
+        const log = app_logger.logger("editor.input");
         if (self.hasOnlyCaretSelections()) {
-            self.moveCaretSetByWord(false) catch {};
+            self.moveCaretSetByWord(false) catch |err| {
+                log.logf(.warning, "move caret set word-right failed: {s}", .{@errorName(err)});
+            };
             return;
         }
         const target = self.wordRightOffset(self.cursor.offset);
@@ -447,7 +478,10 @@ pub const Editor = struct {
 
     fn tryAppendCollapseOffset(self: *Editor, offsets: *std.ArrayList(usize), offset: usize) void {
         if (std.mem.indexOfScalar(usize, offsets.items, offset) != null) return;
-        offsets.append(self.allocator, offset) catch {};
+        offsets.append(self.allocator, offset) catch |err| {
+            const log = app_logger.logger("editor.input");
+            log.logf(.warning, "append collapse offset failed offset={d}: {s}", .{ offset, @errorName(err) });
+        };
     }
 
     fn extendSelectionSetWithHeads(self: *Editor, target_heads: []const usize) !void {
@@ -461,6 +495,7 @@ pub const Editor = struct {
     }
 
     pub fn extendSelectionLeft(self: *Editor) void {
+        const log = app_logger.logger("editor.input");
         if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
             var anchors = std.ArrayList(usize).empty;
             defer anchors.deinit(self.allocator);
@@ -470,13 +505,16 @@ pub const Editor = struct {
             for (target_heads.items) |*offset| {
                 if (offset.* > 0) offset.* -= 1;
             }
-            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch {};
+            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch |err| {
+                log.logf(.warning, "restore extended carets (left) failed: {s}", .{@errorName(err)});
+            };
             return;
         }
         self.extendPrimarySelectionToOffset(if (self.cursor.offset > 0) self.cursor.offset - 1 else 0);
     }
 
     pub fn extendSelectionRight(self: *Editor) void {
+        const log = app_logger.logger("editor.input");
         if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
             var anchors = std.ArrayList(usize).empty;
             defer anchors.deinit(self.allocator);
@@ -487,7 +525,9 @@ pub const Editor = struct {
             for (target_heads.items) |*offset| {
                 if (offset.* < total) offset.* += 1;
             }
-            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch {};
+            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch |err| {
+                log.logf(.warning, "restore extended carets (right) failed: {s}", .{@errorName(err)});
+            };
             return;
         }
         const total = self.buffer.totalLen();
@@ -495,6 +535,7 @@ pub const Editor = struct {
     }
 
     pub fn extendSelectionToLineStart(self: *Editor) void {
+        const log = app_logger.logger("editor.input");
         if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
             var anchors = std.ArrayList(usize).empty;
             defer anchors.deinit(self.allocator);
@@ -505,13 +546,16 @@ pub const Editor = struct {
                 const caret = self.cursorPosForOffset(offset.*);
                 offset.* = self.buffer.lineStart(caret.line);
             }
-            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch {};
+            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch |err| {
+                log.logf(.warning, "restore extended carets (line-start) failed: {s}", .{@errorName(err)});
+            };
             return;
         }
         self.extendPrimarySelectionToOffset(self.buffer.lineStart(self.cursor.line));
     }
 
     pub fn extendSelectionToLineEnd(self: *Editor) void {
+        const log = app_logger.logger("editor.input");
         if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
             var anchors = std.ArrayList(usize).empty;
             defer anchors.deinit(self.allocator);
@@ -522,13 +566,16 @@ pub const Editor = struct {
                 const caret = self.cursorPosForOffset(offset.*);
                 offset.* = self.buffer.lineStart(caret.line) + self.buffer.lineLen(caret.line);
             }
-            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch {};
+            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch |err| {
+                log.logf(.warning, "restore extended carets (line-end) failed: {s}", .{@errorName(err)});
+            };
             return;
         }
         self.extendPrimarySelectionToOffset(self.buffer.lineStart(self.cursor.line) + self.buffer.lineLen(self.cursor.line));
     }
 
     pub fn extendSelectionWordLeft(self: *Editor) void {
+        const log = app_logger.logger("editor.input");
         if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
             var anchors = std.ArrayList(usize).empty;
             defer anchors.deinit(self.allocator);
@@ -538,13 +585,16 @@ pub const Editor = struct {
             for (target_heads.items) |*offset| {
                 offset.* = self.wordLeftOffset(offset.*);
             }
-            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch {};
+            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch |err| {
+                log.logf(.warning, "restore extended carets (word-left) failed: {s}", .{@errorName(err)});
+            };
             return;
         }
         self.extendPrimarySelectionToOffset(self.wordLeftOffset(self.cursor.offset));
     }
 
     pub fn extendSelectionWordRight(self: *Editor) void {
+        const log = app_logger.logger("editor.input");
         if (self.hasSelectionSetState() and !self.hasRectangularSelectionState()) {
             var anchors = std.ArrayList(usize).empty;
             defer anchors.deinit(self.allocator);
@@ -554,7 +604,9 @@ pub const Editor = struct {
             for (target_heads.items) |*offset| {
                 offset.* = self.wordRightOffset(offset.*);
             }
-            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch {};
+            self.restoreExtendedCaretSelections(anchors.items, target_heads.items) catch |err| {
+                log.logf(.warning, "restore extended carets (word-right) failed: {s}", .{@errorName(err)});
+            };
             return;
         }
         self.extendPrimarySelectionToOffset(self.wordRightOffset(self.cursor.offset));
@@ -1171,7 +1223,10 @@ pub const Editor = struct {
     fn noteTextChanged(self: *Editor) void {
         self.noteTextChangedBase();
         if (self.search_query != null) {
-            self.recomputeSearchMatches() catch {};
+            self.recomputeSearchMatches() catch |err| {
+                const log = app_logger.logger("editor.search");
+                log.logf(.warning, "recompute search matches on text change failed: {s}", .{@errorName(err)});
+            };
         }
     }
 
@@ -1726,7 +1781,10 @@ pub const Editor = struct {
             self.invalidateLineWidthCache();
             self.change_tick +|= 1;
             if (self.search_query != null) {
-                self.recomputeSearchMatches() catch {};
+                const log = app_logger.logger("editor.core");
+                self.recomputeSearchMatches() catch |err| {
+                    log.logf(.warning, "recompute search matches after undo failed: {s}", .{@errorName(err)});
+                };
             }
         }
         return result.changed;
@@ -1768,7 +1826,10 @@ pub const Editor = struct {
             self.invalidateLineWidthCache();
             self.change_tick +|= 1;
             if (self.search_query != null) {
-                self.recomputeSearchMatches() catch {};
+                const log = app_logger.logger("editor.core");
+                self.recomputeSearchMatches() catch |err| {
+                    log.logf(.warning, "recompute search matches after redo failed: {s}", .{@errorName(err)});
+                };
             }
         }
         return result.changed;
@@ -1989,7 +2050,10 @@ pub const Editor = struct {
     pub fn ensureHighlighter(self: *Editor) void {
         if (self.highlight_disabled_for_large_file) return;
         if (!self.highlight_pending) return;
-        self.tryInitHighlighter(self.file_path) catch {};
+        self.tryInitHighlighter(self.file_path) catch |err| {
+            const log = app_logger.logger("editor.highlight");
+            log.logf(.warning, "ensure highlighter init failed: {s}", .{@errorName(err)});
+        };
     }
 
     pub fn setSearchQuery(self: *Editor, query: ?[]const u8) !void {
@@ -2084,7 +2148,10 @@ pub const Editor = struct {
         const active = self.search_matches.items[active_idx];
 
         _ = try self.beginTrackedUndoGroup();
-        errdefer self.endTrackedUndoGroup() catch {};
+        errdefer self.endTrackedUndoGroup() catch |err| {
+            const log = app_logger.logger("editor.search");
+            log.logf(.warning, "tracked undo cleanup failed (replace active): {s}", .{@errorName(err)});
+        };
         try self.replaceByteRangeInternal(active.start, active.end, replacement, false);
         try self.recomputeSearchMatches();
         self.search_active = self.findSearchMatchAtOrAfter(active.start + replacement.len);
@@ -2102,7 +2169,10 @@ pub const Editor = struct {
         defer self.allocator.free(matches);
 
         _ = try self.beginTrackedUndoGroup();
-        errdefer self.endTrackedUndoGroup() catch {};
+        errdefer self.endTrackedUndoGroup() catch |err| {
+            const log = app_logger.logger("editor.search");
+            log.logf(.warning, "tracked undo cleanup failed (replace all): {s}", .{@errorName(err)});
+        };
         var idx = matches.len;
         while (idx > 0) {
             idx -= 1;
