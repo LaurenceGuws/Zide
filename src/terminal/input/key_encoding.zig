@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_logger = @import("../../app_logger.zig");
 const pty_mod = @import("../io/pty.zig");
 const types = @import("../model/types.zig");
 
@@ -78,6 +79,7 @@ pub fn sendKittyFunctionKey(
     action: KeyAction,
     flags: u32,
 ) bool {
+    const log = app_logger.logger("terminal.input");
     const report_all = (flags & key_mode_report_all_event_types) != 0;
     const disambiguate = (flags & key_mode_disambiguate) != 0;
     const report_text = (flags & key_mode_report_text) != 0;
@@ -97,26 +99,38 @@ pub fn sendKittyFunctionKey(
     buf[pos] = '[';
     pos += 1;
     if (!omit_leading_one) {
-        const written_key = std.fmt.bufPrint(buf[pos..], "{d}", .{key_number}) catch return false;
+        const written_key = std.fmt.bufPrint(buf[pos..], "{d}", .{key_number}) catch |err| {
+            log.logf(.warning, "kitty function key number format failed: {s}", .{@errorName(err)});
+            return false;
+        };
         pos += written_key.len;
     }
     if (second_field) {
         buf[pos] = ';';
         pos += 1;
         if (has_mods or add_actions) {
-            const written_mod = std.fmt.bufPrint(buf[pos..], "{d}", .{mod_value}) catch return false;
+            const written_mod = std.fmt.bufPrint(buf[pos..], "{d}", .{mod_value}) catch |err| {
+                log.logf(.warning, "kitty function key modifier format failed: {s}", .{@errorName(err)});
+                return false;
+            };
             pos += written_mod.len;
         }
         if (add_actions) {
             buf[pos] = ':';
             pos += 1;
-            const written_action = std.fmt.bufPrint(buf[pos..], "{d}", .{@intFromEnum(action) + 1}) catch return false;
+            const written_action = std.fmt.bufPrint(buf[pos..], "{d}", .{@intFromEnum(action) + 1}) catch |err| {
+                log.logf(.warning, "kitty function key action format failed: {s}", .{@errorName(err)});
+                return false;
+            };
             pos += written_action.len;
         }
     }
     buf[pos] = trailer;
     pos += 1;
-    _ = pty.write(buf[0..pos]) catch return false;
+    _ = pty.write(buf[0..pos]) catch |err| {
+        log.logf(.warning, "kitty function key write failed: {s}", .{@errorName(err)});
+        return false;
+    };
     return true;
 }
 
