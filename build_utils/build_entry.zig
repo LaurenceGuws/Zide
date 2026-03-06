@@ -4,15 +4,10 @@ const bootstrap_graph = @import("bootstrap_graph.zig");
 const app_graph = @import("app_graph.zig");
 const ide_graph = @import("ide_graph.zig");
 
-const MainModeRunSteps = step_utils.MainModeRunSteps;
-const initBuildBootstrap = bootstrap_graph.initBuildBootstrap;
-const planAppModeGraphAndInstallRuntime = app_graph.planAppModeGraphAndInstallRuntime;
-const planIdeExtendedBuildGraph = ide_graph.planIdeExtendedBuildGraph;
-
 pub fn build(b: *std.Build) void {
-    const boot = initBuildBootstrap(b);
+    const boot = bootstrap_graph.initBuildBootstrap(b);
 
-    const main_mode_run_steps: MainModeRunSteps = planAppModeGraphAndInstallRuntime(
+    const main_mode_run_steps: step_utils.MainModeRunSteps = app_graph.planAppModeGraphAndInstallRuntime(
         b,
         boot.target,
         boot.optimize,
@@ -26,7 +21,7 @@ pub fn build(b: *std.Build) void {
         boot.vcpkg_bin,
     ) orelse return;
 
-    planIdeExtendedBuildGraph(
+    ide_graph.planIdeExtendedBuildGraph(
         b,
         boot.target,
         boot.optimize,

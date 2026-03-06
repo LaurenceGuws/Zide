@@ -115,6 +115,18 @@ pub fn addGateStep(
     return step;
 }
 
+pub fn addBuildAllReportsStep(
+    b: *std.Build,
+    deps: []const *std.Build.Step,
+) *std.Build.Step {
+    return addGateStep(
+        b,
+        "report-build-all",
+        "Run all core build report/check steps",
+        deps,
+    );
+}
+
 pub fn addSystemCommandStep(
     b: *std.Build,
     step_name: []const u8,
