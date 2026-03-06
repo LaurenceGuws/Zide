@@ -156,7 +156,15 @@ fn linkCommonPlatformGraphics(exe: *std.Build.Step.Compile, target_os: std.Targe
     }
 }
 
-fn configureAppExecutable(exe: *std.Build.Step.Compile, ctx: AppLinkContext, include_treesitter: bool) void {
+fn configureAppExecutable(
+    exe: *std.Build.Step.Compile,
+    ctx: AppLinkContext,
+    target_name: []const u8,
+    include_treesitter: bool,
+) void {
+    if (std.mem.eql(u8, target_name, "zide-terminal") and include_treesitter) {
+        @panic("dependency policy violation: zide-terminal must not link tree-sitter");
+    }
     if (include_treesitter) {
         exe.linkLibrary(ctx.treesitter);
     }
@@ -357,7 +365,7 @@ pub fn build(b: *std.Build) void {
         "zide",
         "src/main.zig",
     );
-    configureAppExecutable(exe, app_link_ctx, true);
+    configureAppExecutable(exe, app_link_ctx, "zide", true);
 
     b.installArtifact(exe);
 
@@ -429,7 +437,7 @@ pub fn build(b: *std.Build) void {
         "zide-terminal",
         "src/entry_terminal.zig",
     );
-    configureAppExecutable(exe_terminal, app_link_ctx, false);
+    configureAppExecutable(exe_terminal, app_link_ctx, "zide-terminal", false);
     b.installArtifact(exe_terminal);
     const run_terminal_cmd = b.addRunArtifact(exe_terminal);
     run_terminal_cmd.step.dependOn(b.getInstallStep());
@@ -448,7 +456,7 @@ pub fn build(b: *std.Build) void {
         "zide-editor",
         "src/entry_editor.zig",
     );
-    configureAppExecutable(exe_editor, app_link_ctx, true);
+    configureAppExecutable(exe_editor, app_link_ctx, "zide-editor", true);
     b.installArtifact(exe_editor);
     const run_editor_cmd = b.addRunArtifact(exe_editor);
     run_editor_cmd.step.dependOn(b.getInstallStep());
@@ -467,7 +475,7 @@ pub fn build(b: *std.Build) void {
         "zide-ide",
         "src/entry_ide.zig",
     );
-    configureAppExecutable(exe_ide, app_link_ctx, true);
+    configureAppExecutable(exe_ide, app_link_ctx, "zide-ide", true);
     b.installArtifact(exe_ide);
     const run_ide_cmd = b.addRunArtifact(exe_ide);
     run_ide_cmd.step.dependOn(b.getInstallStep());
