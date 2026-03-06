@@ -12,24 +12,15 @@ fn parseDependencyPath(raw: []const u8) DependencySource {
     std.debug.panic("invalid -Dpath='{s}' (expected 'link' or 'zig')", .{raw});
 }
 
-fn linkSdl3(step: *std.Build.Step.Compile, dep_path: DependencySource, sdl_lib: ?*std.Build.Step.Compile) void {
-    _ = dep_path;
+fn linkSdl3(step: *std.Build.Step.Compile, sdl_lib: ?*std.Build.Step.Compile) void {
     step.linkLibrary(sdl_lib.?);
 }
 
-fn linkLua(step: *std.Build.Step.Compile, dep_path: DependencySource, lua_lib: ?*std.Build.Step.Compile) void {
-    _ = dep_path;
+fn linkLua(step: *std.Build.Step.Compile, lua_lib: ?*std.Build.Step.Compile) void {
     step.linkLibrary(lua_lib.?);
 }
 
-fn addLinuxSystemSdlInclude(step: *std.Build.Step.Compile, target_os: std.Target.Os.Tag, dep_path: DependencySource) void {
-    _ = step;
-    _ = target_os;
-    _ = dep_path;
-}
-
-fn addLuaIncludes(step: *std.Build.Step.Compile, dep_path: DependencySource, lua_lib: ?*std.Build.Step.Compile) void {
-    _ = dep_path;
+fn addLuaIncludes(step: *std.Build.Step.Compile, lua_lib: ?*std.Build.Step.Compile) void {
     step.addIncludePath(lua_lib.?.getEmittedIncludeTree());
 }
 
@@ -200,9 +191,9 @@ fn configureSdlTestTarget(
         step.addLibraryPath(.{ .cwd_relative = ctx.vcpkg_lib.? });
         step.addIncludePath(.{ .cwd_relative = ctx.vcpkg_include.? });
     }
-    linkSdl3(step, ctx.dep_path, ctx.sdl_lib);
+    linkSdl3(step, ctx.sdl_lib);
     if (include_text_stack) linkTextStack(step, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
-    if (include_lua) linkLua(step, ctx.dep_path, ctx.lua_lib);
+    if (include_lua) linkLua(step, ctx.lua_lib);
     if (include_fontconfig and ctx.target_os == .linux) {
         step.linkSystemLibrary("fontconfig");
     }
@@ -220,9 +211,8 @@ fn configureSdlTestTarget(
             addTextStackIncludes(step, ctx.use_vcpkg, ctx.target_os, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
         }
         if (include_lua) {
-            addLuaIncludes(step, ctx.dep_path, ctx.lua_lib);
+            addLuaIncludes(step, ctx.lua_lib);
         }
-        addLinuxSystemSdlInclude(step, ctx.target_os, ctx.dep_path);
     }
 }
 
@@ -241,14 +231,10 @@ fn configureAppExecutable(
     if (ctx.use_vcpkg) {
         exe.addLibraryPath(.{ .cwd_relative = ctx.vcpkg_lib.? });
         exe.addIncludePath(.{ .cwd_relative = ctx.vcpkg_include.? });
-        linkTextStack(exe, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
-        linkLua(exe, ctx.dep_path, ctx.lua_lib);
-        linkSdl3(exe, ctx.dep_path, ctx.sdl_lib);
-    } else {
-        linkTextStack(exe, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
-        linkLua(exe, ctx.dep_path, ctx.lua_lib);
-        linkSdl3(exe, ctx.dep_path, ctx.sdl_lib);
     }
+    linkTextStack(exe, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
+    linkLua(exe, ctx.lua_lib);
+    linkSdl3(exe, ctx.sdl_lib);
     if (ctx.target_os == .linux) {
         exe.linkSystemLibrary("fontconfig");
     }
@@ -258,10 +244,7 @@ fn configureAppExecutable(
     }
     if (!ctx.use_vcpkg) {
         addTextStackIncludes(exe, ctx.use_vcpkg, ctx.target_os, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
-        addLuaIncludes(exe, ctx.dep_path, ctx.lua_lib);
-        if (ctx.target_os == .linux) {
-            addLinuxSystemSdlInclude(exe, ctx.target_os, ctx.dep_path);
-        }
+        addLuaIncludes(exe, ctx.lua_lib);
     }
     linkCommonPlatformGraphics(exe, ctx.target_os);
 }
@@ -282,6 +265,47 @@ fn addRunStepForArtifact(
     const run_step = b.step(step_name, description);
     run_step.dependOn(&run_cmd.step);
     return run_step;
+}
+
+fn addCheckExecutableStep(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    name: []const u8,
+    root_source_file: []const u8,
+    step_name: []const u8,
+    description: []const u8,
+) *std.Build.Step {
+    const exe = b.addExecutable(.{
+        .name = name,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path(root_source_file),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run = b.addRunArtifact(exe);
+    const step = b.step(step_name, description);
+    step.dependOn(&run.step);
+    return step;
+}
+
+fn addRunArtifactStep(
+    b: *std.Build,
+    artifact: *std.Build.Step.Compile,
+    step_name: []const u8,
+    description: []const u8,
+) struct {
+    run: *std.Build.Step.Run,
+    step: *std.Build.Step,
+} {
+    const run = b.addRunArtifact(artifact);
+    const step = b.step(step_name, description);
+    step.dependOn(&run.step);
+    return .{
+        .run = run,
+        .step = step,
+    };
 }
 
 pub fn build(b: *std.Build) void {
@@ -632,9 +656,7 @@ pub fn build(b: *std.Build) void {
     unit_tests.root_module.addOptions("build_options", build_options);
     configureSdlTestTarget(unit_tests, app_link_ctx, true, false, false, false);
 
-    const run_tests = b.addRunArtifact(unit_tests);
-    const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_tests.step);
+    const test_step = addRunArtifactStep(b, unit_tests, "test", "Run unit tests").step;
 
     const editor_tests_root = b.createModule(.{
         .root_source_file = b.path("src/tests_main.zig"),
@@ -648,9 +670,7 @@ pub fn build(b: *std.Build) void {
     editor_tests_root.addOptions("build_options", build_options);
     configureSdlTestTarget(editor_tests, app_link_ctx, true, true, true, false);
 
-    const run_editor_tests = b.addRunArtifact(editor_tests);
-    const editor_test_step = b.step("test-editor", "Run editor-specific tests");
-    editor_test_step.dependOn(&run_editor_tests.step);
+    _ = addRunArtifactStep(b, editor_tests, "test-editor", "Run editor-specific tests").step;
 
     const config_tests = b.addTest(.{
         .root_module = b.createModule(.{
@@ -662,9 +682,7 @@ pub fn build(b: *std.Build) void {
     });
     configureSdlTestTarget(config_tests, app_link_ctx, false, true, true, true);
 
-    const run_config_tests = b.addRunArtifact(config_tests);
-    const config_test_step = b.step("test-config", "Run Lua config parser/merge tests");
-    config_test_step.dependOn(&run_config_tests.step);
+    _ = addRunArtifactStep(b, config_tests, "test-config", "Run Lua config parser/merge tests").step;
 
     const terminal_replay_exe = b.addExecutable(.{
         .name = "terminal-replay",
@@ -677,17 +695,25 @@ pub fn build(b: *std.Build) void {
     });
     configureSdlTestTarget(terminal_replay_exe, app_link_ctx, false, false, false, false);
 
-    const run_terminal_replay = b.addRunArtifact(terminal_replay_exe);
+    const terminal_replay = addRunArtifactStep(
+        b,
+        terminal_replay_exe,
+        "test-terminal-replay",
+        "Run terminal replay harness",
+    );
     if (b.args) |args| {
-        run_terminal_replay.addArgs(args);
+        terminal_replay.run.addArgs(args);
     }
-    const terminal_replay_step = b.step("test-terminal-replay", "Run terminal replay harness");
-    terminal_replay_step.dependOn(&run_terminal_replay.step);
+    _ = terminal_replay.step;
 
-    const run_terminal_replay_all = b.addRunArtifact(terminal_replay_exe);
-    run_terminal_replay_all.addArg("--all");
-    const terminal_replay_all_step = b.step("test-terminal-replay-all", "Run terminal replay harness across all fixtures");
-    terminal_replay_all_step.dependOn(&run_terminal_replay_all.step);
+    const terminal_replay_all = addRunArtifactStep(
+        b,
+        terminal_replay_exe,
+        "test-terminal-replay-all",
+        "Run terminal replay harness across all fixtures",
+    );
+    terminal_replay_all.run.addArg("--all");
+    const terminal_replay_all_step = terminal_replay_all.step;
 
     const editor_perf_headless = b.addExecutable(.{
         .name = "editor-perf-headless",
@@ -701,15 +727,16 @@ pub fn build(b: *std.Build) void {
     editor_perf_headless.linkLibrary(treesitter);
     editor_perf_headless.addIncludePath(b.path("vendor"));
     addTreeSitterIncludes(editor_perf_headless, treesitter);
-    const run_editor_perf_headless = b.addRunArtifact(editor_perf_headless);
-    if (b.args) |args| {
-        run_editor_perf_headless.addArgs(args);
-    }
-    const editor_perf_headless_step = b.step(
+    const editor_perf_headless_run = addRunArtifactStep(
+        b,
+        editor_perf_headless,
         "perf-editor-headless",
         "Run headless editor large-file performance harness",
     );
-    editor_perf_headless_step.dependOn(&run_editor_perf_headless.step);
+    if (b.args) |args| {
+        editor_perf_headless_run.run.addArgs(args);
+    }
+    _ = editor_perf_headless_run.step;
 
     const editor_perf_gate_cmd = b.addSystemCommand(&.{ "bash", "tools/perf_editor_gate.sh" });
     const editor_perf_gate_step = b.step(
@@ -727,12 +754,12 @@ pub fn build(b: *std.Build) void {
         }),
     });
     configureSdlTestTarget(terminal_kitty_query_tests, app_link_ctx, false, false, false, false);
-    const run_terminal_kitty_query_tests = b.addRunArtifact(terminal_kitty_query_tests);
-    const terminal_kitty_query_tests_step = b.step(
+    _ = addRunArtifactStep(
+        b,
+        terminal_kitty_query_tests,
         "test-terminal-kitty-query-parse",
         "Run project-integrated kitty query parse-path tests",
-    );
-    terminal_kitty_query_tests_step.dependOn(&run_terminal_kitty_query_tests.step);
+    ).step;
 
     const terminal_focus_reporting_tests = b.addTest(.{
         .root_module = b.createModule(.{
@@ -743,12 +770,12 @@ pub fn build(b: *std.Build) void {
         }),
     });
     configureSdlTestTarget(terminal_focus_reporting_tests, app_link_ctx, false, false, false, false);
-    const run_terminal_focus_reporting_tests = b.addRunArtifact(terminal_focus_reporting_tests);
-    const terminal_focus_reporting_tests_step = b.step(
+    _ = addRunArtifactStep(
+        b,
+        terminal_focus_reporting_tests,
         "test-terminal-focus-reporting",
         "Run project-integrated terminal focus reporting tests",
-    );
-    terminal_focus_reporting_tests_step.dependOn(&run_terminal_focus_reporting_tests.step);
+    ).step;
 
     const terminal_workspace_tests = b.addTest(.{
         .root_module = b.createModule(.{
@@ -759,12 +786,12 @@ pub fn build(b: *std.Build) void {
         }),
     });
     configureSdlTestTarget(terminal_workspace_tests, app_link_ctx, false, false, false, false);
-    const run_terminal_workspace_tests = b.addRunArtifact(terminal_workspace_tests);
-    const terminal_workspace_tests_step = b.step(
+    _ = addRunArtifactStep(
+        b,
+        terminal_workspace_tests,
         "test-terminal-workspace",
         "Run terminal workspace lifecycle tests",
-    );
-    terminal_workspace_tests_step.dependOn(&run_terminal_workspace_tests.step);
+    ).step;
 
     const terminal_ffi_tests = b.addTest(.{
         .root_module = b.createModule(.{
@@ -775,12 +802,12 @@ pub fn build(b: *std.Build) void {
         }),
     });
     addVendorAndStb(terminal_ffi_tests);
-    const run_terminal_ffi_tests = b.addRunArtifact(terminal_ffi_tests);
-    const terminal_ffi_tests_step = b.step(
+    _ = addRunArtifactStep(
+        b,
+        terminal_ffi_tests,
         "test-terminal-ffi",
         "Run terminal FFI bridge tests",
-    );
-    terminal_ffi_tests_step.dependOn(&run_terminal_ffi_tests.step);
+    ).step;
 
     const editor_ffi_tests = b.addTest(.{
         .root_module = b.createModule(.{
@@ -793,12 +820,12 @@ pub fn build(b: *std.Build) void {
     editor_ffi_tests.linkLibrary(treesitter);
     addVendorAndStb(editor_ffi_tests);
     addTreeSitterIncludes(editor_ffi_tests, treesitter);
-    const run_editor_ffi_tests = b.addRunArtifact(editor_ffi_tests);
-    const editor_ffi_tests_step = b.step(
+    _ = addRunArtifactStep(
+        b,
+        editor_ffi_tests,
         "test-editor-ffi",
         "Run editor FFI bridge tests",
-    );
-    editor_ffi_tests_step.dependOn(&run_editor_ffi_tests.step);
+    ).step;
 
     const terminal_ffi_pty_smoke = b.addExecutable(.{
         .name = "terminal-ffi-pty-smoke",
@@ -810,64 +837,62 @@ pub fn build(b: *std.Build) void {
         }),
     });
     addVendorAndStb(terminal_ffi_pty_smoke);
-    const run_terminal_ffi_pty_smoke = b.addRunArtifact(terminal_ffi_pty_smoke);
-    const terminal_ffi_pty_smoke_step = b.step(
+    _ = addRunArtifactStep(
+        b,
+        terminal_ffi_pty_smoke,
         "test-terminal-ffi-pty",
         "Run PTY-backed terminal FFI smoke",
+    ).step;
+
+    const terminal_import_check_step = addCheckExecutableStep(
+        b,
+        target,
+        optimize,
+        "terminal-import-check",
+        "tools/terminal_import_check.zig",
+        "check-terminal-imports",
+        "Check terminal module import layering",
     );
-    terminal_ffi_pty_smoke_step.dependOn(&run_terminal_ffi_pty_smoke.step);
 
-    const terminal_import_check = b.addExecutable(.{
-        .name = "terminal-import-check",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("tools/terminal_import_check.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    const run_terminal_import_check = b.addRunArtifact(terminal_import_check);
-    const terminal_import_check_step = b.step("check-terminal-imports", "Check terminal module import layering");
-    terminal_import_check_step.dependOn(&run_terminal_import_check.step);
+    const editor_import_check_step = addCheckExecutableStep(
+        b,
+        target,
+        optimize,
+        "editor-import-check",
+        "tools/editor_import_check.zig",
+        "check-editor-imports",
+        "Check editor module import layering",
+    );
 
-    const editor_import_check = b.addExecutable(.{
-        .name = "editor-import-check",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("tools/editor_import_check.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    const run_editor_import_check = b.addRunArtifact(editor_import_check);
-    const editor_import_check_step = b.step("check-editor-imports", "Check editor module import layering");
-    editor_import_check_step.dependOn(&run_editor_import_check.step);
+    const app_import_check_step = addCheckExecutableStep(
+        b,
+        target,
+        optimize,
+        "app-import-check",
+        "tools/app_import_check.zig",
+        "check-app-imports",
+        "Check app-level and mode-layer import boundaries",
+    );
 
-    const app_import_check = b.addExecutable(.{
-        .name = "app-import-check",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("tools/app_import_check.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    const run_app_import_check = b.addRunArtifact(app_import_check);
-    const app_import_check_step = b.step("check-app-imports", "Check app-level and mode-layer import boundaries");
-    app_import_check_step.dependOn(&run_app_import_check.step);
+    const input_import_check_step = addCheckExecutableStep(
+        b,
+        target,
+        optimize,
+        "input-import-check",
+        "tools/input_import_check.zig",
+        "check-input-imports",
+        "Check input module import layering",
+    );
 
-    const run_input_import_check = b.addRunArtifact(app_import_check);
-    const input_import_check_step = b.step("check-input-imports", "Check input module import layering");
-    input_import_check_step.dependOn(&run_input_import_check.step);
-
-    const build_dep_policy_check = b.addExecutable(.{
-        .name = "build-dep-policy-check",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("tools/build_dep_policy_check.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    const run_build_dep_policy_check = b.addRunArtifact(build_dep_policy_check);
-    const build_dep_policy_step = b.step("check-build-deps", "Check app target dependency policy wiring");
-    build_dep_policy_step.dependOn(&run_build_dep_policy_check.step);
+    const build_dep_policy_step = addCheckExecutableStep(
+        b,
+        target,
+        optimize,
+        "build-dep-policy-check",
+        "tools/build_dep_policy_check.zig",
+        "check-build-deps",
+        "Check app target dependency policy wiring",
+    );
 
     const build_dep_report_cmd = b.addSystemCommand(&.{ "bash", "-lc", "rg -n \"configureAppExecutable\\(exe(_terminal|_editor|_ide)?|dependency policy violation\" build.zig" });
     const build_dep_report_step = b.step("report-build-deps", "Report app target dependency policy wiring");
@@ -932,10 +957,14 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
-    const run_grammar_update = b.addRunArtifact(grammar_update);
+    const grammar_update_run = addRunArtifactStep(
+        b,
+        grammar_update,
+        "grammar-update",
+        "Build and install tree-sitter grammar packs",
+    );
     if (b.args) |args| {
-        run_grammar_update.addArgs(args);
+        grammar_update_run.run.addArgs(args);
     }
-    const grammar_update_step = b.step("grammar-update", "Build and install tree-sitter grammar packs");
-    grammar_update_step.dependOn(&run_grammar_update.step);
+    _ = grammar_update_run.step;
 }
