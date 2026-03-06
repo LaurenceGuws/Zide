@@ -27,6 +27,7 @@ tic -x -o ~/.terminfo terminfo/zide.terminfo
 
 After installation, new shells launched inside Zide should prefer `TERM=zide-256color`.
 If the entry is not installed, Zide falls back to `xterm-256color`.
+For packaged installs that place entries under `/usr/share/terminfo`, `TERMINFO` is typically unset by design.
 
 The initial `zide` terminfo entry intentionally keeps `xterm-256color` as its
 base and adds only audited extensions:

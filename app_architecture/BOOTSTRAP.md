@@ -125,9 +125,10 @@ Mode behavior:
 - `ide`: plans full IDE build graph.
 - `terminal` / `editor`: plan only selected app target + run step for lower compile overhead.
 - `zig build report-build-mode`: prints the selected mode and graph path.
-- `zig build report-build-bootstrap`: prints resolved bootstrap context (mode/path/os/vcpkg/tree-sitter flag).
+- `zig build report-build-bootstrap`: prints resolved bootstrap context (mode/os/vcpkg/tree-sitter flag).
 - `zig build report-build-focused-policy`: asserts focused-mode dependency policy wiring.
 - `zig build report-build-target`: prints resolved target tuple + optimize mode.
+- `zig build check-build-report-tools`: compile-checks all core build report tools.
 - `zig build report-build-all`: runs the core build reports/checks in one step.
 - Build graph moduleization:
   - `build.zig`: thin forwarder into `build_utils/build_entry.zig`.
@@ -137,7 +138,7 @@ Mode behavior:
   - `build_utils/ide_graph.zig`: IDE-only extended graph (ffi/tests/tools/gates).
   - `build_utils/step_reports.zig`: focused constructors for build report/check top-level steps.
 
-Dependency source scope:
+Dependency source scope (stable):
 - SDL3, Lua, and tree-sitter core are Zig package managed in normal flow.
 - FreeType/HarfBuzz are Zig package managed on non-vcpkg paths.
 - Windows continues to use vcpkg integration for platform-native dependency flow.

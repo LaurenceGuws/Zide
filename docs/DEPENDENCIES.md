@@ -37,6 +37,7 @@ Behavior:
 - `ide` (default): full IDE app graph (tests/tools/ffi steps available).
 - `terminal`: terminal app graph only (IDE-only graph planning is skipped).
 - `editor`: editor app graph only (IDE-only graph planning is skipped).
+- `zig build check-build-report-tools`: compile-checks core build report tools.
 - `zig build report-build-all`: runs core mode/bootstrap/policy/target reports in one step.
 
 Notes:
