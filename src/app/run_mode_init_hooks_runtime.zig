@@ -1,7 +1,7 @@
 const app_run_mode_init = @import("run_mode_init.zig");
-const app_editor_seed = @import("editor_seed.zig");
 const app_terminal_tab_bar_sync_runtime = @import("terminal_tab_bar_sync_runtime.zig");
 const app_terminal_tabs_runtime = @import("terminal_tabs_runtime.zig");
+const app_modes = @import("modes/mod.zig");
 
 pub fn handle(state: anytype) !void {
     try handleWithMode(state, null, .ide);
@@ -70,9 +70,11 @@ fn handleWithMode(
             }.call,
             .seed_default_welcome_buffer = struct {
                 fn call(raw: *anyopaque) !void {
+                    if (comptime forced_mode != null and !app_modes.ide.supportsEditorSurface(forced_mode.?)) return;
                     const rs = @as(*@TypeOf(runtime_state), @ptrCast(@alignCast(raw)));
                     const s = rs.state;
                     if (s.editors.items.len > 0) {
+                        const app_editor_seed = @import("editor_seed.zig");
                         const editor = s.editors.items[0];
                         try app_editor_seed.seedDefaultWelcomeBuffer(editor);
                     }
