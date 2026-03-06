@@ -263,6 +263,47 @@ test "terminal selection survives output while scrolled" {
     }
 }
 
+test "terminal view cache selection clamps row end to last content column" {
+    const allocator = std.testing.allocator;
+
+    var session = try term_mod.TerminalSession.init(allocator, 2, 8);
+    defer session.deinit();
+
+    term_mod.debugFeedBytes(session, "ab\n");
+    session.startSelection(0, 0);
+    session.updateSelection(0, 7);
+    session.finishSelection();
+    session.updateViewCacheForScrollLocked();
+
+    const cache = session.renderCache();
+    try std.testing.expect(cache.selection_active);
+    try std.testing.expectEqual(@as(usize, 2), cache.selection_rows.items.len);
+    try std.testing.expect(cache.selection_rows.items[0]);
+    try std.testing.expectEqual(@as(u16, 0), cache.selection_cols_start.items[0]);
+    try std.testing.expectEqual(@as(u16, 1), cache.selection_cols_end.items[0]);
+}
+
+test "terminal view cache suppresses blank rows in multi-row selection overlay" {
+    const allocator = std.testing.allocator;
+
+    var session = try term_mod.TerminalSession.init(allocator, 2, 8);
+    defer session.deinit();
+
+    term_mod.debugFeedBytes(session, "ab\n");
+    session.startSelection(0, 0);
+    session.updateSelection(1, 7);
+    session.finishSelection();
+    session.updateViewCacheForScrollLocked();
+
+    const cache = session.renderCache();
+    try std.testing.expect(cache.selection_active);
+    try std.testing.expectEqual(@as(usize, 2), cache.selection_rows.items.len);
+    try std.testing.expect(cache.selection_rows.items[0]);
+    try std.testing.expect(!cache.selection_rows.items[1]);
+    try std.testing.expectEqual(@as(u16, 0), cache.selection_cols_start.items[0]);
+    try std.testing.expectEqual(@as(u16, 1), cache.selection_cols_end.items[0]);
+}
+
 test "terminal reflow remaps saved cursor" {
     const allocator = std.testing.allocator;
 
