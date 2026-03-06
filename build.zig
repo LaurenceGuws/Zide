@@ -7,19 +7,12 @@ const ide_graph = @import("build_utils/ide_graph.zig");
 const MainModeRunSteps = step_utils.MainModeRunSteps;
 const installVcpkgRuntimeDlls = windows_runtime.installVcpkgRuntimeDlls;
 const initBuildBootstrap = bootstrap_graph.initBuildBootstrap;
-const addBuildModeReportStep = step_utils.addBuildModeReportStep;
 const planIdePrimaryAppGraph = app_graph.planIdePrimaryAppGraph;
 const planFocusedRuntimeAppGraph = app_graph.planFocusedRuntimeAppGraph;
 const planIdeExtendedBuildGraph = ide_graph.planIdeExtendedBuildGraph;
 
 pub fn build(b: *std.Build) void {
     const boot = initBuildBootstrap(b);
-    _ = addBuildModeReportStep(
-        b,
-        boot.target,
-        boot.optimize,
-        boot.build_options,
-    );
 
     const main_mode_run_steps: MainModeRunSteps = switch (boot.build_mode) {
         .ide => planIdePrimaryAppGraph(
