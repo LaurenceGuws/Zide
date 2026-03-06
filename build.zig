@@ -377,7 +377,6 @@ pub fn build(b: *std.Build) void {
     });
     exe_terminal.root_module.addOptions("build_options", build_options);
     exe_terminal.root_module.addImport("zlua", zlua_module);
-    exe_terminal.linkLibrary(treesitter);
     if (use_vcpkg) {
         exe_terminal.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
         exe_terminal.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
@@ -393,7 +392,6 @@ pub fn build(b: *std.Build) void {
         exe_terminal.linkSystemLibrary("fontconfig");
     }
     exe_terminal.addIncludePath(b.path("vendor"));
-    addTreeSitterIncludes(exe_terminal, treesitter);
     if (!use_vcpkg) {
         addTextStackIncludes(exe_terminal, use_vcpkg, target_os, dep_path, freetype_lib, harfbuzz_lib);
         addLuaIncludes(exe_terminal, dep_path, lua_lib);
