@@ -6,10 +6,13 @@ const vcpkg_paths = @import("vcpkg_paths.zig");
 const dependency_resolver = @import("dependency_resolver.zig");
 const mode_specs = @import("mode_specs.zig");
 const target_profile = @import("target_profile.zig");
+const step_utils = @import("step_utils.zig");
 
 const AppLinkContext = app_types.AppLinkContext;
 const parseDependencyPath = dependency_path.parseDependencyPath;
 const resolveVcpkgPaths = vcpkg_paths.resolveVcpkgPaths;
+const addBuildModeReportStep = step_utils.addBuildModeReportStep;
+const addBuildBootstrapReportStep = step_utils.addBuildBootstrapReportStep;
 
 pub const BuildBootstrap = struct {
     target: std.Build.ResolvedTarget,
@@ -65,11 +68,12 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
     }
 
     const build_options = b.addOptions();
+    const use_vcpkg = (target_os == .windows);
     build_options.addOption([]const u8, "renderer_backend", renderer_backend);
     build_options.addOption([]const u8, "dependency_path", dep_path_raw);
     build_options.addOption([]const u8, "build_mode", build_mode_raw);
-
-    const use_vcpkg = (target_os == .windows);
+    build_options.addOption([]const u8, "target_os", @tagName(target_os));
+    build_options.addOption(bool, "use_vcpkg", use_vcpkg);
     const vcpkg_root_opt = b.option([]const u8, "vcpkg-root", "Path to vcpkg root") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_ROOT") catch null;
     const vcpkg_triplet_opt = b.option([]const u8, "vcpkg-triplet", "vcpkg triplet (e.g. x64-windows)") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_DEFAULT_TRIPLET") catch null;
 
@@ -95,6 +99,20 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
     if (build_mode != .terminal and deps.treesitter == null) {
         @panic("dependency policy violation: non-terminal modes must resolve tree-sitter");
     }
+    build_options.addOption(bool, "treesitter_enabled", deps.treesitter != null);
+
+    _ = addBuildModeReportStep(
+        b,
+        target,
+        optimize,
+        build_options,
+    );
+    _ = addBuildBootstrapReportStep(
+        b,
+        target,
+        optimize,
+        build_options,
+    );
 
     const app_link_ctx = AppLinkContext{
         .dep_path = dep_path,

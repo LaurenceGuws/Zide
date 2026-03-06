@@ -179,3 +179,27 @@ pub fn addBuildModeReportStep(
     step.dependOn(&run.step);
     return step;
 }
+
+pub fn addBuildBootstrapReportStep(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    build_options: *std.Build.Step.Options,
+) *std.Build.Step {
+    const exe = b.addExecutable(.{
+        .name = "build-bootstrap-report",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/build_bootstrap_report.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    exe.root_module.addOptions("build_options", build_options);
+    const run = b.addRunArtifact(exe);
+    const step = b.step(
+        "report-build-bootstrap",
+        "Report resolved build bootstrap context",
+    );
+    step.dependOn(&run.step);
+    return step;
+}
