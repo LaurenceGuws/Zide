@@ -41,6 +41,18 @@ Important:
 - The app still links `libc` and platform/system libraries (for example on Linux: `GL`, `fontconfig`, `m`, `pthread`, `dl`, `rt`, and `z` on the zig text-stack path).
 - So this migration reduces host package coupling and version drift, but it is not a pure-Zig runtime/linkage yet.
 
+## Terminal bundle runtime notes (Linux)
+
+`zig build bundle-terminal` now ships and uses Zide-owned terminfo inside the bundle:
+- Compiles `terminfo/zide.terminfo` with `tic -x` into `terminal-bundle/terminfo`.
+- Launcher exports `TERMINFO` / `TERMINFO_DIRS` with the bundled directory first.
+- PTY chooses `TERM=zide-256color` (alias-compatible with `zide` entry).
+
+Shell startup consistency for bundled launcher:
+- Launcher captures caller cwd into `ZIDE_LAUNCH_CWD`.
+- PTY child applies `chdir(ZIDE_LAUNCH_CWD)` and synchronizes `PWD`.
+- This avoids shell startup drift between direct binary (`./zig-out/bin/zide-terminal`) and installed bundle launcher paths.
+
 Lua implementation status (config parser backend):
 - The config parser backend is now fixed to native `ziglua`.
 - `-Dlua-impl` is no longer a supported build selector.

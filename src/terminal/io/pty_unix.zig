@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const posix = std.posix;
 const PtySize = @import("pty.zig").PtySize;
+const app_logger = @import("../../app_logger.zig");
 
 const c = @cImport({
     @cInclude("unistd.h");
@@ -300,9 +301,29 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
 
     const shell_path = shell orelse defaultShell();
     const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
+    const env_log = app_logger.logger("terminal.env");
 
     const term = chooseTermName(terminfoExists);
     _ = c.setenv("TERM", term, 1);
+    env_log.logf(
+        "spawn begin shell={s} TERM={s} TERMINFO={s} TERMINFO_DIRS={s} launch_cwd={s}",
+        .{
+            shell_path,
+            term,
+            getenvOrUnset("TERMINFO"),
+            getenvOrUnset("TERMINFO_DIRS"),
+            getenvOrUnset("ZIDE_LAUNCH_CWD"),
+        },
+    );
+    if (std.c.getenv("ZIDE_LAUNCH_CWD")) |cwd_c| {
+        const cwd = std.mem.sliceTo(cwd_c, 0);
+        posix.chdir(cwd) catch |err| {
+            env_log.logf("spawn chdir failed cwd={s} err={s}", .{ cwd, @errorName(err) });
+            return err;
+        };
+        _ = c.setenv("PWD", cwd_c, 1);
+        env_log.logf("spawn chdir ok cwd={s}", .{cwd});
+    }
     if (std.c.getenv("INPUTRC") == null) {
         const pid = c.getpid();
         var path_buf: [128:0]u8 = undefined;
@@ -325,6 +346,7 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
     }
 
     const argv = [_:null]?[*:0]const u8{shell_path.ptr};
+    env_log.logf("spawn exec shell={s}", .{shell_path});
     _ = posix.execvpeZ(shell_path.ptr, &argv, envp) catch {};
     posix.exit(127);
 }
@@ -357,6 +379,7 @@ fn terminfoExists(name: []const u8) bool {
 }
 
 fn chooseTermName(existsFn: fn ([]const u8) bool) [:0]const u8 {
+    if (existsFn("zide-256color")) return "zide-256color";
     if (existsFn("zide")) return "zide";
     if (existsFn("xterm-kitty")) return "xterm-kitty";
     return "xterm-256color";
@@ -380,13 +403,18 @@ fn terminfoInDirSlice(dir: []const u8, name: []const u8) bool {
     }
 }
 
+fn getenvOrUnset(name: [*:0]const u8) []const u8 {
+    if (std.c.getenv(name)) |value| return std.mem.sliceTo(value, 0);
+    return "<unset>";
+}
+
 test "chooseTermName prefers zide terminfo" {
     const Exists = struct {
         fn has(name: []const u8) bool {
-            return std.mem.eql(u8, name, "zide") or std.mem.eql(u8, name, "xterm-kitty");
+            return std.mem.eql(u8, name, "zide-256color") or std.mem.eql(u8, name, "zide") or std.mem.eql(u8, name, "xterm-kitty");
         }
     };
-    try std.testing.expectEqualStrings("zide", chooseTermName(Exists.has));
+    try std.testing.expectEqualStrings("zide-256color", chooseTermName(Exists.has));
 }
 
 test "chooseTermName falls back to xterm-kitty before xterm-256color" {

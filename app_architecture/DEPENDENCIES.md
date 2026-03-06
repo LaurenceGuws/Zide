@@ -13,6 +13,11 @@ Track practical migration details for replacing system-managed native dependenci
 - Build/runtime still link native C/C++ libraries and system libs; package migration changes sourcing/pinning, not language/runtime ABI.
 - `zide-terminal` is now intentionally detached from tree-sitter linking/plumbing; tree-sitter remains linked for main/editor/ide and editor-facing test/ffi targets.
 - Build hygiene guardrail: `zig build check-build-deps` enforces the app target dependency policy in `build.zig` (including terminal no-tree-sitter rule).
+- Linux terminal bundle (`zig build bundle-terminal`) now compiles/ships project-owned terminfo and launches with stable shell cwd semantics:
+  - bundles `zide.terminfo` via `tic -x` into `terminal-bundle/terminfo`,
+  - exports bundled `TERMINFO`/`TERMINFO_DIRS` first,
+  - runtime TERM preference is `zide-256color` (alias-compatible with `zide`),
+  - launcher-provided cwd is applied in PTY child with matching `PWD` sync.
 
 ## Implemented package integration
 
