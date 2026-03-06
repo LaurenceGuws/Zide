@@ -1919,9 +1919,13 @@ const QueryCache = struct {
                 plain_count += 1;
                 if (plain_examples_written < max_plain_examples) {
                     if (plain_examples_written > 0) {
-                        plain_examples.appendSlice(self.allocator, ", ") catch {};
+                        plain_examples.appendSlice(self.allocator, ", ") catch |err| {
+                            log.logf(.warning, "plain capture examples append separator failed: {s}", .{@errorName(err)});
+                        };
                     }
-                    plain_examples.appendSlice(self.allocator, name) catch {};
+                    plain_examples.appendSlice(self.allocator, name) catch |err| {
+                        log.logf(.warning, "plain capture examples append name failed: {s}", .{@errorName(err)});
+                    };
                     plain_examples_written += 1;
                 }
             } else {

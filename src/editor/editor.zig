@@ -1333,7 +1333,10 @@ pub const Editor = struct {
         if (self.selections.items.len > 0) {
             if (self.hasOnlyCaretSelections()) {
                 _ = try self.beginTrackedUndoGroup();
-                errdefer self.endTrackedUndoGroup() catch {};
+                errdefer self.endTrackedUndoGroup() catch |err| {
+                    const log = app_logger.logger("editor.core");
+                    log.logf(.warning, "tracked undo cleanup failed (insert char caret set): {s}", .{@errorName(err)});
+                };
                 var caret_offsets = try self.collectCaretOffsetsDescending();
                 defer caret_offsets.deinit(self.allocator);
                 var new_offsets = std.ArrayList(usize).empty;
@@ -1354,7 +1357,10 @@ pub const Editor = struct {
                 return;
             }
             _ = try self.beginTrackedUndoGroup();
-            errdefer self.endTrackedUndoGroup() catch {};
+            errdefer self.endTrackedUndoGroup() catch |err| {
+                const log = app_logger.logger("editor.core");
+                log.logf(.warning, "tracked undo cleanup failed (insert char selection set): {s}", .{@errorName(err)});
+            };
             const selections = try self.duplicateNormalizedSelectionsDescending();
             defer self.allocator.free(selections);
             const bytes = [_]u8{char};
@@ -1374,7 +1380,10 @@ pub const Editor = struct {
         }
         if (self.selection != null) {
             _ = try self.beginTrackedUndoGroup();
-            errdefer self.endTrackedUndoGroup() catch {};
+            errdefer self.endTrackedUndoGroup() catch |err| {
+                const log = app_logger.logger("editor.core");
+                log.logf(.warning, "tracked undo cleanup failed (insert char primary selection): {s}", .{@errorName(err)});
+            };
             try self.deleteSelection();
             const bytes = [_]u8{char};
             const insert_start = self.cursor.offset;
@@ -1405,7 +1414,10 @@ pub const Editor = struct {
         if (self.selections.items.len > 0) {
             if (self.hasOnlyCaretSelections()) {
                 _ = try self.beginTrackedUndoGroup();
-                errdefer self.endTrackedUndoGroup() catch {};
+                errdefer self.endTrackedUndoGroup() catch |err| {
+                    const log = app_logger.logger("editor.core");
+                    log.logf(.warning, "tracked undo cleanup failed (insert text caret set): {s}", .{@errorName(err)});
+                };
                 var caret_offsets = try self.collectCaretOffsetsDescending();
                 defer caret_offsets.deinit(self.allocator);
                 var new_offsets = std.ArrayList(usize).empty;
@@ -1425,7 +1437,10 @@ pub const Editor = struct {
                 return;
             }
             _ = try self.beginTrackedUndoGroup();
-            errdefer self.endTrackedUndoGroup() catch {};
+            errdefer self.endTrackedUndoGroup() catch |err| {
+                const log = app_logger.logger("editor.core");
+                log.logf(.warning, "tracked undo cleanup failed (insert text selection set): {s}", .{@errorName(err)});
+            };
             const selections = try self.duplicateNormalizedSelectionsDescending();
             defer self.allocator.free(selections);
             const rect_lines = try self.rectangularPasteLines(text);
@@ -1450,7 +1465,10 @@ pub const Editor = struct {
         }
         if (self.selection != null) {
             _ = try self.beginTrackedUndoGroup();
-            errdefer self.endTrackedUndoGroup() catch {};
+            errdefer self.endTrackedUndoGroup() catch |err| {
+                const log = app_logger.logger("editor.core");
+                log.logf(.warning, "tracked undo cleanup failed (insert text primary selection): {s}", .{@errorName(err)});
+            };
             try self.deleteSelection();
             const insert_start = self.cursor.offset;
             const insert_point = self.pointForByte(insert_start);
@@ -1482,7 +1500,10 @@ pub const Editor = struct {
         self.preferred_visual_col = null;
         if (self.hasOnlyCaretSelections()) {
             _ = try self.beginTrackedUndoGroup();
-            errdefer self.endTrackedUndoGroup() catch {};
+            errdefer self.endTrackedUndoGroup() catch |err| {
+                const log = app_logger.logger("editor.core");
+                log.logf(.warning, "tracked undo cleanup failed (backspace caret set): {s}", .{@errorName(err)});
+            };
             var caret_offsets = try self.collectCaretOffsetsDescending();
             defer caret_offsets.deinit(self.allocator);
             var new_offsets = std.ArrayList(usize).empty;
@@ -1513,7 +1534,10 @@ pub const Editor = struct {
         }
         if (self.selections.items.len > 0) {
             _ = try self.beginTrackedUndoGroup();
-            errdefer self.endTrackedUndoGroup() catch {};
+            errdefer self.endTrackedUndoGroup() catch |err| {
+                const log = app_logger.logger("editor.core");
+                log.logf(.warning, "tracked undo cleanup failed (backspace selection set): {s}", .{@errorName(err)});
+            };
             const selections = try self.duplicateNormalizedSelectionsDescending();
             defer self.allocator.free(selections);
             var ops = std.ArrayList(SelectionReplacementOp).empty;
@@ -1559,7 +1583,10 @@ pub const Editor = struct {
         self.preferred_visual_col = null;
         if (self.hasOnlyCaretSelections()) {
             _ = try self.beginTrackedUndoGroup();
-            errdefer self.endTrackedUndoGroup() catch {};
+            errdefer self.endTrackedUndoGroup() catch |err| {
+                const log = app_logger.logger("editor.core");
+                log.logf(.warning, "tracked undo cleanup failed (delete forward caret set): {s}", .{@errorName(err)});
+            };
             var caret_offsets = try self.collectCaretOffsetsDescending();
             defer caret_offsets.deinit(self.allocator);
             var new_offsets = std.ArrayList(usize).empty;
@@ -1591,7 +1618,10 @@ pub const Editor = struct {
         }
         if (self.selections.items.len > 0) {
             _ = try self.beginTrackedUndoGroup();
-            errdefer self.endTrackedUndoGroup() catch {};
+            errdefer self.endTrackedUndoGroup() catch |err| {
+                const log = app_logger.logger("editor.core");
+                log.logf(.warning, "tracked undo cleanup failed (delete forward selection set): {s}", .{@errorName(err)});
+            };
             const selections = try self.duplicateNormalizedSelectionsDescending();
             defer self.allocator.free(selections);
             var ops = std.ArrayList(SelectionReplacementOp).empty;
@@ -1642,7 +1672,10 @@ pub const Editor = struct {
         }
         if (self.selections.items.len > 0) {
             _ = try self.beginTrackedUndoGroup();
-            errdefer self.endTrackedUndoGroup() catch {};
+            errdefer self.endTrackedUndoGroup() catch |err| {
+                const log = app_logger.logger("editor.core");
+                log.logf(.warning, "tracked undo cleanup failed (delete selection set): {s}", .{@errorName(err)});
+            };
             const selections = try self.duplicateNormalizedSelectionsDescending();
             defer self.allocator.free(selections);
             var ops = std.ArrayList(SelectionReplacementOp).empty;
