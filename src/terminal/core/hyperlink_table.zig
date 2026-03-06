@@ -1,4 +1,7 @@
+const app_logger = @import("../../app_logger.zig");
+
 pub fn appendHyperlink(self: anytype, uri: []const u8, max_hyperlinks: usize) ?u32 {
+    const log = app_logger.logger("terminal.hyperlink");
     if (uri.len == 0) return 0;
     if (self.hyperlink_table.items.len >= max_hyperlinks) {
         for (self.hyperlink_table.items) |link| {
@@ -6,9 +9,13 @@ pub fn appendHyperlink(self: anytype, uri: []const u8, max_hyperlinks: usize) ?u
         }
         self.hyperlink_table.clearRetainingCapacity();
     }
-    const duped = self.allocator.dupe(u8, uri) catch return null;
+    const duped = self.allocator.dupe(u8, uri) catch |err| {
+        log.logf(.warning, "hyperlink uri alloc failed len={d}: {s}", .{ uri.len, @errorName(err) });
+        return null;
+    };
     _ = self.hyperlink_table.append(self.allocator, .{ .uri = duped }) catch {
         self.allocator.free(duped);
+        log.logf(.warning, "hyperlink table append failed len={d}", .{uri.len});
         return null;
     };
     return @intCast(self.hyperlink_table.items.len);
