@@ -35,3 +35,4 @@ vcpkg_installed/
 packaging/local/**/pkg/
 packaging/local/**/src/
 packaging/local/**/*.pkg.tar.*
+fixtures/editor/stress/
