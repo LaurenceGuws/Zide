@@ -192,40 +192,78 @@ fn writeReadStatus(self: anytype, pty: anytype, terminator: OscTerminator, id: [
 }
 
 fn writeReadStatusWithId(self: anytype, pty: anytype, terminator: OscTerminator, id: []const u8, status: []const u8) void {
+    const log = app_logger.logger("terminal.osc");
     var seq = std.ArrayList(u8).empty;
     defer seq.deinit(self.allocator);
-    _ = seq.appendSlice(self.allocator, "\x1b]5522;type=read:status=") catch return;
-    _ = seq.appendSlice(self.allocator, status) catch return;
+    _ = seq.appendSlice(self.allocator, "\x1b]5522;type=read:status=") catch |err| {
+        log.logf(.warning, "osc5522 status prefix append failed: {s}", .{@errorName(err)});
+        return;
+    };
+    _ = seq.appendSlice(self.allocator, status) catch |err| {
+        log.logf(.warning, "osc5522 status text append failed: {s}", .{@errorName(err)});
+        return;
+    };
     if (id.len > 0) {
-        _ = seq.appendSlice(self.allocator, ":id=") catch return;
-        _ = seq.appendSlice(self.allocator, id) catch return;
+        _ = seq.appendSlice(self.allocator, ":id=") catch |err| {
+            log.logf(.warning, "osc5522 status id prefix append failed: {s}", .{@errorName(err)});
+            return;
+        };
+        _ = seq.appendSlice(self.allocator, id) catch |err| {
+            log.logf(.warning, "osc5522 status id append failed: {s}", .{@errorName(err)});
+            return;
+        };
     }
     appendOscTerminator(self, &seq, terminator);
     writeSeq(pty, seq.items);
 }
 
 fn writeReadData(self: anytype, pty: anytype, terminator: OscTerminator, id: []const u8, mime: []const u8, payload: []const u8) void {
+    const log = app_logger.logger("terminal.osc");
     const mime_b64_len = std.base64.standard.Encoder.calcSize(mime.len);
     const payload_b64_len = std.base64.standard.Encoder.calcSize(payload.len);
     var mime_b64 = std.ArrayList(u8).empty;
     defer mime_b64.deinit(self.allocator);
     var payload_b64 = std.ArrayList(u8).empty;
     defer payload_b64.deinit(self.allocator);
-    mime_b64.resize(self.allocator, mime_b64_len) catch return;
-    payload_b64.resize(self.allocator, payload_b64_len) catch return;
+    mime_b64.resize(self.allocator, mime_b64_len) catch |err| {
+        log.logf(.warning, "osc5522 data mime buffer resize failed: {s}", .{@errorName(err)});
+        return;
+    };
+    payload_b64.resize(self.allocator, payload_b64_len) catch |err| {
+        log.logf(.warning, "osc5522 data payload buffer resize failed: {s}", .{@errorName(err)});
+        return;
+    };
     _ = std.base64.standard.Encoder.encode(mime_b64.items, mime);
     _ = std.base64.standard.Encoder.encode(payload_b64.items, payload);
 
     var seq = std.ArrayList(u8).empty;
     defer seq.deinit(self.allocator);
-    _ = seq.appendSlice(self.allocator, "\x1b]5522;type=read:status=DATA:mime=") catch return;
-    _ = seq.appendSlice(self.allocator, mime_b64.items) catch return;
+    _ = seq.appendSlice(self.allocator, "\x1b]5522;type=read:status=DATA:mime=") catch |err| {
+        log.logf(.warning, "osc5522 data prefix append failed: {s}", .{@errorName(err)});
+        return;
+    };
+    _ = seq.appendSlice(self.allocator, mime_b64.items) catch |err| {
+        log.logf(.warning, "osc5522 data mime append failed: {s}", .{@errorName(err)});
+        return;
+    };
     if (id.len > 0) {
-        _ = seq.appendSlice(self.allocator, ":id=") catch return;
-        _ = seq.appendSlice(self.allocator, id) catch return;
+        _ = seq.appendSlice(self.allocator, ":id=") catch |err| {
+            log.logf(.warning, "osc5522 data id prefix append failed: {s}", .{@errorName(err)});
+            return;
+        };
+        _ = seq.appendSlice(self.allocator, id) catch |err| {
+            log.logf(.warning, "osc5522 data id append failed: {s}", .{@errorName(err)});
+            return;
+        };
     }
-    _ = seq.append(self.allocator, ';') catch return;
-    _ = seq.appendSlice(self.allocator, payload_b64.items) catch return;
+    _ = seq.append(self.allocator, ';') catch |err| {
+        log.logf(.warning, "osc5522 data separator append failed: {s}", .{@errorName(err)});
+        return;
+    };
+    _ = seq.appendSlice(self.allocator, payload_b64.items) catch |err| {
+        log.logf(.warning, "osc5522 data payload append failed: {s}", .{@errorName(err)});
+        return;
+    };
     appendOscTerminator(self, &seq, terminator);
     writeSeq(pty, seq.items);
 }
