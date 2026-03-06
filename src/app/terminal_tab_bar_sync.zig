@@ -1,5 +1,26 @@
+const std = @import("std");
 const terminal_mod = @import("../terminal/core/terminal.zig");
 const widgets = @import("../ui/widgets.zig");
+
+fn terminalTabLabel(session: *terminal_mod.TerminalSession) []const u8 {
+    const title = session.currentTitle();
+    if (title.len > 0 and !std.mem.eql(u8, title, "Terminal")) return title;
+
+    const cwd = session.currentCwd();
+    if (cwd.len > 0) {
+        if (std.mem.eql(u8, cwd, "/")) return "/";
+        const trimmed = std.mem.trimRight(u8, cwd, "/");
+        if (trimmed.len > 0) {
+            if (std.mem.lastIndexOfScalar(u8, trimmed, '/')) |slash| {
+                if (slash + 1 < trimmed.len) return trimmed[slash + 1 ..];
+            } else {
+                return trimmed;
+            }
+        }
+    }
+    if (title.len > 0) return title;
+    return "Terminal";
+}
 
 pub fn syncFromWorkspace(
     tab_bar: *widgets.TabBar,
@@ -47,7 +68,7 @@ pub fn syncFromWorkspace(
         for (0..count) |widx| {
             const tab_id = workspace.tabIdAt(widx) orelse continue;
             const session = workspace.sessionAt(widx) orelse continue;
-            const title = if (session.currentTitle().len > 0) session.currentTitle() else "Terminal";
+            const title = terminalTabLabel(session);
             if (tab_bar.indexOfTerminalTabId(tab_id)) |bar_idx| {
                 try tab_bar.setTabTitle(bar_idx, title);
             } else {
@@ -65,4 +86,3 @@ pub fn syncFromWorkspace(
         tab_bar.clearTabs();
     }
 }
-
