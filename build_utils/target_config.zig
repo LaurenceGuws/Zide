@@ -1,6 +1,7 @@
 const std = @import("std");
 const dependency_path = @import("dependency_path.zig");
 const app_types = @import("app_types.zig");
+const target_profile = @import("target_profile.zig");
 const links_windows = @import("platform_links_windows.zig");
 const links_linux = @import("platform_links_linux.zig");
 const links_macos = @import("platform_links_macos.zig");
@@ -115,35 +116,32 @@ fn linkSdlTestGraphics(step: *std.Build.Step.Compile, target_os: std.Target.Os.T
 pub fn configureSdlTestTarget(
     step: *std.Build.Step.Compile,
     ctx: app_types.AppLinkContext,
-    include_treesitter: bool,
-    include_text_stack: bool,
-    include_lua: bool,
-    include_fontconfig: bool,
+    profile: target_profile.LinkProfile,
 ) void {
     if (ctx.use_vcpkg) {
         step.addLibraryPath(.{ .cwd_relative = ctx.vcpkg_lib.? });
         step.addIncludePath(.{ .cwd_relative = ctx.vcpkg_include.? });
     }
     linkSdl3(step, ctx.sdl_lib);
-    if (include_text_stack) linkTextStack(step, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
-    if (include_lua) linkLua(step, ctx.lua_lib);
-    if (include_fontconfig and ctx.target_os == .linux) {
+    if (profile.include_text_stack) linkTextStack(step, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
+    if (profile.include_lua) linkLua(step, ctx.lua_lib);
+    if (profile.include_fontconfig and ctx.target_os == .linux) {
         step.linkSystemLibrary("fontconfig");
     }
     linkSdlTestGraphics(step, ctx.target_os);
 
-    if (include_treesitter) {
+    if (profile.include_treesitter) {
         step.linkLibrary(ctx.treesitter);
     }
     addVendorAndStb(step);
-    if (include_treesitter) {
+    if (profile.include_treesitter) {
         addTreeSitterIncludes(step, ctx.treesitter);
     }
     if (!ctx.use_vcpkg) {
-        if (include_text_stack) {
+        if (profile.include_text_stack) {
             addTextStackIncludes(step, ctx.use_vcpkg, ctx.target_os, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
         }
-        if (include_lua) {
+        if (profile.include_lua) {
             addLuaIncludes(step, ctx.lua_lib);
         }
     }
@@ -153,31 +151,39 @@ pub fn configureAppExecutable(
     exe: *std.Build.Step.Compile,
     ctx: app_types.AppLinkContext,
     target_name: []const u8,
-    include_treesitter: bool,
+    profile: target_profile.LinkProfile,
 ) void {
-    if (std.mem.eql(u8, target_name, "zide-terminal") and include_treesitter) {
+    if (std.mem.eql(u8, target_name, "zide-terminal") and profile.include_treesitter) {
         @panic("dependency policy violation: zide-terminal must not link tree-sitter");
     }
-    if (include_treesitter) {
+    if (profile.include_treesitter) {
         exe.linkLibrary(ctx.treesitter);
     }
     if (ctx.use_vcpkg) {
         exe.addLibraryPath(.{ .cwd_relative = ctx.vcpkg_lib.? });
         exe.addIncludePath(.{ .cwd_relative = ctx.vcpkg_include.? });
     }
-    linkTextStack(exe, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
-    linkLua(exe, ctx.lua_lib);
+    if (profile.include_text_stack) {
+        linkTextStack(exe, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
+    }
+    if (profile.include_lua) {
+        linkLua(exe, ctx.lua_lib);
+    }
     linkSdl3(exe, ctx.sdl_lib);
-    if (ctx.target_os == .linux) {
+    if (profile.include_fontconfig and ctx.target_os == .linux) {
         exe.linkSystemLibrary("fontconfig");
     }
     addVendorAndStb(exe);
-    if (include_treesitter) {
+    if (profile.include_treesitter) {
         addTreeSitterIncludes(exe, ctx.treesitter);
     }
     if (!ctx.use_vcpkg) {
-        addTextStackIncludes(exe, ctx.use_vcpkg, ctx.target_os, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
-        addLuaIncludes(exe, ctx.lua_lib);
+        if (profile.include_text_stack) {
+            addTextStackIncludes(exe, ctx.use_vcpkg, ctx.target_os, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
+        }
+        if (profile.include_lua) {
+            addLuaIncludes(exe, ctx.lua_lib);
+        }
     }
     linkCommonPlatformGraphics(exe, ctx.target_os);
 }

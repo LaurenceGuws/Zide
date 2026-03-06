@@ -108,6 +108,19 @@ UI rendering journey: `app_architecture/ui/DEVELOPMENT_JOURNEY.md`.
 zig build
 ```
 
+Mode-isolated builds:
+
+```bash
+# default: full IDE binary only
+zig build
+
+# terminal-only binary only
+zig build -Dmode=terminal
+
+# editor-only binary only
+zig build -Dmode=editor
+```
+
 Dependency path selector:
 
 ```bash
