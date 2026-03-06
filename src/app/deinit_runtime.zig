@@ -1,11 +1,14 @@
 const app_logger = @import("../app_logger.zig");
+const mode_build = @import("mode_build.zig");
 
 pub fn handle(state: anytype) void {
     if (state.font_sample_view) |*view| {
         view.deinit();
     }
-    for (state.editors.items) |e| {
-        e.deinit();
+    if (comptime mode_build.focused_mode != .terminal) {
+        for (state.editors.items) |e| {
+            e.deinit();
+        }
     }
     state.editors.deinit(state.allocator);
 
