@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const app_logger = @import("../../app_logger.zig");
 const pty_mod = @import("../io/pty.zig");
 const types = @import("../model/types.zig");
 const mouse_report = @import("mouse_report.zig");
@@ -71,6 +72,7 @@ pub const InputState = struct {
     }
 
     pub fn reportMouseEvent(self: *InputState, pty: *pty_mod.Pty, event: types.MouseEvent, rows: u16, cols: u16) !bool {
+        const log = app_logger.logger("terminal.input");
         if (!self.mouseTrackingActive()) return false;
         if (rows == 0 or cols == 0) return false;
 
@@ -114,7 +116,10 @@ pub const InputState = struct {
                 &buf,
                 "\x1b[<{d};{d};{d}{c}",
                 .{ code, sgr_x, sgr_y, terminator },
-            ) catch return false;
+            ) catch |err| {
+                log.logf(.warning, "mouse sgr sequence format failed: {s}", .{@errorName(err)});
+                return false;
+            };
             _ = try pty.write(seq);
         } else {
             var buf: [6]u8 = undefined;
@@ -213,6 +218,7 @@ pub fn sendChar(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, key_mode_flag
 }
 
 pub fn sendCharAction(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, key_mode_flags: u32, action: KeyAction) !bool {
+    const log = app_logger.logger("terminal.input");
     if (char > 0x10FFFF or (char >= 0xD800 and char <= 0xDFFF)) return false;
     if (sendCharWithProtocol(pty, char, mod, key_mode_flags, action)) return true;
     const report_text = (key_mode_flags & key_encoding.key_mode_report_text) != 0;
@@ -229,7 +235,10 @@ pub fn sendCharAction(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, key_mod
         _ = try pty.write(&[_]u8{0x1b});
     }
     var buf: [4]u8 = undefined;
-    const len = std.unicode.utf8Encode(@intCast(char), &buf) catch return false;
+    const len = std.unicode.utf8Encode(@intCast(char), &buf) catch |err| {
+        log.logf(.warning, "utf8 encode char failed cp={d}: {s}", .{ char, @errorName(err) });
+        return false;
+    };
     _ = try pty.write(buf[0..len]);
     return true;
 }
@@ -272,12 +281,22 @@ fn encodeModifier(mod: types.Modifier) u8 {
 }
 
 fn sendCsiWithMod(pty: *pty_mod.Pty, prefix: []const u8, mod_code: u8, suffix: []const u8) bool {
+    const log = app_logger.logger("terminal.input");
     var buf: [32]u8 = undefined;
     const seq = if (mod_code > 1)
-        std.fmt.bufPrint(&buf, "\x1b[{s};{d}{s}", .{ prefix, mod_code, suffix }) catch return false
+        std.fmt.bufPrint(&buf, "\x1b[{s};{d}{s}", .{ prefix, mod_code, suffix }) catch |err| {
+            log.logf(.warning, "CSI+mod sequence format failed: {s}", .{@errorName(err)});
+            return false;
+        }
     else
-        std.fmt.bufPrint(&buf, "\x1b[{s}{s}", .{ prefix, suffix }) catch return false;
-    _ = pty.write(seq) catch return false;
+        std.fmt.bufPrint(&buf, "\x1b[{s}{s}", .{ prefix, suffix }) catch |err| {
+            log.logf(.warning, "CSI sequence format failed: {s}", .{@errorName(err)});
+            return false;
+        };
+    _ = pty.write(seq) catch |err| {
+        log.logf(.warning, "CSI sequence write failed: {s}", .{@errorName(err)});
+        return false;
+    };
     return true;
 }
 
@@ -310,6 +329,7 @@ fn sendCharWithProtocolMeta(
     action: KeyAction,
     alternate_meta: ?types.KeyboardAlternateMetadata,
 ) bool {
+    const log = app_logger.logger("terminal.input");
     if (flags == 0) return false;
     if (!key_encoding.supportsKeyEncoding(flags)) return false;
     const report_text = (flags & key_encoding.key_mode_report_text) != 0;
@@ -331,17 +351,26 @@ fn sendCharWithProtocolMeta(
     pos += 1;
     buf[pos] = '[';
     pos += 1;
-    const written_key = std.fmt.bufPrint(buf[pos..], "{d}", .{key_fields.key}) catch return false;
+    const written_key = std.fmt.bufPrint(buf[pos..], "{d}", .{key_fields.key}) catch |err| {
+        log.logf(.warning, "kitty protocol key field format failed: {s}", .{@errorName(err)});
+        return false;
+    };
     pos += written_key.len;
     if (key_fields.shifted) |shifted_key| {
         buf[pos] = ':';
         pos += 1;
-        const written_shifted = std.fmt.bufPrint(buf[pos..], "{d}", .{shifted_key}) catch return false;
+        const written_shifted = std.fmt.bufPrint(buf[pos..], "{d}", .{shifted_key}) catch |err| {
+            log.logf(.warning, "kitty protocol shifted field format failed: {s}", .{@errorName(err)});
+            return false;
+        };
         pos += written_shifted.len;
         if (key_fields.alternate) |alternate_key| {
             buf[pos] = ':';
             pos += 1;
-            const written_alt = std.fmt.bufPrint(buf[pos..], "{d}", .{alternate_key}) catch return false;
+            const written_alt = std.fmt.bufPrint(buf[pos..], "{d}", .{alternate_key}) catch |err| {
+                log.logf(.warning, "kitty protocol alternate field format failed: {s}", .{@errorName(err)});
+                return false;
+            };
             pos += written_alt.len;
         }
     } else if (key_fields.alternate) |alternate_key| {
@@ -349,20 +378,29 @@ fn sendCharWithProtocolMeta(
         pos += 1;
         buf[pos] = ':';
         pos += 1;
-        const written_alt = std.fmt.bufPrint(buf[pos..], "{d}", .{alternate_key}) catch return false;
+        const written_alt = std.fmt.bufPrint(buf[pos..], "{d}", .{alternate_key}) catch |err| {
+            log.logf(.warning, "kitty protocol alternate-only field format failed: {s}", .{@errorName(err)});
+            return false;
+        };
         pos += written_alt.len;
     }
     if (second_field or include_associated_text) {
         buf[pos] = ';';
         pos += 1;
         if (has_mods or add_actions or include_associated_text) {
-            const written_mod = std.fmt.bufPrint(buf[pos..], "{d}", .{mod_value}) catch return false;
+            const written_mod = std.fmt.bufPrint(buf[pos..], "{d}", .{mod_value}) catch |err| {
+                log.logf(.warning, "kitty protocol modifier field format failed: {s}", .{@errorName(err)});
+                return false;
+            };
             pos += written_mod.len;
         }
         if (add_actions) {
             buf[pos] = ':';
             pos += 1;
-            const written_action = std.fmt.bufPrint(buf[pos..], "{d}", .{@intFromEnum(action) + 1}) catch return false;
+            const written_action = std.fmt.bufPrint(buf[pos..], "{d}", .{@intFromEnum(action) + 1}) catch |err| {
+                log.logf(.warning, "kitty protocol action field format failed: {s}", .{@errorName(err)});
+                return false;
+            };
             pos += written_action.len;
         }
     }
@@ -373,7 +411,10 @@ fn sendCharWithProtocolMeta(
     }
     buf[pos] = 'u';
     pos += 1;
-    _ = pty.write(buf[0..pos]) catch return false;
+    _ = pty.write(buf[0..pos]) catch |err| {
+        log.logf(.warning, "kitty protocol sequence write failed: {s}", .{@errorName(err)});
+        return false;
+    };
     return true;
 }
 
@@ -383,11 +424,15 @@ fn appendAssociatedTextCodepoints(
     fallback_codepoint: u32,
     alternate_meta: ?types.KeyboardAlternateMetadata,
 ) bool {
+    const log = app_logger.logger("terminal.input");
     const fallback_cp = associatedFallbackCodepoint(fallback_codepoint, alternate_meta);
     if (alternate_meta) |meta| {
         if (meta.produced_text_utf8) |text| {
             if (text.len > 0) {
-                var view = std.unicode.Utf8View.init(text) catch return appendAssociatedCodepoint(buf, pos, fallback_cp);
+                var view = std.unicode.Utf8View.init(text) catch |err| {
+                    log.logf(.warning, "associated text utf8 view init failed: {s}", .{@errorName(err)});
+                    return appendAssociatedCodepoint(buf, pos, fallback_cp);
+                };
                 var it = view.iterator();
                 var wrote_any = false;
                 while (it.nextCodepoint()) |cp| {
@@ -407,7 +452,11 @@ fn appendAssociatedTextCodepoints(
 }
 
 fn appendAssociatedCodepoint(buf: []u8, pos: *usize, cp: u32) bool {
-    const written = std.fmt.bufPrint(buf[pos.*..], "{d}", .{cp}) catch return false;
+    const log = app_logger.logger("terminal.input");
+    const written = std.fmt.bufPrint(buf[pos.*..], "{d}", .{cp}) catch |err| {
+        log.logf(.warning, "associated codepoint format failed cp={d}: {s}", .{ cp, @errorName(err) });
+        return false;
+    };
     pos.* += written.len;
     return true;
 }
