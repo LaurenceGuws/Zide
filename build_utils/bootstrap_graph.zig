@@ -14,6 +14,7 @@ const resolveVcpkgPaths = vcpkg_paths.resolveVcpkgPaths;
 const addBuildModeReportStep = step_utils.addBuildModeReportStep;
 const addBuildBootstrapReportStep = step_utils.addBuildBootstrapReportStep;
 const addBuildFocusedModePolicyCheckStep = step_utils.addBuildFocusedModePolicyCheckStep;
+const addBuildTargetReportStep = step_utils.addBuildTargetReportStep;
 
 pub const BuildBootstrap = struct {
     target: std.Build.ResolvedTarget,
@@ -73,7 +74,10 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
     build_options.addOption([]const u8, "renderer_backend", renderer_backend);
     build_options.addOption([]const u8, "dependency_path", dep_path_raw);
     build_options.addOption([]const u8, "build_mode", build_mode_raw);
+    build_options.addOption([]const u8, "target_arch", @tagName(target.result.cpu.arch));
     build_options.addOption([]const u8, "target_os", @tagName(target_os));
+    build_options.addOption([]const u8, "target_abi", @tagName(target.result.abi));
+    build_options.addOption([]const u8, "optimize_mode", @tagName(optimize));
     build_options.addOption(bool, "use_vcpkg", use_vcpkg);
     const vcpkg_root_opt = b.option([]const u8, "vcpkg-root", "Path to vcpkg root") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_ROOT") catch null;
     const vcpkg_triplet_opt = b.option([]const u8, "vcpkg-triplet", "vcpkg triplet (e.g. x64-windows)") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_DEFAULT_TRIPLET") catch null;
@@ -115,6 +119,12 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
         build_options,
     );
     _ = addBuildFocusedModePolicyCheckStep(
+        b,
+        target,
+        optimize,
+        build_options,
+    );
+    _ = addBuildTargetReportStep(
         b,
         target,
         optimize,
