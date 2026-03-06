@@ -1,9 +1,9 @@
-const app_editor_draw_surface_runtime = @import("editor_draw_surface_runtime.zig");
 const app_font_sample_draw_runtime = @import("font_sample_draw_runtime.zig");
 const app_tabbar_draw_runtime = @import("tabbar_draw_runtime.zig");
 const app_terminal_draw_surface_runtime = @import("terminal_draw_surface_runtime.zig");
 const app_shell_chrome_draw_runtime = @import("shell_chrome_draw_runtime.zig");
 const app_draw_overlays_runtime = @import("draw_overlays_runtime.zig");
+const mode_build = @import("mode_build.zig");
 const shared_types = @import("../types/mod.zig");
 
 const layout_types = shared_types.layout;
@@ -35,7 +35,10 @@ pub fn draw(state: anytype, shell: anytype, ctx: *anyopaque, hooks: Hooks) void 
         },
     );
 
-    app_editor_draw_surface_runtime.draw(state, shell, layout);
+    if (comptime mode_build.focused_mode != .terminal) {
+        const app_editor_draw_surface_runtime = @import("editor_draw_surface_runtime.zig");
+        app_editor_draw_surface_runtime.draw(state, shell, layout);
+    }
     app_terminal_draw_surface_runtime.draw(state, shell, layout);
     app_shell_chrome_draw_runtime.draw(state, shell, layout, tab_tooltip);
     app_draw_overlays_runtime.draw(
