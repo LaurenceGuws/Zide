@@ -1,6 +1,5 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const dependency_path = @import("dependency_path.zig");
 const app_types = @import("app_types.zig");
 const vcpkg_paths = @import("vcpkg_paths.zig");
 const dependency_resolver = @import("dependency_resolver.zig");
@@ -35,18 +34,12 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
     });
     const optimize = b.standardOptimizeOption(.{});
 
-    const dep_path_raw = b.option(
-        []const u8,
-        "path",
-        "Dependency path: link (default) or zig package manager",
-    ) orelse "link";
     const build_mode_raw = b.option(
         []const u8,
         "mode",
         "Build app mode: ide (default), terminal, editor",
     ) orelse "ide";
 
-    const dep_path = dependency_path.parseDependencyPath(dep_path_raw);
     const build_mode = mode_specs.parseBuildMode(build_mode_raw);
     const target_os = target.result.os.tag;
 
@@ -66,7 +59,6 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
     const build_options = b.addOptions();
     const use_vcpkg = (target_os == .windows);
     build_options.addOption([]const u8, "renderer_backend", renderer_backend);
-    build_options.addOption([]const u8, "dependency_path", dep_path_raw);
     build_options.addOption([]const u8, "build_mode", build_mode_raw);
     build_options.addOption([]const u8, "target_arch", @tagName(target.result.cpu.arch));
     build_options.addOption([]const u8, "target_os", @tagName(target_os));
@@ -88,7 +80,6 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
         b,
         target,
         optimize,
-        dep_path,
         use_vcpkg,
         build_mode != .terminal,
     );
@@ -135,7 +126,6 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
     );
 
     const app_link_ctx = AppLinkContext{
-        .dep_path = dep_path,
         .target_os = target_os,
         .use_vcpkg = use_vcpkg,
         .vcpkg_lib = resolved_vcpkg_paths.lib,

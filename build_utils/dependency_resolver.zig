@@ -1,5 +1,4 @@
 const std = @import("std");
-const dependency_path = @import("dependency_path.zig");
 
 pub const BuildDependencies = struct {
     treesitter: ?*std.Build.Step.Compile,
@@ -14,7 +13,6 @@ pub fn resolveDependencies(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
-    dep_path: dependency_path.DependencySource,
     use_vcpkg: bool,
     need_treesitter: bool,
 ) BuildDependencies {
@@ -40,7 +38,7 @@ pub fn resolveDependencies(
     const zlua_module = zlua_dep.module("zlua");
     const lua_lib = zlua_dep.artifact("lua");
 
-    const freetype_dep = if (dep_path == .zig and !use_vcpkg)
+    const freetype_dep = if (!use_vcpkg)
         b.dependency("freetype", .{
             .target = target,
             .optimize = optimize,
@@ -50,7 +48,7 @@ pub fn resolveDependencies(
     else
         null;
 
-    const harfbuzz_dep = if (dep_path == .zig and !use_vcpkg)
+    const harfbuzz_dep = if (!use_vcpkg)
         b.dependency("harfbuzz", .{
             .target = target,
             .optimize = optimize,

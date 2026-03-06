@@ -1,8 +1,6 @@
 const std = @import("std");
-const dependency_path = @import("dependency_path.zig");
 
 pub const AppLinkContext = struct {
-    dep_path: dependency_path.DependencySource,
     target_os: std.Target.Os.Tag,
     use_vcpkg: bool,
     vcpkg_lib: ?[]const u8,
