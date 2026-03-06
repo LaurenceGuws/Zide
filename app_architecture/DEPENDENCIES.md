@@ -11,6 +11,7 @@ Track practical migration details for replacing system-managed native dependenci
 - `-Dpath=link|zig` is retained as the migration toggle surface for the next dependency slice.
 - Current active `-Dpath` migration slice: FreeType/HarfBuzz packaging.
 - Build/runtime still link native C/C++ libraries and system libs; package migration changes sourcing/pinning, not language/runtime ABI.
+- `zide-terminal` is now intentionally detached from tree-sitter linking/plumbing; tree-sitter remains linked for main/editor/ide and editor-facing test/ffi targets.
 
 ## Implemented package integration
 
