@@ -878,6 +878,18 @@ pub fn build(b: *std.Build) void {
     const mode_size_report_cmd = b.addSystemCommand(&.{ "bash", "tools/report_mode_binary_sizes.sh" });
     mode_size_report_step.dependOn(&mode_size_report_cmd.step);
 
+    if (target_os == .linux) {
+        const bundle_terminal_step = b.step("bundle-terminal", "Bundle zide-terminal with resolved shared libs for portable use");
+        bundle_terminal_step.dependOn(b.getInstallStep());
+        const bundle_terminal_cmd = b.addSystemCommand(&.{
+            "bash",
+            "tools/bundle_terminal_linux.sh",
+            "zig-out/bin/zide-terminal",
+            "zig-out/terminal-bundle",
+        });
+        bundle_terminal_step.dependOn(&bundle_terminal_cmd.step);
+    }
+
     const mode_size_check_step = b.step("mode-size-check", "Check focused binaries are not larger than main binary");
     mode_size_check_step.dependOn(b.getInstallStep());
     const mode_size_check_cmd = b.addSystemCommand(&.{ "bash", "tools/check_mode_binary_sizes.sh" });
