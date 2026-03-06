@@ -31,6 +31,57 @@ const addMainModeRunSteps = step_utils.addMainModeRunSteps;
 const addSystemCommandStep = step_utils.addSystemCommandStep;
 const MainModeRunSteps = step_utils.MainModeRunSteps;
 
+fn planIdePrimaryAppGraph(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    build_options: *std.Build.Step.Options,
+    zlua_module: *std.Build.Module,
+    app_link_ctx: AppLinkContext,
+    passthrough_args: ?[]const []const u8,
+) MainModeRunSteps {
+    const exe = addAppExecutable(
+        b,
+        target,
+        optimize,
+        build_options,
+        zlua_module,
+        "zide",
+        "src/main.zig",
+    );
+    configureAppExecutable(exe, app_link_ctx, "zide", target_profile.app_main);
+    b.installArtifact(exe);
+    return addMainModeRunSteps(b, b.getInstallStep(), exe, passthrough_args);
+}
+
+fn planFocusedRuntimeAppGraph(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    build_options: *std.Build.Step.Options,
+    zlua_module: *std.Build.Module,
+    app_link_ctx: AppLinkContext,
+    mode: mode_specs.BuildMode,
+    passthrough_args: ?[]const []const u8,
+) void {
+    const spec = mode_specs.selectedFocusedApp(mode) orelse
+        @panic("dependency policy violation: focused runtime mode requires selected app spec");
+    _ = addFocusedModeExecutable(
+        b,
+        target,
+        optimize,
+        build_options,
+        zlua_module,
+        app_link_ctx,
+        spec.name,
+        spec.root_source_file,
+        spec.profile,
+        spec.run_step_name,
+        spec.run_description,
+        passthrough_args,
+    );
+}
+
 pub fn build(b: *std.Build) void {
     target_profile.assertPolicy();
 
@@ -128,45 +179,33 @@ pub fn build(b: *std.Build) void {
         .harfbuzz_lib = harfbuzz_lib,
     };
 
-    var main_mode_run_steps: ?MainModeRunSteps = null;
-    if (build_mode == .ide) {
-        const exe = addAppExecutable(
+    const main_mode_run_steps: MainModeRunSteps = switch (build_mode) {
+        .ide => planIdePrimaryAppGraph(
             b,
             target,
             optimize,
             build_options,
             zlua_module,
-            "zide",
-            "src/main.zig",
-        );
-        configureAppExecutable(exe, app_link_ctx, "zide", target_profile.app_main);
-        b.installArtifact(exe);
-        main_mode_run_steps = addMainModeRunSteps(b, b.getInstallStep(), exe, b.args);
-    } else {
-        if (mode_specs.selectedFocusedApp(build_mode)) |spec| {
-            _ = addFocusedModeExecutable(
+            app_link_ctx,
+            b.args,
+        ),
+        .terminal, .editor => {
+            // High-value compile-time isolation:
+            // terminal/editor mode builds should only register the selected app
+            // artifact + run step, and skip IDE-only build graph setup.
+            planFocusedRuntimeAppGraph(
                 b,
                 target,
                 optimize,
                 build_options,
                 zlua_module,
                 app_link_ctx,
-                spec.name,
-                spec.root_source_file,
-                spec.profile,
-                spec.run_step_name,
-                spec.run_description,
+                build_mode,
                 b.args,
             );
-        }
-    }
-
-    if (build_mode != .ide) {
-        // High-value compile-time isolation:
-        // terminal/editor mode builds should only register the selected app
-        // artifact + run step, and skip IDE-only build graph setup.
-        return;
-    }
+            return;
+        },
+    };
 
     // On Windows, vcpkg typically provides runtime deps as DLLs in
     // <triplet>/bin. Copy them next to the installed exe so that launching
@@ -543,19 +582,17 @@ pub fn build(b: *std.Build) void {
         },
     );
 
-    if (main_mode_run_steps) |steps| {
-        _ = addGateStep(
-            b,
-            "mode-smokes-manual",
-            "Run interactive MODE smokes (manual)",
-            &.{
-                steps.run,
-                steps.terminal,
-                steps.editor,
-                steps.ide,
-            },
-        );
-    }
+    _ = addGateStep(
+        b,
+        "mode-smokes-manual",
+        "Run interactive MODE smokes (manual)",
+        &.{
+            main_mode_run_steps.run,
+            main_mode_run_steps.terminal,
+            main_mode_run_steps.editor,
+            main_mode_run_steps.ide,
+        },
+    );
 
     const grammar_update = addLibcExecutable(
         b,
