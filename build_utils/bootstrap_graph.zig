@@ -115,6 +115,12 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
         optimize,
         build_options,
     );
+    const build_report_tools_check_step = step_reports.addCheckBuildReportToolsStep(
+        b,
+        target,
+        optimize,
+        build_options,
+    );
     _ = step_reports.addReportBuildAllStep(
         b,
         &.{
@@ -122,6 +128,7 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
             build_bootstrap_report_step,
             build_focused_policy_report_step,
             build_target_report_step,
+            build_report_tools_check_step,
         },
     );
 

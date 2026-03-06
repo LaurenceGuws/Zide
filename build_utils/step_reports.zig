@@ -134,3 +134,61 @@ pub fn addReportBuildTargetStep(
     step.dependOn(&run.step);
     return step;
 }
+
+pub fn addCheckBuildReportToolsStep(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    build_options: *std.Build.Step.Options,
+) *std.Build.Step {
+    const step = b.step(
+        "check-build-report-tools",
+        "Compile-check all core build report tools",
+    );
+
+    const mode_report = b.addExecutable(.{
+        .name = "build-mode-report-check",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/build_mode_report.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    mode_report.root_module.addOptions("build_options", build_options);
+    step.dependOn(&mode_report.step);
+
+    const bootstrap_report = b.addExecutable(.{
+        .name = "build-bootstrap-report-check",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/build_bootstrap_report.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    bootstrap_report.root_module.addOptions("build_options", build_options);
+    step.dependOn(&bootstrap_report.step);
+
+    const focused_policy = b.addExecutable(.{
+        .name = "build-focused-policy-report-check",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/build_focused_mode_policy_check.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    focused_policy.root_module.addOptions("build_options", build_options);
+    step.dependOn(&focused_policy.step);
+
+    const target_report = b.addExecutable(.{
+        .name = "build-target-report-check",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/build_target_report.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    target_report.root_module.addOptions("build_options", build_options);
+    step.dependOn(&target_report.step);
+
+    return step;
+}
