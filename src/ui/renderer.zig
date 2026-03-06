@@ -572,15 +572,22 @@ pub const Renderer = struct {
     }
 
     fn setFontFeatureListRaw(self: *Renderer, raw_slot: *?[]u8, list: *std.ArrayListUnmanaged(hb.hb_feature_t), raw: []const u8) void {
+        const log = app_logger.logger("renderer.font");
         if (raw_slot.*) |owned| {
             self.allocator.free(owned);
             raw_slot.* = null;
         }
-        raw_slot.* = self.allocator.dupe(u8, raw) catch null;
+        raw_slot.* = self.allocator.dupe(u8, raw) catch |err| blk: {
+            if (log.enabled_file or log.enabled_console) {
+                log.logf(.warning, "font feature raw dup failed len={d} err={s}", .{ raw.len, @errorName(err) });
+            }
+            break :blk null;
+        };
         self.rebuildFontFeaturesList(raw_slot.*, list);
     }
 
     fn rebuildFontFeaturesList(self: *Renderer, raw_opt: ?[]u8, list: *std.ArrayListUnmanaged(hb.hb_feature_t)) void {
+        const log = app_logger.logger("renderer.font");
         list.items.len = 0;
         const raw = raw_opt orelse return;
         var it = std.mem.splitScalar(u8, raw, ',');
@@ -589,7 +596,12 @@ pub const Renderer = struct {
             if (token.len == 0) continue;
             var feature: hb.hb_feature_t = undefined;
             if (hb.hb_feature_from_string(token.ptr, @intCast(token.len), &feature) != 0) {
-                list.append(self.allocator, feature) catch return;
+                list.append(self.allocator, feature) catch |err| {
+                    if (log.enabled_file or log.enabled_console) {
+                        log.logf(.warning, "font feature append failed token={s} err={s}", .{ token, @errorName(err) });
+                    }
+                    return;
+                };
             }
         }
     }
@@ -1511,6 +1523,7 @@ pub const Renderer = struct {
     }
 
     fn drawTextWithFontMonospaceShaped(self: *Renderer, font: *TerminalFont, cell_w: f32, cell_h: f32, text: []const u8, x: f32, y: f32, color: types.Rgba, disable_programming_ligatures: bool) bool {
+        const log = app_logger.logger("renderer.text");
         if (text.len == 0) return true;
 
         if (!textLikelyNeedsShaping(text)) {
@@ -1524,21 +1537,36 @@ pub const Renderer = struct {
         var idx: usize = 0;
         while (idx < text.len) {
             const first = text[idx];
-            const seq_len = std.unicode.utf8ByteSequenceLength(first) catch {
-                idx += 1;
-                codepoints.append(self.allocator, 0xFFFD) catch return false;
-                continue;
-            };
-            if (idx + seq_len > text.len) {
-                idx += 1;
-                codepoints.append(self.allocator, 0xFFFD) catch return false;
-                continue;
+                const seq_len = std.unicode.utf8ByteSequenceLength(first) catch {
+                    idx += 1;
+                    codepoints.append(self.allocator, 0xFFFD) catch |err| {
+                        if (log.enabled_file or log.enabled_console) {
+                            log.logf(.warning, "shaped text append replacement failed err={s}", .{ @errorName(err) });
+                        }
+                        return false;
+                    };
+                    continue;
+                };
+                if (idx + seq_len > text.len) {
+                    idx += 1;
+                    codepoints.append(self.allocator, 0xFFFD) catch |err| {
+                        if (log.enabled_file or log.enabled_console) {
+                            log.logf(.warning, "shaped text append replacement (truncated utf8) failed err={s}", .{ @errorName(err) });
+                        }
+                        return false;
+                    };
+                    continue;
+                }
+                const slice = text[idx .. idx + seq_len];
+                const cp = std.unicode.utf8Decode(slice) catch 0xFFFD;
+                codepoints.append(self.allocator, cp) catch |err| {
+                    if (log.enabled_file or log.enabled_console) {
+                        log.logf(.warning, "shaped text codepoint append failed err={s}", .{ @errorName(err) });
+                    }
+                    return false;
+                };
+                idx += seq_len;
             }
-            const slice = text[idx .. idx + seq_len];
-            const cp = std.unicode.utf8Decode(slice) catch 0xFFFD;
-            codepoints.append(self.allocator, cp) catch return false;
-            idx += seq_len;
-        }
         if (codepoints.items.len == 0) return true;
 
         var span_start: usize = 0;
@@ -1588,8 +1616,18 @@ pub const Renderer = struct {
             const span_len = span_end - span_start;
             self.terminal_shape_first_pen_set.items.len = 0;
             self.terminal_shape_first_pen.items.len = 0;
-            self.terminal_shape_first_pen_set.ensureTotalCapacity(self.allocator, span_len) catch return false;
-            self.terminal_shape_first_pen.ensureTotalCapacity(self.allocator, span_len) catch return false;
+            self.terminal_shape_first_pen_set.ensureTotalCapacity(self.allocator, span_len) catch |err| {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(.warning, "shaped text first-pen-set capacity failed span_len={d} err={s}", .{ span_len, @errorName(err) });
+                }
+                return false;
+            };
+            self.terminal_shape_first_pen.ensureTotalCapacity(self.allocator, span_len) catch |err| {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(.warning, "shaped text first-pen capacity failed span_len={d} err={s}", .{ span_len, @errorName(err) });
+                }
+                return false;
+            };
             self.terminal_shape_first_pen_set.items.len = span_len;
             self.terminal_shape_first_pen.items.len = span_len;
             @memset(self.terminal_shape_first_pen_set.items, false);
