@@ -87,7 +87,7 @@ pub const AppState = struct {
     last_input: t.InputSnapshot,
     app_mode: AppMode,
     input_router: t.InputRouter,
-    editor_mode_adapter: t.EditorMode,
+    editor_mode_adapter: ?t.EditorMode,
     terminal_mode_adapter: t.TerminalMode,
     font_sample_view: ?t.FontSampleView,
     font_sample_auto_close_frames: u64,
