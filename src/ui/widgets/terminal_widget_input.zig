@@ -290,6 +290,25 @@ pub fn handleInput(
                 }
             }
         }.apply;
+        const rowLastContentCol = struct {
+            fn apply(cells: []const terminal_types.Cell, cols_count: usize, row_idx: usize) ?usize {
+                if (cols_count == 0) return null;
+                const row_start = row_idx * cols_count;
+                if (row_start + cols_count > cells.len) return null;
+                const row_cells = cells[row_start .. row_start + cols_count];
+                var last: ?usize = null;
+                var col_idx: usize = 0;
+                while (col_idx < cols_count) : (col_idx += 1) {
+                    const cell = row_cells[col_idx];
+                    if (cell.x != 0 or cell.y != 0) continue;
+                    if (cell.codepoint == 0 and cell.combining_len == 0) continue;
+                    const width_units = @as(usize, @max(@as(u8, 1), cell.width));
+                    const cell_end = @min(cols_count - 1, col_idx + width_units - 1);
+                    last = cell_end;
+                }
+                return last;
+            }
+        }.apply;
         const applyTerminalKey = struct {
             fn apply(widget: anytype, key: shared_types.input.Key, key_mod: terminal_mod.Modifier, action: terminal_mod.KeyAction) !bool {
                 return key_encoder.sendKeyAction(widget.session, key, key_mod, action);
@@ -602,9 +621,13 @@ pub fn handleInput(
             }
         }
 
-        const suppress_selection_for_scrollbar = mouse_on_scrollbar or scroll_dragging.*;
-        if (!mouse_reporting and in_terminal and !suppress_selection_for_scrollbar) {
-            if (input_batch.mousePressed(.left)) {
+    const suppress_selection_for_scrollbar = mouse_on_scrollbar or scroll_dragging.*;
+    if (!mouse_reporting and in_terminal and input_batch.mousePressed(.left) and self.session.selectionState() != null) {
+        self.session.clearSelection();
+        handled = true;
+    }
+    if (!mouse_reporting and in_terminal and !suppress_selection_for_scrollbar) {
+        if (input_batch.mousePressed(.left)) {
                 const col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
                 const row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
                 if (cols > 0 and rows > 0) {
@@ -612,26 +635,38 @@ pub fn handleInput(
                     const clamped_row = @min(row, rows - 1);
                     const global_row = start_line + clamped_row;
                     if (global_row < history_len + rows) {
-                        self.session.startSelection(global_row, clamped_col);
-                        handled = true;
+                        if (rowLastContentCol(snapshot.cells, cols, clamped_row)) |last_col| {
+                            const sel_col = @min(clamped_col, last_col);
+                            self.session.startSelection(global_row, sel_col);
+                            handled = true;
+                        }
                     }
                 }
             }
 
             if (input_batch.mouseDown(.left)) {
-                if (self.session.selectionState()) |_| {
-                    const col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
-                    const row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
-                    if (cols > 0 and rows > 0) {
-                        const clamped_col = @min(col, cols - 1);
-                        const clamped_row = @min(row, rows - 1);
-                        const global_row = start_line + clamped_row;
-                        if (global_row < history_len + rows) {
-                            self.session.updateSelection(global_row, clamped_col);
-                            handled = true;
+                const col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
+                const row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
+                if (cols > 0 and rows > 0) {
+                    const clamped_col = @min(col, cols - 1);
+                    const clamped_row = @min(row, rows - 1);
+                    const global_row = start_line + clamped_row;
+                    if (global_row < history_len + rows) {
+                        if (rowLastContentCol(snapshot.cells, cols, clamped_row)) |last_col| {
+                            const sel_col = @min(clamped_col, last_col);
+                            if (self.session.selectionState() == null) {
+                                // Late-start selection when drag begins on blank space and enters content.
+                                self.session.startSelection(global_row, sel_col);
+                                handled = true;
+                            } else {
+                                self.session.updateSelection(global_row, sel_col);
+                                handled = true;
+                            }
                         }
                     }
+                }
 
+                if (self.session.selectionState() != null) {
                     // Autoscroll when dragging outside terminal area
                     if (mouse.y < y) {
                         self.session.scrollBy(1);
