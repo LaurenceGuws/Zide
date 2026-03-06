@@ -9,12 +9,6 @@ const target_profile = @import("target_profile.zig");
 const step_utils = @import("step_utils.zig");
 
 const AppLinkContext = app_types.AppLinkContext;
-const parseDependencyPath = dependency_path.parseDependencyPath;
-const resolveVcpkgPaths = vcpkg_paths.resolveVcpkgPaths;
-const addBuildModeReportStep = step_utils.addBuildModeReportStep;
-const addBuildBootstrapReportStep = step_utils.addBuildBootstrapReportStep;
-const addBuildFocusedModePolicyCheckStep = step_utils.addBuildFocusedModePolicyCheckStep;
-const addBuildTargetReportStep = step_utils.addBuildTargetReportStep;
 
 pub const BuildBootstrap = struct {
     target: std.Build.ResolvedTarget,
@@ -52,7 +46,7 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
         "Build app mode: ide (default), terminal, editor",
     ) orelse "ide";
 
-    const dep_path = parseDependencyPath(dep_path_raw);
+    const dep_path = dependency_path.parseDependencyPath(dep_path_raw);
     const build_mode = mode_specs.parseBuildMode(build_mode_raw);
     const target_os = target.result.os.tag;
 
@@ -82,7 +76,7 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
     const vcpkg_root_opt = b.option([]const u8, "vcpkg-root", "Path to vcpkg root") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_ROOT") catch null;
     const vcpkg_triplet_opt = b.option([]const u8, "vcpkg-triplet", "vcpkg triplet (e.g. x64-windows)") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_DEFAULT_TRIPLET") catch null;
 
-    const resolved_vcpkg_paths = resolveVcpkgPaths(
+    const resolved_vcpkg_paths = vcpkg_paths.resolveVcpkgPaths(
         b,
         target,
         target_os,
@@ -106,29 +100,38 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
     }
     build_options.addOption(bool, "treesitter_enabled", deps.treesitter != null);
 
-    _ = addBuildModeReportStep(
+    const build_mode_report_step = step_utils.addBuildModeReportStep(
         b,
         target,
         optimize,
         build_options,
     );
-    _ = addBuildBootstrapReportStep(
+    const build_bootstrap_report_step = step_utils.addBuildBootstrapReportStep(
         b,
         target,
         optimize,
         build_options,
     );
-    _ = addBuildFocusedModePolicyCheckStep(
+    const build_focused_policy_report_step = step_utils.addBuildFocusedModePolicyCheckStep(
         b,
         target,
         optimize,
         build_options,
     );
-    _ = addBuildTargetReportStep(
+    const build_target_report_step = step_utils.addBuildTargetReportStep(
         b,
         target,
         optimize,
         build_options,
+    );
+    _ = step_utils.addBuildAllReportsStep(
+        b,
+        &.{
+            build_mode_report_step,
+            build_bootstrap_report_step,
+            build_focused_policy_report_step,
+            build_target_report_step,
+        },
     );
 
     const app_link_ctx = AppLinkContext{

@@ -43,6 +43,7 @@ Behavior:
 - `ide` (default): full IDE app graph (tests/tools/ffi steps available).
 - `terminal`: terminal app graph only (IDE-only graph planning is skipped).
 - `editor`: editor app graph only (IDE-only graph planning is skipped).
+- `zig build report-build-all`: runs core mode/bootstrap/policy/target reports in one step.
 
 Notes:
 - SDL3 and Lua are now always Zig package managed in normal flow (`castholm/SDL`, `ziglua` artifact `lua`).

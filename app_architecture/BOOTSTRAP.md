@@ -128,7 +128,10 @@ Mode behavior:
 - `zig build report-build-bootstrap`: prints resolved bootstrap context (mode/path/os/vcpkg/tree-sitter flag).
 - `zig build report-build-focused-policy`: asserts focused-mode dependency policy wiring.
 - `zig build report-build-target`: prints resolved target tuple + optimize mode.
+- `zig build report-build-all`: runs the core build reports/checks in one step.
 - Build graph moduleization:
+  - `build.zig`: thin forwarder into `build_utils/build_entry.zig`.
+  - `build_utils/build_entry.zig`: final top-level planner chain (`initBuildBootstrap` -> app graph -> optional IDE graph).
   - `build_utils/bootstrap_graph.zig`: shared build bootstrap/dependency/context setup.
   - `build_utils/app_graph.zig`: primary app graph planners (ide/focused runtime).
   - `build_utils/ide_graph.zig`: IDE-only extended graph (ffi/tests/tools/gates).
