@@ -276,9 +276,7 @@ fn appendOscTerminator(self: anytype, seq: *std.ArrayList(u8), terminator: OscTe
 
 fn writeSeq(pty: anytype, seq: []const u8) void {
     const log = app_logger.logger("terminal.osc");
-    if (log.enabled_file or log.enabled_console) {
-        log.logf(.info, "osc5522 reply=\"{s}\"", .{seq});
-    }
+            log.logf(.info, "osc5522 reply=\"{s}\"", .{seq});
     _ = pty.write(seq) catch |err| blk: {
         log.logf(.warning, "osc5522 reply write failed len={d} err={s}", .{ seq.len, @errorName(err) });
         break :blk 0;

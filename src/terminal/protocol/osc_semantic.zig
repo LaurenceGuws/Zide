@@ -41,9 +41,7 @@ pub fn parseSemanticPrompt(self: anytype, text: []const u8) void {
             applySemanticPromptEndCommand(self, rest);
         },
         else => {
-            if (log.enabled_file or log.enabled_console) {
-                log.logf(.info, "osc 133: unknown kind={c}", .{kind});
-            }
+                            log.logf(.info, "osc 133: unknown kind={c}", .{kind});
         },
     }
 }

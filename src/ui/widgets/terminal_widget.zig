@@ -122,9 +122,7 @@ pub const TerminalWidget = struct {
         if (self.ui_focused == focused) return;
         self.ui_focused = focused;
         const log = app_logger.logger("terminal.cursor");
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(.info, "ui_focus changed focused={d}", .{ @intFromBool(focused) });
-        }
+                    log.logf(.info, "ui_focus changed focused={d}", .{ @intFromBool(focused) });
     }
 
     pub fn updateBlink(self: *TerminalWidget, now: f64) bool {

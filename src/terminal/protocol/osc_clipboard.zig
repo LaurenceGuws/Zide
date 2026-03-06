@@ -95,9 +95,7 @@ fn writeClipboardReply(self: anytype, pty: anytype, selection: []const u8, termi
         return;
     };
 
-    if (log.enabled_file or log.enabled_console) {
-        log.logf(.info, "osc reply=\"{s}\"", .{seq.items});
-    }
+            log.logf(.info, "osc reply=\"{s}\"", .{seq.items});
     _ = pty.write(seq.items) catch |err| blk: {
         log.logf(.warning, "osc52 reply write failed len={d} err={s}", .{ seq.items.len, @errorName(err) });
         break :blk 0;

@@ -132,8 +132,7 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
 
                     if (result.blink_armed_changed) {
                         const cursor_log = app_logger.logger("terminal.cursor");
-                        if (cursor_log.enabled_file or cursor_log.enabled_console) {
-                            cursor_log.logf(.info, 
+                                                    cursor_log.logf(.info, 
                                 "cursor blink armed={any} visible={any} blink={any} scroll_offset={d}",
                                 .{
                                     result.blink_armed,
@@ -142,7 +141,6 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                                     cache.?.scroll_offset,
                                 },
                             );
-                        }
                     }
                     if (result.needs_redraw) inner_state.needs_redraw = true;
                 }

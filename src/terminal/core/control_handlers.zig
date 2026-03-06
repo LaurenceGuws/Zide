@@ -13,16 +13,12 @@ pub fn handleControl(self: anytype, byte: u8) void {
         0x0A => { // LF
             newline(self);
             const log = app_logger.logger("terminal.trace.control");
-            if (log.enabled_file or log.enabled_console) {
-                log.logf(.info, "control=LF row={d} col={d}", .{ screen.cursor.row, screen.cursor.col });
-            }
+                            log.logf(.info, "control=LF row={d} col={d}", .{ screen.cursor.row, screen.cursor.col });
         },
         0x0D => { // CR
             screen.carriageReturn();
             const log = app_logger.logger("terminal.trace.control");
-            if (log.enabled_file or log.enabled_console) {
-                log.logf(.info, "control=CR row={d} col={d}", .{ screen.cursor.row, screen.cursor.col });
-            }
+                            log.logf(.info, "control=CR row={d} col={d}", .{ screen.cursor.row, screen.cursor.col });
         },
         0x0E => { // SO (Shift Out) -> G1
             self.parser.gl_charset = self.parser.g1_charset;

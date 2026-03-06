@@ -148,9 +148,7 @@ pub fn addBatchQuad(renderer: anytype, texture: types.Texture, src: types.Rect, 
         .{ .x = x0, .y = y1, .u = u_min, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
     };
     renderer.batch_vertices.appendSlice(renderer.allocator, &verts) catch |err| {
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(.warning, "batch vertices append failed texture={d} err={s}", .{ texture.id, @errorName(err) });
-        }
+                    log.logf(.warning, "batch vertices append failed texture={d} err={s}", .{ texture.id, @errorName(err) });
         return;
     };
     if (renderer.batch_draws.items.len > 0) {
@@ -166,9 +164,7 @@ pub fn addBatchQuad(renderer: anytype, texture: types.Texture, src: types.Rect, 
         .start = base,
         .count = 6,
     }) catch |err| {
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(.warning, "batch draws append failed texture={d} err={s}", .{ texture.id, @errorName(err) });
-        }
+                    log.logf(.warning, "batch draws append failed texture={d} err={s}", .{ texture.id, @errorName(err) });
     };
 }
 

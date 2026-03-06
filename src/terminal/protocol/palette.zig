@@ -189,10 +189,8 @@ fn writeOscColorReply(self: anytype, pty: anytype, code: u8, color: types.Color,
         log.logf(.warning, "osc color reply format failed code={d} err={s}", .{ code, @errorName(err) });
         return;
     };
-    if (log.enabled_file or log.enabled_console) {
-        log.logf(.info, "osc reply=\"{s}\"", .{seq});
+            log.logf(.info, "osc reply=\"{s}\"", .{seq});
         logOscReplyHex(log, seq);
-    }
     _ = pty.write(seq) catch |err| blk: {
         log.logf(.warning, "osc reply write failed code={d} err={s}", .{ code, @errorName(err) });
         break :blk 0;
@@ -215,10 +213,8 @@ fn writeOscPaletteReply(self: anytype, pty: anytype, idx: u8, color: types.Color
         log.logf(.warning, "osc palette reply format failed idx={d} err={s}", .{ idx, @errorName(err) });
         return;
     };
-    if (log.enabled_file or log.enabled_console) {
-        log.logf(.info, "osc reply=\"{s}\"", .{seq});
+            log.logf(.info, "osc reply=\"{s}\"", .{seq});
         logOscReplyHex(log, seq);
-    }
     _ = pty.write(seq) catch |err| blk: {
         log.logf(.warning, "osc palette reply write failed idx={d} err={s}", .{ idx, @errorName(err) });
         break :blk 0;
