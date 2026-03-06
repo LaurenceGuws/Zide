@@ -517,16 +517,24 @@ fn parseKittyControl(
 }
 
 fn parseKittyValue(text: []const u8) ?u32 {
+    const log = app_logger.logger("terminal.kitty");
     if (text.len == 0) return null;
     if (text.len == 1 and (text[0] < '0' or text[0] > '9')) {
         return @intCast(text[0]);
     }
-    return std.fmt.parseUnsigned(u32, text, 10) catch null;
+    return std.fmt.parseUnsigned(u32, text, 10) catch {
+        log.logf(.debug, "kitty parse unsigned failed text={s}", .{ text });
+        return null;
+    };
 }
 
 fn parseKittySigned(text: []const u8) ?i32 {
+    const log = app_logger.logger("terminal.kitty");
     if (text.len == 0) return null;
-    return std.fmt.parseInt(i32, text, 10) catch null;
+    return std.fmt.parseInt(i32, text, 10) catch {
+        log.logf(.debug, "kitty parse signed failed text={s}", .{ text });
+        return null;
+    };
 }
 
 fn resolveKittyImageId(control: KittyControl) ?u32 {
@@ -562,16 +570,32 @@ fn validateKittyControl(control: KittyControl) bool {
 }
 
 fn decodeBase64(self: anytype, data: []const u8) ?[]u8 {
+    const log = app_logger.logger("terminal.kitty");
     if (data.len == 0) {
-        return self.allocator.alloc(u8, 0) catch return null;
+        return self.allocator.alloc(u8, 0) catch {
+            log.logf(.warning, "kitty decodeBase64 failed allocating empty payload", .{});
+            return null;
+        };
     }
-    const decoded_len = std.base64.standard.Decoder.calcSizeForSlice(data) catch return null;
+    const decoded_len = std.base64.standard.Decoder.calcSizeForSlice(data) catch {
+        log.logf(.warning, "kitty decodeBase64 failed size calculation", .{});
+        return null;
+    };
     var decoded = std.ArrayList(u8).empty;
     var owned = false;
     defer if (!owned) decoded.deinit(self.allocator);
-    decoded.resize(self.allocator, decoded_len) catch return null;
-    _ = std.base64.standard.Decoder.decode(decoded.items, data) catch return null;
-    const out = decoded.toOwnedSlice(self.allocator) catch return null;
+    decoded.resize(self.allocator, decoded_len) catch {
+        log.logf(.warning, "kitty decodeBase64 failed buffer resize bytes={d}", .{ decoded_len });
+        return null;
+    };
+    _ = std.base64.standard.Decoder.decode(decoded.items, data) catch {
+        log.logf(.warning, "kitty decodeBase64 failed decode", .{});
+        return null;
+    };
+    const out = decoded.toOwnedSlice(self.allocator) catch {
+        log.logf(.warning, "kitty decodeBase64 failed ownership conversion", .{});
+        return null;
+    };
     owned = true;
     return out;
 }
@@ -596,6 +620,7 @@ fn loadKittyPayload(self: anytype, control: *KittyControl, data: []const u8) ?[]
 }
 
 fn readKittyFile(self: anytype, path: []const u8, size: u32, is_temporary: bool) ?[]u8 {
+    const log = app_logger.logger("terminal.kitty");
     if (is_temporary) {
         if (!std.mem.startsWith(u8, path, "/tmp/") and !std.mem.startsWith(u8, path, "/var/tmp/")) return null;
         if (std.mem.indexOf(u8, path, "tty-graphics-protocol") == null) return null;
@@ -617,18 +642,26 @@ fn readKittyFile(self: anytype, path: []const u8, size: u32, is_temporary: bool)
                 };
             }
         };
-        const stat = f.stat() catch return null;
+        const stat = f.stat() catch |err| {
+            log.logf(.warning, "kitty file stat failed path={s} err={s}", .{ path, @errorName(err) });
+            return null;
+        };
         const total: usize = @intCast(stat.size);
         const read_len: usize = if (size > 0) @min(@as(usize, size), total) else total;
         if (read_len > kitty_max_bytes) return null;
-        const out = self.allocator.alloc(u8, read_len) catch return null;
+        const out = self.allocator.alloc(u8, read_len) catch {
+            log.logf(.warning, "kitty file alloc failed path={s} bytes={d}", .{ path, read_len });
+            return null;
+        };
         const n = f.readAll(out) catch {
             self.allocator.free(out);
+            log.logf(.warning, "kitty file read failed path={s}", .{ path });
             return null;
         };
         if (n < read_len) {
             const trimmed = self.allocator.alloc(u8, n) catch {
                 self.allocator.free(out);
+                log.logf(.warning, "kitty file trim alloc failed path={s} bytes={d}", .{ path, n });
                 return null;
             };
             std.mem.copyForwards(u8, trimmed, out[0..n]);
@@ -637,21 +670,29 @@ fn readKittyFile(self: anytype, path: []const u8, size: u32, is_temporary: bool)
         }
         return out;
     } else |_| {
+        log.logf(.debug, "kitty file open failed path={s}", .{ path });
         return null;
     }
 }
 
 fn readKittySharedMemory(self: anytype, name: []const u8, size: u32) ?[]u8 {
+    const log = app_logger.logger("terminal.kitty");
     if (builtin.target.os.tag == .windows) return null;
     if (!builtin.link_libc) return null;
     if (builtin.target.os.tag == .windows) return null;
     var buf: [std.fs.max_path_bytes]u8 = undefined;
-    const name_z = std.fmt.bufPrintZ(&buf, "{s}", .{name}) catch return null;
+    const name_z = std.fmt.bufPrintZ(&buf, "{s}", .{name}) catch {
+        log.logf(.warning, "kitty shm name format failed name={s}", .{ name });
+        return null;
+    };
     const fd = std.c.shm_open(name_z, @as(c_int, @bitCast(std.c.O{ .ACCMODE = .RDONLY })), 0);
     if (fd < 0) return null;
     defer _ = std.c.close(fd);
     defer _ = std.c.shm_unlink(name_z);
-    const stat = posix.fstat(fd) catch return null;
+    const stat = posix.fstat(fd) catch |err| {
+        log.logf(.warning, "kitty shm fstat failed name={s} err={s}", .{ name, @errorName(err) });
+        return null;
+    };
     if (stat.size <= 0) return null;
     const total: usize = @intCast(stat.size);
     const read_len: usize = if (size > 0) @min(@as(usize, size), total) else total;
@@ -663,14 +704,21 @@ fn readKittySharedMemory(self: anytype, name: []const u8, size: u32) ?[]u8 {
         std.c.MAP{ .TYPE = .SHARED },
         fd,
         0,
-    ) catch return null;
+    ) catch |err| {
+        log.logf(.warning, "kitty shm mmap failed name={s} err={s}", .{ name, @errorName(err) });
+        return null;
+    };
     defer posix.munmap(map);
-    const out = self.allocator.alloc(u8, read_len) catch return null;
+    const out = self.allocator.alloc(u8, read_len) catch {
+        log.logf(.warning, "kitty shm alloc failed name={s} bytes={d}", .{ name, read_len });
+        return null;
+    };
     std.mem.copyForwards(u8, out, map[0..read_len]);
     return out;
 }
 
 fn accumulateKittyData(self: anytype, image_id: u32, control: *KittyControl, decoded: []u8) ?[]u8 {
+    const log = app_logger.logger("terminal.kitty");
     const kitty = kittyState(self);
     var chunk = decoded;
     var compression = control.compression;
@@ -697,7 +745,10 @@ fn accumulateKittyData(self: anytype, image_id: u32, control: *KittyControl, dec
     }
 
     if (control.more) {
-        const entry = kitty.partials.getOrPut(image_id) catch return null;
+        const entry = kitty.partials.getOrPut(image_id) catch |err| {
+            log.logf(.warning, "kitty partial getOrPut failed id={d} err={s}", .{ image_id, @errorName(err) });
+            return null;
+        };
         if (!entry.found_existing) {
             const format = kittyFormatFor(control.format) orelse {
                 self.allocator.free(chunk);
@@ -781,7 +832,10 @@ fn accumulateKittyData(self: anytype, image_id: u32, control: *KittyControl, dec
             _ = kitty.partials.remove(image_id);
             return null;
         }
-        const combined = entry.value_ptr.data.toOwnedSlice(self.allocator) catch return null;
+        const combined = entry.value_ptr.data.toOwnedSlice(self.allocator) catch |err| {
+            log.logf(.warning, "kitty partial toOwnedSlice failed id={d} err={s}", .{ image_id, @errorName(err) });
+            return null;
+        };
         if (control.width == 0) control.width = entry.value_ptr.width;
         if (control.height == 0) control.height = entry.value_ptr.height;
         if (control.format == 0) {
@@ -835,11 +889,15 @@ fn accumulateKittyData(self: anytype, image_id: u32, control: *KittyControl, dec
 }
 
 fn applyKittyChunk(self: anytype, partial: *KittyPartial, control: *KittyControl, chunk: []const u8) bool {
+    const log = app_logger.logger("terminal.kitty");
     const expected_size = if (partial.expected_size > 0) partial.expected_size else control.size;
     if (expected_size > 0 and expected_size > kitty_max_bytes) return false;
     if (expected_size > 0) {
         if (!partial.size_initialized) {
-            partial.data.resize(self.allocator, expected_size) catch return false;
+            partial.data.resize(self.allocator, expected_size) catch |err| {
+                log.logf(.warning, "kitty partial resize failed bytes={d} err={s}", .{ expected_size, @errorName(err) });
+                return false;
+            };
             @memset(partial.data.items, 0);
             partial.size_initialized = true;
         }
@@ -854,12 +912,16 @@ fn applyKittyChunk(self: anytype, partial: *KittyPartial, control: *KittyControl
 
     if (control.offset > 0) return false;
     if (partial.data.items.len + chunk.len > kitty_max_bytes) return false;
-    _ = partial.data.appendSlice(self.allocator, chunk) catch return false;
+    _ = partial.data.appendSlice(self.allocator, chunk) catch |err| {
+        log.logf(.warning, "kitty partial append failed bytes={d} err={s}", .{ chunk.len, @errorName(err) });
+        return false;
+    };
     partial.received = @intCast(partial.data.items.len);
     return true;
 }
 
 fn inflateKittyData(self: anytype, compressed: []const u8, expected_size: u32) ?[]u8 {
+    const log = app_logger.logger("terminal.kitty");
     var stream = std.io.fixedBufferStream(compressed);
     var reader_buf: [8192]u8 = undefined;
     var adapter = stream.reader().adaptToNewApi(&reader_buf);
@@ -870,13 +932,22 @@ fn inflateKittyData(self: anytype, compressed: []const u8, expected_size: u32) ?
     const limit: usize = if (expected_size > 0) @intCast(expected_size) else kitty_max_bytes;
     var buf: [8192]u8 = undefined;
     while (true) {
-        const n = decompressor.reader.readSliceShort(&buf) catch return null;
+        const n = decompressor.reader.readSliceShort(&buf) catch |err| {
+            log.logf(.warning, "kitty inflate read failed err={s}", .{ @errorName(err) });
+            return null;
+        };
         if (n == 0) break;
         if (out.items.len + n > limit) return null;
-        _ = out.appendSlice(self.allocator, buf[0..n]) catch return null;
+        _ = out.appendSlice(self.allocator, buf[0..n]) catch |err| {
+            log.logf(.warning, "kitty inflate append failed bytes={d} err={s}", .{ n, @errorName(err) });
+            return null;
+        };
     }
     if (expected_size > 0 and out.items.len != expected_size) return null;
-    return out.toOwnedSlice(self.allocator) catch null;
+    return out.toOwnedSlice(self.allocator) catch |err| {
+        log.logf(.warning, "kitty inflate ownership conversion failed err={s}", .{ @errorName(err) });
+        return null;
+    };
 }
 
 fn kittyFormatFor(value: u32) ?KittyImageFormat {
