@@ -156,6 +156,58 @@ fn linkCommonPlatformGraphics(exe: *std.Build.Step.Compile, target_os: std.Targe
     }
 }
 
+fn linkSdlTestGraphics(step: *std.Build.Step.Compile, target_os: std.Target.Os.Tag) void {
+    if (target_os == .linux) {
+        step.linkSystemLibrary("GL");
+    } else if (target_os == .windows) {
+        step.linkSystemLibrary("opengl32");
+    } else if (target_os == .macos) {
+        step.linkFramework("OpenGL");
+    }
+}
+
+fn configureSdlTestTarget(
+    step: *std.Build.Step.Compile,
+    ctx: AppLinkContext,
+    include_treesitter: bool,
+    include_text_stack: bool,
+    include_lua: bool,
+    include_fontconfig: bool,
+) void {
+    if (ctx.use_vcpkg) {
+        step.addLibraryPath(.{ .cwd_relative = ctx.vcpkg_lib.? });
+        step.addIncludePath(.{ .cwd_relative = ctx.vcpkg_include.? });
+    }
+    linkSdl3(step, ctx.dep_path, ctx.sdl_lib);
+    if (include_text_stack) linkTextStack(step, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
+    if (include_lua) linkLua(step, ctx.dep_path, ctx.lua_lib);
+    if (include_fontconfig and ctx.target_os == .linux) {
+        step.linkSystemLibrary("fontconfig");
+    }
+    linkSdlTestGraphics(step, ctx.target_os);
+
+    if (include_treesitter) {
+        step.linkLibrary(ctx.treesitter);
+    }
+    step.addIncludePath(.{ .cwd_relative = "vendor" });
+    if (include_treesitter) {
+        addTreeSitterIncludes(step, ctx.treesitter);
+    }
+    if (!ctx.use_vcpkg) {
+        if (include_text_stack) {
+            addTextStackIncludes(step, ctx.use_vcpkg, ctx.target_os, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
+        }
+        if (include_lua) {
+            addLuaIncludes(step, ctx.dep_path, ctx.lua_lib);
+        }
+        addLinuxSystemSdlInclude(step, ctx.target_os, ctx.dep_path);
+    }
+    step.addCSourceFile(.{
+        .file = .{ .cwd_relative = "src/c/stb_image.c" },
+        .flags = &.{"-std=c99"},
+    });
+}
+
 fn configureAppExecutable(
     exe: *std.Build.Step.Compile,
     ctx: AppLinkContext,
@@ -198,6 +250,24 @@ fn configureAppExecutable(
         .file = .{ .cwd_relative = "src/c/stb_image.c" },
         .flags = &.{"-std=c99"},
     });
+}
+
+fn addRunStepForArtifact(
+    b: *std.Build,
+    install_step: *std.Build.Step,
+    artifact: *std.Build.Step.Compile,
+    step_name: []const u8,
+    description: []const u8,
+    fixed_args: []const []const u8,
+    passthrough_args: ?[]const []const u8,
+) *std.Build.Step {
+    const run_cmd = b.addRunArtifact(artifact);
+    run_cmd.step.dependOn(install_step);
+    if (fixed_args.len > 0) run_cmd.addArgs(fixed_args);
+    if (passthrough_args) |args| run_cmd.addArgs(args);
+    const run_step = b.step(step_name, description);
+    run_step.dependOn(&run_cmd.step);
+    return run_step;
 }
 
 pub fn build(b: *std.Build) void {
@@ -400,32 +470,34 @@ pub fn build(b: *std.Build) void {
     // ─────────────────────────────────────────────────────────────────────────
     // Run step
     // ─────────────────────────────────────────────────────────────────────────
-    const run_cmd = b.addRunArtifact(exe);
-    run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
-
-    const run_step = b.step("run", "Run the IDE");
-    run_step.dependOn(&run_cmd.step);
-
-    const run_mode_terminal_cmd = b.addRunArtifact(exe);
-    run_mode_terminal_cmd.step.dependOn(b.getInstallStep());
-    run_mode_terminal_cmd.addArgs(&.{ "--mode", "terminal" });
-    const run_mode_terminal_step = b.step("run-mode-terminal", "Run main entry in --mode terminal");
-    run_mode_terminal_step.dependOn(&run_mode_terminal_cmd.step);
-
-    const run_mode_editor_cmd = b.addRunArtifact(exe);
-    run_mode_editor_cmd.step.dependOn(b.getInstallStep());
-    run_mode_editor_cmd.addArgs(&.{ "--mode", "editor" });
-    const run_mode_editor_step = b.step("run-mode-editor", "Run main entry in --mode editor");
-    run_mode_editor_step.dependOn(&run_mode_editor_cmd.step);
-
-    const run_mode_ide_cmd = b.addRunArtifact(exe);
-    run_mode_ide_cmd.step.dependOn(b.getInstallStep());
-    run_mode_ide_cmd.addArgs(&.{ "--mode", "ide" });
-    const run_mode_ide_step = b.step("run-mode-ide", "Run main entry in --mode ide");
-    run_mode_ide_step.dependOn(&run_mode_ide_cmd.step);
+    const run_step = addRunStepForArtifact(b, b.getInstallStep(), exe, "run", "Run the IDE", &.{}, b.args);
+    const run_mode_terminal_step = addRunStepForArtifact(
+        b,
+        b.getInstallStep(),
+        exe,
+        "run-mode-terminal",
+        "Run main entry in --mode terminal",
+        &.{ "--mode", "terminal" },
+        null,
+    );
+    const run_mode_editor_step = addRunStepForArtifact(
+        b,
+        b.getInstallStep(),
+        exe,
+        "run-mode-editor",
+        "Run main entry in --mode editor",
+        &.{ "--mode", "editor" },
+        null,
+    );
+    const run_mode_ide_step = addRunStepForArtifact(
+        b,
+        b.getInstallStep(),
+        exe,
+        "run-mode-ide",
+        "Run main entry in --mode ide",
+        &.{ "--mode", "ide" },
+        null,
+    );
 
     // Focused app entrypoints (same app graph for now, fixed mode roots).
     const exe_terminal = addAppExecutable(
@@ -439,13 +511,15 @@ pub fn build(b: *std.Build) void {
     );
     configureAppExecutable(exe_terminal, app_link_ctx, "zide-terminal", false);
     b.installArtifact(exe_terminal);
-    const run_terminal_cmd = b.addRunArtifact(exe_terminal);
-    run_terminal_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_terminal_cmd.addArgs(args);
-    }
-    const run_terminal_step = b.step("run-terminal", "Run terminal-only app entry");
-    run_terminal_step.dependOn(&run_terminal_cmd.step);
+    _ = addRunStepForArtifact(
+        b,
+        b.getInstallStep(),
+        exe_terminal,
+        "run-terminal",
+        "Run terminal-only app entry",
+        &.{},
+        b.args,
+    );
 
     const exe_editor = addAppExecutable(
         b,
@@ -458,13 +532,15 @@ pub fn build(b: *std.Build) void {
     );
     configureAppExecutable(exe_editor, app_link_ctx, "zide-editor", true);
     b.installArtifact(exe_editor);
-    const run_editor_cmd = b.addRunArtifact(exe_editor);
-    run_editor_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_editor_cmd.addArgs(args);
-    }
-    const run_editor_step = b.step("run-editor", "Run editor-only app entry");
-    run_editor_step.dependOn(&run_editor_cmd.step);
+    _ = addRunStepForArtifact(
+        b,
+        b.getInstallStep(),
+        exe_editor,
+        "run-editor",
+        "Run editor-only app entry",
+        &.{},
+        b.args,
+    );
 
     const exe_ide = addAppExecutable(
         b,
@@ -477,13 +553,15 @@ pub fn build(b: *std.Build) void {
     );
     configureAppExecutable(exe_ide, app_link_ctx, "zide-ide", true);
     b.installArtifact(exe_ide);
-    const run_ide_cmd = b.addRunArtifact(exe_ide);
-    run_ide_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_ide_cmd.addArgs(args);
-    }
-    const run_ide_step = b.step("run-ide", "Run ide-only app entry");
-    run_ide_step.dependOn(&run_ide_cmd.step);
+    _ = addRunStepForArtifact(
+        b,
+        b.getInstallStep(),
+        exe_ide,
+        "run-ide",
+        "Run ide-only app entry",
+        &.{},
+        b.args,
+    );
 
     // ─────────────────────────────────────────────────────────────────────────
     // Terminal FFI bridge
@@ -562,28 +640,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     unit_tests.root_module.addOptions("build_options", build_options);
-    if (use_vcpkg) {
-        unit_tests.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
-        unit_tests.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
-    }
-    linkSdl3(unit_tests, dep_path, sdl_lib);
-    if (target_os == .linux) {
-        unit_tests.linkSystemLibrary("GL");
-    } else if (target_os == .windows) {
-        unit_tests.linkSystemLibrary("opengl32");
-    } else if (target_os == .macos) {
-        unit_tests.linkFramework("OpenGL");
-    }
-    unit_tests.linkLibrary(treesitter);
-    unit_tests.addIncludePath(b.path("vendor"));
-    addTreeSitterIncludes(unit_tests, treesitter);
-    if (!use_vcpkg) {
-        addLinuxSystemSdlInclude(unit_tests, target_os, dep_path);
-    }
-    unit_tests.addCSourceFile(.{
-        .file = b.path("src/c/stb_image.c"),
-        .flags = &.{"-std=c99"},
-    });
+    configureSdlTestTarget(unit_tests, app_link_ctx, true, false, false, false);
 
     const run_tests = b.addRunArtifact(unit_tests);
     const test_step = b.step("test", "Run unit tests");
@@ -599,30 +656,7 @@ pub fn build(b: *std.Build) void {
         .root_module = editor_tests_root,
     });
     editor_tests_root.addOptions("build_options", build_options);
-    if (use_vcpkg) {
-        editor_tests.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
-        editor_tests.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
-    }
-    linkSdl3(editor_tests, dep_path, sdl_lib);
-    if (target_os == .linux) {
-        editor_tests.linkSystemLibrary("GL");
-    } else if (target_os == .windows) {
-        editor_tests.linkSystemLibrary("opengl32");
-    } else if (target_os == .macos) {
-        editor_tests.linkFramework("OpenGL");
-    }
-    editor_tests.linkLibrary(treesitter);
-    editor_tests.addIncludePath(b.path("vendor"));
-    addTreeSitterIncludes(editor_tests, treesitter);
-    if (!use_vcpkg) {
-        addTextStackIncludes(editor_tests, use_vcpkg, target_os, dep_path, freetype_lib, harfbuzz_lib);
-        addLuaIncludes(editor_tests, dep_path, lua_lib);
-        addLinuxSystemSdlInclude(editor_tests, target_os, dep_path);
-    }
-    editor_tests.addCSourceFile(.{
-        .file = b.path("src/c/stb_image.c"),
-        .flags = &.{"-std=c99"},
-    });
+    configureSdlTestTarget(editor_tests, app_link_ctx, true, true, true, false);
 
     const run_editor_tests = b.addRunArtifact(editor_tests);
     const editor_test_step = b.step("test-editor", "Run editor-specific tests");
@@ -636,33 +670,7 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
-    if (use_vcpkg) {
-        config_tests.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
-        config_tests.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
-    }
-    linkSdl3(config_tests, dep_path, sdl_lib);
-    linkTextStack(config_tests, dep_path, freetype_lib, harfbuzz_lib);
-    linkLua(config_tests, dep_path, lua_lib);
-    if (target_os == .linux) {
-        config_tests.linkSystemLibrary("GL");
-        config_tests.linkSystemLibrary("fontconfig");
-    } else if (target_os == .windows) {
-        config_tests.linkSystemLibrary("opengl32");
-    } else if (target_os == .macos) {
-        config_tests.linkFramework("OpenGL");
-    }
-    config_tests.addIncludePath(b.path("vendor"));
-    if (!use_vcpkg) {
-        addTextStackIncludes(config_tests, use_vcpkg, target_os, dep_path, freetype_lib, harfbuzz_lib);
-        addLuaIncludes(config_tests, dep_path, lua_lib);
-        if (target_os == .linux) {
-            addLinuxSystemSdlInclude(config_tests, target_os, dep_path);
-        }
-    }
-    config_tests.addCSourceFile(.{
-        .file = b.path("src/c/stb_image.c"),
-        .flags = &.{"-std=c99"},
-    });
+    configureSdlTestTarget(config_tests, app_link_ctx, false, true, true, true);
 
     const run_config_tests = b.addRunArtifact(config_tests);
     const config_test_step = b.step("test-config", "Run Lua config parser/merge tests");
@@ -677,20 +685,7 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
-    linkSdl3(terminal_replay_exe, dep_path, sdl_lib);
-    if (target_os == .linux) {
-        terminal_replay_exe.linkSystemLibrary("GL");
-    } else if (target_os == .windows) {
-        terminal_replay_exe.linkSystemLibrary("opengl32");
-    } else if (target_os == .macos) {
-        terminal_replay_exe.linkFramework("OpenGL");
-    }
-    terminal_replay_exe.addIncludePath(b.path("vendor"));
-    addLinuxSystemSdlInclude(terminal_replay_exe, target_os, dep_path);
-    terminal_replay_exe.addCSourceFile(.{
-        .file = b.path("src/c/stb_image.c"),
-        .flags = &.{"-std=c99"},
-    });
+    configureSdlTestTarget(terminal_replay_exe, app_link_ctx, false, false, false, false);
 
     const run_terminal_replay = b.addRunArtifact(terminal_replay_exe);
     if (b.args) |args| {
@@ -741,20 +736,7 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
-    linkSdl3(terminal_kitty_query_tests, dep_path, sdl_lib);
-    if (target_os == .linux) {
-        terminal_kitty_query_tests.linkSystemLibrary("GL");
-    } else if (target_os == .windows) {
-        terminal_kitty_query_tests.linkSystemLibrary("opengl32");
-    } else if (target_os == .macos) {
-        terminal_kitty_query_tests.linkFramework("OpenGL");
-    }
-    terminal_kitty_query_tests.addIncludePath(b.path("vendor"));
-    addLinuxSystemSdlInclude(terminal_kitty_query_tests, target_os, dep_path);
-    terminal_kitty_query_tests.addCSourceFile(.{
-        .file = b.path("src/c/stb_image.c"),
-        .flags = &.{"-std=c99"},
-    });
+    configureSdlTestTarget(terminal_kitty_query_tests, app_link_ctx, false, false, false, false);
     const run_terminal_kitty_query_tests = b.addRunArtifact(terminal_kitty_query_tests);
     const terminal_kitty_query_tests_step = b.step(
         "test-terminal-kitty-query-parse",
@@ -770,20 +752,7 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
-    linkSdl3(terminal_focus_reporting_tests, dep_path, sdl_lib);
-    if (target_os == .linux) {
-        terminal_focus_reporting_tests.linkSystemLibrary("GL");
-    } else if (target_os == .windows) {
-        terminal_focus_reporting_tests.linkSystemLibrary("opengl32");
-    } else if (target_os == .macos) {
-        terminal_focus_reporting_tests.linkFramework("OpenGL");
-    }
-    terminal_focus_reporting_tests.addIncludePath(b.path("vendor"));
-    addLinuxSystemSdlInclude(terminal_focus_reporting_tests, target_os, dep_path);
-    terminal_focus_reporting_tests.addCSourceFile(.{
-        .file = b.path("src/c/stb_image.c"),
-        .flags = &.{"-std=c99"},
-    });
+    configureSdlTestTarget(terminal_focus_reporting_tests, app_link_ctx, false, false, false, false);
     const run_terminal_focus_reporting_tests = b.addRunArtifact(terminal_focus_reporting_tests);
     const terminal_focus_reporting_tests_step = b.step(
         "test-terminal-focus-reporting",
@@ -799,20 +768,7 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         }),
     });
-    linkSdl3(terminal_workspace_tests, dep_path, sdl_lib);
-    if (target_os == .linux) {
-        terminal_workspace_tests.linkSystemLibrary("GL");
-    } else if (target_os == .windows) {
-        terminal_workspace_tests.linkSystemLibrary("opengl32");
-    } else if (target_os == .macos) {
-        terminal_workspace_tests.linkFramework("OpenGL");
-    }
-    terminal_workspace_tests.addIncludePath(b.path("vendor"));
-    addLinuxSystemSdlInclude(terminal_workspace_tests, target_os, dep_path);
-    terminal_workspace_tests.addCSourceFile(.{
-        .file = b.path("src/c/stb_image.c"),
-        .flags = &.{"-std=c99"},
-    });
+    configureSdlTestTarget(terminal_workspace_tests, app_link_ctx, false, false, false, false);
     const run_terminal_workspace_tests = b.addRunArtifact(terminal_workspace_tests);
     const terminal_workspace_tests_step = b.step(
         "test-terminal-workspace",
