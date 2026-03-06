@@ -96,6 +96,102 @@ fn addTextStackIncludes(
     }
 }
 
+const AppLinkContext = struct {
+    dep_path: DependencySource,
+    target_os: std.Target.Os.Tag,
+    use_vcpkg: bool,
+    vcpkg_lib: ?[]const u8,
+    vcpkg_include: ?[]const u8,
+    treesitter: *std.Build.Step.Compile,
+    sdl_lib: ?*std.Build.Step.Compile,
+    lua_lib: ?*std.Build.Step.Compile,
+    freetype_lib: ?*std.Build.Step.Compile,
+    harfbuzz_lib: ?*std.Build.Step.Compile,
+};
+
+fn addAppExecutable(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    build_options: *std.Build.Step.Options,
+    zlua_module: *std.Build.Module,
+    name: []const u8,
+    root_source_file: []const u8,
+) *std.Build.Step.Compile {
+    const exe = b.addExecutable(.{
+        .name = name,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path(root_source_file),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    exe.root_module.addOptions("build_options", build_options);
+    exe.root_module.addImport("zlua", zlua_module);
+    return exe;
+}
+
+fn linkCommonPlatformGraphics(exe: *std.Build.Step.Compile, target_os: std.Target.Os.Tag) void {
+    if (target_os == .windows) {
+        exe.linkSystemLibrary("opengl32");
+        exe.linkSystemLibrary("gdi32");
+        exe.linkSystemLibrary("comdlg32");
+        exe.linkSystemLibrary("dwrite");
+        exe.linkSystemLibrary("ole32");
+        exe.linkSystemLibrary("winmm");
+        exe.linkSystemLibrary("user32");
+        exe.linkSystemLibrary("shell32");
+    } else if (target_os == .macos) {
+        exe.linkFramework("OpenGL");
+        exe.linkFramework("Cocoa");
+        exe.linkFramework("IOKit");
+        exe.linkFramework("CoreVideo");
+    } else {
+        exe.linkSystemLibrary("GL");
+        exe.linkSystemLibrary("m");
+        exe.linkSystemLibrary("pthread");
+        exe.linkSystemLibrary("dl");
+        exe.linkSystemLibrary("rt");
+    }
+}
+
+fn configureAppExecutable(exe: *std.Build.Step.Compile, ctx: AppLinkContext, include_treesitter: bool) void {
+    if (include_treesitter) {
+        exe.linkLibrary(ctx.treesitter);
+    }
+    if (ctx.use_vcpkg) {
+        exe.addLibraryPath(.{ .cwd_relative = ctx.vcpkg_lib.? });
+        exe.addIncludePath(.{ .cwd_relative = ctx.vcpkg_include.? });
+        linkTextStack(exe, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
+        linkLua(exe, ctx.dep_path, ctx.lua_lib);
+        linkSdl3(exe, ctx.dep_path, ctx.sdl_lib);
+    } else {
+        linkTextStack(exe, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
+        linkLua(exe, ctx.dep_path, ctx.lua_lib);
+        linkSdl3(exe, ctx.dep_path, ctx.sdl_lib);
+    }
+    if (ctx.target_os == .linux) {
+        exe.linkSystemLibrary("fontconfig");
+    }
+    exe.addIncludePath(.{ .cwd_relative = "vendor" });
+    if (include_treesitter) {
+        addTreeSitterIncludes(exe, ctx.treesitter);
+    }
+    if (!ctx.use_vcpkg) {
+        addTextStackIncludes(exe, ctx.use_vcpkg, ctx.target_os, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
+        addLuaIncludes(exe, ctx.dep_path, ctx.lua_lib);
+        if (ctx.target_os == .linux) {
+            addLinuxSystemSdlInclude(exe, ctx.target_os, ctx.dep_path);
+        }
+    }
+    linkCommonPlatformGraphics(exe, ctx.target_os);
+    exe.addCSourceFile(.{
+        .file = .{ .cwd_relative = "src/c/stb_image.c" },
+        .flags = &.{"-std=c99"},
+    });
+}
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{
         .default_target = if (builtin.os.tag == .windows) .{
@@ -239,71 +335,29 @@ pub fn build(b: *std.Build) void {
     // ─────────────────────────────────────────────────────────────────────────
     // Main executable
     // ─────────────────────────────────────────────────────────────────────────
-    const exe = b.addExecutable(.{
-        .name = "zide",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-    exe.root_module.addOptions("build_options", build_options);
-    exe.root_module.addImport("zlua", zlua_module);
+    const app_link_ctx = AppLinkContext{
+        .dep_path = dep_path,
+        .target_os = target_os,
+        .use_vcpkg = use_vcpkg,
+        .vcpkg_lib = vcpkg_lib,
+        .vcpkg_include = vcpkg_include,
+        .treesitter = treesitter,
+        .sdl_lib = sdl_lib,
+        .lua_lib = lua_lib,
+        .freetype_lib = freetype_lib,
+        .harfbuzz_lib = harfbuzz_lib,
+    };
 
-    // Link C libraries
-    exe.linkLibrary(treesitter);
-    if (use_vcpkg) {
-        exe.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
-        exe.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
-        linkTextStack(exe, dep_path, freetype_lib, harfbuzz_lib);
-        linkLua(exe, dep_path, lua_lib);
-        linkSdl3(exe, dep_path, sdl_lib);
-    } else {
-        linkTextStack(exe, dep_path, freetype_lib, harfbuzz_lib);
-        linkLua(exe, dep_path, lua_lib);
-        linkSdl3(exe, dep_path, sdl_lib);
-    }
-    if (target_os == .linux) {
-        exe.linkSystemLibrary("fontconfig");
-    }
-
-    // Include paths for @cImport
-    exe.addIncludePath(b.path("vendor"));
-    addTreeSitterIncludes(exe, treesitter);
-    if (!use_vcpkg) {
-        addTextStackIncludes(exe, use_vcpkg, target_os, dep_path, freetype_lib, harfbuzz_lib);
-        addLuaIncludes(exe, dep_path, lua_lib);
-        addLinuxSystemSdlInclude(exe, target_os, dep_path);
-    }
-
-    // Platform-specific linking for the exe
-    if (target_os == .windows) {
-        exe.linkSystemLibrary("opengl32");
-        exe.linkSystemLibrary("gdi32");
-        exe.linkSystemLibrary("comdlg32");
-        exe.linkSystemLibrary("dwrite");
-        exe.linkSystemLibrary("ole32");
-        exe.linkSystemLibrary("winmm");
-        exe.linkSystemLibrary("user32");
-        exe.linkSystemLibrary("shell32");
-    } else if (target_os == .macos) {
-        exe.linkFramework("OpenGL");
-        exe.linkFramework("Cocoa");
-        exe.linkFramework("IOKit");
-        exe.linkFramework("CoreVideo");
-    } else {
-        exe.linkSystemLibrary("GL");
-        exe.linkSystemLibrary("m");
-        exe.linkSystemLibrary("pthread");
-        exe.linkSystemLibrary("dl");
-        exe.linkSystemLibrary("rt");
-    }
-
-    exe.addCSourceFile(.{
-        .file = b.path("src/c/stb_image.c"),
-        .flags = &.{"-std=c99"},
-    });
+    const exe = addAppExecutable(
+        b,
+        target,
+        optimize,
+        build_options,
+        zlua_module,
+        "zide",
+        "src/main.zig",
+    );
+    configureAppExecutable(exe, app_link_ctx, true);
 
     b.installArtifact(exe);
 
@@ -366,64 +420,16 @@ pub fn build(b: *std.Build) void {
     run_mode_ide_step.dependOn(&run_mode_ide_cmd.step);
 
     // Focused app entrypoints (same app graph for now, fixed mode roots).
-    const exe_terminal = b.addExecutable(.{
-        .name = "zide-terminal",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/entry_terminal.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-    exe_terminal.root_module.addOptions("build_options", build_options);
-    exe_terminal.root_module.addImport("zlua", zlua_module);
-    if (use_vcpkg) {
-        exe_terminal.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
-        exe_terminal.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
-        linkTextStack(exe_terminal, dep_path, freetype_lib, harfbuzz_lib);
-        linkLua(exe_terminal, dep_path, lua_lib);
-        linkSdl3(exe_terminal, dep_path, sdl_lib);
-    } else {
-        linkTextStack(exe_terminal, dep_path, freetype_lib, harfbuzz_lib);
-        linkLua(exe_terminal, dep_path, lua_lib);
-        linkSdl3(exe_terminal, dep_path, sdl_lib);
-    }
-    if (target_os == .linux) {
-        exe_terminal.linkSystemLibrary("fontconfig");
-    }
-    exe_terminal.addIncludePath(b.path("vendor"));
-    if (!use_vcpkg) {
-        addTextStackIncludes(exe_terminal, use_vcpkg, target_os, dep_path, freetype_lib, harfbuzz_lib);
-        addLuaIncludes(exe_terminal, dep_path, lua_lib);
-        if (target_os == .linux) {
-            addLinuxSystemSdlInclude(exe_terminal, target_os, dep_path);
-        }
-    }
-    if (target_os == .windows) {
-        exe_terminal.linkSystemLibrary("opengl32");
-        exe_terminal.linkSystemLibrary("gdi32");
-        exe_terminal.linkSystemLibrary("comdlg32");
-        exe_terminal.linkSystemLibrary("dwrite");
-        exe_terminal.linkSystemLibrary("ole32");
-        exe_terminal.linkSystemLibrary("winmm");
-        exe_terminal.linkSystemLibrary("user32");
-        exe_terminal.linkSystemLibrary("shell32");
-    } else if (target_os == .macos) {
-        exe_terminal.linkFramework("OpenGL");
-        exe_terminal.linkFramework("Cocoa");
-        exe_terminal.linkFramework("IOKit");
-        exe_terminal.linkFramework("CoreVideo");
-    } else {
-        exe_terminal.linkSystemLibrary("GL");
-        exe_terminal.linkSystemLibrary("m");
-        exe_terminal.linkSystemLibrary("pthread");
-        exe_terminal.linkSystemLibrary("dl");
-        exe_terminal.linkSystemLibrary("rt");
-    }
-    exe_terminal.addCSourceFile(.{
-        .file = b.path("src/c/stb_image.c"),
-        .flags = &.{"-std=c99"},
-    });
+    const exe_terminal = addAppExecutable(
+        b,
+        target,
+        optimize,
+        build_options,
+        zlua_module,
+        "zide-terminal",
+        "src/entry_terminal.zig",
+    );
+    configureAppExecutable(exe_terminal, app_link_ctx, false);
     b.installArtifact(exe_terminal);
     const run_terminal_cmd = b.addRunArtifact(exe_terminal);
     run_terminal_cmd.step.dependOn(b.getInstallStep());
@@ -433,66 +439,16 @@ pub fn build(b: *std.Build) void {
     const run_terminal_step = b.step("run-terminal", "Run terminal-only app entry");
     run_terminal_step.dependOn(&run_terminal_cmd.step);
 
-    const exe_editor = b.addExecutable(.{
-        .name = "zide-editor",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/entry_editor.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-    exe_editor.root_module.addOptions("build_options", build_options);
-    exe_editor.root_module.addImport("zlua", zlua_module);
-    exe_editor.linkLibrary(treesitter);
-    if (use_vcpkg) {
-        exe_editor.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
-        exe_editor.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
-        linkTextStack(exe_editor, dep_path, freetype_lib, harfbuzz_lib);
-        linkLua(exe_editor, dep_path, lua_lib);
-        linkSdl3(exe_editor, dep_path, sdl_lib);
-    } else {
-        linkTextStack(exe_editor, dep_path, freetype_lib, harfbuzz_lib);
-        linkLua(exe_editor, dep_path, lua_lib);
-        linkSdl3(exe_editor, dep_path, sdl_lib);
-    }
-    if (target_os == .linux) {
-        exe_editor.linkSystemLibrary("fontconfig");
-    }
-    exe_editor.addIncludePath(b.path("vendor"));
-    addTreeSitterIncludes(exe_editor, treesitter);
-    if (!use_vcpkg) {
-        addTextStackIncludes(exe_editor, use_vcpkg, target_os, dep_path, freetype_lib, harfbuzz_lib);
-        addLuaIncludes(exe_editor, dep_path, lua_lib);
-        if (target_os == .linux) {
-            addLinuxSystemSdlInclude(exe_editor, target_os, dep_path);
-        }
-    }
-    if (target_os == .windows) {
-        exe_editor.linkSystemLibrary("opengl32");
-        exe_editor.linkSystemLibrary("gdi32");
-        exe_editor.linkSystemLibrary("comdlg32");
-        exe_editor.linkSystemLibrary("dwrite");
-        exe_editor.linkSystemLibrary("ole32");
-        exe_editor.linkSystemLibrary("winmm");
-        exe_editor.linkSystemLibrary("user32");
-        exe_editor.linkSystemLibrary("shell32");
-    } else if (target_os == .macos) {
-        exe_editor.linkFramework("OpenGL");
-        exe_editor.linkFramework("Cocoa");
-        exe_editor.linkFramework("IOKit");
-        exe_editor.linkFramework("CoreVideo");
-    } else {
-        exe_editor.linkSystemLibrary("GL");
-        exe_editor.linkSystemLibrary("m");
-        exe_editor.linkSystemLibrary("pthread");
-        exe_editor.linkSystemLibrary("dl");
-        exe_editor.linkSystemLibrary("rt");
-    }
-    exe_editor.addCSourceFile(.{
-        .file = b.path("src/c/stb_image.c"),
-        .flags = &.{"-std=c99"},
-    });
+    const exe_editor = addAppExecutable(
+        b,
+        target,
+        optimize,
+        build_options,
+        zlua_module,
+        "zide-editor",
+        "src/entry_editor.zig",
+    );
+    configureAppExecutable(exe_editor, app_link_ctx, true);
     b.installArtifact(exe_editor);
     const run_editor_cmd = b.addRunArtifact(exe_editor);
     run_editor_cmd.step.dependOn(b.getInstallStep());
@@ -502,66 +458,16 @@ pub fn build(b: *std.Build) void {
     const run_editor_step = b.step("run-editor", "Run editor-only app entry");
     run_editor_step.dependOn(&run_editor_cmd.step);
 
-    const exe_ide = b.addExecutable(.{
-        .name = "zide-ide",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/entry_ide.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-    });
-    exe_ide.root_module.addOptions("build_options", build_options);
-    exe_ide.root_module.addImport("zlua", zlua_module);
-    exe_ide.linkLibrary(treesitter);
-    if (use_vcpkg) {
-        exe_ide.addLibraryPath(.{ .cwd_relative = vcpkg_lib.? });
-        exe_ide.addIncludePath(.{ .cwd_relative = vcpkg_include.? });
-        linkTextStack(exe_ide, dep_path, freetype_lib, harfbuzz_lib);
-        linkLua(exe_ide, dep_path, lua_lib);
-        linkSdl3(exe_ide, dep_path, sdl_lib);
-    } else {
-        linkTextStack(exe_ide, dep_path, freetype_lib, harfbuzz_lib);
-        linkLua(exe_ide, dep_path, lua_lib);
-        linkSdl3(exe_ide, dep_path, sdl_lib);
-    }
-    if (target_os == .linux) {
-        exe_ide.linkSystemLibrary("fontconfig");
-    }
-    exe_ide.addIncludePath(b.path("vendor"));
-    addTreeSitterIncludes(exe_ide, treesitter);
-    if (!use_vcpkg) {
-        addTextStackIncludes(exe_ide, use_vcpkg, target_os, dep_path, freetype_lib, harfbuzz_lib);
-        addLuaIncludes(exe_ide, dep_path, lua_lib);
-        if (target_os == .linux) {
-            addLinuxSystemSdlInclude(exe_ide, target_os, dep_path);
-        }
-    }
-    if (target_os == .windows) {
-        exe_ide.linkSystemLibrary("opengl32");
-        exe_ide.linkSystemLibrary("gdi32");
-        exe_ide.linkSystemLibrary("comdlg32");
-        exe_ide.linkSystemLibrary("dwrite");
-        exe_ide.linkSystemLibrary("ole32");
-        exe_ide.linkSystemLibrary("winmm");
-        exe_ide.linkSystemLibrary("user32");
-        exe_ide.linkSystemLibrary("shell32");
-    } else if (target_os == .macos) {
-        exe_ide.linkFramework("OpenGL");
-        exe_ide.linkFramework("Cocoa");
-        exe_ide.linkFramework("IOKit");
-        exe_ide.linkFramework("CoreVideo");
-    } else {
-        exe_ide.linkSystemLibrary("GL");
-        exe_ide.linkSystemLibrary("m");
-        exe_ide.linkSystemLibrary("pthread");
-        exe_ide.linkSystemLibrary("dl");
-        exe_ide.linkSystemLibrary("rt");
-    }
-    exe_ide.addCSourceFile(.{
-        .file = b.path("src/c/stb_image.c"),
-        .flags = &.{"-std=c99"},
-    });
+    const exe_ide = addAppExecutable(
+        b,
+        target,
+        optimize,
+        build_options,
+        zlua_module,
+        "zide-ide",
+        "src/entry_ide.zig",
+    );
+    configureAppExecutable(exe_ide, app_link_ctx, true);
     b.installArtifact(exe_ide);
     const run_ide_cmd = b.addRunArtifact(exe_ide);
     run_ide_cmd.step.dependOn(b.getInstallStep());
