@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const app_logger = @import("../../app_logger.zig");
 
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
@@ -29,6 +30,7 @@ pub fn ctrlClickOpenMaybe(
     cell_width: f32,
     cell_height: f32,
 ) bool {
+    const log = app_logger.logger("terminal.open");
     if (rows == 0 or cols == 0) return false;
     if (cell_width <= 0 or cell_height <= 0) return false;
 
@@ -58,15 +60,24 @@ pub fn ctrlClickOpenMaybe(
                 // Resolve to an absolute path when possible.
                 var resolved: ?[]u8 = null;
                 if (builtin.os.tag == .windows and isWindowsAbsPath(parsed.path)) {
-                    resolved = allocator.dupe(u8, parsed.path) catch null;
+                    resolved = allocator.dupe(u8, parsed.path) catch {
+                        log.logf(.warning, "ctrl-open failed duplicating windows absolute path", .{});
+                        return false;
+                    };
                 } else if (std.mem.startsWith(u8, parsed.path, "file://") or (parsed.path.len > 0 and parsed.path[0] == '/')) {
                     resolved = resolveLinkPath(allocator, session, parsed.path);
                 } else {
                     const cwd = session.currentCwd();
                     if (cwd.len > 0) {
-                        resolved = std.fs.path.join(allocator, &.{ cwd, parsed.path }) catch null;
+                        resolved = std.fs.path.join(allocator, &.{ cwd, parsed.path }) catch |err| {
+                            log.logf(.warning, "ctrl-open failed joining cwd-relative path err={s}", .{ @errorName(err) });
+                            return false;
+                        };
                     } else {
-                        resolved = allocator.dupe(u8, parsed.path) catch null;
+                        resolved = allocator.dupe(u8, parsed.path) catch {
+                            log.logf(.warning, "ctrl-open failed duplicating relative path without cwd", .{});
+                            return false;
+                        };
                     }
                 }
 
@@ -89,29 +100,52 @@ fn setPendingOpen(allocator: std.mem.Allocator, pending_open: *?PendingOpen, req
 }
 
 fn decodePercent(allocator: std.mem.Allocator, text: []const u8) ?[]u8 {
-    if (text.len == 0) return allocator.dupe(u8, "") catch null;
+    const log = app_logger.logger("terminal.open");
+    if (text.len == 0) return allocator.dupe(u8, "") catch {
+        log.logf(.warning, "decodePercent failed duplicating empty string", .{});
+        return null;
+    };
     var out = std.ArrayList(u8).empty;
     errdefer out.deinit(allocator);
     var i: usize = 0;
     while (i < text.len) : (i += 1) {
         const b = text[i];
         if (b == '%' and i + 2 < text.len) {
-            const hi = std.fmt.charToDigit(text[i + 1], 16) catch return null;
-            const lo = std.fmt.charToDigit(text[i + 2], 16) catch return null;
-            _ = out.append(allocator, @as(u8, (hi << 4) | lo)) catch return null;
+            const hi = std.fmt.charToDigit(text[i + 1], 16) catch {
+                log.logf(.debug, "decodePercent invalid hex high nibble", .{});
+                return null;
+            };
+            const lo = std.fmt.charToDigit(text[i + 2], 16) catch {
+                log.logf(.debug, "decodePercent invalid hex low nibble", .{});
+                return null;
+            };
+            _ = out.append(allocator, @as(u8, (hi << 4) | lo)) catch {
+                log.logf(.warning, "decodePercent failed appending decoded byte", .{});
+                return null;
+            };
             i += 2;
             continue;
         }
-        _ = out.append(allocator, b) catch return null;
+        _ = out.append(allocator, b) catch {
+            log.logf(.warning, "decodePercent failed appending plain byte", .{});
+            return null;
+        };
     }
-    return out.toOwnedSlice(allocator) catch null;
+    return out.toOwnedSlice(allocator) catch {
+        log.logf(.warning, "decodePercent failed materializing decoded slice", .{});
+        return null;
+    };
 }
 
 fn resolveLinkPath(allocator: std.mem.Allocator, session: *TerminalSession, uri: []const u8) ?[]u8 {
+    const log = app_logger.logger("terminal.open");
     if (uri.len == 0) return null;
     if (builtin.os.tag == .windows) {
         if (isWindowsAbsPath(uri)) {
-            return allocator.dupe(u8, uri) catch null;
+            return allocator.dupe(u8, uri) catch {
+                log.logf(.warning, "resolveLinkPath failed duplicating windows absolute path", .{});
+                return null;
+            };
         }
     }
     if (std.mem.startsWith(u8, uri, "file://")) {
@@ -135,11 +169,17 @@ fn resolveLinkPath(allocator: std.mem.Allocator, session: *TerminalSession, uri:
         return decoded;
     }
     if (uri[0] == '/') {
-        return allocator.dupe(u8, uri) catch null;
+        return allocator.dupe(u8, uri) catch {
+            log.logf(.warning, "resolveLinkPath failed duplicating absolute path", .{});
+            return null;
+        };
     }
     const cwd = session.currentCwd();
     if (cwd.len == 0) return null;
-    return std.fs.path.join(allocator, &.{ cwd, uri }) catch null;
+    return std.fs.path.join(allocator, &.{ cwd, uri }) catch |err| {
+        log.logf(.warning, "resolveLinkPath failed joining cwd path err={s}", .{ @errorName(err) });
+        return null;
+    };
 }
 
 fn isWindowsAbsPath(text: []const u8) bool {
@@ -149,11 +189,15 @@ fn isWindowsAbsPath(text: []const u8) bool {
 }
 
 fn normalizeWindowsFileUriPath(allocator: std.mem.Allocator, path: []const u8) ?[]u8 {
+    const log = app_logger.logger("terminal.open");
     // Common patterns produced by file:// URIs:
     // - /C:/foo/bar  -> C:/foo/bar
     // - /c:/foo/bar  -> c:/foo/bar
     if (path.len >= 4 and path[0] == '/' and std.ascii.isAlphabetic(path[1]) and path[2] == ':' and path[3] == '/') {
-        return allocator.dupe(u8, path[1..]) catch null;
+        return allocator.dupe(u8, path[1..]) catch {
+            log.logf(.warning, "normalizeWindowsFileUriPath failed duplicating normalized path", .{});
+            return null;
+        };
     }
     return null;
 }
@@ -194,6 +238,7 @@ fn isTokenChar(cp: u32) bool {
 }
 
 fn extractTokenAtCol(allocator: std.mem.Allocator, row_cells: []const Cell, col: usize) ?[]u8 {
+    const log = app_logger.logger("terminal.open");
     if (col >= row_cells.len) return null;
     if (row_cells[col].codepoint == 0) return null;
     if (!isTokenChar(row_cells[col].codepoint)) return null;
@@ -221,10 +266,16 @@ fn extractTokenAtCol(allocator: std.mem.Allocator, row_cells: []const Cell, col:
         var buf: [4]u8 = undefined;
         const n = std.unicode.utf8Encode(@intCast(cell.codepoint), &buf) catch 0;
         if (n > 0) {
-            out.appendSlice(allocator, buf[0..n]) catch return null;
+            out.appendSlice(allocator, buf[0..n]) catch {
+                log.logf(.warning, "extractTokenAtCol failed appending token bytes", .{});
+                return null;
+            };
         }
     }
-    var token = out.toOwnedSlice(allocator) catch return null;
+    var token = out.toOwnedSlice(allocator) catch {
+        log.logf(.warning, "extractTokenAtCol failed materializing token", .{});
+        return null;
+    };
 
     // Trim common punctuation around terminal paths.
     while (token.len > 0) {
@@ -244,7 +295,10 @@ fn extractTokenAtCol(allocator: std.mem.Allocator, row_cells: []const Cell, col:
         break;
     }
     if (token.len == 0) return null;
-    return allocator.dupe(u8, token) catch null;
+    return allocator.dupe(u8, token) catch {
+        log.logf(.warning, "extractTokenAtCol failed duplicating trimmed token", .{});
+        return null;
+    };
 }
 
 const ParsedPath = struct {

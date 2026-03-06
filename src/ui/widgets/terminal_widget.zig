@@ -190,6 +190,7 @@ pub const TerminalWidget = struct {
     }
 
     pub fn copySelectionToClipboard(self: *TerminalWidget, shell: *Shell) bool {
+        const log = app_logger.logger("terminal.widget");
         const selection = self.session.selectionState() orelse return false;
         const rowLastContentCol = struct {
             fn apply(row_cells: []const Cell, cols_count: usize) ?usize {
@@ -244,14 +245,20 @@ pub const TerminalWidget = struct {
             const col_end = if (row_idx == end_sel.row) end_sel.col else cols_snapshot - 1;
             const last_content_col = rowLastContentCol(row_cells, cols_snapshot) orelse {
                 if (row_idx != end_sel.row) {
-                    text.append(self.session.allocator, '\n') catch return false;
+                    text.append(self.session.allocator, '\n') catch {
+                        log.logf(.warning, "copy selection failed appending newline for empty row", .{});
+                        return false;
+                    };
                 }
                 continue;
             };
             const clamped_end = @min(col_end, last_content_col);
             if (clamped_end < col_start) {
                 if (row_idx != end_sel.row) {
-                    text.append(self.session.allocator, '\n') catch return false;
+                    text.append(self.session.allocator, '\n') catch {
+                        log.logf(.warning, "copy selection failed appending newline for clamped row", .{});
+                        return false;
+                    };
                 }
                 continue;
             }
@@ -262,13 +269,19 @@ pub const TerminalWidget = struct {
                     continue;
                 }
                 if (cell.codepoint == 0) {
-                    text.append(self.session.allocator, ' ') catch return false;
+                    text.append(self.session.allocator, ' ') catch {
+                        log.logf(.warning, "copy selection failed appending space", .{});
+                        return false;
+                    };
                     continue;
                 }
                 var buf: [4]u8 = undefined;
                 const len = std.unicode.utf8Encode(@intCast(cell.codepoint), &buf) catch 0;
                 if (len > 0) {
-                    text.appendSlice(self.session.allocator, buf[0..len]) catch return false;
+                    text.appendSlice(self.session.allocator, buf[0..len]) catch {
+                        log.logf(.warning, "copy selection failed appending codepoint", .{});
+                        return false;
+                    };
                 }
                 if (cell.combining_len > 0) {
                     var ci: usize = 0;
@@ -276,7 +289,10 @@ pub const TerminalWidget = struct {
                         const cp = cell.combining[ci];
                         const c_len = std.unicode.utf8Encode(@intCast(cp), &buf) catch 0;
                         if (c_len > 0) {
-                            text.appendSlice(self.session.allocator, buf[0..c_len]) catch return false;
+                            text.appendSlice(self.session.allocator, buf[0..c_len]) catch {
+                                log.logf(.warning, "copy selection failed appending combining codepoint", .{});
+                                return false;
+                            };
                         }
                     }
                 }
@@ -287,17 +303,24 @@ pub const TerminalWidget = struct {
             }
 
             if (row_idx != end_sel.row) {
-                text.append(self.session.allocator, '\n') catch return false;
+                text.append(self.session.allocator, '\n') catch {
+                    log.logf(.warning, "copy selection failed appending row newline", .{});
+                    return false;
+                };
             }
         }
 
-        text.append(self.session.allocator, 0) catch return false;
+        text.append(self.session.allocator, 0) catch {
+            log.logf(.warning, "copy selection failed appending c-string terminator", .{});
+            return false;
+        };
         const cstr: [*:0]const u8 = @ptrCast(text.items.ptr);
         shell.setClipboardText(cstr);
         return true;
     }
 
     pub fn pasteClipboardFromSystem(self: *TerminalWidget, shell: *Shell) bool {
+        const log = app_logger.logger("terminal.widget");
         const clip_opt = shell.getClipboardText();
         const html = shell.getClipboardMimeData(self.session.allocator, "text/html");
         const uri_list = shell.getClipboardMimeData(self.session.allocator, "text/uri-list");
@@ -311,24 +334,42 @@ pub const TerminalWidget = struct {
         if (self.session.scrollOffset() > 0) {
             self.session.setScrollOffset(0);
         }
-        if (self.session.sendKittyPasteEvent5522WithMimeRich(clip, html, uri_list, png) catch false) {
+        if (self.session.sendKittyPasteEvent5522WithMimeRich(clip, html, uri_list, png) catch |err| {
+            log.logf(.warning, "kitty mime paste event failed err={s}", .{ @errorName(err) });
+            return false;
+        }) {
             return true;
         }
         if (clip_opt == null) return false;
         if (self.session.bracketedPasteEnabled()) {
-            self.session.sendText("\x1b[200~") catch return false;
+            self.session.sendText("\x1b[200~") catch |err| {
+                log.logf(.warning, "paste failed sending bracketed prefix err={s}", .{ @errorName(err) });
+                return false;
+            };
             var filtered = std.ArrayList(u8).empty;
             defer filtered.deinit(self.session.allocator);
             for (clip_opt.?) |b| {
                 if (b == 0x1b or b == 0x03) continue;
-                filtered.append(self.session.allocator, b) catch return false;
+                filtered.append(self.session.allocator, b) catch {
+                    log.logf(.warning, "paste failed appending filtered clipboard byte", .{});
+                    return false;
+                };
             }
             if (filtered.items.len > 0) {
-                self.session.sendText(filtered.items) catch return false;
+                self.session.sendText(filtered.items) catch |err| {
+                    log.logf(.warning, "paste failed sending filtered clipboard err={s}", .{ @errorName(err) });
+                    return false;
+                };
             }
-            self.session.sendText("\x1b[201~") catch return false;
+            self.session.sendText("\x1b[201~") catch |err| {
+                log.logf(.warning, "paste failed sending bracketed suffix err={s}", .{ @errorName(err) });
+                return false;
+            };
         } else {
-            self.session.sendText(clip_opt.?) catch return false;
+            self.session.sendText(clip_opt.?) catch |err| {
+                log.logf(.warning, "paste failed sending clipboard err={s}", .{ @errorName(err) });
+                return false;
+            };
         }
         return true;
     }
