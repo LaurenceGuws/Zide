@@ -22,6 +22,10 @@ pub fn addTreeSitterIncludes(step: *std.Build.Step.Compile, treesitter_lib: *std
     step.addIncludePath(treesitter_lib.getEmittedIncludeTree());
 }
 
+fn requireTreeSitter(ctx: app_types.AppLinkContext) *std.Build.Step.Compile {
+    return ctx.treesitter orelse @panic("dependency policy violation: tree-sitter required but not resolved");
+}
+
 fn linkTextStack(
     step: *std.Build.Step.Compile,
     dep_path: dependency_path.DependencySource,
@@ -130,13 +134,9 @@ pub fn configureSdlTestTarget(
     }
     linkSdlTestGraphics(step, ctx.target_os);
 
-    if (profile.include_treesitter) {
-        step.linkLibrary(ctx.treesitter);
-    }
+    if (profile.include_treesitter) step.linkLibrary(requireTreeSitter(ctx));
     addVendorAndStb(step);
-    if (profile.include_treesitter) {
-        addTreeSitterIncludes(step, ctx.treesitter);
-    }
+    if (profile.include_treesitter) addTreeSitterIncludes(step, requireTreeSitter(ctx));
     if (!ctx.use_vcpkg) {
         if (profile.include_text_stack) {
             addTextStackIncludes(step, ctx.use_vcpkg, ctx.target_os, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);
@@ -156,9 +156,7 @@ pub fn configureAppExecutable(
     if (std.mem.eql(u8, target_name, "zide-terminal") and profile.include_treesitter) {
         @panic("dependency policy violation: zide-terminal must not link tree-sitter");
     }
-    if (profile.include_treesitter) {
-        exe.linkLibrary(ctx.treesitter);
-    }
+    if (profile.include_treesitter) exe.linkLibrary(requireTreeSitter(ctx));
     if (ctx.use_vcpkg) {
         exe.addLibraryPath(.{ .cwd_relative = ctx.vcpkg_lib.? });
         exe.addIncludePath(.{ .cwd_relative = ctx.vcpkg_include.? });
@@ -174,9 +172,7 @@ pub fn configureAppExecutable(
         exe.linkSystemLibrary("fontconfig");
     }
     addVendorAndStb(exe);
-    if (profile.include_treesitter) {
-        addTreeSitterIncludes(exe, ctx.treesitter);
-    }
+    if (profile.include_treesitter) addTreeSitterIncludes(exe, requireTreeSitter(ctx));
     if (!ctx.use_vcpkg) {
         if (profile.include_text_stack) {
             addTextStackIncludes(exe, ctx.use_vcpkg, ctx.target_os, ctx.dep_path, ctx.freetype_lib, ctx.harfbuzz_lib);

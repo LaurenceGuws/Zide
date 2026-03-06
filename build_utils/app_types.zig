@@ -7,7 +7,7 @@ pub const AppLinkContext = struct {
     use_vcpkg: bool,
     vcpkg_lib: ?[]const u8,
     vcpkg_include: ?[]const u8,
-    treesitter: *std.Build.Step.Compile,
+    treesitter: ?*std.Build.Step.Compile,
     sdl_lib: ?*std.Build.Step.Compile,
     lua_lib: ?*std.Build.Step.Compile,
     freetype_lib: ?*std.Build.Step.Compile,
