@@ -501,7 +501,10 @@ pub const Editor = struct {
             defer anchors.deinit(self.allocator);
             var target_heads = std.ArrayList(usize).empty;
             defer target_heads.deinit(self.allocator);
-            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch return;
+            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch |err| {
+                log.logf(.warning, "collect selection anchors/heads (left) failed: {s}", .{@errorName(err)});
+                return;
+            };
             for (target_heads.items) |*offset| {
                 if (offset.* > 0) offset.* -= 1;
             }
@@ -520,7 +523,10 @@ pub const Editor = struct {
             defer anchors.deinit(self.allocator);
             var target_heads = std.ArrayList(usize).empty;
             defer target_heads.deinit(self.allocator);
-            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch return;
+            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch |err| {
+                log.logf(.warning, "collect selection anchors/heads (right) failed: {s}", .{@errorName(err)});
+                return;
+            };
             const total = self.buffer.totalLen();
             for (target_heads.items) |*offset| {
                 if (offset.* < total) offset.* += 1;
@@ -541,7 +547,10 @@ pub const Editor = struct {
             defer anchors.deinit(self.allocator);
             var target_heads = std.ArrayList(usize).empty;
             defer target_heads.deinit(self.allocator);
-            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch return;
+            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch |err| {
+                log.logf(.warning, "collect selection anchors/heads (line-start) failed: {s}", .{@errorName(err)});
+                return;
+            };
             for (target_heads.items) |*offset| {
                 const caret = self.cursorPosForOffset(offset.*);
                 offset.* = self.buffer.lineStart(caret.line);
@@ -561,7 +570,10 @@ pub const Editor = struct {
             defer anchors.deinit(self.allocator);
             var target_heads = std.ArrayList(usize).empty;
             defer target_heads.deinit(self.allocator);
-            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch return;
+            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch |err| {
+                log.logf(.warning, "collect selection anchors/heads (line-end) failed: {s}", .{@errorName(err)});
+                return;
+            };
             for (target_heads.items) |*offset| {
                 const caret = self.cursorPosForOffset(offset.*);
                 offset.* = self.buffer.lineStart(caret.line) + self.buffer.lineLen(caret.line);
@@ -581,7 +593,10 @@ pub const Editor = struct {
             defer anchors.deinit(self.allocator);
             var target_heads = std.ArrayList(usize).empty;
             defer target_heads.deinit(self.allocator);
-            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch return;
+            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch |err| {
+                log.logf(.warning, "collect selection anchors/heads (word-left) failed: {s}", .{@errorName(err)});
+                return;
+            };
             for (target_heads.items) |*offset| {
                 offset.* = self.wordLeftOffset(offset.*);
             }
@@ -600,7 +615,10 @@ pub const Editor = struct {
             defer anchors.deinit(self.allocator);
             var target_heads = std.ArrayList(usize).empty;
             defer target_heads.deinit(self.allocator);
-            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch return;
+            self.collectSelectionAnchorsAndHeads(&anchors, &target_heads) catch |err| {
+                log.logf(.warning, "collect selection anchors/heads (word-right) failed: {s}", .{@errorName(err)});
+                return;
+            };
             for (target_heads.items) |*offset| {
                 offset.* = self.wordRightOffset(offset.*);
             }
