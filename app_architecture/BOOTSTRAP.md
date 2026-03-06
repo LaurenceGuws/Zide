@@ -121,6 +121,10 @@ zig build -Dmode=terminal
 zig build -Dmode=editor
 ```
 
+Mode behavior:
+- `ide`: plans full IDE build graph.
+- `terminal` / `editor`: plan only selected app target + run step for lower compile overhead.
+
 Dependency path selector:
 
 ```bash
