@@ -179,6 +179,7 @@ fn hexNibble(c: u8) ?u8 {
 }
 
 fn handleLegacySyncUpdates(self: anytype, payload: []const u8) bool {
+    const log = app_logger.logger("terminal.apc");
     // Legacy synchronized update control:
     // DCS = 1 s ST -> enable
     // DCS = 2 s ST -> disable
@@ -186,7 +187,10 @@ fn handleLegacySyncUpdates(self: anytype, payload: []const u8) bool {
     if (payload[0] != '=' or payload[payload.len - 1] != 's') return false;
     const raw = std.mem.trim(u8, payload[1 .. payload.len - 1], " ;");
     if (raw.len == 0) return false;
-    const mode = std.fmt.parseInt(u8, raw, 10) catch return false;
+    const mode = std.fmt.parseInt(u8, raw, 10) catch {
+        log.logf(.debug, "legacy sync updates parse failed raw={s}", .{ raw });
+        return false;
+    };
     switch (mode) {
         1 => self.setSyncUpdates(true),
         2 => self.setSyncUpdates(false),

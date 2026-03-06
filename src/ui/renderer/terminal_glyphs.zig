@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_logger = @import("../../app_logger.zig");
 const iface = @import("interface.zig");
 const types = @import("types.zig");
 
@@ -383,6 +384,7 @@ fn downsampleWeight(kernel: DownsampleKernel, ss: i32, sample_idx: i32) f32 {
 }
 
 fn rasterizePowerlineMask(mode: PowerlineMode, width: i32, height: i32, out_alpha: []u8) bool {
+    const log = app_logger.logger("renderer.terminal.glyphs");
     if (width <= 0 or height <= 0) return false;
     const out_len: usize = @intCast(width * height);
     if (out_alpha.len < out_len) return false;
@@ -392,7 +394,10 @@ fn rasterizePowerlineMask(mode: PowerlineMode, width: i32, height: i32, out_alph
     const hi_w = width * ss;
     const hi_h = height * ss;
     const hi_len: usize = @intCast(hi_w * hi_h);
-    var hi = std.heap.page_allocator.alloc(u8, hi_len) catch return false;
+    var hi = std.heap.page_allocator.alloc(u8, hi_len) catch |err| {
+        log.logf(.warning, "powerline supersample alloc failed bytes={d} err={s}", .{ hi_len, @errorName(err) });
+        return false;
+    };
     defer std.heap.page_allocator.free(hi);
     @memset(hi, 0);
 

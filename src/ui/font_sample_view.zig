@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_logger = @import("../app_logger.zig");
 
 const app_shell = @import("../app_shell.zig");
 const terminal_font_mod = @import("terminal_font.zig");
@@ -79,6 +80,7 @@ pub const FontSampleView = struct {
     }
 
     pub fn update(self: *FontSampleView, renderer: *Renderer, input: anytype) bool {
+        const log = app_logger.logger("ui.font-sample");
         // Returns true if the view changed and needs redraw.
         // +/- adjust size and rebuild the sample fonts.
         const mods = input.mods;
@@ -108,7 +110,10 @@ pub const FontSampleView = struct {
             iface.EMOJI_COLOR_FALLBACK_PATH,
             iface.EMOJI_TEXT_FALLBACK_PATH,
             renderer.font_rendering,
-        ) catch return false;
+        ) catch |err| {
+            log.logf(.warning, "font sample left font rebuild failed err={s}", .{ @errorName(err) });
+            return false;
+        };
         errdefer new_left.deinit();
         new_left.render_scale = render_scale;
         new_left.setAtlasFilterPoint();
@@ -125,7 +130,8 @@ pub const FontSampleView = struct {
             iface.EMOJI_COLOR_FALLBACK_PATH,
             iface.EMOJI_TEXT_FALLBACK_PATH,
             renderer.font_rendering,
-        ) catch {
+        ) catch |err| {
+            log.logf(.warning, "font sample right font rebuild failed err={s}", .{ @errorName(err) });
             new_left.deinit();
             return false;
         };
