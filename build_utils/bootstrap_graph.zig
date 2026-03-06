@@ -100,31 +100,31 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
     }
     build_options.addOption(bool, "treesitter_enabled", deps.treesitter != null);
 
-    const build_mode_report_step = step_reports.addBuildModeReportStep(
+    const build_mode_report_step = step_reports.addReportBuildModeStep(
         b,
         target,
         optimize,
         build_options,
     );
-    const build_bootstrap_report_step = step_reports.addBuildBootstrapReportStep(
+    const build_bootstrap_report_step = step_reports.addReportBuildBootstrapStep(
         b,
         target,
         optimize,
         build_options,
     );
-    const build_focused_policy_report_step = step_reports.addBuildFocusedModePolicyCheckStep(
+    const build_focused_policy_report_step = step_reports.addReportBuildFocusedPolicyStep(
         b,
         target,
         optimize,
         build_options,
     );
-    const build_target_report_step = step_reports.addBuildTargetReportStep(
+    const build_target_report_step = step_reports.addReportBuildTargetStep(
         b,
         target,
         optimize,
         build_options,
     );
-    _ = step_reports.addBuildAllReportsStep(
+    _ = step_reports.addReportBuildAllStep(
         b,
         &.{
             build_mode_report_step,

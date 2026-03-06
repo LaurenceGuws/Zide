@@ -1,5 +1,5 @@
-const target_profile = @import("target_profile.zig");
 const std = @import("std");
+const target_profile = @import("target_profile.zig");
 
 pub const BuildMode = enum {
     ide,
@@ -14,6 +14,7 @@ pub fn parseBuildMode(raw: []const u8) BuildMode {
     @panic("invalid -Dmode (expected: ide, terminal, editor)");
 }
 
+// Focused app build/run metadata
 pub const FocusedAppSpec = struct {
     name: []const u8,
     root_source_file: []const u8,
@@ -48,12 +49,13 @@ pub const focused_apps = [_]FocusedAppSpec{
 
 pub fn selectedFocusedApp(mode: BuildMode) ?FocusedAppSpec {
     return switch (mode) {
-        .terminal => focused_apps[0],
-        .editor => focused_apps[1],
+        .terminal => focused_apps[0], // zide-terminal
+        .editor => focused_apps[1], // zide-editor
         .ide => null,
     };
 }
 
+// Terminal-focused standalone test metadata
 pub const TerminalTestSpec = struct {
     root_source_file: []const u8,
     step_name: []const u8,

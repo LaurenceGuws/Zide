@@ -18,7 +18,7 @@ const addLibcTest = target_factory.addLibcTest;
 const addLibcExecutable = target_factory.addLibcExecutable;
 const addCheckExecutableStep = step_utils.addCheckExecutableStep;
 const addSystemCommandStep = step_utils.addSystemCommandStep;
-const addBuildProfileReportStep = step_reports.addBuildProfileReportStep;
+const addReportBuildProfilesStep = step_reports.addReportBuildProfilesStep;
 const addGateStep = step_utils.addGateStep;
 const MainModeRunSteps = step_utils.MainModeRunSteps;
 
@@ -36,6 +36,7 @@ fn addModeGateAndBundleSteps(
     terminal_replay_all_step: *std.Build.Step,
     main_mode_run_steps: MainModeRunSteps,
 ) void {
+    // Mode utility + packaging steps
     _ = addSystemCommandStep(
         b,
         "mode-size-report",
@@ -126,6 +127,7 @@ pub fn planIdeExtendedBuildGraph(
     build_options: *std.Build.Step.Options,
     main_mode_run_steps: MainModeRunSteps,
 ) void {
+    // FFI artifacts
     const terminal_ffi = b.addLibrary(.{
         .name = "zide-terminal-ffi",
         .linkage = .dynamic,
@@ -164,6 +166,7 @@ pub fn planIdeExtendedBuildGraph(
     editor_ffi_step.dependOn(&install_editor_ffi.step);
     editor_ffi_step.dependOn(&install_editor_ffi_header.step);
 
+    // Core test suites
     const unit_tests = addSdlConfiguredTest(
         b,
         target,
@@ -197,6 +200,7 @@ pub fn planIdeExtendedBuildGraph(
     );
     _ = addRunArtifactStep(b, config_tests, "test-config", "Run Lua config parser/merge tests").step;
 
+    // Replay + perf harnesses
     const terminal_replay_exe = addSdlConfiguredExecutable(
         b,
         target,
@@ -314,6 +318,7 @@ pub fn planIdeExtendedBuildGraph(
         "Run PTY-backed terminal FFI smoke",
     ).step;
 
+    // Import/build policy checks
     const terminal_import_check_step = addCheckExecutableStep(
         b,
         target,
@@ -366,12 +371,13 @@ pub fn planIdeExtendedBuildGraph(
         &.{ "bash", "-lc", "rg -n \"configureAppExecutable\\(exe(_terminal|_editor|_ide)?|dependency policy violation\" build.zig" },
         &.{},
     );
-    const build_profile_report_step = addBuildProfileReportStep(
+    const build_profile_report_step = addReportBuildProfilesStep(
         b,
         target,
         optimize,
     );
 
+    // Aggregate mode gates
     addModeGateAndBundleSteps(
         b,
         target_os,
@@ -387,6 +393,7 @@ pub fn planIdeExtendedBuildGraph(
         main_mode_run_steps,
     );
 
+    // Developer tooling
     const grammar_update = addLibcExecutable(
         b,
         target,

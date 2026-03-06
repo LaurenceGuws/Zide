@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub fn addBuildAllReportsStep(
+pub fn addReportBuildAllStep(
     b: *std.Build,
     deps: []const *std.Build.Step,
 ) *std.Build.Step {
@@ -12,7 +12,7 @@ pub fn addBuildAllReportsStep(
     return step;
 }
 
-pub fn addBuildProfileReportStep(
+pub fn addReportBuildProfilesStep(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
@@ -39,7 +39,7 @@ pub fn addBuildProfileReportStep(
     return step;
 }
 
-pub fn addBuildModeReportStep(
+pub fn addReportBuildModeStep(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
@@ -63,7 +63,7 @@ pub fn addBuildModeReportStep(
     return step;
 }
 
-pub fn addBuildBootstrapReportStep(
+pub fn addReportBuildBootstrapStep(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
@@ -87,7 +87,7 @@ pub fn addBuildBootstrapReportStep(
     return step;
 }
 
-pub fn addBuildFocusedModePolicyCheckStep(
+pub fn addReportBuildFocusedPolicyStep(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
@@ -111,7 +111,7 @@ pub fn addBuildFocusedModePolicyCheckStep(
     return step;
 }
 
-pub fn addBuildTargetReportStep(
+pub fn addReportBuildTargetStep(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
