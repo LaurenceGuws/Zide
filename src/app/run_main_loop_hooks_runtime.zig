@@ -5,20 +5,18 @@ const app_shell = @import("../app_shell.zig");
 const Shell = app_shell.Shell;
 
 pub fn run(state: anytype) !void {
-    try runWithMode(state, null, .ide);
+    try runWithMode(state, null);
 }
 
 pub fn runFocused(state: anytype, comptime app_mode: @import("bootstrap.zig").AppMode) !void {
-    try runWithMode(state, app_mode, .ide);
+    try runWithMode(state, app_mode);
 }
 
 fn runWithMode(
     state: anytype,
     comptime forced_mode: ?@import("bootstrap.zig").AppMode,
-    runtime_mode_fallback: @import("bootstrap.zig").AppMode,
 ) !void {
     const app_mode = if (comptime forced_mode) |mode| mode else state.app_mode;
-    _ = runtime_mode_fallback;
 
     const State = @TypeOf(state);
     const RuntimeCtx = struct {

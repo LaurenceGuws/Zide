@@ -484,14 +484,20 @@ fn forceKillProcessTree(pid: posix.pid_t) void {
 fn cleanupSpawnTempFilesForPid(pid: posix.pid_t) void {
     const log = app_logger.logger("terminal.env");
     var bashrc_buf: [128:0]u8 = undefined;
-    const bashrc_path = std.fmt.bufPrintZ(&bashrc_buf, "/tmp/zide-bashrc-{d}", .{pid}) catch return;
+    const bashrc_path = std.fmt.bufPrintZ(&bashrc_buf, "/tmp/zide-bashrc-{d}", .{pid}) catch |err| {
+        log.logf(.warning, "spawn cleanup path format failed kind=bashrc pid={d} err={s}", .{ pid, @errorName(err) });
+        return;
+    };
     std.fs.deleteFileAbsolute(bashrc_path) catch |err| switch (err) {
         error.FileNotFound => {},
         else => log.logf(.debug, "spawn cleanup failed path={s} err={s}", .{ bashrc_path, @errorName(err) }),
     };
 
     var inputrc_buf: [128:0]u8 = undefined;
-    const inputrc_path = std.fmt.bufPrintZ(&inputrc_buf, "/tmp/zide-inputrc-{d}", .{pid}) catch return;
+    const inputrc_path = std.fmt.bufPrintZ(&inputrc_buf, "/tmp/zide-inputrc-{d}", .{pid}) catch |err| {
+        log.logf(.warning, "spawn cleanup path format failed kind=inputrc pid={d} err={s}", .{ pid, @errorName(err) });
+        return;
+    };
     std.fs.deleteFileAbsolute(inputrc_path) catch |err| switch (err) {
         error.FileNotFound => {},
         else => log.logf(.debug, "spawn cleanup failed path={s} err={s}", .{ inputrc_path, @errorName(err) }),

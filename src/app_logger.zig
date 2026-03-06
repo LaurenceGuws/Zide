@@ -106,7 +106,10 @@ pub const Logger = struct {
         if (!emit_file and !emit_console) return;
 
         var buf: [1024]u8 = undefined;
-        const msg = std.fmt.bufPrint(&buf, fmt, args) catch return;
+        const msg = std.fmt.bufPrint(&buf, fmt, args) catch |err| {
+            std.debug.print("[app.logger][Warning][{s}] dropped log message due to fmt error: {s}\n", .{ self.name, @errorName(err) });
+            return;
+        };
         const ts_us = timestampMicros();
         const tod = timeOfDayMicrosUtc();
         const level_name = levelName(level);
@@ -115,7 +118,21 @@ pub const Logger = struct {
             &prefix_buf,
             "[{d:0>2}:{d:0>2}:{d:0>2}.{d:0>6}][+{d}us][{s}][{s}] ",
             .{ tod.h, tod.m, tod.s, tod.us, ts_us, level_name, self.name },
-        ) catch return;
+        ) catch |err| {
+            const fallback_prefix = "[app.logger][Warning] ";
+            if (emit_file) {
+                log_mutex.lock();
+                defer log_mutex.unlock();
+                if (log_file) |file| {
+                    writeLogLine(file, fallback_prefix, msg) catch {};
+                }
+            }
+            if (emit_console) {
+                std.debug.print("{s}{s}\n", .{ fallback_prefix, msg });
+            }
+            std.debug.print("[app.logger][Warning][{s}] prefix formatting failed: {s}\n", .{ self.name, @errorName(err) });
+            return;
+        };
 
         if (emit_file) {
             log_mutex.lock();
@@ -140,7 +157,10 @@ pub const Logger = struct {
         if (!emit_file and !emit_console) return;
 
         var buf: [1024]u8 = undefined;
-        const msg = std.fmt.bufPrint(&buf, fmt, args) catch return;
+        const msg = std.fmt.bufPrint(&buf, fmt, args) catch |err| {
+            std.debug.print("[app.logger][Warning][{s}] dropped log message due to fmt error: {s}\n", .{ self.name, @errorName(err) });
+            return;
+        };
         const ts_us = timestampMicros();
         const tod = timeOfDayMicrosUtc();
         const level_name = levelName(level);
@@ -149,7 +169,21 @@ pub const Logger = struct {
             &prefix_buf,
             "[{d:0>2}:{d:0>2}:{d:0>2}.{d:0>6}][+{d}us][{s}][{s}] ",
             .{ tod.h, tod.m, tod.s, tod.us, ts_us, level_name, self.name },
-        ) catch return;
+        ) catch |err| {
+            const fallback_prefix = "[app.logger][Warning] ";
+            if (emit_console) {
+                std.debug.print("{s}{s}\n", .{ fallback_prefix, msg });
+            }
+            if (emit_file) {
+                log_mutex.lock();
+                defer log_mutex.unlock();
+                if (log_file) |file| {
+                    writeLogLine(file, fallback_prefix, msg) catch {};
+                }
+            }
+            std.debug.print("[app.logger][Warning][{s}] prefix formatting failed: {s}\n", .{ self.name, @errorName(err) });
+            return;
+        };
 
         if (emit_console) {
             std.debug.print("{s}", .{prefix});

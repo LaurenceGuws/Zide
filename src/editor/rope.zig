@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_logger = @import("../app_logger.zig");
 
 pub const BufferKind = enum(u8) {
     original,
@@ -295,10 +296,15 @@ pub const Rope = struct {
     }
 
     pub fn beginUndoGroup(self: *Rope) void {
+        const log = app_logger.logger("editor.rope");
         if (self.group_depth == 0) {
-            const marker = boundaryOp(self) catch return;
-            self.undo_stack.append(self.allocator, marker) catch {
+            const marker = boundaryOp(self) catch |err| {
+                log.logf(.warning, "beginUndoGroup boundary alloc failed err={s}", .{@errorName(err)});
+                return;
+            };
+            self.undo_stack.append(self.allocator, marker) catch |err| {
                 freeUndoOp(self, marker);
+                log.logf(.warning, "beginUndoGroup push marker failed err={s}", .{@errorName(err)});
                 return;
             };
             trimUndoStack(self);
@@ -308,13 +314,18 @@ pub const Rope = struct {
     }
 
     pub fn endUndoGroup(self: *Rope) !void {
+        const log = app_logger.logger("editor.rope");
         if (self.group_depth == 0) return;
         self.group_depth -= 1;
         if (self.group_depth == 0 and self.group_dirty) {
-            const marker = boundaryOp(self) catch return;
-            self.undo_stack.append(self.allocator, marker) catch {
+            const marker = boundaryOp(self) catch |err| {
+                log.logf(.warning, "endUndoGroup boundary alloc failed err={s}", .{@errorName(err)});
+                return err;
+            };
+            self.undo_stack.append(self.allocator, marker) catch |err| {
                 freeUndoOp(self, marker);
-                return;
+                log.logf(.warning, "endUndoGroup push marker failed err={s}", .{@errorName(err)});
+                return err;
             };
             trimUndoStack(self);
             self.group_dirty = false;
