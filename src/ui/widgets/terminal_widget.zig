@@ -191,6 +191,22 @@ pub const TerminalWidget = struct {
 
     pub fn copySelectionToClipboard(self: *TerminalWidget, shell: *Shell) bool {
         const selection = self.session.selectionState() orelse return false;
+        const rowLastContentCol = struct {
+            fn apply(row_cells: []const Cell, cols_count: usize) ?usize {
+                if (cols_count == 0 or row_cells.len < cols_count) return null;
+                var last: ?usize = null;
+                var col_idx: usize = 0;
+                while (col_idx < cols_count) : (col_idx += 1) {
+                    const cell = row_cells[col_idx];
+                    if (cell.x != 0 or cell.y != 0) continue;
+                    if (cell.codepoint == 0 and cell.combining_len == 0) continue;
+                    const width_units = @as(usize, @max(@as(u8, 1), cell.width));
+                    const end_col = @min(cols_count - 1, col_idx + width_units - 1);
+                    last = end_col;
+                }
+                return last;
+            }
+        }.apply;
         const sel_snapshot = self.session.snapshot();
         const rows_snapshot = sel_snapshot.rows;
         const cols_snapshot = sel_snapshot.cols;
@@ -226,8 +242,21 @@ pub const TerminalWidget = struct {
 
             const col_start = if (row_idx == start_sel.row) start_sel.col else 0;
             const col_end = if (row_idx == end_sel.row) end_sel.col else cols_snapshot - 1;
+            const last_content_col = rowLastContentCol(row_cells, cols_snapshot) orelse {
+                if (row_idx != end_sel.row) {
+                    text.append(self.session.allocator, '\n') catch return false;
+                }
+                continue;
+            };
+            const clamped_end = @min(col_end, last_content_col);
+            if (clamped_end < col_start) {
+                if (row_idx != end_sel.row) {
+                    text.append(self.session.allocator, '\n') catch return false;
+                }
+                continue;
+            }
             var col_idx: usize = col_start;
-            while (col_idx <= col_end and col_idx < cols_snapshot) : (col_idx += 1) {
+            while (col_idx <= clamped_end and col_idx < cols_snapshot) : (col_idx += 1) {
                 const cell = row_cells[col_idx];
                 if (cell.x != 0 or cell.y != 0) {
                     continue;
