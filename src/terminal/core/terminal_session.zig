@@ -1098,8 +1098,12 @@ pub const TerminalSession = struct {
     }
 
     fn appendParam(buf: []u8, pos: *usize, param: u8) bool {
+        const log = app_logger.logger("terminal.csi");
         var tmp: [4]u8 = undefined;
-        const text = std.fmt.bufPrint(&tmp, "{d}", .{param}) catch return false;
+        const text = std.fmt.bufPrint(&tmp, "{d}", .{param}) catch |err| {
+            log.logf(.warning, "appendParam format failed param={d}: {s}", .{ param, @errorName(err) });
+            return false;
+        };
         var needed = text.len;
         if (pos.* > 0) needed += 1;
         if (pos.* + needed > buf.len) return false;

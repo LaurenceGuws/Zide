@@ -1,6 +1,7 @@
 const std = @import("std");
 const screen_mod = @import("../model/screen.zig");
 const types = @import("../model/types.zig");
+const app_logger = @import("../../app_logger.zig");
 
 pub const KittyImageFormat = enum {
     rgb,
@@ -205,6 +206,7 @@ fn appendCellToken(out: *std.ArrayList(u8), allocator: std.mem.Allocator, cell: 
 }
 
 fn appendCodepoint(out: *std.ArrayList(u8), allocator: std.mem.Allocator, codepoint: u32) !void {
+    const log = app_logger.logger("terminal.snapshot");
     var buf: [4]u8 = undefined;
     const len = std.unicode.utf8Encode(@intCast(codepoint), &buf) catch 0;
     if (len == 0) {
@@ -222,7 +224,10 @@ fn appendCodepoint(out: *std.ArrayList(u8), allocator: std.mem.Allocator, codepo
             '\t' => try out.appendSlice(allocator, "\\t"),
             0x00...0x08, 0x0b...0x0c, 0x0e...0x1f, 0x7f => {
                 var esc: [4]u8 = undefined;
-                _ = std.fmt.bufPrint(&esc, "\\x{x:0>2}", .{b}) catch continue;
+                _ = std.fmt.bufPrint(&esc, "\\x{x:0>2}", .{b}) catch |err| {
+                    log.logf(.warning, "appendCodepoint escape format failed byte={d}: {s}", .{ b, @errorName(err) });
+                    continue;
+                };
                 try out.appendSlice(allocator, esc[0..]);
             },
             else => try out.append(allocator, b),
@@ -259,6 +264,7 @@ fn appendAttrsRun(
     attrs: types.CellAttrs,
     base_default: types.CellAttrs,
 ) !void {
+    const log = app_logger.logger("terminal.snapshot");
     var fg_buf: [16]u8 = undefined;
     var bg_buf: [16]u8 = undefined;
     var ulc_buf: [16]u8 = undefined;
@@ -291,7 +297,10 @@ fn appendAttrsRun(
             ulc,
             attrs.link_id,
         },
-    ) catch return;
+    ) catch |err| {
+        log.logf(.warning, "appendAttrsRun line format failed row={d}: {s}", .{ row, @errorName(err) });
+        return;
+    };
     try out.appendSlice(allocator, line);
     try out.append(allocator, '\n');
 }
@@ -431,6 +440,7 @@ fn appendQuotedField(out: *std.ArrayList(u8), allocator: std.mem.Allocator, labe
 }
 
 fn appendEscaped(out: *std.ArrayList(u8), allocator: std.mem.Allocator, text: []const u8) !void {
+    const log = app_logger.logger("terminal.snapshot");
     for (text) |b| {
         switch (b) {
             '\\' => try out.appendSlice(allocator, "\\\\"),
@@ -440,7 +450,10 @@ fn appendEscaped(out: *std.ArrayList(u8), allocator: std.mem.Allocator, text: []
             '\t' => try out.appendSlice(allocator, "\\t"),
             0x00...0x08, 0x0b...0x0c, 0x0e...0x1f, 0x7f => {
                 var esc: [4]u8 = undefined;
-                _ = std.fmt.bufPrint(&esc, "\\x{x:0>2}", .{b}) catch continue;
+                _ = std.fmt.bufPrint(&esc, "\\x{x:0>2}", .{b}) catch |err| {
+                    log.logf(.warning, "appendEscaped escape format failed byte={d}: {s}", .{ b, @errorName(err) });
+                    continue;
+                };
                 try out.appendSlice(allocator, esc[0..]);
             },
             else => try out.append(allocator, b),
@@ -449,8 +462,12 @@ fn appendEscaped(out: *std.ArrayList(u8), allocator: std.mem.Allocator, text: []
 }
 
 fn appendInt(out: *std.ArrayList(u8), allocator: std.mem.Allocator, value: anytype) !void {
+    const log = app_logger.logger("terminal.snapshot");
     var buf: [32]u8 = undefined;
-    const text = std.fmt.bufPrint(&buf, "{d}", .{value}) catch return;
+    const text = std.fmt.bufPrint(&buf, "{d}", .{value}) catch |err| {
+        log.logf(.warning, "appendInt format failed: {s}", .{@errorName(err)});
+        return;
+    };
     try out.appendSlice(allocator, text);
 }
 
@@ -460,8 +477,12 @@ fn appendLine(out: *std.ArrayList(u8), allocator: std.mem.Allocator, text: []con
 }
 
 fn appendLineFmt(out: *std.ArrayList(u8), allocator: std.mem.Allocator, comptime fmt: []const u8, args: anytype) !void {
+    const log = app_logger.logger("terminal.snapshot");
     var buf: [512]u8 = undefined;
-    const line = std.fmt.bufPrint(&buf, fmt, args) catch return;
+    const line = std.fmt.bufPrint(&buf, fmt, args) catch |err| {
+        log.logf(.warning, "appendLineFmt format failed: {s}", .{@errorName(err)});
+        return;
+    };
     try out.appendSlice(allocator, line);
     try out.append(allocator, '\n');
 }
