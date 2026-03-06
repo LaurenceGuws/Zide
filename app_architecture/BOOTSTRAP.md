@@ -59,7 +59,7 @@ cd C:\dev\vcpkg-win
 # Build using vcpkg
 $env:VCPKG_ROOT="C:\dev\vcpkg-win"
 $env:VCPKG_DEFAULT_TRIPLET="x64-windows"
-zig build -Duse-vcpkg=true
+zig build
 ```
 
 On Windows, builds rely on vcpkg-provided deps and will search for installs in either:
