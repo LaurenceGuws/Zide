@@ -105,7 +105,12 @@ pub fn fontForSize(renderer: anytype, size: f32) ?*TerminalFont {
     const key: u32 = @intFromFloat(std.math.round(size));
     if (renderer.font_cache.get(key)) |font_ptr| return font_ptr;
 
-    const font_ptr = renderer.allocator.create(TerminalFont) catch return null;
+    const font_ptr = renderer.allocator.create(TerminalFont) catch |err| {
+        if (log.enabled_file or log.enabled_console) {
+            log.logf(.warning, "font cache alloc failed size_key={d} err={s}", .{ key, @errorName(err) });
+        }
+        return null;
+    };
     font_ptr.* = TerminalFont.init(
         renderer.allocator,
         iface.FONT_PATH,
