@@ -4,11 +4,11 @@ const app_terminal_close_confirm_input = @import("terminal_close_confirm_input.z
 const app_terminal_shortcut_suppress = @import("terminal_shortcut_suppress.zig");
 const app_terminal_surface_gate = @import("terminal_surface_gate.zig");
 const app_terminal_clipboard_shortcuts_frame = @import("terminal_clipboard_shortcuts_frame.zig");
-const app_editor_shortcuts_frame = @import("editor_shortcuts_frame.zig");
 const app_update_prelude_frame_runtime = @import("update_prelude_frame_runtime.zig");
 const app_shell = @import("../app_shell.zig");
 const app_bootstrap = @import("bootstrap.zig");
 const app_modes = @import("modes/mod.zig");
+const mode_build = @import("mode_build.zig");
 const input_actions = @import("../input/input_actions.zig");
 const shared_types = @import("../types/mod.zig");
 const terminal_mod = @import("../terminal/core/terminal.zig");
@@ -98,24 +98,27 @@ pub fn handle(
         if (clipboard_result.handled) handled_shortcut = true;
     }
 
-    if (focus == .editor and editors.len > 0) {
-        const action_layout = hooks.compute_layout(ctx, @floatFromInt(r.width), @floatFromInt(r.height));
-        const editor_idx = @min(active_tab, editors.len - 1);
-        const editor = editors[editor_idx];
-        const editor_shortcut_result = try app_editor_shortcuts_frame.handle(
-            actions,
-            allocator,
-            frame_shell,
-            action_layout,
-            editor,
-            editor_cluster_cache,
-            editor_wrap,
-            editor_large_jump_rows,
-            search_panel_active,
-            search_panel_query,
-        );
-        if (editor_shortcut_result.needs_redraw) hooks.mark_redraw(ctx);
-        if (editor_shortcut_result.handled) handled_shortcut = true;
+    if (comptime mode_build.focused_mode != .terminal) {
+        if (focus == .editor and editors.len > 0) {
+            const app_editor_shortcuts_frame = @import("editor_shortcuts_frame.zig");
+            const action_layout = hooks.compute_layout(ctx, @floatFromInt(r.width), @floatFromInt(r.height));
+            const editor_idx = @min(active_tab, editors.len - 1);
+            const editor = editors[editor_idx];
+            const editor_shortcut_result = try app_editor_shortcuts_frame.handle(
+                actions,
+                allocator,
+                frame_shell,
+                action_layout,
+                editor,
+                editor_cluster_cache,
+                editor_wrap,
+                editor_large_jump_rows,
+                search_panel_active,
+                search_panel_query,
+            );
+            if (editor_shortcut_result.needs_redraw) hooks.mark_redraw(ctx);
+            if (editor_shortcut_result.handled) handled_shortcut = true;
+        }
     }
 
     return .{
