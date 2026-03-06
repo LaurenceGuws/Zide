@@ -124,6 +124,7 @@ zig build -Dmode=editor
 Mode behavior:
 - `ide`: plans full IDE build graph.
 - `terminal` / `editor`: plan only selected app target + run step for lower compile overhead.
+- `zig build report-build-mode`: prints the selected mode and graph path.
 - Build graph moduleization:
   - `build_utils/bootstrap_graph.zig`: shared build bootstrap/dependency/context setup.
   - `build_utils/app_graph.zig`: primary app graph planners (ide/focused runtime).

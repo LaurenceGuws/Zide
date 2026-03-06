@@ -4,17 +4,22 @@ const windows_runtime = @import("build_utils/windows_runtime.zig");
 const bootstrap_graph = @import("build_utils/bootstrap_graph.zig");
 const app_graph = @import("build_utils/app_graph.zig");
 const ide_graph = @import("build_utils/ide_graph.zig");
-const target_profile = @import("build_utils/target_profile.zig");
 const MainModeRunSteps = step_utils.MainModeRunSteps;
 const installVcpkgRuntimeDlls = windows_runtime.installVcpkgRuntimeDlls;
 const initBuildBootstrap = bootstrap_graph.initBuildBootstrap;
+const addBuildModeReportStep = step_utils.addBuildModeReportStep;
 const planIdePrimaryAppGraph = app_graph.planIdePrimaryAppGraph;
 const planFocusedRuntimeAppGraph = app_graph.planFocusedRuntimeAppGraph;
 const planIdeExtendedBuildGraph = ide_graph.planIdeExtendedBuildGraph;
 
 pub fn build(b: *std.Build) void {
-    target_profile.assertPolicy();
     const boot = initBuildBootstrap(b);
+    _ = addBuildModeReportStep(
+        b,
+        boot.target,
+        boot.optimize,
+        boot.build_options,
+    );
 
     const main_mode_run_steps: MainModeRunSteps = switch (boot.build_mode) {
         .ide => planIdePrimaryAppGraph(

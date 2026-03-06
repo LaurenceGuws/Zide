@@ -5,6 +5,7 @@ const app_types = @import("app_types.zig");
 const vcpkg_paths = @import("vcpkg_paths.zig");
 const dependency_resolver = @import("dependency_resolver.zig");
 const mode_specs = @import("mode_specs.zig");
+const target_profile = @import("target_profile.zig");
 
 const AppLinkContext = app_types.AppLinkContext;
 const parseDependencyPath = dependency_path.parseDependencyPath;
@@ -24,6 +25,8 @@ pub const BuildBootstrap = struct {
 };
 
 pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
+    target_profile.assertPolicy();
+
     const target = b.standardTargetOptions(.{
         .default_target = if (builtin.os.tag == .windows) .{
             .cpu_arch = .x86_64,
@@ -64,6 +67,7 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
     const build_options = b.addOptions();
     build_options.addOption([]const u8, "renderer_backend", renderer_backend);
     build_options.addOption([]const u8, "dependency_path", dep_path_raw);
+    build_options.addOption([]const u8, "build_mode", build_mode_raw);
 
     const use_vcpkg = (target_os == .windows);
     const vcpkg_root_opt = b.option([]const u8, "vcpkg-root", "Path to vcpkg root") orelse std.process.getEnvVarOwned(b.allocator, "VCPKG_ROOT") catch null;
@@ -85,6 +89,12 @@ pub fn initBuildBootstrap(b: *std.Build) BuildBootstrap {
         use_vcpkg,
         build_mode != .terminal,
     );
+    if (build_mode == .terminal and deps.treesitter != null) {
+        @panic("dependency policy violation: terminal mode must not resolve tree-sitter");
+    }
+    if (build_mode != .terminal and deps.treesitter == null) {
+        @panic("dependency policy violation: non-terminal modes must resolve tree-sitter");
+    }
 
     const app_link_ctx = AppLinkContext{
         .dep_path = dep_path,
