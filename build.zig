@@ -20,6 +20,7 @@ const addLibcExecutable = helpers.addLibcExecutable;
 const addGateStep = helpers.addGateStep;
 const resolveVcpkgPaths = helpers.resolveVcpkgPaths;
 const addMainModeRunSteps = helpers.addMainModeRunSteps;
+const addSystemCommandStep = helpers.addSystemCommandStep;
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{
@@ -370,12 +371,13 @@ pub fn build(b: *std.Build) void {
     }
     _ = editor_perf_headless_run.step;
 
-    const editor_perf_gate_cmd = b.addSystemCommand(&.{ "bash", "tools/perf_editor_gate.sh" });
-    const editor_perf_gate_step = b.step(
+    _ = addSystemCommandStep(
+        b,
         "perf-editor-gate",
         "Run repeatable editor performance gate against stress fixtures",
+        &.{ "bash", "tools/perf_editor_gate.sh" },
+        &.{},
     );
-    editor_perf_gate_step.dependOn(&editor_perf_gate_cmd.step);
 
     const terminal_kitty_query_tests = addSdlConfiguredTest(
         b,
@@ -529,32 +531,45 @@ pub fn build(b: *std.Build) void {
         "Check app target dependency policy wiring",
     );
 
-    const build_dep_report_cmd = b.addSystemCommand(&.{ "bash", "-lc", "rg -n \"configureAppExecutable\\(exe(_terminal|_editor|_ide)?|dependency policy violation\" build.zig" });
-    const build_dep_report_step = b.step("report-build-deps", "Report app target dependency policy wiring");
-    build_dep_report_step.dependOn(&build_dep_report_cmd.step);
+    _ = addSystemCommandStep(
+        b,
+        "report-build-deps",
+        "Report app target dependency policy wiring",
+        &.{ "bash", "-lc", "rg -n \"configureAppExecutable\\(exe(_terminal|_editor|_ide)?|dependency policy violation\" build.zig" },
+        &.{},
+    );
 
-    const mode_size_report_step = b.step("mode-size-report", "Report focused mode binary sizes");
-    mode_size_report_step.dependOn(b.getInstallStep());
-    const mode_size_report_cmd = b.addSystemCommand(&.{ "bash", "tools/report_mode_binary_sizes.sh" });
-    mode_size_report_step.dependOn(&mode_size_report_cmd.step);
+    _ = addSystemCommandStep(
+        b,
+        "mode-size-report",
+        "Report focused mode binary sizes",
+        &.{ "bash", "tools/report_mode_binary_sizes.sh" },
+        &.{b.getInstallStep()},
+    );
 
     if (target_os == .linux) {
-        const bundle_terminal_step = b.step("bundle-terminal", "Bundle zide-terminal with resolved shared libs for portable use");
-        bundle_terminal_step.dependOn(b.getInstallStep());
-        const bundle_terminal_cmd = b.addSystemCommand(&.{
-            "bash",
-            "tools/bundle_terminal_linux.sh",
-            "zig-out/bin/zide-terminal",
-            "zig-out/terminal-bundle",
-            "assets",
-        });
-        bundle_terminal_step.dependOn(&bundle_terminal_cmd.step);
+        _ = addSystemCommandStep(
+            b,
+            "bundle-terminal",
+            "Bundle zide-terminal with resolved shared libs for portable use",
+            &.{
+                "bash",
+                "tools/bundle_terminal_linux.sh",
+                "zig-out/bin/zide-terminal",
+                "zig-out/terminal-bundle",
+                "assets",
+            },
+            &.{b.getInstallStep()},
+        );
     }
 
-    const mode_size_check_step = b.step("mode-size-check", "Check focused binaries are not larger than main binary");
-    mode_size_check_step.dependOn(b.getInstallStep());
-    const mode_size_check_cmd = b.addSystemCommand(&.{ "bash", "tools/check_mode_binary_sizes.sh" });
-    mode_size_check_step.dependOn(&mode_size_check_cmd.step);
+    const mode_size_check_step = addSystemCommandStep(
+        b,
+        "mode-size-check",
+        "Check focused binaries are not larger than main binary",
+        &.{ "bash", "tools/check_mode_binary_sizes.sh" },
+        &.{b.getInstallStep()},
+    );
 
     _ = addGateStep(
         b,
