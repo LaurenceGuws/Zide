@@ -306,6 +306,7 @@ pub fn handleKittyQueryPayloadLoadFailureReply(self: anytype, control: KittyCont
 }
 
 pub fn handleKittyQueryPayloadSizeReply(self: anytype, control: KittyControl, image_id: u32, chunk_len: usize) bool {
+    const log = app_logger.logger("terminal.kitty");
     if (kittyExpectedDataBytes(control)) |expected| {
         if (chunk_len < expected) {
             var message = std.ArrayList(u8).empty;
@@ -313,7 +314,12 @@ pub fn handleKittyQueryPayloadSizeReply(self: anytype, control: KittyControl, im
             _ = message.writer(self.allocator).print(
                 "ENODATA:Insufficient image data: {d} < {d}",
                 .{ chunk_len, expected },
-            ) catch return false;
+            ) catch |err| {
+                if (log.enabled_file or log.enabled_console) {
+                    log.logf(.warning, "kitty query payload size message format failed len={d} expected={d} err={s}", .{ chunk_len, expected, @errorName(err) });
+                }
+                return false;
+            };
             writeKittyResponse(self, control, image_id, false, message.items);
             return true;
         }
