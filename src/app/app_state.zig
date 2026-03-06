@@ -65,7 +65,7 @@ pub const AppState = struct {
     editor_vscroll_grab_offset: f32,
     editor_cluster_cache: t.EditorClusterCache,
     editor_render_cache: t.EditorRenderCache,
-    grammar_manager: t.GrammarManager,
+    grammar_manager: ?t.GrammarManager,
     last_cursor_blink_on: bool,
     last_cursor_blink_armed: bool,
     frame_id: u64,
