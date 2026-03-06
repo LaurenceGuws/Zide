@@ -232,10 +232,10 @@ terminal_protocol_todo:
       notes:
         - "Initial beta compatibility doc added: docs/terminal/compatibility.md"
         - "Initial conservative terminfo entry added: terminfo/zide.terminfo"
-        - "Runtime TERM selection now prefers `zide-256color` when the terminfo entry is installed"
+        - "Runtime TERM selection now prefers `xterm-zide` when the terminfo entry is installed"
         - "Initial `zide` terminfo now advertises only audited overrides above `xterm-256color` (Tc/Su/Smulx/Setulc/XF/fullkbd/Sync/Ms)"
         - "Sync capability advertisement now uses the canonical CSI `?2026` form; legacy `DCS = 1/2 s` remains a compatibility alias"
-        - "PTY TERM selection is covered by selector unit tests and Unix PTY smoke (current preferred identity: `TERM=zide-256color`, with `xterm-zide` alias support)"
+        - "PTY TERM selection is covered by selector unit tests and Unix PTY smoke (current preferred identity: `TERM=xterm-zide`, with `zide-256color` alias support)"
         - "Compiled-terminfo smoke now verifies `Ms`, `Setulc`, and `Sync` are present in the installed `zide` entry"
         - "Replay authority now locks the beta identity tuple (`DA` + `XTGETTCAP TN/Co/RGB`) via fixtures/terminal/terminal_identity_query_reply.*"
         - "Further capability-specific terminfo expansion still requires a feature-by-feature audit"

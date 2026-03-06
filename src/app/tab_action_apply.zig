@@ -9,10 +9,10 @@ pub fn applyTerminal(
     app_mode: AppMode,
     adapter: *app_modes.backend.TerminalMode,
     tab_action: app_modes.shared.actions.TabAction,
-) void {
+) !void {
     if (!app_modes.ide.canHandleTerminalTabShortcuts(app_mode)) return;
     const contract = adapter.asContract();
-    _ = contract.applyAction(allocator, .{ .tab = tab_action }) catch {};
+    _ = try contract.applyAction(allocator, .{ .tab = tab_action });
 }
 
 pub fn applyEditor(
@@ -20,10 +20,10 @@ pub fn applyEditor(
     app_mode: AppMode,
     adapter: *app_modes.backend.EditorMode,
     tab_action: app_modes.shared.actions.TabAction,
-) void {
+) !void {
     if (!app_modes.ide.supportsEditorSurface(app_mode)) return;
     const contract = adapter.asContract();
-    _ = contract.applyAction(allocator, .{ .tab = tab_action }) catch {};
+    _ = try contract.applyAction(allocator, .{ .tab = tab_action });
 }
 
 test "applyTerminal respects mode gate" {
@@ -34,11 +34,11 @@ test "applyTerminal respects mode gate" {
     });
     defer terminal.deinit(allocator);
 
-    applyTerminal(allocator, .editor, &terminal, .create);
+    try applyTerminal(allocator, .editor, &terminal, .create);
     var snap = try terminal.asContract().snapshot(allocator);
     try std.testing.expectEqual(@as(usize, 0), snap.tabs.len);
 
-    applyTerminal(allocator, .terminal, &terminal, .create);
+    try applyTerminal(allocator, .terminal, &terminal, .create);
     snap = try terminal.asContract().snapshot(allocator);
     try std.testing.expectEqual(@as(usize, 1), snap.tabs.len);
 }
@@ -51,11 +51,11 @@ test "applyEditor respects mode gate" {
     });
     defer editor.deinit(allocator);
 
-    applyEditor(allocator, .terminal, &editor, .create);
+    try applyEditor(allocator, .terminal, &editor, .create);
     var snap = try editor.asContract().snapshot(allocator);
     try std.testing.expectEqual(@as(usize, 0), snap.tabs.len);
 
-    applyEditor(allocator, .ide, &editor, .create);
+    try applyEditor(allocator, .ide, &editor, .create);
     snap = try editor.asContract().snapshot(allocator);
     try std.testing.expectEqual(@as(usize, 1), snap.tabs.len);
 }

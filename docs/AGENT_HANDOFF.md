@@ -25,7 +25,7 @@
   - launcher/runtime directory semantics.
 - Terminal identity/runtime environment tightened:
   - project terminfo aliases: `xterm-zide|zide-256color`
-  - runtime TERM preference: `zide-256color`, then `xterm-zide`, then `zide`, then `xterm-256color`
+  - runtime TERM preference: `xterm-zide`, then `zide-256color`, then `zide`, then `xterm-256color`
   - no `xterm-kitty` fallback path in terminal core.
 
 ### Constraints / Guardrails

@@ -124,12 +124,6 @@ SELF_DIR="$(dirname -- "$(readlink -f -- "$0")")"
 LAUNCH_CWD="${PWD:-$HOME}"
 RUNTIME_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/zide-terminal"
 export LD_LIBRARY_PATH="$SELF_DIR/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-if [[ "${ZIDE_USE_BUNDLED_TERMINFO:-0}" == "1" ]] && [[ -f "$SELF_DIR/terminfo/x/xterm-zide" || -f "$SELF_DIR/terminfo/z/zide-256color" || -f "$SELF_DIR/terminfo/z/zide" ]]; then
-  export TERMINFO="$SELF_DIR/terminfo"
-  _ZIDE_TERMINFO_DIRS="$SELF_DIR/terminfo${TERMINFO_DIRS:+:$TERMINFO_DIRS}:/usr/share/terminfo:/usr/lib/terminfo:/lib/terminfo:/etc/terminfo"
-  export TERMINFO_DIRS="$_ZIDE_TERMINFO_DIRS"
-  unset _ZIDE_TERMINFO_DIRS
-fi
 export ZIDE_LAUNCH_CWD="$LAUNCH_CWD"
 
 mkdir -p "$RUNTIME_DIR"

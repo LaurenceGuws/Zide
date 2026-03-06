@@ -65,7 +65,6 @@ Important:
 
 Launcher behavior:
 - By default, launcher does not force `TERMINFO`.
-- Bundled terminfo export is opt-in via `ZIDE_USE_BUNDLED_TERMINFO=1`.
 - Preferred system install path for packaged runs is `/usr/share/terminfo` (installed by local package flow).
 
 Shell startup consistency for bundled launcher:
