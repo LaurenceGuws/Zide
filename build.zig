@@ -179,6 +179,13 @@ pub fn build(b: *std.Build) void {
         }
     }
 
+    if (build_mode != .ide) {
+        // High-value compile-time isolation:
+        // terminal/editor mode builds should only register the selected app
+        // artifact + run step, and skip IDE-only build graph setup.
+        return;
+    }
+
     // On Windows, vcpkg typically provides runtime deps as DLLs in
     // <triplet>/bin. Copy them next to the installed exe so that launching
     // `zig-out/bin/zide.exe` works without requiring manual PATH setup.
@@ -487,87 +494,85 @@ pub fn build(b: *std.Build) void {
     );
     build_profile_report_step.dependOn(&build_profile_report_run.step);
 
-    if (build_mode == .ide) {
+    _ = addSystemCommandStep(
+        b,
+        "mode-size-report",
+        "Report focused mode binary sizes",
+        &.{ "bash", "tools/report_mode_binary_sizes.sh" },
+        &.{b.getInstallStep()},
+    );
+
+    if (target_os == .linux) {
         _ = addSystemCommandStep(
             b,
-            "mode-size-report",
-            "Report focused mode binary sizes",
-            &.{ "bash", "tools/report_mode_binary_sizes.sh" },
+            "bundle-terminal",
+            "Bundle zide-terminal with resolved shared libs for portable use",
+            &.{
+                "bash",
+                "tools/bundle_terminal_linux.sh",
+                "zig-out/bin/zide-terminal",
+                "zig-out/terminal-bundle",
+                "assets",
+            },
             &.{b.getInstallStep()},
         );
+    }
 
-        if (target_os == .linux) {
-            _ = addSystemCommandStep(
-                b,
-                "bundle-terminal",
-                "Bundle zide-terminal with resolved shared libs for portable use",
-                &.{
-                    "bash",
-                    "tools/bundle_terminal_linux.sh",
-                    "zig-out/bin/zide-terminal",
-                    "zig-out/terminal-bundle",
-                    "assets",
-                },
-                &.{b.getInstallStep()},
-            );
-        }
+    const mode_size_check_step = addSystemCommandStep(
+        b,
+        "mode-size-check",
+        "Check focused binaries are not larger than main binary",
+        &.{ "bash", "tools/check_mode_binary_sizes.sh" },
+        &.{b.getInstallStep()},
+    );
 
-        const mode_size_check_step = addSystemCommandStep(
-            b,
-            "mode-size-check",
-            "Check focused binaries are not larger than main binary",
-            &.{ "bash", "tools/check_mode_binary_sizes.sh" },
-            &.{b.getInstallStep()},
-        );
+    _ = addGateStep(
+        b,
+        "mode-gates",
+        "Run MODE extraction regression gate bundle",
+        &.{
+            test_step,
+            terminal_import_check_step,
+            app_import_check_step,
+            input_import_check_step,
+            editor_import_check_step,
+            build_dep_policy_step,
+            build_profile_report_step,
+            b.getInstallStep(),
+            mode_size_check_step,
+            terminal_replay_all_step,
+        },
+    );
 
+    _ = addGateStep(
+        b,
+        "mode-gates-fast",
+        "Run fast non-replay MODE extraction gates",
+        &.{
+            test_step,
+            terminal_import_check_step,
+            app_import_check_step,
+            input_import_check_step,
+            editor_import_check_step,
+            build_dep_policy_step,
+            build_profile_report_step,
+            b.getInstallStep(),
+            mode_size_check_step,
+        },
+    );
+
+    if (main_mode_run_steps) |steps| {
         _ = addGateStep(
             b,
-            "mode-gates",
-            "Run MODE extraction regression gate bundle",
+            "mode-smokes-manual",
+            "Run interactive MODE smokes (manual)",
             &.{
-                test_step,
-                terminal_import_check_step,
-                app_import_check_step,
-                input_import_check_step,
-                editor_import_check_step,
-                build_dep_policy_step,
-                build_profile_report_step,
-                b.getInstallStep(),
-                mode_size_check_step,
-                terminal_replay_all_step,
+                steps.run,
+                steps.terminal,
+                steps.editor,
+                steps.ide,
             },
         );
-
-        _ = addGateStep(
-            b,
-            "mode-gates-fast",
-            "Run fast non-replay MODE extraction gates",
-            &.{
-                test_step,
-                terminal_import_check_step,
-                app_import_check_step,
-                input_import_check_step,
-                editor_import_check_step,
-                build_dep_policy_step,
-                build_profile_report_step,
-                b.getInstallStep(),
-                mode_size_check_step,
-            },
-        );
-
-        if (main_mode_run_steps) |steps| {
-            _ = addGateStep(
-                b,
-                "mode-smokes-manual",
-                "Run interactive MODE smokes (manual)",
-                &.{
-                    steps.run,
-                    steps.terminal,
-                    steps.editor,
-                    steps.ide,
-                },
-            );
-        }
     }
 
     const grammar_update = addLibcExecutable(
