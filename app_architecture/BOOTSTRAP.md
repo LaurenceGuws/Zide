@@ -126,6 +126,7 @@ Mode behavior:
 - `terminal` / `editor`: plan only selected app target + run step for lower compile overhead.
 - `zig build report-build-mode`: prints the selected mode and graph path.
 - `zig build report-build-bootstrap`: prints resolved bootstrap context (mode/path/os/vcpkg/tree-sitter flag).
+- `zig build report-build-focused-policy`: asserts focused-mode dependency policy wiring.
 - Build graph moduleization:
   - `build_utils/bootstrap_graph.zig`: shared build bootstrap/dependency/context setup.
   - `build_utils/app_graph.zig`: primary app graph planners (ide/focused runtime).
