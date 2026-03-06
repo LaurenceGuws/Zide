@@ -9,12 +9,12 @@ reference terminal implements it.
 
 ## Identity
 
-- Recommended `TERM`: `zide-256color`
+- Recommended `TERM`: `xterm-zide`
 - Fallback `TERM`: `xterm-256color`
 - Terminfo source: `terminfo/zide.terminfo`
 - Runtime selection order inside Zide:
-  - `zide-256color` when available
   - `xterm-zide` when available
+  - `zide-256color` when available
   - `zide` when available
   - `xterm-256color` as the final fallback
 
@@ -25,7 +25,7 @@ mkdir -p ~/.terminfo
 tic -x -o ~/.terminfo terminfo/zide.terminfo
 ```
 
-After installation, new shells launched inside Zide should prefer `TERM=zide-256color`.
+After installation, new shells launched inside Zide should prefer `TERM=xterm-zide`.
 If the entry is not installed, Zide falls back to `xterm-256color`.
 For packaged installs that place entries under `/usr/share/terminfo`, `TERMINFO` is typically unset by design.
 
@@ -62,8 +62,8 @@ So the current terminfo strategy is:
 ## Capability Discovery
 
 - `TERM`:
-  - primary identity is `zide-256color`
-  - compatibility alias `xterm-zide` is provided by the same terminfo entry
+  - primary identity is `xterm-zide`
+  - `zide-256color` is also provided by the same terminfo entry
   - runtime fallback order is `xterm-256color` after Zide-specific identities
 - Primary DA:
   - Zide answers as an xterm-family VT identity for broad compatibility
@@ -210,7 +210,7 @@ Then launch a new shell inside Zide and confirm:
 printf '%s\n' "$TERM"
 ```
 
-Expected value is `zide-256color` (or `xterm-zide` in compatibility scenarios).
+Expected value is `xterm-zide` (or `zide-256color` in compatibility scenarios).
 If the terminfo entry is not installed yet, expect `xterm-256color`.
 
 ## Validation Sources

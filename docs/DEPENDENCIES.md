@@ -58,8 +58,8 @@ Important:
 `zig build bundle-terminal` ships a Zide-owned terminfo payload inside the bundle:
 - Compiles `terminfo/zide.terminfo` with `tic -x` into `terminal-bundle/terminfo`.
 - PTY chooses TERM in this order:
-  - `zide-256color`
   - `xterm-zide`
+  - `zide-256color`
   - `zide`
   - `xterm-256color`
 
