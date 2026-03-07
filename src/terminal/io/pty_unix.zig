@@ -106,9 +106,13 @@ pub const Pty = struct {
     }
 
     pub fn read(self: *Pty, buffer: []u8) !?usize {
+        const log = app_logger.logger("terminal.io");
         const n = posix.read(self.master_fd, buffer) catch |err| {
             if (err == error.WouldBlock) return null;
-            if (err == error.InputOutput) return null;
+            if (err == error.InputOutput) {
+                log.logf(.debug, "pty read returned InputOutput; treating as no data", .{});
+                return null;
+            }
             return err;
         };
         if (n == 0) return null;
@@ -219,7 +223,10 @@ fn readForegroundProcessName(pgrp: c.pid_t, out_buf: *[128]u8) ?usize {
     if (std.fs.openFileAbsolute(cmdline_path, .{ .mode = .read_only })) |cmdline_file| {
         defer cmdline_file.close();
         var cmdline_buf: [1024]u8 = undefined;
-        const n_cmd = cmdline_file.readAll(&cmdline_buf) catch 0;
+        const n_cmd = cmdline_file.readAll(&cmdline_buf) catch |err| blk: {
+            log.logf(.debug, "foreground cmdline read failed pgrp={d}: {s}", .{ pgrp, @errorName(err) });
+            break :blk 0;
+        };
         if (n_cmd > 0) {
             var first_end: usize = 0;
             while (first_end < n_cmd and cmdline_buf[first_end] != 0) : (first_end += 1) {}
@@ -550,7 +557,10 @@ fn terminfoInDirSlice(dir: []const u8, name: []const u8) bool {
     if (std.fs.openFileAbsolute(path, .{ .mode = .read_only })) |file| {
         file.close();
         return true;
-    } else |_| {
+    } else |err| {
+        if (err != error.FileNotFound and err != error.NotDir) {
+            log.logf(.debug, "terminfo path probe failed path={s} err={s}", .{ path, @errorName(err) });
+        }
         return false;
     }
 }
