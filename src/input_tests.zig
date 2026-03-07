@@ -223,20 +223,20 @@ test "input replay updates terminal hover state" {
 
     batch.mouse_pos = .{ .x = 5, .y = 5 };
     batch.mods = .{};
-    terminal_hover_mod.updateHoverState(&widget.hover, session, 0, 0, 30, 40, 10, 20, snapshot, history_len, start_line, &batch);
+    terminal_hover_mod.updateHoverState(&widget.hover, session, 0, 0, 30, 40, 1.0, 10, 20, snapshot, history_len, start_line, &batch);
     try std.testing.expectEqual(@as(isize, 0), widget.hover.last_hover_row);
     try std.testing.expectEqual(@as(isize, 0), widget.hover.last_hover_col);
     try std.testing.expect(!widget.hover.last_hover_ctrl);
 
     batch.mouse_pos = .{ .x = 25, .y = 5 };
     batch.mods.ctrl = true;
-    terminal_hover_mod.updateHoverState(&widget.hover, session, 0, 0, 30, 40, 10, 20, snapshot, history_len, start_line, &batch);
+    terminal_hover_mod.updateHoverState(&widget.hover, session, 0, 0, 30, 40, 1.0, 10, 20, snapshot, history_len, start_line, &batch);
     try std.testing.expectEqual(@as(isize, -1), widget.hover.last_hover_row);
     try std.testing.expectEqual(@as(isize, -1), widget.hover.last_hover_col);
     try std.testing.expect(widget.hover.last_hover_ctrl);
 
     batch.mouse_pos = .{ .x = 45, .y = 5 };
-    terminal_hover_mod.updateHoverState(&widget.hover, session, 0, 0, 30, 40, 10, 20, snapshot, history_len, start_line, &batch);
+    terminal_hover_mod.updateHoverState(&widget.hover, session, 0, 0, 30, 40, 1.0, 10, 20, snapshot, history_len, start_line, &batch);
     try std.testing.expectEqual(@as(isize, -1), widget.hover.last_hover_row);
     try std.testing.expectEqual(@as(isize, -1), widget.hover.last_hover_col);
 }

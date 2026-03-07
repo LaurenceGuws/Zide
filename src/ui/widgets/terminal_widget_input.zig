@@ -42,8 +42,8 @@ pub fn handleInput(
     const mouse = input_batch.mouse_pos;
     const in_terminal = common.pointInRect(mouse.x, mouse.y, x, y, width, height);
     const scale = shell.uiScaleFactor();
-    const scrollbar_base_w: f32 = common.scrollbarHoverWidth(scale);
-    const scrollbar_hover_w: f32 = scrollbar_base_w + @max(@as(f32, 1), 2 * scale);
+    const scrollbar_base_w: f32 = common.scrollbarWidth(scale);
+    const scrollbar_hover_w: f32 = common.scrollbarHoverWidth(scale);
     const scrollbar_hit_margin: f32 = common.scrollbarHitMargin(scale);
     const scrollbar_proximity: f32 = common.scrollbarProximityRange(scale);
     const in_scroll_y = mouse.y >= y and mouse.y <= y + height;
@@ -94,6 +94,7 @@ pub fn handleInput(
         y,
         width,
         height,
+        scale,
         hit_cell_w,
         hit_cell_h,
         snapshot,

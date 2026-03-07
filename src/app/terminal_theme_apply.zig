@@ -46,7 +46,18 @@ pub fn applyThemeToWidgets(
 ) void {
     for (terminal_widgets.items) |*widget| {
         const term = widget.session;
+        var old_ansi: [16]term_types.Color = undefined;
+        for (0..16) |i| {
+            old_ansi[i] = term.paletteColor(@intCast(i));
+        }
         setSessionPalette(term, theme);
+        if (theme.ansi_colors) |ansi| {
+            var new_ansi: [16]term_types.Color = undefined;
+            for (ansi, 0..) |c, i| {
+                new_ansi[i] = term_types.Color{ .r = c.r, .g = c.g, .b = c.b };
+            }
+            term.remapAnsiColors(old_ansi, new_ansi);
+        }
         term.markDirty();
         term.updateViewCacheForScroll();
         widget.invalidateTextureCache();

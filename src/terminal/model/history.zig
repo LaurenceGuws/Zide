@@ -75,24 +75,53 @@ pub const TerminalHistory = struct {
         new_fg: types.Color,
         new_bg: types.Color,
     ) void {
+        var changed = false;
         var idx: usize = 0;
         while (idx < self.scrollback.count()) : (idx += 1) {
             const line = self.scrollback.lineByIndexMut(idx) orelse continue;
             for (line.cells) |*cell| {
-                if (cell.attrs.fg.r == old_fg.r and
-                    cell.attrs.fg.g == old_fg.g and
-                    cell.attrs.fg.b == old_fg.b and
-                    cell.attrs.fg.a == old_fg.a and
-                    cell.attrs.bg.r == old_bg.r and
-                    cell.attrs.bg.g == old_bg.g and
-                    cell.attrs.bg.b == old_bg.b and
-                    cell.attrs.bg.a == old_bg.a)
-                {
+                if (colorsEqual(cell.attrs.fg, old_fg)) {
                     cell.attrs.fg = new_fg;
+                    changed = true;
+                }
+                if (colorsEqual(cell.attrs.bg, old_bg)) {
                     cell.attrs.bg = new_bg;
+                    changed = true;
                 }
             }
         }
+        if (changed) self.markScrollbackChanged();
+    }
+
+    pub fn updateAnsiColors(self: *TerminalHistory, old_colors: [16]types.Color, new_colors: [16]types.Color) void {
+        var changed = false;
+        var idx: usize = 0;
+        while (idx < self.scrollback.count()) : (idx += 1) {
+            const line = self.scrollback.lineByIndexMut(idx) orelse continue;
+            for (line.cells) |*cell| {
+                const old_fg = cell.attrs.fg;
+                const old_bg = cell.attrs.bg;
+                const old_ul = cell.attrs.underline_color;
+                cell.attrs.fg = remapAnsiColor(cell.attrs.fg, old_colors, new_colors);
+                cell.attrs.bg = remapAnsiColor(cell.attrs.bg, old_colors, new_colors);
+                cell.attrs.underline_color = remapAnsiColor(cell.attrs.underline_color, old_colors, new_colors);
+                if (!colorsEqual(old_fg, cell.attrs.fg) or !colorsEqual(old_bg, cell.attrs.bg) or !colorsEqual(old_ul, cell.attrs.underline_color)) {
+                    changed = true;
+                }
+            }
+        }
+        if (changed) self.markScrollbackChanged();
+    }
+
+    fn remapAnsiColor(color: types.Color, old_colors: [16]types.Color, new_colors: [16]types.Color) types.Color {
+        for (0..16) |i| {
+            if (colorsEqual(color, old_colors[i])) return new_colors[i];
+        }
+        return color;
+    }
+
+    fn colorsEqual(a: types.Color, b: types.Color) bool {
+        return a.r == b.r and a.g == b.g and a.b == b.b and a.a == b.a;
     }
 
     pub fn ensureViewCache(self: *TerminalHistory, cols: u16, default_cell: types.Cell) void {

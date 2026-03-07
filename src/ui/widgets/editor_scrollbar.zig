@@ -3,6 +3,7 @@ const common = @import("common.zig");
 
 pub const VerticalGeometry = struct {
     visible: bool,
+    focus_t: f32,
     scrollbar_x: f32,
     scrollbar_y: f32,
     scrollbar_w: f32,
@@ -15,6 +16,7 @@ pub const VerticalGeometry = struct {
 
 pub const HorizontalGeometry = struct {
     visible: bool,
+    focus_t: f32,
     track_x: f32,
     track_y: f32,
     track_h: f32,
@@ -44,6 +46,7 @@ pub fn computeVertical(
     if (total_lines <= visible_lines or width <= 0 or height <= 0) {
         return .{
             .visible = false,
+            .focus_t = 0,
             .scrollbar_x = x,
             .scrollbar_y = y,
             .scrollbar_w = 0,
@@ -82,6 +85,7 @@ pub fn computeVertical(
 
     return .{
         .visible = true,
+        .focus_t = t,
         .scrollbar_x = scrollbar_x,
         .scrollbar_y = scrollbar_y,
         .scrollbar_w = scrollbar_w,
@@ -111,6 +115,7 @@ pub fn computeHorizontal(
     if (width <= 0 or height <= 0 or cols == 0 or max_visible_width <= cols) {
         return .{
             .visible = false,
+            .focus_t = 0,
             .track_x = x + gutter_width,
             .track_y = y + height,
             .track_h = 0,
@@ -159,6 +164,7 @@ pub fn computeHorizontal(
 
     return .{
         .visible = true,
+        .focus_t = t,
         .track_x = track_x,
         .track_y = track_y,
         .track_h = track_h,

@@ -148,8 +148,8 @@ pub fn draw(
     const base_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(y)))));
 
     const scale = shell.uiScaleFactor();
-    const scrollbar_base_w: f32 = common.scrollbarHoverWidth(scale);
-    const scrollbar_hover_w: f32 = scrollbar_base_w + @max(@as(f32, 1), 2 * scale);
+    const scrollbar_base_w: f32 = common.scrollbarWidth(scale);
+    const scrollbar_hover_w: f32 = common.scrollbarHoverWidth(scale);
     const scrollbar_hit_margin: f32 = common.scrollbarHitMargin(scale);
     const scrollbar_proximity: f32 = common.scrollbarProximityRange(scale);
     const mouse = input.mouse_pos;
@@ -1106,17 +1106,22 @@ pub fn draw(
             1.0;
         const thumb = common.computeScrollbarThumb(scrollbar_y, track_h, rows, total_lines, min_thumb_h, ratio);
 
+        const show_track = self.scrollbar_drag_active or self.scrollbar_hover_anim > 0.05;
+        if (show_track) {
+            r.drawRect(
+                @intFromFloat(scrollbar_x),
+                @intFromFloat(scrollbar_y),
+                @intFromFloat(scrollbar_w),
+                @intFromFloat(scrollbar_h),
+                r.theme.line_number_bg,
+            );
+        }
+        const thumb_inset = if (show_track) @max(1.0, scrollbar_w * 0.25) else 0;
+        const thumb_w = @max(1.0, scrollbar_w - thumb_inset * 2);
         r.drawRect(
-            @intFromFloat(scrollbar_x),
-            @intFromFloat(scrollbar_y),
-            @intFromFloat(scrollbar_w),
-            @intFromFloat(scrollbar_h),
-            r.theme.line_number_bg,
-        );
-        r.drawRect(
-            @intFromFloat(scrollbar_x + 2),
+            @intFromFloat(scrollbar_x + thumb_inset),
             @intFromFloat(thumb.thumb_y),
-            @intFromFloat(scrollbar_w - 4),
+            @intFromFloat(thumb_w),
             @intFromFloat(thumb.thumb_h),
             r.theme.selection,
         );

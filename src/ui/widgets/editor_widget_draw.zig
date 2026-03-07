@@ -1733,51 +1733,63 @@ fn hashScrollState(
 }
 
 fn drawHorizontalScrollbar(r: anytype, h: scrollbar_mod.HorizontalGeometry, list: ?*EditorDrawList) void {
-    if (list) |ops| {
-        _ = addRectOp(ops, h.track_x, h.track_max_y, h.track_w, h.track_max_h, r.theme.line_number_bg);
-    } else {
-        r.drawRect(
-            @intFromFloat(h.track_x),
-            @intFromFloat(h.track_max_y),
-            @intFromFloat(h.track_w),
-            @intFromFloat(h.track_max_h),
-            r.theme.line_number_bg,
-        );
+    const show_track = h.focus_t > 0.01;
+    if (show_track) {
+        if (list) |ops| {
+            _ = addRectOp(ops, h.track_x, h.track_max_y, h.track_w, h.track_max_h, r.theme.line_number_bg);
+        } else {
+            r.drawRect(
+                @intFromFloat(h.track_x),
+                @intFromFloat(h.track_max_y),
+                @intFromFloat(h.track_w),
+                @intFromFloat(h.track_max_h),
+                r.theme.line_number_bg,
+            );
+        }
     }
-    const inset: f32 = @max(1, 2 * r.uiScaleFactor());
+    const inset: f32 = if (show_track) blk: {
+        const inset_limit = @max(0.0, h.track_h * 0.5 - 1.0);
+        break :blk @min(@max(1.0, r.uiScaleFactor()), inset_limit);
+    } else 0;
     if (list) |ops| {
-        _ = addRectOp(ops, h.thumb_x, h.track_y + inset, h.thumb_w, h.track_h - inset * 2, r.theme.selection);
+        _ = addRectOp(ops, h.thumb_x, h.track_y + inset, h.thumb_w, @max(1, h.track_h - inset * 2), r.theme.selection);
     } else {
         r.drawRect(
             @intFromFloat(h.thumb_x),
             @intFromFloat(h.track_y + inset),
             @intFromFloat(h.thumb_w),
-            @intFromFloat(h.track_h - inset * 2),
+            @intFromFloat(@max(1, h.track_h - inset * 2)),
             r.theme.selection,
         );
     }
 }
 
 fn drawVerticalScrollbar(r: anytype, v: scrollbar_mod.VerticalGeometry, list: ?*EditorDrawList) void {
-    if (list) |ops| {
-        _ = addRectOp(ops, v.scrollbar_x, v.scrollbar_y, v.scrollbar_w, v.scrollbar_h, r.theme.line_number_bg);
-    } else {
-        r.drawRect(
-            @intFromFloat(v.scrollbar_x),
-            @intFromFloat(v.scrollbar_y),
-            @intFromFloat(v.scrollbar_w),
-            @intFromFloat(v.scrollbar_h),
-            r.theme.line_number_bg,
-        );
+    const show_track = v.focus_t > 0.01;
+    if (show_track) {
+        if (list) |ops| {
+            _ = addRectOp(ops, v.scrollbar_x, v.scrollbar_y, v.scrollbar_w, v.scrollbar_h, r.theme.line_number_bg);
+        } else {
+            r.drawRect(
+                @intFromFloat(v.scrollbar_x),
+                @intFromFloat(v.scrollbar_y),
+                @intFromFloat(v.scrollbar_w),
+                @intFromFloat(v.scrollbar_h),
+                r.theme.line_number_bg,
+            );
+        }
     }
-    const inset: f32 = @max(1, 2 * r.uiScaleFactor());
+    const inset: f32 = if (show_track) blk: {
+        const inset_limit = @max(0.0, v.scrollbar_w * 0.5 - 1.0);
+        break :blk @min(@max(1.0, r.uiScaleFactor()), inset_limit);
+    } else 0;
     if (list) |ops| {
-        _ = addRectOp(ops, v.scrollbar_x + inset, v.thumb.thumb_y, v.scrollbar_w - inset * 2, v.thumb.thumb_h, r.theme.selection);
+        _ = addRectOp(ops, v.scrollbar_x + inset, v.thumb.thumb_y, @max(1, v.scrollbar_w - inset * 2), v.thumb.thumb_h, r.theme.selection);
     } else {
         r.drawRect(
             @intFromFloat(v.scrollbar_x + inset),
             @intFromFloat(v.thumb.thumb_y),
-            @intFromFloat(v.scrollbar_w - inset * 2),
+            @intFromFloat(@max(1, v.scrollbar_w - inset * 2)),
             @intFromFloat(v.thumb.thumb_h),
             r.theme.selection,
         );

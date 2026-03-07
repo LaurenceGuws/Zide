@@ -65,6 +65,56 @@ test "theme utils dark classifier uses background luma" {
     try std.testing.expect(!app_theme_utils.isDarkTheme(&light_theme));
 }
 
+test "terminal ansi palette update remaps existing screen and scrollback cells" {
+    const allocator = std.testing.allocator;
+    const term = try terminal_mod.TerminalSession.init(allocator, 2, 2);
+    defer term.deinit();
+
+    const palette_idx: u8 = 1;
+    const old_color = term.paletteColor(palette_idx);
+    const new_color = terminal_mod.Color{ .r = 12, .g = 210, .b = 160, .a = 255 };
+
+    term.primary.grid.cells.items[0].attrs.fg = old_color;
+    term.primary.grid.cells.items[0].attrs.bg = old_color;
+    term.primary.grid.cells.items[0].attrs.underline_color = old_color;
+
+    term.alt.grid.cells.items[0].attrs.fg = old_color;
+    term.alt.grid.cells.items[0].attrs.bg = old_color;
+    term.alt.grid.cells.items[0].attrs.underline_color = old_color;
+
+    const default_cell = term.primary.defaultCell();
+    var row = [_]terminal_mod.Cell{ default_cell, default_cell };
+    row[0].attrs.fg = old_color;
+    row[0].attrs.bg = old_color;
+    row[0].attrs.underline_color = old_color;
+    term.history.pushRow(row[0..], false, default_cell);
+
+    var old_palette: [16]terminal_mod.Color = undefined;
+    var new_palette: [16]terminal_mod.Color = undefined;
+    for (0..16) |i| {
+        const color = term.paletteColor(@intCast(i));
+        old_palette[i] = color;
+        new_palette[i] = color;
+    }
+    new_palette[palette_idx] = new_color;
+
+    term.setAnsiColors(new_palette);
+    term.remapAnsiColors(old_palette, new_palette);
+
+    try std.testing.expectEqualDeep(new_color, term.primary.grid.cells.items[0].attrs.fg);
+    try std.testing.expectEqualDeep(new_color, term.primary.grid.cells.items[0].attrs.bg);
+    try std.testing.expectEqualDeep(new_color, term.primary.grid.cells.items[0].attrs.underline_color);
+
+    try std.testing.expectEqualDeep(new_color, term.alt.grid.cells.items[0].attrs.fg);
+    try std.testing.expectEqualDeep(new_color, term.alt.grid.cells.items[0].attrs.bg);
+    try std.testing.expectEqualDeep(new_color, term.alt.grid.cells.items[0].attrs.underline_color);
+
+    const scroll_row = term.scrollbackRow(0) orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqualDeep(new_color, scroll_row[0].attrs.fg);
+    try std.testing.expectEqualDeep(new_color, scroll_row[0].attrs.bg);
+    try std.testing.expectEqualDeep(new_color, scroll_row[0].attrs.underline_color);
+}
+
 test "search panel command maps navigation keys" {
     const allocator = std.testing.allocator;
     var batch = shared_types.input.InputBatch.init(allocator);
