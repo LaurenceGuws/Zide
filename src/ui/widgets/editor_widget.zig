@@ -39,6 +39,7 @@ const CursorLineCtx = struct {
 };
 
 fn cursorLineText(ctx: *anyopaque, line_idx: usize, scratch: *LineScratch) LineSlice {
+    const log = app_logger.logger("editor.input");
     const payload: *CursorLineCtx = @ptrCast(@alignCast(ctx));
     const editor = payload.widget.editor;
     const line_len = editor.lineLen(line_idx);
@@ -46,7 +47,10 @@ fn cursorLineText(ctx: *anyopaque, line_idx: usize, scratch: *LineScratch) LineS
         const len = editor.getLine(line_idx, scratch.buf);
         return .{ .text = scratch.buf[0..len], .owned = null };
     }
-    const owned = editor.getLineAlloc(line_idx) catch return .{ .text = &[_]u8{}, .owned = null };
+    const owned = editor.getLineAlloc(line_idx) catch |err| {
+        log.logf(.warning, "cursorLineText getLineAlloc failed line={d} err={s}", .{ line_idx, @errorName(err) });
+        return .{ .text = &[_]u8{}, .owned = null };
+    };
     return .{ .text = owned, .owned = owned };
 }
 
