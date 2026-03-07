@@ -40,7 +40,8 @@ pub const Pty = struct {
 
         const pid = try posix.fork();
         if (pid == 0) {
-            childProcess(@intCast(slave_fd), shell) catch {
+            childProcess(@intCast(slave_fd), shell) catch |err| {
+                app_logger.logger("terminal.env").logf(.warning, "child process setup failed err={s}", .{@errorName(err)});
                 posix.exit(1);
             };
             unreachable;

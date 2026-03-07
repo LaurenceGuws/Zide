@@ -299,7 +299,8 @@ fn sanitizeId(self: anytype, id: []const u8) struct { value: []const u8, owned: 
         out.deinit(self.allocator);
         return .{ .value = "", .owned = false };
     }
-    const owned = out.toOwnedSlice(self.allocator) catch {
+    const owned = out.toOwnedSlice(self.allocator) catch |err| {
+        app_logger.logger("terminal.osc").logf(.warning, "osc5522 id sanitize materialize failed err={s}", .{@errorName(err)});
         out.deinit(self.allocator);
         return .{ .value = "", .owned = false };
     };
