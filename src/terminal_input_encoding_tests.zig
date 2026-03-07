@@ -49,6 +49,20 @@ test "terminal input disambiguate mode uses legacy compact cursor/home/end forms
     try std.testing.expectEqualStrings("\x1b[F", end);
 }
 
+test "terminal input default mode encodes modified cursor keys with legacy xterm forms" {
+    const allocator = std.testing.allocator;
+    const flags: u32 = 0;
+    const ctrl = types.VTERM_MOD_CTRL;
+
+    const left = try input_mod.encodeKeyBytesForTest(allocator, types.VTERM_KEY_LEFT, ctrl, flags);
+    defer allocator.free(left);
+    try std.testing.expectEqualStrings("\x1b[1;5D", left);
+
+    const right = try input_mod.encodeKeyBytesForTest(allocator, types.VTERM_KEY_RIGHT, ctrl, flags);
+    defer allocator.free(right);
+    try std.testing.expectEqualStrings("\x1b[1;5C", right);
+}
+
 test "terminal input disambiguate mode encodes modified cursor/home/end with 1;{m} forms" {
     const allocator = std.testing.allocator;
     const flags: u32 = 1; // key_mode_disambiguate
@@ -68,6 +82,8 @@ test "terminal input disambiguate mode encodes modified cursor/home/end with 1;{
         .{ .key = types.VTERM_KEY_HOME, .mod = types.VTERM_MOD_ALT, .expected = "\x1b[1;3H" },
         .{ .key = types.VTERM_KEY_END, .mod = types.VTERM_MOD_ALT, .expected = "\x1b[1;3F" },
         .{ .key = types.VTERM_KEY_UP, .mod = types.VTERM_MOD_CTRL, .expected = "\x1b[1;5A" },
+        .{ .key = types.VTERM_KEY_LEFT, .mod = types.VTERM_MOD_CTRL, .expected = "\x1b[1;5D" },
+        .{ .key = types.VTERM_KEY_RIGHT, .mod = types.VTERM_MOD_CTRL, .expected = "\x1b[1;5C" },
         .{ .key = types.VTERM_KEY_HOME, .mod = types.VTERM_MOD_CTRL, .expected = "\x1b[1;5H" },
         .{ .key = types.VTERM_KEY_END, .mod = types.VTERM_MOD_CTRL, .expected = "\x1b[1;5F" },
     };

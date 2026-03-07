@@ -282,9 +282,13 @@ pub const Renderer = struct {
     mouse_down: [mouse_button_count]bool,
     mouse_pressed: [mouse_button_count]bool,
     mouse_released: [mouse_button_count]bool,
+    mouse_clicks: [mouse_button_count]u8,
     key_queue: std.ArrayList(KeyPress),
+    key_queue_head: usize,
     char_queue: std.ArrayList(TextPress),
+    char_queue_head: usize,
     focus_queue: std.ArrayList(bool),
+    focus_queue_head: usize,
     composing_text: std.ArrayList(u8),
     composing_cursor: i32,
     composing_selection_len: i32,
@@ -412,9 +416,13 @@ pub const Renderer = struct {
             .mouse_down = [_]bool{false} ** mouse_button_count,
             .mouse_pressed = [_]bool{false} ** mouse_button_count,
             .mouse_released = [_]bool{false} ** mouse_button_count,
+            .mouse_clicks = [_]u8{0} ** mouse_button_count,
             .key_queue = std.ArrayList(KeyPress).empty,
+            .key_queue_head = 0,
             .char_queue = std.ArrayList(TextPress).empty,
+            .char_queue_head = 0,
             .focus_queue = std.ArrayList(bool).empty,
+            .focus_queue_head = 0,
             .composing_text = std.ArrayList(u8).empty,
             .composing_cursor = 0,
             .composing_selection_len = 0,
@@ -578,7 +586,7 @@ pub const Renderer = struct {
             raw_slot.* = null;
         }
         raw_slot.* = self.allocator.dupe(u8, raw) catch |err| blk: {
-                            log.logf(.warning, "font feature raw dup failed len={d} err={s}", .{ raw.len, @errorName(err) });
+            log.logf(.warning, "font feature raw dup failed len={d} err={s}", .{ raw.len, @errorName(err) });
             break :blk null;
         };
         self.rebuildFontFeaturesList(raw_slot.*, list);
@@ -595,7 +603,7 @@ pub const Renderer = struct {
             var feature: hb.hb_feature_t = undefined;
             if (hb.hb_feature_from_string(token.ptr, @intCast(token.len), &feature) != 0) {
                 list.append(self.allocator, feature) catch |err| {
-                                            log.logf(.warning, "font feature append failed token={s} err={s}", .{ token, @errorName(err) });
+                    log.logf(.warning, "font feature append failed token={s} err={s}", .{ token, @errorName(err) });
                     return;
                 };
             }
@@ -720,19 +728,20 @@ pub const Renderer = struct {
         });
         log.logf(.info, "ui_zoom layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
         try self.applyFontScale();
-                    log.logf(.info, 
-                "ui_zoom_effective base={d:.2} ui={d:.3} zoom={d:.3} target={d:.3} render={d:.3} font={d:.2} term_cell={d:.2}x{d:.2}",
-                .{
-                    self.base_font_size,
-                    self.ui_scale,
-                    self.user_zoom,
-                    self.user_zoom_target,
-                    self.render_scale,
-                    self.font_size,
-                    self.terminal_cell_width,
-                    self.terminal_cell_height,
-                },
-            );
+        log.logf(
+            .info,
+            "ui_zoom_effective base={d:.2} ui={d:.3} zoom={d:.3} target={d:.3} render={d:.3} font={d:.2} term_cell={d:.2}x{d:.2}",
+            .{
+                self.base_font_size,
+                self.ui_scale,
+                self.user_zoom,
+                self.user_zoom_target,
+                self.render_scale,
+                self.font_size,
+                self.terminal_cell_width,
+                self.terminal_cell_height,
+            },
+        );
         self.last_zoom_apply_time = result.apply_time;
         return true;
     }
@@ -1347,18 +1356,24 @@ pub const Renderer = struct {
     }
 
     pub fn getCharPressed(self: *Renderer) ?u32 {
-        if (self.char_queue.items.len == 0) return null;
-        return self.char_queue.orderedRemove(0).codepoint;
+        if (self.char_queue_head >= self.char_queue.items.len) return null;
+        const value = self.char_queue.items[self.char_queue_head];
+        self.char_queue_head += 1;
+        return value.codepoint;
     }
 
     pub fn getTextPressed(self: *Renderer) ?TextPress {
-        if (self.char_queue.items.len == 0) return null;
-        return self.char_queue.orderedRemove(0);
+        if (self.char_queue_head >= self.char_queue.items.len) return null;
+        const value = self.char_queue.items[self.char_queue_head];
+        self.char_queue_head += 1;
+        return value;
     }
 
     pub fn getFocusEvent(self: *Renderer) ?bool {
-        if (self.focus_queue.items.len == 0) return null;
-        return self.focus_queue.orderedRemove(0);
+        if (self.focus_queue_head >= self.focus_queue.items.len) return null;
+        const value = self.focus_queue.items[self.focus_queue_head];
+        self.focus_queue_head += 1;
+        return value;
     }
 
     pub const TextComposition = text_composition.TextComposition;
@@ -1373,7 +1388,7 @@ pub const Renderer = struct {
     }
 
     pub fn getKeyPressed(self: *Renderer) ?KeyPress {
-        return key_queue.pop(&self.key_queue);
+        return key_queue.pop(&self.key_queue, &self.key_queue_head);
     }
 
     pub fn keycodeFromScancode(_: *Renderer, scancode: i32, shift: bool) i32 {
@@ -1466,6 +1481,13 @@ pub const Renderer = struct {
         return mouse_state.isMouseButtonReleased(self.mouse_released[0..], button);
     }
 
+    pub fn mouseButtonClicks(self: *Renderer, button: i32) u8 {
+        if (button < 0) return 0;
+        const idx: usize = @intCast(button);
+        if (idx >= self.mouse_clicks.len) return 0;
+        return self.mouse_clicks[idx];
+    }
+
     pub fn getMouseWheelMove(self: *Renderer) f32 {
         _ = self;
         return mouse_wheel_delta;
@@ -1527,30 +1549,30 @@ pub const Renderer = struct {
         var idx: usize = 0;
         while (idx < text.len) {
             const first = text[idx];
-                const seq_len = std.unicode.utf8ByteSequenceLength(first) catch {
-                    idx += 1;
-                    codepoints.append(self.allocator, 0xFFFD) catch |err| {
-                                                    log.logf(.warning, "shaped text append replacement failed err={s}", .{ @errorName(err) });
-                        return false;
-                    };
-                    continue;
-                };
-                if (idx + seq_len > text.len) {
-                    idx += 1;
-                    codepoints.append(self.allocator, 0xFFFD) catch |err| {
-                                                    log.logf(.warning, "shaped text append replacement (truncated utf8) failed err={s}", .{ @errorName(err) });
-                        return false;
-                    };
-                    continue;
-                }
-                const slice = text[idx .. idx + seq_len];
-                const cp = std.unicode.utf8Decode(slice) catch 0xFFFD;
-                codepoints.append(self.allocator, cp) catch |err| {
-                                            log.logf(.warning, "shaped text codepoint append failed err={s}", .{ @errorName(err) });
+            const seq_len = std.unicode.utf8ByteSequenceLength(first) catch {
+                idx += 1;
+                codepoints.append(self.allocator, 0xFFFD) catch |err| {
+                    log.logf(.warning, "shaped text append replacement failed err={s}", .{@errorName(err)});
                     return false;
                 };
-                idx += seq_len;
+                continue;
+            };
+            if (idx + seq_len > text.len) {
+                idx += 1;
+                codepoints.append(self.allocator, 0xFFFD) catch |err| {
+                    log.logf(.warning, "shaped text append replacement (truncated utf8) failed err={s}", .{@errorName(err)});
+                    return false;
+                };
+                continue;
             }
+            const slice = text[idx .. idx + seq_len];
+            const cp = std.unicode.utf8Decode(slice) catch 0xFFFD;
+            codepoints.append(self.allocator, cp) catch |err| {
+                log.logf(.warning, "shaped text codepoint append failed err={s}", .{@errorName(err)});
+                return false;
+            };
+            idx += seq_len;
+        }
         if (codepoints.items.len == 0) return true;
 
         var span_start: usize = 0;
@@ -1601,11 +1623,11 @@ pub const Renderer = struct {
             self.terminal_shape_first_pen_set.items.len = 0;
             self.terminal_shape_first_pen.items.len = 0;
             self.terminal_shape_first_pen_set.ensureTotalCapacity(self.allocator, span_len) catch |err| {
-                                    log.logf(.warning, "shaped text first-pen-set capacity failed span_len={d} err={s}", .{ span_len, @errorName(err) });
+                log.logf(.warning, "shaped text first-pen-set capacity failed span_len={d} err={s}", .{ span_len, @errorName(err) });
                 return false;
             };
             self.terminal_shape_first_pen.ensureTotalCapacity(self.allocator, span_len) catch |err| {
-                                    log.logf(.warning, "shaped text first-pen capacity failed span_len={d} err={s}", .{ span_len, @errorName(err) });
+                log.logf(.warning, "shaped text first-pen capacity failed span_len={d} err={s}", .{ span_len, @errorName(err) });
                 return false;
             };
             self.terminal_shape_first_pen_set.items.len = span_len;
@@ -1796,12 +1818,17 @@ pub const Renderer = struct {
         const input_log = app_logger.logger("input.sdl");
         const window_log = app_logger.logger("sdl.window");
         if (!sdl_input_env_logged) {
-            input_log.logf(.info, 
+            input_log.logf(
+                .info,
                 "sdl build_version=sdl3 event_size={d}",
                 .{sdl_api.sdlEventSize()},
             );
             sdl_input_env_logged = true;
         }
+        compactInputQueue(KeyPress, &self.key_queue, &self.key_queue_head);
+        compactInputQueue(TextPress, &self.char_queue, &self.char_queue_head);
+        compactInputQueue(bool, &self.focus_queue, &self.focus_queue_head);
+
         const state = input_state.InputState{
             .key_down = self.key_down[0..],
             .key_pressed = self.key_pressed[0..],
@@ -1810,6 +1837,7 @@ pub const Renderer = struct {
             .mouse_down = self.mouse_down[0..],
             .mouse_pressed = self.mouse_pressed[0..],
             .mouse_released = self.mouse_released[0..],
+            .mouse_clicks = self.mouse_clicks[0..],
             .key_queue = &self.key_queue,
             .char_queue = &self.char_queue,
             .composing_text = &self.composing_text,
@@ -1850,23 +1878,24 @@ pub const Renderer = struct {
                     sdl_api.startTextInput(self.window);
                     text_input.reapplyRect(&self.text_input_state, self.window);
                     self.focus_queue.append(self.allocator, true) catch |err| {
-                                                    window_log.logf(.warning, "focus queue append failed focused=1 err={s}", .{@errorName(err)});
+                        window_log.logf(.warning, "focus queue append failed focused=1 err={s}", .{@errorName(err)});
                     };
                 }
                 if (sdl_api.isFocusLostEvent(event.type)) {
                     sdl_api.stopTextInput(self.window);
                     self.focus_queue.append(self.allocator, false) catch |err| {
-                                                    window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
+                        window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
                     };
                 }
-                                    window_log.logf(.info, 
-                        "event={s} data1={d} data2={d}",
-                        .{
-                            sdl_api.windowEventName(event.type),
-                            sdl_api.windowEventData1(event),
-                            sdl_api.windowEventData2(event),
-                        },
-                    );
+                window_log.logf(
+                    .info,
+                    "event={s} data1={d} data2={d}",
+                    .{
+                        sdl_api.windowEventName(event.type),
+                        sdl_api.windowEventData1(event),
+                        sdl_api.windowEventData2(event),
+                    },
+                );
             },
             sdl_api.EVENT_KEY_DOWN => {
                 const key_info = platform_input_events.handleKeyDown(
@@ -1877,10 +1906,11 @@ pub const Renderer = struct {
                     &self.key_queue,
                     self.allocator,
                 );
-                                    input_log.logf(.info, 
-                        "keydown sc={d} sym={d} repeat={d}",
-                        .{ key_info.scancode, key_info.sym, key_info.repeat },
-                    );
+                input_log.logf(
+                    .info,
+                    "keydown sc={d} sym={d} repeat={d}",
+                    .{ key_info.scancode, key_info.sym, key_info.repeat },
+                );
             },
             sdl_api.EVENT_KEY_UP => {
                 const key_info = platform_input_events.handleKeyUp(
@@ -1888,10 +1918,11 @@ pub const Renderer = struct {
                     self.key_down[0..],
                     self.key_released[0..],
                 );
-                                    input_log.logf(.info, 
-                        "keyup sc={d} sym={d}",
-                        .{ key_info.scancode, key_info.sym },
-                    );
+                input_log.logf(
+                    .info,
+                    "keyup sc={d} sym={d}",
+                    .{ key_info.scancode, key_info.sym },
+                );
             },
             sdl_api.EVENT_TEXT_INPUT => {
                 const text_was_composed = state.composing_active.*;
@@ -1903,7 +1934,7 @@ pub const Renderer = struct {
                 );
                 input_state.applyTextInputReset(state);
                 input_logging.logTextInput(text_len);
-                                    input_log.logf(.info, "textinput type={d}", .{event.type});
+                input_log.logf(.info, "textinput type={d}", .{event.type});
                 if (!sdl3_textinput_layout_logged) {
                     const layout = sdl_api.textInputLayout();
                     input_logging.logTextInputLayout(
@@ -1968,6 +1999,7 @@ pub const Renderer = struct {
                     event,
                     self.mouse_down[0..],
                     self.mouse_pressed[0..],
+                    self.mouse_clicks[0..],
                 );
             },
             sdl_api.EVENT_MOUSE_BUTTON_UP => {
@@ -1987,26 +2019,40 @@ pub const Renderer = struct {
                         sdl_api.startTextInput(self.window);
                         text_input.reapplyRect(&self.text_input_state, self.window);
                         self.focus_queue.append(self.allocator, true) catch |err| {
-                                                            window_log.logf(.warning, "focus queue append failed focused=1 err={s}", .{@errorName(err)});
+                            window_log.logf(.warning, "focus queue append failed focused=1 err={s}", .{@errorName(err)});
                         };
                     }
                     if (sdl_api.isFocusLostEvent(event.type)) {
                         sdl_api.stopTextInput(self.window);
                         self.focus_queue.append(self.allocator, false) catch |err| {
-                                                            window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
+                            window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
                         };
                     }
-                                            window_log.logf(.info, 
-                            "event={s} data1={d} data2={d}",
-                            .{
-                                sdl_api.windowEventName(event.type),
-                                sdl_api.windowEventData1(event),
-                                sdl_api.windowEventData2(event),
-                            },
-                        );
+                    window_log.logf(
+                        .info,
+                        "event={s} data1={d} data2={d}",
+                        .{
+                            sdl_api.windowEventName(event.type),
+                            sdl_api.windowEventData1(event),
+                            sdl_api.windowEventData2(event),
+                        },
+                    );
                 }
             },
         }
+    }
+
+    fn compactInputQueue(comptime T: type, queue: *std.ArrayList(T), head: *usize) void {
+        if (head.* == 0) return;
+        if (head.* >= queue.items.len) {
+            queue.clearRetainingCapacity();
+            head.* = 0;
+            return;
+        }
+        const remaining = queue.items.len - head.*;
+        std.mem.copyForwards(T, queue.items[0..remaining], queue.items[head.*..queue.items.len]);
+        queue.items.len = remaining;
+        head.* = 0;
     }
 };
 

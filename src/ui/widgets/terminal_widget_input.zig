@@ -627,16 +627,153 @@ pub fn handleInput(
                     const clamped_row = @min(row, rows - 1);
                     const global_row = start_line + clamped_row;
                     if (global_row < history_len + rows) {
+                        const row_cells = snapshot.cells[clamped_row * cols .. (clamped_row + 1) * cols];
                         if (rowLastContentCol(snapshot.cells, cols, clamped_row)) |last_col| {
-                            const sel_col = @min(clamped_col, last_col);
-                            self.session.startSelection(global_row, sel_col);
-                            handled = true;
+                            const click_count = input_batch.mouseClicks(.left);
+                            self.selection_press_origin = mouse;
+                            self.selection_drag_active = false;
+                            if (click_count >= 3) {
+                                self.multi_click_selection_mode = .line;
+                                self.multi_click_anchor_row = global_row;
+                                self.multi_click_anchor_col_start = 0;
+                                self.multi_click_anchor_col_end = last_col;
+                                self.session.startSelection(global_row, 0);
+                                self.session.updateSelection(global_row, last_col);
+                                self.session.finishSelection();
+                                handled = true;
+                            } else if (click_count == 2) {
+                                if (selectWordSpan(row_cells, cols, clamped_col, last_col)) |span| {
+                                    self.multi_click_selection_mode = .word;
+                                    self.multi_click_anchor_row = global_row;
+                                    self.multi_click_anchor_col_start = span.start;
+                                    self.multi_click_anchor_col_end = span.end;
+                                    self.session.startSelection(global_row, span.start);
+                                    self.session.updateSelection(global_row, span.end);
+                                    self.session.finishSelection();
+                                    handled = true;
+                                } else {
+                                    self.multi_click_selection_mode = .none;
+                                    const sel_col = @min(clamped_col, last_col);
+                                    self.session.startSelection(global_row, sel_col);
+                                    handled = true;
+                                }
+                            } else {
+                                self.multi_click_selection_mode = .none;
+                                // Single-click only sets drag origin; selection begins once drag threshold is crossed.
+                            }
                         }
                     }
                 }
             }
 
-            if (input_batch.mouseDown(.left)) {
+            var drag_select_active = input_batch.mouseDown(.left) and !input_batch.mousePressed(.left);
+            if (drag_select_active and !self.selection_drag_active) {
+                if (self.selection_press_origin) |origin| {
+                    const dx = mouse.x - origin.x;
+                    const dy = mouse.y - origin.y;
+                    const dist2 = dx * dx + dy * dy;
+                    const threshold = hit_cell_w;
+                    const threshold2 = threshold * threshold;
+                    if (dist2 >= threshold2) {
+                        self.selection_drag_active = true;
+                    } else {
+                        drag_select_active = false;
+                    }
+                } else {
+                    drag_select_active = false;
+                }
+            }
+            const drag_select_multi = drag_select_active and self.multi_click_selection_mode != .none;
+            const drag_select_normal = drag_select_active and self.multi_click_selection_mode == .none;
+            if (drag_select_multi) {
+                const col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
+                const row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
+                if (cols > 0 and rows > 0) {
+                    const clamped_col = @min(col, cols - 1);
+                    const clamped_row = @min(row, rows - 1);
+                    const global_row = start_line + clamped_row;
+                    if (global_row < history_len + rows) {
+                        const row_cells = snapshot.cells[clamped_row * cols .. (clamped_row + 1) * cols];
+                        const last_col_opt = rowLastContentCol(snapshot.cells, cols, clamped_row);
+                        switch (self.multi_click_selection_mode) {
+                            .word => {
+                                var target_start: usize = clamped_col;
+                                var target_end: usize = clamped_col;
+                                if (last_col_opt) |last_col| {
+                                    if (selectWordSpan(row_cells, cols, clamped_col, last_col)) |span| {
+                                        target_start = span.start;
+                                        target_end = span.end;
+                                    } else {
+                                        const sel_col = @min(clamped_col, last_col);
+                                        target_start = sel_col;
+                                        target_end = sel_col;
+                                    }
+                                } else {
+                                    target_start = 0;
+                                    target_end = 0;
+                                }
+                                const anchor_start = SelPoint{
+                                    .row = self.multi_click_anchor_row,
+                                    .col = self.multi_click_anchor_col_start,
+                                };
+                                const anchor_end = SelPoint{
+                                    .row = self.multi_click_anchor_row,
+                                    .col = self.multi_click_anchor_col_end,
+                                };
+                                const target_start_pos = SelPoint{ .row = global_row, .col = target_start };
+                                const target_end_pos = SelPoint{ .row = global_row, .col = target_end };
+                                var sel_start: SelPoint = undefined;
+                                var sel_end: SelPoint = undefined;
+                                if (selPointBefore(target_start_pos, anchor_start)) {
+                                    sel_start = target_start_pos;
+                                    sel_end = anchor_end;
+                                } else {
+                                    sel_start = anchor_start;
+                                    sel_end = target_end_pos;
+                                }
+                                self.session.startSelection(sel_start.row, sel_start.col);
+                                self.session.updateSelection(sel_end.row, sel_end.col);
+                                handled = true;
+                            },
+                            .line => {
+                                const target_last = last_col_opt orelse 0;
+                                const anchor_start = SelPoint{ .row = self.multi_click_anchor_row, .col = 0 };
+                                const anchor_end = SelPoint{
+                                    .row = self.multi_click_anchor_row,
+                                    .col = self.multi_click_anchor_col_end,
+                                };
+                                const target_start_pos = SelPoint{ .row = global_row, .col = 0 };
+                                const target_end_pos = SelPoint{ .row = global_row, .col = target_last };
+                                var sel_start: SelPoint = undefined;
+                                var sel_end: SelPoint = undefined;
+                                if (selPointBefore(target_start_pos, anchor_start)) {
+                                    sel_start = target_start_pos;
+                                    sel_end = anchor_end;
+                                } else {
+                                    sel_start = anchor_start;
+                                    sel_end = target_end_pos;
+                                }
+                                self.session.startSelection(sel_start.row, sel_start.col);
+                                self.session.updateSelection(sel_end.row, sel_end.col);
+                                handled = true;
+                            },
+                            .none => {},
+                        }
+                    }
+                }
+
+                if (self.session.selectionState() != null) {
+                    // Autoscroll when dragging outside terminal area
+                    if (mouse.y < y) {
+                        self.session.scrollBy(1);
+                        handled = true;
+                    } else if (mouse.y > y + height) {
+                        self.session.scrollBy(-1);
+                        handled = true;
+                    }
+                }
+            }
+            if (drag_select_normal) {
                 const col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
                 const row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
                 if (cols > 0 and rows > 0) {
@@ -671,6 +808,9 @@ pub fn handleInput(
             }
 
             if (input_batch.mouseReleased(.left)) {
+                self.multi_click_selection_mode = .none;
+                self.selection_press_origin = null;
+                self.selection_drag_active = false;
                 if (self.session.selectionState() != null) {
                     self.session.finishSelection();
                     handled = true;
@@ -720,6 +860,11 @@ pub fn handleInput(
         }
     }
 
+    if (input_batch.mouseReleased(.left)) {
+        self.multi_click_selection_mode = .none;
+        self.selection_press_origin = null;
+        self.selection_drag_active = false;
+    }
     self.scrollbar_drag_active = scroll_dragging.*;
     return handled;
 }
@@ -736,4 +881,83 @@ fn terminalInputActivity(input_batch: *const shared_types.input.InputBatch, in_t
     if (input_batch.mouseReleased(.left) or input_batch.mouseReleased(.middle) or input_batch.mouseReleased(.right)) return true;
     if (input_batch.mouseDown(.left) or input_batch.mouseDown(.middle) or input_batch.mouseDown(.right)) return true;
     return input_batch.scroll.y != 0;
+}
+
+const WordSpan = struct {
+    start: usize,
+    end: usize,
+};
+
+fn selectWordSpan(row_cells: []const terminal_types.Cell, cols_count: usize, col: usize, last_col: usize) ?WordSpan {
+    if (cols_count == 0 or row_cells.len < cols_count) return null;
+    const clamped_last = @min(last_col, cols_count - 1);
+    var anchor = @min(col, clamped_last);
+    anchor = cellRootCol(row_cells, anchor);
+    const anchor_class = classifySelectionCell(row_cells[anchor]);
+    if (anchor_class == .empty) return null;
+
+    var start = anchor;
+    while (start > 0) {
+        const prev = start - 1;
+        const prev_root = cellRootCol(row_cells, prev);
+        if (prev_root >= start) break;
+        if (prev_root > clamped_last) break;
+        if (classifySelectionCell(row_cells[prev_root]) != anchor_class) break;
+        start = prev_root;
+    }
+
+    var end = anchor;
+    while (end < clamped_last) {
+        const next = end + 1;
+        const next_root = cellRootCol(row_cells, next);
+        if (next_root <= end) break;
+        if (next_root > clamped_last) break;
+        if (classifySelectionCell(row_cells[next_root]) != anchor_class) break;
+        end = next_root;
+    }
+
+    return .{ .start = start, .end = end };
+}
+
+const SelectionCellClass = enum {
+    empty,
+    word,
+    space,
+    other,
+};
+
+const SelPoint = struct {
+    row: usize,
+    col: usize,
+};
+
+fn selPointBefore(a: SelPoint, b: SelPoint) bool {
+    if (a.row < b.row) return true;
+    if (a.row > b.row) return false;
+    return a.col < b.col;
+}
+
+fn classifySelectionCell(cell: terminal_types.Cell) SelectionCellClass {
+    if (cell.x != 0 or cell.y != 0) return .empty;
+    if (cell.codepoint == 0 and cell.combining_len == 0) return .space;
+    const cp = cell.codepoint;
+    if (cp <= 0x7F) {
+        const b: u8 = @intCast(cp);
+        if (std.ascii.isAlphanumeric(b) or b == '_') return .word;
+        if (std.ascii.isWhitespace(b)) return .space;
+    } else {
+        // Treat non-ASCII graphemes as word characters by default.
+        return .word;
+    }
+    return .other;
+}
+
+fn cellRootCol(row_cells: []const terminal_types.Cell, col: usize) usize {
+    if (row_cells.len == 0) return 0;
+    const idx = @min(col, row_cells.len - 1);
+    const cell = row_cells[idx];
+    if (cell.x == 0 or cell.y != 0) return idx;
+    const delta = @as(usize, cell.x);
+    if (delta > idx) return 0;
+    return idx - delta;
 }

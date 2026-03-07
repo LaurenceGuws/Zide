@@ -88,11 +88,13 @@ pub fn handleMouseButtonDown(
     event: *const sdl.SDL_Event,
     mouse_down: []bool,
     mouse_pressed: []bool,
+    mouse_clicks: []u8,
 ) void {
     const btn = @as(i32, @intCast(event.button.button));
     if (btn >= 0 and @as(usize, @intCast(btn)) < mouse_down.len) {
         mouse_down[@intCast(btn)] = true;
         mouse_pressed[@intCast(btn)] = true;
+        mouse_clicks[@intCast(btn)] = sdl_api.mouseButtonClicks(event);
     }
 }
 

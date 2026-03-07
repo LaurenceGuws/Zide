@@ -236,8 +236,10 @@ pub const InputBatch = struct {
     mouse_down: [MOUSE_BUTTON_COUNT]bool,
     mouse_pressed: [MOUSE_BUTTON_COUNT]bool,
     mouse_released: [MOUSE_BUTTON_COUNT]bool,
+    mouse_clicks: [MOUSE_BUTTON_COUNT]u8,
     mouse_pos: MousePos,
     mouse_pos_raw: MousePos,
+    mouse_moved: bool,
     scroll: ScrollDelta,
     mods: Modifiers,
 
@@ -257,8 +259,10 @@ pub const InputBatch = struct {
             .mouse_down = [_]bool{false} ** MOUSE_BUTTON_COUNT,
             .mouse_pressed = [_]bool{false} ** MOUSE_BUTTON_COUNT,
             .mouse_released = [_]bool{false} ** MOUSE_BUTTON_COUNT,
+            .mouse_clicks = [_]u8{0} ** MOUSE_BUTTON_COUNT,
             .mouse_pos = .{ .x = 0, .y = 0 },
             .mouse_pos_raw = .{ .x = 0, .y = 0 },
+            .mouse_moved = false,
             .scroll = .{ .x = 0, .y = 0 },
             .mods = .{},
         };
@@ -283,8 +287,10 @@ pub const InputBatch = struct {
         self.mouse_down = [_]bool{false} ** MOUSE_BUTTON_COUNT;
         self.mouse_pressed = [_]bool{false} ** MOUSE_BUTTON_COUNT;
         self.mouse_released = [_]bool{false} ** MOUSE_BUTTON_COUNT;
+        self.mouse_clicks = [_]u8{0} ** MOUSE_BUTTON_COUNT;
         self.mouse_pos = .{ .x = 0, .y = 0 };
         self.mouse_pos_raw = .{ .x = 0, .y = 0 };
+        self.mouse_moved = false;
         self.scroll = .{ .x = 0, .y = 0 };
         self.mods = .{};
     }
@@ -319,6 +325,14 @@ pub const InputBatch = struct {
 
     pub fn mouseReleased(self: *const InputBatch, button: MouseButton) bool {
         return self.mouse_released[@intFromEnum(button)];
+    }
+
+    pub fn mouseClicks(self: *const InputBatch, button: MouseButton) u8 {
+        return self.mouse_clicks[@intFromEnum(button)];
+    }
+
+    pub fn mouseMoved(self: *const InputBatch) bool {
+        return self.mouse_moved;
     }
 
     pub fn snapshot(self: *const InputBatch) InputSnapshot {

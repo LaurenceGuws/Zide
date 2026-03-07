@@ -9,6 +9,8 @@ fn sdlModHasAltGr(mod_bits: u32) bool {
     return (mod_bits & (sdl_ralt_mask | sdl_mode_mask)) != 0;
 }
 
+var last_mouse_pos_raw: ?shared_types.input.MousePos = null;
+
 pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) shared_types.input.InputBatch {
     var batch = shared_types.input.InputBatch.init(allocator);
     const log = app_logger.logger("input.batch");
@@ -18,6 +20,12 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
     batch.mouse_pos = .{ .x = pos.x, .y = pos.y };
     const pos_raw = r.getMousePosRaw();
     batch.mouse_pos_raw = .{ .x = pos_raw.x, .y = pos_raw.y };
+    if (last_mouse_pos_raw) |prev| {
+        batch.mouse_moved = prev.x != batch.mouse_pos_raw.x or prev.y != batch.mouse_pos_raw.y;
+    } else {
+        batch.mouse_moved = false;
+    }
+    last_mouse_pos_raw = batch.mouse_pos_raw;
     batch.scroll = .{ .x = 0, .y = r.getMouseWheelMove() };
 
     batch.mouse_down[@intFromEnum(shared_types.input.MouseButton.left)] = r.isMouseButtonDown(app_shell.MOUSE_LEFT);
@@ -31,6 +39,9 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
     batch.mouse_released[@intFromEnum(shared_types.input.MouseButton.left)] = r.isMouseButtonReleased(app_shell.MOUSE_LEFT);
     batch.mouse_released[@intFromEnum(shared_types.input.MouseButton.middle)] = r.isMouseButtonReleased(app_shell.MOUSE_MIDDLE);
     batch.mouse_released[@intFromEnum(shared_types.input.MouseButton.right)] = r.isMouseButtonReleased(app_shell.MOUSE_RIGHT);
+    batch.mouse_clicks[@intFromEnum(shared_types.input.MouseButton.left)] = r.mouseButtonClicks(app_shell.MOUSE_LEFT);
+    batch.mouse_clicks[@intFromEnum(shared_types.input.MouseButton.middle)] = r.mouseButtonClicks(app_shell.MOUSE_MIDDLE);
+    batch.mouse_clicks[@intFromEnum(shared_types.input.MouseButton.right)] = r.mouseButtonClicks(app_shell.MOUSE_RIGHT);
 
     batch.mods = .{
         .shift = r.isKeyDown(app_shell.KEY_LEFT_SHIFT) or r.isKeyDown(app_shell.KEY_RIGHT_SHIFT),
