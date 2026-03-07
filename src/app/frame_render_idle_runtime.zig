@@ -72,13 +72,16 @@ fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f64, 
     if (poll_metrics != null and draw_metrics != null) {
         state.input_latency_logger.logf(
             .info,
-            "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2} term_draw_lock_ms={d:.2} term_draw_render_ms={d:.2} term_poll_tabs={d} term_poll_total={d} term_poll_active={d}/{d} term_poll_bg={d}/{d} term_poll_bg_inspected={d} term_poll_budget_tabs={d} term_poll_hints={d}/{d}/{d}",
+            "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2} term_draw_lock_ms={d:.2} term_draw_cache_copy_ms={d:.2} term_draw_texture_ms={d:.2} term_draw_overlay_ms={d:.2} term_draw_render_ms={d:.2} term_poll_tabs={d} term_poll_total={d} term_poll_active={d}/{d} term_poll_bg={d}/{d} term_poll_bg_inspected={d} term_poll_budget_tabs={d} term_poll_hints={d}/{d}/{d}",
             .{
                 poll_ms,
                 build_ms,
                 update_ms,
                 draw_ms,
                 draw_metrics.?.lock_ms,
+                draw_metrics.?.cache_copy_ms,
+                draw_metrics.?.texture_update_ms,
+                draw_metrics.?.overlay_ms,
                 draw_metrics.?.render_ms,
                 poll_metrics.?.tab_count,
                 poll_metrics.?.total_polled,
@@ -99,13 +102,16 @@ fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f64, 
     if (draw_metrics != null) {
         state.input_latency_logger.logf(
             .info,
-            "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2} term_draw_lock_ms={d:.2} term_draw_render_ms={d:.2}",
+            "poll_ms={d:.2} build_ms={d:.2} update_ms={d:.2} draw_ms={d:.2} term_draw_lock_ms={d:.2} term_draw_cache_copy_ms={d:.2} term_draw_texture_ms={d:.2} term_draw_overlay_ms={d:.2} term_draw_render_ms={d:.2}",
             .{
                 poll_ms,
                 build_ms,
                 update_ms,
                 draw_ms,
                 draw_metrics.?.lock_ms,
+                draw_metrics.?.cache_copy_ms,
+                draw_metrics.?.texture_update_ms,
+                draw_metrics.?.overlay_ms,
                 draw_metrics.?.render_ms,
             },
         );

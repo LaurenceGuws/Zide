@@ -12,6 +12,7 @@ const TextStore = text_store.TextStore;
 const CursorPos = types.CursorPos;
 const Selection = types.Selection;
 const c = ts_api.c_api;
+const c_allocator = std.heap.c_allocator;
 
 var grammar_auto_bootstrap_lock: std.Thread.Mutex = .{};
 const GrammarAutoBootstrapState = enum {
@@ -56,6 +57,20 @@ pub const Editor = struct {
         regex,
     };
 
+    const SearchWorkRequest = struct {
+        generation: u64,
+        preferred_offset: usize,
+        mode: SearchMode,
+        query: []u8,
+        content: []u8,
+    };
+
+    const SearchWorkResult = struct {
+        generation: u64,
+        preferred_offset: usize,
+        matches: []SearchMatch,
+    };
+
     allocator: std.mem.Allocator,
     buffer: *TextStore,
     cursor: CursorPos,
@@ -77,6 +92,13 @@ pub const Editor = struct {
     search_active: ?usize,
     search_mode: SearchMode,
     search_epoch: u64,
+    search_worker: ?std.Thread,
+    search_worker_running: bool,
+    search_mutex: std.Thread.Mutex,
+    search_cond: std.Thread.Condition,
+    search_generation: u64,
+    search_request: ?SearchWorkRequest,
+    search_result: ?SearchWorkResult,
     change_tick: u64,
     highlight_epoch: u64,
     file_path: ?[]const u8,
@@ -119,6 +141,13 @@ pub const Editor = struct {
             .search_active = null,
             .search_mode = .literal,
             .search_epoch = 0,
+            .search_worker = null,
+            .search_worker_running = false,
+            .search_mutex = .{},
+            .search_cond = .{},
+            .search_generation = 0,
+            .search_request = null,
+            .search_result = null,
             .change_tick = 0,
             .highlight_epoch = 0,
             .file_path = null,
@@ -132,6 +161,7 @@ pub const Editor = struct {
     }
 
     pub fn deinit(self: *Editor) void {
+        self.stopSearchWorker();
         if (self.highlighter) |h| {
             h.destroy();
         }
@@ -2146,6 +2176,10 @@ pub const Editor = struct {
         };
     }
 
+    pub fn applyPendingSearchWork(self: *Editor) void {
+        self.applyPendingSearchResult();
+    }
+
     pub fn setSearchQuery(self: *Editor, query: ?[]const u8) !void {
         self.search_mode = .literal;
         if (self.search_query) |prev| {
@@ -2243,7 +2277,7 @@ pub const Editor = struct {
             log.logf(.warning, "tracked undo cleanup failed (replace active): {s}", .{@errorName(err)});
         };
         try self.replaceByteRangeInternal(active.start, active.end, replacement, false);
-        try self.recomputeSearchMatches();
+        try self.recomputeSearchMatchesSync();
         self.search_active = self.findSearchMatchAtOrAfter(active.start + replacement.len);
         if (self.search_active != null) {
             self.jumpToSearchActive();
@@ -2269,7 +2303,7 @@ pub const Editor = struct {
             const match = matches[idx];
             try self.replaceByteRangeInternal(match.start, match.end, replacement, false);
         }
-        try self.recomputeSearchMatches();
+        try self.recomputeSearchMatchesSync();
         try self.endTrackedUndoGroup();
         return matches.len;
     }
@@ -2289,6 +2323,7 @@ pub const Editor = struct {
     }
 
     fn clearSearchState(self: *Editor) void {
+        self.cancelPendingSearchWork();
         self.search_matches.clearRetainingCapacity();
         self.search_active = null;
         self.search_epoch +|= 1;
@@ -2300,6 +2335,57 @@ pub const Editor = struct {
     }
 
     fn recomputeSearchMatchesPrefer(self: *Editor, preferred_offset: usize) !void {
+        const query = self.search_query orelse {
+            self.clearSearchState();
+            return;
+        };
+        if (query.len == 0) {
+            self.clearSearchState();
+            return;
+        }
+
+        const total = self.buffer.totalLen();
+        const content_owned = try self.buffer.readRangeAlloc(0, total);
+        defer self.allocator.free(content_owned);
+        const query_copy = try c_allocator.dupe(u8, query);
+        errdefer c_allocator.free(query_copy);
+        const content_copy = try c_allocator.dupe(u8, content_owned);
+        errdefer c_allocator.free(content_copy);
+
+        const generation_opt = self.queueSearchRequest(.{
+            .preferred_offset = preferred_offset,
+            .mode = self.search_mode,
+            .query = query_copy,
+            .content = content_copy,
+        });
+        if (generation_opt == null) {
+            c_allocator.free(query_copy);
+            c_allocator.free(content_copy);
+            try self.recomputeSearchMatchesSyncPrefer(preferred_offset);
+            return;
+        }
+        const generation = generation_opt.?;
+
+        self.search_matches.clearRetainingCapacity();
+        self.search_active = null;
+        self.search_epoch +|= 1;
+        if (total > 0) self.noteHighlightDirtyRange(0, total - 1);
+
+        const log = app_logger.logger("editor.search");
+        log.logf(.debug, "search scheduled generation={d} query_len={d} content_len={d} mode={s}", .{
+            generation,
+            query.len,
+            content_owned.len,
+            @tagName(self.search_mode),
+        });
+    }
+
+    fn recomputeSearchMatchesSync(self: *Editor) !void {
+        const preferred = if (self.searchActiveMatch()) |active| active.start else self.cursor.offset;
+        try self.recomputeSearchMatchesSyncPrefer(preferred);
+    }
+
+    fn recomputeSearchMatchesSyncPrefer(self: *Editor, preferred_offset: usize) !void {
         self.search_matches.clearRetainingCapacity();
         const query = self.search_query orelse {
             self.search_active = null;
@@ -2316,12 +2402,193 @@ pub const Editor = struct {
         const content = try self.buffer.readRangeAlloc(0, total);
         defer self.allocator.free(content);
 
-        switch (self.search_mode) {
+        const matches = try computeSearchMatchesAlloc(self.allocator, self.search_mode, query, content);
+        defer self.allocator.free(matches);
+        try self.search_matches.appendSlice(self.allocator, matches);
+        self.search_active = self.pickSearchActiveIndex(preferred_offset);
+        self.search_epoch +|= 1;
+        if (total > 0) self.noteHighlightDirtyRange(0, total - 1);
+    }
+
+    fn queueSearchRequest(self: *Editor, request: struct {
+        preferred_offset: usize,
+        mode: SearchMode,
+        query: []u8,
+        content: []u8,
+    }) ?u64 {
+        self.ensureSearchWorker();
+        self.search_mutex.lock();
+        defer self.search_mutex.unlock();
+        if (!self.search_worker_running) return null;
+
+        self.search_generation +|= 1;
+        const generation = self.search_generation;
+        if (self.search_request) |pending| {
+            c_allocator.free(pending.query);
+            c_allocator.free(pending.content);
+        }
+        self.search_request = .{
+            .generation = generation,
+            .preferred_offset = request.preferred_offset,
+            .mode = request.mode,
+            .query = request.query,
+            .content = request.content,
+        };
+        self.search_cond.signal();
+        return generation;
+    }
+
+    fn ensureSearchWorker(self: *Editor) void {
+        self.search_mutex.lock();
+        if (self.search_worker_running) {
+            self.search_mutex.unlock();
+            return;
+        }
+        self.search_worker_running = true;
+        self.search_mutex.unlock();
+
+        const worker = std.Thread.spawn(.{}, searchWorkerMain, .{self}) catch |err| {
+            const log = app_logger.logger("editor.search");
+            log.logf(.warning, "search worker spawn failed err={s}", .{@errorName(err)});
+            self.search_mutex.lock();
+            self.search_worker_running = false;
+            self.search_mutex.unlock();
+            return;
+        };
+        self.search_worker = worker;
+    }
+
+    fn stopSearchWorker(self: *Editor) void {
+        self.search_mutex.lock();
+        self.search_worker_running = false;
+        if (self.search_request) |pending| {
+            c_allocator.free(pending.query);
+            c_allocator.free(pending.content);
+            self.search_request = null;
+        }
+        self.search_cond.signal();
+        self.search_mutex.unlock();
+
+        if (self.search_worker) |thread| {
+            thread.join();
+            self.search_worker = null;
+        }
+
+        self.search_mutex.lock();
+        defer self.search_mutex.unlock();
+        if (self.search_result) |result| {
+            c_allocator.free(result.matches);
+            self.search_result = null;
+        }
+    }
+
+    fn cancelPendingSearchWork(self: *Editor) void {
+        self.search_mutex.lock();
+        defer self.search_mutex.unlock();
+        self.search_generation +|= 1;
+        if (self.search_request) |pending| {
+            c_allocator.free(pending.query);
+            c_allocator.free(pending.content);
+            self.search_request = null;
+        }
+        if (self.search_result) |result| {
+            c_allocator.free(result.matches);
+            self.search_result = null;
+        }
+    }
+
+    fn applyPendingSearchResult(self: *Editor) void {
+        self.search_mutex.lock();
+        const result_opt = self.search_result;
+        if (result_opt == null) {
+            self.search_mutex.unlock();
+            return;
+        }
+        const result = result_opt.?;
+        self.search_result = null;
+        const latest_generation = self.search_generation;
+        self.search_mutex.unlock();
+
+        defer c_allocator.free(result.matches);
+        if (result.generation != latest_generation) {
+            return;
+        }
+
+        self.search_matches.clearRetainingCapacity();
+        self.search_matches.appendSlice(self.allocator, result.matches) catch |err| {
+            const log = app_logger.logger("editor.search");
+            log.logf(.warning, "apply search result append failed err={s}", .{@errorName(err)});
+            self.search_active = null;
+            self.search_epoch +|= 1;
+            return;
+        };
+        self.search_active = self.pickSearchActiveIndex(result.preferred_offset);
+        self.search_epoch +|= 1;
+        const total = self.buffer.totalLen();
+        if (total > 0) self.noteHighlightDirtyRange(0, total - 1);
+    }
+
+    fn searchWorkerMain(self: *Editor) void {
+        while (true) {
+            self.search_mutex.lock();
+            while (self.search_worker_running and self.search_request == null) {
+                self.search_cond.wait(&self.search_mutex);
+            }
+            if (!self.search_worker_running) {
+                self.search_mutex.unlock();
+                return;
+            }
+            const request = self.search_request.?;
+            self.search_request = null;
+            self.search_mutex.unlock();
+
+            const matches = computeSearchMatchesAlloc(c_allocator, request.mode, request.query, request.content) catch |err| {
+                const log = app_logger.logger("editor.search");
+                log.logf(.warning, "search worker compute failed generation={d} err={s}", .{ request.generation, @errorName(err) });
+                c_allocator.free(request.query);
+                c_allocator.free(request.content);
+                continue;
+            };
+            c_allocator.free(request.query);
+            c_allocator.free(request.content);
+
+            self.search_mutex.lock();
+            if (!self.search_worker_running) {
+                self.search_mutex.unlock();
+                c_allocator.free(matches);
+                return;
+            }
+            if (request.generation != self.search_generation) {
+                self.search_mutex.unlock();
+                c_allocator.free(matches);
+                continue;
+            }
+            if (self.search_result) |old| {
+                c_allocator.free(old.matches);
+            }
+            self.search_result = .{
+                .generation = request.generation,
+                .preferred_offset = request.preferred_offset,
+                .matches = matches,
+            };
+            self.search_mutex.unlock();
+        }
+    }
+
+    fn computeSearchMatchesAlloc(
+        allocator: std.mem.Allocator,
+        mode: SearchMode,
+        query: []const u8,
+        content: []const u8,
+    ) ![]SearchMatch {
+        var out = std.ArrayList(SearchMatch).empty;
+        errdefer out.deinit(allocator);
+        switch (mode) {
             .literal => {
                 var pos: usize = 0;
                 while (pos <= content.len) {
                     const found = std.mem.indexOfPos(u8, content, pos, query) orelse break;
-                    try self.search_matches.append(self.allocator, .{
+                    try out.append(allocator, .{
                         .start = found,
                         .end = found + query.len,
                     });
@@ -2333,17 +2600,14 @@ pub const Editor = struct {
                 while (pos < content.len) : (pos += 1) {
                     const len = regexMatchLengthAt(query, content, pos) orelse continue;
                     if (len == 0) continue;
-                    try self.search_matches.append(self.allocator, .{
+                    try out.append(allocator, .{
                         .start = pos,
                         .end = pos + len,
                     });
                 }
             },
         }
-
-        self.search_active = self.pickSearchActiveIndex(preferred_offset);
-        self.search_epoch +|= 1;
-        if (total > 0) self.noteHighlightDirtyRange(0, total - 1);
+        return out.toOwnedSlice(allocator);
     }
 
     fn pickSearchActiveIndex(self: *const Editor, preferred_offset: usize) ?usize {

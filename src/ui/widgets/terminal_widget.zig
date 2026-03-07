@@ -53,9 +53,11 @@ pub const TerminalWidget = struct {
     blink_last_slow_on: bool = true,
     blink_last_fast_on: bool = true,
     blink_last_active: bool = false,
+    blink_phase_changed_pending: bool = false,
     cursor_blink_pause_until: f64 = 0,
     terminal_texture_ready: bool = false,
     last_render_generation: u64 = 0,
+    last_alt_active: bool = false,
     last_cell_w_i: i32 = 0,
     last_cell_h_i: i32 = 0,
     last_render_scale: f32 = 0,
@@ -89,8 +91,10 @@ pub const TerminalWidget = struct {
             .blink_last_slow_on = true,
             .blink_last_fast_on = true,
             .blink_last_active = false,
+            .blink_phase_changed_pending = false,
             .terminal_texture_ready = false,
             .last_render_generation = 0,
+            .last_alt_active = false,
             .last_cell_w_i = 0,
             .last_cell_h_i = 0,
             .last_render_scale = 0,
@@ -149,6 +153,7 @@ pub const TerminalWidget = struct {
     pub fn updateBlink(self: *TerminalWidget, now: f64) bool {
         if (self.blink_style == .off) {
             self.blink_last_active = false;
+            self.blink_phase_changed_pending = false;
             return false;
         }
         const cache = self.session.renderCache();
@@ -165,6 +170,7 @@ pub const TerminalWidget = struct {
         }
         if (!has_slow and !has_fast) {
             self.blink_last_active = false;
+            self.blink_phase_changed_pending = false;
             return false;
         }
         const slow_on = @mod(now, 2.0) < 1.0;
@@ -183,6 +189,7 @@ pub const TerminalWidget = struct {
             self.blink_last_fast_on = fast_on;
         }
         self.blink_last_active = true;
+        self.blink_phase_changed_pending = changed;
         return changed;
     }
 

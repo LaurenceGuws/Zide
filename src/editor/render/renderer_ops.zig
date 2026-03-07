@@ -57,20 +57,30 @@ pub fn drawEditorLineBase(
 }
 
 pub fn drawCursor(self: anytype, x: f32, y: f32, mode: anytype) void {
-    const w: c_int = switch (mode) {
-        .block => @intFromFloat(self.char_width),
-        .line => 2,
-        .underline => @intFromFloat(self.char_width),
-    };
-    const h: c_int = switch (mode) {
-        .block => @intFromFloat(self.char_height),
-        .line => @intFromFloat(self.char_height),
-        .underline => 2,
-    };
-    const cursor_y = switch (mode) {
-        .underline => y + self.char_height - 2,
-        else => y,
-    };
+    const scale = self.uiScaleFactor();
+    const edge_inset: c_int = @max(0, @as(c_int, @intFromFloat(std.math.floor(scale * 0.5))));
+    const stroke: c_int = @max(1, @as(c_int, @intFromFloat(std.math.round(scale))));
 
-    self.drawRect(@intFromFloat(x), @intFromFloat(cursor_y), w, h, self.theme.cursor);
+    const x_i: c_int = @intFromFloat(x);
+    const y_i: c_int = @intFromFloat(y);
+    const char_w_i: c_int = @max(1, @as(c_int, @intFromFloat(self.char_width)));
+    const char_h_i: c_int = @max(1, @as(c_int, @intFromFloat(self.char_height)));
+
+    switch (mode) {
+        .block => {
+            self.drawRect(x_i, y_i, char_w_i, char_h_i, self.theme.cursor);
+        },
+        .line => {
+            const draw_x = x_i + edge_inset;
+            const draw_h = @max(1, char_h_i - edge_inset * 2);
+            const draw_y = y_i + @divFloor(char_h_i - draw_h, 2);
+            self.drawRect(draw_x, draw_y, stroke, draw_h, self.theme.cursor);
+        },
+        .underline => {
+            const draw_x = x_i + edge_inset;
+            const draw_w = @max(1, char_w_i - edge_inset * 2);
+            const draw_y = y_i + char_h_i - stroke - edge_inset;
+            self.drawRect(draw_x, draw_y, draw_w, stroke, self.theme.cursor);
+        },
+    }
 }
