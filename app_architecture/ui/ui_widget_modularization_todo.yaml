@@ -250,13 +250,16 @@ ui_widget_modularization_todo:
 
         - id: UI-PERF-07
           title: "Add frame-phase metrics for lock wait and poll budgets"
-          status: pending
+          status: done
           files_to_edit:
             - src/app/frame_render_idle_runtime.zig
             - src/terminal/core/workspace.zig
             - src/ui/widgets/terminal_widget_draw.zig
           notes:
             - "Track lock wait time, poll bytes/tabs processed, and per-frame spillover."
+            - "2026-03-07: Added terminal poll frame metrics snapshot in workspace (`lastPollFrameMetrics`) with active/background budget usage and spillover/backlog hints."
+            - "2026-03-07: Added terminal draw phase latency snapshot in terminal widget draw (`latestFrameLatencyMetrics`) for lock/snapshot vs render timing."
+            - "2026-03-07: Integrated terminal poll/draw metrics into existing `input.latency` logging with sequence-gated emission to avoid stale/noisy repeats."
 
         - id: UI-PERF-08
           title: "Verification pass for latency under heavy terminal output and large editor files"

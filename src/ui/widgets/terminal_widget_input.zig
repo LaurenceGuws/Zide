@@ -29,16 +29,17 @@ pub fn handleInput(
     suppress_shortcuts: bool,
     input_batch: *shared_types.input.InputBatch,
 ) !bool {
+    const mouse = input_batch.mouse_pos;
+    const in_terminal = common.pointInRect(mouse.x, mouse.y, x, y, width, height);
+    const has_terminal_input_activity = terminalInputActivity(input_batch, in_terminal);
     const locked = self.session.tryLock();
     if (!locked) {
-        const needs_keyboard_input = allow_input and input_batch.events.items.len > 0;
-        if (!needs_keyboard_input) return false;
+        // Skip lock fallback work unless there is terminal-relevant input pressure.
+        if (!(allow_input and has_terminal_input_activity)) return false;
     }
     defer if (locked) self.session.unlock();
     var handled = false;
     self.scrollbar_drag_active = scroll_dragging.*;
-    const mouse = input_batch.mouse_pos;
-    const in_terminal = common.pointInRect(mouse.x, mouse.y, x, y, width, height);
     const scale = shell.uiScaleFactor();
     const scrollbar_base_w: f32 = common.scrollbarWidth(scale);
     const scrollbar_hover_w: f32 = common.scrollbarHoverWidth(scale);
@@ -721,4 +722,18 @@ pub fn handleInput(
 
     self.scrollbar_drag_active = scroll_dragging.*;
     return handled;
+}
+
+fn terminalInputActivity(input_batch: *const shared_types.input.InputBatch, in_terminal: bool) bool {
+    for (input_batch.events.items) |event| {
+        switch (event) {
+            .key, .text, .focus => return true,
+            else => {},
+        }
+    }
+    if (!in_terminal) return false;
+    if (input_batch.mousePressed(.left) or input_batch.mousePressed(.middle) or input_batch.mousePressed(.right)) return true;
+    if (input_batch.mouseReleased(.left) or input_batch.mouseReleased(.middle) or input_batch.mouseReleased(.right)) return true;
+    if (input_batch.mouseDown(.left) or input_batch.mouseDown(.middle) or input_batch.mouseDown(.right)) return true;
+    return input_batch.scroll.y != 0;
 }

@@ -15,6 +15,28 @@ pub const Result = struct {
     needs_redraw: bool = false,
 };
 
+fn hasPassiveMouseMoveOnly(input_batch: *input_types.InputBatch, in_terminal_rect: bool) bool {
+    if (!in_terminal_rect) return false;
+    if (input_batch.scroll.x != 0 or input_batch.scroll.y != 0) return false;
+    if (input_batch.mouseDown(.left) or input_batch.mouseDown(.middle) or input_batch.mouseDown(.right) or input_batch.mouseDown(.back) or input_batch.mouseDown(.forward) or input_batch.mouseDown(.other)) return false;
+    if (input_batch.mousePressed(.left) or input_batch.mousePressed(.middle) or input_batch.mousePressed(.right) or input_batch.mousePressed(.back) or input_batch.mousePressed(.forward) or input_batch.mousePressed(.other)) return false;
+    if (input_batch.mouseReleased(.left) or input_batch.mouseReleased(.middle) or input_batch.mouseReleased(.right) or input_batch.mouseReleased(.back) or input_batch.mouseReleased(.forward) or input_batch.mouseReleased(.other)) return false;
+
+    var saw_move = false;
+    for (input_batch.events.items) |event| {
+        switch (event) {
+            .mouse => |mouse_event| {
+                switch (mouse_event.kind) {
+                    .move => saw_move = true,
+                    else => return false,
+                }
+            },
+            else => return false,
+        }
+    }
+    return saw_move;
+}
+
 pub const Hooks = struct {
     poll_visible_sessions: *const fn (*anyopaque, *input_types.InputBatch) anyerror!void,
     handle_terminal_widget_input: *const fn (
@@ -75,23 +97,33 @@ pub fn handle(
 
         const suppress_terminal_input_for_tab_drag = app_modes.ide.suppressTerminalInputForTabDrag(app_mode, tab_bar_dragging);
         const allow_terminal_input = active_kind == .terminal and !terminal_close_modal_active and !suppress_terminal_input_for_tab_drag;
+        const mouse = input_batch.mouse_pos;
+        const in_terminal_rect = mouse.x >= term_x and
+            mouse.x <= term_x + layout.terminal.width and
+            mouse.y >= term_y_draw and
+            mouse.y <= term_y_draw + term_draw_height;
+        const passive_move_only = hasPassiveMouseMoveOnly(input_batch, in_terminal_rect);
+        const mouse_reporting = term_widget.session.mouseReportingEnabled();
+        const ctrl_link_intent = input_batch.mods.ctrl and passive_move_only;
+        const skip_widget_input = passive_move_only and !mouse_reporting and !ctrl_link_intent;
 
-        try hooks.handle_terminal_widget_input(
-            ctx,
-            term_widget,
-            shell,
-            term_x,
-            term_y_draw,
-            layout.terminal.width,
-            term_draw_height,
-            allow_terminal_input,
-            suppress_terminal_shortcuts,
-            input_batch,
-            search_panel_consumed_input,
-            now,
-        );
+        if (!skip_widget_input) {
+            try hooks.handle_terminal_widget_input(
+                ctx,
+                term_widget,
+                shell,
+                term_x,
+                term_y_draw,
+                layout.terminal.width,
+                term_draw_height,
+                allow_terminal_input,
+                suppress_terminal_shortcuts,
+                input_batch,
+                search_panel_consumed_input,
+                now,
+            );
+        }
     }
 
     return out;
 }
-

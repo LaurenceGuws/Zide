@@ -22,6 +22,19 @@ pub const Hooks = struct {
     sync_terminal_tab_bar: *const fn (*anyopaque) anyerror!void,
 };
 
+fn hasTerminalInputActivity(batch: *const input_types.InputBatch) bool {
+    for (batch.events.items) |event| {
+        switch (event) {
+            .key, .text, .focus => return true,
+            else => {},
+        }
+    }
+    if (batch.mousePressed(.left) or batch.mousePressed(.middle) or batch.mousePressed(.right)) return true;
+    if (batch.mouseReleased(.left) or batch.mouseReleased(.middle) or batch.mouseReleased(.right)) return true;
+    if (batch.mouseDown(.left) or batch.mouseDown(.middle) or batch.mouseDown(.right)) return true;
+    return batch.scroll.x != 0 or batch.scroll.y != 0;
+}
+
 pub fn handle(
     app_mode: app_bootstrap.AppMode,
     show_terminal: bool,
@@ -85,6 +98,7 @@ pub fn handle(
             .poll_visible_sessions = struct {
                 fn call(route_raw: *anyopaque, poll_batch: *input_types.InputBatch) !void {
                     const route = @as(*@TypeOf(runtime_state), @ptrCast(@alignCast(route_raw)));
+                    app_poll_visible_terminal_sessions_runtime.setTerminalInputActivityHint(hasTerminalInputActivity(poll_batch));
                     if (try app_poll_visible_terminal_sessions_runtime.handle(
                         route.app_mode,
                         route.show_terminal,

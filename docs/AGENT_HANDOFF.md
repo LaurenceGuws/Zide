@@ -24,6 +24,10 @@
   - render cache is copied under short lock into widget-owned snapshot buffers
   - shaping/glyph batching and draw passes run lock-free
   - dirty-clear now uses generation-guarded session helper (`clearDirtyIfGeneration`)
+- Added terminal-focused input/poll/redraw refinement + telemetry (2026-03-07):
+  - terminal poll pressure now follows terminal-relevant activity (not generic event count)
+  - passive terminal hover-only mouse movement is skipped in visible-terminal widget input path (unless mouse-reporting/ctrl-link intent applies)
+  - `input.latency` logs now include terminal poll budget usage + terminal draw phase attribution
 - Build graph now supports focused compile-time mode planning:
   - default `zig build` plans full IDE app
   - `-Dmode=terminal` plans terminal-only app

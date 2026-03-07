@@ -177,6 +177,12 @@ Completed slices
 - UI-PERF-06 (ctrl+click file-detect I/O cleanup):
   - Removed sync open/stat/read file-probe from immediate input callback.
   - Ctrl+click open path now uses no-I/O extension gating + guarded optimistic open.
+- UI-PERF-07 (frame-phase terminal metrics + event-pressure refinement):
+  - Added per-frame workspace poll metrics (active/background polled, budget usage, inspected background count, spillover/backlog hints).
+  - Added per-frame terminal draw phase metrics (lock/snapshot time vs render time vs total draw time).
+  - `input.latency` logs now include terminal poll/draw attribution when fresh metrics are available.
+  - Terminal poll input-pressure hint is now driven by terminal-relevant activity (key/text/focus and meaningful mouse actions), not generic event count.
+  - Passive terminal hover-only mouse movement is now skipped in visible-terminal widget input path when mouse reporting is off and ctrl-link intent is not active.
 
 Remaining high-impact items
 - UI-PERF-01: terminal draw lock-scope reduction (still highest risk for long render stalls).
