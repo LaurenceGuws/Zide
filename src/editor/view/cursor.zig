@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_logger = @import("../../app_logger.zig");
 const editor_mod = @import("../editor.zig");
 const types = @import("../types.zig");
 const layout_mod = @import("layout.zig");
@@ -253,12 +254,16 @@ pub fn extendSelectionVisual(
     scratch_a: *LineScratch,
     scratch_b: *LineScratch,
 ) bool {
+    const log = app_logger.logger("editor.cursor");
     if (editor.hasSelectionSetState() and !editor.hasRectangularSelectionState()) {
         var anchor_offsets = std.ArrayList(usize).empty;
         defer anchor_offsets.deinit(editor.allocator);
         var head_offsets = std.ArrayList(usize).empty;
         defer head_offsets.deinit(editor.allocator);
-        editor.collectSelectionAnchorsAndHeads(&anchor_offsets, &head_offsets) catch return false;
+        editor.collectSelectionAnchorsAndHeads(&anchor_offsets, &head_offsets) catch |err| {
+            log.logf(.warning, "extendSelectionVisual collectSelectionAnchorsAndHeads failed err={s}", .{@errorName(err)});
+            return false;
+        };
 
         var target_offsets = std.ArrayList(usize).empty;
         defer target_offsets.deinit(editor.allocator);
@@ -272,10 +277,16 @@ pub fn extendSelectionVisual(
             };
             const target = moveVisualFromPos(editor, current, delta, cols, wrap_enabled, provider, scratch_a, scratch_b) orelse current;
             if (target.offset != offset) changed = true;
-            target_offsets.append(editor.allocator, target.offset) catch return false;
+            target_offsets.append(editor.allocator, target.offset) catch |err| {
+                log.logf(.warning, "extendSelectionVisual target offset append failed err={s}", .{@errorName(err)});
+                return false;
+            };
         }
         if (!changed) return false;
-        editor.restoreExtendedCaretSelections(anchor_offsets.items, target_offsets.items) catch return false;
+        editor.restoreExtendedCaretSelections(anchor_offsets.items, target_offsets.items) catch |err| {
+            log.logf(.warning, "extendSelectionVisual restoreExtendedCaretSelections failed err={s}", .{@errorName(err)});
+            return false;
+        };
         return true;
     }
 
