@@ -2,6 +2,7 @@ const std = @import("std");
 const editor_mod = @import("../editor.zig");
 const grammar_manager_mod = @import("../grammar_manager.zig");
 const editor_types = @import("../types.zig");
+const app_logger = @import("../../app_logger.zig");
 
 pub const Status = enum(c_int) {
     ok = 0,
@@ -39,9 +40,13 @@ const StringOwner = struct {
 };
 
 pub fn create(out_handle: *?*ZideEditorHandle) Status {
+    const log = app_logger.logger("editor.ffi");
     out_handle.* = null;
     const allocator = std.heap.c_allocator;
-    const handle = allocator.create(Handle) catch return .out_of_memory;
+    const handle = allocator.create(Handle) catch |err| {
+        log.logf(.warning, "create handle alloc failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
     errdefer allocator.destroy(handle);
 
     handle.* = .{
@@ -49,9 +54,15 @@ pub fn create(out_handle: *?*ZideEditorHandle) Status {
         .grammar_manager = undefined,
         .editor = undefined,
     };
-    handle.grammar_manager = grammar_manager_mod.GrammarManager.init(allocator) catch return .out_of_memory;
+    handle.grammar_manager = grammar_manager_mod.GrammarManager.init(allocator) catch |err| {
+        log.logf(.warning, "create grammar manager init failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
     errdefer handle.grammar_manager.deinit();
-    handle.editor = editor_mod.Editor.init(allocator, &handle.grammar_manager) catch return .out_of_memory;
+    handle.editor = editor_mod.Editor.init(allocator, &handle.grammar_manager) catch |err| {
+        log.logf(.warning, "create editor init failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
     errdefer handle.editor.deinit();
 
     out_handle.* = toOpaque(handle);
@@ -143,11 +154,13 @@ pub fn endUndoGroup(handle: ?*ZideEditorHandle) Status {
 }
 
 pub fn textAlloc(handle: ?*ZideEditorHandle, out_string: *StringBuffer) Status {
+    const log = app_logger.logger("editor.ffi");
     out_string.* = .{};
     const h = fromOpaque(handle) orelse return .invalid_argument;
     const total = h.editor.totalLen();
     const bytes = h.editor.buffer.readRangeAlloc(0, total) catch |err| return mapError(err);
-    const owner = h.allocator.create(StringOwner) catch {
+    const owner = h.allocator.create(StringOwner) catch |err| {
+        log.logf(.warning, "textAlloc owner alloc failed bytes={d} err={s}", .{ bytes.len, @errorName(err) });
         h.allocator.free(bytes);
         return .out_of_memory;
     };
@@ -214,6 +227,7 @@ pub fn setCarets(
     aux: ?[*]const CaretOffset,
     aux_count: usize,
 ) Status {
+    const log = app_logger.logger("editor.ffi");
     const h = fromOpaque(handle) orelse return .invalid_argument;
     const aux_slice = ptrLenTyped(CaretOffset, aux, aux_count) orelse return .invalid_argument;
     const editor = h.editor;
@@ -231,9 +245,15 @@ pub fn setCarets(
             .start = pos,
             .end = pos,
             .is_rectangular = false,
-        }) catch return .out_of_memory;
+        }) catch |err| {
+            log.logf(.warning, "setCarets addSelection failed err={s}", .{@errorName(err)});
+            return .out_of_memory;
+        };
     }
-    editor.normalizeSelections() catch return .out_of_memory;
+    editor.normalizeSelections() catch |err| {
+        log.logf(.warning, "setCarets normalizeSelections failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
     return .ok;
 }
 
@@ -384,8 +404,12 @@ fn stringOwner(ctx: ?*anyopaque) ?*StringOwner {
 }
 
 fn mapError(err: anyerror) Status {
+    const log = app_logger.logger("editor.ffi");
     return switch (err) {
         error.OutOfMemory => .out_of_memory,
-        else => .backend_error,
+        else => blk: {
+            log.logf(.warning, "backend error mapped status=backend_error err={s}", .{@errorName(err)});
+            break :blk .backend_error;
+        },
     };
 }

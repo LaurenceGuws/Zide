@@ -1,6 +1,7 @@
 const std = @import("std");
 const terminal = @import("../core/terminal.zig");
 const types = @import("../model/types.zig");
+const app_logger = @import("../../app_logger.zig");
 
 pub const Status = enum(c_int) {
     ok = 0,
@@ -198,12 +199,16 @@ const StringOwner = struct {
 };
 
 pub fn create(config: ?*const CreateConfig, out_handle: *?*ZideTerminalHandle) Status {
+    const log = app_logger.logger("terminal.ffi");
     out_handle.* = null;
     const cfg = config orelse &CreateConfig{};
     if (cfg.rows == 0 or cfg.cols == 0) return .invalid_argument;
 
     const allocator = std.heap.c_allocator;
-    const handle = allocator.create(Handle) catch return .out_of_memory;
+    const handle = allocator.create(Handle) catch |err| {
+        log.logf(.warning, "create handle alloc failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
     errdefer allocator.destroy(handle);
 
     const cursor_style = types.CursorStyle{
@@ -228,8 +233,14 @@ pub fn create(config: ?*const CreateConfig, out_handle: *?*ZideTerminalHandle) S
         .last_cwd = .empty,
         .exit_delivered = false,
     };
-    handle.last_title.appendSlice(allocator, session.currentTitle()) catch return .out_of_memory;
-    handle.last_cwd.appendSlice(allocator, session.currentCwd()) catch return .out_of_memory;
+    handle.last_title.appendSlice(allocator, session.currentTitle()) catch |err| {
+        log.logf(.warning, "create last_title append failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
+    handle.last_cwd.appendSlice(allocator, session.currentCwd()) catch |err| {
+        log.logf(.warning, "create last_cwd append failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
 
     out_handle.* = toOpaque(handle);
     return .ok;
@@ -329,23 +340,36 @@ pub fn sendMouse(handle: ?*ZideTerminalHandle, event: ?*const MouseEvent) Status
 }
 
 pub fn snapshotAcquire(handle: ?*ZideTerminalHandle, out_snapshot: *Snapshot) Status {
+    const log = app_logger.logger("terminal.ffi");
     const h = fromOpaque(handle) orelse return .invalid_argument;
     const snapshot = h.session.snapshot();
     const allocator = h.allocator;
 
-    const owner = allocator.create(SnapshotOwner) catch return .out_of_memory;
+    const owner = allocator.create(SnapshotOwner) catch |err| {
+        log.logf(.warning, "snapshot owner alloc failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
     errdefer allocator.destroy(owner);
 
     const cell_count = snapshot.cells.len;
-    const cells = allocator.alloc(Cell, cell_count) catch return .out_of_memory;
+    const cells = allocator.alloc(Cell, cell_count) catch |err| {
+        log.logf(.warning, "snapshot cells alloc failed count={d} err={s}", .{ cell_count, @errorName(err) });
+        return .out_of_memory;
+    };
     errdefer allocator.free(cells);
     for (snapshot.cells, 0..) |cell, i| {
         cells[i] = mapCell(cell);
     }
 
-    const title = allocator.dupe(u8, h.session.currentTitle()) catch return .out_of_memory;
+    const title = allocator.dupe(u8, h.session.currentTitle()) catch |err| {
+        log.logf(.warning, "snapshot title dup failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
     errdefer allocator.free(title);
-    const cwd = allocator.dupe(u8, h.session.currentCwd()) catch return .out_of_memory;
+    const cwd = allocator.dupe(u8, h.session.currentCwd()) catch |err| {
+        log.logf(.warning, "snapshot cwd dup failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
     errdefer allocator.free(cwd);
 
     owner.* = .{
@@ -408,6 +432,7 @@ pub fn scrollbackCount(handle: ?*ZideTerminalHandle, out_count: *u32) Status {
 }
 
 pub fn scrollbackAcquire(handle: ?*ZideTerminalHandle, start_row: u32, max_rows: u32, out_buffer: *ScrollbackBuffer) Status {
+    const log = app_logger.logger("terminal.ffi");
     const h = fromOpaque(handle) orelse return .invalid_argument;
     out_buffer.* = .{};
 
@@ -421,9 +446,15 @@ pub fn scrollbackAcquire(handle: ?*ZideTerminalHandle, start_row: u32, max_rows:
     const cell_count = requested * cols;
     const allocator = h.allocator;
 
-    const owner = allocator.create(ScrollbackOwner) catch return .out_of_memory;
+    const owner = allocator.create(ScrollbackOwner) catch |err| {
+        log.logf(.warning, "scrollback owner alloc failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
     errdefer allocator.destroy(owner);
-    const cells = allocator.alloc(Cell, cell_count) catch return .out_of_memory;
+    const cells = allocator.alloc(Cell, cell_count) catch |err| {
+        log.logf(.warning, "scrollback cells alloc failed count={d} err={s}", .{ cell_count, @errorName(err) });
+        return .out_of_memory;
+    };
     errdefer allocator.free(cells);
 
     var row_index: usize = 0;
@@ -466,17 +497,27 @@ pub fn scrollbackRelease(scrollback: *ScrollbackBuffer) void {
 }
 
 pub fn eventDrain(handle: ?*ZideTerminalHandle, out_events: *EventBuffer) Status {
+    const log = app_logger.logger("terminal.ffi");
     const h = fromOpaque(handle) orelse return .invalid_argument;
     out_events.* = .{};
     if (h.pending_events.items.len == 0) return .ok;
 
     const allocator = h.allocator;
-    const owner = allocator.create(EventOwner) catch return .out_of_memory;
+    const owner = allocator.create(EventOwner) catch |err| {
+        log.logf(.warning, "event owner alloc failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
     errdefer allocator.destroy(owner);
 
-    const events = allocator.alloc(Event, h.pending_events.items.len) catch return .out_of_memory;
+    const events = allocator.alloc(Event, h.pending_events.items.len) catch |err| {
+        log.logf(.warning, "event array alloc failed count={d} err={s}", .{ h.pending_events.items.len, @errorName(err) });
+        return .out_of_memory;
+    };
     errdefer allocator.free(events);
-    const payloads = allocator.alloc([]u8, h.pending_events.items.len) catch return .out_of_memory;
+    const payloads = allocator.alloc([]u8, h.pending_events.items.len) catch |err| {
+        log.logf(.warning, "event payload array alloc failed count={d} err={s}", .{ h.pending_events.items.len, @errorName(err) });
+        return .out_of_memory;
+    };
     errdefer allocator.free(payloads);
 
     for (h.pending_events.items, 0..) |pending, i| {
@@ -675,18 +716,29 @@ fn scrollbackOwner(ctx: ?*anyopaque) ?*ScrollbackOwner {
 }
 
 fn mapError(err: anyerror) Status {
+    const log = app_logger.logger("terminal.ffi");
     return switch (err) {
         error.OutOfMemory => .out_of_memory,
-        else => .backend_error,
+        else => blk: {
+            log.logf(.warning, "backend error mapped status=backend_error err={s}", .{@errorName(err)});
+            break :blk .backend_error;
+        },
     };
 }
 
 fn stringFromSlice(allocator: std.mem.Allocator, value: []const u8, out_string: *StringBuffer) Status {
+    const log = app_logger.logger("terminal.ffi");
     out_string.* = .{};
-    const owner = allocator.create(StringOwner) catch return .out_of_memory;
+    const owner = allocator.create(StringOwner) catch |err| {
+        log.logf(.warning, "string owner alloc failed len={d} err={s}", .{ value.len, @errorName(err) });
+        return .out_of_memory;
+    };
     errdefer allocator.destroy(owner);
 
-    const bytes = allocator.dupe(u8, value) catch return .out_of_memory;
+    const bytes = allocator.dupe(u8, value) catch |err| {
+        log.logf(.warning, "string dup failed len={d} err={s}", .{ value.len, @errorName(err) });
+        return .out_of_memory;
+    };
     errdefer allocator.free(bytes);
 
     owner.* = .{
