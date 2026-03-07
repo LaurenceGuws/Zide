@@ -15,7 +15,7 @@ Track practical migration details for replacing system-managed native dependenci
 - Linux terminal bundle (`zig build bundle-terminal`) now compiles/ships project-owned terminfo and launches with stable shell cwd semantics:
   - bundles `zide.terminfo` via `tic -x` into `terminal-bundle/terminfo`,
   - launcher does not force `TERMINFO`/`TERMINFO_DIRS`,
-  - runtime TERM preference is `xterm-zide`, then `zide-256color`, then `zide`, then `xterm-256color`,
+  - runtime TERM preference is `xterm-kitty`, then `xterm-zide`, then `zide-256color`, then `zide`, then `xterm-256color`,
   - launcher-provided cwd is applied in PTY child with matching `PWD` sync.
 
 ## Implemented package integration

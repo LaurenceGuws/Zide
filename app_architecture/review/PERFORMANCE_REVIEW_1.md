@@ -183,6 +183,8 @@ Completed slices
   - `input.latency` logs now include terminal poll/draw attribution when fresh metrics are available.
   - Terminal poll input-pressure hint is now driven by terminal-relevant activity (key/text/focus and meaningful mouse actions), not generic event count.
   - Passive terminal hover-only mouse movement is now skipped in visible-terminal widget input path when mouse reporting is off and ctrl-link intent is not active.
+  - Passive-move detection now reads an explicit `InputBatch.mouse_moved` signal, fixing prior reliance on sparse mouse event list content.
+  - Renderer input queues (`key_queue`, `char_queue`, `focus_queue`) now pop in O(1) via queue heads with per-frame compaction, avoiding repeated `orderedRemove(0)` shifts.
 
 Remaining high-impact items
 - UI-PERF-01: terminal draw lock-scope reduction (still highest risk for long render stalls).

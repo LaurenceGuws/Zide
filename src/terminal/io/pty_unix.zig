@@ -357,7 +357,8 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
     if (std.c.getenv("COLORTERM") == null) {
         _ = c.setenv("COLORTERM", "truecolor", 1);
     }
-    env_log.logf(.info, 
+    env_log.logf(
+        .info,
         "spawn begin shell={s} TERM={s} COLORTERM={s} TERMINFO={s} TERMINFO_DIRS={s} launch_cwd={s}",
         .{
             shell_path,
@@ -368,7 +369,8 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
             getenvOrUnset("ZIDE_LAUNCH_CWD"),
         },
     );
-    env_log.logf(.info, 
+    env_log.logf(
+        .info,
         "spawn color_env TERM={s} COLORTERM={s} FORCE_COLOR={s} CLICOLOR_FORCE={s} NO_COLOR={s}",
         .{
             getenvOrUnset("TERM"),
@@ -512,7 +514,6 @@ fn cleanupSpawnTempFilesForPid(pid: posix.pid_t) void {
     };
 }
 
-
 fn terminfoExists(name: []const u8) bool {
     if (terminfoInDir(std.c.getenv("TERMINFO"), name)) return true;
 
@@ -534,6 +535,7 @@ fn terminfoExists(name: []const u8) bool {
 }
 
 fn chooseTermName(existsFn: fn ([]const u8) bool) [:0]const u8 {
+    if (existsFn("xterm-kitty")) return "xterm-kitty";
     if (existsFn("xterm-zide")) return "xterm-zide";
     if (existsFn("zide-256color")) return "zide-256color";
     if (existsFn("zide")) return "zide";
@@ -570,13 +572,13 @@ fn getenvOrUnset(name: [*:0]const u8) []const u8 {
     return "<unset>";
 }
 
-test "chooseTermName prefers xterm-zide identity for compatibility" {
+test "chooseTermName prefers xterm-kitty identity when available" {
     const Exists = struct {
         fn has(name: []const u8) bool {
-            return std.mem.eql(u8, name, "xterm-zide") or std.mem.eql(u8, name, "zide-256color") or std.mem.eql(u8, name, "zide");
+            return std.mem.eql(u8, name, "xterm-kitty") or std.mem.eql(u8, name, "xterm-zide") or std.mem.eql(u8, name, "zide-256color") or std.mem.eql(u8, name, "zide");
         }
     };
-    try std.testing.expectEqualStrings("xterm-zide", chooseTermName(Exists.has));
+    try std.testing.expectEqualStrings("xterm-kitty", chooseTermName(Exists.has));
 }
 
 test "chooseTermName falls back to xterm-256color when zide terminfo is unavailable" {
@@ -586,6 +588,15 @@ test "chooseTermName falls back to xterm-256color when zide terminfo is unavaila
         }
     };
     try std.testing.expectEqualStrings("xterm-256color", chooseTermName(Exists.has));
+}
+
+test "chooseTermName falls back to xterm-kitty when zide terminfo is unavailable" {
+    const Exists = struct {
+        fn has(name: []const u8) bool {
+            return std.mem.eql(u8, name, "xterm-kitty");
+        }
+    };
+    try std.testing.expectEqualStrings("xterm-kitty", chooseTermName(Exists.has));
 }
 
 test "unix pty smoke prefers TERM=xterm-zide when bundled terminfo is installed" {
