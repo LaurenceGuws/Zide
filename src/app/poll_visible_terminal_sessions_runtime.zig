@@ -28,7 +28,9 @@ pub fn handle(
     if (app_modes.ide.shouldUseTerminalWorkspace(app_mode)) {
         if (terminal_workspace.*) |*workspace| {
             const PollBudget = @TypeOf(workspace.*).PollBudget;
-            const budget: PollBudget = if (input_pressure)
+            const prev = workspace.lastPollFrameMetrics();
+            const tab_count = workspace.tabCount();
+            var budget: PollBudget = if (input_pressure)
                 .{
                     .max_tabs_per_frame = 3,
                     .max_background_tabs_per_frame = 1,
@@ -40,6 +42,29 @@ pub fn handle(
                     .max_background_tabs_per_frame = 3,
                     .max_active_polls_per_frame = 4,
                 };
+
+            if (tab_count <= 1) {
+                budget.max_background_tabs_per_frame = 0;
+            } else if (input_pressure and tab_count > 4) {
+                // Prioritize active-tab responsiveness when many background tabs are present.
+                budget.max_background_tabs_per_frame = 0;
+                budget.max_tabs_per_frame = @max(@as(usize, 1), budget.max_active_polls_per_frame);
+            }
+
+            if (prev.active_spillover_hint) {
+                budget.max_active_polls_per_frame = @min(budget.max_active_polls_per_frame + 1, 6);
+                budget.max_tabs_per_frame = @max(budget.max_tabs_per_frame, budget.max_active_polls_per_frame);
+            }
+            if (!input_pressure and prev.background_backlog_hint) {
+                budget.max_background_tabs_per_frame = @min(budget.max_background_tabs_per_frame + 1, 6);
+                budget.max_tabs_per_frame = @min(@max(budget.max_tabs_per_frame, budget.max_background_tabs_per_frame + 1), 8);
+            }
+            if (input_pressure and prev.budget_exhausted_hint and prev.active_spillover_hint) {
+                // If the active tab still overflows under pressure, spend the frame on active polls.
+                budget.max_background_tabs_per_frame = 0;
+                budget.max_tabs_per_frame = budget.max_active_polls_per_frame;
+            }
+
             return try workspace.pollBudgeted(
                 app_terminal_tabs_runtime.activeIndex(
                     app_mode,
