@@ -150,6 +150,18 @@ fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f64, 
     );
 }
 
+fn hasTerminalOutputPressure(state: anytype) bool {
+    const State = @TypeOf(state.*);
+    if (!@hasField(State, "terminal_workspace")) return false;
+
+    if (state.terminal_workspace) |*workspace| {
+        if (workspace.activeSession()) |session| {
+            return session.hasData();
+        }
+    }
+    return false;
+}
+
 pub fn handle(
     state: anytype,
     ctx: *anyopaque,
@@ -209,7 +221,10 @@ pub fn handle(
     }
 
     const uptime = app_shell.getTime();
-    const sleep_ms: f64 = if (uptime < 3.0)
+    const terminal_output_pressure = hasTerminalOutputPressure(state);
+    const sleep_ms: f64 = if (terminal_output_pressure)
+        0.001
+    else if (uptime < 3.0)
         0.016
     else if (state.idle_frames < 10)
         0.016
