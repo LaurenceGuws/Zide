@@ -1101,7 +1101,7 @@ pub fn draw(
                     if ((row < view_dirty_rows.len and view_dirty_rows[row]) or is_shift_row) {
                         var col_start: usize = 0;
                         var col_end: usize = cols - 1;
-                        if (row < cache.dirty_cols_start.items.len and row < cache.dirty_cols_end.items.len) {
+                        if (!is_shift_row and row < cache.dirty_cols_start.items.len and row < cache.dirty_cols_end.items.len) {
                             col_start = @min(@as(usize, cache.dirty_cols_start.items[row]), cols - 1);
                             col_end = @min(@as(usize, cache.dirty_cols_end.items[row]), cols - 1);
                         }
@@ -1123,7 +1123,7 @@ pub fn draw(
                     if ((row < view_dirty_rows.len and view_dirty_rows[row]) or is_shift_row) {
                         var col_start: usize = 0;
                         var col_end: usize = cols - 1;
-                        if (row < cache.dirty_cols_start.items.len and row < cache.dirty_cols_end.items.len) {
+                        if (!is_shift_row and row < cache.dirty_cols_start.items.len and row < cache.dirty_cols_end.items.len) {
                             col_start = @min(@as(usize, cache.dirty_cols_start.items[row]), cols - 1);
                             col_end = @min(@as(usize, cache.dirty_cols_end.items[row]), cols - 1);
                         }
@@ -1215,10 +1215,10 @@ pub fn draw(
                 const top_right_exposed = !has_prev or !rowSelectionCoversColumn(cache, selection_rows, row_idx - 1, col_end);
                 const bottom_left_exposed = !has_next or !rowSelectionCoversColumn(cache, selection_rows, row_idx + 1, col_start);
                 const bottom_right_exposed = !has_next or !rowSelectionCoversColumn(cache, selection_rows, row_idx + 1, col_end);
-                const top_left_inward = has_prev and rowSelectionStart(cache, row_idx - 1) < col_start;
-                const top_right_inward = has_prev and rowSelectionEnd(cache, row_idx - 1) > col_end;
-                const bottom_left_inward = has_next and rowSelectionStart(cache, row_idx + 1) < col_start;
-                const bottom_right_inward = has_next and rowSelectionEnd(cache, row_idx + 1) > col_end;
+                const top_left_inward = has_prev and rowSelectionCoversColumn(cache, selection_rows, row_idx - 1, col_start) and rowSelectionStart(cache, row_idx - 1) < col_start;
+                const top_right_inward = has_prev and rowSelectionCoversColumn(cache, selection_rows, row_idx - 1, col_end) and rowSelectionEnd(cache, row_idx - 1) > col_end;
+                const bottom_left_inward = has_next and rowSelectionCoversColumn(cache, selection_rows, row_idx + 1, col_start) and rowSelectionStart(cache, row_idx + 1) < col_start;
+                const bottom_right_inward = has_next and rowSelectionCoversColumn(cache, selection_rows, row_idx + 1, col_end) and rowSelectionEnd(cache, row_idx + 1) > col_end;
 
                 drawSoftSelectionRect(
                     r,
