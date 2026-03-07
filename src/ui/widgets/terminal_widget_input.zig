@@ -449,6 +449,28 @@ pub fn handleInput(
             }
         }.apply;
 
+        if (locked and self.session.scrollOffset() > 0) {
+            var reset_scrollback = false;
+            for (input_batch.events.items) |event| {
+                switch (event) {
+                    .key => |key_event| {
+                        if (key_event.pressed and !isModifierKey(key_event.key)) {
+                            reset_scrollback = true;
+                            break;
+                        }
+                    },
+                    .text => {
+                        reset_scrollback = true;
+                        break;
+                    },
+                    else => {},
+                }
+            }
+            if (reset_scrollback) {
+                self.session.setScrollOffset(0);
+            }
+        }
+
         if (allow_terminal_key) {
             if (input_batch.events.items.len > 0) {
                 key_log.logf(

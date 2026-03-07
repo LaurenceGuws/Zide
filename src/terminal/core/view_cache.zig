@@ -62,6 +62,27 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     {
         return;
     }
+    if (active_cache.rows == rows and
+        active_cache.cols == cols and
+        active_cache.history_len == history_len and
+        active_cache.total_lines == total_lines and
+        active_cache.scroll_offset == clamped_offset and
+        active_cache.clear_generation == clear_generation and
+        active_cache.alt_active == (self.active == .alt) and
+        active_cache.sync_updates_active == self.sync_updates_active and
+        active_cache.screen_reverse == screen_reverse and
+        active_cache.kitty_generation == kitty_generation and
+        !force_full_damage and
+        view.dirty == .none and
+        active_cache.dirty == .none and
+        !selection_active and
+        !active_cache.selection_active)
+    {
+        // Generation can advance without visible cell changes (e.g. parser-side churn).
+        // Keep cache generation current without forcing a redraw.
+        active_cache.generation = generation;
+        return;
+    }
     if (rows == 0 or cols == 0) {
         cache.cells.clearRetainingCapacity();
         cache.dirty_rows.clearRetainingCapacity();
@@ -80,6 +101,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         cache.cursor = view.cursor;
         cache.cursor_style = view.cursor_style;
         cache.cursor_visible = view.cursor_visible;
+        cache.has_blink = false;
         cache.dirty = .full;
         cache.damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
         cache.alt_active = self.active == .alt;
@@ -301,6 +323,13 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     cache.cursor = view.cursor;
     cache.cursor_style = view.cursor_style;
     cache.cursor_visible = view.cursor_visible;
+    cache.has_blink = false;
+    for (cache.cells.items) |cell| {
+        if (cell.attrs.blink) {
+            cache.has_blink = true;
+            break;
+        }
+    }
     cache.dirty = if (needs_full_damage) .full else view.dirty;
     cache.damage = if (needs_full_damage)
         .{ .start_row = 0, .end_row = if (rows > 0) rows - 1 else 0, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
@@ -329,53 +358,8 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         }
     }
 
-    if (!needs_full_damage and rows > 0 and cols > 0 and scroll_offset == 0) {
-        const current_cursor = view.cursor;
-        const prev_cursor = active_cache.cursor;
-        const current_visible = view.cursor_visible;
-        const prev_visible = active_cache.cursor_visible;
-        if (current_visible or prev_visible) {
-            const markCursorDirty = struct {
-                fn mark(cache_ptr: *RenderCache, row_idx: usize, col_idx: usize, width: usize, rows_count: usize, cols_count: usize) void {
-                    if (row_idx >= rows_count or col_idx >= cols_count) return;
-                    const max_col = cols_count - 1;
-                    const col_start = @min(col_idx, max_col);
-                    const col_end = @min(col_idx + width - 1, max_col);
-                    cache_ptr.dirty_rows.items[row_idx] = true;
-                    if (cache_ptr.dirty_cols_start.items[row_idx] > col_start) {
-                        cache_ptr.dirty_cols_start.items[row_idx] = @intCast(col_start);
-                    }
-                    if (cache_ptr.dirty_cols_end.items[row_idx] < col_end) {
-                        cache_ptr.dirty_cols_end.items[row_idx] = @intCast(col_end);
-                    }
-                    if (cache_ptr.dirty == .none) {
-                        cache_ptr.dirty = .partial;
-                        cache_ptr.damage = .{ .start_row = row_idx, .end_row = row_idx, .start_col = col_start, .end_col = col_end };
-                    } else if (cache_ptr.dirty != .full) {
-                        cache_ptr.damage.start_row = @min(cache_ptr.damage.start_row, row_idx);
-                        cache_ptr.damage.end_row = @max(cache_ptr.damage.end_row, row_idx);
-                        cache_ptr.damage.start_col = @min(cache_ptr.damage.start_col, col_start);
-                        cache_ptr.damage.end_col = @max(cache_ptr.damage.end_col, col_end);
-                    }
-                }
-            }.mark;
-
-            if (prev_visible and prev_cursor.row < rows and prev_cursor.col < cols and active_cache.rows == rows and active_cache.cols == cols) {
-                const prev_row_start = prev_cursor.row * cols;
-                const prev_row_cells = active_cache.cells.items[prev_row_start .. prev_row_start + cols];
-                const prev_cell = prev_row_cells[prev_cursor.col];
-                const prev_width = @as(usize, @max(@as(u8, 1), prev_cell.width));
-                markCursorDirty(cache, prev_cursor.row, prev_cursor.col, prev_width, rows, cols);
-            }
-            if (current_visible and current_cursor.row < rows and current_cursor.col < cols) {
-                const cur_row_start = current_cursor.row * cols;
-                const cur_row_cells = cache.cells.items[cur_row_start .. cur_row_start + cols];
-                const cur_cell = cur_row_cells[current_cursor.col];
-                const cur_width = @as(usize, @max(@as(u8, 1), cur_cell.width));
-                markCursorDirty(cache, current_cursor.row, current_cursor.col, cur_width, rows, cols);
-            }
-        }
-    }
+    // Cursor is rendered as a UI overlay in terminal_widget_draw, so cursor visibility
+    // changes should not dirty the cached terminal texture rows every frame.
 
     if (cache.dirty == .partial and cols > 0) {
         var row_idx: usize = 0;

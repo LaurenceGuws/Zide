@@ -96,9 +96,16 @@ const SelectionCornerMask = struct {
 
 fn drawSoftSelectionRect(r: anytype, x: i32, y: i32, w: i32, h: i32, color: Color, mask: SelectionCornerMask) void {
     if (w <= 0 or h <= 0) return;
+    const style = r.terminalSelectionOverlayStyle();
+    if (!style.smooth_enabled) {
+        r.drawRect(x, y, w, h, color);
+        return;
+    }
     const smooth_active = mask.top_left_outward or mask.top_right_outward or mask.bottom_left_outward or mask.bottom_right_outward or mask.top_left_inward or mask.top_right_inward or mask.bottom_left_inward or mask.bottom_right_inward;
-    const inset_x = @max(1, @as(i32, @intFromFloat(std.math.floor(r.uiScaleFactor() * 0.75))));
-    const pad_x = if (smooth_active) @max(1, @as(i32, @intFromFloat(std.math.round(r.uiScaleFactor() * 0.5)))) else 0;
+    const corner_px = style.corner_px orelse @max(1.0, std.math.floor(r.uiScaleFactor() * 0.75));
+    const inset_x = @max(1, @as(i32, @intFromFloat(std.math.round(corner_px))));
+    const pad_px = style.pad_px orelse @max(1.0, std.math.round(r.uiScaleFactor() * 0.5));
+    const pad_x = if (smooth_active) @max(0, @as(i32, @intFromFloat(std.math.round(pad_px)))) else 0;
     const draw_x = x + inset_x - pad_x;
     const draw_y = y;
     const draw_w = @max(1, w - inset_x * 2 + pad_x * 2);
@@ -115,6 +122,17 @@ fn drawSoftSelectionRect(r: anytype, x: i32, y: i32, w: i32, h: i32, color: Colo
     const top_right_inset = cornerDelta(mask.top_right_outward, mask.top_right_inward, corner);
     const bottom_left_inset = cornerDelta(mask.bottom_left_outward, mask.bottom_left_inward, corner);
     const bottom_right_inset = cornerDelta(mask.bottom_right_outward, mask.bottom_right_inward, corner);
+    const compensatedInset = struct {
+        fn apply(value: i32, pad: i32) i32 {
+            if (value > 0) return @max(0, value - pad);
+            if (value < 0) return value - pad;
+            return 0;
+        }
+    }.apply;
+    const top_left_edge = compensatedInset(top_left_inset, pad_x);
+    const top_right_edge = compensatedInset(top_right_inset, pad_x);
+    const bottom_left_edge = compensatedInset(bottom_left_inset, pad_x);
+    const bottom_right_edge = compensatedInset(bottom_right_inset, pad_x);
 
     const drawTopRow = struct {
         fn draw(r_local: anytype, x_local: i32, y_local: i32, w_local: i32, color_local: Color, left_inset: i32, right_inset: i32) void {
@@ -134,27 +152,27 @@ fn drawSoftSelectionRect(r: anytype, x: i32, y: i32, w: i32, h: i32, color: Colo
                 draw_y,
                 draw_w,
                 color,
-                if (top_left_inset != 0) top_left_inset else bottom_left_inset,
-                if (top_right_inset != 0) top_right_inset else bottom_right_inset,
+                if (top_left_edge != 0) top_left_edge else bottom_left_edge,
+                if (top_right_edge != 0) top_right_edge else bottom_right_edge,
             );
             return;
         },
         2 => {
-            drawTopRow(r, draw_x, draw_y, draw_w, color, top_left_inset, top_right_inset);
-            drawTopRow(r, draw_x, draw_y + 1, draw_w, color, bottom_left_inset, bottom_right_inset);
+            drawTopRow(r, draw_x, draw_y, draw_w, color, top_left_edge, top_right_edge);
+            drawTopRow(r, draw_x, draw_y + 1, draw_w, color, bottom_left_edge, bottom_right_edge);
             return;
         },
         else => {},
     }
 
-    if (top_left_inset == 0 and top_right_inset == 0 and bottom_left_inset == 0 and bottom_right_inset == 0) {
+    if (top_left_edge == 0 and top_right_edge == 0 and bottom_left_edge == 0 and bottom_right_edge == 0) {
         r.drawRect(draw_x, draw_y, draw_w, draw_h, color);
         return;
     }
 
-    drawTopRow(r, draw_x, draw_y, draw_w, color, top_left_inset, top_right_inset);
+    drawTopRow(r, draw_x, draw_y, draw_w, color, top_left_edge, top_right_edge);
     r.drawRect(draw_x, draw_y + 1, draw_w, draw_h - 2, color);
-    drawTopRow(r, draw_x, draw_y + draw_h - 1, draw_w, color, bottom_left_inset, bottom_right_inset);
+    drawTopRow(r, draw_x, draw_y + draw_h - 1, draw_w, color, bottom_left_edge, bottom_right_edge);
 }
 
 fn rowSelectionCoversColumn(cache: *const RenderCache, selection_rows: []const bool, row_idx: usize, col: usize) bool {
@@ -256,6 +274,7 @@ pub fn draw(
     const r = shell.rendererPtr();
     const cache = &self.draw_cache;
     var alt_exit = false;
+    var alt_state_changed = false;
     const lock_phase_start = app_shell.getTime();
     var live_cache = self.session.renderCache();
     if (!live_cache.alt_active and self.session.view_cache_pending.load(.acquire)) {
@@ -268,6 +287,7 @@ pub fn draw(
         log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
         return;
     };
+    alt_state_changed = self.last_alt_active != cache.alt_active;
     alt_exit = self.last_alt_active and !cache.alt_active;
     self.last_alt_active = cache.alt_active;
     render_phase_start = app_shell.getTime();
@@ -325,6 +345,8 @@ pub fn draw(
     const selection_active = cache.selection_active;
     const kitty_generation = cache.kitty_generation;
     const has_blink = blink_style != .off and cache.has_blink;
+    const blink_phase_changed = self.blink_phase_changed_pending;
+    self.blink_phase_changed_pending = false;
 
     self.kitty.updateViews(self.session.allocator, rows, cols, cache.kitty_images.items, cache.kitty_placements.items);
 
@@ -336,6 +358,20 @@ pub fn draw(
 
     const view_cells = cache.cells.items;
     const view_dirty_rows = cache.dirty_rows.items;
+    var dirty_rows_count: usize = 0;
+    var damage_row_span: usize = 0;
+    var damage_col_span: usize = 0;
+    if (cache.dirty != .none) {
+        for (view_dirty_rows) |row_dirty| {
+            if (row_dirty) dirty_rows_count += 1;
+        }
+        if (cache.damage.end_row >= cache.damage.start_row) {
+            damage_row_span = cache.damage.end_row - cache.damage.start_row + 1;
+        }
+        if (cache.damage.end_col >= cache.damage.start_col) {
+            damage_col_span = cache.damage.end_col - cache.damage.start_col + 1;
+        }
+    }
     const has_kitty = self.kitty.hasKitty();
     const bg_color = if (view_cells.len > 0) Color{
         .r = view_cells[0].attrs.bg.r,
@@ -946,6 +982,18 @@ pub fn draw(
     var updated = false;
     var texture_full_update = false;
     var texture_partial_update = false;
+    var dirty_clear_ok = false;
+    var full_reason_recreated = false;
+    var full_reason_gen = false;
+    var full_reason_cell_metrics = false;
+    var full_reason_scale = false;
+    var full_reason_alt_change = false;
+    var full_reason_dirty_full = false;
+    var full_reason_scroll = false;
+    var full_reason_scrollback_dirty = false;
+    var full_reason_kitty = false;
+    var full_reason_kitty_gen = false;
+    var full_reason_blink = false;
     const texture_phase_start = app_shell.getTime();
     if (rows > 0 and cols > 0) {
         const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
@@ -958,7 +1006,31 @@ pub fn draw(
         const recreated = r.ensureTerminalTexture(texture_w, texture_h);
         const kitty_changed = kitty_generation != self.kitty.last_generation;
         const gen_changed = cache.generation != self.last_render_generation;
-        var needs_full = recreated or gen_changed or cell_metrics_changed or render_scale_changed or cache.alt_active or cache.dirty == .full or scroll_changed or (cache.dirty != .none and scroll_offset > 0) or has_kitty or kitty_changed or has_blink;
+        full_reason_recreated = recreated;
+        // Some sessions still advance generation without reliable dirty metadata.
+        // Preserve correctness by redrawing on generation change when cache reports no dirty rows.
+        full_reason_gen = gen_changed and cache.dirty == .none;
+        full_reason_cell_metrics = cell_metrics_changed;
+        full_reason_scale = render_scale_changed;
+        full_reason_alt_change = alt_state_changed;
+        full_reason_dirty_full = cache.dirty == .full;
+        full_reason_scroll = scroll_changed;
+        full_reason_scrollback_dirty = cache.dirty != .none and scroll_offset > 0;
+        full_reason_kitty = has_kitty;
+        full_reason_kitty_gen = kitty_changed;
+        full_reason_blink = has_blink and blink_phase_changed;
+
+        var needs_full = full_reason_recreated or
+            full_reason_gen or
+            full_reason_cell_metrics or
+            full_reason_scale or
+            full_reason_alt_change or
+            full_reason_dirty_full or
+            full_reason_scroll or
+            full_reason_scrollback_dirty or
+            full_reason_kitty or
+            full_reason_kitty_gen or
+            full_reason_blink;
         var needs_partial = cache.dirty == .partial and !needs_full and scroll_offset == 0;
         if (!self.terminal_texture_ready and rows > 0 and cols > 0) {
             needs_full = true;
@@ -966,7 +1038,7 @@ pub fn draw(
         }
         const shift_abs_i: i32 = if (viewport_shift_rows < 0) -viewport_shift_rows else viewport_shift_rows;
         var shifted_rows: usize = 0;
-        if (viewport_shift_rows != 0 and scroll_offset == 0 and !needs_full and self.terminal_texture_ready and shift_abs_i > 0 and shift_abs_i < @as(i32, @intCast(rows))) {
+        if (gen_changed and viewport_shift_rows != 0 and scroll_offset == 0 and !needs_full and self.terminal_texture_ready and shift_abs_i > 0 and shift_abs_i < @as(i32, @intCast(rows))) {
             const dy_pixels: i32 = -viewport_shift_rows * cell_h_i;
             if (r.scrollTerminalTexture(0, dy_pixels)) {
                 needs_partial = true;
@@ -975,7 +1047,7 @@ pub fn draw(
                 needs_full = true;
                 needs_partial = false;
             }
-        } else if (viewport_shift_rows != 0 and scroll_offset == 0 and shift_abs_i > 0) {
+        } else if (gen_changed and viewport_shift_rows != 0 and scroll_offset == 0 and shift_abs_i > 0) {
             needs_full = true;
             needs_partial = false;
         }
@@ -1411,8 +1483,12 @@ pub fn draw(
         );
     }
 
-    if (!sync_updates and (updated or cache.dirty == .none)) {
-        _ = self.session.clearDirtyIfGeneration(cache.generation);
+    if (updated or cache.dirty == .none) {
+        if (sync_updates) {
+            dirty_clear_ok = self.session.clearRenderCacheDirtyIfGeneration(cache.generation);
+        } else {
+            dirty_clear_ok = self.session.clearDirtyIfGeneration(cache.generation);
+        }
     }
     overlay_ms = time_utils.secondsToMs(app_shell.getTime() - overlay_phase_start);
 
@@ -1456,7 +1532,7 @@ pub fn draw(
         );
         perf_log.logf(
             .info,
-            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} rows={d} cols={d}",
+            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} dirty_rows={d} damage_rows={d} damage_cols={d} blink_cells={d} blink_phase_changed={d} full_reasons={d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d} rows={d} cols={d}",
             .{
                 elapsed_ms,
                 lock_ms,
@@ -1466,6 +1542,25 @@ pub fn draw(
                 @intFromBool(texture_full_update),
                 @intFromBool(texture_partial_update),
                 @intFromBool(updated),
+                @intFromBool(sync_updates),
+                @intFromBool(dirty_clear_ok),
+                @tagName(cache.dirty),
+                dirty_rows_count,
+                damage_row_span,
+                damage_col_span,
+                @intFromBool(has_blink),
+                @intFromBool(blink_phase_changed),
+                @intFromBool(full_reason_recreated),
+                @intFromBool(full_reason_gen),
+                @intFromBool(full_reason_cell_metrics),
+                @intFromBool(full_reason_scale),
+                @intFromBool(full_reason_alt_change),
+                @intFromBool(full_reason_dirty_full),
+                @intFromBool(full_reason_scroll),
+                @intFromBool(full_reason_scrollback_dirty),
+                @intFromBool(full_reason_kitty),
+                @intFromBool(full_reason_kitty_gen),
+                @intFromBool(full_reason_blink),
                 rows,
                 cols,
             },
