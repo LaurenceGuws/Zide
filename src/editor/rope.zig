@@ -733,6 +733,7 @@ pub const Rope = struct {
     }
 
     fn tryMergeUndoInsert(self: *Rope, pos: usize, data: []const u8) ?bool {
+        const log = app_logger.logger("editor.rope");
         if (self.undo_stack.items.len == 0) return null;
         const last_index = self.undo_stack.items.len - 1;
         const last = &self.undo_stack.items[last_index];
@@ -740,13 +741,17 @@ pub const Rope = struct {
         if (last.text.len + data.len > max_undo_bytes) return null;
         if (last.pos + last.text.len != pos) return null;
         const new_len = last.text.len + data.len;
-        var merged = self.allocator.realloc(last.text, new_len) catch return null;
+        var merged = self.allocator.realloc(last.text, new_len) catch |err| {
+            log.logf(.warning, "tryMergeUndoInsert realloc failed old_len={d} add_len={d} err={s}", .{ last.text.len, data.len, @errorName(err) });
+            return null;
+        };
         std.mem.copyForwards(u8, merged[last.text.len..new_len], data);
         last.text = merged;
         return true;
     }
 
     fn tryMergeUndoDelete(self: *Rope, pos: usize, deleted: []const u8) ?bool {
+        const log = app_logger.logger("editor.rope");
         if (self.undo_stack.items.len == 0) return null;
         const last_index = self.undo_stack.items.len - 1;
         const last = &self.undo_stack.items[last_index];
@@ -754,14 +759,20 @@ pub const Rope = struct {
         if (last.text.len + deleted.len > max_undo_bytes) return null;
         if (pos == last.pos) {
             const new_len = last.text.len + deleted.len;
-            var merged = self.allocator.realloc(last.text, new_len) catch return null;
+            var merged = self.allocator.realloc(last.text, new_len) catch |err| {
+                log.logf(.warning, "tryMergeUndoDelete realloc-tail failed old_len={d} add_len={d} err={s}", .{ last.text.len, deleted.len, @errorName(err) });
+                return null;
+            };
             std.mem.copyForwards(u8, merged[last.text.len..new_len], deleted);
             last.text = merged;
             return true;
         }
         if (pos + deleted.len == last.pos) {
             const new_len = last.text.len + deleted.len;
-            var merged = self.allocator.alloc(u8, new_len) catch return null;
+            var merged = self.allocator.alloc(u8, new_len) catch |err| {
+                log.logf(.warning, "tryMergeUndoDelete alloc-head failed old_len={d} add_len={d} err={s}", .{ last.text.len, deleted.len, @errorName(err) });
+                return null;
+            };
             std.mem.copyForwards(u8, merged[0..deleted.len], deleted);
             std.mem.copyForwards(u8, merged[deleted.len..new_len], last.text);
             self.allocator.free(last.text);
