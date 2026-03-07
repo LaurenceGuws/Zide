@@ -154,6 +154,31 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         });
     }
 
+    if (config.selection_overlay_smooth != null or config.selection_overlay_corner_px != null or config.selection_overlay_pad_px != null or
+        config.editor_selection_overlay_smooth != null or config.editor_selection_overlay_corner_px != null or config.editor_selection_overlay_pad_px != null or
+        config.terminal_selection_overlay_smooth != null or config.terminal_selection_overlay_corner_px != null or config.terminal_selection_overlay_pad_px != null)
+    {
+        state.shell.rendererPtr().setEditorSelectionOverlayStyle(
+            config.editor_selection_overlay_smooth orelse config.selection_overlay_smooth,
+            config.editor_selection_overlay_corner_px orelse config.selection_overlay_corner_px,
+            config.editor_selection_overlay_pad_px orelse config.selection_overlay_pad_px,
+        );
+        state.shell.rendererPtr().setTerminalSelectionOverlayStyle(
+            config.terminal_selection_overlay_smooth orelse config.selection_overlay_smooth,
+            config.terminal_selection_overlay_corner_px orelse config.selection_overlay_corner_px,
+            config.terminal_selection_overlay_pad_px orelse config.selection_overlay_pad_px,
+        );
+        state.needs_redraw = true;
+        log.logStdout(.info, "reload selection_overlay editor(smooth={any}, corner_px={any}, pad_px={any}) terminal(smooth={any}, corner_px={any}, pad_px={any})", .{
+            config.editor_selection_overlay_smooth orelse config.selection_overlay_smooth,
+            config.editor_selection_overlay_corner_px orelse config.selection_overlay_corner_px,
+            config.editor_selection_overlay_pad_px orelse config.selection_overlay_pad_px,
+            config.terminal_selection_overlay_smooth orelse config.selection_overlay_smooth,
+            config.terminal_selection_overlay_corner_px orelse config.selection_overlay_corner_px,
+            config.terminal_selection_overlay_pad_px orelse config.selection_overlay_pad_px,
+        });
+    }
+
     if (config.terminal_cursor_shape != null or config.terminal_cursor_blink != null) {
         var cursor_style = term_types.default_cursor_style;
         if (config.terminal_cursor_shape) |shape| {

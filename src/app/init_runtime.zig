@@ -116,6 +116,16 @@ fn initWithMode(
         } else null,
         config.editor_font_features,
     );
+    shell.rendererPtr().setEditorSelectionOverlayStyle(
+        config.editor_selection_overlay_smooth orelse config.selection_overlay_smooth,
+        config.editor_selection_overlay_corner_px orelse config.selection_overlay_corner_px,
+        config.editor_selection_overlay_pad_px orelse config.selection_overlay_pad_px,
+    );
+    shell.rendererPtr().setTerminalSelectionOverlayStyle(
+        config.terminal_selection_overlay_smooth orelse config.selection_overlay_smooth,
+        config.terminal_selection_overlay_corner_px orelse config.selection_overlay_corner_px,
+        config.terminal_selection_overlay_pad_px orelse config.selection_overlay_pad_px,
+    );
     if (config.app_font_path != null or config.app_font_size != null or
         config.editor_font_path != null or config.editor_font_size != null or
         config.terminal_font_path != null or config.terminal_font_size != null)

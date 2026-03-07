@@ -101,11 +101,10 @@ fn drawSoftSelectionRect(r: anytype, x: i32, y: i32, w: i32, h: i32, color: Colo
         r.drawRect(x, y, w, h, color);
         return;
     }
-    const smooth_active = mask.top_left_outward or mask.top_right_outward or mask.bottom_left_outward or mask.bottom_right_outward or mask.top_left_inward or mask.top_right_inward or mask.bottom_left_inward or mask.bottom_right_inward;
     const corner_px = style.corner_px orelse @max(1.0, std.math.floor(r.uiScaleFactor() * 0.75));
     const inset_x = @max(1, @as(i32, @intFromFloat(std.math.round(corner_px))));
     const pad_px = style.pad_px orelse @max(1.0, std.math.round(r.uiScaleFactor() * 0.5));
-    const pad_x = if (smooth_active) @max(0, @as(i32, @intFromFloat(std.math.round(pad_px)))) else 0;
+    const pad_x = @max(0, @as(i32, @intFromFloat(std.math.round(pad_px))));
     const draw_x = x + inset_x - pad_x;
     const draw_y = y;
     const draw_w = @max(1, w - inset_x * 2 + pad_x * 2);
@@ -122,17 +121,10 @@ fn drawSoftSelectionRect(r: anytype, x: i32, y: i32, w: i32, h: i32, color: Colo
     const top_right_inset = cornerDelta(mask.top_right_outward, mask.top_right_inward, corner);
     const bottom_left_inset = cornerDelta(mask.bottom_left_outward, mask.bottom_left_inward, corner);
     const bottom_right_inset = cornerDelta(mask.bottom_right_outward, mask.bottom_right_inward, corner);
-    const compensatedInset = struct {
-        fn apply(value: i32, pad: i32) i32 {
-            if (value > 0) return @max(0, value - pad);
-            if (value < 0) return value - pad;
-            return 0;
-        }
-    }.apply;
-    const top_left_edge = compensatedInset(top_left_inset, pad_x);
-    const top_right_edge = compensatedInset(top_right_inset, pad_x);
-    const bottom_left_edge = compensatedInset(bottom_left_inset, pad_x);
-    const bottom_right_edge = compensatedInset(bottom_right_inset, pad_x);
+    const top_left_edge = top_left_inset;
+    const top_right_edge = top_right_inset;
+    const bottom_left_edge = bottom_left_inset;
+    const bottom_right_edge = bottom_right_inset;
 
     const drawTopRow = struct {
         fn draw(r_local: anytype, x_local: i32, y_local: i32, w_local: i32, color_local: Color, left_inset: i32, right_inset: i32) void {
@@ -180,6 +172,15 @@ fn rowSelectionCoversColumn(cache: *const RenderCache, selection_rows: []const b
     const start = @as(usize, cache.selection_cols_start.items[row_idx]);
     const end = @as(usize, cache.selection_cols_end.items[row_idx]);
     return col >= start and col <= end;
+}
+
+fn rowSelectionNearColumn(cache: *const RenderCache, selection_rows: []const bool, row_idx: usize, col: usize, tolerance: usize) bool {
+    if (row_idx >= selection_rows.len or !selection_rows[row_idx]) return false;
+    const start = @as(usize, cache.selection_cols_start.items[row_idx]);
+    const end = @as(usize, cache.selection_cols_end.items[row_idx]);
+    const low = col -| tolerance;
+    const high = col + tolerance;
+    return !(end < low or start > high);
 }
 
 fn rowSelectionStart(cache: *const RenderCache, row_idx: usize) usize {
@@ -1210,15 +1211,16 @@ pub fn draw(
 
                 const has_prev = row_idx > 0 and selection_rows[row_idx - 1];
                 const has_next = row_idx + 1 < rows and selection_rows[row_idx + 1];
+                const edge_tolerance: usize = 1;
 
-                const top_left_exposed = !has_prev or !rowSelectionCoversColumn(cache, selection_rows, row_idx - 1, col_start);
-                const top_right_exposed = !has_prev or !rowSelectionCoversColumn(cache, selection_rows, row_idx - 1, col_end);
-                const bottom_left_exposed = !has_next or !rowSelectionCoversColumn(cache, selection_rows, row_idx + 1, col_start);
-                const bottom_right_exposed = !has_next or !rowSelectionCoversColumn(cache, selection_rows, row_idx + 1, col_end);
-                const top_left_inward = has_prev and rowSelectionCoversColumn(cache, selection_rows, row_idx - 1, col_start) and rowSelectionStart(cache, row_idx - 1) < col_start;
-                const top_right_inward = has_prev and rowSelectionCoversColumn(cache, selection_rows, row_idx - 1, col_end) and rowSelectionEnd(cache, row_idx - 1) > col_end;
-                const bottom_left_inward = has_next and rowSelectionCoversColumn(cache, selection_rows, row_idx + 1, col_start) and rowSelectionStart(cache, row_idx + 1) < col_start;
-                const bottom_right_inward = has_next and rowSelectionCoversColumn(cache, selection_rows, row_idx + 1, col_end) and rowSelectionEnd(cache, row_idx + 1) > col_end;
+                const top_left_exposed = !has_prev or !rowSelectionNearColumn(cache, selection_rows, row_idx - 1, col_start, edge_tolerance);
+                const top_right_exposed = !has_prev or !rowSelectionNearColumn(cache, selection_rows, row_idx - 1, col_end, edge_tolerance);
+                const bottom_left_exposed = !has_next or !rowSelectionNearColumn(cache, selection_rows, row_idx + 1, col_start, edge_tolerance);
+                const bottom_right_exposed = !has_next or !rowSelectionNearColumn(cache, selection_rows, row_idx + 1, col_end, edge_tolerance);
+                const top_left_inward = has_prev and rowSelectionNearColumn(cache, selection_rows, row_idx - 1, col_start, edge_tolerance) and rowSelectionStart(cache, row_idx - 1) + edge_tolerance < col_start;
+                const top_right_inward = has_prev and rowSelectionNearColumn(cache, selection_rows, row_idx - 1, col_end, edge_tolerance) and rowSelectionEnd(cache, row_idx - 1) > col_end + edge_tolerance;
+                const bottom_left_inward = has_next and rowSelectionNearColumn(cache, selection_rows, row_idx + 1, col_start, edge_tolerance) and rowSelectionStart(cache, row_idx + 1) + edge_tolerance < col_start;
+                const bottom_right_inward = has_next and rowSelectionNearColumn(cache, selection_rows, row_idx + 1, col_end, edge_tolerance) and rowSelectionEnd(cache, row_idx + 1) > col_end + edge_tolerance;
 
                 drawSoftSelectionRect(
                     r,

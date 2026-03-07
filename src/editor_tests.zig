@@ -1140,6 +1140,12 @@ const DrawLog = struct {
 };
 
 const FakeRenderer = struct {
+    const SelectionOverlayStyle = struct {
+        smooth_enabled: bool = true,
+        corner_px: ?f32 = null,
+        pad_px: ?f32 = null,
+    };
+
     allocator: std.mem.Allocator,
     width: i32,
     height: i32,
@@ -1147,6 +1153,8 @@ const FakeRenderer = struct {
     char_height: f32,
     editor_disable_ligatures: renderer_mod.TerminalDisableLigaturesStrategy,
     theme: Theme,
+    editor_selection_overlay_style: SelectionOverlayStyle,
+    terminal_selection_overlay_style: SelectionOverlayStyle,
     log: DrawLog,
     editor_texture_created: bool,
 
@@ -1159,6 +1167,8 @@ const FakeRenderer = struct {
             .char_height = char_height,
             .editor_disable_ligatures = .never,
             .theme = .{},
+            .editor_selection_overlay_style = .{},
+            .terminal_selection_overlay_style = .{},
             .log = DrawLog.init(allocator),
             .editor_texture_created = false,
         };
@@ -1175,6 +1185,20 @@ const FakeRenderer = struct {
 
     pub fn rendererPtr(self: *FakeRenderer) *FakeRenderer {
         return self;
+    }
+
+    pub fn editorSelectionOverlayStyle(self: *FakeRenderer) SelectionOverlayStyle {
+        return self.editor_selection_overlay_style;
+    }
+
+    pub fn terminalSelectionOverlayStyle(self: *FakeRenderer) SelectionOverlayStyle {
+        return self.terminal_selection_overlay_style;
+    }
+
+    pub fn setEditorSelectionOverlayStyle(self: *FakeRenderer, smooth_enabled: ?bool, corner_px: ?f32, pad_px: ?f32) void {
+        if (smooth_enabled) |v| self.editor_selection_overlay_style.smooth_enabled = v;
+        if (corner_px) |v| if (v > 0) self.editor_selection_overlay_style.corner_px = v;
+        if (pad_px) |v| if (v > 0) self.editor_selection_overlay_style.pad_px = v;
     }
 
     pub fn ensureEditorTexture(self: *FakeRenderer, width: i32, height: i32) bool {
@@ -1431,6 +1455,23 @@ fn textOpsOnly(allocator: std.mem.Allocator, log: []const u8) ![]u8 {
     return out.toOwnedSlice(allocator);
 }
 
+const RectEntry = struct { x: i32, y: i32, w: i32, h: i32 };
+
+fn parseRectLine(line: []const u8) ?RectEntry {
+    if (!std.mem.startsWith(u8, line, "rect ")) return null;
+    var it = std.mem.tokenizeScalar(u8, line, ' ');
+    _ = it.next(); // rect
+    const x_s = it.next() orelse return null;
+    const y_s = it.next() orelse return null;
+    const w_s = it.next() orelse return null;
+    const h_s = it.next() orelse return null;
+    const x = std.fmt.parseInt(i32, x_s, 10) catch return null;
+    const y = std.fmt.parseInt(i32, y_s, 10) catch return null;
+    const w = std.fmt.parseInt(i32, w_s, 10) catch return null;
+    const h = std.fmt.parseInt(i32, h_s, 10) catch return null;
+    return .{ .x = x, .y = y, .w = w, .h = h };
+}
+
 test "editor render snapshot baseline" {
     const allocator = std.testing.allocator;
     var fixture = try EditorFixture.init(allocator);
@@ -1638,6 +1679,95 @@ test "editor render cache redraws on search change" {
     draw_mod.drawCached(&widget, &renderer, &cache, 0, 0, 320, 32, 3, input);
     try std.testing.expect(renderer.log.data.items.len > 0);
     try std.testing.expect(std.mem.indexOf(u8, renderer.log.data.items, "#44475A98") != null);
+}
+
+test "editor selection smoothing keeps wide-leading glyph start covered" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("WWW\nii");
+    editor.selection = .{
+        .start = .{ .line = 0, .col = 0, .offset = 0 },
+        .end = .{ .line = 1, .col = 2, .offset = 6 },
+    };
+
+    var renderer = FakeRenderer.init(allocator, 320, 64, 8, 16);
+    defer renderer.deinit();
+    renderer.setEditorSelectionOverlayStyle(true, null, 1.0);
+
+    var widget = FakeWidget{ .editor = editor, .gutter_width = 0, .wrap_enabled = false };
+    const input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
+    draw_mod.draw(&widget, &renderer, 0, 0, 320, 64, input);
+
+    const log = renderer.log.data.items;
+    // Ensure selection overlay reaches content start x for first row.
+    try std.testing.expect(std.mem.indexOf(u8, log, "rect 58 0 ") != null);
+}
+
+test "editor selection smoothing rounds inward notch corners for stepped lines" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("ooo\noo\nooo");
+    editor.selection = .{
+        .start = .{ .line = 0, .col = 0, .offset = 0 },
+        .end = .{ .line = 2, .col = 3, .offset = 10 },
+    };
+
+    var renderer = FakeRenderer.init(allocator, 320, 96, 8, 16);
+    defer renderer.deinit();
+    var widget = FakeWidget{ .editor = editor, .gutter_width = 0, .wrap_enabled = false };
+    const input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
+    draw_mod.draw(&widget, &renderer, 0, 0, 320, 96, input);
+
+    var mid_top_w: ?i32 = null;
+    var mid_body_w: ?i32 = null;
+    var lines = std.mem.splitScalar(u8, renderer.log.data.items, '\n');
+    while (lines.next()) |line| {
+        if (std.mem.indexOf(u8, line, "#44475A84") == null) continue;
+        const rect = parseRectLine(line) orelse continue;
+        if (rect.y == 16 and rect.h == 1) mid_top_w = rect.w;
+        if (rect.y == 17 and rect.h >= 14) mid_body_w = rect.w;
+    }
+    try std.testing.expect(mid_top_w != null);
+    try std.testing.expect(mid_body_w != null);
+    // Inward-notch smoothing should expand the top scanline vs body width on middle line.
+    try std.testing.expect(mid_top_w.? > mid_body_w.?);
+}
+
+test "editor wrapped selection smoothing rounds inward notch corners across segments" {
+    const allocator = std.testing.allocator;
+    var fixture = try EditorFixture.init(allocator);
+    defer fixture.deinit();
+    const editor = fixture.editor;
+
+    try editor.insertText("ooooooo");
+    editor.selection = .{
+        .start = .{ .line = 0, .col = 0, .offset = 0 },
+        .end = .{ .line = 0, .col = 7, .offset = 7 },
+    };
+
+    var renderer = FakeRenderer.init(allocator, 130, 96, 8, 16); // narrow viewport to force wrap segments
+    defer renderer.deinit();
+    var widget = FakeWidget{ .editor = editor, .gutter_width = 0, .wrap_enabled = true };
+    const input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
+    draw_mod.draw(&widget, &renderer, 0, 0, 130, 96, input);
+
+    var saw_inward_expanded_scanline = false;
+    var lines = std.mem.splitScalar(u8, renderer.log.data.items, '\n');
+    while (lines.next()) |line| {
+        if (std.mem.indexOf(u8, line, "#44475A84") == null) continue;
+        const rect = parseRectLine(line) orelse continue;
+        if (rect.h == 1 and rect.w > 30 and rect.y > 0) {
+            saw_inward_expanded_scanline = true;
+            break;
+        }
+    }
+    try std.testing.expect(saw_inward_expanded_scanline);
 }
 
 test "editor render cache redraws on selection change" {
