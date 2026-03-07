@@ -468,14 +468,14 @@ pub const TerminalSession = struct {
         if (self.pty) |*pty| {
             if (pty.pollExit() catch |err| blk: {
                 const log = app_logger.logger("terminal.pty");
-                                    log.logf(.warning, "pty pollExit failed err={s}", .{ @errorName(err) });
+                log.logf(.warning, "pty pollExit failed err={s}", .{@errorName(err)});
                 break :blk null;
             }) |code| {
                 self.child_exit_code.store(code, .release);
                 self.child_exited.store(true, .release);
 
                 const log = app_logger.logger("terminal.pty");
-                                    log.logf(.info, "pty child exited code={d}", .{code});
+                log.logf(.info, "pty child exited code={d}", .{code});
             }
         }
     }
@@ -526,14 +526,14 @@ pub const TerminalSession = struct {
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
         const app_cursor = input_snapshot.app_cursor_keys.load(.acquire);
-                    log.logf(.info, "sendKey key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x}", .{
-                keyName(key),
-                key,
-                mod,
-                @tagName(action),
-                app_cursor,
-                key_mode_flags,
-            });
+        log.logf(.info, "sendKey key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x}", .{
+            keyName(key),
+            key,
+            mod,
+            @tagName(action),
+            app_cursor,
+            key_mode_flags,
+        });
         if (self.pty) |*pty| {
             self.pty_write_mutex.lock();
             defer self.pty_write_mutex.unlock();
@@ -568,15 +568,15 @@ pub const TerminalSession = struct {
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
         const app_cursor = input_snapshot.app_cursor_keys.load(.acquire);
-                    log.logf(.info, "sendKey(meta) key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x} alt_meta={any}", .{
-                keyName(key),
-                key,
-                mod,
-                @tagName(action),
-                app_cursor,
-                key_mode_flags,
-                alternate_meta != null,
-            });
+        log.logf(.info, "sendKey(meta) key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x} alt_meta={any}", .{
+            keyName(key),
+            key,
+            mod,
+            @tagName(action),
+            app_cursor,
+            key_mode_flags,
+            alternate_meta != null,
+        });
         if (self.pty) |*pty| {
             self.pty_write_mutex.lock();
             defer self.pty_write_mutex.unlock();
@@ -615,13 +615,13 @@ pub const TerminalSession = struct {
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
         const app_keypad = input_snapshot.app_keypad.load(.acquire);
-                    log.logf(.info, "sendKeypad key={s} mod=0x{x} action={s} app_keypad={any} key_mode=0x{x}", .{
-                keypadKeyName(key),
-                mod,
-                @tagName(action),
-                app_keypad,
-                key_mode_flags,
-            });
+        log.logf(.info, "sendKeypad key={s} mod=0x{x} action={s} app_keypad={any} key_mode=0x{x}", .{
+            keypadKeyName(key),
+            mod,
+            @tagName(action),
+            app_keypad,
+            key_mode_flags,
+        });
         if (self.pty) |*pty| {
             self.pty_write_mutex.lock();
             defer self.pty_write_mutex.unlock();
@@ -644,12 +644,12 @@ pub const TerminalSession = struct {
         const log = app_logger.logger("terminal.input");
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
-                    log.logf(.info, "sendChar cp={d} mod=0x{x} action={s} key_mode=0x{x}", .{
-                char,
-                mod,
-                @tagName(action),
-                key_mode_flags,
-            });
+        log.logf(.info, "sendChar cp={d} mod=0x{x} action={s} key_mode=0x{x}", .{
+            char,
+            mod,
+            @tagName(action),
+            key_mode_flags,
+        });
         if (self.pty) |*pty| {
             self.pty_write_mutex.lock();
             defer self.pty_write_mutex.unlock();
@@ -670,13 +670,13 @@ pub const TerminalSession = struct {
         const log = app_logger.logger("terminal.input");
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
-                    log.logf(.info, "sendChar(meta) cp={d} mod=0x{x} action={s} key_mode=0x{x} alt_meta={any}", .{
-                char,
-                mod,
-                @tagName(action),
-                key_mode_flags,
-                alternate_meta != null,
-            });
+        log.logf(.info, "sendChar(meta) cp={d} mod=0x{x} action={s} key_mode=0x{x} alt_meta={any}", .{
+            char,
+            mod,
+            @tagName(action),
+            key_mode_flags,
+            alternate_meta != null,
+        });
         if (self.pty) |*pty| {
             self.pty_write_mutex.lock();
             defer self.pty_write_mutex.unlock();
@@ -729,7 +729,7 @@ pub const TerminalSession = struct {
     pub fn sendText(self: *TerminalSession, text: []const u8) !void {
         if (text.len == 0) return;
         const log = app_logger.logger("terminal.input");
-                    log.logf(.info, "sendText len={d}", .{text.len});
+        log.logf(.info, "sendText len={d}", .{text.len});
         if (self.pty) |*pty| {
             self.pty_write_mutex.lock();
             defer self.pty_write_mutex.unlock();
@@ -1001,7 +1001,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn keyModeFlagsValue(self: *TerminalSession) u32 {
-        return self.keyModeFlags();
+        return self.input_snapshot.key_mode_flags.load(.acquire);
     }
 
     pub fn keyModePush(self: *TerminalSession, flags: u32) void {
@@ -1043,7 +1043,7 @@ pub const TerminalSession = struct {
                 screen.scroll_top + 1,
                 screen.scroll_bottom + 1,
             }) catch |err| {
-                                    log.logf(.warning, "decrqss r reply format failed err={s}", .{ @errorName(err) });
+                log.logf(.warning, "decrqss r reply format failed err={s}", .{@errorName(err)});
                 return null;
             };
         }
@@ -1053,7 +1053,7 @@ pub const TerminalSession = struct {
                 screen.left_margin + 1,
                 screen.right_margin + 1,
             }) catch |err| {
-                                    log.logf(.warning, "decrqss s reply format failed err={s}", .{ @errorName(err) });
+                log.logf(.warning, "decrqss s reply format failed err={s}", .{@errorName(err)});
                 return null;
             };
         }

@@ -172,3 +172,94 @@ ui_widget_modularization_todo:
             - zig build check-app-imports
             - zig build check-editor-imports
             - zig build check-input-imports
+
+    - name: "Phase 5 - UI Thread/Backend Decoupling"
+      tasks:
+        - id: UI-PERF-01
+          title: "Reduce terminal widget draw lock scope to snapshot-only"
+          status: pending
+          files_to_edit:
+            - src/ui/widgets/terminal_widget_draw.zig
+            - src/terminal/core/terminal_session.zig
+          notes:
+            - "Do not hold session state mutex across shaping, glyph batching, or long draw loops."
+            - "Capture needed view/snapshot data under lock, then draw lock-free."
+
+        - id: UI-PERF-02
+          title: "Avoid blocking lock in terminal widget input path"
+          status: done
+          files_to_edit:
+            - src/ui/widgets/terminal_widget_input.zig
+            - src/terminal/core/terminal_session.zig
+          notes:
+            - "Keep optimistic tryLock behavior; avoid unconditional fallback waits on hot input paths."
+            - "Defer non-critical hover/open calculations when lock contention is high."
+            - "2026-03-07: Removed fallback blocking lock waits from terminal widget input; lock-dependent hover/open/selection/scrollbar work is skipped under contention while key/focus paths remain responsive."
+            - "2026-03-07: `TerminalSession.keyModeFlagsValue()` now reads the atomic input snapshot (`input_snapshot.key_mode_flags`) to support lock-light input reads."
+
+        - id: UI-PERF-03
+          title: "Bound terminal workspace polling cost per frame"
+          status: done
+          files_to_edit:
+            - src/app/visible_terminal_frame.zig
+            - src/app/poll_visible_terminal_sessions_runtime.zig
+            - src/terminal/core/workspace.zig
+          notes:
+            - "Introduce poll budget/fairness with active-tab priority."
+            - "Ensure many-tab output does not stall UI update."
+            - "2026-03-07: Added `TerminalWorkspace.PollBudget` and `pollBudgeted(...)` (active tab first + bounded background round-robin polling)."
+            - "2026-03-07: Visible-terminal runtime now uses tighter per-frame budgets when input is active and slightly larger budgets when idle."
+            - "2026-03-07: Regression tuning for terminal TUIs (rain/stress): added bounded multi-poll passes for active tab and raised runtime poll budgets to improve frame smoothness and key-to-pixel latency while keeping polling bounded."
+
+        - id: UI-PERF-04
+          title: "Remove synchronous grammar bootstrap from frame path"
+          status: done
+          files_to_edit:
+            - src/app/editor_display_prepare.zig
+            - src/editor/editor.zig
+          notes:
+            - "No spawnAndWait from update/draw hooks."
+            - "Use async/pending state and user-facing notice path."
+            - "2026-03-07: Replaced frame-path grammar auto-bootstrap `spawnAndWait` with detached background worker + shared state (`idle/running/succeeded/failed`)."
+            - "2026-03-07: Highlighter init now returns immediately while bootstrap is running; load is retried after completion without blocking update/draw."
+
+        - id: UI-PERF-05
+          title: "Move search recompute off UI thread with generation cancellation"
+          status: pending
+          files_to_edit:
+            - src/editor/editor.zig
+            - src/app/editor_input_runtime.zig
+          notes:
+            - "Literal/regex search recompute should not block keystroke handling."
+            - "Only latest generation result may commit."
+
+        - id: UI-PERF-06
+          title: "Remove synchronous file detect I/O from terminal ctrl+click path"
+          status: done
+          files_to_edit:
+            - src/app/terminal_widget_input_runtime.zig
+            - src/app/file_detect.zig
+          notes:
+            - "Avoid open/stat/read in immediate input callback."
+            - "Use deferred check or optimistic open policy."
+            - "2026-03-07: Removed sync open/stat/read probe from ctrl+click path; file-detect is now a cheap no-I/O extension heuristic."
+            - "2026-03-07: Ctrl+click open uses guarded optimistic open calls and logs failures without bubbling errors through input callback."
+
+        - id: UI-PERF-07
+          title: "Add frame-phase metrics for lock wait and poll budgets"
+          status: pending
+          files_to_edit:
+            - src/app/frame_render_idle_runtime.zig
+            - src/terminal/core/workspace.zig
+            - src/ui/widgets/terminal_widget_draw.zig
+          notes:
+            - "Track lock wait time, poll bytes/tabs processed, and per-frame spillover."
+
+        - id: UI-PERF-08
+          title: "Verification pass for latency under heavy terminal output and large editor files"
+          status: pending
+          commands:
+            - zig build run -- --mode terminal
+            - zig build run
+          notes:
+            - "Use local perf logs to confirm update/draw phases stay bounded."

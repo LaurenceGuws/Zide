@@ -14,13 +14,27 @@ pub fn handle(
 
     if (app_modes.ide.shouldUseTerminalWorkspace(app_mode)) {
         if (terminal_workspace.*) |*workspace| {
-            return try workspace.pollAll(
+            const PollBudget = @TypeOf(workspace.*).PollBudget;
+            const budget: PollBudget = if (input_has_events)
+                .{
+                    .max_tabs_per_frame = 3,
+                    .max_background_tabs_per_frame = 1,
+                    .max_active_polls_per_frame = 2,
+                }
+            else
+                .{
+                    .max_tabs_per_frame = 6,
+                    .max_background_tabs_per_frame = 3,
+                    .max_active_polls_per_frame = 4,
+                };
+            return try workspace.pollBudgeted(
                 app_terminal_tabs_runtime.activeIndex(
                     app_mode,
                     terminal_workspace.*,
                     terminals.len,
                 ),
                 input_has_events,
+                budget,
             );
         }
         return false;

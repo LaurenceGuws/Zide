@@ -74,3 +74,108 @@ Scope: UI layout/dock structure and redraw behavior, with a focus on responsiven
 ## Notes
 - The bottom dock layout is simple and stable; performance issues stem primarily from redraw policy, not the layout structure itself.
 - With dirty rendering or caching in place, hover and lightweight animations will be safe even with terminal visible.
+
+## UI Thread/Backend Blocking Audit (2026-03-07)
+
+Scope
+- Audit `src/app/*`, `src/ui/widgets/*`, `src/terminal/core/*`, and `src/editor/*` for:
+  - render-thread blocking on backend/session state
+  - heavy compute and blocking I/O on the UI thread that can be moved or bounded
+
+Confirmed high-impact hotspots
+- Terminal draw holds `TerminalSession.state_mutex` for nearly the full draw path, including shaping-heavy loops.
+  - `src/ui/widgets/terminal_widget_draw.zig`
+- Terminal input path may block on the same mutex when input events are present.
+  - `src/ui/widgets/terminal_widget_input.zig`
+- Visible-terminal poll executes on the UI update path and iterates all tabs.
+  - `src/app/visible_terminal_frame.zig`
+  - `src/app/poll_visible_terminal_sessions_runtime.zig`
+  - `src/terminal/core/workspace.zig`
+- On non-threaded PTY paths, parse work runs inline on UI thread.
+  - `src/terminal/core/pty_io.zig`
+- Highlighter init can run synchronous process execution (`spawnAndWait`) via frame-time prepare calls.
+  - `src/app/editor_display_prepare.zig`
+  - `src/editor/editor.zig`
+- Search recompute reads full buffer and does expensive regex scans synchronously.
+  - `src/editor/editor.zig`
+- Ctrl+click file detect performs synchronous file open/stat/read on UI path.
+  - `src/app/file_detect.zig`
+
+Prioritized roadmap (implementation order)
+
+1) Terminal lock-scope reduction (highest)
+- Goal: remove long lock hold from `TerminalWidget.draw` and `TerminalWidget.handleInput`.
+- Approach:
+  - Copy/snapshot only required immutable view data under lock, then release lock before shaping + draw submission.
+  - Keep lock hold for tiny state transitions only (scroll offset updates, selection writes).
+- Acceptance:
+  - No mutex lock around HarfBuzz shaping loops.
+  - No regression in cursor/selection/dirty-row correctness under heavy output.
+
+2) Terminal polling decoupling from UI update
+- Goal: prevent per-frame all-tab poll work from elongating UI frame time.
+- Approach:
+  - Introduce poll budget + fairness (active tab first, bounded background tabs).
+  - Move remaining poll work to background cadence where possible; UI thread only consumes ready snapshots/signals.
+- Acceptance:
+  - UI update phase remains bounded when many tabs produce output.
+  - Active tab latency does not regress.
+
+3) Highlighter init/offline bootstrap hardening
+- Goal: remove `spawnAndWait` and other long setup from frame path.
+- Approach:
+  - Never run grammar bootstrap synchronously in frame/update/draw hooks.
+  - Convert bootstrap/init to async state machine (pending, ready, failed) with non-blocking UI fallback.
+- Acceptance:
+  - Frame path contains no blocking child-process wait for grammar init.
+  - Missing grammar UX remains clear and actionable.
+
+4) Editor search compute offload and throttling
+- Goal: avoid full-buffer synchronous scans on each query mutation.
+- Approach:
+  - Move regex/literal match recompute to worker task with cancellation by generation.
+  - Keep main thread applying latest completed result only.
+  - Add debounce for high-frequency query edits.
+- Acceptance:
+  - Typing into search remains responsive on large files.
+  - Search highlight updates remain monotonic (no stale result overwrite).
+
+5) UI-thread I/O cleanup for open detection
+- Goal: eliminate synchronous filesystem probes on pointer/input path.
+- Approach:
+  - Replace direct text-file detection with deferred worker check or optimistic open + backend-side guard.
+- Acceptance:
+  - No file open/stat/read in immediate click handler path.
+
+6) Continue bounded precompute strategy for editor caches
+- Goal: preserve current budgeting and prevent accidental regressions.
+- Approach:
+  - Keep `precomputeHighlightTokens`, width, and wrap budgets explicit/configurable.
+  - Add perf counters for consumed budget and spillover.
+- Acceptance:
+  - Budget knobs still cap per-frame cost in worst-case visible ranges.
+
+## Phase 5 Checkpoint (2026-03-07)
+
+Completed slices
+- UI-PERF-02 (terminal input lock contention):
+  - `TerminalWidget.handleInput` no longer falls back to blocking lock waits after `tryLock` failure.
+  - Lock-dependent non-critical work (hover/open/selection/scrollbar updates, OSC clipboard drain) is deferred when lock acquisition fails.
+  - Key/focus input paths remain responsive under contention.
+- UI-PERF-03 (poll budget/fairness):
+  - Added workspace polling budget model (`TerminalWorkspace.PollBudget`) and bounded `pollBudgeted(...)`.
+  - Active tab is polled first; background tabs are polled with bounded round-robin fairness.
+  - Visible-terminal runtime now uses small budgets under active input and larger budgets when idle.
+- UI-PERF-04 (grammar bootstrap off frame path):
+  - Removed synchronous grammar bootstrap wait from highlighter init path.
+  - Auto-bootstrap now runs in a detached worker with explicit state (`idle/running/succeeded/failed`).
+  - Frame/update/draw path returns immediately while bootstrap is in progress.
+- UI-PERF-06 (ctrl+click file-detect I/O cleanup):
+  - Removed sync open/stat/read file-probe from immediate input callback.
+  - Ctrl+click open path now uses no-I/O extension gating + guarded optimistic open.
+
+Remaining high-impact items
+- UI-PERF-01: terminal draw lock-scope reduction (still highest risk for long render stalls).
+- UI-PERF-05: search recompute offload/cancellation (still synchronous on UI thread).
+- UI-PERF-07: frame-phase perf counters for lock wait/poll spillover.
+- UI-PERF-08: heavy-output/large-file latency verification pass.
