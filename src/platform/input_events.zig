@@ -118,9 +118,13 @@ pub fn handleTextInput(
     allocator: std.mem.Allocator,
     text_is_composed: bool,
 ) usize {
+    const log = app_logger.logger("input.sdl");
     const len = sdl_api.textInputLen(event);
     const text = sdl_api.textSpanWithLen(event.text.text, len);
-    var it = std.unicode.Utf8View.init(text) catch return 0;
+    var it = std.unicode.Utf8View.init(text) catch |err| {
+        log.logf(.debug, "text input utf8 init failed bytes={d} err={s}", .{ text.len, @errorName(err) });
+        return 0;
+    };
     var iter = it.iterator();
     while (iter.nextCodepoint()) |cp| {
         var utf8: [4]u8 = .{ 0, 0, 0, 0 };

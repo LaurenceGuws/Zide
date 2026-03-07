@@ -1103,7 +1103,10 @@ pub const TerminalFont = struct {
 
     pub fn drawGlyph(self: *TerminalFont, draw: DrawContext, codepoint: u32, x: f32, y: f32, cell_width: f32, cell_height: f32, followed_by_space: bool, color: Rgba) void {
         if (codepoint == 0) return;
-        const glyph = self.getGlyphForCodepoint(codepoint) catch return;
+        const glyph = self.getGlyphForCodepoint(codepoint) catch |err| {
+            app_logger.logger("terminal.glyph").logf(.debug, "drawGlyph getGlyphForCodepoint failed cp=U+{X} err={s}", .{ codepoint, @errorName(err) });
+            return;
+        };
         const render_scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
         const inv_scale = 1.0 / render_scale;
         const baseline = y + self.baseline_from_top * inv_scale;
