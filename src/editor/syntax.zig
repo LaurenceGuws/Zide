@@ -108,6 +108,7 @@ const PlainCaptureSampler = struct {
     }
 
     pub fn observe(self: *PlainCaptureSampler, capture_name: []const u8) void {
+        const log = app_logger.logger("editor.highlight");
         for (self.entries.items) |*entry| {
             if (!std.mem.eql(u8, entry.name, capture_name)) continue;
             entry.hits += 1;
@@ -116,12 +117,16 @@ const PlainCaptureSampler = struct {
             return;
         }
 
-        const owned_name = self.allocator.dupe(u8, capture_name) catch return;
+        const owned_name = self.allocator.dupe(u8, capture_name) catch |err| {
+            log.logf(.warning, "plain capture sampler name dup failed capture={s} err={s}", .{ capture_name, @errorName(err) });
+            return;
+        };
         self.entries.append(self.allocator, .{
             .name = owned_name,
             .hits = 1,
-        }) catch {
+        }) catch |err| {
             self.allocator.free(owned_name);
+            log.logf(.warning, "plain capture sampler entry append failed capture={s} err={s}", .{ capture_name, @errorName(err) });
             return;
         };
         self.total_hits += 1;
@@ -141,7 +146,10 @@ const PlainCaptureSampler = struct {
         const log = app_logger.logger("editor.highlight");
         var top = std.ArrayList(PlainCaptureEntry).empty;
         defer top.deinit(self.allocator);
-        top.appendSlice(self.allocator, self.entries.items) catch return;
+        top.appendSlice(self.allocator, self.entries.items) catch |err| {
+            log.logf(.warning, "plain capture sampler top append failed phase={s} err={s}", .{ phase, @errorName(err) });
+            return;
+        };
         std.sort.heap(PlainCaptureEntry, top.items, {}, struct {
             fn lessThan(_: void, a: PlainCaptureEntry, b: PlainCaptureEntry) bool {
                 if (a.hits != b.hits) return a.hits > b.hits;
@@ -154,9 +162,15 @@ const PlainCaptureSampler = struct {
         const top_count: usize = @min(top.items.len, 8);
         for (top.items[0..top_count], 0..) |entry, i| {
             if (i > 0) {
-                buf.appendSlice(self.allocator, ", ") catch return;
+                buf.appendSlice(self.allocator, ", ") catch |err| {
+                    log.logf(.warning, "plain capture sampler summary separator append failed phase={s} err={s}", .{ phase, @errorName(err) });
+                    return;
+                };
             }
-            buf.writer(self.allocator).print("{s}:{d}", .{ entry.name, entry.hits }) catch return;
+            buf.writer(self.allocator).print("{s}:{d}", .{ entry.name, entry.hits }) catch |err| {
+                log.logf(.warning, "plain capture sampler summary print failed phase={s} err={s}", .{ phase, @errorName(err) });
+                return;
+            };
         }
         log.logf(.info, 
             "runtime unmapped captures phase={s} lang={s} total_hits={d} distinct={d} top=\"{s}\"",
@@ -1527,6 +1541,7 @@ fn applyDirectives(
     capture_meta: []CaptureMeta,
     allocator: std.mem.Allocator,
 ) void {
+    const log = app_logger.logger("editor.syntax");
     var step_count: u32 = 0;
     const steps = c.ts_query_predicates_for_pattern(query, match.pattern_index, &step_count);
     if (steps == null or step_count == 0) return;
@@ -1550,7 +1565,10 @@ fn applyDirectives(
             },
             c.TSQueryPredicateStepTypeCapture => {
                 if (current_name == null) continue;
-                args.append(allocator, .{ .capture = step.value_id }) catch return;
+                args.append(allocator, .{ .capture = step.value_id }) catch |err| {
+                    log.logf(.warning, "applyDirectives capture append failed pattern={d} err={s}", .{ match.pattern_index, @errorName(err) });
+                    return;
+                };
             },
             c.TSQueryPredicateStepTypeString => {
                 var len: u32 = 0;
@@ -1559,7 +1577,10 @@ fn applyDirectives(
                 if (current_name == null) {
                     current_name = value;
                 } else {
-                    args.append(allocator, .{ .string = value }) catch return;
+                    args.append(allocator, .{ .string = value }) catch |err| {
+                        log.logf(.warning, "applyDirectives string append failed pattern={d} err={s}", .{ match.pattern_index, @errorName(err) });
+                        return;
+                    };
                 }
             },
             else => {},
@@ -1573,6 +1594,7 @@ fn collectInjectionSettings(
     allocator: std.mem.Allocator,
     settings: *InjectionSettings,
 ) void {
+    const log = app_logger.logger("editor.syntax");
     var step_count: u32 = 0;
     const steps = c.ts_query_predicates_for_pattern(query, match.pattern_index, &step_count);
     if (steps == null or step_count == 0) return;
@@ -1596,7 +1618,10 @@ fn collectInjectionSettings(
             },
             c.TSQueryPredicateStepTypeCapture => {
                 if (current_name == null) continue;
-                args.append(allocator, .{ .capture = step.value_id }) catch return;
+                args.append(allocator, .{ .capture = step.value_id }) catch |err| {
+                    log.logf(.warning, "collectInjectionSettings capture append failed pattern={d} err={s}", .{ match.pattern_index, @errorName(err) });
+                    return;
+                };
             },
             c.TSQueryPredicateStepTypeString => {
                 var len: u32 = 0;
@@ -1605,7 +1630,10 @@ fn collectInjectionSettings(
                 if (current_name == null) {
                     current_name = value;
                 } else {
-                    args.append(allocator, .{ .string = value }) catch return;
+                    args.append(allocator, .{ .string = value }) catch |err| {
+                        log.logf(.warning, "collectInjectionSettings string append failed pattern={d} err={s}", .{ match.pattern_index, @errorName(err) });
+                        return;
+                    };
                 }
             },
             else => {},
@@ -1687,8 +1715,12 @@ fn applyDirective(
 }
 
 fn applyDirectiveValue(meta: anytype, key: []const u8, value: []const u8) void {
+    const log = app_logger.logger("editor.syntax");
     if (std.mem.eql(u8, key, "priority")) {
-        const parsed = std.fmt.parseInt(i32, value, 10) catch return;
+        const parsed = std.fmt.parseInt(i32, value, 10) catch |err| {
+            log.logf(.debug, "directive priority parse failed value={s} err={s}", .{ value, @errorName(err) });
+            return;
+        };
         meta.priority = parsed;
         meta.has_priority = true;
         return;
