@@ -747,19 +747,28 @@ pub const TerminalSession = struct {
     }
 
     pub fn reportFocusChanged(self: *TerminalSession, focused: bool) !bool {
-        if (!self.focusReportingEnabled()) return false;
+        const log = app_logger.logger("terminal.input");
+        if (!self.focusReportingEnabled()) {
+            log.logf(.debug, "focus report skipped focused={d} reason=disabled", .{@intFromBool(focused)});
+            return false;
+        }
         if (self.pty) |*pty| {
             self.pty_write_mutex.lock();
             defer self.pty_write_mutex.unlock();
             _ = try pty.write(if (focused) "\x1b[I" else "\x1b[O");
             return true;
         }
+        log.logf(.warning, "focus report dropped focused={d} reason=missing-pty", .{@intFromBool(focused)});
         return false;
     }
 
     pub fn reportColorSchemeChanged(self: *TerminalSession, dark: bool) !bool {
+        const log = app_logger.logger("terminal.input");
         self.color_scheme_dark = dark;
-        if (!self.report_color_scheme_2031) return false;
+        if (!self.report_color_scheme_2031) {
+            log.logf(.debug, "color-scheme report skipped dark={d} reason=disabled", .{@intFromBool(dark)});
+            return false;
+        }
         if (self.pty) |*pty| {
             var buf: [16]u8 = undefined;
             const seq = try std.fmt.bufPrint(&buf, "\x1b[?997;{d}n", .{if (dark) @as(u8, 1) else @as(u8, 2)});
@@ -768,6 +777,7 @@ pub const TerminalSession = struct {
             _ = try pty.write(seq);
             return true;
         }
+        log.logf(.warning, "color-scheme report dropped dark={d} reason=missing-pty", .{@intFromBool(dark)});
         return false;
     }
 
@@ -1301,8 +1311,15 @@ pub const TerminalSession = struct {
         uri_list: ?[]const u8,
         png: ?[]const u8,
     ) !bool {
-        if (!self.kitty_paste_events_5522) return false;
-        if (self.pty == null) return false;
+        const log = app_logger.logger("terminal.osc");
+        if (!self.kitty_paste_events_5522) {
+            log.logf(.debug, "osc5522 paste skipped reason=disabled", .{});
+            return false;
+        }
+        if (self.pty == null) {
+            log.logf(.warning, "osc5522 paste dropped reason=missing-pty", .{});
+            return false;
+        }
 
         self.kitty_osc5522_clipboard_text.clearRetainingCapacity();
         try self.kitty_osc5522_clipboard_text.ensureTotalCapacity(self.allocator, clip.len);
@@ -1329,6 +1346,7 @@ pub const TerminalSession = struct {
             osc_kitty_clipboard.sendPasteEventMimes(self, pty, .st);
             return true;
         }
+        log.logf(.warning, "osc5522 paste dropped after buffer prep reason=missing-pty", .{});
         return false;
     }
 
