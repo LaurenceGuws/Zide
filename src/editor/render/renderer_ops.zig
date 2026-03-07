@@ -1,4 +1,5 @@
 const std = @import("std");
+const app_logger = @import("../../app_logger.zig");
 
 pub fn drawEditorLine(
     self: anytype,
@@ -46,7 +47,10 @@ pub fn drawEditorLineBase(
 
     // Draw line number
     var num_buf: [16]u8 = undefined;
-    const num_str = std.fmt.bufPrint(&num_buf, "{d: >4}", .{line_num + 1}) catch return;
+    const num_str = std.fmt.bufPrint(&num_buf, "{d: >4}", .{line_num + 1}) catch |err| {
+        app_logger.logger("editor.draw").logf(.warning, "drawEditorLineBase line number format failed line={d} err={s}", .{ line_num + 1, @errorName(err) });
+        return;
+    };
     const pad = 4 * self.uiScaleFactor();
     const line_color = if (is_current) self.theme.foreground else self.theme.line_number;
     self.drawTextMonospace(num_str, x + pad, line_y, line_color);
