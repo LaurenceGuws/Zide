@@ -158,6 +158,10 @@ Prioritized roadmap (implementation order)
 ## Phase 5 Checkpoint (2026-03-07)
 
 Completed slices
+- UI-PERF-01 (terminal draw lock scope):
+  - `TerminalWidget.draw` now takes `TerminalSession` lock only long enough to refresh and copy render-cache state.
+  - HarfBuzz shaping, glyph batching, kitty overlay draws, and cursor/selection overlays now run lock-free against widget-owned snapshot buffers.
+  - Dirty-flag clear after draw now uses generation-guarded session helper (`clearDirtyIfGeneration(...)`) to avoid clearing newer state.
 - UI-PERF-02 (terminal input lock contention):
   - `TerminalWidget.handleInput` no longer falls back to blocking lock waits after `tryLock` failure.
   - Lock-dependent non-critical work (hover/open/selection/scrollbar updates, OSC clipboard drain) is deferred when lock acquisition fails.

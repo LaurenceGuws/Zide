@@ -20,6 +20,10 @@
   - visible-terminal polling now uses bounded active-first budgets with background fairness
   - editor grammar auto-bootstrap no longer blocks frame path (`spawnAndWait` removed from highlighter init path)
   - terminal ctrl+click open path no longer performs sync file detect I/O
+- Completed terminal draw lock-scope reduction (2026-03-07):
+  - render cache is copied under short lock into widget-owned snapshot buffers
+  - shaping/glyph batching and draw passes run lock-free
+  - dirty-clear now uses generation-guarded session helper (`clearDirtyIfGeneration`)
 - Build graph now supports focused compile-time mode planning:
   - default `zig build` plans full IDE app
   - `-Dmode=terminal` plans terminal-only app
@@ -54,7 +58,7 @@
 - Doc workflow policy: `docs/WORKFLOW.md`
 
 ### Known Risk (High-Level)
-- Terminal draw lock scope can still stall render/update under heavy parse throughput (input-side lock behavior has been improved).
+- Terminal polling and search recompute still need final metrics/offload tuning under worst-case load.
 - Editor search recompute is still synchronous and can cause visible stalls on large files.
 - Focused mode extraction is broad; regressions can hide in runtime wiring if checkpoints are not kept small.
 - FreeType/HarfBuzz pinned package path still needs continued parity attention across environments.

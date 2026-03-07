@@ -10,6 +10,7 @@ const hover_mod = @import("terminal_widget_hover.zig");
 const kitty_mod = @import("terminal_widget_kitty.zig");
 const draw_mod = @import("terminal_widget_draw.zig");
 const input_mod = @import("terminal_widget_input.zig");
+const render_cache_mod = @import("../../terminal/core/render_cache.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
@@ -19,6 +20,7 @@ const Cell = terminal_mod.Cell;
 const CellAttrs = terminal_mod.CellAttrs;
 const KittyImage = terminal_mod.KittyImage;
 const KittyPlacement = terminal_mod.KittyPlacement;
+const RenderCache = render_cache_mod.RenderCache;
 
 /// Terminal widget for drawing a terminal view
 pub const TerminalWidget = struct {
@@ -40,6 +42,7 @@ pub const TerminalWidget = struct {
     hover: hover_mod.HoverState = .{},
     pending_open: ?PendingOpen = null,
     last_draw_log_time: f64 = 0,
+    draw_cache: RenderCache,
     bench_enabled: bool = false,
     last_bench_log_time: f64 = 0,
     blink_last_slow_on: bool = true,
@@ -69,6 +72,7 @@ pub const TerminalWidget = struct {
             .hover = .{},
             .pending_open = null,
             .last_draw_log_time = 0,
+            .draw_cache = RenderCache.init(),
             .bench_enabled = std.c.getenv("ZIDE_TERMINAL_UI_BENCH") != null,
             .last_bench_log_time = 0,
             .blink_last_slow_on = true,
@@ -122,7 +126,7 @@ pub const TerminalWidget = struct {
         if (self.ui_focused == focused) return;
         self.ui_focused = focused;
         const log = app_logger.logger("terminal.cursor");
-                    log.logf(.info, "ui_focus changed focused={d}", .{ @intFromBool(focused) });
+        log.logf(.info, "ui_focus changed focused={d}", .{@intFromBool(focused)});
     }
 
     pub fn updateBlink(self: *TerminalWidget, now: f64) bool {
@@ -174,6 +178,7 @@ pub const TerminalWidget = struct {
             self.session.allocator.free(req.path);
             self.pending_open = null;
         }
+        self.draw_cache.deinit(self.session.allocator);
         self.kitty.deinit(self.session.allocator);
     }
 
@@ -333,7 +338,7 @@ pub const TerminalWidget = struct {
             self.session.setScrollOffset(0);
         }
         if (self.session.sendKittyPasteEvent5522WithMimeRich(clip, html, uri_list, png) catch |err| {
-            log.logf(.warning, "kitty mime paste event failed err={s}", .{ @errorName(err) });
+            log.logf(.warning, "kitty mime paste event failed err={s}", .{@errorName(err)});
             return false;
         }) {
             return true;
@@ -341,7 +346,7 @@ pub const TerminalWidget = struct {
         if (clip_opt == null) return false;
         if (self.session.bracketedPasteEnabled()) {
             self.session.sendText("\x1b[200~") catch |err| {
-                log.logf(.warning, "paste failed sending bracketed prefix err={s}", .{ @errorName(err) });
+                log.logf(.warning, "paste failed sending bracketed prefix err={s}", .{@errorName(err)});
                 return false;
             };
             var filtered = std.ArrayList(u8).empty;
@@ -355,17 +360,17 @@ pub const TerminalWidget = struct {
             }
             if (filtered.items.len > 0) {
                 self.session.sendText(filtered.items) catch |err| {
-                    log.logf(.warning, "paste failed sending filtered clipboard err={s}", .{ @errorName(err) });
+                    log.logf(.warning, "paste failed sending filtered clipboard err={s}", .{@errorName(err)});
                     return false;
                 };
             }
             self.session.sendText("\x1b[201~") catch |err| {
-                log.logf(.warning, "paste failed sending bracketed suffix err={s}", .{ @errorName(err) });
+                log.logf(.warning, "paste failed sending bracketed suffix err={s}", .{@errorName(err)});
                 return false;
             };
         } else {
             self.session.sendText(clip_opt.?) catch |err| {
-                log.logf(.warning, "paste failed sending clipboard err={s}", .{ @errorName(err) });
+                log.logf(.warning, "paste failed sending clipboard err={s}", .{@errorName(err)});
                 return false;
             };
         }

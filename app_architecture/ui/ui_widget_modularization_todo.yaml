@@ -177,13 +177,16 @@ ui_widget_modularization_todo:
       tasks:
         - id: UI-PERF-01
           title: "Reduce terminal widget draw lock scope to snapshot-only"
-          status: pending
+          status: done
           files_to_edit:
             - src/ui/widgets/terminal_widget_draw.zig
             - src/terminal/core/terminal_session.zig
           notes:
             - "Do not hold session state mutex across shaping, glyph batching, or long draw loops."
             - "Capture needed view/snapshot data under lock, then draw lock-free."
+            - "2026-03-07: `TerminalWidget.draw` now locks only long enough to refresh/copy render cache into widget-owned snapshot buffers."
+            - "2026-03-07: HarfBuzz shaping, glyph batching, kitty overlay draws, and selection/cursor/overlay passes now run without holding session state mutex."
+            - "2026-03-07: Added generation-guarded `TerminalSession.clearDirtyIfGeneration(...)` to safely clear dirty flags after lock-free draw."
 
         - id: UI-PERF-02
           title: "Avoid blocking lock in terminal widget input path"
