@@ -100,7 +100,6 @@ pub fn poll(self: anytype) !void {
 
         if (had_data) {
             self.state_mutex.lock();
-            self.force_full_damage.store(true, .release);
             @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.history.scrollOffset());
             self.state_mutex.unlock();
         }
@@ -153,7 +152,6 @@ pub fn poll(self: anytype) !void {
             if (processed >= max_bytes_per_poll) break;
         }
         if (had_data) {
-            self.force_full_damage.store(true, .release);
             @import("view_cache.zig").updateViewCacheNoLock(self, self.output_generation.load(.acquire), self.history.scrollOffset());
         }
         if (processed > 0 and self.alt_exit_pending.swap(false, .acq_rel)) {

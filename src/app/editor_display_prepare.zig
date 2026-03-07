@@ -8,6 +8,7 @@ pub fn prepare(
     editor: *Editor,
     editor_render_cache: *EditorRenderCache,
 ) void {
+    editor.applyPendingSearchWork();
     const total_lines = editor.lineCount();
     if (editor.takeHighlightDirtyRange()) |range| {
         const end_line = @min(range.end_line, total_lines);
@@ -15,4 +16,3 @@ pub fn prepare(
     }
     editor.ensureHighlighter();
 }
-
