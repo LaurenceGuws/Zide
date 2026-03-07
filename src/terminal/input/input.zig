@@ -620,20 +620,29 @@ pub fn encodeKeyActionBytesForTest(
         else => false,
     };
     if (!omit_leading_one) {
-        const written_key = std.fmt.bufPrint(buf[pos..], "{d}", .{fk.number}) catch return allocator.alloc(u8, 0);
+        const written_key = std.fmt.bufPrint(buf[pos..], "{d}", .{fk.number}) catch |err| {
+            app_logger.logger("terminal.input").logf(.warning, "encodeKeyActionBytesForTest key field format failed key={d} err={s}", .{ fk.number, @errorName(err) });
+            return allocator.alloc(u8, 0);
+        };
         pos += written_key.len;
     }
     if (second_field) {
         buf[pos] = ';';
         pos += 1;
         if (has_mods) {
-            const written_mod = std.fmt.bufPrint(buf[pos..], "{d}", .{mod_code}) catch return allocator.alloc(u8, 0);
+            const written_mod = std.fmt.bufPrint(buf[pos..], "{d}", .{mod_code}) catch |err| {
+                app_logger.logger("terminal.input").logf(.warning, "encodeKeyActionBytesForTest mod field format failed mod={d} err={s}", .{ mod_code, @errorName(err) });
+                return allocator.alloc(u8, 0);
+            };
             pos += written_mod.len;
         }
         if (add_actions) {
             buf[pos] = ':';
             pos += 1;
-            const written_action = std.fmt.bufPrint(buf[pos..], "{d}", .{@intFromEnum(action) + 1}) catch return allocator.alloc(u8, 0);
+            const written_action = std.fmt.bufPrint(buf[pos..], "{d}", .{@intFromEnum(action) + 1}) catch |err| {
+                app_logger.logger("terminal.input").logf(.warning, "encodeKeyActionBytesForTest action field format failed action={s} err={s}", .{ @tagName(action), @errorName(err) });
+                return allocator.alloc(u8, 0);
+            };
             pos += written_action.len;
         }
     }
@@ -818,7 +827,10 @@ fn associatedTextFieldForTest(
     if (alternate_meta) |meta| {
         if (meta.produced_text_utf8) |text| {
             if (text.len > 0) {
-                var view = std.unicode.Utf8View.init(text) catch return std.fmt.allocPrint(allocator, "{d}", .{fallback_cp});
+                var view = std.unicode.Utf8View.init(text) catch |err| {
+                    app_logger.logger("terminal.input").logf(.debug, "associatedTextFieldForTest utf8 init failed, using fallback cp={d} err={s}", .{ fallback_cp, @errorName(err) });
+                    return std.fmt.allocPrint(allocator, "{d}", .{fallback_cp});
+                };
                 var it = view.iterator();
                 while (it.nextCodepoint()) |cp| {
                     try list.append(allocator, cp);
