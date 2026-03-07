@@ -32,6 +32,29 @@ const RenderCache = render_cache_mod.RenderCache;
 const kitty_unicode_placeholder: u32 = 0x10EEEE;
 
 var jitter_debug_enabled_cache: ?bool = null;
+var frame_latency_seq: u64 = 0;
+var frame_latency_metrics: FrameLatencyMetrics = .{};
+
+pub const FrameLatencyMetrics = struct {
+    seq: u64 = 0,
+    lock_ms: f64 = 0.0,
+    render_ms: f64 = 0.0,
+    draw_ms: f64 = 0.0,
+};
+
+pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
+    return frame_latency_metrics;
+}
+
+fn publishFrameLatencyMetrics(lock_ms: f64, render_ms: f64, draw_ms: f64) void {
+    frame_latency_seq +%= 1;
+    frame_latency_metrics = .{
+        .seq = frame_latency_seq,
+        .lock_ms = lock_ms,
+        .render_ms = render_ms,
+        .draw_ms = draw_ms,
+    };
+}
 
 fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
     const scale = if (render_scale > 0.0) render_scale else 1.0;
@@ -99,9 +122,19 @@ pub fn draw(
     input: shared_types.input.InputSnapshot,
 ) void {
     const draw_start = app_shell.getTime();
+    var lock_ms: f64 = 0.0;
+    var render_phase_start = draw_start;
+    defer {
+        const draw_end = app_shell.getTime();
+        const draw_ms_total = time_utils.secondsToMs(draw_end - draw_start);
+        const render_ms = time_utils.secondsToMs(draw_end - render_phase_start);
+        publishFrameLatencyMetrics(lock_ms, render_ms, draw_ms_total);
+    }
+
     const r = shell.rendererPtr();
     const cache = &self.draw_cache;
     var alt_exit = false;
+    const lock_phase_start = app_shell.getTime();
     self.session.lock();
     {
         var live_cache = self.session.renderCache();
@@ -119,6 +152,8 @@ pub fn draw(
         self.session.alt_last_active = cache.alt_active;
     }
     self.session.unlock();
+    render_phase_start = app_shell.getTime();
+    lock_ms = time_utils.secondsToMs(render_phase_start - lock_phase_start);
 
     const sync_updates = cache.sync_updates_active;
     const screen_reverse = cache.screen_reverse;

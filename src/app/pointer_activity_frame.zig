@@ -20,15 +20,35 @@ pub fn handle(
     last_ctrl_down: *bool,
 ) Result {
     var out: Result = .{};
-    const mouse_down = input_batch.mouseDown(.left);
     const mouse_moved = mouse.x != last_mouse_pos.x or mouse.y != last_mouse_pos.y;
-    const wheel = input_batch.scroll.y;
-    const mouse_pressed = input_batch.mousePressed(.left) or input_batch.mousePressed(.right);
-    const has_mouse_action = mouse_pressed or wheel != 0 or mouse_down;
+    const wheel = input_batch.scroll.x != 0 or input_batch.scroll.y != 0;
+    const any_mouse_down = input_batch.mouseDown(.left) or
+        input_batch.mouseDown(.middle) or
+        input_batch.mouseDown(.right) or
+        input_batch.mouseDown(.back) or
+        input_batch.mouseDown(.forward) or
+        input_batch.mouseDown(.other);
+    const any_mouse_pressed = input_batch.mousePressed(.left) or
+        input_batch.mousePressed(.middle) or
+        input_batch.mousePressed(.right) or
+        input_batch.mousePressed(.back) or
+        input_batch.mousePressed(.forward) or
+        input_batch.mousePressed(.other);
+    const any_mouse_released = input_batch.mouseReleased(.left) or
+        input_batch.mouseReleased(.middle) or
+        input_batch.mouseReleased(.right) or
+        input_batch.mouseReleased(.back) or
+        input_batch.mouseReleased(.forward) or
+        input_batch.mouseReleased(.other);
+    const has_mouse_action = any_mouse_pressed or any_mouse_released or wheel or any_mouse_down;
 
     const terminal_visible = show_terminal and layout.terminal.height > 0;
-    const term_y = layout.terminal.y;
-    const in_terminal_area = terminal_visible and mouse.y >= term_y;
+    const term = layout.terminal;
+    const in_terminal_area = terminal_visible and
+        mouse.x >= term.x and
+        mouse.x <= term.x + term.width and
+        mouse.y >= term.y and
+        mouse.y <= term.y + term.height;
     const ctrl_down = input_batch.mods.ctrl;
 
     if (has_mouse_action) {

@@ -162,10 +162,10 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
                     .pressed = true,
                     .scancode = press.scancode,
                     .sym = press.sym,
-                .sdl_mod_bits = press.mod_bits,
+                    .sdl_mod_bits = press.mod_bits,
                 },
             }) catch |err| {
-                                    log.logf(.warning, "batch append key failed key={s} err={s}", .{ @tagName(key), @errorName(err) });
+                log.logf(.warning, "batch append key failed key={s} err={s}", .{ @tagName(key), @errorName(err) });
             };
         }
     }
@@ -181,9 +181,9 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
                 .scancode = entry.code,
                 .sym = null,
                 .sdl_mod_bits = null,
-                },
+            },
         }) catch |err| {
-                            log.logf(.warning, "batch append key release failed key={s} err={s}", .{ @tagName(entry.key), @errorName(err) });
+            log.logf(.warning, "batch append key release failed key={s} err={s}", .{ @tagName(entry.key), @errorName(err) });
         };
     }
 
@@ -194,13 +194,13 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
             .utf8 = text_press.utf8,
             .text_is_composed = text_press.text_is_composed,
         } }) catch |err| {
-                            log.logf(.warning, "batch append text failed cp={d} err={s}", .{ text_press.codepoint, @errorName(err) });
+            log.logf(.warning, "batch append text failed cp={d} err={s}", .{ text_press.codepoint, @errorName(err) });
         };
     }
 
     while (r.getFocusEvent()) |focused| {
         batch.append(.{ .focus = focused }) catch |err| {
-                            log.logf(.warning, "batch append focus failed focused={d} err={s}", .{ @intFromBool(focused), @errorName(err) });
+            log.logf(.warning, "batch append focus failed focused={d} err={s}", .{ @intFromBool(focused), @errorName(err) });
         };
     }
 
@@ -208,7 +208,7 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
     if (composition.active and composition.text.len > 0) {
         batch.composing_buffer.clearRetainingCapacity();
         _ = batch.composing_buffer.appendSlice(allocator, composition.text) catch |err| blk: {
-                            log.logf(.warning, "batch composing append failed bytes={d} err={s}", .{ composition.text.len, @errorName(err) });
+            log.logf(.warning, "batch composing append failed bytes={d} err={s}", .{ composition.text.len, @errorName(err) });
             break :blk 0;
         };
         batch.composing_text = batch.composing_buffer.items;

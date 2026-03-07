@@ -28,6 +28,21 @@ pub const TerminalWorkspace = struct {
         /// This helps high-throughput active tabs stay smooth without unbounded all-tab polling.
         max_active_polls_per_frame: usize = 1,
     };
+    pub const PollFrameMetrics = struct {
+        seq: u64 = 0,
+        tab_count: usize = 0,
+        active_index: usize = 0,
+        active_budget: usize = 0,
+        active_polled: usize = 0,
+        background_budget: usize = 0,
+        background_inspected: usize = 0,
+        background_polled: usize = 0,
+        total_polled: usize = 0,
+        budget_tabs: usize = 0,
+        budget_exhausted_hint: bool = false,
+        active_spillover_hint: bool = false,
+        background_backlog_hint: bool = false,
+    };
 
     allocator: std.mem.Allocator,
     init_options: TerminalSession.InitOptions,
@@ -36,6 +51,8 @@ pub const TerminalWorkspace = struct {
     next_tab_id: TabId,
     background_poll_cursor: usize,
     input_pressure_index: ?usize,
+    poll_metrics_seq: u64,
+    last_poll_metrics: PollFrameMetrics,
 
     pub fn init(allocator: std.mem.Allocator, init_options: TerminalSession.InitOptions) TerminalWorkspace {
         return .{
@@ -46,6 +63,8 @@ pub const TerminalWorkspace = struct {
             .next_tab_id = 1,
             .background_poll_cursor = 0,
             .input_pressure_index = null,
+            .poll_metrics_seq = 0,
+            .last_poll_metrics = .{},
         };
     }
 
@@ -190,15 +209,40 @@ pub const TerminalWorkspace = struct {
     }
 
     pub fn pollAll(self: *TerminalWorkspace, input_active_index: ?usize, has_input: bool) !bool {
+        const count = self.tabs.items.len;
+        const active_idx = normalizeIndex(input_active_index, count) orelse self.activeIndex();
         var any_polled = false;
+        var total_polled: usize = 0;
+        var active_polled: usize = 0;
+        var background_polled: usize = 0;
         for (self.tabs.items, 0..) |tab, i| {
             const is_input_target = input_active_index != null and input_active_index.? == i;
             tab.session.setInputPressure(has_input and is_input_target);
             if (tab.session.hasData()) {
                 try tab.session.poll();
                 any_polled = true;
+                total_polled += 1;
+                if (i == active_idx) {
+                    active_polled += 1;
+                } else {
+                    background_polled += 1;
+                }
             }
         }
+        self.recordPollMetrics(.{
+            .tab_count = count,
+            .active_index = active_idx,
+            .active_budget = 1,
+            .active_polled = active_polled,
+            .background_budget = if (count > 0) count - 1 else 0,
+            .background_inspected = if (count > 0) count - 1 else 0,
+            .background_polled = background_polled,
+            .total_polled = total_polled,
+            .budget_tabs = count,
+            .budget_exhausted_hint = false,
+            .active_spillover_hint = false,
+            .background_backlog_hint = false,
+        });
         return any_polled;
     }
 
@@ -207,54 +251,121 @@ pub const TerminalWorkspace = struct {
         if (count == 0) {
             self.clearInputPressure();
             self.background_poll_cursor = 0;
+            self.recordPollMetrics(.{});
             return false;
         }
 
         self.normalizePollCursor();
         self.updateInputPressure(input_active_index, has_input);
 
-        if (budget.max_tabs_per_frame == 0) return false;
+        const active_idx = normalizeIndex(input_active_index, count) orelse self.activeIndex();
+        if (budget.max_tabs_per_frame == 0) {
+            self.recordPollMetrics(.{
+                .tab_count = count,
+                .active_index = active_idx,
+                .budget_tabs = 0,
+                .background_backlog_hint = count > 1,
+            });
+            return false;
+        }
 
         var any_polled = false;
-        const active_idx = normalizeIndex(input_active_index, count) orelse self.activeIndex();
-
         const active_polls = @max(@as(usize, 1), budget.max_active_polls_per_frame);
+        var active_polled_success: usize = 0;
         var active_polled: usize = 0;
         while (active_polled < active_polls) : (active_polled += 1) {
             if (try self.pollIndexIfReady(active_idx)) {
                 any_polled = true;
+                active_polled_success += 1;
             } else {
                 break;
             }
         }
 
+        var background_budget_used: usize = 0;
+        var background_inspected: usize = 0;
+        var background_polled: usize = 0;
+        var budget_exhausted_hint = false;
+        var background_backlog_hint = false;
+
         if (count == 1 or budget.max_tabs_per_frame == 1 or budget.max_background_tabs_per_frame == 0) {
+            background_backlog_hint = count > 1 and (budget.max_tabs_per_frame <= 1 or budget.max_background_tabs_per_frame == 0);
             self.background_poll_cursor = (active_idx + 1) % count;
+            self.recordPollMetrics(.{
+                .tab_count = count,
+                .active_index = active_idx,
+                .active_budget = active_polls,
+                .active_polled = active_polled_success,
+                .background_budget = background_budget_used,
+                .background_inspected = background_inspected,
+                .background_polled = background_polled,
+                .total_polled = active_polled_success,
+                .budget_tabs = budget.max_tabs_per_frame,
+                .budget_exhausted_hint = budget_exhausted_hint,
+                .active_spillover_hint = active_polled_success >= active_polls and self.tabs.items[active_idx].session.hasData(),
+                .background_backlog_hint = background_backlog_hint,
+            });
             return any_polled;
         }
 
         const remaining_slots = budget.max_tabs_per_frame - 1;
         const background_slots = @min(remaining_slots, budget.max_background_tabs_per_frame);
+        background_budget_used = background_slots;
         if (background_slots == 0) {
+            background_backlog_hint = count > 1;
             self.background_poll_cursor = (active_idx + 1) % count;
+            self.recordPollMetrics(.{
+                .tab_count = count,
+                .active_index = active_idx,
+                .active_budget = active_polls,
+                .active_polled = active_polled_success,
+                .background_budget = background_budget_used,
+                .background_inspected = background_inspected,
+                .background_polled = background_polled,
+                .total_polled = active_polled_success,
+                .budget_tabs = budget.max_tabs_per_frame,
+                .budget_exhausted_hint = budget_exhausted_hint,
+                .active_spillover_hint = active_polled_success >= active_polls and self.tabs.items[active_idx].session.hasData(),
+                .background_backlog_hint = background_backlog_hint,
+            });
             return any_polled;
         }
 
         var cursor = self.background_poll_cursor % count;
-        var inspected_background: usize = 0;
-        while (inspected_background < background_slots) {
+        while (background_inspected < background_slots) {
             if (cursor == active_idx) {
                 cursor = (cursor + 1) % count;
                 continue;
             }
             if (try self.pollIndexIfReady(cursor)) {
                 any_polled = true;
+                background_polled += 1;
             }
-            inspected_background += 1;
+            background_inspected += 1;
             cursor = (cursor + 1) % count;
         }
         self.background_poll_cursor = cursor;
+        budget_exhausted_hint = background_inspected >= background_slots and background_slots >= @min(count - 1, budget.max_background_tabs_per_frame);
+        background_backlog_hint = count > 1 and background_slots < (count - 1);
+        self.recordPollMetrics(.{
+            .tab_count = count,
+            .active_index = active_idx,
+            .active_budget = active_polls,
+            .active_polled = active_polled_success,
+            .background_budget = background_budget_used,
+            .background_inspected = background_inspected,
+            .background_polled = background_polled,
+            .total_polled = active_polled_success + background_polled,
+            .budget_tabs = budget.max_tabs_per_frame,
+            .budget_exhausted_hint = budget_exhausted_hint,
+            .active_spillover_hint = active_polled_success >= active_polls and self.tabs.items[active_idx].session.hasData(),
+            .background_backlog_hint = background_backlog_hint,
+        });
         return any_polled;
+    }
+
+    pub fn lastPollFrameMetrics(self: *const TerminalWorkspace) PollFrameMetrics {
+        return self.last_poll_metrics;
     }
 
     fn pollIndexIfReady(self: *TerminalWorkspace, index: usize) !bool {
@@ -309,6 +420,12 @@ pub const TerminalWorkspace = struct {
             if (idx < count) return idx;
         }
         return null;
+    }
+
+    fn recordPollMetrics(self: *TerminalWorkspace, metrics: PollFrameMetrics) void {
+        self.poll_metrics_seq +%= 1;
+        self.last_poll_metrics = metrics;
+        self.last_poll_metrics.seq = self.poll_metrics_seq;
     }
 
     fn indexOfTabId(self: *const TerminalWorkspace, tab_id: TabId) ?usize {
