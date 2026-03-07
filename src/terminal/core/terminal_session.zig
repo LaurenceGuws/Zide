@@ -1252,6 +1252,14 @@ pub const TerminalSession = struct {
         self.activeScreen().clearDirty();
     }
 
+    pub fn clearDirtyIfGeneration(self: *TerminalSession, expected_generation: u64) bool {
+        self.lock();
+        defer self.unlock();
+        if (self.output_generation.load(.acquire) != expected_generation) return false;
+        self.activeScreen().clearDirty();
+        return true;
+    }
+
     pub fn clearSelection(self: *TerminalSession) void {
         selection_mod.clearSelection(self);
     }

@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
+const render_cache_mod = @import("../../terminal/core/render_cache.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 const time_utils = @import("../renderer/time_utils.zig");
@@ -27,6 +28,7 @@ const TextureKind = terminal_font_mod.TextureKind;
 const Rgba = terminal_font_mod.Rgba;
 const Renderer = renderer_mod.Renderer;
 const TerminalDisableLigaturesStrategy = renderer_mod.TerminalDisableLigaturesStrategy;
+const RenderCache = render_cache_mod.RenderCache;
 const kitty_unicode_placeholder: u32 = 0x10EEEE;
 
 var jitter_debug_enabled_cache: ?bool = null;
@@ -34,6 +36,57 @@ var jitter_debug_enabled_cache: ?bool = null;
 fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
     const scale = if (render_scale > 0.0) render_scale else 1.0;
     return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
+}
+
+fn copyRenderCacheSnapshot(dst: *RenderCache, allocator: std.mem.Allocator, src: *const RenderCache) !void {
+    try dst.cells.resize(allocator, src.cells.items.len);
+    std.mem.copyForwards(Cell, dst.cells.items, src.cells.items);
+
+    try dst.dirty_rows.resize(allocator, src.dirty_rows.items.len);
+    std.mem.copyForwards(bool, dst.dirty_rows.items, src.dirty_rows.items);
+
+    try dst.dirty_cols_start.resize(allocator, src.dirty_cols_start.items.len);
+    std.mem.copyForwards(u16, dst.dirty_cols_start.items, src.dirty_cols_start.items);
+
+    try dst.dirty_cols_end.resize(allocator, src.dirty_cols_end.items.len);
+    std.mem.copyForwards(u16, dst.dirty_cols_end.items, src.dirty_cols_end.items);
+
+    try dst.selection_rows.resize(allocator, src.selection_rows.items.len);
+    std.mem.copyForwards(bool, dst.selection_rows.items, src.selection_rows.items);
+
+    try dst.selection_cols_start.resize(allocator, src.selection_cols_start.items.len);
+    std.mem.copyForwards(u16, dst.selection_cols_start.items, src.selection_cols_start.items);
+
+    try dst.selection_cols_end.resize(allocator, src.selection_cols_end.items.len);
+    std.mem.copyForwards(u16, dst.selection_cols_end.items, src.selection_cols_end.items);
+
+    try dst.row_hashes.resize(allocator, src.row_hashes.items.len);
+    std.mem.copyForwards(u64, dst.row_hashes.items, src.row_hashes.items);
+
+    try dst.kitty_images.resize(allocator, src.kitty_images.items.len);
+    std.mem.copyForwards(render_cache_mod.KittyImage, dst.kitty_images.items, src.kitty_images.items);
+
+    try dst.kitty_placements.resize(allocator, src.kitty_placements.items.len);
+    std.mem.copyForwards(render_cache_mod.KittyPlacement, dst.kitty_placements.items, src.kitty_placements.items);
+
+    dst.rows = src.rows;
+    dst.cols = src.cols;
+    dst.history_len = src.history_len;
+    dst.total_lines = src.total_lines;
+    dst.generation = src.generation;
+    dst.scroll_offset = src.scroll_offset;
+    dst.cursor = src.cursor;
+    dst.cursor_style = src.cursor_style;
+    dst.cursor_visible = src.cursor_visible;
+    dst.dirty = src.dirty;
+    dst.damage = src.damage;
+    dst.alt_active = src.alt_active;
+    dst.selection_active = src.selection_active;
+    dst.sync_updates_active = src.sync_updates_active;
+    dst.screen_reverse = src.screen_reverse;
+    dst.kitty_generation = src.kitty_generation;
+    dst.clear_generation = src.clear_generation;
+    dst.viewport_shift_rows = src.viewport_shift_rows;
 }
 
 pub fn draw(
@@ -45,16 +98,28 @@ pub fn draw(
     height: f32,
     input: shared_types.input.InputSnapshot,
 ) void {
-    self.session.lock();
-    defer self.session.unlock();
-
     const draw_start = app_shell.getTime();
     const r = shell.rendererPtr();
-    var cache = self.session.renderCache();
-    if (!cache.alt_active and self.session.view_cache_pending.load(.acquire)) {
-        self.session.updateViewCacheForScrollLocked();
-        cache = self.session.renderCache();
+    const cache = &self.draw_cache;
+    var alt_exit = false;
+    self.session.lock();
+    {
+        var live_cache = self.session.renderCache();
+        if (!live_cache.alt_active and self.session.view_cache_pending.load(.acquire)) {
+            self.session.updateViewCacheForScrollLocked();
+            live_cache = self.session.renderCache();
+        }
+        copyRenderCacheSnapshot(cache, self.session.allocator, live_cache) catch |err| {
+            const log = app_logger.logger("terminal.ui.redraw");
+            log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
+            self.session.unlock();
+            return;
+        };
+        alt_exit = self.session.alt_last_active and !cache.alt_active;
+        self.session.alt_last_active = cache.alt_active;
     }
+    self.session.unlock();
+
     const sync_updates = cache.sync_updates_active;
     const screen_reverse = cache.screen_reverse;
     const blink_style = self.blink_style;
@@ -81,8 +146,6 @@ pub fn draw(
         r.drawTerminalTexture(x, y);
         return;
     }
-    const alt_exit = self.session.alt_last_active and !cache.alt_active;
-    self.session.alt_last_active = cache.alt_active;
     const draw_start_time = if (alt_exit) app_shell.getTime() else 0;
     const rows = cache.rows;
     const cols = cache.cols;
@@ -682,7 +745,8 @@ pub fn draw(
                                 }
                                 if (variant == .powerline) {
                                     const special_log = app_logger.logger("terminal.glyph.special");
-                                    special_log.logf(.info, 
+                                    special_log.logf(
+                                        .info,
                                         "sprite_missing cp=U+{X} variant={s} cell={d}x{d}",
                                         .{ cell.codepoint, @tagName(variant), box_w_i, box_h_i },
                                     );
@@ -939,17 +1003,18 @@ pub fn draw(
 
     if (draw_cursor and rows > 0 and cols > 0 and cursor.row < rows and cursor.col < cols and view_cells.len >= rows * cols) {
         const cursor_log = app_logger.logger("terminal.cursor");
-                    cursor_log.logf(.info, 
-                "cursor draw ui_focused={d} shape={s} blink={d} visible={d} row={d} col={d}",
-                .{
-                    @intFromBool(self.ui_focused),
-                    @tagName(cursor_style.shape),
-                    @intFromBool(cursor_style.blink),
-                    @intFromBool(draw_cursor),
-                    cursor.row,
-                    cursor.col,
-                },
-            );
+        cursor_log.logf(
+            .info,
+            "cursor draw ui_focused={d} shape={s} blink={d} visible={d} row={d} col={d}",
+            .{
+                @intFromBool(self.ui_focused),
+                @tagName(cursor_style.shape),
+                @intFromBool(cursor_style.blink),
+                @intFromBool(draw_cursor),
+                cursor.row,
+                cursor.col,
+            },
+        );
         const row_cells = rowSlice(view_cells, cols, cursor.row);
         if (row_cells.len != 0) {
             const cell = row_cells[cursor.col];
@@ -1164,10 +1229,7 @@ pub fn draw(
     }
 
     if (!sync_updates and (updated or cache.dirty == .none)) {
-        const current_gen = self.session.currentGeneration();
-        if (current_gen == cache.generation) {
-            self.session.clearDirty();
-        }
+        _ = self.session.clearDirtyIfGeneration(cache.generation);
     }
 
     if (alt_exit) {
@@ -1194,7 +1256,8 @@ pub fn draw(
     const has_kitty_images = self.kitty.images_view.items.len > 0;
     if ((elapsed_ms >= 4.0 or has_kitty_images) and (now - self.last_draw_log_time) >= 0.1) {
         self.last_draw_log_time = now;
-        draw_log.logf(.info,
+        draw_log.logf(
+            .info,
             "draw_ms={d:.2} rows={d} cols={d} history={d} cells={d} kitty_images={d} kitty_placements={d}",
             .{
                 elapsed_ms,
@@ -1212,7 +1275,8 @@ pub fn draw(
         const bench_log = app_logger.logger("terminal.ui.bench");
         if ((now - self.last_bench_log_time) >= 0.1) {
             self.last_bench_log_time = now;
-            bench_log.logf(.info,
+            bench_log.logf(
+                .info,
                 "draw_ms={d:.2} rows={d} cols={d} upload_images={d} upload_bytes={d}",
                 .{ elapsed_ms, rows, cols, upload_stats.images, upload_stats.bytes },
             );
@@ -1304,7 +1368,7 @@ fn drawShapedGlyph(
 ) void {
     const glyph = font.getGlyphById(face, glyph_id, want_color, hb_pos.x_advance) catch |err| {
         const log = app_logger.logger("terminal.draw");
-                    log.logf(.warning, "shaped glyph lookup failed cp=U+{X} glyph_id={d} err={s}", .{ base_codepoint, glyph_id, @errorName(err) });
+        log.logf(.warning, "shaped glyph lookup failed cp=U+{X} glyph_id={d} err={s}", .{ base_codepoint, glyph_id, @errorName(err) });
         return;
     };
     const render_scale = if (font.render_scale > 0.0) font.render_scale else 1.0;
@@ -1356,7 +1420,8 @@ fn drawShapedGlyph(
         const y_snap_error = draw_y - snapped_y;
         const large_y_snap = @abs(y_snap_error) >= 0.45;
         if (did_fit_scale or has_y_offset or large_y_snap) {
-            jitter_log.logf(.info, 
+            jitter_log.logf(
+                .info,
                 "cp=U+{X:0>4} gid={d} x={d:.2} y={d:.2} cell_w={d:.2} glyph_w={d:.2} bearing_y={d:.2} y_off_26_6={d} draw_y={d:.3} snap_y={d:.3} snap_err={d:.3} scale={d:.4} fit={d} square_or_wide={d}",
                 .{
                     base_codepoint,
