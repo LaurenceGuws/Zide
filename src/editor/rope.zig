@@ -870,7 +870,10 @@ fn rememberLineStart(self: *Rope, line_index: usize, offset: usize) void {
             self.line_start_cache.clearRetainingCapacity();
         }
     }
-    self.line_start_cache.put(line_index, offset) catch return;
+    self.line_start_cache.put(line_index, offset) catch |err| {
+        app_logger.logger("editor.rope").logf(.debug, "line_start_cache put failed line={d} offset={d} err={s}", .{ line_index, offset, @errorName(err) });
+        return;
+    };
 }
 
 fn boundaryOp(self: *Rope) !UndoOp {
