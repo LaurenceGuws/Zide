@@ -5,6 +5,9 @@ Goal
 - Treat reference repos as canonical. We only diverge when required by Zide's code or to exceed the reference quality.
 
 Status (2026-01-29)
+- New focus (2026-03-07): UI-thread/backend decoupling and compute offload.
+  - plan: `app_architecture/review/PERFORMANCE_REVIEW_1.md`
+  - task tracker: `app_architecture/ui/ui_widget_modularization_todo.yaml` (Phase 5)
 - SDL3 window/input + OpenGL 3.3 renderer is now the active stack on Linux.
 - Raylib has been removed from the build path; PNG decoding is handled via stb_image.
 - Fixed texture UV orientation: CPU textures use top-left UVs; FBO blits flip Y at draw time.
