@@ -14,7 +14,13 @@ const Selection = types.Selection;
 const c = ts_api.c_api;
 
 var grammar_auto_bootstrap_lock: std.Thread.Mutex = .{};
-var grammar_auto_bootstrap_attempted: bool = false;
+const GrammarAutoBootstrapState = enum {
+    idle,
+    running,
+    succeeded,
+    failed,
+};
+var grammar_auto_bootstrap_state: GrammarAutoBootstrapState = .idle;
 var grammar_missing_notice_lock: std.Thread.Mutex = .{};
 var grammar_missing_notice_emitted: bool = false;
 
@@ -1932,7 +1938,8 @@ pub const Editor = struct {
             self.highlight_dirty_start_line = null;
             self.highlight_dirty_end_line = null;
             self.highlight_pending = false;
-            log.logf(.info, 
+            log.logf(
+                .info,
                 "highlight skipped large_file bytes={d} threshold={d} path=\"{s}\"",
                 .{ self.buffer.totalLen(), highlighter_large_file_threshold_bytes, path orelse "" },
             );
@@ -1976,15 +1983,19 @@ pub const Editor = struct {
             const grammar = try self.grammar_manager.getOrLoad(lang.?) orelse blk: {
                 log.logf(.info, "highlight missing grammar lang={s}", .{lang.?});
                 if (shouldAutoBootstrapGrammars()) {
-                    if (self.tryAutoBootstrapGrammars()) {
-                        if (try self.grammar_manager.getOrLoad(lang.?)) |loaded| {
-                            log.logf(.info, "highlight grammar loaded after bootstrap lang={s}", .{lang.?});
-                            break :blk loaded;
-                        }
-                        log.logf(.info, "highlight grammar still missing after bootstrap lang={s}", .{lang.?});
-                        self.emitMissingGrammarNotice(true, true, false);
-                    } else {
-                        self.emitMissingGrammarNotice(true, true, false);
+                    _ = self.tryAutoBootstrapGrammars();
+                    switch (grammarAutoBootstrapState()) {
+                        .running => return,
+                        .succeeded => {
+                            if (try self.grammar_manager.getOrLoad(lang.?)) |loaded| {
+                                log.logf(.info, "highlight grammar loaded after bootstrap lang={s}", .{lang.?});
+                                break :blk loaded;
+                            }
+                            log.logf(.info, "highlight grammar still missing after bootstrap lang={s}", .{lang.?});
+                            self.emitMissingGrammarNotice(true, true, false);
+                        },
+                        .failed => self.emitMissingGrammarNotice(true, true, false),
+                        .idle => self.emitMissingGrammarNotice(true, false, false),
                     }
                 } else {
                     self.emitMissingGrammarNotice(false, false, false);
@@ -2005,7 +2016,8 @@ pub const Editor = struct {
             self.highlight_epoch +|= 1;
             self.noteHighlightDirtyRange(0, self.buffer.totalLen());
             const elapsed_ns = std.time.nanoTimestamp() - t_start;
-            log.logf(.info, 
+            log.logf(
+                .info,
                 "highlight enabled path=\"{s}\" time_us={d}",
                 .{ path orelse "", @as(i64, @intCast(@divTrunc(elapsed_ns, 1000))) },
             );
@@ -2013,12 +2025,23 @@ pub const Editor = struct {
     }
 
     fn tryAutoBootstrapGrammars(self: *Editor) bool {
+        _ = self;
         grammar_auto_bootstrap_lock.lock();
-        const should_attempt = !grammar_auto_bootstrap_attempted;
-        if (should_attempt) grammar_auto_bootstrap_attempted = true;
-        grammar_auto_bootstrap_lock.unlock();
-        if (!should_attempt) return false;
+        defer grammar_auto_bootstrap_lock.unlock();
+        if (grammar_auto_bootstrap_state != .idle) return false;
+        grammar_auto_bootstrap_state = .running;
 
+        const worker = std.Thread.spawn(.{}, grammarAutoBootstrapWorker, .{}) catch |err| {
+            grammar_auto_bootstrap_state = .failed;
+            const log = app_logger.logger("editor.grammar");
+            log.logf(.info, "auto bootstrap worker spawn failed err={any}", .{err});
+            return false;
+        };
+        worker.detach();
+        return true;
+    }
+
+    fn grammarAutoBootstrapWorker() void {
         const log = app_logger.logger("editor.grammar");
         log.logf(.info, "auto bootstrap start cmd=\"zig build grammar-update -- --skip-git --continue-on-error\"", .{});
 
@@ -2029,31 +2052,47 @@ pub const Editor = struct {
             "--",
             "--skip-git",
             "--continue-on-error",
-        }, self.allocator);
+        }, std.heap.page_allocator);
         child.stdout_behavior = .Inherit;
         child.stderr_behavior = .Inherit;
         const result = child.spawnAndWait() catch |err| {
             log.logf(.info, "auto bootstrap spawn failed err={any}", .{err});
-            return false;
+            grammar_auto_bootstrap_lock.lock();
+            grammar_auto_bootstrap_state = .failed;
+            grammar_auto_bootstrap_lock.unlock();
+            return;
         };
+
+        grammar_auto_bootstrap_lock.lock();
+        defer grammar_auto_bootstrap_lock.unlock();
         switch (result) {
             .Exited => |code| {
                 if (code == 0) {
                     log.logf(.info, "auto bootstrap succeeded", .{});
-                    return true;
+                    grammar_auto_bootstrap_state = .succeeded;
+                    return;
                 }
                 log.logf(.info, "auto bootstrap failed exit_code={d}", .{code});
-                return false;
+                grammar_auto_bootstrap_state = .failed;
+                return;
             },
             .Signal => |sig| {
                 log.logf(.info, "auto bootstrap failed signal={d}", .{sig});
-                return false;
+                grammar_auto_bootstrap_state = .failed;
+                return;
             },
             else => {
                 log.logf(.info, "auto bootstrap failed status={any}", .{result});
-                return false;
+                grammar_auto_bootstrap_state = .failed;
+                return;
             },
         }
+    }
+
+    fn grammarAutoBootstrapState() GrammarAutoBootstrapState {
+        grammar_auto_bootstrap_lock.lock();
+        defer grammar_auto_bootstrap_lock.unlock();
+        return grammar_auto_bootstrap_state;
     }
 
     fn shouldAutoBootstrapGrammars() bool {

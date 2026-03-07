@@ -1,6 +1,9 @@
 ## Handoff (High-Level)
 
 ### Current Focus
+- Primary: remove UI/render-thread blocking on backend/session work and move expensive compute off the UI thread.
+  - tracking and phased plan: `app_architecture/review/PERFORMANCE_REVIEW_1.md`
+  - task tracker: `app_architecture/ui/ui_widget_modularization_todo.yaml` (Phase 5)
 - Keep mode-layer extraction stable and continue shrinking `main.zig` ownership through app-runtime module extraction (`app_architecture/app_mode_layering_todo.yaml`).
 - Keep dependency packaging robust and documented:
   - SDL3, Lua, tree-sitter core, and FreeType/HarfBuzz are Zig package managed in normal flow (non-vcpkg paths).
@@ -10,6 +13,13 @@
   - terminfo/runtime identity behavior documented and consistent.
 
 ### Recent Changes (High-Level)
+- Completed UI-thread/backend contention audit (2026-03-07) and documented prioritized refactor plan.
+- Added explicit Phase 5 performance/offload tasks to UI widget modularization todo (terminal lock scope, polling budgets, async highlighter/search work, UI-path I/O cleanup).
+- Completed a first Phase 5 implementation batch (2026-03-07):
+  - terminal input lock path now avoids blocking fallback waits under contention
+  - visible-terminal polling now uses bounded active-first budgets with background fairness
+  - editor grammar auto-bootstrap no longer blocks frame path (`spawnAndWait` removed from highlighter init path)
+  - terminal ctrl+click open path no longer performs sync file detect I/O
 - Build graph now supports focused compile-time mode planning:
   - default `zig build` plans full IDE app
   - `-Dmode=terminal` plans terminal-only app
@@ -34,6 +44,8 @@
 - Agent owns `./.zide.lua` logging scope during debugging (minimal useful tags; low noise).
 
 ### Where to Look
+- UI blocking/offload plan: `app_architecture/review/PERFORMANCE_REVIEW_1.md`
+- UI performance task tracker: `app_architecture/ui/ui_widget_modularization_todo.yaml`
 - Mode layering/refactor tracker: `app_architecture/app_mode_layering_todo.yaml`
 - Dependency packaging tracker: `app_architecture/dependencies_todo.yaml`
 - Dependency architecture notes: `app_architecture/DEPENDENCIES.md`
@@ -42,6 +54,8 @@
 - Doc workflow policy: `docs/WORKFLOW.md`
 
 ### Known Risk (High-Level)
+- Terminal draw lock scope can still stall render/update under heavy parse throughput (input-side lock behavior has been improved).
+- Editor search recompute is still synchronous and can cause visible stalls on large files.
 - Focused mode extraction is broad; regressions can hide in runtime wiring if checkpoints are not kept small.
 - FreeType/HarfBuzz pinned package path still needs continued parity attention across environments.
 - Terminal packaging/runtime can drift if terminfo identity docs and launcher behavior are not kept aligned with core.

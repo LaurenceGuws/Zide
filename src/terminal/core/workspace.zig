@@ -19,11 +19,23 @@ pub const TabMetadata = struct {
 };
 
 pub const TerminalWorkspace = struct {
+    pub const PollBudget = struct {
+        /// Maximum number of sessions to inspect for data and poll in a single frame.
+        max_tabs_per_frame: usize = 4,
+        /// Maximum number of background (non-active) sessions to inspect per frame.
+        max_background_tabs_per_frame: usize = 2,
+        /// Maximum number of poll passes for the active tab in one frame.
+        /// This helps high-throughput active tabs stay smooth without unbounded all-tab polling.
+        max_active_polls_per_frame: usize = 1,
+    };
+
     allocator: std.mem.Allocator,
     init_options: TerminalSession.InitOptions,
     tabs: std.ArrayList(Tab),
     active_index: usize,
     next_tab_id: TabId,
+    background_poll_cursor: usize,
+    input_pressure_index: ?usize,
 
     pub fn init(allocator: std.mem.Allocator, init_options: TerminalSession.InitOptions) TerminalWorkspace {
         return .{
@@ -32,6 +44,8 @@ pub const TerminalWorkspace = struct {
             .tabs = .empty,
             .active_index = 0,
             .next_tab_id = 1,
+            .background_poll_cursor = 0,
+            .input_pressure_index = null,
         };
     }
 
@@ -97,6 +111,7 @@ pub const TerminalWorkspace = struct {
             .session = session,
         });
         self.active_index = self.tabs.items.len - 1;
+        self.background_poll_cursor = self.active_index;
         return tab_id;
     }
 
@@ -129,9 +144,11 @@ pub const TerminalWorkspace = struct {
 
     pub fn closeTab(self: *TerminalWorkspace, tab_id: TabId) bool {
         const idx = self.indexOfTabId(tab_id) orelse return false;
+        self.clearInputPressure();
         const removed = self.tabs.orderedRemove(idx);
         removed.session.deinit();
         self.normalizeActiveAfterRemoval(idx);
+        self.normalizePollCursor();
         return true;
     }
 
@@ -146,6 +163,7 @@ pub const TerminalWorkspace = struct {
         if (to_index >= self.tabs.items.len) return false;
         if (from_index == to_index) return true;
 
+        self.clearInputPressure();
         const active_id = self.activeTabId();
         const moved = self.tabs.orderedRemove(from_index);
         self.tabs.insert(self.allocator, to_index, moved) catch |err| {
@@ -155,6 +173,7 @@ pub const TerminalWorkspace = struct {
         if (active_id) |id| {
             self.active_index = self.indexOfTabId(id) orelse 0;
         }
+        self.normalizePollCursor();
         return true;
     }
 
@@ -181,6 +200,115 @@ pub const TerminalWorkspace = struct {
             }
         }
         return any_polled;
+    }
+
+    pub fn pollBudgeted(self: *TerminalWorkspace, input_active_index: ?usize, has_input: bool, budget: PollBudget) !bool {
+        const count = self.tabs.items.len;
+        if (count == 0) {
+            self.clearInputPressure();
+            self.background_poll_cursor = 0;
+            return false;
+        }
+
+        self.normalizePollCursor();
+        self.updateInputPressure(input_active_index, has_input);
+
+        if (budget.max_tabs_per_frame == 0) return false;
+
+        var any_polled = false;
+        const active_idx = normalizeIndex(input_active_index, count) orelse self.activeIndex();
+
+        const active_polls = @max(@as(usize, 1), budget.max_active_polls_per_frame);
+        var active_polled: usize = 0;
+        while (active_polled < active_polls) : (active_polled += 1) {
+            if (try self.pollIndexIfReady(active_idx)) {
+                any_polled = true;
+            } else {
+                break;
+            }
+        }
+
+        if (count == 1 or budget.max_tabs_per_frame == 1 or budget.max_background_tabs_per_frame == 0) {
+            self.background_poll_cursor = (active_idx + 1) % count;
+            return any_polled;
+        }
+
+        const remaining_slots = budget.max_tabs_per_frame - 1;
+        const background_slots = @min(remaining_slots, budget.max_background_tabs_per_frame);
+        if (background_slots == 0) {
+            self.background_poll_cursor = (active_idx + 1) % count;
+            return any_polled;
+        }
+
+        var cursor = self.background_poll_cursor % count;
+        var inspected_background: usize = 0;
+        while (inspected_background < background_slots) {
+            if (cursor == active_idx) {
+                cursor = (cursor + 1) % count;
+                continue;
+            }
+            if (try self.pollIndexIfReady(cursor)) {
+                any_polled = true;
+            }
+            inspected_background += 1;
+            cursor = (cursor + 1) % count;
+        }
+        self.background_poll_cursor = cursor;
+        return any_polled;
+    }
+
+    fn pollIndexIfReady(self: *TerminalWorkspace, index: usize) !bool {
+        if (index >= self.tabs.items.len) return false;
+        const session = self.tabs.items[index].session;
+        if (!session.hasData()) return false;
+        try session.poll();
+        return true;
+    }
+
+    fn updateInputPressure(self: *TerminalWorkspace, input_active_index: ?usize, has_input: bool) void {
+        const count = self.tabs.items.len;
+        const desired_index = if (has_input) normalizeIndex(input_active_index, count) else null;
+        if (self.input_pressure_index) |current_index| {
+            if (desired_index == null or desired_index.? != current_index) {
+                if (current_index < count) {
+                    self.tabs.items[current_index].session.setInputPressure(false);
+                }
+            }
+        }
+        if (desired_index) |idx| {
+            self.tabs.items[idx].session.setInputPressure(true);
+        }
+        self.input_pressure_index = desired_index;
+    }
+
+    fn clearInputPressure(self: *TerminalWorkspace) void {
+        if (self.input_pressure_index) |idx| {
+            if (idx < self.tabs.items.len) {
+                self.tabs.items[idx].session.setInputPressure(false);
+            }
+            self.input_pressure_index = null;
+        }
+    }
+
+    fn normalizePollCursor(self: *TerminalWorkspace) void {
+        const count = self.tabs.items.len;
+        if (count == 0) {
+            self.background_poll_cursor = 0;
+            self.input_pressure_index = null;
+            return;
+        }
+        self.background_poll_cursor %= count;
+        if (self.input_pressure_index) |idx| {
+            if (idx >= count) self.input_pressure_index = null;
+        }
+    }
+
+    fn normalizeIndex(index: ?usize, count: usize) ?usize {
+        if (count == 0) return null;
+        if (index) |idx| {
+            if (idx < count) return idx;
+        }
+        return null;
     }
 
     fn indexOfTabId(self: *const TerminalWorkspace, tab_id: TabId) ?usize {

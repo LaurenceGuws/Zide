@@ -29,12 +29,10 @@ pub fn handleInput(
     suppress_shortcuts: bool,
     input_batch: *shared_types.input.InputBatch,
 ) !bool {
-    var locked = self.session.tryLock();
+    const locked = self.session.tryLock();
     if (!locked) {
-        const needs_input = allow_input and input_batch.events.items.len > 0;
-        if (!needs_input) return false;
-        self.session.lock();
-        locked = true;
+        const needs_keyboard_input = allow_input and input_batch.events.items.len > 0;
+        if (!needs_keyboard_input) return false;
     }
     defer if (locked) self.session.unlock();
     var handled = false;
@@ -58,17 +56,28 @@ pub fn handleInput(
     const scrollbar_y = y;
     const scrollbar_h = height;
 
-    const history_len = self.session.scrollbackCount();
-    const snapshot = self.session.snapshot();
-    const rows = snapshot.rows;
-    const cols = snapshot.cols;
-    const total_lines = history_len + rows;
-    const scroll_offset = self.session.scrollOffset();
-    const end_line = total_lines - scroll_offset;
-    const start_line = if (end_line > rows) end_line - rows else 0;
-    const max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
-    const cache = self.session.renderCache();
-    const show_scrollbar = !cache.alt_active and !self.session.mouseReportingEnabled() and total_lines > rows;
+    var history_len: usize = 0;
+    var snapshot: terminal_mod.TerminalSnapshot = undefined;
+    var rows: usize = 0;
+    var cols: usize = 0;
+    var total_lines: usize = 0;
+    var scroll_offset: usize = 0;
+    var start_line: usize = 0;
+    var max_scroll_offset: usize = 0;
+    var show_scrollbar = false;
+    if (locked) {
+        history_len = self.session.scrollbackCount();
+        snapshot = self.session.snapshot();
+        rows = snapshot.rows;
+        cols = snapshot.cols;
+        total_lines = history_len + rows;
+        scroll_offset = self.session.scrollOffset();
+        const end_line = total_lines - scroll_offset;
+        start_line = if (end_line > rows) end_line - rows else 0;
+        max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
+        const cache = self.session.renderCache();
+        show_scrollbar = !cache.alt_active and !self.session.mouseReportingEnabled() and total_lines > rows;
+    }
     const mouse_on_scrollbar = show_scrollbar and common.pointInRect(
         mouse.x,
         mouse.y,
@@ -87,21 +96,23 @@ pub fn handleInput(
     const hit_cell_h = @as(f32, @floatFromInt(@max(1, @as(i32, @intFromFloat(std.math.round(r.terminal_cell_height))))));
     const hit_base_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(x)))));
     const hit_base_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(y)))));
-    hover_mod.updateHoverState(
-        &self.hover,
-        self.session,
-        x,
-        y,
-        width,
-        height,
-        scale,
-        hit_cell_w,
-        hit_cell_h,
-        snapshot,
-        history_len,
-        start_line,
-        input_batch,
-    );
+    if (locked) {
+        hover_mod.updateHoverState(
+            &self.hover,
+            self.session,
+            x,
+            y,
+            width,
+            height,
+            scale,
+            hit_cell_w,
+            hit_cell_h,
+            snapshot,
+            history_len,
+            start_line,
+            input_batch,
+        );
+    }
 
     const ctrl = input_batch.mods.ctrl;
     const shift = input_batch.mods.shift;
@@ -122,7 +133,7 @@ pub fn handleInput(
     }
     const mouse_reporting = allow_input and in_terminal and self.session.mouseReportingEnabled();
     var skip_mouse_click = false;
-    if (allow_input and in_terminal and ctrl and input_batch.mousePressed(.left)) {
+    if (locked and allow_input and in_terminal and ctrl and input_batch.mousePressed(.left)) {
         if (rows > 0 and cols > 0 and snapshot.cells.len >= rows * cols) {
             const did_open = open_mod.ctrlClickOpenMaybe(
                 self.session.allocator,
@@ -147,10 +158,12 @@ pub fn handleInput(
         }
     }
 
-    if (self.session.takeOscClipboard()) |clip| {
-        const cstr: [*:0]const u8 = @ptrCast(clip.ptr);
-        shell.setClipboardText(cstr);
-        handled = true;
+    if (locked) {
+        if (self.session.takeOscClipboard()) |clip| {
+            const cstr: [*:0]const u8 = @ptrCast(clip.ptr);
+            shell.setClipboardText(cstr);
+            handled = true;
+        }
     }
 
     if (mouse_reporting and rows > 0 and cols > 0) {
@@ -184,7 +197,8 @@ pub fn handleInput(
             const screen = r.getScreenSize();
             const render = r.getRenderSize();
             const dpi = r.getDpiScale();
-            mousemap_log.logf(.info, 
+            mousemap_log.logf(
+                .info,
                 "mouse press raw=({d:.2},{d:.2}) scaled=({d:.2},{d:.2}) widget=({d:.2},{d:.2},{d:.2},{d:.2}) base=({d:.2},{d:.2}) cell=({d:.2},{d:.2}) rowcol=({d},{d}) rows={d} cols={d} screen=({d:.2},{d:.2}) render=({d:.2},{d:.2}) dpi=({d:.3},{d:.3})",
                 .{
                     input_batch.mouse_pos_raw.x,
@@ -283,7 +297,8 @@ pub fn handleInput(
             }
         }.apply;
         const clearLiveState = struct {
-            fn apply(widget: anytype) void {
+            fn apply(widget: anytype, session_locked: bool) void {
+                if (!session_locked) return;
                 if (widget.session.scrollOffset() > 0) {
                     widget.session.setScrollOffset(0);
                 }
@@ -375,28 +390,29 @@ pub fn handleInput(
                     .explicit_altgr = explicit_altgr,
                     .explicit_non_altgr_alt = explicit_non_altgr_alt,
                 });
-                                    log.logf(.info, 
-                        "key={d} sc={d} sym={d} sdl_mods={d} flags(exp_altgr={d} exp_non_alt={d}) mods(s={d} a={d} c={d} g={d}) trans(base={d} shift={d} altgr={d} altgr_shift={d}) meta(base={d} shift={d} alt={d})",
-                        .{
-                            @intFromEnum(key_event.key),
-                            key_event.scancode orelse -1,
-                            key_event.sym orelse 0,
-                            key_event.sdl_mod_bits orelse 0,
-                            @intFromBool(explicit_altgr),
-                            @intFromBool(explicit_non_altgr_alt),
-                            @intFromBool(key_event.mods.shift),
-                            @intFromBool(key_event.mods.alt),
-                            @intFromBool(key_event.mods.ctrl),
-                            @intFromBool(key_event.mods.super),
-                            translated_base orelse 0,
-                            translated_shifted orelse 0,
-                            translated_altgr orelse 0,
-                            translated_shift_altgr orelse 0,
-                            meta.base_codepoint orelse 0,
-                            meta.shifted_codepoint orelse 0,
-                            meta.alternate_layout_codepoint orelse 0,
-                        },
-                    );
+                log.logf(
+                    .info,
+                    "key={d} sc={d} sym={d} sdl_mods={d} flags(exp_altgr={d} exp_non_alt={d}) mods(s={d} a={d} c={d} g={d}) trans(base={d} shift={d} altgr={d} altgr_shift={d}) meta(base={d} shift={d} alt={d})",
+                    .{
+                        @intFromEnum(key_event.key),
+                        key_event.scancode orelse -1,
+                        key_event.sym orelse 0,
+                        key_event.sdl_mod_bits orelse 0,
+                        @intFromBool(explicit_altgr),
+                        @intFromBool(explicit_non_altgr_alt),
+                        @intFromBool(key_event.mods.shift),
+                        @intFromBool(key_event.mods.alt),
+                        @intFromBool(key_event.mods.ctrl),
+                        @intFromBool(key_event.mods.super),
+                        translated_base orelse 0,
+                        translated_shifted orelse 0,
+                        translated_altgr orelse 0,
+                        translated_shift_altgr orelse 0,
+                        meta.base_codepoint orelse 0,
+                        meta.shifted_codepoint orelse 0,
+                        meta.alternate_layout_codepoint orelse 0,
+                    },
+                );
                 return meta;
             }
         }.apply;
@@ -434,7 +450,8 @@ pub fn handleInput(
 
         if (allow_terminal_key) {
             if (input_batch.events.items.len > 0) {
-                key_log.logf(.info, 
+                key_log.logf(
+                    .info,
                     "frame key_mode_flags={d} report_text={d} auto_repeat={d} events={d}",
                     .{
                         key_mode_flags,
@@ -455,42 +472,43 @@ pub fn handleInput(
                 if (event != .key) continue;
                 const key = event.key.key;
                 const event_mod = keyModFromEvent(event.key);
-                                    key_log.logf(.info, 
-                        "event key={d} pressed={d} repeated={d} mods(s={d} a={d} c={d} g={d} super={d})",
-                        .{
-                            @intFromEnum(key),
-                            @intFromBool(event.key.pressed),
-                            @intFromBool(event.key.repeated),
-                            @intFromBool(event.key.mods.shift),
-                            @intFromBool(event.key.mods.alt),
-                            @intFromBool(event.key.mods.ctrl),
-                            @intFromBool(event.key.mods.altgr),
-                            @intFromBool(event.key.mods.super),
-                        },
-                    );
+                key_log.logf(
+                    .info,
+                    "event key={d} pressed={d} repeated={d} mods(s={d} a={d} c={d} g={d} super={d})",
+                    .{
+                        @intFromEnum(key),
+                        @intFromBool(event.key.pressed),
+                        @intFromBool(event.key.repeated),
+                        @intFromBool(event.key.mods.shift),
+                        @intFromBool(event.key.mods.alt),
+                        @intFromBool(event.key.mods.ctrl),
+                        @intFromBool(event.key.mods.altgr),
+                        @intFromBool(event.key.mods.super),
+                    },
+                );
                 if (suppress_shortcuts and ctrl and shift and (key == .c or key == .v)) {
-                                            key_log.logf(.info, "skip key={d} reason=suppress_shortcuts", .{ @intFromEnum(key) });
+                    key_log.logf(.info, "skip key={d} reason=suppress_shortcuts", .{@intFromEnum(key)});
                     continue;
                 }
                 if (!event.key.pressed) {
                     if (!report_text_enabled and isModifierKey(key)) {
-                                                    key_log.logf(.info, "skip key={d} reason=modifier_release_without_report_text", .{ @intFromEnum(key) });
+                        key_log.logf(.info, "skip key={d} reason=modifier_release_without_report_text", .{@intFromEnum(key)});
                         continue;
                     }
                     if (report_text_enabled) {
                         if (key_encoder.baseCharForKey(key)) |base_char| {
-                            clearLiveState(self);
+                            clearLiveState(self, locked);
                             try self.session.sendCharActionWithMetadata(base_char, event_mod, .release, keyAltMeta(r, altmeta_log, event.key, base_char));
-                                                            key_log.logf(.info, "send char key={d} action=release base_char={d}", .{ @intFromEnum(key), base_char });
+                            key_log.logf(.info, "send char key={d} action=release base_char={d}", .{ @intFromEnum(key), base_char });
                             handled = true;
                             skip_chars = true;
                             continue;
                         }
                     }
                     const handled_release = try applyTerminalKey(self, key, event_mod, .release);
-                                            key_log.logf(.info, "send key={d} action=release handled={d}", .{ @intFromEnum(key), @intFromBool(handled_release) });
+                    key_log.logf(.info, "send key={d} action=release handled={d}", .{ @intFromEnum(key), @intFromBool(handled_release) });
                     if (handled_release) {
-                        clearLiveState(self);
+                        clearLiveState(self, locked);
                         handled = true;
                         skip_chars = true;
                     }
@@ -498,18 +516,18 @@ pub fn handleInput(
                 }
                 const action: terminal_mod.KeyAction = if (event.key.repeated) .repeat else .press;
                 if (action == .repeat and !self.session.autoRepeatEnabled()) {
-                                            key_log.logf(.info, "skip key={d} action=repeat reason=auto_repeat_disabled", .{ @intFromEnum(key) });
+                    key_log.logf(.info, "skip key={d} action=repeat reason=auto_repeat_disabled", .{@intFromEnum(key)});
                     continue;
                 }
                 if (!report_text_enabled and isModifierKey(key)) {
-                                            key_log.logf(.info, "skip key={d} action={s} reason=modifier_without_report_text", .{ @intFromEnum(key), @tagName(action) });
+                    key_log.logf(.info, "skip key={d} action={s} reason=modifier_without_report_text", .{ @intFromEnum(key), @tagName(action) });
                     continue;
                 }
                 if (report_text_enabled) {
                     if (key_encoder.baseCharForKey(key)) |base_char| {
-                        clearLiveState(self);
+                        clearLiveState(self, locked);
                         try self.session.sendCharActionWithMetadata(base_char, event_mod, action, keyAltMeta(r, altmeta_log, event.key, base_char));
-                                                    key_log.logf(.info, "send char key={d} action={s} base_char={d}", .{ @intFromEnum(key), @tagName(action), base_char });
+                        key_log.logf(.info, "send char key={d} action={s} base_char={d}", .{ @intFromEnum(key), @tagName(action), base_char });
                         handled = true;
                         skip_chars = true;
                         continue;
@@ -517,10 +535,10 @@ pub fn handleInput(
                 }
 
                 const handled_key = try applyTerminalKey(self, key, event_mod, action);
-                                    key_log.logf(.info, "send key={d} action={s} handled={d}", .{ @intFromEnum(key), @tagName(action), @intFromBool(handled_key) });
+                key_log.logf(.info, "send key={d} action={s} handled={d}", .{ @intFromEnum(key), @tagName(action), @intFromBool(handled_key) });
 
                 if (handled_key) {
-                    clearLiveState(self);
+                    clearLiveState(self, locked);
                     handled = true;
                     skip_chars = true;
                     continue;
@@ -528,8 +546,8 @@ pub fn handleInput(
 
                 if (!report_text_enabled and (event.key.mods.ctrl or event.key.mods.alt)) {
                     if (try key_encoder.sendCharForKey(self.session, key, event_mod, action, event.key.mods.ctrl, event.key.mods.alt)) {
-                                                    key_log.logf(.info, "send ctrl_alt_char key={d} action={s}", .{ @intFromEnum(key), @tagName(action) });
-                        clearLiveState(self);
+                        key_log.logf(.info, "send ctrl_alt_char key={d} action={s}", .{ @intFromEnum(key), @tagName(action) });
+                        clearLiveState(self, locked);
                         handled = true;
                         skip_chars = true;
                     }
@@ -548,7 +566,7 @@ pub fn handleInput(
                         const char = text_event.codepoint;
                         if (char < 32) continue;
                         const alt_meta = textAltMeta(r, altmeta_log, text_event, pending_text_key, char);
-                        clearLiveState(self);
+                        clearLiveState(self, locked);
                         try self.session.sendCharActionWithMetadata(char, mod, .press, alt_meta);
                         handled = true;
                         pending_text_key = null;
@@ -558,7 +576,7 @@ pub fn handleInput(
             }
         }
 
-        if (!mouse_reporting and in_terminal and mouse_on_scrollbar) {
+        if (locked and !mouse_reporting and in_terminal and mouse_on_scrollbar) {
             if (input_batch.mousePressed(.left)) {
                 scroll_dragging.* = true;
                 self.scrollbar_drag_active = true;
@@ -571,12 +589,12 @@ pub fn handleInput(
                     1.0;
                 const thumb = common.computeScrollbarThumb(scrollbar_y, track_h, rows, total_lines, min_thumb_h, ratio);
                 scroll_grab_offset.* = mouse.y - thumb.thumb_y;
-                                    scroll_log.logf(.info, "scrollbar press offset={d}", .{scroll_offset_local});
+                scroll_log.logf(.info, "scrollbar press offset={d}", .{scroll_offset_local});
                 handled = true;
             }
         }
 
-        if (!mouse_reporting and scroll_dragging.*) {
+        if (locked and !mouse_reporting and scroll_dragging.*) {
             if (input_batch.mouseDown(.left)) {
                 const track_h = scrollbar_h;
                 const min_thumb_h: f32 = 18;
@@ -586,7 +604,7 @@ pub fn handleInput(
                 const ratio = if (available > 0) (clamped_mouse - scrollbar_y) / available else 0;
                 const target_offset = @as(usize, @intFromFloat(@round(@as(f32, @floatFromInt(max_scroll_offset)) * (1.0 - ratio))));
                 self.session.setScrollOffset(target_offset);
-                                    scroll_log.logf(.info, "scrollbar drag offset={d} ratio={d:.3}", .{ target_offset, ratio });
+                scroll_log.logf(.info, "scrollbar drag offset={d} ratio={d:.3}", .{ target_offset, ratio });
                 handled = true;
             } else {
                 scroll_dragging.* = false;
@@ -594,13 +612,13 @@ pub fn handleInput(
             }
         }
 
-    const suppress_selection_for_scrollbar = mouse_on_scrollbar or scroll_dragging.*;
-    if (!mouse_reporting and in_terminal and input_batch.mousePressed(.left) and self.session.selectionState() != null) {
-        self.session.clearSelection();
-        handled = true;
-    }
-    if (!mouse_reporting and in_terminal and !suppress_selection_for_scrollbar) {
-        if (input_batch.mousePressed(.left)) {
+        const suppress_selection_for_scrollbar = mouse_on_scrollbar or scroll_dragging.*;
+        if (locked and !mouse_reporting and in_terminal and input_batch.mousePressed(.left) and self.session.selectionState() != null) {
+            self.session.clearSelection();
+            handled = true;
+        }
+        if (locked and !mouse_reporting and in_terminal and !suppress_selection_for_scrollbar) {
+            if (input_batch.mousePressed(.left)) {
                 const col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
                 const row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
                 if (cols > 0 and rows > 0) {
@@ -659,7 +677,7 @@ pub fn handleInput(
             }
         }
 
-        if (!mouse_reporting and in_terminal) {
+        if (locked and !mouse_reporting and in_terminal) {
             if (input_batch.mousePressed(.middle)) {
                 const clip_opt = shell.getClipboardText();
                 const html = shell.getClipboardMimeData(self.session.allocator, "text/html");
@@ -687,7 +705,7 @@ pub fn handleInput(
             }
             if (wheel_steps != 0) {
                 if (try self.session.reportAlternateScrollWheel(wheel_steps, mod)) {
-                                            scroll_log.logf(.info, "alt-scroll wheel steps={d}", .{wheel_steps});
+                    scroll_log.logf(.info, "alt-scroll wheel steps={d}", .{wheel_steps});
                     handled = true;
                     wheel_steps = 0;
                 }
@@ -695,11 +713,10 @@ pub fn handleInput(
             if (wheel_steps != 0) {
                 const delta: isize = @intCast(wheel_steps * 3);
                 self.session.scrollBy(delta);
-                                    scroll_log.logf(.info, "scroll wheel delta={d}", .{delta});
+                scroll_log.logf(.info, "scroll wheel delta={d}", .{delta});
                 handled = true;
             }
         }
-
     }
 
     self.scrollbar_drag_active = scroll_dragging.*;

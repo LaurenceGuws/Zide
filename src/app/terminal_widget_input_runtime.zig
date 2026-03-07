@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_file_detect = @import("file_detect.zig");
+const app_logger = @import("../app_logger.zig");
 const app_shell = @import("../app_shell.zig");
 const shared_types = @import("../types/mod.zig");
 const widgets = @import("../ui/widgets.zig");
@@ -35,6 +36,7 @@ pub fn handle(
     ctx: *anyopaque,
     hooks: Hooks,
 ) !Result {
+    const log = app_logger.logger("app.terminal_input");
     var out: Result = .{};
     if (!search_panel_consumed_input and try term_widget.handleInput(
         shell,
@@ -56,9 +58,15 @@ pub fn handle(
         defer allocator.free(req.path);
         if (app_file_detect.isProbablyTextFile(req.path)) {
             if (req.line != null) {
-                try hooks.open_file_at(ctx, req.path, req.line.?, req.col);
+                hooks.open_file_at(ctx, req.path, req.line.?, req.col) catch |err| {
+                    log.logf(.debug, "ctrl+click open_file_at failed path={s}: {s}", .{ req.path, @errorName(err) });
+                    return out;
+                };
             } else {
-                try hooks.open_file(ctx, req.path);
+                hooks.open_file(ctx, req.path) catch |err| {
+                    log.logf(.debug, "ctrl+click open_file failed path={s}: {s}", .{ req.path, @errorName(err) });
+                    return out;
+                };
             }
             out.needs_redraw = true;
             out.note_input = true;
