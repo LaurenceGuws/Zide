@@ -273,6 +273,7 @@ ui_widget_modularization_todo:
             - "2026-03-07: Made viewport texture-shift copy one-shot per new cache generation to prevent repeated `partial=1` redraws when `dirty=none`."
             - "2026-03-07: Removed scroll-path full-damage forcing and switched full-screen scroll mutation to row-range partial damage, allowing scroll-heavy TUIs (e.g. `rain`) to avoid unnecessary full redraws."
             - "2026-03-07: Reverted an experimental 'shift-on-full' texture optimization after it introduced visible scrollback tearing/late text reveal; correctness takes priority over that optimization path."
+            - "2026-03-07: Fixed viewport-shift partial redraw to repaint full-width newly exposed rows (do not reuse stale dirty column ranges for shift rows), addressing blank/invisible scrollback blocks under heavy output."
 
         - id: UI-PERF-08
           title: "Verification pass for latency under heavy terminal output and large editor files"
