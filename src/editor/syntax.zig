@@ -1011,6 +1011,7 @@ fn predicatesMatch(
     text_buffer: *TextStore,
     allocator: std.mem.Allocator,
 ) bool {
+    const log = app_logger.logger("editor.syntax");
     var step_count: u32 = 0;
     const steps = c.ts_query_predicates_for_pattern(query, match.pattern_index, &step_count);
     if (steps == null or step_count == 0) return true;
@@ -1041,7 +1042,10 @@ fn predicatesMatch(
             },
             c.TSQueryPredicateStepTypeCapture => {
                 if (current_name == null) continue;
-                args.append(allocator, .{ .capture = step.value_id }) catch return false;
+                args.append(allocator, .{ .capture = step.value_id }) catch |err| {
+                    log.logf(.warning, "predicate capture arg append failed pattern={d} err={s}", .{ match.pattern_index, @errorName(err) });
+                    return false;
+                };
             },
             c.TSQueryPredicateStepTypeString => {
                 var len: u32 = 0;
@@ -1050,7 +1054,10 @@ fn predicatesMatch(
                 if (current_name == null) {
                     current_name = value;
                 } else {
-                    args.append(allocator, .{ .string = value }) catch return false;
+                    args.append(allocator, .{ .string = value }) catch |err| {
+                        log.logf(.warning, "predicate string arg append failed pattern={d} err={s}", .{ match.pattern_index, @errorName(err) });
+                        return false;
+                    };
                 }
             },
             else => {},
@@ -1260,6 +1267,7 @@ fn captureMatchesPattern(
     pattern: []const u8,
     any: bool,
 ) bool {
+    const log = app_logger.logger("editor.syntax");
     var found = false;
     var any_ok = false;
     var i: u32 = 0;
@@ -1267,7 +1275,10 @@ fn captureMatchesPattern(
         const capture = match.captures[i];
         if (capture.index != capture_id) continue;
         found = true;
-        const text = readNodeTextAlloc(text_buffer, allocator, capture.node) catch return false;
+        const text = readNodeTextAlloc(text_buffer, allocator, capture.node) catch |err| {
+            log.logf(.warning, "captureMatchesPattern read text failed capture={d} err={s}", .{ capture_id, @errorName(err) });
+            return false;
+        };
         defer allocator.free(text);
         const ok = simpleRegexMatch(pattern, text);
         if (any) {
@@ -1324,7 +1335,11 @@ fn nodeTextEquals(
     node: c.TSNode,
     needle: []const u8,
 ) bool {
-    const text = readNodeTextAlloc(text_buffer, allocator, node) catch return false;
+    const log = app_logger.logger("editor.syntax");
+    const text = readNodeTextAlloc(text_buffer, allocator, node) catch |err| {
+        log.logf(.warning, "nodeTextEquals read text failed err={s}", .{@errorName(err)});
+        return false;
+    };
     defer allocator.free(text);
     return std.mem.eql(u8, text, needle);
 }
@@ -1335,6 +1350,7 @@ fn nodeTextEqualsCapture(
     left: c.TSNode,
     right: c.TSNode,
 ) bool {
+    const log = app_logger.logger("editor.syntax");
     const left_start = c.ts_node_start_byte(left);
     const left_end = c.ts_node_end_byte(left);
     const right_start = c.ts_node_start_byte(right);
@@ -1342,9 +1358,15 @@ fn nodeTextEqualsCapture(
     const left_len = @as(usize, @intCast(left_end - left_start));
     const right_len = @as(usize, @intCast(right_end - right_start));
     if (left_len != right_len) return false;
-    const left_text = readNodeTextAlloc(text_buffer, allocator, left) catch return false;
+    const left_text = readNodeTextAlloc(text_buffer, allocator, left) catch |err| {
+        log.logf(.warning, "nodeTextEqualsCapture read left failed err={s}", .{@errorName(err)});
+        return false;
+    };
     defer allocator.free(left_text);
-    const right_text = readNodeTextAlloc(text_buffer, allocator, right) catch return false;
+    const right_text = readNodeTextAlloc(text_buffer, allocator, right) catch |err| {
+        log.logf(.warning, "nodeTextEqualsCapture read right failed err={s}", .{@errorName(err)});
+        return false;
+    };
     defer allocator.free(right_text);
     return std.mem.eql(u8, left_text, right_text);
 }
@@ -1379,7 +1401,11 @@ fn nodeTextContains(
     node: c.TSNode,
     needle: []const u8,
 ) bool {
-    const text = readNodeTextAlloc(text_buffer, allocator, node) catch return false;
+    const log = app_logger.logger("editor.syntax");
+    const text = readNodeTextAlloc(text_buffer, allocator, node) catch |err| {
+        log.logf(.warning, "nodeTextContains read text failed err={s}", .{@errorName(err)});
+        return false;
+    };
     defer allocator.free(text);
     return std.mem.indexOf(u8, text, needle) != null;
 }
