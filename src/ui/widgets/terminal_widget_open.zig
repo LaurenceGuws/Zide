@@ -46,7 +46,11 @@ pub fn ctrlClickOpenMaybe(
             if (resolveLinkPath(allocator, session, link)) |path| {
                 setPendingOpen(allocator, pending_open, .{ .path = path });
                 opened = true;
+            } else {
+                log.logf(.debug, "ctrl-open hyperlink resolve failed link_id={d}", .{link_id});
             }
+        } else {
+            log.logf(.debug, "ctrl-open hyperlink id missing uri link_id={d}", .{link_id});
         }
     }
 
@@ -85,6 +89,9 @@ pub fn ctrlClickOpenMaybe(
                     setPendingOpen(allocator, pending_open, .{ .path = path, .line = parsed.line, .col = parsed.col });
                     return true;
                 }
+                log.logf(.debug, "ctrl-open token resolved to no path token={s}", .{token});
+            } else {
+                log.logf(.debug, "ctrl-open token parse failed token={s}", .{token});
             }
         }
     }
