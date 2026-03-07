@@ -253,6 +253,10 @@ pub fn keyModBits(event: *const c.SDL_Event) u32 {
     return @intCast(event.key.mod);
 }
 
+pub fn mouseButtonClicks(event: *const c.SDL_Event) u8 {
+    return @intCast(event.button.clicks);
+}
+
 pub fn keycodeFromScancodeMods(scancode: i32, shift: bool, alt: bool, ctrl: bool, super: bool) i32 {
     var raw_modstate: c_uint = @intCast(c.SDL_KMOD_NONE);
     if (shift) raw_modstate |= @as(c_uint, @intCast(c.SDL_KMOD_SHIFT));

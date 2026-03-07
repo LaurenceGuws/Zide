@@ -13,6 +13,7 @@ pub const InputState = struct {
     mouse_down: []bool,
     mouse_pressed: []bool,
     mouse_released: []bool,
+    mouse_clicks: []u8,
     key_queue: *std.ArrayList(KeyPress),
     char_queue: *std.ArrayList(TextPress),
     composing_text: *std.ArrayList(u8),
@@ -29,6 +30,7 @@ pub fn resetForFrame(state: InputState) void {
     @memset(state.key_released, false);
     @memset(state.mouse_pressed, false);
     @memset(state.mouse_released, false);
+    @memset(state.mouse_clicks, 0);
     state.window_resized_flag.* = false;
     state.mouse_wheel_delta.* = 0.0;
 }

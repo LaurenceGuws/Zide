@@ -492,6 +492,9 @@ terminal_widget_todo:
             - reference_repos/terminals/foot/selection.c
             - reference_repos/terminals/ghostty/src/terminal/Selection.zig
             - reference_repos/terminals/rio/rio-backend/src/selection.rs
+          notes:
+            - "2026-03-07: Added standard pointer-selection ergonomics in terminal widget input: single-click character anchor, double-click word-span selection, triple-click row-span selection."
+            - "2026-03-07: SDL click-count is now propagated through renderer -> InputBatch (`mouse_clicks`) so widgets can implement multi-click behavior without raw SDL coupling."
 
     - name: "Phase 7 - Correctness + Compatibility"
       tasks:

@@ -161,6 +161,9 @@ pub const KeypadKey = enum {
 
 pub fn sendKey(pty: *pty_mod.Pty, key: types.Key, mod: types.Modifier, key_mode_flags: u32) !bool {
     if (sendKeyWithProtocol(pty, key, mod, key_mode_flags, .press)) return true;
+    if (mod != types.VTERM_MOD_NONE) {
+        if (sendLegacyModifiedKey(pty, key, mod)) return true;
+    }
     const seq = switch (key) {
         types.VTERM_KEY_ENTER => "\r",
         types.VTERM_KEY_TAB => "\t",
@@ -298,6 +301,24 @@ fn sendCsiWithMod(pty: *pty_mod.Pty, prefix: []const u8, mod_code: u8, suffix: [
         return false;
     };
     return true;
+}
+
+fn sendLegacyModifiedKey(pty: *pty_mod.Pty, key: types.Key, mod: types.Modifier) bool {
+    const mod_code = encodeModifier(mod);
+    if (mod_code <= 1) return false;
+    return switch (key) {
+        types.VTERM_KEY_UP => sendCsiWithMod(pty, "1", mod_code, "A"),
+        types.VTERM_KEY_DOWN => sendCsiWithMod(pty, "1", mod_code, "B"),
+        types.VTERM_KEY_RIGHT => sendCsiWithMod(pty, "1", mod_code, "C"),
+        types.VTERM_KEY_LEFT => sendCsiWithMod(pty, "1", mod_code, "D"),
+        types.VTERM_KEY_HOME => sendCsiWithMod(pty, "1", mod_code, "H"),
+        types.VTERM_KEY_END => sendCsiWithMod(pty, "1", mod_code, "F"),
+        types.VTERM_KEY_PAGEUP => sendCsiWithMod(pty, "5", mod_code, "~"),
+        types.VTERM_KEY_PAGEDOWN => sendCsiWithMod(pty, "6", mod_code, "~"),
+        types.VTERM_KEY_INS => sendCsiWithMod(pty, "2", mod_code, "~"),
+        types.VTERM_KEY_DEL => sendCsiWithMod(pty, "3", mod_code, "~"),
+        else => false,
+    };
 }
 
 fn sendKeyWithProtocol(pty: *pty_mod.Pty, key: types.Key, mod: types.Modifier, flags: u32, action: KeyAction) bool {
