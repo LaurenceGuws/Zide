@@ -184,6 +184,261 @@ fn selectionBandForRowBand(band: RowBand) RowBand {
     };
 }
 
+fn softSelectionColor(base: anytype) @TypeOf(base) {
+    var color = base;
+    color.a = @min(@as(u8, 132), color.a);
+    return color;
+}
+
+fn softSelectionInset(scale: f32) f32 {
+    return @max(1.0, std.math.floor(scale * 0.75));
+}
+
+const SelectionCornerMask = struct {
+    top_left_outward: bool = false,
+    top_right_outward: bool = false,
+    bottom_left_outward: bool = false,
+    bottom_right_outward: bool = false,
+    top_left_inward: bool = false,
+    top_right_inward: bool = false,
+    bottom_left_inward: bool = false,
+    bottom_right_inward: bool = false,
+};
+
+fn drawTopSelectionScanline(r: anytype, x: f32, y: f32, w: f32, color: anytype, left_inset: f32, right_inset: f32) void {
+    const line_x = x + left_inset;
+    const line_w = w - left_inset - right_inset;
+    if (line_w <= 0) return;
+    r.drawRect(
+        @intFromFloat(line_x),
+        @intFromFloat(y),
+        @intFromFloat(line_w),
+        1,
+        color,
+    );
+}
+
+fn drawSoftSelectionRect(r: anytype, x: f32, y: f32, w: f32, h: f32, color: anytype, mask: SelectionCornerMask) void {
+    if (w <= 0 or h <= 0) return;
+    const smooth_active = mask.top_left_outward or mask.top_right_outward or mask.bottom_left_outward or mask.bottom_right_outward or mask.top_left_inward or mask.top_right_inward or mask.bottom_left_inward or mask.bottom_right_inward;
+    const inset_x = softSelectionInset(r.uiScaleFactor());
+    const pad_x: f32 = if (smooth_active) @max(1.0, std.math.round(r.uiScaleFactor() * 0.5)) else 0.0;
+    const draw_x = x + inset_x - pad_x;
+    const draw_y = y;
+    const draw_w = @max(1.0, w - inset_x * 2.0 + pad_x * 2.0);
+    const draw_h = h;
+    const corner = @max(1.0, @min(inset_x, std.math.floor(draw_h / 4.0)));
+    const cornerDelta = struct {
+        fn resolve(outward: bool, inward: bool, amount: f32) f32 {
+            if (outward) return amount;
+            if (inward) return -amount;
+            return 0.0;
+        }
+    }.resolve;
+    const top_left_inset = cornerDelta(mask.top_left_outward, mask.top_left_inward, corner);
+    const top_right_inset = cornerDelta(mask.top_right_outward, mask.top_right_inward, corner);
+    const bottom_left_inset = cornerDelta(mask.bottom_left_outward, mask.bottom_left_inward, corner);
+    const bottom_right_inset = cornerDelta(mask.bottom_right_outward, mask.bottom_right_inward, corner);
+    const draw_h_i = @as(i32, @intFromFloat(draw_h));
+
+    if (draw_h_i <= 1) {
+        drawTopSelectionScanline(
+            r,
+            draw_x,
+            draw_y,
+            draw_w,
+            color,
+            if (top_left_inset != 0.0) top_left_inset else bottom_left_inset,
+            if (top_right_inset != 0.0) top_right_inset else bottom_right_inset,
+        );
+        return;
+    }
+    if (draw_h_i == 2) {
+        drawTopSelectionScanline(r, draw_x, draw_y, draw_w, color, top_left_inset, top_right_inset);
+        drawTopSelectionScanline(r, draw_x, draw_y + 1.0, draw_w, color, bottom_left_inset, bottom_right_inset);
+        return;
+    }
+
+    if (top_left_inset == 0 and top_right_inset == 0 and bottom_left_inset == 0 and bottom_right_inset == 0) {
+        r.drawRect(
+            @intFromFloat(draw_x),
+            @intFromFloat(draw_y),
+            @intFromFloat(draw_w),
+            @intFromFloat(draw_h),
+            color,
+        );
+        return;
+    }
+
+    drawTopSelectionScanline(r, draw_x, draw_y, draw_w, color, top_left_inset, top_right_inset);
+    r.drawRect(
+        @intFromFloat(draw_x),
+        @intFromFloat(draw_y + 1.0),
+        @intFromFloat(draw_w),
+        @intFromFloat(draw_h - 2.0),
+        color,
+    );
+    drawTopSelectionScanline(
+        r,
+        draw_x,
+        draw_y + draw_h - 1.0,
+        draw_w,
+        color,
+        bottom_left_inset,
+        bottom_right_inset,
+    );
+}
+
+fn addSoftSelectionRectOp(list: *EditorDrawList, r: anytype, x: f32, y: f32, w: f32, h: f32, color: anytype, mask: SelectionCornerMask) bool {
+    if (w <= 0 or h <= 0) return true;
+    const smooth_active = mask.top_left_outward or mask.top_right_outward or mask.bottom_left_outward or mask.bottom_right_outward or mask.top_left_inward or mask.top_right_inward or mask.bottom_left_inward or mask.bottom_right_inward;
+    const inset_x = softSelectionInset(r.uiScaleFactor());
+    const pad_x: f32 = if (smooth_active) @max(1.0, std.math.round(r.uiScaleFactor() * 0.5)) else 0.0;
+    const draw_x = x + inset_x - pad_x;
+    const draw_y = y;
+    const draw_w = @max(1.0, w - inset_x * 2.0 + pad_x * 2.0);
+    const draw_h = h;
+    const corner = @max(1.0, @min(inset_x, std.math.floor(draw_h / 4.0)));
+    const cornerDelta = struct {
+        fn resolve(outward: bool, inward: bool, amount: f32) f32 {
+            if (outward) return amount;
+            if (inward) return -amount;
+            return 0.0;
+        }
+    }.resolve;
+    const top_left_inset = cornerDelta(mask.top_left_outward, mask.top_left_inward, corner);
+    const top_right_inset = cornerDelta(mask.top_right_outward, mask.top_right_inward, corner);
+    const bottom_left_inset = cornerDelta(mask.bottom_left_outward, mask.bottom_left_inward, corner);
+    const bottom_right_inset = cornerDelta(mask.bottom_right_outward, mask.bottom_right_inward, corner);
+    const draw_h_i = @as(i32, @intFromFloat(draw_h));
+
+    if (draw_h_i <= 1) {
+        const left_inset = if (top_left_inset != 0.0) top_left_inset else bottom_left_inset;
+        const right_inset = if (top_right_inset != 0.0) top_right_inset else bottom_right_inset;
+        const line_x = draw_x + left_inset;
+        const line_w = draw_w - left_inset - right_inset;
+        if (line_w <= 0) return true;
+        return addRectOp(list, line_x, draw_y, line_w, 1.0, color);
+    }
+    if (draw_h_i == 2) {
+        var ok = true;
+        const top_x = draw_x + top_left_inset;
+        const top_w = draw_w - top_left_inset - top_right_inset;
+        if (top_w > 0) ok = ok and addRectOp(list, top_x, draw_y, top_w, 1.0, color);
+        const bottom_x = draw_x + bottom_left_inset;
+        const bottom_w = draw_w - bottom_left_inset - bottom_right_inset;
+        if (bottom_w > 0) ok = ok and addRectOp(list, bottom_x, draw_y + 1.0, bottom_w, 1.0, color);
+        return ok;
+    }
+
+    if (top_left_inset == 0 and top_right_inset == 0 and bottom_left_inset == 0 and bottom_right_inset == 0) {
+        return addRectOp(list, draw_x, draw_y, draw_w, draw_h, color);
+    }
+
+    var ok = true;
+    const top_x = draw_x + top_left_inset;
+    const top_w = draw_w - top_left_inset - top_right_inset;
+    if (top_w > 0) ok = ok and addRectOp(list, top_x, draw_y, top_w, 1.0, color);
+    ok = ok and addRectOp(list, draw_x, draw_y + 1.0, draw_w, draw_h - 2.0, color);
+    const bottom_x = draw_x + bottom_left_inset;
+    const bottom_w = draw_w - bottom_left_inset - bottom_right_inset;
+    if (bottom_w > 0) ok = ok and addRectOp(list, bottom_x, draw_y + draw_h - 1.0, bottom_w, 1.0, color);
+    return ok;
+}
+
+const NeighborEdgeState = struct {
+    left_connected: bool = false,
+    right_connected: bool = false,
+    left_inward: bool = false,
+    right_inward: bool = false,
+};
+
+fn accumulateNeighborEdgeState(state: *NeighborEdgeState, sel_start: usize, sel_end: usize, neighbor_start: usize, neighbor_end: usize) void {
+    if (neighbor_end <= neighbor_start) return;
+
+    const overlaps_left_edge = neighbor_start <= sel_start and neighbor_end > sel_start;
+    const overlaps_right_edge = neighbor_start < sel_end and neighbor_end >= sel_end;
+    if (overlaps_left_edge) state.left_connected = true;
+    if (overlaps_right_edge) state.right_connected = true;
+    if (neighbor_start < sel_start and neighbor_end > sel_start) state.left_inward = true;
+    if (neighbor_end > sel_end and neighbor_start < sel_end) state.right_inward = true;
+}
+
+fn lineNeighborEdgeState(editor: anytype, line_idx: usize, sel_start: usize, sel_end: usize) NeighborEdgeState {
+    var state: NeighborEdgeState = .{};
+
+    const mergeSelection = struct {
+        fn apply(state_local: *NeighborEdgeState, line_idx_local: usize, sel_start_local: usize, sel_end_local: usize, selection: anytype) void {
+            const norm = selection.normalized();
+            if (norm.isEmpty()) return;
+            if (line_idx_local < norm.start.line or line_idx_local > norm.end.line) return;
+
+            const neighbor_start: usize = if (line_idx_local == norm.start.line) norm.start.col else 0;
+            const neighbor_end: usize = if (line_idx_local == norm.end.line) norm.end.col else std.math.maxInt(usize);
+            accumulateNeighborEdgeState(state_local, sel_start_local, sel_end_local, neighbor_start, neighbor_end);
+        }
+    }.apply;
+
+    if (editor.selection) |sel| {
+        mergeSelection(&state, line_idx, sel_start, sel_end, sel);
+    }
+    for (editor.selections.items) |sel| {
+        mergeSelection(&state, line_idx, sel_start, sel_end, sel);
+    }
+    return state;
+}
+
+fn selectionCornerMaskForSegment(
+    editor: anytype,
+    line_idx: usize,
+    cols: usize,
+    line_width: usize,
+    seg: usize,
+    total_visual_lines: usize,
+    seg_start_col: usize,
+    seg_end_col: usize,
+    range: SelectionRange,
+) SelectionCornerMask {
+    const sel_start = @max(range.start_col, seg_start_col);
+    const sel_end = @min(range.end_col, seg_end_col);
+    if (sel_end <= sel_start) return .{};
+
+    var top_state: NeighborEdgeState = .{};
+    if (seg > 0 and cols > 0) {
+        const prev_seg = seg - 1;
+        const prev_seg_start = prev_seg * cols;
+        const prev_seg_end = @min(line_width, prev_seg_start + cols);
+        const prev_start = @max(range.start_col, prev_seg_start);
+        const prev_end = @min(range.end_col, prev_seg_end);
+        accumulateNeighborEdgeState(&top_state, sel_start, sel_end, prev_start, prev_end);
+    } else if (seg == 0 and line_idx > 0 and range.start_col == 0) {
+        top_state = lineNeighborEdgeState(editor, line_idx - 1, sel_start, sel_end);
+    }
+
+    var bottom_state: NeighborEdgeState = .{};
+    if (seg + 1 < total_visual_lines and cols > 0) {
+        const next_seg = seg + 1;
+        const next_seg_start = next_seg * cols;
+        const next_seg_end = @min(line_width, next_seg_start + cols);
+        const next_start = @max(range.start_col, next_seg_start);
+        const next_end = @min(range.end_col, next_seg_end);
+        accumulateNeighborEdgeState(&bottom_state, sel_start, sel_end, next_start, next_end);
+    } else if (seg + 1 >= total_visual_lines and line_idx + 1 < editor.lineCount() and range.end_col >= line_width) {
+        bottom_state = lineNeighborEdgeState(editor, line_idx + 1, sel_start, sel_end);
+    }
+
+    return .{
+        .top_left_outward = !top_state.left_connected,
+        .top_right_outward = !top_state.right_connected,
+        .bottom_left_outward = !bottom_state.left_connected,
+        .bottom_right_outward = !bottom_state.right_connected,
+        .top_left_inward = top_state.left_inward,
+        .top_right_inward = top_state.right_inward,
+        .bottom_left_inward = bottom_state.left_inward,
+        .bottom_right_inward = bottom_state.right_inward,
+    };
+}
+
 fn searchHighlightColor(theme: anytype) @TypeOf(theme.selection) {
     var color = if (@hasField(@TypeOf(theme), "ui_accent")) theme.ui_accent else theme.selection;
     color.a = 80;
@@ -228,13 +483,15 @@ fn flushDrawList(list: *EditorDrawList, r: anytype) void {
                 }
             },
             .cursor => |cursor| {
-                r.drawRect(
-                    @intFromFloat(cursor.x),
-                    @intFromFloat(cursor.y),
-                    2,
-                    @intFromFloat(cursor.h),
-                    unpackColor(ColorType, cursor.color),
-                );
+                const color = unpackColor(ColorType, cursor.color);
+                const scale = r.uiScaleFactor();
+                const edge_inset: i32 = @max(0, @as(i32, @intFromFloat(std.math.floor(scale * 0.5))));
+                const stroke: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(scale))));
+                const x_i: i32 = @as(i32, @intFromFloat(cursor.x)) + edge_inset;
+                const cursor_h_i: i32 = @as(i32, @intFromFloat(cursor.h));
+                const h_i: i32 = @max(1, cursor_h_i - edge_inset * 2);
+                const y_i: i32 = @as(i32, @intFromFloat(cursor.y)) + @divFloor(@max(0, cursor_h_i - h_i), 2);
+                r.drawRect(x_i, y_i, stroke, h_i, color);
             },
         }
     }
@@ -804,6 +1061,7 @@ pub fn draw(
 
             if (range_count > 0) {
                 const sel_band = selectionBandForRowBand(seg_band);
+                const selection_color = softSelectionColor(r.theme.selection);
                 var r_i: usize = 0;
                 while (r_i < range_count) : (r_i += 1) {
                     const range = ranges[r_i];
@@ -812,13 +1070,8 @@ pub fn draw(
                     if (sel_end <= sel_start) continue;
                     const sel_x = text_start_x + @as(f32, @floatFromInt(sel_start - seg_start_col)) * r.char_width;
                     const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r.char_width;
-                    r.drawRect(
-                        @intFromFloat(sel_x),
-                        sel_band.y_i,
-                        @intFromFloat(sel_w),
-                        sel_band.h_i,
-                        r.theme.selection,
-                    );
+                    const corner_mask = selectionCornerMaskForSegment(widget.editor, line_idx, cols, line_width, seg, total_visual_lines, seg_start_col, seg_end_col, range);
+                    drawSoftSelectionRect(r, sel_x, sel_band.y_f, sel_w, sel_band.h_f, selection_color, corner_mask);
                 }
             }
 
@@ -851,6 +1104,7 @@ pub fn draw(
             }
 
             const base_bg = if (is_current) r.theme.current_line else r.theme.background;
+            const selection_bg = softSelectionColor(r.theme.selection);
             var sel_bytes: [8]ByteRange = undefined;
             const sel_count = if (range_count > 0)
                 buildSelectionByteRanges(
@@ -878,7 +1132,7 @@ pub fn draw(
                     seg_end_byte,
                     r.theme.foreground,
                     base_bg,
-                    r.theme.selection,
+                    selection_bg,
                     sel_bytes[0..sel_count],
                     disable_programming_ligatures,
                 );
@@ -894,7 +1148,7 @@ pub fn draw(
                     seg_start_col,
                     effective_tokens,
                     base_bg,
-                    r.theme.selection,
+                    selection_bg,
                     sel_bytes[0..sel_count],
                     disable_programming_ligatures,
                 );
@@ -1128,6 +1382,7 @@ pub fn drawCached(
 
                     if (range_count > 0) {
                         const sel_band = selectionBandForRowBand(seg_band);
+                        const selection_color = softSelectionColor(r.theme.selection);
                         var r_i: usize = 0;
                         while (r_i < range_count) : (r_i += 1) {
                             const range = ranges[r_i];
@@ -1136,7 +1391,8 @@ pub fn drawCached(
                             if (sel_end <= sel_start) continue;
                             const sel_x = origin_x + widget.gutter_width + 8 * r.uiScaleFactor() + @as(f32, @floatFromInt(sel_start - seg_start_col)) * r.char_width;
                             const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r.char_width;
-                            list_ok = list_ok and addRectOp(draw_list, sel_x, sel_band.y_f, sel_w, sel_band.h_f, r.theme.selection);
+                            const corner_mask = selectionCornerMaskForSegment(widget.editor, line_idx, cols, line_width, seg, total_visual_lines, seg_start_col, seg_end_col, range);
+                            list_ok = list_ok and addSoftSelectionRectOp(draw_list, r, sel_x, sel_band.y_f, sel_w, sel_band.h_f, selection_color, corner_mask);
                         }
                     }
 
@@ -1163,6 +1419,7 @@ pub fn drawCached(
                     }
 
                     const base_bg = if (is_current) r.theme.current_line else r.theme.background;
+                    const selection_bg = softSelectionColor(r.theme.selection);
                     var sel_bytes: [8]ByteRange = undefined;
                     const sel_count = if (range_count > 0)
                         buildSelectionByteRanges(
@@ -1192,7 +1449,7 @@ pub fn drawCached(
                             seg_end_byte,
                             r.theme.foreground,
                             base_bg,
-                            r.theme.selection,
+                            selection_bg,
                             sel_bytes[0..sel_count],
                             disable_programming_ligatures,
                         );
@@ -1209,7 +1466,7 @@ pub fn drawCached(
                             seg_start_col,
                             effective_tokens,
                             base_bg,
-                            r.theme.selection,
+                            selection_bg,
                             seg_start_byte,
                             sel_bytes[0..sel_count],
                             disable_programming_ligatures,
@@ -1274,6 +1531,7 @@ pub fn drawCached(
 
                         if (range_count > 0) {
                             const sel_band = selectionBandForRowBand(seg_band);
+                            const selection_color = softSelectionColor(r.theme.selection);
                             var r_i: usize = 0;
                             while (r_i < range_count) : (r_i += 1) {
                                 const range = ranges[r_i];
@@ -1282,18 +1540,14 @@ pub fn drawCached(
                                 if (sel_end <= sel_start) continue;
                                 const sel_x = origin_x + widget.gutter_width + 8 * r.uiScaleFactor() + @as(f32, @floatFromInt(sel_start - seg_start_col)) * r.char_width;
                                 const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r.char_width;
-                                r.drawRect(
-                                    @intFromFloat(sel_x),
-                                    sel_band.y_i,
-                                    @intFromFloat(sel_w),
-                                    sel_band.h_i,
-                                    r.theme.selection,
-                                );
+                                const corner_mask = selectionCornerMaskForSegment(widget.editor, line_idx, cols, line_width, seg, total_visual_lines, seg_start_col, seg_end_col, range);
+                                drawSoftSelectionRect(r, sel_x, sel_band.y_f, sel_w, sel_band.h_f, selection_color, corner_mask);
                             }
                         }
 
                         if (effective_tokens.len == 0) {
                             const seg_base_bg = base_bg;
+                            const selection_bg_local = softSelectionColor(r.theme.selection);
                             if (sel_count == 0) {
                                 r.drawTextMonospaceOnBgPolicy(line_text[seg_start_byte..seg_end_byte], text_start_x, seg_y, r.theme.foreground, seg_base_bg, disable_programming_ligatures);
                             } else {
@@ -1305,7 +1559,7 @@ pub fn drawCached(
                                         r.drawTextMonospaceOnBgPolicy(line_text[cursor_b..sr.start], x0, seg_y, r.theme.foreground, seg_base_bg, disable_programming_ligatures);
                                     }
                                     const x1 = xForByteOffset(r, line_text, seg_start_byte, seg_start_col, sr.start, text_start_x);
-                                    r.drawTextMonospaceOnBgPolicy(line_text[sr.start..sr.end], x1, seg_y, r.theme.foreground, r.theme.selection, disable_programming_ligatures);
+                                    r.drawTextMonospaceOnBgPolicy(line_text[sr.start..sr.end], x1, seg_y, r.theme.foreground, selection_bg_local, disable_programming_ligatures);
                                     cursor_b = sr.end;
                                 }
                                 if (cursor_b < seg_end_byte) {
@@ -1323,13 +1577,13 @@ pub fn drawCached(
                                 seg_start_byte,
                                 seg_end_byte,
                                 seg_start_col,
-                                effective_tokens,
-                                base_bg,
-                                r.theme.selection,
-                                sel_bytes[0..sel_count],
-                                disable_programming_ligatures,
-                            );
-                        }
+                            effective_tokens,
+                            base_bg,
+                            selection_bg,
+                            sel_bytes[0..sel_count],
+                            disable_programming_ligatures,
+                        );
+                    }
 
                         if (is_current and seg == cursor_seg) {
                             const local_col = cursor_col_vis - seg_start_col;

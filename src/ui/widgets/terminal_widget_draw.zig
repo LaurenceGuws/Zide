@@ -38,6 +38,9 @@ var frame_latency_metrics: FrameLatencyMetrics = .{};
 pub const FrameLatencyMetrics = struct {
     seq: u64 = 0,
     lock_ms: f64 = 0.0,
+    cache_copy_ms: f64 = 0.0,
+    texture_update_ms: f64 = 0.0,
+    overlay_ms: f64 = 0.0,
     render_ms: f64 = 0.0,
     draw_ms: f64 = 0.0,
 };
@@ -46,11 +49,21 @@ pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
     return frame_latency_metrics;
 }
 
-fn publishFrameLatencyMetrics(lock_ms: f64, render_ms: f64, draw_ms: f64) void {
+fn publishFrameLatencyMetrics(
+    lock_ms: f64,
+    cache_copy_ms: f64,
+    texture_update_ms: f64,
+    overlay_ms: f64,
+    render_ms: f64,
+    draw_ms: f64,
+) void {
     frame_latency_seq +%= 1;
     frame_latency_metrics = .{
         .seq = frame_latency_seq,
         .lock_ms = lock_ms,
+        .cache_copy_ms = cache_copy_ms,
+        .texture_update_ms = texture_update_ms,
+        .overlay_ms = overlay_ms,
         .render_ms = render_ms,
         .draw_ms = draw_ms,
     };
@@ -59,6 +72,104 @@ fn publishFrameLatencyMetrics(lock_ms: f64, render_ms: f64, draw_ms: f64) void {
 fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
     const scale = if (render_scale > 0.0) render_scale else 1.0;
     return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
+}
+
+fn softSelectionColor(base: Color) Color {
+    return .{
+        .r = base.r,
+        .g = base.g,
+        .b = base.b,
+        .a = @min(@as(u8, 156), base.a),
+    };
+}
+
+const SelectionCornerMask = struct {
+    top_left_outward: bool = false,
+    top_right_outward: bool = false,
+    bottom_left_outward: bool = false,
+    bottom_right_outward: bool = false,
+    top_left_inward: bool = false,
+    top_right_inward: bool = false,
+    bottom_left_inward: bool = false,
+    bottom_right_inward: bool = false,
+};
+
+fn drawSoftSelectionRect(r: anytype, x: i32, y: i32, w: i32, h: i32, color: Color, mask: SelectionCornerMask) void {
+    if (w <= 0 or h <= 0) return;
+    const smooth_active = mask.top_left_outward or mask.top_right_outward or mask.bottom_left_outward or mask.bottom_right_outward or mask.top_left_inward or mask.top_right_inward or mask.bottom_left_inward or mask.bottom_right_inward;
+    const inset_x = @max(1, @as(i32, @intFromFloat(std.math.floor(r.uiScaleFactor() * 0.75))));
+    const pad_x = if (smooth_active) @max(1, @as(i32, @intFromFloat(std.math.round(r.uiScaleFactor() * 0.5)))) else 0;
+    const draw_x = x + inset_x - pad_x;
+    const draw_y = y;
+    const draw_w = @max(1, w - inset_x * 2 + pad_x * 2);
+    const draw_h = h;
+    const corner = @max(1, @min(inset_x, @divFloor(draw_h, 4)));
+    const cornerDelta = struct {
+        fn resolve(outward: bool, inward: bool, amount: i32) i32 {
+            if (outward) return amount;
+            if (inward) return -amount;
+            return 0;
+        }
+    }.resolve;
+    const top_left_inset = cornerDelta(mask.top_left_outward, mask.top_left_inward, corner);
+    const top_right_inset = cornerDelta(mask.top_right_outward, mask.top_right_inward, corner);
+    const bottom_left_inset = cornerDelta(mask.bottom_left_outward, mask.bottom_left_inward, corner);
+    const bottom_right_inset = cornerDelta(mask.bottom_right_outward, mask.bottom_right_inward, corner);
+
+    const drawTopRow = struct {
+        fn draw(r_local: anytype, x_local: i32, y_local: i32, w_local: i32, color_local: Color, left_inset: i32, right_inset: i32) void {
+            const line_x = x_local + left_inset;
+            const line_w = w_local - left_inset - right_inset;
+            if (line_w > 0) {
+                r_local.drawRect(line_x, y_local, line_w, 1, color_local);
+            }
+        }
+    }.draw;
+
+    switch (draw_h) {
+        1 => {
+            drawTopRow(
+                r,
+                draw_x,
+                draw_y,
+                draw_w,
+                color,
+                if (top_left_inset != 0) top_left_inset else bottom_left_inset,
+                if (top_right_inset != 0) top_right_inset else bottom_right_inset,
+            );
+            return;
+        },
+        2 => {
+            drawTopRow(r, draw_x, draw_y, draw_w, color, top_left_inset, top_right_inset);
+            drawTopRow(r, draw_x, draw_y + 1, draw_w, color, bottom_left_inset, bottom_right_inset);
+            return;
+        },
+        else => {},
+    }
+
+    if (top_left_inset == 0 and top_right_inset == 0 and bottom_left_inset == 0 and bottom_right_inset == 0) {
+        r.drawRect(draw_x, draw_y, draw_w, draw_h, color);
+        return;
+    }
+
+    drawTopRow(r, draw_x, draw_y, draw_w, color, top_left_inset, top_right_inset);
+    r.drawRect(draw_x, draw_y + 1, draw_w, draw_h - 2, color);
+    drawTopRow(r, draw_x, draw_y + draw_h - 1, draw_w, color, bottom_left_inset, bottom_right_inset);
+}
+
+fn rowSelectionCoversColumn(cache: *const RenderCache, selection_rows: []const bool, row_idx: usize, col: usize) bool {
+    if (row_idx >= selection_rows.len or !selection_rows[row_idx]) return false;
+    const start = @as(usize, cache.selection_cols_start.items[row_idx]);
+    const end = @as(usize, cache.selection_cols_end.items[row_idx]);
+    return col >= start and col <= end;
+}
+
+fn rowSelectionStart(cache: *const RenderCache, row_idx: usize) usize {
+    return @as(usize, cache.selection_cols_start.items[row_idx]);
+}
+
+fn rowSelectionEnd(cache: *const RenderCache, row_idx: usize) usize {
+    return @as(usize, cache.selection_cols_end.items[row_idx]);
 }
 
 fn copyRenderCacheSnapshot(dst: *RenderCache, allocator: std.mem.Allocator, src: *const RenderCache) !void {
@@ -101,6 +212,7 @@ fn copyRenderCacheSnapshot(dst: *RenderCache, allocator: std.mem.Allocator, src:
     dst.cursor = src.cursor;
     dst.cursor_style = src.cursor_style;
     dst.cursor_visible = src.cursor_visible;
+    dst.has_blink = src.has_blink;
     dst.dirty = src.dirty;
     dst.damage = src.damage;
     dst.alt_active = src.alt_active;
@@ -123,37 +235,44 @@ pub fn draw(
 ) void {
     const draw_start = app_shell.getTime();
     var lock_ms: f64 = 0.0;
+    var cache_copy_ms: f64 = 0.0;
+    var texture_update_ms: f64 = 0.0;
+    var overlay_ms: f64 = 0.0;
     var render_phase_start = draw_start;
     defer {
         const draw_end = app_shell.getTime();
         const draw_ms_total = time_utils.secondsToMs(draw_end - draw_start);
         const render_ms = time_utils.secondsToMs(draw_end - render_phase_start);
-        publishFrameLatencyMetrics(lock_ms, render_ms, draw_ms_total);
+        publishFrameLatencyMetrics(
+            lock_ms,
+            cache_copy_ms,
+            texture_update_ms,
+            overlay_ms,
+            render_ms,
+            draw_ms_total,
+        );
     }
 
     const r = shell.rendererPtr();
     const cache = &self.draw_cache;
     var alt_exit = false;
     const lock_phase_start = app_shell.getTime();
-    self.session.lock();
-    {
-        var live_cache = self.session.renderCache();
-        if (!live_cache.alt_active and self.session.view_cache_pending.load(.acquire)) {
-            self.session.updateViewCacheForScrollLocked();
-            live_cache = self.session.renderCache();
-        }
-        copyRenderCacheSnapshot(cache, self.session.allocator, live_cache) catch |err| {
-            const log = app_logger.logger("terminal.ui.redraw");
-            log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
-            self.session.unlock();
-            return;
-        };
-        alt_exit = self.session.alt_last_active and !cache.alt_active;
-        self.session.alt_last_active = cache.alt_active;
+    var live_cache = self.session.renderCache();
+    if (!live_cache.alt_active and self.session.view_cache_pending.load(.acquire)) {
+        // Queue a best-effort scroll view-cache refresh without blocking draw.
+        self.session.updateViewCacheForScroll();
+        live_cache = self.session.renderCache();
     }
-    self.session.unlock();
+    copyRenderCacheSnapshot(cache, self.session.allocator, live_cache) catch |err| {
+        const log = app_logger.logger("terminal.ui.redraw");
+        log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
+        return;
+    };
+    alt_exit = self.last_alt_active and !cache.alt_active;
+    self.last_alt_active = cache.alt_active;
     render_phase_start = app_shell.getTime();
     lock_ms = time_utils.secondsToMs(render_phase_start - lock_phase_start);
+    cache_copy_ms = lock_ms;
 
     const sync_updates = cache.sync_updates_active;
     const screen_reverse = cache.screen_reverse;
@@ -205,15 +324,7 @@ pub fn draw(
     }
     const selection_active = cache.selection_active;
     const kitty_generation = cache.kitty_generation;
-    var has_blink = false;
-    if (blink_style != .off) {
-        for (cache.cells.items) |cell| {
-            if (cell.attrs.blink) {
-                has_blink = true;
-                break;
-            }
-        }
-    }
+    const has_blink = blink_style != .off and cache.has_blink;
 
     self.kitty.updateViews(self.session.allocator, rows, cols, cache.kitty_images.items, cache.kitty_placements.items);
 
@@ -833,6 +944,9 @@ pub fn draw(
     }.render;
 
     var updated = false;
+    var texture_full_update = false;
+    var texture_partial_update = false;
+    const texture_phase_start = app_shell.getTime();
     if (rows > 0 and cols > 0) {
         const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
         const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_height));
@@ -865,6 +979,8 @@ pub fn draw(
             needs_full = true;
             needs_partial = false;
         }
+        texture_full_update = needs_full;
+        texture_partial_update = needs_partial;
 
         if ((needs_full or needs_partial) and r.beginTerminalTexture()) {
             // Disable scissor while updating the offscreen texture.
@@ -993,6 +1109,8 @@ pub fn draw(
         }
         r.drawTerminalTexture(base_x, base_y);
     }
+    texture_update_ms = time_utils.secondsToMs(app_shell.getTime() - texture_phase_start);
+    const overlay_phase_start = app_shell.getTime();
     if (!has_kitty and self.kitty.textures.count() > 0) {
         self.kitty.cleanupTextures(self.session.allocator, self.kitty.images_view.items);
     }
@@ -1000,12 +1118,7 @@ pub fn draw(
     if (rows > 0 and cols > 0 and selection_active) {
         const selection_rows = cache.selection_rows.items;
         if (selection_rows.len == rows) {
-            const selection_color = Color{
-                .r = r.theme.selection.r,
-                .g = r.theme.selection.g,
-                .b = r.theme.selection.b,
-                .a = 140,
-            };
+            const selection_color = softSelectionColor(r.theme.selection);
             const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
             const cell_h_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_height));
             const base_x_i: i32 = @intFromFloat(std.math.round(base_x));
@@ -1023,12 +1136,35 @@ pub fn draw(
                 const rect_w = cell_w_i * @as(i32, @intCast(col_end - col_start + 1));
                 const rect_h = cell_h_i;
 
-                r.drawRect(
+                const has_prev = row_idx > 0 and selection_rows[row_idx - 1];
+                const has_next = row_idx + 1 < rows and selection_rows[row_idx + 1];
+
+                const top_left_exposed = !has_prev or !rowSelectionCoversColumn(cache, selection_rows, row_idx - 1, col_start);
+                const top_right_exposed = !has_prev or !rowSelectionCoversColumn(cache, selection_rows, row_idx - 1, col_end);
+                const bottom_left_exposed = !has_next or !rowSelectionCoversColumn(cache, selection_rows, row_idx + 1, col_start);
+                const bottom_right_exposed = !has_next or !rowSelectionCoversColumn(cache, selection_rows, row_idx + 1, col_end);
+                const top_left_inward = has_prev and rowSelectionStart(cache, row_idx - 1) < col_start;
+                const top_right_inward = has_prev and rowSelectionEnd(cache, row_idx - 1) > col_end;
+                const bottom_left_inward = has_next and rowSelectionStart(cache, row_idx + 1) < col_start;
+                const bottom_right_inward = has_next and rowSelectionEnd(cache, row_idx + 1) > col_end;
+
+                drawSoftSelectionRect(
+                    r,
                     rect_x,
                     rect_y,
                     rect_w,
                     rect_h,
                     selection_color,
+                    .{
+                        .top_left_outward = top_left_exposed,
+                        .top_right_outward = top_right_exposed,
+                        .bottom_left_outward = bottom_left_exposed,
+                        .bottom_right_outward = bottom_right_exposed,
+                        .top_left_inward = top_left_inward,
+                        .top_right_inward = top_right_inward,
+                        .bottom_left_inward = bottom_left_inward,
+                        .bottom_right_inward = bottom_right_inward,
+                    },
                 );
             }
         }
@@ -1062,6 +1198,8 @@ pub fn draw(
             const cell_y_i = base_y_i + @as(i32, @intCast(cursor.row)) * cell_h_i;
             const cell_x = @as(f32, @floatFromInt(cell_x_i));
             const cell_y = @as(f32, @floatFromInt(cell_y_i));
+            const cursor_edge_inset: i32 = @max(0, @as(i32, @intFromFloat(std.math.floor(r.uiScaleFactor() * 0.5))));
+            const cursor_stroke: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(r.uiScaleFactor()))));
 
             var fg = Color{
                 .r = cell.attrs.fg.r,
@@ -1102,10 +1240,14 @@ pub fn draw(
             const cursor_w_i: i32 = cell_w_i * @as(i32, @intCast(cell_width_units));
             if (!self.ui_focused) {
                 const border_w: i32 = 1;
-                r.drawRect(cell_x_i, cell_y_i, cursor_w_i, border_w, r.theme.cursor);
-                r.drawRect(cell_x_i, cell_y_i + cell_h_i - border_w, cursor_w_i, border_w, r.theme.cursor);
-                r.drawRect(cell_x_i, cell_y_i, border_w, cell_h_i, r.theme.cursor);
-                r.drawRect(cell_x_i + cursor_w_i - border_w, cell_y_i, border_w, cell_h_i, r.theme.cursor);
+                const box_x = cell_x_i + cursor_edge_inset;
+                const box_y = cell_y_i + cursor_edge_inset;
+                const box_w = @max(border_w * 2, cursor_w_i - cursor_edge_inset * 2);
+                const box_h = @max(border_w * 2, cell_h_i - cursor_edge_inset * 2);
+                r.drawRect(box_x, box_y, box_w, border_w, r.theme.cursor);
+                r.drawRect(box_x, box_y + box_h - border_w, box_w, border_w, r.theme.cursor);
+                r.drawRect(box_x, box_y, border_w, box_h, r.theme.cursor);
+                r.drawRect(box_x + box_w - border_w, box_y, border_w, box_h, r.theme.cursor);
             } else switch (cursor_style.shape) {
                 .block => {
                     if (cell.combining_len > 0) {
@@ -1144,10 +1286,16 @@ pub fn draw(
                     }
                 },
                 .underline => {
-                    r.drawRect(cell_x_i, cell_y_i + cell_h_i - 2, cursor_w_i, 2, r.theme.cursor);
+                    const draw_x = cell_x_i + cursor_edge_inset;
+                    const draw_w = @max(1, cursor_w_i - cursor_edge_inset * 2);
+                    const draw_y = cell_y_i + cell_h_i - cursor_stroke - cursor_edge_inset;
+                    r.drawRect(draw_x, draw_y, draw_w, cursor_stroke, r.theme.cursor);
                 },
                 .bar => {
-                    r.drawRect(cell_x_i, cell_y_i, 2, cell_h_i, r.theme.cursor);
+                    const draw_x = cell_x_i + cursor_edge_inset;
+                    const draw_h = @max(1, cell_h_i - cursor_edge_inset * 2);
+                    const draw_y = cell_y_i + @divFloor(cell_h_i - draw_h, 2);
+                    r.drawRect(draw_x, draw_y, cursor_stroke, draw_h, r.theme.cursor);
                 },
             }
             const composing_cells: usize = if (input.composing_active and input.composing_text.len > 0) blk: {
@@ -1266,6 +1414,7 @@ pub fn draw(
     if (!sync_updates and (updated or cache.dirty == .none)) {
         _ = self.session.clearDirtyIfGeneration(cache.generation);
     }
+    overlay_ms = time_utils.secondsToMs(app_shell.getTime() - overlay_phase_start);
 
     if (alt_exit) {
         const elapsed_ms = (app_shell.getTime() - draw_start_time) * 1000.0;
@@ -1286,6 +1435,7 @@ pub fn draw(
     }
 
     const draw_log = app_logger.logger("terminal.ui.redraw");
+    const perf_log = app_logger.logger("terminal.ui.perf");
     const now = app_shell.getTime();
     const elapsed_ms = time_utils.secondsToMs(now - draw_start);
     const has_kitty_images = self.kitty.images_view.items.len > 0;
@@ -1302,6 +1452,22 @@ pub fn draw(
                 rows * cols,
                 self.kitty.images_view.items.len,
                 self.kitty.placements_view.items.len,
+            },
+        );
+        perf_log.logf(
+            .info,
+            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} rows={d} cols={d}",
+            .{
+                elapsed_ms,
+                lock_ms,
+                cache_copy_ms,
+                texture_update_ms,
+                overlay_ms,
+                @intFromBool(texture_full_update),
+                @intFromBool(texture_partial_update),
+                @intFromBool(updated),
+                rows,
+                cols,
             },
         );
     }
