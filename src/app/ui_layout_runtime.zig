@@ -10,7 +10,7 @@ pub const Hooks = struct {
 
 pub fn applyUiScale(state: anytype, scale: f32, ctx: *anyopaque, hooks: Hooks) void {
     state.options_bar.height = 26 * scale;
-    state.tab_bar.height = 28 * scale;
+    state.tab_bar.height = 24 * scale;
     state.tab_bar.tab_width = 150 * scale;
     state.tab_bar.tab_spacing = @max(1, scale);
     state.status_bar.height = 24 * scale;

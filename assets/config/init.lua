@@ -391,6 +391,8 @@ return {
             { key = "w", mods = { "ctrl", "shift" }, action = "terminal_close_tab" },
             { key = "tab", mods = { "ctrl" }, action = "terminal_next_tab" },
             { key = "tab", mods = { "ctrl", "shift" }, action = "terminal_prev_tab" },
+            { key = "right", mods = { "ctrl", "shift" }, action = "terminal_next_tab" },
+            { key = "left", mods = { "ctrl", "shift" }, action = "terminal_prev_tab" },
             { key = "one", mods = { "ctrl" }, action = "terminal_focus_tab_1" },
             { key = "two", mods = { "ctrl" }, action = "terminal_focus_tab_2" },
             { key = "three", mods = { "ctrl" }, action = "terminal_focus_tab_3" },

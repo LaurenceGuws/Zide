@@ -1157,62 +1157,48 @@ pub const Screen = struct {
     pub fn updateDefaultColors(self: *Screen, old_attrs: types.CellAttrs, new_attrs: types.CellAttrs) void {
         self.default_attrs = new_attrs;
 
-        if (self.current_attrs.fg.r == old_attrs.fg.r and
-            self.current_attrs.fg.g == old_attrs.fg.g and
-            self.current_attrs.fg.b == old_attrs.fg.b and
-            self.current_attrs.fg.a == old_attrs.fg.a and
-            self.current_attrs.bg.r == old_attrs.bg.r and
-            self.current_attrs.bg.g == old_attrs.bg.g and
-            self.current_attrs.bg.b == old_attrs.bg.b and
-            self.current_attrs.bg.a == old_attrs.bg.a and
-            self.current_attrs.underline_color.r == old_attrs.underline_color.r and
-            self.current_attrs.underline_color.g == old_attrs.underline_color.g and
-            self.current_attrs.underline_color.b == old_attrs.underline_color.b and
-            self.current_attrs.underline_color.a == old_attrs.underline_color.a)
-        {
-            self.current_attrs.fg = new_attrs.fg;
-            self.current_attrs.bg = new_attrs.bg;
-            self.current_attrs.underline_color = new_attrs.underline_color;
-        }
+        if (colorsEqual(self.current_attrs.fg, old_attrs.fg)) self.current_attrs.fg = new_attrs.fg;
+        if (colorsEqual(self.current_attrs.bg, old_attrs.bg)) self.current_attrs.bg = new_attrs.bg;
+        if (colorsEqual(self.current_attrs.underline_color, old_attrs.underline_color)) self.current_attrs.underline_color = new_attrs.underline_color;
 
-        if (self.saved_cursor.attrs.fg.r == old_attrs.fg.r and
-            self.saved_cursor.attrs.fg.g == old_attrs.fg.g and
-            self.saved_cursor.attrs.fg.b == old_attrs.fg.b and
-            self.saved_cursor.attrs.fg.a == old_attrs.fg.a and
-            self.saved_cursor.attrs.bg.r == old_attrs.bg.r and
-            self.saved_cursor.attrs.bg.g == old_attrs.bg.g and
-            self.saved_cursor.attrs.bg.b == old_attrs.bg.b and
-            self.saved_cursor.attrs.bg.a == old_attrs.bg.a and
-            self.saved_cursor.attrs.underline_color.r == old_attrs.underline_color.r and
-            self.saved_cursor.attrs.underline_color.g == old_attrs.underline_color.g and
-            self.saved_cursor.attrs.underline_color.b == old_attrs.underline_color.b and
-            self.saved_cursor.attrs.underline_color.a == old_attrs.underline_color.a)
-        {
-            self.saved_cursor.attrs.fg = new_attrs.fg;
-            self.saved_cursor.attrs.bg = new_attrs.bg;
-            self.saved_cursor.attrs.underline_color = new_attrs.underline_color;
-        }
+        if (colorsEqual(self.saved_cursor.attrs.fg, old_attrs.fg)) self.saved_cursor.attrs.fg = new_attrs.fg;
+        if (colorsEqual(self.saved_cursor.attrs.bg, old_attrs.bg)) self.saved_cursor.attrs.bg = new_attrs.bg;
+        if (colorsEqual(self.saved_cursor.attrs.underline_color, old_attrs.underline_color)) self.saved_cursor.attrs.underline_color = new_attrs.underline_color;
 
         for (self.grid.cells.items) |*cell| {
-            if (cell.attrs.fg.r == old_attrs.fg.r and
-                cell.attrs.fg.g == old_attrs.fg.g and
-                cell.attrs.fg.b == old_attrs.fg.b and
-                cell.attrs.fg.a == old_attrs.fg.a and
-                cell.attrs.bg.r == old_attrs.bg.r and
-                cell.attrs.bg.g == old_attrs.bg.g and
-                cell.attrs.bg.b == old_attrs.bg.b and
-                cell.attrs.bg.a == old_attrs.bg.a and
-                cell.attrs.underline_color.r == old_attrs.underline_color.r and
-                cell.attrs.underline_color.g == old_attrs.underline_color.g and
-                cell.attrs.underline_color.b == old_attrs.underline_color.b and
-                cell.attrs.underline_color.a == old_attrs.underline_color.a)
-            {
-                cell.attrs.fg = new_attrs.fg;
-                cell.attrs.bg = new_attrs.bg;
-                cell.attrs.underline_color = new_attrs.underline_color;
-            }
+            if (colorsEqual(cell.attrs.fg, old_attrs.fg)) cell.attrs.fg = new_attrs.fg;
+            if (colorsEqual(cell.attrs.bg, old_attrs.bg)) cell.attrs.bg = new_attrs.bg;
+            if (colorsEqual(cell.attrs.underline_color, old_attrs.underline_color)) cell.attrs.underline_color = new_attrs.underline_color;
         }
         self.grid.markDirtyAll();
+    }
+
+    pub fn updateAnsiColors(self: *Screen, old_colors: [16]types.Color, new_colors: [16]types.Color) void {
+        self.current_attrs.fg = remapAnsiColor(self.current_attrs.fg, old_colors, new_colors);
+        self.current_attrs.bg = remapAnsiColor(self.current_attrs.bg, old_colors, new_colors);
+        self.current_attrs.underline_color = remapAnsiColor(self.current_attrs.underline_color, old_colors, new_colors);
+
+        self.saved_cursor.attrs.fg = remapAnsiColor(self.saved_cursor.attrs.fg, old_colors, new_colors);
+        self.saved_cursor.attrs.bg = remapAnsiColor(self.saved_cursor.attrs.bg, old_colors, new_colors);
+        self.saved_cursor.attrs.underline_color = remapAnsiColor(self.saved_cursor.attrs.underline_color, old_colors, new_colors);
+
+        for (self.grid.cells.items) |*cell| {
+            cell.attrs.fg = remapAnsiColor(cell.attrs.fg, old_colors, new_colors);
+            cell.attrs.bg = remapAnsiColor(cell.attrs.bg, old_colors, new_colors);
+            cell.attrs.underline_color = remapAnsiColor(cell.attrs.underline_color, old_colors, new_colors);
+        }
+        self.grid.markDirtyAll();
+    }
+
+    fn remapAnsiColor(color: types.Color, old_colors: [16]types.Color, new_colors: [16]types.Color) types.Color {
+        for (0..16) |i| {
+            if (colorsEqual(color, old_colors[i])) return new_colors[i];
+        }
+        return color;
+    }
+
+    fn colorsEqual(a: types.Color, b: types.Color) bool {
+        return a.r == b.r and a.g == b.g and a.b == b.b and a.a == b.a;
     }
 
     pub fn scrollRegionUpBy(self: *Screen, n: usize, blank_cell: types.Cell) void {

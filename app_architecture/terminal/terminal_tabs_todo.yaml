@@ -137,6 +137,7 @@ terminal_tabs_todo:
             - app_architecture/CONFIG.md
           notes:
             - "Required baseline: new tab, close tab, next tab, previous tab, activate tab by index."
+            - "Default terminal tab cycling now includes Ctrl+Shift+Left/Right aliases in addition to Ctrl+Tab / Ctrl+Shift+Tab."
         - id: TABS-02-03
           title: "Handle tab close edge cases for live processes"
           status: done

@@ -23,11 +23,11 @@ pub const ScrollbarThumb = struct {
 };
 
 pub fn scrollbarWidth(ui_scale: f32) f32 {
-    return @max(@as(f32, 8), 10 * ui_scale);
+    return @max(@as(f32, 3), 3 * ui_scale);
 }
 
 pub fn scrollbarHoverWidth(ui_scale: f32) f32 {
-    return @max(@as(f32, 10), 14 * ui_scale);
+    return @max(@as(f32, 6), 8 * ui_scale);
 }
 
 pub fn scrollbarHitMargin(ui_scale: f32) f32 {

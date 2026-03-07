@@ -26,6 +26,7 @@ pub fn updateHoverState(
     y: f32,
     width: f32,
     height: f32,
+    ui_scale: f32,
     cell_width: f32,
     cell_height: f32,
     snapshot: terminal_mod.TerminalSnapshot,
@@ -37,7 +38,7 @@ pub fn updateHoverState(
     const cols = snapshot.cols;
     const mouse = input_batch.mouse_pos;
     const ctrl = input_batch.mods.ctrl;
-    const scrollbar_w: f32 = 10;
+    const scrollbar_w: f32 = common.scrollbarWidth(ui_scale);
     const scrollbar_x = x + width - scrollbar_w;
     var hover_row: isize = -1;
     var hover_col: isize = -1;

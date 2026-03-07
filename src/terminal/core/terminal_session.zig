@@ -388,6 +388,16 @@ pub const TerminalSession = struct {
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
+    pub fn remapAnsiColors(self: *TerminalSession, old_colors: [16]types.Color, new_colors: [16]types.Color) void {
+        self.lock();
+        defer self.unlock();
+        self.primary.updateAnsiColors(old_colors, new_colors);
+        self.alt.updateAnsiColors(old_colors, new_colors);
+        self.history.updateAnsiColors(old_colors, new_colors);
+        self.force_full_damage.store(true, .release);
+        self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
+    }
+
     pub fn deinit(self: *TerminalSession) void {
         if (self.read_thread) |thread| {
             self.read_thread_running.store(false, .release);
