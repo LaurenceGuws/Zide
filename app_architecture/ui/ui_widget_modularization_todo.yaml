@@ -213,6 +213,7 @@ ui_widget_modularization_todo:
             - "2026-03-07: Added `TerminalWorkspace.PollBudget` and `pollBudgeted(...)` (active tab first + bounded background round-robin polling)."
             - "2026-03-07: Visible-terminal runtime now uses tighter per-frame budgets when input is active and slightly larger budgets when idle."
             - "2026-03-07: Regression tuning for terminal TUIs (rain/stress): added bounded multi-poll passes for active tab and raised runtime poll budgets to improve frame smoothness and key-to-pixel latency while keeping polling bounded."
+            - "2026-03-07: Added adaptive poll-budget tuning using prior-frame spillover/backlog hints (`lastPollFrameMetrics`) to dynamically rebalance active-vs-background polling."
 
         - id: UI-PERF-04
           title: "Remove synchronous grammar bootstrap from frame path"
