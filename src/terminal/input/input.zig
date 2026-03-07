@@ -224,6 +224,8 @@ pub fn sendCharAction(pty: *pty_mod.Pty, char: u32, mod: types.Modifier, key_mod
     const log = app_logger.logger("terminal.input");
     if (char > 0x10FFFF or (char >= 0xD800 and char <= 0xDFFF)) return false;
     if (sendCharWithProtocol(pty, char, mod, key_mode_flags, action)) return true;
+    const report_all = (key_mode_flags & key_encoding.key_mode_report_all_event_types) != 0;
+    if (!report_all and action == .release) return false;
     const report_text = (key_mode_flags & key_encoding.key_mode_report_text) != 0;
     if (!report_text and (mod & types.VTERM_MOD_CTRL) != 0) {
         if (ctrlChar(char)) |mapped| {
