@@ -620,8 +620,9 @@ pub fn handleInput(
         }
         if (locked and !mouse_reporting and in_terminal and !suppress_selection_for_scrollbar) {
             if (input_batch.mousePressed(.left)) {
-                const col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
-                const row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
+                const press_mouse = input_batch.mousePressPos(.left) orelse mouse;
+                const col = @as(usize, @intFromFloat((press_mouse.x - hit_base_x) / hit_cell_w));
+                const row = @as(usize, @intFromFloat((press_mouse.y - hit_base_y) / hit_cell_h));
                 if (cols > 0 and rows > 0) {
                     const clamped_col = @min(col, cols - 1);
                     const clamped_row = @min(row, rows - 1);
@@ -630,7 +631,7 @@ pub fn handleInput(
                         const row_cells = snapshot.cells[clamped_row * cols .. (clamped_row + 1) * cols];
                         if (rowLastContentCol(snapshot.cells, cols, clamped_row)) |last_col| {
                             const click_count = input_batch.mouseClicks(.left);
-                            self.selection_press_origin = mouse;
+                            self.selection_press_origin = press_mouse;
                             self.selection_drag_active = false;
                             if (click_count >= 3) {
                                 self.multi_click_selection_mode = .line;

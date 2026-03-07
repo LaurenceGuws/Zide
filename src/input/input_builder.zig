@@ -42,6 +42,15 @@ pub fn buildInputBatch(allocator: std.mem.Allocator, shell: *app_shell.Shell) sh
     batch.mouse_clicks[@intFromEnum(shared_types.input.MouseButton.left)] = r.mouseButtonClicks(app_shell.MOUSE_LEFT);
     batch.mouse_clicks[@intFromEnum(shared_types.input.MouseButton.middle)] = r.mouseButtonClicks(app_shell.MOUSE_MIDDLE);
     batch.mouse_clicks[@intFromEnum(shared_types.input.MouseButton.right)] = r.mouseButtonClicks(app_shell.MOUSE_RIGHT);
+    if (r.mouseButtonPressPos(app_shell.MOUSE_LEFT)) |pos_press| {
+        batch.mouse_press_pos[@intFromEnum(shared_types.input.MouseButton.left)] = .{ .x = pos_press.x, .y = pos_press.y };
+    }
+    if (r.mouseButtonPressPos(app_shell.MOUSE_MIDDLE)) |pos_press| {
+        batch.mouse_press_pos[@intFromEnum(shared_types.input.MouseButton.middle)] = .{ .x = pos_press.x, .y = pos_press.y };
+    }
+    if (r.mouseButtonPressPos(app_shell.MOUSE_RIGHT)) |pos_press| {
+        batch.mouse_press_pos[@intFromEnum(shared_types.input.MouseButton.right)] = .{ .x = pos_press.x, .y = pos_press.y };
+    }
 
     batch.mods = .{
         .shift = r.isKeyDown(app_shell.KEY_LEFT_SHIFT) or r.isKeyDown(app_shell.KEY_RIGHT_SHIFT),

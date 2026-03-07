@@ -18,6 +18,7 @@ pub const EVENT_KEY_DOWN: c_uint = c.SDL_EVENT_KEY_DOWN;
 pub const EVENT_KEY_UP: c_uint = c.SDL_EVENT_KEY_UP;
 pub const EVENT_TEXT_INPUT: c_uint = c.SDL_EVENT_TEXT_INPUT;
 pub const EVENT_TEXT_EDITING: c_uint = c.SDL_EVENT_TEXT_EDITING;
+pub const EVENT_MOUSE_MOTION: c_uint = c.SDL_EVENT_MOUSE_MOTION;
 pub const EVENT_MOUSE_BUTTON_DOWN: c_uint = c.SDL_EVENT_MOUSE_BUTTON_DOWN;
 pub const EVENT_MOUSE_BUTTON_UP: c_uint = c.SDL_EVENT_MOUSE_BUTTON_UP;
 pub const EVENT_MOUSE_WHEEL: c_uint = c.SDL_EVENT_MOUSE_WHEEL;
@@ -229,6 +230,10 @@ pub fn pollEvent(event: *c.SDL_Event) bool {
     return c.SDL_PollEvent(event);
 }
 
+pub fn setEventEnabled(event_type: c_uint, enabled: bool) void {
+    _ = c.SDL_SetEventEnabled(event_type, enabled);
+}
+
 pub fn sdlEventSize() usize {
     return @sizeOf(c.SDL_Event);
 }
@@ -255,6 +260,14 @@ pub fn keyModBits(event: *const c.SDL_Event) u32 {
 
 pub fn mouseButtonClicks(event: *const c.SDL_Event) u8 {
     return @intCast(event.button.clicks);
+}
+
+pub fn mouseButtonX(event: *const c.SDL_Event) f32 {
+    return event.button.x;
+}
+
+pub fn mouseButtonY(event: *const c.SDL_Event) f32 {
+    return event.button.y;
 }
 
 pub fn keycodeFromScancodeMods(scancode: i32, shift: bool, alt: bool, ctrl: bool, super: bool) i32 {
