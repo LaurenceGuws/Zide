@@ -17,24 +17,18 @@ pub const Result = struct {
 
 fn hasPassiveMouseMoveOnly(input_batch: *input_types.InputBatch, in_terminal_rect: bool) bool {
     if (!in_terminal_rect) return false;
+    if (!input_batch.mouseMoved()) return false;
     if (input_batch.scroll.x != 0 or input_batch.scroll.y != 0) return false;
     if (input_batch.mouseDown(.left) or input_batch.mouseDown(.middle) or input_batch.mouseDown(.right) or input_batch.mouseDown(.back) or input_batch.mouseDown(.forward) or input_batch.mouseDown(.other)) return false;
     if (input_batch.mousePressed(.left) or input_batch.mousePressed(.middle) or input_batch.mousePressed(.right) or input_batch.mousePressed(.back) or input_batch.mousePressed(.forward) or input_batch.mousePressed(.other)) return false;
     if (input_batch.mouseReleased(.left) or input_batch.mouseReleased(.middle) or input_batch.mouseReleased(.right) or input_batch.mouseReleased(.back) or input_batch.mouseReleased(.forward) or input_batch.mouseReleased(.other)) return false;
-
-    var saw_move = false;
     for (input_batch.events.items) |event| {
         switch (event) {
-            .mouse => |mouse_event| {
-                switch (mouse_event.kind) {
-                    .move => saw_move = true,
-                    else => return false,
-                }
-            },
+            .mouse => {},
             else => return false,
         }
     }
-    return saw_move;
+    return true;
 }
 
 pub const Hooks = struct {

@@ -43,8 +43,7 @@
   - launcher/runtime directory semantics.
 - Terminal identity/runtime environment tightened:
   - project terminfo aliases: `xterm-zide|zide-256color`
-  - runtime TERM preference: `xterm-zide`, then `zide-256color`, then `zide`, then `xterm-256color`
-  - no `xterm-kitty` fallback path in terminal core.
+- runtime TERM preference: `xterm-kitty`, then `xterm-zide`, then `zide-256color`, then `zide`, then `xterm-256color`
 
 ### Constraints / Guardrails
 - Handoff docs remain high-level only; details belong in `app_architecture/*` docs and todo files.

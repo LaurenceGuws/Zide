@@ -13,6 +13,7 @@ reference terminal implements it.
 - Fallback `TERM`: `xterm-256color`
 - Terminfo source: `terminfo/zide.terminfo`
 - Runtime selection order inside Zide:
+  - `xterm-kitty` when available
   - `xterm-zide` when available
   - `zide-256color` when available
   - `zide` when available
@@ -210,8 +211,8 @@ Then launch a new shell inside Zide and confirm:
 printf '%s\n' "$TERM"
 ```
 
-Expected value is `xterm-zide` (or `zide-256color` in compatibility scenarios).
-If the terminfo entry is not installed yet, expect `xterm-256color`.
+Expected value is `xterm-kitty` when that terminfo exists.
+Otherwise expect `xterm-zide` (or `zide-256color`), and finally `xterm-256color`.
 
 ## Validation Sources
 
