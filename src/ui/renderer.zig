@@ -283,6 +283,8 @@ pub const Renderer = struct {
     mouse_pressed: [mouse_button_count]bool,
     mouse_released: [mouse_button_count]bool,
     mouse_clicks: [mouse_button_count]u8,
+    mouse_press_pos: [mouse_button_count]MousePos,
+    mouse_press_pos_valid: [mouse_button_count]bool,
     key_queue: std.ArrayList(KeyPress),
     key_queue_head: usize,
     char_queue: std.ArrayList(TextPress),
@@ -417,6 +419,8 @@ pub const Renderer = struct {
             .mouse_pressed = [_]bool{false} ** mouse_button_count,
             .mouse_released = [_]bool{false} ** mouse_button_count,
             .mouse_clicks = [_]u8{0} ** mouse_button_count,
+            .mouse_press_pos = [_]MousePos{.{ .x = 0, .y = 0 }} ** mouse_button_count,
+            .mouse_press_pos_valid = [_]bool{false} ** mouse_button_count,
             .key_queue = std.ArrayList(KeyPress).empty,
             .key_queue_head = 0,
             .char_queue = std.ArrayList(TextPress).empty,
@@ -443,6 +447,10 @@ pub const Renderer = struct {
 
         try renderer.initGlResources();
         try renderer.initFonts(font_size);
+
+        // Mouse position is sampled directly each frame via SDL_GetMouseState;
+        // we do not consume SDL mouse-motion events.
+        sdl_api.setEventEnabled(sdl_api.EVENT_MOUSE_MOTION, false);
 
         sdl_api.startTextInput(window);
         try renderer.initInputThread();
@@ -1488,6 +1496,21 @@ pub const Renderer = struct {
         return self.mouse_clicks[idx];
     }
 
+    pub fn mouseButtonPressPos(self: *Renderer, button: i32) ?MousePos {
+        if (button < 0) return null;
+        const idx: usize = @intCast(button);
+        if (idx >= self.mouse_press_pos_valid.len) return null;
+        if (!self.mouse_press_pos_valid[idx]) return null;
+        return self.mouse_press_pos[idx];
+    }
+
+    fn anyMouseButtonsDown(self: *Renderer) bool {
+        for (self.mouse_down) |down| {
+            if (down) return true;
+        }
+        return false;
+    }
+
     pub fn getMouseWheelMove(self: *Renderer) f32 {
         _ = self;
         return mouse_wheel_delta;
@@ -1848,6 +1871,7 @@ pub const Renderer = struct {
             .window_resized_flag = &self.window_resized_flag,
         };
         input_state.resetForFrame(state);
+        @memset(self.mouse_press_pos_valid[0..], false);
         mouse_wheel.reset(&mouse_wheel_delta);
 
         var event: sdl.SDL_Event = undefined;
@@ -1883,6 +1907,7 @@ pub const Renderer = struct {
                 }
                 if (sdl_api.isFocusLostEvent(event.type)) {
                     sdl_api.stopTextInput(self.window);
+                    sdl_api.setEventEnabled(sdl_api.EVENT_MOUSE_MOTION, false);
                     self.focus_queue.append(self.allocator, false) catch |err| {
                         window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
                     };
@@ -2001,6 +2026,20 @@ pub const Renderer = struct {
                     self.mouse_pressed[0..],
                     self.mouse_clicks[0..],
                 );
+                const btn = @as(i32, @intCast(event.button.button));
+                if (btn >= 0) {
+                    const idx: usize = @intCast(btn);
+                    if (idx < self.mouse_press_pos.len) {
+                        const raw_x = sdl_api.mouseButtonX(event);
+                        const raw_y = sdl_api.mouseButtonY(event);
+                        self.mouse_press_pos[idx] = .{
+                            .x = raw_x * self.mouse_scale.x,
+                            .y = raw_y * self.mouse_scale.y,
+                        };
+                        self.mouse_press_pos_valid[idx] = true;
+                    }
+                }
+                sdl_api.setEventEnabled(sdl_api.EVENT_MOUSE_MOTION, true);
             },
             sdl_api.EVENT_MOUSE_BUTTON_UP => {
                 platform_input_events.handleMouseButtonUp(
@@ -2008,6 +2047,9 @@ pub const Renderer = struct {
                     self.mouse_down[0..],
                     self.mouse_released[0..],
                 );
+                if (!self.anyMouseButtonsDown()) {
+                    sdl_api.setEventEnabled(sdl_api.EVENT_MOUSE_MOTION, false);
+                }
             },
             sdl_api.EVENT_MOUSE_WHEEL => {
                 mouse_wheel.add(&mouse_wheel_delta, platform_input_events.wheelDelta(event));
@@ -2024,6 +2066,7 @@ pub const Renderer = struct {
                     }
                     if (sdl_api.isFocusLostEvent(event.type)) {
                         sdl_api.stopTextInput(self.window);
+                        sdl_api.setEventEnabled(sdl_api.EVENT_MOUSE_MOTION, false);
                         self.focus_queue.append(self.allocator, false) catch |err| {
                             window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
                         };

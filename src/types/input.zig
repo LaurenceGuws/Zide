@@ -237,6 +237,7 @@ pub const InputBatch = struct {
     mouse_pressed: [MOUSE_BUTTON_COUNT]bool,
     mouse_released: [MOUSE_BUTTON_COUNT]bool,
     mouse_clicks: [MOUSE_BUTTON_COUNT]u8,
+    mouse_press_pos: [MOUSE_BUTTON_COUNT]?MousePos,
     mouse_pos: MousePos,
     mouse_pos_raw: MousePos,
     mouse_moved: bool,
@@ -260,6 +261,7 @@ pub const InputBatch = struct {
             .mouse_pressed = [_]bool{false} ** MOUSE_BUTTON_COUNT,
             .mouse_released = [_]bool{false} ** MOUSE_BUTTON_COUNT,
             .mouse_clicks = [_]u8{0} ** MOUSE_BUTTON_COUNT,
+            .mouse_press_pos = [_]?MousePos{null} ** MOUSE_BUTTON_COUNT,
             .mouse_pos = .{ .x = 0, .y = 0 },
             .mouse_pos_raw = .{ .x = 0, .y = 0 },
             .mouse_moved = false,
@@ -288,6 +290,7 @@ pub const InputBatch = struct {
         self.mouse_pressed = [_]bool{false} ** MOUSE_BUTTON_COUNT;
         self.mouse_released = [_]bool{false} ** MOUSE_BUTTON_COUNT;
         self.mouse_clicks = [_]u8{0} ** MOUSE_BUTTON_COUNT;
+        self.mouse_press_pos = [_]?MousePos{null} ** MOUSE_BUTTON_COUNT;
         self.mouse_pos = .{ .x = 0, .y = 0 };
         self.mouse_pos_raw = .{ .x = 0, .y = 0 };
         self.mouse_moved = false;
@@ -329,6 +332,10 @@ pub const InputBatch = struct {
 
     pub fn mouseClicks(self: *const InputBatch, button: MouseButton) u8 {
         return self.mouse_clicks[@intFromEnum(button)];
+    }
+
+    pub fn mousePressPos(self: *const InputBatch, button: MouseButton) ?MousePos {
+        return self.mouse_press_pos[@intFromEnum(button)];
     }
 
     pub fn mouseMoved(self: *const InputBatch) bool {
