@@ -69,6 +69,15 @@ pub fn emptyConfig() Config {
         .editor_large_jump_rows = null,
         .editor_highlight_budget = null,
         .editor_width_budget = null,
+        .selection_overlay_smooth = null,
+        .selection_overlay_corner_px = null,
+        .selection_overlay_pad_px = null,
+        .editor_selection_overlay_smooth = null,
+        .editor_selection_overlay_corner_px = null,
+        .editor_selection_overlay_pad_px = null,
+        .terminal_selection_overlay_smooth = null,
+        .terminal_selection_overlay_corner_px = null,
+        .terminal_selection_overlay_pad_px = null,
         .app_font_path = null,
         .app_font_size = null,
         .editor_font_path = null,
@@ -254,6 +263,15 @@ pub fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config)
     if (overlay.editor_large_jump_rows != null) base.editor_large_jump_rows = overlay.editor_large_jump_rows;
     if (overlay.editor_highlight_budget != null) base.editor_highlight_budget = overlay.editor_highlight_budget;
     if (overlay.editor_width_budget != null) base.editor_width_budget = overlay.editor_width_budget;
+    if (overlay.selection_overlay_smooth != null) base.selection_overlay_smooth = overlay.selection_overlay_smooth;
+    if (overlay.selection_overlay_corner_px != null) base.selection_overlay_corner_px = overlay.selection_overlay_corner_px;
+    if (overlay.selection_overlay_pad_px != null) base.selection_overlay_pad_px = overlay.selection_overlay_pad_px;
+    if (overlay.editor_selection_overlay_smooth != null) base.editor_selection_overlay_smooth = overlay.editor_selection_overlay_smooth;
+    if (overlay.editor_selection_overlay_corner_px != null) base.editor_selection_overlay_corner_px = overlay.editor_selection_overlay_corner_px;
+    if (overlay.editor_selection_overlay_pad_px != null) base.editor_selection_overlay_pad_px = overlay.editor_selection_overlay_pad_px;
+    if (overlay.terminal_selection_overlay_smooth != null) base.terminal_selection_overlay_smooth = overlay.terminal_selection_overlay_smooth;
+    if (overlay.terminal_selection_overlay_corner_px != null) base.terminal_selection_overlay_corner_px = overlay.terminal_selection_overlay_corner_px;
+    if (overlay.terminal_selection_overlay_pad_px != null) base.terminal_selection_overlay_pad_px = overlay.terminal_selection_overlay_pad_px;
     if (overlay.app_font_path) |path| {
         if (base.app_font_path) |old| allocator.free(old);
         base.app_font_path = allocator.dupe(u8, path) catch base.app_font_path;

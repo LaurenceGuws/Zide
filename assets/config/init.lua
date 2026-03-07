@@ -216,6 +216,16 @@ return {
         },
     },
 
+    -- Selection overlay smoothing defaults (applies to editor and terminal unless overridden).
+    -- smooth: false disables contour smoothing and draws rectangular selection fills.
+    -- corner_px: smoothing corner amount in px.
+    -- pad_px: extra horizontal pad in px to keep wide-leading glyph edges covered (e.g. "W").
+    selection_overlay = {
+        smooth = true,
+        corner_px = 1.0,
+        pad_px = 1.0,
+    },
+
     -- Editor configuration.
     editor = {
         -- Editor-specific theme override.
@@ -261,6 +271,12 @@ return {
             -- highlight_budget = 120,
             -- width_budget = 120,
         },
+        -- Optional per-editor selection overlay override.
+        -- selection_overlay = {
+        --     smooth = true,
+        --     corner_px = 1.0,
+        --     pad_px = 1.0,
+        -- },
         -- Optional override. Current runtime still resolves one shared effective font
         -- stack using precedence: terminal.font > editor.font > app.font.
         -- font = { path = "/usr/share/fonts/...", size = 16 },
@@ -296,6 +312,12 @@ return {
         --   font_features = "-calt,-liga,-dlig"
         --   font_features = { "+calt", "-liga" }
         -- font_features = "+calt",
+        -- Optional per-terminal selection overlay override.
+        -- selection_overlay = {
+        --     smooth = true,
+        --     corner_px = 1.0,
+        --     pad_px = 1.0,
+        -- },
 
         -- Blink style: "kitty" (default) or "off".
         -- blink = "kitty",

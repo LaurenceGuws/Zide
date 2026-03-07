@@ -220,9 +220,20 @@ fn drawTopSelectionScanline(r: anytype, x: f32, y: f32, w: f32, color: anytype, 
 
 fn drawSoftSelectionRect(r: anytype, x: f32, y: f32, w: f32, h: f32, color: anytype, mask: SelectionCornerMask) void {
     if (w <= 0 or h <= 0) return;
+    const style = r.editorSelectionOverlayStyle();
+    if (!style.smooth_enabled) {
+        r.drawRect(
+            @intFromFloat(x),
+            @intFromFloat(y),
+            @intFromFloat(w),
+            @intFromFloat(h),
+            color,
+        );
+        return;
+    }
     const smooth_active = mask.top_left_outward or mask.top_right_outward or mask.bottom_left_outward or mask.bottom_right_outward or mask.top_left_inward or mask.top_right_inward or mask.bottom_left_inward or mask.bottom_right_inward;
-    const inset_x = softSelectionInset(r.uiScaleFactor());
-    const pad_x: f32 = if (smooth_active) @max(1.0, std.math.round(r.uiScaleFactor() * 0.5)) else 0.0;
+    const inset_x: f32 = style.corner_px orelse softSelectionInset(r.uiScaleFactor());
+    const pad_x: f32 = if (smooth_active) (style.pad_px orelse @max(1.0, std.math.round(r.uiScaleFactor() * 0.5))) else 0.0;
     const draw_x = x + inset_x - pad_x;
     const draw_y = y;
     const draw_w = @max(1.0, w - inset_x * 2.0 + pad_x * 2.0);
@@ -239,6 +250,17 @@ fn drawSoftSelectionRect(r: anytype, x: f32, y: f32, w: f32, h: f32, color: anyt
     const top_right_inset = cornerDelta(mask.top_right_outward, mask.top_right_inward, corner);
     const bottom_left_inset = cornerDelta(mask.bottom_left_outward, mask.bottom_left_inward, corner);
     const bottom_right_inset = cornerDelta(mask.bottom_right_outward, mask.bottom_right_inward, corner);
+    const compensatedInset = struct {
+        fn apply(value: f32, pad: f32) f32 {
+            if (value > 0.0) return @max(0.0, value - pad);
+            if (value < 0.0) return value - pad;
+            return 0.0;
+        }
+    }.apply;
+    const top_left_edge = compensatedInset(top_left_inset, pad_x);
+    const top_right_edge = compensatedInset(top_right_inset, pad_x);
+    const bottom_left_edge = compensatedInset(bottom_left_inset, pad_x);
+    const bottom_right_edge = compensatedInset(bottom_right_inset, pad_x);
     const draw_h_i = @as(i32, @intFromFloat(draw_h));
 
     if (draw_h_i <= 1) {
@@ -248,18 +270,18 @@ fn drawSoftSelectionRect(r: anytype, x: f32, y: f32, w: f32, h: f32, color: anyt
             draw_y,
             draw_w,
             color,
-            if (top_left_inset != 0.0) top_left_inset else bottom_left_inset,
-            if (top_right_inset != 0.0) top_right_inset else bottom_right_inset,
+            if (top_left_edge != 0.0) top_left_edge else bottom_left_edge,
+            if (top_right_edge != 0.0) top_right_edge else bottom_right_edge,
         );
         return;
     }
     if (draw_h_i == 2) {
-        drawTopSelectionScanline(r, draw_x, draw_y, draw_w, color, top_left_inset, top_right_inset);
-        drawTopSelectionScanline(r, draw_x, draw_y + 1.0, draw_w, color, bottom_left_inset, bottom_right_inset);
+        drawTopSelectionScanline(r, draw_x, draw_y, draw_w, color, top_left_edge, top_right_edge);
+        drawTopSelectionScanline(r, draw_x, draw_y + 1.0, draw_w, color, bottom_left_edge, bottom_right_edge);
         return;
     }
 
-    if (top_left_inset == 0 and top_right_inset == 0 and bottom_left_inset == 0 and bottom_right_inset == 0) {
+    if (top_left_edge == 0 and top_right_edge == 0 and bottom_left_edge == 0 and bottom_right_edge == 0) {
         r.drawRect(
             @intFromFloat(draw_x),
             @intFromFloat(draw_y),
@@ -270,7 +292,7 @@ fn drawSoftSelectionRect(r: anytype, x: f32, y: f32, w: f32, h: f32, color: anyt
         return;
     }
 
-    drawTopSelectionScanline(r, draw_x, draw_y, draw_w, color, top_left_inset, top_right_inset);
+    drawTopSelectionScanline(r, draw_x, draw_y, draw_w, color, top_left_edge, top_right_edge);
     r.drawRect(
         @intFromFloat(draw_x),
         @intFromFloat(draw_y + 1.0),
@@ -284,16 +306,20 @@ fn drawSoftSelectionRect(r: anytype, x: f32, y: f32, w: f32, h: f32, color: anyt
         draw_y + draw_h - 1.0,
         draw_w,
         color,
-        bottom_left_inset,
-        bottom_right_inset,
+        bottom_left_edge,
+        bottom_right_edge,
     );
 }
 
 fn addSoftSelectionRectOp(list: *EditorDrawList, r: anytype, x: f32, y: f32, w: f32, h: f32, color: anytype, mask: SelectionCornerMask) bool {
     if (w <= 0 or h <= 0) return true;
+    const style = r.editorSelectionOverlayStyle();
+    if (!style.smooth_enabled) {
+        return addRectOp(list, x, y, w, h, color);
+    }
     const smooth_active = mask.top_left_outward or mask.top_right_outward or mask.bottom_left_outward or mask.bottom_right_outward or mask.top_left_inward or mask.top_right_inward or mask.bottom_left_inward or mask.bottom_right_inward;
-    const inset_x = softSelectionInset(r.uiScaleFactor());
-    const pad_x: f32 = if (smooth_active) @max(1.0, std.math.round(r.uiScaleFactor() * 0.5)) else 0.0;
+    const inset_x: f32 = style.corner_px orelse softSelectionInset(r.uiScaleFactor());
+    const pad_x: f32 = if (smooth_active) (style.pad_px orelse @max(1.0, std.math.round(r.uiScaleFactor() * 0.5))) else 0.0;
     const draw_x = x + inset_x - pad_x;
     const draw_y = y;
     const draw_w = @max(1.0, w - inset_x * 2.0 + pad_x * 2.0);
@@ -310,11 +336,22 @@ fn addSoftSelectionRectOp(list: *EditorDrawList, r: anytype, x: f32, y: f32, w: 
     const top_right_inset = cornerDelta(mask.top_right_outward, mask.top_right_inward, corner);
     const bottom_left_inset = cornerDelta(mask.bottom_left_outward, mask.bottom_left_inward, corner);
     const bottom_right_inset = cornerDelta(mask.bottom_right_outward, mask.bottom_right_inward, corner);
+    const compensatedInset = struct {
+        fn apply(value: f32, pad: f32) f32 {
+            if (value > 0.0) return @max(0.0, value - pad);
+            if (value < 0.0) return value - pad;
+            return 0.0;
+        }
+    }.apply;
+    const top_left_edge = compensatedInset(top_left_inset, pad_x);
+    const top_right_edge = compensatedInset(top_right_inset, pad_x);
+    const bottom_left_edge = compensatedInset(bottom_left_inset, pad_x);
+    const bottom_right_edge = compensatedInset(bottom_right_inset, pad_x);
     const draw_h_i = @as(i32, @intFromFloat(draw_h));
 
     if (draw_h_i <= 1) {
-        const left_inset = if (top_left_inset != 0.0) top_left_inset else bottom_left_inset;
-        const right_inset = if (top_right_inset != 0.0) top_right_inset else bottom_right_inset;
+        const left_inset = if (top_left_edge != 0.0) top_left_edge else bottom_left_edge;
+        const right_inset = if (top_right_edge != 0.0) top_right_edge else bottom_right_edge;
         const line_x = draw_x + left_inset;
         const line_w = draw_w - left_inset - right_inset;
         if (line_w <= 0) return true;
@@ -322,26 +359,26 @@ fn addSoftSelectionRectOp(list: *EditorDrawList, r: anytype, x: f32, y: f32, w: 
     }
     if (draw_h_i == 2) {
         var ok = true;
-        const top_x = draw_x + top_left_inset;
-        const top_w = draw_w - top_left_inset - top_right_inset;
+        const top_x = draw_x + top_left_edge;
+        const top_w = draw_w - top_left_edge - top_right_edge;
         if (top_w > 0) ok = ok and addRectOp(list, top_x, draw_y, top_w, 1.0, color);
-        const bottom_x = draw_x + bottom_left_inset;
-        const bottom_w = draw_w - bottom_left_inset - bottom_right_inset;
+        const bottom_x = draw_x + bottom_left_edge;
+        const bottom_w = draw_w - bottom_left_edge - bottom_right_edge;
         if (bottom_w > 0) ok = ok and addRectOp(list, bottom_x, draw_y + 1.0, bottom_w, 1.0, color);
         return ok;
     }
 
-    if (top_left_inset == 0 and top_right_inset == 0 and bottom_left_inset == 0 and bottom_right_inset == 0) {
+    if (top_left_edge == 0 and top_right_edge == 0 and bottom_left_edge == 0 and bottom_right_edge == 0) {
         return addRectOp(list, draw_x, draw_y, draw_w, draw_h, color);
     }
 
     var ok = true;
-    const top_x = draw_x + top_left_inset;
-    const top_w = draw_w - top_left_inset - top_right_inset;
+    const top_x = draw_x + top_left_edge;
+    const top_w = draw_w - top_left_edge - top_right_edge;
     if (top_w > 0) ok = ok and addRectOp(list, top_x, draw_y, top_w, 1.0, color);
     ok = ok and addRectOp(list, draw_x, draw_y + 1.0, draw_w, draw_h - 2.0, color);
-    const bottom_x = draw_x + bottom_left_inset;
-    const bottom_w = draw_w - bottom_left_inset - bottom_right_inset;
+    const bottom_x = draw_x + bottom_left_edge;
+    const bottom_w = draw_w - bottom_left_edge - bottom_right_edge;
     if (bottom_w > 0) ok = ok and addRectOp(list, bottom_x, draw_y + draw_h - 1.0, bottom_w, 1.0, color);
     return ok;
 }

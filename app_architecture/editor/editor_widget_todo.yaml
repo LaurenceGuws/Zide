@@ -195,6 +195,7 @@ editor_widget_todo:
         - "Editor scrollbar geometry is now computed in one shared module and reused by both draw and input paths, reducing hitbox/visual drift and duplicated math."
         - "Selection overlay softening now follows exposed-edge contouring in both editor and terminal draw paths (Zed-inspired corner shaping), including inward step-corners on shorter middle rows, so multiline joins stay flush while both external and internal notches render softer."
         - "Smoothed selection corners now add a tiny horizontal pad while shaping, avoiding glyph-edge clipping on wide-leading characters (for example `W`) at selection starts/ends."
+        - "Selection overlay smoothing is now configurable via Lua (`selection_overlay.{smooth,corner_px,pad_px}` with `editor.selection_overlay` and `terminal.selection_overlay` overrides), including full on/off toggle and per-surface tuning."
       references:
         - reference_repos/editors/helix/helix-core/src/selection.rs
         - reference_repos/editors/kakoune/src/selection.cc

@@ -206,6 +206,12 @@ const BatchDraw = draw_ops.BatchDraw;
 const Vertex = draw_ops.Vertex;
 
 pub const Renderer = struct {
+    pub const SelectionOverlayStyle = struct {
+        smooth_enabled: bool = true,
+        corner_px: ?f32 = null,
+        pad_px: ?f32 = null,
+    };
+
     allocator: std.mem.Allocator,
     window: *sdl.SDL_Window,
     gl_context: sdl.SDL_GLContext,
@@ -235,6 +241,8 @@ pub const Renderer = struct {
     text_gamma: f32,
     text_contrast: f32,
     text_linear_correction: bool,
+    editor_selection_overlay_style: SelectionOverlayStyle,
+    terminal_selection_overlay_style: SelectionOverlayStyle,
 
     // Text background behind glyphs (used for optional linear correction).
     // Default is alpha=0, which disables correction in the shader.
@@ -377,6 +385,8 @@ pub const Renderer = struct {
             .text_gamma = 1.0,
             .text_contrast = 1.0,
             .text_linear_correction = true,
+            .editor_selection_overlay_style = .{},
+            .terminal_selection_overlay_style = .{},
             .text_bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 },
             .font_size = font_size,
             .base_font_size = base_font_size,
@@ -567,6 +577,34 @@ pub const Renderer = struct {
             if (self.uniform_text_contrast >= 0) gl.Uniform1f(self.uniform_text_contrast, self.text_contrast);
             if (self.uniform_linear_correction >= 0) gl.Uniform1i(self.uniform_linear_correction, if (self.text_linear_correction) 1 else 0);
         }
+    }
+
+    pub fn setEditorSelectionOverlayStyle(self: *Renderer, smooth_enabled: ?bool, corner_px: ?f32, pad_px: ?f32) void {
+        if (smooth_enabled) |v| self.editor_selection_overlay_style.smooth_enabled = v;
+        if (corner_px) |v| {
+            if (v > 0) self.editor_selection_overlay_style.corner_px = v;
+        }
+        if (pad_px) |v| {
+            if (v > 0) self.editor_selection_overlay_style.pad_px = v;
+        }
+    }
+
+    pub fn setTerminalSelectionOverlayStyle(self: *Renderer, smooth_enabled: ?bool, corner_px: ?f32, pad_px: ?f32) void {
+        if (smooth_enabled) |v| self.terminal_selection_overlay_style.smooth_enabled = v;
+        if (corner_px) |v| {
+            if (v > 0) self.terminal_selection_overlay_style.corner_px = v;
+        }
+        if (pad_px) |v| {
+            if (v > 0) self.terminal_selection_overlay_style.pad_px = v;
+        }
+    }
+
+    pub fn editorSelectionOverlayStyle(self: *const Renderer) SelectionOverlayStyle {
+        return self.editor_selection_overlay_style;
+    }
+
+    pub fn terminalSelectionOverlayStyle(self: *const Renderer) SelectionOverlayStyle {
+        return self.terminal_selection_overlay_style;
     }
 
     pub fn setTerminalLigatureConfig(self: *Renderer, strategy: ?TerminalDisableLigaturesStrategy, features_raw: ?[]const u8) void {

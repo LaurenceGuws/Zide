@@ -153,6 +153,61 @@ fn normalizeScrollback(value: i64) usize {
     return @intCast(value);
 }
 
+fn parsePositiveF32(lua: *zlua.Lua, idx: i32) ?f32 {
+    if (!lua.isNumber(idx)) return null;
+    if (lua.toNumber(idx)) |v| {
+        if (v > 0) return @floatCast(v);
+    } else |_| {}
+    return null;
+}
+
+const SelectionOverlayPrefix = enum {
+    global,
+    editor,
+    terminal,
+};
+
+fn parseSelectionOverlayTable(
+    lua: *zlua.Lua,
+    idx: i32,
+    out: *Config,
+    prefix: SelectionOverlayPrefix,
+) void {
+    if (!lua.isTable(idx)) return;
+    const table_idx = lua.absIndex(idx);
+
+    _ = lua.getField(table_idx, "smooth");
+    if (lua.isBoolean(-1)) {
+        const value = lua.toBoolean(-1);
+        switch (prefix) {
+            .global => out.selection_overlay_smooth = value,
+            .editor => out.editor_selection_overlay_smooth = value,
+            .terminal => out.terminal_selection_overlay_smooth = value,
+        }
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_idx, "corner_px");
+    if (parsePositiveF32(lua, -1)) |value| {
+        switch (prefix) {
+            .global => out.selection_overlay_corner_px = value,
+            .editor => out.editor_selection_overlay_corner_px = value,
+            .terminal => out.terminal_selection_overlay_corner_px = value,
+        }
+    }
+    lua.pop(1);
+
+    _ = lua.getField(table_idx, "pad_px");
+    if (parsePositiveF32(lua, -1)) |value| {
+        switch (prefix) {
+            .global => out.selection_overlay_pad_px = value,
+            .editor => out.editor_selection_overlay_pad_px = value,
+            .terminal => out.terminal_selection_overlay_pad_px = value,
+        }
+    }
+    lua.pop(1);
+}
+
 fn parseHexByte(slice: []const u8) ?u8 {
     return std.fmt.parseInt(u8, slice, 16) catch null;
 }
@@ -848,6 +903,22 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     }
     lua.pop(1);
 
+    _ = lua.getField(table_index, "selection_overlay_smooth");
+    if (lua.isBoolean(-1)) out.selection_overlay_smooth = lua.toBoolean(-1);
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "selection_overlay_corner_px");
+    if (parsePositiveF32(lua, -1)) |v| out.selection_overlay_corner_px = v;
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "selection_overlay_pad_px");
+    if (parsePositiveF32(lua, -1)) |v| out.selection_overlay_pad_px = v;
+    lua.pop(1);
+
+    _ = lua.getField(table_index, "selection_overlay");
+    parseSelectionOverlayTable(lua, -1, &out, .global);
+    lua.pop(1);
+
     _ = lua.getField(table_index, "terminal_scrollback_rows");
     if (lua.isNumber(-1)) {
         if (lua.toInteger(-1)) |v| {
@@ -1148,6 +1219,10 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             lua.pop(1);
         }
         lua.pop(1);
+
+        _ = lua.getField(editor_idx, "selection_overlay");
+        parseSelectionOverlayTable(lua, -1, &out, .editor);
+        lua.pop(1);
     }
     lua.pop(1);
 
@@ -1268,6 +1343,10 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             }
             lua.pop(1);
         }
+        lua.pop(1);
+
+        _ = lua.getField(terminal_idx, "selection_overlay");
+        parseSelectionOverlayTable(lua, -1, &out, .terminal);
         lua.pop(1);
     }
     lua.pop(1);
