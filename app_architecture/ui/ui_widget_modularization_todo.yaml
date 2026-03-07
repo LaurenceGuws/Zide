@@ -274,6 +274,7 @@ ui_widget_modularization_todo:
             - "2026-03-07: Removed scroll-path full-damage forcing and switched full-screen scroll mutation to row-range partial damage, allowing scroll-heavy TUIs (e.g. `rain`) to avoid unnecessary full redraws."
             - "2026-03-07: Reverted an experimental 'shift-on-full' texture optimization after it introduced visible scrollback tearing/late text reveal; correctness takes priority over that optimization path."
             - "2026-03-07: Fixed viewport-shift partial redraw to repaint full-width newly exposed rows (do not reuse stale dirty column ranges for shift rows), addressing blank/invisible scrollback blocks under heavy output."
+            - "2026-03-07: Reduced idle-loop sleep to 1ms while active terminal output is pending (`session.hasData()`), preventing 100ms idle backoff from causing visible stutter/frozen lines during high-throughput terminal output."
 
         - id: UI-PERF-08
           title: "Verification pass for latency under heavy terminal output and large editor files"
