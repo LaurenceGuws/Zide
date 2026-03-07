@@ -1342,7 +1342,7 @@ pub const Screen = struct {
         }
         self.cursor.row = rows - 1;
         self.cursor.col = 0;
-        self.grid.markDirtyAll();
+        self.grid.markDirtyRange(0, rows - 1, 0, cols - 1);
     }
 };
 

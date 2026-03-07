@@ -1257,6 +1257,21 @@ pub const TerminalSession = struct {
         defer self.unlock();
         if (self.output_generation.load(.acquire) != expected_generation) return false;
         self.activeScreen().clearDirty();
+        inline for (0..2) |i| {
+            self.render_caches[i].dirty = .none;
+            self.render_caches[i].damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
+        }
+        return true;
+    }
+
+    pub fn clearRenderCacheDirtyIfGeneration(self: *TerminalSession, expected_generation: u64) bool {
+        self.lock();
+        defer self.unlock();
+        if (self.output_generation.load(.acquire) != expected_generation) return false;
+        inline for (0..2) |i| {
+            self.render_caches[i].dirty = .none;
+            self.render_caches[i].damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
+        }
         return true;
     }
 

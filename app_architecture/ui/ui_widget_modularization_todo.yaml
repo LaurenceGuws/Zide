@@ -187,6 +187,8 @@ ui_widget_modularization_todo:
             - "2026-03-07: `TerminalWidget.draw` now locks only long enough to refresh/copy render cache into widget-owned snapshot buffers."
             - "2026-03-07: HarfBuzz shaping, glyph batching, kitty overlay draws, and selection/cursor/overlay passes now run without holding session state mutex."
             - "2026-03-07: Added generation-guarded `TerminalSession.clearDirtyIfGeneration(...)` to safely clear dirty flags after lock-free draw."
+            - "2026-03-07: Removed per-frame UI-thread blink detection scan across all terminal cells; `RenderCache.has_blink` is now computed in view-cache update and consumed directly by draw invalidation logic."
+            - "2026-03-07: Blink presence no longer unconditionally forces full texture redraw; full redraw now gates on actual blink phase toggles (`blink_phase_changed_pending`)."
 
         - id: UI-PERF-02
           title: "Avoid blocking lock in terminal widget input path"
@@ -230,13 +232,16 @@ ui_widget_modularization_todo:
 
         - id: UI-PERF-05
           title: "Move search recompute off UI thread with generation cancellation"
-          status: pending
+          status: done
           files_to_edit:
             - src/editor/editor.zig
             - src/app/editor_input_runtime.zig
           notes:
             - "Literal/regex search recompute should not block keystroke handling."
             - "Only latest generation result may commit."
+            - "2026-03-07: Added background search worker in `Editor` with generation-based cancellation and non-blocking queueing."
+            - "2026-03-07: Search results are now applied during `editor_display_prepare` via `editor.applyPendingSearchWork()`."
+            - "2026-03-07: Kept synchronous search recompute path only for replace operations that require immediate correctness."
 
         - id: UI-PERF-06
           title: "Remove synchronous file detect I/O from terminal ctrl+click path"
@@ -262,6 +267,12 @@ ui_widget_modularization_todo:
             - "2026-03-07: Added terminal poll frame metrics snapshot in workspace (`lastPollFrameMetrics`) with active/background budget usage and spillover/backlog hints."
             - "2026-03-07: Added terminal draw phase latency snapshot in terminal widget draw (`latestFrameLatencyMetrics`) for lock/snapshot vs render timing."
             - "2026-03-07: Integrated terminal poll/draw metrics into existing `input.latency` logging with sequence-gated emission to avoid stale/noisy repeats."
+            - "2026-03-07: Expanded terminal draw metrics to expose `cache_copy_ms`, `texture_update_ms`, and `overlay_ms`; added `terminal.ui.perf` log tag and mirrored phase fields into `input.latency` output."
+            - "2026-03-07: Added `sync` + `clear_ok` fields to `terminal.ui.perf` and generation-guarded render-cache-only dirty clear during synchronized updates to diagnose/avoid sticky partial texture updates."
+            - "2026-03-07: Removed generation-only redraw forcing; cache generation now updates without texture invalidation when view content is unchanged (`view.dirty == .none`)."
+            - "2026-03-07: Made viewport texture-shift copy one-shot per new cache generation to prevent repeated `partial=1` redraws when `dirty=none`."
+            - "2026-03-07: Removed scroll-path full-damage forcing and switched full-screen scroll mutation to row-range partial damage, allowing scroll-heavy TUIs (e.g. `rain`) to avoid unnecessary full redraws."
+            - "2026-03-07: Reverted an experimental 'shift-on-full' texture optimization after it introduced visible scrollback tearing/late text reveal; correctness takes priority over that optimization path."
 
         - id: UI-PERF-08
           title: "Verification pass for latency under heavy terminal output and large editor files"
