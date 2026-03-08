@@ -207,6 +207,10 @@ This confirms a practical scheduler race window around `hasData` gating and idle
 - Follow-up fix:
   - `view_cache` forced-full path now emits explicit `full_dirty_reason` attribution instead of inheriting ambiguous/empty source reason.
   - This prevents persistent `full_dirty_reason=unknown full_dirty_seq=0` during large-tile forced redraw episodes and allows direct ranking of full-dirty producers.
+- Applied narrowing:
+  - full-region scroll output no longer bumps `clear_generation`
+  - `view_cache` therefore stops escalating normal live-bottom scroll churn into `view_cache_clear_generation_change` full redraws
+  - added a session regression that asserts a bottom-following scroll publishes `dirty=partial` with `viewport_shift_rows=1`
 
 ## Applied Fix Candidate (2026-03-08)
 
