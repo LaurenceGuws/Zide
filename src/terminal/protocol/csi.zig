@@ -32,6 +32,7 @@ fn effectiveSgrParamCount(action: parser_csi.CsiAction) usize {
 
 pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
     const log = app_logger.logger("terminal.csi");
+    const inputpath_log = app_logger.logger("terminal.inputpath");
     const csi_param_count = effectiveCsiParamCount(action);
             log.logf(.info, 
             "csi final={c} leader={c} private={d} interm={s} count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
@@ -82,12 +83,30 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
         'C' => { // CUF
             const n = @max(1, get(p, 0, 1));
             const delta: usize = @intCast(n);
+            const before_row = screen.cursor.row;
+            const before_col = screen.cursor.col;
             screen.cursorForward(delta);
+            inputpath_log.logf(.info, "shell_csi final=CUF delta={d} cursor={d},{d}->{d},{d}", .{
+                delta,
+                before_row,
+                before_col,
+                screen.cursor.row,
+                screen.cursor.col,
+            });
         },
         'D' => { // CUB
             const n = @max(1, get(p, 0, 1));
             const delta: usize = @intCast(n);
+            const before_row = screen.cursor.row;
+            const before_col = screen.cursor.col;
             screen.cursorBack(delta);
+            inputpath_log.logf(.info, "shell_csi final=CUB delta={d} cursor={d},{d}->{d},{d}", .{
+                delta,
+                before_row,
+                before_col,
+                screen.cursor.row,
+                screen.cursor.col,
+            });
         },
         'E' => { // CNL
             const n = @max(1, get(p, 0, 1));
@@ -125,6 +144,11 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
         },
         'K' => { // EL
             const mode = if (param_len > 0) p[0] else 0;
+            inputpath_log.logf(.info, "shell_csi final=EL mode={d} cursor={d},{d}", .{
+                mode,
+                screen.cursor.row,
+                screen.cursor.col,
+            });
             self.eraseLine(mode);
         },
         '@' => { // ICH
@@ -567,7 +591,7 @@ fn applyDecstr(self: anytype) void {
 
     const screen = self.activeScreen();
     screen.resetState();
-    screen.markDirtyAllWithReason(.decstr_soft_reset);
+    screen.markDirtyAllWithReason(.decstr_soft_reset, @src());
 
     self.updateInputSnapshot();
 }

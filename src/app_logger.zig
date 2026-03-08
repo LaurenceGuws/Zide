@@ -100,6 +100,10 @@ pub const Logger = struct {
     enabled_file: bool,
     enabled_console: bool,
 
+    pub fn logfSrc(self: Logger, level: Level, src: std.builtin.SourceLocation, comptime fmt: []const u8, args: anytype) void {
+        self.logf(level, "{s}:{d} " ++ fmt, .{ src.file, src.line } ++ args);
+    }
+
     pub fn logf(self: Logger, level: Level, comptime fmt: []const u8, args: anytype) void {
         const emit_file = self.enabled_file and log_file != null and shouldEmit(level, log_level_file);
         const emit_console = self.enabled_console and shouldEmit(level, log_level_console);

@@ -51,6 +51,9 @@ pub const TerminalWidget = struct {
     last_state_probe_draw_time: f64 = 0,
     last_state_probe_generation: u64 = 0,
     draw_cache: RenderCache,
+    partial_draw_rows: std.ArrayList(bool),
+    partial_draw_cols_start: std.ArrayList(u16),
+    partial_draw_cols_end: std.ArrayList(u16),
     bench_enabled: bool = false,
     last_bench_log_time: f64 = 0,
     blink_last_slow_on: bool = true,
@@ -92,6 +95,9 @@ pub const TerminalWidget = struct {
             .last_state_probe_draw_time = 0,
             .last_state_probe_generation = 0,
             .draw_cache = RenderCache.init(),
+            .partial_draw_rows = std.ArrayList(bool).empty,
+            .partial_draw_cols_start = std.ArrayList(u16).empty,
+            .partial_draw_cols_end = std.ArrayList(u16).empty,
             .bench_enabled = std.c.getenv("ZIDE_TERMINAL_UI_BENCH") != null,
             .last_bench_log_time = 0,
             .blink_last_slow_on = true,
@@ -209,6 +215,9 @@ pub const TerminalWidget = struct {
             self.pending_open = null;
         }
         self.draw_cache.deinit(self.session.allocator);
+        self.partial_draw_rows.deinit(self.session.allocator);
+        self.partial_draw_cols_start.deinit(self.session.allocator);
+        self.partial_draw_cols_end.deinit(self.session.allocator);
         self.kitty.deinit(self.session.allocator);
     }
 
