@@ -280,7 +280,8 @@ pub fn handle(
         last_terminal_generation = active_generation;
         last_terminal_generation_change_time = now;
     }
-    const sleep_ms: f64 = if (terminal_output_pressure)
+    const generation_recently_advanced = last_terminal_generation_change_time > 0 and (now - last_terminal_generation_change_time) <= 0.25;
+    const sleep_ms: f64 = if (terminal_output_pressure or generation_recently_advanced)
         0.001
     else if (uptime < 3.0)
         0.016
@@ -291,7 +292,7 @@ pub fn handle(
     else
         0.100;
 
-    if (!terminal_output_pressure and sleep_ms >= 0.033) {
+    if (!terminal_output_pressure and !generation_recently_advanced and sleep_ms >= 0.033) {
         const gen_advance_ms = (now - last_terminal_generation_change_time) * 1000.0;
         if (last_terminal_generation_change_time > 0 and gen_advance_ms <= 200.0 and (now - last_terminal_statebug_log_time) >= 0.1) {
             last_terminal_statebug_log_time = now;
