@@ -316,3 +316,5 @@ ui_widget_modularization_todo:
             - "2026-03-09: New `cache_refine` logs showed the stronger bug: source damage still starts at row 0, but row-hash refinement was diffing against the newest published cache even when draw had not presented that generation yet, collapsing dirty rows toward the bottom."
             - "2026-03-09: Added `presented_generation` tracking from `terminal_widget_draw` back into `TerminalSession`; `view_cache` now only performs row-hash refinement when the refinement base matches the last presented cache generation."
             - "2026-03-09: Added regression coverage for repeated scroll publications without an intervening draw so top-row damage cannot be refined away by unseen intermediate publications."
+            - "2026-03-09: Full-screen rain repro after the presented-generation fix now keeps refinement aligned and is visually close to correct; user reported it as the best result so far."
+            - "2026-03-09: Removed temporary `cache_refine`/row-dirty probe logging from the hot path and dropped the obsolete `generation changed + dirty=none => full redraw` fallback from `terminal_widget_draw`."

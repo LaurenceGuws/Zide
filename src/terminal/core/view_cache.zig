@@ -95,7 +95,6 @@ fn rowDiffSpan(new_row: []const Cell, old_row: []const Cell, cols: usize) ?struc
 
 pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usize) void {
     const fullwidth_origin_log = app_logger.logger("terminal.ui.row_fullwidth_origin");
-    const partial_pipeline_log = app_logger.logger("terminal.ui.partial_pipeline");
     const screen = self.activeScreenConst();
     const view = screen.snapshotView();
     const screen_reverse = screen.screen_reverse;
@@ -377,19 +376,6 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         }
     }
 
-    var source_dirty_rows_count: usize = 0;
-    var source_first_dirty_row: ?usize = null;
-    var source_last_dirty_row: ?usize = null;
-    if (view.dirty == .partial and !needs_full_damage) {
-        var row_idx: usize = 0;
-        while (row_idx < rows) : (row_idx += 1) {
-            if (!cache.dirty_rows.items[row_idx]) continue;
-            source_dirty_rows_count += 1;
-            if (source_first_dirty_row == null) source_first_dirty_row = row_idx;
-            source_last_dirty_row = row_idx;
-        }
-    }
-
     if (!needs_full_damage and active_cache.rows == rows and active_cache.cols == cols and active_cache.selection_rows.items.len == rows) {
         var row_idx: usize = 0;
         while (row_idx < rows) : (row_idx += 1) {
@@ -547,37 +533,6 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
             }
         }
 
-        var resolved_dirty_rows_count: usize = 0;
-        var resolved_first_dirty_row: ?usize = null;
-        var resolved_last_dirty_row: ?usize = null;
-        row_idx = 0;
-        while (row_idx < rows) : (row_idx += 1) {
-            if (!cache.dirty_rows.items[row_idx]) continue;
-            resolved_dirty_rows_count += 1;
-            if (resolved_first_dirty_row == null) resolved_first_dirty_row = row_idx;
-            resolved_last_dirty_row = row_idx;
-        }
-        partial_pipeline_log.logf(
-            .info,
-            "cache_refine src_damage_rows={d}..{d} src_dirty_rows={d} src_first_row={d} src_last_row={d} resolved_damage_rows={d}..{d} resolved_dirty_rows={d} resolved_first_row={d} resolved_last_row={d} viewport_shift_rows={d} refine_base_gen={d} presented_gen={d} rows={d} cols={d}",
-            .{
-                view.damage.start_row,
-                view.damage.end_row,
-                source_dirty_rows_count,
-                source_first_dirty_row orelse rows,
-                source_last_dirty_row orelse rows,
-                if (cache.dirty == .none) rows else cache.damage.start_row,
-                if (cache.dirty == .none) rows else cache.damage.end_row,
-                resolved_dirty_rows_count,
-                resolved_first_dirty_row orelse rows,
-                resolved_last_dirty_row orelse rows,
-                viewport_shift_rows,
-                active_cache.generation,
-                presented_generation,
-                rows,
-                cols,
-            },
-        );
     }
 
     // Cursor is rendered as a UI overlay in terminal_widget_draw, so cursor visibility

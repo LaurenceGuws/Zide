@@ -218,6 +218,8 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - the next repro showed the row-hash refinement step collapsing `src_damage_rows=0..N` into bottom-heavy `resolved_damage_rows=M..N` before draw; the comparison base was the newest published cache, not the cache generation actually presented on screen
   - patched the seam so row-hash refinement only runs when the active published cache generation matches a new `presented_generation` marker updated by `terminal_widget_draw` after the texture upload completes
   - added a regression that simulates repeated scroll publications without an intervening presentation and asserts top-row damage is preserved instead of being refined away
+  - latest full-screen rain repro now keeps refinement aligned (`refine_base_gen == presented_gen`) and the user reported the result as the best state so far, with full-screen rain nearly perfect
+  - removed temporary `cache_refine`/row-sample probe logging from the hot path and dropped the stale `generation changed + dirty=none => force full redraw` fallback, since the render-cache contract now distinguishes published vs presented generations explicitly
 
 ## Applied Fix Candidate (2026-03-09)
 
@@ -291,6 +293,19 @@ This confirms a practical scheduler race window around `hasData` gating and idle
 - Intent:
   - stop partial-damage refinement from assuming intermediate published generations have already reached the screen
   - preserve top-row damage during multi-generation bursts, which matches the user-visible “row 1 is laziest, bottom rows catch up first” symptom
+
+## Cleanup Pass (2026-03-09)
+
+- Files:
+  - `src/terminal/core/view_cache.zig`
+  - `src/ui/widgets/terminal_widget_draw.zig`
+- Change:
+  - removed temporary `cache_refine` tracing and per-row sample probe logging used to isolate the refinement seam
+  - removed the draw-path fallback that forced a full texture redraw whenever cache generation advanced with `dirty == .none`
+  - kept the structural fixes: presented-generation tracking, full-dirty attribution, and normal perf logging
+- Intent:
+  - reduce investigation-only hot-path noise
+  - stop carrying obsolete redraw fallbacks once the cache publication/presentation contract is explicit
 
 ## Applied Texture-Shift Kill-Switch (2026-03-08)
 
