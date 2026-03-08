@@ -870,8 +870,8 @@ pub const TerminalSession = struct {
         const screen = self.activeScreen();
         const blank_cell = screen.blankCell();
         screen.eraseDisplay(mode, blank_cell);
+        self.force_full_damage.store(true, .release);
         if (mode == 2 or mode == 3) {
-            self.force_full_damage.store(true, .release);
             self.clearSelection();
             _ = self.clear_generation.fetchAdd(1, .acq_rel);
         }
@@ -881,6 +881,7 @@ pub const TerminalSession = struct {
         const screen = self.activeScreen();
         const blank_cell = screen.blankCell();
         screen.eraseLine(mode, blank_cell);
+        self.force_full_damage.store(true, .release);
     }
 
     pub fn insertChars(self: *TerminalSession, count: usize) void {
