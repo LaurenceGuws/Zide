@@ -7,7 +7,6 @@ const app_shell = @import("../app_shell.zig");
 
 var terminal_input_activity_hint: ?bool = null;
 var last_statebug_poll_log_time: f64 = 0.0;
-var last_single_terminal_generation: u64 = 0;
 
 pub fn setTerminalInputActivityHint(active: bool) void {
     terminal_input_activity_hint = active;
@@ -84,33 +83,25 @@ pub fn handle(
 
     if (terminals.len > 0) {
         const term = terminals[0];
-        const gen_snapshot = term.currentGeneration();
-        var generation_advanced = gen_snapshot != last_single_terminal_generation;
-        if (generation_advanced) last_single_terminal_generation = gen_snapshot;
         const has_data_pre = term.hasData();
         const gen_pre = term.currentGeneration();
-        if (has_data_pre or generation_advanced) {
+        if (has_data_pre) {
             term.setInputPressure(input_pressure);
             try term.poll();
             const has_data_post = term.hasData();
             const gen_post = term.currentGeneration();
-            if (gen_post != last_single_terminal_generation) {
-                generation_advanced = true;
-                last_single_terminal_generation = gen_post;
-            }
             const now = app_shell.getTime();
             if ((now - last_statebug_poll_log_time) >= 0.1) {
                 last_statebug_poll_log_time = now;
                 app_logger.logger("terminal.ui.statebug").logf(
                     .info,
-                    "poll_probe(single) input_pressure={d} any_polled=1 active_idx=0 hasData_pre={d} hasData_post={d} gen_pre={d} gen_post={d} gen_advanced={d}",
+                    "poll_probe(single) input_pressure={d} any_polled=1 active_idx=0 hasData_pre={d} hasData_post={d} gen_pre={d} gen_post={d}",
                     .{
                         @intFromBool(input_pressure),
                         @intFromBool(has_data_pre),
                         @intFromBool(has_data_post),
                         gen_pre,
                         gen_post,
-                        @intFromBool(generation_advanced),
                     },
                 );
             }
@@ -122,16 +113,14 @@ pub fn handle(
                 last_statebug_poll_log_time = now;
                 app_logger.logger("terminal.ui.statebug").logf(
                     .info,
-                    "poll_probe(single) input_pressure={d} any_polled=0 active_idx=0 hasData_pre=0 hasData_post=0 gen_pre={d} gen_post={d} gen_advanced={d}",
+                    "poll_probe(single) input_pressure={d} any_polled=0 active_idx=0 hasData_pre=0 hasData_post=0 gen_pre={d} gen_post={d}",
                     .{
                         @intFromBool(input_pressure),
                         gen_pre,
                         gen_post,
-                        @intFromBool(generation_advanced),
                     },
                 );
             }
-            if (generation_advanced) return true;
         }
     }
     return false;
