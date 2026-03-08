@@ -359,6 +359,18 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - keep renderer decisions focused on renderer-local constraints
   - avoid duplicating backend state-transition policy in the widget once the cache publication contract is explicit
 
+## Viewport-Shift Fallback Cleanup (2026-03-09)
+
+- Files:
+  - `src/ui/widgets/terminal_widget_draw.zig`
+- Change:
+  - removed the viewport-shift policy that escalated to a full redraw whenever the texture-copy fast path was unavailable
+  - draw now attempts the texture shift when eligible; otherwise it falls back to the normal published-damage path instead of forcing a full upload
+  - updated unit coverage so shift-disabled, oversize-shift, and already-full cases all resolve to the standard damage path rather than a synthetic full redraw
+- Intent:
+  - decouple the optional texture-copy optimization from correctness policy
+  - preserve correctness through published damage first, using the shift path only as a performance optimization
+
 ## Applied Texture-Shift Kill-Switch (2026-03-08)
 
 - Files:

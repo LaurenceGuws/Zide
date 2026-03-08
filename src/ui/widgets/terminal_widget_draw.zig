@@ -49,7 +49,6 @@ pub const FrameLatencyMetrics = struct {
 const ViewportTextureShiftPlan = union(enum) {
     none,
     attempt: usize,
-    force_full,
 };
 
 const TextureUpdatePlan = struct {
@@ -279,9 +278,6 @@ fn planViewportTextureShift(
         shift_abs_i < @as(i32, @intCast(rows)))
     {
         return .{ .attempt = @as(usize, @intCast(shift_abs_i)) };
-    }
-    if (gen_changed and viewport_shift_rows != 0 and scroll_offset == 0 and shift_abs_i > 0) {
-        return .force_full;
     }
     return .none;
 }
@@ -1094,7 +1090,7 @@ pub fn draw(
             blink_phase_changed,
             self.terminal_texture_ready,
         );
-        var needs_full = update_plan.needs_full;
+        const needs_full = update_plan.needs_full;
         var needs_partial = update_plan.needs_partial;
         var shifted_rows: usize = 0;
         switch (planViewportTextureShift(
@@ -1112,13 +1108,8 @@ pub fn draw(
                     needs_partial = true;
                     shifted_rows = shift_rows;
                 } else {
-                    needs_full = true;
-                    needs_partial = false;
+                    shifted_rows = 0;
                 }
-            },
-            .force_full => {
-                needs_full = true;
-                needs_partial = false;
             },
             .none => {},
         }
@@ -1895,19 +1886,19 @@ test "viewport texture shift attempts only when fast path is eligible" {
     }
 }
 
-test "viewport texture shift disable falls back to full redraw" {
+test "viewport texture shift disable falls back to standard damage path" {
     const plan = planViewportTextureShift(false, true, 2, 0, false, true, 24);
-    try std.testing.expectEqual(ViewportTextureShiftPlan.force_full, plan);
+    try std.testing.expectEqual(ViewportTextureShiftPlan.none, plan);
 }
 
-test "viewport texture shift oversize scroll falls back to full redraw" {
+test "viewport texture shift oversize scroll falls back to standard damage path" {
     const plan = planViewportTextureShift(true, true, 24, 0, false, true, 24);
-    try std.testing.expectEqual(ViewportTextureShiftPlan.force_full, plan);
+    try std.testing.expectEqual(ViewportTextureShiftPlan.none, plan);
 }
 
 test "viewport texture shift does not attempt while already forced full" {
     const plan = planViewportTextureShift(true, true, 2, 0, true, true, 24);
-    try std.testing.expectEqual(ViewportTextureShiftPlan.force_full, plan);
+    try std.testing.expectEqual(ViewportTextureShiftPlan.none, plan);
 }
 
 test "viewport texture shift ignores scrollback view movement" {
