@@ -169,9 +169,23 @@ Runtime-only instrumentation has been added (no behavior/path forcing):
 - Purpose:
   - validate suspected false-negative window where `output_pending` is cleared/observed low and UI chooses longer idle sleeps while generation is still advancing.
 
-3. Logging scope
+4. Logging scope
 - `.zide.lua` configured to low-noise bug-scoped tags:
   - `terminal.ui.statebug,terminal.ui.perf,input.latency,terminal.core`
+
+## Confirmed Signal (2026-03-08, latest logs)
+
+- `poll_probe` repeatedly showed `hasData_pre=0/hasData_post=0` windows while generation later jumped significantly on subsequent draws.
+- `idle_backoff_after_gen_advance` fired with `sleep_ms=0.033` and `gen_advance_ms~145ms`, confirming idle backoff can still trigger shortly after output generation movement when `hasData` is low.
+- This confirms a practical scheduler race window around `hasData` gating and idle sleep selection.
+
+## Applied Fix Candidate (2026-03-08)
+
+- File: `src/app/frame_render_idle_runtime.zig`
+- Change:
+  - keep low-latency idle sleep (`1ms`) not only when `hasData` is true, but also for a short grace window (250ms) after generation advances.
+- Intent:
+  - prevent 33ms/100ms backoff from engaging during brief `hasData=0` gaps while output is still actively progressing.
 
 ## Acceptance Criteria for Fix
 
