@@ -1,5 +1,4 @@
 const app_shell = @import("../app_shell.zig");
-const app_logger = @import("../app_logger.zig");
 const shared_types = @import("../types/mod.zig");
 const terminal_widget_draw = @import("../ui/widgets/terminal_widget_draw.zig");
 
@@ -9,7 +8,6 @@ const TerminalDrawLatencyMetrics = terminal_widget_draw.FrameLatencyMetrics;
 var last_terminal_draw_seq: u64 = 0;
 var last_terminal_poll_seq: u64 = 0;
 var terminal_pressure_since: ?f64 = null;
-var last_terminal_statebug_log_time: f64 = 0.0;
 var last_terminal_observed_generation: u64 = 0;
 var last_terminal_observed_current_generation: u64 = 0;
 var last_terminal_drawn_generation: u64 = 0;
@@ -169,16 +167,6 @@ fn hasTerminalOutputPressure(state: anytype) bool {
     return false;
 }
 
-fn latestTerminalPollSeq(state: anytype) u64 {
-    const State = @TypeOf(state.*);
-    if (!@hasField(State, "terminal_workspace")) return 0;
-
-    if (state.terminal_workspace) |*workspace| {
-        return workspace.lastPollFrameMetrics().seq;
-    }
-    return 0;
-}
-
 fn latestTerminalPublishedGeneration(state: anytype) u64 {
     const State = @TypeOf(state.*);
     if (!@hasField(State, "terminal_workspace")) return 0;
@@ -274,26 +262,6 @@ pub fn handle(
     state.idle_frames +|= 1;
     if (terminal_redraw_pending) {
         if (terminal_pressure_since == null) terminal_pressure_since = now;
-        const pressure_ms = (now - terminal_pressure_since.?) * 1000.0;
-        if (pressure_ms >= 100.0 and (now - last_terminal_statebug_log_time) >= 0.1) {
-            last_terminal_statebug_log_time = now;
-            const statebug_log = app_logger.logger("terminal.ui.statebug");
-            statebug_log.logf(
-                .info,
-                "idle_generation_backlog_ms={d:.2} idle_frames={d} needs_redraw={d} pending_gen={d} drawn_gen={d} draw_seq={d} poll_seq={d} win_px={d}x{d}",
-                .{
-                    pressure_ms,
-                    state.idle_frames,
-                    @intFromBool(state.needs_redraw),
-                    active_current_generation,
-                    last_terminal_drawn_generation,
-                    terminal_widget_draw.latestFrameLatencyMetrics().seq,
-                    latestTerminalPollSeq(state),
-                    state.shell.width(),
-                    state.shell.height(),
-                },
-            );
-        }
     } else {
         terminal_pressure_since = null;
     }
@@ -320,27 +288,6 @@ pub fn handle(
         0.033
     else
         0.100;
-
-    if (!terminal_redraw_pending and !terminal_output_pressure and !generation_recently_advanced and sleep_ms >= 0.033) {
-        const gen_advance_ms = (now - last_terminal_generation_change_time) * 1000.0;
-        if (last_terminal_generation_change_time > 0 and gen_advance_ms <= 200.0 and (now - last_terminal_statebug_log_time) >= 0.1) {
-            last_terminal_statebug_log_time = now;
-            app_logger.logger("terminal.ui.statebug").logf(
-                .info,
-                "idle_backoff_after_gen_advance gen={d} drawn_gen={d} gen_advance_ms={d:.2} sleep_ms={d:.3} hasData={d} idle_frames={d} win_px={d}x{d}",
-                .{
-                    active_current_generation,
-                    last_terminal_drawn_generation,
-                    gen_advance_ms,
-                    sleep_ms,
-                    @intFromBool(terminal_output_pressure),
-                    state.idle_frames,
-                    state.shell.width(),
-                    state.shell.height(),
-                },
-            );
-        }
-    }
 
     app_shell.waitTime(sleep_ms);
     hooks.maybe_log_metrics(ctx, app_shell.getTime());
