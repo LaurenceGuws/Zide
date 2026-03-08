@@ -198,7 +198,7 @@ Runtime-only instrumentation has been added (no behavior/path forcing):
 
 - `poll_probe` repeatedly showed `hasData_pre=0/hasData_post=0` windows while generation later jumped significantly on subsequent draws.
 - `idle_backoff_after_gen_advance` fired with `sleep_ms=0.033` and `gen_advance_ms~145ms`, confirming idle backoff can still trigger shortly after output generation movement when `hasData` is low.
-- This confirms a practical scheduler race window around `hasData` gating and idle sleep selection.
+This confirms a practical scheduler race window around `hasData` gating and idle sleep selection.
 - A stronger rendering signal emerged from later traces:
   - in the problematic large-tile case, `terminal.ui.perf` spends long stretches with `dirty=full` and `full_reasons ... dirty_full=1`
   - this keeps Zide on full-surface redraws instead of the viewport-shift / partial-damage fast path
@@ -223,16 +223,6 @@ Runtime-only instrumentation has been added (no behavior/path forcing):
   - if terminal generation has advanced since last check, treat frame as needing poll/redraw even when `hasData=0`.
 - Intent:
   - avoid missed redraws when `output_pending` drops low but parsed output generation has already moved.
-
-3. Do not force full damage for bottom-pinned scrollback generation churn
-- File: `src/terminal/core/view_cache.zig`
-- Change:
-  - `clear_generation` changes no longer force full damage when both previous and current `scroll_offset` are `0`
-  - keep forcing full damage for actual scrollback-view cases (`scroll_offset != 0`)
-- Intent:
-  - full-region scrolls mutate scrollback generation even when the user is pinned to the live bottom viewport
-  - in that live-bottom case, the visible region can still use `viewport_shift_rows` + partial exposed-row redraw
-  - this restores the scalable fast path for workloads like `ascii-rain`
 
 ## Acceptance Criteria for Fix
 
