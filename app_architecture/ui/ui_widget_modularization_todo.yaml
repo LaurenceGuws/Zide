@@ -209,6 +209,7 @@ ui_widget_modularization_todo:
             - "2026-03-08: Session locking in `terminal_widget_input` is now explicit and narrow: only OSC clipboard pickup, selection/scroll mutations, middle-click paste send, and terminal mouse-reporting stay on the locked path."
             - "2026-03-08: Visible-terminal polling now requests redraws from active-session published cache generation changes rather than `hasData()`/poll activity alone, so frame scheduling follows cache publication instead of threaded PTY pressure heuristics."
             - "2026-03-08: Added reloadable `terminal.texture_shift` renderer config as a kill-switch for the viewport texture self-copy optimization; disabling it preserves the normal redraw fallback path."
+            - "2026-03-08: Workspace poll metrics now treat active-tab spillover as either PTY readiness or unpublished-generation backlog, and poll probes log both current-generation and published-generation movement instead of treating `hasData()` as the only backlog signal."
 
         - id: UI-PERF-03
           title: "Bound terminal workspace polling cost per frame"

@@ -283,6 +283,19 @@ This confirms a practical scheduler race window around `hasData` gating and idle
 - Intent:
   - allow direct A/B validation of the suspected `glCopyTexSubImage2D` self-copy path without flattening the rest of terminal redraw behavior
 
+## Applied Poll Backlog Hint Fix (2026-03-08)
+
+- Files:
+  - `src/terminal/core/terminal_session.zig`
+  - `src/terminal/core/workspace.zig`
+  - `src/app/poll_visible_terminal_sessions_runtime.zig`
+- Change:
+  - added explicit published-generation backlog helpers on `TerminalSession`
+  - workspace `active_spillover_hint` now treats backlog as either PTY-ready data or unpublished-generation work, instead of consulting `hasData()` alone
+  - poll probe logging now emits both `currentGeneration` and published cache generation before/after polling
+- Intent:
+  - keep poll scheduling conservative while making poll metrics and diagnostics reflect the real two-stage pipeline (PTY readiness plus parse/cache publication backlog)
+
 ## Acceptance Criteria for Fix
 
 - At 240Hz, `ascii-rain` no longer shows perceptible frozen subsets under normal runtime load.

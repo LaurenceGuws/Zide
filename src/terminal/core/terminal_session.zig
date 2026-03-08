@@ -690,13 +690,21 @@ pub const TerminalSession = struct {
         self.state_mutex.unlock();
     }
 
-    pub fn currentGeneration(self: *TerminalSession) u64 {
+    pub fn currentGeneration(self: *const TerminalSession) u64 {
         return self.output_generation.load(.acquire);
     }
 
     pub fn publishedGeneration(self: *const TerminalSession) u64 {
         const idx = self.render_cache_index.load(.acquire);
         return self.render_caches[idx].generation;
+    }
+
+    pub fn hasPublishedGenerationBacklog(self: *TerminalSession) bool {
+        return self.currentGeneration() != self.publishedGeneration();
+    }
+
+    pub fn pollBacklogHint(self: *TerminalSession) bool {
+        return self.hasData() or self.hasPublishedGenerationBacklog();
     }
 
     pub fn sendKey(self: *TerminalSession, key: Key, mod: Modifier) !void {
