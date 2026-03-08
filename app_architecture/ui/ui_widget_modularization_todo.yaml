@@ -310,3 +310,6 @@ ui_widget_modularization_todo:
             - "2026-03-08: Added full-dirty source attribution (`FullDirtyReason` + `full_dirty_seq`) from grid -> render cache -> `terminal.ui.perf`/`terminal.ui.statebug` so each `dirty=full` frame reports who requested it."
             - "2026-03-08: Added terminal-session regression coverage for the live-bottom scroll case: a full-region scroll now publishes `dirty=partial` with `viewport_shift_rows=1` instead of forcing a clear-generation full redraw."
             - "2026-03-08: Removed the no-thread `feedOutputBytes(...)` blanket force-full request and added regression coverage so direct parser feeds keep incremental damage after the initial baseline publish."
+            - "2026-03-09: Fresh rain logs showed top rows do participate in partial damage on many frames; the more consistent remaining bug is redraw cadence (`draw_gap_ms~120`) while generations jump sharply between draws."
+            - "2026-03-09: `frame_render_idle_runtime` now treats `currentGeneration != publishedGeneration` as terminal pressure, so parse-thread backlog keeps the UI loop on 1ms sleeps instead of falling into 33/100ms idle backoff."
+            - "2026-03-09: Added temporary `cache_refine` tracing in `view_cache` to compare source dirty spans with post-hash refined dirty spans on the next repro run."
