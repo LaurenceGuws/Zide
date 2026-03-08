@@ -9,8 +9,8 @@
 - Captured a fresh differential analysis (March 8, 2026) against `reference_repos/terminals/kitty` focused on high-refresh behavior.
 - Consolidated findings into a dedicated architecture review doc and marked prior generic focus as stale.
 - Confirmed the current likely fault domain is Zide redraw scheduling / partial texture update behavior under high-refresh incremental updates, not a simple PTY throughput ceiling.
-- Reproduction tightened: issue appears with a single `ascii-rain` instance when resizing the same window in large single-tile Hyprland layouts.
-- Added temporary validation guard to force full terminal texture updates on generation/dirty changes to isolate partial invalidation correctness.
+- Reproduction tightened: issue appears with a single `ascii-rain` instance in large single-tile Hyprland layout state; not primarily a resize-event trigger.
+- Added instrumentation-only `terminal.ui.statebug` logging (draw-gap/state snapshots + idle-pressure snapshots) to isolate state-dependent redraw cadence failures.
 
 ### Constraints / Guardrails
 - Handoff docs remain high-level only; details belong in `app_architecture/*` docs and todo files.

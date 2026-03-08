@@ -21,7 +21,8 @@ This doc is the detailed source of truth for the current focus item.
   - Not strictly tied to 240Hz.
   - Reproduces when terminal occupies a large single-tile workspace on Hyprland.
   - Can reproduce on 60Hz at 4k in that large-tile layout.
-  - New probe clarification: observed logs came from a single `ascii-rain` instance while only resizing the same window between smaller/larger sizes.
+  - New probe clarification: observed logs came from a single `ascii-rain` instance.
+  - Correction: this is not primarily a resize-event trigger. Launching directly in large full-tile state reproduces; launching in half-tile state often does not.
 
 ## Key Differential: Kitty vs Zide
 
@@ -130,12 +131,6 @@ Kitty demonstrates three robustness properties we should mirror:
 4. Keep changes small and bisectable
 - Separate "instrumentation only" commits from behavior changes.
 
-## Current Investigation Guard
-
-- Temporary guard has been applied in `src/ui/renderer/gl_backend.zig` to disable self-copy texture shift optimization and force fallback redraw path for validation.
-- If artifacts disappear in large Hyprland single-tile layouts, this strongly implicates the shift-copy path as the primary fault surface.
-- User validation update (2026-03-08): no visible improvement so far with the guard enabled, so this path is now considered a weaker primary-cause candidate (still possible secondary contributor).
-
 ## Additional Probe Findings (2026-03-08)
 
 - While probing, `terminal.parse` emitted repeated `parse wait timedWait failed err=Timeout` warnings.
@@ -149,20 +144,27 @@ Kitty demonstrates three robustness properties we should mirror:
 
 - The noisy timeout logs were produced during a single-process resize probe (not multi-instance stress), which further weakens "raw throughput saturation" as the primary explanation.
 
-## Current Active Guards (2026-03-08)
+## Current Instrumentation Probe (2026-03-08)
 
-1. `glCopyTexSubImage2D` self-copy shift disabled
-- File: `src/ui/renderer/gl_backend.zig`
-- Status: enabled
-- Result so far: no meaningful improvement by itself.
+Runtime-only instrumentation has been added (no behavior/path forcing):
 
-2. Force full texture update on output generation/dirty activity (probe)
-- File: `src/ui/widgets/terminal_widget_draw.zig`
-- Status: enabled (temporary investigation guard)
-- Intent: isolate partial dirty-row invalidation path as the cause by bypassing partial texture updates when output is advancing.
-- Validation target:
-  - If stale/frozen drops disappear, fault is likely in partial update/dirty reconciliation.
-  - If issue persists, focus shifts back to redraw scheduling/present cadence rather than partial invalidation correctness.
+1. `terminal.ui.statebug` draw-state snapshots
+- Files:
+  - `src/ui/widgets/terminal_widget.zig`
+  - `src/ui/widgets/terminal_widget_draw.zig`
+- Emits every ~100ms:
+  - draw gap (`draw_gap_ms`), draw duration, generation/gen-delta
+  - dirty/damage spans, full/partial choice, clear result
+  - terminal geometry (`rows`, `cols`, `widget_px`, `tex_px`, `scale`)
+
+2. `terminal.ui.statebug` idle pressure snapshots
+- File: `src/app/frame_render_idle_runtime.zig`
+- Emits when terminal output pressure persists while no redraw occurs:
+  - pressure time, idle frames, redraw flag, draw/poll sequence IDs, window pixel size
+
+3. Logging scope
+- `.zide.lua` configured to low-noise bug-scoped tags:
+  - `terminal.ui.statebug,terminal.ui.perf,input.latency,terminal.core`
 
 ## Acceptance Criteria for Fix
 

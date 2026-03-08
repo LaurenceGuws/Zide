@@ -292,3 +292,5 @@ ui_widget_modularization_todo:
             - "2026-03-08: Parse thread wait-timeout warnings were downgraded (timeout is expected), reducing log spam while preserving non-timeout warning signal."
             - "2026-03-08: Probe clarification: logs came from one `ascii-rain` process while only resizing the same window between smaller/larger sizes (not multi-instance load)."
             - "2026-03-08: Added temporary guard in `src/ui/widgets/terminal_widget_draw.zig` to force full texture update on generation/dirty activity, isolating partial invalidation correctness as a root-cause candidate."
+            - "2026-03-08: Correction from user logs: symptom is not resize-event-specific; launching directly in large full-tile state reproduces while half-tile state often does not."
+            - "2026-03-08: Added instrumentation-only `terminal.ui.statebug` logs (draw-gap/gen-delta/dirty spans + idle-pressure snapshots) in `terminal_widget_draw`, `terminal_widget`, and `frame_render_idle_runtime`."
