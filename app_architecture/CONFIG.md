@@ -115,6 +115,7 @@ Theme import helper: `assets/config/theme_import.lua` provides `from_kitty(path)
 | `terminal.disable_ligatures` | Terminal ligature strategy | `src/main.zig` -> renderer/terminal draw | `reloadable` | Current values: `never`, `cursor`, `always`. |
 | `terminal.font_features` | Terminal OpenType features | `src/main.zig` -> renderer/terminal draw | `reloadable` | |
 | `terminal.blink` | Cursor blink policy | `src/main.zig` -> terminal widget | `reloadable` | Preferred values: `kitty`, `off`. Boolean shorthand also accepted. |
+| `terminal.texture_shift` | Enable terminal viewport texture-shift optimization | `src/main.zig` -> renderer/terminal draw | `reloadable` | Set `false` to disable the `scrollTerminalTexture` self-copy fast path while keeping normal redraw logic. |
 | `terminal.tab_bar.show_single_tab` | Terminal-mode tab bar visibility when only one tab exists | `src/main.zig` terminal layout/draw/input | `reloadable` | `false` hides the tab bar until at least 2 tabs exist; `true` keeps it visible for one tab. |
 | `terminal.tab_bar.width_mode` | Terminal-mode tab bar width policy | `src/main.zig` + `src/ui/widgets/tab_bar.zig` | `reloadable` | `fixed`, `dynamic`, `label_length`. |
 | `terminal.scrollback` | Scrollback cap | `src/main.zig` -> new terminal sessions | `partial` | Reload updates future session init options, not existing scrollback history. |
@@ -164,7 +165,7 @@ That means the current Lua surface is more expressive than the actual runtime be
 ### Hot reload is not full reload
 
 Current reload support is intentionally partial:
-- theme, keybinds, wrap, ligature settings, cursor/blink policy, and focus reporting are re-applied.
+- theme, keybinds, wrap, ligature settings, cursor/blink policy, texture-shift toggle, and focus reporting are re-applied.
 - font path/size changes are parsed, but effectively restart-only.
 
 ### Validation behavior is improving, but not finished

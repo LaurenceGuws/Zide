@@ -37,6 +37,7 @@ var frame_latency_metrics: FrameLatencyMetrics = .{};
 
 pub const FrameLatencyMetrics = struct {
     seq: u64 = 0,
+    generation: u64 = 0,
     lock_ms: f64 = 0.0,
     cache_copy_ms: f64 = 0.0,
     texture_update_ms: f64 = 0.0,
@@ -50,6 +51,7 @@ pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
 }
 
 fn publishFrameLatencyMetrics(
+    generation: u64,
     lock_ms: f64,
     cache_copy_ms: f64,
     texture_update_ms: f64,
@@ -60,6 +62,7 @@ fn publishFrameLatencyMetrics(
     frame_latency_seq +%= 1;
     frame_latency_metrics = .{
         .seq = frame_latency_seq,
+        .generation = generation,
         .lock_ms = lock_ms,
         .cache_copy_ms = cache_copy_ms,
         .texture_update_ms = texture_update_ms,
@@ -267,6 +270,7 @@ pub fn draw(
         const draw_ms_total = time_utils.secondsToMs(draw_end - draw_start);
         const render_ms = time_utils.secondsToMs(draw_end - render_phase_start);
         publishFrameLatencyMetrics(
+            self.draw_cache.generation,
             lock_ms,
             cache_copy_ms,
             texture_update_ms,
@@ -281,20 +285,22 @@ pub fn draw(
     var alt_exit = false;
     var alt_state_changed = false;
     const lock_phase_start = app_shell.getTime();
-    var live_cache = self.session.renderCache();
-    if (!live_cache.alt_active and self.session.view_cache_pending.load(.acquire)) {
-        // Queue a best-effort scroll view-cache refresh without blocking draw.
-        self.session.updateViewCacheForScroll();
-        live_cache = self.session.renderCache();
+    self.session.lock();
+    {
+        defer self.session.unlock();
+        if (self.session.view_cache_pending.load(.acquire)) {
+            self.session.updateViewCacheForScrollLocked();
+        }
+        const live_cache = self.session.renderCache();
+        copyRenderCacheSnapshot(cache, self.session.allocator, live_cache) catch |err| {
+            const log = app_logger.logger("terminal.ui.redraw");
+            log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
+            return;
+        };
+        alt_state_changed = self.last_alt_active != cache.alt_active;
+        alt_exit = self.last_alt_active and !cache.alt_active;
+        self.last_alt_active = cache.alt_active;
     }
-    copyRenderCacheSnapshot(cache, self.session.allocator, live_cache) catch |err| {
-        const log = app_logger.logger("terminal.ui.redraw");
-        log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
-        return;
-    };
-    alt_state_changed = self.last_alt_active != cache.alt_active;
-    alt_exit = self.last_alt_active and !cache.alt_active;
-    self.last_alt_active = cache.alt_active;
     render_phase_start = app_shell.getTime();
     lock_ms = time_utils.secondsToMs(render_phase_start - lock_phase_start);
     cache_copy_ms = lock_ms;
@@ -1043,7 +1049,7 @@ pub fn draw(
         }
         const shift_abs_i: i32 = if (viewport_shift_rows < 0) -viewport_shift_rows else viewport_shift_rows;
         var shifted_rows: usize = 0;
-        if (gen_changed and viewport_shift_rows != 0 and scroll_offset == 0 and !needs_full and self.terminal_texture_ready and shift_abs_i > 0 and shift_abs_i < @as(i32, @intCast(rows))) {
+        if (r.terminalTextureShiftEnabled() and gen_changed and viewport_shift_rows != 0 and scroll_offset == 0 and !needs_full and self.terminal_texture_ready and shift_abs_i > 0 and shift_abs_i < @as(i32, @intCast(rows))) {
             const dy_pixels: i32 = -viewport_shift_rows * cell_h_i;
             if (r.scrollTerminalTexture(0, dy_pixels)) {
                 needs_partial = true;
@@ -1127,9 +1133,9 @@ pub fn draw(
 
                 var row: usize = 0;
                 const shift_up = viewport_shift_rows > 0;
-	                while (row < rows) : (row += 1) {
-	                    const is_shift_row = shifted_rows > 0 and (if (shift_up) row >= rows - shifted_rows else row < shifted_rows);
-	                    if (!((row < view_dirty_rows.len and view_dirty_rows[row]) or is_shift_row)) continue;
+                while (row < rows) : (row += 1) {
+                    const is_shift_row = shifted_rows > 0 and (if (shift_up) row >= rows - shifted_rows else row < shifted_rows);
+                    if (!((row < view_dirty_rows.len and view_dirty_rows[row]) or is_shift_row)) continue;
 
                     var col_start: usize = 0;
                     var col_end: usize = cols - 1;
@@ -1149,43 +1155,43 @@ pub fn draw(
                         }
                         if (self.partial_draw_cols_end.items[affect_row] < col_end_u16) {
                             self.partial_draw_cols_end.items[affect_row] = col_end_u16;
-	                        }
-	                    }
-	                }
+                        }
+                    }
+                }
 
-	                var plan_rows_count: usize = 0;
-	                var plan_row_start: usize = rows;
-	                var plan_row_end: usize = 0;
-	                var plan_col_start: usize = cols;
-	                var plan_col_end: usize = 0;
-	                var plan_extra_rows: usize = 0;
-	                row = 0;
-	                while (row < rows) : (row += 1) {
-	                    if (!self.partial_draw_rows.items[row]) continue;
-	                    plan_rows_count += 1;
-	                    if (!(row < view_dirty_rows.len and view_dirty_rows[row])) {
-	                        plan_extra_rows += 1;
-	                    }
-	                    plan_row_start = @min(plan_row_start, row);
-	                    plan_row_end = @max(plan_row_end, row);
-	                    const row_col_start = @min(@as(usize, self.partial_draw_cols_start.items[row]), cols - 1);
-	                    const row_col_end = @min(@as(usize, self.partial_draw_cols_end.items[row]), cols - 1);
-	                    plan_col_start = @min(plan_col_start, row_col_start);
-	                    plan_col_end = @max(plan_col_end, row_col_end);
-	                }
+                var plan_rows_count: usize = 0;
+                var plan_row_start: usize = rows;
+                var plan_row_end: usize = 0;
+                var plan_col_start: usize = cols;
+                var plan_col_end: usize = 0;
+                var plan_extra_rows: usize = 0;
+                row = 0;
+                while (row < rows) : (row += 1) {
+                    if (!self.partial_draw_rows.items[row]) continue;
+                    plan_rows_count += 1;
+                    if (!(row < view_dirty_rows.len and view_dirty_rows[row])) {
+                        plan_extra_rows += 1;
+                    }
+                    plan_row_start = @min(plan_row_start, row);
+                    plan_row_end = @max(plan_row_end, row);
+                    const row_col_start = @min(@as(usize, self.partial_draw_cols_start.items[row]), cols - 1);
+                    const row_col_end = @min(@as(usize, self.partial_draw_cols_end.items[row]), cols - 1);
+                    plan_col_start = @min(plan_col_start, row_col_start);
+                    plan_col_end = @max(plan_col_end, row_col_end);
+                }
                 partial_pipeline_log.logf(
                     .info,
                     "dirty_rows={d} damage_rows={d} damage_cols={d} shifted_rows={d} plan_rows={d} plan_extra_rows={d} plan_row_span={d} plan_col_span={d} rows={d} cols={d}",
-	                    .{
-	                        dirty_rows_count,
-	                        damage_row_span,
-	                        damage_col_span,
-	                        shifted_rows,
-	                        plan_rows_count,
-	                        plan_extra_rows,
-	                        if (plan_rows_count > 0) plan_row_end - plan_row_start + 1 else 0,
-	                        if (plan_rows_count > 0) plan_col_end - plan_col_start + 1 else 0,
-	                        rows,
+                    .{
+                        dirty_rows_count,
+                        damage_row_span,
+                        damage_col_span,
+                        shifted_rows,
+                        plan_rows_count,
+                        plan_extra_rows,
+                        if (plan_rows_count > 0) plan_row_end - plan_row_start + 1 else 0,
+                        if (plan_rows_count > 0) plan_col_end - plan_col_start + 1 else 0,
+                        rows,
                         cols,
                     },
                 );

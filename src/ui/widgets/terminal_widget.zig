@@ -168,7 +168,7 @@ pub const TerminalWidget = struct {
             self.blink_phase_changed_pending = false;
             return false;
         }
-        const cache = self.session.renderCache();
+        const cache = &self.draw_cache;
         var has_slow = false;
         var has_fast = false;
         for (cache.cells.items) |cell| {

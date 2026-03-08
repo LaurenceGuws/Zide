@@ -116,6 +116,7 @@ fn initWithMode(
         } else null,
         config.editor_font_features,
     );
+    shell.rendererPtr().setTerminalTextureShiftEnabled(config.terminal_texture_shift orelse true);
     shell.rendererPtr().setEditorSelectionOverlayStyle(
         config.editor_selection_overlay_smooth orelse config.selection_overlay_smooth,
         config.editor_selection_overlay_corner_px orelse config.selection_overlay_corner_px,
@@ -188,14 +189,11 @@ fn initWithMode(
 
     shell.setTheme(app_theme);
 
-    const grammar_manager: ?grammar_manager_mod.GrammarManager = if (app_modes.ide.supportsEditorSurface(app_mode))
-        blk: {
-            var gm = try grammar_manager_mod.GrammarManager.init(allocator);
-            errdefer gm.deinit();
-            break :blk gm;
-        }
-    else
-        null;
+    const grammar_manager: ?grammar_manager_mod.GrammarManager = if (app_modes.ide.supportsEditorSurface(app_mode)) blk: {
+        var gm = try grammar_manager_mod.GrammarManager.init(allocator);
+        errdefer gm.deinit();
+        break :blk gm;
+    } else null;
     const terminal_workspace = if (app_modes.ide.shouldUseTerminalWorkspace(app_mode))
         TerminalWorkspace.init(allocator, .{
             .scrollback_rows = config.terminal_scrollback_rows,

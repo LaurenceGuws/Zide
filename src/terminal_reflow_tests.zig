@@ -304,6 +304,28 @@ test "terminal view cache suppresses blank rows in multi-row selection overlay" 
     try std.testing.expectEqual(@as(u16, 1), cache.selection_cols_end.items[0]);
 }
 
+test "terminal locked scroll refresh consumes pending view cache update" {
+    const allocator = std.testing.allocator;
+
+    var session = try term_mod.TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    term_mod.debugFeedBytes(session, "AAAA\nBBBB\nCCCC\nDDDD\n");
+    session.updateViewCacheForScrollLocked();
+
+    session.lock();
+    defer session.unlock();
+
+    session.scrollBy(1);
+    try std.testing.expect(session.view_cache_pending.load(.acquire));
+    try std.testing.expectEqual(@as(usize, 0), session.renderCache().scroll_offset);
+
+    session.updateViewCacheForScrollLocked();
+
+    try std.testing.expect(!session.view_cache_pending.load(.acquire));
+    try std.testing.expectEqual(session.scrollOffset(), session.renderCache().scroll_offset);
+}
+
 test "terminal reflow remaps saved cursor" {
     const allocator = std.testing.allocator;
 

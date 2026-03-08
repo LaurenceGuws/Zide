@@ -34,32 +34,33 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
     const log = app_logger.logger("terminal.csi");
     const inputpath_log = app_logger.logger("terminal.inputpath");
     const csi_param_count = effectiveCsiParamCount(action);
-            log.logf(.info, 
-            "csi final={c} leader={c} private={d} interm={s} count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
-            .{
-                action.final,
-                if (action.leader == 0) '.' else action.leader,
-                @as(u8, @intFromBool(action.private)),
-                action.intermediates[0..action.intermediates_len],
-                csi_param_count,
-                action.params[0],
-                action.params[1],
-                action.params[2],
-                action.params[3],
-                action.params[4],
-                action.params[5],
-                action.params[6],
-                action.params[7],
-                action.params[8],
-                action.params[9],
-                action.params[10],
-                action.params[11],
-                action.params[12],
-                action.params[13],
-                action.params[14],
-                action.params[15],
-            },
-        );
+    log.logf(
+        .info,
+        "csi final={c} leader={c} private={d} interm={s} count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
+        .{
+            action.final,
+            if (action.leader == 0) '.' else action.leader,
+            @as(u8, @intFromBool(action.private)),
+            action.intermediates[0..action.intermediates_len],
+            csi_param_count,
+            action.params[0],
+            action.params[1],
+            action.params[2],
+            action.params[3],
+            action.params[4],
+            action.params[5],
+            action.params[6],
+            action.params[7],
+            action.params[8],
+            action.params[9],
+            action.params[10],
+            action.params[11],
+            action.params[12],
+            action.params[13],
+            action.params[14],
+            action.params[15],
+        },
+    );
     const p = action.params;
     const param_len = csi_param_count;
     const get = struct {
@@ -342,7 +343,10 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         5 => self.activeScreen().*.setScreenReverse(true),
                         6 => self.activeScreen().*.setOriginMode(true),
                         7 => self.activeScreen().*.setAutowrap(true),
-                        8 => self.auto_repeat = true,
+                        8 => {
+                            self.auto_repeat = true;
+                            self.updateInputSnapshot();
+                        },
                         9 => {
                             self.input.mouse_mode_x10 = true;
                             self.updateInputSnapshot();
@@ -358,7 +362,10 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             self.activeScreen().*.setSaveCursorMode1048(true);
                         },
                         1049 => self.enterAltScreen(true, true),
-                        2004 => self.bracketed_paste = true,
+                        2004 => {
+                            self.bracketed_paste = true;
+                            self.updateInputSnapshot();
+                        },
                         2026 => self.setSyncUpdates(true),
                         2027 => {
                             self.grapheme_cluster_shaping_2027 = true;
@@ -387,7 +394,10 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             self.input.mouse_mode_sgr = true;
                             self.updateInputSnapshot();
                         },
-                        1007 => self.mouse_alternate_scroll = true,
+                        1007 => {
+                            self.mouse_alternate_scroll = true;
+                            self.updateInputSnapshot();
+                        },
                         1016 => {
                             self.input.mouse_mode_sgr_pixels_1016 = true;
                             self.updateInputSnapshot();
@@ -426,7 +436,10 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         5 => self.activeScreen().*.setScreenReverse(false),
                         6 => self.activeScreen().*.setOriginMode(false),
                         7 => self.activeScreen().*.setAutowrap(false),
-                        8 => self.auto_repeat = false,
+                        8 => {
+                            self.auto_repeat = false;
+                            self.updateInputSnapshot();
+                        },
                         9 => {
                             self.input.mouse_mode_x10 = false;
                             self.updateInputSnapshot();
@@ -442,7 +455,10 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             self.activeScreen().*.setSaveCursorMode1048(false);
                         },
                         1049 => self.exitAltScreen(true),
-                        2004 => self.bracketed_paste = false,
+                        2004 => {
+                            self.bracketed_paste = false;
+                            self.updateInputSnapshot();
+                        },
                         2026 => self.setSyncUpdates(false),
                         2027 => {
                             self.grapheme_cluster_shaping_2027 = false;
@@ -471,7 +487,10 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             self.input.mouse_mode_sgr = false;
                             self.updateInputSnapshot();
                         },
-                        1007 => self.mouse_alternate_scroll = false,
+                        1007 => {
+                            self.mouse_alternate_scroll = false;
+                            self.updateInputSnapshot();
+                        },
                         1016 => {
                             self.input.mouse_mode_sgr_pixels_1016 = false;
                             self.updateInputSnapshot();
@@ -735,28 +754,29 @@ pub fn applySgr(self: anytype, action: parser_csi.CsiAction) void {
     const params = action.params;
     const n_params = effectiveSgrParamCount(action);
     const log = app_logger.logger("terminal.sgr");
-            log.logf(.info, 
-            "sgr count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
-            .{
-                n_params,
-                params[0],
-                params[1],
-                params[2],
-                params[3],
-                params[4],
-                params[5],
-                params[6],
-                params[7],
-                params[8],
-                params[9],
-                params[10],
-                params[11],
-                params[12],
-                params[13],
-                params[14],
-                params[15],
-            },
-        );
+    log.logf(
+        .info,
+        "sgr count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
+        .{
+            n_params,
+            params[0],
+            params[1],
+            params[2],
+            params[3],
+            params[4],
+            params[5],
+            params[6],
+            params[7],
+            params[8],
+            params[9],
+            params[10],
+            params[11],
+            params[12],
+            params[13],
+            params[14],
+            params[15],
+        },
+    );
     var i: usize = 0;
     while (i < n_params) {
         const p = params[i];
