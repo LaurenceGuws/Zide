@@ -302,7 +302,7 @@ pub const TerminalWorkspace = struct {
                 .total_polled = active_polled_success,
                 .budget_tabs = budget.max_tabs_per_frame,
                 .budget_exhausted_hint = budget_exhausted_hint,
-                .active_spillover_hint = active_polled_success >= active_polls and self.tabs.items[active_idx].session.hasData(),
+                .active_spillover_hint = activePolledBacklogHint(self, active_idx, active_polled_success, active_polls),
                 .background_backlog_hint = background_backlog_hint,
             });
             return any_polled;
@@ -325,7 +325,7 @@ pub const TerminalWorkspace = struct {
                 .total_polled = active_polled_success,
                 .budget_tabs = budget.max_tabs_per_frame,
                 .budget_exhausted_hint = budget_exhausted_hint,
-                .active_spillover_hint = active_polled_success >= active_polls and self.tabs.items[active_idx].session.hasData(),
+                .active_spillover_hint = activePolledBacklogHint(self, active_idx, active_polled_success, active_polls),
                 .background_backlog_hint = background_backlog_hint,
             });
             return any_polled;
@@ -358,7 +358,7 @@ pub const TerminalWorkspace = struct {
             .total_polled = active_polled_success + background_polled,
             .budget_tabs = budget.max_tabs_per_frame,
             .budget_exhausted_hint = budget_exhausted_hint,
-            .active_spillover_hint = active_polled_success >= active_polls and self.tabs.items[active_idx].session.hasData(),
+            .active_spillover_hint = activePolledBacklogHint(self, active_idx, active_polled_success, active_polls),
             .background_backlog_hint = background_backlog_hint,
         });
         return any_polled;
@@ -420,6 +420,12 @@ pub const TerminalWorkspace = struct {
             if (idx < count) return idx;
         }
         return null;
+    }
+
+    fn activePolledBacklogHint(self: *TerminalWorkspace, active_idx: usize, active_polled_success: usize, active_polls: usize) bool {
+        if (active_polled_success < active_polls) return false;
+        if (active_idx >= self.tabs.items.len) return false;
+        return self.tabs.items[active_idx].session.pollBacklogHint();
     }
 
     fn recordPollMetrics(self: *TerminalWorkspace, metrics: PollFrameMetrics) void {
