@@ -364,15 +364,6 @@ pub const TerminalSession = struct {
         return self.active == .alt;
     }
 
-    pub fn requestForceFullDamage(self: *TerminalSession, reason: []const u8) void {
-        self.force_full_damage.store(true, .release);
-        app_logger.logger("terminal.ui.invalidate").logf(
-            .info,
-            "force_full_damage reason={s}",
-            .{reason},
-        );
-    }
-
     pub fn setDefaultColors(self: *TerminalSession, fg: types.Color, bg: types.Color) void {
         const old_attrs = self.primary.default_attrs;
         var new_attrs = types.defaultCell().attrs;
@@ -383,8 +374,7 @@ pub const TerminalSession = struct {
         self.primary.updateDefaultColors(old_attrs, new_attrs);
         self.alt.updateDefaultColors(old_attrs, new_attrs);
         self.history.updateDefaultColors(old_attrs.fg, old_attrs.bg, new_attrs.fg, new_attrs.bg);
-        // Theme default colors touch every cell/background relationship.
-        self.requestForceFullDamage("default colors changed");
+        self.force_full_damage.store(true, .release);
     }
 
     pub fn setAnsiColors(self: *TerminalSession, colors: [16]types.Color) void {
@@ -394,8 +384,7 @@ pub const TerminalSession = struct {
             self.palette_default[i] = colors[i];
             self.palette_current[i] = colors[i];
         }
-        // Palette replacement invalidates all previously resolved ANSI color mapping.
-        self.requestForceFullDamage("set ANSI palette");
+        self.force_full_damage.store(true, .release);
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
@@ -405,8 +394,7 @@ pub const TerminalSession = struct {
         self.primary.updateAnsiColors(old_colors, new_colors);
         self.alt.updateAnsiColors(old_colors, new_colors);
         self.history.updateAnsiColors(old_colors, new_colors);
-        // Remapping ANSI colors mutates effective colors across the entire buffer.
-        self.requestForceFullDamage("remap ANSI palette");
+        self.force_full_damage.store(true, .release);
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
@@ -824,8 +812,7 @@ pub const TerminalSession = struct {
         self.primary.setCursor(0, 0);
         self.alt.setCursor(0, 0);
         _ = self.clear_generation.fetchAdd(1, .acq_rel);
-        // 132-column mode clears both screens and resets layout; repaint from scratch.
-        self.requestForceFullDamage("set 132-column mode");
+        self.force_full_damage.store(true, .release);
     }
 
     pub fn setCellSize(self: *TerminalSession, cell_width: u16, cell_height: u16) void {
@@ -883,8 +870,7 @@ pub const TerminalSession = struct {
         const screen = self.activeScreen();
         const blank_cell = screen.blankCell();
         screen.eraseDisplay(mode, blank_cell);
-        // Trust screen dirty metadata for ED; forcing full damage on every ED
-        // can create sustained full-redraw loops for clear-heavy TUIs.
+        self.force_full_damage.store(true, .release);
         if (mode == 2 or mode == 3) {
             self.clearSelection();
             _ = self.clear_generation.fetchAdd(1, .acq_rel);
@@ -1174,7 +1160,6 @@ pub const TerminalSession = struct {
             self.activeScreen().clear();
             self.activeScreen().setCursor(0, 0);
         }
-        // Alt-screen switch changes active backing grid; force complete repaint.
         self.activeScreen().markDirtyAllWithReason(.alt_enter);
     }
 
@@ -1189,7 +1174,6 @@ pub const TerminalSession = struct {
         if (restore_cursor) {
             self.restoreCursor();
         }
-        // Exiting alt-screen restores primary content; repaint the full viewport.
         self.activeScreen().markDirtyAllWithReason(.alt_exit);
     }
 
@@ -1232,11 +1216,9 @@ pub const TerminalSession = struct {
         if (self.sync_updates_active == enabled) return;
         self.sync_updates_active = enabled;
         if (!enabled) {
-            // Leaving synchronized updates can release a backlog of terminal mutations.
             self.activeScreen().markDirtyAllWithReason(.sync_updates_disabled);
         }
-        // Sync-update mode transition invalidates render-cache assumptions.
-        self.requestForceFullDamage("sync updates mode changed");
+        self.force_full_damage.store(true, .release);
         const offset: usize = self.history.scrollOffset();
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), offset);
     }
@@ -1441,7 +1423,6 @@ pub const TerminalSession = struct {
     pub fn markDirty(self: *TerminalSession) void {
         self.lock();
         defer self.unlock();
-        // External API requested full invalidation; mark both backing screens dirty.
         self.activeScreen().markDirtyAllWithReason(.session_mark_dirty_api);
         self.inactiveScreen().markDirtyAllWithReason(.session_mark_dirty_api);
         _ = self.output_generation.fetchAdd(1, .acq_rel);
