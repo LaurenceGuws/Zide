@@ -111,9 +111,12 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         !selection_active and
         !active_cache.selection_active)
     {
-        // Generation can advance without visible cell changes (e.g. parser-side churn).
-        // Keep cache generation current without forcing a redraw.
+        // Generation can advance without visible cell changes (e.g. cursor-only shell
+        // movement). Keep overlay-facing state current even when cell contents stay the same.
         active_cache.generation = generation;
+        active_cache.cursor = view.cursor;
+        active_cache.cursor_style = view.cursor_style;
+        active_cache.cursor_visible = view.cursor_visible;
         return;
     }
     if (rows == 0 or cols == 0) {
@@ -274,11 +277,12 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         }
         cache.selection_active = selection_active;
     }
+    const requires_full_damage_for_scrollback = clear_generation != active_cache.clear_generation;
     const needs_full_damage = force_full_damage or
         rows != active_cache.rows or
         cols != active_cache.cols or
         scroll_offset != active_cache.scroll_offset or
-        clear_generation != active_cache.clear_generation or
+        requires_full_damage_for_scrollback or
         (self.active == .alt) != active_cache.alt_active or
         screen_reverse != active_cache.screen_reverse or
         kitty_generation != active_cache.kitty_generation or
