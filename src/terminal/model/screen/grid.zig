@@ -25,6 +25,14 @@ pub const FullDirtyReason = enum {
     scrollback_view_offset_change,
     resize_reflow,
     kitty_graphics_changed,
+    view_cache_force_full_damage,
+    view_cache_geometry_change,
+    view_cache_scroll_offset_change,
+    view_cache_scrollback_generation_change,
+    view_cache_alt_state_change,
+    view_cache_screen_reverse_change,
+    view_cache_kitty_generation_change,
+    view_cache_view_dirty_full,
 };
 
 pub const Damage = struct {

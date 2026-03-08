@@ -3,9 +3,42 @@ const types = @import("../model/types.zig");
 const kitty_mod = @import("../kitty/graphics.zig");
 const render_cache_mod = @import("render_cache.zig");
 const app_logger = @import("../../app_logger.zig");
+const screen_mod = @import("../model/screen.zig");
 
 const RenderCache = render_cache_mod.RenderCache;
 const Cell = types.Cell;
+const FullDirtyReason = screen_mod.FullDirtyReason;
+
+fn pickForcedFullDirtyReason(
+    force_full_damage: bool,
+    rows: usize,
+    active_rows: usize,
+    cols: usize,
+    active_cols: usize,
+    scroll_offset: usize,
+    active_scroll_offset: usize,
+    requires_full_damage_for_scrollback: bool,
+    active_is_alt: bool,
+    cache_alt_active: bool,
+    screen_reverse: bool,
+    cache_screen_reverse: bool,
+    kitty_generation: u64,
+    cache_kitty_generation: u64,
+    view_dirty: anytype,
+    view_reason: FullDirtyReason,
+) FullDirtyReason {
+    if (force_full_damage) return .view_cache_force_full_damage;
+    if (rows != active_rows or cols != active_cols) return .view_cache_geometry_change;
+    if (scroll_offset != active_scroll_offset) return .view_cache_scroll_offset_change;
+    if (requires_full_damage_for_scrollback) return .view_cache_scrollback_generation_change;
+    if (active_is_alt != cache_alt_active) return .view_cache_alt_state_change;
+    if (screen_reverse != cache_screen_reverse) return .view_cache_screen_reverse_change;
+    if (kitty_generation != cache_kitty_generation) return .view_cache_kitty_generation_change;
+    if (view_dirty == .full) {
+        return if (view_reason == .unknown) .view_cache_view_dirty_full else view_reason;
+    }
+    return .unknown;
+}
 
 fn rowLastContentCol(row_cells: []const Cell, cols: usize) ?usize {
     if (cols == 0 or row_cells.len < cols) return null;
@@ -344,8 +377,31 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         .{ .start_row = 0, .end_row = if (rows > 0) rows - 1 else 0, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
     else
         view.damage;
-    cache.full_dirty_reason = view.full_dirty_reason;
-    cache.full_dirty_seq = view.full_dirty_seq;
+    if (needs_full_damage) {
+        const forced_reason = pickForcedFullDirtyReason(
+            force_full_damage,
+            rows,
+            active_cache.rows,
+            cols,
+            active_cache.cols,
+            scroll_offset,
+            active_cache.scroll_offset,
+            requires_full_damage_for_scrollback,
+            self.active == .alt,
+            active_cache.alt_active,
+            screen_reverse,
+            active_cache.screen_reverse,
+            kitty_generation,
+            active_cache.kitty_generation,
+            view.dirty,
+            view.full_dirty_reason,
+        );
+        cache.full_dirty_reason = forced_reason;
+        cache.full_dirty_seq = active_cache.full_dirty_seq +% 1;
+    } else {
+        cache.full_dirty_reason = view.full_dirty_reason;
+        cache.full_dirty_seq = view.full_dirty_seq;
+    }
 
     if (!needs_full_damage and cache.dirty == .full and active_cache.rows == rows and active_cache.cols == cols and active_cache.row_hashes.items.len == rows and rows > 0 and cols > 0) {
         const shift = viewport_shift_rows;
