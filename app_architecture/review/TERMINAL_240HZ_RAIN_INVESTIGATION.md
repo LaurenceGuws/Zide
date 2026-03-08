@@ -283,6 +283,22 @@ This confirms a practical scheduler race window around `hasData` gating and idle
 - Intent:
   - allow direct A/B validation of the suspected `glCopyTexSubImage2D` self-copy path without flattening the rest of terminal redraw behavior
 
+## Applied Texture-Shift Coverage (2026-03-08)
+
+- Files:
+  - `src/ui/widgets/terminal_widget_draw.zig`
+  - `src/tests_main.zig`
+- Change:
+  - extracted the viewport texture-shift gate into a pure planning helper
+  - added unit coverage for:
+    - fast-path eligible shift attempts
+    - `terminal.texture_shift = false` forcing full redraw fallback
+    - oversize viewport shifts forcing full redraw fallback
+    - already-forced-full draws refusing the shift path
+    - scrollback-view movement refusing the shift path
+- Intent:
+  - make the kill-switch behavior regression-testable so enabled vs disabled path selection is not only a manual probe
+
 ## Applied Poll Backlog Hint Fix (2026-03-08)
 
 - Files:
