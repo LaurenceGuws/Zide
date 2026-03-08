@@ -291,8 +291,6 @@ pub fn draw(
     input: shared_types.input.InputSnapshot,
 ) void {
     const draw_start = app_shell.getTime();
-    const partial_pipeline_log = app_logger.logger("terminal.ui.partial_pipeline");
-    const row_dirty_samples_log = app_logger.logger("terminal.ui.row_dirty_samples");
     var lock_ms: f64 = 0.0;
     var cache_copy_ms: f64 = 0.0;
     var texture_update_ms: f64 = 0.0;
@@ -1028,7 +1026,6 @@ pub fn draw(
     var texture_partial_update = false;
     var dirty_clear_ok = false;
     var full_reason_recreated = false;
-    var full_reason_gen = false;
     var full_reason_cell_metrics = false;
     var full_reason_scale = false;
     var full_reason_alt_change = false;
@@ -1051,9 +1048,6 @@ pub fn draw(
         const kitty_changed = kitty_generation != self.kitty.last_generation;
         const gen_changed = cache.generation != self.last_render_generation;
         full_reason_recreated = recreated;
-        // Some sessions still advance generation without reliable dirty metadata.
-        // Preserve correctness by redrawing on generation change when cache reports no dirty rows.
-        full_reason_gen = gen_changed and cache.dirty == .none;
         full_reason_cell_metrics = cell_metrics_changed;
         full_reason_scale = render_scale_changed;
         full_reason_alt_change = alt_state_changed;
@@ -1065,7 +1059,6 @@ pub fn draw(
         full_reason_blink = has_blink and blink_phase_changed;
 
         var needs_full = full_reason_recreated or
-            full_reason_gen or
             full_reason_cell_metrics or
             full_reason_scale or
             full_reason_alt_change or
@@ -1201,70 +1194,6 @@ pub fn draw(
                             self.partial_draw_cols_end.items[affect_row] = col_end_u16;
                         }
                     }
-                }
-
-                var plan_rows_count: usize = 0;
-                var plan_row_start: usize = rows;
-                var plan_row_end: usize = 0;
-                var plan_col_start: usize = cols;
-                var plan_col_end: usize = 0;
-                var plan_extra_rows: usize = 0;
-                row = 0;
-                while (row < rows) : (row += 1) {
-                    if (!self.partial_draw_rows.items[row]) continue;
-                    plan_rows_count += 1;
-                    if (!(row < view_dirty_rows.len and view_dirty_rows[row])) {
-                        plan_extra_rows += 1;
-                    }
-                    plan_row_start = @min(plan_row_start, row);
-                    plan_row_end = @max(plan_row_end, row);
-                    const row_col_start = @min(@as(usize, self.partial_draw_cols_start.items[row]), cols - 1);
-                    const row_col_end = @min(@as(usize, self.partial_draw_cols_end.items[row]), cols - 1);
-                    plan_col_start = @min(plan_col_start, row_col_start);
-                    plan_col_end = @max(plan_col_end, row_col_end);
-                }
-                partial_pipeline_log.logf(
-                    .info,
-                    "dirty_rows={d} damage_rows={d} damage_cols={d} shifted_rows={d} plan_rows={d} plan_extra_rows={d} plan_row_span={d} plan_col_span={d} rows={d} cols={d}",
-                    .{
-                        dirty_rows_count,
-                        damage_row_span,
-                        damage_col_span,
-                        shifted_rows,
-                        plan_rows_count,
-                        plan_extra_rows,
-                        if (plan_rows_count > 0) plan_row_end - plan_row_start + 1 else 0,
-                        if (plan_rows_count > 0) plan_col_end - plan_col_start + 1 else 0,
-                        rows,
-                        cols,
-                    },
-                );
-
-                var sampled: usize = 0;
-                row = 0;
-                while (row < rows and sampled < 5) : (row += 1) {
-                    if (!(row < view_dirty_rows.len and view_dirty_rows[row])) continue;
-                    if (row >= cache.dirty_cols_start.items.len or row >= cache.dirty_cols_end.items.len) continue;
-                    const dirty_col_start = @min(@as(usize, cache.dirty_cols_start.items[row]), cols - 1);
-                    const dirty_col_end = @min(@as(usize, cache.dirty_cols_end.items[row]), cols - 1);
-                    const sampled_plan_col_start = @min(@as(usize, self.partial_draw_cols_start.items[row]), cols - 1);
-                    const sampled_plan_col_end = @min(@as(usize, self.partial_draw_cols_end.items[row]), cols - 1);
-                    row_dirty_samples_log.logf(
-                        .info,
-                        "row={d} dirty={d}..{d} span={d} plan={d}..{d} plan_span={d} rows={d} cols={d}",
-                        .{
-                            row,
-                            dirty_col_start,
-                            dirty_col_end,
-                            dirty_col_end - dirty_col_start + 1,
-                            sampled_plan_col_start,
-                            sampled_plan_col_end,
-                            sampled_plan_col_end - sampled_plan_col_start + 1,
-                            rows,
-                            cols,
-                        },
-                    );
-                    sampled += 1;
                 }
 
                 r.beginTerminalBatch();
@@ -1684,7 +1613,7 @@ pub fn draw(
         );
         perf_log.logf(
             .info,
-            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} dirty_rows={d} damage_rows={d} damage_cols={d} blink_cells={d} blink_phase_changed={d} full_reasons={d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d} full_dirty_reason={s} full_dirty_seq={d} rows={d} cols={d}",
+            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} dirty_rows={d} damage_rows={d} damage_cols={d} blink_cells={d} blink_phase_changed={d} full_reasons={d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d} full_dirty_reason={s} full_dirty_seq={d} rows={d} cols={d}",
             .{
                 elapsed_ms,
                 lock_ms,
@@ -1703,7 +1632,6 @@ pub fn draw(
                 @intFromBool(has_blink),
                 @intFromBool(blink_phase_changed),
                 @intFromBool(full_reason_recreated),
-                @intFromBool(full_reason_gen),
                 @intFromBool(full_reason_cell_metrics),
                 @intFromBool(full_reason_scale),
                 @intFromBool(full_reason_alt_change),
