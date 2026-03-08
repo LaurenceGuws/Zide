@@ -48,6 +48,78 @@ const SavedCharsetState = struct {
     target: CharsetTarget = .g0,
 };
 
+const PatternStats = struct {
+    window_start_ms: i64 = 0,
+    force_full_ed: u32 = 0,
+    force_full_el: u32 = 0,
+    force_full_el_same_generation: u32 = 0,
+    force_full_el_mode0: u32 = 0,
+    force_full_el_mode1: u32 = 0,
+    force_full_el_mode2: u32 = 0,
+    force_full_el_row_min: ?usize = null,
+    force_full_el_row_max: ?usize = null,
+    force_full_el_last_generation: ?u64 = null,
+    force_full_sync: u32 = 0,
+    force_full_feed: u32 = 0,
+    full_dirty_screen_clear: u32 = 0,
+    full_dirty_erase_display: u32 = 0,
+    full_dirty_alt_enter: u32 = 0,
+    full_dirty_alt_exit: u32 = 0,
+    full_dirty_sync_updates_disabled: u32 = 0,
+    kitty_image_store: u32 = 0,
+    kitty_place: u32 = 0,
+    kitty_delete: u32 = 0,
+
+    fn reset(self: *PatternStats, now_ms: i64) void {
+        self.* = .{ .window_start_ms = now_ms };
+    }
+
+    fn total(self: *const PatternStats) u32 {
+        return self.force_full_ed +
+            self.force_full_el +
+            self.force_full_sync +
+            self.force_full_feed +
+            self.full_dirty_screen_clear +
+            self.full_dirty_erase_display +
+            self.full_dirty_alt_enter +
+            self.full_dirty_alt_exit +
+            self.full_dirty_sync_updates_disabled +
+            self.kitty_image_store +
+            self.kitty_place +
+            self.kitty_delete;
+    }
+
+    fn noteEl(self: *PatternStats, mode: i32, row: usize, generation: u64) void {
+        self.force_full_el += 1;
+        if (self.force_full_el_last_generation) |last_generation| {
+            if (last_generation == generation) self.force_full_el_same_generation += 1;
+        }
+        self.force_full_el_last_generation = generation;
+        switch (mode) {
+            0 => self.force_full_el_mode0 += 1,
+            1 => self.force_full_el_mode1 += 1,
+            2 => self.force_full_el_mode2 += 1,
+            else => {},
+        }
+        self.force_full_el_row_min = if (self.force_full_el_row_min) |min_row| @min(min_row, row) else row;
+        self.force_full_el_row_max = if (self.force_full_el_row_max) |max_row| @max(max_row, row) else row;
+    }
+};
+
+pub const PatternEvent = enum {
+    force_full_ed,
+    force_full_sync,
+    force_full_feed,
+    full_dirty_screen_clear,
+    full_dirty_erase_display,
+    full_dirty_alt_enter,
+    full_dirty_alt_exit,
+    full_dirty_sync_updates_disabled,
+    kitty_image_store,
+    kitty_place,
+    kitty_delete,
+};
+
 pub const KittyImageFormat = snapshot_mod.KittyImageFormat;
 pub const KittyImage = snapshot_mod.KittyImage;
 pub const KittyPlacement = snapshot_mod.KittyPlacement;
@@ -98,6 +170,13 @@ const ActiveScreen = enum {
     primary,
     alt,
 };
+
+fn isNavigationKey(key: Key) bool {
+    return switch (key) {
+        VTERM_KEY_LEFT, VTERM_KEY_RIGHT, VTERM_KEY_UP, VTERM_KEY_DOWN, VTERM_KEY_HOME, VTERM_KEY_END => true,
+        else => false,
+    };
+}
 
 /// Minimal terminal stub so the UI panel stays wired while backend is removed.
 pub const TerminalSession = struct {
@@ -173,6 +252,7 @@ pub const TerminalSession = struct {
     alt_last_active: bool,
     clear_generation: std.atomic.Value(u64),
     force_full_damage: std.atomic.Value(bool),
+    pattern_stats: PatternStats,
     saved_charset: SavedCharsetState,
     child_exited: std.atomic.Value(bool),
     child_exit_code: std.atomic.Value(i32),
@@ -292,6 +372,7 @@ pub const TerminalSession = struct {
             .alt_last_active = false,
             .clear_generation = std.atomic.Value(u64).init(0),
             .force_full_damage = std.atomic.Value(bool).init(false),
+            .pattern_stats = .{},
             .saved_charset = .{},
             .child_exited = std.atomic.Value(bool).init(false),
             .child_exit_code = std.atomic.Value(i32).init(-1),
@@ -364,6 +445,96 @@ pub const TerminalSession = struct {
         return self.active == .alt;
     }
 
+    fn flushPatternStats(self: *TerminalSession, now_ms: i64) void {
+        if (self.pattern_stats.total() == 0) {
+            self.pattern_stats.window_start_ms = now_ms;
+            return;
+        }
+        const screen = self.activeScreenConst();
+        app_logger.logger("terminal.ui.pattern").logf(
+            .info,
+            "window_ms={d} rows={d} cols={d} alt={d} sync={d} force_full(ed={d} el={d} sync={d} feed={d}) full_dirty(screen_clear={d} ed_full={d} alt_enter={d} alt_exit={d} sync_off={d}) kitty(store={d} place={d} delete={d})",
+            .{
+                now_ms - self.pattern_stats.window_start_ms,
+                screen.grid.rows,
+                screen.grid.cols,
+                @intFromBool(self.isAltActive()),
+                @intFromBool(self.sync_updates_active),
+                self.pattern_stats.force_full_ed,
+                self.pattern_stats.force_full_el,
+                self.pattern_stats.force_full_sync,
+                self.pattern_stats.force_full_feed,
+                self.pattern_stats.full_dirty_screen_clear,
+                self.pattern_stats.full_dirty_erase_display,
+                self.pattern_stats.full_dirty_alt_enter,
+                self.pattern_stats.full_dirty_alt_exit,
+                self.pattern_stats.full_dirty_sync_updates_disabled,
+                self.pattern_stats.kitty_image_store,
+                self.pattern_stats.kitty_place,
+                self.pattern_stats.kitty_delete,
+            },
+        );
+        if (self.pattern_stats.force_full_el > 0) {
+            app_logger.logger("terminal.ui.pattern").logf(
+                .info,
+                "el_detail window_ms={d} rows={d} cols={d} count={d} same_generation={d} modes(0={d} 1={d} 2={d}) row_span={d}..{d}",
+                .{
+                    now_ms - self.pattern_stats.window_start_ms,
+                    screen.grid.rows,
+                    screen.grid.cols,
+                    self.pattern_stats.force_full_el,
+                    self.pattern_stats.force_full_el_same_generation,
+                    self.pattern_stats.force_full_el_mode0,
+                    self.pattern_stats.force_full_el_mode1,
+                    self.pattern_stats.force_full_el_mode2,
+                    self.pattern_stats.force_full_el_row_min orelse 0,
+                    self.pattern_stats.force_full_el_row_max orelse 0,
+                },
+            );
+        }
+        self.pattern_stats.reset(now_ms);
+    }
+
+    pub fn notePatternEvent(self: *TerminalSession, event: PatternEvent) void {
+        const now_ms = std.time.milliTimestamp();
+        if (self.pattern_stats.window_start_ms == 0) {
+            self.pattern_stats.window_start_ms = now_ms;
+        } else if (now_ms - self.pattern_stats.window_start_ms >= 500) {
+            self.flushPatternStats(now_ms);
+        }
+        switch (event) {
+            .force_full_ed => self.pattern_stats.force_full_ed += 1,
+            .force_full_sync => self.pattern_stats.force_full_sync += 1,
+            .force_full_feed => self.pattern_stats.force_full_feed += 1,
+            .full_dirty_screen_clear => self.pattern_stats.full_dirty_screen_clear += 1,
+            .full_dirty_erase_display => self.pattern_stats.full_dirty_erase_display += 1,
+            .full_dirty_alt_enter => self.pattern_stats.full_dirty_alt_enter += 1,
+            .full_dirty_alt_exit => self.pattern_stats.full_dirty_alt_exit += 1,
+            .full_dirty_sync_updates_disabled => self.pattern_stats.full_dirty_sync_updates_disabled += 1,
+            .kitty_image_store => self.pattern_stats.kitty_image_store += 1,
+            .kitty_place => self.pattern_stats.kitty_place += 1,
+            .kitty_delete => self.pattern_stats.kitty_delete += 1,
+        }
+    }
+
+    pub fn requestForceFullDamage(self: *TerminalSession, reason: []const u8, src: std.builtin.SourceLocation) void {
+        self.force_full_damage.store(true, .release);
+        if (std.mem.eql(u8, reason, "erase display CSI")) {
+            self.notePatternEvent(.force_full_ed);
+        } else if (std.mem.eql(u8, reason, "sync updates mode changed")) {
+            self.notePatternEvent(.force_full_sync);
+        } else if (std.mem.eql(u8, reason, "feed output bytes")) {
+            self.notePatternEvent(.force_full_feed);
+        }
+        if (std.mem.eql(u8, reason, "erase line CSI")) return;
+        app_logger.logger("terminal.ui.invalidate").logfSrc(
+            .info,
+            src,
+            "force_full_damage reason={s}",
+            .{reason},
+        );
+    }
+
     pub fn setDefaultColors(self: *TerminalSession, fg: types.Color, bg: types.Color) void {
         const old_attrs = self.primary.default_attrs;
         var new_attrs = types.defaultCell().attrs;
@@ -374,7 +545,7 @@ pub const TerminalSession = struct {
         self.primary.updateDefaultColors(old_attrs, new_attrs);
         self.alt.updateDefaultColors(old_attrs, new_attrs);
         self.history.updateDefaultColors(old_attrs.fg, old_attrs.bg, new_attrs.fg, new_attrs.bg);
-        self.force_full_damage.store(true, .release);
+        self.requestForceFullDamage("default colors changed", @src());
     }
 
     pub fn setAnsiColors(self: *TerminalSession, colors: [16]types.Color) void {
@@ -384,7 +555,7 @@ pub const TerminalSession = struct {
             self.palette_default[i] = colors[i];
             self.palette_current[i] = colors[i];
         }
-        self.force_full_damage.store(true, .release);
+        self.requestForceFullDamage("set ANSI palette", @src());
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
@@ -394,7 +565,7 @@ pub const TerminalSession = struct {
         self.primary.updateAnsiColors(old_colors, new_colors);
         self.alt.updateAnsiColors(old_colors, new_colors);
         self.history.updateAnsiColors(old_colors, new_colors);
-        self.force_full_damage.store(true, .release);
+        self.requestForceFullDamage("remap ANSI palette", @src());
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
@@ -526,14 +697,16 @@ pub const TerminalSession = struct {
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
         const app_cursor = input_snapshot.app_cursor_keys.load(.acquire);
-        log.logf(.info, "sendKey key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x}", .{
-            keyName(key),
-            key,
-            mod,
-            @tagName(action),
-            app_cursor,
-            key_mode_flags,
-        });
+        if (isNavigationKey(key)) {
+            log.logf(.info, "sendKey key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x}", .{
+                keyName(key),
+                key,
+                mod,
+                @tagName(action),
+                app_cursor,
+                key_mode_flags,
+            });
+        }
         if (self.pty) |*pty| {
             self.pty_write_mutex.lock();
             defer self.pty_write_mutex.unlock();
@@ -548,9 +721,15 @@ pub const TerminalSession = struct {
                     else => "",
                 };
                 if (seq.len > 0) {
+                    if (isNavigationKey(key)) {
+                        log.logf(.info, "sendKey path=app_cursor seq_len={d}", .{seq.len});
+                    }
                     _ = try pty.write(seq);
                     return;
                 }
+            }
+            if (isNavigationKey(key)) {
+                log.logf(.info, "sendKey path=encoded", .{});
             }
             _ = try input_mod.sendKeyAction(pty, key, mod, key_mode_flags, action);
         }
@@ -568,15 +747,17 @@ pub const TerminalSession = struct {
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
         const app_cursor = input_snapshot.app_cursor_keys.load(.acquire);
-        log.logf(.info, "sendKey(meta) key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x} alt_meta={any}", .{
-            keyName(key),
-            key,
-            mod,
-            @tagName(action),
-            app_cursor,
-            key_mode_flags,
-            alternate_meta != null,
-        });
+        if (isNavigationKey(key)) {
+            log.logf(.info, "sendKey(meta) key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x} alt_meta={any}", .{
+                keyName(key),
+                key,
+                mod,
+                @tagName(action),
+                app_cursor,
+                key_mode_flags,
+                alternate_meta != null,
+            });
+        }
         if (self.pty) |*pty| {
             self.pty_write_mutex.lock();
             defer self.pty_write_mutex.unlock();
@@ -591,9 +772,15 @@ pub const TerminalSession = struct {
                     else => "",
                 };
                 if (seq.len > 0) {
+                    if (isNavigationKey(key)) {
+                        log.logf(.info, "sendKey(meta) path=app_cursor seq_len={d}", .{seq.len});
+                    }
                     _ = try pty.write(seq);
                     return;
                 }
+            }
+            if (isNavigationKey(key)) {
+                log.logf(.info, "sendKey(meta) path=encoded", .{});
             }
             _ = try input_mod.sendKeyActionEvent(pty, .{
                 .key = key,
@@ -812,7 +999,7 @@ pub const TerminalSession = struct {
         self.primary.setCursor(0, 0);
         self.alt.setCursor(0, 0);
         _ = self.clear_generation.fetchAdd(1, .acq_rel);
-        self.force_full_damage.store(true, .release);
+        self.requestForceFullDamage("set 132-column mode", @src());
     }
 
     pub fn setCellSize(self: *TerminalSession, cell_width: u16, cell_height: u16) void {
@@ -855,7 +1042,7 @@ pub const TerminalSession = struct {
         if (bytes.len == 0) return;
         self.parser.handleSlice(self, bytes);
         _ = self.output_generation.fetchAdd(1, .acq_rel);
-        self.force_full_damage.store(true, .release);
+        self.requestForceFullDamage("feed output bytes", @src());
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
@@ -871,10 +1058,14 @@ pub const TerminalSession = struct {
         const screen = self.activeScreen();
         const blank_cell = screen.blankCell();
         screen.eraseDisplay(mode, blank_cell);
-        self.force_full_damage.store(true, .release);
         if (mode == 2 or mode == 3) {
+            self.notePatternEvent(.full_dirty_erase_display);
             self.clearSelection();
             _ = self.clear_generation.fetchAdd(1, .acq_rel);
+        } else {
+            // ED 2/3 already marks the screen fully dirty through the screen model.
+            // Keep the conservative force-full path only for partial ED variants.
+            self.requestForceFullDamage("erase display CSI", @src());
         }
     }
 
@@ -882,7 +1073,17 @@ pub const TerminalSession = struct {
         const screen = self.activeScreen();
         const blank_cell = screen.blankCell();
         screen.eraseLine(mode, blank_cell);
-        self.force_full_damage.store(true, .release);
+        self.notePatternEventEl(mode, screen.cursor.row, self.output_generation.load(.acquire));
+    }
+
+    fn notePatternEventEl(self: *TerminalSession, mode: i32, row: usize, generation: u64) void {
+        const now_ms = std.time.milliTimestamp();
+        if (self.pattern_stats.window_start_ms == 0) {
+            self.pattern_stats.window_start_ms = now_ms;
+        } else if (now_ms - self.pattern_stats.window_start_ms >= 500) {
+            self.flushPatternStats(now_ms);
+        }
+        self.pattern_stats.noteEl(mode, row, generation);
     }
 
     pub fn insertChars(self: *TerminalSession, count: usize) void {
@@ -1161,8 +1362,10 @@ pub const TerminalSession = struct {
         if (clear) {
             self.activeScreen().clear();
             self.activeScreen().setCursor(0, 0);
+            self.notePatternEvent(.full_dirty_screen_clear);
         }
-        self.activeScreen().markDirtyAllWithReason(.alt_enter);
+        self.notePatternEvent(.full_dirty_alt_enter);
+        self.activeScreen().markDirtyAllWithReason(.alt_enter, @src());
     }
 
     pub fn exitAltScreen(self: *TerminalSession, restore_cursor: bool) void {
@@ -1176,7 +1379,8 @@ pub const TerminalSession = struct {
         if (restore_cursor) {
             self.restoreCursor();
         }
-        self.activeScreen().markDirtyAllWithReason(.alt_exit);
+        self.notePatternEvent(.full_dirty_alt_exit);
+        self.activeScreen().markDirtyAllWithReason(.alt_exit, @src());
     }
 
     pub fn snapshot(self: *TerminalSession) TerminalSnapshot {
@@ -1218,9 +1422,10 @@ pub const TerminalSession = struct {
         if (self.sync_updates_active == enabled) return;
         self.sync_updates_active = enabled;
         if (!enabled) {
-            self.activeScreen().markDirtyAllWithReason(.sync_updates_disabled);
+            self.notePatternEvent(.full_dirty_sync_updates_disabled);
+            self.activeScreen().markDirtyAllWithReason(.sync_updates_disabled, @src());
         }
-        self.force_full_damage.store(true, .release);
+        self.requestForceFullDamage("sync updates mode changed", @src());
         const offset: usize = self.history.scrollOffset();
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), offset);
     }
@@ -1425,8 +1630,8 @@ pub const TerminalSession = struct {
     pub fn markDirty(self: *TerminalSession) void {
         self.lock();
         defer self.unlock();
-        self.activeScreen().markDirtyAllWithReason(.session_mark_dirty_api);
-        self.inactiveScreen().markDirtyAllWithReason(.session_mark_dirty_api);
+        self.activeScreen().markDirtyAllWithReason(.session_mark_dirty_api, @src());
+        self.inactiveScreen().markDirtyAllWithReason(.session_mark_dirty_api, @src());
         _ = self.output_generation.fetchAdd(1, .acq_rel);
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }

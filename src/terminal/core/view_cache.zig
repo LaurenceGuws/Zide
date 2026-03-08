@@ -306,14 +306,6 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     if (view.dirty_cols_start.len == rows and view.dirty_cols_end.len == rows and !needs_full_damage) {
         std.mem.copyForwards(u16, cache.dirty_cols_start.items, view.dirty_cols_start);
         std.mem.copyForwards(u16, cache.dirty_cols_end.items, view.dirty_cols_end);
-        if (view.dirty == .partial and cols > 0) {
-            var row_idx: usize = 0;
-            while (row_idx < rows) : (row_idx += 1) {
-                if (!cache.dirty_rows.items[row_idx]) continue;
-                cache.dirty_cols_start.items[row_idx] = 0;
-                cache.dirty_cols_end.items[row_idx] = @intCast(cols - 1);
-            }
-        }
     } else {
         for (cache.dirty_cols_start.items, cache.dirty_cols_end.items) |*col_start, *col_end| {
             col_start.* = 0;
