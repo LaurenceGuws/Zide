@@ -187,6 +187,14 @@ Runtime-only instrumentation has been added (no behavior/path forcing):
 - Intent:
   - prevent 33ms/100ms backoff from engaging during brief `hasData=0` gaps while output is still actively progressing.
 
+2. Generation-driven redraw eligibility in single-terminal poll path
+- File: `src/app/poll_visible_terminal_sessions_runtime.zig`
+- Change:
+  - do not gate redraw intent solely on `hasData()`.
+  - if terminal generation has advanced since last check, treat frame as needing poll/redraw even when `hasData=0`.
+- Intent:
+  - avoid missed redraws when `output_pending` drops low but parsed output generation has already moved.
+
 ## Acceptance Criteria for Fix
 
 - At 240Hz, `ascii-rain` no longer shows perceptible frozen subsets under normal runtime load.
