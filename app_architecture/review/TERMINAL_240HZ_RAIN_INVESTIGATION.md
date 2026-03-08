@@ -204,6 +204,9 @@ Runtime-only instrumentation has been added (no behavior/path forcing):
   - this keeps Zide on full-surface redraws instead of the viewport-shift / partial-damage fast path
   - the cost increase scales directly with terminal width, matching the “full tile bad, half tile okay” symptom much better than the `poll_probe` log rate itself
 - With full-dirty attribution, the next narrowing step is to identify which `full_dirty_reason` dominates during `ascii-rain` stalls in the large-tile case and then target that producer path directly.
+- Follow-up fix:
+  - `view_cache` forced-full path now emits explicit `full_dirty_reason` attribution instead of inheriting ambiguous/empty source reason.
+  - This prevents persistent `full_dirty_reason=unknown full_dirty_seq=0` during large-tile forced redraw episodes and allows direct ranking of full-dirty producers.
 
 ## Applied Fix Candidate (2026-03-08)
 
