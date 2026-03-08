@@ -52,6 +52,11 @@ const ViewportTextureShiftPlan = union(enum) {
     force_full,
 };
 
+const TextureUpdatePlan = struct {
+    needs_full: bool,
+    needs_partial: bool,
+};
+
 pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
     return frame_latency_metrics;
 }
@@ -279,6 +284,39 @@ fn planViewportTextureShift(
         return .force_full;
     }
     return .none;
+}
+
+fn chooseTextureUpdatePlan(
+    cache_dirty: @TypeOf(RenderCache.init().dirty),
+    recreated: bool,
+    cell_metrics_changed: bool,
+    render_scale_changed: bool,
+    alt_state_changed: bool,
+    scroll_changed: bool,
+    has_kitty: bool,
+    kitty_changed: bool,
+    has_blink: bool,
+    blink_phase_changed: bool,
+    terminal_texture_ready: bool,
+) TextureUpdatePlan {
+    var needs_full = recreated or
+        cell_metrics_changed or
+        render_scale_changed or
+        alt_state_changed or
+        cache_dirty == .full or
+        scroll_changed or
+        has_kitty or
+        kitty_changed or
+        (has_blink and blink_phase_changed);
+    var needs_partial = cache_dirty == .partial and !needs_full;
+    if (!terminal_texture_ready) {
+        needs_full = true;
+        needs_partial = false;
+    }
+    return .{
+        .needs_full = needs_full,
+        .needs_partial = needs_partial,
+    };
 }
 
 pub fn draw(
@@ -1031,7 +1069,6 @@ pub fn draw(
     var full_reason_alt_change = false;
     var full_reason_dirty_full = false;
     var full_reason_scroll = false;
-    var full_reason_scrollback_dirty = false;
     var full_reason_kitty = false;
     var full_reason_kitty_gen = false;
     var full_reason_blink = false;
@@ -1053,26 +1090,24 @@ pub fn draw(
         full_reason_alt_change = alt_state_changed;
         full_reason_dirty_full = cache.dirty == .full;
         full_reason_scroll = scroll_changed;
-        full_reason_scrollback_dirty = cache.dirty != .none and scroll_offset > 0;
         full_reason_kitty = has_kitty;
         full_reason_kitty_gen = kitty_changed;
         full_reason_blink = has_blink and blink_phase_changed;
-
-        var needs_full = full_reason_recreated or
-            full_reason_cell_metrics or
-            full_reason_scale or
-            full_reason_alt_change or
-            full_reason_dirty_full or
-            full_reason_scroll or
-            full_reason_scrollback_dirty or
-            full_reason_kitty or
-            full_reason_kitty_gen or
-            full_reason_blink;
-        var needs_partial = cache.dirty == .partial and !needs_full and scroll_offset == 0;
-        if (!self.terminal_texture_ready and rows > 0 and cols > 0) {
-            needs_full = true;
-            needs_partial = false;
-        }
+        const update_plan = chooseTextureUpdatePlan(
+            cache.dirty,
+            full_reason_recreated,
+            full_reason_cell_metrics,
+            full_reason_scale,
+            full_reason_alt_change,
+            full_reason_scroll,
+            full_reason_kitty,
+            full_reason_kitty_gen,
+            has_blink,
+            blink_phase_changed,
+            self.terminal_texture_ready,
+        );
+        var needs_full = update_plan.needs_full;
+        var needs_partial = update_plan.needs_partial;
         var shifted_rows: usize = 0;
         switch (planViewportTextureShift(
             r.terminalTextureShiftEnabled(),
@@ -1613,7 +1648,7 @@ pub fn draw(
         );
         perf_log.logf(
             .info,
-            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} dirty_rows={d} damage_rows={d} damage_cols={d} blink_cells={d} blink_phase_changed={d} full_reasons={d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d} full_dirty_reason={s} full_dirty_seq={d} rows={d} cols={d}",
+            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} dirty_rows={d} damage_rows={d} damage_cols={d} blink_cells={d} blink_phase_changed={d} full_reasons={d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d} full_dirty_reason={s} full_dirty_seq={d} rows={d} cols={d}",
             .{
                 elapsed_ms,
                 lock_ms,
@@ -1637,7 +1672,6 @@ pub fn draw(
                 @intFromBool(full_reason_alt_change),
                 @intFromBool(full_reason_dirty_full),
                 @intFromBool(full_reason_scroll),
-                @intFromBool(full_reason_scrollback_dirty),
                 @intFromBool(full_reason_kitty),
                 @intFromBool(full_reason_kitty_gen),
                 @intFromBool(full_reason_blink),
@@ -1940,4 +1974,40 @@ test "viewport texture shift does not attempt while already forced full" {
 test "viewport texture shift ignores scrollback view movement" {
     const plan = planViewportTextureShift(true, true, 2, 3, false, true, 24);
     try std.testing.expectEqual(ViewportTextureShiftPlan.none, plan);
+}
+
+test "texture update plan keeps partial redraws eligible while scrolled" {
+    const plan = chooseTextureUpdatePlan(
+        .partial,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+    );
+    try std.testing.expect(!plan.needs_full);
+    try std.testing.expect(plan.needs_partial);
+}
+
+test "texture update plan forces full redraw when texture is not ready" {
+    const plan = chooseTextureUpdatePlan(
+        .partial,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+    );
+    try std.testing.expect(plan.needs_full);
+    try std.testing.expect(!plan.needs_partial);
 }

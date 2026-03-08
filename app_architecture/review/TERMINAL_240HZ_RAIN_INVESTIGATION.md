@@ -307,6 +307,19 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - reduce investigation-only hot-path noise
   - stop carrying obsolete redraw fallbacks once the cache publication/presentation contract is explicit
 
+## Scrolled-Viewport Partial Cleanup (2026-03-09)
+
+- Files:
+  - `src/ui/widgets/terminal_widget_draw.zig`
+- Change:
+  - replaced the ad-hoc draw-path `scroll_offset > 0 => full redraw` policy with an explicit texture update plan helper
+  - partial texture updates are now allowed while scrolled, as long as the render cache itself reports partial damage and no real full-redraw condition is active
+  - viewport texture shift remains disabled while scrolled; only the unrelated blanket full-redraw fallback was removed
+  - added unit coverage proving that scrolled partial damage remains eligible for partial texture upload, while non-ready textures still force a full upload
+- Intent:
+  - keep draw policy aligned with cache authority
+  - remove another broad fallback that penalized correctness-preserving scrollback views without improving the underlying contract
+
 ## Applied Texture-Shift Kill-Switch (2026-03-08)
 
 - Files:

@@ -318,3 +318,5 @@ ui_widget_modularization_todo:
             - "2026-03-09: Added regression coverage for repeated scroll publications without an intervening draw so top-row damage cannot be refined away by unseen intermediate publications."
             - "2026-03-09: Full-screen rain repro after the presented-generation fix now keeps refinement aligned and is visually close to correct; user reported it as the best result so far."
             - "2026-03-09: Removed temporary `cache_refine`/row-dirty probe logging from the hot path and dropped the obsolete `generation changed + dirty=none => full redraw` fallback from `terminal_widget_draw`."
+            - "2026-03-09: Removed the blanket `scroll_offset > 0 => full redraw` policy from `terminal_widget_draw`; partial texture uploads are now allowed while scrolled when the render cache itself reports partial damage."
+            - "2026-03-09: Added draw-path unit coverage for the new texture update plan so scrolled partial damage stays test-locked while texture-not-ready still forces a full upload."
