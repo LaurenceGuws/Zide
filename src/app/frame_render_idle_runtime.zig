@@ -157,10 +157,16 @@ fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f64, 
 
 fn hasTerminalOutputPressure(state: anytype) bool {
     const State = @TypeOf(state.*);
-    if (!@hasField(State, "terminal_workspace")) return false;
-
-    if (state.terminal_workspace) |*workspace| {
-        if (workspace.activeSession()) |session| {
+    if (@hasField(State, "terminal_workspace")) {
+        if (state.terminal_workspace) |*workspace| {
+            if (workspace.activeSession()) |session| {
+                return session.hasData();
+            }
+        }
+    }
+    if (@hasField(State, "terminals")) {
+        if (state.terminals.items.len > 0) {
+            const session = state.terminals.items[0];
             return session.hasData();
         }
     }
@@ -179,10 +185,16 @@ fn latestTerminalPollSeq(state: anytype) u64 {
 
 fn latestTerminalGeneration(state: anytype) u64 {
     const State = @TypeOf(state.*);
-    if (!@hasField(State, "terminal_workspace")) return 0;
-
-    if (state.terminal_workspace) |*workspace| {
-        if (workspace.activeSession()) |session| {
+    if (@hasField(State, "terminal_workspace")) {
+        if (state.terminal_workspace) |*workspace| {
+            if (workspace.activeSession()) |session| {
+                return session.currentGeneration();
+            }
+        }
+    }
+    if (@hasField(State, "terminals")) {
+        if (state.terminals.items.len > 0) {
+            const session = state.terminals.items[0];
             return session.currentGeneration();
         }
     }
