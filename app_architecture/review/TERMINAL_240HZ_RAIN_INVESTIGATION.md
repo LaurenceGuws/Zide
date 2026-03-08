@@ -211,6 +211,7 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - full-region scroll output no longer bumps `clear_generation`
   - `view_cache` therefore stops escalating normal live-bottom scroll churn into `view_cache_clear_generation_change` full redraws
   - added a session regression that asserts a bottom-following scroll publishes `dirty=partial` with `viewport_shift_rows=1`
+  - removed the no-thread `feedOutputBytes(...)` blanket full-damage request so direct parser feeds now respect incremental screen dirty tracking
 
 ## Applied Fix Candidate (2026-03-08)
 

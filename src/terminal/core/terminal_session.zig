@@ -1062,7 +1062,6 @@ pub const TerminalSession = struct {
         if (bytes.len == 0) return;
         self.parser.handleSlice(self, bytes);
         _ = self.output_generation.fetchAdd(1, .acq_rel);
-        self.requestForceFullDamage("feed output bytes", @src());
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
@@ -1826,4 +1825,27 @@ test "full-region scroll publishes partial cache damage at live bottom" {
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(i32, 1), cache.viewport_shift_rows);
     try std.testing.expectEqual(@as(usize, 1), session.scrollbackCount());
+}
+
+test "feedOutputBytes keeps incremental damage after baseline publish" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 1, 4);
+    defer session.deinit();
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+
+    session.feedOutputBytes("A");
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_col);
 }
