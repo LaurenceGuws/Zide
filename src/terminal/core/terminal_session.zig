@@ -881,7 +881,6 @@ pub const TerminalSession = struct {
         const screen = self.activeScreen();
         const blank_cell = screen.blankCell();
         screen.eraseLine(mode, blank_cell);
-        self.force_full_damage.store(true, .release);
     }
 
     pub fn insertChars(self: *TerminalSession, count: usize) void {
