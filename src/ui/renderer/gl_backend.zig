@@ -221,13 +221,6 @@ pub fn beginRenderTarget(renderer: anytype, target: ?RenderTarget) bool {
 }
 
 pub fn scrollRenderTarget(renderer: anytype, target: ?RenderTarget, dx: i32, dy: i32, width: i32, height: i32) bool {
-    // Investigation guard:
-    // This optimization uses CopyTexSubImage2D to self-copy inside the active
-    // render target. On some compositor/driver/tile-size combinations this has
-    // shown stale-region artifacts. Force caller fallback redraw for now.
-    const allow_self_copy_shift = false;
-    if (!allow_self_copy_shift) return false;
-
     if (target == null) return false;
     if (dx == 0 and dy == 0) return true;
     const t = target.?;
