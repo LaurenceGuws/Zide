@@ -559,13 +559,15 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
 
 pub fn updateViewCacheForScroll(self: anytype) void {
     if (self.state_mutex.tryLock()) {
+        defer self.state_mutex.unlock();
+        if (!self.view_cache_pending.swap(false, .acq_rel)) return;
         const offset: usize = @intCast(self.view_cache_request_offset.load(.acquire));
         updateViewCacheNoLock(self, self.output_generation.load(.acquire), offset);
-        self.state_mutex.unlock();
     }
 }
 
 pub fn updateViewCacheForScrollLocked(self: anytype) void {
+    if (!self.view_cache_pending.swap(false, .acq_rel)) return;
     const offset: usize = @intCast(self.view_cache_request_offset.load(.acquire));
     updateViewCacheNoLock(self, self.output_generation.load(.acquire), offset);
 }

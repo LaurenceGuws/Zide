@@ -394,6 +394,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn updateInputSnapshot(self: *TerminalSession) void {
+        const screen = self.activeScreenConst();
         self.input_snapshot.app_cursor_keys.store(self.app_cursor_keys, .release);
         self.input_snapshot.app_keypad.store(self.app_keypad, .release);
         self.input_snapshot.key_mode_flags.store(self.keyModeFlags(), .release);
@@ -402,6 +403,12 @@ pub const TerminalSession = struct {
         self.input_snapshot.mouse_mode_any.store(self.input.mouse_mode_any, .release);
         self.input_snapshot.mouse_mode_sgr.store(self.input.mouse_mode_sgr, .release);
         self.input_snapshot.focus_reporting.store(self.focus_reporting, .release);
+        self.input_snapshot.bracketed_paste.store(self.bracketed_paste, .release);
+        self.input_snapshot.auto_repeat.store(self.auto_repeat, .release);
+        self.input_snapshot.mouse_alternate_scroll.store(self.mouse_alternate_scroll, .release);
+        self.input_snapshot.alt_active.store(self.active == .alt, .release);
+        self.input_snapshot.screen_rows.store(screen.grid.rows, .release);
+        self.input_snapshot.screen_cols.store(screen.grid.cols, .release);
     }
 
     fn hashRow(cells: []const Cell) u64 {
@@ -687,12 +694,17 @@ pub const TerminalSession = struct {
         return self.output_generation.load(.acquire);
     }
 
+    pub fn publishedGeneration(self: *const TerminalSession) u64 {
+        const idx = self.render_cache_index.load(.acquire);
+        return self.render_caches[idx].generation;
+    }
+
     pub fn sendKey(self: *TerminalSession, key: Key, mod: Modifier) !void {
         try self.sendKeyAction(key, mod, input_mod.KeyAction.press);
     }
 
     pub fn sendKeyAction(self: *TerminalSession, key: Key, mod: Modifier, action: input_mod.KeyAction) !void {
-        if (action == .repeat and !self.auto_repeat) return;
+        if (action == .repeat and !self.input_snapshot.auto_repeat.load(.acquire)) return;
         const log = app_logger.logger("terminal.input");
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
@@ -742,7 +754,7 @@ pub const TerminalSession = struct {
         action: input_mod.KeyAction,
         alternate_meta: ?types.KeyboardAlternateMetadata,
     ) !void {
-        if (action == .repeat and !self.auto_repeat) return;
+        if (action == .repeat and !self.input_snapshot.auto_repeat.load(.acquire)) return;
         const log = app_logger.logger("terminal.input");
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
@@ -797,7 +809,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn sendKeypadAction(self: *TerminalSession, key: input_mod.KeypadKey, mod: Modifier, action: input_mod.KeyAction) !void {
-        if (action == .repeat and !self.auto_repeat) return;
+        if (action == .repeat and !self.input_snapshot.auto_repeat.load(.acquire)) return;
         const log = app_logger.logger("terminal.input");
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
@@ -827,7 +839,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn sendCharAction(self: *TerminalSession, char: u32, mod: Modifier, action: input_mod.KeyAction) !void {
-        if (action == .repeat and !self.auto_repeat) return;
+        if (action == .repeat and !self.input_snapshot.auto_repeat.load(.acquire)) return;
         const log = app_logger.logger("terminal.input");
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
@@ -853,7 +865,7 @@ pub const TerminalSession = struct {
         action: input_mod.KeyAction,
         alternate_meta: ?types.KeyboardAlternateMetadata,
     ) !void {
-        if (action == .repeat and !self.auto_repeat) return;
+        if (action == .repeat and !self.input_snapshot.auto_repeat.load(.acquire)) return;
         const log = app_logger.logger("terminal.input");
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
@@ -902,8 +914,8 @@ pub const TerminalSession = struct {
 
     pub fn reportAlternateScrollWheel(self: *TerminalSession, wheel_steps: i32, mod: Modifier) !bool {
         if (wheel_steps == 0) return false;
-        if (!self.mouse_alternate_scroll) return false;
-        if (!self.isAltActive()) return false;
+        if (!self.input_snapshot.mouse_alternate_scroll.load(.acquire)) return false;
+        if (!self.input_snapshot.alt_active.load(.acquire)) return false;
         var remaining = wheel_steps;
         while (remaining != 0) {
             const key: Key = if (remaining > 0) VTERM_KEY_UP else VTERM_KEY_DOWN;
@@ -1366,6 +1378,7 @@ pub const TerminalSession = struct {
         }
         self.notePatternEvent(.full_dirty_alt_enter);
         self.activeScreen().markDirtyAllWithReason(.alt_enter, @src());
+        self.updateInputSnapshot();
     }
 
     pub fn exitAltScreen(self: *TerminalSession, restore_cursor: bool) void {
@@ -1381,6 +1394,7 @@ pub const TerminalSession = struct {
         }
         self.notePatternEvent(.full_dirty_alt_exit);
         self.activeScreen().markDirtyAllWithReason(.alt_exit, @src());
+        self.updateInputSnapshot();
     }
 
     pub fn snapshot(self: *TerminalSession) TerminalSnapshot {
@@ -1501,7 +1515,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn bracketedPasteEnabled(self: *TerminalSession) bool {
-        return self.bracketed_paste;
+        return self.input_snapshot.bracketed_paste.load(.acquire);
     }
 
     pub fn focusReportingEnabled(self: *TerminalSession) bool {
@@ -1509,11 +1523,11 @@ pub const TerminalSession = struct {
     }
 
     pub fn autoRepeatEnabled(self: *TerminalSession) bool {
-        return self.auto_repeat;
+        return self.input_snapshot.auto_repeat.load(.acquire);
     }
 
     pub fn mouseAlternateScrollEnabled(self: *TerminalSession) bool {
-        return self.mouse_alternate_scroll;
+        return self.input_snapshot.mouse_alternate_scroll.load(.acquire);
     }
 
     pub fn kittyPasteEvents5522Enabled(self: *TerminalSession) bool {
@@ -1646,6 +1660,12 @@ pub const InputSnapshot = struct {
     mouse_mode_any: std.atomic.Value(bool),
     mouse_mode_sgr: std.atomic.Value(bool),
     focus_reporting: std.atomic.Value(bool),
+    bracketed_paste: std.atomic.Value(bool),
+    auto_repeat: std.atomic.Value(bool),
+    mouse_alternate_scroll: std.atomic.Value(bool),
+    alt_active: std.atomic.Value(bool),
+    screen_rows: std.atomic.Value(u16),
+    screen_cols: std.atomic.Value(u16),
 
     pub fn init() InputSnapshot {
         return .{
@@ -1657,6 +1677,12 @@ pub const InputSnapshot = struct {
             .mouse_mode_any = std.atomic.Value(bool).init(false),
             .mouse_mode_sgr = std.atomic.Value(bool).init(false),
             .focus_reporting = std.atomic.Value(bool).init(false),
+            .bracketed_paste = std.atomic.Value(bool).init(false),
+            .auto_repeat = std.atomic.Value(bool).init(true),
+            .mouse_alternate_scroll = std.atomic.Value(bool).init(true),
+            .alt_active = std.atomic.Value(bool).init(false),
+            .screen_rows = std.atomic.Value(u16).init(0),
+            .screen_cols = std.atomic.Value(u16).init(0),
         };
     }
 };

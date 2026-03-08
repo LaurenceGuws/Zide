@@ -38,7 +38,7 @@ pub fn handle(
             const active_idx = active_idx_opt orelse 0;
             const active_session = if (active_idx_opt) |idx| workspace.sessionAt(idx) else null;
             const has_data_pre = if (active_session) |s| s.hasData() else false;
-            const gen_pre = if (active_session) |s| s.currentGeneration() else 0;
+            const gen_pre = if (active_session) |s| s.publishedGeneration() else 0;
             const PollBudget = @TypeOf(workspace.*).PollBudget;
             const budget: PollBudget = if (input_pressure)
                 .{
@@ -58,16 +58,18 @@ pub fn handle(
                 budget,
             );
             const has_data_post = if (active_session) |s| s.hasData() else false;
-            const gen_post = if (active_session) |s| s.currentGeneration() else 0;
+            const gen_post = if (active_session) |s| s.publishedGeneration() else 0;
+            const redraw_needed = gen_post != gen_pre;
             const now = app_shell.getTime();
             if ((now - last_statebug_poll_log_time) >= 0.1) {
                 last_statebug_poll_log_time = now;
                 app_logger.logger("terminal.ui.statebug").logf(
                     .info,
-                    "poll_probe input_pressure={d} any_polled={d} active_idx={d} hasData_pre={d} hasData_post={d} gen_pre={d} gen_post={d}",
+                    "poll_probe input_pressure={d} any_polled={d} redraw_needed={d} active_idx={d} hasData_pre={d} hasData_post={d} pubgen_pre={d} pubgen_post={d}",
                     .{
                         @intFromBool(input_pressure),
                         @intFromBool(any_polled),
+                        @intFromBool(redraw_needed),
                         active_idx,
                         @intFromBool(has_data_pre),
                         @intFromBool(has_data_post),
@@ -76,7 +78,7 @@ pub fn handle(
                     },
                 );
             }
-            return any_polled;
+            return redraw_needed;
         }
         return false;
     }
@@ -84,20 +86,22 @@ pub fn handle(
     if (terminals.len > 0) {
         const term = terminals[0];
         const has_data_pre = term.hasData();
-        const gen_pre = term.currentGeneration();
+        const gen_pre = term.publishedGeneration();
         if (has_data_pre) {
             term.setInputPressure(input_pressure);
             try term.poll();
             const has_data_post = term.hasData();
-            const gen_post = term.currentGeneration();
+            const gen_post = term.publishedGeneration();
+            const redraw_needed = gen_post != gen_pre;
             const now = app_shell.getTime();
             if ((now - last_statebug_poll_log_time) >= 0.1) {
                 last_statebug_poll_log_time = now;
                 app_logger.logger("terminal.ui.statebug").logf(
                     .info,
-                    "poll_probe(single) input_pressure={d} any_polled=1 active_idx=0 hasData_pre={d} hasData_post={d} gen_pre={d} gen_post={d}",
+                    "poll_probe(single) input_pressure={d} any_polled=1 redraw_needed={d} active_idx=0 hasData_pre={d} hasData_post={d} pubgen_pre={d} pubgen_post={d}",
                     .{
                         @intFromBool(input_pressure),
+                        @intFromBool(redraw_needed),
                         @intFromBool(has_data_pre),
                         @intFromBool(has_data_post),
                         gen_pre,
@@ -105,22 +109,25 @@ pub fn handle(
                     },
                 );
             }
-            return true;
+            return redraw_needed;
         } else {
-            const gen_post = term.currentGeneration();
+            const gen_post = term.publishedGeneration();
+            const redraw_needed = gen_post != gen_pre;
             const now = app_shell.getTime();
             if ((now - last_statebug_poll_log_time) >= 0.1) {
                 last_statebug_poll_log_time = now;
                 app_logger.logger("terminal.ui.statebug").logf(
                     .info,
-                    "poll_probe(single) input_pressure={d} any_polled=0 active_idx=0 hasData_pre=0 hasData_post=0 gen_pre={d} gen_post={d}",
+                    "poll_probe(single) input_pressure={d} any_polled=0 redraw_needed={d} active_idx=0 hasData_pre=0 hasData_post=0 pubgen_pre={d} pubgen_post={d}",
                     .{
                         @intFromBool(input_pressure),
+                        @intFromBool(redraw_needed),
                         gen_pre,
                         gen_post,
                     },
                 );
             }
+            return redraw_needed;
         }
     }
     return false;

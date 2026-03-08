@@ -94,6 +94,7 @@ pub fn emptyConfig() Config {
         .terminal_scrollback_rows = null,
         .terminal_cursor_shape = null,
         .terminal_cursor_blink = null,
+        .terminal_texture_shift = null,
         .editor_tab_bar_width_mode = null,
         .terminal_tab_bar_show_single_tab = null,
         .terminal_tab_bar_width_mode = null,

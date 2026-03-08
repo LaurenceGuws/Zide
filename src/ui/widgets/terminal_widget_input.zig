@@ -31,13 +31,6 @@ pub fn handleInput(
 ) !bool {
     const mouse = input_batch.mouse_pos;
     const in_terminal = common.pointInRect(mouse.x, mouse.y, x, y, width, height);
-    const has_terminal_input_activity = terminalInputActivity(input_batch, in_terminal);
-    const locked = self.session.tryLock();
-    if (!locked) {
-        // Skip lock fallback work unless there is terminal-relevant input pressure.
-        if (!(allow_input and has_terminal_input_activity)) return false;
-    }
-    defer if (locked) self.session.unlock();
     var handled = false;
     self.scrollbar_drag_active = scroll_dragging.*;
     const scale = shell.uiScaleFactor();
@@ -57,28 +50,18 @@ pub fn handleInput(
     const scrollbar_y = y;
     const scrollbar_h = height;
 
-    var history_len: usize = 0;
-    var snapshot: terminal_mod.TerminalSnapshot = undefined;
-    var rows: usize = 0;
-    var cols: usize = 0;
-    var total_lines: usize = 0;
-    var scroll_offset: usize = 0;
-    var start_line: usize = 0;
-    var max_scroll_offset: usize = 0;
-    var show_scrollbar = false;
-    if (locked) {
-        history_len = self.session.scrollbackCount();
-        snapshot = self.session.snapshot();
-        rows = snapshot.rows;
-        cols = snapshot.cols;
-        total_lines = history_len + rows;
-        scroll_offset = self.session.scrollOffset();
-        const end_line = total_lines - scroll_offset;
-        start_line = if (end_line > rows) end_line - rows else 0;
-        max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
-        const cache = self.session.renderCache();
-        show_scrollbar = !cache.alt_active and !self.session.mouseReportingEnabled() and total_lines > rows;
-    }
+    const cache = &self.draw_cache;
+    const view_cells = cache.cells.items;
+    const history_len = cache.history_len;
+    const rows = cache.rows;
+    const cols = cache.cols;
+    const total_lines = cache.total_lines;
+    const scroll_offset = cache.scroll_offset;
+    const end_line = total_lines - scroll_offset;
+    const start_line = if (end_line > rows) end_line - rows else 0;
+    const max_scroll_offset = if (total_lines > rows) total_lines - rows else 0;
+    const has_visible_grid = rows > 0 and cols > 0 and view_cells.len >= rows * cols;
+    const show_scrollbar = !cache.alt_active and !self.session.mouseReportingEnabled() and total_lines > rows;
     const mouse_on_scrollbar = show_scrollbar and common.pointInRect(
         mouse.x,
         mouse.y,
@@ -89,7 +72,6 @@ pub fn handleInput(
     );
     const scroll_log = app_logger.logger("terminal.scroll");
     const altmeta_log = app_logger.logger("terminal.input.altmeta");
-    const mousemap_log = app_logger.logger("terminal.ui.mousemap");
     const key_log = app_logger.logger("terminal.input.keys");
 
     const r = shell.rendererPtr();
@@ -97,23 +79,20 @@ pub fn handleInput(
     const hit_cell_h = @as(f32, @floatFromInt(@max(1, @as(i32, @intFromFloat(std.math.round(r.terminal_cell_height))))));
     const hit_base_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(x)))));
     const hit_base_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(y)))));
-    if (locked) {
-        hover_mod.updateHoverState(
-            &self.hover,
-            self.session,
-            x,
-            y,
-            width,
-            height,
-            scale,
-            hit_cell_w,
-            hit_cell_h,
-            snapshot,
-            history_len,
-            start_line,
-            input_batch,
-        );
-    }
+    hover_mod.updateHoverStateVisible(
+        &self.hover,
+        x,
+        y,
+        width,
+        height,
+        scale,
+        hit_cell_w,
+        hit_cell_h,
+        rows,
+        cols,
+        view_cells,
+        input_batch,
+    );
 
     const ctrl = input_batch.mods.ctrl;
     const shift = input_batch.mods.shift;
@@ -134,15 +113,13 @@ pub fn handleInput(
     }
     const mouse_reporting = allow_input and in_terminal and self.session.mouseReportingEnabled();
     var skip_mouse_click = false;
-    if (locked and allow_input and in_terminal and ctrl and input_batch.mousePressed(.left)) {
-        if (rows > 0 and cols > 0 and snapshot.cells.len >= rows * cols) {
-            const did_open = open_mod.ctrlClickOpenMaybe(
+    if (allow_input and in_terminal and ctrl and input_batch.mousePressed(.left)) {
+        if (has_visible_grid) {
+            const did_open = open_mod.ctrlClickOpenVisibleMaybe(
                 self.session.allocator,
                 self.session,
                 &self.pending_open,
-                snapshot,
-                history_len,
-                start_line,
+                view_cells,
                 rows,
                 cols,
                 hit_base_x,
@@ -159,119 +136,11 @@ pub fn handleInput(
         }
     }
 
-    if (locked) {
+    if (self.session.tryLock()) {
+        defer self.session.unlock();
         if (self.session.takeOscClipboard()) |clip| {
             const cstr: [*:0]const u8 = @ptrCast(clip.ptr);
             shell.setClipboardText(cstr);
-            handled = true;
-        }
-    }
-
-    if (mouse_reporting and rows > 0 and cols > 0) {
-        const mouse_left_down = input_batch.mouseDown(.left);
-        const mouse_middle_down = input_batch.mouseDown(.middle);
-        const mouse_right_down = input_batch.mouseDown(.right);
-        var buttons_down: u8 = 0;
-        if (mouse_left_down) buttons_down |= 1;
-        if (mouse_middle_down) buttons_down |= 2;
-        if (mouse_right_down) buttons_down |= 4;
-
-        var col: usize = 0;
-        if (mouse.x > hit_base_x) {
-            col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
-        }
-        var row: usize = 0;
-        if (mouse.y > hit_base_y) {
-            row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
-        }
-        row = @min(row, rows - 1);
-        col = @min(col, cols - 1);
-        const grid_px_w = @as(u32, @intCast(cols)) * @as(u32, @intFromFloat(hit_cell_w));
-        const grid_px_h = @as(u32, @intCast(rows)) * @as(u32, @intFromFloat(hit_cell_h));
-        const raw_px_x_f = @max(0.0, mouse.x - hit_base_x);
-        const raw_px_y_f = @max(0.0, mouse.y - hit_base_y);
-        var pixel_x: u32 = @intFromFloat(raw_px_x_f);
-        var pixel_y: u32 = @intFromFloat(raw_px_y_f);
-        if (grid_px_w > 0) pixel_x = @min(pixel_x, grid_px_w - 1);
-        if (grid_px_h > 0) pixel_y = @min(pixel_y, grid_px_h - 1);
-        if (input_batch.mousePressed(.left) or input_batch.mousePressed(.middle) or input_batch.mousePressed(.right)) {
-            const screen = r.getScreenSize();
-            const render = r.getRenderSize();
-            const dpi = r.getDpiScale();
-            mousemap_log.logf(
-                .info,
-                "mouse press raw=({d:.2},{d:.2}) scaled=({d:.2},{d:.2}) widget=({d:.2},{d:.2},{d:.2},{d:.2}) base=({d:.2},{d:.2}) cell=({d:.2},{d:.2}) rowcol=({d},{d}) rows={d} cols={d} screen=({d:.2},{d:.2}) render=({d:.2},{d:.2}) dpi=({d:.3},{d:.3})",
-                .{
-                    input_batch.mouse_pos_raw.x,
-                    input_batch.mouse_pos_raw.y,
-                    mouse.x,
-                    mouse.y,
-                    x,
-                    y,
-                    width,
-                    height,
-                    hit_base_x,
-                    hit_base_y,
-                    hit_cell_w,
-                    hit_cell_h,
-                    row,
-                    col,
-                    rows,
-                    cols,
-                    screen.x,
-                    screen.y,
-                    render.x,
-                    render.y,
-                    dpi.x,
-                    dpi.y,
-                },
-            );
-        }
-
-        if (wheel_steps != 0) {
-            var remaining = wheel_steps;
-            while (remaining != 0) {
-                const button: terminal_mod.MouseButton = if (remaining > 0) .wheel_up else .wheel_down;
-                if (try self.session.reportMouseEvent(.{ .kind = .wheel, .button = button, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) {
-                    handled = true;
-                }
-                remaining += if (remaining > 0) -1 else 1;
-            }
-        }
-
-        if (input_batch.mousePressed(.left) and !skip_mouse_click) {
-            if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .left, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) {
-                handled = true;
-            }
-        }
-        if (input_batch.mousePressed(.middle)) {
-            if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .middle, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) {
-                handled = true;
-            }
-        }
-        if (input_batch.mousePressed(.right)) {
-            if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .right, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) {
-                handled = true;
-            }
-        }
-
-        if (input_batch.mouseReleased(.left)) {
-            if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .left, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) {
-                handled = true;
-            }
-        }
-        if (input_batch.mouseReleased(.middle)) {
-            if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .middle, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) {
-                handled = true;
-            }
-        }
-        if (input_batch.mouseReleased(.right)) {
-            if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .right, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) {
-                handled = true;
-            }
-        }
-
-        if (try self.session.reportMouseEvent(.{ .kind = .move, .button = .none, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) {
             handled = true;
         }
     }
@@ -298,8 +167,9 @@ pub fn handleInput(
             }
         }.apply;
         const clearLiveState = struct {
-            fn apply(widget: anytype, session_locked: bool) void {
-                if (!session_locked) return;
+            fn apply(widget: anytype) void {
+                widget.session.lock();
+                defer widget.session.unlock();
                 if (widget.session.scrollOffset() > 0) {
                     widget.session.setScrollOffset(0);
                 }
@@ -449,8 +319,8 @@ pub fn handleInput(
             }
         }.apply;
 
-        if (locked and self.session.scrollOffset() > 0) {
-            var reset_scrollback = false;
+        var reset_scrollback = false;
+        if (scroll_offset > 0) {
             for (input_batch.events.items) |event| {
                 switch (event) {
                     .key => |key_event| {
@@ -465,9 +335,6 @@ pub fn handleInput(
                     },
                     else => {},
                 }
-            }
-            if (reset_scrollback) {
-                self.session.setScrollOffset(0);
             }
         }
 
@@ -520,7 +387,7 @@ pub fn handleInput(
                     }
                     if (report_text_enabled) {
                         if (key_encoder.baseCharForKey(key)) |base_char| {
-                            clearLiveState(self, locked);
+                            clearLiveState(self);
                             try self.session.sendCharActionWithMetadata(base_char, event_mod, .release, keyAltMeta(r, altmeta_log, event.key, base_char));
                             key_log.logf(.info, "send char key={d} action=release base_char={d}", .{ @intFromEnum(key), base_char });
                             handled = true;
@@ -531,7 +398,7 @@ pub fn handleInput(
                     const handled_release = try applyTerminalKey(self, key, event_mod, .release);
                     key_log.logf(.info, "send key={d} action=release handled={d}", .{ @intFromEnum(key), @intFromBool(handled_release) });
                     if (handled_release) {
-                        clearLiveState(self, locked);
+                        clearLiveState(self);
                         handled = true;
                         skip_chars = true;
                     }
@@ -548,7 +415,7 @@ pub fn handleInput(
                 }
                 if (report_text_enabled) {
                     if (key_encoder.baseCharForKey(key)) |base_char| {
-                        clearLiveState(self, locked);
+                        clearLiveState(self);
                         try self.session.sendCharActionWithMetadata(base_char, event_mod, action, keyAltMeta(r, altmeta_log, event.key, base_char));
                         key_log.logf(.info, "send char key={d} action={s} base_char={d}", .{ @intFromEnum(key), @tagName(action), base_char });
                         handled = true;
@@ -561,7 +428,7 @@ pub fn handleInput(
                 key_log.logf(.info, "send key={d} action={s} handled={d}", .{ @intFromEnum(key), @tagName(action), @intFromBool(handled_key) });
 
                 if (handled_key) {
-                    clearLiveState(self, locked);
+                    clearLiveState(self);
                     handled = true;
                     skip_chars = true;
                     continue;
@@ -570,7 +437,7 @@ pub fn handleInput(
                 if (!report_text_enabled and (event.key.mods.ctrl or event.key.mods.alt)) {
                     if (try key_encoder.sendCharForKey(self.session, key, event_mod, action, event.key.mods.ctrl, event.key.mods.alt)) {
                         key_log.logf(.info, "send ctrl_alt_char key={d} action={s}", .{ @intFromEnum(key), @tagName(action) });
-                        clearLiveState(self, locked);
+                        clearLiveState(self);
                         handled = true;
                         skip_chars = true;
                     }
@@ -589,7 +456,7 @@ pub fn handleInput(
                         const char = text_event.codepoint;
                         if (char < 32) continue;
                         const alt_meta = textAltMeta(r, altmeta_log, text_event, pending_text_key, char);
-                        clearLiveState(self, locked);
+                        clearLiveState(self);
                         try self.session.sendCharActionWithMetadata(char, mod, .press, alt_meta);
                         handled = true;
                         pending_text_key = null;
@@ -599,8 +466,30 @@ pub fn handleInput(
             }
         }
 
-        if (locked and !mouse_reporting and in_terminal and mouse_on_scrollbar) {
-            if (input_batch.mousePressed(.left)) {
+        var clip_opt: ?[]const u8 = null;
+        var html: ?[]u8 = null;
+        var uri_list: ?[]u8 = null;
+        var png: ?[]u8 = null;
+        defer if (html) |buf| self.session.allocator.free(buf);
+        defer if (uri_list) |buf| self.session.allocator.free(buf);
+        defer if (png) |buf| self.session.allocator.free(buf);
+        if (!mouse_reporting and in_terminal and input_batch.mousePressed(.middle)) {
+            clip_opt = shell.getClipboardText();
+            html = shell.getClipboardMimeData(self.session.allocator, "text/html");
+            uri_list = shell.getClipboardMimeData(self.session.allocator, "text/uri-list");
+            png = shell.getClipboardMimeData(self.session.allocator, "image/png");
+        }
+
+        const suppress_selection_for_scrollbar = mouse_on_scrollbar or scroll_dragging.*;
+        if (!mouse_reporting and (reset_scrollback or in_terminal or scroll_dragging.*)) {
+            self.session.lock();
+            defer self.session.unlock();
+
+            if (reset_scrollback and self.session.scrollOffset() > 0) {
+                self.session.setScrollOffset(0);
+            }
+
+            if (in_terminal and mouse_on_scrollbar and input_batch.mousePressed(.left)) {
                 scroll_dragging.* = true;
                 self.scrollbar_drag_active = true;
                 const track_h = scrollbar_h;
@@ -615,43 +504,40 @@ pub fn handleInput(
                 scroll_log.logf(.info, "scrollbar press offset={d}", .{scroll_offset_local});
                 handled = true;
             }
-        }
 
-        if (locked and !mouse_reporting and scroll_dragging.*) {
-            if (input_batch.mouseDown(.left)) {
-                const track_h = scrollbar_h;
-                const min_thumb_h: f32 = 18;
-                const thumb = common.computeScrollbarThumb(scrollbar_y, track_h, rows, total_lines, min_thumb_h, 0.0);
-                const available = thumb.available;
-                const clamped_mouse = @min(@max(mouse.y - scroll_grab_offset.*, scrollbar_y), scrollbar_y + available);
-                const ratio = if (available > 0) (clamped_mouse - scrollbar_y) / available else 0;
-                const target_offset = @as(usize, @intFromFloat(@round(@as(f32, @floatFromInt(max_scroll_offset)) * (1.0 - ratio))));
-                self.session.setScrollOffset(target_offset);
-                scroll_log.logf(.info, "scrollbar drag offset={d} ratio={d:.3}", .{ target_offset, ratio });
-                handled = true;
-            } else {
-                scroll_dragging.* = false;
-                self.scrollbar_drag_active = false;
+            if (scroll_dragging.*) {
+                if (input_batch.mouseDown(.left)) {
+                    const track_h = scrollbar_h;
+                    const min_thumb_h: f32 = 18;
+                    const thumb = common.computeScrollbarThumb(scrollbar_y, track_h, rows, total_lines, min_thumb_h, 0.0);
+                    const available = thumb.available;
+                    const clamped_mouse = @min(@max(mouse.y - scroll_grab_offset.*, scrollbar_y), scrollbar_y + available);
+                    const ratio = if (available > 0) (clamped_mouse - scrollbar_y) / available else 0;
+                    const target_offset = @as(usize, @intFromFloat(@round(@as(f32, @floatFromInt(max_scroll_offset)) * (1.0 - ratio))));
+                    self.session.setScrollOffset(target_offset);
+                    scroll_log.logf(.info, "scrollbar drag offset={d} ratio={d:.3}", .{ target_offset, ratio });
+                    handled = true;
+                } else {
+                    scroll_dragging.* = false;
+                    self.scrollbar_drag_active = false;
+                }
             }
-        }
 
-        const suppress_selection_for_scrollbar = mouse_on_scrollbar or scroll_dragging.*;
-        if (locked and !mouse_reporting and in_terminal and input_batch.mousePressed(.left) and self.session.selectionState() != null) {
-            self.session.clearSelection();
-            handled = true;
-        }
-        if (locked and !mouse_reporting and in_terminal and !suppress_selection_for_scrollbar) {
-            if (input_batch.mousePressed(.left)) {
-                const press_mouse = input_batch.mousePressPos(.left) orelse mouse;
-                const col = @as(usize, @intFromFloat((press_mouse.x - hit_base_x) / hit_cell_w));
-                const row = @as(usize, @intFromFloat((press_mouse.y - hit_base_y) / hit_cell_h));
-                if (cols > 0 and rows > 0) {
+            if (in_terminal and input_batch.mousePressed(.left) and self.session.selectionState() != null) {
+                self.session.clearSelection();
+                handled = true;
+            }
+            if (has_visible_grid and in_terminal and !suppress_selection_for_scrollbar) {
+                if (input_batch.mousePressed(.left)) {
+                    const press_mouse = input_batch.mousePressPos(.left) orelse mouse;
+                    const col = @as(usize, @intFromFloat((press_mouse.x - hit_base_x) / hit_cell_w));
+                    const row = @as(usize, @intFromFloat((press_mouse.y - hit_base_y) / hit_cell_h));
                     const clamped_col = @min(col, cols - 1);
                     const clamped_row = @min(row, rows - 1);
                     const global_row = start_line + clamped_row;
                     if (global_row < history_len + rows) {
-                        const row_cells = snapshot.cells[clamped_row * cols .. (clamped_row + 1) * cols];
-                        if (rowLastContentCol(snapshot.cells, cols, clamped_row)) |last_col| {
+                        const row_cells = view_cells[clamped_row * cols .. (clamped_row + 1) * cols];
+                        if (rowLastContentCol(view_cells, cols, clamped_row)) |last_col| {
                             const click_count = input_batch.mouseClicks(.left);
                             self.selection_press_origin = press_mouse;
                             self.selection_drag_active = false;
@@ -687,37 +573,35 @@ pub fn handleInput(
                         }
                     }
                 }
-            }
 
-            var drag_select_active = input_batch.mouseDown(.left) and !input_batch.mousePressed(.left);
-            if (drag_select_active and !self.selection_drag_active) {
-                if (self.selection_press_origin) |origin| {
-                    const dx = mouse.x - origin.x;
-                    const dy = mouse.y - origin.y;
-                    const dist2 = dx * dx + dy * dy;
-                    const threshold = hit_cell_w;
-                    const threshold2 = threshold * threshold;
-                    if (dist2 >= threshold2) {
-                        self.selection_drag_active = true;
+                var drag_select_active = input_batch.mouseDown(.left) and !input_batch.mousePressed(.left);
+                if (drag_select_active and !self.selection_drag_active) {
+                    if (self.selection_press_origin) |origin| {
+                        const dx = mouse.x - origin.x;
+                        const dy = mouse.y - origin.y;
+                        const dist2 = dx * dx + dy * dy;
+                        const threshold = hit_cell_w;
+                        const threshold2 = threshold * threshold;
+                        if (dist2 >= threshold2) {
+                            self.selection_drag_active = true;
+                        } else {
+                            drag_select_active = false;
+                        }
                     } else {
                         drag_select_active = false;
                     }
-                } else {
-                    drag_select_active = false;
                 }
-            }
-            const drag_select_multi = drag_select_active and self.multi_click_selection_mode != .none;
-            const drag_select_normal = drag_select_active and self.multi_click_selection_mode == .none;
-            if (drag_select_multi) {
-                const col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
-                const row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
-                if (cols > 0 and rows > 0) {
+                const drag_select_multi = drag_select_active and self.multi_click_selection_mode != .none;
+                const drag_select_normal = drag_select_active and self.multi_click_selection_mode == .none;
+                if (drag_select_multi) {
+                    const col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
+                    const row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
                     const clamped_col = @min(col, cols - 1);
                     const clamped_row = @min(row, rows - 1);
                     const global_row = start_line + clamped_row;
                     if (global_row < history_len + rows) {
-                        const row_cells = snapshot.cells[clamped_row * cols .. (clamped_row + 1) * cols];
-                        const last_col_opt = rowLastContentCol(snapshot.cells, cols, clamped_row);
+                        const row_cells = view_cells[clamped_row * cols .. (clamped_row + 1) * cols];
+                        const last_col_opt = rowLastContentCol(view_cells, cols, clamped_row);
                         switch (self.multi_click_selection_mode) {
                             .word => {
                                 var target_start: usize = clamped_col;
@@ -783,28 +667,26 @@ pub fn handleInput(
                             .none => {},
                         }
                     }
-                }
 
-                if (self.session.selectionState() != null) {
-                    // Autoscroll when dragging outside terminal area
-                    if (mouse.y < y) {
-                        self.session.scrollBy(1);
-                        handled = true;
-                    } else if (mouse.y > y + height) {
-                        self.session.scrollBy(-1);
-                        handled = true;
+                    if (self.session.selectionState() != null) {
+                        // Autoscroll when dragging outside terminal area
+                        if (mouse.y < y) {
+                            self.session.scrollBy(1);
+                            handled = true;
+                        } else if (mouse.y > y + height) {
+                            self.session.scrollBy(-1);
+                            handled = true;
+                        }
                     }
                 }
-            }
-            if (drag_select_normal) {
-                const col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
-                const row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
-                if (cols > 0 and rows > 0) {
+                if (drag_select_normal) {
+                    const col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
+                    const row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
                     const clamped_col = @min(col, cols - 1);
                     const clamped_row = @min(row, rows - 1);
                     const global_row = start_line + clamped_row;
                     if (global_row < history_len + rows) {
-                        if (rowLastContentCol(snapshot.cells, cols, clamped_row)) |last_col| {
+                        if (rowLastContentCol(view_cells, cols, clamped_row)) |last_col| {
                             const sel_col = @min(clamped_col, last_col);
                             if (self.session.selectionState() == null) {
                                 // Late-start selection when drag begins on blank space and enters content.
@@ -816,40 +698,31 @@ pub fn handleInput(
                             }
                         }
                     }
+
+                    if (self.session.selectionState() != null) {
+                        // Autoscroll when dragging outside terminal area
+                        if (mouse.y < y) {
+                            self.session.scrollBy(1);
+                            handled = true;
+                        } else if (mouse.y > y + height) {
+                            self.session.scrollBy(-1);
+                            handled = true;
+                        }
+                    }
                 }
 
-                if (self.session.selectionState() != null) {
-                    // Autoscroll when dragging outside terminal area
-                    if (mouse.y < y) {
-                        self.session.scrollBy(1);
-                        handled = true;
-                    } else if (mouse.y > y + height) {
-                        self.session.scrollBy(-1);
+                if (input_batch.mouseReleased(.left)) {
+                    self.multi_click_selection_mode = .none;
+                    self.selection_press_origin = null;
+                    self.selection_drag_active = false;
+                    if (self.session.selectionState() != null) {
+                        self.session.finishSelection();
                         handled = true;
                     }
                 }
             }
 
-            if (input_batch.mouseReleased(.left)) {
-                self.multi_click_selection_mode = .none;
-                self.selection_press_origin = null;
-                self.selection_drag_active = false;
-                if (self.session.selectionState() != null) {
-                    self.session.finishSelection();
-                    handled = true;
-                }
-            }
-        }
-
-        if (locked and !mouse_reporting and in_terminal) {
-            if (input_batch.mousePressed(.middle)) {
-                const clip_opt = shell.getClipboardText();
-                const html = shell.getClipboardMimeData(self.session.allocator, "text/html");
-                const uri_list = shell.getClipboardMimeData(self.session.allocator, "text/uri-list");
-                const png = shell.getClipboardMimeData(self.session.allocator, "image/png");
-                defer if (html) |buf| self.session.allocator.free(buf);
-                defer if (uri_list) |buf| self.session.allocator.free(buf);
-                defer if (png) |buf| self.session.allocator.free(buf);
+            if (in_terminal and input_batch.mousePressed(.middle)) {
                 const has_supported_clipboard_data = clip_opt != null or html != null or uri_list != null or png != null;
                 if (has_supported_clipboard_data) {
                     const clip = clip_opt orelse "";
@@ -867,19 +740,73 @@ pub fn handleInput(
                     }
                 }
             }
-            if (wheel_steps != 0) {
+            if (in_terminal and wheel_steps != 0) {
                 if (try self.session.reportAlternateScrollWheel(wheel_steps, mod)) {
                     scroll_log.logf(.info, "alt-scroll wheel steps={d}", .{wheel_steps});
                     handled = true;
                     wheel_steps = 0;
                 }
             }
-            if (wheel_steps != 0) {
+            if (in_terminal and wheel_steps != 0) {
                 const delta: isize = @intCast(wheel_steps * 3);
                 self.session.scrollBy(delta);
                 scroll_log.logf(.info, "scroll wheel delta={d}", .{delta});
                 handled = true;
             }
+        }
+        if (mouse_reporting and rows > 0 and cols > 0) {
+            self.session.lock();
+            defer self.session.unlock();
+            // Mouse reporting uses terminal input-state bookkeeping and grid dimensions.
+            var buttons_down: u8 = 0;
+            if (input_batch.mouseDown(.left)) buttons_down |= 1;
+            if (input_batch.mouseDown(.middle)) buttons_down |= 2;
+            if (input_batch.mouseDown(.right)) buttons_down |= 4;
+
+            var col: usize = 0;
+            if (mouse.x > hit_base_x) col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
+            var row: usize = 0;
+            if (mouse.y > hit_base_y) row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
+            row = @min(row, rows - 1);
+            col = @min(col, cols - 1);
+            const grid_px_w = @as(u32, @intCast(cols)) * @as(u32, @intFromFloat(hit_cell_w));
+            const grid_px_h = @as(u32, @intCast(rows)) * @as(u32, @intFromFloat(hit_cell_h));
+            const raw_px_x_f = @max(0.0, mouse.x - hit_base_x);
+            const raw_px_y_f = @max(0.0, mouse.y - hit_base_y);
+            var pixel_x: u32 = @intFromFloat(raw_px_x_f);
+            var pixel_y: u32 = @intFromFloat(raw_px_y_f);
+            if (grid_px_w > 0) pixel_x = @min(pixel_x, grid_px_w - 1);
+            if (grid_px_h > 0) pixel_y = @min(pixel_y, grid_px_h - 1);
+
+            if (wheel_steps != 0) {
+                var remaining = wheel_steps;
+                while (remaining != 0) {
+                    const button: terminal_mod.MouseButton = if (remaining > 0) .wheel_up else .wheel_down;
+                    if (try self.session.reportMouseEvent(.{ .kind = .wheel, .button = button, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) {
+                        handled = true;
+                    }
+                    remaining += if (remaining > 0) -1 else 1;
+                }
+            }
+            if (input_batch.mousePressed(.left) and !skip_mouse_click) {
+                if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .left, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) handled = true;
+            }
+            if (input_batch.mousePressed(.middle)) {
+                if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .middle, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) handled = true;
+            }
+            if (input_batch.mousePressed(.right)) {
+                if (try self.session.reportMouseEvent(.{ .kind = .press, .button = .right, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) handled = true;
+            }
+            if (input_batch.mouseReleased(.left)) {
+                if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .left, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) handled = true;
+            }
+            if (input_batch.mouseReleased(.middle)) {
+                if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .middle, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) handled = true;
+            }
+            if (input_batch.mouseReleased(.right)) {
+                if (try self.session.reportMouseEvent(.{ .kind = .release, .button = .right, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) handled = true;
+            }
+            if (try self.session.reportMouseEvent(.{ .kind = .move, .button = .none, .row = row, .col = col, .pixel_x = pixel_x, .pixel_y = pixel_y, .mod = mod, .buttons_down = buttons_down })) handled = true;
         }
     }
 
@@ -890,20 +817,6 @@ pub fn handleInput(
     }
     self.scrollbar_drag_active = scroll_dragging.*;
     return handled;
-}
-
-fn terminalInputActivity(input_batch: *const shared_types.input.InputBatch, in_terminal: bool) bool {
-    for (input_batch.events.items) |event| {
-        switch (event) {
-            .key, .text, .focus => return true,
-            else => {},
-        }
-    }
-    if (!in_terminal) return false;
-    if (input_batch.mousePressed(.left) or input_batch.mousePressed(.middle) or input_batch.mousePressed(.right)) return true;
-    if (input_batch.mouseReleased(.left) or input_batch.mouseReleased(.middle) or input_batch.mouseReleased(.right)) return true;
-    if (input_batch.mouseDown(.left) or input_batch.mouseDown(.middle) or input_batch.mouseDown(.right)) return true;
-    return input_batch.scroll.y != 0;
 }
 
 const WordSpan = struct {

@@ -14,6 +14,83 @@ pub const PendingOpen = struct {
     col: ?usize = null, // 1-based
 };
 
+pub fn ctrlClickOpenVisibleMaybe(
+    allocator: std.mem.Allocator,
+    session: *TerminalSession,
+    pending_open: *?PendingOpen,
+    view_cells: []const Cell,
+    rows: usize,
+    cols: usize,
+    x: f32,
+    y: f32,
+    mouse_x: f32,
+    mouse_y: f32,
+    cell_width: f32,
+    cell_height: f32,
+) bool {
+    const log = app_logger.logger("terminal.open");
+    if (rows == 0 or cols == 0) return false;
+    if (cell_width <= 0 or cell_height <= 0) return false;
+    if (view_cells.len < rows * cols) return false;
+
+    const col = @as(usize, @intFromFloat((mouse_x - x) / cell_width));
+    const row = @as(usize, @intFromFloat((mouse_y - y) / cell_height));
+    if (row >= rows or col >= cols) return false;
+
+    const link_id = hover_mod.visibleLinkIdAtCell(view_cells, rows, cols, row, col);
+    if (link_id != 0) {
+        if (session.hyperlinkUri(link_id)) |link| {
+            if (resolveLinkPath(allocator, session, link)) |path| {
+                setPendingOpen(allocator, pending_open, .{ .path = path });
+                return true;
+            }
+            log.logf(.debug, "ctrl-open hyperlink resolve failed link_id={d}", .{link_id});
+        } else {
+            log.logf(.debug, "ctrl-open hyperlink id missing uri link_id={d}", .{link_id});
+        }
+    }
+
+    if (visibleRowCells(view_cells, cols, row)) |row_cells| {
+        if (extractTokenAtCol(allocator, row_cells, col)) |token| {
+            defer allocator.free(token);
+            if (parsePathAndLocation(token)) |parsed| {
+                var resolved: ?[]u8 = null;
+                if (builtin.os.tag == .windows and isWindowsAbsPath(parsed.path)) {
+                    resolved = allocator.dupe(u8, parsed.path) catch {
+                        log.logf(.warning, "ctrl-open failed duplicating windows absolute path", .{});
+                        return false;
+                    };
+                } else if (std.mem.startsWith(u8, parsed.path, "file://") or (parsed.path.len > 0 and parsed.path[0] == '/')) {
+                    resolved = resolveLinkPath(allocator, session, parsed.path);
+                } else {
+                    const cwd = session.currentCwd();
+                    if (cwd.len > 0) {
+                        resolved = std.fs.path.join(allocator, &.{ cwd, parsed.path }) catch |err| {
+                            log.logf(.warning, "ctrl-open failed joining cwd-relative path err={s}", .{@errorName(err)});
+                            return false;
+                        };
+                    } else {
+                        resolved = allocator.dupe(u8, parsed.path) catch {
+                            log.logf(.warning, "ctrl-open failed duplicating relative path without cwd", .{});
+                            return false;
+                        };
+                    }
+                }
+
+                if (resolved) |path| {
+                    setPendingOpen(allocator, pending_open, .{ .path = path, .line = parsed.line, .col = parsed.col });
+                    return true;
+                }
+                log.logf(.debug, "ctrl-open token resolved to no path token={s}", .{token});
+            } else {
+                log.logf(.debug, "ctrl-open token parse failed token={s}", .{token});
+            }
+        }
+    }
+
+    return false;
+}
+
 pub fn ctrlClickOpenMaybe(
     allocator: std.mem.Allocator,
     session: *TerminalSession,
@@ -74,7 +151,7 @@ pub fn ctrlClickOpenMaybe(
                     const cwd = session.currentCwd();
                     if (cwd.len > 0) {
                         resolved = std.fs.path.join(allocator, &.{ cwd, parsed.path }) catch |err| {
-                            log.logf(.warning, "ctrl-open failed joining cwd-relative path err={s}", .{ @errorName(err) });
+                            log.logf(.warning, "ctrl-open failed joining cwd-relative path err={s}", .{@errorName(err)});
                             return false;
                         };
                     } else {
@@ -184,7 +261,7 @@ fn resolveLinkPath(allocator: std.mem.Allocator, session: *TerminalSession, uri:
     const cwd = session.currentCwd();
     if (cwd.len == 0) return null;
     return std.fs.path.join(allocator, &.{ cwd, uri }) catch |err| {
-        log.logf(.warning, "resolveLinkPath failed joining cwd path err={s}", .{ @errorName(err) });
+        log.logf(.warning, "resolveLinkPath failed joining cwd path err={s}", .{@errorName(err)});
         return null;
     };
 }
@@ -230,6 +307,13 @@ fn rowCellsAtVisibleRow(
         return snapshot.cells[grid_row * cols .. grid_row * cols + cols];
     }
     return null;
+}
+
+fn visibleRowCells(view_cells: []const Cell, cols: usize, row: usize) ?[]const Cell {
+    if (cols == 0) return null;
+    const row_start = row * cols;
+    if (row_start + cols > view_cells.len) return null;
+    return view_cells[row_start .. row_start + cols];
 }
 
 fn isTokenChar(cp: u32) bool {
@@ -329,7 +413,7 @@ fn parsePathAndLocation(token: []const u8) ?ParsedPath {
         const tail2 = tmp[idx2 + 1 ..];
         if (tail2.len > 0 and allDigits(tail2)) {
             const n2 = std.fmt.parseInt(usize, tail2, 10) catch blk: {
-                log.logf(.debug, "parsePathAndLocation parseInt n2 failed tail={s}", .{ tail2 });
+                log.logf(.debug, "parsePathAndLocation parseInt n2 failed tail={s}", .{tail2});
                 break :blk null;
             };
             if (n2 != null) {
@@ -338,7 +422,7 @@ fn parsePathAndLocation(token: []const u8) ?ParsedPath {
                     const tail1 = tmp[idx1 + 1 ..];
                     if (tail1.len > 0 and allDigits(tail1)) {
                         const n1 = std.fmt.parseInt(usize, tail1, 10) catch blk: {
-                            log.logf(.debug, "parsePathAndLocation parseInt n1 failed tail={s}", .{ tail1 });
+                            log.logf(.debug, "parsePathAndLocation parseInt n1 failed tail={s}", .{tail1});
                             break :blk null;
                         };
                         if (n1 != null) {

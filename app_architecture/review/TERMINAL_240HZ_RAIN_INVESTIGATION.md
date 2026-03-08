@@ -216,6 +216,73 @@ This confirms a practical scheduler race window around `hasData` gating and idle
 - Intent:
   - prevent 33ms/100ms backoff from engaging during brief `hasData=0` gaps while output is still actively progressing.
 
+## Applied Contract Fix (2026-03-08)
+
+- Files:
+  - `src/terminal/core/view_cache.zig`
+  - `src/ui/widgets/terminal_widget_draw.zig`
+  - `src/ui/widgets/terminal_widget.zig`
+  - `src/app/post_preinput_hooks_runtime.zig`
+- Change:
+  - make pending scroll/view-cache refresh consumption explicit: successful `updateViewCacheForScroll*` calls now clear `view_cache_pending`
+  - service pending view-cache refreshes under the draw snapshot lock before copying the published render cache
+  - stop app/widget lock-free reads of `TerminalSession.renderCache()` for cursor blink/arming paths; use widget-owned snapshot state instead
+- Intent:
+  - remove stale-cache reads from the UI/backend seam
+  - restore a single authoritative point where pending scroll/view selection state is folded into the render cache before draw
+  - reduce dependence on best-effort `tryLock` refreshes for visible correctness
+
+## Applied Input Contract Fix (2026-03-08)
+
+- Files:
+  - `src/terminal/core/terminal_session.zig`
+  - `src/terminal/protocol/csi.zig`
+  - `src/ui/widgets/terminal_widget_input.zig`
+  - `src/ui/widgets/terminal_widget_hover.zig`
+  - `src/ui/widgets/terminal_widget_open.zig`
+- Change:
+  - expanded `TerminalSession.input_snapshot` so UI/input code reads bracketed paste, auto-repeat, alternate-scroll, alt-screen state, and live screen dimensions atomically
+  - refresh that snapshot on CSI mode changes and alt-screen enter/exit
+  - move hover hit-testing, ctrl+click open, and selection hit-mapping onto the widget-owned published draw cache instead of live session snapshot reads
+  - keep the truly stateful paths under the session mutex: OSC clipboard pickup, selection/scroll mutations, middle-click paste emission, and terminal mouse-reporting bookkeeping
+- Intent:
+  - remove the previous mixed contract where `terminal_widget_input` could skip the lock but still touch non-thread-safe session state
+  - make the UI/backend seam explicit: published draw cache + atomic input snapshot for reads, short locked sections for mutations and input-state bookkeeping
+
+## Applied Redraw Authority Fix (2026-03-08)
+
+- Files:
+  - `src/terminal/core/terminal_session.zig`
+  - `src/app/poll_visible_terminal_sessions_runtime.zig`
+  - `src/app/frame_render_idle_runtime.zig`
+  - `src/ui/widgets/terminal_widget_draw.zig`
+- Change:
+  - added `TerminalSession.publishedGeneration()` to expose the generation of the currently published render cache
+  - visible-terminal polling now requests redraw from active-session published-generation changes instead of raw `any_polled` / `hasData()` activity
+  - frame idle runtime now tracks observed vs drawn published generation and forces redraw when a newer published cache exists
+  - draw latency metrics now publish the rendered cache generation so frame scheduling can track what was actually presented
+- Intent:
+  - separate poll pressure from redraw authority
+  - make frame presentation follow cache publication, not `output_pending` timing windows
+
+## Applied Texture-Shift Kill-Switch (2026-03-08)
+
+- Files:
+  - `src/ui/renderer.zig`
+  - `src/ui/widgets/terminal_widget_draw.zig`
+  - `src/config/lua_config_iface.zig`
+  - `src/config/lua_config_shared.zig`
+  - `src/config/lua_config_ziglua_parse.zig`
+  - `src/app/init_runtime.zig`
+  - `src/app/reload_config_runtime.zig`
+  - `assets/config/init.lua`
+- Change:
+  - added reloadable `terminal.texture_shift` config, default `true`
+  - gated the `scrollTerminalTexture(...)` viewport-shift optimization on that renderer flag
+  - disabling the flag leaves the existing full redraw fallback intact
+- Intent:
+  - allow direct A/B validation of the suspected `glCopyTexSubImage2D` self-copy path without flattening the rest of terminal redraw behavior
+
 ## Acceptance Criteria for Fix
 
 - At 240Hz, `ascii-rain` no longer shows perceptible frozen subsets under normal runtime load.
