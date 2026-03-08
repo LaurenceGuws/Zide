@@ -241,6 +241,8 @@ fn copyRenderCacheSnapshot(dst: *RenderCache, allocator: std.mem.Allocator, src:
     dst.kitty_generation = src.kitty_generation;
     dst.clear_generation = src.clear_generation;
     dst.viewport_shift_rows = src.viewport_shift_rows;
+    dst.full_dirty_reason = src.full_dirty_reason;
+    dst.full_dirty_seq = src.full_dirty_seq;
 }
 
 pub fn draw(
