@@ -1293,6 +1293,7 @@ pub fn draw(
             }
             self.terminal_texture_ready = true;
             self.last_render_generation = cache.generation;
+            self.session.notePresentedGeneration(cache.generation);
             self.last_cell_w_i = cell_w_i;
             self.last_cell_h_i = cell_h_i;
             self.last_render_scale = r.render_scale;

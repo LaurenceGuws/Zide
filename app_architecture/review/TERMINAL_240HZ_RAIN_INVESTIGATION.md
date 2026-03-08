@@ -215,8 +215,11 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - later traces showed top rows are not universally omitted from partial damage; the more stable remaining fault is `~120ms` draw cadence with large generation jumps between frames
   - patched `frame_render_idle_runtime` so `currentGeneration != publishedGeneration` counts as active terminal pressure, preventing long idle sleeps while parse-thread backlog is still waiting to publish
   - added temporary `cache_refine` tracing in `view_cache` to compare source dirty spans against post-hash dirty spans on the next run
+  - the next repro showed the row-hash refinement step collapsing `src_damage_rows=0..N` into bottom-heavy `resolved_damage_rows=M..N` before draw; the comparison base was the newest published cache, not the cache generation actually presented on screen
+  - patched the seam so row-hash refinement only runs when the active published cache generation matches a new `presented_generation` marker updated by `terminal_widget_draw` after the texture upload completes
+  - added a regression that simulates repeated scroll publications without an intervening presentation and asserts top-row damage is preserved instead of being refined away
 
-## Applied Fix Candidate (2026-03-08)
+## Applied Fix Candidate (2026-03-09)
 
 - File: `src/app/frame_render_idle_runtime.zig`
 - Change:
@@ -224,7 +227,7 @@ This confirms a practical scheduler race window around `hasData` gating and idle
 - Intent:
   - prevent 33ms/100ms backoff from engaging during brief `hasData=0` gaps while output is still actively progressing.
 
-## Applied Contract Fix (2026-03-08)
+## Applied Contract Fix (2026-03-09)
 
 - Files:
   - `src/terminal/core/view_cache.zig`
@@ -240,7 +243,7 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - restore a single authoritative point where pending scroll/view selection state is folded into the render cache before draw
   - reduce dependence on best-effort `tryLock` refreshes for visible correctness
 
-## Applied Input Contract Fix (2026-03-08)
+## Applied Input Contract Fix (2026-03-09)
 
 - Files:
   - `src/terminal/core/terminal_session.zig`
@@ -257,7 +260,7 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - remove the previous mixed contract where `terminal_widget_input` could skip the lock but still touch non-thread-safe session state
   - make the UI/backend seam explicit: published draw cache + atomic input snapshot for reads, short locked sections for mutations and input-state bookkeeping
 
-## Applied Redraw Authority Fix (2026-03-08)
+## Applied Redraw Authority Fix (2026-03-09)
 
 - Files:
   - `src/terminal/core/terminal_session.zig`
@@ -272,6 +275,22 @@ This confirms a practical scheduler race window around `hasData` gating and idle
 - Intent:
   - separate poll pressure from redraw authority
   - make frame presentation follow cache publication, not `output_pending` timing windows
+
+## Applied Presented-Generation Refinement Fix (2026-03-09)
+
+- Files:
+  - `src/terminal/core/terminal_session.zig`
+  - `src/terminal/core/view_cache.zig`
+  - `src/ui/widgets/terminal_widget_draw.zig`
+- Change:
+  - added `TerminalSession.presentedGeneration()` and `notePresentedGeneration(...)` so the backend can distinguish the latest published render cache from the last cache generation actually uploaded to the terminal texture
+  - `terminal_widget_draw` now marks the cache generation as presented only after the offscreen terminal texture update completes
+  - `view_cache` row-hash refinement is now gated on `active_cache.generation == presented_generation`; if draw is behind publication, refinement falls back to the source dirty rows instead of diffing against an unseen cache
+  - `cache_refine` tracing now logs `refine_base_gen` and `presented_gen` to make this seam visible in future repros
+  - added a terminal-session regression covering repeated scroll publications without an intervening draw
+- Intent:
+  - stop partial-damage refinement from assuming intermediate published generations have already reached the screen
+  - preserve top-row damage during multi-generation bursts, which matches the user-visible “row 1 is laziest, bottom rows catch up first” symptom
 
 ## Applied Texture-Shift Kill-Switch (2026-03-08)
 
