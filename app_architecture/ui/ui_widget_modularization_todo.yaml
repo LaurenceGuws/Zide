@@ -284,3 +284,5 @@ ui_widget_modularization_todo:
             - zig build run
           notes:
             - "Use local perf logs to confirm update/draw phases stay bounded."
+            - "2026-03-08: High-refresh terminal investigation is now the primary verification target; see `app_architecture/review/TERMINAL_240HZ_RAIN_INVESTIGATION.md`."
+            - "2026-03-08: Kitty differential review indicates no explicit high-Hz guard; likely issue surface is Zide redraw scheduling and/or viewport texture-shift partial update correctness."

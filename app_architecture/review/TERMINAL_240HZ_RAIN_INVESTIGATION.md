@@ -1,0 +1,134 @@
+# Terminal 240Hz Rain Investigation (2026-03-08)
+
+## Scope
+
+Investigate why `ascii-rain-git` appears smooth on 60Hz displays but shows intermittent "standing still" drops (up to roughly 0.5s perceived stalls) on 240Hz displays in Zide terminal rendering.
+
+This note documents:
+- what was observed and compared
+- what was ruled out
+- the most likely fault surfaces
+- concrete next validation steps
+
+This doc is the detailed source of truth for the current focus item.
+
+## Reproduction Baseline
+
+- Reproducer command:
+  - `yay -Qi ascii-rain-git` confirms package metadata
+  - run `ascii-rain` in terminal pane
+- User observation:
+  - 60Hz monitor: visually smooth / expected
+  - 240Hz monitor: subsets of drops appear frozen or lagged
+
+## Key Differential: Kitty vs Zide
+
+Kitty source inspected under:
+- `reference_repos/terminals/kitty/kitty/*`
+- `reference_repos/terminals/kitty/glfw/*`
+
+### What Kitty Does (Relevant)
+
+1. No explicit "240Hz mode"
+- It still relies on standard sync/present behavior (`glfwSwapInterval`) and configurable `sync_to_monitor`.
+- Files:
+  - `reference_repos/terminals/kitty/kitty/glfw.c` (`apply_swap_interval`)
+  - `reference_repos/terminals/kitty/kitty/options/definition.py` (`sync_to_monitor`, `repaint_delay`, `input_delay`)
+
+2. Explicit frame callback request/recovery path (Wayland/macOS)
+- Uses render-frame requests and tracks render-frame readiness.
+- Re-requests frame if one does not arrive within 250ms.
+- Files:
+  - `reference_repos/terminals/kitty/kitty/glfw.c` (`request_frame_render`, frame callbacks)
+  - `reference_repos/terminals/kitty/kitty/child-monitor.c` (`no_render_frame_received_recently`, `render_os_window`)
+
+3. Render pacing separated from input pacing
+- `repaint_delay` and `input_delay` are independent.
+- Repaint delay is ignored when pending input exists.
+- Files:
+  - `reference_repos/terminals/kitty/kitty/options/definition.py`
+  - `reference_repos/terminals/kitty/kitty/child-monitor.c` (main/render loop + IO wakeup path)
+
+4. Authoritative dirty-line driven GPU updates
+- GPU cell data path updates from line dirty state and marks lines clean post-render.
+- Files:
+  - `reference_repos/terminals/kitty/kitty/screen.c` (`screen_update_cell_data`)
+  - `reference_repos/terminals/kitty/kitty/shaders.c` (`send_cell_data_to_gpu`)
+
+### What Zide Currently Does (Relevant)
+
+1. Poll/redraw gating and idle backoff
+- Terminal redraw typically depends on poll path signaling (`hasData`/`poll`) and setting `needs_redraw`.
+- Files:
+  - `src/app/poll_visible_terminal_sessions_runtime.zig`
+  - `src/app/visible_terminal_frame_hooks_runtime.zig`
+  - `src/app/frame_render_idle_runtime.zig`
+
+2. Partial texture update + viewport texture shift path
+- Uses `scrollTerminalTexture(...)` + partial row redraw for certain generation/shift conditions.
+- Files:
+  - `src/ui/widgets/terminal_widget_draw.zig`
+  - `src/terminal/core/view_cache.zig`
+
+3. Existing instrumentation is draw/poll-centric
+- `input.latency`, `terminal.ui.perf`, and poll metrics exist.
+- A temporary branch-local starvation logger was added in `frame_render_idle_runtime.zig` to detect prolonged terminal output pressure while no redraw occurs.
+
+## What Is Unlikely
+
+Pure PTY throughput limitation as the primary cause is unlikely:
+- Same workload renders smoothly in Kitty at high refresh.
+- Existing Zide issue signature is selective visual stall (subset appears frozen), which better matches redraw/damage scheduling behavior than total throughput saturation.
+
+## Working Hypotheses (Ranked)
+
+1. Redraw scheduling starvation under high-refresh cadence
+- Terminal output exists, but redraw trigger or cadence occasionally fails to keep texture updates continuous.
+- Symptom fit: visible pauses with later catch-up.
+
+2. Partial texture update correctness issue under viewport-shift path
+- `scrollTerminalTexture` reuse + dirty rows/columns reconciliation may occasionally preserve stale regions under high-frequency incremental updates.
+- Symptom fit: only some rain drops appear to stand still.
+
+3. Poll budget/cadence interaction with active-output pressure
+- Current budget model may be correct at 60Hz but can produce perceptible jitter at 240Hz due to timing granularity/cadence mismatch.
+
+## Why Kitty Matters Here
+
+Kitty demonstrates three robustness properties we should mirror:
+
+1. Frame-request watchdog/recovery
+- If compositor/frame callback flow stalls, force re-request quickly.
+
+2. Input/read and repaint pacing are explicitly separated
+- Prevents one cadence from accidentally starving the other.
+
+3. Dirty source of truth is conservative and authoritative
+- Reduced dependence on cache-shift correctness for visible output continuity.
+
+## Immediate Validation Plan
+
+1. Add a temporary kill-switch for viewport texture shift optimization
+- Force full or non-shift partial path while keeping other logic unchanged.
+- Compare artifact frequency at 240Hz.
+
+2. Add redraw watchdog in Zide frame loop
+- If terminal output pressure persists without redraw beyond threshold, force redraw request and log event.
+
+3. Compare metrics under 60Hz vs 240Hz with identical workload
+- Track:
+  - poll sequence progression
+  - draw sequence progression
+  - prolonged output pressure without redraw
+  - partial/full texture update ratios
+
+4. Keep changes small and bisectable
+- Separate "instrumentation only" commits from behavior changes.
+
+## Acceptance Criteria for Fix
+
+- At 240Hz, `ascii-rain` no longer shows perceptible frozen subsets under normal runtime load.
+- No regressions at 60Hz.
+- Terminal redraw metrics show continuous draw progression during sustained output.
+- No new tearing/blank-row artifacts introduced by any texture update path change.
+
