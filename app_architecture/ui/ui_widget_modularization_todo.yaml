@@ -323,3 +323,4 @@ ui_widget_modularization_todo:
             - "2026-03-09: Retired the temporary `terminal.ui.statebug` investigation probes from widget draw, visible-terminal poll, and idle scheduling paths after the render-path diagnosis converged."
             - "2026-03-09: Removed widget-local scroll-history redraw forcing from `terminal_widget_draw`; scroll/viewport redraw policy now trusts the published render cache instead of a second widget-side scroll-change bit."
             - "2026-03-09: Removed widget-local alt-screen transition forcing from the draw texture update plan; alt-screen redraw policy now follows the published render cache, while alt-exit timing logs remain intact."
+            - "2026-03-09: Removed the `viewport texture shift unavailable => full redraw` fallback; shift is now a pure optimization, and disabled/oversize/forced-full cases fall back to normal published damage instead."
