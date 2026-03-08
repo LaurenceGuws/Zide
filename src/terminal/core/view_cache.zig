@@ -17,7 +17,7 @@ fn pickForcedFullDirtyReason(
     active_cols: usize,
     scroll_offset: usize,
     active_scroll_offset: usize,
-    requires_full_damage_for_scrollback: bool,
+    requires_full_damage_for_clear_generation: bool,
     active_is_alt: bool,
     cache_alt_active: bool,
     screen_reverse: bool,
@@ -30,7 +30,7 @@ fn pickForcedFullDirtyReason(
     if (force_full_damage) return .view_cache_force_full_damage;
     if (rows != active_rows or cols != active_cols) return .view_cache_geometry_change;
     if (scroll_offset != active_scroll_offset) return .view_cache_scroll_offset_change;
-    if (requires_full_damage_for_scrollback) return .view_cache_scrollback_generation_change;
+    if (requires_full_damage_for_clear_generation) return .view_cache_clear_generation_change;
     if (active_is_alt != cache_alt_active) return .view_cache_alt_state_change;
     if (screen_reverse != cache_screen_reverse) return .view_cache_screen_reverse_change;
     if (kitty_generation != cache_kitty_generation) return .view_cache_kitty_generation_change;
@@ -316,12 +316,12 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         }
         cache.selection_active = selection_active;
     }
-    const requires_full_damage_for_scrollback = clear_generation != active_cache.clear_generation;
+    const requires_full_damage_for_clear_generation = clear_generation != active_cache.clear_generation;
     const needs_full_damage = force_full_damage or
         rows != active_cache.rows or
         cols != active_cache.cols or
         scroll_offset != active_cache.scroll_offset or
-        requires_full_damage_for_scrollback or
+        requires_full_damage_for_clear_generation or
         (self.active == .alt) != active_cache.alt_active or
         screen_reverse != active_cache.screen_reverse or
         kitty_generation != active_cache.kitty_generation or
@@ -449,7 +449,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
             active_cache.cols,
             scroll_offset,
             active_cache.scroll_offset,
-            requires_full_damage_for_scrollback,
+            requires_full_damage_for_clear_generation,
             self.active == .alt,
             active_cache.alt_active,
             screen_reverse,

@@ -1792,3 +1792,38 @@ pub const Modifier = types.Modifier;
 pub const MouseButton = types.MouseButton;
 pub const MouseEventKind = types.MouseEventKind;
 pub const MouseEvent = types.MouseEvent;
+
+test "full-region scroll publishes partial cache damage at live bottom" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 3, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row: usize = 0;
+    while (row < 3) : (row += 1) {
+        var col: usize = 0;
+        while (col < 4) : (col += 1) {
+            var cell = base;
+            cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(row));
+            session.primary.grid.cells.items[row * 4 + col] = cell;
+        }
+    }
+    session.primary.setCursor(2, 0);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+
+    session.scrollUp();
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(i32, 1), cache.viewport_shift_rows);
+    try std.testing.expectEqual(@as(usize, 1), session.scrollbackCount());
+}
