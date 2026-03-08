@@ -371,6 +371,18 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - decouple the optional texture-copy optimization from correctness policy
   - preserve correctness through published damage first, using the shift path only as a performance optimization
 
+## Kitty Full-Redraw Narrowing (2026-03-09)
+
+- Files:
+  - `src/ui/widgets/terminal_widget_draw.zig`
+- Change:
+  - narrowed kitty-triggered full redraws from “kitty content exists” to “kitty content exists and there is cell damage that needs reconciliation in the texture”
+  - static kitty content no longer forces a full texture update by itself when the cache is otherwise clean
+  - added draw-path unit coverage for the static-kitty-clean case and the kitty-plus-dirty case
+- Intent:
+  - reduce one more unconditional renderer-side full-redraw reason
+  - keep kitty generation changes authoritative while avoiding extra work for unchanged kitty scenes
+
 ## Applied Texture-Shift Kill-Switch (2026-03-08)
 
 - Files:

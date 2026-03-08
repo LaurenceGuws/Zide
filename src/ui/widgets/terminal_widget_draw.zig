@@ -287,7 +287,7 @@ fn chooseTextureUpdatePlan(
     recreated: bool,
     cell_metrics_changed: bool,
     render_scale_changed: bool,
-    has_kitty: bool,
+    kitty_requires_full: bool,
     kitty_changed: bool,
     has_blink: bool,
     blink_phase_changed: bool,
@@ -297,7 +297,7 @@ fn chooseTextureUpdatePlan(
         cell_metrics_changed or
         render_scale_changed or
         cache_dirty == .full or
-        has_kitty or
+        kitty_requires_full or
         kitty_changed or
         (has_blink and blink_phase_changed);
     var needs_partial = cache_dirty == .partial and !needs_full;
@@ -1072,11 +1072,12 @@ pub fn draw(
         const recreated = r.ensureTerminalTexture(texture_w, texture_h);
         const kitty_changed = kitty_generation != self.kitty.last_generation;
         const gen_changed = cache.generation != self.last_render_generation;
+        const kitty_requires_full = has_kitty and cache.dirty != .none;
         full_reason_recreated = recreated;
         full_reason_cell_metrics = cell_metrics_changed;
         full_reason_scale = render_scale_changed;
         full_reason_dirty_full = cache.dirty == .full;
-        full_reason_kitty = has_kitty;
+        full_reason_kitty = kitty_requires_full;
         full_reason_kitty_gen = kitty_changed;
         full_reason_blink = has_blink and blink_phase_changed;
         const update_plan = chooseTextureUpdatePlan(
@@ -1084,7 +1085,7 @@ pub fn draw(
             full_reason_recreated,
             full_reason_cell_metrics,
             full_reason_scale,
-            full_reason_kitty,
+            kitty_requires_full,
             full_reason_kitty_gen,
             has_blink,
             blink_phase_changed,
@@ -1933,6 +1934,38 @@ test "texture update plan forces full redraw when texture is not ready" {
         false,
         false,
         false,
+    );
+    try std.testing.expect(plan.needs_full);
+    try std.testing.expect(!plan.needs_partial);
+}
+
+test "texture update plan does not force full redraw for static kitty content alone" {
+    const plan = chooseTextureUpdatePlan(
+        .none,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+    );
+    try std.testing.expect(!plan.needs_full);
+    try std.testing.expect(!plan.needs_partial);
+}
+
+test "texture update plan forces full redraw when dirty cells overlap kitty content policy" {
+    const plan = chooseTextureUpdatePlan(
+        .partial,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
     );
     try std.testing.expect(plan.needs_full);
     try std.testing.expect(!plan.needs_partial);
