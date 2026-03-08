@@ -335,6 +335,19 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - return the hot paths to production-oriented code after the investigation converged
   - reduce per-frame/per-poll bookkeeping that no longer contributes to terminal correctness
 
+## Cache-Authority Scroll Cleanup (2026-03-09)
+
+- Files:
+  - `src/ui/widgets/terminal_widget.zig`
+  - `src/ui/widgets/terminal_widget_draw.zig`
+- Change:
+  - removed widget-local scroll-history tracking used only to force a redraw policy decision in draw
+  - `chooseTextureUpdatePlan(...)` no longer treats a widget-observed scroll-offset change as its own full-redraw reason
+  - draw now relies on the published render cache for scroll/viewport correctness, while renderer-local reasons (texture recreation, cell metrics, scale, kitty images, blink phase) still remain local
+- Intent:
+  - keep redraw authority centered on published cache state instead of duplicating scroll-change policy in widget state
+  - shrink one more UI/backend seam where local widget history could override backend damage truth
+
 ## Applied Texture-Shift Kill-Switch (2026-03-08)
 
 - Files:

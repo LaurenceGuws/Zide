@@ -42,7 +42,6 @@ pub const TerminalWidget = struct {
 
     session: *TerminalSession,
     blink_style: BlinkStyle = .kitty,
-    last_scroll_offset: usize = 0,
     kitty: kitty_mod.KittyState,
     hover: hover_mod.HoverState = .{},
     pending_open: ?PendingOpen = null,
@@ -83,7 +82,6 @@ pub const TerminalWidget = struct {
         return .{
             .session = session,
             .blink_style = blink_style,
-            .last_scroll_offset = 0,
             .kitty = kitty_mod.KittyState.init(session.allocator),
             .hover = .{},
             .pending_open = null,

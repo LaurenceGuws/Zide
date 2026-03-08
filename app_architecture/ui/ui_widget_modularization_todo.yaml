@@ -321,3 +321,4 @@ ui_widget_modularization_todo:
             - "2026-03-09: Removed the blanket `scroll_offset > 0 => full redraw` policy from `terminal_widget_draw`; partial texture uploads are now allowed while scrolled when the render cache itself reports partial damage."
             - "2026-03-09: Added draw-path unit coverage for the new texture update plan so scrolled partial damage stays test-locked while texture-not-ready still forces a full upload."
             - "2026-03-09: Retired the temporary `terminal.ui.statebug` investigation probes from widget draw, visible-terminal poll, and idle scheduling paths after the render-path diagnosis converged."
+            - "2026-03-09: Removed widget-local scroll-history redraw forcing from `terminal_widget_draw`; scroll/viewport redraw policy now trusts the published render cache instead of a second widget-side scroll-change bit."
