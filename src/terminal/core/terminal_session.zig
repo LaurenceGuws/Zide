@@ -855,7 +855,6 @@ pub const TerminalSession = struct {
         if (bytes.len == 0) return;
         self.parser.handleSlice(self, bytes);
         _ = self.output_generation.fetchAdd(1, .acq_rel);
-        self.force_full_damage.store(true, .release);
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
