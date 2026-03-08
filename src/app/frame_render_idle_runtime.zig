@@ -1,4 +1,5 @@
 const app_shell = @import("../app_shell.zig");
+const app_logger = @import("../app_logger.zig");
 const shared_types = @import("../types/mod.zig");
 const terminal_widget_draw = @import("../ui/widgets/terminal_widget_draw.zig");
 
@@ -7,6 +8,8 @@ const TerminalDrawLatencyMetrics = terminal_widget_draw.FrameLatencyMetrics;
 
 var last_terminal_draw_seq: u64 = 0;
 var last_terminal_poll_seq: u64 = 0;
+var terminal_pressure_since: ?f64 = null;
+var last_terminal_statebug_log_time: f64 = 0.0;
 
 const TerminalLatencyContext = struct {
     poll: ?PollMetrics = null,
@@ -162,6 +165,16 @@ fn hasTerminalOutputPressure(state: anytype) bool {
     return false;
 }
 
+fn latestTerminalPollSeq(state: anytype) u64 {
+    const State = @TypeOf(state.*);
+    if (!@hasField(State, "terminal_workspace")) return 0;
+
+    if (state.terminal_workspace) |*workspace| {
+        return workspace.lastPollFrameMetrics().seq;
+    }
+    return 0;
+}
+
 pub fn handle(
     state: anytype,
     ctx: *anyopaque,
@@ -172,6 +185,8 @@ pub fn handle(
     hooks: Hooks,
 ) void {
     var draw_ms: f64 = 0.0;
+    const now = app_shell.getTime();
+    const terminal_output_pressure = hasTerminalOutputPressure(state);
 
     if (state.needs_redraw) {
         const draw_start = app_shell.getTime();
@@ -197,6 +212,7 @@ pub fn handle(
         hooks.maybe_log_metrics(ctx, draw_end);
         state.needs_redraw = false;
         state.idle_frames = 0;
+        terminal_pressure_since = null;
         if (input_batch.events.items.len > 0) {
             const total_ms = poll_ms + build_ms + update_ms + draw_ms;
             if (total_ms >= 1.0) {
@@ -210,6 +226,30 @@ pub fn handle(
     }
 
     state.idle_frames +|= 1;
+    if (terminal_output_pressure) {
+        if (terminal_pressure_since == null) terminal_pressure_since = now;
+        const pressure_ms = (now - terminal_pressure_since.?) * 1000.0;
+        if (pressure_ms >= 100.0 and (now - last_terminal_statebug_log_time) >= 0.1) {
+            last_terminal_statebug_log_time = now;
+            const statebug_log = app_logger.logger("terminal.ui.statebug");
+            statebug_log.logf(
+                .info,
+                "idle_pressure_ms={d:.2} idle_frames={d} needs_redraw={d} draw_seq={d} poll_seq={d} win_px={d}x{d}",
+                .{
+                    pressure_ms,
+                    state.idle_frames,
+                    @intFromBool(state.needs_redraw),
+                    terminal_widget_draw.latestFrameLatencyMetrics().seq,
+                    latestTerminalPollSeq(state),
+                    state.shell.width(),
+                    state.shell.height(),
+                },
+            );
+        }
+    } else {
+        terminal_pressure_since = null;
+    }
+
     if (input_batch.events.items.len > 0) {
         const total_ms = poll_ms + build_ms + update_ms;
         if (total_ms >= 1.0) {
@@ -220,8 +260,7 @@ pub fn handle(
         }
     }
 
-    const uptime = app_shell.getTime();
-    const terminal_output_pressure = hasTerminalOutputPressure(state);
+    const uptime = now;
     const sleep_ms: f64 = if (terminal_output_pressure)
         0.001
     else if (uptime < 3.0)

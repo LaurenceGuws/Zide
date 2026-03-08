@@ -1514,6 +1514,7 @@ pub fn draw(
 
     const draw_log = app_logger.logger("terminal.ui.redraw");
     const perf_log = app_logger.logger("terminal.ui.perf");
+    const statebug_log = app_logger.logger("terminal.ui.statebug");
     const now = app_shell.getTime();
     const elapsed_ms = time_utils.secondsToMs(now - draw_start);
     const has_kitty_images = self.kitty.images_view.items.len > 0;
@@ -1565,6 +1566,50 @@ pub fn draw(
                 @intFromBool(full_reason_blink),
                 rows,
                 cols,
+            },
+        );
+    }
+
+    if ((now - self.last_state_probe_log_time) >= 0.1) {
+        const cell_w_i_probe: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
+        const cell_h_i_probe: i32 = @intFromFloat(std.math.round(r.terminal_cell_height));
+        const padding_x_probe: i32 = @max(2, @divTrunc(cell_w_i_probe, 2));
+        const texture_w_probe: i32 = cell_w_i_probe * @as(i32, @intCast(cols)) + padding_x_probe;
+        const texture_h_probe: i32 = cell_h_i_probe * @as(i32, @intCast(rows));
+        const since_prev_draw_ms = if (self.last_state_probe_draw_time > 0)
+            time_utils.secondsToMs(now - self.last_state_probe_draw_time)
+        else
+            -1.0;
+        const gen_delta: u64 = if (cache.generation >= self.last_state_probe_generation)
+            cache.generation - self.last_state_probe_generation
+        else
+            0;
+        self.last_state_probe_log_time = now;
+        self.last_state_probe_draw_time = now;
+        self.last_state_probe_generation = cache.generation;
+        statebug_log.logf(
+            .info,
+            "draw_gap_ms={d:.2} draw_ms={d:.2} gen={d} gen_delta={d} dirty={s} dirty_rows={d} damage_rows={d} damage_cols={d} updated={d} full={d} partial={d} clear_ok={d} rows={d} cols={d} widget_px={d}x{d} tex_px={d}x{d} scale={d:.3}",
+            .{
+                since_prev_draw_ms,
+                elapsed_ms,
+                cache.generation,
+                gen_delta,
+                @tagName(cache.dirty),
+                dirty_rows_count,
+                damage_row_span,
+                damage_col_span,
+                @intFromBool(updated),
+                @intFromBool(texture_full_update),
+                @intFromBool(texture_partial_update),
+                @intFromBool(dirty_clear_ok),
+                rows,
+                cols,
+                @as(i32, @intFromFloat(std.math.round(width))),
+                @as(i32, @intFromFloat(std.math.round(height))),
+                texture_w_probe,
+                texture_h_probe,
+                r.render_scale,
             },
         );
     }
