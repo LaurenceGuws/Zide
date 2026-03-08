@@ -116,6 +116,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     const force_full_damage = self.force_full_damage.swap(false, .acq_rel);
     const selection_active = self.active != .alt and self.history.selectionState() != null;
     const active_cache = &self.render_caches[active_index];
+    const presented_generation = self.presentedGeneration();
     if (active_cache.rows == rows and
         active_cache.cols == cols and
         active_cache.history_len == history_len and
@@ -480,7 +481,13 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         cache.full_dirty_seq = view.full_dirty_seq;
     }
 
-    if (!needs_full_damage and view.dirty == .partial and active_cache.rows == rows and active_cache.cols == cols and active_cache.row_hashes.items.len == rows) {
+    if (!needs_full_damage and
+        view.dirty == .partial and
+        active_cache.rows == rows and
+        active_cache.cols == cols and
+        active_cache.row_hashes.items.len == rows and
+        active_cache.generation == presented_generation)
+    {
         var any_dirty = false;
         var row_idx: usize = 0;
         while (row_idx < rows) : (row_idx += 1) {
@@ -552,7 +559,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         }
         partial_pipeline_log.logf(
             .info,
-            "cache_refine src_damage_rows={d}..{d} src_dirty_rows={d} src_first_row={d} src_last_row={d} resolved_damage_rows={d}..{d} resolved_dirty_rows={d} resolved_first_row={d} resolved_last_row={d} viewport_shift_rows={d} rows={d} cols={d}",
+            "cache_refine src_damage_rows={d}..{d} src_dirty_rows={d} src_first_row={d} src_last_row={d} resolved_damage_rows={d}..{d} resolved_dirty_rows={d} resolved_first_row={d} resolved_last_row={d} viewport_shift_rows={d} refine_base_gen={d} presented_gen={d} rows={d} cols={d}",
             .{
                 view.damage.start_row,
                 view.damage.end_row,
@@ -565,6 +572,8 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
                 resolved_first_dirty_row orelse rows,
                 resolved_last_dirty_row orelse rows,
                 viewport_shift_rows,
+                active_cache.generation,
+                presented_generation,
                 rows,
                 cols,
             },

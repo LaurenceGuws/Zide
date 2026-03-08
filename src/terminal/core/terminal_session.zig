@@ -241,6 +241,7 @@ pub const TerminalSession = struct {
     column_mode_132: bool,
     output_pending: std.atomic.Value(bool),
     output_generation: std.atomic.Value(u64),
+    presented_generation: std.atomic.Value(u64),
     input_pressure: std.atomic.Value(bool),
     alt_exit_pending: std.atomic.Value(bool),
     alt_exit_time_ms: std.atomic.Value(i64),
@@ -361,6 +362,7 @@ pub const TerminalSession = struct {
             .column_mode_132 = false,
             .output_pending = std.atomic.Value(bool).init(false),
             .output_generation = std.atomic.Value(u64).init(0),
+            .presented_generation = std.atomic.Value(u64).init(0),
             .input_pressure = std.atomic.Value(bool).init(false),
             .alt_exit_pending = std.atomic.Value(bool).init(false),
             .alt_exit_time_ms = std.atomic.Value(i64).init(-1),
@@ -697,6 +699,14 @@ pub const TerminalSession = struct {
     pub fn publishedGeneration(self: *const TerminalSession) u64 {
         const idx = self.render_cache_index.load(.acquire);
         return self.render_caches[idx].generation;
+    }
+
+    pub fn presentedGeneration(self: *const TerminalSession) u64 {
+        return self.presented_generation.load(.acquire);
+    }
+
+    pub fn notePresentedGeneration(self: *TerminalSession, generation: u64) void {
+        self.presented_generation.store(generation, .release);
     }
 
     pub fn hasPublishedGenerationBacklog(self: *TerminalSession) bool {
@@ -1848,4 +1858,44 @@ test "feedOutputBytes keeps incremental damage after baseline publish" {
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.end_col);
+}
+
+test "row hash refinement does not skip unpresented top rows" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 3, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row: usize = 0;
+    while (row < 3) : (row += 1) {
+        var col: usize = 0;
+        while (col < 4) : (col += 1) {
+            var cell = base;
+            cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(row));
+            session.primary.grid.cells.items[row * 4 + col] = cell;
+        }
+    }
+    session.primary.setCursor(2, 0);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+
+    session.scrollUp();
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    session.scrollUp();
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expect(cache.dirty_rows.items[0]);
 }
