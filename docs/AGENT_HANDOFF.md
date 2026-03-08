@@ -1,7 +1,7 @@
 ## Handoff (High-Level)
 
 ### Current Focus
-- Primary: investigate and fix terminal rendering stutter/frozen-rain artifacts observed on 240Hz monitors (not reproducible on 60Hz), with `ascii-rain-git` as the baseline reproducer.
+- Primary: investigate and fix terminal rendering stale/frozen-rain artifacts in large single-tile Hyprland layouts (previously misattributed to refresh rate), with `ascii-rain-git` as the baseline reproducer.
   - investigation doc: `app_architecture/review/TERMINAL_240HZ_RAIN_INVESTIGATION.md`
   - tracker: `app_architecture/ui/ui_widget_modularization_todo.yaml` (Phase 5 verification follow-up)
 
@@ -9,6 +9,8 @@
 - Captured a fresh differential analysis (March 8, 2026) against `reference_repos/terminals/kitty` focused on high-refresh behavior.
 - Consolidated findings into a dedicated architecture review doc and marked prior generic focus as stale.
 - Confirmed the current likely fault domain is Zide redraw scheduling / partial texture update behavior under high-refresh incremental updates, not a simple PTY throughput ceiling.
+- Reproduction tightened: issue appears with a single `ascii-rain` instance when resizing the same window in large single-tile Hyprland layouts.
+- Added temporary validation guard to force full terminal texture updates on generation/dirty changes to isolate partial invalidation correctness.
 
 ### Constraints / Guardrails
 - Handoff docs remain high-level only; details belong in `app_architecture/*` docs and todo files.

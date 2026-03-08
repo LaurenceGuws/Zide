@@ -1,8 +1,8 @@
-# Terminal 240Hz Rain Investigation (2026-03-08)
+# Terminal Rain Rendering Investigation (2026-03-08)
 
 ## Scope
 
-Investigate why `ascii-rain-git` appears smooth on 60Hz displays but shows intermittent "standing still" drops (up to roughly 0.5s perceived stalls) on 240Hz displays in Zide terminal rendering.
+Investigate why `ascii-rain-git` shows intermittent "standing still" drops in some layouts. Initial assumption was "240Hz-only", but updated reproduction indicates the stronger trigger is large single-tile Hyprland layouts (also reproducible on 60Hz at 4k).
 
 This note documents:
 - what was observed and compared
@@ -17,9 +17,11 @@ This doc is the detailed source of truth for the current focus item.
 - Reproducer command:
   - `yay -Qi ascii-rain-git` confirms package metadata
   - run `ascii-rain` in terminal pane
-- User observation:
-  - 60Hz monitor: visually smooth / expected
-  - 240Hz monitor: subsets of drops appear frozen or lagged
+- Updated user observation:
+  - Not strictly tied to 240Hz.
+  - Reproduces when terminal occupies a large single-tile workspace on Hyprland.
+  - Can reproduce on 60Hz at 4k in that large-tile layout.
+  - New probe clarification: observed logs came from a single `ascii-rain` instance while only resizing the same window between smaller/larger sizes.
 
 ## Key Differential: Kitty vs Zide
 
@@ -69,6 +71,7 @@ Kitty source inspected under:
 - Files:
   - `src/ui/widgets/terminal_widget_draw.zig`
   - `src/terminal/core/view_cache.zig`
+  - `src/ui/renderer/gl_backend.zig`
 
 3. Existing instrumentation is draw/poll-centric
 - `input.latency`, `terminal.ui.perf`, and poll metrics exist.
@@ -89,6 +92,8 @@ Pure PTY throughput limitation as the primary cause is unlikely:
 2. Partial texture update correctness issue under viewport-shift path
 - `scrollTerminalTexture` reuse + dirty rows/columns reconciliation may occasionally preserve stale regions under high-frequency incremental updates.
 - Symptom fit: only some rain drops appear to stand still.
+- Additional risk signal:
+  - The shift path currently uses `glCopyTexSubImage2D` self-copy in the same render target, which is likely driver/compositor sensitive at large target sizes.
 
 3. Poll budget/cadence interaction with active-output pressure
 - Current budget model may be correct at 60Hz but can produce perceptible jitter at 240Hz due to timing granularity/cadence mismatch.
@@ -125,10 +130,43 @@ Kitty demonstrates three robustness properties we should mirror:
 4. Keep changes small and bisectable
 - Separate "instrumentation only" commits from behavior changes.
 
+## Current Investigation Guard
+
+- Temporary guard has been applied in `src/ui/renderer/gl_backend.zig` to disable self-copy texture shift optimization and force fallback redraw path for validation.
+- If artifacts disappear in large Hyprland single-tile layouts, this strongly implicates the shift-copy path as the primary fault surface.
+- User validation update (2026-03-08): no visible improvement so far with the guard enabled, so this path is now considered a weaker primary-cause candidate (still possible secondary contributor).
+
+## Additional Probe Findings (2026-03-08)
+
+- While probing, `terminal.parse` emitted repeated `parse wait timedWait failed err=Timeout` warnings.
+- In this parse-thread loop, timeout is expected behavior for bounded wait cadence and should not be logged as warning.
+- Patch applied:
+  - `src/terminal/core/io_threads.zig`
+  - suppress warning for `error.Timeout`; keep warning for non-timeout wait failures.
+- Rationale:
+  - avoids log-noise-induced observer effect during perf/render investigations
+  - keeps signal for actual synchronization errors
+
+- The noisy timeout logs were produced during a single-process resize probe (not multi-instance stress), which further weakens "raw throughput saturation" as the primary explanation.
+
+## Current Active Guards (2026-03-08)
+
+1. `glCopyTexSubImage2D` self-copy shift disabled
+- File: `src/ui/renderer/gl_backend.zig`
+- Status: enabled
+- Result so far: no meaningful improvement by itself.
+
+2. Force full texture update on output generation/dirty activity (probe)
+- File: `src/ui/widgets/terminal_widget_draw.zig`
+- Status: enabled (temporary investigation guard)
+- Intent: isolate partial dirty-row invalidation path as the cause by bypassing partial texture updates when output is advancing.
+- Validation target:
+  - If stale/frozen drops disappear, fault is likely in partial update/dirty reconciliation.
+  - If issue persists, focus shifts back to redraw scheduling/present cadence rather than partial invalidation correctness.
+
 ## Acceptance Criteria for Fix
 
 - At 240Hz, `ascii-rain` no longer shows perceptible frozen subsets under normal runtime load.
 - No regressions at 60Hz.
 - Terminal redraw metrics show continuous draw progression during sustained output.
 - No new tearing/blank-row artifacts introduced by any texture update path change.
-
