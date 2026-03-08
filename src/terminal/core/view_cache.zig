@@ -274,18 +274,11 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         }
         cache.selection_active = selection_active;
     }
-    const scrollback_generation_changed = clear_generation != active_cache.clear_generation;
-    // Full-region scrolls advance scrollback generation even when the user is
-    // pinned to the live bottom view. In that case the visible viewport can
-    // still use viewport_shift_rows + partial row damage; forcing full damage
-    // here scales badly with large terminals and defeats the fast path.
-    const requires_full_damage_for_scrollback = scrollback_generation_changed and
-        (clamped_offset != 0 or active_cache.scroll_offset != 0);
     const needs_full_damage = force_full_damage or
         rows != active_cache.rows or
         cols != active_cache.cols or
         scroll_offset != active_cache.scroll_offset or
-        requires_full_damage_for_scrollback or
+        clear_generation != active_cache.clear_generation or
         (self.active == .alt) != active_cache.alt_active or
         screen_reverse != active_cache.screen_reverse or
         kitty_generation != active_cache.kitty_generation or
