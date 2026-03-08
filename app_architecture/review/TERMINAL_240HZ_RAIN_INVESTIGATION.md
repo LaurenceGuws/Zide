@@ -169,6 +169,27 @@ Runtime-only instrumentation has been added (no behavior/path forcing):
 - Purpose:
   - validate suspected false-negative window where `output_pending` is cleared/observed low and UI chooses longer idle sleeps while generation is still advancing.
 
+4. Full-dirty attribution probe (new)
+- Files:
+  - `src/terminal/model/screen/grid.zig`
+  - `src/terminal/model/screen/screen.zig`
+  - `src/terminal/core/render_cache.zig`
+  - `src/terminal/core/view_cache.zig`
+  - `src/ui/widgets/terminal_widget_draw.zig`
+- Added `FullDirtyReason` + `full_dirty_seq` tracking at the grid source of truth.
+- Wired reason + sequence through snapshot/view-cache into draw logs.
+- `terminal.ui.perf` and `terminal.ui.statebug` now emit:
+  - `full_dirty_reason=<enum>`
+  - `full_dirty_seq=<u64>`
+- Explicit reason callsites now include:
+  - alt-screen enter/exit
+  - sync-updates disable path
+  - DECSTR soft reset
+  - scrollback offset/view movement
+  - resize reflow
+  - kitty image/placement mutations
+  - screen clear/reverse/palette full clears
+
 4. Logging scope
 - `.zide.lua` configured to low-noise bug-scoped tags:
   - `terminal.ui.statebug,terminal.ui.perf,input.latency,terminal.core`
@@ -182,6 +203,7 @@ Runtime-only instrumentation has been added (no behavior/path forcing):
   - in the problematic large-tile case, `terminal.ui.perf` spends long stretches with `dirty=full` and `full_reasons ... dirty_full=1`
   - this keeps Zide on full-surface redraws instead of the viewport-shift / partial-damage fast path
   - the cost increase scales directly with terminal width, matching the “full tile bad, half tile okay” symptom much better than the `poll_probe` log rate itself
+- With full-dirty attribution, the next narrowing step is to identify which `full_dirty_reason` dominates during `ascii-rain` stalls in the large-tile case and then target that producer path directly.
 
 ## Applied Fix Candidate (2026-03-08)
 

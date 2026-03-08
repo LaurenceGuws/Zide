@@ -104,6 +104,8 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         cache.has_blink = false;
         cache.dirty = .full;
         cache.damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
+        cache.full_dirty_reason = view.full_dirty_reason;
+        cache.full_dirty_seq = view.full_dirty_seq;
         cache.alt_active = self.active == .alt;
         cache.selection_active = selection_active;
         cache.sync_updates_active = self.sync_updates_active;
@@ -342,6 +344,8 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         .{ .start_row = 0, .end_row = if (rows > 0) rows - 1 else 0, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
     else
         view.damage;
+    cache.full_dirty_reason = view.full_dirty_reason;
+    cache.full_dirty_seq = view.full_dirty_seq;
 
     if (!needs_full_damage and cache.dirty == .full and active_cache.rows == rows and active_cache.cols == cols and active_cache.row_hashes.items.len == rows and rows > 0 and cols > 0) {
         const shift = viewport_shift_rows;

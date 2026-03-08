@@ -1124,7 +1124,7 @@ pub fn updateKittyPlacementsForScroll(self: anytype) void {
     }
     if (changed) {
         kitty.generation += 1;
-        self.activeScreen().grid.markDirtyAll();
+        self.activeScreen().grid.markDirtyAllWithReason(.kitty_graphics_changed);
     }
 }
 
@@ -1153,7 +1153,7 @@ pub fn shiftKittyPlacementsUp(self: anytype, top: usize, bottom: usize, count: u
     }
     if (changed) {
         kitty.generation += 1;
-        self.activeScreen().grid.markDirtyAll();
+        self.activeScreen().grid.markDirtyAllWithReason(.kitty_graphics_changed);
     }
 }
 
@@ -1180,7 +1180,7 @@ pub fn shiftKittyPlacementsDown(self: anytype, top: usize, bottom: usize, count:
     }
     if (changed) {
         kitty.generation += 1;
-        self.activeScreen().grid.markDirtyAll();
+        self.activeScreen().grid.markDirtyAllWithReason(.kitty_graphics_changed);
     }
 }
 
@@ -1225,7 +1225,7 @@ fn evictKittyImage(self: anytype, prefer_unplaced: bool) bool {
         _ = kitty.partials.remove(image.id);
     }
     kitty.generation += 1;
-    self.activeScreen().grid.markDirtyAll();
+    self.activeScreen().grid.markDirtyAllWithReason(.kitty_graphics_changed);
     return true;
 }
 
@@ -1260,7 +1260,7 @@ fn storeKittyImage(self: anytype, image: KittyImage) void {
             kitty.images.items[idx] = image;
             kitty.images.items[idx].version = version;
             kitty.total_bytes += image.data.len;
-            self.activeScreen().grid.markDirtyAll();
+            self.activeScreen().grid.markDirtyAllWithReason(.kitty_graphics_changed);
                             log.logf(.info, "kitty image updated id={d} format={s} bytes={d}", .{ image.id, @tagName(image.format), image.data.len });
             return;
         }
@@ -1281,7 +1281,7 @@ fn storeKittyImage(self: anytype, image: KittyImage) void {
         return;
     };
     kitty.total_bytes += stored.data.len;
-    self.activeScreen().grid.markDirtyAll();
+    self.activeScreen().grid.markDirtyAllWithReason(.kitty_graphics_changed);
             log.logf(.info, "kitty image stored id={d} format={s} bytes={d}", .{ stored.id, @tagName(stored.format), stored.data.len });
 }
 
@@ -1354,7 +1354,7 @@ fn placeKittyImage(self: anytype, image_id: u32, control: KittyControl) ?[]const
             return "ENOMEM";
         };
     }
-    self.activeScreen().grid.markDirtyAll();
+    self.activeScreen().grid.markDirtyAllWithReason(.kitty_graphics_changed);
             log.logf(.info, "kitty placed id={d} row={d} col={d} cols={d} rows={d}", .{ image_id, row, col, placement.cols, placement.rows });
 
     if (control.cursor_movement != 1) {
@@ -1470,7 +1470,7 @@ fn deleteKittyImages(self: anytype, image_id: ?u32) void {
     } else {
         clearKittyImages(self);
     }
-    self.activeScreen().grid.markDirtyAll();
+    self.activeScreen().grid.markDirtyAllWithReason(.kitty_graphics_changed);
 }
 
 fn deleteKittyPlacements(
@@ -1491,7 +1491,7 @@ fn deleteKittyPlacements(
     }
     if (changed) {
         kitty.generation += 1;
-        self.activeScreen().grid.markDirtyAll();
+        self.activeScreen().grid.markDirtyAllWithReason(.kitty_graphics_changed);
     }
 }
 

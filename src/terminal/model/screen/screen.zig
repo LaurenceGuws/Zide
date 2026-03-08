@@ -252,7 +252,7 @@ pub const Screen = struct {
     pub fn setScreenReverse(self: *Screen, enabled: bool) void {
         if (self.screen_reverse == enabled) return;
         self.screen_reverse = enabled;
-        self.grid.markDirtyAll();
+        self.grid.markDirtyAllWithReason(.screen_reverse_mode_toggle);
     }
 
     pub fn cellAtOr(self: *const Screen, row: usize, col: usize, default_cell: types.Cell) types.Cell {
@@ -827,6 +827,8 @@ pub const Screen = struct {
         cursor_visible: bool,
         dirty: grid_mod.Dirty,
         damage: grid_mod.Damage,
+        full_dirty_reason: grid_mod.FullDirtyReason,
+        full_dirty_seq: u64,
     };
 
     pub fn snapshotView(self: *const Screen) SnapshotView {
@@ -842,11 +844,17 @@ pub const Screen = struct {
             .cursor_visible = self.cursor_visible,
             .dirty = self.grid.dirty,
             .damage = self.grid.damage,
+            .full_dirty_reason = self.grid.full_dirty_reason,
+            .full_dirty_seq = self.grid.full_dirty_seq,
         };
     }
 
     pub fn markDirtyAll(self: *Screen) void {
-        self.grid.markDirtyAll();
+        self.grid.markDirtyAllWithReason(.screen_mark_dirty_api);
+    }
+
+    pub fn markDirtyAllWithReason(self: *Screen, reason: grid_mod.FullDirtyReason) void {
+        self.grid.markDirtyAllWithReason(reason);
     }
 
     pub fn clearDirty(self: *Screen) void {
@@ -882,7 +890,7 @@ pub const Screen = struct {
         for (self.grid.wrap_flags.items) |*flag| {
             flag.* = false;
         }
-        self.grid.markDirtyAll();
+        self.grid.markDirtyAllWithReason(.screen_clear);
     }
 
     pub fn eraseDisplay(self: *Screen, mode: i32, blank_cell: types.Cell) void {
@@ -940,7 +948,7 @@ pub const Screen = struct {
             2 => { // all
                 if (left == 0 and right + 1 == cols) {
                     for (self.grid.cells.items) |*cell| cell.* = blank_cell;
-                    self.grid.markDirtyAll();
+                    self.grid.markDirtyAllWithReason(.erase_display_full);
                 } else {
                     var r: usize = 0;
                     while (r < rows) : (r += 1) {
@@ -956,7 +964,7 @@ pub const Screen = struct {
             3 => { // saved lines + all (treat as full clear)
                 if (left == 0 and right + 1 == cols) {
                     for (self.grid.cells.items) |*cell| cell.* = blank_cell;
-                    self.grid.markDirtyAll();
+                    self.grid.markDirtyAllWithReason(.erase_display_full);
                 } else {
                     var r: usize = 0;
                     while (r < rows) : (r += 1) {
@@ -1170,7 +1178,7 @@ pub const Screen = struct {
             if (colorsEqual(cell.attrs.bg, old_attrs.bg)) cell.attrs.bg = new_attrs.bg;
             if (colorsEqual(cell.attrs.underline_color, old_attrs.underline_color)) cell.attrs.underline_color = new_attrs.underline_color;
         }
-        self.grid.markDirtyAll();
+        self.grid.markDirtyAllWithReason(.palette_default_changed);
     }
 
     pub fn updateAnsiColors(self: *Screen, old_colors: [16]types.Color, new_colors: [16]types.Color) void {
@@ -1187,7 +1195,7 @@ pub const Screen = struct {
             cell.attrs.bg = remapAnsiColor(cell.attrs.bg, old_colors, new_colors);
             cell.attrs.underline_color = remapAnsiColor(cell.attrs.underline_color, old_colors, new_colors);
         }
-        self.grid.markDirtyAll();
+        self.grid.markDirtyAllWithReason(.palette_ansi_changed);
     }
 
     fn remapAnsiColor(color: types.Color, old_colors: [16]types.Color, new_colors: [16]types.Color) types.Color {
