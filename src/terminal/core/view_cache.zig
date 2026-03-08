@@ -403,60 +403,6 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         cache.full_dirty_seq = view.full_dirty_seq;
     }
 
-    if (!needs_full_damage and cache.dirty == .full and active_cache.rows == rows and active_cache.cols == cols and active_cache.row_hashes.items.len == rows and rows > 0 and cols > 0) {
-        const shift = viewport_shift_rows;
-        const shift_abs: usize = @intCast(if (shift < 0) -shift else shift);
-        if (shift_abs > 0 and shift_abs < rows) {
-            var any_dirty = false;
-            var damage_start_row: usize = rows - 1;
-            var damage_end_row: usize = 0;
-            var row_idx: usize = 0;
-            while (row_idx < rows) : (row_idx += 1) {
-                const row_start = row_idx * cols;
-                const row_cells = cache.cells.items[row_start .. row_start + cols];
-                const hash_now = hashRow(row_cells);
-                cache.row_hashes.items[row_idx] = hash_now;
-
-                const shifted_source_row_signed: i32 = @as(i32, @intCast(row_idx)) + shift;
-                const shifted_source_valid = shifted_source_row_signed >= 0 and shifted_source_row_signed < @as(i32, @intCast(rows));
-                const shifted_source_row: usize = if (shifted_source_valid) @intCast(shifted_source_row_signed) else 0;
-                const hash_changed = if (!shifted_source_valid)
-                    true
-                else
-                    hash_now != active_cache.row_hashes.items[shifted_source_row];
-
-                cache.dirty_rows.items[row_idx] = hash_changed;
-                if (hash_changed) {
-                    cache.dirty_cols_start.items[row_idx] = 0;
-                    cache.dirty_cols_end.items[row_idx] = @intCast(cols - 1);
-                    if (!any_dirty) {
-                        damage_start_row = row_idx;
-                        damage_end_row = row_idx;
-                    } else {
-                        damage_start_row = @min(damage_start_row, row_idx);
-                        damage_end_row = @max(damage_end_row, row_idx);
-                    }
-                    any_dirty = true;
-                } else {
-                    cache.dirty_cols_start.items[row_idx] = @intCast(cols);
-                    cache.dirty_cols_end.items[row_idx] = 0;
-                }
-            }
-            if (any_dirty) {
-                cache.dirty = .partial;
-                cache.damage = .{
-                    .start_row = damage_start_row,
-                    .end_row = damage_end_row,
-                    .start_col = 0,
-                    .end_col = cols - 1,
-                };
-            } else {
-                cache.dirty = .none;
-                cache.damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
-            }
-        }
-    }
-
     if (!needs_full_damage and view.dirty == .partial and active_cache.rows == rows and active_cache.cols == cols and active_cache.row_hashes.items.len == rows) {
         var any_dirty = false;
         var row_idx: usize = 0;
