@@ -212,6 +212,9 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - `view_cache` therefore stops escalating normal live-bottom scroll churn into `view_cache_clear_generation_change` full redraws
   - added a session regression that asserts a bottom-following scroll publishes `dirty=partial` with `viewport_shift_rows=1`
   - removed the no-thread `feedOutputBytes(...)` blanket full-damage request so direct parser feeds now respect incremental screen dirty tracking
+  - later traces showed top rows are not universally omitted from partial damage; the more stable remaining fault is `~120ms` draw cadence with large generation jumps between frames
+  - patched `frame_render_idle_runtime` so `currentGeneration != publishedGeneration` counts as active terminal pressure, preventing long idle sleeps while parse-thread backlog is still waiting to publish
+  - added temporary `cache_refine` tracing in `view_cache` to compare source dirty spans against post-hash dirty spans on the next run
 
 ## Applied Fix Candidate (2026-03-08)
 

@@ -11,6 +11,7 @@ var last_terminal_poll_seq: u64 = 0;
 var terminal_pressure_since: ?f64 = null;
 var last_terminal_statebug_log_time: f64 = 0.0;
 var last_terminal_observed_generation: u64 = 0;
+var last_terminal_observed_current_generation: u64 = 0;
 var last_terminal_drawn_generation: u64 = 0;
 var last_terminal_generation_change_time: f64 = 0.0;
 
@@ -190,6 +191,18 @@ fn latestTerminalPublishedGeneration(state: anytype) u64 {
     return 0;
 }
 
+fn latestTerminalCurrentGeneration(state: anytype) u64 {
+    const State = @TypeOf(state.*);
+    if (!@hasField(State, "terminal_workspace")) return 0;
+
+    if (state.terminal_workspace) |*workspace| {
+        if (workspace.activeSession()) |session| {
+            return session.currentGeneration();
+        }
+    }
+    return 0;
+}
+
 pub fn handle(
     state: anytype,
     ctx: *anyopaque,
@@ -201,13 +214,19 @@ pub fn handle(
 ) void {
     var draw_ms: f64 = 0.0;
     const now = app_shell.getTime();
+    const active_current_generation = latestTerminalCurrentGeneration(state);
     const active_generation = latestTerminalPublishedGeneration(state);
+    if (active_current_generation != last_terminal_observed_current_generation) {
+        last_terminal_observed_current_generation = active_current_generation;
+        last_terminal_generation_change_time = now;
+    }
     if (active_generation != last_terminal_observed_generation) {
         last_terminal_observed_generation = active_generation;
         last_terminal_generation_change_time = now;
     }
     const terminal_redraw_pending = active_generation != last_terminal_drawn_generation;
-    const terminal_output_pressure = hasTerminalOutputPressure(state);
+    const terminal_parse_backlog = active_current_generation != active_generation;
+    const terminal_output_pressure = hasTerminalOutputPressure(state) or terminal_parse_backlog;
     if (terminal_redraw_pending) {
         state.needs_redraw = true;
     }
@@ -266,7 +285,7 @@ pub fn handle(
                     pressure_ms,
                     state.idle_frames,
                     @intFromBool(state.needs_redraw),
-                    active_generation,
+                    active_current_generation,
                     last_terminal_drawn_generation,
                     terminal_widget_draw.latestFrameLatencyMetrics().seq,
                     latestTerminalPollSeq(state),
@@ -310,7 +329,7 @@ pub fn handle(
                 .info,
                 "idle_backoff_after_gen_advance gen={d} drawn_gen={d} gen_advance_ms={d:.2} sleep_ms={d:.3} hasData={d} idle_frames={d} win_px={d}x{d}",
                 .{
-                    active_generation,
+                    active_current_generation,
                     last_terminal_drawn_generation,
                     gen_advance_ms,
                     sleep_ms,
