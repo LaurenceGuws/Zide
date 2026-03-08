@@ -1162,7 +1162,7 @@ pub const TerminalSession = struct {
             self.activeScreen().clear();
             self.activeScreen().setCursor(0, 0);
         }
-        self.activeScreen().markDirtyAll();
+        self.activeScreen().markDirtyAllWithReason(.alt_enter);
     }
 
     pub fn exitAltScreen(self: *TerminalSession, restore_cursor: bool) void {
@@ -1176,7 +1176,7 @@ pub const TerminalSession = struct {
         if (restore_cursor) {
             self.restoreCursor();
         }
-        self.activeScreen().markDirtyAll();
+        self.activeScreen().markDirtyAllWithReason(.alt_exit);
     }
 
     pub fn snapshot(self: *TerminalSession) TerminalSnapshot {
@@ -1218,7 +1218,7 @@ pub const TerminalSession = struct {
         if (self.sync_updates_active == enabled) return;
         self.sync_updates_active = enabled;
         if (!enabled) {
-            self.activeScreen().markDirtyAll();
+            self.activeScreen().markDirtyAllWithReason(.sync_updates_disabled);
         }
         self.force_full_damage.store(true, .release);
         const offset: usize = self.history.scrollOffset();
@@ -1425,8 +1425,8 @@ pub const TerminalSession = struct {
     pub fn markDirty(self: *TerminalSession) void {
         self.lock();
         defer self.unlock();
-        self.activeScreen().markDirtyAll();
-        self.inactiveScreen().markDirtyAll();
+        self.activeScreen().markDirtyAllWithReason(.session_mark_dirty_api);
+        self.inactiveScreen().markDirtyAllWithReason(.session_mark_dirty_api);
         _ = self.output_generation.fetchAdd(1, .acq_rel);
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }

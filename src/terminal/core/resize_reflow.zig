@@ -334,7 +334,7 @@ fn reflowResizePrimary(
             self.primary.grid.setRowWrapped(row_idx, false);
         }
     }
-    self.primary.grid.markDirtyAll();
+    self.primary.grid.markDirtyAllWithReason(.resize_reflow);
 
     const old_start_line = if (old_total_lines > @as(usize, old_rows) + old_scroll_offset)
         old_total_lines - @as(usize, old_rows) - old_scroll_offset

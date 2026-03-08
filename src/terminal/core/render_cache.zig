@@ -6,6 +6,7 @@ const types = @import("../model/types.zig");
 const Cell = types.Cell;
 const Dirty = screen_mod.Dirty;
 const Damage = screen_mod.Damage;
+const FullDirtyReason = screen_mod.FullDirtyReason;
 
 pub const KittyImage = snapshot_mod.KittyImage;
 pub const KittyPlacement = snapshot_mod.KittyPlacement;
@@ -33,6 +34,8 @@ pub const RenderCache = struct {
     has_blink: bool,
     dirty: Dirty,
     damage: Damage,
+    full_dirty_reason: FullDirtyReason,
+    full_dirty_seq: u64,
     alt_active: bool,
     selection_active: bool,
     sync_updates_active: bool,
@@ -65,6 +68,8 @@ pub const RenderCache = struct {
             .has_blink = false,
             .dirty = .none,
             .damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 },
+            .full_dirty_reason = .unknown,
+            .full_dirty_seq = 0,
             .alt_active = false,
             .selection_active = false,
             .sync_updates_active = false,

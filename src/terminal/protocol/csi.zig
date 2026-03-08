@@ -567,7 +567,7 @@ fn applyDecstr(self: anytype) void {
 
     const screen = self.activeScreen();
     screen.resetState();
-    screen.markDirtyAll();
+    screen.markDirtyAllWithReason(.decstr_soft_reset);
 
     self.updateInputSnapshot();
 }

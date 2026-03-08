@@ -7,6 +7,26 @@ pub const Dirty = enum {
     full,
 };
 
+pub const FullDirtyReason = enum {
+    unknown,
+    init,
+    resize,
+    screen_mark_dirty_api,
+    screen_reverse_mode_toggle,
+    screen_clear,
+    erase_display_full,
+    palette_default_changed,
+    palette_ansi_changed,
+    alt_enter,
+    alt_exit,
+    session_mark_dirty_api,
+    sync_updates_disabled,
+    decstr_soft_reset,
+    scrollback_view_offset_change,
+    resize_reflow,
+    kitty_graphics_changed,
+};
+
 pub const Damage = struct {
     start_row: usize,
     end_row: usize,
@@ -25,6 +45,8 @@ pub const TerminalGrid = struct {
     dirty_cols_end: std.ArrayList(u16),
     dirty: Dirty,
     damage: Damage,
+    full_dirty_reason: FullDirtyReason,
+    full_dirty_seq: u64,
 
     pub fn init(allocator: std.mem.Allocator, rows: u16, cols: u16, default_cell: types.Cell) !TerminalGrid {
         var cells = std.ArrayList(types.Cell).empty;
@@ -67,6 +89,8 @@ pub const TerminalGrid = struct {
                 .start_col = 0,
                 .end_col = if (cols > 0) @as(usize, cols - 1) else 0,
             },
+            .full_dirty_reason = .init,
+            .full_dirty_seq = 1,
         };
     }
 
@@ -209,6 +233,10 @@ pub const TerminalGrid = struct {
     }
 
     pub fn markDirtyAll(self: *TerminalGrid) void {
+        self.markDirtyAllWithReason(.unknown);
+    }
+
+    pub fn markDirtyAllWithReason(self: *TerminalGrid, reason: FullDirtyReason) void {
         self.dirty = .full;
         self.damage = .{
             .start_row = 0,
@@ -216,6 +244,8 @@ pub const TerminalGrid = struct {
             .start_col = 0,
             .end_col = if (self.cols > 0) @as(usize, self.cols - 1) else 0,
         };
+        self.full_dirty_reason = reason;
+        self.full_dirty_seq +%= 1;
         self.setAllDirtyRows(true);
         if (self.cols > 0) {
             self.setAllDirtyCols(0, self.cols - 1);

@@ -1535,7 +1535,7 @@ pub fn draw(
         );
         perf_log.logf(
             .info,
-            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} dirty_rows={d} damage_rows={d} damage_cols={d} blink_cells={d} blink_phase_changed={d} full_reasons={d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d} rows={d} cols={d}",
+            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} dirty_rows={d} damage_rows={d} damage_cols={d} blink_cells={d} blink_phase_changed={d} full_reasons={d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d}/{d} full_dirty_reason={s} full_dirty_seq={d} rows={d} cols={d}",
             .{
                 elapsed_ms,
                 lock_ms,
@@ -1564,6 +1564,8 @@ pub fn draw(
                 @intFromBool(full_reason_kitty),
                 @intFromBool(full_reason_kitty_gen),
                 @intFromBool(full_reason_blink),
+                @tagName(cache.full_dirty_reason),
+                cache.full_dirty_seq,
                 rows,
                 cols,
             },
@@ -1589,7 +1591,7 @@ pub fn draw(
         self.last_state_probe_generation = cache.generation;
         statebug_log.logf(
             .info,
-            "draw_gap_ms={d:.2} draw_ms={d:.2} gen={d} gen_delta={d} dirty={s} dirty_rows={d} damage_rows={d} damage_cols={d} updated={d} full={d} partial={d} clear_ok={d} rows={d} cols={d} widget_px={d}x{d} tex_px={d}x{d} scale={d:.3}",
+            "draw_gap_ms={d:.2} draw_ms={d:.2} gen={d} gen_delta={d} dirty={s} dirty_rows={d} damage_rows={d} damage_cols={d} updated={d} full={d} partial={d} clear_ok={d} full_dirty_reason={s} full_dirty_seq={d} rows={d} cols={d} widget_px={d}x{d} tex_px={d}x{d} scale={d:.3}",
             .{
                 since_prev_draw_ms,
                 elapsed_ms,
@@ -1603,6 +1605,8 @@ pub fn draw(
                 @intFromBool(texture_full_update),
                 @intFromBool(texture_partial_update),
                 @intFromBool(dirty_clear_ok),
+                @tagName(cache.full_dirty_reason),
+                cache.full_dirty_seq,
                 rows,
                 cols,
                 @as(i32, @intFromFloat(std.math.round(width))),
