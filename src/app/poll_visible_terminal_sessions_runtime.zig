@@ -2,11 +2,8 @@ const app_modes = @import("modes/mod.zig");
 const app_terminal_surface_gate = @import("terminal_surface_gate.zig");
 const app_terminal_tabs_runtime = @import("terminal_tabs_runtime.zig");
 const app_bootstrap = @import("bootstrap.zig");
-const app_logger = @import("../app_logger.zig");
-const app_shell = @import("../app_shell.zig");
 
 var terminal_input_activity_hint: ?bool = null;
-var last_statebug_poll_log_time: f64 = 0.0;
 
 pub fn setTerminalInputActivityHint(active: bool) void {
     terminal_input_activity_hint = active;
@@ -58,31 +55,11 @@ pub fn handle(
                 input_pressure,
                 budget,
             );
-            const has_data_post = if (active_session) |s| s.hasData() else false;
-            const currgen_post = if (active_session) |s| s.currentGeneration() else 0;
             const pubgen_post = if (active_session) |s| s.publishedGeneration() else 0;
-            const redraw_needed = pubgen_post != pubgen_pre;
-            const now = app_shell.getTime();
-            if ((now - last_statebug_poll_log_time) >= 0.1) {
-                last_statebug_poll_log_time = now;
-                app_logger.logger("terminal.ui.statebug").logf(
-                    .info,
-                    "poll_probe input_pressure={d} any_polled={d} redraw_needed={d} active_idx={d} hasData_pre={d} hasData_post={d} currgen_pre={d} currgen_post={d} pubgen_pre={d} pubgen_post={d}",
-                    .{
-                        @intFromBool(input_pressure),
-                        @intFromBool(any_polled),
-                        @intFromBool(redraw_needed),
-                        active_idx,
-                        @intFromBool(has_data_pre),
-                        @intFromBool(has_data_post),
-                        currgen_pre,
-                        currgen_post,
-                        pubgen_pre,
-                        pubgen_post,
-                    },
-                );
-            }
-            return redraw_needed;
+            _ = any_polled;
+            _ = has_data_pre;
+            _ = currgen_pre;
+            return pubgen_post != pubgen_pre;
         }
         return false;
     }
@@ -90,55 +67,15 @@ pub fn handle(
     if (terminals.len > 0) {
         const term = terminals[0];
         const has_data_pre = term.hasData();
-        const currgen_pre = term.currentGeneration();
         const pubgen_pre = term.publishedGeneration();
         if (has_data_pre) {
             term.setInputPressure(input_pressure);
             try term.poll();
-            const has_data_post = term.hasData();
-            const currgen_post = term.currentGeneration();
             const pubgen_post = term.publishedGeneration();
-            const redraw_needed = pubgen_post != pubgen_pre;
-            const now = app_shell.getTime();
-            if ((now - last_statebug_poll_log_time) >= 0.1) {
-                last_statebug_poll_log_time = now;
-                app_logger.logger("terminal.ui.statebug").logf(
-                    .info,
-                    "poll_probe(single) input_pressure={d} any_polled=1 redraw_needed={d} active_idx=0 hasData_pre={d} hasData_post={d} currgen_pre={d} currgen_post={d} pubgen_pre={d} pubgen_post={d}",
-                    .{
-                        @intFromBool(input_pressure),
-                        @intFromBool(redraw_needed),
-                        @intFromBool(has_data_pre),
-                        @intFromBool(has_data_post),
-                        currgen_pre,
-                        currgen_post,
-                        pubgen_pre,
-                        pubgen_post,
-                    },
-                );
-            }
-            return redraw_needed;
+            return pubgen_post != pubgen_pre;
         } else {
-            const currgen_post = term.currentGeneration();
             const pubgen_post = term.publishedGeneration();
-            const redraw_needed = pubgen_post != pubgen_pre;
-            const now = app_shell.getTime();
-            if ((now - last_statebug_poll_log_time) >= 0.1) {
-                last_statebug_poll_log_time = now;
-                app_logger.logger("terminal.ui.statebug").logf(
-                    .info,
-                    "poll_probe(single) input_pressure={d} any_polled=0 redraw_needed={d} active_idx=0 hasData_pre=0 hasData_post=0 currgen_pre={d} currgen_post={d} pubgen_pre={d} pubgen_post={d}",
-                    .{
-                        @intFromBool(input_pressure),
-                        @intFromBool(redraw_needed),
-                        currgen_pre,
-                        currgen_post,
-                        pubgen_pre,
-                        pubgen_post,
-                    },
-                );
-            }
-            return redraw_needed;
+            return pubgen_post != pubgen_pre;
         }
     }
     return false;

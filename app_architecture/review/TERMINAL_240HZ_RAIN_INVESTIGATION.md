@@ -320,6 +320,21 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - keep draw policy aligned with cache authority
   - remove another broad fallback that penalized correctness-preserving scrollback views without improving the underlying contract
 
+## Investigation Probe Retirement (2026-03-09)
+
+- Files:
+  - `src/ui/widgets/terminal_widget.zig`
+  - `src/ui/widgets/terminal_widget_draw.zig`
+  - `src/app/poll_visible_terminal_sessions_runtime.zig`
+  - `src/app/frame_render_idle_runtime.zig`
+- Change:
+  - removed temporary `terminal.ui.statebug` probe state and log emission from draw, poll, and idle scheduling paths
+  - removed widget-side state used only to compute draw-gap/generation probe logs
+  - kept the underlying redraw and backlog behavior changes; only the investigation scaffolding was retired
+- Intent:
+  - return the hot paths to production-oriented code after the investigation converged
+  - reduce per-frame/per-poll bookkeeping that no longer contributes to terminal correctness
+
 ## Applied Texture-Shift Kill-Switch (2026-03-08)
 
 - Files:
