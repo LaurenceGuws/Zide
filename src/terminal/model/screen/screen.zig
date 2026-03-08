@@ -3,6 +3,7 @@ const types = @import("../types.zig");
 const grid_mod = @import("grid.zig");
 const tab_mod = @import("tabstops.zig");
 const key_mod = @import("key_mode.zig");
+const app_logger = @import("../../../app_logger.zig");
 
 const TerminalGrid = grid_mod.TerminalGrid;
 const TabStops = tab_mod.TabStops;
@@ -252,7 +253,7 @@ pub const Screen = struct {
     pub fn setScreenReverse(self: *Screen, enabled: bool) void {
         if (self.screen_reverse == enabled) return;
         self.screen_reverse = enabled;
-        self.grid.markDirtyAllWithReason(.screen_reverse_mode_toggle);
+        self.grid.markDirtyAllWithReason(.screen_reverse_mode_toggle, @src());
     }
 
     pub fn cellAtOr(self: *const Screen, row: usize, col: usize, default_cell: types.Cell) types.Cell {
@@ -261,6 +262,137 @@ pub const Screen = struct {
         }
         const idx = row * @as(usize, self.grid.cols) + col;
         return self.grid.cells.items[idx];
+    }
+
+    fn logDirtyRangeSemanticGaps(self: *const Screen, op: []const u8, start_row: usize, end_row: usize, start_col: usize, end_col: usize) void {
+        const damage_semantics_log = app_logger.logger("terminal.ui.damage_semantics");
+        const rows = @as(usize, self.grid.rows);
+        const cols = @as(usize, self.grid.cols);
+        if (rows == 0 or cols == 0) return;
+
+        const clamped_start_row = @min(start_row, rows - 1);
+        const clamped_end_row = @min(end_row, rows - 1);
+        const clamped_start_col = @min(start_col, cols - 1);
+        const clamped_end_col = @min(end_col, cols - 1);
+        if (clamped_start_row > clamped_end_row or clamped_start_col > clamped_end_col) return;
+
+        var hits: usize = 0;
+        var continuation_hits: usize = 0;
+        var multiraw_hits: usize = 0;
+        var first_touched_row: usize = 0;
+        var first_touched_col: usize = 0;
+        var first_root_row: usize = 0;
+        var first_root_col: usize = 0;
+        var first_root_width: usize = 0;
+        var first_root_height: usize = 0;
+        var first_cover_end_row: usize = 0;
+        var first_cover_end_col: usize = 0;
+        var captured = false;
+
+        var row = clamped_start_row;
+        while (row <= clamped_end_row) : (row += 1) {
+            var col = clamped_start_col;
+            while (col <= clamped_end_col) : (col += 1) {
+                const idx = row * cols + col;
+                const cell = self.grid.cells.items[idx];
+                if (!types.isCellContinuation(cell) and !types.isMultiRowCellRoot(cell)) continue;
+
+                const root_row = row - @min(@as(usize, cell.y), row);
+                const root_col = col - @min(@as(usize, cell.x), col);
+                if (root_row >= rows or root_col >= cols) continue;
+
+                const root_idx = root_row * cols + root_col;
+                const root = self.grid.cells.items[root_idx];
+                const cover_width = @max(@as(usize, root.width), 1);
+                const cover_height = @max(@as(usize, root.height), 1);
+                const cover_end_row = @min(rows - 1, root_row + cover_height - 1);
+                const cover_end_col = @min(cols - 1, root_col + cover_width - 1);
+                const escapes =
+                    root_row < clamped_start_row or
+                    root_col < clamped_start_col or
+                    cover_end_row > clamped_end_row or
+                    cover_end_col > clamped_end_col;
+                if (!escapes) continue;
+
+                hits += 1;
+                if (types.isCellContinuation(cell)) continuation_hits += 1;
+                if (types.isMultiRowCellRoot(root)) multiraw_hits += 1;
+
+                if (!captured) {
+                    captured = true;
+                    first_touched_row = row;
+                    first_touched_col = col;
+                    first_root_row = root_row;
+                    first_root_col = root_col;
+                    first_root_width = cover_width;
+                    first_root_height = cover_height;
+                    first_cover_end_row = cover_end_row;
+                    first_cover_end_col = cover_end_col;
+                }
+            }
+        }
+
+        if (!captured) return;
+        damage_semantics_log.logf(
+            .info,
+            "op={s} requested={d}..{d},{d}..{d} hits={d} continuation_hits={d} multirow_hits={d} first_touched={d},{d} root={d},{d} cover={d}..{d},{d}..{d} size={d}x{d}",
+            .{
+                op,
+                clamped_start_row,
+                clamped_end_row,
+                clamped_start_col,
+                clamped_end_col,
+                hits,
+                continuation_hits,
+                multiraw_hits,
+                first_touched_row,
+                first_touched_col,
+                first_root_row,
+                first_root_col,
+                first_root_row,
+                first_cover_end_row,
+                first_root_col,
+                first_cover_end_col,
+                first_root_width,
+                first_root_height,
+            },
+        );
+    }
+
+    fn markDirtyRangeWithOrigin(self: *Screen, op: []const u8, start_row: usize, end_row: usize, start_col: usize, end_col: usize) void {
+        const rows = @as(usize, self.grid.rows);
+        const cols = @as(usize, self.grid.cols);
+        if (rows == 0 or cols == 0) return;
+
+        const clamped_start_row = @min(start_row, rows - 1);
+        const clamped_end_row = @min(end_row, rows - 1);
+        const clamped_start_col = @min(start_col, cols - 1);
+        const clamped_end_col = @min(end_col, cols - 1);
+        if (clamped_start_row > clamped_end_row or clamped_start_col > clamped_end_col) return;
+
+        if (clamped_start_col == 0 and clamped_end_col + 1 == cols) {
+            const dirty_origin_log = app_logger.logger("terminal.ui.screen_dirty_origin");
+            dirty_origin_log.logf(
+                .info,
+                "op={s} rows={d}..{d} cols=0..{d} span_rows={d} span_cols={d} cursor={d},{d} scroll={d}..{d} margins={d}..{d}",
+                .{
+                    op,
+                    clamped_start_row,
+                    clamped_end_row,
+                    cols - 1,
+                    clamped_end_row - clamped_start_row + 1,
+                    cols,
+                    self.cursor.row,
+                    self.cursor.col,
+                    self.scroll_top,
+                    self.scroll_bottom,
+                    self.leftBoundary(),
+                    self.rightBoundary(),
+                },
+            );
+        }
+
+        self.grid.markDirtyRange(clamped_start_row, clamped_end_row, clamped_start_col, clamped_end_col);
     }
 
     pub fn writeCodepoint(self: *Screen, cp: u32, attrs: types.CellAttrs) void {
@@ -307,6 +439,7 @@ pub const Screen = struct {
 
         const width: u8 = codepointCellWidth(cp);
         const write_width: u8 = if (width > 1 and col + 1 > right) 1 else width;
+        self.logDirtyRangeSemanticGaps("write_codepoint", row, row, col, @min(right, col + @max(@as(usize, write_width), 1) - 1));
 
         // If overwriting a prior wide-cell root, clear its tail continuation.
         const existing = self.grid.cells.items[idx];
@@ -512,7 +645,7 @@ pub const Screen = struct {
                 if (self.cursor.col == 0) {
                     const cols_local = @as(usize, self.grid.cols);
                     if (cols_local > 0) {
-                        self.grid.markDirtyRange(self.cursor.row, self.cursor.row, 0, cols_local - 1);
+                        self.markDirtyRangeWithOrigin("prepare_write_wrap_mark", self.cursor.row, self.cursor.row, 0, cols_local - 1);
                     }
                 }
                 return .need_wrap;
@@ -849,12 +982,12 @@ pub const Screen = struct {
         };
     }
 
-    pub fn markDirtyAll(self: *Screen) void {
-        self.grid.markDirtyAllWithReason(.screen_mark_dirty_api);
+    pub fn markDirtyAll(self: *Screen, src: std.builtin.SourceLocation) void {
+        self.grid.markDirtyAllWithReason(.screen_mark_dirty_api, src);
     }
 
-    pub fn markDirtyAllWithReason(self: *Screen, reason: grid_mod.FullDirtyReason) void {
-        self.grid.markDirtyAllWithReason(reason);
+    pub fn markDirtyAllWithReason(self: *Screen, reason: grid_mod.FullDirtyReason, src: std.builtin.SourceLocation) void {
+        self.grid.markDirtyAllWithReason(reason, src);
     }
 
     pub fn clearDirty(self: *Screen) void {
@@ -890,7 +1023,7 @@ pub const Screen = struct {
         for (self.grid.wrap_flags.items) |*flag| {
             flag.* = false;
         }
-        self.grid.markDirtyAllWithReason(.screen_clear);
+        self.grid.markDirtyAllWithReason(.screen_clear, @src());
     }
 
     pub fn eraseDisplay(self: *Screen, mode: i32, blank_cell: types.Cell) void {
@@ -906,10 +1039,11 @@ pub const Screen = struct {
             0 => { // cursor to end
                 if (row >= rows or col >= cols) return;
                 const start_col = if (col < left) left else col;
+                self.logDirtyRangeSemanticGaps("erase_display_0", row, rows - 1, start_col, right);
                 if (start_col <= right) {
                     const row_start = row * cols;
                     for (self.grid.cells.items[row_start + start_col .. row_start + right + 1]) |*cell| cell.* = blank_cell;
-                    self.grid.markDirtyRange(row, row, start_col, right);
+                    self.markDirtyRangeWithOrigin("erase_display_0_cursor_row", row, row, start_col, right);
                 }
                 if (row + 1 < rows) {
                     var r = row + 1;
@@ -917,7 +1051,7 @@ pub const Screen = struct {
                         const row_start = r * cols;
                         for (self.grid.cells.items[row_start + left .. row_start + right + 1]) |*cell| cell.* = blank_cell;
                     }
-                    self.grid.markDirtyRange(row + 1, rows - 1, left, right);
+                    self.markDirtyRangeWithOrigin("erase_display_0_tail_rows", row + 1, rows - 1, left, right);
                 }
                 var r = row;
                 while (r < rows) : (r += 1) {
@@ -926,19 +1060,20 @@ pub const Screen = struct {
             },
             1 => { // start to cursor
                 if (row >= rows or col >= cols) return;
+                self.logDirtyRangeSemanticGaps("erase_display_1", 0, row, left, @min(col, right));
                 if (row > 0) {
                     var r: usize = 0;
                     while (r < row) : (r += 1) {
                         const row_start = r * cols;
                         for (self.grid.cells.items[row_start + left .. row_start + right + 1]) |*cell| cell.* = blank_cell;
                     }
-                    self.grid.markDirtyRange(0, row - 1, left, right);
+                    self.markDirtyRangeWithOrigin("erase_display_1_head_rows", 0, row - 1, left, right);
                 }
                 if (col >= left) {
                     const end_col = @min(col, right);
                     const row_start = row * cols;
                     for (self.grid.cells.items[row_start + left .. row_start + end_col + 1]) |*cell| cell.* = blank_cell;
-                    self.grid.markDirtyRange(row, row, left, end_col);
+                    self.markDirtyRangeWithOrigin("erase_display_1_cursor_row", row, row, left, end_col);
                 }
                 var r: usize = 0;
                 while (r <= row) : (r += 1) {
@@ -946,32 +1081,34 @@ pub const Screen = struct {
                 }
             },
             2 => { // all
+                self.logDirtyRangeSemanticGaps("erase_display_2", 0, rows - 1, left, right);
                 if (left == 0 and right + 1 == cols) {
                     for (self.grid.cells.items) |*cell| cell.* = blank_cell;
-                    self.grid.markDirtyAllWithReason(.erase_display_full);
+                    self.grid.markDirtyAllWithReason(.erase_display_full, @src());
                 } else {
                     var r: usize = 0;
                     while (r < rows) : (r += 1) {
                         const row_start = r * cols;
                         for (self.grid.cells.items[row_start + left .. row_start + right + 1]) |*cell| cell.* = blank_cell;
                     }
-                    self.grid.markDirtyRange(0, rows - 1, left, right);
+                    self.markDirtyRangeWithOrigin("erase_display_2_partial", 0, rows - 1, left, right);
                 }
                 for (self.grid.wrap_flags.items) |*flag| {
                     flag.* = false;
                 }
             },
             3 => { // saved lines + all (treat as full clear)
+                self.logDirtyRangeSemanticGaps("erase_display_3", 0, rows - 1, left, right);
                 if (left == 0 and right + 1 == cols) {
                     for (self.grid.cells.items) |*cell| cell.* = blank_cell;
-                    self.grid.markDirtyAllWithReason(.erase_display_full);
+                    self.grid.markDirtyAllWithReason(.erase_display_full, @src());
                 } else {
                     var r: usize = 0;
                     while (r < rows) : (r += 1) {
                         const row_start = r * cols;
                         for (self.grid.cells.items[row_start + left .. row_start + right + 1]) |*cell| cell.* = blank_cell;
                     }
-                    self.grid.markDirtyRange(0, rows - 1, left, right);
+                    self.markDirtyRangeWithOrigin("erase_display_3_partial", 0, rows - 1, left, right);
                 }
                 for (self.grid.wrap_flags.items) |*flag| {
                     flag.* = false;
@@ -992,16 +1129,19 @@ pub const Screen = struct {
         if (col < left or col > right or col >= cols) return;
         switch (mode) {
             0 => { // cursor to end of line
+                self.logDirtyRangeSemanticGaps("erase_line_0", self.cursor.row, self.cursor.row, col, right);
                 for (self.grid.cells.items[row_start + col .. row_start + right + 1]) |*cell| cell.* = blank_cell;
-                self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, right);
+                self.markDirtyRangeWithOrigin("erase_line_0", self.cursor.row, self.cursor.row, col, right);
             },
             1 => { // start to cursor
+                self.logDirtyRangeSemanticGaps("erase_line_1", self.cursor.row, self.cursor.row, left, col);
                 for (self.grid.cells.items[row_start + left .. row_start + col + 1]) |*cell| cell.* = blank_cell;
-                self.grid.markDirtyRange(self.cursor.row, self.cursor.row, left, col);
+                self.markDirtyRangeWithOrigin("erase_line_1", self.cursor.row, self.cursor.row, left, col);
             },
             2 => { // entire line
+                self.logDirtyRangeSemanticGaps("erase_line_2", self.cursor.row, self.cursor.row, left, right);
                 for (self.grid.cells.items[row_start + left .. row_start + right + 1]) |*cell| cell.* = blank_cell;
-                self.grid.markDirtyRange(self.cursor.row, self.cursor.row, left, right);
+                self.markDirtyRangeWithOrigin("erase_line_2", self.cursor.row, self.cursor.row, left, right);
             },
             else => {},
         }
@@ -1019,13 +1159,14 @@ pub const Screen = struct {
         const end_excl = right + 1;
         const n = @min(count, end_excl - col);
         if (n == 0) return;
+        self.logDirtyRangeSemanticGaps("insert_chars", self.cursor.row, self.cursor.row, col, right);
         const row_start = self.cursor.row * cols;
         const line = self.grid.cells.items[row_start .. row_start + cols];
         if (end_excl - col > n) {
             std.mem.copyBackwards(types.Cell, line[col + n .. end_excl], line[col .. end_excl - n]);
         }
         for (line[col .. col + n]) |*cell| cell.* = blank_cell;
-        self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, right);
+        self.markDirtyRangeWithOrigin("insert_chars", self.cursor.row, self.cursor.row, col, right);
     }
 
     pub fn deleteChars(self: *Screen, count: usize, blank_cell: types.Cell) void {
@@ -1039,13 +1180,14 @@ pub const Screen = struct {
         const end_excl = right + 1;
         const n = @min(count, end_excl - col);
         if (n == 0) return;
+        self.logDirtyRangeSemanticGaps("delete_chars", self.cursor.row, self.cursor.row, col, right);
         const row_start = self.cursor.row * cols;
         const line = self.grid.cells.items[row_start .. row_start + cols];
         if (end_excl - col > n) {
             std.mem.copyForwards(types.Cell, line[col .. end_excl - n], line[col + n .. end_excl]);
         }
         for (line[end_excl - n .. end_excl]) |*cell| cell.* = blank_cell;
-        self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, right);
+        self.markDirtyRangeWithOrigin("delete_chars", self.cursor.row, self.cursor.row, col, right);
     }
 
     pub fn eraseChars(self: *Screen, count: usize, blank_cell: types.Cell) void {
@@ -1059,10 +1201,11 @@ pub const Screen = struct {
         const end_excl = right + 1;
         const n = @min(count, end_excl - col);
         if (n == 0) return;
+        self.logDirtyRangeSemanticGaps("erase_chars", self.cursor.row, self.cursor.row, col, col + n - 1);
         const row_start = self.cursor.row * cols;
         const line = self.grid.cells.items[row_start .. row_start + cols];
         for (line[col .. col + n]) |*cell| cell.* = blank_cell;
-        self.grid.markDirtyRange(self.cursor.row, self.cursor.row, col, col + n - 1);
+        self.markDirtyRangeWithOrigin("erase_chars", self.cursor.row, self.cursor.row, col, col + n - 1);
     }
 
     pub fn insertLines(self: *Screen, count: usize, blank_cell: types.Cell) void {
@@ -1072,6 +1215,7 @@ pub const Screen = struct {
         if (self.cursor.row < self.scroll_top or self.cursor.row > self.scroll_bottom) return;
         if (self.left_right_margin_mode_69 and (self.cursor.col < self.leftBoundary() or self.cursor.col > self.rightBoundary())) return;
         const n = @min(count, self.scroll_bottom - self.cursor.row + 1);
+        self.logDirtyRangeSemanticGaps("insert_lines", self.cursor.row, self.scroll_bottom, self.leftBoundary(), self.rightBoundary());
         if (self.left_right_margin_mode_69) {
             const left = self.leftBoundary();
             const right = self.rightBoundary();
@@ -1093,7 +1237,7 @@ pub const Screen = struct {
                 if (row == self.cursor.row) break;
                 row -= 1;
             }
-            self.grid.markDirtyRange(self.cursor.row, self.scroll_bottom, left, right);
+            self.markDirtyRangeWithOrigin("insert_lines_margin", self.cursor.row, self.scroll_bottom, left, right);
             return;
         }
         const region_end = (self.scroll_bottom + 1) * cols;
@@ -1112,7 +1256,7 @@ pub const Screen = struct {
         while (row < self.cursor.row + n and row <= self.scroll_bottom) : (row += 1) {
             self.grid.setRowWrapped(row, false);
         }
-        self.grid.markDirtyRange(self.cursor.row, self.scroll_bottom, 0, cols - 1);
+        self.markDirtyRangeWithOrigin("insert_lines_full", self.cursor.row, self.scroll_bottom, 0, cols - 1);
     }
 
     pub fn deleteLines(self: *Screen, count: usize, blank_cell: types.Cell) void {
@@ -1122,6 +1266,7 @@ pub const Screen = struct {
         if (self.cursor.row < self.scroll_top or self.cursor.row > self.scroll_bottom) return;
         if (self.left_right_margin_mode_69 and (self.cursor.col < self.leftBoundary() or self.cursor.col > self.rightBoundary())) return;
         const n = @min(count, self.scroll_bottom - self.cursor.row + 1);
+        self.logDirtyRangeSemanticGaps("delete_lines", self.cursor.row, self.scroll_bottom, self.leftBoundary(), self.rightBoundary());
         if (self.left_right_margin_mode_69) {
             const left = self.leftBoundary();
             const right = self.rightBoundary();
@@ -1141,7 +1286,7 @@ pub const Screen = struct {
                 }
                 self.grid.setRowWrapped(row, false);
             }
-            self.grid.markDirtyRange(self.cursor.row, self.scroll_bottom, left, right);
+            self.markDirtyRangeWithOrigin("delete_lines_margin", self.cursor.row, self.scroll_bottom, left, right);
             return;
         }
         const region_end = (self.scroll_bottom + 1) * cols;
@@ -1159,7 +1304,7 @@ pub const Screen = struct {
         while (row <= self.scroll_bottom) : (row += 1) {
             self.grid.setRowWrapped(row, false);
         }
-        self.grid.markDirtyRange(self.cursor.row, self.scroll_bottom, 0, cols - 1);
+        self.markDirtyRangeWithOrigin("delete_lines_full", self.cursor.row, self.scroll_bottom, 0, cols - 1);
     }
 
     pub fn updateDefaultColors(self: *Screen, old_attrs: types.CellAttrs, new_attrs: types.CellAttrs) void {
@@ -1178,7 +1323,7 @@ pub const Screen = struct {
             if (colorsEqual(cell.attrs.bg, old_attrs.bg)) cell.attrs.bg = new_attrs.bg;
             if (colorsEqual(cell.attrs.underline_color, old_attrs.underline_color)) cell.attrs.underline_color = new_attrs.underline_color;
         }
-        self.grid.markDirtyAllWithReason(.palette_default_changed);
+        self.grid.markDirtyAllWithReason(.palette_default_changed, @src());
     }
 
     pub fn updateAnsiColors(self: *Screen, old_colors: [16]types.Color, new_colors: [16]types.Color) void {
@@ -1195,7 +1340,7 @@ pub const Screen = struct {
             cell.attrs.bg = remapAnsiColor(cell.attrs.bg, old_colors, new_colors);
             cell.attrs.underline_color = remapAnsiColor(cell.attrs.underline_color, old_colors, new_colors);
         }
-        self.grid.markDirtyAllWithReason(.palette_ansi_changed);
+        self.grid.markDirtyAllWithReason(.palette_ansi_changed, @src());
     }
 
     fn remapAnsiColor(color: types.Color, old_colors: [16]types.Color, new_colors: [16]types.Color) types.Color {
@@ -1213,6 +1358,7 @@ pub const Screen = struct {
         const cols = @as(usize, self.grid.cols);
         if (cols == 0 or self.grid.rows == 0) return;
         if (n == 0) return;
+        self.logDirtyRangeSemanticGaps("scroll_region_up", self.scroll_top, self.scroll_bottom, self.leftBoundary(), self.rightBoundary());
         if (self.left_right_margin_mode_69) {
             const left = self.leftBoundary();
             const right = self.rightBoundary();
@@ -1232,7 +1378,7 @@ pub const Screen = struct {
                 }
                 self.grid.setRowWrapped(row, false);
             }
-            self.grid.markDirtyRange(self.scroll_top, self.scroll_bottom, left, right);
+            self.markDirtyRangeWithOrigin("scroll_region_up_margin", self.scroll_top, self.scroll_bottom, left, right);
             return;
         }
         const region_start = self.scroll_top * cols;
@@ -1254,7 +1400,7 @@ pub const Screen = struct {
                 self.grid.setRowWrapped(row, false);
             }
         }
-        self.grid.markDirtyRange(self.scroll_top, self.scroll_bottom, 0, cols - 1);
+        self.markDirtyRangeWithOrigin("scroll_region_up_full", self.scroll_top, self.scroll_bottom, 0, cols - 1);
     }
 
     pub fn scrollRegionUp(self: *Screen, count: usize, blank_cell: types.Cell) usize {
@@ -1270,6 +1416,7 @@ pub const Screen = struct {
         const cols = @as(usize, self.grid.cols);
         if (cols == 0 or self.grid.rows == 0) return;
         if (n == 0) return;
+        self.logDirtyRangeSemanticGaps("scroll_region_down", self.scroll_top, self.scroll_bottom, self.leftBoundary(), self.rightBoundary());
         if (self.left_right_margin_mode_69) {
             const left = self.leftBoundary();
             const right = self.rightBoundary();
@@ -1291,7 +1438,7 @@ pub const Screen = struct {
                 if (row == self.scroll_top) break;
                 row -= 1;
             }
-            self.grid.markDirtyRange(self.scroll_top, self.scroll_bottom, left, right);
+            self.markDirtyRangeWithOrigin("scroll_region_down_margin", self.scroll_top, self.scroll_bottom, left, right);
             return;
         }
         const region_start = self.scroll_top * cols;
@@ -1314,7 +1461,7 @@ pub const Screen = struct {
                 self.grid.setRowWrapped(row, false);
             }
         }
-        self.grid.markDirtyRange(self.scroll_top, self.scroll_bottom, 0, cols - 1);
+        self.markDirtyRangeWithOrigin("scroll_region_down_full", self.scroll_top, self.scroll_bottom, 0, cols - 1);
     }
 
     pub fn scrollRegionDown(self: *Screen, count: usize, blank_cell: types.Cell) usize {
@@ -1330,6 +1477,7 @@ pub const Screen = struct {
         const cols = @as(usize, self.grid.cols);
         const rows = @as(usize, self.grid.rows);
         if (rows == 0 or cols == 0) return;
+        self.logDirtyRangeSemanticGaps("scroll_up", 0, rows - 1, 0, cols - 1);
         const total = rows * cols;
         const row_bytes = cols * @sizeOf(types.Cell);
         const src = @as([*]u8, @ptrCast(self.grid.cells.items.ptr));
@@ -1350,7 +1498,7 @@ pub const Screen = struct {
         }
         self.cursor.row = rows - 1;
         self.cursor.col = 0;
-        self.grid.markDirtyRange(0, rows - 1, 0, cols - 1);
+        self.markDirtyRangeWithOrigin("scroll_up_full", 0, rows - 1, 0, cols - 1);
     }
 };
 

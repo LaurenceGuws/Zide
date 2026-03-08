@@ -55,7 +55,46 @@ fn rowLastContentCol(row_cells: []const Cell, cols: usize) ?usize {
     return last;
 }
 
+fn cellsEqual(a: Cell, b: Cell) bool {
+    if (a.codepoint != b.codepoint) return false;
+    if (a.combining_len != b.combining_len) return false;
+    if (a.width != b.width or a.height != b.height or a.x != b.x or a.y != b.y) return false;
+    if (!std.meta.eql(a.attrs, b.attrs)) return false;
+    var i: usize = 0;
+    while (i < a.combining.len) : (i += 1) {
+        if (a.combining[i] != b.combining[i]) return false;
+    }
+    return true;
+}
+
+fn rowDiffSpan(new_row: []const Cell, old_row: []const Cell, cols: usize) ?struct { start: usize, end: usize } {
+    if (cols == 0 or new_row.len < cols or old_row.len < cols) return null;
+
+    var start_opt: ?usize = null;
+    var col: usize = 0;
+    while (col < cols) : (col += 1) {
+        if (!cellsEqual(new_row[col], old_row[col])) {
+            start_opt = col;
+            break;
+        }
+    }
+    const start = start_opt orelse return null;
+
+    var end: usize = start;
+    var rev: usize = cols;
+    while (rev > start) {
+        rev -= 1;
+        if (!cellsEqual(new_row[rev], old_row[rev])) {
+            end = rev;
+            break;
+        }
+    }
+
+    return .{ .start = start, .end = end };
+}
+
 pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usize) void {
+    const fullwidth_origin_log = app_logger.logger("terminal.ui.row_fullwidth_origin");
     const screen = self.activeScreenConst();
     const view = screen.snapshotView();
     const screen_reverse = screen.screen_reverse;
@@ -306,6 +345,29 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     if (view.dirty_cols_start.len == rows and view.dirty_cols_end.len == rows and !needs_full_damage) {
         std.mem.copyForwards(u16, cache.dirty_cols_start.items, view.dirty_cols_start);
         std.mem.copyForwards(u16, cache.dirty_cols_end.items, view.dirty_cols_end);
+        if (cols > 0 and view.dirty == .partial) {
+            var logged: usize = 0;
+            var row_idx: usize = 0;
+            while (row_idx < rows and logged < 5) : (row_idx += 1) {
+                if (!cache.dirty_rows.items[row_idx]) continue;
+                if (cache.dirty_cols_start.items[row_idx] != 0) continue;
+                if (@as(usize, cache.dirty_cols_end.items[row_idx]) != cols - 1) continue;
+                fullwidth_origin_log.logf(
+                    .info,
+                    "source=view row={d} reason=copied_from_view cols=0..{d} dirty={s} damage_rows={d} damage_cols={d} rows={d} cols={d}",
+                    .{
+                        row_idx,
+                        cols - 1,
+                        @tagName(view.dirty),
+                        if (view.damage.end_row >= view.damage.start_row) view.damage.end_row - view.damage.start_row + 1 else 0,
+                        if (view.damage.end_col >= view.damage.start_col) view.damage.end_col - view.damage.start_col + 1 else 0,
+                        rows,
+                        cols,
+                    },
+                );
+                logged += 1;
+            }
+        }
     } else {
         for (cache.dirty_cols_start.items, cache.dirty_cols_end.items) |*col_start, *col_end| {
             col_start.* = 0;
@@ -328,6 +390,18 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
             cache.dirty_rows.items[row_idx] = true;
             cache.dirty_cols_start.items[row_idx] = 0;
             cache.dirty_cols_end.items[row_idx] = if (cols > 0) @intCast(cols - 1) else 0;
+            fullwidth_origin_log.logf(
+                .info,
+                "source=view_cache row={d} reason=selection_change cols=0..{d} was_selected={d} is_selected={d} rows={d} cols={d}",
+                .{
+                    row_idx,
+                    if (cols > 0) cols - 1 else 0,
+                    @intFromBool(was_selected),
+                    @intFromBool(is_selected),
+                    rows,
+                    cols,
+                },
+            );
             if (cache.dirty == .none) {
                 cache.dirty = .partial;
                 cache.damage = .{
@@ -399,18 +473,57 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
             if (!cache.dirty_rows.items[row_idx]) continue;
             const row_start = row_idx * cols;
             const row_cells = cache.cells.items[row_start .. row_start + cols];
+            const old_row_cells = active_cache.cells.items[row_start .. row_start + cols];
             const hash_now = hashRow(row_cells);
             cache.row_hashes.items[row_idx] = hash_now;
             const hash_changed = hash_now != active_cache.row_hashes.items[row_idx];
             cache.dirty_rows.items[row_idx] = hash_changed;
             if (hash_changed) {
-                cache.dirty_cols_start.items[row_idx] = 0;
-                cache.dirty_cols_end.items[row_idx] = if (cols > 0) @intCast(cols - 1) else 0;
+                if (rowDiffSpan(row_cells, old_row_cells, cols)) |span| {
+                    cache.dirty_cols_start.items[row_idx] = @intCast(span.start);
+                    cache.dirty_cols_end.items[row_idx] = @intCast(span.end);
+                } else {
+                    cache.dirty_rows.items[row_idx] = false;
+                    continue;
+                }
+                fullwidth_origin_log.logf(
+                    .info,
+                    "source=view_cache row={d} reason=row_hash_changed cols={d}..{d} rows={d} cols={d}",
+                    .{
+                        row_idx,
+                        cache.dirty_cols_start.items[row_idx],
+                        cache.dirty_cols_end.items[row_idx],
+                        rows,
+                        cols,
+                    },
+                );
                 any_dirty = true;
             }
         }
         if (!any_dirty) {
             cache.dirty = .none;
+        } else {
+            var first_dirty = true;
+            row_idx = 0;
+            while (row_idx < rows) : (row_idx += 1) {
+                if (!cache.dirty_rows.items[row_idx]) continue;
+                const start_col = @as(usize, cache.dirty_cols_start.items[row_idx]);
+                const end_col = @as(usize, cache.dirty_cols_end.items[row_idx]);
+                if (first_dirty) {
+                    cache.damage = .{
+                        .start_row = row_idx,
+                        .end_row = row_idx,
+                        .start_col = start_col,
+                        .end_col = end_col,
+                    };
+                    first_dirty = false;
+                } else {
+                    cache.damage.start_row = @min(cache.damage.start_row, row_idx);
+                    cache.damage.end_row = @max(cache.damage.end_row, row_idx);
+                    cache.damage.start_col = @min(cache.damage.start_col, start_col);
+                    cache.damage.end_col = @max(cache.damage.end_col, end_col);
+                }
+            }
         }
     }
 

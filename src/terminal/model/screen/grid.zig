@@ -1,5 +1,6 @@
 const std = @import("std");
 const types = @import("../types.zig");
+const app_logger = @import("../../../app_logger.zig");
 
 pub const Dirty = enum {
     none,
@@ -34,6 +35,36 @@ pub const FullDirtyReason = enum {
     view_cache_kitty_generation_change,
     view_cache_view_dirty_full,
 };
+
+fn fullDirtyReasonNote(reason: FullDirtyReason) []const u8 {
+    return switch (reason) {
+        .unknown => "fallback full invalidate without explicit semantic reason",
+        .init => "grid initialized with full damage",
+        .resize => "grid resized and needs full repaint",
+        .screen_mark_dirty_api => "screen API requested full invalidate",
+        .screen_reverse_mode_toggle => "reverse-video mode changed all visible colors",
+        .screen_clear => "screen clear rewrites every cell in the viewport",
+        .erase_display_full => "ED full clear variant affects the entire visible grid",
+        .palette_default_changed => "default colors changed and can affect many existing cells",
+        .palette_ansi_changed => "ANSI palette remap can recolor previously drawn cells",
+        .alt_enter => "switched to alt screen backing store",
+        .alt_exit => "returned from alt screen to primary backing store",
+        .session_mark_dirty_api => "terminal session API requested full invalidate",
+        .sync_updates_disabled => "sync-update disable may release a large pending change set",
+        .decstr_soft_reset => "DECSTR soft reset can rewrite broad terminal state",
+        .scrollback_view_offset_change => "scrollback viewport mapping changed",
+        .resize_reflow => "resize reflow moved content and requires full repaint",
+        .kitty_graphics_changed => "kitty graphics mutation can affect arbitrary cells",
+        .view_cache_force_full_damage => "force_full_damage flag requested conservative full redraw",
+        .view_cache_geometry_change => "view cache geometry no longer matches terminal size",
+        .view_cache_scroll_offset_change => "view cache scroll offset changed",
+        .view_cache_scrollback_generation_change => "scrollback generation changed and cache chose conservative full redraw",
+        .view_cache_alt_state_change => "alt-screen active state changed in view cache",
+        .view_cache_screen_reverse_change => "screen reverse mode changed in view cache",
+        .view_cache_kitty_generation_change => "kitty image generation changed in view cache",
+        .view_cache_view_dirty_full => "view snapshot itself reported full dirty state",
+    };
+}
 
 pub const Damage = struct {
     start_row: usize,
@@ -174,7 +205,7 @@ pub const TerminalGrid = struct {
         self.dirty_cols_end = new_dirty_cols_end;
         self.rows = rows;
         self.cols = cols;
-        self.markDirtyAll();
+        self.markDirtyAll(@src());
     }
 
     pub fn setRowWrapped(self: *TerminalGrid, row: usize, wrapped: bool) void {
@@ -240,11 +271,11 @@ pub const TerminalGrid = struct {
         }
     }
 
-    pub fn markDirtyAll(self: *TerminalGrid) void {
-        self.markDirtyAllWithReason(.unknown);
+    pub fn markDirtyAll(self: *TerminalGrid, src: std.builtin.SourceLocation) void {
+        self.markDirtyAllWithReason(.unknown, src);
     }
 
-    pub fn markDirtyAllWithReason(self: *TerminalGrid, reason: FullDirtyReason) void {
+    pub fn markDirtyAllWithReason(self: *TerminalGrid, reason: FullDirtyReason, src: std.builtin.SourceLocation) void {
         self.dirty = .full;
         self.damage = .{
             .start_row = 0,
@@ -260,6 +291,12 @@ pub const TerminalGrid = struct {
         } else {
             self.setAllDirtyCols(0, 0);
         }
+        app_logger.logger("terminal.ui.invalidate").logfSrc(
+            .info,
+            src,
+            "full_dirty reason={s} seq={d} rows={d} cols={d} note={s}",
+            .{ @tagName(reason), self.full_dirty_seq, self.rows, self.cols, fullDirtyReasonNote(reason) },
+        );
     }
 
     pub fn clearDirty(self: *TerminalGrid) void {
