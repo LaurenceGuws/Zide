@@ -162,6 +162,13 @@ Runtime-only instrumentation has been added (no behavior/path forcing):
 - Emits when terminal output pressure persists while no redraw occurs:
   - pressure time, idle frames, redraw flag, draw/poll sequence IDs, window pixel size
 
+3. Poll-path probe around `hasData`/generation
+- File: `src/app/poll_visible_terminal_sessions_runtime.zig`
+- Emits every ~100ms:
+  - `hasData` pre/post poll, generation pre/post poll, and whether poll path reported activity
+- Purpose:
+  - validate suspected false-negative window where `output_pending` is cleared/observed low and UI chooses longer idle sleeps while generation is still advancing.
+
 3. Logging scope
 - `.zide.lua` configured to low-noise bug-scoped tags:
   - `terminal.ui.statebug,terminal.ui.perf,input.latency,terminal.core`

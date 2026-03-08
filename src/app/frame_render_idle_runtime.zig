@@ -10,6 +10,8 @@ var last_terminal_draw_seq: u64 = 0;
 var last_terminal_poll_seq: u64 = 0;
 var terminal_pressure_since: ?f64 = null;
 var last_terminal_statebug_log_time: f64 = 0.0;
+var last_terminal_generation: u64 = 0;
+var last_terminal_generation_change_time: f64 = 0.0;
 
 const TerminalLatencyContext = struct {
     poll: ?PollMetrics = null,
@@ -175,6 +177,18 @@ fn latestTerminalPollSeq(state: anytype) u64 {
     return 0;
 }
 
+fn latestTerminalGeneration(state: anytype) u64 {
+    const State = @TypeOf(state.*);
+    if (!@hasField(State, "terminal_workspace")) return 0;
+
+    if (state.terminal_workspace) |*workspace| {
+        if (workspace.activeSession()) |session| {
+            return session.currentGeneration();
+        }
+    }
+    return 0;
+}
+
 pub fn handle(
     state: anytype,
     ctx: *anyopaque,
@@ -261,6 +275,11 @@ pub fn handle(
     }
 
     const uptime = now;
+    const active_generation = latestTerminalGeneration(state);
+    if (active_generation != last_terminal_generation) {
+        last_terminal_generation = active_generation;
+        last_terminal_generation_change_time = now;
+    }
     const sleep_ms: f64 = if (terminal_output_pressure)
         0.001
     else if (uptime < 3.0)
@@ -271,6 +290,26 @@ pub fn handle(
         0.033
     else
         0.100;
+
+    if (!terminal_output_pressure and sleep_ms >= 0.033) {
+        const gen_advance_ms = (now - last_terminal_generation_change_time) * 1000.0;
+        if (last_terminal_generation_change_time > 0 and gen_advance_ms <= 200.0 and (now - last_terminal_statebug_log_time) >= 0.1) {
+            last_terminal_statebug_log_time = now;
+            app_logger.logger("terminal.ui.statebug").logf(
+                .info,
+                "idle_backoff_after_gen_advance gen={d} gen_advance_ms={d:.2} sleep_ms={d:.3} hasData={d} idle_frames={d} win_px={d}x{d}",
+                .{
+                    active_generation,
+                    gen_advance_ms,
+                    sleep_ms,
+                    @intFromBool(terminal_output_pressure),
+                    state.idle_frames,
+                    state.shell.width(),
+                    state.shell.height(),
+                },
+            );
+        }
+    }
 
     app_shell.waitTime(sleep_ms);
     hooks.maybe_log_metrics(ctx, app_shell.getTime());
