@@ -80,17 +80,14 @@ pub fn parseThreadMain(session: anytype) void {
 
         var queued_bytes: usize = 0;
         session.io_mutex.lock();
-        if (session.io_buffer.items.len > session.io_read_offset) {
-            queued_bytes = session.io_buffer.items.len - session.io_read_offset;
-        } else {
-            if (pending_offset == null) {
-                session.io_wait_cond.timedWait(&session.io_mutex, 10 * std.time.ns_per_ms) catch |err| {
-                    // Timeout is expected for bounded polling cadence.
-                    if (err != error.Timeout) {
+            if (session.io_buffer.items.len > session.io_read_offset) {
+                queued_bytes = session.io_buffer.items.len - session.io_read_offset;
+            } else {
+                if (pending_offset == null) {
+                    session.io_wait_cond.timedWait(&session.io_mutex, 10 * std.time.ns_per_ms) catch |err| {
                         app_logger.logger("terminal.parse").logf(.warning, "parse wait timedWait failed err={s}", .{@errorName(err)});
-                    }
-                };
-            }
+                    };
+                }
             if (!session.parse_thread_running.load(.acquire)) {
                 session.io_mutex.unlock();
                 break;

@@ -30,7 +30,6 @@ const Renderer = renderer_mod.Renderer;
 const TerminalDisableLigaturesStrategy = renderer_mod.TerminalDisableLigaturesStrategy;
 const RenderCache = render_cache_mod.RenderCache;
 const kitty_unicode_placeholder: u32 = 0x10EEEE;
-const investigation_force_full_dirty = true;
 
 var jitter_debug_enabled_cache: ?bool = null;
 var frame_latency_seq: u64 = 0;
@@ -996,10 +995,6 @@ pub fn draw(
     var full_reason_kitty = false;
     var full_reason_kitty_gen = false;
     var full_reason_blink = false;
-    var force_full_probe = false;
-    var texture_w_px: i32 = 0;
-    var texture_h_px: i32 = 0;
-    var shift_rows_applied: i32 = 0;
     const texture_phase_start = app_shell.getTime();
     if (rows > 0 and cols > 0) {
         const cell_w_i: i32 = @intFromFloat(std.math.round(r.terminal_cell_width));
@@ -1009,8 +1004,6 @@ pub fn draw(
         const padding_x_i: i32 = @max(2, @divTrunc(cell_w_i, 2));
         const texture_w = cell_w_i * @as(i32, @intCast(cols)) + padding_x_i;
         const texture_h = cell_h_i * @as(i32, @intCast(rows));
-        texture_w_px = texture_w;
-        texture_h_px = texture_h;
         const recreated = r.ensureTerminalTexture(texture_w, texture_h);
         const kitty_changed = kitty_generation != self.kitty.last_generation;
         const gen_changed = cache.generation != self.last_render_generation;
@@ -1040,11 +1033,6 @@ pub fn draw(
             full_reason_kitty_gen or
             full_reason_blink;
         var needs_partial = cache.dirty == .partial and !needs_full and scroll_offset == 0;
-        if (investigation_force_full_dirty and (cache.dirty != .none or gen_changed)) {
-            force_full_probe = !needs_full;
-            needs_full = true;
-            needs_partial = false;
-        }
         if (!self.terminal_texture_ready and rows > 0 and cols > 0) {
             needs_full = true;
             needs_partial = false;
@@ -1056,7 +1044,6 @@ pub fn draw(
             if (r.scrollTerminalTexture(0, dy_pixels)) {
                 needs_partial = true;
                 shifted_rows = @as(usize, @intCast(shift_abs_i));
-                shift_rows_applied = viewport_shift_rows;
             } else {
                 needs_full = true;
                 needs_partial = false;
@@ -1579,11 +1566,6 @@ pub fn draw(
                 rows,
                 cols,
             },
-        );
-        perf_log.logf(
-            .info,
-            "target tex_px={d}x{d} shift_rows={d} render_scale={d:.3} force_full_probe={d}",
-            .{ texture_w_px, texture_h_px, shift_rows_applied, r.render_scale, @intFromBool(force_full_probe) },
         );
     }
 
