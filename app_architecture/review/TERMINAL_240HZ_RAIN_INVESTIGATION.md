@@ -348,6 +348,17 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - keep redraw authority centered on published cache state instead of duplicating scroll-change policy in widget state
   - shrink one more UI/backend seam where local widget history could override backend damage truth
 
+## Cache-Authority Alt-State Cleanup (2026-03-09)
+
+- Files:
+  - `src/ui/widgets/terminal_widget_draw.zig`
+- Change:
+  - removed draw-local alt-screen transition forcing from the texture update plan
+  - widget still tracks `alt_exit` timing for diagnostics, but alt-screen redraw policy now comes from the published render cache (`cache.dirty`, `cache.alt_active`, and full-dirty reason) rather than a second widget-side reason bit
+- Intent:
+  - keep renderer decisions focused on renderer-local constraints
+  - avoid duplicating backend state-transition policy in the widget once the cache publication contract is explicit
+
 ## Applied Texture-Shift Kill-Switch (2026-03-08)
 
 - Files:

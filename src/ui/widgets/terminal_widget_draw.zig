@@ -291,7 +291,6 @@ fn chooseTextureUpdatePlan(
     recreated: bool,
     cell_metrics_changed: bool,
     render_scale_changed: bool,
-    alt_state_changed: bool,
     has_kitty: bool,
     kitty_changed: bool,
     has_blink: bool,
@@ -301,7 +300,6 @@ fn chooseTextureUpdatePlan(
     var needs_full = recreated or
         cell_metrics_changed or
         render_scale_changed or
-        alt_state_changed or
         cache_dirty == .full or
         has_kitty or
         kitty_changed or
@@ -1062,7 +1060,6 @@ pub fn draw(
     var full_reason_recreated = false;
     var full_reason_cell_metrics = false;
     var full_reason_scale = false;
-    var full_reason_alt_change = false;
     var full_reason_dirty_full = false;
     var full_reason_kitty = false;
     var full_reason_kitty_gen = false;
@@ -1082,7 +1079,6 @@ pub fn draw(
         full_reason_recreated = recreated;
         full_reason_cell_metrics = cell_metrics_changed;
         full_reason_scale = render_scale_changed;
-        full_reason_alt_change = alt_state_changed;
         full_reason_dirty_full = cache.dirty == .full;
         full_reason_kitty = has_kitty;
         full_reason_kitty_gen = kitty_changed;
@@ -1092,7 +1088,6 @@ pub fn draw(
             full_reason_recreated,
             full_reason_cell_metrics,
             full_reason_scale,
-            full_reason_alt_change,
             full_reason_kitty,
             full_reason_kitty_gen,
             has_blink,
@@ -1640,7 +1635,7 @@ pub fn draw(
         );
         perf_log.logf(
             .info,
-            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} dirty_rows={d} damage_rows={d} damage_cols={d} blink_cells={d} blink_phase_changed={d} full_reasons={d}/{d}/{d}/{d}/{d}/{d}/{d}/{d} full_dirty_reason={s} full_dirty_seq={d} rows={d} cols={d}",
+            "draw_ms={d:.2} lock_ms={d:.2} cache_copy_ms={d:.2} texture_update_ms={d:.2} overlay_ms={d:.2} full={d} partial={d} updated={d} sync={d} clear_ok={d} dirty={s} dirty_rows={d} damage_rows={d} damage_cols={d} blink_cells={d} blink_phase_changed={d} full_reasons={d}/{d}/{d}/{d}/{d}/{d}/{d} full_dirty_reason={s} full_dirty_seq={d} rows={d} cols={d}",
             .{
                 elapsed_ms,
                 lock_ms,
@@ -1661,7 +1656,6 @@ pub fn draw(
                 @intFromBool(full_reason_recreated),
                 @intFromBool(full_reason_cell_metrics),
                 @intFromBool(full_reason_scale),
-                @intFromBool(full_reason_alt_change),
                 @intFromBool(full_reason_dirty_full),
                 @intFromBool(full_reason_kitty),
                 @intFromBool(full_reason_kitty_gen),
@@ -1931,7 +1925,6 @@ test "texture update plan keeps partial redraws eligible while scrolled" {
         false,
         false,
         false,
-        false,
         true,
     );
     try std.testing.expect(!plan.needs_full);
@@ -1941,7 +1934,6 @@ test "texture update plan keeps partial redraws eligible while scrolled" {
 test "texture update plan forces full redraw when texture is not ready" {
     const plan = chooseTextureUpdatePlan(
         .partial,
-        false,
         false,
         false,
         false,
