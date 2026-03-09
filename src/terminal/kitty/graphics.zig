@@ -130,19 +130,12 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
         return;
     }
     if (control.action == 'd') {
-        if (!deleteKittyByAction(self, control)) {
-            writeKittyResponse(self, control, resolveKittyImageId(control) orelse 0, false, "EINVAL");
-        }
+        handleKittyDelete(self, control);
         return;
     }
 
     if (control.action == 'p') {
-        const image_id = resolveKittyImageId(control) orelse return;
-        if (placeKittyImage(self, image_id, control)) |err_msg| {
-            writeKittyResponse(self, control, image_id, false, err_msg);
-            return;
-        }
-        writeKittyResponse(self, control, image_id, true, "OK");
+        handleKittyPlacementRequest(self, control);
         return;
     }
 
@@ -152,6 +145,21 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
     }
     if (control.action != 't' and control.action != 'T') return;
     handleKittyUpload(self, control, data);
+}
+
+fn handleKittyDelete(self: anytype, control: KittyControl) void {
+    if (!deleteKittyByAction(self, control)) {
+        writeKittyResponse(self, control, resolveKittyImageId(control) orelse 0, false, "EINVAL");
+    }
+}
+
+fn handleKittyPlacementRequest(self: anytype, control: KittyControl) void {
+    const image_id = resolveKittyImageId(control) orelse return;
+    if (placeKittyImage(self, image_id, control)) |err_msg| {
+        writeKittyResponse(self, control, image_id, false, err_msg);
+        return;
+    }
+    writeKittyResponse(self, control, image_id, true, "OK");
 }
 
 pub fn handleKittyQueryEarlyReply(self: anytype, control: KittyControl, data_len: usize) bool {
@@ -1627,173 +1635,144 @@ fn deleteKittyByAction(self: anytype, control: KittyControl) bool {
     const range_end = if (control.y > 0) control.y else 0;
     const z = control.z;
     switch (action) {
-        'a' => {
-            const Ctx = struct {
-                fn pred(_: @This(), _: anytype, _: KittyPlacement) bool {
-                    return true;
-                }
-            };
-            deleteKittyPlacements(self, Ctx{}, Ctx.pred);
-            return true;
-        },
-        'A' => {
-            clearKittyImages(self);
-            return true;
-        },
-        'i', 'I' => {
-            if (id == null) return true;
-            const target = id.?;
-            if (action == 'I') {
-                deleteKittyImages(self, target);
-                return true;
-            }
-            const Ctx = struct {
-                target_id: u32,
-                target_pid: u32,
-                fn pred(ctx: @This(), _: anytype, placement: KittyPlacement) bool {
-                    if (placement.image_id != ctx.target_id) return false;
-                    if (ctx.target_pid != 0 and placement.placement_id != ctx.target_pid) return false;
-                    return true;
-                }
-            };
-            deleteKittyPlacements(self, Ctx{ .target_id = target, .target_pid = placement_id }, Ctx.pred);
-            return true;
-        },
-        'n', 'N' => {
-            if (id == null) return true;
-            const target = id.?;
-            if (action == 'N') {
-                deleteKittyImages(self, target);
-                return true;
-            }
-            const Ctx = struct {
-                target_id: u32,
-                target_pid: u32,
-                fn pred(ctx: @This(), _: anytype, placement: KittyPlacement) bool {
-                    if (placement.image_id != ctx.target_id) return false;
-                    if (ctx.target_pid != 0 and placement.placement_id != ctx.target_pid) return false;
-                    return true;
-                }
-            };
-            deleteKittyPlacements(self, Ctx{ .target_id = target, .target_pid = placement_id }, Ctx.pred);
-            return true;
-        },
-        'c', 'C' => {
-            const delete_images = action == 'C';
-            const Ctx = struct {
-                row: u16,
-                col: u16,
-                delete_images: bool,
-                fn pred(ctx: @This(), session: anytype, placement: KittyPlacement) bool {
-                    if (!kittyPlacementIntersects(placement, ctx.row, ctx.col)) return false;
-                    if (ctx.delete_images) {
-                        deleteKittyImages(session, placement.image_id);
-                        return false;
-                    }
-                    return true;
-                }
-            };
-            deleteKittyPlacements(self, Ctx{ .row = cursor_row, .col = cursor_col, .delete_images = delete_images }, Ctx.pred);
-            return true;
-        },
-        'p', 'P' => {
-            const row = @as(u16, @intCast(y));
-            const col = @as(u16, @intCast(x));
-            const delete_images = action == 'P';
-            const Ctx = struct {
-                row: u16,
-                col: u16,
-                delete_images: bool,
-                fn pred(ctx: @This(), session: anytype, placement: KittyPlacement) bool {
-                    if (!kittyPlacementIntersects(placement, ctx.row, ctx.col)) return false;
-                    if (ctx.delete_images) {
-                        deleteKittyImages(session, placement.image_id);
-                        return false;
-                    }
-                    return true;
-                }
-            };
-            deleteKittyPlacements(self, Ctx{ .row = row, .col = col, .delete_images = delete_images }, Ctx.pred);
-            return true;
-        },
-        'z', 'Z' => {
-            const delete_images = action == 'Z';
-            const Ctx = struct {
-                z: i32,
-                delete_images: bool,
-                fn pred(ctx: @This(), session: anytype, placement: KittyPlacement) bool {
-                    if (placement.z != ctx.z) return false;
-                    if (ctx.delete_images) {
-                        deleteKittyImages(session, placement.image_id);
-                        return false;
-                    }
-                    return true;
-                }
-            };
-            deleteKittyPlacements(self, Ctx{ .z = z, .delete_images = delete_images }, Ctx.pred);
-            return true;
-        },
-        'r', 'R' => {
-            const end = if (range_end > 0) range_end else range_start;
-            if (range_start > end) return true;
-            const delete_images = action == 'R';
-            const Ctx = struct {
-                start_id: u32,
-                end_id: u32,
-                delete_images: bool,
-                fn pred(ctx: @This(), session: anytype, placement: KittyPlacement) bool {
-                    if (placement.image_id < ctx.start_id or placement.image_id > ctx.end_id) return false;
-                    if (ctx.delete_images) {
-                        deleteKittyImages(session, placement.image_id);
-                        return false;
-                    }
-                    return true;
-                }
-            };
-            deleteKittyPlacements(self, Ctx{ .start_id = range_start, .end_id = end, .delete_images = delete_images }, Ctx.pred);
-            return true;
-        },
-        'x', 'X' => {
-            const col = @as(u16, @intCast(x));
-            const delete_images = action == 'X';
-            const Ctx = struct {
-                col: u16,
-                delete_images: bool,
-                fn pred(ctx: @This(), session: anytype, placement: KittyPlacement) bool {
-                    if (!kittyPlacementIntersects(placement, placement.row, ctx.col)) return false;
-                    if (ctx.delete_images) {
-                        deleteKittyImages(session, placement.image_id);
-                        return false;
-                    }
-                    return true;
-                }
-            };
-            deleteKittyPlacements(self, Ctx{ .col = col, .delete_images = delete_images }, Ctx.pred);
-            return true;
-        },
-        'y', 'Y' => {
-            const row = @as(u16, @intCast(y));
-            const delete_images = action == 'Y';
-            const Ctx = struct {
-                row: u16,
-                delete_images: bool,
-                fn pred(ctx: @This(), session: anytype, placement: KittyPlacement) bool {
-                    if (!kittyPlacementIntersects(placement, ctx.row, placement.col)) return false;
-                    if (ctx.delete_images) {
-                        deleteKittyImages(session, placement.image_id);
-                        return false;
-                    }
-                    return true;
-                }
-            };
-            deleteKittyPlacements(self, Ctx{ .row = row, .delete_images = delete_images }, Ctx.pred);
-            return true;
-        },
+        'a' => return deleteAllKittyPlacements(self),
+        'A' => return deleteAllKittyImages(self),
+        'i', 'I', 'n', 'N' => return deleteKittyByIdSelector(self, id, placement_id, action == 'I' or action == 'N'),
+        'c', 'C' => return deleteKittyByPoint(self, cursor_row, cursor_col, action == 'C'),
+        'p', 'P' => return deleteKittyByPoint(self, @as(u16, @intCast(y)), @as(u16, @intCast(x)), action == 'P'),
+        'z', 'Z' => return deleteKittyByZ(self, z, action == 'Z'),
+        'r', 'R' => return deleteKittyByRange(self, range_start, range_end, action == 'R'),
+        'x', 'X' => return deleteKittyByColumn(self, @as(u16, @intCast(x)), action == 'X'),
+        'y', 'Y' => return deleteKittyByRow(self, @as(u16, @intCast(y)), action == 'Y'),
         // AUDIT-07 policy lock: kitty delete selectors q/Q/f/F are explicitly deferred
         // in Zide and treated as invalid (`EINVAL`) instead of falling into unknown.
         'q', 'Q', 'f', 'F' => return false,
         else => return false,
     }
+}
+
+fn deleteAllKittyPlacements(self: anytype) bool {
+    const Ctx = struct {
+        fn pred(_: @This(), _: anytype, _: KittyPlacement) bool {
+            return true;
+        }
+    };
+    deleteKittyPlacements(self, Ctx{}, Ctx.pred);
+    return true;
+}
+
+fn deleteAllKittyImages(self: anytype) bool {
+    clearKittyImages(self);
+    return true;
+}
+
+fn deleteKittyByIdSelector(self: anytype, id: ?u32, placement_id: u32, delete_images: bool) bool {
+    if (id == null) return true;
+    const target = id.?;
+    if (delete_images) {
+        deleteKittyImages(self, target);
+        return true;
+    }
+    const Ctx = struct {
+        target_id: u32,
+        target_pid: u32,
+        fn pred(ctx: @This(), _: anytype, placement: KittyPlacement) bool {
+            if (placement.image_id != ctx.target_id) return false;
+            if (ctx.target_pid != 0 and placement.placement_id != ctx.target_pid) return false;
+            return true;
+        }
+    };
+    deleteKittyPlacements(self, Ctx{ .target_id = target, .target_pid = placement_id }, Ctx.pred);
+    return true;
+}
+
+fn deleteKittyByPoint(self: anytype, row: u16, col: u16, delete_images: bool) bool {
+    const Ctx = struct {
+        row: u16,
+        col: u16,
+        delete_images: bool,
+        fn pred(ctx: @This(), session: anytype, placement: KittyPlacement) bool {
+            if (!kittyPlacementIntersects(placement, ctx.row, ctx.col)) return false;
+            if (ctx.delete_images) {
+                deleteKittyImages(session, placement.image_id);
+                return false;
+            }
+            return true;
+        }
+    };
+    deleteKittyPlacements(self, Ctx{ .row = row, .col = col, .delete_images = delete_images }, Ctx.pred);
+    return true;
+}
+
+fn deleteKittyByZ(self: anytype, z: i32, delete_images: bool) bool {
+    const Ctx = struct {
+        z: i32,
+        delete_images: bool,
+        fn pred(ctx: @This(), session: anytype, placement: KittyPlacement) bool {
+            if (placement.z != ctx.z) return false;
+            if (ctx.delete_images) {
+                deleteKittyImages(session, placement.image_id);
+                return false;
+            }
+            return true;
+        }
+    };
+    deleteKittyPlacements(self, Ctx{ .z = z, .delete_images = delete_images }, Ctx.pred);
+    return true;
+}
+
+fn deleteKittyByRange(self: anytype, range_start: u32, raw_range_end: u32, delete_images: bool) bool {
+    const end = if (raw_range_end > 0) raw_range_end else range_start;
+    if (range_start > end) return true;
+    const Ctx = struct {
+        start_id: u32,
+        end_id: u32,
+        delete_images: bool,
+        fn pred(ctx: @This(), session: anytype, placement: KittyPlacement) bool {
+            if (placement.image_id < ctx.start_id or placement.image_id > ctx.end_id) return false;
+            if (ctx.delete_images) {
+                deleteKittyImages(session, placement.image_id);
+                return false;
+            }
+            return true;
+        }
+    };
+    deleteKittyPlacements(self, Ctx{ .start_id = range_start, .end_id = end, .delete_images = delete_images }, Ctx.pred);
+    return true;
+}
+
+fn deleteKittyByColumn(self: anytype, col: u16, delete_images: bool) bool {
+    const Ctx = struct {
+        col: u16,
+        delete_images: bool,
+        fn pred(ctx: @This(), session: anytype, placement: KittyPlacement) bool {
+            if (!kittyPlacementIntersects(placement, placement.row, ctx.col)) return false;
+            if (ctx.delete_images) {
+                deleteKittyImages(session, placement.image_id);
+                return false;
+            }
+            return true;
+        }
+    };
+    deleteKittyPlacements(self, Ctx{ .col = col, .delete_images = delete_images }, Ctx.pred);
+    return true;
+}
+
+fn deleteKittyByRow(self: anytype, row: u16, delete_images: bool) bool {
+    const Ctx = struct {
+        row: u16,
+        delete_images: bool,
+        fn pred(ctx: @This(), session: anytype, placement: KittyPlacement) bool {
+            if (!kittyPlacementIntersects(placement, ctx.row, placement.col)) return false;
+            if (ctx.delete_images) {
+                deleteKittyImages(session, placement.image_id);
+                return false;
+            }
+            return true;
+        }
+    };
+    deleteKittyPlacements(self, Ctx{ .row = row, .delete_images = delete_images }, Ctx.pred);
+    return true;
 }
 
 fn kittyPlacementIntersects(placement: KittyPlacement, row: u16, col: u16) bool {
