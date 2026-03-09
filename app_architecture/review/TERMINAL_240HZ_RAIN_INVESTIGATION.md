@@ -770,6 +770,22 @@ Reason:
   - stop exposing stale scheduler-shaping types that app/runtime no longer owns
   - keep the workspace contract closer to the real runtime boundary
 
+## Workspace Read-Only Query Cleanup (2026-03-09)
+
+- Files:
+  - `src/terminal/core/workspace.zig`
+  - `src/app/terminal_frame_pacing_runtime.zig`
+  - `src/app/terminal_poll_runtime.zig`
+- Change:
+  - added explicit read-only workspace queries for active-session data pressure and
+    generation observation plus per-index published generation
+  - rewired app runtime pacing/poll helpers to use those queries instead of raw
+    `activeSession()` / `sessionAt()` access for read-only state
+- Intent:
+  - narrow the remaining workspace surface toward explicit contracts
+  - reduce incidental session-pointer exposure in runtime code paths that only need
+    scheduler/publication state
+
 ## Presented-Ack API Cleanup (2026-03-09)
 
 - Files:

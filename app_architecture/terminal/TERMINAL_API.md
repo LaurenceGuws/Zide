@@ -89,6 +89,10 @@ important than the exact file layout.
 | TerminalWorkspace.activateNext/Prev | - | bool | n/a | none | wraps when more than one tab exists | terminal_workspace_tests |
 | TerminalWorkspace.moveTab | tab_id, to_index | bool | n/a | may move backing entries | active tab id preserved across move | terminal_workspace_tests |
 | TerminalWorkspace.metadataAt | index | ?TabMetadata | borrowed from active session state | none | metadata is session-derived, not duplicated | terminal_workspace_tests |
+| TerminalWorkspace.activeSessionHasData | - | bool | n/a | none | read-only active-session pacing query; returns false when no tabs exist | pending |
+| TerminalWorkspace.activeSessionPublishedGeneration | - | u64 | n/a | none | read-only active-session publication query; returns 0 when no tabs exist | pending |
+| TerminalWorkspace.activeSessionCurrentGeneration | - | u64 | n/a | none | read-only active-session parser/backlog query; returns 0 when no tabs exist | pending |
+| TerminalWorkspace.publishedGenerationAt | index | ?u64 | n/a | none | read-only per-tab publication query; null when index is invalid | pending |
 | TerminalWorkspace.resizeAll | rows, cols | void/error | n/a | session-internal resize alloc behavior | applies consistently across all tabs | pending |
 | TerminalWorkspace.setCellSizeAll | cell_width, cell_height | void | n/a | none | applies consistently across all tabs | pending |
 | TerminalWorkspace.pollForFrame | input_active_index, has_input | bool/error | n/a | none | workspace-owned polling fairness policy; return value means published generation advanced for the tracked active session | pending |

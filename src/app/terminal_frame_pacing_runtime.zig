@@ -194,9 +194,7 @@ fn hasOutputPressure(state: anytype) bool {
     if (!@hasField(State, "terminal_workspace")) return false;
 
     if (state.terminal_workspace) |*workspace| {
-        if (workspace.activeSession()) |session| {
-            return session.hasData();
-        }
+        return workspace.activeSessionHasData();
     }
     return false;
 }
@@ -206,9 +204,7 @@ fn latestPublishedGeneration(state: anytype) u64 {
     if (!@hasField(State, "terminal_workspace")) return 0;
 
     if (state.terminal_workspace) |*workspace| {
-        if (workspace.activeSession()) |session| {
-            return session.publishedGeneration();
-        }
+        return workspace.activeSessionPublishedGeneration();
     }
     return 0;
 }
@@ -218,9 +214,7 @@ fn latestCurrentGeneration(state: anytype) u64 {
     if (!@hasField(State, "terminal_workspace")) return 0;
 
     if (state.terminal_workspace) |*workspace| {
-        if (workspace.activeSession()) |session| {
-            return session.currentGeneration();
-        }
+        return workspace.activeSessionCurrentGeneration();
     }
     return 0;
 }

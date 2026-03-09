@@ -44,6 +44,7 @@ That orchestration now lives in `src/terminal/core/workspace.zig` as `TerminalWo
 - `closeTab(id)` / `closeActiveTab()` -> destroys session and normalizes active index.
 - `activateTab(id)` / `activateIndex(index)` / `activateNext()` / `activatePrev()`.
 - `moveTab(id, to_index)` -> ordered move with active-tab preservation.
+- `activeSessionHasData()` / `activeSessionPublishedGeneration()` / `activeSessionCurrentGeneration()` / `publishedGenerationAt(index)` -> read-only workspace queries for runtime pacing/publication code.
 - `setCellSizeAll()` + `resizeAll()` -> workspace-wide geometry propagation.
 - `pollForFrame(active_input_index, has_input)` -> workspace-owned resource-aware polling across tabs; budget shaping is internal to workspace polling, not part of the public contract.
 
