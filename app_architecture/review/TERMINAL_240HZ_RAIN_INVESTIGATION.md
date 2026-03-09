@@ -614,3 +614,17 @@ Reason:
 - Intent:
   - reduce widget-side maintenance surface
   - avoid drift between dead snapshot helpers and the actual visible-cache input path
+
+## Full-Invalidate API Cleanup (2026-03-09)
+
+- Files:
+  - `src/terminal/core/terminal_session.zig`
+  - `src/terminal/model/screen/screen.zig`
+  - `src/terminal/model/screen/grid.zig`
+- Change:
+  - removed the dead `TerminalSession.markDirty()` and `Screen.markDirtyAll()` escape-hatch APIs
+  - removed the matching `session_mark_dirty_api` and `screen_mark_dirty_api` full-dirty reasons
+  - kept `TerminalGrid.markDirtyAll()` because grid resize still needs an internal whole-grid invalidate helper
+- Intent:
+  - narrow the remaining “formal full redraw” surface to semantic cases that are still real
+  - stop advertising unused escape hatches as part of the current terminal design
