@@ -15,6 +15,8 @@ pub const ScrollbackInfo = struct {
     cols: usize,
 };
 
+pub const default_wheel_lines_per_step: isize = 3;
+
 pub fn scrollbackCount(self: anytype) usize {
     if (self.active == .alt) return 0;
     self.history.ensureViewCache(self.primary.grid.cols, self.primary.defaultCell());
@@ -99,8 +101,40 @@ pub fn setScrollOffsetLocked(self: anytype, offset: usize) void {
     self.updateViewCacheForScroll();
     const log = app_logger.logger("terminal.core");
     const max_offset = self.history.maxScrollOffset(self.primary.grid.rows);
-    log.logf(.info, "set scroll offset={d} max={d}", .{ self.history.scrollOffset(), max_offset });
-    log.logStdout(.info, "set scroll offset={d} max={d}", .{ self.history.scrollOffset(), max_offset });
+    log.logf(.debug, "set scroll offset={d} max={d}", .{ self.history.scrollOffset(), max_offset });
+}
+
+pub fn resetToLiveBottomLocked(self: anytype) bool {
+    if (self.active == .alt) return false;
+    if (self.history.scrollOffset() == 0) return false;
+    setScrollOffsetLocked(self, 0);
+    return true;
+}
+
+pub fn setScrollOffsetFromNormalizedTrackLocked(self: anytype, track_ratio: f32) ?usize {
+    if (self.active == .alt) return null;
+    self.history.ensureViewCache(self.primary.grid.cols, self.primary.defaultCell());
+    const max_offset = self.history.maxScrollOffset(self.primary.grid.rows);
+    const clamped = std.math.clamp(track_ratio, 0.0, 1.0);
+    const target_offset = @as(usize, @intFromFloat(@round(@as(f32, @floatFromInt(max_offset)) * (1.0 - clamped))));
+    if (target_offset == self.history.scrollOffset()) return null;
+    setScrollOffsetLocked(self, target_offset);
+    return self.history.scrollOffset();
+}
+
+pub fn scrollSelectionDragLocked(self: anytype, toward_top: bool) bool {
+    if (self.active == .alt) return false;
+    scrollByLocked(self, if (toward_top) 1 else -1);
+    return true;
+}
+
+pub fn scrollWheelLocked(self: anytype, wheel_steps: i32) bool {
+    if (self.active == .alt) return false;
+    if (wheel_steps == 0) return false;
+    const before = self.history.scrollOffset();
+    const delta: isize = @as(isize, @intCast(wheel_steps)) * default_wheel_lines_per_step;
+    scrollByLocked(self, delta);
+    return self.history.scrollOffset() != before;
 }
 
 pub fn scrollBy(self: anytype, delta: isize) void {
@@ -120,6 +154,5 @@ pub fn scrollByLocked(self: anytype, delta: isize) void {
     self.updateViewCacheForScroll();
     const log = app_logger.logger("terminal.core");
     const max_offset = self.history.maxScrollOffset(self.primary.grid.rows);
-    log.logf(.info, "scroll by delta={d} offset={d} max={d}", .{ delta, self.history.scrollOffset(), max_offset });
-    log.logStdout(.info, "scroll by delta={d} offset={d} max={d}", .{ delta, self.history.scrollOffset(), max_offset });
+    log.logf(.debug, "scroll by delta={d} offset={d} max={d}", .{ delta, self.history.scrollOffset(), max_offset });
 }
