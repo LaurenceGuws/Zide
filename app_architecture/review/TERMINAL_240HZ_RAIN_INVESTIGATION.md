@@ -754,6 +754,21 @@ Reason:
   - keep publication lifecycle ownership moving out of the widget layer
   - reduce renderer-side knowledge of backend dirty-retirement policy
 
+## Presented-Ack Policy Cleanup (2026-03-09)
+
+- Files:
+  - `src/terminal/core/terminal_session.zig`
+  - `src/ui/widgets/terminal_widget_draw.zig`
+- Change:
+  - removed the widget-supplied `sync_updates` policy bit from
+    `acknowledgePresentedGeneration(...)`
+  - backend ack logic now derives the correct dirty-retirement path from the
+    published render-cache generation and has a regression test covering sync and
+    non-sync retirement behavior
+- Intent:
+  - keep renderer-side publication lifecycle knowledge shrinking toward zero
+  - make dirty-retirement policy backend-owned instead of cache-consumer owned
+
 ## Input Reset Extraction (2026-03-09)
 
 - Files:

@@ -1679,7 +1679,7 @@ pub fn draw(
     }
 
     if (updated or cache.dirty == .none) {
-        dirty_clear_ok = self.session.acknowledgePresentedGeneration(cache.generation, sync_updates);
+        dirty_clear_ok = self.session.acknowledgePresentedGeneration(cache.generation);
     }
     overlay_ms = time_utils.secondsToMs(app_shell.getTime() - overlay_phase_start);
 
