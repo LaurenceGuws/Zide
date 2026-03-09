@@ -86,13 +86,13 @@ pub const SessionFacade = struct {
             .parse_semantic_prompt_fn = struct {
                 fn call(ctx: *anyopaque, text: []const u8) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    osc_semantic.parseSemanticPrompt(s, text);
+                    osc_semantic.parseSemanticPrompt(osc_semantic.SessionFacade.from(s), text);
                 }
             }.call,
             .parse_user_var_fn = struct {
                 fn call(ctx: *anyopaque, text: []const u8) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    osc_semantic.parseUserVar(s, text);
+                    osc_semantic.parseUserVar(osc_semantic.SessionFacade.from(s), text);
                 }
             }.call,
         };

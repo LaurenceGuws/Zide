@@ -2,7 +2,48 @@ const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const osc_util = @import("osc_util.zig");
 
-pub fn parseSemanticPrompt(self: anytype, text: []const u8) void {
+pub const SessionFacade = struct {
+    ctx: *anyopaque,
+    parse_semantic_prompt_fn: *const fn (ctx: *anyopaque, text: []const u8) void,
+    parse_user_var_fn: *const fn (ctx: *anyopaque, text: []const u8) void,
+
+    pub fn from(session: anytype) SessionFacade {
+        const SessionPtr = @TypeOf(session);
+        return .{
+            .ctx = @ptrCast(session),
+            .parse_semantic_prompt_fn = struct {
+                fn call(ctx: *anyopaque, text: []const u8) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    parseSemanticPromptOnSession(s, text);
+                }
+            }.call,
+            .parse_user_var_fn = struct {
+                fn call(ctx: *anyopaque, text: []const u8) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    parseUserVarOnSession(s, text);
+                }
+            }.call,
+        };
+    }
+
+    pub fn parseSemanticPrompt(self: *const SessionFacade, text: []const u8) void {
+        self.parse_semantic_prompt_fn(self.ctx, text);
+    }
+
+    pub fn parseUserVar(self: *const SessionFacade, text: []const u8) void {
+        self.parse_user_var_fn(self.ctx, text);
+    }
+};
+
+pub fn parseSemanticPrompt(session: SessionFacade, text: []const u8) void {
+    session.parseSemanticPrompt(text);
+}
+
+pub fn parseUserVar(session: SessionFacade, text: []const u8) void {
+    session.parseUserVar(text);
+}
+
+fn parseSemanticPromptOnSession(self: anytype, text: []const u8) void {
     if (text.len == 0) return;
     const log = app_logger.logger("terminal.osc");
     const kind = text[0];
@@ -46,7 +87,7 @@ pub fn parseSemanticPrompt(self: anytype, text: []const u8) void {
     }
 }
 
-pub fn parseUserVar(self: anytype, text: []const u8) void {
+fn parseUserVarOnSession(self: anytype, text: []const u8) void {
     const log = app_logger.logger("terminal.osc");
     const prefix = "SetUserVar=";
     if (!std.mem.startsWith(u8, text, prefix)) return;
