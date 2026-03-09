@@ -356,7 +356,7 @@ Statuses are strict:
   - 2026-03-09: DCS/CSI/OSC/kitty reply paths and input-mode queries were rewired onto the session-owned write contract, while reply-byte unit tests were kept intact by teaching the test harnesses the same locked-writer surface.
 
 3) Session state/publication locking cleanup
-- status: `in_progress`
+- status: `done`
 - priority: `P0`
 - scope:
   - remove unlocked mutation/publication paths such as default-color/theme publication
