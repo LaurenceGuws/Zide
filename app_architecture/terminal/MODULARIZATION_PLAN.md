@@ -521,6 +521,7 @@ Statuses are strict:
   - 2026-03-09: sixth slice landed on feature-branch work: demoted high-frequency `terminal.input` send-path logs (`sendKey*`, `sendKeypad*`, `sendChar*`, `sendText`) from `.info` to `.debug` to keep default logs focused on operational signals.
   - 2026-03-09: seventh slice landed on feature-branch work: demoted high-frequency scrollback view-offset logs to `.debug` and removed duplicate stdout emissions in `scrollback_view`, reducing scroll-driven log spam.
   - 2026-03-09: eighth slice landed on feature-branch work: demoted raw CSI-byte tracing in `io_threads.logCsiSequences(...)` from `.info` to `.debug`, keeping the diagnostic path available without polluting default-info output.
+  - 2026-03-09: ninth slice landed on feature-branch work: removed duplicate stdout info logs for terminal lifecycle init/resize (`terminal_session`, `resize_reflow`), keeping one structured core log signal per event.
 
 11) Kitty subsystem split
 - status: `todo`
