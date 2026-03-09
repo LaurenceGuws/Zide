@@ -34,10 +34,8 @@ fn launchCwdForWorkspaceNewTab(state: anytype, workspace: *TerminalWorkspace) !L
     switch (state.terminal_new_tab_start_location) {
         .default => return fallbackDefaultStartLocation(state),
         .current => {
-            if (workspace.activeSession()) |active| {
-                const cwd = active.currentCwd();
-                if (cwd.len > 0) return .{ .value = cwd };
-            }
+            const cwd = workspace.activeSessionCwd();
+            if (cwd.len > 0) return .{ .value = cwd };
             return fallbackDefaultStartLocation(state);
         },
     }

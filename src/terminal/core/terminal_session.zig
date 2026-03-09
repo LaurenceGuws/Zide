@@ -99,6 +99,13 @@ const ActiveScreen = enum {
     alt,
 };
 
+fn isNavigationKey(key: Key) bool {
+    return switch (key) {
+        VTERM_KEY_LEFT, VTERM_KEY_RIGHT, VTERM_KEY_UP, VTERM_KEY_DOWN, VTERM_KEY_HOME, VTERM_KEY_END => true,
+        else => false,
+    };
+}
+
 /// Minimal terminal stub so the UI panel stays wired while backend is removed.
 pub const TerminalSession = struct {
     allocator: std.mem.Allocator,
@@ -162,6 +169,7 @@ pub const TerminalSession = struct {
     column_mode_132: bool,
     output_pending: std.atomic.Value(bool),
     output_generation: std.atomic.Value(u64),
+    presented_generation: std.atomic.Value(u64),
     input_pressure: std.atomic.Value(bool),
     alt_exit_pending: std.atomic.Value(bool),
     alt_exit_time_ms: std.atomic.Value(i64),
@@ -172,7 +180,6 @@ pub const TerminalSession = struct {
     view_cache_request_offset: std.atomic.Value(u64),
     alt_last_active: bool,
     clear_generation: std.atomic.Value(u64),
-    force_full_damage: std.atomic.Value(bool),
     saved_charset: SavedCharsetState,
     child_exited: std.atomic.Value(bool),
     child_exit_code: std.atomic.Value(i32),
@@ -281,6 +288,7 @@ pub const TerminalSession = struct {
             .column_mode_132 = false,
             .output_pending = std.atomic.Value(bool).init(false),
             .output_generation = std.atomic.Value(u64).init(0),
+            .presented_generation = std.atomic.Value(u64).init(0),
             .input_pressure = std.atomic.Value(bool).init(false),
             .alt_exit_pending = std.atomic.Value(bool).init(false),
             .alt_exit_time_ms = std.atomic.Value(i64).init(-1),
@@ -291,7 +299,6 @@ pub const TerminalSession = struct {
             .view_cache_request_offset = std.atomic.Value(u64).init(0),
             .alt_last_active = false,
             .clear_generation = std.atomic.Value(u64).init(0),
-            .force_full_damage = std.atomic.Value(bool).init(false),
             .saved_charset = .{},
             .child_exited = std.atomic.Value(bool).init(false),
             .child_exit_code = std.atomic.Value(i32).init(-1),
@@ -313,6 +320,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn updateInputSnapshot(self: *TerminalSession) void {
+        const screen = self.activeScreenConst();
         self.input_snapshot.app_cursor_keys.store(self.app_cursor_keys, .release);
         self.input_snapshot.app_keypad.store(self.app_keypad, .release);
         self.input_snapshot.key_mode_flags.store(self.keyModeFlags(), .release);
@@ -321,6 +329,17 @@ pub const TerminalSession = struct {
         self.input_snapshot.mouse_mode_any.store(self.input.mouse_mode_any, .release);
         self.input_snapshot.mouse_mode_sgr.store(self.input.mouse_mode_sgr, .release);
         self.input_snapshot.focus_reporting.store(self.focus_reporting, .release);
+        self.input_snapshot.bracketed_paste.store(self.bracketed_paste, .release);
+        self.input_snapshot.auto_repeat.store(self.auto_repeat, .release);
+        self.input_snapshot.mouse_alternate_scroll.store(self.mouse_alternate_scroll, .release);
+        self.input_snapshot.alt_active.store(self.active == .alt, .release);
+        self.input_snapshot.screen_rows.store(screen.grid.rows, .release);
+        self.input_snapshot.screen_cols.store(screen.grid.cols, .release);
+    }
+
+    fn setActiveScreenMode(self: *TerminalSession, active: ActiveScreen) void {
+        self.active = active;
+        self.updateInputSnapshot();
     }
 
     fn hashRow(cells: []const Cell) u64 {
@@ -374,7 +393,7 @@ pub const TerminalSession = struct {
         self.primary.updateDefaultColors(old_attrs, new_attrs);
         self.alt.updateDefaultColors(old_attrs, new_attrs);
         self.history.updateDefaultColors(old_attrs.fg, old_attrs.bg, new_attrs.fg, new_attrs.bg);
-        self.force_full_damage.store(true, .release);
+        self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
     pub fn setAnsiColors(self: *TerminalSession, colors: [16]types.Color) void {
@@ -384,7 +403,6 @@ pub const TerminalSession = struct {
             self.palette_default[i] = colors[i];
             self.palette_current[i] = colors[i];
         }
-        self.force_full_damage.store(true, .release);
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
@@ -394,7 +412,6 @@ pub const TerminalSession = struct {
         self.primary.updateAnsiColors(old_colors, new_colors);
         self.alt.updateAnsiColors(old_colors, new_colors);
         self.history.updateAnsiColors(old_colors, new_colors);
-        self.force_full_damage.store(true, .release);
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
@@ -512,8 +529,46 @@ pub const TerminalSession = struct {
         self.state_mutex.unlock();
     }
 
-    pub fn currentGeneration(self: *TerminalSession) u64 {
+    pub fn currentGeneration(self: *const TerminalSession) u64 {
         return self.output_generation.load(.acquire);
+    }
+
+    pub fn publishedGeneration(self: *const TerminalSession) u64 {
+        const idx = self.render_cache_index.load(.acquire);
+        return self.render_caches[idx].generation;
+    }
+
+    pub fn presentedGeneration(self: *const TerminalSession) u64 {
+        return self.presented_generation.load(.acquire);
+    }
+
+    pub fn notePresentedGeneration(self: *TerminalSession, generation: u64) void {
+        self.presented_generation.store(generation, .release);
+    }
+
+    pub fn acknowledgePresentedGeneration(self: *TerminalSession, generation: u64) bool {
+        self.notePresentedGeneration(generation);
+        if (self.renderCacheSyncUpdatesActiveForGeneration(generation)) {
+            return self.clearPublishedDamageIfGeneration(generation, false);
+        }
+        return self.clearPublishedDamageIfGeneration(generation, true);
+    }
+
+    fn renderCacheSyncUpdatesActiveForGeneration(self: *TerminalSession, generation: u64) bool {
+        inline for (0..2) |i| {
+            if (self.render_caches[i].generation == generation) {
+                return self.render_caches[i].sync_updates_active;
+            }
+        }
+        return self.sync_updates_active;
+    }
+
+    pub fn hasPublishedGenerationBacklog(self: *TerminalSession) bool {
+        return self.currentGeneration() != self.publishedGeneration();
+    }
+
+    pub fn pollBacklogHint(self: *TerminalSession) bool {
+        return self.hasData() or self.hasPublishedGenerationBacklog();
     }
 
     pub fn sendKey(self: *TerminalSession, key: Key, mod: Modifier) !void {
@@ -521,19 +576,21 @@ pub const TerminalSession = struct {
     }
 
     pub fn sendKeyAction(self: *TerminalSession, key: Key, mod: Modifier, action: input_mod.KeyAction) !void {
-        if (action == .repeat and !self.auto_repeat) return;
+        if (action == .repeat and !self.input_snapshot.auto_repeat.load(.acquire)) return;
         const log = app_logger.logger("terminal.input");
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
         const app_cursor = input_snapshot.app_cursor_keys.load(.acquire);
-        log.logf(.info, "sendKey key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x}", .{
-            keyName(key),
-            key,
-            mod,
-            @tagName(action),
-            app_cursor,
-            key_mode_flags,
-        });
+        if (isNavigationKey(key)) {
+            log.logf(.info, "sendKey key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x}", .{
+                keyName(key),
+                key,
+                mod,
+                @tagName(action),
+                app_cursor,
+                key_mode_flags,
+            });
+        }
         if (self.pty) |*pty| {
             self.pty_write_mutex.lock();
             defer self.pty_write_mutex.unlock();
@@ -548,9 +605,15 @@ pub const TerminalSession = struct {
                     else => "",
                 };
                 if (seq.len > 0) {
+                    if (isNavigationKey(key)) {
+                        log.logf(.info, "sendKey path=app_cursor seq_len={d}", .{seq.len});
+                    }
                     _ = try pty.write(seq);
                     return;
                 }
+            }
+            if (isNavigationKey(key)) {
+                log.logf(.info, "sendKey path=encoded", .{});
             }
             _ = try input_mod.sendKeyAction(pty, key, mod, key_mode_flags, action);
         }
@@ -563,20 +626,22 @@ pub const TerminalSession = struct {
         action: input_mod.KeyAction,
         alternate_meta: ?types.KeyboardAlternateMetadata,
     ) !void {
-        if (action == .repeat and !self.auto_repeat) return;
+        if (action == .repeat and !self.input_snapshot.auto_repeat.load(.acquire)) return;
         const log = app_logger.logger("terminal.input");
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
         const app_cursor = input_snapshot.app_cursor_keys.load(.acquire);
-        log.logf(.info, "sendKey(meta) key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x} alt_meta={any}", .{
-            keyName(key),
-            key,
-            mod,
-            @tagName(action),
-            app_cursor,
-            key_mode_flags,
-            alternate_meta != null,
-        });
+        if (isNavigationKey(key)) {
+            log.logf(.info, "sendKey(meta) key={s} code={d} mod=0x{x} action={s} app_cursor={any} key_mode=0x{x} alt_meta={any}", .{
+                keyName(key),
+                key,
+                mod,
+                @tagName(action),
+                app_cursor,
+                key_mode_flags,
+                alternate_meta != null,
+            });
+        }
         if (self.pty) |*pty| {
             self.pty_write_mutex.lock();
             defer self.pty_write_mutex.unlock();
@@ -591,9 +656,15 @@ pub const TerminalSession = struct {
                     else => "",
                 };
                 if (seq.len > 0) {
+                    if (isNavigationKey(key)) {
+                        log.logf(.info, "sendKey(meta) path=app_cursor seq_len={d}", .{seq.len});
+                    }
                     _ = try pty.write(seq);
                     return;
                 }
+            }
+            if (isNavigationKey(key)) {
+                log.logf(.info, "sendKey(meta) path=encoded", .{});
             }
             _ = try input_mod.sendKeyActionEvent(pty, .{
                 .key = key,
@@ -610,7 +681,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn sendKeypadAction(self: *TerminalSession, key: input_mod.KeypadKey, mod: Modifier, action: input_mod.KeyAction) !void {
-        if (action == .repeat and !self.auto_repeat) return;
+        if (action == .repeat and !self.input_snapshot.auto_repeat.load(.acquire)) return;
         const log = app_logger.logger("terminal.input");
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
@@ -640,7 +711,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn sendCharAction(self: *TerminalSession, char: u32, mod: Modifier, action: input_mod.KeyAction) !void {
-        if (action == .repeat and !self.auto_repeat) return;
+        if (action == .repeat and !self.input_snapshot.auto_repeat.load(.acquire)) return;
         const log = app_logger.logger("terminal.input");
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
@@ -666,7 +737,7 @@ pub const TerminalSession = struct {
         action: input_mod.KeyAction,
         alternate_meta: ?types.KeyboardAlternateMetadata,
     ) !void {
-        if (action == .repeat and !self.auto_repeat) return;
+        if (action == .repeat and !self.input_snapshot.auto_repeat.load(.acquire)) return;
         const log = app_logger.logger("terminal.input");
         const input_snapshot = self.input_snapshot;
         const key_mode_flags = input_snapshot.key_mode_flags.load(.acquire);
@@ -715,8 +786,8 @@ pub const TerminalSession = struct {
 
     pub fn reportAlternateScrollWheel(self: *TerminalSession, wheel_steps: i32, mod: Modifier) !bool {
         if (wheel_steps == 0) return false;
-        if (!self.mouse_alternate_scroll) return false;
-        if (!self.isAltActive()) return false;
+        if (!self.input_snapshot.mouse_alternate_scroll.load(.acquire)) return false;
+        if (!self.input_snapshot.alt_active.load(.acquire)) return false;
         var remaining = wheel_steps;
         while (remaining != 0) {
             const key: Key = if (remaining > 0) VTERM_KEY_UP else VTERM_KEY_DOWN;
@@ -812,7 +883,7 @@ pub const TerminalSession = struct {
         self.primary.setCursor(0, 0);
         self.alt.setCursor(0, 0);
         _ = self.clear_generation.fetchAdd(1, .acq_rel);
-        self.force_full_damage.store(true, .release);
+        self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
     pub fn setCellSize(self: *TerminalSession, cell_width: u16, cell_height: u16) void {
@@ -855,7 +926,6 @@ pub const TerminalSession = struct {
         if (bytes.len == 0) return;
         self.parser.handleSlice(self, bytes);
         _ = self.output_generation.fetchAdd(1, .acq_rel);
-        self.force_full_damage.store(true, .release);
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
@@ -871,7 +941,6 @@ pub const TerminalSession = struct {
         const screen = self.activeScreen();
         const blank_cell = screen.blankCell();
         screen.eraseDisplay(mode, blank_cell);
-        self.force_full_damage.store(true, .release);
         if (mode == 2 or mode == 3) {
             self.clearSelection();
             _ = self.clear_generation.fetchAdd(1, .acq_rel);
@@ -882,7 +951,6 @@ pub const TerminalSession = struct {
         const screen = self.activeScreen();
         const blank_cell = screen.blankCell();
         screen.eraseLine(mode, blank_cell);
-        self.force_full_damage.store(true, .release);
     }
 
     pub fn insertChars(self: *TerminalSession, count: usize) void {
@@ -1018,6 +1086,50 @@ pub const TerminalSession = struct {
 
     pub fn keyModeQuery(self: *TerminalSession) void {
         input_modes.keyModeQuery(self);
+    }
+
+    pub fn setAppCursorKeys(self: *TerminalSession, enabled: bool) void {
+        input_modes.setAppCursorKeys(self, enabled);
+    }
+
+    pub fn setAutoRepeat(self: *TerminalSession, enabled: bool) void {
+        input_modes.setAutoRepeat(self, enabled);
+    }
+
+    pub fn setBracketedPaste(self: *TerminalSession, enabled: bool) void {
+        input_modes.setBracketedPaste(self, enabled);
+    }
+
+    pub fn setFocusReporting(self: *TerminalSession, enabled: bool) void {
+        input_modes.setFocusReporting(self, enabled);
+    }
+
+    pub fn setMouseAlternateScroll(self: *TerminalSession, enabled: bool) void {
+        input_modes.setMouseAlternateScroll(self, enabled);
+    }
+
+    pub fn setMouseModeX10(self: *TerminalSession, enabled: bool) void {
+        input_modes.setMouseModeX10(self, enabled);
+    }
+
+    pub fn setMouseModeButton(self: *TerminalSession, enabled: bool) void {
+        input_modes.setMouseModeButton(self, enabled);
+    }
+
+    pub fn setMouseModeAny(self: *TerminalSession, enabled: bool) void {
+        input_modes.setMouseModeAny(self, enabled);
+    }
+
+    pub fn setMouseModeSgr(self: *TerminalSession, enabled: bool) void {
+        input_modes.setMouseModeSgr(self, enabled);
+    }
+
+    pub fn setMouseModeSgrPixels(self: *TerminalSession, enabled: bool) void {
+        input_modes.setMouseModeSgrPixels(self, enabled);
+    }
+
+    pub fn resetInputModes(self: *TerminalSession) void {
+        input_modes.resetInputModes(self);
     }
 
     pub fn setCursorStyle(self: *TerminalSession, mode: i32) void {
@@ -1156,19 +1268,19 @@ pub const TerminalSession = struct {
         }
         self.history.saveScrollOffset();
         self.clearSelection();
-        self.active = .alt;
+        self.setActiveScreenMode(.alt);
         kitty_mod.clearKittyImages(self);
         if (clear) {
             self.activeScreen().clear();
             self.activeScreen().setCursor(0, 0);
         }
-        self.activeScreen().markDirtyAll();
+        self.activeScreen().markDirtyAllWithReason(.alt_enter, @src());
     }
 
     pub fn exitAltScreen(self: *TerminalSession, restore_cursor: bool) void {
         if (!self.isAltActive()) return;
         kitty_mod.clearKittyImages(self);
-        self.active = .primary;
+        self.setActiveScreenMode(.primary);
         self.alt_exit_pending.store(true, .release);
         self.alt_exit_time_ms.store(std.time.milliTimestamp(), .release);
         self.history.restoreScrollOffset(self.primary.grid.rows);
@@ -1176,7 +1288,7 @@ pub const TerminalSession = struct {
         if (restore_cursor) {
             self.restoreCursor();
         }
-        self.activeScreen().markDirtyAll();
+        self.activeScreen().markDirtyAllWithReason(.alt_exit, @src());
     }
 
     pub fn snapshot(self: *TerminalSession) TerminalSnapshot {
@@ -1217,10 +1329,6 @@ pub const TerminalSession = struct {
     pub fn setSyncUpdates(self: *TerminalSession, enabled: bool) void {
         if (self.sync_updates_active == enabled) return;
         self.sync_updates_active = enabled;
-        if (!enabled) {
-            self.activeScreen().markDirtyAll();
-        }
-        self.force_full_damage.store(true, .release);
         const offset: usize = self.history.scrollOffset();
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), offset);
     }
@@ -1248,26 +1356,13 @@ pub const TerminalSession = struct {
         return self.title;
     }
 
-    pub fn clearDirty(self: *TerminalSession) void {
-        self.activeScreen().clearDirty();
-    }
-
-    pub fn clearDirtyIfGeneration(self: *TerminalSession, expected_generation: u64) bool {
+    fn clearPublishedDamageIfGeneration(self: *TerminalSession, expected_generation: u64, clear_screen_dirty: bool) bool {
         self.lock();
         defer self.unlock();
         if (self.output_generation.load(.acquire) != expected_generation) return false;
-        self.activeScreen().clearDirty();
-        inline for (0..2) |i| {
-            self.render_caches[i].dirty = .none;
-            self.render_caches[i].damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
+        if (clear_screen_dirty) {
+            self.activeScreen().clearDirty();
         }
-        return true;
-    }
-
-    pub fn clearRenderCacheDirtyIfGeneration(self: *TerminalSession, expected_generation: u64) bool {
-        self.lock();
-        defer self.unlock();
-        if (self.output_generation.load(.acquire) != expected_generation) return false;
         inline for (0..2) |i| {
             self.render_caches[i].dirty = .none;
             self.render_caches[i].damage = .{ .start_row = 0, .end_row = 0, .start_col = 0, .end_col = 0 };
@@ -1296,7 +1391,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn bracketedPasteEnabled(self: *TerminalSession) bool {
-        return self.bracketed_paste;
+        return self.input_snapshot.bracketed_paste.load(.acquire);
     }
 
     pub fn focusReportingEnabled(self: *TerminalSession) bool {
@@ -1304,11 +1399,11 @@ pub const TerminalSession = struct {
     }
 
     pub fn autoRepeatEnabled(self: *TerminalSession) bool {
-        return self.auto_repeat;
+        return self.input_snapshot.auto_repeat.load(.acquire);
     }
 
     pub fn mouseAlternateScrollEnabled(self: *TerminalSession) bool {
-        return self.mouse_alternate_scroll;
+        return self.input_snapshot.mouse_alternate_scroll.load(.acquire);
     }
 
     pub fn kittyPasteEvents5522Enabled(self: *TerminalSession) bool {
@@ -1421,15 +1516,6 @@ pub const TerminalSession = struct {
     } {
         return self.activeScreenConst().getDamage();
     }
-
-    pub fn markDirty(self: *TerminalSession) void {
-        self.lock();
-        defer self.unlock();
-        self.activeScreen().markDirtyAll();
-        self.inactiveScreen().markDirtyAll();
-        _ = self.output_generation.fetchAdd(1, .acq_rel);
-        self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
-    }
 };
 
 pub const InputSnapshot = struct {
@@ -1441,6 +1527,12 @@ pub const InputSnapshot = struct {
     mouse_mode_any: std.atomic.Value(bool),
     mouse_mode_sgr: std.atomic.Value(bool),
     focus_reporting: std.atomic.Value(bool),
+    bracketed_paste: std.atomic.Value(bool),
+    auto_repeat: std.atomic.Value(bool),
+    mouse_alternate_scroll: std.atomic.Value(bool),
+    alt_active: std.atomic.Value(bool),
+    screen_rows: std.atomic.Value(u16),
+    screen_cols: std.atomic.Value(u16),
 
     pub fn init() InputSnapshot {
         return .{
@@ -1452,6 +1544,12 @@ pub const InputSnapshot = struct {
             .mouse_mode_any = std.atomic.Value(bool).init(false),
             .mouse_mode_sgr = std.atomic.Value(bool).init(false),
             .focus_reporting = std.atomic.Value(bool).init(false),
+            .bracketed_paste = std.atomic.Value(bool).init(false),
+            .auto_repeat = std.atomic.Value(bool).init(true),
+            .mouse_alternate_scroll = std.atomic.Value(bool).init(true),
+            .alt_active = std.atomic.Value(bool).init(false),
+            .screen_rows = std.atomic.Value(u16).init(0),
+            .screen_cols = std.atomic.Value(u16).init(0),
         };
     }
 };
@@ -1553,3 +1651,578 @@ pub const Modifier = types.Modifier;
 pub const MouseButton = types.MouseButton;
 pub const MouseEventKind = types.MouseEventKind;
 pub const MouseEvent = types.MouseEvent;
+
+test "full-region scroll publishes partial cache damage at live bottom" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 3, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row: usize = 0;
+    while (row < 3) : (row += 1) {
+        var col: usize = 0;
+        while (col < 4) : (col += 1) {
+            var cell = base;
+            cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(row));
+            session.primary.grid.cells.items[row * 4 + col] = cell;
+        }
+    }
+    session.primary.setCursor(2, 0);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.scrollUp();
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(i32, 1), cache.viewport_shift_rows);
+    try std.testing.expectEqual(@as(usize, 1), session.scrollbackCount());
+}
+
+test "feedOutputBytes keeps incremental damage after baseline publish" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 1, 4);
+    defer session.deinit();
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.feedOutputBytes("A");
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_col);
+}
+
+test "acknowledgePresentedGeneration derives sync dirty retirement from cache" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 1, 4);
+    defer session.deinit();
+
+    session.primary.markDirtyAllWithReason(.unknown, @src());
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    const normal_generation = session.renderCache().generation;
+    try std.testing.expect(session.acknowledgePresentedGeneration(normal_generation));
+    try std.testing.expectEqual(Dirty.none, session.primary.grid.dirty);
+
+    session.primary.markDirtyAllWithReason(.unknown, @src());
+    session.setSyncUpdates(true);
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    const sync_generation = session.renderCache().generation;
+    try std.testing.expect(session.acknowledgePresentedGeneration(sync_generation));
+    try std.testing.expectEqual(Dirty.full, session.primary.grid.dirty);
+}
+
+test "row hash refinement does not skip unpresented top rows" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 3, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row: usize = 0;
+    while (row < 3) : (row += 1) {
+        var col: usize = 0;
+        while (col < 4) : (col += 1) {
+            var cell = base;
+            cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(row));
+            session.primary.grid.cells.items[row * 4 + col] = cell;
+        }
+    }
+    session.primary.setCursor(2, 0);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.scrollUp();
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    session.scrollUp();
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expect(cache.dirty_rows.items[0]);
+}
+
+test "setSyncUpdates enable does not force redraw when screen is otherwise clean" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.setSyncUpdates(true);
+
+    const cache = session.renderCache();
+    try std.testing.expect(session.syncUpdatesActive());
+    try std.testing.expectEqual(Dirty.none, cache.dirty);
+    try std.testing.expectEqual(@as(u64, 0), cache.full_dirty_seq);
+}
+
+test "setSyncUpdates disable stays clean when no buffered changes exist" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    session.setSyncUpdates(true);
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.setSyncUpdates(false);
+
+    const cache = session.renderCache();
+    try std.testing.expect(!session.syncUpdatesActive());
+    try std.testing.expectEqual(Dirty.none, cache.dirty);
+}
+
+test "setSyncUpdates disable preserves buffered partial damage" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.setSyncUpdates(true);
+
+    var cell = session.primary.defaultCell();
+    cell.codepoint = 'Z';
+    session.primary.grid.cells.items[0] = cell;
+    session.primary.grid.markDirtyRange(0, 0, 0, 0);
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    session.setSyncUpdates(false);
+
+    const cache = session.renderCache();
+    try std.testing.expect(!session.syncUpdatesActive());
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_col);
+}
+
+test "visible history changes publish partial cache damage without force-full" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row_a = [_]Cell{ base, base, base, base };
+    var row_b = [_]Cell{ base, base, base, base };
+    for (&row_a, 0..) |*cell, col| cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(col));
+    for (&row_b, 0..) |*cell, col| cell.codepoint = @as(u32, 'E') + @as(u32, @intCast(col));
+
+    session.history.pushRow(&row_a, false, base);
+    session.history.pushRow(&row_b, false, base);
+    session.history.ensureViewCache(session.primary.grid.cols, base);
+    session.history.setScrollOffset(session.primary.grid.rows, 2);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    const new_fg = Color{ .r = 0x11, .g = 0x22, .b = 0x33, .a = 0xff };
+    session.history.updateDefaultColors(base.attrs.fg, base.attrs.bg, new_fg, base.attrs.bg);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expect(cache.dirty_rows.items[0]);
+    try std.testing.expectEqual(new_fg, cache.cells.items[0].attrs.fg);
+}
+
+test "visible history changes without presented diff base stay partial" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row_a = [_]Cell{ base, base, base, base };
+    var row_b = [_]Cell{ base, base, base, base };
+    for (&row_a, 0..) |*cell, col| cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(col));
+    for (&row_b, 0..) |*cell, col| cell.codepoint = @as(u32, 'E') + @as(u32, @intCast(col));
+
+    session.history.pushRow(&row_a, false, base);
+    session.history.pushRow(&row_b, false, base);
+    session.history.ensureViewCache(session.primary.grid.cols, base);
+    session.history.setScrollOffset(session.primary.grid.rows, 2);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    const new_fg = Color{ .r = 0x44, .g = 0x55, .b = 0x66, .a = 0xff };
+    session.history.updateDefaultColors(base.attrs.fg, base.attrs.bg, new_fg, base.attrs.bg);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
+    try std.testing.expect(cache.dirty_rows.items[0]);
+    try std.testing.expect(cache.dirty_rows.items[1]);
+    try std.testing.expectEqual(@as(u16, 0), cache.dirty_cols_start.items[0]);
+    try std.testing.expectEqual(@as(u16, 3), cache.dirty_cols_end.items[0]);
+    try std.testing.expectEqual(new_fg, cache.cells.items[0].attrs.fg);
+}
+
+test "scrollback offset change publishes shift-exposed partial damage" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var history_rows = [_][4]Cell{
+        .{ base, base, base, base },
+        .{ base, base, base, base },
+        .{ base, base, base, base },
+        .{ base, base, base, base },
+    };
+    for (&history_rows, 0..) |*history_row, row_idx| {
+        for (history_row, 0..) |*cell, col| {
+            cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(row_idx * 4 + col));
+        }
+        session.history.pushRow(history_row, false, base);
+    }
+
+    session.history.ensureViewCache(session.primary.grid.cols, base);
+    session.history.setScrollOffset(session.primary.grid.rows, 2);
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.setScrollOffset(1);
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(i32, 1), cache.viewport_shift_rows);
+    try std.testing.expect(cache.viewport_shift_exposed_only);
+    try std.testing.expect(!cache.dirty_rows.items[0]);
+    try std.testing.expect(cache.dirty_rows.items[1]);
+}
+
+test "cursor style updates publish through cache without texture invalidation" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.primary.cursor_style = .{ .shape = .bar, .blink = false };
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.none, cache.dirty);
+    try std.testing.expectEqual(types.CursorStyle{ .shape = .bar, .blink = false }, cache.cursor_style);
+}
+
+test "kitty generation delta does not force full damage when cell damage is partial" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.kitty_primary.generation += 1;
+    session.primary.grid.markDirtyRange(0, 0, 0, 0);
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_col);
+}
+
+test "kitty generation delta without visible damage stays clean" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.kitty_primary.generation += 1;
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.none, cache.dirty);
+}
+
+test "clear generation delta without visible damage stays clean" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    _ = session.clear_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.none, cache.dirty);
+}
+
+test "default color remap stays on partial path" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    const old_attrs = session.primary.default_attrs;
+    const new_fg = Color{ .r = 0xaa, .g = 0xbb, .b = 0xcc, .a = 0xff };
+    session.setDefaultColors(new_fg, old_attrs.bg);
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
+    try std.testing.expectEqual(@as(u16, 0), cache.dirty_cols_start.items[0]);
+    try std.testing.expectEqual(@as(u16, 3), cache.dirty_cols_end.items[0]);
+    try std.testing.expectEqual(new_fg, cache.cells.items[0].attrs.fg);
+}
+
+test "screen reverse toggle stays on partial path" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.activeScreen().setScreenReverse(true);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
+    try std.testing.expect(cache.screen_reverse);
+    try std.testing.expectEqual(@as(u16, 0), cache.dirty_cols_start.items[0]);
+    try std.testing.expectEqual(@as(u16, 3), cache.dirty_cols_end.items[0]);
+}
+
+test "eraseDisplay cursor-to-end keeps partial damage" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 3, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    for (session.primary.grid.cells.items, 0..) |*cell, idx| {
+        cell.* = base;
+        cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(idx % 4));
+    }
+    session.primary.setCursor(1, 1);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.eraseDisplay(0);
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 1), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 2), cache.damage.end_row);
+}
+
+test "eraseDisplay start-to-cursor keeps partial damage" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 3, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    for (session.primary.grid.cells.items, 0..) |*cell, idx| {
+        cell.* = base;
+        cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(idx % 4));
+    }
+    session.primary.setCursor(1, 2);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.eraseDisplay(1);
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
+}
+
+test "eraseDisplay full keeps full-width partial damage" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 3, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    for (session.primary.grid.cells.items, 0..) |*cell, idx| {
+        cell.* = base;
+        cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(idx % 4));
+    }
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.eraseDisplay(2);
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 2), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 3), cache.damage.end_col);
+}
+
+test "screen clear stays on partial path" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    for (session.primary.grid.cells.items, 0..) |*cell, idx| {
+        cell.* = base;
+        cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(idx % 4));
+    }
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.acknowledgePresentedGeneration(session.renderCache().generation));
+
+    session.activeScreen().clear();
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 3), cache.damage.end_col);
+}

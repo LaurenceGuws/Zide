@@ -971,6 +971,10 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
     if (lua.isBoolean(-1)) out.terminal_cursor_blink = lua.toBoolean(-1);
     lua.pop(1);
 
+    _ = lua.getField(table_index, "terminal_texture_shift");
+    if (lua.isBoolean(-1)) out.terminal_texture_shift = lua.toBoolean(-1);
+    lua.pop(1);
+
     _ = lua.getField(table_index, "terminal_tab_bar_show_single_tab");
     if (lua.isBoolean(-1)) out.terminal_tab_bar_show_single_tab = lua.toBoolean(-1);
     lua.pop(1);
@@ -1286,6 +1290,10 @@ fn parseNativeScalarOverlay(allocator: std.mem.Allocator, lua: *zlua.Lua, table_
             if (lua.isBoolean(-1)) out.terminal_cursor_blink = lua.toBoolean(-1);
             lua.pop(1);
         }
+        lua.pop(1);
+
+        _ = lua.getField(terminal_idx, "texture_shift");
+        if (lua.isBoolean(-1)) out.terminal_texture_shift = lua.toBoolean(-1);
         lua.pop(1);
 
         _ = lua.getField(terminal_idx, "tab_bar");

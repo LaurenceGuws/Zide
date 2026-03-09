@@ -4,7 +4,6 @@ const shared_types = @import("../../types/mod.zig");
 const terminal_mod = @import("../../terminal/core/terminal.zig");
 const common = @import("common.zig");
 
-const TerminalSession = terminal_mod.TerminalSession;
 const Cell = terminal_mod.Cell;
 
 pub const HoverState = struct {
@@ -19,9 +18,15 @@ pub fn hoverLinkId(state: *const HoverState) u32 {
     return if (state.last_hover_ctrl) state.last_hover_link_id else 0;
 }
 
-pub fn updateHoverState(
+pub fn visibleLinkIdAtCell(view_cells: []const Cell, rows: usize, cols: usize, row: usize, col: usize) u32 {
+    if (rows == 0 or cols == 0) return 0;
+    if (row >= rows or col >= cols) return 0;
+    if (view_cells.len < rows * cols) return 0;
+    return view_cells[row * cols + col].attrs.link_id;
+}
+
+pub fn updateHoverStateVisible(
     state: *HoverState,
-    session: *TerminalSession,
     x: f32,
     y: f32,
     width: f32,
@@ -29,13 +34,11 @@ pub fn updateHoverState(
     ui_scale: f32,
     cell_width: f32,
     cell_height: f32,
-    snapshot: terminal_mod.TerminalSnapshot,
-    history_len: usize,
-    start_line: usize,
+    rows: usize,
+    cols: usize,
+    view_cells: []const Cell,
     input_batch: *shared_types.input.InputBatch,
 ) void {
-    const rows = snapshot.rows;
-    const cols = snapshot.cols;
     const mouse = input_batch.mouse_pos;
     const ctrl = input_batch.mods.ctrl;
     const scrollbar_w: f32 = common.scrollbarWidth(ui_scale);
@@ -55,7 +58,7 @@ pub fn updateHoverState(
                 hover_row = @intCast(row);
                 hover_col = @intCast(col);
                 if (ctrl) {
-                    hover_link_id = linkIdAtCell(session, snapshot, history_len, start_line, rows, cols, row, col);
+                    hover_link_id = visibleLinkIdAtCell(view_cells, rows, cols, row, col);
                 }
             }
         }
@@ -73,32 +76,6 @@ pub fn updateHoverState(
     state.last_hover_link_id = hover_link_id;
     state.last_hover_row = hover_row;
     state.last_hover_col = hover_col;
-}
-
-pub fn linkIdAtCell(
-    session: *TerminalSession,
-    snapshot: terminal_mod.TerminalSnapshot,
-    history_len: usize,
-    start_line: usize,
-    rows: usize,
-    cols: usize,
-    row: usize,
-    col: usize,
-) u32 {
-    if (rows == 0 or cols == 0) return 0;
-    if (row >= rows or col >= cols) return 0;
-    const global_row = start_line + row;
-    if (global_row < history_len) {
-        if (session.scrollbackRow(global_row)) |history_row| {
-            return history_row[col].attrs.link_id;
-        }
-        return 0;
-    }
-    const grid_row = global_row - history_len;
-    if (grid_row < rows and snapshot.cells.len >= rows * cols) {
-        return snapshot.cells[grid_row * cols + col].attrs.link_id;
-    }
-    return 0;
 }
 
 pub fn drawHoverUnderlineOverlay(

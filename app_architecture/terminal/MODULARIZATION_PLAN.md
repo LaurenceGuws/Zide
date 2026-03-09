@@ -147,6 +147,29 @@ Progress:
 - Migration step: extracted hyperlink table helpers to `src/terminal/core/hyperlink_table.zig` (no behavior change).
 - Migration step: extracted reset/save/restore helpers to `src/terminal/core/state_reset.zig` (no behavior change).
 - Migration step: extracted scrollback accessors to `src/terminal/core/scrollback_view.zig` (no behavior change).
+- Follow-up (2026-03-09): expanded `app_architecture/terminal/TERMINAL_API.md` with an explicit boundary contract for runtime/protocol/model/publication/widget ownership.
+- Follow-up (2026-03-09): removed the file-global visible-terminal poll input-activity hint; terminal input pressure is now passed explicitly into `poll_visible_terminal_sessions_runtime.handle(...)`.
+- Follow-up (2026-03-09): moved terminal idle/pacing bookkeeping out of `frame_render_idle_runtime` file globals and into `AppState` so scheduler state is instance-owned.
+- Follow-up (2026-03-09): removed the stale snapshot-based hover/open widget path so terminal hover/open now has one authoritative visible-cache seam.
+- Follow-up (2026-03-09): removed the dead `TerminalSession.markDirty()` / `Screen.markDirtyAll()` escape-hatch APIs and their dedicated full-dirty reasons.
+- Follow-up (2026-03-09): removed additional dead leftovers from the old snapshot/open seam (`TerminalSession.clearDirty()` and the unused snapshot row helper in `terminal_widget_open.zig`).
+- Follow-up (2026-03-09): removed the dead unbounded `TerminalWorkspace.pollAll()` API so workspace polling surface now matches the budgeted scheduler design.
+- Follow-up (2026-03-09): extracted workspace polling/fairness implementation into `src/terminal/core/workspace_polling.zig` so `workspace.zig` moves closer to tab/session ownership rather than scheduling policy.
+- Follow-up (2026-03-09): removed the now-dead public `TerminalWorkspace.pollBudgeted(...)` surface after `pollForFrame(...)` became the workspace-owned polling contract used by app runtime.
+- Follow-up (2026-03-09): removed the public `TerminalWorkspace.PollBudget` type after poll budgets became an internal workspace-polling detail instead of part of the live runtime contract.
+- Follow-up (2026-03-09): added explicit read-only workspace generation/data queries so app runtime pacing code can avoid raw session-pointer access when it only needs polling/publication state.
+- Follow-up (2026-03-09): added explicit workspace cwd/close-confirm query helpers and rewired read-only app callers off `sessionAt(...)` / `activeSession()` where they only needed derived state.
+- Follow-up (2026-03-09): extracted terminal frame pacing/latency/generation observation into `src/app/terminal_frame_pacing_runtime.zig` so `frame_render_idle_runtime.zig` acts as a coordinator instead of embedding terminal scheduler policy inline.
+- Follow-up (2026-03-09): grouped terminal frame pacing bookkeeping into `AppState.terminal_frame_pacing` so runtime scheduler state stops leaking across the top-level app state as unrelated scalar fields.
+- Follow-up (2026-03-09): removed the dead frame-pacing `pressure_since` timestamp after the runtime extraction confirmed it was no longer read by any scheduler path.
+- Follow-up (2026-03-09): extracted visible-terminal poll budget/pressure/publication detection into `src/app/terminal_poll_runtime.zig` so `poll_visible_terminal_sessions_runtime.zig` stops embedding terminal polling policy inline.
+- Follow-up (2026-03-09): moved concrete per-frame workspace poll budgets behind `TerminalWorkspace.pollForFrame(...)` so app runtime no longer owns those fairness constants directly.
+- Follow-up (2026-03-09): introduced `TerminalSession.acknowledgePresentedGeneration(...)` so widget draw no longer manually composes presented-generation publication with dirty-retirement calls.
+- Follow-up (2026-03-09): moved sync-updates dirty-retirement choice behind `TerminalSession.acknowledgePresentedGeneration(...)` so widget draw no longer supplies that policy bit either.
+- Follow-up (2026-03-09): removed the old paired generation-guarded dirty-clear APIs from the public session surface and collapsed them into one backend-owned retirement helper behind `acknowledgePresentedGeneration(...)`.
+- Follow-up (2026-03-09): routed common input-mode snapshot updates through explicit `input_modes` setters so CSI mode toggles no longer open-code field mutation plus `updateInputSnapshot()` at each call site.
+- Follow-up (2026-03-09): extracted DECSTR input-mode reset into `input_modes.resetInputModes(...)` so soft reset stops duplicating snapshot-owned field resets inline.
+- Follow-up (2026-03-09): routed alt-screen transitions through `setActiveScreenMode(...)` so active-screen publication and snapshot refresh stop being open-coded in enter/exit paths.
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.
@@ -167,3 +190,105 @@ Progress:
 - Replay harness snapshot format is fixed by the approved outline.
 - Tests + goldens gate all refactors.
 - Extraction-only means no renames, no cleanup, no behavior changes.
+
+## Current Architectural Hotspots (2026-03-09)
+
+These are the large remaining smells after the redraw/rain cleanup work. They are
+ordered by how much they constrain future correctness and simplification work.
+
+1) `TerminalSession` remains a god object.
+- File: `src/terminal/core/terminal_session.zig`
+- It still owns PTY/threading, parser/runtime state, both screens, history, kitty state,
+  render caches, redraw publication state, input snapshot state, and multiple UI-facing APIs.
+- This prevents a clean contract between model, runtime, and presentation.
+
+2) Render publication ownership is still split.
+- Files:
+  - `src/terminal/core/view_cache.zig`
+  - `src/ui/widgets/terminal_widget_draw.zig`
+  - `src/app/frame_render_idle_runtime.zig`
+- `view_cache` is no longer just a cache builder; it also embeds redraw policy
+  heuristics, selection overlay publication, row-hash refinement, viewport-shift
+  publication, and kitty ordering.
+- `terminal_widget_draw` still performs backend-facing lifecycle work such as
+  pending-cache service, presented-generation ack, and dirty clearing.
+
+3) Scheduler ownership is still spread across app runtime helpers and workspace policy.
+- Files:
+  - `src/app/frame_render_idle_runtime.zig`
+  - `src/app/terminal_frame_pacing_runtime.zig`
+  - `src/app/poll_visible_terminal_sessions_runtime.zig`
+  - `src/terminal/core/workspace.zig`
+- Poll cadence, backlog hints, draw cadence, and active/background fairness are
+  still split across multiple modules even though the obvious file-global runtime
+  state has now been removed.
+
+4) Input snapshot publication is manual and drift-prone.
+- Files:
+  - `src/terminal/core/terminal_session.zig`
+  - `src/terminal/protocol/csi.zig`
+  - `src/terminal/core/input_modes.zig`
+- The current `input_snapshot` design works, but many protocol/mode branches must
+  remember to call `updateInputSnapshot()`. The most repetitive CSI toggles now flow
+  through explicit setters, but the design is still easy to drift and hard to audit.
+
+5) Widget input/draw code still carries backend and app policy.
+- Files:
+  - `src/ui/widgets/terminal_widget_input.zig`
+  - `src/ui/widgets/terminal_widget_draw.zig`
+  - `src/ui/widgets/terminal_widget.zig`
+- The widget is still larger than a thin presenter: it owns cache copies, hover/open
+  policy, selection behavior, scrollbar policy, kitty upload scheduling, and dirty ack.
+
+6) Protocol layer boundaries are still implicit.
+- Files:
+  - `src/terminal/protocol/csi.zig`
+  - `src/terminal/protocol/osc.zig`
+  - `src/terminal/core/parser_hooks.zig`
+- Protocol modules use `anytype self` and mutate deep session state through implicit
+  contracts rather than a narrow explicit interface.
+
+7) Kitty graphics remains a concentrated risk surface.
+- File: `src/terminal/kitty/graphics.zig`
+- The module still combines protocol parsing, payload assembly, memory lifecycle,
+  placement management, dirty-region derivation, and fallback invalidation behavior.
+
+## Recommended Sequencing (2026-03-09)
+
+These can be parallelized in limited lanes, but not as a fully independent rewrite.
+
+Do first:
+1) Define the new ownership boundaries on paper.
+- Lock down which module owns:
+  - runtime IO/threading
+  - mode/input publication
+  - render publication / presented-generation ack
+  - widget presentation only
+
+Then parallelize in bounded lanes:
+1) Runtime lane:
+- split scheduler/poll ownership out of widget-facing app helpers
+- reduce `TerminalWorkspace` to tab ownership + simple polling surface
+
+2) Publication lane:
+- narrow `view_cache` into cache publication only
+- move dirty-ack / presented-generation lifecycle behind a dedicated publication API
+
+3) UI lane:
+- shrink `TerminalWidget` / `terminal_widget_input` into presentation + intent emission only
+- remove stale duplicate hover/open APIs once the new boundary is stable
+
+After those land:
+1) Input-mode lane:
+- replace manual `updateInputSnapshot()` scatter with explicit mode-state publication
+
+2) Protocol lane:
+- replace `anytype self` mutation style with a narrow protocol facade
+
+3) Kitty lane:
+- split kitty protocol/decode/state/dirty publication once the publication boundary is stable
+
+Unsafe to parallelize immediately:
+- `TerminalSession` decomposition, `view_cache` ownership changes, and widget draw lifecycle
+  changes all touch the same invariants and should not be rewritten independently without
+  a shared contract first.

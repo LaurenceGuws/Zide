@@ -42,12 +42,14 @@ pub const TerminalWidget = struct {
 
     session: *TerminalSession,
     blink_style: BlinkStyle = .kitty,
-    last_scroll_offset: usize = 0,
     kitty: kitty_mod.KittyState,
     hover: hover_mod.HoverState = .{},
     pending_open: ?PendingOpen = null,
     last_draw_log_time: f64 = 0,
     draw_cache: RenderCache,
+    partial_draw_rows: std.ArrayList(bool),
+    partial_draw_cols_start: std.ArrayList(u16),
+    partial_draw_cols_end: std.ArrayList(u16),
     bench_enabled: bool = false,
     last_bench_log_time: f64 = 0,
     blink_last_slow_on: bool = true,
@@ -80,12 +82,14 @@ pub const TerminalWidget = struct {
         return .{
             .session = session,
             .blink_style = blink_style,
-            .last_scroll_offset = 0,
             .kitty = kitty_mod.KittyState.init(session.allocator),
             .hover = .{},
             .pending_open = null,
             .last_draw_log_time = 0,
             .draw_cache = RenderCache.init(),
+            .partial_draw_rows = std.ArrayList(bool).empty,
+            .partial_draw_cols_start = std.ArrayList(u16).empty,
+            .partial_draw_cols_end = std.ArrayList(u16).empty,
             .bench_enabled = std.c.getenv("ZIDE_TERMINAL_UI_BENCH") != null,
             .last_bench_log_time = 0,
             .blink_last_slow_on = true,
@@ -156,7 +160,7 @@ pub const TerminalWidget = struct {
             self.blink_phase_changed_pending = false;
             return false;
         }
-        const cache = self.session.renderCache();
+        const cache = &self.draw_cache;
         var has_slow = false;
         var has_fast = false;
         for (cache.cells.items) |cell| {
@@ -203,6 +207,9 @@ pub const TerminalWidget = struct {
             self.pending_open = null;
         }
         self.draw_cache.deinit(self.session.allocator);
+        self.partial_draw_rows.deinit(self.session.allocator);
+        self.partial_draw_cols_start.deinit(self.session.allocator);
+        self.partial_draw_cols_end.deinit(self.session.allocator);
         self.kitty.deinit(self.session.allocator);
     }
 

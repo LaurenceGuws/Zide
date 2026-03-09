@@ -138,6 +138,12 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         });
     }
 
+    if (config.terminal_texture_shift) |enabled| {
+        state.shell.rendererPtr().setTerminalTextureShiftEnabled(enabled);
+        state.needs_redraw = true;
+        log.logStdout(.info, "reload terminal.texture_shift={any}", .{enabled});
+    }
+
     if (config.editor_disable_ligatures != null or config.editor_font_features != null) {
         state.shell.rendererPtr().setEditorLigatureConfig(
             if (config.editor_disable_ligatures) |v| switch (v) {
@@ -191,7 +197,6 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         for (state.terminals.items) |term| {
             term.primary.cursor_style = cursor_style;
             term.alt.cursor_style = cursor_style;
-            term.force_full_damage.store(true, .release);
             term.updateViewCacheForScroll();
         }
         state.needs_redraw = true;

@@ -1,49 +1,21 @@
 ## Handoff (High-Level)
 
 ### Current Focus
-- Primary: remove UI/render-thread blocking on backend/session work and move expensive compute off the UI thread.
-  - tracking and phased plan: `app_architecture/review/PERFORMANCE_REVIEW_1.md`
-  - task tracker: `app_architecture/ui/ui_widget_modularization_todo.yaml` (Phase 5)
-- Keep mode-layer extraction stable and continue shrinking `main.zig` ownership through app-runtime module extraction (`app_architecture/app_mode_layering_todo.yaml`).
-- Keep dependency packaging robust and documented:
-  - SDL3, Lua, tree-sitter core, and FreeType/HarfBuzz are Zig package managed in normal flow (non-vcpkg paths).
-- Keep terminal-only distribution healthy:
-  - terminal-focused build graph (`-Dmode=terminal`)
-  - bundle packaging flow under `tools/bundle_terminal_linux.sh`
-  - terminfo/runtime identity behavior documented and consistent.
+- Primary: terminal architecture cleanup after the rain/render investigation stabilized the worst redraw faults.
+  - detailed review + recent fix history: `app_architecture/review/TERMINAL_240HZ_RAIN_INVESTIGATION.md`
+  - terminal architecture plan: `app_architecture/terminal/MODULARIZATION_PLAN.md`
+  - damage/dirty notes: `app_architecture/terminal/DAMAGE_TRACKING.md`
+  - UI/backend seam tracker: `app_architecture/ui/ui_widget_modularization_todo.yaml`
 
 ### Recent Changes (High-Level)
-- Completed UI-thread/backend contention audit (2026-03-07) and documented prioritized refactor plan.
-- Added explicit Phase 5 performance/offload tasks to UI widget modularization todo (terminal lock scope, polling budgets, async highlighter/search work, UI-path I/O cleanup).
-- Completed a first Phase 5 implementation batch (2026-03-07):
-  - terminal input lock path now avoids blocking fallback waits under contention
-  - visible-terminal polling now uses bounded active-first budgets with background fairness
-  - editor grammar auto-bootstrap no longer blocks frame path (`spawnAndWait` removed from highlighter init path)
-  - terminal ctrl+click open path no longer performs sync file detect I/O
-- Completed terminal draw lock-scope reduction (2026-03-07):
-  - render cache is copied under short lock into widget-owned snapshot buffers
-  - shaping/glyph batching and draw passes run lock-free
-  - dirty-clear now uses generation-guarded session helper (`clearDirtyIfGeneration`)
-- Added terminal-focused input/poll/redraw refinement + telemetry (2026-03-07):
-  - terminal poll pressure now follows terminal-relevant activity (not generic event count)
-  - passive terminal hover-only mouse movement is skipped in visible-terminal widget input path (unless mouse-reporting/ctrl-link intent applies)
-  - `input.latency` logs now include terminal poll budget usage + terminal draw phase attribution
-- Build graph now supports focused compile-time mode planning:
-  - default `zig build` plans full IDE app
-  - `-Dmode=terminal` plans terminal-only app
-  - `-Dmode=editor` plans editor-only app
-- Build logic was split into focused `build_utils/*` planners/reports/dependency resolution modules.
-- SDL3 + Lua + tree-sitter core now run through Zig package manager in normal flow.
-- Tree-sitter terminal-policy tightened:
-  - terminal target does not link tree-sitter
-  - dependency policy checks enforce this.
-- Terminal bundle flow was hardened:
-  - mode-aware asset whitelist copy
-  - bundled terminfo compile
-  - launcher/runtime directory semantics.
-- Terminal identity/runtime environment tightened:
-  - project terminfo aliases: `xterm-zide|zide-256color`
-- runtime TERM preference: `xterm-kitty`, then `xterm-zide`, then `zide-256color`, then `zide`, then `xterm-256color`
+- The high-refresh rain investigation removed most renderer-side force-full and stale invalidation escape hatches.
+- Full-screen `ascii-rain` is now close to stable, so the stronger remaining work is structural rather than incident-driven.
+- Current high-risk architectural seams are:
+  - `TerminalSession` is still a large multi-domain owner (PTY/parser/screens/history/render publication/UI-facing APIs).
+  - redraw lifecycle ownership is still split between `view_cache`, `terminal_widget_draw`, and frame runtime helpers, although presented-generation ack and dirty-retirement policy are now behind a single backend API instead of widget-local sequencing.
+  - scheduler/poll state is still split across app runtime helpers and `TerminalWorkspace`, but concrete workspace poll budgets now live behind the workspace contract instead of the app hook.
+  - input-mode snapshot publication is still manual and duplicated in places, although the common CSI mode toggles now flow through explicit setters instead of open-coded field flips.
+  - widget input/draw still contain backend-policy behavior rather than being thin presentation/orchestration layers.
 
 ### Constraints / Guardrails
 - Handoff docs remain high-level only; details belong in `app_architecture/*` docs and todo files.
@@ -51,18 +23,13 @@
 - Agent owns `./.zide.lua` logging scope during debugging (minimal useful tags; low noise).
 
 ### Where to Look
-- UI blocking/offload plan: `app_architecture/review/PERFORMANCE_REVIEW_1.md`
-- UI performance task tracker: `app_architecture/ui/ui_widget_modularization_todo.yaml`
-- Mode layering/refactor tracker: `app_architecture/app_mode_layering_todo.yaml`
-- Dependency packaging tracker: `app_architecture/dependencies_todo.yaml`
-- Dependency architecture notes: `app_architecture/DEPENDENCIES.md`
-- Bootstrap/build/run guide: `app_architecture/BOOTSTRAP.md`
-- Terminal compatibility surface: `docs/terminal/compatibility.md`
+- Primary architecture review + recent cleanup history: `app_architecture/review/TERMINAL_240HZ_RAIN_INVESTIGATION.md`
+- Terminal architecture plan + current hotspot list: `app_architecture/terminal/MODULARIZATION_PLAN.md`
+- Terminal damage/dirty background + redraw/publication hotspot list: `app_architecture/terminal/DAMAGE_TRACKING.md`
+- Current UI/backend seam tracker: `app_architecture/ui/ui_widget_modularization_todo.yaml`
 - Doc workflow policy: `docs/WORKFLOW.md`
 
 ### Known Risk (High-Level)
-- Terminal polling and search recompute still need final metrics/offload tuning under worst-case load.
-- Editor search recompute is still synchronous and can cause visible stalls on large files.
-- Focused mode extraction is broad; regressions can hide in runtime wiring if checkpoints are not kept small.
-- FreeType/HarfBuzz pinned package path still needs continued parity attention across environments.
-- Terminal packaging/runtime can drift if terminfo identity docs and launcher behavior are not kept aligned with core.
+- A broad refactor done in the wrong order will re-entangle correctness with redraw/scheduler changes and make regressions hard to localize.
+- The main remaining risk is boundary drift: session/runtime/widget/protocol code still share responsibilities that should be isolated.
+- Kitty graphics, sync/presentation ownership, and input snapshot publication remain sensitive correctness surfaces.

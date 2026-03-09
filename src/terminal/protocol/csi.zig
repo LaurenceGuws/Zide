@@ -32,33 +32,35 @@ fn effectiveSgrParamCount(action: parser_csi.CsiAction) usize {
 
 pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
     const log = app_logger.logger("terminal.csi");
+    const inputpath_log = app_logger.logger("terminal.inputpath");
     const csi_param_count = effectiveCsiParamCount(action);
-            log.logf(.info, 
-            "csi final={c} leader={c} private={d} interm={s} count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
-            .{
-                action.final,
-                if (action.leader == 0) '.' else action.leader,
-                @as(u8, @intFromBool(action.private)),
-                action.intermediates[0..action.intermediates_len],
-                csi_param_count,
-                action.params[0],
-                action.params[1],
-                action.params[2],
-                action.params[3],
-                action.params[4],
-                action.params[5],
-                action.params[6],
-                action.params[7],
-                action.params[8],
-                action.params[9],
-                action.params[10],
-                action.params[11],
-                action.params[12],
-                action.params[13],
-                action.params[14],
-                action.params[15],
-            },
-        );
+    log.logf(
+        .info,
+        "csi final={c} leader={c} private={d} interm={s} count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
+        .{
+            action.final,
+            if (action.leader == 0) '.' else action.leader,
+            @as(u8, @intFromBool(action.private)),
+            action.intermediates[0..action.intermediates_len],
+            csi_param_count,
+            action.params[0],
+            action.params[1],
+            action.params[2],
+            action.params[3],
+            action.params[4],
+            action.params[5],
+            action.params[6],
+            action.params[7],
+            action.params[8],
+            action.params[9],
+            action.params[10],
+            action.params[11],
+            action.params[12],
+            action.params[13],
+            action.params[14],
+            action.params[15],
+        },
+    );
     const p = action.params;
     const param_len = csi_param_count;
     const get = struct {
@@ -82,12 +84,30 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
         'C' => { // CUF
             const n = @max(1, get(p, 0, 1));
             const delta: usize = @intCast(n);
+            const before_row = screen.cursor.row;
+            const before_col = screen.cursor.col;
             screen.cursorForward(delta);
+            inputpath_log.logf(.info, "shell_csi final=CUF delta={d} cursor={d},{d}->{d},{d}", .{
+                delta,
+                before_row,
+                before_col,
+                screen.cursor.row,
+                screen.cursor.col,
+            });
         },
         'D' => { // CUB
             const n = @max(1, get(p, 0, 1));
             const delta: usize = @intCast(n);
+            const before_row = screen.cursor.row;
+            const before_col = screen.cursor.col;
             screen.cursorBack(delta);
+            inputpath_log.logf(.info, "shell_csi final=CUB delta={d} cursor={d},{d}->{d},{d}", .{
+                delta,
+                before_row,
+                before_col,
+                screen.cursor.row,
+                screen.cursor.col,
+            });
         },
         'E' => { // CNL
             const n = @max(1, get(p, 0, 1));
@@ -125,6 +145,11 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
         },
         'K' => { // EL
             const mode = if (param_len > 0) p[0] else 0;
+            inputpath_log.logf(.info, "shell_csi final=EL mode={d} cursor={d},{d}", .{
+                mode,
+                screen.cursor.row,
+                screen.cursor.col,
+            });
             self.eraseLine(mode);
         },
         '@' => { // ICH
@@ -311,17 +336,17 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                     const mode = p[idx];
                     switch (mode) {
                         1 => {
-                            self.app_cursor_keys = true;
-                            self.updateInputSnapshot();
+                            self.setAppCursorKeys(true);
                         },
                         3 => self.setColumnMode132(true),
                         5 => self.activeScreen().*.setScreenReverse(true),
                         6 => self.activeScreen().*.setOriginMode(true),
                         7 => self.activeScreen().*.setAutowrap(true),
-                        8 => self.auto_repeat = true,
+                        8 => {
+                            self.setAutoRepeat(true);
+                        },
                         9 => {
-                            self.input.mouse_mode_x10 = true;
-                            self.updateInputSnapshot();
+                            self.setMouseModeX10(true);
                         },
                         12 => self.activeScreen().*.setCursorBlink(true),
                         45 => self.activeScreen().*.setReverseWrap(true),
@@ -334,7 +359,9 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             self.activeScreen().*.setSaveCursorMode1048(true);
                         },
                         1049 => self.enterAltScreen(true, true),
-                        2004 => self.bracketed_paste = true,
+                        2004 => {
+                            self.setBracketedPaste(true);
+                        },
                         2026 => self.setSyncUpdates(true),
                         2027 => {
                             self.grapheme_cluster_shaping_2027 = true;
@@ -344,29 +371,25 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         2031 => self.report_color_scheme_2031 = true,
                         2048 => self.inband_resize_notifications_2048 = true,
                         1004 => {
-                            self.focus_reporting = true;
-                            self.updateInputSnapshot();
+                            self.setFocusReporting(true);
                         },
                         1000 => {
-                            self.input.mouse_mode_x10 = true;
-                            self.updateInputSnapshot();
+                            self.setMouseModeX10(true);
                         },
                         1002 => {
-                            self.input.mouse_mode_button = true;
-                            self.updateInputSnapshot();
+                            self.setMouseModeButton(true);
                         },
                         1003 => {
-                            self.input.mouse_mode_any = true;
-                            self.updateInputSnapshot();
+                            self.setMouseModeAny(true);
                         },
                         1006 => {
-                            self.input.mouse_mode_sgr = true;
-                            self.updateInputSnapshot();
+                            self.setMouseModeSgr(true);
                         },
-                        1007 => self.mouse_alternate_scroll = true,
+                        1007 => {
+                            self.setMouseAlternateScroll(true);
+                        },
                         1016 => {
-                            self.input.mouse_mode_sgr_pixels_1016 = true;
-                            self.updateInputSnapshot();
+                            self.setMouseModeSgrPixels(true);
                         },
                         5522 => self.kitty_paste_events_5522 = true,
                         else => {},
@@ -395,17 +418,17 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                     const mode = p[idx];
                     switch (mode) {
                         1 => {
-                            self.app_cursor_keys = false;
-                            self.updateInputSnapshot();
+                            self.setAppCursorKeys(false);
                         },
                         3 => self.setColumnMode132(false),
                         5 => self.activeScreen().*.setScreenReverse(false),
                         6 => self.activeScreen().*.setOriginMode(false),
                         7 => self.activeScreen().*.setAutowrap(false),
-                        8 => self.auto_repeat = false,
+                        8 => {
+                            self.setAutoRepeat(false);
+                        },
                         9 => {
-                            self.input.mouse_mode_x10 = false;
-                            self.updateInputSnapshot();
+                            self.setMouseModeX10(false);
                         },
                         12 => self.activeScreen().*.setCursorBlink(false),
                         45 => self.activeScreen().*.setReverseWrap(false),
@@ -418,7 +441,9 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                             self.activeScreen().*.setSaveCursorMode1048(false);
                         },
                         1049 => self.exitAltScreen(true),
-                        2004 => self.bracketed_paste = false,
+                        2004 => {
+                            self.setBracketedPaste(false);
+                        },
                         2026 => self.setSyncUpdates(false),
                         2027 => {
                             self.grapheme_cluster_shaping_2027 = false;
@@ -428,29 +453,25 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         2031 => self.report_color_scheme_2031 = false,
                         2048 => self.inband_resize_notifications_2048 = false,
                         1004 => {
-                            self.focus_reporting = false;
-                            self.updateInputSnapshot();
+                            self.setFocusReporting(false);
                         },
                         1000 => {
-                            self.input.mouse_mode_x10 = false;
-                            self.updateInputSnapshot();
+                            self.setMouseModeX10(false);
                         },
                         1002 => {
-                            self.input.mouse_mode_button = false;
-                            self.updateInputSnapshot();
+                            self.setMouseModeButton(false);
                         },
                         1003 => {
-                            self.input.mouse_mode_any = false;
-                            self.updateInputSnapshot();
+                            self.setMouseModeAny(false);
                         },
                         1006 => {
-                            self.input.mouse_mode_sgr = false;
-                            self.updateInputSnapshot();
+                            self.setMouseModeSgr(false);
                         },
-                        1007 => self.mouse_alternate_scroll = false,
+                        1007 => {
+                            self.setMouseAlternateScroll(false);
+                        },
                         1016 => {
-                            self.input.mouse_mode_sgr_pixels_1016 = false;
-                            self.updateInputSnapshot();
+                            self.setMouseModeSgrPixels(false);
                         },
                         5522 => self.kitty_paste_events_5522 = false,
                         else => {},
@@ -545,19 +566,13 @@ fn applyDecstr(self: anytype) void {
     self.title_buffer.clearRetainingCapacity();
     self.title = "Terminal";
 
-    self.app_cursor_keys = false;
-    self.app_keypad = false;
-    self.auto_repeat = true;
-    self.mouse_alternate_scroll = true;
     self.report_color_scheme_2031 = false;
     self.grapheme_cluster_shaping_2027 = false;
     self.primary.setGraphemeClusterShaping2027(false);
     self.alt.setGraphemeClusterShaping2027(false);
     self.inband_resize_notifications_2048 = false;
     self.kitty_paste_events_5522 = false;
-    self.input.resetMouse();
-    self.bracketed_paste = false;
-    self.focus_reporting = false;
+    self.resetInputModes();
     self.column_mode_132 = false;
     self.setSyncUpdates(false);
 
@@ -567,9 +582,7 @@ fn applyDecstr(self: anytype) void {
 
     const screen = self.activeScreen();
     screen.resetState();
-    screen.markDirtyAll();
-
-    self.updateInputSnapshot();
+    screen.markDirtyAllWithReason(.decstr_soft_reset, @src());
 }
 
 fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState {
@@ -711,28 +724,29 @@ pub fn applySgr(self: anytype, action: parser_csi.CsiAction) void {
     const params = action.params;
     const n_params = effectiveSgrParamCount(action);
     const log = app_logger.logger("terminal.sgr");
-            log.logf(.info, 
-            "sgr count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
-            .{
-                n_params,
-                params[0],
-                params[1],
-                params[2],
-                params[3],
-                params[4],
-                params[5],
-                params[6],
-                params[7],
-                params[8],
-                params[9],
-                params[10],
-                params[11],
-                params[12],
-                params[13],
-                params[14],
-                params[15],
-            },
-        );
+    log.logf(
+        .info,
+        "sgr count={d} params={d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d},{d}",
+        .{
+            n_params,
+            params[0],
+            params[1],
+            params[2],
+            params[3],
+            params[4],
+            params[5],
+            params[6],
+            params[7],
+            params[8],
+            params[9],
+            params[10],
+            params[11],
+            params[12],
+            params[13],
+            params[14],
+            params[15],
+        },
+    );
     var i: usize = 0;
     while (i < n_params) {
         const p = params[i];

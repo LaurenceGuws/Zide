@@ -58,8 +58,5 @@ pub fn applyThemeToWidgets(
             }
             term.remapAnsiColors(old_ansi, new_ansi);
         }
-        term.markDirty();
-        term.updateViewCacheForScroll();
-        widget.invalidateTextureCache();
     }
 }

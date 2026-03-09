@@ -22,7 +22,6 @@ pub fn scrollRegionUp(self: anytype, count: usize) void {
             pushScrollbackRow(self, screen.scroll_top + row);
         }
         kitty_mod.updateKittyPlacementsForScroll(self);
-        _ = self.clear_generation.fetchAdd(1, .acq_rel);
     }
     screen.scrollRegionUpBy(n, blank_cell);
     if (!isFullScrollRegion(self)) {
@@ -44,7 +43,6 @@ pub fn scrollRegionDown(self: anytype, count: usize) void {
     const blank_cell = screen.blankCell();
     screen.scrollRegionDownBy(n, blank_cell);
     kitty_mod.shiftKittyPlacementsDown(self, screen.scroll_top, screen.scroll_bottom, n);
-    _ = self.clear_generation.fetchAdd(1, .acq_rel);
 }
 
 pub fn scrollUp(self: anytype) void {
@@ -59,7 +57,6 @@ pub fn scrollUp(self: anytype) void {
     if (isFullScrollRegion(self)) {
         pushScrollbackRow(self, 0);
         kitty_mod.updateKittyPlacementsForScroll(self);
-        _ = self.clear_generation.fetchAdd(1, .acq_rel);
     }
     const blank_cell = screen.blankCell();
     screen.scrollUp(blank_cell);

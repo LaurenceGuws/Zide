@@ -321,6 +321,9 @@ return {
 
         -- Blink style: "kitty" (default) or "off".
         -- blink = "kitty",
+        -- Viewport texture shift optimization used for scroll-like updates.
+        -- Disable to force redraw fallback instead of the texture self-copy path.
+        texture_shift = true,
         -- Scrollback line cap (min 100, max 100000). Invalid values warn and fall back to 1000.
         scrollback = 10000,
         -- Terminal start-location policy.

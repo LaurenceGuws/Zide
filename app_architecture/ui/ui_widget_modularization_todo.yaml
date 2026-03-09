@@ -189,6 +189,8 @@ ui_widget_modularization_todo:
             - "2026-03-07: Added generation-guarded `TerminalSession.clearDirtyIfGeneration(...)` to safely clear dirty flags after lock-free draw."
             - "2026-03-07: Removed per-frame UI-thread blink detection scan across all terminal cells; `RenderCache.has_blink` is now computed in view-cache update and consumed directly by draw invalidation logic."
             - "2026-03-07: Blink presence no longer unconditionally forces full texture redraw; full redraw now gates on actual blink phase toggles (`blink_phase_changed_pending`)."
+            - "2026-03-08: Pending view-cache refreshes are now consumed under the draw snapshot lock before copying the published render cache, instead of a best-effort lock-free read of possibly stale cache state."
+            - "2026-03-08: Cursor blink arming and widget blink-phase checks no longer read `TerminalSession.renderCache()` lock-free from app/widget code; they use widget-owned snapshot state."
 
         - id: UI-PERF-02
           title: "Avoid blocking lock in terminal widget input path"
@@ -201,6 +203,14 @@ ui_widget_modularization_todo:
             - "Defer non-critical hover/open calculations when lock contention is high."
             - "2026-03-07: Removed fallback blocking lock waits from terminal widget input; lock-dependent hover/open/selection/scrollbar work is skipped under contention while key/focus paths remain responsive."
             - "2026-03-07: `TerminalSession.keyModeFlagsValue()` now reads the atomic input snapshot (`input_snapshot.key_mode_flags`) to support lock-light input reads."
+            - "2026-03-08: Input-mode reads used by the widget now come from `TerminalSession.input_snapshot`, expanded to include bracketed paste, auto-repeat, alternate-scroll, alt-screen state, and live screen dimensions."
+            - "2026-03-08: CSI mode transitions and alt-screen enter/exit now refresh that input snapshot so UI-side input decisions do not race plain session state."
+            - "2026-03-08: `terminal_widget_input` now derives hover hit-testing, ctrl+click open, and selection hit-mapping from the widget-owned published draw cache instead of live session snapshot reads."
+            - "2026-03-08: Session locking in `terminal_widget_input` is now explicit and narrow: only OSC clipboard pickup, selection/scroll mutations, middle-click paste send, and terminal mouse-reporting stay on the locked path."
+            - "2026-03-08: Visible-terminal polling now requests redraws from active-session published cache generation changes rather than `hasData()`/poll activity alone, so frame scheduling follows cache publication instead of threaded PTY pressure heuristics."
+            - "2026-03-08: Added reloadable `terminal.texture_shift` renderer config as a kill-switch for the viewport texture self-copy optimization; disabling it preserves the normal redraw fallback path."
+            - "2026-03-08: Extracted viewport texture-shift gating into a pure draw helper and added unit coverage for shift-enabled, shift-disabled, oversize-shift, forced-full, and scrollback-view cases."
+            - "2026-03-08: Workspace poll metrics now treat active-tab spillover as either PTY readiness or unpublished-generation backlog, and poll probes log both current-generation and published-generation movement instead of treating `hasData()` as the only backlog signal."
 
         - id: UI-PERF-03
           title: "Bound terminal workspace polling cost per frame"
@@ -212,7 +222,7 @@ ui_widget_modularization_todo:
           notes:
             - "Introduce poll budget/fairness with active-tab priority."
             - "Ensure many-tab output does not stall UI update."
-            - "2026-03-07: Added `TerminalWorkspace.PollBudget` and `pollBudgeted(...)` (active tab first + bounded background round-robin polling)."
+            - "2026-03-07: Added workspace-owned bounded polling policy (`PollBudget` model; later exposed to app runtime through `pollForFrame(...)`) with active-tab-first + bounded background round-robin polling."
             - "2026-03-07: Visible-terminal runtime now uses tighter per-frame budgets when input is active and slightly larger budgets when idle."
             - "2026-03-07: Regression tuning for terminal TUIs (rain/stress): added bounded multi-poll passes for active tab and raised runtime poll budgets to improve frame smoothness and key-to-pixel latency while keeping polling bounded."
             - "2026-03-07: Terminal passive-move gating now uses explicit per-frame `InputBatch.mouse_moved` signal instead of relying on mouse events list population."
@@ -229,6 +239,41 @@ ui_widget_modularization_todo:
             - "Use async/pending state and user-facing notice path."
             - "2026-03-07: Replaced frame-path grammar auto-bootstrap `spawnAndWait` with detached background worker + shared state (`idle/running/succeeded/failed`)."
             - "2026-03-07: Highlighter init now returns immediately while bootstrap is running; load is retried after completion without blocking update/draw."
+
+    - name: "Phase 6 - Terminal UI Boundary Cleanup"
+      tasks:
+        - id: UI-TB-01
+          title: "Shrink TerminalWidget to presentation/orchestration only"
+          status: todo
+          files_to_edit:
+            - src/ui/widgets/terminal_widget.zig
+            - src/ui/widgets/terminal_widget_draw.zig
+            - src/ui/widgets/terminal_widget_input.zig
+          notes:
+            - "Current hotspot review (2026-03-09): the widget still owns backend/app policy including dirty ack, kitty upload lifecycle, selection/scrollbar policy, and open/hover policy."
+            - "Do not mix this with `TerminalSession` decomposition until ownership contracts are written down."
+
+        - id: UI-TB-02
+          title: "Remove duplicate snapshot-vs-visible hover/open paths"
+          status: done
+          files_to_edit:
+            - src/ui/widgets/terminal_widget_hover.zig
+            - src/ui/widgets/terminal_widget_open.zig
+            - src/ui/widgets/terminal_widget_input.zig
+          notes:
+            - "The current code keeps both visible-cache and snapshot-based paths; converge on one authoritative UI-side contract after boundary cleanup."
+            - "2026-03-09: Removed the stale snapshot-based hover/open path and rewired the remaining tests to the visible-cache seam that production input uses."
+
+        - id: UI-TB-03
+          title: "Move terminal dirty acknowledgement out of widget draw"
+          status: todo
+          files_to_edit:
+            - src/ui/widgets/terminal_widget_draw.zig
+            - src/terminal/core/terminal_session.zig
+            - src/terminal/core/view_cache.zig
+          notes:
+            - "Current hotspot review (2026-03-09): widget draw still calls generation-guarded dirty-clear APIs after upload."
+            - "Long-term target: renderer consumes published terminal state; backend owns ack/publication lifecycle."
 
         - id: UI-PERF-05
           title: "Move search recompute off UI thread with generation cancellation"
@@ -284,3 +329,53 @@ ui_widget_modularization_todo:
             - zig build run
           notes:
             - "Use local perf logs to confirm update/draw phases stay bounded."
+            - "2026-03-08: High-refresh terminal investigation is now the primary verification target; see `app_architecture/review/TERMINAL_240HZ_RAIN_INVESTIGATION.md`."
+            - "2026-03-08: Kitty differential review indicates no explicit high-Hz guard; likely issue surface is Zide redraw scheduling and/or viewport texture-shift partial update correctness."
+            - "2026-03-08: Reproduction updated: issue correlates more strongly with large single-tile Hyprland layout size than refresh rate alone."
+            - "2026-03-08: Added temporary investigation guard disabling render-target self-copy shift path in `src/ui/renderer/gl_backend.zig` to validate compositor/driver-sensitive texture-shift hypothesis."
+            - "2026-03-08: User validation reported no meaningful improvement from the shift-copy guard alone; continue with redraw scheduling and large-target texture sync probes."
+            - "2026-03-08: Parse thread wait-timeout warnings were downgraded (timeout is expected), reducing log spam while preserving non-timeout warning signal."
+            - "2026-03-08: Probe clarification: logs came from one `ascii-rain` process while only resizing the same window between smaller/larger sizes (not multi-instance load)."
+            - "2026-03-08: Added temporary guard in `src/ui/widgets/terminal_widget_draw.zig` to force full texture update on generation/dirty activity, isolating partial invalidation correctness as a root-cause candidate."
+            - "2026-03-08: Correction from user logs: symptom is not resize-event-specific; launching directly in large full-tile state reproduces while half-tile state often does not."
+            - "2026-03-08: Added instrumentation-only `terminal.ui.statebug` logs (draw-gap/gen-delta/dirty spans + idle-pressure snapshots) in `terminal_widget_draw`, `terminal_widget`, and `frame_render_idle_runtime`."
+            - "2026-03-08: Added poll-path probe logging in `poll_visible_terminal_sessions_runtime` for `hasData` pre/post and generation pre/post to validate idle-backoff false-negative hypothesis."
+            - "2026-03-08: Logs confirmed `idle_backoff_after_gen_advance` windows (`sleep_ms=0.033`) shortly after generation movement when `hasData=0`; applied fix candidate in `frame_render_idle_runtime` to hold 1ms sleep for 250ms after generation advances."
+            - "2026-03-08: Stronger fault signal: large-tile traces stay in `dirty=full` for long stretches, keeping the terminal on full-surface redraws. Updated `view_cache` so `clear_generation` churn from live-bottom scrollback updates does not force full damage when `scroll_offset==0`."
+            - "2026-03-08: Added full-dirty source attribution (`FullDirtyReason` + `full_dirty_seq`) from grid -> render cache -> `terminal.ui.perf`/`terminal.ui.statebug` so each `dirty=full` frame reports who requested it."
+            - "2026-03-08: Added terminal-session regression coverage for the live-bottom scroll case: a full-region scroll now publishes `dirty=partial` with `viewport_shift_rows=1` instead of forcing a clear-generation full redraw."
+            - "2026-03-08: Removed the no-thread `feedOutputBytes(...)` blanket force-full request and added regression coverage so direct parser feeds keep incremental damage after the initial baseline publish."
+            - "2026-03-09: Fresh rain logs showed top rows do participate in partial damage on many frames; the more consistent remaining bug is redraw cadence (`draw_gap_ms~120`) while generations jump sharply between draws."
+            - "2026-03-09: `frame_render_idle_runtime` now treats `currentGeneration != publishedGeneration` as terminal pressure, so parse-thread backlog keeps the UI loop on 1ms sleeps instead of falling into 33/100ms idle backoff."
+            - "2026-03-09: Added temporary `cache_refine` tracing in `view_cache` to compare source dirty spans with post-hash refined dirty spans on the next repro run."
+            - "2026-03-09: New `cache_refine` logs showed the stronger bug: source damage still starts at row 0, but row-hash refinement was diffing against the newest published cache even when draw had not presented that generation yet, collapsing dirty rows toward the bottom."
+            - "2026-03-09: Added `presented_generation` tracking from `terminal_widget_draw` back into `TerminalSession`; `view_cache` now only performs row-hash refinement when the refinement base matches the last presented cache generation."
+            - "2026-03-09: Added regression coverage for repeated scroll publications without an intervening draw so top-row damage cannot be refined away by unseen intermediate publications."
+            - "2026-03-09: Full-screen rain repro after the presented-generation fix now keeps refinement aligned and is visually close to correct; user reported it as the best result so far."
+            - "2026-03-09: Removed temporary `cache_refine`/row-dirty probe logging from the hot path and dropped the obsolete `generation changed + dirty=none => full redraw` fallback from `terminal_widget_draw`."
+            - "2026-03-09: Removed the blanket `scroll_offset > 0 => full redraw` policy from `terminal_widget_draw`; partial texture uploads are now allowed while scrolled when the render cache itself reports partial damage."
+            - "2026-03-09: Added draw-path unit coverage for the new texture update plan so scrolled partial damage stays test-locked while texture-not-ready still forces a full upload."
+            - "2026-03-09: Retired the temporary `terminal.ui.statebug` investigation probes from widget draw, visible-terminal poll, and idle scheduling paths after the render-path diagnosis converged."
+            - "2026-03-09: Removed widget-local scroll-history redraw forcing from `terminal_widget_draw`; scroll/viewport redraw policy now trusts the published render cache instead of a second widget-side scroll-change bit."
+            - "2026-03-09: Removed widget-local alt-screen transition forcing from the draw texture update plan; alt-screen redraw policy now follows the published render cache, while alt-exit timing logs remain intact."
+            - "2026-03-09: Removed the `viewport texture shift unavailable => full redraw` fallback; shift is now a pure optimization, and disabled/oversize/forced-full cases fall back to normal published damage instead."
+            - "2026-03-09: Narrowed kitty-driven full redraws so static kitty content no longer forces a full texture update by itself; that renderer-side overlap policy was later superseded by backend-published kitty dirty ranges plus partial kitty repainting."
+            - "2026-03-09: Blink phase changes now use the partial redraw path instead of acting as a blanket full-redraw reason; kitty overlap no longer forces full because partial draws repaint kitty layers directly."
+            - "2026-03-09: Removed the redundant sync-updates `requestForceFullDamage(...)` path from `TerminalSession`; disabling sync updates now relies on model-published full dirty, and enabling sync updates stays clean when nothing else changed."
+            - "2026-03-09: `view_cache` now publishes visible scrollback-history generation, so scrolled history mutations can be row-hash diffed against the last presented cache instead of leaning on generic force-full invalidation."
+            - "2026-03-09: Visible-history changes without a presented diff base now stay on the partial path as full-width damage instead of escalating to a formal `view_cache` full redraw."
+            - "2026-03-09: Pure `clear_generation` deltas no longer trigger `view_cache` full redraws by themselves; they now only invalidate cache reuse while visible repaint still follows the screen model's own damage."
+            - "2026-03-09: Reverse-video toggles and palette remaps now publish full-width partial damage instead of formal full redraw, and `view_cache` no longer treats screen-reverse state change as a separate forced-full path."
+            - "2026-03-09: `screen.clear()` and full `ED` variants now stay on the partial path as full-width damage instead of formal full redraw."
+            - "2026-03-09: Terminal theme reload no longer stacks `term.markDirty()` / texture-cache invalidation on top of palette damage publication; theme repaint now follows the existing full-width partial damage from the model."
+            - "2026-03-09: Same-generation cursor-style changes are now published through the render cache fast path, and config reload no longer forces a full terminal texture invalidate just to apply cursor shape/blink changes."
+            - "2026-03-09: Removed redundant `requestForceFullDamage(...)` callers for default colors, ANSI palette setup/remap, and 132-column mode; those paths now rely on screen-model full dirty, visible-history publication, or clear-generation-driven full damage instead."
+            - "2026-03-09: Kitty image/placement mutations now dirty their affected cell ranges directly instead of defaulting to full-screen `kitty_graphics_changed`; partial texture updates repaint kitty layers, and the temporary kitty-occupancy render-cache side channel was removed."
+            - "2026-03-09: Removed the conservative partial-ED (`CSI J` mode 0/1) force-full fallback; `eraseDisplay` now relies on the screen model's published partial dirty ranges, with regression coverage for both cursor-to-end and start-to-cursor paths."
+            - "2026-03-09: Deleted the now-unused `force_full_damage` terminal-session side channel and its matching `view_cache_force_full_damage` reason after the last callers were removed; redraw authority is now fully cache/model-driven on this path."
+            - "2026-03-09: Scrollback-view movement no longer marks the primary screen fully dirty; `view_cache` now publishes a `viewport_shift_exposed_only` partial-damage contract for pure scrollback remaps, and draw now falls back to a synthetic full-width partial repaint when the texture-shift copy path cannot be used."
+            - "2026-03-09: `setSyncUpdates(false)` no longer marks the active screen fully dirty by itself; sync-disable now publishes the already-buffered real damage, with regression coverage for both the clean-disable case and buffered-partial case."
+            - "2026-03-09: Renderer kitty full-redraw policy was first narrowed from global to overlap-based, then superseded by backend-published kitty dirty ranges plus direct partial kitty repainting."
+            - "2026-03-09: Removed the temporary `terminal.ui.pattern` aggregation counters from `TerminalSession`; redraw investigation now relies on authoritative `terminal.ui.perf` / `full_dirty_reason` signals instead of sidecar pattern bookkeeping."
+            - "2026-03-09: Kitty image/placement mutations now dirty their affected cell ranges directly instead of defaulting to full-screen `kitty_graphics_changed`; partial texture updates repaint kitty layers, and the temporary kitty-occupancy render-cache side channel was removed."
+            - "2026-03-09: Removed the last `view_cache` forced-full kitty-generation check; kitty-generation deltas now stay partial or clean according to the published screen damage instead of triggering cache-side escalation."

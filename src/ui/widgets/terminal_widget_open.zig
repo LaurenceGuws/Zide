@@ -14,13 +14,11 @@ pub const PendingOpen = struct {
     col: ?usize = null, // 1-based
 };
 
-pub fn ctrlClickOpenMaybe(
+pub fn ctrlClickOpenVisibleMaybe(
     allocator: std.mem.Allocator,
     session: *TerminalSession,
     pending_open: *?PendingOpen,
-    snapshot: terminal_mod.TerminalSnapshot,
-    history_len: usize,
-    start_line: usize,
+    view_cells: []const Cell,
     rows: usize,
     cols: usize,
     x: f32,
@@ -33,35 +31,29 @@ pub fn ctrlClickOpenMaybe(
     const log = app_logger.logger("terminal.open");
     if (rows == 0 or cols == 0) return false;
     if (cell_width <= 0 or cell_height <= 0) return false;
+    if (view_cells.len < rows * cols) return false;
 
     const col = @as(usize, @intFromFloat((mouse_x - x) / cell_width));
     const row = @as(usize, @intFromFloat((mouse_y - y) / cell_height));
     if (row >= rows or col >= cols) return false;
 
-    // Try hyperlink first.
-    var opened = false;
-    const link_id = hover_mod.linkIdAtCell(session, snapshot, history_len, start_line, rows, cols, row, col);
+    const link_id = hover_mod.visibleLinkIdAtCell(view_cells, rows, cols, row, col);
     if (link_id != 0) {
         if (session.hyperlinkUri(link_id)) |link| {
             if (resolveLinkPath(allocator, session, link)) |path| {
                 setPendingOpen(allocator, pending_open, .{ .path = path });
-                opened = true;
-            } else {
-                log.logf(.debug, "ctrl-open hyperlink resolve failed link_id={d}", .{link_id});
+                return true;
             }
+            log.logf(.debug, "ctrl-open hyperlink resolve failed link_id={d}", .{link_id});
         } else {
             log.logf(.debug, "ctrl-open hyperlink id missing uri link_id={d}", .{link_id});
         }
     }
 
-    if (opened) return true;
-
-    // Fallback: extract a token under the mouse.
-    if (rowCellsAtVisibleRow(session, snapshot, history_len, start_line, rows, cols, row)) |row_cells| {
+    if (visibleRowCells(view_cells, cols, row)) |row_cells| {
         if (extractTokenAtCol(allocator, row_cells, col)) |token| {
             defer allocator.free(token);
             if (parsePathAndLocation(token)) |parsed| {
-                // Resolve to an absolute path when possible.
                 var resolved: ?[]u8 = null;
                 if (builtin.os.tag == .windows and isWindowsAbsPath(parsed.path)) {
                     resolved = allocator.dupe(u8, parsed.path) catch {
@@ -74,7 +66,7 @@ pub fn ctrlClickOpenMaybe(
                     const cwd = session.currentCwd();
                     if (cwd.len > 0) {
                         resolved = std.fs.path.join(allocator, &.{ cwd, parsed.path }) catch |err| {
-                            log.logf(.warning, "ctrl-open failed joining cwd-relative path err={s}", .{ @errorName(err) });
+                            log.logf(.warning, "ctrl-open failed joining cwd-relative path err={s}", .{@errorName(err)});
                             return false;
                         };
                     } else {
@@ -184,7 +176,7 @@ fn resolveLinkPath(allocator: std.mem.Allocator, session: *TerminalSession, uri:
     const cwd = session.currentCwd();
     if (cwd.len == 0) return null;
     return std.fs.path.join(allocator, &.{ cwd, uri }) catch |err| {
-        log.logf(.warning, "resolveLinkPath failed joining cwd path err={s}", .{ @errorName(err) });
+        log.logf(.warning, "resolveLinkPath failed joining cwd path err={s}", .{@errorName(err)});
         return null;
     };
 }
@@ -209,27 +201,11 @@ fn normalizeWindowsFileUriPath(allocator: std.mem.Allocator, path: []const u8) ?
     return null;
 }
 
-fn rowCellsAtVisibleRow(
-    session: *TerminalSession,
-    snapshot: terminal_mod.TerminalSnapshot,
-    history_len: usize,
-    start_line: usize,
-    rows: usize,
-    cols: usize,
-    row: usize,
-) ?[]const Cell {
-    if (rows == 0 or cols == 0) return null;
-    if (row >= rows) return null;
-    const global_row = start_line + row;
-    if (global_row < history_len) {
-        if (session.scrollbackRow(global_row)) |history_row| return history_row;
-        return null;
-    }
-    const grid_row = global_row - history_len;
-    if (grid_row < rows and snapshot.cells.len >= rows * cols) {
-        return snapshot.cells[grid_row * cols .. grid_row * cols + cols];
-    }
-    return null;
+fn visibleRowCells(view_cells: []const Cell, cols: usize, row: usize) ?[]const Cell {
+    if (cols == 0) return null;
+    const row_start = row * cols;
+    if (row_start + cols > view_cells.len) return null;
+    return view_cells[row_start .. row_start + cols];
 }
 
 fn isTokenChar(cp: u32) bool {
@@ -329,7 +305,7 @@ fn parsePathAndLocation(token: []const u8) ?ParsedPath {
         const tail2 = tmp[idx2 + 1 ..];
         if (tail2.len > 0 and allDigits(tail2)) {
             const n2 = std.fmt.parseInt(usize, tail2, 10) catch blk: {
-                log.logf(.debug, "parsePathAndLocation parseInt n2 failed tail={s}", .{ tail2 });
+                log.logf(.debug, "parsePathAndLocation parseInt n2 failed tail={s}", .{tail2});
                 break :blk null;
             };
             if (n2 != null) {
@@ -338,7 +314,7 @@ fn parsePathAndLocation(token: []const u8) ?ParsedPath {
                     const tail1 = tmp[idx1 + 1 ..];
                     if (tail1.len > 0 and allDigits(tail1)) {
                         const n1 = std.fmt.parseInt(usize, tail1, 10) catch blk: {
-                            log.logf(.debug, "parsePathAndLocation parseInt n1 failed tail={s}", .{ tail1 });
+                            log.logf(.debug, "parsePathAndLocation parseInt n1 failed tail={s}", .{tail1});
                             break :blk null;
                         };
                         if (n1 != null) {

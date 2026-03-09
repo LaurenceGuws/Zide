@@ -1,6 +1,7 @@
 const std = @import("std");
 const session_mod = @import("terminal_session.zig");
 const app_logger = @import("../../app_logger.zig");
+const polling = @import("workspace_polling.zig");
 
 pub const TerminalSession = session_mod.TerminalSession;
 pub const TabId = u64;
@@ -19,15 +20,6 @@ pub const TabMetadata = struct {
 };
 
 pub const TerminalWorkspace = struct {
-    pub const PollBudget = struct {
-        /// Maximum number of sessions to inspect for data and poll in a single frame.
-        max_tabs_per_frame: usize = 4,
-        /// Maximum number of background (non-active) sessions to inspect per frame.
-        max_background_tabs_per_frame: usize = 2,
-        /// Maximum number of poll passes for the active tab in one frame.
-        /// This helps high-throughput active tabs stay smooth without unbounded all-tab polling.
-        max_active_polls_per_frame: usize = 1,
-    };
     pub const PollFrameMetrics = struct {
         seq: u64 = 0,
         tab_count: usize = 0,
@@ -108,6 +100,41 @@ pub const TerminalWorkspace = struct {
         return self.tabs.items[self.activeIndex()].session;
     }
 
+    pub fn activeSessionCwd(self: *const TerminalWorkspace) []const u8 {
+        if (self.tabs.items.len == 0) return "";
+        return self.tabs.items[self.activeIndex()].session.currentCwd();
+    }
+
+    pub fn activeSessionShouldConfirmClose(self: *const TerminalWorkspace) bool {
+        if (self.tabs.items.len == 0) return false;
+        return self.tabs.items[self.activeIndex()].session.shouldConfirmClose();
+    }
+
+    pub fn activeSessionHasData(self: *const TerminalWorkspace) bool {
+        if (self.tabs.items.len == 0) return false;
+        return self.tabs.items[self.activeIndex()].session.hasData();
+    }
+
+    pub fn activeSessionPublishedGeneration(self: *const TerminalWorkspace) u64 {
+        if (self.tabs.items.len == 0) return 0;
+        return self.tabs.items[self.activeIndex()].session.publishedGeneration();
+    }
+
+    pub fn activeSessionCurrentGeneration(self: *const TerminalWorkspace) u64 {
+        if (self.tabs.items.len == 0) return 0;
+        return self.tabs.items[self.activeIndex()].session.currentGeneration();
+    }
+
+    pub fn publishedGenerationAt(self: *const TerminalWorkspace, index: usize) ?u64 {
+        if (index >= self.tabs.items.len) return null;
+        return self.tabs.items[index].session.publishedGeneration();
+    }
+
+    pub fn shouldConfirmCloseAt(self: *const TerminalWorkspace, index: usize) bool {
+        if (index >= self.tabs.items.len) return false;
+        return self.tabs.items[index].session.shouldConfirmClose();
+    }
+
     pub fn metadataAt(self: *TerminalWorkspace, index: usize) ?TabMetadata {
         const session = self.sessionAt(index) orelse return null;
         return .{
@@ -163,11 +190,11 @@ pub const TerminalWorkspace = struct {
 
     pub fn closeTab(self: *TerminalWorkspace, tab_id: TabId) bool {
         const idx = self.indexOfTabId(tab_id) orelse return false;
-        self.clearInputPressure();
+        polling.clearInputPressure(self);
         const removed = self.tabs.orderedRemove(idx);
         removed.session.deinit();
         self.normalizeActiveAfterRemoval(idx);
-        self.normalizePollCursor();
+        polling.normalizePollCursor(self);
         return true;
     }
 
@@ -182,7 +209,7 @@ pub const TerminalWorkspace = struct {
         if (to_index >= self.tabs.items.len) return false;
         if (from_index == to_index) return true;
 
-        self.clearInputPressure();
+        polling.clearInputPressure(self);
         const active_id = self.activeTabId();
         const moved = self.tabs.orderedRemove(from_index);
         self.tabs.insert(self.allocator, to_index, moved) catch |err| {
@@ -192,7 +219,7 @@ pub const TerminalWorkspace = struct {
         if (active_id) |id| {
             self.active_index = self.indexOfTabId(id) orelse 0;
         }
-        self.normalizePollCursor();
+        polling.normalizePollCursor(self);
         return true;
     }
 
@@ -208,224 +235,12 @@ pub const TerminalWorkspace = struct {
         }
     }
 
-    pub fn pollAll(self: *TerminalWorkspace, input_active_index: ?usize, has_input: bool) !bool {
-        const count = self.tabs.items.len;
-        const active_idx = normalizeIndex(input_active_index, count) orelse self.activeIndex();
-        var any_polled = false;
-        var total_polled: usize = 0;
-        var active_polled: usize = 0;
-        var background_polled: usize = 0;
-        for (self.tabs.items, 0..) |tab, i| {
-            const is_input_target = input_active_index != null and input_active_index.? == i;
-            tab.session.setInputPressure(has_input and is_input_target);
-            if (tab.session.hasData()) {
-                try tab.session.poll();
-                any_polled = true;
-                total_polled += 1;
-                if (i == active_idx) {
-                    active_polled += 1;
-                } else {
-                    background_polled += 1;
-                }
-            }
-        }
-        self.recordPollMetrics(.{
-            .tab_count = count,
-            .active_index = active_idx,
-            .active_budget = 1,
-            .active_polled = active_polled,
-            .background_budget = if (count > 0) count - 1 else 0,
-            .background_inspected = if (count > 0) count - 1 else 0,
-            .background_polled = background_polled,
-            .total_polled = total_polled,
-            .budget_tabs = count,
-            .budget_exhausted_hint = false,
-            .active_spillover_hint = false,
-            .background_backlog_hint = false,
-        });
-        return any_polled;
-    }
-
-    pub fn pollBudgeted(self: *TerminalWorkspace, input_active_index: ?usize, has_input: bool, budget: PollBudget) !bool {
-        const count = self.tabs.items.len;
-        if (count == 0) {
-            self.clearInputPressure();
-            self.background_poll_cursor = 0;
-            self.recordPollMetrics(.{});
-            return false;
-        }
-
-        self.normalizePollCursor();
-        self.updateInputPressure(input_active_index, has_input);
-
-        const active_idx = normalizeIndex(input_active_index, count) orelse self.activeIndex();
-        if (budget.max_tabs_per_frame == 0) {
-            self.recordPollMetrics(.{
-                .tab_count = count,
-                .active_index = active_idx,
-                .budget_tabs = 0,
-                .background_backlog_hint = count > 1,
-            });
-            return false;
-        }
-
-        var any_polled = false;
-        const active_polls = @max(@as(usize, 1), budget.max_active_polls_per_frame);
-        var active_polled_success: usize = 0;
-        var active_polled: usize = 0;
-        while (active_polled < active_polls) : (active_polled += 1) {
-            if (try self.pollIndexIfReady(active_idx)) {
-                any_polled = true;
-                active_polled_success += 1;
-            } else {
-                break;
-            }
-        }
-
-        var background_budget_used: usize = 0;
-        var background_inspected: usize = 0;
-        var background_polled: usize = 0;
-        var budget_exhausted_hint = false;
-        var background_backlog_hint = false;
-
-        if (count == 1 or budget.max_tabs_per_frame == 1 or budget.max_background_tabs_per_frame == 0) {
-            background_backlog_hint = count > 1 and (budget.max_tabs_per_frame <= 1 or budget.max_background_tabs_per_frame == 0);
-            self.background_poll_cursor = (active_idx + 1) % count;
-            self.recordPollMetrics(.{
-                .tab_count = count,
-                .active_index = active_idx,
-                .active_budget = active_polls,
-                .active_polled = active_polled_success,
-                .background_budget = background_budget_used,
-                .background_inspected = background_inspected,
-                .background_polled = background_polled,
-                .total_polled = active_polled_success,
-                .budget_tabs = budget.max_tabs_per_frame,
-                .budget_exhausted_hint = budget_exhausted_hint,
-                .active_spillover_hint = active_polled_success >= active_polls and self.tabs.items[active_idx].session.hasData(),
-                .background_backlog_hint = background_backlog_hint,
-            });
-            return any_polled;
-        }
-
-        const remaining_slots = budget.max_tabs_per_frame - 1;
-        const background_slots = @min(remaining_slots, budget.max_background_tabs_per_frame);
-        background_budget_used = background_slots;
-        if (background_slots == 0) {
-            background_backlog_hint = count > 1;
-            self.background_poll_cursor = (active_idx + 1) % count;
-            self.recordPollMetrics(.{
-                .tab_count = count,
-                .active_index = active_idx,
-                .active_budget = active_polls,
-                .active_polled = active_polled_success,
-                .background_budget = background_budget_used,
-                .background_inspected = background_inspected,
-                .background_polled = background_polled,
-                .total_polled = active_polled_success,
-                .budget_tabs = budget.max_tabs_per_frame,
-                .budget_exhausted_hint = budget_exhausted_hint,
-                .active_spillover_hint = active_polled_success >= active_polls and self.tabs.items[active_idx].session.hasData(),
-                .background_backlog_hint = background_backlog_hint,
-            });
-            return any_polled;
-        }
-
-        var cursor = self.background_poll_cursor % count;
-        while (background_inspected < background_slots) {
-            if (cursor == active_idx) {
-                cursor = (cursor + 1) % count;
-                continue;
-            }
-            if (try self.pollIndexIfReady(cursor)) {
-                any_polled = true;
-                background_polled += 1;
-            }
-            background_inspected += 1;
-            cursor = (cursor + 1) % count;
-        }
-        self.background_poll_cursor = cursor;
-        budget_exhausted_hint = background_inspected >= background_slots and background_slots >= @min(count - 1, budget.max_background_tabs_per_frame);
-        background_backlog_hint = count > 1 and background_slots < (count - 1);
-        self.recordPollMetrics(.{
-            .tab_count = count,
-            .active_index = active_idx,
-            .active_budget = active_polls,
-            .active_polled = active_polled_success,
-            .background_budget = background_budget_used,
-            .background_inspected = background_inspected,
-            .background_polled = background_polled,
-            .total_polled = active_polled_success + background_polled,
-            .budget_tabs = budget.max_tabs_per_frame,
-            .budget_exhausted_hint = budget_exhausted_hint,
-            .active_spillover_hint = active_polled_success >= active_polls and self.tabs.items[active_idx].session.hasData(),
-            .background_backlog_hint = background_backlog_hint,
-        });
-        return any_polled;
+    pub fn pollForFrame(self: *TerminalWorkspace, input_active_index: ?usize, has_input: bool) !bool {
+        return polling.pollForFrame(self, input_active_index, has_input);
     }
 
     pub fn lastPollFrameMetrics(self: *const TerminalWorkspace) PollFrameMetrics {
         return self.last_poll_metrics;
-    }
-
-    fn pollIndexIfReady(self: *TerminalWorkspace, index: usize) !bool {
-        if (index >= self.tabs.items.len) return false;
-        const session = self.tabs.items[index].session;
-        if (!session.hasData()) return false;
-        try session.poll();
-        return true;
-    }
-
-    fn updateInputPressure(self: *TerminalWorkspace, input_active_index: ?usize, has_input: bool) void {
-        const count = self.tabs.items.len;
-        const desired_index = if (has_input) normalizeIndex(input_active_index, count) else null;
-        if (self.input_pressure_index) |current_index| {
-            if (desired_index == null or desired_index.? != current_index) {
-                if (current_index < count) {
-                    self.tabs.items[current_index].session.setInputPressure(false);
-                }
-            }
-        }
-        if (desired_index) |idx| {
-            self.tabs.items[idx].session.setInputPressure(true);
-        }
-        self.input_pressure_index = desired_index;
-    }
-
-    fn clearInputPressure(self: *TerminalWorkspace) void {
-        if (self.input_pressure_index) |idx| {
-            if (idx < self.tabs.items.len) {
-                self.tabs.items[idx].session.setInputPressure(false);
-            }
-            self.input_pressure_index = null;
-        }
-    }
-
-    fn normalizePollCursor(self: *TerminalWorkspace) void {
-        const count = self.tabs.items.len;
-        if (count == 0) {
-            self.background_poll_cursor = 0;
-            self.input_pressure_index = null;
-            return;
-        }
-        self.background_poll_cursor %= count;
-        if (self.input_pressure_index) |idx| {
-            if (idx >= count) self.input_pressure_index = null;
-        }
-    }
-
-    fn normalizeIndex(index: ?usize, count: usize) ?usize {
-        if (count == 0) return null;
-        if (index) |idx| {
-            if (idx < count) return idx;
-        }
-        return null;
-    }
-
-    fn recordPollMetrics(self: *TerminalWorkspace, metrics: PollFrameMetrics) void {
-        self.poll_metrics_seq +%= 1;
-        self.last_poll_metrics = metrics;
-        self.last_poll_metrics.seq = self.poll_metrics_seq;
     }
 
     fn indexOfTabId(self: *const TerminalWorkspace, tab_id: TabId) ?usize {

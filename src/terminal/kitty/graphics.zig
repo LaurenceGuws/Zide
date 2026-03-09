@@ -126,7 +126,7 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
     defer raw_kv.deinit(self.allocator);
     const data = parseKittyControl(self.allocator, payload, &control, &raw_kv);
     if (!validateKittyControl(control)) {
-                    log.logf(.info, "kitty invalid command a={c} data_len={d}", .{ control.action, data.len });
+        log.logf(.info, "kitty invalid command a={c} data_len={d}", .{ control.action, data.len });
         writeKittyResponse(self, control, resolveKittyImageId(control) orelse 0, false, "EINVAL");
         return;
     }
@@ -222,7 +222,7 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
     }
 
     const decoded = loadKittyPayload(self, &control, data) orelse {
-                    log.logf(.info, "kitty decode failed len={d}", .{data.len});
+        log.logf(.info, "kitty decode failed len={d}", .{data.len});
         clearKittyLoading(kitty, final_image_id);
         writeKittyResponse(self, control, final_image_id, false, "EINVAL");
         return;
@@ -257,7 +257,7 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
     }
 
     const image = buildKittyImage(self, final_image_id, control, final_data) catch |err| {
-                    log.logf(.info, "kitty build failed id={d} format={d} data_len={d}", .{ final_image_id, control.format, final_data.len });
+        log.logf(.info, "kitty build failed id={d} format={d} data_len={d}", .{ final_image_id, control.format, final_data.len });
         const message = switch (err) {
             error.BadPng => "EBADPNG",
             else => "EINVAL",
@@ -309,7 +309,7 @@ pub fn handleKittyQueryPayloadSizeReply(self: anytype, control: KittyControl, im
                 "ENODATA:Insufficient image data: {d} < {d}",
                 .{ chunk_len, expected },
             ) catch |err| {
-                                    log.logf(.warning, "kitty query payload size message format failed len={d} expected={d} err={s}", .{ chunk_len, expected, @errorName(err) });
+                log.logf(.warning, "kitty query payload size message format failed len={d} expected={d} err={s}", .{ chunk_len, expected, @errorName(err) });
                 return false;
             };
             writeKittyResponse(self, control, image_id, false, message.items);
@@ -521,7 +521,7 @@ fn parseKittyValue(text: []const u8) ?u32 {
         return @intCast(text[0]);
     }
     return std.fmt.parseUnsigned(u32, text, 10) catch {
-        log.logf(.debug, "kitty parse unsigned failed text={s}", .{ text });
+        log.logf(.debug, "kitty parse unsigned failed text={s}", .{text});
         return null;
     };
 }
@@ -530,7 +530,7 @@ fn parseKittySigned(text: []const u8) ?i32 {
     const log = app_logger.logger("terminal.kitty");
     if (text.len == 0) return null;
     return std.fmt.parseInt(i32, text, 10) catch {
-        log.logf(.debug, "kitty parse signed failed text={s}", .{ text });
+        log.logf(.debug, "kitty parse signed failed text={s}", .{text});
         return null;
     };
 }
@@ -583,7 +583,7 @@ fn decodeBase64(self: anytype, data: []const u8) ?[]u8 {
     var owned = false;
     defer if (!owned) decoded.deinit(self.allocator);
     decoded.resize(self.allocator, decoded_len) catch {
-        log.logf(.warning, "kitty decodeBase64 failed buffer resize bytes={d}", .{ decoded_len });
+        log.logf(.warning, "kitty decodeBase64 failed buffer resize bytes={d}", .{decoded_len});
         return null;
     };
     _ = std.base64.standard.Decoder.decode(decoded.items, data) catch {
@@ -653,7 +653,7 @@ fn readKittyFile(self: anytype, path: []const u8, size: u32, is_temporary: bool)
         };
         const n = f.readAll(out) catch {
             self.allocator.free(out);
-            log.logf(.warning, "kitty file read failed path={s}", .{ path });
+            log.logf(.warning, "kitty file read failed path={s}", .{path});
             return null;
         };
         if (n < read_len) {
@@ -668,7 +668,7 @@ fn readKittyFile(self: anytype, path: []const u8, size: u32, is_temporary: bool)
         }
         return out;
     } else |_| {
-        log.logf(.debug, "kitty file open failed path={s}", .{ path });
+        log.logf(.debug, "kitty file open failed path={s}", .{path});
         return null;
     }
 }
@@ -680,7 +680,7 @@ fn readKittySharedMemory(self: anytype, name: []const u8, size: u32) ?[]u8 {
     if (builtin.target.os.tag == .windows) return null;
     var buf: [std.fs.max_path_bytes]u8 = undefined;
     const name_z = std.fmt.bufPrintZ(&buf, "{s}", .{name}) catch {
-        log.logf(.warning, "kitty shm name format failed name={s}", .{ name });
+        log.logf(.warning, "kitty shm name format failed name={s}", .{name});
         return null;
     };
     const fd = std.c.shm_open(name_z, @as(c_int, @bitCast(std.c.O{ .ACCMODE = .RDONLY })), 0);
@@ -931,7 +931,7 @@ fn inflateKittyData(self: anytype, compressed: []const u8, expected_size: u32) ?
     var buf: [8192]u8 = undefined;
     while (true) {
         const n = decompressor.reader.readSliceShort(&buf) catch |err| {
-            log.logf(.warning, "kitty inflate read failed err={s}", .{ @errorName(err) });
+            log.logf(.warning, "kitty inflate read failed err={s}", .{@errorName(err)});
             return null;
         };
         if (n == 0) break;
@@ -943,7 +943,7 @@ fn inflateKittyData(self: anytype, compressed: []const u8, expected_size: u32) ?
     }
     if (expected_size > 0 and out.items.len != expected_size) return null;
     return out.toOwnedSlice(self.allocator) catch |err| {
-        log.logf(.warning, "kitty inflate ownership conversion failed err={s}", .{ @errorName(err) });
+        log.logf(.warning, "kitty inflate ownership conversion failed err={s}", .{@errorName(err)});
         return null;
     };
 }
@@ -1099,6 +1099,87 @@ fn kittyVisibleTop(self: anytype) u64 {
     return kitty.scrollback_total - count;
 }
 
+const KittyDirtyRegion = struct {
+    start_row: usize,
+    end_row: usize,
+    start_col: usize,
+    end_col: usize,
+};
+
+const KittyDirtyPlacement = union(enum) {
+    none,
+    partial: KittyDirtyRegion,
+    full,
+};
+
+fn kittyPlacementDirtyRegion(
+    image: ?KittyImage,
+    placement: KittyPlacement,
+    screen_rows: usize,
+    screen_cols: usize,
+    cell_width: u16,
+    cell_height: u16,
+) KittyDirtyPlacement {
+    if (screen_rows == 0 or screen_cols == 0) return .none;
+
+    const start_row = @as(usize, placement.row);
+    const start_col = @as(usize, placement.col);
+    if (start_row >= screen_rows or start_col >= screen_cols) return .none;
+
+    const col_span = if (placement.cols > 0)
+        @as(usize, placement.cols)
+    else blk: {
+        const kitty_image = image orelse return .full;
+        if (cell_width == 0 or kitty_image.width == 0) return .full;
+        break :blk @as(usize, std.math.divCeil(u32, kitty_image.width, cell_width) catch return .full);
+    };
+    const row_span = if (placement.rows > 0)
+        @as(usize, placement.rows)
+    else blk: {
+        const kitty_image = image orelse return .full;
+        if (cell_height == 0 or kitty_image.height == 0) return .full;
+        break :blk @as(usize, std.math.divCeil(u32, kitty_image.height, cell_height) catch return .full);
+    };
+
+    const dirty_cols = @max(@as(usize, 1), col_span);
+    const dirty_rows = @max(@as(usize, 1), row_span);
+    return .{
+        .partial = .{
+            .start_row = start_row,
+            .end_row = @min(screen_rows - 1, start_row + dirty_rows - 1),
+            .start_col = start_col,
+            .end_col = @min(screen_cols - 1, start_col + dirty_cols - 1),
+        },
+    };
+}
+
+fn markKittyPlacementDirty(self: anytype, placement: KittyPlacement, src: std.builtin.SourceLocation) void {
+    const screen = self.activeScreen();
+    const kitty = kittyStateConst(self);
+    const image = findKittyImageById(kitty.images.items, placement.image_id);
+    switch (kittyPlacementDirtyRegion(
+        image,
+        placement,
+        screen.grid.rows,
+        screen.grid.cols,
+        self.cell_width,
+        self.cell_height,
+    )) {
+        .none => {},
+        .partial => |region| screen.grid.markDirtyRange(region.start_row, region.end_row, region.start_col, region.end_col),
+        .full => screen.grid.markDirtyAllWithReason(.kitty_graphics_changed, src),
+    }
+}
+
+fn markKittyImagePlacementsDirty(self: anytype, image_id: u32, src: std.builtin.SourceLocation) void {
+    const kitty = kittyStateConst(self);
+    for (kitty.placements.items) |placement| {
+        if (placement.image_id == image_id or placement.parent_image_id == image_id) {
+            markKittyPlacementDirty(self, placement, src);
+        }
+    }
+}
+
 pub fn updateKittyPlacementsForScroll(self: anytype) void {
     const kitty = kittyState(self);
     if (kitty.placements.items.len == 0) return;
@@ -1111,20 +1192,23 @@ pub fn updateKittyPlacementsForScroll(self: anytype) void {
     while (idx < kitty.placements.items.len) {
         const placement = &kitty.placements.items[idx];
         if (placement.anchor_row < top or placement.anchor_row >= max_row) {
+            markKittyPlacementDirty(self, placement.*, @src());
             _ = kitty.placements.swapRemove(idx);
             changed = true;
             continue;
         }
         const new_row: u64 = placement.anchor_row - top;
         if (placement.row != @as(u16, @intCast(new_row))) {
+            const old_placement = placement.*;
             placement.row = @as(u16, @intCast(new_row));
+            markKittyPlacementDirty(self, old_placement, @src());
+            markKittyPlacementDirty(self, placement.*, @src());
             changed = true;
         }
         idx += 1;
     }
     if (changed) {
         kitty.generation += 1;
-        self.activeScreen().grid.markDirtyAll();
     }
 }
 
@@ -1140,20 +1224,23 @@ pub fn shiftKittyPlacementsUp(self: anytype, top: usize, bottom: usize, count: u
             continue;
         }
         if (placement.row < top + count) {
+            markKittyPlacementDirty(self, placement.*, @src());
             _ = kitty.placements.swapRemove(idx);
             changed = true;
             continue;
         }
+        const old_placement = placement.*;
         placement.row = @intCast(placement.row - count);
         if (placement.anchor_row >= count) {
             placement.anchor_row -= count;
         }
+        markKittyPlacementDirty(self, old_placement, @src());
+        markKittyPlacementDirty(self, placement.*, @src());
         changed = true;
         idx += 1;
     }
     if (changed) {
         kitty.generation += 1;
-        self.activeScreen().grid.markDirtyAll();
     }
 }
 
@@ -1169,18 +1256,21 @@ pub fn shiftKittyPlacementsDown(self: anytype, top: usize, bottom: usize, count:
             continue;
         }
         if (placement.row + count > bottom) {
+            markKittyPlacementDirty(self, placement.*, @src());
             _ = kitty.placements.swapRemove(idx);
             changed = true;
             continue;
         }
+        const old_placement = placement.*;
         placement.row = @intCast(placement.row + count);
         placement.anchor_row += count;
+        markKittyPlacementDirty(self, old_placement, @src());
+        markKittyPlacementDirty(self, placement.*, @src());
         changed = true;
         idx += 1;
     }
     if (changed) {
         kitty.generation += 1;
-        self.activeScreen().grid.markDirtyAll();
     }
 }
 
@@ -1209,6 +1299,7 @@ fn evictKittyImage(self: anytype, prefer_unplaced: bool) bool {
     }
     if (best_idx == null) return false;
     const image = kitty.images.items[best_idx.?];
+    markKittyImagePlacementsDirty(self, image.id, @src());
     self.allocator.free(image.data);
     kitty.total_bytes -= image.data.len;
     _ = kitty.images.swapRemove(best_idx.?);
@@ -1225,7 +1316,6 @@ fn evictKittyImage(self: anytype, prefer_unplaced: bool) bool {
         _ = kitty.partials.remove(image.id);
     }
     kitty.generation += 1;
-    self.activeScreen().grid.markDirtyAll();
     return true;
 }
 
@@ -1238,6 +1328,7 @@ fn storeKittyImage(self: anytype, image: KittyImage) void {
     while (idx < kitty.images.items.len) : (idx += 1) {
         if (kitty.images.items[idx].id == image.id) {
             const old_len = kitty.images.items[idx].data.len;
+            markKittyImagePlacementsDirty(self, image.id, @src());
             var p: usize = 0;
             while (p < kitty.placements.items.len) {
                 if (kitty.placements.items[p].image_id == image.id) {
@@ -1260,8 +1351,7 @@ fn storeKittyImage(self: anytype, image: KittyImage) void {
             kitty.images.items[idx] = image;
             kitty.images.items[idx].version = version;
             kitty.total_bytes += image.data.len;
-            self.activeScreen().grid.markDirtyAll();
-                            log.logf(.info, "kitty image updated id={d} format={s} bytes={d}", .{ image.id, @tagName(image.format), image.data.len });
+            log.logf(.info, "kitty image updated id={d} format={s} bytes={d}", .{ image.id, @tagName(image.format), image.data.len });
             return;
         }
     }
@@ -1277,12 +1367,11 @@ fn storeKittyImage(self: anytype, image: KittyImage) void {
     stored.version = version;
     kitty.images.append(self.allocator, stored) catch |err| {
         self.allocator.free(stored.data);
-                    log.logf(.warning, "kitty image store failed id={d} err={s}", .{ stored.id, @errorName(err) });
+        log.logf(.warning, "kitty image store failed id={d} err={s}", .{ stored.id, @errorName(err) });
         return;
     };
     kitty.total_bytes += stored.data.len;
-    self.activeScreen().grid.markDirtyAll();
-            log.logf(.info, "kitty image stored id={d} format={s} bytes={d}", .{ stored.id, @tagName(stored.format), stored.data.len });
+    log.logf(.info, "kitty image stored id={d} format={s} bytes={d}", .{ stored.id, @tagName(stored.format), stored.data.len });
 }
 
 fn placeKittyImage(self: anytype, image_id: u32, control: KittyControl) ?[]const u8 {
@@ -1341,21 +1430,22 @@ fn placeKittyImage(self: anytype, image_id: u32, control: KittyControl) ?[]const
     };
     if (placement_id != 0) {
         if (findKittyPlacementIndex(self, image_id, placement_id)) |idx| {
+            markKittyPlacementDirty(self, kitty.placements.items[idx], @src());
             kitty.placements.items[idx] = placement;
         } else {
             kitty.placements.append(self.allocator, placement) catch |err| {
-                                    log.logf(.warning, "kitty placement append failed id={d} pid={d} err={s}", .{ image_id, placement_id, @errorName(err) });
+                log.logf(.warning, "kitty placement append failed id={d} pid={d} err={s}", .{ image_id, placement_id, @errorName(err) });
                 return "ENOMEM";
             };
         }
     } else {
         kitty.placements.append(self.allocator, placement) catch |err| {
-                            log.logf(.warning, "kitty placement append failed id={d} err={s}", .{ image_id, @errorName(err) });
+            log.logf(.warning, "kitty placement append failed id={d} err={s}", .{ image_id, @errorName(err) });
             return "ENOMEM";
         };
     }
-    self.activeScreen().grid.markDirtyAll();
-            log.logf(.info, "kitty placed id={d} row={d} col={d} cols={d} rows={d}", .{ image_id, row, col, placement.cols, placement.rows });
+    markKittyPlacementDirty(self, placement, @src());
+    log.logf(.info, "kitty placed id={d} row={d} col={d} cols={d} rows={d}", .{ image_id, row, col, placement.cols, placement.rows });
 
     if (control.cursor_movement != 1) {
         const cols = effectiveKittyColumns(self, control, image_id);
@@ -1445,6 +1535,7 @@ fn effectiveKittyRows(self: anytype, control: KittyControl, image_id: u32) u32 {
 fn deleteKittyImages(self: anytype, image_id: ?u32) void {
     const kitty = kittyState(self);
     if (image_id) |id| {
+        markKittyImagePlacementsDirty(self, id, @src());
         var i: usize = 0;
         while (i < kitty.images.items.len) {
             if (kitty.images.items[i].id == id) {
@@ -1468,9 +1559,11 @@ fn deleteKittyImages(self: anytype, image_id: ?u32) void {
             _ = kitty.partials.remove(id);
         }
     } else {
+        for (kitty.placements.items) |placement| {
+            markKittyPlacementDirty(self, placement, @src());
+        }
         clearKittyImages(self);
     }
-    self.activeScreen().grid.markDirtyAll();
 }
 
 fn deleteKittyPlacements(
@@ -1483,6 +1576,7 @@ fn deleteKittyPlacements(
     var changed = false;
     while (idx < kitty.placements.items.len) {
         if (predicate(ctx, self, kitty.placements.items[idx])) {
+            markKittyPlacementDirty(self, kitty.placements.items[idx], @src());
             _ = kitty.placements.swapRemove(idx);
             changed = true;
             continue;
@@ -1491,7 +1585,6 @@ fn deleteKittyPlacements(
     }
     if (changed) {
         kitty.generation += 1;
-        self.activeScreen().grid.markDirtyAll();
     }
 }
 
@@ -1693,7 +1786,7 @@ pub fn writeKittyResponse(self: anytype, control: KittyControl, image_id: u32, o
     var seq = std.ArrayList(u8).empty;
     defer seq.deinit(self.allocator);
     _ = seq.appendSlice(self.allocator, "\x1b_G") catch |err| {
-        log.logf(.warning, "kitty response prefix append failed err={s}", .{ @errorName(err) });
+        log.logf(.warning, "kitty response prefix append failed err={s}", .{@errorName(err)});
         return;
     };
     var needs_comma = false;
@@ -1706,7 +1799,7 @@ pub fn writeKittyResponse(self: anytype, control: KittyControl, image_id: u32, o
     }
     if (control.image_number) |num| {
         if (needs_comma) _ = seq.append(self.allocator, ',') catch |err| {
-            log.logf(.warning, "kitty response comma append failed err={s}", .{ @errorName(err) });
+            log.logf(.warning, "kitty response comma append failed err={s}", .{@errorName(err)});
             return;
         };
         _ = seq.writer(self.allocator).print("I={d}", .{num}) catch |err| {
@@ -1717,7 +1810,7 @@ pub fn writeKittyResponse(self: anytype, control: KittyControl, image_id: u32, o
     }
     if (control.placement_id) |pid| {
         if (needs_comma) _ = seq.append(self.allocator, ',') catch |err| {
-            log.logf(.warning, "kitty response comma append failed err={s}", .{ @errorName(err) });
+            log.logf(.warning, "kitty response comma append failed err={s}", .{@errorName(err)});
             return;
         };
         _ = seq.writer(self.allocator).print("p={d}", .{pid}) catch |err| {
@@ -1726,7 +1819,7 @@ pub fn writeKittyResponse(self: anytype, control: KittyControl, image_id: u32, o
         };
     }
     _ = seq.append(self.allocator, ';') catch |err| {
-        log.logf(.warning, "kitty response separator append failed err={s}", .{ @errorName(err) });
+        log.logf(.warning, "kitty response separator append failed err={s}", .{@errorName(err)});
         return;
     };
     _ = seq.appendSlice(self.allocator, message) catch |err| {
@@ -1734,7 +1827,7 @@ pub fn writeKittyResponse(self: anytype, control: KittyControl, image_id: u32, o
         return;
     };
     _ = seq.appendSlice(self.allocator, "\x1b\\") catch |err| {
-        log.logf(.warning, "kitty response terminator append failed err={s}", .{ @errorName(err) });
+        log.logf(.warning, "kitty response terminator append failed err={s}", .{@errorName(err)});
         return;
     };
     if (self.pty) |*pty| {
@@ -1768,4 +1861,71 @@ fn clearKittyImagesState(self: anytype, kitty: *KittyState) void {
     kitty.partials.clearRetainingCapacity();
     kitty.total_bytes = 0;
     kitty.generation += 1;
+}
+
+test "kitty dirty region derives implicit cell span from image dimensions" {
+    const image = KittyImage{
+        .id = 1,
+        .width = 20,
+        .height = 40,
+        .format = .rgba,
+        .data = &.{},
+        .version = 1,
+    };
+    const placement = KittyPlacement{
+        .image_id = 1,
+        .placement_id = 0,
+        .row = 2,
+        .col = 3,
+        .cols = 0,
+        .rows = 0,
+        .z = 0,
+        .anchor_row = 0,
+        .is_virtual = false,
+        .parent_image_id = 0,
+        .parent_placement_id = 0,
+        .offset_x = 0,
+        .offset_y = 0,
+    };
+
+    switch (kittyPlacementDirtyRegion(image, placement, 10, 10, 8, 16)) {
+        .partial => |region| {
+            try std.testing.expectEqual(@as(usize, 2), region.start_row);
+            try std.testing.expectEqual(@as(usize, 4), region.end_row);
+            try std.testing.expectEqual(@as(usize, 3), region.start_col);
+            try std.testing.expectEqual(@as(usize, 5), region.end_col);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "kitty dirty region falls back to full when implicit span cannot be derived" {
+    const image = KittyImage{
+        .id = 1,
+        .width = 20,
+        .height = 40,
+        .format = .rgba,
+        .data = &.{},
+        .version = 1,
+    };
+    const placement = KittyPlacement{
+        .image_id = 1,
+        .placement_id = 0,
+        .row = 0,
+        .col = 0,
+        .cols = 0,
+        .rows = 0,
+        .z = 0,
+        .anchor_row = 0,
+        .is_virtual = false,
+        .parent_image_id = 0,
+        .parent_placement_id = 0,
+        .offset_x = 0,
+        .offset_y = 0,
+    };
+
+    try std.testing.expectEqual(
+        KittyDirtyPlacement.full,
+        kittyPlacementDirtyRegion(image, placement, 10, 10, 0, 16),
+    );
 }
