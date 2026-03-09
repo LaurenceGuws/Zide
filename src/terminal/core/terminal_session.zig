@@ -1013,6 +1013,8 @@ pub const TerminalSession = struct {
     }
 
     pub fn setCellSize(self: *TerminalSession, cell_width: u16, cell_height: u16) void {
+        self.lock();
+        defer self.unlock();
         self.cell_width = cell_width;
         self.cell_height = cell_height;
     }
@@ -1178,8 +1180,16 @@ pub const TerminalSession = struct {
         scrollback_view.setScrollOffset(self, offset);
     }
 
+    pub fn setScrollOffsetLocked(self: *TerminalSession, offset: usize) void {
+        scrollback_view.setScrollOffsetLocked(self, offset);
+    }
+
     pub fn scrollBy(self: *TerminalSession, delta: isize) void {
         scrollback_view.scrollBy(self, delta);
+    }
+
+    pub fn scrollByLocked(self: *TerminalSession, delta: isize) void {
+        scrollback_view.scrollByLocked(self, delta);
     }
 
     pub fn updateViewCacheForScroll(self: *TerminalSession) void {
