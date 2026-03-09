@@ -255,13 +255,14 @@ ui_widget_modularization_todo:
 
         - id: UI-TB-02
           title: "Remove duplicate snapshot-vs-visible hover/open paths"
-          status: todo
+          status: done
           files_to_edit:
             - src/ui/widgets/terminal_widget_hover.zig
             - src/ui/widgets/terminal_widget_open.zig
             - src/ui/widgets/terminal_widget_input.zig
           notes:
             - "The current code keeps both visible-cache and snapshot-based paths; converge on one authoritative UI-side contract after boundary cleanup."
+            - "2026-03-09: Removed the stale snapshot-based hover/open path and rewired the remaining tests to the visible-cache seam that production input uses."
 
         - id: UI-TB-03
           title: "Move terminal dirty acknowledgement out of widget draw"
