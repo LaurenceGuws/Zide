@@ -368,6 +368,7 @@ Statuses are strict:
   - `src/app/terminal_theme_apply.zig`
 - progress:
   - 2026-03-09: first slice landed on feature branch work: default-color publication now has an explicit `setDefaultColorsLocked(...)` contract for parser-owned state mutations, and app-side theme application now uses `applyThemePalette(...)` so palette capture, default-color mutation, ANSI replacement, and remap happen under one session lock instead of a partly unlocked sequence.
+  - 2026-03-09: second slice landed on feature branch work: OSC palette and dynamic-color protocol handlers now mutate session palette/default state through explicit locked helpers (`setPaletteColorLocked(...)`, `resetAllPaletteColorsLocked(...)`, `setDynamicColorCodeLocked(...)`) instead of reaching into raw session fields ad hoc.
 
 4) `TerminalSession` surface reduction
 - status: `todo`

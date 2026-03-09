@@ -53,6 +53,16 @@ fn FakePtySupport(comptime Self: type) type {
         pub fn writePtyBytes(self: *Self, bytes: []const u8) !void {
             try writeFakePtyBytes(&self.pty, bytes);
         }
+
+        pub fn setDefaultColorsLocked(_: *Self, _: types.Color, _: types.Color) void {}
+
+        pub fn setPaletteColorLocked(_: *Self, _: usize, _: types.Color) void {}
+
+        pub fn resetPaletteColorLocked(_: *Self, _: usize) void {}
+
+        pub fn resetAllPaletteColorsLocked(_: *Self) void {}
+
+        pub fn setDynamicColorCodeLocked(_: *Self, _: u8, _: ?types.Color) void {}
     };
 }
 
@@ -342,7 +352,6 @@ test "OSC 10 dynamic color query replies with default fg and BEL terminator" {
 
         pub usingnamespace FakePtySupport(@This());
         pub fn setDefaultColors(_: *@This(), _: types.Color, _: types.Color) void {}
-        pub fn setDefaultColorsLocked(_: *@This(), _: types.Color, _: types.Color) void {}
     };
 
     const default_attrs = types.defaultCell().attrs;
