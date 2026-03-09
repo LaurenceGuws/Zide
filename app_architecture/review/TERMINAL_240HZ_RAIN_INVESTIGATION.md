@@ -679,3 +679,18 @@ Reason:
     the generic frame idle hook
   - reduce the amount of terminal-specific behavior that still lives inline in the
     top-level app render/idle path
+
+## Frame Pacing State Grouping (2026-03-09)
+
+- Files:
+  - `src/app/app_state.zig`
+  - `src/app/app_state_types.zig`
+  - `src/app/init_runtime.zig`
+  - `src/app/terminal_frame_pacing_runtime.zig`
+- Change:
+  - grouped the terminal pacing bookkeeping into `AppState.terminal_frame_pacing`
+    instead of keeping draw-seq, poll-seq, generation observation, and pressure
+    timing as separate top-level fields
+- Intent:
+  - reduce app-state sprawl while the runtime lane is being cleaned up
+  - make later extraction of terminal-specific scheduler ownership less invasive

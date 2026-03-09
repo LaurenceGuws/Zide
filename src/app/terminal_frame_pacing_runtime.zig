@@ -30,18 +30,19 @@ pub const Snapshot = struct {
 };
 
 pub fn observe(state: anytype, now: f64) Snapshot {
+    const pacing = &state.terminal_frame_pacing;
     const current_generation = latestCurrentGeneration(state);
     const published_generation = latestPublishedGeneration(state);
-    if (current_generation != state.last_terminal_observed_current_generation) {
-        state.last_terminal_observed_current_generation = current_generation;
-        state.last_terminal_generation_change_time = now;
+    if (current_generation != pacing.last_observed_current_generation) {
+        pacing.last_observed_current_generation = current_generation;
+        pacing.last_generation_change_time = now;
     }
-    if (published_generation != state.last_terminal_observed_generation) {
-        state.last_terminal_observed_generation = published_generation;
-        state.last_terminal_generation_change_time = now;
+    if (published_generation != pacing.last_observed_generation) {
+        pacing.last_observed_generation = published_generation;
+        pacing.last_generation_change_time = now;
     }
 
-    const redraw_pending = published_generation != state.last_terminal_drawn_generation;
+    const redraw_pending = published_generation != pacing.last_drawn_generation;
     const parse_backlog = current_generation != published_generation;
     return .{
         .current_generation = current_generation,
@@ -53,9 +54,10 @@ pub fn observe(state: anytype, now: f64) Snapshot {
 }
 
 pub fn consumeDrawMetrics(state: anytype) ?TerminalDrawLatencyMetrics {
+    const pacing = &state.terminal_frame_pacing;
     const metrics = terminal_widget_draw.latestFrameLatencyMetrics();
-    if (metrics.seq == 0 or metrics.seq == state.last_terminal_draw_seq) return null;
-    state.last_terminal_draw_seq = metrics.seq;
+    if (metrics.seq == 0 or metrics.seq == pacing.last_draw_seq) return null;
+    pacing.last_draw_seq = metrics.seq;
     return metrics;
 }
 
@@ -64,9 +66,10 @@ pub fn consumePollMetrics(state: anytype) ?PollMetrics {
     if (!@hasField(State, "terminal_workspace")) return null;
 
     if (state.terminal_workspace) |*workspace| {
+        const pacing = &state.terminal_frame_pacing;
         const metrics = workspace.lastPollFrameMetrics();
-        if (metrics.seq == 0 or metrics.seq == state.last_terminal_poll_seq) return null;
-        state.last_terminal_poll_seq = metrics.seq;
+        if (metrics.seq == 0 or metrics.seq == pacing.last_poll_seq) return null;
+        pacing.last_poll_seq = metrics.seq;
         return .{
             .tab_count = metrics.tab_count,
             .active_polled = metrics.active_polled,
@@ -86,20 +89,22 @@ pub fn consumePollMetrics(state: anytype) ?PollMetrics {
 }
 
 pub fn clearPressure(state: anytype) void {
-    state.terminal_pressure_since = null;
+    state.terminal_frame_pacing.pressure_since = null;
 }
 
 pub fn noteIdle(state: anytype, now: f64, redraw_pending: bool) void {
+    const pacing = &state.terminal_frame_pacing;
     if (redraw_pending) {
-        if (state.terminal_pressure_since == null) state.terminal_pressure_since = now;
+        if (pacing.pressure_since == null) pacing.pressure_since = now;
     } else {
-        state.terminal_pressure_since = null;
+        pacing.pressure_since = null;
     }
 }
 
 pub fn sleepDuration(state: anytype, now: f64, snapshot: Snapshot) f64 {
-    const generation_recently_advanced = state.last_terminal_generation_change_time > 0 and
-        (now - state.last_terminal_generation_change_time) <= 0.25;
+    const pacing = &state.terminal_frame_pacing;
+    const generation_recently_advanced = pacing.last_generation_change_time > 0 and
+        (now - pacing.last_generation_change_time) <= 0.25;
     return if (snapshot.redraw_pending or snapshot.output_pressure or generation_recently_advanced)
         0.001
     else if (now < 3.0)

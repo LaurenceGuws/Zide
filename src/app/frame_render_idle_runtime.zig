@@ -32,7 +32,7 @@ pub fn handle(
         draw_ms = (draw_end - draw_start) * 1000.0;
         const terminal_draw_metrics = app_terminal_frame_pacing_runtime.consumeDrawMetrics(state);
         if (terminal_draw_metrics) |metrics| {
-            state.last_terminal_drawn_generation = metrics.generation;
+            state.terminal_frame_pacing.last_drawn_generation = metrics.generation;
         }
         state.metrics.recordDraw(draw_start, draw_end);
         if (state.perf_mode and state.perf_frames_done > 0) {
