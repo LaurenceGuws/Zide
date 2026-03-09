@@ -1170,15 +1170,6 @@ pub const TerminalSession = struct {
         return scrollback_view.scrollbackCount(self);
     }
 
-    pub fn copyScrollbackRow(self: *TerminalSession, allocator: std.mem.Allocator, index: usize, out: *std.ArrayList(Cell)) !?[]const Cell {
-        self.lock();
-        defer self.unlock();
-        out.clearRetainingCapacity();
-        const row = scrollback_view.scrollbackRow(self, index) orelse return null;
-        try out.appendSlice(allocator, row);
-        return out.items;
-    }
-
     pub fn copyScrollbackRange(
         self: *TerminalSession,
         allocator: std.mem.Allocator,

@@ -4,13 +4,14 @@ const term_mod = @import("terminal/core/terminal.zig");
 fn firstCodepoint(session: *term_mod.TerminalSession, global_row: usize) ?u32 {
     const snapshot = session.snapshot();
     const history_len = snapshot.scrollback_count;
-    const cols = snapshot.cols;
     if (global_row < history_len) {
-        var row_buf = std.ArrayList(term_mod.Cell).empty;
-        defer row_buf.deinit(std.testing.allocator);
-        if ((session.copyScrollbackRow(std.testing.allocator, global_row, &row_buf) catch null)) |row| return row[0].codepoint;
+        var cells = std.ArrayList(term_mod.Cell).empty;
+        defer cells.deinit(std.testing.allocator);
+        const range = session.copyScrollbackRange(std.testing.allocator, global_row, 1, &cells) catch return null;
+        if (range.row_count == 1 and range.cols > 0) return cells.items[0].codepoint;
         return null;
     }
+    const cols = snapshot.cols;
     const grid_row = global_row - history_len;
     if (grid_row >= snapshot.rows) return null;
     const row_start = grid_row * cols;
@@ -21,13 +22,11 @@ fn codepointAt(session: *term_mod.TerminalSession, global_row: usize, col: usize
     const snapshot = session.snapshot();
     const history_len = snapshot.scrollback_count;
     if (global_row < history_len) {
-        var row_buf = std.ArrayList(term_mod.Cell).empty;
-        defer row_buf.deinit(std.testing.allocator);
-        if ((session.copyScrollbackRow(std.testing.allocator, global_row, &row_buf) catch null)) |row| {
-            if (col >= row.len) return null;
-            return row[col].codepoint;
-        }
-        return null;
+        var cells = std.ArrayList(term_mod.Cell).empty;
+        defer cells.deinit(std.testing.allocator);
+        const range = session.copyScrollbackRange(std.testing.allocator, global_row, 1, &cells) catch return null;
+        if (range.row_count != 1 or col >= range.cols) return null;
+        return cells.items[col].codepoint;
     }
     const grid_row = global_row - history_len;
     if (grid_row >= snapshot.rows) return null;

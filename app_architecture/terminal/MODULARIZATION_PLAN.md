@@ -393,6 +393,7 @@ Statuses are strict:
   - 2026-03-09: seventh slice started on feature branch work: terminal text export is now backend-owned. Selection/plain/ANSI export moved out of `terminal_widget.zig` into `src/terminal/core/text_export.zig` and is exposed through `TerminalSession`, so app shortcuts and pager flow through terminal core instead of widget-owned serialization.
   - 2026-03-09: eighth slice started on feature branch work: the new terminal-owned export seam is now exposed to FFI through string-returning bridge/C APIs for selection text plus plain/ANSI scrollback dumps, and obsolete borrowed session reads (`currentTitle`, `currentCwd`, `scrollbackRow`, `scrollOffset`, `selectionState`) were deleted from the public `TerminalSession` surface.
   - 2026-03-09: ninth slice started on feature branch work: scrollback range export is now backend-owned as well. `copyScrollbackRange(...)` moved row-count validation and contiguous history-cell assembly out of the FFI bridge and into terminal core, so the bridge only marshals ABI cells instead of implementing a second scrollback paging contract.
+  - 2026-03-09: tenth slice started on feature branch work: the old row-by-row public history seam (`copyScrollbackRow(...)`) was deleted after all real callers moved to backend-owned range/text export contracts. Remaining tests now validate history through `copyScrollbackRange(...)` instead of a special-case row helper.
 
 5) Workspace/session boundary tightening
 - status: `todo`
