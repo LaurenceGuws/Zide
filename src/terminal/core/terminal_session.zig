@@ -1345,6 +1345,10 @@ pub const TerminalSession = struct {
         return self.acknowledgePresentedGeneration(presented.generation);
     }
 
+    pub fn takeAltExitPresentationTimeMs(self: *TerminalSession) i64 {
+        return self.alt_exit_time_ms.swap(-1, .acq_rel);
+    }
+
     pub fn syncUpdatesActive(self: *const TerminalSession) bool {
         return self.sync_updates_active;
     }

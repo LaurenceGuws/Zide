@@ -48,8 +48,17 @@ pub const FrameLatencyMetrics = struct {
 };
 
 pub const DrawOutcome = struct {
+    pub const AltExitInfo = struct {
+        draw_ms: f64,
+        rows: usize,
+        cols: usize,
+        history_len: usize,
+        scroll_offset: usize,
+    };
+
     presented: ?PresentedRenderCache = null,
     texture_updated: bool = false,
+    alt_exit_info: ?AltExitInfo = null,
 };
 
 pub const DrawPreparation = struct {
@@ -1626,21 +1635,13 @@ pub fn drawPrepared(
     overlay_ms = time_utils.secondsToMs(app_shell.getTime() - overlay_phase_start);
 
     if (alt_exit) {
-        const elapsed_ms = (app_shell.getTime() - draw_start_time) * 1000.0;
-        const exit_time_ms = self.session.alt_exit_time_ms.swap(-1, .acq_rel);
-        const exit_to_draw_ms: f64 = if (exit_time_ms >= 0)
-            @as(f64, @floatFromInt(std.time.milliTimestamp() - exit_time_ms))
-        else
-            -1.0;
-        const log = app_logger.logger("terminal.alt");
-        log.logf(.info, "alt_exit_draw_ms={d:.2} exit_to_draw_ms={d:.2} rows={d} cols={d} history={d} scroll_offset={d}", .{
-            elapsed_ms,
-            exit_to_draw_ms,
-            rows,
-            cols,
-            history_len,
-            scroll_offset,
-        });
+        outcome.alt_exit_info = .{
+            .draw_ms = (app_shell.getTime() - draw_start_time) * 1000.0,
+            .rows = rows,
+            .cols = cols,
+            .history_len = history_len,
+            .scroll_offset = scroll_offset,
+        };
     }
 
     const draw_log = app_logger.logger("terminal.ui.redraw");
