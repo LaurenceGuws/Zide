@@ -45,6 +45,193 @@ const ModeSnapshot = struct {
     newline_mode: bool,
 };
 
+const DecstrContext = struct {
+    ctx: *anyopaque,
+    reset_parser_fn: *const fn (ctx: *anyopaque) void,
+    reset_saved_charset_fn: *const fn (ctx: *anyopaque) void,
+    clear_title_buffer_fn: *const fn (ctx: *anyopaque) void,
+    set_default_title_fn: *const fn (ctx: *anyopaque) void,
+    set_report_color_scheme_2031_fn: *const fn (ctx: *anyopaque, enabled: bool) void,
+    set_grapheme_cluster_shaping_2027_fn: *const fn (ctx: *anyopaque, enabled: bool) void,
+    set_primary_grapheme_cluster_shaping_2027_fn: *const fn (ctx: *anyopaque, enabled: bool) void,
+    set_alt_grapheme_cluster_shaping_2027_fn: *const fn (ctx: *anyopaque, enabled: bool) void,
+    set_inband_resize_notifications_2048_fn: *const fn (ctx: *anyopaque, enabled: bool) void,
+    set_kitty_paste_events_5522_fn: *const fn (ctx: *anyopaque, enabled: bool) void,
+    reset_input_modes_locked_fn: *const fn (ctx: *anyopaque) void,
+    set_column_mode_132_fn: *const fn (ctx: *anyopaque, enabled: bool) void,
+    set_sync_updates_locked_fn: *const fn (ctx: *anyopaque, enabled: bool) void,
+    clear_all_kitty_images_fn: *const fn (ctx: *anyopaque) void,
+    reset_active_screen_state_fn: *const fn (ctx: *anyopaque) void,
+    mark_active_screen_decstr_dirty_fn: *const fn (ctx: *anyopaque) void,
+
+    pub fn from(session: anytype) DecstrContext {
+        const SessionPtr = @TypeOf(session);
+        return .{
+            .ctx = @ptrCast(session),
+            .reset_parser_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.parser.reset();
+                }
+            }.call,
+            .reset_saved_charset_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.saved_charset = .{};
+                }
+            }.call,
+            .clear_title_buffer_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.title_buffer.clearRetainingCapacity();
+                }
+            }.call,
+            .set_default_title_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.title = "Terminal";
+                }
+            }.call,
+            .set_report_color_scheme_2031_fn = struct {
+                fn call(ctx: *anyopaque, enabled: bool) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.report_color_scheme_2031 = enabled;
+                }
+            }.call,
+            .set_grapheme_cluster_shaping_2027_fn = struct {
+                fn call(ctx: *anyopaque, enabled: bool) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.grapheme_cluster_shaping_2027 = enabled;
+                }
+            }.call,
+            .set_primary_grapheme_cluster_shaping_2027_fn = struct {
+                fn call(ctx: *anyopaque, enabled: bool) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.primary.setGraphemeClusterShaping2027(enabled);
+                }
+            }.call,
+            .set_alt_grapheme_cluster_shaping_2027_fn = struct {
+                fn call(ctx: *anyopaque, enabled: bool) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.alt.setGraphemeClusterShaping2027(enabled);
+                }
+            }.call,
+            .set_inband_resize_notifications_2048_fn = struct {
+                fn call(ctx: *anyopaque, enabled: bool) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.inband_resize_notifications_2048 = enabled;
+                }
+            }.call,
+            .set_kitty_paste_events_5522_fn = struct {
+                fn call(ctx: *anyopaque, enabled: bool) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.kitty_paste_events_5522 = enabled;
+                }
+            }.call,
+            .reset_input_modes_locked_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.resetInputModesLocked();
+                }
+            }.call,
+            .set_column_mode_132_fn = struct {
+                fn call(ctx: *anyopaque, enabled: bool) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.column_mode_132 = enabled;
+                }
+            }.call,
+            .set_sync_updates_locked_fn = struct {
+                fn call(ctx: *anyopaque, enabled: bool) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.setSyncUpdatesLocked(enabled);
+                }
+            }.call,
+            .clear_all_kitty_images_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.clearAllKittyImages();
+                }
+            }.call,
+            .reset_active_screen_state_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.activeScreen().resetState();
+                }
+            }.call,
+            .mark_active_screen_decstr_dirty_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.activeScreen().markDirtyAllWithReason(.decstr_soft_reset, @src());
+                }
+            }.call,
+        };
+    }
+
+    pub fn resetParser(self: *const DecstrContext) void {
+        self.reset_parser_fn(self.ctx);
+    }
+
+    pub fn resetSavedCharset(self: *const DecstrContext) void {
+        self.reset_saved_charset_fn(self.ctx);
+    }
+
+    pub fn clearTitleBuffer(self: *const DecstrContext) void {
+        self.clear_title_buffer_fn(self.ctx);
+    }
+
+    pub fn setDefaultTitle(self: *const DecstrContext) void {
+        self.set_default_title_fn(self.ctx);
+    }
+
+    pub fn setReportColorScheme2031(self: *const DecstrContext, enabled: bool) void {
+        self.set_report_color_scheme_2031_fn(self.ctx, enabled);
+    }
+
+    pub fn setGraphemeClusterShaping2027(self: *const DecstrContext, enabled: bool) void {
+        self.set_grapheme_cluster_shaping_2027_fn(self.ctx, enabled);
+    }
+
+    pub fn setPrimaryGraphemeClusterShaping2027(self: *const DecstrContext, enabled: bool) void {
+        self.set_primary_grapheme_cluster_shaping_2027_fn(self.ctx, enabled);
+    }
+
+    pub fn setAltGraphemeClusterShaping2027(self: *const DecstrContext, enabled: bool) void {
+        self.set_alt_grapheme_cluster_shaping_2027_fn(self.ctx, enabled);
+    }
+
+    pub fn setInbandResizeNotifications2048(self: *const DecstrContext, enabled: bool) void {
+        self.set_inband_resize_notifications_2048_fn(self.ctx, enabled);
+    }
+
+    pub fn setKittyPasteEvents5522(self: *const DecstrContext, enabled: bool) void {
+        self.set_kitty_paste_events_5522_fn(self.ctx, enabled);
+    }
+
+    pub fn resetInputModesLocked(self: *const DecstrContext) void {
+        self.reset_input_modes_locked_fn(self.ctx);
+    }
+
+    pub fn setColumnMode132(self: *const DecstrContext, enabled: bool) void {
+        self.set_column_mode_132_fn(self.ctx, enabled);
+    }
+
+    pub fn setSyncUpdatesLocked(self: *const DecstrContext, enabled: bool) void {
+        self.set_sync_updates_locked_fn(self.ctx, enabled);
+    }
+
+    pub fn clearAllKittyImages(self: *const DecstrContext) void {
+        self.clear_all_kitty_images_fn(self.ctx);
+    }
+
+    pub fn resetActiveScreenState(self: *const DecstrContext) void {
+        self.reset_active_screen_state_fn(self.ctx);
+    }
+
+    pub fn markActiveScreenDecstrDirty(self: *const DecstrContext) void {
+        self.mark_active_screen_decstr_dirty_fn(self.ctx);
+    }
+};
+
 fn captureModeSnapshot(self: anytype, screen: anytype) ModeSnapshot {
     return .{
         .app_cursor_keys = self.appCursorKeysEnabled(),
@@ -367,7 +554,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
         'p' => { // DECRQM (requires '$' intermediate)
             if (csiIntermediatesEq(action, "!")) { // DECSTR (soft terminal reset)
                 if (action.leader == 0 and !action.private) {
-                    applyDecstr(self);
+                    applyDecstr(DecstrContext.from(self));
                 }
                 return;
             }
@@ -636,31 +823,29 @@ pub fn writeDecrqmReply(pty: anytype, private: bool, mode: i32, state: DecrpmSta
     return true;
 }
 
-fn applyDecstr(self: anytype) void {
+fn applyDecstr(context: DecstrContext) void {
     // DECSTR is a soft reset: reset parser/mode state but preserve screen contents,
     // scrollback, and kitty graphics. Do not call the hard reset path.
-    self.parser.reset();
-    self.saved_charset = .{};
-    self.title_buffer.clearRetainingCapacity();
-    self.title = "Terminal";
+    context.resetParser();
+    context.resetSavedCharset();
+    context.clearTitleBuffer();
+    context.setDefaultTitle();
 
-    self.report_color_scheme_2031 = false;
-    self.grapheme_cluster_shaping_2027 = false;
-    self.primary.setGraphemeClusterShaping2027(false);
-    self.alt.setGraphemeClusterShaping2027(false);
-    self.inband_resize_notifications_2048 = false;
-    self.kitty_paste_events_5522 = false;
-    self.resetInputModesLocked();
-    self.column_mode_132 = false;
-    self.setSyncUpdatesLocked(false);
+    context.setReportColorScheme2031(false);
+    context.setGraphemeClusterShaping2027(false);
+    context.setPrimaryGraphemeClusterShaping2027(false);
+    context.setAltGraphemeClusterShaping2027(false);
+    context.setInbandResizeNotifications2048(false);
+    context.setKittyPasteEvents5522(false);
+    context.resetInputModesLocked();
+    context.setColumnMode132(false);
+    context.setSyncUpdatesLocked(false);
 
     // Reset kitty graphics state across both screens as part of DECSTR.
     // This follows foot-style soft reset behavior and avoids hidden-screen leaks.
-    self.clearAllKittyImages();
-
-    const screen = self.activeScreen();
-    screen.resetState();
-    screen.markDirtyAllWithReason(.decstr_soft_reset, @src());
+    context.clearAllKittyImages();
+    context.resetActiveScreenState();
+    context.markActiveScreenDecstrDirty();
 }
 
 fn decrqmPrivateModeState(snapshot: ModeSnapshot, mode: i32) DecrpmState {
