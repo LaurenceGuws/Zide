@@ -208,44 +208,6 @@ pub const TerminalWorkspace = struct {
         }
     }
 
-    pub fn pollAll(self: *TerminalWorkspace, input_active_index: ?usize, has_input: bool) !bool {
-        const count = self.tabs.items.len;
-        const active_idx = normalizeIndex(input_active_index, count) orelse self.activeIndex();
-        var any_polled = false;
-        var total_polled: usize = 0;
-        var active_polled: usize = 0;
-        var background_polled: usize = 0;
-        for (self.tabs.items, 0..) |tab, i| {
-            const is_input_target = input_active_index != null and input_active_index.? == i;
-            tab.session.setInputPressure(has_input and is_input_target);
-            if (tab.session.hasData()) {
-                try tab.session.poll();
-                any_polled = true;
-                total_polled += 1;
-                if (i == active_idx) {
-                    active_polled += 1;
-                } else {
-                    background_polled += 1;
-                }
-            }
-        }
-        self.recordPollMetrics(.{
-            .tab_count = count,
-            .active_index = active_idx,
-            .active_budget = 1,
-            .active_polled = active_polled,
-            .background_budget = if (count > 0) count - 1 else 0,
-            .background_inspected = if (count > 0) count - 1 else 0,
-            .background_polled = background_polled,
-            .total_polled = total_polled,
-            .budget_tabs = count,
-            .budget_exhausted_hint = false,
-            .active_spillover_hint = false,
-            .background_backlog_hint = false,
-        });
-        return any_polled;
-    }
-
     pub fn pollBudgeted(self: *TerminalWorkspace, input_active_index: ?usize, has_input: bool, budget: PollBudget) !bool {
         const count = self.tabs.items.len;
         if (count == 0) {

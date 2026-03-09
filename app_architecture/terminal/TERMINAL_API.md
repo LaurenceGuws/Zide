@@ -89,7 +89,6 @@ important than the exact file layout.
 | TerminalWorkspace.activateNext/Prev | - | bool | n/a | none | wraps when more than one tab exists | terminal_workspace_tests |
 | TerminalWorkspace.moveTab | tab_id, to_index | bool | n/a | may move backing entries | active tab id preserved across move | terminal_workspace_tests |
 | TerminalWorkspace.metadataAt | index | ?TabMetadata | borrowed from active session state | none | metadata is session-derived, not duplicated | terminal_workspace_tests |
-| TerminalWorkspace.pollAll | active_input_index?, has_input | bool(any polled) | n/a | none | input pressure only applied to selected tab for current frame | terminal_workspace_tests |
 | TerminalWorkspace.resizeAll | rows, cols | void/error | n/a | session-internal resize alloc behavior | applies consistently across all tabs | pending |
 | TerminalWorkspace.setCellSizeAll | cell_width, cell_height | void | n/a | none | applies consistently across all tabs | pending |
 
