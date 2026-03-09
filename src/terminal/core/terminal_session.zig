@@ -414,7 +414,7 @@ pub const TerminalSession = struct {
         return self.active == .alt;
     }
 
-    pub fn setDefaultColors(self: *TerminalSession, fg: types.Color, bg: types.Color) void {
+    pub fn setDefaultColorsLocked(self: *TerminalSession, fg: types.Color, bg: types.Color) void {
         const old_attrs = self.primary.default_attrs;
         var new_attrs = types.defaultCell().attrs;
         new_attrs.fg = fg;
@@ -427,9 +427,13 @@ pub const TerminalSession = struct {
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
-    pub fn setAnsiColors(self: *TerminalSession, colors: [16]types.Color) void {
+    pub fn setDefaultColors(self: *TerminalSession, fg: types.Color, bg: types.Color) void {
         self.lock();
         defer self.unlock();
+        self.setDefaultColorsLocked(fg, bg);
+    }
+
+    fn setAnsiColorsLocked(self: *TerminalSession, colors: [16]types.Color) void {
         for (0..16) |i| {
             self.palette_default[i] = colors[i];
             self.palette_current[i] = colors[i];
@@ -437,13 +441,48 @@ pub const TerminalSession = struct {
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
-    pub fn remapAnsiColors(self: *TerminalSession, old_colors: [16]types.Color, new_colors: [16]types.Color) void {
+    pub fn setAnsiColors(self: *TerminalSession, colors: [16]types.Color) void {
         self.lock();
         defer self.unlock();
+        self.setAnsiColorsLocked(colors);
+    }
+
+    fn remapAnsiColorsLocked(self: *TerminalSession, old_colors: [16]types.Color, new_colors: [16]types.Color) void {
         self.primary.updateAnsiColors(old_colors, new_colors);
         self.alt.updateAnsiColors(old_colors, new_colors);
         self.history.updateAnsiColors(old_colors, new_colors);
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
+    }
+
+    pub fn remapAnsiColors(self: *TerminalSession, old_colors: [16]types.Color, new_colors: [16]types.Color) void {
+        self.lock();
+        defer self.unlock();
+        self.remapAnsiColorsLocked(old_colors, new_colors);
+    }
+
+    fn snapshotAnsiColorsLocked(self: *const TerminalSession) [16]types.Color {
+        var colors: [16]types.Color = undefined;
+        for (0..16) |i| {
+            colors[i] = self.palette_current[i];
+        }
+        return colors;
+    }
+
+    pub fn applyThemePalette(
+        self: *TerminalSession,
+        fg: types.Color,
+        bg: types.Color,
+        ansi: ?[16]types.Color,
+    ) void {
+        self.lock();
+        defer self.unlock();
+
+        const old_ansi = if (ansi != null) self.snapshotAnsiColorsLocked() else undefined;
+        self.setDefaultColorsLocked(fg, bg);
+        if (ansi) |colors| {
+            self.setAnsiColorsLocked(colors);
+            self.remapAnsiColorsLocked(old_ansi, colors);
+        }
     }
 
     pub fn deinit(self: *TerminalSession) void {

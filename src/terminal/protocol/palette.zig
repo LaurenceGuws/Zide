@@ -56,11 +56,11 @@ pub fn handleOscDynamicColor(self: anytype, code: u8, text: []const u8, terminat
         switch (code) {
             10 => {
                 const default_attrs = self.primary.default_attrs;
-                self.setDefaultColors(color, default_attrs.bg);
+                self.setDefaultColorsLocked(color, default_attrs.bg);
             },
             11 => {
                 const default_attrs = self.primary.default_attrs;
-                self.setDefaultColors(default_attrs.fg, color);
+                self.setDefaultColorsLocked(default_attrs.fg, color);
             },
             else => {
                 const idx = @as(usize, code - dynamic_color_base);
@@ -77,11 +77,11 @@ pub fn handleOscDynamicReset(self: anytype, code: u8) void {
     switch (target) {
         10 => {
             const default_attrs = self.primary.default_attrs;
-            self.setDefaultColors(self.base_default_attrs.fg, default_attrs.bg);
+            self.setDefaultColorsLocked(self.base_default_attrs.fg, default_attrs.bg);
         },
         11 => {
             const default_attrs = self.primary.default_attrs;
-            self.setDefaultColors(default_attrs.fg, self.base_default_attrs.bg);
+            self.setDefaultColorsLocked(default_attrs.fg, self.base_default_attrs.bg);
         },
         else => {
             const idx = @as(usize, target - dynamic_color_base);

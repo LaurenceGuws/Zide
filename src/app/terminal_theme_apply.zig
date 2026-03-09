@@ -9,25 +9,24 @@ const TerminalSession = terminal_mod.TerminalSession;
 const TerminalWidget = widgets.TerminalWidget;
 
 pub fn setSessionPalette(term: *TerminalSession, theme: *const app_shell.Theme) void {
-    term.setDefaultColors(
-        term_types.Color{
-            .r = theme.foreground.r,
-            .g = theme.foreground.g,
-            .b = theme.foreground.b,
-        },
-        term_types.Color{
-            .r = theme.background.r,
-            .g = theme.background.g,
-            .b = theme.background.b,
-        },
-    );
-    if (theme.ansi_colors) |ansi| {
+    const fg = term_types.Color{
+        .r = theme.foreground.r,
+        .g = theme.foreground.g,
+        .b = theme.foreground.b,
+    };
+    const bg = term_types.Color{
+        .r = theme.background.r,
+        .g = theme.background.g,
+        .b = theme.background.b,
+    };
+    const ansi_colors = if (theme.ansi_colors) |ansi| blk: {
         var colors: [16]term_types.Color = undefined;
         for (ansi, 0..) |c, i| {
             colors[i] = term_types.Color{ .r = c.r, .g = c.g, .b = c.b };
         }
-        term.setAnsiColors(colors);
-    }
+        break :blk colors;
+    } else null;
+    term.applyThemePalette(fg, bg, ansi_colors);
 }
 
 pub fn notifyColorSchemeChanged(
@@ -45,18 +44,6 @@ pub fn applyThemeToWidgets(
     theme: *const app_shell.Theme,
 ) void {
     for (terminal_widgets.items) |*widget| {
-        const term = widget.session;
-        var old_ansi: [16]term_types.Color = undefined;
-        for (0..16) |i| {
-            old_ansi[i] = term.paletteColor(@intCast(i));
-        }
-        setSessionPalette(term, theme);
-        if (theme.ansi_colors) |ansi| {
-            var new_ansi: [16]term_types.Color = undefined;
-            for (ansi, 0..) |c, i| {
-                new_ansi[i] = term_types.Color{ .r = c.r, .g = c.g, .b = c.b };
-            }
-            term.remapAnsiColors(old_ansi, new_ansi);
-        }
+        setSessionPalette(widget.session, theme);
     }
 }
