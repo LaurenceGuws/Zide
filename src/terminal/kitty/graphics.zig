@@ -126,7 +126,7 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
     defer raw_kv.deinit(self.allocator);
     const data = parseKittyControl(self.allocator, payload, &control, &raw_kv);
     if (!validateKittyControl(control)) {
-                    log.logf(.info, "kitty invalid command a={c} data_len={d}", .{ control.action, data.len });
+        log.logf(.info, "kitty invalid command a={c} data_len={d}", .{ control.action, data.len });
         writeKittyResponse(self, control, resolveKittyImageId(control) orelse 0, false, "EINVAL");
         return;
     }
@@ -222,7 +222,7 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
     }
 
     const decoded = loadKittyPayload(self, &control, data) orelse {
-                    log.logf(.info, "kitty decode failed len={d}", .{data.len});
+        log.logf(.info, "kitty decode failed len={d}", .{data.len});
         clearKittyLoading(kitty, final_image_id);
         writeKittyResponse(self, control, final_image_id, false, "EINVAL");
         return;
@@ -257,7 +257,7 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
     }
 
     const image = buildKittyImage(self, final_image_id, control, final_data) catch |err| {
-                    log.logf(.info, "kitty build failed id={d} format={d} data_len={d}", .{ final_image_id, control.format, final_data.len });
+        log.logf(.info, "kitty build failed id={d} format={d} data_len={d}", .{ final_image_id, control.format, final_data.len });
         const message = switch (err) {
             error.BadPng => "EBADPNG",
             else => "EINVAL",
@@ -309,7 +309,7 @@ pub fn handleKittyQueryPayloadSizeReply(self: anytype, control: KittyControl, im
                 "ENODATA:Insufficient image data: {d} < {d}",
                 .{ chunk_len, expected },
             ) catch |err| {
-                                    log.logf(.warning, "kitty query payload size message format failed len={d} expected={d} err={s}", .{ chunk_len, expected, @errorName(err) });
+                log.logf(.warning, "kitty query payload size message format failed len={d} expected={d} err={s}", .{ chunk_len, expected, @errorName(err) });
                 return false;
             };
             writeKittyResponse(self, control, image_id, false, message.items);
@@ -521,7 +521,7 @@ fn parseKittyValue(text: []const u8) ?u32 {
         return @intCast(text[0]);
     }
     return std.fmt.parseUnsigned(u32, text, 10) catch {
-        log.logf(.debug, "kitty parse unsigned failed text={s}", .{ text });
+        log.logf(.debug, "kitty parse unsigned failed text={s}", .{text});
         return null;
     };
 }
@@ -530,7 +530,7 @@ fn parseKittySigned(text: []const u8) ?i32 {
     const log = app_logger.logger("terminal.kitty");
     if (text.len == 0) return null;
     return std.fmt.parseInt(i32, text, 10) catch {
-        log.logf(.debug, "kitty parse signed failed text={s}", .{ text });
+        log.logf(.debug, "kitty parse signed failed text={s}", .{text});
         return null;
     };
 }
@@ -583,7 +583,7 @@ fn decodeBase64(self: anytype, data: []const u8) ?[]u8 {
     var owned = false;
     defer if (!owned) decoded.deinit(self.allocator);
     decoded.resize(self.allocator, decoded_len) catch {
-        log.logf(.warning, "kitty decodeBase64 failed buffer resize bytes={d}", .{ decoded_len });
+        log.logf(.warning, "kitty decodeBase64 failed buffer resize bytes={d}", .{decoded_len});
         return null;
     };
     _ = std.base64.standard.Decoder.decode(decoded.items, data) catch {
@@ -653,7 +653,7 @@ fn readKittyFile(self: anytype, path: []const u8, size: u32, is_temporary: bool)
         };
         const n = f.readAll(out) catch {
             self.allocator.free(out);
-            log.logf(.warning, "kitty file read failed path={s}", .{ path });
+            log.logf(.warning, "kitty file read failed path={s}", .{path});
             return null;
         };
         if (n < read_len) {
@@ -668,7 +668,7 @@ fn readKittyFile(self: anytype, path: []const u8, size: u32, is_temporary: bool)
         }
         return out;
     } else |_| {
-        log.logf(.debug, "kitty file open failed path={s}", .{ path });
+        log.logf(.debug, "kitty file open failed path={s}", .{path});
         return null;
     }
 }
@@ -680,7 +680,7 @@ fn readKittySharedMemory(self: anytype, name: []const u8, size: u32) ?[]u8 {
     if (builtin.target.os.tag == .windows) return null;
     var buf: [std.fs.max_path_bytes]u8 = undefined;
     const name_z = std.fmt.bufPrintZ(&buf, "{s}", .{name}) catch {
-        log.logf(.warning, "kitty shm name format failed name={s}", .{ name });
+        log.logf(.warning, "kitty shm name format failed name={s}", .{name});
         return null;
     };
     const fd = std.c.shm_open(name_z, @as(c_int, @bitCast(std.c.O{ .ACCMODE = .RDONLY })), 0);
@@ -931,7 +931,7 @@ fn inflateKittyData(self: anytype, compressed: []const u8, expected_size: u32) ?
     var buf: [8192]u8 = undefined;
     while (true) {
         const n = decompressor.reader.readSliceShort(&buf) catch |err| {
-            log.logf(.warning, "kitty inflate read failed err={s}", .{ @errorName(err) });
+            log.logf(.warning, "kitty inflate read failed err={s}", .{@errorName(err)});
             return null;
         };
         if (n == 0) break;
@@ -943,7 +943,7 @@ fn inflateKittyData(self: anytype, compressed: []const u8, expected_size: u32) ?
     }
     if (expected_size > 0 and out.items.len != expected_size) return null;
     return out.toOwnedSlice(self.allocator) catch |err| {
-        log.logf(.warning, "kitty inflate ownership conversion failed err={s}", .{ @errorName(err) });
+        log.logf(.warning, "kitty inflate ownership conversion failed err={s}", .{@errorName(err)});
         return null;
     };
 }
@@ -1260,9 +1260,8 @@ fn storeKittyImage(self: anytype, image: KittyImage) void {
             kitty.images.items[idx] = image;
             kitty.images.items[idx].version = version;
             kitty.total_bytes += image.data.len;
-            self.notePatternEvent(.kitty_image_store);
             self.activeScreen().grid.markDirtyAllWithReason(.kitty_graphics_changed, @src());
-                            log.logf(.info, "kitty image updated id={d} format={s} bytes={d}", .{ image.id, @tagName(image.format), image.data.len });
+            log.logf(.info, "kitty image updated id={d} format={s} bytes={d}", .{ image.id, @tagName(image.format), image.data.len });
             return;
         }
     }
@@ -1278,13 +1277,12 @@ fn storeKittyImage(self: anytype, image: KittyImage) void {
     stored.version = version;
     kitty.images.append(self.allocator, stored) catch |err| {
         self.allocator.free(stored.data);
-                    log.logf(.warning, "kitty image store failed id={d} err={s}", .{ stored.id, @errorName(err) });
+        log.logf(.warning, "kitty image store failed id={d} err={s}", .{ stored.id, @errorName(err) });
         return;
     };
     kitty.total_bytes += stored.data.len;
-    self.notePatternEvent(.kitty_image_store);
     self.activeScreen().grid.markDirtyAllWithReason(.kitty_graphics_changed, @src());
-            log.logf(.info, "kitty image stored id={d} format={s} bytes={d}", .{ stored.id, @tagName(stored.format), stored.data.len });
+    log.logf(.info, "kitty image stored id={d} format={s} bytes={d}", .{ stored.id, @tagName(stored.format), stored.data.len });
 }
 
 fn placeKittyImage(self: anytype, image_id: u32, control: KittyControl) ?[]const u8 {
@@ -1346,19 +1344,18 @@ fn placeKittyImage(self: anytype, image_id: u32, control: KittyControl) ?[]const
             kitty.placements.items[idx] = placement;
         } else {
             kitty.placements.append(self.allocator, placement) catch |err| {
-                                    log.logf(.warning, "kitty placement append failed id={d} pid={d} err={s}", .{ image_id, placement_id, @errorName(err) });
+                log.logf(.warning, "kitty placement append failed id={d} pid={d} err={s}", .{ image_id, placement_id, @errorName(err) });
                 return "ENOMEM";
             };
         }
     } else {
         kitty.placements.append(self.allocator, placement) catch |err| {
-                            log.logf(.warning, "kitty placement append failed id={d} err={s}", .{ image_id, @errorName(err) });
+            log.logf(.warning, "kitty placement append failed id={d} err={s}", .{ image_id, @errorName(err) });
             return "ENOMEM";
         };
     }
-    self.notePatternEvent(.kitty_place);
     self.activeScreen().grid.markDirtyAllWithReason(.kitty_graphics_changed, @src());
-            log.logf(.info, "kitty placed id={d} row={d} col={d} cols={d} rows={d}", .{ image_id, row, col, placement.cols, placement.rows });
+    log.logf(.info, "kitty placed id={d} row={d} col={d} cols={d} rows={d}", .{ image_id, row, col, placement.cols, placement.rows });
 
     if (control.cursor_movement != 1) {
         const cols = effectiveKittyColumns(self, control, image_id);
@@ -1473,7 +1470,6 @@ fn deleteKittyImages(self: anytype, image_id: ?u32) void {
     } else {
         clearKittyImages(self);
     }
-    self.notePatternEvent(.kitty_delete);
     self.activeScreen().grid.markDirtyAllWithReason(.kitty_graphics_changed, @src());
 }
 
@@ -1495,7 +1491,6 @@ fn deleteKittyPlacements(
     }
     if (changed) {
         kitty.generation += 1;
-        self.notePatternEvent(.kitty_delete);
         self.activeScreen().grid.markDirtyAllWithReason(.kitty_graphics_changed, @src());
     }
 }
@@ -1698,7 +1693,7 @@ pub fn writeKittyResponse(self: anytype, control: KittyControl, image_id: u32, o
     var seq = std.ArrayList(u8).empty;
     defer seq.deinit(self.allocator);
     _ = seq.appendSlice(self.allocator, "\x1b_G") catch |err| {
-        log.logf(.warning, "kitty response prefix append failed err={s}", .{ @errorName(err) });
+        log.logf(.warning, "kitty response prefix append failed err={s}", .{@errorName(err)});
         return;
     };
     var needs_comma = false;
@@ -1711,7 +1706,7 @@ pub fn writeKittyResponse(self: anytype, control: KittyControl, image_id: u32, o
     }
     if (control.image_number) |num| {
         if (needs_comma) _ = seq.append(self.allocator, ',') catch |err| {
-            log.logf(.warning, "kitty response comma append failed err={s}", .{ @errorName(err) });
+            log.logf(.warning, "kitty response comma append failed err={s}", .{@errorName(err)});
             return;
         };
         _ = seq.writer(self.allocator).print("I={d}", .{num}) catch |err| {
@@ -1722,7 +1717,7 @@ pub fn writeKittyResponse(self: anytype, control: KittyControl, image_id: u32, o
     }
     if (control.placement_id) |pid| {
         if (needs_comma) _ = seq.append(self.allocator, ',') catch |err| {
-            log.logf(.warning, "kitty response comma append failed err={s}", .{ @errorName(err) });
+            log.logf(.warning, "kitty response comma append failed err={s}", .{@errorName(err)});
             return;
         };
         _ = seq.writer(self.allocator).print("p={d}", .{pid}) catch |err| {
@@ -1731,7 +1726,7 @@ pub fn writeKittyResponse(self: anytype, control: KittyControl, image_id: u32, o
         };
     }
     _ = seq.append(self.allocator, ';') catch |err| {
-        log.logf(.warning, "kitty response separator append failed err={s}", .{ @errorName(err) });
+        log.logf(.warning, "kitty response separator append failed err={s}", .{@errorName(err)});
         return;
     };
     _ = seq.appendSlice(self.allocator, message) catch |err| {
@@ -1739,7 +1734,7 @@ pub fn writeKittyResponse(self: anytype, control: KittyControl, image_id: u32, o
         return;
     };
     _ = seq.appendSlice(self.allocator, "\x1b\\") catch |err| {
-        log.logf(.warning, "kitty response terminator append failed err={s}", .{ @errorName(err) });
+        log.logf(.warning, "kitty response terminator append failed err={s}", .{@errorName(err)});
         return;
     };
     if (self.pty) |*pty| {
