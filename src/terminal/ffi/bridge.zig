@@ -604,6 +604,30 @@ pub fn currentCwd(handle: ?*ZideTerminalHandle, out_string: *StringBuffer) Statu
     return stringFromSlice(h.allocator, cwd, out_string);
 }
 
+pub fn selectionText(handle: ?*ZideTerminalHandle, out_string: *StringBuffer) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    const text = (h.session.selectionPlainTextAlloc(h.allocator) catch |err| {
+        return mapError(err);
+    }) orelse return stringFromSlice(h.allocator, "", out_string);
+    return stringFromOwnedSlice(h.allocator, text, out_string);
+}
+
+pub fn scrollbackPlainText(handle: ?*ZideTerminalHandle, out_string: *StringBuffer) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    const text = h.session.scrollbackPlainTextAlloc(h.allocator) catch |err| {
+        return mapError(err);
+    };
+    return stringFromOwnedSlice(h.allocator, text, out_string);
+}
+
+pub fn scrollbackAnsiText(handle: ?*ZideTerminalHandle, out_string: *StringBuffer) Status {
+    const h = fromOpaque(handle) orelse return .invalid_argument;
+    const text = h.session.scrollbackAnsiTextAlloc(h.allocator) catch |err| {
+        return mapError(err);
+    };
+    return stringFromOwnedSlice(h.allocator, text, out_string);
+}
+
 pub fn stringFree(string: *StringBuffer) void {
     const owner = stringOwner(string._ctx) orelse {
         string.* = .{};
@@ -782,6 +806,27 @@ fn stringFromSlice(allocator: std.mem.Allocator, value: []const u8, out_string: 
     out_string.* = .{
         .ptr = if (bytes.len == 0) null else bytes.ptr,
         .len = bytes.len,
+        ._ctx = owner,
+    };
+    return .ok;
+}
+
+fn stringFromOwnedSlice(allocator: std.mem.Allocator, value: []u8, out_string: *StringBuffer) Status {
+    const log = app_logger.logger("terminal.ffi");
+    out_string.* = .{};
+    const owner = allocator.create(StringOwner) catch |err| {
+        log.logf(.warning, "string owner alloc failed len={d} err={s}", .{ value.len, @errorName(err) });
+        allocator.free(value);
+        return .out_of_memory;
+    };
+
+    owner.* = .{
+        .allocator = allocator,
+        .bytes = value,
+    };
+    out_string.* = .{
+        .ptr = if (value.len == 0) null else value.ptr,
+        .len = value.len,
         ._ctx = owner,
     };
     return .ok;

@@ -24,6 +24,7 @@ const input_modes = @import("input_modes.zig");
 const hyperlink_table = @import("hyperlink_table.zig");
 const state_reset = @import("state_reset.zig");
 const scrollback_view = @import("scrollback_view.zig");
+const text_export = @import("text_export.zig");
 const osc_kitty_clipboard = @import("../protocol/osc_kitty_clipboard.zig");
 const Pty = pty_mod.Pty;
 const PtySize = pty_mod.PtySize;
@@ -99,7 +100,7 @@ pub fn debugSnapshot(self: *TerminalSession) DebugSnapshot {
         .scrollback_count = self.history.scrollbackCount(),
         .scrollback_offset = self.history.scrollOffset(),
         .focus_reporting = self.focus_reporting,
-        .selection = self.selectionState(),
+        .selection = selection_mod.selectionState(self),
         .base_default_attrs = self.base_default_attrs,
     };
 }
@@ -1168,10 +1169,6 @@ pub const TerminalSession = struct {
         return scrollback_view.scrollbackCount(self);
     }
 
-    pub fn scrollbackRow(self: *TerminalSession, index: usize) ?[]const Cell {
-        return scrollback_view.scrollbackRow(self, index);
-    }
-
     pub fn copyScrollbackRow(self: *TerminalSession, allocator: std.mem.Allocator, index: usize, out: *std.ArrayList(Cell)) !?[]const Cell {
         self.lock();
         defer self.unlock();
@@ -1181,8 +1178,16 @@ pub const TerminalSession = struct {
         return out.items;
     }
 
-    pub fn scrollOffset(self: *TerminalSession) usize {
-        return scrollback_view.scrollOffset(self);
+    pub fn selectionPlainTextAlloc(self: *TerminalSession, allocator: std.mem.Allocator) !?[]u8 {
+        return text_export.selectionPlainTextAlloc(self, allocator);
+    }
+
+    pub fn scrollbackPlainTextAlloc(self: *TerminalSession, allocator: std.mem.Allocator) ![]u8 {
+        return text_export.scrollbackPlainTextAlloc(self, allocator);
+    }
+
+    pub fn scrollbackAnsiTextAlloc(self: *TerminalSession, allocator: std.mem.Allocator) ![]u8 {
+        return text_export.scrollbackAnsiTextAlloc(self, allocator);
     }
 
     pub fn setScrollOffset(self: *TerminalSession, offset: usize) void {
@@ -1561,23 +1566,10 @@ pub const TerminalSession = struct {
         return out.items;
     }
 
-    pub fn currentCwd(self: *const TerminalSession) []const u8 {
-        return self.cwd;
-    }
-
     pub fn copyCurrentCwd(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) ![]const u8 {
         self.lock();
         defer self.unlock();
         return copyTextInto(allocator, out, self.cwd);
-    }
-
-    pub fn currentTitle(self: *TerminalSession) []const u8 {
-        if (self.pty) |*pty| {
-            if (pty.foregroundProcessLabel()) |label| {
-                return label;
-            }
-        }
-        return self.title;
     }
 
     pub fn copyCurrentTitle(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) ![]const u8 {
@@ -1634,10 +1626,6 @@ pub const TerminalSession = struct {
 
     pub fn finishSelectionLocked(self: *TerminalSession) void {
         selection_mod.finishSelectionLocked(self);
-    }
-
-    pub fn selectionState(self: *TerminalSession) ?TerminalSelection {
-        return selection_mod.selectionState(self);
     }
 
     pub fn bracketedPasteEnabled(self: *TerminalSession) bool {
@@ -2475,4 +2463,99 @@ test "screen clear stays on partial path" {
     try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
     try std.testing.expectEqual(@as(usize, 3), cache.damage.end_col);
+}
+
+test "selection plain text export is terminal-owned across history and grid" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var history_row = [_]Cell{ base, base, base, base };
+    history_row[0].codepoint = 'A';
+    history_row[1].codepoint = 'B';
+    session.history.pushRow(&history_row, false, base);
+
+    session.primary.grid.cells.items[0] = base;
+    session.primary.grid.cells.items[1] = base;
+    session.primary.grid.cells.items[2] = base;
+    session.primary.grid.cells.items[3] = base;
+    session.primary.grid.cells.items[0].codepoint = 'C';
+    session.primary.grid.cells.items[1].codepoint = 'D';
+
+    session.startSelection(0, 1);
+    session.updateSelection(1, 1);
+    session.finishSelection();
+
+    const text_opt = try session.selectionPlainTextAlloc(allocator);
+    try std.testing.expect(text_opt != null);
+    const text = text_opt.?;
+    defer allocator.free(text);
+
+    try std.testing.expectEqualStrings("B\nCD", text);
+}
+
+test "scrollback plain text export is terminal-owned" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var history_row = [_]Cell{ base, base, base, base };
+    history_row[0].codepoint = 'A';
+    history_row[1].codepoint = 'B';
+    session.history.pushRow(&history_row, false, base);
+
+    session.primary.grid.cells.items[0] = base;
+    session.primary.grid.cells.items[1] = base;
+    session.primary.grid.cells.items[2] = base;
+    session.primary.grid.cells.items[3] = base;
+    session.primary.grid.cells.items[4] = base;
+    session.primary.grid.cells.items[5] = base;
+    session.primary.grid.cells.items[6] = base;
+    session.primary.grid.cells.items[7] = base;
+    session.primary.grid.cells.items[0].codepoint = 'C';
+    session.primary.grid.cells.items[1].codepoint = 'D';
+    session.primary.grid.cells.items[4].codepoint = 'E';
+    session.primary.grid.cells.items[5].codepoint = 'F';
+
+    const text = try session.scrollbackPlainTextAlloc(allocator);
+    defer allocator.free(text);
+
+    try std.testing.expectEqualStrings("AB\nCD\nEF\n", text);
+}
+
+test "scrollback ansi text export is terminal-owned" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 1, 1);
+    defer session.deinit();
+
+    var cell = session.primary.defaultCell();
+    cell.codepoint = 'A';
+    session.primary.grid.cells.items[0] = cell;
+
+    const text = try session.scrollbackAnsiTextAlloc(allocator);
+    defer allocator.free(text);
+
+    const expected = try std.fmt.allocPrint(
+        allocator,
+        "\x1b[0;38;2;{d};{d};{d};48;2;{d};{d};{d};58;2;{d};{d};{d}mA\x1b[0m\n",
+        .{
+            cell.attrs.fg.r,
+            cell.attrs.fg.g,
+            cell.attrs.fg.b,
+            cell.attrs.bg.r,
+            cell.attrs.bg.g,
+            cell.attrs.bg.b,
+            cell.attrs.underline_color.r,
+            cell.attrs.underline_color.g,
+            cell.attrs.underline_color.b,
+        },
+    );
+    defer allocator.free(expected);
+
+    try std.testing.expectEqualStrings(expected, text);
 }

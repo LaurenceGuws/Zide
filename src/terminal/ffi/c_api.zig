@@ -101,6 +101,18 @@ pub fn zide_terminal_current_cwd(handle: ?*ZideTerminalHandle, out_string: *Zide
     return @intFromEnum(bridge.currentCwd(handle, out_string));
 }
 
+pub fn zide_terminal_selection_text(handle: ?*ZideTerminalHandle, out_string: *ZideTerminalStringBuffer) c_int {
+    return @intFromEnum(bridge.selectionText(handle, out_string));
+}
+
+pub fn zide_terminal_scrollback_plain_text(handle: ?*ZideTerminalHandle, out_string: *ZideTerminalStringBuffer) c_int {
+    return @intFromEnum(bridge.scrollbackPlainText(handle, out_string));
+}
+
+pub fn zide_terminal_scrollback_ansi_text(handle: ?*ZideTerminalHandle, out_string: *ZideTerminalStringBuffer) c_int {
+    return @intFromEnum(bridge.scrollbackAnsiText(handle, out_string));
+}
+
 pub fn zide_terminal_string_free(string: *ZideTerminalStringBuffer) void {
     bridge.stringFree(string);
 }
