@@ -222,7 +222,7 @@ ui_widget_modularization_todo:
           notes:
             - "Introduce poll budget/fairness with active-tab priority."
             - "Ensure many-tab output does not stall UI update."
-            - "2026-03-07: Added `TerminalWorkspace.PollBudget` and `pollBudgeted(...)` (active tab first + bounded background round-robin polling)."
+            - "2026-03-07: Added workspace-owned bounded polling policy (`PollBudget` model; later exposed to app runtime through `pollForFrame(...)`) with active-tab-first + bounded background round-robin polling."
             - "2026-03-07: Visible-terminal runtime now uses tighter per-frame budgets when input is active and slightly larger budgets when idle."
             - "2026-03-07: Regression tuning for terminal TUIs (rain/stress): added bounded multi-poll passes for active tab and raised runtime poll budgets to improve frame smoothness and key-to-pixel latency while keeping polling bounded."
             - "2026-03-07: Terminal passive-move gating now uses explicit per-frame `InputBatch.mouse_moved` signal instead of relying on mouse events list population."

@@ -91,6 +91,7 @@ important than the exact file layout.
 | TerminalWorkspace.metadataAt | index | ?TabMetadata | borrowed from active session state | none | metadata is session-derived, not duplicated | terminal_workspace_tests |
 | TerminalWorkspace.resizeAll | rows, cols | void/error | n/a | session-internal resize alloc behavior | applies consistently across all tabs | pending |
 | TerminalWorkspace.setCellSizeAll | cell_width, cell_height | void | n/a | none | applies consistently across all tabs | pending |
+| TerminalWorkspace.pollForFrame | input_active_index, has_input | bool/error | n/a | none | workspace-owned polling fairness policy; return value means published generation advanced for the tracked active session | pending |
 
 ## Layering Rules (Imports)
 

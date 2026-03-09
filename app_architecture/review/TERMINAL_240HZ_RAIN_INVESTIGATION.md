@@ -647,7 +647,7 @@ Reason:
   - `app_architecture/terminal/TERMINAL_API.md`
 - Change:
   - removed the dead `TerminalWorkspace.pollAll()` surface
-  - kept `pollBudgeted()` as the single workspace polling entrypoint exposed by the current app/runtime design
+  - later follow-up replaced that with `pollForFrame()` as the live workspace polling entrypoint; `pollBudgeted()` was then removed from the public surface
 - Intent:
   - keep workspace API aligned with the bounded polling architecture that the app actually uses
 
