@@ -9,6 +9,7 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_EVENT_ABI_VERSION, c_api.zide_terminal_event_abi_version());
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_SCROLLBACK_ABI_VERSION, c_api.zide_terminal_scrollback_abi_version());
     try std.testing.expectEqual(c_api.ZIDE_TERMINAL_RENDERER_METADATA_ABI_VERSION, c_api.zide_terminal_renderer_metadata_abi_version());
+    try std.testing.expectEqual(c_api.ZIDE_TERMINAL_METADATA_ABI_VERSION, c_api.zide_terminal_metadata_abi_version());
 
     var rounded_box_meta: c_api.ZideTerminalRendererMetadata = .{};
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_renderer_metadata(0x256D, &rounded_box_meta));
@@ -52,15 +53,14 @@ test "ffi non-pty snapshot and event ownership smoke" {
     try std.testing.expect(snapshot.title_ptr != null);
     try std.testing.expectEqualStrings("ffi-title", ptrBytes(snapshot.title_ptr, snapshot.title_len));
 
-    var title: c_api.ZideTerminalStringBuffer = .{};
-    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_current_title(handle, &title));
-    defer c_api.zide_terminal_string_free(&title);
-    try std.testing.expectEqualStrings("ffi-title", ptrBytes(title.ptr, title.len));
-
-    var cwd: c_api.ZideTerminalStringBuffer = .{};
-    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_current_cwd(handle, &cwd));
-    defer c_api.zide_terminal_string_free(&cwd);
-    try std.testing.expectEqual(@as(usize, 0), cwd.len);
+    var metadata: c_api.ZideTerminalMetadata = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &metadata));
+    defer c_api.zide_terminal_metadata_release(&metadata);
+    try std.testing.expectEqual(c_api.ZIDE_TERMINAL_METADATA_ABI_VERSION, metadata.abi_version);
+    try std.testing.expectEqual(@as(u32, @sizeOf(c_api.ZideTerminalMetadata)), metadata.struct_size);
+    try std.testing.expectEqualStrings("ffi-title", ptrBytes(metadata.title_ptr, metadata.title_len));
+    try std.testing.expectEqual(@as(usize, 0), metadata.cwd_len);
+    try std.testing.expectEqual(@as(u32, 0), metadata.scrollback_count);
 
     try std.testing.expectEqualStrings("ok", std.mem.span(c_api.zide_terminal_status_string(0)));
     try std.testing.expectEqualStrings("invalid_argument", std.mem.span(c_api.zide_terminal_status_string(1)));
@@ -116,8 +116,10 @@ test "ffi scrollback acquire exports copied rows" {
         "hist-05\r\n";
     try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_feed_output(handle, lines.ptr, lines.len));
 
-    var count: u32 = 0;
-    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_scrollback_count(handle, &count));
+    var metadata: c_api.ZideTerminalMetadata = .{};
+    try std.testing.expectEqual(@as(c_int, 0), c_api.zide_terminal_metadata_acquire(handle, &metadata));
+    defer c_api.zide_terminal_metadata_release(&metadata);
+    const count = metadata.scrollback_count;
     try std.testing.expect(count > 0);
 
     var scrollback: c_api.ZideTerminalScrollbackBuffer = .{};

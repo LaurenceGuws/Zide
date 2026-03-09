@@ -39,7 +39,12 @@ pub fn ctrlClickOpenVisibleMaybe(
 
     const link_id = hover_mod.visibleLinkIdAtCell(view_cells, rows, cols, row, col);
     if (link_id != 0) {
-        if (session.hyperlinkUri(link_id)) |link| {
+        var link_buf = std.ArrayList(u8).empty;
+        defer link_buf.deinit(allocator);
+        if ((session.copyHyperlinkUri(allocator, link_id, &link_buf) catch |err| {
+            log.logf(.warning, "ctrl-open hyperlink copy failed link_id={d} err={s}", .{ link_id, @errorName(err) });
+            return false;
+        })) |link| {
             if (resolveLinkPath(allocator, session, link)) |path| {
                 setPendingOpen(allocator, pending_open, .{ .path = path });
                 return true;
@@ -63,7 +68,15 @@ pub fn ctrlClickOpenVisibleMaybe(
                 } else if (std.mem.startsWith(u8, parsed.path, "file://") or (parsed.path.len > 0 and parsed.path[0] == '/')) {
                     resolved = resolveLinkPath(allocator, session, parsed.path);
                 } else {
-                    const cwd = session.currentCwd();
+                    var title_buf = std.ArrayList(u8).empty;
+                    defer title_buf.deinit(allocator);
+                    var cwd_buf = std.ArrayList(u8).empty;
+                    defer cwd_buf.deinit(allocator);
+                    const metadata = session.copyMetadata(allocator, &title_buf, &cwd_buf) catch |err| {
+                        log.logf(.warning, "ctrl-open failed copying metadata err={s}", .{@errorName(err)});
+                        return false;
+                    };
+                    const cwd = metadata.cwd;
                     if (cwd.len > 0) {
                         resolved = std.fs.path.join(allocator, &.{ cwd, parsed.path }) catch |err| {
                             log.logf(.warning, "ctrl-open failed joining cwd-relative path err={s}", .{@errorName(err)});
@@ -173,7 +186,15 @@ fn resolveLinkPath(allocator: std.mem.Allocator, session: *TerminalSession, uri:
             return null;
         };
     }
-    const cwd = session.currentCwd();
+    var title_buf = std.ArrayList(u8).empty;
+    defer title_buf.deinit(allocator);
+    var cwd_buf = std.ArrayList(u8).empty;
+    defer cwd_buf.deinit(allocator);
+    const metadata = session.copyMetadata(allocator, &title_buf, &cwd_buf) catch |err| {
+        log.logf(.warning, "resolveLinkPath failed copying metadata err={s}", .{@errorName(err)});
+        return null;
+    };
+    const cwd = metadata.cwd;
     if (cwd.len == 0) return null;
     return std.fs.path.join(allocator, &.{ cwd, uri }) catch |err| {
         log.logf(.warning, "resolveLinkPath failed joining cwd path err={s}", .{@errorName(err)});

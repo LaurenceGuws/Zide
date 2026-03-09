@@ -39,7 +39,17 @@ pub fn handle(
         .copy = struct {
             fn call(raw: *anyopaque) !bool {
                 const ctx: *RuntimeCtx = @ptrCast(@alignCast(raw));
-                return ctx.widget.copySelectionToClipboard(ctx.shell);
+                const term = app_terminal_active_session.resolveActive(
+                    ctx.app_mode,
+                    ctx.terminal_workspace,
+                    ctx.terminals,
+                ) orelse return false;
+                const text = (try term.selectionPlainTextAlloc(ctx.allocator)) orelse return false;
+                defer ctx.allocator.free(text);
+                const cstr = try ctx.allocator.dupeZ(u8, text);
+                defer ctx.allocator.free(cstr);
+                ctx.shell.setClipboardText(cstr);
+                return true;
             }
         }.call,
         .paste = struct {
@@ -58,7 +68,6 @@ pub fn handle(
                 ) orelse return false;
                 return terminal_scrollback_pager.openInPager(
                     ctx.allocator,
-                    ctx.widget,
                     term,
                 );
             }
@@ -71,4 +80,3 @@ pub fn handle(
         hooks,
     );
 }
-

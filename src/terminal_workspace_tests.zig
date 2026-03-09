@@ -37,12 +37,16 @@ test "terminal workspace create switch move close lifecycle" {
 test "terminal workspace metadata is session-derived" {
     var workspace = terminal.TerminalWorkspace.init(std.testing.allocator, .{});
     defer workspace.deinit();
+    var title_buf = std.ArrayList(u8).empty;
+    defer title_buf.deinit(std.testing.allocator);
+    var cwd_buf = std.ArrayList(u8).empty;
+    defer cwd_buf.deinit(std.testing.allocator);
 
     _ = try workspace.createTab(24, 80);
     const session = workspace.activeSession().?;
     terminal.debugFeedBytes(session, "\x1b]2;build-shell\x07");
 
-    const metadata = workspace.metadataAt(workspace.activeIndex()).?;
+    const metadata = (try workspace.copyMetadataAt(std.testing.allocator, workspace.activeIndex(), &title_buf, &cwd_buf)).?;
     try std.testing.expectEqualStrings("build-shell", metadata.title);
     try std.testing.expectEqual(metadata.id, workspace.activeTabId().?);
 }

@@ -374,7 +374,7 @@ Statuses are strict:
   - 2026-03-09: fifth slice landed on feature branch work: terminal selection mutation now follows the same split as other shared session state. UI-facing selection APIs lock, while parser-owned/internal paths use explicit locked helpers (`clearSelectionLocked(...)`, `startSelectionLocked(...)`, `updateSelectionLocked(...)`, `finishSelectionLocked(...)`) when they already hold the session mutex.
 
 4) `TerminalSession` surface reduction
-- status: `todo`
+- status: `in_progress`
 - priority: `P1`
 - scope:
   - shrink `TerminalSession` toward an orchestrator instead of a universal owner
@@ -383,6 +383,21 @@ Statuses are strict:
 - primary files:
   - `src/terminal/core/terminal_session.zig`
   - `src/terminal/core/terminal.zig`
+- progress:
+  - 2026-03-09: first slice started on feature branch work: app/UI consumers are being moved off borrowed session-owned clipboard/link/title/cwd reads and onto explicit copy-out session APIs with caller-owned buffers. This begins shrinking the most fragile external `TerminalSession` surface before broader orchestrator reduction.
+  - 2026-03-09: second slice started on feature branch work: workspace tab metadata no longer borrows `title/cwd` directly from a live session. `TerminalWorkspace.copyMetadataAt(...)` now fills caller-owned buffers, so the tab-bar sync path stops depending on borrowed `TerminalSession` string storage.
+  - 2026-03-09: third slice started on feature branch work: new-terminal launch cwd no longer borrows the active session cwd through workspace. `TerminalWorkspace.copyActiveSessionCwd(...)` now copies into caller-owned storage before runtime uses it as launch input.
+  - 2026-03-09: fourth slice started on feature branch work: FFI scrollback export no longer walks borrowed row slices from a live session. `TerminalSession.copyScrollbackRow(...)` now copies rows into caller-owned storage before the bridge maps them into ABI cells.
+  - 2026-03-09: fifth slice started on feature branch work: widget-side selection/plain/ANSI export paths no longer walk borrowed scrollback rows directly. They now use `TerminalSession.copyScrollbackRow(...)` for history rows, reducing another external dependency on live session-owned row slices.
+  - 2026-03-09: sixth slice started on feature branch work: snapshot now publishes `scrollback_count`, `scrollback_offset`, and `selection`, and widget/input paths are being rewired to prefer snapshot/render-cache metadata over separate live session reads for the same state.
+  - 2026-03-09: seventh slice started on feature branch work: terminal text export is now backend-owned. Selection/plain/ANSI export moved out of `terminal_widget.zig` into `src/terminal/core/text_export.zig` and is exposed through `TerminalSession`, so app shortcuts and pager flow through terminal core instead of widget-owned serialization.
+  - 2026-03-09: eighth slice started on feature branch work: the new terminal-owned export seam is now exposed to FFI through string-returning bridge/C APIs for selection text plus plain/ANSI scrollback dumps, and obsolete borrowed session reads (`currentTitle`, `currentCwd`, `scrollbackRow`, `scrollOffset`, `selectionState`) were deleted from the public `TerminalSession` surface.
+  - 2026-03-09: ninth slice started on feature branch work: scrollback range export is now backend-owned as well. `copyScrollbackRange(...)` moved row-count validation and contiguous history-cell assembly out of the FFI bridge and into terminal core, so the bridge only marshals ABI cells instead of implementing a second scrollback paging contract.
+  - 2026-03-09: tenth slice started on feature branch work: the old row-by-row public history seam (`copyScrollbackRow(...)`) was deleted after all real callers moved to backend-owned range/text export contracts. Remaining tests now validate history through `copyScrollbackRange(...)` instead of a special-case row helper.
+  - 2026-03-09: eleventh slice started on feature branch work: leftover naked geometry/count queries were narrowed again. Public `gridRows(...)`, `gridCols(...)`, and `scrollbackCount(...)` were removed from `TerminalSession`, replaced by a backend-owned `scrollbackInfo(...)` metadata contract used by FFI instead of a raw count getter.
+  - 2026-03-09: twelfth slice started on feature branch work: separate FFI title/cwd/scrollback-count getters were replaced with one backend-owned metadata contract. `TerminalSession.copyMetadata(...)` now publishes title, cwd, scrollback count/offset, alive, and exit status in one call, and FFI/workspace callers were rewired onto that instead of stitching those fields together piecemeal.
+  - 2026-03-09: thirteenth slice started on feature branch work: the leftover split title/cwd copy helpers (`copyCurrentTitle(...)`, `copyCurrentCwd(...)`) were deleted. Workspace launch-cwd lookup and ctrl-open path resolution now use the same backend-owned `copyMetadata(...)` contract as FFI instead of keeping a second public metadata seam alive.
+  - 2026-03-09: fourteenth slice started on feature branch work: the public `childExitCode(...)` session getter was deleted after the FFI bridge moved fully onto `copyMetadata(...)` for exit-status reads and derived-event sync. That removes another raw process-state escape hatch that only survived for older FFI layering.
 
 5) Workspace/session boundary tightening
 - status: `todo`
