@@ -188,8 +188,8 @@ fn handleLegacySyncUpdates(self: anytype, payload: []const u8) bool {
         return false;
     };
     switch (mode) {
-        1 => self.setSyncUpdates(true),
-        2 => self.setSyncUpdates(false),
+        1 => self.setSyncUpdatesLocked(true),
+        2 => self.setSyncUpdatesLocked(false),
         else => return false,
     }
     return true;
