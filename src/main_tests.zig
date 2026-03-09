@@ -106,7 +106,9 @@ test "terminal ansi palette update remaps existing screen and scrollback cells" 
     try std.testing.expectEqualDeep(new_color, term.alt.grid.cells.items[0].attrs.bg);
     try std.testing.expectEqualDeep(new_color, term.alt.grid.cells.items[0].attrs.underline_color);
 
-    const scroll_row = term.scrollbackRow(0) orelse return error.TestUnexpectedResult;
+    var scroll_row_buf = std.ArrayList(terminal_mod.Cell).empty;
+    defer scroll_row_buf.deinit(allocator);
+    const scroll_row = (try term.copyScrollbackRow(allocator, 0, &scroll_row_buf)) orelse return error.TestUnexpectedResult;
     try std.testing.expectEqualDeep(new_color, scroll_row[0].attrs.fg);
     try std.testing.expectEqualDeep(new_color, scroll_row[0].attrs.bg);
     try std.testing.expectEqualDeep(new_color, scroll_row[0].attrs.underline_color);
