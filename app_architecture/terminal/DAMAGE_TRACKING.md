@@ -48,7 +48,7 @@ Historical fixes/notes (keep as reference):
 3) Make scroll and clear operations authoritative for damage:
 - Scroll region changes and scrollRegionUp/Down must mark full region dirty, not partial bounds.
 - eraseDisplay should mark full dirty for mode 2 and set a clear-generation marker to force redraw.
-- Sync updates (CSI ? 2026) should buffer rendering and force full redraw on disable.
+- Sync updates (CSI ? 2026) should buffer rendering while active; disable should publish the buffered real damage rather than inventing a blanket full redraw.
 
 4) Add replay fixtures for full-screen TUIs:
 - Capture gping/nvim redraw scenarios with the replay harness.

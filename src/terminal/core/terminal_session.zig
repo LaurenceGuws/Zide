@@ -62,7 +62,6 @@ const PatternStats = struct {
     full_dirty_erase_display: u32 = 0,
     full_dirty_alt_enter: u32 = 0,
     full_dirty_alt_exit: u32 = 0,
-    full_dirty_sync_updates_disabled: u32 = 0,
     kitty_image_store: u32 = 0,
     kitty_place: u32 = 0,
     kitty_delete: u32 = 0,
@@ -77,7 +76,6 @@ const PatternStats = struct {
             self.full_dirty_erase_display +
             self.full_dirty_alt_enter +
             self.full_dirty_alt_exit +
-            self.full_dirty_sync_updates_disabled +
             self.kitty_image_store +
             self.kitty_place +
             self.kitty_delete;
@@ -105,7 +103,6 @@ pub const PatternEvent = enum {
     full_dirty_erase_display,
     full_dirty_alt_enter,
     full_dirty_alt_exit,
-    full_dirty_sync_updates_disabled,
     kitty_image_store,
     kitty_place,
     kitty_delete,
@@ -451,7 +448,7 @@ pub const TerminalSession = struct {
         const screen = self.activeScreenConst();
         app_logger.logger("terminal.ui.pattern").logf(
             .info,
-            "window_ms={d} rows={d} cols={d} alt={d} sync={d} force_full(el={d}) full_dirty(screen_clear={d} ed_full={d} alt_enter={d} alt_exit={d} sync_off={d}) kitty(store={d} place={d} delete={d})",
+            "window_ms={d} rows={d} cols={d} alt={d} sync={d} force_full(el={d}) full_dirty(screen_clear={d} ed_full={d} alt_enter={d} alt_exit={d}) kitty(store={d} place={d} delete={d})",
             .{
                 now_ms - self.pattern_stats.window_start_ms,
                 screen.grid.rows,
@@ -463,7 +460,6 @@ pub const TerminalSession = struct {
                 self.pattern_stats.full_dirty_erase_display,
                 self.pattern_stats.full_dirty_alt_enter,
                 self.pattern_stats.full_dirty_alt_exit,
-                self.pattern_stats.full_dirty_sync_updates_disabled,
                 self.pattern_stats.kitty_image_store,
                 self.pattern_stats.kitty_place,
                 self.pattern_stats.kitty_delete,
@@ -502,7 +498,6 @@ pub const TerminalSession = struct {
             .full_dirty_erase_display => self.pattern_stats.full_dirty_erase_display += 1,
             .full_dirty_alt_enter => self.pattern_stats.full_dirty_alt_enter += 1,
             .full_dirty_alt_exit => self.pattern_stats.full_dirty_alt_exit += 1,
-            .full_dirty_sync_updates_disabled => self.pattern_stats.full_dirty_sync_updates_disabled += 1,
             .kitty_image_store => self.pattern_stats.kitty_image_store += 1,
             .kitty_place => self.pattern_stats.kitty_place += 1,
             .kitty_delete => self.pattern_stats.kitty_delete += 1,

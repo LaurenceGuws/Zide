@@ -410,11 +410,12 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - `src/terminal/core/terminal_session.zig`
 - Change:
   - removed the redundant `requestForceFullDamage("sync updates mode changed")` path from `setSyncUpdates(...)`
-  - disabling sync updates now relies on the existing screen-model full-dirty publication (`.sync_updates_disabled`) instead of a second force-full side channel
+  - initial narrowing removed the extra session-side force-full path while still leaving disable on the screen-model full-dirty publication
   - enabling sync updates no longer synthesizes redraw work when the screen is otherwise clean
-  - removed the now-dead `force_full_sync` pattern-stat path and added tests for clean enable / model-driven full disable behavior
+  - later follow-up removed that remaining full-dirty publication too: sync disable now publishes the already-buffered real damage (`none` or partial/full) instead of forcing a full redraw reason
+  - removed the now-dead sync-disable pattern-stat path and updated tests to cover clean disable and buffered-partial disable behavior
 - Intent:
-  - keep full redraw authority in the backend damage model rather than in extra “force full” escape hatches
+  - keep redraw authority in published backend damage state rather than in extra “force full” escape hatches
   - narrow one more backend-side quick fix that outlived the original investigation
 
 ## Applied Texture-Shift Kill-Switch (2026-03-08)
