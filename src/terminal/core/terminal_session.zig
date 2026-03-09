@@ -57,6 +57,7 @@ const RenderCache = render_cache_mod.RenderCache;
 
 pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
 pub const DebugSnapshot = snapshot_mod.DebugSnapshot;
+pub const ScrollbackInfo = scrollback_view.ScrollbackInfo;
 pub const ScrollbackRange = scrollback_view.ScrollbackRange;
 pub const PresentedRenderCache = struct {
     generation: u64,
@@ -1158,16 +1159,8 @@ pub const TerminalSession = struct {
         return self.activeScreenConst().cursorPos();
     }
 
-    pub fn gridRows(self: *TerminalSession) usize {
-        return self.activeScreenConst().rowCount();
-    }
-
-    pub fn gridCols(self: *TerminalSession) usize {
-        return self.activeScreenConst().colCount();
-    }
-
-    pub fn scrollbackCount(self: *TerminalSession) usize {
-        return scrollback_view.scrollbackCount(self);
+    pub fn scrollbackInfo(self: *TerminalSession) ScrollbackInfo {
+        return scrollback_view.scrollbackInfo(self);
     }
 
     pub fn copyScrollbackRange(
@@ -1924,7 +1917,7 @@ test "full-region scroll publishes partial cache damage at live bottom" {
     const cache = session.renderCache();
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(i32, 1), cache.viewport_shift_rows);
-    try std.testing.expectEqual(@as(usize, 1), session.scrollbackCount());
+    try std.testing.expectEqual(@as(usize, 1), session.scrollbackInfo().total_rows);
 }
 
 test "feedOutputBytes keeps incremental damage after baseline publish" {

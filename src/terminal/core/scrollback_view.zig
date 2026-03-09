@@ -10,6 +10,11 @@ pub const ScrollbackRange = struct {
     cols: usize,
 };
 
+pub const ScrollbackInfo = struct {
+    total_rows: usize,
+    cols: usize,
+};
+
 pub fn scrollbackCount(self: anytype) usize {
     if (self.active == .alt) return 0;
     self.history.ensureViewCache(self.primary.grid.cols, self.primary.defaultCell());
@@ -20,6 +25,20 @@ pub fn scrollbackRow(self: anytype, index: usize) ?[]const Cell {
     if (self.active == .alt) return null;
     self.history.ensureViewCache(self.primary.grid.cols, self.primary.defaultCell());
     return self.history.scrollbackRow(index);
+}
+
+pub fn scrollbackInfo(self: anytype) ScrollbackInfo {
+    if (self.active == .alt) {
+        return .{
+            .total_rows = 0,
+            .cols = self.primary.grid.cols,
+        };
+    }
+    self.history.ensureViewCache(self.primary.grid.cols, self.primary.defaultCell());
+    return .{
+        .total_rows = self.history.scrollbackCount(),
+        .cols = self.primary.grid.cols,
+    };
 }
 
 pub fn copyScrollbackRange(
@@ -33,17 +52,13 @@ pub fn copyScrollbackRange(
     defer self.state_mutex.unlock();
 
     out.clearRetainingCapacity();
-    if (self.active == .alt) {
-        return .{ .total_rows = 0, .row_count = 0, .cols = self.primary.grid.cols };
-    }
-
-    self.history.ensureViewCache(self.primary.grid.cols, self.primary.defaultCell());
-    const total_rows = self.history.scrollbackCount();
+    const info = scrollbackInfo(self);
+    const total_rows = info.total_rows;
+    const cols = info.cols;
     if (start_row > total_rows) return error.InvalidArgument;
 
     const available = total_rows - start_row;
     const requested = if (max_rows == 0) available else @min(available, max_rows);
-    const cols = self.primary.grid.cols;
 
     try out.ensureTotalCapacityPrecise(allocator, requested * cols);
 
