@@ -25,7 +25,7 @@ pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
 }
 
 pub fn handleCsi(self: anytype, action: csi_mod.CsiAction) void {
-    protocol_csi.handleCsi(self, action);
+    protocol_csi.handleCsi(protocol_csi.SessionFacade.from(self), action);
 }
 
 pub fn handleCodepoint(self: anytype, codepoint: u32) void {
