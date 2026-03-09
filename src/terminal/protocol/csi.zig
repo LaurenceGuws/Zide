@@ -13,6 +13,72 @@ pub const DecrpmState = enum(u8) {
     permanently_reset = 4,
 };
 
+const ModeSnapshot = struct {
+    app_cursor_keys: bool,
+    column_mode_132: bool,
+    screen_reverse: bool,
+    origin_mode: bool,
+    auto_wrap: bool,
+    auto_repeat: bool,
+    mouse_mode_x10: bool,
+    cursor_blink: bool,
+    cursor_visible: bool,
+    reverse_wrap: bool,
+    left_right_margin_mode_69: bool,
+    alt_active: bool,
+    save_cursor_mode_1048: bool,
+    app_keypad: bool,
+    mouse_mode_button: bool,
+    mouse_mode_any: bool,
+    focus_reporting: bool,
+    mouse_mode_sgr: bool,
+    mouse_alternate_scroll: bool,
+    mouse_mode_sgr_pixels: bool,
+    bracketed_paste: bool,
+    sync_updates_active: bool,
+    grapheme_cluster_shaping_2027: bool,
+    report_color_scheme_2031: bool,
+    inband_resize_notifications_2048: bool,
+    kitty_paste_events_5522: bool,
+    insert_mode: bool,
+    local_echo_mode_12: bool,
+    newline_mode: bool,
+};
+
+fn captureModeSnapshot(self: anytype, screen: anytype) ModeSnapshot {
+    return .{
+        .app_cursor_keys = self.appCursorKeysEnabled(),
+        .column_mode_132 = self.column_mode_132,
+        .screen_reverse = screen.screen_reverse,
+        .origin_mode = screen.origin_mode,
+        .auto_wrap = screen.auto_wrap,
+        .auto_repeat = self.autoRepeatEnabled(),
+        .mouse_mode_x10 = self.mouseModeX10Enabled(),
+        .cursor_blink = screen.cursor_style.blink,
+        .cursor_visible = screen.cursor_visible,
+        .reverse_wrap = screen.reverse_wrap,
+        .left_right_margin_mode_69 = screen.left_right_margin_mode_69,
+        .alt_active = self.active == .alt,
+        .save_cursor_mode_1048 = screen.save_cursor_mode_1048,
+        .app_keypad = self.appKeypadEnabled(),
+        .mouse_mode_button = self.mouseModeButtonEnabled(),
+        .mouse_mode_any = self.mouseModeAnyEnabled(),
+        .focus_reporting = self.focusReportingEnabled(),
+        .mouse_mode_sgr = self.mouseModeSgrEnabled(),
+        .mouse_alternate_scroll = self.mouseAlternateScrollEnabled(),
+        .mouse_mode_sgr_pixels = self.mouseModeSgrPixelsEnabled(),
+        .bracketed_paste = self.bracketedPasteEnabled(),
+        .sync_updates_active = self.sync_updates_active,
+        .grapheme_cluster_shaping_2027 = self.grapheme_cluster_shaping_2027,
+        .report_color_scheme_2031 = self.report_color_scheme_2031,
+        .inband_resize_notifications_2048 = self.inband_resize_notifications_2048,
+        .kitty_paste_events_5522 = self.kitty_paste_events_5522,
+        .insert_mode = screen.insert_mode,
+        .local_echo_mode_12 = screen.local_echo_mode_12,
+        .newline_mode = screen.newline_mode,
+    };
+}
+
 fn csiIntermediatesEq(action: parser_csi.CsiAction, bytes: []const u8) bool {
     if (action.intermediates_len != bytes.len) return false;
     return std.mem.eql(u8, action.intermediates[0..action.intermediates_len], bytes);
@@ -313,7 +379,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                 if (self.lockPtyWriter()) |writer_guard| {
                     var writer = writer_guard;
                     defer writer.unlock();
-                    const state = decrqmPrivateModeState(self, screen, mode);
+                    const state = decrqmPrivateModeState(captureModeSnapshot(self, screen), mode);
                     _ = writeDecrqmReply(&writer, true, mode, state);
                 }
                 return;
@@ -323,7 +389,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                 if (self.lockPtyWriter()) |writer_guard| {
                     var writer = writer_guard;
                     defer writer.unlock();
-                    const state = decrqmAnsiModeState(screen, mode);
+                    const state = decrqmAnsiModeState(captureModeSnapshot(self, screen), mode);
                     _ = writeDecrqmReply(&writer, false, mode, state);
                 }
             }
@@ -597,53 +663,53 @@ fn applyDecstr(self: anytype) void {
     screen.markDirtyAllWithReason(.decstr_soft_reset, @src());
 }
 
-fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState {
+fn decrqmPrivateModeState(snapshot: ModeSnapshot, mode: i32) DecrpmState {
     return switch (mode) {
-        1 => boolModeState(self.appCursorKeysEnabled()),
-        3 => boolModeState(self.column_mode_132),
-        5 => boolModeState(screen.screen_reverse),
-        6 => boolModeState(screen.origin_mode),
-        7 => boolModeState(screen.auto_wrap),
-        8 => boolModeState(self.autoRepeatEnabled()),
-        9 => boolModeState(self.mouseModeX10Enabled()),
-        12 => boolModeState(screen.cursor_style.blink),
-        25 => boolModeState(screen.cursor_visible),
-        45 => boolModeState(screen.reverse_wrap),
-        69 => boolModeState(screen.left_right_margin_mode_69),
-        47, 1047, 1049 => boolModeState(self.active == .alt),
-        1048 => boolModeState(screen.save_cursor_mode_1048),
-        66 => boolModeState(self.appKeypadEnabled()),
+        1 => boolModeState(snapshot.app_cursor_keys),
+        3 => boolModeState(snapshot.column_mode_132),
+        5 => boolModeState(snapshot.screen_reverse),
+        6 => boolModeState(snapshot.origin_mode),
+        7 => boolModeState(snapshot.auto_wrap),
+        8 => boolModeState(snapshot.auto_repeat),
+        9 => boolModeState(snapshot.mouse_mode_x10),
+        12 => boolModeState(snapshot.cursor_blink),
+        25 => boolModeState(snapshot.cursor_visible),
+        45 => boolModeState(snapshot.reverse_wrap),
+        69 => boolModeState(snapshot.left_right_margin_mode_69),
+        47, 1047, 1049 => boolModeState(snapshot.alt_active),
+        1048 => boolModeState(snapshot.save_cursor_mode_1048),
+        66 => boolModeState(snapshot.app_keypad),
         67 => .permanently_reset, // DECBKM (backarrow key mode) not supported
-        1000 => boolModeState(self.mouseModeX10Enabled()),
+        1000 => boolModeState(snapshot.mouse_mode_x10),
         1001 => .permanently_reset, // Mouse highlight tracking not supported
-        1002 => boolModeState(self.mouseModeButtonEnabled()),
-        1003 => boolModeState(self.mouseModeAnyEnabled()),
-        1004 => boolModeState(self.focusReportingEnabled()),
+        1002 => boolModeState(snapshot.mouse_mode_button),
+        1003 => boolModeState(snapshot.mouse_mode_any),
+        1004 => boolModeState(snapshot.focus_reporting),
         1005 => .permanently_reset, // UTF-8 mouse encoding not supported
-        1006 => boolModeState(self.mouseModeSgrEnabled()),
-        1007 => boolModeState(self.mouseAlternateScrollEnabled()),
+        1006 => boolModeState(snapshot.mouse_mode_sgr),
+        1007 => boolModeState(snapshot.mouse_alternate_scroll),
         1015 => .permanently_reset, // urxvt mouse encoding not supported
-        1016 => boolModeState(self.mouseModeSgrPixelsEnabled()),
+        1016 => boolModeState(snapshot.mouse_mode_sgr_pixels),
         1034 => .permanently_reset, // 8-bit meta mode not supported
         1035 => .permanently_reset, // num lock modifier mode not supported
         1036 => .permanently_reset, // ESC-prefixed meta mode toggle not supported
         1042 => .permanently_reset, // bell action toggle not supported
         1070 => .permanently_reset, // sixel private palette mode not supported
-        2004 => boolModeState(self.bracketedPasteEnabled()),
-        2026 => boolModeState(self.sync_updates_active),
-        2027 => boolModeState(self.grapheme_cluster_shaping_2027),
-        2031 => boolModeState(self.report_color_scheme_2031),
-        2048 => boolModeState(self.inband_resize_notifications_2048),
-        5522 => boolModeState(self.kitty_paste_events_5522),
+        2004 => boolModeState(snapshot.bracketed_paste),
+        2026 => boolModeState(snapshot.sync_updates_active),
+        2027 => boolModeState(snapshot.grapheme_cluster_shaping_2027),
+        2031 => boolModeState(snapshot.report_color_scheme_2031),
+        2048 => boolModeState(snapshot.inband_resize_notifications_2048),
+        5522 => boolModeState(snapshot.kitty_paste_events_5522),
         else => .not_recognized,
     };
 }
 
-fn decrqmAnsiModeState(screen: anytype, mode: i32) DecrpmState {
+fn decrqmAnsiModeState(snapshot: ModeSnapshot, mode: i32) DecrpmState {
     return switch (mode) {
-        4 => boolModeState(screen.insert_mode),
-        12 => boolModeState(screen.local_echo_mode_12),
-        20 => boolModeState(screen.newline_mode),
+        4 => boolModeState(snapshot.insert_mode),
+        12 => boolModeState(snapshot.local_echo_mode_12),
+        20 => boolModeState(snapshot.newline_mode),
         else => .not_recognized,
     };
 }
