@@ -1292,10 +1292,6 @@ pub const TerminalSession = struct {
         return self.title;
     }
 
-    pub fn clearDirty(self: *TerminalSession) void {
-        self.activeScreen().clearDirty();
-    }
-
     pub fn clearDirtyIfGeneration(self: *TerminalSession, expected_generation: u64) bool {
         self.lock();
         defer self.unlock();

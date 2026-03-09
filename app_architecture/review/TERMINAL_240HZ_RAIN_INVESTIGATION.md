@@ -628,3 +628,14 @@ Reason:
 - Intent:
   - narrow the remaining “formal full redraw” surface to semantic cases that are still real
   - stop advertising unused escape hatches as part of the current terminal design
+
+## Dead-Surface Cleanup (2026-03-09)
+
+- Files:
+  - `src/terminal/core/terminal_session.zig`
+  - `src/ui/widgets/terminal_widget_open.zig`
+- Change:
+  - removed the unused `TerminalSession.clearDirty()` helper
+  - removed the unused snapshot-row helper from `terminal_widget_open.zig`
+- Intent:
+  - keep the surviving terminal API surface aligned with the actual active architecture
