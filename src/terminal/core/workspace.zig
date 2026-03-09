@@ -209,10 +209,6 @@ pub const TerminalWorkspace = struct {
         }
     }
 
-    pub fn pollBudgeted(self: *TerminalWorkspace, input_active_index: ?usize, has_input: bool, budget: PollBudget) !bool {
-        return polling.pollBudgeted(self, input_active_index, has_input, budget);
-    }
-
     pub fn pollForFrame(self: *TerminalWorkspace, input_active_index: ?usize, has_input: bool) !bool {
         return polling.pollForFrame(self, input_active_index, has_input);
     }
