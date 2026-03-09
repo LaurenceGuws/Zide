@@ -158,6 +158,7 @@ Progress:
 - Follow-up (2026-03-09): removed the now-dead public `TerminalWorkspace.pollBudgeted(...)` surface after `pollForFrame(...)` became the workspace-owned polling contract used by app runtime.
 - Follow-up (2026-03-09): removed the public `TerminalWorkspace.PollBudget` type after poll budgets became an internal workspace-polling detail instead of part of the live runtime contract.
 - Follow-up (2026-03-09): added explicit read-only workspace generation/data queries so app runtime pacing code can avoid raw session-pointer access when it only needs polling/publication state.
+- Follow-up (2026-03-09): added explicit workspace cwd/close-confirm query helpers and rewired read-only app callers off `sessionAt(...)` / `activeSession()` where they only needed derived state.
 - Follow-up (2026-03-09): extracted terminal frame pacing/latency/generation observation into `src/app/terminal_frame_pacing_runtime.zig` so `frame_render_idle_runtime.zig` acts as a coordinator instead of embedding terminal scheduler policy inline.
 - Follow-up (2026-03-09): grouped terminal frame pacing bookkeeping into `AppState.terminal_frame_pacing` so runtime scheduler state stops leaking across the top-level app state as unrelated scalar fields.
 - Follow-up (2026-03-09): removed the dead frame-pacing `pressure_since` timestamp after the runtime extraction confirmed it was no longer read by any scheduler path.

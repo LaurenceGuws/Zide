@@ -786,6 +786,24 @@ Reason:
   - reduce incidental session-pointer exposure in runtime code paths that only need
     scheduler/publication state
 
+## Workspace App-Query Cleanup (2026-03-09)
+
+- Files:
+  - `src/terminal/core/workspace.zig`
+  - `src/app/new_terminal_runtime.zig`
+  - `src/app/prepare_run_frame_runtime.zig`
+  - `src/app/terminal_close_active_runtime.zig`
+  - `src/app/terminal_tab_bar_sync.zig`
+- Change:
+  - added explicit workspace query helpers for active cwd and close-confirm state
+  - rewired read-only app/runtime call sites to use workspace metadata/query APIs
+    instead of raw `sessionAt(...)` / `activeSession()` access where they only
+    needed derived state
+- Intent:
+  - keep shrinking the workspace public surface toward contract-shaped reads
+  - reserve raw session access for code paths that genuinely need to mutate or pass
+    a session object onward
+
 ## Presented-Ack API Cleanup (2026-03-09)
 
 - Files:

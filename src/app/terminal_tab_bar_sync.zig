@@ -2,11 +2,11 @@ const std = @import("std");
 const terminal_mod = @import("../terminal/core/terminal.zig");
 const widgets = @import("../ui/widgets.zig");
 
-fn terminalTabLabel(session: *terminal_mod.TerminalSession) []const u8 {
-    const title = session.currentTitle();
+fn terminalTabLabel(metadata: terminal_mod.TerminalTabMetadata) []const u8 {
+    const title = metadata.title;
     if (title.len > 0 and !std.mem.eql(u8, title, "Terminal")) return title;
 
-    const cwd = session.currentCwd();
+    const cwd = metadata.cwd;
     if (cwd.len > 0) {
         if (std.mem.eql(u8, cwd, "/")) return "/";
         const trimmed = std.mem.trimRight(u8, cwd, "/");
@@ -67,8 +67,8 @@ pub fn syncFromWorkspace(
         // Add missing tabs and refresh titles while preserving current visual order.
         for (0..count) |widx| {
             const tab_id = workspace.tabIdAt(widx) orelse continue;
-            const session = workspace.sessionAt(widx) orelse continue;
-            const title = terminalTabLabel(session);
+            const metadata = workspace.metadataAt(widx) orelse continue;
+            const title = terminalTabLabel(metadata);
             if (tab_bar.indexOfTerminalTabId(tab_id)) |bar_idx| {
                 try tab_bar.setTabTitle(bar_idx, title);
             } else {
