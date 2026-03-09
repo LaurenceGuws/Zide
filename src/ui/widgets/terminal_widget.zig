@@ -78,7 +78,6 @@ pub const TerminalWidget = struct {
     multi_click_anchor_col_end: usize = 0,
     selection_press_origin: ?shared_types.input.MousePos = null,
     selection_drag_active: bool = false,
-    pending_draw_outcome: DrawOutcome = .{},
 
     pub fn init(session: *TerminalSession, blink_style: BlinkStyle) TerminalWidget {
         return .{
@@ -118,7 +117,6 @@ pub const TerminalWidget = struct {
             .multi_click_anchor_col_end = 0,
             .selection_press_origin = null,
             .selection_drag_active = false,
-            .pending_draw_outcome = .{},
         };
     }
 
@@ -585,15 +583,14 @@ pub const TerminalWidget = struct {
         width: f32,
         height: f32,
         input: shared_types.input.InputSnapshot,
-    ) void {
-        self.pending_draw_outcome = draw_mod.draw(self, shell, x, y, width, height, input);
+    ) DrawOutcome {
+        return draw_mod.draw(self, shell, x, y, width, height, input);
     }
 
-    pub fn finishFramePresentation(self: *TerminalWidget) void {
-        if (self.pending_draw_outcome.presented) |presented| {
-            _ = self.session.retirePresentedRenderCache(presented, self.pending_draw_outcome.texture_updated);
+    pub fn finishFramePresentation(self: *TerminalWidget, outcome: DrawOutcome) void {
+        if (outcome.presented) |presented| {
+            _ = self.session.retirePresentedRenderCache(presented, outcome.texture_updated);
         }
-        self.pending_draw_outcome = .{};
     }
 
     /// Handle input, returns true if any input was processed
