@@ -58,7 +58,7 @@ fn resizeLocked(self: anytype, rows: u16, cols: u16) !void {
             }
             self.history.scrollback_offset = 0;
         } else {
-            self.setScrollOffset(self.history.scrollback_offset);
+            self.setScrollOffsetLocked(self.history.scrollback_offset);
         }
     }
 }

@@ -21,6 +21,12 @@ pub fn scrollOffset(self: anytype) usize {
 }
 
 pub fn setScrollOffset(self: anytype, offset: usize) void {
+    self.state_mutex.lock();
+    defer self.state_mutex.unlock();
+    setScrollOffsetLocked(self, offset);
+}
+
+pub fn setScrollOffsetLocked(self: anytype, offset: usize) void {
     if (self.active == .alt) {
         self.history.scrollback_offset = 0;
         return;
@@ -38,6 +44,12 @@ pub fn setScrollOffset(self: anytype, offset: usize) void {
 }
 
 pub fn scrollBy(self: anytype, delta: isize) void {
+    self.state_mutex.lock();
+    defer self.state_mutex.unlock();
+    scrollByLocked(self, delta);
+}
+
+pub fn scrollByLocked(self: anytype, delta: isize) void {
     if (self.active == .alt) return;
     if (delta == 0) return;
     self.history.ensureViewCache(self.primary.grid.cols, self.primary.defaultCell());
