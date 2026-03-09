@@ -391,7 +391,7 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - added draw-path unit coverage for the static-kitty-clean case and the kitty-plus-dirty case
 - Intent:
   - reduce one more unconditional renderer-side full-redraw reason
-  - keep kitty generation changes authoritative while avoiding extra work for unchanged kitty scenes
+  - stop static kitty content from forcing redraw work before backend-published kitty damage was in place
 
 ## Blink Partial-Damage Cleanup (2026-03-09)
 
@@ -415,6 +415,7 @@ This confirms a practical scheduler race window around `hasData` gating and idle
 - Change:
   - kitty image/placement mutations now dirty their affected cell ranges directly instead of calling full-screen `kitty_graphics_changed` invalidation by default
   - partial texture updates now repaint kitty layers on both below-text and above-text passes, so kitty generation changes no longer require renderer-side full redraw escalation
+  - removed the dead `view_cache_kitty_generation_change` forced-full fallback because kitty visibility changes are now published at the mutation source
   - removed the temporary kitty occupancy side-channel from the render cache because backend dirty publication now carries the authoritative redraw contract
   - added unit coverage for implicit kitty dirty-region derivation and the conservative full fallback when image geometry cannot be projected into cells
 - Intent:
