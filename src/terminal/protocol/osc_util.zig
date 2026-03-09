@@ -1,6 +1,97 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 
+pub const SessionFacade = struct {
+    ctx: *anyopaque,
+    allocator: std.mem.Allocator,
+    clear_cwd_buffer_fn: *const fn (ctx: *anyopaque) void,
+    append_cwd_byte_fn: *const fn (ctx: *anyopaque, b: u8) anyerror!void,
+    append_cwd_slice_fn: *const fn (ctx: *anyopaque, text: []const u8) anyerror!void,
+    set_cwd_from_buffer_fn: *const fn (ctx: *anyopaque) void,
+    cwd_buffer_len_fn: *const fn (ctx: *anyopaque) usize,
+    truncate_cwd_buffer_fn: *const fn (ctx: *anyopaque, len: usize) void,
+    cwd_buffer_last_fn: *const fn (ctx: *anyopaque) ?u8,
+
+    pub fn from(session: anytype) SessionFacade {
+        const SessionPtr = @TypeOf(session);
+        return .{
+            .ctx = @ptrCast(session),
+            .allocator = session.allocator,
+            .clear_cwd_buffer_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.cwd_buffer.clearRetainingCapacity();
+                }
+            }.call,
+            .append_cwd_byte_fn = struct {
+                fn call(ctx: *anyopaque, b: u8) anyerror!void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    try s.cwd_buffer.append(s.allocator, b);
+                }
+            }.call,
+            .append_cwd_slice_fn = struct {
+                fn call(ctx: *anyopaque, text: []const u8) anyerror!void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    _ = try s.cwd_buffer.appendSlice(s.allocator, text);
+                }
+            }.call,
+            .set_cwd_from_buffer_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.cwd = s.cwd_buffer.items;
+                }
+            }.call,
+            .cwd_buffer_len_fn = struct {
+                fn call(ctx: *anyopaque) usize {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return s.cwd_buffer.items.len;
+                }
+            }.call,
+            .truncate_cwd_buffer_fn = struct {
+                fn call(ctx: *anyopaque, len: usize) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.cwd_buffer.items.len = len;
+                }
+            }.call,
+            .cwd_buffer_last_fn = struct {
+                fn call(ctx: *anyopaque) ?u8 {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    if (s.cwd_buffer.items.len == 0) return null;
+                    return s.cwd_buffer.items[s.cwd_buffer.items.len - 1];
+                }
+            }.call,
+        };
+    }
+
+    pub fn clearCwdBuffer(self: *const SessionFacade) void {
+        self.clear_cwd_buffer_fn(self.ctx);
+    }
+
+    pub fn appendCwdByte(self: *const SessionFacade, b: u8) !void {
+        try self.append_cwd_byte_fn(self.ctx, b);
+    }
+
+    pub fn appendCwdSlice(self: *const SessionFacade, text: []const u8) !void {
+        try self.append_cwd_slice_fn(self.ctx, text);
+    }
+
+    pub fn setCwdFromBuffer(self: *const SessionFacade) void {
+        self.set_cwd_from_buffer_fn(self.ctx);
+    }
+
+    pub fn cwdBufferLen(self: *const SessionFacade) usize {
+        return self.cwd_buffer_len_fn(self.ctx);
+    }
+
+    pub fn truncateCwdBuffer(self: *const SessionFacade, len: usize) void {
+        self.truncate_cwd_buffer_fn(self.ctx, len);
+    }
+
+    pub fn cwdBufferLast(self: *const SessionFacade) ?u8 {
+        return self.cwd_buffer_last_fn(self.ctx);
+    }
+};
+
 pub fn decodeOscPercent(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) bool {
     const log = app_logger.logger("terminal.osc");
     out.clearRetainingCapacity();
@@ -27,52 +118,52 @@ pub fn decodeOscPercent(allocator: std.mem.Allocator, out: *std.ArrayList(u8), t
     return true;
 }
 
-pub fn normalizeCwd(self: anytype, raw_path: []const u8) void {
+pub fn normalizeCwd(session: SessionFacade, raw_path: []const u8) void {
     const log = app_logger.logger("terminal.osc");
-    self.cwd_buffer.clearRetainingCapacity();
-    _ = self.cwd_buffer.append(self.allocator, '/') catch |err| {
+    session.clearCwdBuffer();
+    session.appendCwdByte('/') catch |err| {
         log.logf(.warning, "osc cwd normalize root append failed: {s}", .{@errorName(err)});
         return;
     };
 
     var stack = std.ArrayList(usize).empty;
-    defer stack.deinit(self.allocator);
+    defer stack.deinit(session.allocator);
 
     var it = std.mem.splitScalar(u8, raw_path, '/');
     while (it.next()) |segment| {
         if (segment.len == 0 or std.mem.eql(u8, segment, ".")) continue;
         if (std.mem.eql(u8, segment, "..")) {
             if (stack.pop()) |new_len| {
-                self.cwd_buffer.items.len = new_len;
-            } else if (self.cwd_buffer.items.len > 1) {
-                self.cwd_buffer.items.len = 1;
+                session.truncateCwdBuffer(new_len);
+            } else if (session.cwdBufferLen() > 1) {
+                session.truncateCwdBuffer(1);
             }
             continue;
         }
-        if (self.cwd_buffer.items.len > 1 and self.cwd_buffer.items[self.cwd_buffer.items.len - 1] != '/') {
-            _ = self.cwd_buffer.append(self.allocator, '/') catch |err| {
+        if (session.cwdBufferLen() > 1 and session.cwdBufferLast() != '/') {
+            session.appendCwdByte('/') catch |err| {
                 log.logf(.warning, "osc cwd normalize slash append failed: {s}", .{@errorName(err)});
                 return;
             };
         }
-        const segment_start = self.cwd_buffer.items.len;
-        _ = self.cwd_buffer.appendSlice(self.allocator, segment) catch |err| {
+        const segment_start = session.cwdBufferLen();
+        session.appendCwdSlice(segment) catch |err| {
             log.logf(.warning, "osc cwd normalize segment append failed: {s}", .{@errorName(err)});
             return;
         };
-        _ = stack.append(self.allocator, segment_start) catch |err| {
+        _ = stack.append(session.allocator, segment_start) catch |err| {
             log.logf(.warning, "osc cwd normalize stack append failed: {s}", .{@errorName(err)});
             return;
         };
     }
 
-    if (self.cwd_buffer.items.len == 0) {
-        _ = self.cwd_buffer.append(self.allocator, '/') catch |err| {
+    if (session.cwdBufferLen() == 0) {
+        session.appendCwdByte('/') catch |err| {
             log.logf(.warning, "osc cwd normalize final root append failed: {s}", .{@errorName(err)});
             return;
         };
     }
-    self.cwd = self.cwd_buffer.items;
+    session.setCwdFromBuffer();
 }
 
 fn hexNibble(c: u8) ?u8 {

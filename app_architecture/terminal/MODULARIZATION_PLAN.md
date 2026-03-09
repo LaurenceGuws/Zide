@@ -495,6 +495,7 @@ Statuses are strict:
   - 2026-03-09: second slice landed on feature-branch work: OSC parser dispatch now consumes an explicit session facade (`protocol/osc.zig:SessionFacade`) at the parser boundary. OSC sub-handlers still use internal `anytype` contracts behind that adapter and remain queued for follow-on narrowing.
   - 2026-03-09: third slice landed on feature-branch work: CSI parser dispatch now also consumes an explicit session facade (`protocol/csi.zig:SessionFacade`) at the parser boundary. Existing CSI behavior remains unchanged behind the adapter and internal handler narrowing remains queued.
   - 2026-03-09: fourth slice landed on feature-branch work: OSC title and hyperlink sub-handlers now run through explicit local facades (`osc_title.zig:SessionFacade`, `osc_hyperlink.zig:SessionFacade`) instead of raw `anytype` mutation, reducing implicit state-coupling inside protocol internals.
+  - 2026-03-09: fifth slice landed on feature-branch work: OSC cwd normalization path now runs through explicit local facades (`osc_cwd.zig:SessionFacade`, `osc_util.zig:SessionFacade`) instead of raw session mutation in helper code, narrowing another OSC internal state seam.
 
 10) Investigation/probe residue cleanup
 - status: `in_progress`
