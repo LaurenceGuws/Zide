@@ -5,14 +5,6 @@ const terminal_widget_draw = @import("../ui/widgets/terminal_widget_draw.zig");
 const input_types = shared_types.input;
 const TerminalDrawLatencyMetrics = terminal_widget_draw.FrameLatencyMetrics;
 
-var last_terminal_draw_seq: u64 = 0;
-var last_terminal_poll_seq: u64 = 0;
-var terminal_pressure_since: ?f64 = null;
-var last_terminal_observed_generation: u64 = 0;
-var last_terminal_observed_current_generation: u64 = 0;
-var last_terminal_drawn_generation: u64 = 0;
-var last_terminal_generation_change_time: f64 = 0.0;
-
 const TerminalLatencyContext = struct {
     poll: ?PollMetrics = null,
     draw: ?TerminalDrawLatencyMetrics = null,
@@ -37,10 +29,10 @@ pub const Hooks = struct {
     maybe_log_metrics: *const fn (*anyopaque, f64) void,
 };
 
-fn maybeConsumeTerminalDrawMetrics() ?TerminalDrawLatencyMetrics {
+fn maybeConsumeTerminalDrawMetrics(state: anytype) ?TerminalDrawLatencyMetrics {
     const metrics = terminal_widget_draw.latestFrameLatencyMetrics();
-    if (metrics.seq == 0 or metrics.seq == last_terminal_draw_seq) return null;
-    last_terminal_draw_seq = metrics.seq;
+    if (metrics.seq == 0 or metrics.seq == state.last_terminal_draw_seq) return null;
+    state.last_terminal_draw_seq = metrics.seq;
     return metrics;
 }
 
@@ -50,8 +42,8 @@ fn maybeConsumeTerminalPollMetrics(state: anytype) ?PollMetrics {
 
     if (state.terminal_workspace) |*workspace| {
         const metrics = workspace.lastPollFrameMetrics();
-        if (metrics.seq == 0 or metrics.seq == last_terminal_poll_seq) return null;
-        last_terminal_poll_seq = metrics.seq;
+        if (metrics.seq == 0 or metrics.seq == state.last_terminal_poll_seq) return null;
+        state.last_terminal_poll_seq = metrics.seq;
         return .{
             .tab_count = metrics.tab_count,
             .active_polled = metrics.active_polled,
@@ -204,15 +196,15 @@ pub fn handle(
     const now = app_shell.getTime();
     const active_current_generation = latestTerminalCurrentGeneration(state);
     const active_generation = latestTerminalPublishedGeneration(state);
-    if (active_current_generation != last_terminal_observed_current_generation) {
-        last_terminal_observed_current_generation = active_current_generation;
-        last_terminal_generation_change_time = now;
+    if (active_current_generation != state.last_terminal_observed_current_generation) {
+        state.last_terminal_observed_current_generation = active_current_generation;
+        state.last_terminal_generation_change_time = now;
     }
-    if (active_generation != last_terminal_observed_generation) {
-        last_terminal_observed_generation = active_generation;
-        last_terminal_generation_change_time = now;
+    if (active_generation != state.last_terminal_observed_generation) {
+        state.last_terminal_observed_generation = active_generation;
+        state.last_terminal_generation_change_time = now;
     }
-    const terminal_redraw_pending = active_generation != last_terminal_drawn_generation;
+    const terminal_redraw_pending = active_generation != state.last_terminal_drawn_generation;
     const terminal_parse_backlog = active_current_generation != active_generation;
     const terminal_output_pressure = hasTerminalOutputPressure(state) or terminal_parse_backlog;
     if (terminal_redraw_pending) {
@@ -224,9 +216,9 @@ pub fn handle(
         hooks.draw(ctx);
         const draw_end = app_shell.getTime();
         draw_ms = (draw_end - draw_start) * 1000.0;
-        const terminal_draw_metrics = maybeConsumeTerminalDrawMetrics();
+        const terminal_draw_metrics = maybeConsumeTerminalDrawMetrics(state);
         if (terminal_draw_metrics) |metrics| {
-            last_terminal_drawn_generation = metrics.generation;
+            state.last_terminal_drawn_generation = metrics.generation;
         }
         state.metrics.recordDraw(draw_start, draw_end);
         if (state.perf_mode and state.perf_frames_done > 0) {
@@ -246,7 +238,7 @@ pub fn handle(
         hooks.maybe_log_metrics(ctx, draw_end);
         state.needs_redraw = false;
         state.idle_frames = 0;
-        terminal_pressure_since = null;
+        state.terminal_pressure_since = null;
         if (input_batch.events.items.len > 0) {
             const total_ms = poll_ms + build_ms + update_ms + draw_ms;
             if (total_ms >= 1.0) {
@@ -261,9 +253,9 @@ pub fn handle(
 
     state.idle_frames +|= 1;
     if (terminal_redraw_pending) {
-        if (terminal_pressure_since == null) terminal_pressure_since = now;
+        if (state.terminal_pressure_since == null) state.terminal_pressure_since = now;
     } else {
-        terminal_pressure_since = null;
+        state.terminal_pressure_since = null;
     }
 
     if (input_batch.events.items.len > 0) {
@@ -277,7 +269,8 @@ pub fn handle(
     }
 
     const uptime = now;
-    const generation_recently_advanced = last_terminal_generation_change_time > 0 and (now - last_terminal_generation_change_time) <= 0.25;
+    const generation_recently_advanced = state.last_terminal_generation_change_time > 0 and
+        (now - state.last_terminal_generation_change_time) <= 0.25;
     const sleep_ms: f64 = if (terminal_redraw_pending or terminal_output_pressure or generation_recently_advanced)
         0.001
     else if (uptime < 3.0)
