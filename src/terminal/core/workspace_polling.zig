@@ -1,27 +1,6 @@
 const std = @import("std");
 
-const PollBudget = struct {
-    max_tabs_per_frame: usize,
-    max_background_tabs_per_frame: usize,
-    max_active_polls_per_frame: usize,
-};
-
-pub fn budgetForFrame(comptime BudgetType: type, has_input: bool) BudgetType {
-    return if (has_input)
-        .{
-            .max_tabs_per_frame = 3,
-            .max_background_tabs_per_frame = 1,
-            .max_active_polls_per_frame = 2,
-        }
-    else
-        .{
-            .max_tabs_per_frame = 6,
-            .max_background_tabs_per_frame = 3,
-            .max_active_polls_per_frame = 4,
-        };
-}
-
-pub fn pollBudgeted(self: anytype, input_active_index: ?usize, has_input: bool, budget: anytype) !bool {
+pub fn pollBudgeted(self: anytype, input_active_index: ?usize, policy: anytype) !bool {
     const count = self.tabs.items.len;
     if (count == 0) {
         clearInputPressure(self);
@@ -31,10 +10,10 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, has_input: bool, 
     }
 
     normalizePollCursor(self);
-    updateInputPressure(self, input_active_index, has_input);
+    updateInputPressure(self, input_active_index, policy.has_input);
 
     const active_idx = normalizeIndex(input_active_index, count) orelse self.activeIndex();
-    if (budget.max_tabs_per_frame == 0) {
+    if (policy.max_tabs_per_frame == 0) {
         recordPollMetrics(self, .{
             .tab_count = count,
             .active_index = active_idx,
@@ -45,7 +24,7 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, has_input: bool, 
     }
 
     var any_polled = false;
-    const active_polls = @max(@as(usize, 1), budget.max_active_polls_per_frame);
+    const active_polls = @max(@as(usize, 1), policy.max_active_polls_per_frame);
     var active_polled_success: usize = 0;
     var active_polled: usize = 0;
     while (active_polled < active_polls) : (active_polled += 1) {
@@ -63,8 +42,8 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, has_input: bool, 
     var budget_exhausted_hint = false;
     var background_backlog_hint = false;
 
-    if (count == 1 or budget.max_tabs_per_frame == 1 or budget.max_background_tabs_per_frame == 0) {
-        background_backlog_hint = count > 1 and (budget.max_tabs_per_frame <= 1 or budget.max_background_tabs_per_frame == 0);
+    if (count == 1 or policy.max_tabs_per_frame == 1 or policy.max_background_tabs_per_frame == 0) {
+        background_backlog_hint = count > 1 and (policy.max_tabs_per_frame <= 1 or policy.max_background_tabs_per_frame == 0);
         self.background_poll_cursor = (active_idx + 1) % count;
         recordPollMetrics(self, .{
             .tab_count = count,
@@ -75,7 +54,7 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, has_input: bool, 
             .background_inspected = background_inspected,
             .background_polled = background_polled,
             .total_polled = active_polled_success,
-            .budget_tabs = budget.max_tabs_per_frame,
+            .budget_tabs = policy.max_tabs_per_frame,
             .budget_exhausted_hint = budget_exhausted_hint,
             .active_spillover_hint = activePolledBacklogHint(self, active_idx, active_polled_success, active_polls),
             .background_backlog_hint = background_backlog_hint,
@@ -83,8 +62,8 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, has_input: bool, 
         return any_polled;
     }
 
-    const remaining_slots = budget.max_tabs_per_frame - 1;
-    const background_slots = @min(remaining_slots, budget.max_background_tabs_per_frame);
+    const remaining_slots = policy.max_tabs_per_frame - 1;
+    const background_slots = @min(remaining_slots, policy.max_background_tabs_per_frame);
     background_budget_used = background_slots;
     if (background_slots == 0) {
         background_backlog_hint = count > 1;
@@ -98,7 +77,7 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, has_input: bool, 
             .background_inspected = background_inspected,
             .background_polled = background_polled,
             .total_polled = active_polled_success,
-            .budget_tabs = budget.max_tabs_per_frame,
+            .budget_tabs = policy.max_tabs_per_frame,
             .budget_exhausted_hint = budget_exhausted_hint,
             .active_spillover_hint = activePolledBacklogHint(self, active_idx, active_polled_success, active_polls),
             .background_backlog_hint = background_backlog_hint,
@@ -120,7 +99,7 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, has_input: bool, 
         cursor = (cursor + 1) % count;
     }
     self.background_poll_cursor = cursor;
-    budget_exhausted_hint = background_inspected >= background_slots and background_slots >= @min(count - 1, budget.max_background_tabs_per_frame);
+    budget_exhausted_hint = background_inspected >= background_slots and background_slots >= @min(count - 1, policy.max_background_tabs_per_frame);
     background_backlog_hint = count > 1 and background_slots < (count - 1);
     recordPollMetrics(self, .{
         .tab_count = count,
@@ -131,7 +110,7 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, has_input: bool, 
         .background_inspected = background_inspected,
         .background_polled = background_polled,
         .total_polled = active_polled_success + background_polled,
-        .budget_tabs = budget.max_tabs_per_frame,
+        .budget_tabs = policy.max_tabs_per_frame,
         .budget_exhausted_hint = budget_exhausted_hint,
         .active_spillover_hint = activePolledBacklogHint(self, active_idx, active_polled_success, active_polls),
         .background_backlog_hint = background_backlog_hint,
@@ -139,8 +118,22 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, has_input: bool, 
     return any_polled;
 }
 
-pub fn pollForFrame(self: anytype, input_active_index: ?usize, has_input: bool) !bool {
-    return pollBudgeted(self, input_active_index, has_input, budgetForFrame(PollBudget, has_input));
+pub fn pollForFrame(self: anytype, input_active_index: ?usize, policy: anytype) !@TypeOf(self.*).PollFrameResult {
+    const count = self.tabs.items.len;
+    const active_idx = normalizeIndex(input_active_index, count);
+    const published_pre = if (active_idx) |idx|
+        self.tabs.items[idx].session.publishedGeneration()
+    else
+        0;
+    const any_polled = try pollBudgeted(self, input_active_index, policy);
+    const published_post = if (active_idx) |idx|
+        self.tabs.items[idx].session.publishedGeneration()
+    else
+        0;
+    return @TypeOf(self.*).PollFrameResult{
+        .any_polled = any_polled,
+        .active_published_changed = published_post != published_pre,
+    };
 }
 
 pub fn clearInputPressure(self: anytype) void {

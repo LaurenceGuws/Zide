@@ -45,10 +45,10 @@ That orchestration now lives in `src/terminal/core/workspace.zig` as `TerminalWo
 - `activateTab(id)` / `activateIndex(index)` / `activateNext()` / `activatePrev()`.
 - `moveTab(id, to_index)` -> ordered move with active-tab preservation.
 - `activeSessionCwd()` / `activeSessionShouldConfirmClose()` / `firstConfirmCloseTab()` -> read-only workspace queries for app/runtime decisions that should not need raw session access.
-- `activeSessionHasData()` / `activeSessionPublishedGeneration()` / `activeSessionCurrentGeneration()` / `publishedGenerationAt(index)` -> read-only workspace queries for runtime pacing/publication code.
+- `activeFrameState()` -> workspace-owned read-only scheduling snapshot for the active tab (`has_data`, `current_generation`, `published_generation`).
 - `copyTabSyncState(...)` -> workspace-owned tab-bar projection contract for ids + labels + active-tab state.
 - `setCellSizeAll()` + `resizeAll()` -> workspace-wide geometry propagation.
-- `pollForFrame(active_input_index, has_input)` -> workspace-owned resource-aware polling across tabs; budget shaping is internal to workspace polling, not part of the public contract.
+- `pollForFrame(active_input_index, policy)` -> workspace-owned resource-aware polling across tabs; returns `PollFrameResult` so runtime can consume published-generation advancement without doing its own pre/post workspace reads, while runtime still owns which `PollPolicy` to apply for that frame.
 
 ## Invariants
 

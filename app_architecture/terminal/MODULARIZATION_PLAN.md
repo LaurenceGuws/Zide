@@ -429,6 +429,9 @@ Statuses are strict:
   - `src/terminal/core/workspace_polling.zig`
   - `src/app/terminal_poll_runtime.zig`
   - `src/app/terminal_frame_pacing_runtime.zig`
+- progress:
+  - 2026-03-09: first slice started on feature branch work: workspace now owns active-frame scheduling observation through `activeFrameState()` and poll-result publication through `PollFrameResult`. Runtime pacing/poll helpers no longer reconstruct those decisions from separate getters plus app-side pre/post generation comparisons, and the old raw getters (`activeSessionHasData`, `activeSessionPublishedGeneration`, `activeSessionCurrentGeneration`, `publishedGenerationAt`) were deleted.
+  - 2026-03-09: second slice started on feature branch work: runtime now owns poll profile selection again. `terminal_poll_runtime` chooses a `PollPolicy` and workspace executes it, so `workspace_polling` no longer hardcodes the input-vs-idle budget table internally.
 
 7) Input publication redesign
 - status: `todo`
