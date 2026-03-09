@@ -68,6 +68,33 @@ Overrides:
 - `~/.config/zide/syntax.lua` (user)
 - `.zide/syntax.lua` (project)
 
+Git history dashboard (interactive HTML):
+```bash
+./scripts/git_history_dashboard.py generate --repo . --output /tmp/git-history-dashboard.html
+```
+Optional tuning:
+- `--since '24 months ago'` to focus on recent history
+- `--max-points 120` to reduce/increase snapshot density
+- `--top-sections 10` to track more top-level directories
+
+Dynamic multi-repo dashboard (local web app):
+```bash
+./scripts/git_history_dashboard.py serve --port 8765
+```
+Then open `http://127.0.0.1:8765` and enter comma-separated repo paths.
+
+Dynamic filters:
+- Authors: comma-separated regex (matches `Name <email>`)
+- Include path regex: only matching files are counted
+- Exclude path regex: matching files are ignored
+
+Additional graphs in dynamic mode:
+- Per-repo: top authors by churn/commits
+- Per-repo: weekday/hour commit activity heatmap
+- Cross-repo: top authors by churn
+- Per-repo: top files by touches and cumulative churn over time
+- Per-repo: time slider for top largest files (files rotate in/out by snapshot date)
+
 ## Linux Dev Channels
 
 For local Linux testing, you can install two launcher channels:
