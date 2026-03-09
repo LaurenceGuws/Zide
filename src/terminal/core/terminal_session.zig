@@ -1466,14 +1466,6 @@ pub const TerminalSession = struct {
         return self.activeScreenConst().getDamage();
     }
 
-    pub fn markDirty(self: *TerminalSession) void {
-        self.lock();
-        defer self.unlock();
-        self.activeScreen().markDirtyAllWithReason(.session_mark_dirty_api, @src());
-        self.inactiveScreen().markDirtyAllWithReason(.session_mark_dirty_api, @src());
-        _ = self.output_generation.fetchAdd(1, .acq_rel);
-        self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
-    }
 };
 
 pub const InputSnapshot = struct {

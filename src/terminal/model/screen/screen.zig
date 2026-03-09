@@ -984,10 +984,6 @@ pub const Screen = struct {
         };
     }
 
-    pub fn markDirtyAll(self: *Screen, src: std.builtin.SourceLocation) void {
-        self.grid.markDirtyAllWithReason(.screen_mark_dirty_api, src);
-    }
-
     pub fn markDirtyAllWithReason(self: *Screen, reason: grid_mod.FullDirtyReason, src: std.builtin.SourceLocation) void {
         self.grid.markDirtyAllWithReason(reason, src);
     }
