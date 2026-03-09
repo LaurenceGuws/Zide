@@ -1319,6 +1319,38 @@ fn ensureKittyCapacity(self: anytype, additional: usize) bool {
     return true;
 }
 
+fn dropKittyPlacementsForImage(self: anytype, image_id: u32, include_children: bool) void {
+    const kitty = kittyState(self);
+    markKittyImagePlacementsDirty(self, image_id, @src());
+    var idx: usize = 0;
+    while (idx < kitty.placements.items.len) {
+        const placement = kitty.placements.items[idx];
+        if (placement.image_id == image_id or (include_children and placement.parent_image_id == image_id)) {
+            _ = kitty.placements.swapRemove(idx);
+        } else {
+            idx += 1;
+        }
+    }
+}
+
+fn dropKittyPartial(self: anytype, image_id: u32) void {
+    const kitty = kittyState(self);
+    if (kitty.partials.getEntry(image_id)) |entry| {
+        entry.value_ptr.data.deinit(self.allocator);
+        _ = kitty.partials.remove(image_id);
+    }
+}
+
+fn removeStoredKittyImageAt(self: anytype, idx: usize, include_children: bool) void {
+    const kitty = kittyState(self);
+    const image = kitty.images.items[idx];
+    dropKittyPlacementsForImage(self, image.id, include_children);
+    self.allocator.free(image.data);
+    kitty.total_bytes -= image.data.len;
+    _ = kitty.images.swapRemove(idx);
+    dropKittyPartial(self, image.id);
+}
+
 fn evictKittyImage(self: anytype, prefer_unplaced: bool) bool {
     const kitty = kittyState(self);
     if (kitty.images.items.len == 0) return false;
@@ -1332,23 +1364,7 @@ fn evictKittyImage(self: anytype, prefer_unplaced: bool) bool {
         }
     }
     if (best_idx == null) return false;
-    const image = kitty.images.items[best_idx.?];
-    markKittyImagePlacementsDirty(self, image.id, @src());
-    self.allocator.free(image.data);
-    kitty.total_bytes -= image.data.len;
-    _ = kitty.images.swapRemove(best_idx.?);
-    var p: usize = 0;
-    while (p < kitty.placements.items.len) {
-        if (kitty.placements.items[p].image_id == image.id) {
-            _ = kitty.placements.swapRemove(p);
-        } else {
-            p += 1;
-        }
-    }
-    if (kitty.partials.getEntry(image.id)) |entry| {
-        entry.value_ptr.data.deinit(self.allocator);
-        _ = kitty.partials.remove(image.id);
-    }
+    removeStoredKittyImageAt(self, best_idx.?, false);
     kitty.generation += 1;
     return true;
 }
@@ -1362,15 +1378,7 @@ fn storeKittyImage(self: anytype, image: KittyImage) void {
     while (idx < kitty.images.items.len) : (idx += 1) {
         if (kitty.images.items[idx].id == image.id) {
             const old_len = kitty.images.items[idx].data.len;
-            markKittyImagePlacementsDirty(self, image.id, @src());
-            var p: usize = 0;
-            while (p < kitty.placements.items.len) {
-                if (kitty.placements.items[p].image_id == image.id) {
-                    _ = kitty.placements.swapRemove(p);
-                } else {
-                    p += 1;
-                }
-            }
+            dropKittyPlacementsForImage(self, image.id, false);
             if (image.data.len > kitty_max_bytes) {
                 self.allocator.free(image.data);
                 return;
@@ -1569,28 +1577,13 @@ fn effectiveKittyRows(self: anytype, control: KittyControl, image_id: u32) u32 {
 fn deleteKittyImages(self: anytype, image_id: ?u32) void {
     const kitty = kittyState(self);
     if (image_id) |id| {
-        markKittyImagePlacementsDirty(self, id, @src());
         var i: usize = 0;
         while (i < kitty.images.items.len) {
             if (kitty.images.items[i].id == id) {
-                kitty.total_bytes -= kitty.images.items[i].data.len;
-                self.allocator.free(kitty.images.items[i].data);
-                _ = kitty.images.swapRemove(i);
+                removeStoredKittyImageAt(self, i, true);
             } else {
                 i += 1;
             }
-        }
-        var p: usize = 0;
-        while (p < kitty.placements.items.len) {
-            if (kitty.placements.items[p].image_id == id or kitty.placements.items[p].parent_image_id == id) {
-                _ = kitty.placements.swapRemove(p);
-            } else {
-                p += 1;
-            }
-        }
-        if (kitty.partials.getEntry(id)) |entry| {
-            entry.value_ptr.data.deinit(self.allocator);
-            _ = kitty.partials.remove(id);
         }
     } else {
         for (kitty.placements.items) |placement| {
