@@ -419,7 +419,7 @@ Statuses are strict:
   - 2026-03-09: fifth slice started on feature branch work: window-close confirm routing now consumes `firstConfirmCloseTab(...)` from workspace instead of scanning tabs by index in app runtime, and the now-dead per-index helper `shouldConfirmCloseAt(...)` was deleted.
 
 6) Runtime scheduling ownership cleanup
-- status: `todo`
+- status: `done`
 - priority: `P1`
 - scope:
   - push frame-policy and fairness choices to clearer runtime-owned boundaries
@@ -433,9 +433,10 @@ Statuses are strict:
   - 2026-03-09: first slice started on feature branch work: workspace now owns active-frame scheduling observation through `activeFrameState()` and poll-result publication through `PollFrameResult`. Runtime pacing/poll helpers no longer reconstruct those decisions from separate getters plus app-side pre/post generation comparisons, and the old raw getters (`activeSessionHasData`, `activeSessionPublishedGeneration`, `activeSessionCurrentGeneration`, `publishedGenerationAt`) were deleted.
   - 2026-03-09: second slice started on feature branch work: runtime now owns poll profile selection again. `terminal_poll_runtime` chooses a `PollPolicy` and workspace executes it, so `workspace_polling` no longer hardcodes the input-vs-idle budget table internally.
   - 2026-03-09: third slice started on feature branch work: terminal idle/backoff bookkeeping moved fully under `TerminalFramePacingState`. The old generic `AppState.idle_frames` counter was deleted, and `frame_render_idle_runtime` now drives idle progression through explicit pacing hooks (`noteDraw`, `noteIdle`) instead of mutating terminal sleep state directly.
+  - 2026-03-09: fourth slice landed on main-line work: runtime poll and sleep cadence now use explicit profiles (`default_poll_profiles`, `default_sleep_policy`) instead of anonymous magic constants embedded in the hot path, matching the intended Ghostty-style split where terminal core publishes state and runtime owns draw aggressiveness.
 
 7) Input publication redesign
-- status: `todo`
+- status: `in_progress`
 - priority: `P1`
 - scope:
   - replace manual `updateInputSnapshot()` publication shape with a narrower explicit mode/publication boundary
@@ -445,6 +446,12 @@ Statuses are strict:
   - `src/terminal/core/terminal_session.zig`
   - `src/terminal/core/input_modes.zig`
   - `src/terminal/protocol/csi.zig`
+- progress:
+  - 2026-03-09: first slice landed on feature-branch work: generic `TerminalSession.updateInputSnapshot()` was removed from the public session surface, input snapshot publication now flows through `input_modes.publishSnapshot(...)`, and `resetState()` now republishes keypad/cursor input state so parser resets cannot silently drift from the atomic input snapshot.
+  - 2026-03-09: second slice landed on feature-branch work: input-mode setters now have explicit locked and unlocked variants, CSI/ESC parser mutation paths use the `*Locked` variants, and `feedOutputBytes(...)` now acquires `state_mutex` before parser dispatch so parser-owned mode mutation consistently runs under one lock contract.
+  - 2026-03-09: third slice landed on feature-branch work: DECRQM/input-mode read paths now consume explicit session query helpers instead of raw input fields, and SGR-pixel mouse mode (`1016`) is now published in the atomic input snapshot alongside the other input-facing mode bits.
+  - 2026-03-09: fourth slice landed on feature-branch work: hard reset (`RIS`, `ESC c`) now uses a locked reset path and resets the full input-mode subset coherently via `resetInputModesLocked(...)` instead of ad hoc field pokes, with regression coverage for parser-fed `RIS` clearing both input modes and screen contents.
+  - 2026-03-09: fifth slice landed on feature-branch work: kitty keyboard protocol (`CSI >/< /=/? ... u`) no longer calls lock-taking key-mode APIs from the parser-held state lock. Parser-owned key-mode push/pop/modify/query now use explicit `*Locked` paths, fixing the same nested-lock freeze class that showed up during TUI startup in `nvim`, `lazygit`, and `codex-cli`.
 
 8) Widget input/draw policy reduction
 - status: `todo`
@@ -453,13 +460,26 @@ Statuses are strict:
   - reduce `terminal_widget_input` and `terminal_widget_draw` to presentation/orchestration only
   - move backend/app policy out of widget code
   - keep widget-local state only where it is truly UI-owned
+- latest note:
+  - 2026-03-09: fixed a real nested-lock bug in `terminal_widget_input` scrollback selection/scroll handling by using `*Locked` session helpers inside the widget-owned session lock; scrollback mouse selection should remain stable instead of freezing the tab
+- progress:
+  - 2026-03-09: first slice landed on feature-branch work: word-boundary, row-content, and selection-position ordering semantics used by terminal selection gestures moved out of `terminal_widget_input` and into model-owned code (`selection_semantics.zig`), so the widget consumes backend selection rules instead of embedding them inline.
+  - 2026-03-09: second slice landed on feature-branch work: repeated widget-owned `start/update/finish` selection sequencing for word/line gestures moved behind backend `selectRangeLocked(...)`, reducing selection mutation choreography in `terminal_widget_input` and consolidating cache publication for those gestures in terminal core.
+  - 2026-03-09: third slice landed on feature-branch work: widget-owned “clear if active”, “finish if active”, single-cell selection start, and “reset scrollback to live bottom” mutation rules moved behind backend helpers, so `terminal_widget_input` carries less direct session-state sequencing for common scrollback/selection paths.
+  - 2026-03-09: fourth slice landed on feature-branch work: drag-selection range ordering, late-start update, and drag autoscroll mutation now go through backend helpers (`selectOrderedRangeLocked`, `selectOrUpdateCellLocked`, `scrollSelectionDragLocked`) instead of widget-local sequencing.
+  - 2026-03-09: fifth slice landed on feature-branch work: wheel-scroll and scrollbar drag mutation policy now live behind backend scrollback helpers (`scrollWheelLocked`, `setScrollOffsetFromNormalizedTrackLocked`) instead of widget-local delta and offset mapping.
+  - 2026-03-09: sixth slice landed on feature-branch work: multi-click selection gesture policy now lives behind backend helpers (`beginClickSelectionLocked`, `extendGestureSelectionLocked`) and one backend-defined `SelectionGesture` state object, replacing widget-local anchor-field assembly and mode-specific range mutation logic.
+  - 2026-03-09: seventh slice landed on feature-branch work: the widget no longer peeks at row-content semantics to decide whether click/drag selection can start or extend. `beginClickSelectionLocked(...)` now returns an explicit click result, and `selectOrUpdateCellInRowLocked(...)` owns late-start row-content gating in terminal core.
+  - 2026-03-09: eighth slice landed on feature-branch work: terminal scrollbar drag state (`drag_active`, grab offset) moved out of generic app runtime state and onto `TerminalWidget`, deleting the threaded app/runtime parameter plumbing for terminal-only UI state.
+  - 2026-03-09: ninth slice landed on feature-branch work: left-button release reset is now authoritative in one path in `terminal_widget_input`, clearing scrollbar drag + selection drag/gesture state in one place and removing duplicated in-branch reset logic.
+  - 2026-03-09: tenth slice landed on feature-branch work: selection drag-threshold and left-release reset state transitions were extracted into explicit widget-input helpers (`selectionDragIsActive`, `resetLeftDragState`) to reduce branch-local state mutation drift while preserving behavior.
 - primary files:
   - `src/ui/widgets/terminal_widget_input.zig`
   - `src/ui/widgets/terminal_widget_draw.zig`
   - `src/ui/widgets/terminal_widget.zig`
 
 9) Protocol/parser boundary typing cleanup
-- status: `todo`
+- status: `in_progress`
 - priority: `P2`
 - scope:
   - replace implicit `anytype self` protocol/session contracts with a narrower explicit facade
@@ -470,9 +490,12 @@ Statuses are strict:
   - `src/terminal/parser/parser.zig`
   - `src/terminal/protocol/csi.zig`
   - `src/terminal/protocol/osc.zig`
+- progress:
+  - 2026-03-09: first slice landed on feature-branch work: DCS/APC protocol handling now consumes an explicit session facade (`protocol/dcs_apc.zig:SessionFacade`) instead of direct `anytype self` mutation. Parser hooks now adapt terminal session state into that facade at the boundary.
+  - 2026-03-09: second slice landed on feature-branch work: OSC parser dispatch now consumes an explicit session facade (`protocol/osc.zig:SessionFacade`) at the parser boundary. OSC sub-handlers still use internal `anytype` contracts behind that adapter and remain queued for follow-on narrowing.
 
 10) Investigation/probe residue cleanup
-- status: `todo`
+- status: `in_progress`
 - priority: `P2`
 - scope:
   - remove stale hot-path probe logging that survived the rain investigation
@@ -481,6 +504,8 @@ Statuses are strict:
   - `src/terminal/core/parser_hooks.zig`
   - `src/terminal/core/view_cache.zig`
   - `src/terminal/protocol/csi.zig`
+- progress:
+  - 2026-03-09: first slice landed on feature-branch work: removed the hot-path `terminal.trace.scope` probe branch from `handleCodepoint(...)` in `parser_hooks.zig` (the `cp == 0x2502` logging hook), reducing parser-side investigation residue in the steady-state write path.
 
 11) Kitty subsystem split
 - status: `todo`
