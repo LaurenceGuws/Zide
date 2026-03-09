@@ -333,6 +333,7 @@ Statuses are strict:
 - progress:
   - 2026-03-09: first slice landed on feature branch work: `terminal_widget_draw` now reports draw/presentation outcome instead of retiring backend dirty state inline, and terminal surface/runtime finishes presentation after the draw call returns.
   - 2026-03-09: second slice landed on feature branch work: published render-cache capture now flows through `TerminalSession.copyPublishedRenderCache(...)`, so draw stops open-coding session lock + pending-cache service + live-cache copy.
+  - 2026-03-09: third slice landed on feature branch work: session now returns a `PresentedRenderCache` token and owns the retirement eligibility rule through `retirePresentedRenderCache(...)`, so draw/runtime no longer decide dirty-retirement eligibility inline from ad-hoc `updated/dirty` checks.
 
 2) PTY write contract unification
 - status: `todo`

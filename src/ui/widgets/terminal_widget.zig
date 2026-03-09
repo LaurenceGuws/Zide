@@ -590,8 +590,9 @@ pub const TerminalWidget = struct {
     }
 
     pub fn finishFramePresentation(self: *TerminalWidget) void {
-        if (!self.pending_draw_outcome.should_acknowledge_presentation) return;
-        _ = self.session.acknowledgePresentedGeneration(self.pending_draw_outcome.generation);
+        if (self.pending_draw_outcome.presented) |presented| {
+            _ = self.session.retirePresentedRenderCache(presented, self.pending_draw_outcome.texture_updated);
+        }
         self.pending_draw_outcome = .{};
     }
 
