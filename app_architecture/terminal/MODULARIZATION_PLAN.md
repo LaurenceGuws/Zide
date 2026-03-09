@@ -182,6 +182,7 @@ Progress:
 - Follow-up (2026-03-10): split the kitty graphics query (`a=q`) execution path out of `parseKittyGraphics(...)` into dedicated helpers in `src/terminal/kitty/graphics.zig`, separating query payload load/inflate/build-probe/reply policy from the main store/place/delete flow.
 - Follow-up (2026-03-10): split the kitty upload/store path (`a=t`/`a=T`) out of `parseKittyGraphics(...)` into dedicated helpers in `src/terminal/kitty/graphics.zig`, separating upload-id resolution, decode/accumulate, final build/store, and optional placement/reply policy from top-level dispatch.
 - Follow-up (2026-03-10): split kitty placement/delete execution policy out of the top-level graphics flow in `src/terminal/kitty/graphics.zig`, including dedicated helpers for placement requests and the major delete selector families (`all`, id-based, point, z, range, row, column).
+- Follow-up (2026-03-10): consolidated kitty image lifecycle teardown in `src/terminal/kitty/graphics.zig` so `evict`, `delete`, and image replacement now share explicit helpers for dropping placements, partial upload state, and stored image bytes instead of open-coding those destructive paths in multiple places.
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.
