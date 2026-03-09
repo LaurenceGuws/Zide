@@ -136,13 +136,12 @@ pub fn handleInput(
         }
     }
 
-    if (self.session.tryLock()) {
-        defer self.session.unlock();
-        if (self.session.takeOscClipboard()) |clip| {
-            const cstr: [*:0]const u8 = @ptrCast(clip.ptr);
+    var osc_clipboard = std.ArrayList(u8).empty;
+    defer osc_clipboard.deinit(self.session.allocator);
+    if (self.session.tryTakeOscClipboardCopy(self.session.allocator, &osc_clipboard) catch false) {
+        const cstr: [*:0]const u8 = @ptrCast(osc_clipboard.items.ptr);
             shell.setClipboardText(cstr);
             handled = true;
-        }
     }
 
     if (allow_input) {
