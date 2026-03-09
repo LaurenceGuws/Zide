@@ -10,7 +10,6 @@ const Cell = types.Cell;
 const FullDirtyReason = screen_mod.FullDirtyReason;
 
 fn pickForcedFullDirtyReason(
-    force_full_damage: bool,
     rows: usize,
     active_rows: usize,
     cols: usize,
@@ -28,7 +27,6 @@ fn pickForcedFullDirtyReason(
     view_dirty: anytype,
     view_reason: FullDirtyReason,
 ) FullDirtyReason {
-    if (force_full_damage) return .view_cache_force_full_damage;
     if (rows != active_rows or cols != active_cols) return .view_cache_geometry_change;
     if (scroll_offset != active_scroll_offset) return .view_cache_scroll_offset_change;
     if (requires_full_damage_for_visible_history_change) return .view_cache_history_generation_change;
@@ -118,7 +116,6 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         self.history.view_generation;
     const kitty_generation = kitty_mod.kittyStateConst(self).generation;
     const clear_generation = self.clear_generation.load(.acquire);
-    const force_full_damage = self.force_full_damage.swap(false, .acq_rel);
     const selection_active = self.active != .alt and self.history.selectionState() != null;
     const active_cache = &self.render_caches[active_index];
     const presented_generation = self.presentedGeneration();
@@ -137,7 +134,6 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         std.meta.eql(active_cache.cursor, view.cursor) and
         std.meta.eql(active_cache.cursor_style, view.cursor_style) and
         active_cache.cursor_visible == view.cursor_visible and
-        !force_full_damage and
         view.dirty == .none and
         active_cache.dirty == .none and
         !selection_active and
@@ -156,7 +152,6 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         active_cache.sync_updates_active == self.sync_updates_active and
         active_cache.screen_reverse == screen_reverse and
         active_cache.kitty_generation == kitty_generation and
-        !force_full_damage and
         view.dirty == .none and
         active_cache.dirty == .none and
         !selection_active and
@@ -338,8 +333,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         cache.selection_active = selection_active;
     }
     const requires_full_damage_for_clear_generation = clear_generation != active_cache.clear_generation;
-    const needs_full_damage = force_full_damage or
-        rows != active_cache.rows or
+    const needs_full_damage = rows != active_cache.rows or
         cols != active_cache.cols or
         scroll_offset != active_cache.scroll_offset or
         requires_full_damage_for_visible_history_change or
@@ -472,7 +466,6 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         view.damage;
     if (needs_full_damage) {
         const forced_reason = pickForcedFullDirtyReason(
-            force_full_damage,
             rows,
             active_cache.rows,
             cols,
