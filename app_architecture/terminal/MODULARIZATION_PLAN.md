@@ -374,7 +374,7 @@ Statuses are strict:
   - 2026-03-09: fifth slice landed on feature branch work: terminal selection mutation now follows the same split as other shared session state. UI-facing selection APIs lock, while parser-owned/internal paths use explicit locked helpers (`clearSelectionLocked(...)`, `startSelectionLocked(...)`, `updateSelectionLocked(...)`, `finishSelectionLocked(...)`) when they already hold the session mutex.
 
 4) `TerminalSession` surface reduction
-- status: `todo`
+- status: `in_progress`
 - priority: `P1`
 - scope:
   - shrink `TerminalSession` toward an orchestrator instead of a universal owner
@@ -383,6 +383,8 @@ Statuses are strict:
 - primary files:
   - `src/terminal/core/terminal_session.zig`
   - `src/terminal/core/terminal.zig`
+- progress:
+  - 2026-03-09: first slice started on feature branch work: app/UI consumers are being moved off borrowed session-owned clipboard/link/title/cwd reads and onto explicit copy-out session APIs with caller-owned buffers. This begins shrinking the most fragile external `TerminalSession` surface before broader orchestrator reduction.
 
 5) Workspace/session boundary tightening
 - status: `todo`

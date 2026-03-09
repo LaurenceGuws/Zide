@@ -1513,18 +1513,50 @@ pub const TerminalSession = struct {
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), offset);
     }
 
-    pub fn takeOscClipboard(self: *TerminalSession) ?[]const u8 {
-        if (!self.osc_clipboard_pending) return null;
-        self.osc_clipboard_pending = false;
-        return self.osc_clipboard.items;
+    fn copyTextInto(allocator: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) ![]const u8 {
+        out.clearRetainingCapacity();
+        try out.appendSlice(allocator, text);
+        return out.items;
     }
 
-    pub fn hyperlinkUri(self: *const TerminalSession, link_id: u32) ?[]const u8 {
-        return hyperlink_table.hyperlinkUri(self, link_id);
+    fn takeOscClipboardCopyLocked(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) !bool {
+        out.clearRetainingCapacity();
+        if (!self.osc_clipboard_pending) return false;
+        try out.appendSlice(allocator, self.osc_clipboard.items);
+        self.osc_clipboard_pending = false;
+        return true;
+    }
+
+    pub fn takeOscClipboardCopy(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) !bool {
+        self.lock();
+        defer self.unlock();
+        return self.takeOscClipboardCopyLocked(allocator, out);
+    }
+
+    pub fn tryTakeOscClipboardCopy(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) !bool {
+        out.clearRetainingCapacity();
+        if (!self.tryLock()) return false;
+        defer self.unlock();
+        return self.takeOscClipboardCopyLocked(allocator, out);
+    }
+
+    pub fn copyHyperlinkUri(self: *TerminalSession, allocator: std.mem.Allocator, link_id: u32, out: *std.ArrayList(u8)) !?[]const u8 {
+        self.lock();
+        defer self.unlock();
+        out.clearRetainingCapacity();
+        const uri = hyperlink_table.hyperlinkUri(self, link_id) orelse return null;
+        try out.appendSlice(allocator, uri);
+        return out.items;
     }
 
     pub fn currentCwd(self: *const TerminalSession) []const u8 {
         return self.cwd;
+    }
+
+    pub fn copyCurrentCwd(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) ![]const u8 {
+        self.lock();
+        defer self.unlock();
+        return copyTextInto(allocator, out, self.cwd);
     }
 
     pub fn currentTitle(self: *TerminalSession) []const u8 {
@@ -1534,6 +1566,16 @@ pub const TerminalSession = struct {
             }
         }
         return self.title;
+    }
+
+    pub fn copyCurrentTitle(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) ![]const u8 {
+        self.lock();
+        defer self.unlock();
+        const title = if (self.pty) |*pty|
+            (pty.foregroundProcessLabel() orelse self.title)
+        else
+            self.title;
+        return copyTextInto(allocator, out, title);
     }
 
     fn clearPublishedDamageIfGeneration(self: *TerminalSession, expected_generation: u64, clear_screen_dirty: bool) bool {

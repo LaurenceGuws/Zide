@@ -172,6 +172,9 @@ const Handle = struct {
     pending_events: std.ArrayList(PendingEvent),
     last_title: std.ArrayList(u8),
     last_cwd: std.ArrayList(u8),
+    scratch_title: std.ArrayList(u8),
+    scratch_cwd: std.ArrayList(u8),
+    scratch_clipboard: std.ArrayList(u8),
     exit_delivered: bool,
 };
 
@@ -231,14 +234,17 @@ pub fn create(config: ?*const CreateConfig, out_handle: *?*ZideTerminalHandle) S
         .pending_events = .empty,
         .last_title = .empty,
         .last_cwd = .empty,
+        .scratch_title = .empty,
+        .scratch_cwd = .empty,
+        .scratch_clipboard = .empty,
         .exit_delivered = false,
     };
-    handle.last_title.appendSlice(allocator, session.currentTitle()) catch |err| {
-        log.logf(.warning, "create last_title append failed err={s}", .{@errorName(err)});
+    session.copyCurrentTitle(allocator, &handle.last_title) catch |err| {
+        log.logf(.warning, "create last_title copy failed err={s}", .{@errorName(err)});
         return .out_of_memory;
     };
-    handle.last_cwd.appendSlice(allocator, session.currentCwd()) catch |err| {
-        log.logf(.warning, "create last_cwd append failed err={s}", .{@errorName(err)});
+    session.copyCurrentCwd(allocator, &handle.last_cwd) catch |err| {
+        log.logf(.warning, "create last_cwd copy failed err={s}", .{@errorName(err)});
         return .out_of_memory;
     };
 
@@ -255,6 +261,9 @@ pub fn destroy(handle: ?*ZideTerminalHandle) void {
     h.pending_events.deinit(h.allocator);
     h.last_title.deinit(h.allocator);
     h.last_cwd.deinit(h.allocator);
+    h.scratch_title.deinit(h.allocator);
+    h.scratch_cwd.deinit(h.allocator);
+    h.scratch_clipboard.deinit(h.allocator);
     h.session.deinit();
     h.allocator.destroy(h);
 }
@@ -361,12 +370,20 @@ pub fn snapshotAcquire(handle: ?*ZideTerminalHandle, out_snapshot: *Snapshot) St
         cells[i] = mapCell(cell);
     }
 
-    const title = allocator.dupe(u8, h.session.currentTitle()) catch |err| {
+    const title_view = h.session.copyCurrentTitle(allocator, &h.scratch_title) catch |err| {
+        log.logf(.warning, "snapshot title copy failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
+    const title = allocator.dupe(u8, title_view) catch |err| {
         log.logf(.warning, "snapshot title dup failed err={s}", .{@errorName(err)});
         return .out_of_memory;
     };
     errdefer allocator.free(title);
-    const cwd = allocator.dupe(u8, h.session.currentCwd()) catch |err| {
+    const cwd_view = h.session.copyCurrentCwd(allocator, &h.scratch_cwd) catch |err| {
+        log.logf(.warning, "snapshot cwd copy failed err={s}", .{@errorName(err)});
+        return .out_of_memory;
+    };
+    const cwd = allocator.dupe(u8, cwd_view) catch |err| {
         log.logf(.warning, "snapshot cwd dup failed err={s}", .{@errorName(err)});
         return .out_of_memory;
     };
@@ -567,12 +584,18 @@ pub fn isAlive(handle: ?*ZideTerminalHandle) u8 {
 
 pub fn currentTitle(handle: ?*ZideTerminalHandle, out_string: *StringBuffer) Status {
     const h = fromOpaque(handle) orelse return .invalid_argument;
-    return stringFromSlice(h.allocator, h.session.currentTitle(), out_string);
+    const title = h.session.copyCurrentTitle(h.allocator, &h.scratch_title) catch |err| {
+        return mapError(err);
+    };
+    return stringFromSlice(h.allocator, title, out_string);
 }
 
 pub fn currentCwd(handle: ?*ZideTerminalHandle, out_string: *StringBuffer) Status {
     const h = fromOpaque(handle) orelse return .invalid_argument;
-    return stringFromSlice(h.allocator, h.session.currentCwd(), out_string);
+    const cwd = h.session.copyCurrentCwd(h.allocator, &h.scratch_cwd) catch |err| {
+        return mapError(err);
+    };
+    return stringFromSlice(h.allocator, cwd, out_string);
 }
 
 pub fn stringFree(string: *StringBuffer) void {
@@ -626,9 +649,14 @@ pub fn rendererMetadata(codepoint: u32, out_metadata: *RendererMetadata) Status 
 }
 
 fn syncDerivedEvents(handle: *Handle) Status {
-    syncStringEvent(handle, .title_changed, &handle.last_title, handle.session.currentTitle()) catch |err| return mapError(err);
-    syncStringEvent(handle, .cwd_changed, &handle.last_cwd, handle.session.currentCwd()) catch |err| return mapError(err);
-    if (handle.session.takeOscClipboard()) |clip| {
+    const title = handle.session.copyCurrentTitle(handle.allocator, &handle.scratch_title) catch |err| return mapError(err);
+    syncStringEvent(handle, .title_changed, &handle.last_title, title) catch |err| return mapError(err);
+
+    const cwd = handle.session.copyCurrentCwd(handle.allocator, &handle.scratch_cwd) catch |err| return mapError(err);
+    syncStringEvent(handle, .cwd_changed, &handle.last_cwd, cwd) catch |err| return mapError(err);
+
+    if (handle.session.takeOscClipboardCopy(handle.allocator, &handle.scratch_clipboard) catch |err| return mapError(err)) {
+        const clip = handle.scratch_clipboard.items;
         const payload = if (clip.len > 0 and clip[clip.len - 1] == 0) clip[0 .. clip.len - 1] else clip;
         queueEvent(handle, .clipboard_write, payload, 0, 0) catch |err| return mapError(err);
     }
