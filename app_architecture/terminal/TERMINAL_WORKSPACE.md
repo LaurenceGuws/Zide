@@ -45,7 +45,7 @@ That orchestration now lives in `src/terminal/core/workspace.zig` as `TerminalWo
 - `activateTab(id)` / `activateIndex(index)` / `activateNext()` / `activatePrev()`.
 - `moveTab(id, to_index)` -> ordered move with active-tab preservation.
 - `setCellSizeAll()` + `resizeAll()` -> workspace-wide geometry propagation.
-- `pollAll(active_input_index, has_input)` -> resource-aware polling across tabs.
+- `pollForFrame(active_input_index, has_input)` -> workspace-owned resource-aware polling across tabs; budget shaping is internal to workspace polling, not part of the public contract.
 
 ## Invariants
 
@@ -77,4 +77,3 @@ After workspace behavior stabilizes in terminal-only mode:
 - extend FFI with workspace handle operations
 - preserve stable `TabId` semantics across host calls
 - keep explicit ownership rules consistent with existing snapshot/event/string APIs
-

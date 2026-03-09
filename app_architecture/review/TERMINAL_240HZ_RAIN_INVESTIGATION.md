@@ -755,6 +755,21 @@ Reason:
     fairness constants
   - move one more scheduler policy decision behind the workspace contract
 
+## Workspace Poll Surface Cleanup (2026-03-09)
+
+- Files:
+  - `src/terminal/core/workspace.zig`
+  - `src/terminal/core/workspace_polling.zig`
+  - `app_architecture/terminal/TERMINAL_WORKSPACE.md`
+- Change:
+  - removed the public `TerminalWorkspace.PollBudget` type after
+    `TerminalWorkspace.pollForFrame(...)` became the only live app/runtime polling
+    surface
+  - kept the budget structure internal to `workspace_polling.zig`
+- Intent:
+  - stop exposing stale scheduler-shaping types that app/runtime no longer owns
+  - keep the workspace contract closer to the real runtime boundary
+
 ## Presented-Ack API Cleanup (2026-03-09)
 
 - Files:

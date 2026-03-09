@@ -167,7 +167,7 @@ Completed slices
   - Lock-dependent non-critical work (hover/open/selection/scrollbar updates, OSC clipboard drain) is deferred when lock acquisition fails.
   - Key/focus input paths remain responsive under contention.
 - UI-PERF-03 (poll budget/fairness):
-  - Added workspace polling budget model (`TerminalWorkspace.PollBudget`) and bounded `pollBudgeted(...)`.
+  - Added workspace polling budget model and bounded polling, later narrowed behind `TerminalWorkspace.pollForFrame(...)`.
   - Active tab is polled first; background tabs are polled with bounded round-robin fairness.
   - Visible-terminal runtime now uses small budgets under active input and larger budgets when idle.
 - UI-PERF-04 (grammar bootstrap off frame path):

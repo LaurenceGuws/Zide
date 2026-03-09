@@ -1,6 +1,12 @@
 const std = @import("std");
 
-pub fn budgetForFrame(comptime PollBudget: type, has_input: bool) PollBudget {
+const PollBudget = struct {
+    max_tabs_per_frame: usize,
+    max_background_tabs_per_frame: usize,
+    max_active_polls_per_frame: usize,
+};
+
+pub fn budgetForFrame(comptime BudgetType: type, has_input: bool) BudgetType {
     return if (has_input)
         .{
             .max_tabs_per_frame = 3,
@@ -134,7 +140,6 @@ pub fn pollBudgeted(self: anytype, input_active_index: ?usize, has_input: bool, 
 }
 
 pub fn pollForFrame(self: anytype, input_active_index: ?usize, has_input: bool) !bool {
-    const PollBudget = @TypeOf(self.*).PollBudget;
     return pollBudgeted(self, input_active_index, has_input, budgetForFrame(PollBudget, has_input));
 }
 
