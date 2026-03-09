@@ -520,6 +520,7 @@ Statuses are strict:
   - 2026-03-09: fifth slice landed on feature-branch work: demoted `terminal.sgr` per-sequence logs from `.info` to `.debug` so high-volume SGR traffic no longer pollutes default-info logs.
   - 2026-03-09: sixth slice landed on feature-branch work: demoted high-frequency `terminal.input` send-path logs (`sendKey*`, `sendKeypad*`, `sendChar*`, `sendText`) from `.info` to `.debug` to keep default logs focused on operational signals.
   - 2026-03-09: seventh slice landed on feature-branch work: demoted high-frequency scrollback view-offset logs to `.debug` and removed duplicate stdout emissions in `scrollback_view`, reducing scroll-driven log spam.
+  - 2026-03-09: eighth slice landed on feature-branch work: demoted raw CSI-byte tracing in `io_threads.logCsiSequences(...)` from `.info` to `.debug`, keeping the diagnostic path available without polluting default-info output.
 
 11) Kitty subsystem split
 - status: `todo`
