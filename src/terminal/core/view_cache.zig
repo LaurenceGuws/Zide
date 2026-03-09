@@ -15,7 +15,6 @@ fn pickForcedFullDirtyReason(
     cols: usize,
     active_cols: usize,
     requires_full_damage_for_scroll_offset_change: bool,
-    requires_full_damage_for_clear_generation: bool,
     active_is_alt: bool,
     cache_alt_active: bool,
     screen_reverse: bool,
@@ -25,7 +24,6 @@ fn pickForcedFullDirtyReason(
 ) FullDirtyReason {
     if (rows != active_rows or cols != active_cols) return .view_cache_geometry_change;
     if (requires_full_damage_for_scroll_offset_change) return .view_cache_scroll_offset_change;
-    if (requires_full_damage_for_clear_generation) return .view_cache_clear_generation_change;
     if (active_is_alt != cache_alt_active) return .view_cache_alt_state_change;
     if (screen_reverse != cache_screen_reverse) return .view_cache_screen_reverse_change;
     if (view_dirty == .full) {
@@ -334,11 +332,9 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         }
         cache.selection_active = selection_active;
     }
-    const requires_full_damage_for_clear_generation = clear_generation != active_cache.clear_generation;
     const needs_full_damage = rows != active_cache.rows or
         cols != active_cache.cols or
         requires_full_damage_for_scroll_offset_change or
-        requires_full_damage_for_clear_generation or
         (self.active == .alt) != active_cache.alt_active or
         screen_reverse != active_cache.screen_reverse or
         view.dirty == .full;
@@ -497,7 +493,6 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
             cols,
             active_cache.cols,
             requires_full_damage_for_scroll_offset_change,
-            requires_full_damage_for_clear_generation,
             self.active == .alt,
             active_cache.alt_active,
             screen_reverse,

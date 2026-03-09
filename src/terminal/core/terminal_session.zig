@@ -1963,6 +1963,27 @@ test "kitty generation delta without visible damage stays clean" {
     try std.testing.expectEqual(Dirty.none, cache.dirty);
 }
 
+test "clear generation delta without visible damage stays clean" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+
+    _ = session.clear_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.none, cache.dirty);
+}
+
 test "eraseDisplay cursor-to-end keeps partial damage" {
     const allocator = std.testing.allocator;
 
