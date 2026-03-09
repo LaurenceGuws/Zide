@@ -1114,6 +1114,10 @@ pub const TerminalSession = struct {
         input_modes.setMouseModeSgrPixels(self, enabled);
     }
 
+    pub fn resetInputModes(self: *TerminalSession) void {
+        input_modes.resetInputModes(self);
+    }
+
     pub fn setCursorStyle(self: *TerminalSession, mode: i32) void {
         self.activeScreen().setCursorStyle(mode);
     }

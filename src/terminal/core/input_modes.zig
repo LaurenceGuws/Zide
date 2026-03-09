@@ -103,6 +103,17 @@ pub fn setMouseModeSgrPixels(self: anytype, enabled: bool) void {
     self.updateInputSnapshot();
 }
 
+pub fn resetInputModes(self: anytype) void {
+    self.app_cursor_keys = false;
+    self.app_keypad = false;
+    self.auto_repeat = true;
+    self.mouse_alternate_scroll = true;
+    self.input.resetMouse();
+    self.bracketed_paste = false;
+    self.focus_reporting = false;
+    self.updateInputSnapshot();
+}
+
 pub fn appKeypadEnabled(self: anytype) bool {
     return self.input_snapshot.app_keypad.load(.acquire);
 }

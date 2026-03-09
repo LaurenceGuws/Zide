@@ -753,3 +753,17 @@ Reason:
 - Intent:
   - keep publication lifecycle ownership moving out of the widget layer
   - reduce renderer-side knowledge of backend dirty-retirement policy
+
+## Input Reset Extraction (2026-03-09)
+
+- Files:
+  - `src/terminal/core/input_modes.zig`
+  - `src/terminal/core/terminal_session.zig`
+  - `src/terminal/protocol/csi.zig`
+- Change:
+  - extracted the DECSTR input-mode reset bundle into `resetInputModes(...)`
+  - removed the soft-reset path’s inline mutation of snapshot-owned fields and
+    let the helper perform the single snapshot refresh
+- Intent:
+  - reduce another concentrated manual `input_snapshot` drift surface
+  - keep the input lane moving through explicit state helpers instead of field-by-field mutation
