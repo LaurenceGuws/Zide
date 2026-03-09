@@ -11,12 +11,33 @@ const Tab = struct {
     session: *TerminalSession,
 };
 
-pub const TabMetadata = struct {
+pub const TabSyncEntry = struct {
     id: TabId,
-    title: []const u8,
-    cwd: []const u8,
+    title_offset: usize,
+    title_len: usize,
+    cwd_offset: usize,
+    cwd_len: usize,
     alive: bool,
     exit_code: ?i32,
+
+    pub fn title(self: TabSyncEntry, strings: []const u8) []const u8 {
+        return strings[self.title_offset .. self.title_offset + self.title_len];
+    }
+
+    pub fn cwd(self: TabSyncEntry, strings: []const u8) []const u8 {
+        return strings[self.cwd_offset .. self.cwd_offset + self.cwd_len];
+    }
+};
+
+pub const TabSyncState = struct {
+    active_tab_id: ?TabId,
+    strings: []const u8,
+    tabs: []const TabSyncEntry,
+};
+
+pub const TabTarget = struct {
+    index: usize,
+    id: TabId,
 };
 
 pub const TerminalWorkspace = struct {
@@ -136,26 +157,54 @@ pub const TerminalWorkspace = struct {
         return self.tabs.items[index].session.publishedGeneration();
     }
 
-    pub fn shouldConfirmCloseAt(self: *const TerminalWorkspace, index: usize) bool {
-        if (index >= self.tabs.items.len) return false;
-        return self.tabs.items[index].session.shouldConfirmClose();
+    pub fn firstConfirmCloseTab(self: *const TerminalWorkspace) ?TabTarget {
+        for (self.tabs.items, 0..) |tab, idx| {
+            if (!tab.session.shouldConfirmClose()) continue;
+            return .{
+                .index = idx,
+                .id = tab.id,
+            };
+        }
+        return null;
     }
 
-    pub fn copyMetadataAt(
+    pub fn copyTabSyncState(
         self: *TerminalWorkspace,
         allocator: std.mem.Allocator,
-        index: usize,
-        title_out: *std.ArrayList(u8),
-        cwd_out: *std.ArrayList(u8),
-    ) !?TabMetadata {
-        const session = self.sessionAt(index) orelse return null;
-        const metadata = try session.copyMetadata(allocator, title_out, cwd_out);
+        entries_out: *std.ArrayList(TabSyncEntry),
+        strings_out: *std.ArrayList(u8),
+    ) !TabSyncState {
+        entries_out.clearRetainingCapacity();
+        strings_out.clearRetainingCapacity();
+
+        var title_buf = std.ArrayList(u8).empty;
+        defer title_buf.deinit(allocator);
+        var cwd_buf = std.ArrayList(u8).empty;
+        defer cwd_buf.deinit(allocator);
+
+        for (self.tabs.items) |tab| {
+            const metadata = try tab.session.copyMetadata(allocator, &title_buf, &cwd_buf);
+
+            const title_offset = strings_out.items.len;
+            try strings_out.appendSlice(allocator, metadata.title);
+            const cwd_offset = strings_out.items.len;
+            try strings_out.appendSlice(allocator, metadata.cwd);
+
+            try entries_out.append(allocator, .{
+                .id = tab.id,
+                .title_offset = title_offset,
+                .title_len = metadata.title.len,
+                .cwd_offset = cwd_offset,
+                .cwd_len = metadata.cwd.len,
+                .alive = metadata.alive,
+                .exit_code = metadata.exit_code,
+            });
+        }
+
         return .{
-            .id = self.tabs.items[index].id,
-            .title = metadata.title,
-            .cwd = metadata.cwd,
-            .alive = metadata.alive,
-            .exit_code = metadata.exit_code,
+            .active_tab_id = self.activeTabId(),
+            .strings = strings_out.items,
+            .tabs = entries_out.items,
         };
     }
 

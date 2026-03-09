@@ -19,7 +19,8 @@ pub const debugFeedBytes = session_mod.debugFeedBytes;
 pub const TerminalSession = session_mod.TerminalSession;
 pub const TerminalWorkspace = workspace_mod.TerminalWorkspace;
 pub const TerminalTabId = workspace_mod.TabId;
-pub const TerminalTabMetadata = workspace_mod.TabMetadata;
+pub const TerminalTabSyncEntry = workspace_mod.TabSyncEntry;
+pub const TerminalTabSyncState = workspace_mod.TabSyncState;
 
 pub const Hyperlink = session_mod.Hyperlink;
 

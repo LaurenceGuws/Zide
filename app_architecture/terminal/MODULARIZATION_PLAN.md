@@ -385,7 +385,7 @@ Statuses are strict:
   - `src/terminal/core/terminal.zig`
 - progress:
   - 2026-03-09: first slice started on feature branch work: app/UI consumers are being moved off borrowed session-owned clipboard/link/title/cwd reads and onto explicit copy-out session APIs with caller-owned buffers. This begins shrinking the most fragile external `TerminalSession` surface before broader orchestrator reduction.
-  - 2026-03-09: second slice started on feature branch work: workspace tab metadata no longer borrows `title/cwd` directly from a live session. `TerminalWorkspace.copyMetadataAt(...)` now fills caller-owned buffers, so the tab-bar sync path stops depending on borrowed `TerminalSession` string storage.
+  - 2026-03-09: second slice started on feature branch work: workspace tab metadata no longer borrows `title/cwd` directly from a live session. This started with `TerminalWorkspace.copyMetadataAt(...)`, and later item-5 tab-sync work replaced that indexed seam with `copyTabSyncState(...)`.
   - 2026-03-09: third slice started on feature branch work: new-terminal launch cwd no longer borrows the active session cwd through workspace. `TerminalWorkspace.copyActiveSessionCwd(...)` now copies into caller-owned storage before runtime uses it as launch input.
   - 2026-03-09: fourth slice started on feature branch work: FFI scrollback export no longer walks borrowed row slices from a live session. `TerminalSession.copyScrollbackRow(...)` now copies rows into caller-owned storage before the bridge maps them into ABI cells.
   - 2026-03-09: fifth slice started on feature branch work: widget-side selection/plain/ANSI export paths no longer walk borrowed scrollback rows directly. They now use `TerminalSession.copyScrollbackRow(...)` for history rows, reducing another external dependency on live session-owned row slices.
@@ -415,6 +415,8 @@ Statuses are strict:
   - 2026-03-09: first slice started on feature branch work: app clipboard shortcuts stopped resolving raw sessions through workspace entirely and now operate on the already-resolved active widget/session. The dead `src/app/terminal_active_session.zig` resolver was deleted.
   - 2026-03-09: second slice started on feature branch work: workspace tab creation now has an explicit mutable creation contract (`createTabWithSession(...)`) so app runtime no longer does `createTab(...)` followed by a separate `activeSession()` lookup just to configure the newly-created tab.
   - 2026-03-09: third slice started on feature branch work: `TerminalWorkspace.sessionAt(...)`, `activeSession(...)`, and `tabsSlice(...)` stopped being part of the live public app/runtime surface. The remaining raw session helpers are now internal to `workspace.zig`, and the dead `TerminalTab` re-export was removed from `terminal/core/terminal.zig`.
+  - 2026-03-09: fourth slice started on feature branch work: terminal tab-bar sync now consumes one workspace-owned snapshot contract (`copyTabSyncState(...)`) instead of stitching together `tabCount(...)`, `tabIdAt(...)`, `copyMetadataAt(...)`, and `activeTabId(...)`. The per-index `copyMetadataAt(...)` seam was deleted once the tab-bar path moved over.
+  - 2026-03-09: fifth slice started on feature branch work: window-close confirm routing now consumes `firstConfirmCloseTab(...)` from workspace instead of scanning tabs by index in app runtime, and the now-dead per-index helper `shouldConfirmCloseAt(...)` was deleted.
 
 6) Runtime scheduling ownership cleanup
 - status: `todo`

@@ -31,21 +31,22 @@ That orchestration now lives in `src/terminal/core/workspace.zig` as `TerminalWo
 ## Data model
 
 - `TabId`: stable u64 id for workspace lifetime.
-- `Tab`: `{ id, session }`.
-- `TabMetadata` (derived, not duplicated):
-  - `title` from `session.currentTitle()`
-  - `cwd` from `session.currentCwd()`
-  - `alive` from `session.isAlive()`
-  - `exit_code` from `session.childExitCode()`
+- internal `Tab`: `{ id, session }`.
+- `TabSyncEntry` / `TabSyncState`:
+  - workspace-owned projection for tab-bar sync
+  - carries tab ids plus derived title/cwd/alive/exit state
+  - string storage is exported as one caller-owned blob with per-entry offsets, so UI sync consumes one coherent snapshot instead of multiple indexed queries
 
 ## Core operations
 
 - `createTab(rows, cols)` -> creates a new `TerminalSession` and activates it.
+- `createTabWithSession(rows, cols)` -> same creation path, but returns the created session for immediate bootstrap/configuration by runtime code.
 - `closeTab(id)` / `closeActiveTab()` -> destroys session and normalizes active index.
 - `activateTab(id)` / `activateIndex(index)` / `activateNext()` / `activatePrev()`.
 - `moveTab(id, to_index)` -> ordered move with active-tab preservation.
-- `activeSessionCwd()` / `activeSessionShouldConfirmClose()` / `shouldConfirmCloseAt(index)` -> read-only workspace queries for app/runtime decisions that should not need raw session access.
+- `activeSessionCwd()` / `activeSessionShouldConfirmClose()` / `firstConfirmCloseTab()` -> read-only workspace queries for app/runtime decisions that should not need raw session access.
 - `activeSessionHasData()` / `activeSessionPublishedGeneration()` / `activeSessionCurrentGeneration()` / `publishedGenerationAt(index)` -> read-only workspace queries for runtime pacing/publication code.
+- `copyTabSyncState(...)` -> workspace-owned tab-bar projection contract for ids + labels + active-tab state.
 - `setCellSizeAll()` + `resizeAll()` -> workspace-wide geometry propagation.
 - `pollForFrame(active_input_index, has_input)` -> workspace-owned resource-aware polling across tabs; budget shaping is internal to workspace polling, not part of the public contract.
 
@@ -54,6 +55,7 @@ That orchestration now lives in `src/terminal/core/workspace.zig` as `TerminalWo
 - Active index is always valid when tabs exist.
 - Closing a tab destroys exactly one owned `TerminalSession`.
 - Metadata remains session-derived; no duplicated title/cwd caches in workspace.
+- UI tab-bar sync should consume `copyTabSyncState(...)` rather than stitching together `tabCount/tabIdAt/activeTabId` plus per-index metadata calls.
 - UI and FFI should consume ids/metadata via workspace APIs.
 
 ## Background tab resource policy (initial)
