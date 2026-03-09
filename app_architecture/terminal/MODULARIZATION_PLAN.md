@@ -498,6 +498,7 @@ Statuses are strict:
   - 2026-03-09: fifth slice landed on feature-branch work: OSC cwd normalization path now runs through explicit local facades (`osc_cwd.zig:SessionFacade`, `osc_util.zig:SessionFacade`) instead of raw session mutation in helper code, narrowing another OSC internal state seam.
   - 2026-03-09: sixth slice landed on feature-branch work: OSC 52 clipboard handling now runs through an explicit local facade (`osc_clipboard.zig:SessionFacade`) for clipboard-buffer mutation and reply writes, removing another raw `anytype` protocol-internal mutation path.
   - 2026-03-09: seventh slice landed on feature-branch work: OSC semantic prompt/user-var dispatch now also runs through an explicit local facade (`osc_semantic.zig:SessionFacade`) at the `osc.zig` boundary, reducing direct raw `anytype` calls across OSC submodules.
+  - 2026-03-09: eighth slice landed on feature-branch work: OSC palette/dynamic-color handling now runs through an explicit local facade (`palette.zig:SessionFacade`) for palette state reads/writes and reply writes, removing another raw `anytype` OSC-internal mutation path.
 
 10) Investigation/probe residue cleanup
 - status: `in_progress`

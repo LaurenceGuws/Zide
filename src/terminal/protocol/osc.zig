@@ -38,25 +38,25 @@ pub const SessionFacade = struct {
             .handle_palette_fn = struct {
                 fn call(ctx: *anyopaque, text: []const u8, terminator: OscTerminator) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    palette_mod.handleOscPalette(s, text, terminator);
+                    palette_mod.handleOscPalette(palette_mod.SessionFacade.from(s), text, terminator);
                 }
             }.call,
             .handle_dynamic_color_fn = struct {
                 fn call(ctx: *anyopaque, code: u8, text: []const u8, terminator: OscTerminator) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    palette_mod.handleOscDynamicColor(s, code, text, terminator);
+                    palette_mod.handleOscDynamicColor(palette_mod.SessionFacade.from(s), code, text, terminator);
                 }
             }.call,
             .handle_palette_reset_fn = struct {
                 fn call(ctx: *anyopaque, text: []const u8) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    palette_mod.handleOscPaletteReset(s, text);
+                    palette_mod.handleOscPaletteReset(palette_mod.SessionFacade.from(s), text);
                 }
             }.call,
             .handle_dynamic_reset_fn = struct {
                 fn call(ctx: *anyopaque, code: u8) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    palette_mod.handleOscDynamicReset(s, code);
+                    palette_mod.handleOscDynamicReset(palette_mod.SessionFacade.from(s), code);
                 }
             }.call,
             .parse_hyperlink_fn = struct {
