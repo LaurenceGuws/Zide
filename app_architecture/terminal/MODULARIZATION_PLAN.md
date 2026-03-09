@@ -494,6 +494,7 @@ Statuses are strict:
   - 2026-03-09: first slice landed on feature-branch work: DCS/APC protocol handling now consumes an explicit session facade (`protocol/dcs_apc.zig:SessionFacade`) instead of direct `anytype self` mutation. Parser hooks now adapt terminal session state into that facade at the boundary.
   - 2026-03-09: second slice landed on feature-branch work: OSC parser dispatch now consumes an explicit session facade (`protocol/osc.zig:SessionFacade`) at the parser boundary. OSC sub-handlers still use internal `anytype` contracts behind that adapter and remain queued for follow-on narrowing.
   - 2026-03-09: third slice landed on feature-branch work: CSI parser dispatch now also consumes an explicit session facade (`protocol/csi.zig:SessionFacade`) at the parser boundary. Existing CSI behavior remains unchanged behind the adapter and internal handler narrowing remains queued.
+  - 2026-03-09: fourth slice landed on feature-branch work: OSC title and hyperlink sub-handlers now run through explicit local facades (`osc_title.zig:SessionFacade`, `osc_hyperlink.zig:SessionFacade`) instead of raw `anytype` mutation, reducing implicit state-coupling inside protocol internals.
 
 10) Investigation/probe residue cleanup
 - status: `in_progress`

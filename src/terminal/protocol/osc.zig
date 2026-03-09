@@ -32,7 +32,7 @@ pub const SessionFacade = struct {
             .set_title_fn = struct {
                 fn call(ctx: *anyopaque, text: []const u8) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    osc_title.setTitle(s, text);
+                    osc_title.setTitle(osc_title.SessionFacade.from(s), text);
                 }
             }.call,
             .handle_palette_fn = struct {
@@ -62,7 +62,7 @@ pub const SessionFacade = struct {
             .parse_hyperlink_fn = struct {
                 fn call(ctx: *anyopaque, text: []const u8) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    osc_hyperlink.parseHyperlink(s, text);
+                    osc_hyperlink.parseHyperlink(osc_hyperlink.SessionFacade.from(s), text);
                 }
             }.call,
             .parse_cwd_fn = struct {
