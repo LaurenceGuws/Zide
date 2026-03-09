@@ -97,3 +97,59 @@ pub const RenderCache = struct {
         self.kitty_placements.deinit(allocator);
     }
 };
+
+pub fn copySnapshot(dst: *RenderCache, allocator: std.mem.Allocator, src: *const RenderCache) !void {
+    try dst.cells.resize(allocator, src.cells.items.len);
+    std.mem.copyForwards(Cell, dst.cells.items, src.cells.items);
+
+    try dst.dirty_rows.resize(allocator, src.dirty_rows.items.len);
+    std.mem.copyForwards(bool, dst.dirty_rows.items, src.dirty_rows.items);
+
+    try dst.dirty_cols_start.resize(allocator, src.dirty_cols_start.items.len);
+    std.mem.copyForwards(u16, dst.dirty_cols_start.items, src.dirty_cols_start.items);
+
+    try dst.dirty_cols_end.resize(allocator, src.dirty_cols_end.items.len);
+    std.mem.copyForwards(u16, dst.dirty_cols_end.items, src.dirty_cols_end.items);
+
+    try dst.selection_rows.resize(allocator, src.selection_rows.items.len);
+    std.mem.copyForwards(bool, dst.selection_rows.items, src.selection_rows.items);
+
+    try dst.selection_cols_start.resize(allocator, src.selection_cols_start.items.len);
+    std.mem.copyForwards(u16, dst.selection_cols_start.items, src.selection_cols_start.items);
+
+    try dst.selection_cols_end.resize(allocator, src.selection_cols_end.items.len);
+    std.mem.copyForwards(u16, dst.selection_cols_end.items, src.selection_cols_end.items);
+
+    try dst.row_hashes.resize(allocator, src.row_hashes.items.len);
+    std.mem.copyForwards(u64, dst.row_hashes.items, src.row_hashes.items);
+
+    try dst.kitty_images.resize(allocator, src.kitty_images.items.len);
+    std.mem.copyForwards(KittyImage, dst.kitty_images.items, src.kitty_images.items);
+
+    try dst.kitty_placements.resize(allocator, src.kitty_placements.items.len);
+    std.mem.copyForwards(KittyPlacement, dst.kitty_placements.items, src.kitty_placements.items);
+
+    dst.rows = src.rows;
+    dst.cols = src.cols;
+    dst.history_len = src.history_len;
+    dst.total_lines = src.total_lines;
+    dst.visible_history_generation = src.visible_history_generation;
+    dst.generation = src.generation;
+    dst.scroll_offset = src.scroll_offset;
+    dst.cursor = src.cursor;
+    dst.cursor_style = src.cursor_style;
+    dst.cursor_visible = src.cursor_visible;
+    dst.has_blink = src.has_blink;
+    dst.dirty = src.dirty;
+    dst.damage = src.damage;
+    dst.full_dirty_reason = src.full_dirty_reason;
+    dst.full_dirty_seq = src.full_dirty_seq;
+    dst.alt_active = src.alt_active;
+    dst.selection_active = src.selection_active;
+    dst.sync_updates_active = src.sync_updates_active;
+    dst.screen_reverse = src.screen_reverse;
+    dst.kitty_generation = src.kitty_generation;
+    dst.clear_generation = src.clear_generation;
+    dst.viewport_shift_rows = src.viewport_shift_rows;
+    dst.viewport_shift_exposed_only = src.viewport_shift_exposed_only;
+}

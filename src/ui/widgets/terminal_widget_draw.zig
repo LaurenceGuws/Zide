@@ -209,61 +209,6 @@ fn rowSelectionEnd(cache: *const RenderCache, row_idx: usize) usize {
     return @as(usize, cache.selection_cols_end.items[row_idx]);
 }
 
-fn copyRenderCacheSnapshot(dst: *RenderCache, allocator: std.mem.Allocator, src: *const RenderCache) !void {
-    try dst.cells.resize(allocator, src.cells.items.len);
-    std.mem.copyForwards(Cell, dst.cells.items, src.cells.items);
-
-    try dst.dirty_rows.resize(allocator, src.dirty_rows.items.len);
-    std.mem.copyForwards(bool, dst.dirty_rows.items, src.dirty_rows.items);
-
-    try dst.dirty_cols_start.resize(allocator, src.dirty_cols_start.items.len);
-    std.mem.copyForwards(u16, dst.dirty_cols_start.items, src.dirty_cols_start.items);
-
-    try dst.dirty_cols_end.resize(allocator, src.dirty_cols_end.items.len);
-    std.mem.copyForwards(u16, dst.dirty_cols_end.items, src.dirty_cols_end.items);
-
-    try dst.selection_rows.resize(allocator, src.selection_rows.items.len);
-    std.mem.copyForwards(bool, dst.selection_rows.items, src.selection_rows.items);
-
-    try dst.selection_cols_start.resize(allocator, src.selection_cols_start.items.len);
-    std.mem.copyForwards(u16, dst.selection_cols_start.items, src.selection_cols_start.items);
-
-    try dst.selection_cols_end.resize(allocator, src.selection_cols_end.items.len);
-    std.mem.copyForwards(u16, dst.selection_cols_end.items, src.selection_cols_end.items);
-
-    try dst.row_hashes.resize(allocator, src.row_hashes.items.len);
-    std.mem.copyForwards(u64, dst.row_hashes.items, src.row_hashes.items);
-
-    try dst.kitty_images.resize(allocator, src.kitty_images.items.len);
-    std.mem.copyForwards(render_cache_mod.KittyImage, dst.kitty_images.items, src.kitty_images.items);
-
-    try dst.kitty_placements.resize(allocator, src.kitty_placements.items.len);
-    std.mem.copyForwards(render_cache_mod.KittyPlacement, dst.kitty_placements.items, src.kitty_placements.items);
-
-    dst.rows = src.rows;
-    dst.cols = src.cols;
-    dst.history_len = src.history_len;
-    dst.total_lines = src.total_lines;
-    dst.generation = src.generation;
-    dst.scroll_offset = src.scroll_offset;
-    dst.cursor = src.cursor;
-    dst.cursor_style = src.cursor_style;
-    dst.cursor_visible = src.cursor_visible;
-    dst.has_blink = src.has_blink;
-    dst.dirty = src.dirty;
-    dst.damage = src.damage;
-    dst.alt_active = src.alt_active;
-    dst.selection_active = src.selection_active;
-    dst.sync_updates_active = src.sync_updates_active;
-    dst.screen_reverse = src.screen_reverse;
-    dst.kitty_generation = src.kitty_generation;
-    dst.clear_generation = src.clear_generation;
-    dst.viewport_shift_rows = src.viewport_shift_rows;
-    dst.viewport_shift_exposed_only = src.viewport_shift_exposed_only;
-    dst.full_dirty_reason = src.full_dirty_reason;
-    dst.full_dirty_seq = src.full_dirty_seq;
-}
-
 fn planViewportTextureShift(
     texture_shift_enabled: bool,
     gen_changed: bool,
@@ -432,22 +377,14 @@ pub fn draw(
     var alt_exit = false;
     var alt_state_changed = false;
     const lock_phase_start = app_shell.getTime();
-    self.session.lock();
-    {
-        defer self.session.unlock();
-        if (self.session.view_cache_pending.load(.acquire)) {
-            self.session.updateViewCacheForScrollLocked();
-        }
-        const live_cache = self.session.renderCache();
-        copyRenderCacheSnapshot(cache, self.session.allocator, live_cache) catch |err| {
-            const log = app_logger.logger("terminal.ui.redraw");
-            log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
-            return outcome;
-        };
-        alt_state_changed = self.last_alt_active != cache.alt_active;
-        alt_exit = self.last_alt_active and !cache.alt_active;
-        self.last_alt_active = cache.alt_active;
-    }
+    self.session.copyPublishedRenderCache(cache) catch |err| {
+        const log = app_logger.logger("terminal.ui.redraw");
+        log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
+        return outcome;
+    };
+    alt_state_changed = self.last_alt_active != cache.alt_active;
+    alt_exit = self.last_alt_active and !cache.alt_active;
+    self.last_alt_active = cache.alt_active;
     render_phase_start = app_shell.getTime();
     lock_ms = time_utils.secondsToMs(render_phase_start - lock_phase_start);
     cache_copy_ms = lock_ms;

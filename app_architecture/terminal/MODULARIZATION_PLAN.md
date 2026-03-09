@@ -332,6 +332,7 @@ Statuses are strict:
   - `src/terminal/core/view_cache.zig`
 - progress:
   - 2026-03-09: first slice landed on feature branch work: `terminal_widget_draw` now reports draw/presentation outcome instead of retiring backend dirty state inline, and terminal surface/runtime finishes presentation after the draw call returns.
+  - 2026-03-09: second slice landed on feature branch work: published render-cache capture now flows through `TerminalSession.copyPublishedRenderCache(...)`, so draw stops open-coding session lock + pending-cache service + live-cache copy.
 
 2) PTY write contract unification
 - status: `todo`
