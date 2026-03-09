@@ -46,6 +46,11 @@ pub const FrameLatencyMetrics = struct {
     draw_ms: f64 = 0.0,
 };
 
+pub const DrawOutcome = struct {
+    generation: u64 = 0,
+    should_acknowledge_presentation: bool = false,
+};
+
 const ViewportTextureShiftPlan = union(enum) {
     none,
     attempt: usize,
@@ -399,13 +404,14 @@ pub fn draw(
     width: f32,
     height: f32,
     input: shared_types.input.InputSnapshot,
-) void {
+) DrawOutcome {
     const draw_start = app_shell.getTime();
     var lock_ms: f64 = 0.0;
     var cache_copy_ms: f64 = 0.0;
     var texture_update_ms: f64 = 0.0;
     var overlay_ms: f64 = 0.0;
     var render_phase_start = draw_start;
+    var outcome = DrawOutcome{};
     defer {
         const draw_end = app_shell.getTime();
         const draw_ms_total = time_utils.secondsToMs(draw_end - draw_start);
@@ -436,7 +442,7 @@ pub fn draw(
         copyRenderCacheSnapshot(cache, self.session.allocator, live_cache) catch |err| {
             const log = app_logger.logger("terminal.ui.redraw");
             log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
-            return;
+            return outcome;
         };
         alt_state_changed = self.last_alt_active != cache.alt_active;
         alt_exit = self.last_alt_active and !cache.alt_active;
@@ -470,7 +476,7 @@ pub fn draw(
             bg_color,
         );
         r.drawTerminalTexture(x, y);
-        return;
+        return outcome;
     }
     const draw_start_time = if (alt_exit) app_shell.getTime() else 0;
     const rows = cache.rows;
@@ -1133,7 +1139,6 @@ pub fn draw(
     var updated = false;
     var texture_full_update = false;
     var texture_partial_update = false;
-    var dirty_clear_ok = false;
     var full_reason_recreated = false;
     var full_reason_cell_metrics = false;
     var full_reason_scale = false;
@@ -1241,19 +1246,19 @@ pub fn draw(
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=rows rows={d} err={s}", .{ rows, @errorName(err) });
                     r.endTerminalTexture();
-                    return;
+                    return outcome;
                 };
                 self.partial_draw_cols_start.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=cols_start rows={d} err={s}", .{ rows, @errorName(err) });
                     r.endTerminalTexture();
-                    return;
+                    return outcome;
                 };
                 self.partial_draw_cols_end.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=cols_end rows={d} err={s}", .{ rows, @errorName(err) });
                     r.endTerminalTexture();
-                    return;
+                    return outcome;
                 };
 
                 for (self.partial_draw_rows.items) |*row_draw| {
@@ -1679,7 +1684,10 @@ pub fn draw(
     }
 
     if (updated or cache.dirty == .none) {
-        dirty_clear_ok = self.session.acknowledgePresentedGeneration(cache.generation);
+        outcome = .{
+            .generation = cache.generation,
+            .should_acknowledge_presentation = true,
+        };
     }
     overlay_ms = time_utils.secondsToMs(app_shell.getTime() - overlay_phase_start);
 
@@ -1734,7 +1742,7 @@ pub fn draw(
                 @intFromBool(texture_partial_update),
                 @intFromBool(updated),
                 @intFromBool(sync_updates),
-                @intFromBool(dirty_clear_ok),
+                @intFromBool(outcome.should_acknowledge_presentation),
                 @tagName(cache.dirty),
                 dirty_rows_count,
                 damage_row_span,
@@ -1764,6 +1772,7 @@ pub fn draw(
             );
         }
     }
+    return outcome;
 }
 
 fn drawTextureGlyphCache(ctx: *anyopaque, texture: Texture, src: Rect, dest: Rect, color: Rgba, kind: TextureKind) void {

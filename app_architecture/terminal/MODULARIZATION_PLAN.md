@@ -320,7 +320,7 @@ Statuses are strict:
 - `done`: landed and documented
 
 1) Presentation/publication ownership cleanup
-- status: `todo`
+- status: `in_progress`
 - priority: `P0`
 - scope:
   - move presented-generation acknowledgement and dirty retirement out of widget draw initiation
@@ -330,6 +330,8 @@ Statuses are strict:
   - `src/ui/widgets/terminal_widget_draw.zig`
   - `src/terminal/core/terminal_session.zig`
   - `src/terminal/core/view_cache.zig`
+- progress:
+  - 2026-03-09: first slice landed on feature branch work: `terminal_widget_draw` now reports draw/presentation outcome instead of retiring backend dirty state inline, and terminal surface/runtime finishes presentation after the draw call returns.
 
 2) PTY write contract unification
 - status: `todo`
