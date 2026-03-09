@@ -337,6 +337,11 @@ pub const TerminalSession = struct {
         self.input_snapshot.screen_cols.store(screen.grid.cols, .release);
     }
 
+    fn setActiveScreenMode(self: *TerminalSession, active: ActiveScreen) void {
+        self.active = active;
+        self.updateInputSnapshot();
+    }
+
     fn hashRow(cells: []const Cell) u64 {
         var h: u64 = 1469598103934665603;
         const prime: u64 = 1099511628211;
@@ -1263,20 +1268,19 @@ pub const TerminalSession = struct {
         }
         self.history.saveScrollOffset();
         self.clearSelection();
-        self.active = .alt;
+        self.setActiveScreenMode(.alt);
         kitty_mod.clearKittyImages(self);
         if (clear) {
             self.activeScreen().clear();
             self.activeScreen().setCursor(0, 0);
         }
         self.activeScreen().markDirtyAllWithReason(.alt_enter, @src());
-        self.updateInputSnapshot();
     }
 
     pub fn exitAltScreen(self: *TerminalSession, restore_cursor: bool) void {
         if (!self.isAltActive()) return;
         kitty_mod.clearKittyImages(self);
-        self.active = .primary;
+        self.setActiveScreenMode(.primary);
         self.alt_exit_pending.store(true, .release);
         self.alt_exit_time_ms.store(std.time.milliTimestamp(), .release);
         self.history.restoreScrollOffset(self.primary.grid.rows);
@@ -1285,7 +1289,6 @@ pub const TerminalSession = struct {
             self.restoreCursor();
         }
         self.activeScreen().markDirtyAllWithReason(.alt_exit, @src());
-        self.updateInputSnapshot();
     }
 
     pub fn snapshot(self: *TerminalSession) TerminalSnapshot {
