@@ -501,6 +501,7 @@ Statuses are strict:
   - 2026-03-09: eighth slice landed on feature-branch work: OSC palette/dynamic-color handling now runs through an explicit local facade (`palette.zig:SessionFacade`) for palette state reads/writes and reply writes, removing another raw `anytype` OSC-internal mutation path.
   - 2026-03-09: ninth slice landed on feature-branch work: OSC kitty clipboard (`5522`) dispatch now runs through an explicit local facade (`osc_kitty_clipboard.zig:SessionFacade`) at the `osc.zig` boundary, matching the typed dispatch shape used by other OSC submodules.
   - 2026-03-09: tenth slice landed on feature-branch work: kitty paste-event emission now also runs through the `osc_kitty_clipboard` facade (`sendPasteEventMimes(...)`), and terminal-session paste path now calls that typed surface instead of directly binding to raw `anytype` helper calls.
+  - 2026-03-09: eleventh slice landed on feature-branch work: `osc_kitty_clipboard` internal helper paths (`parseReadRequest`, `replyReadRequest`, status/data writers, id sanitization) now use `SessionFacade` + explicit allocator/slice accessors instead of raw `anytype self` helper signatures.
 
 10) Investigation/probe residue cleanup
 - status: `in_progress`
