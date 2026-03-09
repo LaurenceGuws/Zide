@@ -13,7 +13,7 @@
 - Current high-risk architectural seams are:
   - `TerminalSession` is still a large multi-domain owner (PTY/parser/screens/history/render publication/UI-facing APIs).
   - redraw lifecycle ownership is still split between `view_cache`, `terminal_widget_draw`, and frame runtime helpers, although presented-generation ack and dirty-retirement policy are now behind a single backend API instead of widget-local sequencing.
-  - scheduler/poll state is still spread across app runtime helpers and `TerminalWorkspace`, even after extracting frame pacing and visible-terminal poll policy into dedicated helpers.
+  - scheduler/poll state is still split across app runtime helpers and `TerminalWorkspace`, but concrete workspace poll budgets now live behind the workspace contract instead of the app hook.
   - input-mode snapshot publication is still manual and duplicated in places, although the common CSI mode toggles now flow through explicit setters instead of open-coded field flips.
   - widget input/draw still contain backend-policy behavior rather than being thin presentation/orchestration layers.
 
