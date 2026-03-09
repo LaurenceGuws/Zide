@@ -2098,3 +2098,67 @@ test "eraseDisplay start-to-cursor keeps partial damage" {
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
 }
+
+test "eraseDisplay full keeps full-width partial damage" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 3, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    for (session.primary.grid.cells.items, 0..) |*cell, idx| {
+        cell.* = base;
+        cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(idx % 4));
+    }
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+
+    session.eraseDisplay(2);
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 2), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 3), cache.damage.end_col);
+}
+
+test "screen clear stays on partial path" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    for (session.primary.grid.cells.items, 0..) |*cell, idx| {
+        cell.* = base;
+        cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(idx % 4));
+    }
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+
+    session.activeScreen().clear();
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 3), cache.damage.end_col);
+}

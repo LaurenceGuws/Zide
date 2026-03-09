@@ -1025,7 +1025,9 @@ pub const Screen = struct {
         for (self.grid.wrap_flags.items) |*flag| {
             flag.* = false;
         }
-        self.grid.markDirtyAllWithReason(.screen_clear, @src());
+        if (self.grid.rows > 0 and self.grid.cols > 0) {
+            self.grid.markDirtyRange(0, self.grid.rows - 1, 0, self.grid.cols - 1);
+        }
     }
 
     pub fn eraseDisplay(self: *Screen, mode: i32, blank_cell: types.Cell) void {
@@ -1086,7 +1088,7 @@ pub const Screen = struct {
                 self.logDirtyRangeSemanticGaps("erase_display_2", 0, rows - 1, left, right);
                 if (left == 0 and right + 1 == cols) {
                     for (self.grid.cells.items) |*cell| cell.* = blank_cell;
-                    self.grid.markDirtyAllWithReason(.erase_display_full, @src());
+                    self.grid.markDirtyRange(0, rows - 1, 0, cols - 1);
                 } else {
                     var r: usize = 0;
                     while (r < rows) : (r += 1) {
@@ -1103,7 +1105,7 @@ pub const Screen = struct {
                 self.logDirtyRangeSemanticGaps("erase_display_3", 0, rows - 1, left, right);
                 if (left == 0 and right + 1 == cols) {
                     for (self.grid.cells.items) |*cell| cell.* = blank_cell;
-                    self.grid.markDirtyAllWithReason(.erase_display_full, @src());
+                    self.grid.markDirtyRange(0, rows - 1, 0, cols - 1);
                 } else {
                     var r: usize = 0;
                     while (r < rows) : (r += 1) {
