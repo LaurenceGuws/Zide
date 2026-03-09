@@ -782,3 +782,15 @@ Reason:
 - Intent:
   - reduce another concentrated manual `input_snapshot` drift surface
   - keep the input lane moving through explicit state helpers instead of field-by-field mutation
+
+## Active-Screen Publication Cleanup (2026-03-09)
+
+- Files:
+  - `src/terminal/core/terminal_session.zig`
+- Change:
+  - introduced `setActiveScreenMode(...)` and rewired alt-screen enter/exit to use
+    it instead of mutating `self.active` and then separately remembering to refresh
+    the input snapshot
+- Intent:
+  - keep active-screen publication on one explicit helper path
+  - reduce another manual snapshot refresh edge on the input lane
