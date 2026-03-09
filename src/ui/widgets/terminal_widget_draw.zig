@@ -226,6 +226,15 @@ fn copyRenderCacheSnapshot(dst: *RenderCache, allocator: std.mem.Allocator, src:
     try dst.selection_cols_end.resize(allocator, src.selection_cols_end.items.len);
     std.mem.copyForwards(u16, dst.selection_cols_end.items, src.selection_cols_end.items);
 
+    try dst.kitty_rows.resize(allocator, src.kitty_rows.items.len);
+    std.mem.copyForwards(bool, dst.kitty_rows.items, src.kitty_rows.items);
+
+    try dst.kitty_cols_start.resize(allocator, src.kitty_cols_start.items.len);
+    std.mem.copyForwards(u16, dst.kitty_cols_start.items, src.kitty_cols_start.items);
+
+    try dst.kitty_cols_end.resize(allocator, src.kitty_cols_end.items.len);
+    std.mem.copyForwards(u16, dst.kitty_cols_end.items, src.kitty_cols_end.items);
+
     try dst.row_hashes.resize(allocator, src.row_hashes.items.len);
     std.mem.copyForwards(u64, dst.row_hashes.items, src.row_hashes.items);
 
@@ -381,40 +390,30 @@ fn spansOverlap(start_a: usize, end_a: usize, start_b: usize, end_b: usize) bool
 
 fn kittyPlacementOverlapRequiresFull(
     cache: *const RenderCache,
-    start_line: usize,
     blink_requires_partial: bool,
 ) bool {
-    if (cache.rows == 0 or cache.cols == 0 or cache.kitty_placements.items.len == 0) return false;
+    if (cache.rows == 0 or cache.cols == 0 or cache.kitty_rows.items.len != cache.rows) return false;
 
-    for (cache.kitty_placements.items) |placement| {
-        const placement_row_start_global = @as(usize, placement.row);
-        const placement_row_span = @as(usize, @max(@as(u16, 1), placement.rows));
-        const placement_row_end_global = placement_row_start_global + placement_row_span - 1;
-        const viewport_row_end_global = start_line + cache.rows - 1;
-        if (!spansOverlap(placement_row_start_global, placement_row_end_global, start_line, viewport_row_end_global)) continue;
+    var row_idx: usize = 0;
+    while (row_idx < cache.rows) : (row_idx += 1) {
+        if (!cache.kitty_rows.items[row_idx]) continue;
 
-        const visible_row_start = placement_row_start_global -| start_line;
-        const visible_row_end = @min(cache.rows - 1, placement_row_end_global - start_line);
-        const placement_col_start = @as(usize, placement.col);
-        const placement_col_span = @as(usize, if (placement.cols > 0) placement.cols else @as(u16, @intCast(cache.cols)));
-        const placement_col_end = @min(cache.cols - 1, placement_col_start + placement_col_span - 1);
-        if (placement_col_start >= cache.cols) continue;
+        const kitty_col_start = if (row_idx < cache.kitty_cols_start.items.len) @as(usize, cache.kitty_cols_start.items[row_idx]) else 0;
+        const kitty_col_end = if (row_idx < cache.kitty_cols_end.items.len) @as(usize, cache.kitty_cols_end.items[row_idx]) else cache.cols - 1;
+        if (kitty_col_start >= cache.cols or kitty_col_start > kitty_col_end) continue;
 
-        var row_idx = visible_row_start;
-        while (row_idx <= visible_row_end) : (row_idx += 1) {
-            if (cache.dirty == .partial and row_idx < cache.dirty_rows.items.len and cache.dirty_rows.items[row_idx]) {
-                const dirty_col_start = if (row_idx < cache.dirty_cols_start.items.len) @as(usize, cache.dirty_cols_start.items[row_idx]) else 0;
-                const dirty_col_end = if (row_idx < cache.dirty_cols_end.items.len) @as(usize, cache.dirty_cols_end.items[row_idx]) else cache.cols - 1;
-                if (spansOverlap(dirty_col_start, dirty_col_end, placement_col_start, placement_col_end)) return true;
-            }
+        if (cache.dirty == .partial and row_idx < cache.dirty_rows.items.len and cache.dirty_rows.items[row_idx]) {
+            const dirty_col_start = if (row_idx < cache.dirty_cols_start.items.len) @as(usize, cache.dirty_cols_start.items[row_idx]) else 0;
+            const dirty_col_end = if (row_idx < cache.dirty_cols_end.items.len) @as(usize, cache.dirty_cols_end.items[row_idx]) else cache.cols - 1;
+            if (spansOverlap(dirty_col_start, dirty_col_end, kitty_col_start, kitty_col_end)) return true;
+        }
 
-            if (blink_requires_partial) {
-                const row_start = row_idx * cache.cols;
-                const row_cells = cache.cells.items[row_start .. row_start + cache.cols];
-                var col = placement_col_start;
-                while (col <= placement_col_end and col < cache.cols) : (col += 1) {
-                    if (row_cells[col].attrs.blink) return true;
-                }
+        if (blink_requires_partial) {
+            const row_start = row_idx * cache.cols;
+            const row_cells = cache.cells.items[row_start .. row_start + cache.cols];
+            var col = kitty_col_start;
+            while (col <= kitty_col_end and col < cache.cols) : (col += 1) {
+                if (row_cells[col].attrs.blink) return true;
             }
         }
     }
@@ -1182,7 +1181,7 @@ pub fn draw(
         const recreated = r.ensureTerminalTexture(texture_w, texture_h);
         const kitty_changed = kitty_generation != self.kitty.last_generation;
         const gen_changed = cache.generation != self.last_render_generation;
-        const kitty_requires_full = has_kitty and kittyPlacementOverlapRequiresFull(cache, start_line, blink_requires_partial);
+        const kitty_requires_full = has_kitty and kittyPlacementOverlapRequiresFull(cache, blink_requires_partial);
         full_reason_recreated = recreated;
         full_reason_cell_metrics = cell_metrics_changed;
         full_reason_scale = render_scale_changed;
@@ -2121,7 +2120,9 @@ test "kitty overlap policy ignores non-overlapping dirty rows" {
     try cache.dirty_rows.resize(std.testing.allocator, 2);
     try cache.dirty_cols_start.resize(std.testing.allocator, 2);
     try cache.dirty_cols_end.resize(std.testing.allocator, 2);
-    try cache.kitty_placements.resize(std.testing.allocator, 1);
+    try cache.kitty_rows.resize(std.testing.allocator, 2);
+    try cache.kitty_cols_start.resize(std.testing.allocator, 2);
+    try cache.kitty_cols_end.resize(std.testing.allocator, 2);
 
     cache.rows = 2;
     cache.cols = 2;
@@ -2132,24 +2133,14 @@ test "kitty overlap policy ignores non-overlapping dirty rows" {
     cache.dirty_cols_end.items[0] = 1;
     cache.dirty_cols_start.items[1] = 0;
     cache.dirty_cols_end.items[1] = 0;
+    cache.kitty_rows.items[0] = false;
+    cache.kitty_rows.items[1] = true;
+    cache.kitty_cols_start.items[0] = 2;
+    cache.kitty_cols_end.items[0] = 0;
+    cache.kitty_cols_start.items[1] = 0;
+    cache.kitty_cols_end.items[1] = 1;
     for (cache.cells.items) |*cell| cell.* = terminal_mod.defaultCell();
-    cache.kitty_placements.items[0] = .{
-        .image_id = 1,
-        .placement_id = 1,
-        .row = 10,
-        .col = 0,
-        .cols = 2,
-        .rows = 1,
-        .z = 0,
-        .anchor_row = 0,
-        .is_virtual = false,
-        .parent_image_id = 0,
-        .parent_placement_id = 0,
-        .offset_x = 0,
-        .offset_y = 0,
-    };
-
-    try std.testing.expect(!kittyPlacementOverlapRequiresFull(&cache, 11, false));
+    try std.testing.expect(!kittyPlacementOverlapRequiresFull(&cache, false));
 }
 
 test "kitty overlap policy requires full redraw for overlapping dirty cells" {
@@ -2160,7 +2151,9 @@ test "kitty overlap policy requires full redraw for overlapping dirty cells" {
     try cache.dirty_rows.resize(std.testing.allocator, 2);
     try cache.dirty_cols_start.resize(std.testing.allocator, 2);
     try cache.dirty_cols_end.resize(std.testing.allocator, 2);
-    try cache.kitty_placements.resize(std.testing.allocator, 1);
+    try cache.kitty_rows.resize(std.testing.allocator, 2);
+    try cache.kitty_cols_start.resize(std.testing.allocator, 2);
+    try cache.kitty_cols_end.resize(std.testing.allocator, 2);
 
     cache.rows = 2;
     cache.cols = 2;
@@ -2171,22 +2164,12 @@ test "kitty overlap policy requires full redraw for overlapping dirty cells" {
     cache.dirty_cols_end.items[0] = 0;
     cache.dirty_cols_start.items[1] = 0;
     cache.dirty_cols_end.items[1] = 0;
+    cache.kitty_rows.items[0] = true;
+    cache.kitty_rows.items[1] = false;
+    cache.kitty_cols_start.items[0] = 0;
+    cache.kitty_cols_end.items[0] = 0;
+    cache.kitty_cols_start.items[1] = 2;
+    cache.kitty_cols_end.items[1] = 0;
     for (cache.cells.items) |*cell| cell.* = terminal_mod.defaultCell();
-    cache.kitty_placements.items[0] = .{
-        .image_id = 1,
-        .placement_id = 1,
-        .row = 10,
-        .col = 0,
-        .cols = 1,
-        .rows = 1,
-        .z = 0,
-        .anchor_row = 0,
-        .is_virtual = false,
-        .parent_image_id = 0,
-        .parent_placement_id = 0,
-        .offset_x = 0,
-        .offset_y = 0,
-    };
-
-    try std.testing.expect(kittyPlacementOverlapRequiresFull(&cache, 10, false));
+    try std.testing.expect(kittyPlacementOverlapRequiresFull(&cache, false));
 }
