@@ -1070,7 +1070,7 @@ pub const TerminalSession = struct {
         const blank_cell = screen.blankCell();
         screen.eraseDisplay(mode, blank_cell);
         if (mode == 2 or mode == 3) {
-            self.clearSelection();
+            self.clearSelectionLocked();
             _ = self.clear_generation.fetchAdd(1, .acq_rel);
         }
     }
@@ -1403,7 +1403,7 @@ pub const TerminalSession = struct {
             self.saveCursor();
         }
         self.history.saveScrollOffset();
-        self.clearSelection();
+        self.clearSelectionLocked();
         self.setActiveScreenMode(.alt);
         kitty_mod.clearKittyImages(self);
         if (clear) {
@@ -1420,7 +1420,7 @@ pub const TerminalSession = struct {
         self.alt_exit_pending.store(true, .release);
         self.alt_exit_time_ms.store(std.time.milliTimestamp(), .release);
         self.history.restoreScrollOffset(self.primary.grid.rows);
-        self.clearSelection();
+        self.clearSelectionLocked();
         if (restore_cursor) {
             self.restoreCursor();
         }
@@ -1554,16 +1554,32 @@ pub const TerminalSession = struct {
         selection_mod.clearSelection(self);
     }
 
+    pub fn clearSelectionLocked(self: *TerminalSession) void {
+        selection_mod.clearSelectionLocked(self);
+    }
+
     pub fn startSelection(self: *TerminalSession, row: usize, col: usize) void {
         selection_mod.startSelection(self, row, col);
+    }
+
+    pub fn startSelectionLocked(self: *TerminalSession, row: usize, col: usize) void {
+        selection_mod.startSelectionLocked(self, row, col);
     }
 
     pub fn updateSelection(self: *TerminalSession, row: usize, col: usize) void {
         selection_mod.updateSelection(self, row, col);
     }
 
+    pub fn updateSelectionLocked(self: *TerminalSession, row: usize, col: usize) void {
+        selection_mod.updateSelectionLocked(self, row, col);
+    }
+
     pub fn finishSelection(self: *TerminalSession) void {
         selection_mod.finishSelection(self);
+    }
+
+    pub fn finishSelectionLocked(self: *TerminalSession) void {
+        selection_mod.finishSelectionLocked(self);
     }
 
     pub fn selectionState(self: *TerminalSession) ?TerminalSelection {
