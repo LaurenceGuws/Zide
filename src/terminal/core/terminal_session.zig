@@ -1935,6 +1935,46 @@ test "visible history changes publish partial cache damage without force-full" {
     try std.testing.expectEqual(new_fg, cache.cells.items[0].attrs.fg);
 }
 
+test "scrollback offset change publishes shift-exposed partial damage" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var history_rows = [_][4]Cell{
+        .{ base, base, base, base },
+        .{ base, base, base, base },
+        .{ base, base, base, base },
+        .{ base, base, base, base },
+    };
+    for (&history_rows, 0..) |*history_row, row_idx| {
+        for (history_row, 0..) |*cell, col| {
+            cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(row_idx * 4 + col));
+        }
+        session.history.pushRow(history_row, false, base);
+    }
+
+    session.history.ensureViewCache(session.primary.grid.cols, base);
+    session.history.setScrollOffset(session.primary.grid.rows, 2);
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+
+    session.setScrollOffset(1);
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(i32, 1), cache.viewport_shift_rows);
+    try std.testing.expect(cache.viewport_shift_exposed_only);
+    try std.testing.expect(!cache.dirty_rows.items[0]);
+    try std.testing.expect(cache.dirty_rows.items[1]);
+}
+
 test "cursor style updates publish through cache without texture invalidation" {
     const allocator = std.testing.allocator;
 

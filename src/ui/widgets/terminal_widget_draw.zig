@@ -254,6 +254,7 @@ fn copyRenderCacheSnapshot(dst: *RenderCache, allocator: std.mem.Allocator, src:
     dst.kitty_generation = src.kitty_generation;
     dst.clear_generation = src.clear_generation;
     dst.viewport_shift_rows = src.viewport_shift_rows;
+    dst.viewport_shift_exposed_only = src.viewport_shift_exposed_only;
     dst.full_dirty_reason = src.full_dirty_reason;
     dst.full_dirty_seq = src.full_dirty_seq;
 }
@@ -262,6 +263,7 @@ fn planViewportTextureShift(
     texture_shift_enabled: bool,
     gen_changed: bool,
     viewport_shift_rows: i32,
+    viewport_shift_exposed_only: bool,
     scroll_offset: usize,
     needs_full: bool,
     terminal_texture_ready: bool,
@@ -271,7 +273,7 @@ fn planViewportTextureShift(
     if (texture_shift_enabled and
         gen_changed and
         viewport_shift_rows != 0 and
-        scroll_offset == 0 and
+        (scroll_offset == 0 or viewport_shift_exposed_only) and
         !needs_full and
         terminal_texture_ready and
         shift_abs_i > 0 and
@@ -1151,13 +1153,14 @@ pub fn draw(
             blink_requires_partial,
             self.terminal_texture_ready,
         );
-        const needs_full = update_plan.needs_full;
+        var needs_full = update_plan.needs_full;
         var needs_partial = update_plan.needs_partial;
         var shifted_rows: usize = 0;
         switch (planViewportTextureShift(
             r.terminalTextureShiftEnabled(),
             gen_changed,
             viewport_shift_rows,
+            cache.viewport_shift_exposed_only,
             scroll_offset,
             needs_full,
             self.terminal_texture_ready,
@@ -1170,9 +1173,18 @@ pub fn draw(
                     shifted_rows = shift_rows;
                 } else {
                     shifted_rows = 0;
+                    if (cache.viewport_shift_exposed_only) {
+                        needs_full = true;
+                        needs_partial = false;
+                    }
                 }
             },
-            .none => {},
+            .none => {
+                if (cache.viewport_shift_exposed_only) {
+                    needs_full = true;
+                    needs_partial = false;
+                }
+            },
         }
         texture_full_update = needs_full;
         texture_partial_update = needs_partial;
@@ -1943,30 +1955,37 @@ fn jitterDebugEnabled() bool {
 }
 
 test "viewport texture shift attempts only when fast path is eligible" {
-    switch (planViewportTextureShift(true, true, 2, 0, false, true, 24)) {
+    switch (planViewportTextureShift(true, true, 2, false, 0, false, true, 24)) {
         .attempt => |rows| try std.testing.expectEqual(@as(usize, 2), rows),
         else => return error.ExpectedShiftAttempt,
     }
 }
 
 test "viewport texture shift disable falls back to standard damage path" {
-    const plan = planViewportTextureShift(false, true, 2, 0, false, true, 24);
+    const plan = planViewportTextureShift(false, true, 2, false, 0, false, true, 24);
     try std.testing.expectEqual(ViewportTextureShiftPlan.none, plan);
 }
 
 test "viewport texture shift oversize scroll falls back to standard damage path" {
-    const plan = planViewportTextureShift(true, true, 24, 0, false, true, 24);
+    const plan = planViewportTextureShift(true, true, 24, false, 0, false, true, 24);
     try std.testing.expectEqual(ViewportTextureShiftPlan.none, plan);
 }
 
 test "viewport texture shift does not attempt while already forced full" {
-    const plan = planViewportTextureShift(true, true, 2, 0, true, true, 24);
+    const plan = planViewportTextureShift(true, true, 2, false, 0, true, true, 24);
     try std.testing.expectEqual(ViewportTextureShiftPlan.none, plan);
 }
 
 test "viewport texture shift ignores scrollback view movement" {
-    const plan = planViewportTextureShift(true, true, 2, 3, false, true, 24);
+    const plan = planViewportTextureShift(true, true, 2, false, 3, false, true, 24);
     try std.testing.expectEqual(ViewportTextureShiftPlan.none, plan);
+}
+
+test "viewport texture shift allows explicit scrollback remap path" {
+    switch (planViewportTextureShift(true, true, 2, true, 3, false, true, 24)) {
+        .attempt => |rows| try std.testing.expectEqual(@as(usize, 2), rows),
+        else => return error.ExpectedShiftAttempt,
+    }
 }
 
 test "texture update plan keeps partial redraws eligible while scrolled" {

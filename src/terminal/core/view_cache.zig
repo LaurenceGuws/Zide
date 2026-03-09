@@ -14,8 +14,7 @@ fn pickForcedFullDirtyReason(
     active_rows: usize,
     cols: usize,
     active_cols: usize,
-    scroll_offset: usize,
-    active_scroll_offset: usize,
+    requires_full_damage_for_scroll_offset_change: bool,
     requires_full_damage_for_visible_history_change: bool,
     requires_full_damage_for_clear_generation: bool,
     active_is_alt: bool,
@@ -28,7 +27,7 @@ fn pickForcedFullDirtyReason(
     view_reason: FullDirtyReason,
 ) FullDirtyReason {
     if (rows != active_rows or cols != active_cols) return .view_cache_geometry_change;
-    if (scroll_offset != active_scroll_offset) return .view_cache_scroll_offset_change;
+    if (requires_full_damage_for_scroll_offset_change) return .view_cache_scroll_offset_change;
     if (requires_full_damage_for_visible_history_change) return .view_cache_history_generation_change;
     if (requires_full_damage_for_clear_generation) return .view_cache_clear_generation_change;
     if (active_is_alt != cache_alt_active) return .view_cache_alt_state_change;
@@ -195,6 +194,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         cache.screen_reverse = screen_reverse;
         cache.clear_generation = clear_generation;
         cache.viewport_shift_rows = 0;
+        cache.viewport_shift_exposed_only = false;
         updateKittyViewNoLock(self, cache);
         self.render_cache_index.store(target_index, .release);
         return;
@@ -256,6 +256,19 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         const prev_start_line = if (prev_end_line > rows) prev_end_line - rows else 0;
         viewport_shift_rows = @as(i32, @intCast(start_line)) - @as(i32, @intCast(prev_start_line));
     }
+    const shift_abs: usize = @intCast(if (viewport_shift_rows < 0) -viewport_shift_rows else viewport_shift_rows);
+    const scroll_offset_changed = clamped_offset != active_cache.scroll_offset;
+    const can_publish_scroll_shift = scroll_offset_changed and
+        !selection_active and
+        !active_cache.selection_active and
+        !visible_history_changed and
+        view.dirty == .none and
+        active_cache.rows == rows and
+        active_cache.cols == cols and
+        active_cache.generation == presented_generation and
+        shift_abs > 0 and
+        shift_abs < rows;
+    const requires_full_damage_for_scroll_offset_change = scroll_offset_changed and !can_publish_scroll_shift;
     var row: usize = 0;
     while (row < rows) : (row += 1) {
         const global_row = start_line + row;
@@ -335,7 +348,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     const requires_full_damage_for_clear_generation = clear_generation != active_cache.clear_generation;
     const needs_full_damage = rows != active_cache.rows or
         cols != active_cache.cols or
-        scroll_offset != active_cache.scroll_offset or
+        requires_full_damage_for_scroll_offset_change or
         requires_full_damage_for_visible_history_change or
         requires_full_damage_for_clear_generation or
         (self.active == .alt) != active_cache.alt_active or
@@ -351,14 +364,34 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         }
     }
 
-    if (view.dirty_rows.len == rows and !needs_full_damage and !visible_history_changed) {
+    if (can_publish_scroll_shift) {
+        for (cache.dirty_rows.items) |*row_dirty| {
+            row_dirty.* = false;
+        }
+    } else if (view.dirty_rows.len == rows and !needs_full_damage and !visible_history_changed) {
         std.mem.copyForwards(bool, cache.dirty_rows.items, view.dirty_rows);
     } else {
         for (cache.dirty_rows.items) |*row_dirty| {
             row_dirty.* = true;
         }
     }
-    if (view.dirty_cols_start.len == rows and view.dirty_cols_end.len == rows and !needs_full_damage and !visible_history_changed) {
+    if (can_publish_scroll_shift) {
+        for (cache.dirty_cols_start.items, cache.dirty_cols_end.items) |*col_start, *col_end| {
+            col_start.* = 0;
+            col_end.* = if (cols > 0) @intCast(cols - 1) else 0;
+        }
+        if (viewport_shift_rows > 0) {
+            var row_idx = rows - shift_abs;
+            while (row_idx < rows) : (row_idx += 1) {
+                cache.dirty_rows.items[row_idx] = true;
+            }
+        } else {
+            var row_idx: usize = 0;
+            while (row_idx < shift_abs) : (row_idx += 1) {
+                cache.dirty_rows.items[row_idx] = true;
+            }
+        }
+    } else if (view.dirty_cols_start.len == rows and view.dirty_cols_end.len == rows and !needs_full_damage and !visible_history_changed) {
         std.mem.copyForwards(u16, cache.dirty_cols_start.items, view.dirty_cols_start);
         std.mem.copyForwards(u16, cache.dirty_cols_end.items, view.dirty_cols_end);
         if (cols > 0 and view.dirty == .partial) {
@@ -454,12 +487,18 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     }
     cache.dirty = if (needs_full_damage)
         .full
+    else if (can_publish_scroll_shift)
+        .partial
     else if (visible_history_changed and view.dirty == .none)
         .partial
     else
         view.dirty;
     cache.damage = if (needs_full_damage)
         .{ .start_row = 0, .end_row = if (rows > 0) rows - 1 else 0, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
+    else if (can_publish_scroll_shift and viewport_shift_rows > 0)
+        .{ .start_row = rows - shift_abs, .end_row = rows - 1, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
+    else if (can_publish_scroll_shift)
+        .{ .start_row = 0, .end_row = shift_abs - 1, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
     else if (visible_history_changed and view.dirty == .none)
         .{ .start_row = 0, .end_row = if (rows > 0) rows - 1 else 0, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
     else
@@ -470,8 +509,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
             active_cache.rows,
             cols,
             active_cache.cols,
-            scroll_offset,
-            active_cache.scroll_offset,
+            requires_full_damage_for_scroll_offset_change,
             requires_full_damage_for_visible_history_change,
             requires_full_damage_for_clear_generation,
             self.active == .alt,
@@ -583,6 +621,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     cache.screen_reverse = screen_reverse;
     cache.clear_generation = clear_generation;
     cache.viewport_shift_rows = viewport_shift_rows;
+    cache.viewport_shift_exposed_only = can_publish_scroll_shift;
     updateKittyViewNoLock(self, cache);
     self.render_cache_index.store(target_index, .release);
 }

@@ -44,6 +44,7 @@ pub const RenderCache = struct {
     kitty_generation: u64,
     clear_generation: u64,
     viewport_shift_rows: i32,
+    viewport_shift_exposed_only: bool,
 
     pub fn init() RenderCache {
         return .{
@@ -79,6 +80,7 @@ pub const RenderCache = struct {
             .kitty_generation = 0,
             .clear_generation = 0,
             .viewport_shift_rows = 0,
+            .viewport_shift_exposed_only = false,
         };
     }
 
