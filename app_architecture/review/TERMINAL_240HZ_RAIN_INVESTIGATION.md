@@ -396,6 +396,19 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - turn another broad renderer-side redraw policy into explicit partial work
   - keep correctness while moving the renderer closer to a damage-driven model
 
+## Sync-Updates Force-Full Cleanup (2026-03-09)
+
+- Files:
+  - `src/terminal/core/terminal_session.zig`
+- Change:
+  - removed the redundant `requestForceFullDamage("sync updates mode changed")` path from `setSyncUpdates(...)`
+  - disabling sync updates now relies on the existing screen-model full-dirty publication (`.sync_updates_disabled`) instead of a second force-full side channel
+  - enabling sync updates no longer synthesizes redraw work when the screen is otherwise clean
+  - removed the now-dead `force_full_sync` pattern-stat path and added tests for clean enable / model-driven full disable behavior
+- Intent:
+  - keep full redraw authority in the backend damage model rather than in extra “force full” escape hatches
+  - narrow one more backend-side quick fix that outlived the original investigation
+
 ## Applied Texture-Shift Kill-Switch (2026-03-08)
 
 - Files:
