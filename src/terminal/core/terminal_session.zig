@@ -50,7 +50,6 @@ const SavedCharsetState = struct {
 
 const PatternStats = struct {
     window_start_ms: i64 = 0,
-    force_full_ed: u32 = 0,
     force_full_el: u32 = 0,
     force_full_el_same_generation: u32 = 0,
     force_full_el_mode0: u32 = 0,
@@ -74,8 +73,7 @@ const PatternStats = struct {
     }
 
     fn total(self: *const PatternStats) u32 {
-        return self.force_full_ed +
-            self.force_full_el +
+        return self.force_full_el +
             self.force_full_feed +
             self.full_dirty_screen_clear +
             self.full_dirty_erase_display +
@@ -105,7 +103,6 @@ const PatternStats = struct {
 };
 
 pub const PatternEvent = enum {
-    force_full_ed,
     force_full_feed,
     full_dirty_screen_clear,
     full_dirty_erase_display,
@@ -459,14 +456,13 @@ pub const TerminalSession = struct {
         const screen = self.activeScreenConst();
         app_logger.logger("terminal.ui.pattern").logf(
             .info,
-            "window_ms={d} rows={d} cols={d} alt={d} sync={d} force_full(ed={d} el={d} feed={d}) full_dirty(screen_clear={d} ed_full={d} alt_enter={d} alt_exit={d} sync_off={d}) kitty(store={d} place={d} delete={d})",
+            "window_ms={d} rows={d} cols={d} alt={d} sync={d} force_full(el={d} feed={d}) full_dirty(screen_clear={d} ed_full={d} alt_enter={d} alt_exit={d} sync_off={d}) kitty(store={d} place={d} delete={d})",
             .{
                 now_ms - self.pattern_stats.window_start_ms,
                 screen.grid.rows,
                 screen.grid.cols,
                 @intFromBool(self.isAltActive()),
                 @intFromBool(self.sync_updates_active),
-                self.pattern_stats.force_full_ed,
                 self.pattern_stats.force_full_el,
                 self.pattern_stats.force_full_feed,
                 self.pattern_stats.full_dirty_screen_clear,
@@ -508,7 +504,6 @@ pub const TerminalSession = struct {
             self.flushPatternStats(now_ms);
         }
         switch (event) {
-            .force_full_ed => self.pattern_stats.force_full_ed += 1,
             .force_full_feed => self.pattern_stats.force_full_feed += 1,
             .full_dirty_screen_clear => self.pattern_stats.full_dirty_screen_clear += 1,
             .full_dirty_erase_display => self.pattern_stats.full_dirty_erase_display += 1,
@@ -523,9 +518,7 @@ pub const TerminalSession = struct {
 
     pub fn requestForceFullDamage(self: *TerminalSession, reason: []const u8, src: std.builtin.SourceLocation) void {
         self.force_full_damage.store(true, .release);
-        if (std.mem.eql(u8, reason, "erase display CSI")) {
-            self.notePatternEvent(.force_full_ed);
-        } else if (std.mem.eql(u8, reason, "feed output bytes")) {
+        if (std.mem.eql(u8, reason, "feed output bytes")) {
             self.notePatternEvent(.force_full_feed);
         }
         if (std.mem.eql(u8, reason, "erase line CSI")) return;
@@ -1082,10 +1075,6 @@ pub const TerminalSession = struct {
             self.notePatternEvent(.full_dirty_erase_display);
             self.clearSelection();
             _ = self.clear_generation.fetchAdd(1, .acq_rel);
-        } else {
-            // ED 2/3 already marks the screen fully dirty through the screen model.
-            // Keep the conservative force-full path only for partial ED variants.
-            self.requestForceFullDamage("erase display CSI", @src());
         }
     }
 
@@ -1985,4 +1974,66 @@ test "cursor style updates publish through cache without texture invalidation" {
     const cache = session.renderCache();
     try std.testing.expectEqual(Dirty.none, cache.dirty);
     try std.testing.expectEqual(types.CursorStyle{ .shape = .bar, .blink = false }, cache.cursor_style);
+}
+
+test "eraseDisplay cursor-to-end keeps partial damage" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 3, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    for (session.primary.grid.cells.items, 0..) |*cell, idx| {
+        cell.* = base;
+        cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(idx % 4));
+    }
+    session.primary.setCursor(1, 1);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+
+    session.eraseDisplay(0);
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 1), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 2), cache.damage.end_row);
+}
+
+test "eraseDisplay start-to-cursor keeps partial damage" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 3, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    for (session.primary.grid.cells.items, 0..) |*cell, idx| {
+        cell.* = base;
+        cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(idx % 4));
+    }
+    session.primary.setCursor(1, 2);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+
+    session.eraseDisplay(1);
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
 }
