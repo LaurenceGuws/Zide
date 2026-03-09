@@ -1569,22 +1569,6 @@ pub const TerminalSession = struct {
         return out.items;
     }
 
-    pub fn copyCurrentCwd(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) ![]const u8 {
-        self.lock();
-        defer self.unlock();
-        return copyTextInto(allocator, out, self.cwd);
-    }
-
-    pub fn copyCurrentTitle(self: *TerminalSession, allocator: std.mem.Allocator, out: *std.ArrayList(u8)) ![]const u8 {
-        self.lock();
-        defer self.unlock();
-        const title = if (self.pty) |*pty|
-            (pty.foregroundProcessLabel() orelse self.title)
-        else
-            self.title;
-        return copyTextInto(allocator, out, title);
-    }
-
     pub fn copyMetadata(
         self: *TerminalSession,
         allocator: std.mem.Allocator,

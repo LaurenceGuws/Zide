@@ -109,7 +109,10 @@ pub const TerminalWorkspace = struct {
             out.clearRetainingCapacity();
             return "";
         };
-        return session.copyCurrentCwd(allocator, out);
+        var title_buf = std.ArrayList(u8).empty;
+        defer title_buf.deinit(allocator);
+        const metadata = try session.copyMetadata(allocator, &title_buf, out);
+        return metadata.cwd;
     }
 
     pub fn activeSessionShouldConfirmClose(self: *const TerminalWorkspace) bool {

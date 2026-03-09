@@ -12,7 +12,7 @@
 ### Recent Changes (High-Level)
 - The high-refresh rain investigation removed most renderer-side force-full and stale invalidation escape hatches.
 - Full-screen `ascii-rain` is now close to stable, so the stronger remaining work is structural rather than incident-driven.
-- `TerminalSession` surface reduction is active: borrowed title/cwd/scrollback/selection seams are being cut back, terminal text export now lives in backend code instead of the widget, and FFI now uses backend-owned metadata/export contracts for title/cwd/scrollback state instead of separate raw getter calls.
+- `TerminalSession` surface reduction is active: borrowed title/cwd/scrollback/selection seams are being cut back, terminal text export now lives in backend code instead of the widget, and FFI/workspace/open-path callers now use backend-owned metadata/export contracts instead of separate raw getter calls or split title/cwd query helpers.
 - Current high-risk architectural seams are:
   - `TerminalSession` is still a large multi-domain owner (PTY/parser/screens/history/render publication/UI-facing APIs).
   - terminal-originated PTY writes and the main session mutation/publication locking cleanup are now in better shape, so the next structural hotspot is the oversized `TerminalSession` surface and the borrowed app/UI query seams hanging off it.
