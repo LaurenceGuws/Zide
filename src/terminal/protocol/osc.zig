@@ -68,7 +68,7 @@ pub const SessionFacade = struct {
             .parse_cwd_fn = struct {
                 fn call(ctx: *anyopaque, text: []const u8) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    osc_cwd.parseCwd(s, text);
+                    osc_cwd.parseCwd(osc_cwd.SessionFacade.from(s), text);
                 }
             }.call,
             .parse_clipboard_fn = struct {
