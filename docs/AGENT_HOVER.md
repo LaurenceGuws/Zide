@@ -16,5 +16,6 @@ Current state summary:
 Editor context:
 - Prefer structural cleanup at terminal boundaries: session ownership, scheduler ownership, render publication, input snapshot publication, and widget/backend seams.
 - Keep logs scoped and intentional in `./.zide.lua` during investigations; default to minimal useful signal.
+- Default to `main`; use feature branches only for larger isolated terminal changes, then merge them back and clean them up.
 
 If this file conflicts with task todos or architecture docs, treat this file as stale and update it.

@@ -9,6 +9,17 @@ This doc explains how workflow and documentation are intended to be used.
 - **Research notes** that informed a todo item must live in the relevant `app_architecture/` doc.
 - **Implementation** follows AGENTS.md workflow: read handoff → read todo → implement → update docs → tests → approval → commit.
 
+## Branching workflow
+- `main` is the default working branch.
+- Create a feature branch only for larger changes where isolated branch management materially improves safety or reviewability.
+- If a feature branch is created, the agent owns the whole lifecycle:
+  - branch from current `main`
+  - keep commits coherent and scoped
+  - validate locally
+  - merge back into `main`
+  - delete the branch after its work is on `main`
+- Do not preserve obsolete APIs or duplicate code paths just to avoid a direct cut. Prefer clean replacement over compatibility scaffolding when the old surface is holding the design back.
+
 ## Docs roles (what goes where)
 - `AGENTS.md`: authoritative workflow rules.
 - `docs/AGENT_HANDOFF.md`: short entrypoint for the next session (focus, constraints, where to look).
