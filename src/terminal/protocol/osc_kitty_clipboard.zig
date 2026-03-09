@@ -10,6 +10,7 @@ const data_chunk_max: usize = 4096;
 pub const SessionFacade = struct {
     ctx: *anyopaque,
     parse_osc_5522_fn: *const fn (ctx: *anyopaque, text: []const u8, terminator: OscTerminator) void,
+    send_paste_event_mimes_fn: *const fn (ctx: *anyopaque, pty: *anyopaque, write_fn: *const fn (pty: *anyopaque, bytes: []const u8) anyerror!usize, terminator: OscTerminator) void,
 
     pub fn from(session: anytype) SessionFacade {
         const SessionPtr = @TypeOf(session);
@@ -21,11 +22,36 @@ pub const SessionFacade = struct {
                     parseOsc5522OnSession(s, text, terminator);
                 }
             }.call,
+            .send_paste_event_mimes_fn = struct {
+                fn call(ctx: *anyopaque, pty: *anyopaque, write_fn: *const fn (pty: *anyopaque, bytes: []const u8) anyerror!usize, terminator: OscTerminator) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    const WriterProxy = struct {
+                        pty: *anyopaque,
+                        write_fn: *const fn (pty: *anyopaque, bytes: []const u8) anyerror!usize,
+                        pub fn write(self: *@This(), bytes: []const u8) anyerror!usize {
+                            return try self.write_fn(self.pty, bytes);
+                        }
+                    };
+                    var proxy = WriterProxy{ .pty = pty, .write_fn = write_fn };
+                    sendPasteEventMimesOnSession(s, &proxy, terminator);
+                }
+            }.call,
         };
     }
 
     pub fn parseOsc5522(self: *const SessionFacade, text: []const u8, terminator: OscTerminator) void {
         self.parse_osc_5522_fn(self.ctx, text, terminator);
+    }
+
+    pub fn sendPasteEventMimes(self: *const SessionFacade, pty: anytype, terminator: OscTerminator) void {
+        const PtyPtr = @TypeOf(pty);
+        const write_fn = struct {
+            fn call(ptr: *anyopaque, bytes: []const u8) anyerror!usize {
+                const typed: PtyPtr = @ptrCast(@alignCast(ptr));
+                return try typed.write(bytes);
+            }
+        }.call;
+        self.send_paste_event_mimes_fn(self.ctx, @ptrCast(pty), write_fn, terminator);
     }
 };
 
@@ -64,7 +90,11 @@ fn parseOsc5522OnSession(self: anytype, text: []const u8, terminator: OscTermina
     }
 }
 
-pub fn sendPasteEventMimes(self: anytype, pty: anytype, terminator: OscTerminator) void {
+pub fn sendPasteEventMimes(session: SessionFacade, pty: anytype, terminator: OscTerminator) void {
+    session.sendPasteEventMimes(pty, terminator);
+}
+
+fn sendPasteEventMimesOnSession(self: anytype, pty: anytype, terminator: OscTerminator) void {
     var req = ReadReq{ .wants_targets = true };
     replyReadRequest(self, pty, &req, terminator);
 }
