@@ -1,4 +1,3 @@
-const app_logger = @import("../../app_logger.zig");
 const screen_mod = @import("../model/screen.zig");
 const csi_mod = @import("../parser/csi.zig");
 const protocol_csi = @import("../protocol/csi.zig");
@@ -10,15 +9,15 @@ const parser_mod = @import("../parser/parser.zig");
 const OscTerminator = parser_mod.OscTerminator;
 
 pub fn parseDcs(self: anytype, payload: []const u8) void {
-    protocol_dcs_apc.parseDcs(self, payload);
+    protocol_dcs_apc.parseDcs(protocol_dcs_apc.SessionFacade.from(self), payload);
 }
 
 pub fn parseApc(self: anytype, payload: []const u8) void {
-    protocol_dcs_apc.parseApc(self, payload);
+    protocol_dcs_apc.parseApc(protocol_dcs_apc.SessionFacade.from(self), payload);
 }
 
 pub fn parseOsc(self: anytype, payload: []const u8, terminator: OscTerminator) void {
-    protocol_osc.parseOsc(self, payload, terminator);
+    protocol_osc.parseOsc(protocol_osc.SessionFacade.from(self), payload, terminator);
 }
 
 pub fn parseKittyGraphics(self: anytype, payload: []const u8) void {
@@ -75,13 +74,6 @@ pub fn handleCodepoint(self: anytype, codepoint: u32) void {
         attrs.underline = true;
     } else {
         attrs.link_id = 0;
-    }
-    if (cp == 0x2502) {
-        const log = app_logger.logger("terminal.trace.scope");
-                    log.logf(.info, 
-                "scope_glyph row={d} col={d} origin={any} scroll_top={d} scroll_bottom={d}",
-                .{ screen.cursor.row, screen.cursor.col, screen.origin_mode, screen.scroll_top, screen.scroll_bottom },
-            );
     }
     const cp_width = screen_mod.Screen.codepointCellWidth(cp);
     if (screen.insert_mode and cp_width > 0) {

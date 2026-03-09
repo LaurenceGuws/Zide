@@ -11,7 +11,139 @@ const app_logger = @import("../../app_logger.zig");
 
 const OscTerminator = parser_mod.OscTerminator;
 
-pub fn parseOsc(self: anytype, payload: []const u8, terminator: OscTerminator) void {
+pub const SessionFacade = struct {
+    ctx: *anyopaque,
+    set_title_fn: *const fn (ctx: *anyopaque, text: []const u8) void,
+    handle_palette_fn: *const fn (ctx: *anyopaque, text: []const u8, terminator: OscTerminator) void,
+    handle_dynamic_color_fn: *const fn (ctx: *anyopaque, code: u8, text: []const u8, terminator: OscTerminator) void,
+    handle_palette_reset_fn: *const fn (ctx: *anyopaque, text: []const u8) void,
+    handle_dynamic_reset_fn: *const fn (ctx: *anyopaque, code: u8) void,
+    parse_hyperlink_fn: *const fn (ctx: *anyopaque, text: []const u8) void,
+    parse_cwd_fn: *const fn (ctx: *anyopaque, text: []const u8) void,
+    parse_clipboard_fn: *const fn (ctx: *anyopaque, text: []const u8, terminator: OscTerminator) void,
+    parse_kitty_clipboard_fn: *const fn (ctx: *anyopaque, text: []const u8, terminator: OscTerminator) void,
+    parse_semantic_prompt_fn: *const fn (ctx: *anyopaque, text: []const u8) void,
+    parse_user_var_fn: *const fn (ctx: *anyopaque, text: []const u8) void,
+
+    pub fn from(session: anytype) SessionFacade {
+        const SessionPtr = @TypeOf(session);
+        return .{
+            .ctx = @ptrCast(session),
+            .set_title_fn = struct {
+                fn call(ctx: *anyopaque, text: []const u8) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    osc_title.setTitle(s, text);
+                }
+            }.call,
+            .handle_palette_fn = struct {
+                fn call(ctx: *anyopaque, text: []const u8, terminator: OscTerminator) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    palette_mod.handleOscPalette(s, text, terminator);
+                }
+            }.call,
+            .handle_dynamic_color_fn = struct {
+                fn call(ctx: *anyopaque, code: u8, text: []const u8, terminator: OscTerminator) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    palette_mod.handleOscDynamicColor(s, code, text, terminator);
+                }
+            }.call,
+            .handle_palette_reset_fn = struct {
+                fn call(ctx: *anyopaque, text: []const u8) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    palette_mod.handleOscPaletteReset(s, text);
+                }
+            }.call,
+            .handle_dynamic_reset_fn = struct {
+                fn call(ctx: *anyopaque, code: u8) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    palette_mod.handleOscDynamicReset(s, code);
+                }
+            }.call,
+            .parse_hyperlink_fn = struct {
+                fn call(ctx: *anyopaque, text: []const u8) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    osc_hyperlink.parseHyperlink(s, text);
+                }
+            }.call,
+            .parse_cwd_fn = struct {
+                fn call(ctx: *anyopaque, text: []const u8) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    osc_cwd.parseCwd(s, text);
+                }
+            }.call,
+            .parse_clipboard_fn = struct {
+                fn call(ctx: *anyopaque, text: []const u8, terminator: OscTerminator) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    osc_clipboard.parseClipboard(s, text, terminator);
+                }
+            }.call,
+            .parse_kitty_clipboard_fn = struct {
+                fn call(ctx: *anyopaque, text: []const u8, terminator: OscTerminator) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    osc_kitty_clipboard.parseOsc5522(s, text, terminator);
+                }
+            }.call,
+            .parse_semantic_prompt_fn = struct {
+                fn call(ctx: *anyopaque, text: []const u8) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    osc_semantic.parseSemanticPrompt(s, text);
+                }
+            }.call,
+            .parse_user_var_fn = struct {
+                fn call(ctx: *anyopaque, text: []const u8) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    osc_semantic.parseUserVar(s, text);
+                }
+            }.call,
+        };
+    }
+
+    pub fn setTitle(self: *const SessionFacade, text: []const u8) void {
+        self.set_title_fn(self.ctx, text);
+    }
+
+    pub fn handleOscPalette(self: *const SessionFacade, text: []const u8, terminator: OscTerminator) void {
+        self.handle_palette_fn(self.ctx, text, terminator);
+    }
+
+    pub fn handleOscDynamicColor(self: *const SessionFacade, code: u8, text: []const u8, terminator: OscTerminator) void {
+        self.handle_dynamic_color_fn(self.ctx, code, text, terminator);
+    }
+
+    pub fn handleOscPaletteReset(self: *const SessionFacade, text: []const u8) void {
+        self.handle_palette_reset_fn(self.ctx, text);
+    }
+
+    pub fn handleOscDynamicReset(self: *const SessionFacade, code: u8) void {
+        self.handle_dynamic_reset_fn(self.ctx, code);
+    }
+
+    pub fn parseHyperlink(self: *const SessionFacade, text: []const u8) void {
+        self.parse_hyperlink_fn(self.ctx, text);
+    }
+
+    pub fn parseCwd(self: *const SessionFacade, text: []const u8) void {
+        self.parse_cwd_fn(self.ctx, text);
+    }
+
+    pub fn parseClipboard(self: *const SessionFacade, text: []const u8, terminator: OscTerminator) void {
+        self.parse_clipboard_fn(self.ctx, text, terminator);
+    }
+
+    pub fn parseOsc5522(self: *const SessionFacade, text: []const u8, terminator: OscTerminator) void {
+        self.parse_kitty_clipboard_fn(self.ctx, text, terminator);
+    }
+
+    pub fn parseSemanticPrompt(self: *const SessionFacade, text: []const u8) void {
+        self.parse_semantic_prompt_fn(self.ctx, text);
+    }
+
+    pub fn parseUserVar(self: *const SessionFacade, text: []const u8) void {
+        self.parse_user_var_fn(self.ctx, text);
+    }
+};
+
+pub fn parseOsc(session: SessionFacade, payload: []const u8, terminator: OscTerminator) void {
     const log = app_logger.logger("terminal.osc");
     const max_len: usize = 160;
     const slice = if (payload.len > max_len) payload[0..max_len] else payload;
@@ -36,29 +168,29 @@ pub fn parseOsc(self: anytype, payload: []const u8, terminator: OscTerminator) v
     const text = payload[i..];
     switch (code) {
         0, 2 => {
-            osc_title.setTitle(self, text);
+            session.setTitle(text);
         },
-        4 => palette_mod.handleOscPalette(self, text, terminator),
-        10...19 => palette_mod.handleOscDynamicColor(self, @intCast(code), text, terminator),
-        104 => palette_mod.handleOscPaletteReset(self, text),
-        110...119 => palette_mod.handleOscDynamicReset(self, @intCast(code)),
+        4 => session.handleOscPalette(text, terminator),
+        10...19 => session.handleOscDynamicColor(@intCast(code), text, terminator),
+        104 => session.handleOscPaletteReset(text),
+        110...119 => session.handleOscDynamicReset(@intCast(code)),
         8 => {
-            osc_hyperlink.parseHyperlink(self, text);
+            session.parseHyperlink(text);
         },
         7 => {
-            osc_cwd.parseCwd(self, text);
+            session.parseCwd(text);
         },
         52 => {
-            osc_clipboard.parseClipboard(self, text, terminator);
+            session.parseClipboard(text, terminator);
         },
         5522 => {
-            osc_kitty_clipboard.parseOsc5522(self, text, terminator);
+            session.parseOsc5522(text, terminator);
         },
         133 => {
-            osc_semantic.parseSemanticPrompt(self, text);
+            session.parseSemanticPrompt(text);
         },
         1337 => {
-            osc_semantic.parseUserVar(self, text);
+            session.parseUserVar(text);
         },
         else => {},
     }
