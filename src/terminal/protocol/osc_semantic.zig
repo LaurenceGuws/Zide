@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const osc_util = @import("osc_util.zig");
+const semantic_prompt_mod = @import("../core/semantic_prompt.zig");
 
 pub const SessionFacade = struct {
     ctx: *anyopaque,
@@ -35,6 +36,26 @@ pub const SessionFacade = struct {
     }
 };
 
+const SessionState = struct {
+    allocator: std.mem.Allocator,
+    semantic_prompt: *semantic_prompt_mod.SemanticPromptState,
+    semantic_prompt_aid: *std.ArrayList(u8),
+    semantic_cmdline: *std.ArrayList(u8),
+    semantic_cmdline_valid: *bool,
+    user_vars: *std.StringHashMap([]u8),
+
+    pub fn from(session: anytype) SessionState {
+        return .{
+            .allocator = session.allocator,
+            .semantic_prompt = &session.semantic_prompt,
+            .semantic_prompt_aid = &session.semantic_prompt_aid,
+            .semantic_cmdline = &session.semantic_cmdline,
+            .semantic_cmdline_valid = &session.semantic_cmdline_valid,
+            .user_vars = &session.user_vars,
+        };
+    }
+};
+
 pub fn parseSemanticPrompt(session: SessionFacade, text: []const u8) void {
     session.parseSemanticPrompt(text);
 }
@@ -44,6 +65,7 @@ pub fn parseUserVar(session: SessionFacade, text: []const u8) void {
 }
 
 fn parseSemanticPromptOnSession(self: anytype, text: []const u8) void {
+    var state = SessionState.from(self);
     if (text.len == 0) return;
     const log = app_logger.logger("terminal.osc");
     const kind = text[0];
@@ -51,35 +73,35 @@ fn parseSemanticPromptOnSession(self: anytype, text: []const u8) void {
 
     switch (kind) {
         'A' => {
-            self.semantic_prompt.prompt_active = true;
-            self.semantic_prompt.input_active = false;
-            self.semantic_prompt.output_active = false;
-            self.semantic_prompt.kind = .primary;
-            self.semantic_prompt.redraw = true;
-            self.semantic_prompt.special_key = false;
-            self.semantic_prompt.click_events = false;
-            self.semantic_prompt.exit_code = null;
-            self.semantic_prompt_aid.clearRetainingCapacity();
-            self.semantic_cmdline_valid = false;
-            applySemanticPromptOptions(self, rest, true);
+            state.semantic_prompt.prompt_active = true;
+            state.semantic_prompt.input_active = false;
+            state.semantic_prompt.output_active = false;
+            state.semantic_prompt.kind = .primary;
+            state.semantic_prompt.redraw = true;
+            state.semantic_prompt.special_key = false;
+            state.semantic_prompt.click_events = false;
+            state.semantic_prompt.exit_code = null;
+            state.semantic_prompt_aid.clearRetainingCapacity();
+            state.semantic_cmdline_valid.* = false;
+            applySemanticPromptOptions(&state, rest, true);
         },
         'B' => {
-            self.semantic_prompt.prompt_active = false;
-            self.semantic_prompt.input_active = true;
-            self.semantic_prompt.output_active = false;
-            applySemanticPromptOptions(self, rest, false);
+            state.semantic_prompt.prompt_active = false;
+            state.semantic_prompt.input_active = true;
+            state.semantic_prompt.output_active = false;
+            applySemanticPromptOptions(&state, rest, false);
         },
         'C' => {
-            self.semantic_prompt.prompt_active = false;
-            self.semantic_prompt.input_active = false;
-            self.semantic_prompt.output_active = true;
-            applySemanticPromptEndInput(self, rest);
+            state.semantic_prompt.prompt_active = false;
+            state.semantic_prompt.input_active = false;
+            state.semantic_prompt.output_active = true;
+            applySemanticPromptEndInput(&state, rest);
         },
         'D' => {
-            self.semantic_prompt.prompt_active = false;
-            self.semantic_prompt.input_active = false;
-            self.semantic_prompt.output_active = false;
-            applySemanticPromptEndCommand(self, rest);
+            state.semantic_prompt.prompt_active = false;
+            state.semantic_prompt.input_active = false;
+            state.semantic_prompt.output_active = false;
+            applySemanticPromptEndCommand(&state, rest);
         },
         else => {
                             log.logf(.debug, "osc 133: unknown kind={c}", .{kind});
@@ -88,6 +110,7 @@ fn parseSemanticPromptOnSession(self: anytype, text: []const u8) void {
 }
 
 fn parseUserVarOnSession(self: anytype, text: []const u8) void {
+    var state = SessionState.from(self);
     const log = app_logger.logger("terminal.osc");
     const prefix = "SetUserVar=";
     if (!std.mem.startsWith(u8, text, prefix)) return;
@@ -101,14 +124,14 @@ fn parseUserVarOnSession(self: anytype, text: []const u8) void {
     if (encoded.len > max_bytes * 2) return;
 
     var decoded = std.ArrayList(u8).empty;
-    defer decoded.deinit(self.allocator);
+    defer decoded.deinit(state.allocator);
     if (encoded.len > 0) {
         const decoded_len = std.base64.standard.Decoder.calcSizeForSlice(encoded) catch |err| {
             log.logf(.warning, "osc user var decoded length failed: {s}", .{@errorName(err)});
             return;
         };
         if (decoded_len > max_bytes) return;
-        decoded.resize(self.allocator, decoded_len) catch |err| {
+        decoded.resize(state.allocator, decoded_len) catch |err| {
             log.logf(.warning, "osc user var decoded buffer resize failed: {s}", .{@errorName(err)});
             return;
         };
@@ -118,10 +141,10 @@ fn parseUserVarOnSession(self: anytype, text: []const u8) void {
         };
     }
 
-    setUserVar(self, name, decoded.items);
+    setUserVar(&state, name, decoded.items);
 }
 
-fn applySemanticPromptOptions(self: anytype, text: []const u8, allow_aid: bool) void {
+fn applySemanticPromptOptions(state: *SessionState, text: []const u8, allow_aid: bool) void {
     if (text.len == 0) return;
     var it = std.mem.splitScalar(u8, text, ';');
     while (it.next()) |kv| {
@@ -130,15 +153,15 @@ fn applySemanticPromptOptions(self: anytype, text: []const u8, allow_aid: bool) 
         const key = if (eq) |idx| kv[0..idx] else kv;
         const value = if (eq) |idx| kv[idx + 1 ..] else "";
         if (allow_aid and std.mem.eql(u8, key, "aid")) {
-            self.semantic_prompt_aid.clearRetainingCapacity();
-            self.semantic_prompt_aid.appendSlice(self.allocator, value) catch |err| {
+            state.semantic_prompt_aid.clearRetainingCapacity();
+            state.semantic_prompt_aid.appendSlice(state.allocator, value) catch |err| {
                 app_logger.logger("terminal.osc").logf(.warning, "osc 133 aid append failed len={d} err={s}", .{ value.len, @errorName(err) });
             };
             continue;
         }
         if (std.mem.eql(u8, key, "k")) {
             if (value.len == 1) {
-                self.semantic_prompt.kind = switch (value[0]) {
+                state.semantic_prompt.kind = switch (value[0]) {
                     'c' => .continuation,
                     's' => .secondary,
                     'r' => .right,
@@ -148,21 +171,21 @@ fn applySemanticPromptOptions(self: anytype, text: []const u8, allow_aid: bool) 
             continue;
         }
         if (std.mem.eql(u8, key, "redraw")) {
-            self.semantic_prompt.redraw = parseBoolFlag(value, self.semantic_prompt.redraw);
+            state.semantic_prompt.redraw = parseBoolFlag(value, state.semantic_prompt.redraw);
             continue;
         }
         if (std.mem.eql(u8, key, "special_key")) {
-            self.semantic_prompt.special_key = parseBoolFlag(value, self.semantic_prompt.special_key);
+            state.semantic_prompt.special_key = parseBoolFlag(value, state.semantic_prompt.special_key);
             continue;
         }
         if (std.mem.eql(u8, key, "click_events")) {
-            self.semantic_prompt.click_events = parseBoolFlag(value, self.semantic_prompt.click_events);
+            state.semantic_prompt.click_events = parseBoolFlag(value, state.semantic_prompt.click_events);
             continue;
         }
     }
 }
 
-fn applySemanticPromptEndInput(self: anytype, text: []const u8) void {
+fn applySemanticPromptEndInput(state: *SessionState, text: []const u8) void {
     if (text.len == 0) return;
     var it = std.mem.splitScalar(u8, text, ';');
     while (it.next()) |kv| {
@@ -171,64 +194,64 @@ fn applySemanticPromptEndInput(self: anytype, text: []const u8) void {
         const key = if (eq) |idx| kv[0..idx] else kv;
         const value = if (eq) |idx| kv[idx + 1 ..] else "";
         if (std.mem.eql(u8, key, "cmdline_url")) {
-            setSemanticCmdlineUrl(self, value);
+            setSemanticCmdlineUrl(state, value);
             continue;
         }
         if (std.mem.eql(u8, key, "cmdline")) {
-            setSemanticCmdline(self, value);
+            setSemanticCmdline(state, value);
             continue;
         }
     }
 }
 
-fn applySemanticPromptEndCommand(self: anytype, text: []const u8) void {
+fn applySemanticPromptEndCommand(state: *SessionState, text: []const u8) void {
     const log = app_logger.logger("terminal.osc");
     if (text.len == 0) {
-        self.semantic_prompt.exit_code = null;
+        state.semantic_prompt.exit_code = null;
         return;
     }
     if (text.len >= 2 and text[0] == ';') {
         const value = text[1..];
-        self.semantic_prompt.exit_code = std.fmt.parseUnsigned(u8, value, 10) catch blk: {
+        state.semantic_prompt.exit_code = std.fmt.parseUnsigned(u8, value, 10) catch blk: {
             log.logf(.debug, "osc semantic exit parse failed value={s}", .{ value });
             break :blk null;
         };
         return;
     }
-    self.semantic_prompt.exit_code = std.fmt.parseUnsigned(u8, text, 10) catch blk: {
+    state.semantic_prompt.exit_code = std.fmt.parseUnsigned(u8, text, 10) catch blk: {
         log.logf(.debug, "osc semantic exit parse failed value={s}", .{ text });
         break :blk null;
     };
 }
 
-fn setSemanticCmdline(self: anytype, value: []const u8) void {
+fn setSemanticCmdline(state: *SessionState, value: []const u8) void {
     const log = app_logger.logger("terminal.osc");
-    self.semantic_cmdline.clearRetainingCapacity();
+    state.semantic_cmdline.clearRetainingCapacity();
     if (value.len == 0) {
-        self.semantic_cmdline_valid = false;
+        state.semantic_cmdline_valid.* = false;
         return;
     }
-    _ = self.semantic_cmdline.appendSlice(self.allocator, value) catch |err| {
+    _ = state.semantic_cmdline.appendSlice(state.allocator, value) catch |err| {
         log.logf(.warning, "osc semantic cmdline append failed: {s}", .{@errorName(err)});
         return;
     };
-    self.semantic_cmdline_valid = true;
+    state.semantic_cmdline_valid.* = true;
 }
 
-fn setSemanticCmdlineUrl(self: anytype, value: []const u8) void {
+fn setSemanticCmdlineUrl(state: *SessionState, value: []const u8) void {
     const log = app_logger.logger("terminal.osc");
     var decoded = std.ArrayList(u8).empty;
-    defer decoded.deinit(self.allocator);
-    if (!osc_util.decodeOscPercent(self.allocator, &decoded, value)) {
-        self.semantic_cmdline_valid = false;
+    defer decoded.deinit(state.allocator);
+    if (!osc_util.decodeOscPercent(state.allocator, &decoded, value)) {
+        state.semantic_cmdline_valid.* = false;
         return;
     }
-    self.semantic_cmdline.clearRetainingCapacity();
-    _ = self.semantic_cmdline.appendSlice(self.allocator, decoded.items) catch |err| {
+    state.semantic_cmdline.clearRetainingCapacity();
+    _ = state.semantic_cmdline.appendSlice(state.allocator, decoded.items) catch |err| {
         log.logf(.warning, "osc semantic cmdline url append failed: {s}", .{@errorName(err)});
         return;
     };
-    self.semantic_cmdline_valid = true;
+    state.semantic_cmdline_valid.* = true;
 }
 
 fn parseBoolFlag(value: []const u8, default_value: bool) bool {
@@ -240,26 +263,26 @@ fn parseBoolFlag(value: []const u8, default_value: bool) bool {
     };
 }
 
-fn setUserVar(self: anytype, name: []const u8, value: []const u8) void {
+fn setUserVar(state: *SessionState, name: []const u8, value: []const u8) void {
     const log = app_logger.logger("terminal.osc");
-    const name_owned = self.allocator.dupe(u8, name) catch |err| {
+    const name_owned = state.allocator.dupe(u8, name) catch |err| {
         log.logf(.warning, "osc user var name alloc failed: {s}", .{@errorName(err)});
         return;
     };
-    const value_owned = self.allocator.dupe(u8, value) catch |err| {
+    const value_owned = state.allocator.dupe(u8, value) catch |err| {
         log.logf(.warning, "osc user var value alloc failed: {s}", .{@errorName(err)});
-        self.allocator.free(name_owned);
+        state.allocator.free(name_owned);
         return;
     };
-    const entry = self.user_vars.getOrPut(name_owned) catch |err| {
+    const entry = state.user_vars.getOrPut(name_owned) catch |err| {
         log.logf(.warning, "osc user var map insert failed: {s}", .{@errorName(err)});
-        self.allocator.free(name_owned);
-        self.allocator.free(value_owned);
+        state.allocator.free(name_owned);
+        state.allocator.free(value_owned);
         return;
     };
     if (entry.found_existing) {
-        self.allocator.free(name_owned);
-        self.allocator.free(entry.value_ptr.*);
+        state.allocator.free(name_owned);
+        state.allocator.free(entry.value_ptr.*);
         entry.value_ptr.* = value_owned;
     } else {
         entry.value_ptr.* = value_owned;
