@@ -356,7 +356,7 @@ Statuses are strict:
   - 2026-03-09: DCS/CSI/OSC/kitty reply paths and input-mode queries were rewired onto the session-owned write contract, while reply-byte unit tests were kept intact by teaching the test harnesses the same locked-writer surface.
 
 3) Session state/publication locking cleanup
-- status: `todo`
+- status: `in_progress`
 - priority: `P0`
 - scope:
   - remove unlocked mutation/publication paths such as default-color/theme publication
@@ -366,6 +366,8 @@ Statuses are strict:
   - `src/terminal/core/terminal_session.zig`
   - `src/terminal/protocol/palette.zig`
   - `src/app/terminal_theme_apply.zig`
+- progress:
+  - 2026-03-09: first slice landed on feature branch work: default-color publication now has an explicit `setDefaultColorsLocked(...)` contract for parser-owned state mutations, and app-side theme application now uses `applyThemePalette(...)` so palette capture, default-color mutation, ANSI replacement, and remap happen under one session lock instead of a partly unlocked sequence.
 
 4) `TerminalSession` surface reduction
 - status: `todo`

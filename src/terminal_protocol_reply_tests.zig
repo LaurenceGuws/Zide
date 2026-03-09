@@ -342,6 +342,7 @@ test "OSC 10 dynamic color query replies with default fg and BEL terminator" {
 
         pub usingnamespace FakePtySupport(@This());
         pub fn setDefaultColors(_: *@This(), _: types.Color, _: types.Color) void {}
+        pub fn setDefaultColorsLocked(_: *@This(), _: types.Color, _: types.Color) void {}
     };
 
     const default_attrs = types.defaultCell().attrs;

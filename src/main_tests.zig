@@ -89,17 +89,14 @@ test "terminal ansi palette update remaps existing screen and scrollback cells" 
     row[0].attrs.underline_color = old_color;
     term.history.pushRow(row[0..], false, default_cell);
 
-    var old_palette: [16]terminal_mod.Color = undefined;
     var new_palette: [16]terminal_mod.Color = undefined;
     for (0..16) |i| {
         const color = term.paletteColor(@intCast(i));
-        old_palette[i] = color;
         new_palette[i] = color;
     }
     new_palette[palette_idx] = new_color;
 
-    term.setAnsiColors(new_palette);
-    term.remapAnsiColors(old_palette, new_palette);
+    term.applyThemePalette(term.primary.default_attrs.fg, term.primary.default_attrs.bg, new_palette);
 
     try std.testing.expectEqualDeep(new_color, term.primary.grid.cells.items[0].attrs.fg);
     try std.testing.expectEqualDeep(new_color, term.primary.grid.cells.items[0].attrs.bg);
