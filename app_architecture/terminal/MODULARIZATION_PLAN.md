@@ -369,6 +369,7 @@ Statuses are strict:
 - progress:
   - 2026-03-09: first slice landed on feature branch work: default-color publication now has an explicit `setDefaultColorsLocked(...)` contract for parser-owned state mutations, and app-side theme application now uses `applyThemePalette(...)` so palette capture, default-color mutation, ANSI replacement, and remap happen under one session lock instead of a partly unlocked sequence.
   - 2026-03-09: second slice landed on feature branch work: OSC palette and dynamic-color protocol handlers now mutate session palette/default state through explicit locked helpers (`setPaletteColorLocked(...)`, `resetAllPaletteColorsLocked(...)`, `setDynamicColorCodeLocked(...)`) instead of reaching into raw session fields ad hoc.
+  - 2026-03-09: third slice landed on feature branch work: parser-owned synchronized-update and DECCOLM mode changes now call explicit locked session helpers (`setSyncUpdatesLocked(...)`, `setColumnMode132Locked(...)`) instead of generic mutators with ambiguous lock ownership, aligning the protocol/session seam more closely with kitty-style parser-held mutation and Ghostty-style explicit lock contracts.
 
 4) `TerminalSession` surface reduction
 - status: `todo`

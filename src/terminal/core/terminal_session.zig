@@ -995,6 +995,12 @@ pub const TerminalSession = struct {
     }
 
     pub fn setColumnMode132(self: *TerminalSession, enabled: bool) void {
+        self.lock();
+        defer self.unlock();
+        self.setColumnMode132Locked(enabled);
+    }
+
+    pub fn setColumnMode132Locked(self: *TerminalSession, enabled: bool) void {
         if (self.column_mode_132 == enabled) return;
         self.column_mode_132 = enabled;
         if (!enabled) return;
@@ -1485,6 +1491,12 @@ pub const TerminalSession = struct {
     }
 
     pub fn setSyncUpdates(self: *TerminalSession, enabled: bool) void {
+        self.lock();
+        defer self.unlock();
+        self.setSyncUpdatesLocked(enabled);
+    }
+
+    pub fn setSyncUpdatesLocked(self: *TerminalSession, enabled: bool) void {
         if (self.sync_updates_active == enabled) return;
         self.sync_updates_active = enabled;
         const offset: usize = self.history.scrollOffset();

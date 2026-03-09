@@ -74,7 +74,7 @@ test "DCS XTGETTCAP writes TN reply" {
         pty: ?FakePty,
 
         pub usingnamespace FakePtySupport(@This());
-        pub fn setSyncUpdates(_: *@This(), _: bool) void {}
+        pub fn setSyncUpdatesLocked(_: *@This(), _: bool) void {}
     };
 
     var self = Self{ .allocator = allocator, .pty = FakePty.init() };
@@ -92,7 +92,7 @@ test "DCS XTGETTCAP writes failure reply for unknown cap" {
         pty: ?FakePty,
 
         pub usingnamespace FakePtySupport(@This());
-        pub fn setSyncUpdates(_: *@This(), _: bool) void {}
+        pub fn setSyncUpdatesLocked(_: *@This(), _: bool) void {}
     };
 
     var self = Self{ .allocator = allocator, .pty = FakePty.init() };
@@ -110,7 +110,7 @@ test "DCS XTGETTCAP writes ordered replies for multi-cap request" {
         pty: ?FakePty,
 
         pub usingnamespace FakePtySupport(@This());
-        pub fn setSyncUpdates(_: *@This(), _: bool) void {}
+        pub fn setSyncUpdatesLocked(_: *@This(), _: bool) void {}
     };
 
     var self = Self{ .allocator = allocator, .pty = FakePty.init() };
@@ -135,7 +135,7 @@ test "DCS XTGETTCAP identity tuple writes TN Co RGB replies" {
         pty: ?FakePty,
 
         pub usingnamespace FakePtySupport(@This());
-        pub fn setSyncUpdates(_: *@This(), _: bool) void {}
+        pub fn setSyncUpdatesLocked(_: *@This(), _: bool) void {}
     };
 
     var self = Self{ .allocator = allocator, .pty = FakePty.init() };
@@ -158,7 +158,7 @@ test "DCS DECRQSS writes DECSCUSR reply" {
         pty: ?FakePty,
 
         pub usingnamespace FakePtySupport(@This());
-        pub fn setSyncUpdates(_: *@This(), _: bool) void {}
+        pub fn setSyncUpdatesLocked(_: *@This(), _: bool) void {}
         pub fn decrqssReply(_: *@This(), text: []const u8) ?[]const u8 {
             if (std.mem.eql(u8, text, " q")) return "3 q";
             return null;
@@ -180,7 +180,7 @@ test "DCS DECRQSS writes failure reply for unsupported request string" {
         pty: ?FakePty,
 
         pub usingnamespace FakePtySupport(@This());
-        pub fn setSyncUpdates(_: *@This(), _: bool) void {}
+        pub fn setSyncUpdatesLocked(_: *@This(), _: bool) void {}
         pub fn decrqssReply(_: *@This(), _: []const u8) ?[]const u8 {
             return null;
         }
@@ -201,7 +201,7 @@ test "DCS DECRQSS writes SGR reply for bounded attribute state" {
         pty: ?FakePty,
 
         pub usingnamespace FakePtySupport(@This());
-        pub fn setSyncUpdates(_: *@This(), _: bool) void {}
+        pub fn setSyncUpdatesLocked(_: *@This(), _: bool) void {}
         pub fn decrqssReplyInto(_: *@This(), text: []const u8, _: []u8) ?[]const u8 {
             if (std.mem.eql(u8, text, "m")) return "1;5;7;31;42m";
             return null;
@@ -223,7 +223,7 @@ test "DCS DECRQSS writes DECSTBM reply" {
         pty: ?FakePty,
 
         pub usingnamespace FakePtySupport(@This());
-        pub fn setSyncUpdates(_: *@This(), _: bool) void {}
+        pub fn setSyncUpdatesLocked(_: *@This(), _: bool) void {}
         pub fn decrqssReply(_: *@This(), text: []const u8) ?[]const u8 {
             if (std.mem.eql(u8, text, "r")) return "2;5r";
             return null;
@@ -245,7 +245,7 @@ test "DCS DECRQSS writes DECSLRM reply" {
         pty: ?FakePty,
 
         pub usingnamespace FakePtySupport(@This());
-        pub fn setSyncUpdates(_: *@This(), _: bool) void {}
+        pub fn setSyncUpdatesLocked(_: *@This(), _: bool) void {}
         pub fn decrqssReply(_: *@This(), text: []const u8) ?[]const u8 {
             if (std.mem.eql(u8, text, "s")) return "3;8s";
             return null;
