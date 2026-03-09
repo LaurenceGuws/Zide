@@ -2,11 +2,13 @@ const std = @import("std");
 const term_mod = @import("terminal/core/terminal.zig");
 
 fn firstCodepoint(session: *term_mod.TerminalSession, global_row: usize) ?u32 {
-    const history_len = session.scrollbackCount();
     const snapshot = session.snapshot();
+    const history_len = snapshot.scrollback_count;
     const cols = snapshot.cols;
     if (global_row < history_len) {
-        if (session.scrollbackRow(global_row)) |row| return row[0].codepoint;
+        var row_buf = std.ArrayList(term_mod.Cell).empty;
+        defer row_buf.deinit(std.testing.allocator);
+        if ((session.copyScrollbackRow(std.testing.allocator, global_row, &row_buf) catch null)) |row| return row[0].codepoint;
         return null;
     }
     const grid_row = global_row - history_len;
@@ -16,10 +18,12 @@ fn firstCodepoint(session: *term_mod.TerminalSession, global_row: usize) ?u32 {
 }
 
 fn codepointAt(session: *term_mod.TerminalSession, global_row: usize, col: usize) ?u32 {
-    const history_len = session.scrollbackCount();
     const snapshot = session.snapshot();
+    const history_len = snapshot.scrollback_count;
     if (global_row < history_len) {
-        if (session.scrollbackRow(global_row)) |row| {
+        var row_buf = std.ArrayList(term_mod.Cell).empty;
+        defer row_buf.deinit(std.testing.allocator);
+        if ((session.copyScrollbackRow(std.testing.allocator, global_row, &row_buf) catch null)) |row| {
             if (col >= row.len) return null;
             return row[col].codepoint;
         }
@@ -43,7 +47,7 @@ fn rowMatches(session: *term_mod.TerminalSession, global_row: usize, expected: [
 
 fn bottomNonBlankRowFirstCodepoint(session: *term_mod.TerminalSession) ?u32 {
     const snapshot = session.snapshot();
-    const total = session.scrollbackCount() + snapshot.rows;
+    const total = snapshot.scrollback_count + snapshot.rows;
     var idx: usize = total;
     while (idx > 0) {
         idx -= 1;
@@ -63,7 +67,7 @@ test "terminal reflow merges wrapped scrollback rows" {
     try session.resize(2, 8);
 
     const snapshot = session.snapshot();
-    const total_rows = session.scrollbackCount() + snapshot.rows;
+    const total_rows = snapshot.scrollback_count + snapshot.rows;
     var found = false;
     var row: usize = 0;
     while (row < total_rows) : (row += 1) {
@@ -91,7 +95,7 @@ test "terminal reflow preserves trailing blank cursor and selection" {
     const snapshot = session.snapshot();
     try std.testing.expectEqual(@as(usize, 3), snapshot.cursor.col);
 
-    if (session.selectionState()) |selection| {
+    if (snapshot.selection) |selection| {
         try std.testing.expectEqual(@as(usize, 3), selection.start.col);
         try std.testing.expectEqual(@as(usize, 3), selection.end.col);
     } else {
@@ -109,7 +113,7 @@ test "terminal reflow wraps wide scrollback rows" {
     try session.resize(1, 4);
 
     const snapshot = session.snapshot();
-    const total_rows = session.scrollbackCount() + snapshot.rows;
+    const total_rows = snapshot.scrollback_count + snapshot.rows;
     try std.testing.expect(total_rows >= 2);
 
     var found = false;
@@ -133,15 +137,15 @@ test "terminal reflow preserves scrolled anchor line" {
     session.scrollBy(2);
 
     const snapshot_before = session.snapshot();
-    const total_lines_before = session.scrollbackCount() + snapshot_before.rows;
-    const start_line_before = total_lines_before - snapshot_before.rows - session.scrollOffset();
+    const total_lines_before = snapshot_before.scrollback_count + snapshot_before.rows;
+    const start_line_before = total_lines_before - snapshot_before.rows - snapshot_before.scrollback_offset;
     const expected = firstCodepoint(session, start_line_before) orelse return error.MissingScrollback;
 
     try session.resize(2, 6);
 
     const snapshot_after = session.snapshot();
-    const total_lines_after = session.scrollbackCount() + snapshot_after.rows;
-    const start_line_after = total_lines_after - snapshot_after.rows - session.scrollOffset();
+    const total_lines_after = snapshot_after.scrollback_count + snapshot_after.rows;
+    const start_line_after = total_lines_after - snapshot_after.rows - snapshot_after.scrollback_offset;
     const actual = firstCodepoint(session, start_line_after) orelse return error.MissingScrollback;
     try std.testing.expectEqual(expected, actual);
 }
@@ -172,8 +176,8 @@ test "terminal reflow keeps selection active when scrolled" {
     session.scrollBy(2);
 
     const snapshot_before = session.snapshot();
-    const total_lines_before = session.scrollbackCount() + snapshot_before.rows;
-    const start_line_before = total_lines_before - snapshot_before.rows - session.scrollOffset();
+    const total_lines_before = snapshot_before.scrollback_count + snapshot_before.rows;
+    const start_line_before = total_lines_before - snapshot_before.rows - snapshot_before.scrollback_offset;
     const select_row = start_line_before + 1;
     session.startSelection(select_row, 1);
     session.updateSelection(select_row, 2);
@@ -181,7 +185,7 @@ test "terminal reflow keeps selection active when scrolled" {
 
     try session.resize(2, 6);
 
-    if (session.selectionState()) |selection| {
+    if (session.snapshot().selection) |selection| {
         try std.testing.expect(selection.active);
         try std.testing.expectEqual(@as(usize, 1), selection.start.col);
         try std.testing.expectEqual(@as(usize, 2), selection.end.col);
@@ -200,8 +204,8 @@ test "terminal reflow preserves selection content after resize" {
     session.scrollBy(2);
 
     const snapshot_before = session.snapshot();
-    const total_lines_before = session.scrollbackCount() + snapshot_before.rows;
-    const start_line_before = total_lines_before - snapshot_before.rows - session.scrollOffset();
+    const total_lines_before = snapshot_before.scrollback_count + snapshot_before.rows;
+    const start_line_before = total_lines_before - snapshot_before.rows - snapshot_before.scrollback_offset;
     const select_row = start_line_before + 1;
     session.startSelection(select_row, 1);
     session.updateSelection(select_row, 2);
@@ -211,7 +215,7 @@ test "terminal reflow preserves selection content after resize" {
 
     try session.resize(2, 6);
 
-    if (session.selectionState()) |selection| {
+    if (session.snapshot().selection) |selection| {
         const actual = codepointAt(session, selection.start.row, selection.start.col) orelse return error.MissingSelection;
         try std.testing.expectEqual(expected, actual);
     } else {
@@ -227,9 +231,9 @@ test "terminal reflow expands scrollback when narrowing" {
 
     term_mod.debugFeedBytes(session, "AAAAAA\nBBBBBB\nCCCCCC\nDDDDDD\nEEEEEE\n");
 
-    const scrollback_before = session.scrollbackCount();
+    const scrollback_before = session.snapshot().scrollback_count;
     try session.resize(2, 3);
-    const scrollback_after = session.scrollbackCount();
+    const scrollback_after = session.snapshot().scrollback_count;
 
     try std.testing.expect(scrollback_after >= scrollback_before);
 }
@@ -244,8 +248,8 @@ test "terminal selection survives output while scrolled" {
     session.scrollBy(2);
 
     const snapshot_before = session.snapshot();
-    const total_lines_before = session.scrollbackCount() + snapshot_before.rows;
-    const start_line_before = total_lines_before - snapshot_before.rows - session.scrollOffset();
+    const total_lines_before = snapshot_before.scrollback_count + snapshot_before.rows;
+    const start_line_before = total_lines_before - snapshot_before.rows - snapshot_before.scrollback_offset;
     const select_row = start_line_before + 1;
     session.startSelection(select_row, 1);
     session.updateSelection(select_row, 4);
@@ -253,7 +257,7 @@ test "terminal selection survives output while scrolled" {
 
     term_mod.debugFeedBytes(session, "EEEEEE\n");
 
-    if (session.selectionState()) |selection| {
+    if (session.snapshot().selection) |selection| {
         try std.testing.expect(selection.active);
         try std.testing.expectEqual(select_row, selection.start.row);
         try std.testing.expectEqual(@as(usize, 1), selection.start.col);
@@ -323,7 +327,7 @@ test "terminal locked scroll refresh consumes pending view cache update" {
     session.updateViewCacheForScrollLocked();
 
     try std.testing.expect(!session.view_cache_pending.load(.acquire));
-    try std.testing.expectEqual(session.scrollOffset(), session.renderCache().scroll_offset);
+    try std.testing.expectEqual(session.snapshot().scrollback_offset, session.renderCache().scroll_offset);
 }
 
 test "terminal reflow remaps saved cursor" {
@@ -387,7 +391,7 @@ test "terminal reflow keeps top content visible without scrollback" {
 
     try session.resize(2, 10);
 
-    try std.testing.expectEqual(@as(usize, 0), session.scrollbackCount());
     const snapshot = session.snapshot();
+    try std.testing.expectEqual(@as(usize, 0), snapshot.scrollback_count);
     try std.testing.expectEqual(@as(u32, 'H'), snapshot.cells[0].codepoint);
 }

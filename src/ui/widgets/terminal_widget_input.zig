@@ -169,7 +169,7 @@ pub fn handleInput(
             fn apply(widget: anytype) void {
                 widget.session.lock();
                 defer widget.session.unlock();
-                if (widget.session.scrollOffset() > 0) {
+                if (widget.draw_cache.scroll_offset > 0) {
                     widget.session.setScrollOffset(0);
                 }
             }
@@ -481,11 +481,14 @@ pub fn handleInput(
 
         const suppress_selection_for_scrollbar = mouse_on_scrollbar or scroll_dragging.*;
         if (!mouse_reporting and (reset_scrollback or in_terminal or scroll_dragging.*)) {
+            var live_scroll_offset = scroll_offset;
+            var selection_active = cache.selection_active;
             self.session.lock();
             defer self.session.unlock();
 
-            if (reset_scrollback and self.session.scrollOffset() > 0) {
+            if (reset_scrollback and live_scroll_offset > 0) {
                 self.session.setScrollOffset(0);
+                live_scroll_offset = 0;
             }
 
             if (in_terminal and mouse_on_scrollbar and input_batch.mousePressed(.left)) {
@@ -493,14 +496,13 @@ pub fn handleInput(
                 self.scrollbar_drag_active = true;
                 const track_h = scrollbar_h;
                 const min_thumb_h: f32 = 18;
-                const scroll_offset_local = self.session.scrollOffset();
                 const ratio = if (max_scroll_offset > 0)
-                    @as(f32, @floatFromInt(max_scroll_offset - scroll_offset_local)) / @as(f32, @floatFromInt(max_scroll_offset))
+                    @as(f32, @floatFromInt(max_scroll_offset - live_scroll_offset)) / @as(f32, @floatFromInt(max_scroll_offset))
                 else
                     1.0;
                 const thumb = common.computeScrollbarThumb(scrollbar_y, track_h, rows, total_lines, min_thumb_h, ratio);
                 scroll_grab_offset.* = mouse.y - thumb.thumb_y;
-                scroll_log.logf(.info, "scrollbar press offset={d}", .{scroll_offset_local});
+                scroll_log.logf(.info, "scrollbar press offset={d}", .{live_scroll_offset});
                 handled = true;
             }
 
@@ -514,6 +516,7 @@ pub fn handleInput(
                     const ratio = if (available > 0) (clamped_mouse - scrollbar_y) / available else 0;
                     const target_offset = @as(usize, @intFromFloat(@round(@as(f32, @floatFromInt(max_scroll_offset)) * (1.0 - ratio))));
                     self.session.setScrollOffset(target_offset);
+                    live_scroll_offset = target_offset;
                     scroll_log.logf(.info, "scrollbar drag offset={d} ratio={d:.3}", .{ target_offset, ratio });
                     handled = true;
                 } else {
@@ -522,8 +525,9 @@ pub fn handleInput(
                 }
             }
 
-            if (in_terminal and input_batch.mousePressed(.left) and self.session.selectionState() != null) {
+            if (in_terminal and input_batch.mousePressed(.left) and selection_active) {
                 self.session.clearSelection();
+                selection_active = false;
                 handled = true;
             }
             if (has_visible_grid and in_terminal and !suppress_selection_for_scrollbar) {
@@ -548,6 +552,7 @@ pub fn handleInput(
                                 self.session.startSelection(global_row, 0);
                                 self.session.updateSelection(global_row, last_col);
                                 self.session.finishSelection();
+                                selection_active = true;
                                 handled = true;
                             } else if (click_count == 2) {
                                 if (selectWordSpan(row_cells, cols, clamped_col, last_col)) |span| {
@@ -558,11 +563,13 @@ pub fn handleInput(
                                     self.session.startSelection(global_row, span.start);
                                     self.session.updateSelection(global_row, span.end);
                                     self.session.finishSelection();
+                                    selection_active = true;
                                     handled = true;
                                 } else {
                                     self.multi_click_selection_mode = .none;
                                     const sel_col = @min(clamped_col, last_col);
                                     self.session.startSelection(global_row, sel_col);
+                                    selection_active = true;
                                     handled = true;
                                 }
                             } else {
@@ -639,6 +646,7 @@ pub fn handleInput(
                                 }
                                 self.session.startSelection(sel_start.row, sel_start.col);
                                 self.session.updateSelection(sel_end.row, sel_end.col);
+                                selection_active = true;
                                 handled = true;
                             },
                             .line => {
@@ -661,13 +669,14 @@ pub fn handleInput(
                                 }
                                 self.session.startSelection(sel_start.row, sel_start.col);
                                 self.session.updateSelection(sel_end.row, sel_end.col);
+                                selection_active = true;
                                 handled = true;
                             },
                             .none => {},
                         }
                     }
 
-                    if (self.session.selectionState() != null) {
+                    if (selection_active) {
                         // Autoscroll when dragging outside terminal area
                         if (mouse.y < y) {
                             self.session.scrollBy(1);
@@ -687,18 +696,20 @@ pub fn handleInput(
                     if (global_row < history_len + rows) {
                         if (rowLastContentCol(view_cells, cols, clamped_row)) |last_col| {
                             const sel_col = @min(clamped_col, last_col);
-                            if (self.session.selectionState() == null) {
+                            if (!selection_active) {
                                 // Late-start selection when drag begins on blank space and enters content.
                                 self.session.startSelection(global_row, sel_col);
+                                selection_active = true;
                                 handled = true;
                             } else {
                                 self.session.updateSelection(global_row, sel_col);
+                                selection_active = true;
                                 handled = true;
                             }
                         }
                     }
 
-                    if (self.session.selectionState() != null) {
+                    if (selection_active) {
                         // Autoscroll when dragging outside terminal area
                         if (mouse.y < y) {
                             self.session.scrollBy(1);
@@ -714,8 +725,9 @@ pub fn handleInput(
                     self.multi_click_selection_mode = .none;
                     self.selection_press_origin = null;
                     self.selection_drag_active = false;
-                    if (self.session.selectionState() != null) {
+                    if (selection_active) {
                         self.session.finishSelection();
+                        selection_active = true;
                         handled = true;
                     }
                 }

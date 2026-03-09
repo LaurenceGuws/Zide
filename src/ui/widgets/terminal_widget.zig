@@ -227,7 +227,8 @@ pub const TerminalWidget = struct {
 
     pub fn copySelectionToClipboard(self: *TerminalWidget, shell: *Shell) bool {
         const log = app_logger.logger("terminal.widget");
-        const selection = self.session.selectionState() orelse return false;
+        const sel_snapshot = self.session.snapshot();
+        const selection = sel_snapshot.selection orelse return false;
         const rowLastContentCol = struct {
             fn apply(row_cells: []const Cell, cols_count: usize) ?usize {
                 if (cols_count == 0 or row_cells.len < cols_count) return null;
@@ -244,10 +245,9 @@ pub const TerminalWidget = struct {
                 return last;
             }
         }.apply;
-        const sel_snapshot = self.session.snapshot();
         const rows_snapshot = sel_snapshot.rows;
         const cols_snapshot = sel_snapshot.cols;
-        const history = self.session.scrollbackCount();
+        const history = sel_snapshot.scrollback_count;
         const total_lines_copy = history + rows_snapshot;
         if (rows_snapshot == 0 or cols_snapshot == 0 or total_lines_copy == 0) return false;
 
@@ -369,7 +369,7 @@ pub const TerminalWidget = struct {
         const clip = clip_opt orelse "";
         const has_supported_clipboard_data = clip_opt != null or html != null or uri_list != null or png != null;
         if (!has_supported_clipboard_data) return false;
-        if (self.session.scrollOffset() > 0) {
+        if (self.session.renderCache().scroll_offset > 0) {
             self.session.setScrollOffset(0);
         }
         if (self.session.sendKittyPasteEvent5522WithMimeRich(clip, html, uri_list, png) catch |err| {
@@ -416,7 +416,7 @@ pub const TerminalWidget = struct {
         const snap = self.session.snapshot();
         const rows = snap.rows;
         const cols = snap.cols;
-        const history = self.session.scrollbackCount();
+        const history = snap.scrollback_count;
 
         var out = std.ArrayList(u8).empty;
         errdefer out.deinit(allocator);
@@ -523,7 +523,7 @@ pub const TerminalWidget = struct {
         const snap = self.session.snapshot();
         const rows = snap.rows;
         const cols = snap.cols;
-        const history = self.session.scrollbackCount();
+        const history = snap.scrollback_count;
 
         var out = std.ArrayList(u8).empty;
         errdefer out.deinit(allocator);
