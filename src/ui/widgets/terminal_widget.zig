@@ -22,6 +22,7 @@ const KittyImage = terminal_mod.KittyImage;
 const KittyPlacement = terminal_mod.KittyPlacement;
 const RenderCache = render_cache_mod.RenderCache;
 const DrawOutcome = draw_mod.DrawOutcome;
+const DrawPreparation = draw_mod.DrawPreparation;
 
 /// Terminal widget for drawing a terminal view
 pub const TerminalWidget = struct {
@@ -584,7 +585,19 @@ pub const TerminalWidget = struct {
         height: f32,
         input: shared_types.input.InputSnapshot,
     ) DrawOutcome {
-        return draw_mod.draw(self, shell, x, y, width, height, input);
+        const draw_start = app_shell.getTime();
+        const lock_phase_start = draw_start;
+        const presented = self.session.copyPublishedRenderCache(&self.draw_cache) catch |err| {
+            const log = app_logger.logger("terminal.ui.redraw");
+            log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
+            return .{};
+        };
+        const preparation: DrawPreparation = .{
+            .draw_start = draw_start,
+            .lock_ms = @as(f64, @floatCast(app_shell.getTime() - lock_phase_start)) * 1000.0,
+            .presented = presented,
+        };
+        return draw_mod.drawPrepared(self, shell, x, y, width, height, input, preparation);
     }
 
     pub fn finishFramePresentation(self: *TerminalWidget, outcome: DrawOutcome) void {

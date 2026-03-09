@@ -105,6 +105,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         self.history.view_generation;
     const kitty_generation = kitty_mod.kittyStateConst(self).generation;
     const clear_generation = self.clear_generation.load(.acquire);
+    const mouse_reporting_active = self.mouseReportingEnabled();
     const selection_active = self.active != .alt and self.history.selectionState() != null;
     const active_cache = &self.render_caches[active_index];
     const presented_generation = self.presentedGeneration();
@@ -182,6 +183,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         cache.selection_active = selection_active;
         cache.sync_updates_active = self.sync_updates_active;
         cache.screen_reverse = screen_reverse;
+        cache.mouse_reporting_active = mouse_reporting_active;
         cache.clear_generation = clear_generation;
         cache.viewport_shift_rows = 0;
         cache.viewport_shift_exposed_only = false;
@@ -592,6 +594,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     cache.selection_active = selection_active;
     cache.sync_updates_active = self.sync_updates_active;
     cache.screen_reverse = screen_reverse;
+    cache.mouse_reporting_active = mouse_reporting_active;
     cache.clear_generation = clear_generation;
     cache.viewport_shift_rows = viewport_shift_rows;
     cache.viewport_shift_exposed_only = can_publish_scroll_shift;

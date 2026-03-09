@@ -335,6 +335,7 @@ Statuses are strict:
   - 2026-03-09: second slice landed on feature branch work: published render-cache capture now flows through `TerminalSession.copyPublishedRenderCache(...)`, so draw stops open-coding session lock + pending-cache service + live-cache copy.
   - 2026-03-09: third slice landed on feature branch work: session now returns a `PresentedRenderCache` token and owns the retirement eligibility rule through `retirePresentedRenderCache(...)`, so draw/runtime no longer decide dirty-retirement eligibility inline from ad-hoc `updated/dirty` checks.
   - 2026-03-09: fourth slice landed on feature branch work: `TerminalWidget` no longer stores pending presentation outcome as widget state; draw now returns the outcome directly and terminal surface/runtime passes it through explicitly to presentation retirement.
+  - 2026-03-09: fifth slice landed on feature branch work: render-cache capture moved out of `terminal_widget_draw` and into the widget wrapper, and mouse-reporting visibility is now published in `RenderCache`, so draw depends less on live session state during presentation.
 
 2) PTY write contract unification
 - status: `todo`
