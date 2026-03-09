@@ -147,7 +147,7 @@ pub fn parseOsc(session: SessionFacade, payload: []const u8, terminator: OscTerm
     const log = app_logger.logger("terminal.osc");
     const max_len: usize = 160;
     const slice = if (payload.len > max_len) payload[0..max_len] else payload;
-    log.logf(.info, "osc payload=\"{s}\"", .{slice});
+    log.logf(.debug, "osc payload=\"{s}\"", .{slice});
     var i: usize = 0;
     var code: usize = 0;
     var has_code = false;
