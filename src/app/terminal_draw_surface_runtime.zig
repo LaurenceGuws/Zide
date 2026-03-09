@@ -33,9 +33,10 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) v
                 @intFromFloat(term_height),
             );
         }
-        term_widget.draw(shell, layout.terminal.x, term_y + term_offset_y, layout.terminal.width, term_height, state.last_input);
+        const draw_outcome = term_widget.draw(shell, layout.terminal.x, term_y + term_offset_y, layout.terminal.width, term_height, state.last_input);
         if (layout.terminal.width > 0 and term_height > 0) {
             shell.endClip();
         }
+        term_widget.finishFramePresentation(draw_outcome);
     }
 }
