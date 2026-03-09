@@ -45,6 +45,50 @@ const ModeSnapshot = struct {
     newline_mode: bool,
 };
 
+const SgrContext = struct {
+    ctx: *anyopaque,
+    palette_color_fn: *const fn (ctx: *anyopaque, idx: u8) Color,
+    current_attrs_ptr_fn: *const fn (ctx: *anyopaque) *types.CellAttrs,
+    default_attrs_ptr_fn: *const fn (ctx: *anyopaque) *const types.CellAttrs,
+
+    pub fn from(session: anytype) SgrContext {
+        const SessionPtr = @TypeOf(session);
+        return .{
+            .ctx = @ptrCast(session),
+            .palette_color_fn = struct {
+                fn call(ctx: *anyopaque, idx: u8) Color {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return s.paletteColor(idx);
+                }
+            }.call,
+            .current_attrs_ptr_fn = struct {
+                fn call(ctx: *anyopaque) *types.CellAttrs {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return &s.activeScreen().current_attrs;
+                }
+            }.call,
+            .default_attrs_ptr_fn = struct {
+                fn call(ctx: *anyopaque) *const types.CellAttrs {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return &s.activeScreen().default_attrs;
+                }
+            }.call,
+        };
+    }
+
+    pub fn paletteColor(self: *const SgrContext, idx: u8) Color {
+        return self.palette_color_fn(self.ctx, idx);
+    }
+
+    pub fn currentAttrs(self: *const SgrContext) *types.CellAttrs {
+        return self.current_attrs_ptr_fn(self.ctx);
+    }
+
+    pub fn defaultAttrs(self: *const SgrContext) *const types.CellAttrs {
+        return self.default_attrs_ptr_fn(self.ctx);
+    }
+};
+
 const DecstrContext = struct {
     ctx: *anyopaque,
     reset_parser_fn: *const fn (ctx: *anyopaque) void,
@@ -484,7 +528,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
             }
         },
         'm' => { // SGR
-            applySgr(self, action);
+            applySgr(SgrContext.from(self), action);
         },
         'q' => { // DECSCUSR
             if (action.leader == 0 and !action.private) {
@@ -982,10 +1026,11 @@ pub fn writeWindowOpCellPixelsReply(pty: anytype, cell_h: u16, cell_w: u16) bool
     return true;
 }
 
-pub fn applySgr(self: anytype, action: parser_csi.CsiAction) void {
-    const screen = self.activeScreen();
+pub fn applySgr(context: SgrContext, action: parser_csi.CsiAction) void {
     const params = action.params;
     const n_params = effectiveSgrParamCount(action);
+    const current_attrs = context.currentAttrs();
+    const default_attrs = context.defaultAttrs();
     const log = app_logger.logger("terminal.sgr");
     log.logf(
         .debug,
@@ -1018,11 +1063,11 @@ pub fn applySgr(self: anytype, action: parser_csi.CsiAction) void {
                 const mode = params[i + 1];
                 if (mode == 5 and i + 2 < n_params) {
                     const idx = types.clampColorIndex(params[i + 2]);
-                    const color = self.paletteColor(idx);
+                    const color = context.paletteColor(idx);
                     switch (p) {
-                        38 => screen.current_attrs.fg = color,
-                        48 => screen.current_attrs.bg = color,
-                        58 => screen.current_attrs.underline_color = color,
+                        38 => current_attrs.fg = color,
+                        48 => current_attrs.bg = color,
+                        58 => current_attrs.underline_color = color,
                         else => {},
                     }
                     i += 3;
@@ -1037,9 +1082,9 @@ pub fn applySgr(self: anytype, action: parser_csi.CsiAction) void {
                         const b = types.clampColorIndex(params[base + 2]);
                         const color = Color{ .r = r, .g = g, .b = b, .a = 255 };
                         switch (p) {
-                            38 => screen.current_attrs.fg = color,
-                            48 => screen.current_attrs.bg = color,
-                            58 => screen.current_attrs.underline_color = color,
+                            38 => current_attrs.fg = color,
+                            48 => current_attrs.bg = color,
+                            58 => current_attrs.underline_color = color,
                             else => {},
                         }
                         i = base + 3;
@@ -1056,9 +1101,9 @@ pub fn applySgr(self: anytype, action: parser_csi.CsiAction) void {
                         const a = types.clampColorIndex(params[base + 3]);
                         const color = Color{ .r = r, .g = g, .b = b, .a = a };
                         switch (p) {
-                            38 => screen.current_attrs.fg = color,
-                            48 => screen.current_attrs.bg = color,
-                            58 => screen.current_attrs.underline_color = color,
+                            38 => current_attrs.fg = color,
+                            48 => current_attrs.bg = color,
+                            58 => current_attrs.underline_color = color,
                             else => {},
                         }
                         i = base + 4;
@@ -1071,62 +1116,62 @@ pub fn applySgr(self: anytype, action: parser_csi.CsiAction) void {
         }
         switch (p) {
             0 => { // reset
-                screen.current_attrs = screen.default_attrs;
+                current_attrs.* = default_attrs.*;
             },
             1 => { // bold
-                screen.current_attrs.bold = true;
+                current_attrs.bold = true;
             },
             5 => { // blink (slow)
-                screen.current_attrs.blink = true;
-                screen.current_attrs.blink_fast = false;
+                current_attrs.blink = true;
+                current_attrs.blink_fast = false;
             },
             6 => { // blink (fast)
-                screen.current_attrs.blink = true;
-                screen.current_attrs.blink_fast = true;
+                current_attrs.blink = true;
+                current_attrs.blink_fast = true;
             },
             22 => { // normal intensity
-                screen.current_attrs.bold = false;
+                current_attrs.bold = false;
             },
             25 => { // blink off
-                screen.current_attrs.blink = false;
-                screen.current_attrs.blink_fast = false;
+                current_attrs.blink = false;
+                current_attrs.blink_fast = false;
             },
             4 => { // underline
-                screen.current_attrs.underline = true;
+                current_attrs.underline = true;
             },
             24 => { // underline off
-                screen.current_attrs.underline = false;
+                current_attrs.underline = false;
             },
             7 => { // reverse
-                screen.current_attrs.reverse = true;
+                current_attrs.reverse = true;
             },
             27 => { // reverse off
-                screen.current_attrs.reverse = false;
+                current_attrs.reverse = false;
             },
             39 => { // default fg
-                screen.current_attrs.fg = screen.default_attrs.fg;
+                current_attrs.fg = default_attrs.fg;
             },
             49 => { // default bg
-                screen.current_attrs.bg = screen.default_attrs.bg;
+                current_attrs.bg = default_attrs.bg;
             },
             59 => {
-                screen.current_attrs.underline_color = screen.default_attrs.underline_color;
+                current_attrs.underline_color = default_attrs.underline_color;
             },
             30...37 => {
                 const idx: u8 = @intCast(p - 30);
-                screen.current_attrs.fg = self.paletteColor(idx);
+                current_attrs.fg = context.paletteColor(idx);
             },
             40...47 => {
                 const idx: u8 = @intCast(p - 40);
-                screen.current_attrs.bg = self.paletteColor(idx);
+                current_attrs.bg = context.paletteColor(idx);
             },
             90...97 => {
                 const idx: u8 = @intCast(8 + (p - 90));
-                screen.current_attrs.fg = self.paletteColor(idx);
+                current_attrs.fg = context.paletteColor(idx);
             },
             100...107 => {
                 const idx: u8 = @intCast(8 + (p - 100));
-                screen.current_attrs.bg = self.paletteColor(idx);
+                current_attrs.bg = context.paletteColor(idx);
             },
             else => {},
         }
