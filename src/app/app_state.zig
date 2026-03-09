@@ -47,6 +47,13 @@ pub const AppState = struct {
 
     needs_redraw: bool,
     idle_frames: u32,
+    last_terminal_draw_seq: u64,
+    last_terminal_poll_seq: u64,
+    terminal_pressure_since: ?f64,
+    last_terminal_observed_generation: u64,
+    last_terminal_observed_current_generation: u64,
+    last_terminal_drawn_generation: u64,
+    last_terminal_generation_change_time: f64,
     last_mouse_pos: t.MousePos,
     resizing_terminal: bool,
     resize_start_y: f32,

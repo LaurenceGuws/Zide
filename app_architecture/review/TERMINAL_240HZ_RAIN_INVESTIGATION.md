@@ -587,3 +587,16 @@ Reason:
 - Intent:
   - start turning the architecture review into enforceable boundaries
   - reduce scheduler state that lives outside explicit instance/context ownership
+
+## Runtime-Ownership Follow-Up (2026-03-09)
+
+- Files:
+  - `src/app/app_state.zig`
+  - `src/app/init_runtime.zig`
+  - `src/app/frame_render_idle_runtime.zig`
+- Change:
+  - moved terminal idle/pacing bookkeeping out of `frame_render_idle_runtime` file globals and into `AppState`
+  - terminal draw-seq tracking, poll-seq tracking, generation observation, pressure timing, and drawn-generation state are now instance-owned
+- Intent:
+  - reduce process-global runtime state in the terminal frame scheduler
+  - make future scheduler cleanup safer for multi-surface/multi-window ownership
