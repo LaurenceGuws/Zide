@@ -34,19 +34,21 @@ test "terminal workspace create switch move close lifecycle" {
     try std.testing.expectEqual(tab_3, workspace.activeTabId().?);
 }
 
-test "terminal workspace metadata is session-derived" {
+test "terminal workspace tab sync state is session-derived" {
     var workspace = terminal.TerminalWorkspace.init(std.testing.allocator, .{});
     defer workspace.deinit();
-    var title_buf = std.ArrayList(u8).empty;
-    defer title_buf.deinit(std.testing.allocator);
-    var cwd_buf = std.ArrayList(u8).empty;
-    defer cwd_buf.deinit(std.testing.allocator);
+    var entry_buf = std.ArrayList(terminal.TerminalTabSyncEntry).empty;
+    defer entry_buf.deinit(std.testing.allocator);
+    var string_buf = std.ArrayList(u8).empty;
+    defer string_buf.deinit(std.testing.allocator);
 
     const created = try workspace.createTabWithSession(24, 80);
     const session = created.session;
     terminal.debugFeedBytes(session, "\x1b]2;build-shell\x07");
 
-    const metadata = (try workspace.copyMetadataAt(std.testing.allocator, workspace.activeIndex(), &title_buf, &cwd_buf)).?;
-    try std.testing.expectEqualStrings("build-shell", metadata.title);
-    try std.testing.expectEqual(metadata.id, workspace.activeTabId().?);
+    const sync_state = try workspace.copyTabSyncState(std.testing.allocator, &entry_buf, &string_buf);
+    try std.testing.expectEqual(@as(usize, 1), sync_state.tabs.len);
+    try std.testing.expectEqual(created.id, sync_state.active_tab_id.?);
+    try std.testing.expectEqual(created.id, sync_state.tabs[0].id);
+    try std.testing.expectEqualStrings("build-shell", sync_state.tabs[0].title(sync_state.strings));
 }
