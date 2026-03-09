@@ -21,6 +21,41 @@ const FakePty = struct {
     }
 };
 
+const FakePtyWriter = struct {
+    pty: *FakePty,
+
+    pub fn write(self: *FakePtyWriter, bytes: []const u8) !usize {
+        return self.pty.write(bytes);
+    }
+
+    pub fn unlock(_: *FakePtyWriter) void {}
+};
+
+fn lockFakePtyWriter(pty_opt: *?FakePty) ?FakePtyWriter {
+    if (pty_opt.*) |*pty| {
+        return .{ .pty = pty };
+    }
+    return null;
+}
+
+fn writeFakePtyBytes(pty_opt: *?FakePty, bytes: []const u8) !void {
+    if (pty_opt.*) |*pty| {
+        _ = try pty.write(bytes);
+    }
+}
+
+fn FakePtySupport(comptime Self: type) type {
+    return struct {
+        pub fn lockPtyWriter(self: *Self) ?FakePtyWriter {
+            return lockFakePtyWriter(&self.pty);
+        }
+
+        pub fn writePtyBytes(self: *Self, bytes: []const u8) !void {
+            try writeFakePtyBytes(&self.pty, bytes);
+        }
+    };
+}
+
 test "DCS XTGETTCAP writes TN reply" {
     const allocator = std.testing.allocator;
 
@@ -28,6 +63,7 @@ test "DCS XTGETTCAP writes TN reply" {
         allocator: std.mem.Allocator,
         pty: ?FakePty,
 
+        pub usingnamespace FakePtySupport(@This());
         pub fn setSyncUpdates(_: *@This(), _: bool) void {}
     };
 
@@ -45,6 +81,7 @@ test "DCS XTGETTCAP writes failure reply for unknown cap" {
         allocator: std.mem.Allocator,
         pty: ?FakePty,
 
+        pub usingnamespace FakePtySupport(@This());
         pub fn setSyncUpdates(_: *@This(), _: bool) void {}
     };
 
@@ -62,6 +99,7 @@ test "DCS XTGETTCAP writes ordered replies for multi-cap request" {
         allocator: std.mem.Allocator,
         pty: ?FakePty,
 
+        pub usingnamespace FakePtySupport(@This());
         pub fn setSyncUpdates(_: *@This(), _: bool) void {}
     };
 
@@ -86,6 +124,7 @@ test "DCS XTGETTCAP identity tuple writes TN Co RGB replies" {
         allocator: std.mem.Allocator,
         pty: ?FakePty,
 
+        pub usingnamespace FakePtySupport(@This());
         pub fn setSyncUpdates(_: *@This(), _: bool) void {}
     };
 
@@ -108,6 +147,7 @@ test "DCS DECRQSS writes DECSCUSR reply" {
         allocator: std.mem.Allocator,
         pty: ?FakePty,
 
+        pub usingnamespace FakePtySupport(@This());
         pub fn setSyncUpdates(_: *@This(), _: bool) void {}
         pub fn decrqssReply(_: *@This(), text: []const u8) ?[]const u8 {
             if (std.mem.eql(u8, text, " q")) return "3 q";
@@ -129,6 +169,7 @@ test "DCS DECRQSS writes failure reply for unsupported request string" {
         allocator: std.mem.Allocator,
         pty: ?FakePty,
 
+        pub usingnamespace FakePtySupport(@This());
         pub fn setSyncUpdates(_: *@This(), _: bool) void {}
         pub fn decrqssReply(_: *@This(), _: []const u8) ?[]const u8 {
             return null;
@@ -149,6 +190,7 @@ test "DCS DECRQSS writes SGR reply for bounded attribute state" {
         allocator: std.mem.Allocator,
         pty: ?FakePty,
 
+        pub usingnamespace FakePtySupport(@This());
         pub fn setSyncUpdates(_: *@This(), _: bool) void {}
         pub fn decrqssReplyInto(_: *@This(), text: []const u8, _: []u8) ?[]const u8 {
             if (std.mem.eql(u8, text, "m")) return "1;5;7;31;42m";
@@ -170,6 +212,7 @@ test "DCS DECRQSS writes DECSTBM reply" {
         allocator: std.mem.Allocator,
         pty: ?FakePty,
 
+        pub usingnamespace FakePtySupport(@This());
         pub fn setSyncUpdates(_: *@This(), _: bool) void {}
         pub fn decrqssReply(_: *@This(), text: []const u8) ?[]const u8 {
             if (std.mem.eql(u8, text, "r")) return "2;5r";
@@ -191,6 +234,7 @@ test "DCS DECRQSS writes DECSLRM reply" {
         allocator: std.mem.Allocator,
         pty: ?FakePty,
 
+        pub usingnamespace FakePtySupport(@This());
         pub fn setSyncUpdates(_: *@This(), _: bool) void {}
         pub fn decrqssReply(_: *@This(), text: []const u8) ?[]const u8 {
             if (std.mem.eql(u8, text, "s")) return "3;8s";
@@ -213,6 +257,8 @@ test "OSC 52 clipboard query preserves BEL terminator" {
         pty: ?FakePty,
         osc_clipboard: std.ArrayList(u8),
         osc_clipboard_pending: bool,
+
+        pub usingnamespace FakePtySupport(@This());
     };
 
     var clipboard = std.ArrayList(u8).empty;
@@ -240,6 +286,8 @@ test "OSC 52 clipboard query preserves ST terminator" {
         pty: ?FakePty,
         osc_clipboard: std.ArrayList(u8),
         osc_clipboard_pending: bool,
+
+        pub usingnamespace FakePtySupport(@This());
     };
 
     var clipboard = std.ArrayList(u8).empty;
@@ -263,6 +311,8 @@ test "OSC 4 palette query preserves ST terminator" {
     const Self = struct {
         pty: ?FakePty,
         palette_current: [256]types.Color,
+
+        pub usingnamespace FakePtySupport(@This());
     };
 
     var pal = palette.buildDefaultPalette();
@@ -290,6 +340,7 @@ test "OSC 10 dynamic color query replies with default fg and BEL terminator" {
         base_default_attrs: Attrs,
         dynamic_colors: [10]?types.Color,
 
+        pub usingnamespace FakePtySupport(@This());
         pub fn setDefaultColors(_: *@This(), _: types.Color, _: types.Color) void {}
     };
 

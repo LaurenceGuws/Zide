@@ -247,23 +247,25 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
         },
         'n' => { // DSR
             const mode = if (param_len > 0) p[0] else 0;
-            if (self.pty) |*pty| {
+            if (self.lockPtyWriter()) |writer_guard| {
+                var writer = writer_guard;
+                defer writer.unlock();
                 if (action.leader == '?') {
                     switch (mode) {
                         6 => { // DECXCPR
                             const pos = screen.cursorReport();
-                            _ = writeDsrReply(pty, action.leader, mode, pos.row_1, pos.col_1);
+                            _ = writeDsrReply(&writer, action.leader, mode, pos.row_1, pos.col_1);
                         },
-                        15, 25, 26, 55, 56, 75, 85 => _ = writeDsrReply(pty, action.leader, mode, 0, 0),
-                        996 => _ = writeColorSchemePreferenceReply(pty, self.color_scheme_dark),
+                        15, 25, 26, 55, 56, 75, 85 => _ = writeDsrReply(&writer, action.leader, mode, 0, 0),
+                        996 => _ = writeColorSchemePreferenceReply(&writer, self.color_scheme_dark),
                         else => {},
                     }
                 } else if (action.leader == 0) {
                     switch (mode) {
-                        5 => _ = writeDsrReply(pty, action.leader, mode, 0, 0),
+                        5 => _ = writeDsrReply(&writer, action.leader, mode, 0, 0),
                         6 => { // Cursor position report
                             const pos = screen.cursorReport();
-                            _ = writeDsrReply(pty, action.leader, mode, pos.row_1, pos.col_1);
+                            _ = writeDsrReply(&writer, action.leader, mode, pos.row_1, pos.col_1);
                         },
                         else => {},
                     }
@@ -272,20 +274,24 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
         },
         'c' => { // DA
             if (action.leader == 0 or action.leader == '?') {
-                if (self.pty) |*pty| {
-                    _ = writeDaPrimaryReply(pty);
+                if (self.lockPtyWriter()) |writer_guard| {
+                    var writer = writer_guard;
+                    defer writer.unlock();
+                    _ = writeDaPrimaryReply(&writer);
                 }
             }
         },
         't' => { // Window ops (bounded subset)
             if (action.leader != 0 or action.private) return;
             const mode = if (param_len > 0) p[0] else 0;
-            if (self.pty) |*pty| {
+            if (self.lockPtyWriter()) |writer_guard| {
+                var writer = writer_guard;
+                defer writer.unlock();
                 switch (mode) {
-                    14 => _ = writeWindowOpPixelsReply(pty, @as(u32, self.cell_height) * screen.grid.rows, @as(u32, self.cell_width) * screen.grid.cols),
-                    16 => _ = writeWindowOpCellPixelsReply(pty, self.cell_height, self.cell_width),
-                    18 => _ = writeWindowOpCharsReply(pty, screen.grid.rows, screen.grid.cols),
-                    19 => _ = writeWindowOpScreenCharsReply(pty, screen.grid.rows, screen.grid.cols),
+                    14 => _ = writeWindowOpPixelsReply(&writer, @as(u32, self.cell_height) * screen.grid.rows, @as(u32, self.cell_width) * screen.grid.cols),
+                    16 => _ = writeWindowOpCellPixelsReply(&writer, self.cell_height, self.cell_width),
+                    18 => _ = writeWindowOpCharsReply(&writer, screen.grid.rows, screen.grid.cols),
+                    19 => _ = writeWindowOpScreenCharsReply(&writer, screen.grid.rows, screen.grid.cols),
                     else => {},
                 }
             }
@@ -302,17 +308,21 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
             if (param_len != 1) return;
             if (action.leader == '?' and action.private) {
                 const mode = p[0];
-                if (self.pty) |*pty| {
+                if (self.lockPtyWriter()) |writer_guard| {
+                    var writer = writer_guard;
+                    defer writer.unlock();
                     const state = decrqmPrivateModeState(self, screen, mode);
-                    _ = writeDecrqmReply(pty, true, mode, state);
+                    _ = writeDecrqmReply(&writer, true, mode, state);
                 }
                 return;
             }
             if (action.leader == 0 and !action.private) {
                 const mode = p[0];
-                if (self.pty) |*pty| {
+                if (self.lockPtyWriter()) |writer_guard| {
+                    var writer = writer_guard;
+                    defer writer.unlock();
                     const state = decrqmAnsiModeState(screen, mode);
-                    _ = writeDecrqmReply(pty, false, mode, state);
+                    _ = writeDecrqmReply(&writer, false, mode, state);
                 }
             }
         },
