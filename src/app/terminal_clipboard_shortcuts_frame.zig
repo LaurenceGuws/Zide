@@ -33,11 +33,7 @@ pub fn handle(
     return app_terminal_clipboard_shortcuts.handle(
         actions,
         allocator,
-        app_mode,
-        terminal_workspace,
-        terminals,
         shell,
         term_widget,
     );
 }
-

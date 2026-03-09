@@ -42,8 +42,8 @@ test "terminal workspace metadata is session-derived" {
     var cwd_buf = std.ArrayList(u8).empty;
     defer cwd_buf.deinit(std.testing.allocator);
 
-    _ = try workspace.createTab(24, 80);
-    const session = workspace.activeSession().?;
+    const created = try workspace.createTabWithSession(24, 80);
+    const session = created.session;
     terminal.debugFeedBytes(session, "\x1b]2;build-shell\x07");
 
     const metadata = (try workspace.copyMetadataAt(std.testing.allocator, workspace.activeIndex(), &title_buf, &cwd_buf)).?;

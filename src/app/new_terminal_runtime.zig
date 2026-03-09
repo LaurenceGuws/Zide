@@ -75,8 +75,8 @@ pub fn handle(state: anytype) !void {
         if (state.terminal_workspace) |*workspace| {
             var launch_cwd = try launchCwdForWorkspaceNewTab(state, workspace);
             defer launch_cwd.deinit(state.allocator);
-            _ = try workspace.createTab(rows, cols);
-            const term = workspace.activeSession() orelse return error.TerminalWorkspaceNoActiveTab;
+            const created = try workspace.createTabWithSession(rows, cols);
+            const term = created.session;
             app_terminal_theme_apply.setSessionPalette(term, theme);
             try app_terminal_session_bootstrap.startSessionWithShellCellSize(term, shell, launch_cwd.value);
             const widget = app_terminal_session_bootstrap.initWidget(
