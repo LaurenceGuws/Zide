@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const pty_mod = @import("../io/pty.zig");
+const parser_mod = @import("../parser/parser.zig");
 const app_logger = @import("../../app_logger.zig");
 const io_threads = @import("io_threads.zig");
 
@@ -92,7 +93,7 @@ pub fn poll(self: anytype) !void {
             if (chunk_len == 0) break;
 
             self.state_mutex.lock();
-            self.parser.handleSlice(self, temp[0..chunk_len]);
+            self.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), temp[0..chunk_len]);
             self.state_mutex.unlock();
             processed += chunk_len;
             _ = self.output_generation.fetchAdd(1, .acq_rel);
@@ -147,7 +148,7 @@ pub fn poll(self: anytype) !void {
             had_data = true;
             processed += n.?;
             io_threads.logCsiSequences(io_log, buf[0..n.?]);
-            self.parser.handleSlice(self, buf[0..n.?]);
+            self.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), buf[0..n.?]);
             _ = self.output_generation.fetchAdd(1, .acq_rel);
             if (processed >= max_bytes_per_poll) break;
         }

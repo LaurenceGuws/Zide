@@ -129,7 +129,7 @@ pub fn debugSetCursor(self: *TerminalSession, row: usize, col: usize) void {
 
 pub fn debugFeedBytes(self: *TerminalSession, bytes: []const u8) void {
     if (!debugAccessAllowed()) @panic("debugFeedBytes is test-only");
-    self.parser.handleSlice(self, bytes);
+    self.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), bytes);
 }
 
 fn debugAccessAllowed() bool {
@@ -1043,7 +1043,7 @@ pub const TerminalSession = struct {
         if (bytes.len == 0) return;
         self.state_mutex.lock();
         defer self.state_mutex.unlock();
-        self.parser.handleSlice(self, bytes);
+        self.parser.handleSlice(parser_mod.Parser.SessionFacade.from(self), bytes);
         _ = self.output_generation.fetchAdd(1, .acq_rel);
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
