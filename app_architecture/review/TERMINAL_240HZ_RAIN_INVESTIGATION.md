@@ -739,3 +739,17 @@ Reason:
 - Intent:
   - keep the runtime lane consistent with the earlier frame-pacing extraction
   - stop the visible-terminal hook from owning terminal scheduler heuristics
+
+## Presented-Ack API Cleanup (2026-03-09)
+
+- Files:
+  - `src/terminal/core/terminal_session.zig`
+  - `src/ui/widgets/terminal_widget_draw.zig`
+- Change:
+  - introduced `TerminalSession.acknowledgePresentedGeneration(...)` to publish the
+    presented generation and retire dirty state through one backend-owned API
+  - removed the widget-local sequence that manually called `notePresentedGeneration`
+    and then selected one of the dirty-clear helpers itself
+- Intent:
+  - keep publication lifecycle ownership moving out of the widget layer
+  - reduce renderer-side knowledge of backend dirty-retirement policy
