@@ -48,16 +48,20 @@ pub export fn zide_terminal_snapshot_release(snapshot: *c_api.ZideTerminalSnapsh
     c_api.zide_terminal_snapshot_release(snapshot);
 }
 
-pub export fn zide_terminal_scrollback_count(handle: ?*c_api.ZideTerminalHandle, out_count: *u32) c_int {
-    return c_api.zide_terminal_scrollback_count(handle, out_count);
-}
-
 pub export fn zide_terminal_scrollback_acquire(handle: ?*c_api.ZideTerminalHandle, start_row: u32, max_rows: u32, out_buffer: *c_api.ZideTerminalScrollbackBuffer) c_int {
     return c_api.zide_terminal_scrollback_acquire(handle, start_row, max_rows, out_buffer);
 }
 
 pub export fn zide_terminal_scrollback_release(scrollback: *c_api.ZideTerminalScrollbackBuffer) void {
     c_api.zide_terminal_scrollback_release(scrollback);
+}
+
+pub export fn zide_terminal_metadata_acquire(handle: ?*c_api.ZideTerminalHandle, out_metadata: *c_api.ZideTerminalMetadata) c_int {
+    return c_api.zide_terminal_metadata_acquire(handle, out_metadata);
+}
+
+pub export fn zide_terminal_metadata_release(metadata: *c_api.ZideTerminalMetadata) void {
+    c_api.zide_terminal_metadata_release(metadata);
 }
 
 pub export fn zide_terminal_event_drain(handle: ?*c_api.ZideTerminalHandle, out_events: *c_api.ZideTerminalEventBuffer) c_int {
@@ -70,14 +74,6 @@ pub export fn zide_terminal_events_free(events: *c_api.ZideTerminalEventBuffer) 
 
 pub export fn zide_terminal_is_alive(handle: ?*c_api.ZideTerminalHandle) u8 {
     return c_api.zide_terminal_is_alive(handle);
-}
-
-pub export fn zide_terminal_current_title(handle: ?*c_api.ZideTerminalHandle, out_string: *c_api.ZideTerminalStringBuffer) c_int {
-    return c_api.zide_terminal_current_title(handle, out_string);
-}
-
-pub export fn zide_terminal_current_cwd(handle: ?*c_api.ZideTerminalHandle, out_string: *c_api.ZideTerminalStringBuffer) c_int {
-    return c_api.zide_terminal_current_cwd(handle, out_string);
 }
 
 pub export fn zide_terminal_string_free(string: *c_api.ZideTerminalStringBuffer) void {
@@ -98,6 +94,10 @@ pub export fn zide_terminal_event_abi_version() u32 {
 
 pub export fn zide_terminal_scrollback_abi_version() u32 {
     return c_api.zide_terminal_scrollback_abi_version();
+}
+
+pub export fn zide_terminal_metadata_abi_version() u32 {
+    return c_api.zide_terminal_metadata_abi_version();
 }
 
 pub export fn zide_terminal_renderer_metadata_abi_version() u32 {

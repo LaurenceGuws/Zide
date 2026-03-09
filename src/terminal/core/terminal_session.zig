@@ -59,6 +59,14 @@ pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
 pub const DebugSnapshot = snapshot_mod.DebugSnapshot;
 pub const ScrollbackInfo = scrollback_view.ScrollbackInfo;
 pub const ScrollbackRange = scrollback_view.ScrollbackRange;
+pub const SessionMetadata = struct {
+    title: []const u8,
+    cwd: []const u8,
+    scrollback_count: usize,
+    scrollback_offset: usize,
+    alive: bool,
+    exit_code: ?i32,
+};
 pub const PresentedRenderCache = struct {
     generation: u64,
     dirty: Dirty,
@@ -1575,6 +1583,38 @@ pub const TerminalSession = struct {
         else
             self.title;
         return copyTextInto(allocator, out, title);
+    }
+
+    pub fn copyMetadata(
+        self: *TerminalSession,
+        allocator: std.mem.Allocator,
+        title_out: *std.ArrayList(u8),
+        cwd_out: *std.ArrayList(u8),
+    ) !SessionMetadata {
+        self.lock();
+        defer self.unlock();
+
+        const title = if (self.pty) |*pty|
+            (pty.foregroundProcessLabel() orelse self.title)
+        else
+            self.title;
+        const cwd = self.cwd;
+        const scrollback = scrollback_view.scrollbackInfo(self);
+        const scroll_offset: usize = if (self.active == .alt) 0 else self.history.scrollOffset();
+        const alive = if (self.pty) |*pty| pty.isAlive() else false;
+        const exit_code = if (self.child_exited.load(.acquire))
+            self.child_exit_code.load(.acquire)
+        else
+            null;
+
+        return .{
+            .title = try copyTextInto(allocator, title_out, title),
+            .cwd = try copyTextInto(allocator, cwd_out, cwd),
+            .scrollback_count = scrollback.total_rows,
+            .scrollback_offset = scroll_offset,
+            .alive = alive,
+            .exit_code = exit_code,
+        };
     }
 
     fn clearPublishedDamageIfGeneration(self: *TerminalSession, expected_generation: u64, clear_screen_dirty: bool) bool {
