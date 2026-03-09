@@ -7,11 +7,33 @@ const OscTerminator = parser_mod.OscTerminator;
 const max_clipboard_bytes: usize = 1024 * 1024;
 const data_chunk_max: usize = 4096;
 
+const WriterFacade = struct {
+    ctx: *anyopaque,
+    write_fn: *const fn (ctx: *anyopaque, bytes: []const u8) anyerror!usize,
+
+    pub fn from(writer: anytype) WriterFacade {
+        const WriterPtr = @TypeOf(writer);
+        return .{
+            .ctx = @ptrCast(writer),
+            .write_fn = struct {
+                fn call(ctx: *anyopaque, bytes: []const u8) anyerror!usize {
+                    const typed: WriterPtr = @ptrCast(@alignCast(ctx));
+                    return try typed.write(bytes);
+                }
+            }.call,
+        };
+    }
+
+    pub fn write(self: WriterFacade, bytes: []const u8) anyerror!usize {
+        return try self.write_fn(self.ctx, bytes);
+    }
+};
+
 pub const SessionFacade = struct {
     ctx: *anyopaque,
     allocator: std.mem.Allocator,
     parse_osc_5522_fn: *const fn (ctx: *anyopaque, text: []const u8, terminator: OscTerminator) void,
-    send_paste_event_mimes_fn: *const fn (ctx: *anyopaque, pty: *anyopaque, write_fn: *const fn (pty: *anyopaque, bytes: []const u8) anyerror!usize, terminator: OscTerminator) void,
+    send_paste_event_mimes_fn: *const fn (ctx: *anyopaque, writer: WriterFacade, terminator: OscTerminator) void,
     clipboard_text_fn: *const fn (ctx: *anyopaque) []const u8,
     clipboard_html_fn: *const fn (ctx: *anyopaque) []const u8,
     clipboard_uri_list_fn: *const fn (ctx: *anyopaque) []const u8,
@@ -29,17 +51,9 @@ pub const SessionFacade = struct {
                 }
             }.call,
             .send_paste_event_mimes_fn = struct {
-                fn call(ctx: *anyopaque, pty: *anyopaque, write_fn: *const fn (pty: *anyopaque, bytes: []const u8) anyerror!usize, terminator: OscTerminator) void {
+                fn call(ctx: *anyopaque, writer: WriterFacade, terminator: OscTerminator) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    const WriterProxy = struct {
-                        pty: *anyopaque,
-                        write_fn: *const fn (pty: *anyopaque, bytes: []const u8) anyerror!usize,
-                        pub fn write(self: *@This(), bytes: []const u8) anyerror!usize {
-                            return try self.write_fn(self.pty, bytes);
-                        }
-                    };
-                    var proxy = WriterProxy{ .pty = pty, .write_fn = write_fn };
-                    sendPasteEventMimesOnSession(s, &proxy, terminator);
+                    sendPasteEventMimesOnSession(s, writer, terminator);
                 }
             }.call,
             .clipboard_text_fn = struct {
@@ -74,14 +88,7 @@ pub const SessionFacade = struct {
     }
 
     pub fn sendPasteEventMimes(self: *const SessionFacade, pty: anytype, terminator: OscTerminator) void {
-        const PtyPtr = @TypeOf(pty);
-        const write_fn = struct {
-            fn call(ptr: *anyopaque, bytes: []const u8) anyerror!usize {
-                const typed: PtyPtr = @ptrCast(@alignCast(ptr));
-                return try typed.write(bytes);
-            }
-        }.call;
-        self.send_paste_event_mimes_fn(self.ctx, @ptrCast(pty), write_fn, terminator);
+        self.send_paste_event_mimes_fn(self.ctx, WriterFacade.from(pty), terminator);
     }
 
     pub fn clipboardText(self: *const SessionFacade) []const u8 {
@@ -123,17 +130,18 @@ fn parseOsc5522OnSession(self: anytype, text: []const u8, terminator: OscTermina
 
     var req = parseReadRequest(session, metadata, payload_b64) catch |err| {
         if (self.pty) |*pty| {
+            const writer = WriterFacade.from(pty);
             switch (err) {
                 error.UnsupportedPacketType => {},
-                error.UnsupportedPrimarySelection => writeReadStatus(session, pty, terminator, "", "ENOSYS"),
-                else => writeReadStatus(session, pty, terminator, "", "EINVAL"),
+                error.UnsupportedPrimarySelection => writeReadStatus(session, writer, terminator, "", "ENOSYS"),
+                else => writeReadStatus(session, writer, terminator, "", "EINVAL"),
             }
         }
         return;
     };
 
     if (self.pty) |*pty| {
-        replyReadRequest(session, pty, &req, terminator);
+        replyReadRequest(session, WriterFacade.from(pty), &req, terminator);
     }
 }
 
@@ -141,10 +149,10 @@ pub fn sendPasteEventMimes(session: SessionFacade, pty: anytype, terminator: Osc
     session.sendPasteEventMimes(pty, terminator);
 }
 
-fn sendPasteEventMimesOnSession(self: anytype, pty: anytype, terminator: OscTerminator) void {
+fn sendPasteEventMimesOnSession(self: anytype, writer: WriterFacade, terminator: OscTerminator) void {
     const session = SessionFacade.from(self);
     var req = ReadReq{ .wants_targets = true };
-    replyReadRequest(session, pty, &req, terminator);
+    replyReadRequest(session, writer, &req, terminator);
 }
 
 fn parseReadRequest(session: SessionFacade, metadata: []const u8, payload_b64: []const u8) !ReadReq {
@@ -198,104 +206,104 @@ fn parseReadRequest(session: SessionFacade, metadata: []const u8, payload_b64: [
     return req;
 }
 
-fn replyReadRequest(session: SessionFacade, pty: anytype, req: *const ReadReq, terminator: OscTerminator) void {
+fn replyReadRequest(session: SessionFacade, writer: WriterFacade, req: *const ReadReq, terminator: OscTerminator) void {
     const id = sanitizeId(session, req.id);
     defer if (id.owned) session.allocator.free(id.value);
 
     if (req.wants_targets) {
-        writeReadStatusWithId(session, pty, terminator, id.value, "OK");
+        writeReadStatusWithId(session, writer, terminator, id.value, "OK");
         if (session.clipboardText().len > 0) {
-            writeReadData(session, pty, terminator, id.value, ".", "text/plain\n");
+            writeReadData(session, writer, terminator, id.value, ".", "text/plain\n");
         }
         if (session.clipboardHtml().len > 0) {
-            writeReadData(session, pty, terminator, id.value, ".", "text/html\n");
+            writeReadData(session, writer, terminator, id.value, ".", "text/html\n");
         }
         if (session.clipboardUriList().len > 0) {
-            writeReadData(session, pty, terminator, id.value, ".", "text/uri-list\n");
+            writeReadData(session, writer, terminator, id.value, ".", "text/uri-list\n");
         }
         if (session.clipboardPng().len > 0) {
-            writeReadData(session, pty, terminator, id.value, ".", "image/png\n");
+            writeReadData(session, writer, terminator, id.value, ".", "image/png\n");
         }
-        writeReadStatusWithId(session, pty, terminator, id.value, "DONE");
+        writeReadStatusWithId(session, writer, terminator, id.value, "DONE");
         return;
     }
 
     if (req.wants_text_plain) {
         const clip = session.clipboardText();
         if (clip.len == 0) {
-            writeReadStatusWithId(session, pty, terminator, id.value, "ENOSYS");
+            writeReadStatusWithId(session, writer, terminator, id.value, "ENOSYS");
             return;
         }
-        writeReadStatusWithId(session, pty, terminator, id.value, "OK");
+        writeReadStatusWithId(session, writer, terminator, id.value, "OK");
         var offset: usize = 0;
         while (offset < clip.len) {
             const end = @min(offset + data_chunk_max, clip.len);
-            writeReadData(session, pty, terminator, id.value, "text/plain", clip[offset..end]);
+            writeReadData(session, writer, terminator, id.value, "text/plain", clip[offset..end]);
             offset = end;
         }
-        writeReadStatusWithId(session, pty, terminator, id.value, "DONE");
+        writeReadStatusWithId(session, writer, terminator, id.value, "DONE");
         return;
     }
 
     if (req.wants_text_html) {
         const clip = session.clipboardHtml();
         if (clip.len == 0) {
-            writeReadStatusWithId(session, pty, terminator, id.value, "ENOSYS");
+            writeReadStatusWithId(session, writer, terminator, id.value, "ENOSYS");
             return;
         }
-        writeReadStatusWithId(session, pty, terminator, id.value, "OK");
+        writeReadStatusWithId(session, writer, terminator, id.value, "OK");
         var offset: usize = 0;
         while (offset < clip.len) {
             const end = @min(offset + data_chunk_max, clip.len);
-            writeReadData(session, pty, terminator, id.value, "text/html", clip[offset..end]);
+            writeReadData(session, writer, terminator, id.value, "text/html", clip[offset..end]);
             offset = end;
         }
-        writeReadStatusWithId(session, pty, terminator, id.value, "DONE");
+        writeReadStatusWithId(session, writer, terminator, id.value, "DONE");
         return;
     }
 
     if (req.wants_text_uri_list) {
         const clip = session.clipboardUriList();
         if (clip.len == 0) {
-            writeReadStatusWithId(session, pty, terminator, id.value, "ENOSYS");
+            writeReadStatusWithId(session, writer, terminator, id.value, "ENOSYS");
             return;
         }
-        writeReadStatusWithId(session, pty, terminator, id.value, "OK");
+        writeReadStatusWithId(session, writer, terminator, id.value, "OK");
         var offset: usize = 0;
         while (offset < clip.len) {
             const end = @min(offset + data_chunk_max, clip.len);
-            writeReadData(session, pty, terminator, id.value, "text/uri-list", clip[offset..end]);
+            writeReadData(session, writer, terminator, id.value, "text/uri-list", clip[offset..end]);
             offset = end;
         }
-        writeReadStatusWithId(session, pty, terminator, id.value, "DONE");
+        writeReadStatusWithId(session, writer, terminator, id.value, "DONE");
         return;
     }
 
     if (req.wants_image_png) {
         const clip = session.clipboardPng();
         if (clip.len == 0) {
-            writeReadStatusWithId(session, pty, terminator, id.value, "ENOSYS");
+            writeReadStatusWithId(session, writer, terminator, id.value, "ENOSYS");
             return;
         }
-        writeReadStatusWithId(session, pty, terminator, id.value, "OK");
+        writeReadStatusWithId(session, writer, terminator, id.value, "OK");
         var offset: usize = 0;
         while (offset < clip.len) {
             const end = @min(offset + data_chunk_max, clip.len);
-            writeReadData(session, pty, terminator, id.value, "image/png", clip[offset..end]);
+            writeReadData(session, writer, terminator, id.value, "image/png", clip[offset..end]);
             offset = end;
         }
-        writeReadStatusWithId(session, pty, terminator, id.value, "DONE");
+        writeReadStatusWithId(session, writer, terminator, id.value, "DONE");
         return;
     }
 
-    writeReadStatusWithId(session, pty, terminator, id.value, "ENOSYS");
+    writeReadStatusWithId(session, writer, terminator, id.value, "ENOSYS");
 }
 
-fn writeReadStatus(session: SessionFacade, pty: anytype, terminator: OscTerminator, id: []const u8, status: []const u8) void {
-    writeReadStatusWithId(session, pty, terminator, id, status);
+fn writeReadStatus(session: SessionFacade, writer: WriterFacade, terminator: OscTerminator, id: []const u8, status: []const u8) void {
+    writeReadStatusWithId(session, writer, terminator, id, status);
 }
 
-fn writeReadStatusWithId(session: SessionFacade, pty: anytype, terminator: OscTerminator, id: []const u8, status: []const u8) void {
+fn writeReadStatusWithId(session: SessionFacade, writer: WriterFacade, terminator: OscTerminator, id: []const u8, status: []const u8) void {
     const log = app_logger.logger("terminal.osc");
     var seq = std.ArrayList(u8).empty;
     defer seq.deinit(session.allocator);
@@ -318,10 +326,10 @@ fn writeReadStatusWithId(session: SessionFacade, pty: anytype, terminator: OscTe
         };
     }
     appendOscTerminator(session.allocator, &seq, terminator);
-    writeSeq(pty, seq.items);
+    writeSeq(writer, seq.items);
 }
 
-fn writeReadData(session: SessionFacade, pty: anytype, terminator: OscTerminator, id: []const u8, mime: []const u8, payload: []const u8) void {
+fn writeReadData(session: SessionFacade, writer: WriterFacade, terminator: OscTerminator, id: []const u8, mime: []const u8, payload: []const u8) void {
     const log = app_logger.logger("terminal.osc");
     const mime_b64_len = std.base64.standard.Encoder.calcSize(mime.len);
     const payload_b64_len = std.base64.standard.Encoder.calcSize(payload.len);
@@ -369,7 +377,7 @@ fn writeReadData(session: SessionFacade, pty: anytype, terminator: OscTerminator
         return;
     };
     appendOscTerminator(session.allocator, &seq, terminator);
-    writeSeq(pty, seq.items);
+    writeSeq(writer, seq.items);
 }
 
 fn appendOscTerminator(allocator: std.mem.Allocator, seq: *std.ArrayList(u8), terminator: OscTerminator) void {
@@ -378,10 +386,10 @@ fn appendOscTerminator(allocator: std.mem.Allocator, seq: *std.ArrayList(u8), te
     };
 }
 
-fn writeSeq(pty: anytype, seq: []const u8) void {
+fn writeSeq(writer: WriterFacade, seq: []const u8) void {
     const log = app_logger.logger("terminal.osc");
-            log.logf(.debug, "osc5522 reply=\"{s}\"", .{seq});
-    _ = pty.write(seq) catch |err| blk: {
+    log.logf(.debug, "osc5522 reply=\"{s}\"", .{seq});
+    _ = writer.write(seq) catch |err| blk: {
         log.logf(.warning, "osc5522 reply write failed len={d} err={s}", .{ seq.len, @errorName(err) });
         break :blk 0;
     };
