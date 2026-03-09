@@ -31,8 +31,9 @@ pub const Snapshot = struct {
 
 pub fn observe(state: anytype, now: f64) Snapshot {
     const pacing = &state.terminal_frame_pacing;
-    const current_generation = latestCurrentGeneration(state);
-    const published_generation = latestPublishedGeneration(state);
+    const frame_state = activeFrameState(state);
+    const current_generation = frame_state.current_generation;
+    const published_generation = frame_state.published_generation;
     if (current_generation != pacing.last_observed_current_generation) {
         pacing.last_observed_current_generation = current_generation;
         pacing.last_generation_change_time = now;
@@ -49,7 +50,7 @@ pub fn observe(state: anytype, now: f64) Snapshot {
         .published_generation = published_generation,
         .redraw_pending = redraw_pending,
         .parse_backlog = parse_backlog,
-        .output_pressure = hasOutputPressure(state) or parse_backlog,
+        .output_pressure = frame_state.has_data or parse_backlog,
     };
 }
 
@@ -189,32 +190,31 @@ pub fn logInputLatency(state: anytype, poll_ms: f64, build_ms: f64, update_ms: f
     );
 }
 
-fn hasOutputPressure(state: anytype) bool {
+fn activeFrameState(state: anytype) struct {
+    has_data: bool,
+    current_generation: u64,
+    published_generation: u64,
+} {
     const State = @TypeOf(state.*);
-    if (!@hasField(State, "terminal_workspace")) return false;
+    if (!@hasField(State, "terminal_workspace")) {
+        return .{
+            .has_data = false,
+            .current_generation = 0,
+            .published_generation = 0,
+        };
+    }
 
     if (state.terminal_workspace) |*workspace| {
-        return workspace.activeSessionHasData();
+        const frame_state = workspace.activeFrameState();
+        return .{
+            .has_data = frame_state.has_data,
+            .current_generation = frame_state.current_generation,
+            .published_generation = frame_state.published_generation,
+        };
     }
-    return false;
-}
-
-fn latestPublishedGeneration(state: anytype) u64 {
-    const State = @TypeOf(state.*);
-    if (!@hasField(State, "terminal_workspace")) return 0;
-
-    if (state.terminal_workspace) |*workspace| {
-        return workspace.activeSessionPublishedGeneration();
-    }
-    return 0;
-}
-
-fn latestCurrentGeneration(state: anytype) u64 {
-    const State = @TypeOf(state.*);
-    if (!@hasField(State, "terminal_workspace")) return 0;
-
-    if (state.terminal_workspace) |*workspace| {
-        return workspace.activeSessionCurrentGeneration();
-    }
-    return 0;
+    return .{
+        .has_data = false,
+        .current_generation = 0,
+        .published_generation = 0,
+    };
 }
