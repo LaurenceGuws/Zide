@@ -92,49 +92,6 @@ fn rowDiffSpan(new_row: []const Cell, old_row: []const Cell, cols: usize) ?struc
     return .{ .start = start, .end = end };
 }
 
-fn populateKittyOccupancy(cache: *RenderCache, start_line: usize) void {
-    const rows = cache.rows;
-    const cols = cache.cols;
-
-    if (cache.kitty_rows.items.len != rows or cache.kitty_cols_start.items.len != rows or cache.kitty_cols_end.items.len != rows) return;
-
-    for (cache.kitty_rows.items) |*row_has_kitty| {
-        row_has_kitty.* = false;
-    }
-    for (cache.kitty_cols_start.items, cache.kitty_cols_end.items) |*col_start, *col_end| {
-        col_start.* = if (cols > 0) @intCast(cols) else 0;
-        col_end.* = 0;
-    }
-
-    if (rows == 0 or cols == 0) return;
-
-    const viewport_row_end_global = start_line + rows - 1;
-    for (cache.kitty_placements.items) |placement| {
-        const placement_row_start_global = @as(usize, placement.row);
-        const placement_row_span = @as(usize, @max(@as(u16, 1), placement.rows));
-        const placement_row_end_global = placement_row_start_global + placement_row_span - 1;
-        if (placement_row_start_global > viewport_row_end_global or placement_row_end_global < start_line) continue;
-
-        const visible_row_start = placement_row_start_global -| start_line;
-        const visible_row_end = @min(rows - 1, placement_row_end_global - start_line);
-        const placement_col_start = @as(usize, placement.col);
-        if (placement_col_start >= cols) continue;
-        const placement_col_span = @as(usize, if (placement.cols > 0) placement.cols else @as(u16, @intCast(cols)));
-        const placement_col_end = @min(cols - 1, placement_col_start + placement_col_span - 1);
-
-        var row_idx = visible_row_start;
-        while (row_idx <= visible_row_end) : (row_idx += 1) {
-            cache.kitty_rows.items[row_idx] = true;
-            if (cache.kitty_cols_start.items[row_idx] > placement_col_start) {
-                cache.kitty_cols_start.items[row_idx] = @intCast(placement_col_start);
-            }
-            if (cache.kitty_cols_end.items[row_idx] < placement_col_end) {
-                cache.kitty_cols_end.items[row_idx] = @intCast(placement_col_end);
-            }
-        }
-    }
-}
-
 pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usize) void {
     const fullwidth_origin_log = app_logger.logger("terminal.ui.row_fullwidth_origin");
     const screen = self.activeScreenConst();
@@ -215,9 +172,6 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         cache.selection_rows.clearRetainingCapacity();
         cache.selection_cols_start.clearRetainingCapacity();
         cache.selection_cols_end.clearRetainingCapacity();
-        cache.kitty_rows.clearRetainingCapacity();
-        cache.kitty_cols_start.clearRetainingCapacity();
-        cache.kitty_cols_end.clearRetainingCapacity();
         cache.row_hashes.clearRetainingCapacity();
         cache.rows = 0;
         cache.cols = 0;
@@ -242,7 +196,6 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         cache.viewport_shift_rows = 0;
         cache.viewport_shift_exposed_only = false;
         updateKittyViewNoLock(self, cache);
-        populateKittyOccupancy(cache, 0);
         self.render_cache_index.store(target_index, .release);
         return;
     }
@@ -275,18 +228,6 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     };
     cache.selection_cols_end.resize(self.allocator, rows) catch |err| {
         log.logf(.warning, "view cache resize failed field=selection_cols_end rows={d} err={s}", .{ rows, @errorName(err) });
-        return;
-    };
-    cache.kitty_rows.resize(self.allocator, rows) catch |err| {
-        log.logf(.warning, "view cache resize failed field=kitty_rows rows={d} err={s}", .{ rows, @errorName(err) });
-        return;
-    };
-    cache.kitty_cols_start.resize(self.allocator, rows) catch |err| {
-        log.logf(.warning, "view cache resize failed field=kitty_cols_start rows={d} err={s}", .{ rows, @errorName(err) });
-        return;
-    };
-    cache.kitty_cols_end.resize(self.allocator, rows) catch |err| {
-        log.logf(.warning, "view cache resize failed field=kitty_cols_end rows={d} err={s}", .{ rows, @errorName(err) });
         return;
     };
     cache.row_hashes.resize(self.allocator, rows) catch |err| {
@@ -682,7 +623,6 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     cache.viewport_shift_rows = viewport_shift_rows;
     cache.viewport_shift_exposed_only = can_publish_scroll_shift;
     updateKittyViewNoLock(self, cache);
-    populateKittyOccupancy(cache, start_line);
     self.render_cache_index.store(target_index, .release);
 }
 

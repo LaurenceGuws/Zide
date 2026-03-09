@@ -50,7 +50,7 @@ fn fullDirtyReasonNote(reason: FullDirtyReason) []const u8 {
         .session_mark_dirty_api => "terminal session API requested full invalidate",
         .decstr_soft_reset => "DECSTR soft reset can rewrite broad terminal state",
         .resize_reflow => "resize reflow moved content and requires full repaint",
-        .kitty_graphics_changed => "kitty graphics mutation can affect arbitrary cells",
+        .kitty_graphics_changed => "kitty graphics mutation fell back to a conservative full redraw",
         .view_cache_geometry_change => "view cache geometry no longer matches terminal size",
         .view_cache_scroll_offset_change => "view cache scroll offset changed",
         .view_cache_history_generation_change => "visible scrollback history changed without a presented diff base",
