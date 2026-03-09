@@ -499,6 +499,7 @@ Statuses are strict:
   - 2026-03-09: sixth slice landed on feature-branch work: OSC 52 clipboard handling now runs through an explicit local facade (`osc_clipboard.zig:SessionFacade`) for clipboard-buffer mutation and reply writes, removing another raw `anytype` protocol-internal mutation path.
   - 2026-03-09: seventh slice landed on feature-branch work: OSC semantic prompt/user-var dispatch now also runs through an explicit local facade (`osc_semantic.zig:SessionFacade`) at the `osc.zig` boundary, reducing direct raw `anytype` calls across OSC submodules.
   - 2026-03-09: eighth slice landed on feature-branch work: OSC palette/dynamic-color handling now runs through an explicit local facade (`palette.zig:SessionFacade`) for palette state reads/writes and reply writes, removing another raw `anytype` OSC-internal mutation path.
+  - 2026-03-09: ninth slice landed on feature-branch work: OSC kitty clipboard (`5522`) dispatch now runs through an explicit local facade (`osc_kitty_clipboard.zig:SessionFacade`) at the `osc.zig` boundary, matching the typed dispatch shape used by other OSC submodules.
 
 10) Investigation/probe residue cleanup
 - status: `in_progress`

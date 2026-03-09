@@ -80,7 +80,7 @@ pub const SessionFacade = struct {
             .parse_kitty_clipboard_fn = struct {
                 fn call(ctx: *anyopaque, text: []const u8, terminator: OscTerminator) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    osc_kitty_clipboard.parseOsc5522(s, text, terminator);
+                    osc_kitty_clipboard.parseOsc5522(osc_kitty_clipboard.SessionFacade.from(s), text, terminator);
                 }
             }.call,
             .parse_semantic_prompt_fn = struct {

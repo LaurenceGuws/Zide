@@ -7,6 +7,28 @@ const OscTerminator = parser_mod.OscTerminator;
 const max_clipboard_bytes: usize = 1024 * 1024;
 const data_chunk_max: usize = 4096;
 
+pub const SessionFacade = struct {
+    ctx: *anyopaque,
+    parse_osc_5522_fn: *const fn (ctx: *anyopaque, text: []const u8, terminator: OscTerminator) void,
+
+    pub fn from(session: anytype) SessionFacade {
+        const SessionPtr = @TypeOf(session);
+        return .{
+            .ctx = @ptrCast(session),
+            .parse_osc_5522_fn = struct {
+                fn call(ctx: *anyopaque, text: []const u8, terminator: OscTerminator) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    parseOsc5522OnSession(s, text, terminator);
+                }
+            }.call,
+        };
+    }
+
+    pub fn parseOsc5522(self: *const SessionFacade, text: []const u8, terminator: OscTerminator) void {
+        self.parse_osc_5522_fn(self.ctx, text, terminator);
+    }
+};
+
 const ReadReq = struct {
     id: []const u8 = "",
     is_primary: bool = false,
@@ -17,7 +39,11 @@ const ReadReq = struct {
     wants_image_png: bool = false,
 };
 
-pub fn parseOsc5522(self: anytype, text: []const u8, terminator: OscTerminator) void {
+pub fn parseOsc5522(session: SessionFacade, text: []const u8, terminator: OscTerminator) void {
+    session.parseOsc5522(text, terminator);
+}
+
+fn parseOsc5522OnSession(self: anytype, text: []const u8, terminator: OscTerminator) void {
     const split = std.mem.indexOfScalar(u8, text, ';') orelse return;
     const metadata = text[0..split];
     const payload_b64 = text[split + 1 ..];
