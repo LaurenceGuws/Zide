@@ -529,6 +529,90 @@ const KittyTransport = struct {
     }
 };
 
+const KittyPlacementOps = struct {
+    pub fn dropForImage(self: anytype, image_id: u32, include_children: bool) void {
+        const kitty = kittyState(self);
+        markImageDirty(self, image_id, @src());
+        var idx: usize = 0;
+        while (idx < kitty.placements.items.len) {
+            const placement = kitty.placements.items[idx];
+            if (placement.image_id == image_id or (include_children and placement.parent_image_id == image_id)) {
+                _ = kitty.placements.swapRemove(idx);
+            } else {
+                idx += 1;
+            }
+        }
+    }
+
+    pub fn markPlacementDirty(self: anytype, placement: KittyPlacement, src: std.builtin.SourceLocation) void {
+        const screen = self.activeScreen();
+        const kitty = kittyStateConst(self);
+        const image = findKittyImageById(kitty.images.items, placement.image_id);
+        switch (kittyPlacementDirtyRegion(
+            image,
+            placement,
+            screen.grid.rows,
+            screen.grid.cols,
+            self.cell_width,
+            self.cell_height,
+        )) {
+            .none => {},
+            .partial => |region| screen.grid.markDirtyRange(region.start_row, region.end_row, region.start_col, region.end_col),
+            .full => screen.grid.markDirtyAllWithReason(.kitty_graphics_changed, src),
+        }
+    }
+
+    pub fn markImageDirty(self: anytype, image_id: u32, src: std.builtin.SourceLocation) void {
+        const kitty = kittyStateConst(self);
+        for (kitty.placements.items) |placement| {
+            if (placement.image_id == image_id or placement.parent_image_id == image_id) {
+                markPlacementDirty(self, placement, src);
+            }
+        }
+    }
+
+    pub fn find(self: anytype, image_id: u32, placement_id: u32) ?KittyPlacement {
+        const kitty = kittyStateConst(self);
+        for (kitty.placements.items) |placement| {
+            if (placement.image_id == image_id and placement.placement_id == placement_id) return placement;
+        }
+        return null;
+    }
+
+    pub fn findIndex(self: anytype, image_id: u32, placement_id: u32) ?usize {
+        const kitty = kittyStateConst(self);
+        for (kitty.placements.items, 0..) |placement, idx| {
+            if (placement.image_id == image_id and placement.placement_id == placement_id) return idx;
+        }
+        return null;
+    }
+
+    pub fn effectiveColumns(self: anytype, control: KittyControl, image_id: u32) u32 {
+        if (control.cols > 0) return control.cols;
+        const cell_w = @as(u32, self.cell_width);
+        const width_px = if (control.width > 0) control.width else blk: {
+            const kitty = kittyStateConst(self);
+            const image = findKittyImageById(kitty.images.items, image_id) orelse break :blk 0;
+            break :blk image.width;
+        };
+        if (cell_w == 0 or width_px == 0) return 0;
+        return std.math.divCeil(u32, width_px, cell_w) catch 0;
+    }
+
+    pub fn effectiveRows(self: anytype, control: KittyControl, image_id: u32) u32 {
+        if (control.rows > 0) return control.rows;
+        const cell_h = @as(u32, self.cell_height);
+        const height_px = if (control.height > 0) control.height else blk: {
+            const kitty = kittyStateConst(self);
+            const image = findKittyImageById(kitty.images.items, image_id) orelse break :blk 0;
+            break :blk image.height;
+        };
+        if (cell_h == 0 or height_px == 0) return 0;
+        if (height_px <= cell_h) return 0;
+        return std.math.divCeil(u32, height_px, cell_h) catch 0;
+    }
+};
+
 pub const KittyState = struct {
     images: std.ArrayList(KittyImage),
     placements: std.ArrayList(KittyPlacement),
@@ -1129,33 +1213,6 @@ fn kittyPlacementDirtyRegion(
     };
 }
 
-fn markKittyPlacementDirty(self: anytype, placement: KittyPlacement, src: std.builtin.SourceLocation) void {
-    const screen = self.activeScreen();
-    const kitty = kittyStateConst(self);
-    const image = findKittyImageById(kitty.images.items, placement.image_id);
-    switch (kittyPlacementDirtyRegion(
-        image,
-        placement,
-        screen.grid.rows,
-        screen.grid.cols,
-        self.cell_width,
-        self.cell_height,
-    )) {
-        .none => {},
-        .partial => |region| screen.grid.markDirtyRange(region.start_row, region.end_row, region.start_col, region.end_col),
-        .full => screen.grid.markDirtyAllWithReason(.kitty_graphics_changed, src),
-    }
-}
-
-fn markKittyImagePlacementsDirty(self: anytype, image_id: u32, src: std.builtin.SourceLocation) void {
-    const kitty = kittyStateConst(self);
-    for (kitty.placements.items) |placement| {
-        if (placement.image_id == image_id or placement.parent_image_id == image_id) {
-            markKittyPlacementDirty(self, placement, src);
-        }
-    }
-}
-
 pub fn updateKittyPlacementsForScroll(self: anytype) void {
     const kitty = kittyState(self);
     if (kitty.placements.items.len == 0) return;
@@ -1168,7 +1225,7 @@ pub fn updateKittyPlacementsForScroll(self: anytype) void {
     while (idx < kitty.placements.items.len) {
         const placement = &kitty.placements.items[idx];
         if (placement.anchor_row < top or placement.anchor_row >= max_row) {
-            markKittyPlacementDirty(self, placement.*, @src());
+            KittyPlacementOps.markPlacementDirty(self, placement.*, @src());
             _ = kitty.placements.swapRemove(idx);
             changed = true;
             continue;
@@ -1177,8 +1234,8 @@ pub fn updateKittyPlacementsForScroll(self: anytype) void {
         if (placement.row != @as(u16, @intCast(new_row))) {
             const old_placement = placement.*;
             placement.row = @as(u16, @intCast(new_row));
-            markKittyPlacementDirty(self, old_placement, @src());
-            markKittyPlacementDirty(self, placement.*, @src());
+            KittyPlacementOps.markPlacementDirty(self, old_placement, @src());
+            KittyPlacementOps.markPlacementDirty(self, placement.*, @src());
             changed = true;
         }
         idx += 1;
@@ -1200,7 +1257,7 @@ pub fn shiftKittyPlacementsUp(self: anytype, top: usize, bottom: usize, count: u
             continue;
         }
         if (placement.row < top + count) {
-            markKittyPlacementDirty(self, placement.*, @src());
+            KittyPlacementOps.markPlacementDirty(self, placement.*, @src());
             _ = kitty.placements.swapRemove(idx);
             changed = true;
             continue;
@@ -1210,8 +1267,8 @@ pub fn shiftKittyPlacementsUp(self: anytype, top: usize, bottom: usize, count: u
         if (placement.anchor_row >= count) {
             placement.anchor_row -= count;
         }
-        markKittyPlacementDirty(self, old_placement, @src());
-        markKittyPlacementDirty(self, placement.*, @src());
+        KittyPlacementOps.markPlacementDirty(self, old_placement, @src());
+        KittyPlacementOps.markPlacementDirty(self, placement.*, @src());
         changed = true;
         idx += 1;
     }
@@ -1232,7 +1289,7 @@ pub fn shiftKittyPlacementsDown(self: anytype, top: usize, bottom: usize, count:
             continue;
         }
         if (placement.row + count > bottom) {
-            markKittyPlacementDirty(self, placement.*, @src());
+            KittyPlacementOps.markPlacementDirty(self, placement.*, @src());
             _ = kitty.placements.swapRemove(idx);
             changed = true;
             continue;
@@ -1240,8 +1297,8 @@ pub fn shiftKittyPlacementsDown(self: anytype, top: usize, bottom: usize, count:
         const old_placement = placement.*;
         placement.row = @intCast(placement.row + count);
         placement.anchor_row += count;
-        markKittyPlacementDirty(self, old_placement, @src());
-        markKittyPlacementDirty(self, placement.*, @src());
+        KittyPlacementOps.markPlacementDirty(self, old_placement, @src());
+        KittyPlacementOps.markPlacementDirty(self, placement.*, @src());
         changed = true;
         idx += 1;
     }
@@ -1261,20 +1318,6 @@ fn ensureKittyCapacity(self: anytype, additional: usize) bool {
     return true;
 }
 
-fn dropKittyPlacementsForImage(self: anytype, image_id: u32, include_children: bool) void {
-    const kitty = kittyState(self);
-    markKittyImagePlacementsDirty(self, image_id, @src());
-    var idx: usize = 0;
-    while (idx < kitty.placements.items.len) {
-        const placement = kitty.placements.items[idx];
-        if (placement.image_id == image_id or (include_children and placement.parent_image_id == image_id)) {
-            _ = kitty.placements.swapRemove(idx);
-        } else {
-            idx += 1;
-        }
-    }
-}
-
 fn dropKittyPartial(self: anytype, image_id: u32) void {
     const kitty = kittyState(self);
     if (kitty.partials.getEntry(image_id)) |entry| {
@@ -1286,7 +1329,7 @@ fn dropKittyPartial(self: anytype, image_id: u32) void {
 fn removeStoredKittyImageAt(self: anytype, idx: usize, include_children: bool) void {
     const kitty = kittyState(self);
     const image = kitty.images.items[idx];
-    dropKittyPlacementsForImage(self, image.id, include_children);
+    KittyPlacementOps.dropForImage(self, image.id, include_children);
     self.allocator.free(image.data);
     kitty.total_bytes -= image.data.len;
     _ = kitty.images.swapRemove(idx);
@@ -1320,7 +1363,7 @@ fn storeKittyImage(self: anytype, image: KittyImage) void {
     while (idx < kitty.images.items.len) : (idx += 1) {
         if (kitty.images.items[idx].id == image.id) {
             const old_len = kitty.images.items[idx].data.len;
-            dropKittyPlacementsForImage(self, image.id, false);
+            KittyPlacementOps.dropForImage(self, image.id, false);
             if (image.data.len > kitty_max_bytes) {
                 self.allocator.free(image.data);
                 return;
@@ -1377,7 +1420,7 @@ fn placeKittyImage(self: anytype, image_id: u32, control: KittyControl) ?[]const
         if (placement_id != 0 and parent_id == image_id and parent_pid == placement_id) return "EINVAL";
         parent_image_id = parent_id;
         parent_placement_id = parent_pid;
-        const parent = findKittyPlacement(self, parent_id, parent_pid) orelse return "ENOPARENT";
+        const parent = KittyPlacementOps.find(self, parent_id, parent_pid) orelse return "ENOPARENT";
         if (placement_id != 0) {
             const chain_check = kittyValidateParentChain(self, parent, image_id, placement_id);
             if (chain_check) |err_msg| return err_msg;
@@ -1413,8 +1456,8 @@ fn placeKittyImage(self: anytype, image_id: u32, control: KittyControl) ?[]const
         .offset_y = control.parent_y,
     };
     if (placement_id != 0) {
-        if (findKittyPlacementIndex(self, image_id, placement_id)) |idx| {
-            markKittyPlacementDirty(self, kitty.placements.items[idx], @src());
+        if (KittyPlacementOps.findIndex(self, image_id, placement_id)) |idx| {
+            KittyPlacementOps.markPlacementDirty(self, kitty.placements.items[idx], @src());
             kitty.placements.items[idx] = placement;
         } else {
             kitty.placements.append(self.allocator, placement) catch |err| {
@@ -1428,12 +1471,12 @@ fn placeKittyImage(self: anytype, image_id: u32, control: KittyControl) ?[]const
             return "ENOMEM";
         };
     }
-    markKittyPlacementDirty(self, placement, @src());
+    KittyPlacementOps.markPlacementDirty(self, placement, @src());
     log.logf(.info, "kitty placed id={d} row={d} col={d} cols={d} rows={d}", .{ image_id, row, col, placement.cols, placement.rows });
 
     if (control.cursor_movement != 1) {
-        const cols = effectiveKittyColumns(self, control, image_id);
-        const rows = effectiveKittyRows(self, control, image_id);
+        const cols = KittyPlacementOps.effectiveColumns(self, control, image_id);
+        const rows = KittyPlacementOps.effectiveRows(self, control, image_id);
         if (rows > 0) {
             var moved: u32 = 0;
             while (moved < rows) : (moved += 1) {
@@ -1455,7 +1498,7 @@ fn kittyValidateParentChain(self: anytype, parent: KittyPlacement, image_id: u32
         if (depth > kitty_parent_max_depth) return "ETOODEEP";
         if (current.parent_image_id == 0 or current.parent_placement_id == 0) break;
         if (current.parent_image_id == image_id and current.parent_placement_id == placement_id) return "ECYCLE";
-        const next = findKittyPlacement(self, current.parent_image_id, current.parent_placement_id) orelse break;
+        const next = KittyPlacementOps.find(self, current.parent_image_id, current.parent_placement_id) orelse break;
         current = next;
         depth += 1;
     }
@@ -1468,52 +1511,11 @@ fn kittyParentChainTooDeep(self: anytype, parent: KittyPlacement) bool {
     while (true) {
         if (depth > kitty_parent_max_depth) return true;
         if (current.parent_image_id == 0 or current.parent_placement_id == 0) break;
-        const next = findKittyPlacement(self, current.parent_image_id, current.parent_placement_id) orelse break;
+        const next = KittyPlacementOps.find(self, current.parent_image_id, current.parent_placement_id) orelse break;
         current = next;
         depth += 1;
     }
     return false;
-}
-
-fn findKittyPlacement(self: anytype, image_id: u32, placement_id: u32) ?KittyPlacement {
-    const kitty = kittyStateConst(self);
-    for (kitty.placements.items) |placement| {
-        if (placement.image_id == image_id and placement.placement_id == placement_id) return placement;
-    }
-    return null;
-}
-
-fn findKittyPlacementIndex(self: anytype, image_id: u32, placement_id: u32) ?usize {
-    const kitty = kittyStateConst(self);
-    for (kitty.placements.items, 0..) |placement, idx| {
-        if (placement.image_id == image_id and placement.placement_id == placement_id) return idx;
-    }
-    return null;
-}
-
-fn effectiveKittyColumns(self: anytype, control: KittyControl, image_id: u32) u32 {
-    if (control.cols > 0) return control.cols;
-    const cell_w = @as(u32, self.cell_width);
-    const width_px = if (control.width > 0) control.width else blk: {
-        const kitty = kittyStateConst(self);
-        const image = findKittyImageById(kitty.images.items, image_id) orelse break :blk 0;
-        break :blk image.width;
-    };
-    if (cell_w == 0 or width_px == 0) return 0;
-    return std.math.divCeil(u32, width_px, cell_w) catch 0;
-}
-
-fn effectiveKittyRows(self: anytype, control: KittyControl, image_id: u32) u32 {
-    if (control.rows > 0) return control.rows;
-    const cell_h = @as(u32, self.cell_height);
-    const height_px = if (control.height > 0) control.height else blk: {
-        const kitty = kittyStateConst(self);
-        const image = findKittyImageById(kitty.images.items, image_id) orelse break :blk 0;
-        break :blk image.height;
-    };
-    if (cell_h == 0 or height_px == 0) return 0;
-    if (height_px <= cell_h) return 0;
-    return std.math.divCeil(u32, height_px, cell_h) catch 0;
 }
 
 fn deleteKittyImages(self: anytype, image_id: ?u32) void {
@@ -1529,7 +1531,7 @@ fn deleteKittyImages(self: anytype, image_id: ?u32) void {
         }
     } else {
         for (kitty.placements.items) |placement| {
-            markKittyPlacementDirty(self, placement, @src());
+            KittyPlacementOps.markPlacementDirty(self, placement, @src());
         }
         clearKittyImages(self);
     }
@@ -1545,7 +1547,7 @@ fn deleteKittyPlacements(
     var changed = false;
     while (idx < kitty.placements.items.len) {
         if (predicate(ctx, self, kitty.placements.items[idx])) {
-            markKittyPlacementDirty(self, kitty.placements.items[idx], @src());
+            KittyPlacementOps.markPlacementDirty(self, kitty.placements.items[idx], @src());
             _ = kitty.placements.swapRemove(idx);
             changed = true;
             continue;
