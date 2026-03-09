@@ -250,7 +250,6 @@ pub const TerminalSession = struct {
         const history = try history_mod.TerminalHistory.init(allocator, scrollback_rows, cols);
         const log = app_logger.logger("terminal.core");
         log.logf(.info, "terminal init rows={d} cols={d} scrollback_max={d}", .{ rows, cols, scrollback_rows });
-        log.logStdout(.info, "terminal init rows={d} cols={d}", .{ rows, cols });
         const palette_default = palette_mod.buildDefaultPalette();
         session.* = .{
             .allocator = allocator,

@@ -17,7 +17,6 @@ pub fn resize(self: anytype, rows: u16, cols: u16) !void {
     try resizeLocked(self, rows, cols);
     const log = app_logger.logger("terminal.core");
     log.logf(.info, "terminal resize rows={d} cols={d} scrollback_cols={d}", .{ rows, cols, self.primary.grid.cols });
-    log.logStdout(.info, "terminal resize rows={d} cols={d}", .{ rows, cols });
     var pty = self.pty;
     const cell_width = self.cell_width;
     const cell_height = self.cell_height;
