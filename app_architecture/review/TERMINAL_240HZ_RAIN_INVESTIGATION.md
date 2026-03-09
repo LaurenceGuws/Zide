@@ -650,3 +650,15 @@ Reason:
   - kept `pollBudgeted()` as the single workspace polling entrypoint exposed by the current app/runtime design
 - Intent:
   - keep workspace API aligned with the bounded polling architecture that the app actually uses
+
+## Workspace Polling Extraction (2026-03-09)
+
+- Files:
+  - `src/terminal/core/workspace.zig`
+  - `src/terminal/core/workspace_polling.zig`
+- Change:
+  - extracted the budgeted workspace polling/fairness implementation into a dedicated helper module
+  - left `TerminalWorkspace` public behavior unchanged while reducing how much scheduling policy lives inline in `workspace.zig`
+- Intent:
+  - make the runtime lane incremental instead of a single large workspace rewrite
+  - prepare a cleaner split between tab ownership and scheduler policy
