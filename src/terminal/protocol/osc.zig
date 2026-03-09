@@ -74,7 +74,7 @@ pub const SessionFacade = struct {
             .parse_clipboard_fn = struct {
                 fn call(ctx: *anyopaque, text: []const u8, terminator: OscTerminator) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    osc_clipboard.parseClipboard(s, text, terminator);
+                    osc_clipboard.parseClipboard(osc_clipboard.SessionFacade.from(s), text, terminator);
                 }
             }.call,
             .parse_kitty_clipboard_fn = struct {
