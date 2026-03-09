@@ -1017,22 +1017,22 @@ pub const TerminalSession = struct {
     }
 
     pub fn parseDcs(self: *TerminalSession, payload: []const u8) void {
-        parser_hooks.parseDcs(self, payload);
+        parser_hooks.parseDcs(parser_hooks.SessionFacade.from(self), payload);
     }
 
     pub fn parseApc(self: *TerminalSession, payload: []const u8) void {
-        parser_hooks.parseApc(self, payload);
+        parser_hooks.parseApc(parser_hooks.SessionFacade.from(self), payload);
     }
 
     pub fn parseOsc(self: *TerminalSession, payload: []const u8, terminator: OscTerminator) void {
-        parser_hooks.parseOsc(self, payload, terminator);
+        parser_hooks.parseOsc(parser_hooks.SessionFacade.from(self), payload, terminator);
     }
     pub fn appendHyperlink(self: *TerminalSession, uri: []const u8) ?u32 {
         return hyperlink_table.appendHyperlink(self, uri, max_hyperlinks);
     }
 
     pub fn parseKittyGraphics(self: *TerminalSession, payload: []const u8) void {
-        parser_hooks.parseKittyGraphics(self, payload);
+        parser_hooks.parseKittyGraphics(parser_hooks.SessionFacade.from(self), payload);
     }
 
     pub fn clearAllKittyImages(self: *TerminalSession) void {
@@ -1040,7 +1040,7 @@ pub const TerminalSession = struct {
     }
 
     pub fn handleCsi(self: *TerminalSession, action: csi_mod.CsiAction) void {
-        parser_hooks.handleCsi(self, action);
+        parser_hooks.handleCsi(parser_hooks.SessionFacade.from(self), action);
     }
 
     pub fn feedOutputBytes(self: *TerminalSession, bytes: []const u8) void {
@@ -1129,11 +1129,11 @@ pub const TerminalSession = struct {
     }
 
     pub fn handleCodepoint(self: *TerminalSession, codepoint: u32) void {
-        parser_hooks.handleCodepoint(self, codepoint);
+        parser_hooks.handleCodepoint(parser_hooks.SessionFacade.from(self), codepoint);
     }
 
     pub fn handleAsciiSlice(self: *TerminalSession, bytes: []const u8) void {
-        parser_hooks.handleAsciiSlice(self, bytes);
+        parser_hooks.handleAsciiSlice(parser_hooks.SessionFacade.from(self), bytes);
     }
 
     pub fn newline(self: *TerminalSession) void {
