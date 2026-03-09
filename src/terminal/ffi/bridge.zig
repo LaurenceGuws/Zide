@@ -175,6 +175,7 @@ const Handle = struct {
     scratch_title: std.ArrayList(u8),
     scratch_cwd: std.ArrayList(u8),
     scratch_clipboard: std.ArrayList(u8),
+    scratch_scrollback_row: std.ArrayList(types.Cell),
     exit_delivered: bool,
 };
 
@@ -237,6 +238,7 @@ pub fn create(config: ?*const CreateConfig, out_handle: *?*ZideTerminalHandle) S
         .scratch_title = .empty,
         .scratch_cwd = .empty,
         .scratch_clipboard = .empty,
+        .scratch_scrollback_row = .empty,
         .exit_delivered = false,
     };
     session.copyCurrentTitle(allocator, &handle.last_title) catch |err| {
@@ -264,6 +266,7 @@ pub fn destroy(handle: ?*ZideTerminalHandle) void {
     h.scratch_title.deinit(h.allocator);
     h.scratch_cwd.deinit(h.allocator);
     h.scratch_clipboard.deinit(h.allocator);
+    h.scratch_scrollback_row.deinit(h.allocator);
     h.session.deinit();
     h.allocator.destroy(h);
 }
@@ -476,7 +479,10 @@ pub fn scrollbackAcquire(handle: ?*ZideTerminalHandle, start_row: u32, max_rows:
 
     var row_index: usize = 0;
     while (row_index < requested) : (row_index += 1) {
-        const source_row = h.session.scrollbackRow(start_index + row_index) orelse return .backend_error;
+        const source_row = (h.session.copyScrollbackRow(allocator, start_index + row_index, &h.scratch_scrollback_row) catch |err| {
+            log.logf(.warning, "scrollback row copy failed row={d} err={s}", .{ start_index + row_index, @errorName(err) });
+            return mapError(err);
+        }) orelse return .backend_error;
         if (source_row.len != cols) return .backend_error;
         const dst_start = row_index * cols;
         for (source_row, 0..) |cell, col| {
