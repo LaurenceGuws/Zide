@@ -59,6 +59,8 @@ pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
 pub const DebugSnapshot = snapshot_mod.DebugSnapshot;
 pub const ScrollbackInfo = scrollback_view.ScrollbackInfo;
 pub const ScrollbackRange = scrollback_view.ScrollbackRange;
+pub const SelectionGesture = selection_mod.SelectionGesture;
+pub const ClickSelectionResult = selection_mod.ClickSelectionResult;
 pub const SessionMetadata = struct {
     title: []const u8,
     cwd: []const u8,
@@ -345,7 +347,7 @@ pub const TerminalSession = struct {
             .child_exited = std.atomic.Value(bool).init(false),
             .child_exit_code = std.atomic.Value(i32).init(-1),
         };
-        session.updateInputSnapshot();
+        input_modes.publishSnapshot(&session);
         return session;
     }
 
@@ -361,27 +363,9 @@ pub const TerminalSession = struct {
         self.input_pressure.store(value, .release);
     }
 
-    pub fn updateInputSnapshot(self: *TerminalSession) void {
-        const screen = self.activeScreenConst();
-        self.input_snapshot.app_cursor_keys.store(self.app_cursor_keys, .release);
-        self.input_snapshot.app_keypad.store(self.app_keypad, .release);
-        self.input_snapshot.key_mode_flags.store(self.keyModeFlags(), .release);
-        self.input_snapshot.mouse_mode_x10.store(self.input.mouse_mode_x10, .release);
-        self.input_snapshot.mouse_mode_button.store(self.input.mouse_mode_button, .release);
-        self.input_snapshot.mouse_mode_any.store(self.input.mouse_mode_any, .release);
-        self.input_snapshot.mouse_mode_sgr.store(self.input.mouse_mode_sgr, .release);
-        self.input_snapshot.focus_reporting.store(self.focus_reporting, .release);
-        self.input_snapshot.bracketed_paste.store(self.bracketed_paste, .release);
-        self.input_snapshot.auto_repeat.store(self.auto_repeat, .release);
-        self.input_snapshot.mouse_alternate_scroll.store(self.mouse_alternate_scroll, .release);
-        self.input_snapshot.alt_active.store(self.active == .alt, .release);
-        self.input_snapshot.screen_rows.store(screen.grid.rows, .release);
-        self.input_snapshot.screen_cols.store(screen.grid.cols, .release);
-    }
-
     fn setActiveScreenMode(self: *TerminalSession, active: ActiveScreen) void {
         self.active = active;
-        self.updateInputSnapshot();
+        input_modes.publishSnapshot(self);
     }
 
     fn hashRow(cells: []const Cell) u64 {
@@ -832,6 +816,10 @@ pub const TerminalSession = struct {
         return input_modes.appKeypadEnabled(self);
     }
 
+    pub fn appCursorKeysEnabled(self: *const TerminalSession) bool {
+        return self.input_snapshot.app_cursor_keys.load(.acquire);
+    }
+
     pub fn sendChar(self: *TerminalSession, char: u32, mod: Modifier) !void {
         try self.sendCharAction(char, mod, input_mod.KeyAction.press);
     }
@@ -1058,13 +1046,21 @@ pub const TerminalSession = struct {
 
     pub fn feedOutputBytes(self: *TerminalSession, bytes: []const u8) void {
         if (bytes.len == 0) return;
+        self.state_mutex.lock();
+        defer self.state_mutex.unlock();
         self.parser.handleSlice(self, bytes);
         _ = self.output_generation.fetchAdd(1, .acq_rel);
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
     pub fn resetState(self: *TerminalSession) void {
-        state_reset.resetState(self);
+        self.state_mutex.lock();
+        defer self.state_mutex.unlock();
+        state_reset.resetStateLocked(self);
+    }
+
+    pub fn resetStateLocked(self: *TerminalSession) void {
+        state_reset.resetStateLocked(self);
     }
 
     pub fn reverseIndex(self: *TerminalSession) void {
@@ -1196,12 +1192,28 @@ pub const TerminalSession = struct {
         scrollback_view.setScrollOffsetLocked(self, offset);
     }
 
+    pub fn resetToLiveBottomLocked(self: *TerminalSession) bool {
+        return scrollback_view.resetToLiveBottomLocked(self);
+    }
+
+    pub fn setScrollOffsetFromNormalizedTrackLocked(self: *TerminalSession, track_ratio: f32) ?usize {
+        return scrollback_view.setScrollOffsetFromNormalizedTrackLocked(self, track_ratio);
+    }
+
+    pub fn scrollSelectionDragLocked(self: *TerminalSession, toward_top: bool) bool {
+        return scrollback_view.scrollSelectionDragLocked(self, toward_top);
+    }
+
     pub fn scrollBy(self: *TerminalSession, delta: isize) void {
         scrollback_view.scrollBy(self, delta);
     }
 
     pub fn scrollByLocked(self: *TerminalSession, delta: isize) void {
         scrollback_view.scrollByLocked(self, delta);
+    }
+
+    pub fn scrollWheelLocked(self: *TerminalSession, wheel_steps: i32) bool {
+        return scrollback_view.scrollWheelLocked(self, wheel_steps);
     }
 
     pub fn updateViewCacheForScroll(self: *TerminalSession) void {
@@ -1224,60 +1236,120 @@ pub const TerminalSession = struct {
         input_modes.keyModePush(self, flags);
     }
 
+    pub fn keyModePushLocked(self: *TerminalSession, flags: u32) void {
+        input_modes.keyModePushLocked(self, flags);
+    }
+
     pub fn keyModePop(self: *TerminalSession, count: usize) void {
         input_modes.keyModePop(self, count);
+    }
+
+    pub fn keyModePopLocked(self: *TerminalSession, count: usize) void {
+        input_modes.keyModePopLocked(self, count);
     }
 
     pub fn keyModeModify(self: *TerminalSession, flags: u32, mode: u32) void {
         input_modes.keyModeModify(self, flags, mode);
     }
 
+    pub fn keyModeModifyLocked(self: *TerminalSession, flags: u32, mode: u32) void {
+        input_modes.keyModeModifyLocked(self, flags, mode);
+    }
+
     pub fn keyModeQuery(self: *TerminalSession) void {
         input_modes.keyModeQuery(self);
+    }
+
+    pub fn keyModeQueryLocked(self: *TerminalSession) void {
+        input_modes.keyModeQueryLocked(self);
     }
 
     pub fn setAppCursorKeys(self: *TerminalSession, enabled: bool) void {
         input_modes.setAppCursorKeys(self, enabled);
     }
 
+    pub fn setAppCursorKeysLocked(self: *TerminalSession, enabled: bool) void {
+        input_modes.setAppCursorKeysLocked(self, enabled);
+    }
+
     pub fn setAutoRepeat(self: *TerminalSession, enabled: bool) void {
         input_modes.setAutoRepeat(self, enabled);
+    }
+
+    pub fn setAutoRepeatLocked(self: *TerminalSession, enabled: bool) void {
+        input_modes.setAutoRepeatLocked(self, enabled);
     }
 
     pub fn setBracketedPaste(self: *TerminalSession, enabled: bool) void {
         input_modes.setBracketedPaste(self, enabled);
     }
 
+    pub fn setBracketedPasteLocked(self: *TerminalSession, enabled: bool) void {
+        input_modes.setBracketedPasteLocked(self, enabled);
+    }
+
     pub fn setFocusReporting(self: *TerminalSession, enabled: bool) void {
         input_modes.setFocusReporting(self, enabled);
+    }
+
+    pub fn setFocusReportingLocked(self: *TerminalSession, enabled: bool) void {
+        input_modes.setFocusReportingLocked(self, enabled);
     }
 
     pub fn setMouseAlternateScroll(self: *TerminalSession, enabled: bool) void {
         input_modes.setMouseAlternateScroll(self, enabled);
     }
 
+    pub fn setMouseAlternateScrollLocked(self: *TerminalSession, enabled: bool) void {
+        input_modes.setMouseAlternateScrollLocked(self, enabled);
+    }
+
     pub fn setMouseModeX10(self: *TerminalSession, enabled: bool) void {
         input_modes.setMouseModeX10(self, enabled);
+    }
+
+    pub fn setMouseModeX10Locked(self: *TerminalSession, enabled: bool) void {
+        input_modes.setMouseModeX10Locked(self, enabled);
     }
 
     pub fn setMouseModeButton(self: *TerminalSession, enabled: bool) void {
         input_modes.setMouseModeButton(self, enabled);
     }
 
+    pub fn setMouseModeButtonLocked(self: *TerminalSession, enabled: bool) void {
+        input_modes.setMouseModeButtonLocked(self, enabled);
+    }
+
     pub fn setMouseModeAny(self: *TerminalSession, enabled: bool) void {
         input_modes.setMouseModeAny(self, enabled);
+    }
+
+    pub fn setMouseModeAnyLocked(self: *TerminalSession, enabled: bool) void {
+        input_modes.setMouseModeAnyLocked(self, enabled);
     }
 
     pub fn setMouseModeSgr(self: *TerminalSession, enabled: bool) void {
         input_modes.setMouseModeSgr(self, enabled);
     }
 
+    pub fn setMouseModeSgrLocked(self: *TerminalSession, enabled: bool) void {
+        input_modes.setMouseModeSgrLocked(self, enabled);
+    }
+
     pub fn setMouseModeSgrPixels(self: *TerminalSession, enabled: bool) void {
         input_modes.setMouseModeSgrPixels(self, enabled);
     }
 
+    pub fn setMouseModeSgrPixelsLocked(self: *TerminalSession, enabled: bool) void {
+        input_modes.setMouseModeSgrPixelsLocked(self, enabled);
+    }
+
     pub fn resetInputModes(self: *TerminalSession) void {
         input_modes.resetInputModes(self);
+    }
+
+    pub fn resetInputModesLocked(self: *TerminalSession) void {
+        input_modes.resetInputModesLocked(self);
     }
 
     pub fn setCursorStyle(self: *TerminalSession, mode: i32) void {
@@ -1399,6 +1471,10 @@ pub const TerminalSession = struct {
 
     pub fn setKeypadMode(self: *TerminalSession, enabled: bool) void {
         input_modes.setKeypadMode(self, enabled);
+    }
+
+    pub fn setKeypadModeLocked(self: *TerminalSession, enabled: bool) void {
+        input_modes.setKeypadModeLocked(self, enabled);
     }
 
     pub fn restoreCursor(self: *TerminalSession) void {
@@ -1618,6 +1694,10 @@ pub const TerminalSession = struct {
         selection_mod.clearSelectionLocked(self);
     }
 
+    pub fn clearSelectionIfActiveLocked(self: *TerminalSession) bool {
+        return selection_mod.clearSelectionIfActiveLocked(self);
+    }
+
     pub fn startSelection(self: *TerminalSession, row: usize, col: usize) void {
         selection_mod.startSelection(self, row, col);
     }
@@ -1642,6 +1722,66 @@ pub const TerminalSession = struct {
         selection_mod.finishSelectionLocked(self);
     }
 
+    pub fn finishSelectionIfActiveLocked(self: *TerminalSession) bool {
+        return selection_mod.finishSelectionIfActiveLocked(self);
+    }
+
+    pub fn selectRange(self: *TerminalSession, start_pos: SelectionPos, end_pos: SelectionPos, finished: bool) void {
+        selection_mod.selectRange(self, start_pos, end_pos, finished);
+    }
+
+    pub fn selectRangeLocked(self: *TerminalSession, start_pos: SelectionPos, end_pos: SelectionPos, finished: bool) void {
+        selection_mod.selectRangeLocked(self, start_pos, end_pos, finished);
+    }
+
+    pub fn selectCellLocked(self: *TerminalSession, pos: SelectionPos, finished: bool) void {
+        selection_mod.selectCellLocked(self, pos, finished);
+    }
+
+    pub fn selectOrUpdateCellLocked(self: *TerminalSession, pos: SelectionPos) bool {
+        return selection_mod.selectOrUpdateCellLocked(self, pos);
+    }
+
+    pub fn selectOrderedRangeLocked(
+        self: *TerminalSession,
+        anchor_start: SelectionPos,
+        anchor_end: SelectionPos,
+        target_start: SelectionPos,
+        target_end: SelectionPos,
+        finished: bool,
+    ) bool {
+        return selection_mod.selectOrderedRangeLocked(self, anchor_start, anchor_end, target_start, target_end, finished);
+    }
+
+    pub fn beginClickSelectionLocked(
+        self: *TerminalSession,
+        row_cells: []const Cell,
+        global_row: usize,
+        col: usize,
+        click_count: u8,
+    ) ClickSelectionResult {
+        return selection_mod.beginClickSelectionLocked(self, row_cells, global_row, col, click_count);
+    }
+
+    pub fn extendGestureSelectionLocked(
+        self: *TerminalSession,
+        gesture: SelectionGesture,
+        row_cells: []const Cell,
+        global_row: usize,
+        col: usize,
+    ) bool {
+        return selection_mod.extendGestureSelectionLocked(self, gesture, row_cells, global_row, col);
+    }
+
+    pub fn selectOrUpdateCellInRowLocked(
+        self: *TerminalSession,
+        row_cells: []const Cell,
+        global_row: usize,
+        col: usize,
+    ) bool {
+        return selection_mod.selectOrUpdateCellInRowLocked(self, row_cells, global_row, col);
+    }
+
     pub fn bracketedPasteEnabled(self: *TerminalSession) bool {
         return self.input_snapshot.bracketed_paste.load(.acquire);
     }
@@ -1656,6 +1796,26 @@ pub const TerminalSession = struct {
 
     pub fn mouseAlternateScrollEnabled(self: *TerminalSession) bool {
         return self.input_snapshot.mouse_alternate_scroll.load(.acquire);
+    }
+
+    pub fn mouseModeX10Enabled(self: *const TerminalSession) bool {
+        return self.input_snapshot.mouse_mode_x10.load(.acquire);
+    }
+
+    pub fn mouseModeButtonEnabled(self: *const TerminalSession) bool {
+        return self.input_snapshot.mouse_mode_button.load(.acquire);
+    }
+
+    pub fn mouseModeAnyEnabled(self: *const TerminalSession) bool {
+        return self.input_snapshot.mouse_mode_any.load(.acquire);
+    }
+
+    pub fn mouseModeSgrEnabled(self: *const TerminalSession) bool {
+        return self.input_snapshot.mouse_mode_sgr.load(.acquire);
+    }
+
+    pub fn mouseModeSgrPixelsEnabled(self: *const TerminalSession) bool {
+        return self.input_snapshot.mouse_mode_sgr_pixels_1016.load(.acquire);
     }
 
     pub fn kittyPasteEvents5522Enabled(self: *TerminalSession) bool {
@@ -1713,7 +1873,7 @@ pub const TerminalSession = struct {
         if (self.lockPtyWriter()) |writer_guard| {
             var writer = writer_guard;
             defer writer.unlock();
-            osc_kitty_clipboard.sendPasteEventMimes(self, &writer, .st);
+            osc_kitty_clipboard.sendPasteEventMimes(osc_kitty_clipboard.SessionFacade.from(self), &writer, .st);
             return true;
         }
         log.logf(.warning, "osc5522 paste dropped after buffer prep reason=missing-pty", .{});
@@ -1778,6 +1938,7 @@ pub const InputSnapshot = struct {
     mouse_mode_button: std.atomic.Value(bool),
     mouse_mode_any: std.atomic.Value(bool),
     mouse_mode_sgr: std.atomic.Value(bool),
+    mouse_mode_sgr_pixels_1016: std.atomic.Value(bool),
     focus_reporting: std.atomic.Value(bool),
     bracketed_paste: std.atomic.Value(bool),
     auto_repeat: std.atomic.Value(bool),
@@ -1795,6 +1956,7 @@ pub const InputSnapshot = struct {
             .mouse_mode_button = std.atomic.Value(bool).init(false),
             .mouse_mode_any = std.atomic.Value(bool).init(false),
             .mouse_mode_sgr = std.atomic.Value(bool).init(false),
+            .mouse_mode_sgr_pixels_1016 = std.atomic.Value(bool).init(false),
             .focus_reporting = std.atomic.Value(bool).init(false),
             .bracketed_paste = std.atomic.Value(bool).init(false),
             .auto_repeat = std.atomic.Value(bool).init(true),
@@ -2510,6 +2672,214 @@ test "selection plain text export is terminal-owned across history and grid" {
     try std.testing.expectEqualStrings("B\nCD", text);
 }
 
+test "selectRangeLocked applies and finishes selection in one backend step" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    session.lock();
+    session.selectRangeLocked(.{ .row = 0, .col = 1 }, .{ .row = 1, .col = 2 }, true);
+    session.unlock();
+
+    const selection = session.selectionState().?;
+    try std.testing.expect(selection.active);
+    try std.testing.expect(!selection.selecting);
+    try std.testing.expectEqual(@as(usize, 0), selection.start.row);
+    try std.testing.expectEqual(@as(usize, 1), selection.start.col);
+    try std.testing.expectEqual(@as(usize, 1), selection.end.row);
+    try std.testing.expectEqual(@as(usize, 2), selection.end.col);
+}
+
+test "selection helper clears and finishes only when active" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 2);
+    defer session.deinit();
+
+    session.lock();
+    try std.testing.expect(!session.clearSelectionIfActiveLocked());
+    try std.testing.expect(!session.finishSelectionIfActiveLocked());
+
+    session.selectCellLocked(.{ .row = 0, .col = 1 }, false);
+    try std.testing.expect(session.clearSelectionIfActiveLocked());
+    try std.testing.expect(session.selectionState() == null);
+
+    session.selectCellLocked(.{ .row = 1, .col = 0 }, false);
+    try std.testing.expect(session.finishSelectionIfActiveLocked());
+    session.unlock();
+
+    const selection = session.selectionState().?;
+    try std.testing.expect(selection.active);
+    try std.testing.expect(!selection.selecting);
+}
+
+test "selection drag helpers update ordered ranges and late-start cells" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 2);
+    defer session.deinit();
+
+    session.lock();
+    const base = session.primary.defaultCell();
+    var row = [_]Cell{ base, base };
+    row[1].codepoint = 'X';
+
+    try std.testing.expect(!session.selectOrUpdateCellInRowLocked(&[_]Cell{ base, base }, 0, 0));
+    try std.testing.expect(session.selectOrUpdateCellInRowLocked(&row, 1, 1));
+    var selection = session.selectionState().?;
+    try std.testing.expectEqual(@as(usize, 1), selection.start.row);
+    try std.testing.expectEqual(@as(usize, 1), selection.start.col);
+    try std.testing.expectEqual(@as(usize, 1), selection.end.row);
+    try std.testing.expectEqual(@as(usize, 1), selection.end.col);
+
+    try std.testing.expect(session.selectOrderedRangeLocked(
+        .{ .row = 1, .col = 0 },
+        .{ .row = 1, .col = 1 },
+        .{ .row = 0, .col = 0 },
+        .{ .row = 0, .col = 1 },
+        false,
+    ));
+    session.unlock();
+
+    selection = session.selectionState().?;
+    try std.testing.expectEqual(@as(usize, 0), selection.start.row);
+    try std.testing.expectEqual(@as(usize, 0), selection.start.col);
+    try std.testing.expectEqual(@as(usize, 1), selection.end.row);
+    try std.testing.expectEqual(@as(usize, 1), selection.end.col);
+}
+
+test "click selection helpers own word and line gesture policy" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row = [_]Cell{ base, base, base, base };
+    row[0].codepoint = 'f';
+    row[1].codepoint = 'o';
+    row[2].codepoint = 'o';
+    row[3].codepoint = '!';
+
+    session.lock();
+    const word_click = session.beginClickSelectionLocked(&row, 3, 1, 2);
+    try std.testing.expect(word_click.started);
+    try std.testing.expectEqual(.word, word_click.gesture.mode);
+    try std.testing.expectEqual(@as(usize, 3), word_click.gesture.row);
+    try std.testing.expectEqual(@as(usize, 0), word_click.gesture.col_start);
+    try std.testing.expectEqual(@as(usize, 2), word_click.gesture.col_end);
+
+    try std.testing.expect(session.extendGestureSelectionLocked(word_click.gesture, &row, 4, 3));
+    var selection = session.selectionState().?;
+    try std.testing.expectEqual(@as(usize, 3), selection.start.row);
+    try std.testing.expectEqual(@as(usize, 0), selection.start.col);
+    try std.testing.expectEqual(@as(usize, 4), selection.end.row);
+    try std.testing.expectEqual(@as(usize, 3), selection.end.col);
+
+    session.clearSelectionLocked();
+    const line_click = session.beginClickSelectionLocked(&row, 5, 2, 3);
+    try std.testing.expect(line_click.started);
+    try std.testing.expectEqual(.line, line_click.gesture.mode);
+    try std.testing.expectEqual(@as(usize, 5), line_click.gesture.row);
+    try std.testing.expectEqual(@as(usize, 3), line_click.gesture.col_end);
+    session.unlock();
+
+    selection = session.selectionState().?;
+    try std.testing.expectEqual(@as(usize, 5), selection.start.row);
+    try std.testing.expectEqual(@as(usize, 0), selection.start.col);
+    try std.testing.expectEqual(@as(usize, 5), selection.end.row);
+    try std.testing.expectEqual(@as(usize, 3), selection.end.col);
+}
+
+test "resetToLiveBottomLocked resets scrollback offset only when needed" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 2);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row = [_]Cell{ base, base };
+    row[0].codepoint = 'A';
+    session.history.pushRow(&row, false, base);
+    session.history.pushRow(&row, false, base);
+    session.history.ensureViewCache(session.primary.grid.cols, session.primary.defaultCell());
+    session.history.setScrollOffset(session.primary.grid.rows, 1);
+
+    session.lock();
+    try std.testing.expect(session.resetToLiveBottomLocked());
+    try std.testing.expectEqual(@as(usize, 0), session.history.scrollOffset());
+    try std.testing.expect(!session.resetToLiveBottomLocked());
+    session.unlock();
+}
+
+test "scrollSelectionDragLocked scrolls history view in drag direction" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 2);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row = [_]Cell{ base, base };
+    row[0].codepoint = 'A';
+    session.history.pushRow(&row, false, base);
+    session.history.pushRow(&row, false, base);
+    session.history.ensureViewCache(session.primary.grid.cols, session.primary.defaultCell());
+    session.history.setScrollOffset(session.primary.grid.rows, 1);
+
+    session.lock();
+    try std.testing.expect(session.scrollSelectionDragLocked(false));
+    try std.testing.expectEqual(@as(usize, 0), session.history.scrollOffset());
+    try std.testing.expect(session.scrollSelectionDragLocked(true));
+    try std.testing.expectEqual(@as(usize, 1), session.history.scrollOffset());
+    session.unlock();
+}
+
+test "setScrollOffsetFromNormalizedTrackLocked maps scrollbar track ratio to history offset" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 2);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row = [_]Cell{ base, base };
+    row[0].codepoint = 'A';
+    session.history.pushRow(&row, false, base);
+    session.history.pushRow(&row, false, base);
+    session.history.pushRow(&row, false, base);
+    session.history.ensureViewCache(session.primary.grid.cols, session.primary.defaultCell());
+
+    session.lock();
+    try std.testing.expectEqual(@as(?usize, 3), session.setScrollOffsetFromNormalizedTrackLocked(0.0));
+    try std.testing.expectEqual(@as(usize, 3), session.history.scrollOffset());
+    try std.testing.expectEqual(@as(?usize, 0), session.setScrollOffsetFromNormalizedTrackLocked(1.0));
+    try std.testing.expectEqual(@as(usize, 0), session.history.scrollOffset());
+    session.unlock();
+}
+
+test "scrollWheelLocked applies backend wheel policy" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 2);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row = [_]Cell{ base, base };
+    row[0].codepoint = 'A';
+    session.history.pushRow(&row, false, base);
+    session.history.pushRow(&row, false, base);
+    session.history.pushRow(&row, false, base);
+    session.history.ensureViewCache(session.primary.grid.cols, session.primary.defaultCell());
+
+    session.lock();
+    try std.testing.expect(session.scrollWheelLocked(1));
+    try std.testing.expectEqual(@as(usize, 3), session.history.scrollOffset());
+    try std.testing.expect(session.scrollWheelLocked(-1));
+    try std.testing.expectEqual(@as(usize, 0), session.history.scrollOffset());
+    try std.testing.expect(!session.scrollWheelLocked(0));
+    session.unlock();
+}
+
 test "scrollback plain text export is terminal-owned" {
     const allocator = std.testing.allocator;
 
@@ -2602,4 +2972,85 @@ test "scrollback range export is terminal-owned" {
     try std.testing.expectEqual(@as(u32, 'B'), cells.items[1].codepoint);
     try std.testing.expectEqual(@as(u32, 'C'), cells.items[3].codepoint);
     try std.testing.expectEqual(@as(u32, 'D'), cells.items[4].codepoint);
+}
+
+test "terminal reset republishes input snapshot state" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 2);
+    defer session.deinit();
+
+    session.setKeypadMode(true);
+    session.setAppCursorKeys(true);
+    try std.testing.expect(session.appKeypadEnabled());
+    try std.testing.expect(session.input_snapshot.app_cursor_keys.load(.acquire));
+
+    session.resetState();
+
+    try std.testing.expect(!session.appKeypadEnabled());
+    try std.testing.expect(!session.input_snapshot.app_cursor_keys.load(.acquire));
+}
+
+test "feedOutputBytes publishes keypad mode through locked parser path" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 2);
+    defer session.deinit();
+
+    session.feedOutputBytes("\x1b=");
+    try std.testing.expect(session.appKeypadEnabled());
+
+    session.feedOutputBytes("\x1b>");
+    try std.testing.expect(!session.appKeypadEnabled());
+}
+
+test "feedOutputBytes publishes kitty key mode flags through locked parser path" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 2);
+    defer session.deinit();
+
+    session.feedOutputBytes("\x1b[>13u");
+    try std.testing.expectEqual(@as(u32, 13), session.keyModeFlagsValue());
+
+    session.feedOutputBytes("\x1b[<1u");
+    try std.testing.expectEqual(@as(u32, 0), session.keyModeFlagsValue());
+}
+
+test "feedOutputBytes RIS resets input modes and clears screen" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 2);
+    defer session.deinit();
+
+    session.feedOutputBytes(
+        "\x1b[?1004h" ++
+            "\x1b[?2004h" ++
+            "\x1b[?1002h" ++
+            "\x1b[?1006h" ++
+            "\x1b[?1016h" ++
+            "\x1b[?1h" ++
+            "\x1b=" ++
+            "AB",
+    );
+
+    try std.testing.expect(session.focusReportingEnabled());
+    try std.testing.expect(session.bracketedPasteEnabled());
+    try std.testing.expect(session.mouseReportingEnabled());
+    try std.testing.expect(session.mouseModeSgrPixelsEnabled());
+    try std.testing.expect(session.appCursorKeysEnabled());
+    try std.testing.expect(session.appKeypadEnabled());
+    try std.testing.expectEqual(@as(u32, 'A'), session.getCell(0, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), session.getCell(0, 1).codepoint);
+
+    session.feedOutputBytes("\x1bc");
+
+    try std.testing.expect(!session.focusReportingEnabled());
+    try std.testing.expect(!session.bracketedPasteEnabled());
+    try std.testing.expect(!session.mouseReportingEnabled());
+    try std.testing.expect(!session.mouseModeSgrPixelsEnabled());
+    try std.testing.expect(!session.appCursorKeysEnabled());
+    try std.testing.expect(!session.appKeypadEnabled());
+    try std.testing.expectEqual(@as(u32, 0), session.getCell(0, 0).codepoint);
+    try std.testing.expectEqual(@as(u32, 0), session.getCell(0, 1).codepoint);
 }
