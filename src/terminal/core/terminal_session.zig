@@ -1411,10 +1411,6 @@ pub const TerminalSession = struct {
     pub fn setSyncUpdates(self: *TerminalSession, enabled: bool) void {
         if (self.sync_updates_active == enabled) return;
         self.sync_updates_active = enabled;
-        if (!enabled) {
-            self.notePatternEvent(.full_dirty_sync_updates_disabled);
-            self.activeScreen().markDirtyAllWithReason(.sync_updates_disabled, @src());
-        }
         const offset: usize = self.history.scrollOffset();
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), offset);
     }
@@ -1878,7 +1874,7 @@ test "setSyncUpdates enable does not force redraw when screen is otherwise clean
     try std.testing.expectEqual(@as(u64, 0), cache.full_dirty_seq);
 }
 
-test "setSyncUpdates disable publishes full dirty from screen model" {
+test "setSyncUpdates disable stays clean when no buffered changes exist" {
     const allocator = std.testing.allocator;
 
     var session = try TerminalSession.init(allocator, 2, 4);
@@ -1895,8 +1891,39 @@ test "setSyncUpdates disable publishes full dirty from screen model" {
 
     const cache = session.renderCache();
     try std.testing.expect(!session.syncUpdatesActive());
-    try std.testing.expectEqual(Dirty.full, cache.dirty);
-    try std.testing.expectEqual(screen_mod.FullDirtyReason.sync_updates_disabled, cache.full_dirty_reason);
+    try std.testing.expectEqual(Dirty.none, cache.dirty);
+}
+
+test "setSyncUpdates disable preserves buffered partial damage" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+
+    session.setSyncUpdates(true);
+
+    var cell = session.primary.defaultCell();
+    cell.codepoint = 'Z';
+    session.primary.grid.cells.items[0] = cell;
+    session.primary.grid.markDirtyRange(0, 0, 0, 0);
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    session.setSyncUpdates(false);
+
+    const cache = session.renderCache();
+    try std.testing.expect(!session.syncUpdatesActive());
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_row);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_col);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.end_col);
 }
 
 test "visible history changes publish partial cache damage without force-full" {
