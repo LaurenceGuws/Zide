@@ -332,6 +332,22 @@ fn markPartialPlanRows(
     }
 }
 
+fn markAllRowsFullWidthPartialPlan(
+    partial_rows: []bool,
+    partial_cols_start: []u16,
+    partial_cols_end: []u16,
+    rows: usize,
+    cols: usize,
+) void {
+    if (rows == 0 or cols == 0) return;
+    var row: usize = 0;
+    while (row < rows) : (row += 1) {
+        partial_rows[row] = true;
+        partial_cols_start[row] = 0;
+        partial_cols_end[row] = @intCast(cols - 1);
+    }
+}
+
 fn addBlinkRowsToPartialPlan(
     cache: *const RenderCache,
     partial_rows: []bool,
@@ -1145,9 +1161,10 @@ pub fn draw(
             blink_requires_partial,
             self.terminal_texture_ready,
         );
-        var needs_full = update_plan.needs_full;
+        const needs_full = update_plan.needs_full;
         var needs_partial = update_plan.needs_partial;
         var shifted_rows: usize = 0;
+        var shift_requires_fullwidth_partial = false;
         switch (planViewportTextureShift(
             r.terminalTextureShiftEnabled(),
             gen_changed,
@@ -1166,15 +1183,15 @@ pub fn draw(
                 } else {
                     shifted_rows = 0;
                     if (cache.viewport_shift_exposed_only) {
-                        needs_full = true;
-                        needs_partial = false;
+                        needs_partial = true;
+                        shift_requires_fullwidth_partial = true;
                     }
                 }
             },
             .none => {
                 if (cache.viewport_shift_exposed_only) {
-                    needs_full = true;
-                    needs_partial = false;
+                    needs_partial = true;
+                    shift_requires_fullwidth_partial = true;
                 }
             },
         }
@@ -1248,26 +1265,36 @@ pub fn draw(
                 }
 
                 var row: usize = 0;
-                const shift_up = viewport_shift_rows > 0;
-                while (row < rows) : (row += 1) {
-                    const is_shift_row = shifted_rows > 0 and (if (shift_up) row >= rows - shifted_rows else row < shifted_rows);
-                    if (!((row < view_dirty_rows.len and view_dirty_rows[row]) or is_shift_row)) continue;
-
-                    var col_start: usize = 0;
-                    var col_end: usize = cols - 1;
-                    if (!is_shift_row and row < cache.dirty_cols_start.items.len and row < cache.dirty_cols_end.items.len) {
-                        col_start = @min(@as(usize, cache.dirty_cols_start.items[row]), cols - 1);
-                        col_end = @min(@as(usize, cache.dirty_cols_end.items[row]), cols - 1);
-                    }
-                    markPartialPlanRows(
+                if (shift_requires_fullwidth_partial) {
+                    markAllRowsFullWidthPartialPlan(
                         self.partial_draw_rows.items,
                         self.partial_draw_cols_start.items,
                         self.partial_draw_cols_end.items,
                         rows,
-                        row,
-                        col_start,
-                        col_end,
+                        cols,
                     );
+                } else {
+                    const shift_up = viewport_shift_rows > 0;
+                    while (row < rows) : (row += 1) {
+                        const is_shift_row = shifted_rows > 0 and (if (shift_up) row >= rows - shifted_rows else row < shifted_rows);
+                        if (!((row < view_dirty_rows.len and view_dirty_rows[row]) or is_shift_row)) continue;
+
+                        var col_start: usize = 0;
+                        var col_end: usize = cols - 1;
+                        if (!is_shift_row and row < cache.dirty_cols_start.items.len and row < cache.dirty_cols_end.items.len) {
+                            col_start = @min(@as(usize, cache.dirty_cols_start.items[row]), cols - 1);
+                            col_end = @min(@as(usize, cache.dirty_cols_end.items[row]), cols - 1);
+                        }
+                        markPartialPlanRows(
+                            self.partial_draw_rows.items,
+                            self.partial_draw_cols_start.items,
+                            self.partial_draw_cols_end.items,
+                            rows,
+                            row,
+                            col_start,
+                            col_end,
+                        );
+                    }
                 }
                 if (blink_requires_partial) {
                     addBlinkRowsToPartialPlan(
@@ -2049,4 +2076,22 @@ test "texture update plan uses partial redraw for blink-only changes" {
     );
     try std.testing.expect(!plan.needs_full);
     try std.testing.expect(plan.needs_partial);
+}
+
+test "full-width partial plan marks every row" {
+    var rows = [_]bool{ false, false, false };
+    var cols_start = [_]u16{ 9, 9, 9 };
+    var cols_end = [_]u16{ 0, 0, 0 };
+
+    markAllRowsFullWidthPartialPlan(&rows, &cols_start, &cols_end, 3, 5);
+
+    for (rows) |row_marked| {
+        try std.testing.expect(row_marked);
+    }
+    for (cols_start) |start| {
+        try std.testing.expectEqual(@as(u16, 0), start);
+    }
+    for (cols_end) |end| {
+        try std.testing.expectEqual(@as(u16, 4), end);
+    }
 }
