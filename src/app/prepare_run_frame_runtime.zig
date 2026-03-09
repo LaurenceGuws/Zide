@@ -82,24 +82,15 @@ fn handlePendingTerminalWindowClose(state: anytype, app_mode: app_bootstrap.AppM
     }
 
     const active_idx = workspace.activeIndex();
-    var next_confirm_idx: ?usize = null;
-    var i: usize = 0;
-    while (i < workspace.tabCount()) : (i += 1) {
-        if (!workspace.shouldConfirmCloseAt(i)) continue;
-        next_confirm_idx = i;
-        break;
-    }
-
-    if (next_confirm_idx == null) {
+    const next_confirm = workspace.firstConfirmCloseTab() orelse {
         state.terminal_window_close_pending = false;
         return true;
-    }
+    };
 
-    const idx = next_confirm_idx.?;
-    if (idx != active_idx) {
-        _ = app_terminal_tab_navigation_runtime.focusByIndex(state, idx);
+    if (next_confirm.index != active_idx) {
+        _ = app_terminal_tab_navigation_runtime.focusByIndex(state, next_confirm.index);
     }
-    state.terminal_close_confirm_tab = workspace.activeTabId();
+    state.terminal_close_confirm_tab = next_confirm.id;
     state.needs_redraw = true;
     return false;
 }
