@@ -1984,6 +1984,59 @@ test "clear generation delta without visible damage stays clean" {
     try std.testing.expectEqual(Dirty.none, cache.dirty);
 }
 
+test "default color remap stays on partial path" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+
+    const old_attrs = session.primary.default_attrs;
+    const new_fg = Color{ .r = 0xaa, .g = 0xbb, .b = 0xcc, .a = 0xff };
+    session.setDefaultColors(new_fg, old_attrs.bg);
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
+    try std.testing.expectEqual(@as(u16, 0), cache.dirty_cols_start.items[0]);
+    try std.testing.expectEqual(@as(u16, 3), cache.dirty_cols_end.items[0]);
+    try std.testing.expectEqual(new_fg, cache.cells.items[0].attrs.fg);
+}
+
+test "screen reverse toggle stays on partial path" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+
+    session.activeScreen().setScreenReverse(true);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expectEqual(@as(usize, 1), cache.damage.end_row);
+    try std.testing.expect(cache.screen_reverse);
+    try std.testing.expectEqual(@as(u16, 0), cache.dirty_cols_start.items[0]);
+    try std.testing.expectEqual(@as(u16, 3), cache.dirty_cols_end.items[0]);
+}
+
 test "eraseDisplay cursor-to-end keeps partial damage" {
     const allocator = std.testing.allocator;
 

@@ -13,11 +13,8 @@ pub const FullDirtyReason = enum {
     init,
     resize,
     screen_mark_dirty_api,
-    screen_reverse_mode_toggle,
     screen_clear,
     erase_display_full,
-    palette_default_changed,
-    palette_ansi_changed,
     alt_enter,
     alt_exit,
     session_mark_dirty_api,
@@ -27,7 +24,6 @@ pub const FullDirtyReason = enum {
     view_cache_geometry_change,
     view_cache_scroll_offset_change,
     view_cache_alt_state_change,
-    view_cache_screen_reverse_change,
     view_cache_view_dirty_full,
 };
 
@@ -37,11 +33,8 @@ fn fullDirtyReasonNote(reason: FullDirtyReason) []const u8 {
         .init => "grid initialized with full damage",
         .resize => "grid resized and needs full repaint",
         .screen_mark_dirty_api => "screen API requested full invalidate",
-        .screen_reverse_mode_toggle => "reverse-video mode changed all visible colors",
         .screen_clear => "screen clear rewrites every cell in the viewport",
         .erase_display_full => "ED full clear variant affects the entire visible grid",
-        .palette_default_changed => "default colors changed and can affect many existing cells",
-        .palette_ansi_changed => "ANSI palette remap can recolor previously drawn cells",
         .alt_enter => "switched to alt screen backing store",
         .alt_exit => "returned from alt screen to primary backing store",
         .session_mark_dirty_api => "terminal session API requested full invalidate",
@@ -51,7 +44,6 @@ fn fullDirtyReasonNote(reason: FullDirtyReason) []const u8 {
         .view_cache_geometry_change => "view cache geometry no longer matches terminal size",
         .view_cache_scroll_offset_change => "view cache scroll offset changed",
         .view_cache_alt_state_change => "alt-screen active state changed in view cache",
-        .view_cache_screen_reverse_change => "screen reverse mode changed in view cache",
         .view_cache_view_dirty_full => "view snapshot itself reported full dirty state",
     };
 }
