@@ -251,7 +251,6 @@ fn initWithMode(
         .config_reload_notice_until = 0,
         .config_reload_notice_success = true,
         .needs_redraw = true,
-        .idle_frames = 0,
         .terminal_frame_pacing = .{},
         .last_mouse_pos = .{ .x = -1, .y = -1 },
         .last_cursor_blink_on = true,

@@ -89,6 +89,14 @@ pub fn consumePollMetrics(state: anytype) ?PollMetrics {
     return null;
 }
 
+pub fn noteDraw(state: anytype) void {
+    state.terminal_frame_pacing.idle_frames = 0;
+}
+
+pub fn noteIdle(state: anytype) void {
+    state.terminal_frame_pacing.idle_frames +|= 1;
+}
+
 pub fn sleepDuration(state: anytype, now: f64, snapshot: Snapshot) f64 {
     const pacing = &state.terminal_frame_pacing;
     const generation_recently_advanced = pacing.last_generation_change_time > 0 and
@@ -97,9 +105,9 @@ pub fn sleepDuration(state: anytype, now: f64, snapshot: Snapshot) f64 {
         0.001
     else if (now < 3.0)
         0.016
-    else if (state.idle_frames < 10)
+    else if (pacing.idle_frames < 10)
         0.016
-    else if (state.idle_frames < 60)
+    else if (pacing.idle_frames < 60)
         0.033
     else
         0.100;
