@@ -350,7 +350,6 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         requires_full_damage_for_clear_generation or
         (self.active == .alt) != active_cache.alt_active or
         screen_reverse != active_cache.screen_reverse or
-        kitty_generation != active_cache.kitty_generation or
         view.dirty == .full;
     if (needs_full_damage) {
         row = 0;

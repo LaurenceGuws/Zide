@@ -417,7 +417,7 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - partial texture updates now repaint kitty layers on both below-text and above-text passes, so kitty generation changes no longer require renderer-side full redraw escalation
   - removed the dead `view_cache_kitty_generation_change` forced-full fallback because kitty visibility changes are now published at the mutation source
   - removed the temporary kitty occupancy side-channel from the render cache because backend dirty publication now carries the authoritative redraw contract
-  - added unit coverage for implicit kitty dirty-region derivation and the conservative full fallback when image geometry cannot be projected into cells
+  - added unit coverage for implicit kitty dirty-region derivation, the conservative full fallback when image geometry cannot be projected into cells, and the remaining no-visible-damage kitty-generation case staying clean
 - Intent:
   - move kitty redraw authority out of renderer heuristics and into backend-published damage
   - keep kitty correctness while making the normal path incremental instead of blanket-full
