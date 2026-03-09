@@ -29,6 +29,7 @@ const Rgba = terminal_font_mod.Rgba;
 const Renderer = renderer_mod.Renderer;
 const TerminalDisableLigaturesStrategy = renderer_mod.TerminalDisableLigaturesStrategy;
 const RenderCache = render_cache_mod.RenderCache;
+const PresentedRenderCache = terminal_mod.PresentedRenderCache;
 const kitty_unicode_placeholder: u32 = 0x10EEEE;
 
 var jitter_debug_enabled_cache: ?bool = null;
@@ -47,8 +48,8 @@ pub const FrameLatencyMetrics = struct {
 };
 
 pub const DrawOutcome = struct {
-    generation: u64 = 0,
-    should_acknowledge_presentation: bool = false,
+    presented: ?PresentedRenderCache = null,
+    texture_updated: bool = false,
 };
 
 const ViewportTextureShiftPlan = union(enum) {
@@ -377,11 +378,12 @@ pub fn draw(
     var alt_exit = false;
     var alt_state_changed = false;
     const lock_phase_start = app_shell.getTime();
-    self.session.copyPublishedRenderCache(cache) catch |err| {
+    const presented = self.session.copyPublishedRenderCache(cache) catch |err| {
         const log = app_logger.logger("terminal.ui.redraw");
         log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
         return outcome;
     };
+    outcome.presented = presented;
     alt_state_changed = self.last_alt_active != cache.alt_active;
     alt_exit = self.last_alt_active and !cache.alt_active;
     self.last_alt_active = cache.alt_active;
@@ -1621,10 +1623,7 @@ pub fn draw(
     }
 
     if (updated or cache.dirty == .none) {
-        outcome = .{
-            .generation = cache.generation,
-            .should_acknowledge_presentation = true,
-        };
+        outcome.texture_updated = updated;
     }
     overlay_ms = time_utils.secondsToMs(app_shell.getTime() - overlay_phase_start);
 
@@ -1679,7 +1678,7 @@ pub fn draw(
                 @intFromBool(texture_partial_update),
                 @intFromBool(updated),
                 @intFromBool(sync_updates),
-                @intFromBool(outcome.should_acknowledge_presentation),
+                @intFromBool(outcome.presented != null and (outcome.texture_updated or cache.dirty == .none)),
                 @tagName(cache.dirty),
                 dirty_rows_count,
                 damage_row_span,

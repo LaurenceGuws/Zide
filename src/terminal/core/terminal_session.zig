@@ -56,6 +56,10 @@ const RenderCache = render_cache_mod.RenderCache;
 
 pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
 pub const DebugSnapshot = snapshot_mod.DebugSnapshot;
+pub const PresentedRenderCache = struct {
+    generation: u64,
+    dirty: Dirty,
+};
 
 pub fn debugSnapshot(self: *TerminalSession) DebugSnapshot {
     if (!debugAccessAllowed()) @panic("debugSnapshot is test-only");
@@ -1322,13 +1326,23 @@ pub const TerminalSession = struct {
         return &self.render_caches[idx];
     }
 
-    pub fn copyPublishedRenderCache(self: *TerminalSession, dst: *RenderCache) !void {
+    pub fn copyPublishedRenderCache(self: *TerminalSession, dst: *RenderCache) !PresentedRenderCache {
         self.lock();
         defer self.unlock();
         if (self.view_cache_pending.load(.acquire)) {
             self.updateViewCacheForScrollLocked();
         }
-        try render_cache_mod.copySnapshot(dst, self.allocator, self.renderCache());
+        const cache = self.renderCache();
+        try render_cache_mod.copySnapshot(dst, self.allocator, cache);
+        return .{
+            .generation = cache.generation,
+            .dirty = cache.dirty,
+        };
+    }
+
+    pub fn retirePresentedRenderCache(self: *TerminalSession, presented: PresentedRenderCache, texture_updated: bool) bool {
+        if (!texture_updated and presented.dirty != .none) return false;
+        return self.acknowledgePresentedGeneration(presented.generation);
     }
 
     pub fn syncUpdatesActive(self: *const TerminalSession) bool {
