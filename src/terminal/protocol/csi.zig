@@ -862,6 +862,98 @@ const SimpleCsiContext = struct {
     }
 };
 
+const SpecialCsiContext = struct {
+    ctx: *anyopaque,
+    active_screen_fn: *const fn (ctx: *anyopaque) *screen_mod.Screen,
+    save_cursor_fn: *const fn (ctx: *anyopaque) void,
+    restore_cursor_fn: *const fn (ctx: *anyopaque) void,
+    set_cursor_style_fn: *const fn (ctx: *anyopaque, mode: i32) void,
+    key_mode_push_locked_fn: *const fn (ctx: *anyopaque, flags: u32) void,
+    key_mode_pop_locked_fn: *const fn (ctx: *anyopaque, count: usize) void,
+    key_mode_modify_locked_fn: *const fn (ctx: *anyopaque, flags: u32, mode: u32) void,
+    key_mode_query_locked_fn: *const fn (ctx: *anyopaque) void,
+
+    pub fn from(session: anytype) SpecialCsiContext {
+        const SessionPtr = @TypeOf(session);
+        return .{
+            .ctx = @ptrCast(session),
+            .active_screen_fn = struct {
+                fn call(ctx: *anyopaque) *screen_mod.Screen {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return s.activeScreen();
+                }
+            }.call,
+            .save_cursor_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.saveCursor();
+                }
+            }.call,
+            .restore_cursor_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.restoreCursor();
+                }
+            }.call,
+            .set_cursor_style_fn = struct {
+                fn call(ctx: *anyopaque, mode: i32) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.setCursorStyle(mode);
+                }
+            }.call,
+            .key_mode_push_locked_fn = struct {
+                fn call(ctx: *anyopaque, flags: u32) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.keyModePushLocked(flags);
+                }
+            }.call,
+            .key_mode_pop_locked_fn = struct {
+                fn call(ctx: *anyopaque, count: usize) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.keyModePopLocked(count);
+                }
+            }.call,
+            .key_mode_modify_locked_fn = struct {
+                fn call(ctx: *anyopaque, flags: u32, mode: u32) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.keyModeModifyLocked(flags, mode);
+                }
+            }.call,
+            .key_mode_query_locked_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.keyModeQueryLocked();
+                }
+            }.call,
+        };
+    }
+
+    pub fn activeScreen(self: *const SpecialCsiContext) *screen_mod.Screen {
+        return self.active_screen_fn(self.ctx);
+    }
+    pub fn saveCursor(self: *const SpecialCsiContext) void {
+        self.save_cursor_fn(self.ctx);
+    }
+    pub fn restoreCursor(self: *const SpecialCsiContext) void {
+        self.restore_cursor_fn(self.ctx);
+    }
+    pub fn setCursorStyle(self: *const SpecialCsiContext, mode: i32) void {
+        self.set_cursor_style_fn(self.ctx, mode);
+    }
+    pub fn keyModePushLocked(self: *const SpecialCsiContext, flags: u32) void {
+        self.key_mode_push_locked_fn(self.ctx, flags);
+    }
+    pub fn keyModePopLocked(self: *const SpecialCsiContext, count: usize) void {
+        self.key_mode_pop_locked_fn(self.ctx, count);
+    }
+    pub fn keyModeModifyLocked(self: *const SpecialCsiContext, flags: u32, mode: u32) void {
+        self.key_mode_modify_locked_fn(self.ctx, flags, mode);
+    }
+    pub fn keyModeQueryLocked(self: *const SpecialCsiContext) void {
+        self.key_mode_query_locked_fn(self.ctx);
+    }
+};
+
 fn csiIntermediatesEq(action: parser_csi.CsiAction, bytes: []const u8) bool {
     if (action.intermediates_len != bytes.len) return false;
     return std.mem.eql(u8, action.intermediates[0..action.intermediates_len], bytes);
@@ -1008,59 +1100,26 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
     const mode_context = ModeMutationContext.from(self);
     const mode_query = ModeQueryContext.from(self);
     const simple = SimpleCsiContext.from(self);
+    const special = SpecialCsiContext.from(self);
 
     switch (action.final) {
         'A', 'B', 'C', 'D', 'E', 'F', 'G', 'I', 'H', 'f', 'd', 'J', 'K', '@', 'P', 'X', 'L', 'M', 'S', 'T', 'Z', 'r' => {
             handleSimpleCsi(simple, action, param_len, p);
         },
         's' => { // SCP / DECSLRM (when ?69 enabled)
-            if (!action.private) {
-                if (screen.left_right_margin_mode_69) {
-                    const cols = @as(usize, screen.grid.cols);
-                    if (cols == 0) return;
-                    const left_1 = if (param_len > 0 and p[0] > 0) p[0] else 1;
-                    const right_1 = if (param_len > 1 and p[1] > 0) p[1] else @as(i32, @intCast(cols));
-                    const left = @min(cols - 1, @as(usize, @intCast(@max(1, left_1) - 1)));
-                    const right = @min(cols - 1, @as(usize, @intCast(@max(1, right_1) - 1)));
-                    if (left < right) {
-                        screen.setLeftRightMargins(left, right);
-                    }
-                    return;
-                }
-                simple.saveCursor();
-            }
+            handleSpecialCsi(special, action, param_len, p);
         },
         'u' => { // RCP
-            if (action.leader == 0 and !action.private) {
-                simple.restoreCursor();
-                return;
-            }
-            const flags: u32 = if (param_len > 0) @intCast(@max(0, p[0])) else 0;
-            const mode: u32 = if (param_len > 1) @intCast(@max(0, p[1])) else 1;
-            switch (action.leader) {
-                '>' => self.keyModePushLocked(flags),
-                '<' => self.keyModePopLocked(if (param_len > 0) @intCast(@max(1, p[0])) else 1),
-                '=' => self.keyModeModifyLocked(flags, mode),
-                '?' => self.keyModeQueryLocked(),
-                else => {},
-            }
+            handleSpecialCsi(special, action, param_len, p);
         },
         'm' => { // SGR
             applySgr(SgrContext.from(self), action);
         },
         'q' => { // DECSCUSR
-            if (action.leader == 0 and !action.private) {
-                const mode = if (param_len > 0) p[0] else 0;
-                simple.setCursorStyle(mode);
-            }
+            handleSpecialCsi(special, action, param_len, p);
         },
         'g' => { // TBC
-            const mode = if (param_len > 0) p[0] else 0;
-            switch (mode) {
-                0 => screen.clearTabAtCursor(),
-                3 => screen.clearAllTabs(),
-                else => {},
-            }
+            handleSpecialCsi(special, action, param_len, p);
         },
         'n' => { // DSR
             if (self.lockPtyWriter()) |writer_guard| {
@@ -1180,6 +1239,62 @@ fn handleSimpleCsi(
             const bot = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(@max(1, bot_1) - 1)));
             if (top < bot) {
                 screen.setScrollRegion(top, bot);
+            }
+        },
+        else => {},
+    }
+}
+
+fn handleSpecialCsi(
+    context: SpecialCsiContext,
+    action: parser_csi.CsiAction,
+    param_len: usize,
+    params: [parser_csi.max_params]i32,
+) void {
+    const screen = context.activeScreen();
+    switch (action.final) {
+        's' => {
+            if (!action.private) {
+                if (screen.left_right_margin_mode_69) {
+                    const cols = @as(usize, screen.grid.cols);
+                    if (cols == 0) return;
+                    const left_1 = if (param_len > 0 and params[0] > 0) params[0] else 1;
+                    const right_1 = if (param_len > 1 and params[1] > 0) params[1] else @as(i32, @intCast(cols));
+                    const left = @min(cols - 1, @as(usize, @intCast(@max(1, left_1) - 1)));
+                    const right = @min(cols - 1, @as(usize, @intCast(@max(1, right_1) - 1)));
+                    if (left < right) {
+                        screen.setLeftRightMargins(left, right);
+                    }
+                    return;
+                }
+                context.saveCursor();
+            }
+        },
+        'u' => {
+            if (action.leader == 0 and !action.private) {
+                context.restoreCursor();
+                return;
+            }
+            const flags: u32 = if (param_len > 0) @intCast(@max(0, params[0])) else 0;
+            const mode: u32 = if (param_len > 1) @intCast(@max(0, params[1])) else 1;
+            switch (action.leader) {
+                '>' => context.keyModePushLocked(flags),
+                '<' => context.keyModePopLocked(if (param_len > 0) @intCast(@max(1, params[0])) else 1),
+                '=' => context.keyModeModifyLocked(flags, mode),
+                '?' => context.keyModeQueryLocked(),
+                else => {},
+            }
+        },
+        'q' => {
+            if (action.leader == 0 and !action.private) {
+                context.setCursorStyle(if (param_len > 0) params[0] else 0);
+            }
+        },
+        'g' => {
+            switch (if (param_len > 0) params[0] else 0) {
+                0 => screen.clearTabAtCursor(),
+                3 => screen.clearAllTabs(),
+                else => {},
             }
         },
         else => {},
