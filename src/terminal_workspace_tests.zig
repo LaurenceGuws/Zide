@@ -52,3 +52,22 @@ test "terminal workspace tab sync state is session-derived" {
     try std.testing.expectEqual(created.id, sync_state.tabs[0].id);
     try std.testing.expectEqualStrings("build-shell", sync_state.tabs[0].title(sync_state.strings));
 }
+
+test "terminal workspace first confirm close tab returns first matching tab" {
+    var workspace = terminal.TerminalWorkspace.init(std.testing.allocator, .{});
+    defer workspace.deinit();
+
+    const first = try workspace.createTabWithSession(24, 80);
+    const second = try workspace.createTabWithSession(24, 80);
+
+    try std.testing.expect(workspace.firstConfirmCloseTab() == null);
+
+    try first.session.startNoThreads(null);
+    first.session.enterAltScreen(true, false);
+
+    const target = workspace.firstConfirmCloseTab() orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 0), target.index);
+    try std.testing.expectEqual(first.id, target.id);
+
+    _ = second;
+}

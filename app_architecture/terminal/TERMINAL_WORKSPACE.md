@@ -44,7 +44,7 @@ That orchestration now lives in `src/terminal/core/workspace.zig` as `TerminalWo
 - `closeTab(id)` / `closeActiveTab()` -> destroys session and normalizes active index.
 - `activateTab(id)` / `activateIndex(index)` / `activateNext()` / `activatePrev()`.
 - `moveTab(id, to_index)` -> ordered move with active-tab preservation.
-- `activeSessionCwd()` / `activeSessionShouldConfirmClose()` / `shouldConfirmCloseAt(index)` -> read-only workspace queries for app/runtime decisions that should not need raw session access.
+- `activeSessionCwd()` / `activeSessionShouldConfirmClose()` / `firstConfirmCloseTab()` -> read-only workspace queries for app/runtime decisions that should not need raw session access.
 - `activeSessionHasData()` / `activeSessionPublishedGeneration()` / `activeSessionCurrentGeneration()` / `publishedGenerationAt(index)` -> read-only workspace queries for runtime pacing/publication code.
 - `copyTabSyncState(...)` -> workspace-owned tab-bar projection contract for ids + labels + active-tab state.
 - `setCellSizeAll()` + `resizeAll()` -> workspace-wide geometry propagation.

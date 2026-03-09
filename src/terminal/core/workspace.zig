@@ -35,6 +35,11 @@ pub const TabSyncState = struct {
     tabs: []const TabSyncEntry,
 };
 
+pub const TabTarget = struct {
+    index: usize,
+    id: TabId,
+};
+
 pub const TerminalWorkspace = struct {
     pub const PollFrameMetrics = struct {
         seq: u64 = 0,
@@ -152,9 +157,15 @@ pub const TerminalWorkspace = struct {
         return self.tabs.items[index].session.publishedGeneration();
     }
 
-    pub fn shouldConfirmCloseAt(self: *const TerminalWorkspace, index: usize) bool {
-        if (index >= self.tabs.items.len) return false;
-        return self.tabs.items[index].session.shouldConfirmClose();
+    pub fn firstConfirmCloseTab(self: *const TerminalWorkspace) ?TabTarget {
+        for (self.tabs.items, 0..) |tab, idx| {
+            if (!tab.session.shouldConfirmClose()) continue;
+            return .{
+                .index = idx,
+                .id = tab.id,
+            };
+        }
+        return null;
     }
 
     pub fn copyTabSyncState(
