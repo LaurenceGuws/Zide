@@ -503,6 +503,7 @@ Statuses are strict:
   - 2026-03-09: tenth slice landed on feature-branch work: kitty paste-event emission now also runs through the `osc_kitty_clipboard` facade (`sendPasteEventMimes(...)`), and terminal-session paste path now calls that typed surface instead of directly binding to raw `anytype` helper calls.
   - 2026-03-09: eleventh slice landed on feature-branch work: `osc_kitty_clipboard` internal helper paths (`parseReadRequest`, `replyReadRequest`, status/data writers, id sanitization) now use `SessionFacade` + explicit allocator/slice accessors instead of raw `anytype self` helper signatures.
   - 2026-03-09: twelfth slice landed on feature-branch work: `osc_semantic` internal helper paths now run on an explicit local `SessionState` context (allocator + semantic prompt/cmdline/user-vars pointers) instead of `anytype` helper signatures, narrowing another implicit OSC-internal seam without behavior changes.
+  - 2026-03-09: thirteenth slice landed on feature-branch work: `osc_semantic` parse entry paths now dispatch directly into explicit `SessionState`-based functions (`parseSemanticPromptWithState`, `parseUserVarWithState`) so helper chaining no longer depends on `anytype` at those internal call sites.
 
 10) Investigation/probe residue cleanup
 - status: `in_progress`

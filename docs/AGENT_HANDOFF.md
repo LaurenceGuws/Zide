@@ -22,7 +22,7 @@
   - terminal-originated PTY writes and the main session mutation/publication locking cleanup are now in better shape, so the next structural hotspot is the oversized `TerminalSession` surface and the borrowed app/UI query seams hanging off it.
   - redraw lifecycle ownership is significantly cleaner: published cache capture and post-draw completion are now behind backend APIs, although `view_cache`, widget wrapper code, and frame runtime still participate in the presentation pipeline.
   - scheduler/poll state is still split across app runtime helpers and `TerminalWorkspace`, but concrete workspace poll budgets now live behind the workspace contract instead of the app hook.
-- protocol/parser seam is still only partially typed; DCS/APC/OSC/CSI parser dispatch now run through explicit session facades, and OSC title/hyperlink/cwd/clipboard/semantic/palette/kitty-clipboard boundaries plus kitty paste-event emission/internal helper paths were narrowed to local facades/context structs, but protocol internals still contain remaining implicit `anytype` seams.
+- protocol/parser seam is still only partially typed; DCS/APC/OSC/CSI parser dispatch now run through explicit session facades, and OSC title/hyperlink/cwd/clipboard/semantic/palette/kitty-clipboard boundaries plus kitty paste-event emission/internal helper paths were narrowed to local facades/context structs, but protocol internals still contain remaining implicit `anytype` seams (mainly in CSI and selected protocol entry wrappers).
   - widget input/draw still contain backend-policy behavior rather than being thin presentation/orchestration layers.
 
 ### Constraints / Guardrails
