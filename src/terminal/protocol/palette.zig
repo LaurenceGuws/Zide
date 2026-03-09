@@ -24,9 +24,7 @@ pub fn handleOscPalette(self: anytype, text: []const u8, terminator: OscTerminat
         const idx = parseOscIndex(idx_text) orelse continue;
         if (idx >= self.palette_current.len) continue;
         if (color_text.len == 1 and color_text[0] == '?') {
-            if (self.pty) |*pty| {
-                writeOscPaletteReply(self, pty, @intCast(idx), self.palette_current[idx], terminator);
-            }
+            writeOscPaletteReply(self, @intCast(idx), self.palette_current[idx], terminator);
             continue;
         }
         if (parseOscColor(color_text)) |color| {
@@ -49,12 +47,10 @@ pub fn handleOscPaletteReset(self: anytype, text: []const u8) void {
 }
 
 pub fn handleOscDynamicColor(self: anytype, code: u8, text: []const u8, terminator: OscTerminator) void {
-    if (self.pty) |*pty| {
-        if (text.len == 1 and text[0] == '?') {
-            const color = dynamicColorValue(self, code);
-            writeOscColorReply(self, pty, code, color, terminator);
-            return;
-        }
+    if (text.len == 1 and text[0] == '?') {
+        const color = dynamicColorValue(self, code);
+        writeOscColorReply(self, code, color, terminator);
+        return;
     }
     if (parseOscColor(text)) |color| {
         switch (code) {
@@ -173,9 +169,8 @@ fn parseOscIndex(text: []const u8) ?usize {
     return value;
 }
 
-fn writeOscColorReply(self: anytype, pty: anytype, code: u8, color: types.Color, terminator: OscTerminator) void {
+fn writeOscColorReply(self: anytype, code: u8, color: types.Color, terminator: OscTerminator) void {
     const log = app_logger.logger("terminal.osc");
-    _ = self;
     var buf: [80]u8 = undefined;
     const end = if (terminator == .bel) "\x07" else "\x1b\\";
     const r16: u16 = @as(u16, color.r) * 257;
@@ -191,15 +186,13 @@ fn writeOscColorReply(self: anytype, pty: anytype, code: u8, color: types.Color,
     };
     log.logf(.info, "osc reply=\"{s}\"", .{seq});
     logOscReplyHex(log, seq);
-    _ = pty.write(seq) catch |err| blk: {
+    self.writePtyBytes(seq) catch |err| {
         log.logf(.warning, "osc reply write failed code={d} err={s}", .{ code, @errorName(err) });
-        break :blk 0;
     };
 }
 
-fn writeOscPaletteReply(self: anytype, pty: anytype, idx: u8, color: types.Color, terminator: OscTerminator) void {
+fn writeOscPaletteReply(self: anytype, idx: u8, color: types.Color, terminator: OscTerminator) void {
     const log = app_logger.logger("terminal.osc");
-    _ = self;
     var buf: [88]u8 = undefined;
     const end = if (terminator == .bel) "\x07" else "\x1b\\";
     const r16: u16 = @as(u16, color.r) * 257;
@@ -215,9 +208,8 @@ fn writeOscPaletteReply(self: anytype, pty: anytype, idx: u8, color: types.Color
     };
             log.logf(.info, "osc reply=\"{s}\"", .{seq});
         logOscReplyHex(log, seq);
-    _ = pty.write(seq) catch |err| blk: {
+    self.writePtyBytes(seq) catch |err| {
         log.logf(.warning, "osc palette reply write failed idx={d} err={s}", .{ idx, @errorName(err) });
-        break :blk 0;
     };
 }
 

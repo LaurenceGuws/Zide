@@ -25,20 +25,22 @@ pub fn parseApc(self: anytype, payload: []const u8) void {
 }
 
 fn handleXtgettcap(self: anytype, text: []const u8) void {
-    if (self.pty == null) return;
+    var writer = self.lockPtyWriter() orelse return;
+    defer writer.unlock();
     if (text.len == 0) {
-        writeXtgettcapReply(self, false, "", null);
+        writeXtgettcapReply(self, &writer, false, "", null);
         return;
     }
     var it = std.mem.splitScalar(u8, text, ';');
     while (it.next()) |cap_hex| {
         if (cap_hex.len == 0) continue;
-        replyXtgettcap(self, cap_hex);
+        replyXtgettcap(self, &writer, cap_hex);
     }
 }
 
 fn handleDecrqss(self: anytype, text: []const u8) void {
-    if (self.pty == null) return;
+    var writer = self.lockPtyWriter() orelse return;
+    defer writer.unlock();
     var buf: [128]u8 = undefined;
     const ok_reply = if (@hasDecl(@TypeOf(self.*), "decrqssReplyInto"))
         self.decrqssReplyInto(text, &buf)
@@ -46,26 +48,26 @@ fn handleDecrqss(self: anytype, text: []const u8) void {
         self.decrqssReply(text)
     else
         null;
-    writeDecrqssReply(self, ok_reply != null, ok_reply);
+    writeDecrqssReply(self, &writer, ok_reply != null, ok_reply);
 }
 
-fn replyXtgettcap(self: anytype, cap_hex: []const u8) void {
+fn replyXtgettcap(self: anytype, writer: anytype, cap_hex: []const u8) void {
     var decoded = std.ArrayList(u8).empty;
     defer decoded.deinit(self.allocator);
     if (!decodeHex(self.allocator, &decoded, cap_hex)) {
-        writeXtgettcapReply(self, false, cap_hex, null);
+        writeXtgettcapReply(self, writer, false, cap_hex, null);
         return;
     }
 
     const value = xtgettcapValue(decoded.items);
     if (value) |val| {
-        writeXtgettcapReply(self, true, cap_hex, val);
+        writeXtgettcapReply(self, writer, true, cap_hex, val);
     } else {
-        writeXtgettcapReply(self, false, cap_hex, null);
+        writeXtgettcapReply(self, writer, false, cap_hex, null);
     }
 }
 
-fn writeXtgettcapReply(self: anytype, ok: bool, cap_hex: []const u8, value: ?[]const u8) void {
+fn writeXtgettcapReply(self: anytype, writer: anytype, ok: bool, cap_hex: []const u8, value: ?[]const u8) void {
     const log = app_logger.logger("terminal.apc");
     var reply = std.ArrayList(u8).empty;
     defer reply.deinit(self.allocator);
@@ -90,15 +92,13 @@ fn writeXtgettcapReply(self: anytype, ok: bool, cap_hex: []const u8, value: ?[]c
         log.logf(.warning, "xtgettcap reply terminator append failed: {s}", .{@errorName(err)});
         return;
     };
-    if (self.pty) |*pty_writer| {
-        _ = pty_writer.write(reply.items) catch |err| blk: {
-            log.logf(.warning, "xtgettcap reply write failed len={d} err={s}", .{ reply.items.len, @errorName(err) });
-            break :blk 0;
-        };
-    }
+    _ = writer.write(reply.items) catch |err| blk: {
+        log.logf(.warning, "xtgettcap reply write failed len={d} err={s}", .{ reply.items.len, @errorName(err) });
+        break :blk 0;
+    };
 }
 
-fn writeDecrqssReply(self: anytype, ok: bool, value: ?[]const u8) void {
+fn writeDecrqssReply(self: anytype, writer: anytype, ok: bool, value: ?[]const u8) void {
     const log = app_logger.logger("terminal.apc");
     var reply = std.ArrayList(u8).empty;
     defer reply.deinit(self.allocator);
@@ -119,12 +119,10 @@ fn writeDecrqssReply(self: anytype, ok: bool, value: ?[]const u8) void {
         log.logf(.warning, "decrqss reply terminator append failed: {s}", .{@errorName(err)});
         return;
     };
-    if (self.pty) |*pty_writer| {
-        _ = pty_writer.write(reply.items) catch |err| blk: {
-            log.logf(.warning, "decrqss reply write failed len={d} err={s}", .{ reply.items.len, @errorName(err) });
-            break :blk 0;
-        };
-    }
+    _ = writer.write(reply.items) catch |err| blk: {
+        log.logf(.warning, "decrqss reply write failed len={d} err={s}", .{ reply.items.len, @errorName(err) });
+        break :blk 0;
+    };
 }
 
 fn xtgettcapValue(name: []const u8) ?[]const u8 {

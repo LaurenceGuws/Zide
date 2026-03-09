@@ -18,9 +18,19 @@ const FakePty = struct {
     }
 };
 
+fn writeFakePtyBytes(pty_opt: *?FakePty, bytes: []const u8) !void {
+    if (pty_opt.*) |*pty| {
+        _ = try pty.write(bytes);
+    }
+}
+
 const TestSelf = struct {
     allocator: std.mem.Allocator,
     pty: ?FakePty,
+
+    pub fn writePtyBytes(self: *@This(), bytes: []const u8) !void {
+        try writeFakePtyBytes(&self.pty, bytes);
+    }
 };
 
 test "kitty reply formats ids and placement ids" {

@@ -340,7 +340,7 @@ Statuses are strict:
   - 2026-03-09: seventh slice landed on feature branch work: the post-draw presentation feedback contract moved into `TerminalSession.completePresentationFeedback(...)`, so widget flow no longer owns backend dirty-retirement or alt-exit presentation policy.
 
 2) PTY write contract unification
-- status: `todo`
+- status: `done`
 - priority: `P0`
 - scope:
   - make all terminal-originated PTY writes obey one serialization contract
@@ -351,6 +351,9 @@ Statuses are strict:
   - `src/terminal/core/input_modes.zig`
   - `src/terminal/protocol/csi.zig`
   - other direct PTY reply writers as discovered
+- progress:
+  - 2026-03-09: session now owns a locked PTY writer token (`lockPtyWriter(...)`) plus the single-write helper (`writePtyBytes(...)`), and all terminal-originated production writes now flow through that contract instead of bypassing `pty_write_mutex`.
+  - 2026-03-09: DCS/CSI/OSC/kitty reply paths and input-mode queries were rewired onto the session-owned write contract, while reply-byte unit tests were kept intact by teaching the test harnesses the same locked-writer surface.
 
 3) Session state/publication locking cleanup
 - status: `todo`
