@@ -662,3 +662,20 @@ Reason:
 - Intent:
   - make the runtime lane incremental instead of a single large workspace rewrite
   - prepare a cleaner split between tab ownership and scheduler policy
+
+## Frame Pacing Extraction (2026-03-09)
+
+- Files:
+  - `src/app/frame_render_idle_runtime.zig`
+  - `src/app/terminal_frame_pacing_runtime.zig`
+- Change:
+  - extracted terminal-specific generation observation, output-pressure checks,
+    draw/poll latency metric consumption, and sleep-duration policy into
+    `terminal_frame_pacing_runtime.zig`
+  - left `frame_render_idle_runtime.handle(...)` as the coordinator that decides
+    whether to draw, logs generic perf data, and delegates terminal pacing details
+- Intent:
+  - keep the runtime lane moving without coupling more terminal scheduler policy to
+    the generic frame idle hook
+  - reduce the amount of terminal-specific behavior that still lives inline in the
+    top-level app render/idle path
