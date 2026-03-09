@@ -41,6 +41,24 @@ pub const TabTarget = struct {
 };
 
 pub const TerminalWorkspace = struct {
+    pub const ActiveFrameState = struct {
+        has_data: bool = false,
+        current_generation: u64 = 0,
+        published_generation: u64 = 0,
+    };
+
+    pub const PollFrameResult = struct {
+        any_polled: bool = false,
+        active_published_changed: bool = false,
+    };
+
+    pub const PollPolicy = struct {
+        has_input: bool,
+        max_tabs_per_frame: usize,
+        max_background_tabs_per_frame: usize,
+        max_active_polls_per_frame: usize,
+    };
+
     pub const PollFrameMetrics = struct {
         seq: u64 = 0,
         tab_count: usize = 0,
@@ -137,24 +155,14 @@ pub const TerminalWorkspace = struct {
         return self.tabs.items[self.activeIndex()].session.shouldConfirmClose();
     }
 
-    pub fn activeSessionHasData(self: *const TerminalWorkspace) bool {
-        if (self.tabs.items.len == 0) return false;
-        return self.tabs.items[self.activeIndex()].session.hasData();
-    }
-
-    pub fn activeSessionPublishedGeneration(self: *const TerminalWorkspace) u64 {
-        if (self.tabs.items.len == 0) return 0;
-        return self.tabs.items[self.activeIndex()].session.publishedGeneration();
-    }
-
-    pub fn activeSessionCurrentGeneration(self: *const TerminalWorkspace) u64 {
-        if (self.tabs.items.len == 0) return 0;
-        return self.tabs.items[self.activeIndex()].session.currentGeneration();
-    }
-
-    pub fn publishedGenerationAt(self: *const TerminalWorkspace, index: usize) ?u64 {
-        if (index >= self.tabs.items.len) return null;
-        return self.tabs.items[index].session.publishedGeneration();
+    pub fn activeFrameState(self: *const TerminalWorkspace) ActiveFrameState {
+        if (self.tabs.items.len == 0) return .{};
+        const session = self.tabs.items[self.activeIndex()].session;
+        return .{
+            .has_data = session.hasData(),
+            .current_generation = session.currentGeneration(),
+            .published_generation = session.publishedGeneration(),
+        };
     }
 
     pub fn firstConfirmCloseTab(self: *const TerminalWorkspace) ?TabTarget {
@@ -309,8 +317,8 @@ pub const TerminalWorkspace = struct {
         }
     }
 
-    pub fn pollForFrame(self: *TerminalWorkspace, input_active_index: ?usize, has_input: bool) !bool {
-        return polling.pollForFrame(self, input_active_index, has_input);
+    pub fn pollForFrame(self: *TerminalWorkspace, input_active_index: ?usize, policy: PollPolicy) !PollFrameResult {
+        return polling.pollForFrame(self, input_active_index, policy);
     }
 
     pub fn lastPollFrameMetrics(self: *const TerminalWorkspace) PollFrameMetrics {
