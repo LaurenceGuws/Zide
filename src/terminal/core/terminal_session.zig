@@ -59,7 +59,6 @@ const PatternStats = struct {
     force_full_el_row_min: ?usize = null,
     force_full_el_row_max: ?usize = null,
     force_full_el_last_generation: ?u64 = null,
-    force_full_sync: u32 = 0,
     force_full_feed: u32 = 0,
     full_dirty_screen_clear: u32 = 0,
     full_dirty_erase_display: u32 = 0,
@@ -77,7 +76,6 @@ const PatternStats = struct {
     fn total(self: *const PatternStats) u32 {
         return self.force_full_ed +
             self.force_full_el +
-            self.force_full_sync +
             self.force_full_feed +
             self.full_dirty_screen_clear +
             self.full_dirty_erase_display +
@@ -108,7 +106,6 @@ const PatternStats = struct {
 
 pub const PatternEvent = enum {
     force_full_ed,
-    force_full_sync,
     force_full_feed,
     full_dirty_screen_clear,
     full_dirty_erase_display,
@@ -462,7 +459,7 @@ pub const TerminalSession = struct {
         const screen = self.activeScreenConst();
         app_logger.logger("terminal.ui.pattern").logf(
             .info,
-            "window_ms={d} rows={d} cols={d} alt={d} sync={d} force_full(ed={d} el={d} sync={d} feed={d}) full_dirty(screen_clear={d} ed_full={d} alt_enter={d} alt_exit={d} sync_off={d}) kitty(store={d} place={d} delete={d})",
+            "window_ms={d} rows={d} cols={d} alt={d} sync={d} force_full(ed={d} el={d} feed={d}) full_dirty(screen_clear={d} ed_full={d} alt_enter={d} alt_exit={d} sync_off={d}) kitty(store={d} place={d} delete={d})",
             .{
                 now_ms - self.pattern_stats.window_start_ms,
                 screen.grid.rows,
@@ -471,7 +468,6 @@ pub const TerminalSession = struct {
                 @intFromBool(self.sync_updates_active),
                 self.pattern_stats.force_full_ed,
                 self.pattern_stats.force_full_el,
-                self.pattern_stats.force_full_sync,
                 self.pattern_stats.force_full_feed,
                 self.pattern_stats.full_dirty_screen_clear,
                 self.pattern_stats.full_dirty_erase_display,
@@ -513,7 +509,6 @@ pub const TerminalSession = struct {
         }
         switch (event) {
             .force_full_ed => self.pattern_stats.force_full_ed += 1,
-            .force_full_sync => self.pattern_stats.force_full_sync += 1,
             .force_full_feed => self.pattern_stats.force_full_feed += 1,
             .full_dirty_screen_clear => self.pattern_stats.full_dirty_screen_clear += 1,
             .full_dirty_erase_display => self.pattern_stats.full_dirty_erase_display += 1,
@@ -530,8 +525,6 @@ pub const TerminalSession = struct {
         self.force_full_damage.store(true, .release);
         if (std.mem.eql(u8, reason, "erase display CSI")) {
             self.notePatternEvent(.force_full_ed);
-        } else if (std.mem.eql(u8, reason, "sync updates mode changed")) {
-            self.notePatternEvent(.force_full_sync);
         } else if (std.mem.eql(u8, reason, "feed output bytes")) {
             self.notePatternEvent(.force_full_feed);
         }
@@ -1456,7 +1449,6 @@ pub const TerminalSession = struct {
             self.notePatternEvent(.full_dirty_sync_updates_disabled);
             self.activeScreen().markDirtyAllWithReason(.sync_updates_disabled, @src());
         }
-        self.requestForceFullDamage("sync updates mode changed", @src());
         const offset: usize = self.history.scrollOffset();
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), offset);
     }
@@ -1898,4 +1890,45 @@ test "row hash refinement does not skip unpresented top rows" {
     try std.testing.expectEqual(Dirty.partial, cache.dirty);
     try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
     try std.testing.expect(cache.dirty_rows.items[0]);
+}
+
+test "setSyncUpdates enable does not force redraw when screen is otherwise clean" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+
+    session.setSyncUpdates(true);
+
+    const cache = session.renderCache();
+    try std.testing.expect(session.syncUpdatesActive());
+    try std.testing.expectEqual(Dirty.none, cache.dirty);
+    try std.testing.expectEqual(@as(u64, 0), cache.full_dirty_seq);
+}
+
+test "setSyncUpdates disable publishes full dirty from screen model" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    session.setSyncUpdates(true);
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+
+    session.setSyncUpdates(false);
+
+    const cache = session.renderCache();
+    try std.testing.expect(!session.syncUpdatesActive());
+    try std.testing.expectEqual(Dirty.full, cache.dirty);
+    try std.testing.expectEqual(screen_mod.FullDirtyReason.sync_updates_disabled, cache.full_dirty_reason);
 }
