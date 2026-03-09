@@ -639,3 +639,14 @@ Reason:
   - removed the unused snapshot-row helper from `terminal_widget_open.zig`
 - Intent:
   - keep the surviving terminal API surface aligned with the actual active architecture
+
+## Workspace Poll API Cleanup (2026-03-09)
+
+- Files:
+  - `src/terminal/core/workspace.zig`
+  - `app_architecture/terminal/TERMINAL_API.md`
+- Change:
+  - removed the dead `TerminalWorkspace.pollAll()` surface
+  - kept `pollBudgeted()` as the single workspace polling entrypoint exposed by the current app/runtime design
+- Intent:
+  - keep workspace API aligned with the bounded polling architecture that the app actually uses
