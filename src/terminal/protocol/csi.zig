@@ -381,6 +381,50 @@ const CsiWriter = struct {
     }
 };
 
+const QueryContext = struct {
+    ctx: *anyopaque,
+    color_scheme_dark_fn: *const fn (ctx: *anyopaque) bool,
+    cell_height_fn: *const fn (ctx: *anyopaque) u16,
+    cell_width_fn: *const fn (ctx: *anyopaque) u16,
+
+    pub fn from(session: anytype) QueryContext {
+        const SessionPtr = @TypeOf(session);
+        return .{
+            .ctx = @ptrCast(session),
+            .color_scheme_dark_fn = struct {
+                fn call(ctx: *anyopaque) bool {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return s.color_scheme_dark;
+                }
+            }.call,
+            .cell_height_fn = struct {
+                fn call(ctx: *anyopaque) u16 {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return s.cell_height;
+                }
+            }.call,
+            .cell_width_fn = struct {
+                fn call(ctx: *anyopaque) u16 {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return s.cell_width;
+                }
+            }.call,
+        };
+    }
+
+    pub fn colorSchemeDark(self: *const QueryContext) bool {
+        return self.color_scheme_dark_fn(self.ctx);
+    }
+
+    pub fn cellHeight(self: *const QueryContext) u16 {
+        return self.cell_height_fn(self.ctx);
+    }
+
+    pub fn cellWidth(self: *const QueryContext) u16 {
+        return self.cell_width_fn(self.ctx);
+    }
+};
+
 pub const SessionFacade = struct {
     ctx: *anyopaque,
     handle_csi_fn: *const fn (ctx: *anyopaque, action: parser_csi.CsiAction) void,
@@ -445,6 +489,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
         }
     }.at;
     const screen = self.activeScreen();
+    const query = QueryContext.from(self);
 
     switch (action.final) {
         'A' => { // CUU
@@ -599,30 +644,10 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
             }
         },
         'n' => { // DSR
-            const mode = if (param_len > 0) p[0] else 0;
             if (self.lockPtyWriter()) |writer_guard| {
                 var writer = writer_guard;
                 defer writer.unlock();
-                if (action.leader == '?') {
-                    switch (mode) {
-                        6 => { // DECXCPR
-                            const pos = screen.cursorReport();
-                            _ = writeDsrReplyWithWriter(CsiWriter.from(&writer), action.leader, mode, pos.row_1, pos.col_1);
-                        },
-                        15, 25, 26, 55, 56, 75, 85 => _ = writeDsrReplyWithWriter(CsiWriter.from(&writer), action.leader, mode, 0, 0),
-                        996 => _ = writeColorSchemePreferenceReplyWithWriter(CsiWriter.from(&writer), self.color_scheme_dark),
-                        else => {},
-                    }
-                } else if (action.leader == 0) {
-                    switch (mode) {
-                        5 => _ = writeDsrReplyWithWriter(CsiWriter.from(&writer), action.leader, mode, 0, 0),
-                        6 => { // Cursor position report
-                            const pos = screen.cursorReport();
-                            _ = writeDsrReplyWithWriter(CsiWriter.from(&writer), action.leader, mode, pos.row_1, pos.col_1);
-                        },
-                        else => {},
-                    }
-                }
+                handleDsrQuery(query, CsiWriter.from(&writer), screen, action, param_len, p);
             }
         },
         'c' => { // DA
@@ -630,23 +655,16 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                 if (self.lockPtyWriter()) |writer_guard| {
                     var writer = writer_guard;
                     defer writer.unlock();
-                    _ = writeDaPrimaryReplyWithWriter(CsiWriter.from(&writer));
+                    handleDaQuery(CsiWriter.from(&writer));
                 }
             }
         },
         't' => { // Window ops (bounded subset)
             if (action.leader != 0 or action.private) return;
-            const mode = if (param_len > 0) p[0] else 0;
             if (self.lockPtyWriter()) |writer_guard| {
                 var writer = writer_guard;
                 defer writer.unlock();
-                switch (mode) {
-                    14 => _ = writeWindowOpPixelsReplyWithWriter(CsiWriter.from(&writer), @as(u32, self.cell_height) * screen.grid.rows, @as(u32, self.cell_width) * screen.grid.cols),
-                    16 => _ = writeWindowOpCellPixelsReplyWithWriter(CsiWriter.from(&writer), self.cell_height, self.cell_width),
-                    18 => _ = writeWindowOpCharsReplyWithWriter(CsiWriter.from(&writer), screen.grid.rows, screen.grid.cols),
-                    19 => _ = writeWindowOpScreenCharsReplyWithWriter(CsiWriter.from(&writer), screen.grid.rows, screen.grid.cols),
-                    else => {},
-                }
+                handleWindowOpQuery(query, CsiWriter.from(&writer), screen, param_len, p);
             }
         },
         'p' => { // DECRQM (requires '$' intermediate)
@@ -690,24 +708,10 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                 .local_echo_mode_12 = screen.local_echo_mode_12,
                 .newline_mode = screen.newline_mode,
             });
-            if (action.leader == '?' and action.private) {
-                const mode = p[0];
-                if (self.lockPtyWriter()) |writer_guard| {
-                    var writer = writer_guard;
-                    defer writer.unlock();
-                    const state = decrqmPrivateModeState(snapshot, mode);
-                    _ = writeDecrqmReplyWithWriter(CsiWriter.from(&writer), true, mode, state);
-                }
-                return;
-            }
-            if (action.leader == 0 and !action.private) {
-                const mode = p[0];
-                if (self.lockPtyWriter()) |writer_guard| {
-                    var writer = writer_guard;
-                    defer writer.unlock();
-                    const state = decrqmAnsiModeState(snapshot, mode);
-                    _ = writeDecrqmReplyWithWriter(CsiWriter.from(&writer), false, mode, state);
-                }
+            if (self.lockPtyWriter()) |writer_guard| {
+                var writer = writer_guard;
+                defer writer.unlock();
+                handleDecrqmQuery(CsiWriter.from(&writer), action, p[0], snapshot);
             }
         },
         'h' => { // SM
@@ -1042,6 +1046,57 @@ fn decrqmAnsiModeState(snapshot: ModeSnapshot, mode: i32) DecrpmState {
 
 fn boolModeState(enabled: bool) DecrpmState {
     return if (enabled) .set else .reset;
+}
+
+fn handleDsrQuery(query: QueryContext, writer: CsiWriter, screen: anytype, action: parser_csi.CsiAction, param_len: usize, params: [parser_csi.max_params]i32) void {
+    const mode = if (param_len > 0) params[0] else 0;
+    if (action.leader == '?') {
+        switch (mode) {
+            6 => {
+                const pos = screen.cursorReport();
+                _ = writeDsrReplyWithWriter(writer, action.leader, mode, pos.row_1, pos.col_1);
+            },
+            15, 25, 26, 55, 56, 75, 85 => _ = writeDsrReplyWithWriter(writer, action.leader, mode, 0, 0),
+            996 => _ = writeColorSchemePreferenceReplyWithWriter(writer, query.colorSchemeDark()),
+            else => {},
+        }
+    } else if (action.leader == 0) {
+        switch (mode) {
+            5 => _ = writeDsrReplyWithWriter(writer, action.leader, mode, 0, 0),
+            6 => {
+                const pos = screen.cursorReport();
+                _ = writeDsrReplyWithWriter(writer, action.leader, mode, pos.row_1, pos.col_1);
+            },
+            else => {},
+        }
+    }
+}
+
+fn handleDaQuery(writer: CsiWriter) void {
+    _ = writeDaPrimaryReplyWithWriter(writer);
+}
+
+fn handleWindowOpQuery(query: QueryContext, writer: CsiWriter, screen: anytype, param_len: usize, params: [parser_csi.max_params]i32) void {
+    const mode = if (param_len > 0) params[0] else 0;
+    switch (mode) {
+        14 => _ = writeWindowOpPixelsReplyWithWriter(writer, @as(u32, query.cellHeight()) * screen.grid.rows, @as(u32, query.cellWidth()) * screen.grid.cols),
+        16 => _ = writeWindowOpCellPixelsReplyWithWriter(writer, query.cellHeight(), query.cellWidth()),
+        18 => _ = writeWindowOpCharsReplyWithWriter(writer, screen.grid.rows, screen.grid.cols),
+        19 => _ = writeWindowOpScreenCharsReplyWithWriter(writer, screen.grid.rows, screen.grid.cols),
+        else => {},
+    }
+}
+
+fn handleDecrqmQuery(writer: CsiWriter, action: parser_csi.CsiAction, mode: i32, snapshot: ModeSnapshot) void {
+    if (action.leader == '?' and action.private) {
+        const state = decrqmPrivateModeState(snapshot, mode);
+        _ = writeDecrqmReplyWithWriter(writer, true, mode, state);
+        return;
+    }
+    if (action.leader == 0 and !action.private) {
+        const state = decrqmAnsiModeState(snapshot, mode);
+        _ = writeDecrqmReplyWithWriter(writer, false, mode, state);
+    }
 }
 
 fn writeConst(writer: CsiWriter, seq: []const u8) bool {

@@ -178,6 +178,7 @@ Progress:
 - Follow-up (2026-03-10): typed the top-level parser dispatch seam in `src/terminal/core/parser_hooks.zig` behind an explicit session facade, so `TerminalSession` no longer calls parser hook entrypoints through raw `anytype` generics.
 - Follow-up (2026-03-10): removed the dead public `TerminalSession.parseKittyGraphics(...)` bounce and rewired `src/terminal/protocol/dcs_apc.zig` to target the kitty graphics parser module directly, reducing one more protocol-to-session indirection seam.
 - Follow-up (2026-03-10): typed the VT parser callback contract in `src/terminal/parser/parser.zig` behind `Parser.SessionFacade`, and rewired terminal-session, PTY polling, IO-thread parsing, and test debug feed paths to use that explicit parser/session boundary.
+- Follow-up (2026-03-10): extracted CSI query/reply dispatch (`DSR`, `DA`, bounded window ops, `DECRQM`) behind a typed `QueryContext` plus dedicated helpers in `src/terminal/protocol/csi.zig`, shrinking the inline PTY/query logic inside the monolithic CSI handler.
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.
