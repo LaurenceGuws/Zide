@@ -58,7 +58,6 @@ const PatternStats = struct {
     force_full_el_row_min: ?usize = null,
     force_full_el_row_max: ?usize = null,
     force_full_el_last_generation: ?u64 = null,
-    force_full_feed: u32 = 0,
     full_dirty_screen_clear: u32 = 0,
     full_dirty_erase_display: u32 = 0,
     full_dirty_alt_enter: u32 = 0,
@@ -74,7 +73,6 @@ const PatternStats = struct {
 
     fn total(self: *const PatternStats) u32 {
         return self.force_full_el +
-            self.force_full_feed +
             self.full_dirty_screen_clear +
             self.full_dirty_erase_display +
             self.full_dirty_alt_enter +
@@ -103,7 +101,6 @@ const PatternStats = struct {
 };
 
 pub const PatternEvent = enum {
-    force_full_feed,
     full_dirty_screen_clear,
     full_dirty_erase_display,
     full_dirty_alt_enter,
@@ -246,7 +243,6 @@ pub const TerminalSession = struct {
     view_cache_request_offset: std.atomic.Value(u64),
     alt_last_active: bool,
     clear_generation: std.atomic.Value(u64),
-    force_full_damage: std.atomic.Value(bool),
     pattern_stats: PatternStats,
     saved_charset: SavedCharsetState,
     child_exited: std.atomic.Value(bool),
@@ -367,7 +363,6 @@ pub const TerminalSession = struct {
             .view_cache_request_offset = std.atomic.Value(u64).init(0),
             .alt_last_active = false,
             .clear_generation = std.atomic.Value(u64).init(0),
-            .force_full_damage = std.atomic.Value(bool).init(false),
             .pattern_stats = .{},
             .saved_charset = .{},
             .child_exited = std.atomic.Value(bool).init(false),
@@ -456,7 +451,7 @@ pub const TerminalSession = struct {
         const screen = self.activeScreenConst();
         app_logger.logger("terminal.ui.pattern").logf(
             .info,
-            "window_ms={d} rows={d} cols={d} alt={d} sync={d} force_full(el={d} feed={d}) full_dirty(screen_clear={d} ed_full={d} alt_enter={d} alt_exit={d} sync_off={d}) kitty(store={d} place={d} delete={d})",
+            "window_ms={d} rows={d} cols={d} alt={d} sync={d} force_full(el={d}) full_dirty(screen_clear={d} ed_full={d} alt_enter={d} alt_exit={d} sync_off={d}) kitty(store={d} place={d} delete={d})",
             .{
                 now_ms - self.pattern_stats.window_start_ms,
                 screen.grid.rows,
@@ -464,7 +459,6 @@ pub const TerminalSession = struct {
                 @intFromBool(self.isAltActive()),
                 @intFromBool(self.sync_updates_active),
                 self.pattern_stats.force_full_el,
-                self.pattern_stats.force_full_feed,
                 self.pattern_stats.full_dirty_screen_clear,
                 self.pattern_stats.full_dirty_erase_display,
                 self.pattern_stats.full_dirty_alt_enter,
@@ -504,7 +498,6 @@ pub const TerminalSession = struct {
             self.flushPatternStats(now_ms);
         }
         switch (event) {
-            .force_full_feed => self.pattern_stats.force_full_feed += 1,
             .full_dirty_screen_clear => self.pattern_stats.full_dirty_screen_clear += 1,
             .full_dirty_erase_display => self.pattern_stats.full_dirty_erase_display += 1,
             .full_dirty_alt_enter => self.pattern_stats.full_dirty_alt_enter += 1,
@@ -514,20 +507,6 @@ pub const TerminalSession = struct {
             .kitty_place => self.pattern_stats.kitty_place += 1,
             .kitty_delete => self.pattern_stats.kitty_delete += 1,
         }
-    }
-
-    pub fn requestForceFullDamage(self: *TerminalSession, reason: []const u8, src: std.builtin.SourceLocation) void {
-        self.force_full_damage.store(true, .release);
-        if (std.mem.eql(u8, reason, "feed output bytes")) {
-            self.notePatternEvent(.force_full_feed);
-        }
-        if (std.mem.eql(u8, reason, "erase line CSI")) return;
-        app_logger.logger("terminal.ui.invalidate").logfSrc(
-            .info,
-            src,
-            "force_full_damage reason={s}",
-            .{reason},
-        );
     }
 
     pub fn setDefaultColors(self: *TerminalSession, fg: types.Color, bg: types.Color) void {
