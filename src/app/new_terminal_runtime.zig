@@ -34,8 +34,16 @@ fn launchCwdForWorkspaceNewTab(state: anytype, workspace: *TerminalWorkspace) !L
     switch (state.terminal_new_tab_start_location) {
         .default => return fallbackDefaultStartLocation(state),
         .current => {
-            const cwd = workspace.activeSessionCwd();
-            if (cwd.len > 0) return .{ .value = cwd };
+            var cwd_buf = std.ArrayList(u8).empty;
+            defer cwd_buf.deinit(state.allocator);
+            const cwd = try workspace.copyActiveSessionCwd(state.allocator, &cwd_buf);
+            if (cwd.len > 0) {
+                const owned = try state.allocator.dupe(u8, cwd);
+                return .{
+                    .value = owned,
+                    .owned = owned,
+                };
+            }
             return fallbackDefaultStartLocation(state);
         },
     }

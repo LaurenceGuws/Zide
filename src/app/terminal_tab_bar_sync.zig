@@ -28,6 +28,10 @@ pub fn syncFromWorkspace(
 ) !void {
     if (terminal_workspace.*) |*workspace| {
         const count = workspace.tabCount();
+        var title_buf = std.ArrayList(u8).empty;
+        defer title_buf.deinit(tab_bar.allocator);
+        var cwd_buf = std.ArrayList(u8).empty;
+        defer cwd_buf.deinit(tab_bar.allocator);
         var has_non_terminal = false;
         for (tab_bar.tabs.items) |tab| {
             if (tab.kind != .terminal) {
@@ -67,7 +71,7 @@ pub fn syncFromWorkspace(
         // Add missing tabs and refresh titles while preserving current visual order.
         for (0..count) |widx| {
             const tab_id = workspace.tabIdAt(widx) orelse continue;
-            const metadata = workspace.metadataAt(widx) orelse continue;
+            const metadata = (try workspace.copyMetadataAt(tab_bar.allocator, widx, &title_buf, &cwd_buf)) orelse continue;
             const title = terminalTabLabel(metadata);
             if (tab_bar.indexOfTerminalTabId(tab_id)) |bar_idx| {
                 try tab_bar.setTabTitle(bar_idx, title);
