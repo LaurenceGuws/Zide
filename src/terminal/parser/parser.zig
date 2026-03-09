@@ -119,7 +119,7 @@ pub const Parser = struct {
                     self.charset_target = .g1;
                     self.esc_state = .charset;
                 } else if (byte == 'c') {
-                    session.resetState();
+                    session.resetStateLocked();
                     self.esc_state = .ground;
                 } else if (byte == '7') {
                     session.saveCursor();
@@ -134,10 +134,10 @@ pub const Parser = struct {
                     session.reverseIndex();
                     self.esc_state = .ground;
                 } else if (byte == '=') {
-                    session.setKeypadMode(true);
+                    session.setKeypadModeLocked(true);
                     self.esc_state = .ground;
                 } else if (byte == '>') {
-                    session.setKeypadMode(false);
+                    session.setKeypadModeLocked(false);
                     self.esc_state = .ground;
                 } else {
                     self.esc_state = .ground;

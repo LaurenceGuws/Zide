@@ -24,15 +24,12 @@ pub fn handleInput(
     width: f32,
     height: f32,
     allow_input: bool,
-    scroll_dragging: *bool,
-    scroll_grab_offset: *f32,
     suppress_shortcuts: bool,
     input_batch: *shared_types.input.InputBatch,
 ) !bool {
     const mouse = input_batch.mouse_pos;
     const in_terminal = common.pointInRect(mouse.x, mouse.y, x, y, width, height);
     var handled = false;
-    self.scrollbar_drag_active = scroll_dragging.*;
     const scale = shell.uiScaleFactor();
     const scrollbar_base_w: f32 = common.scrollbarWidth(scale);
     const scrollbar_hover_w: f32 = common.scrollbarHoverWidth(scale);
@@ -45,7 +42,7 @@ pub fn handleInput(
     else
         0.0;
     const proximity_t = common.smoothstep01(proximity_raw);
-    const scrollbar_w: f32 = common.lerp(scrollbar_base_w, scrollbar_hover_w, if (scroll_dragging.*) 1.0 else proximity_t);
+    const scrollbar_w: f32 = common.lerp(scrollbar_base_w, scrollbar_hover_w, if (self.scrollbar_drag_active) 1.0 else proximity_t);
     const scrollbar_x = x + width - scrollbar_w;
     const scrollbar_y = y;
     const scrollbar_h = height;
@@ -140,8 +137,8 @@ pub fn handleInput(
     defer osc_clipboard.deinit(self.session.allocator);
     if (self.session.tryTakeOscClipboardCopy(self.session.allocator, &osc_clipboard) catch false) {
         const cstr: [*:0]const u8 = @ptrCast(osc_clipboard.items.ptr);
-            shell.setClipboardText(cstr);
-            handled = true;
+        shell.setClipboardText(cstr);
+        handled = true;
     }
 
     if (allow_input) {
@@ -169,28 +166,7 @@ pub fn handleInput(
             fn apply(widget: anytype) void {
                 widget.session.lock();
                 defer widget.session.unlock();
-                if (widget.draw_cache.scroll_offset > 0) {
-                    widget.session.setScrollOffset(0);
-                }
-            }
-        }.apply;
-        const rowLastContentCol = struct {
-            fn apply(cells: []const terminal_types.Cell, cols_count: usize, row_idx: usize) ?usize {
-                if (cols_count == 0) return null;
-                const row_start = row_idx * cols_count;
-                if (row_start + cols_count > cells.len) return null;
-                const row_cells = cells[row_start .. row_start + cols_count];
-                var last: ?usize = null;
-                var col_idx: usize = 0;
-                while (col_idx < cols_count) : (col_idx += 1) {
-                    const cell = row_cells[col_idx];
-                    if (cell.x != 0 or cell.y != 0) continue;
-                    if (cell.codepoint == 0 and cell.combining_len == 0) continue;
-                    const width_units = @as(usize, @max(@as(u8, 1), cell.width));
-                    const cell_end = @min(cols_count - 1, col_idx + width_units - 1);
-                    last = cell_end;
-                }
-                return last;
+                _ = widget.session.resetToLiveBottomLocked();
             }
         }.apply;
         const applyTerminalKey = struct {
@@ -479,20 +455,20 @@ pub fn handleInput(
             png = shell.getClipboardMimeData(self.session.allocator, "image/png");
         }
 
-        const suppress_selection_for_scrollbar = mouse_on_scrollbar or scroll_dragging.*;
-        if (!mouse_reporting and (reset_scrollback or in_terminal or scroll_dragging.*)) {
+        const suppress_selection_for_scrollbar = mouse_on_scrollbar or self.scrollbar_drag_active;
+        if (!mouse_reporting and (reset_scrollback or in_terminal or self.scrollbar_drag_active)) {
             var live_scroll_offset = scroll_offset;
             var selection_active = cache.selection_active;
             self.session.lock();
             defer self.session.unlock();
 
             if (reset_scrollback and live_scroll_offset > 0) {
-                self.session.setScrollOffset(0);
-                live_scroll_offset = 0;
+                if (self.session.resetToLiveBottomLocked()) {
+                    live_scroll_offset = 0;
+                }
             }
 
             if (in_terminal and mouse_on_scrollbar and input_batch.mousePressed(.left)) {
-                scroll_dragging.* = true;
                 self.scrollbar_drag_active = true;
                 const track_h = scrollbar_h;
                 const min_thumb_h: f32 = 18;
@@ -501,34 +477,34 @@ pub fn handleInput(
                 else
                     1.0;
                 const thumb = common.computeScrollbarThumb(scrollbar_y, track_h, rows, total_lines, min_thumb_h, ratio);
-                scroll_grab_offset.* = mouse.y - thumb.thumb_y;
+                self.scrollbar_grab_offset = mouse.y - thumb.thumb_y;
                 scroll_log.logf(.info, "scrollbar press offset={d}", .{live_scroll_offset});
                 handled = true;
             }
 
-            if (scroll_dragging.*) {
+            if (self.scrollbar_drag_active) {
                 if (input_batch.mouseDown(.left)) {
                     const track_h = scrollbar_h;
                     const min_thumb_h: f32 = 18;
                     const thumb = common.computeScrollbarThumb(scrollbar_y, track_h, rows, total_lines, min_thumb_h, 0.0);
                     const available = thumb.available;
-                    const clamped_mouse = @min(@max(mouse.y - scroll_grab_offset.*, scrollbar_y), scrollbar_y + available);
+                    const clamped_mouse = @min(@max(mouse.y - self.scrollbar_grab_offset, scrollbar_y), scrollbar_y + available);
                     const ratio = if (available > 0) (clamped_mouse - scrollbar_y) / available else 0;
-                    const target_offset = @as(usize, @intFromFloat(@round(@as(f32, @floatFromInt(max_scroll_offset)) * (1.0 - ratio))));
-                    self.session.setScrollOffset(target_offset);
-                    live_scroll_offset = target_offset;
-                    scroll_log.logf(.info, "scrollbar drag offset={d} ratio={d:.3}", .{ target_offset, ratio });
-                    handled = true;
+                    if (self.session.setScrollOffsetFromNormalizedTrackLocked(ratio)) |new_offset| {
+                        live_scroll_offset = new_offset;
+                        scroll_log.logf(.info, "scrollbar drag offset={d} ratio={d:.3}", .{ live_scroll_offset, ratio });
+                        handled = true;
+                    }
                 } else {
-                    scroll_dragging.* = false;
                     self.scrollbar_drag_active = false;
                 }
             }
 
             if (in_terminal and input_batch.mousePressed(.left) and selection_active) {
-                self.session.clearSelection();
-                selection_active = false;
-                handled = true;
+                if (self.session.clearSelectionIfActiveLocked()) {
+                    selection_active = false;
+                    handled = true;
+                }
             }
             if (has_visible_grid and in_terminal and !suppress_selection_for_scrollbar) {
                 if (input_batch.mousePressed(.left)) {
@@ -540,65 +516,25 @@ pub fn handleInput(
                     const global_row = start_line + clamped_row;
                     if (global_row < history_len + rows) {
                         const row_cells = view_cells[clamped_row * cols .. (clamped_row + 1) * cols];
-                        if (rowLastContentCol(view_cells, cols, clamped_row)) |last_col| {
-                            const click_count = input_batch.mouseClicks(.left);
-                            self.selection_press_origin = press_mouse;
-                            self.selection_drag_active = false;
-                            if (click_count >= 3) {
-                                self.multi_click_selection_mode = .line;
-                                self.multi_click_anchor_row = global_row;
-                                self.multi_click_anchor_col_start = 0;
-                                self.multi_click_anchor_col_end = last_col;
-                                self.session.startSelection(global_row, 0);
-                                self.session.updateSelection(global_row, last_col);
-                                self.session.finishSelection();
-                                selection_active = true;
-                                handled = true;
-                            } else if (click_count == 2) {
-                                if (selectWordSpan(row_cells, cols, clamped_col, last_col)) |span| {
-                                    self.multi_click_selection_mode = .word;
-                                    self.multi_click_anchor_row = global_row;
-                                    self.multi_click_anchor_col_start = span.start;
-                                    self.multi_click_anchor_col_end = span.end;
-                                    self.session.startSelection(global_row, span.start);
-                                    self.session.updateSelection(global_row, span.end);
-                                    self.session.finishSelection();
-                                    selection_active = true;
-                                    handled = true;
-                                } else {
-                                    self.multi_click_selection_mode = .none;
-                                    const sel_col = @min(clamped_col, last_col);
-                                    self.session.startSelection(global_row, sel_col);
-                                    selection_active = true;
-                                    handled = true;
-                                }
-                            } else {
-                                self.multi_click_selection_mode = .none;
-                                // Single-click only sets drag origin; selection begins once drag threshold is crossed.
-                            }
+                        const click_result = self.session.beginClickSelectionLocked(
+                            row_cells,
+                            global_row,
+                            clamped_col,
+                            input_batch.mouseClicks(.left),
+                        );
+                        self.selection_press_origin = press_mouse;
+                        self.selection_drag_active = false;
+                        self.selection_gesture = click_result.gesture;
+                        if (click_result.started) {
+                            selection_active = true;
+                            handled = true;
                         }
                     }
                 }
 
-                var drag_select_active = input_batch.mouseDown(.left) and !input_batch.mousePressed(.left);
-                if (drag_select_active and !self.selection_drag_active) {
-                    if (self.selection_press_origin) |origin| {
-                        const dx = mouse.x - origin.x;
-                        const dy = mouse.y - origin.y;
-                        const dist2 = dx * dx + dy * dy;
-                        const threshold = hit_cell_w;
-                        const threshold2 = threshold * threshold;
-                        if (dist2 >= threshold2) {
-                            self.selection_drag_active = true;
-                        } else {
-                            drag_select_active = false;
-                        }
-                    } else {
-                        drag_select_active = false;
-                    }
-                }
-                const drag_select_multi = drag_select_active and self.multi_click_selection_mode != .none;
-                const drag_select_normal = drag_select_active and self.multi_click_selection_mode == .none;
+                const drag_select_active = selectionDragIsActive(self, input_batch, mouse, hit_cell_w);
+                const drag_select_multi = drag_select_active and self.selection_gesture.mode != .none;
+                const drag_select_normal = drag_select_active and self.selection_gesture.mode == .none;
                 if (drag_select_multi) {
                     const col = @as(usize, @intFromFloat((mouse.x - hit_base_x) / hit_cell_w));
                     const row = @as(usize, @intFromFloat((mouse.y - hit_base_y) / hit_cell_h));
@@ -607,82 +543,19 @@ pub fn handleInput(
                     const global_row = start_line + clamped_row;
                     if (global_row < history_len + rows) {
                         const row_cells = view_cells[clamped_row * cols .. (clamped_row + 1) * cols];
-                        const last_col_opt = rowLastContentCol(view_cells, cols, clamped_row);
-                        switch (self.multi_click_selection_mode) {
-                            .word => {
-                                var target_start: usize = clamped_col;
-                                var target_end: usize = clamped_col;
-                                if (last_col_opt) |last_col| {
-                                    if (selectWordSpan(row_cells, cols, clamped_col, last_col)) |span| {
-                                        target_start = span.start;
-                                        target_end = span.end;
-                                    } else {
-                                        const sel_col = @min(clamped_col, last_col);
-                                        target_start = sel_col;
-                                        target_end = sel_col;
-                                    }
-                                } else {
-                                    target_start = 0;
-                                    target_end = 0;
-                                }
-                                const anchor_start = SelPoint{
-                                    .row = self.multi_click_anchor_row,
-                                    .col = self.multi_click_anchor_col_start,
-                                };
-                                const anchor_end = SelPoint{
-                                    .row = self.multi_click_anchor_row,
-                                    .col = self.multi_click_anchor_col_end,
-                                };
-                                const target_start_pos = SelPoint{ .row = global_row, .col = target_start };
-                                const target_end_pos = SelPoint{ .row = global_row, .col = target_end };
-                                var sel_start: SelPoint = undefined;
-                                var sel_end: SelPoint = undefined;
-                                if (selPointBefore(target_start_pos, anchor_start)) {
-                                    sel_start = target_start_pos;
-                                    sel_end = anchor_end;
-                                } else {
-                                    sel_start = anchor_start;
-                                    sel_end = target_end_pos;
-                                }
-                                self.session.startSelection(sel_start.row, sel_start.col);
-                                self.session.updateSelection(sel_end.row, sel_end.col);
-                                selection_active = true;
-                                handled = true;
-                            },
-                            .line => {
-                                const target_last = last_col_opt orelse 0;
-                                const anchor_start = SelPoint{ .row = self.multi_click_anchor_row, .col = 0 };
-                                const anchor_end = SelPoint{
-                                    .row = self.multi_click_anchor_row,
-                                    .col = self.multi_click_anchor_col_end,
-                                };
-                                const target_start_pos = SelPoint{ .row = global_row, .col = 0 };
-                                const target_end_pos = SelPoint{ .row = global_row, .col = target_last };
-                                var sel_start: SelPoint = undefined;
-                                var sel_end: SelPoint = undefined;
-                                if (selPointBefore(target_start_pos, anchor_start)) {
-                                    sel_start = target_start_pos;
-                                    sel_end = anchor_end;
-                                } else {
-                                    sel_start = anchor_start;
-                                    sel_end = target_end_pos;
-                                }
-                                self.session.startSelection(sel_start.row, sel_start.col);
-                                self.session.updateSelection(sel_end.row, sel_end.col);
-                                selection_active = true;
-                                handled = true;
-                            },
-                            .none => {},
+                        if (self.session.extendGestureSelectionLocked(self.selection_gesture, row_cells, global_row, clamped_col)) {
+                            selection_active = true;
+                            handled = true;
                         }
                     }
 
                     if (selection_active) {
                         // Autoscroll when dragging outside terminal area
                         if (mouse.y < y) {
-                            self.session.scrollBy(1);
+                            _ = self.session.scrollSelectionDragLocked(true);
                             handled = true;
                         } else if (mouse.y > y + height) {
-                            self.session.scrollBy(-1);
+                            _ = self.session.scrollSelectionDragLocked(false);
                             handled = true;
                         }
                     }
@@ -694,39 +567,28 @@ pub fn handleInput(
                     const clamped_row = @min(row, rows - 1);
                     const global_row = start_line + clamped_row;
                     if (global_row < history_len + rows) {
-                        if (rowLastContentCol(view_cells, cols, clamped_row)) |last_col| {
-                            const sel_col = @min(clamped_col, last_col);
-                            if (!selection_active) {
-                                // Late-start selection when drag begins on blank space and enters content.
-                                self.session.startSelection(global_row, sel_col);
-                                selection_active = true;
-                                handled = true;
-                            } else {
-                                self.session.updateSelection(global_row, sel_col);
-                                selection_active = true;
-                                handled = true;
-                            }
+                        const row_cells = view_cells[clamped_row * cols .. (clamped_row + 1) * cols];
+                        // Late-start selection when drag begins on blank space and enters content.
+                        if (self.session.selectOrUpdateCellInRowLocked(row_cells, global_row, clamped_col)) {
+                            selection_active = true;
+                            handled = true;
                         }
                     }
 
                     if (selection_active) {
                         // Autoscroll when dragging outside terminal area
                         if (mouse.y < y) {
-                            self.session.scrollBy(1);
+                            _ = self.session.scrollSelectionDragLocked(true);
                             handled = true;
                         } else if (mouse.y > y + height) {
-                            self.session.scrollBy(-1);
+                            _ = self.session.scrollSelectionDragLocked(false);
                             handled = true;
                         }
                     }
                 }
 
                 if (input_batch.mouseReleased(.left)) {
-                    self.multi_click_selection_mode = .none;
-                    self.selection_press_origin = null;
-                    self.selection_drag_active = false;
-                    if (selection_active) {
-                        self.session.finishSelection();
+                    if (selection_active and self.session.finishSelectionIfActiveLocked()) {
                         selection_active = true;
                         handled = true;
                     }
@@ -759,10 +621,10 @@ pub fn handleInput(
                 }
             }
             if (in_terminal and wheel_steps != 0) {
-                const delta: isize = @intCast(wheel_steps * 3);
-                self.session.scrollBy(delta);
-                scroll_log.logf(.info, "scroll wheel delta={d}", .{delta});
-                handled = true;
+                if (self.session.scrollWheelLocked(wheel_steps)) {
+                    scroll_log.logf(.info, "scroll wheel steps={d}", .{wheel_steps});
+                    handled = true;
+                }
             }
         }
         if (mouse_reporting and rows > 0 and cols > 0) {
@@ -821,90 +683,33 @@ pub fn handleInput(
         }
     }
 
-    if (input_batch.mouseReleased(.left)) {
-        self.multi_click_selection_mode = .none;
-        self.selection_press_origin = null;
-        self.selection_drag_active = false;
-    }
-    self.scrollbar_drag_active = scroll_dragging.*;
+    if (input_batch.mouseReleased(.left)) resetLeftDragState(self);
     return handled;
 }
 
-const WordSpan = struct {
-    start: usize,
-    end: usize,
-};
-
-fn selectWordSpan(row_cells: []const terminal_types.Cell, cols_count: usize, col: usize, last_col: usize) ?WordSpan {
-    if (cols_count == 0 or row_cells.len < cols_count) return null;
-    const clamped_last = @min(last_col, cols_count - 1);
-    var anchor = @min(col, clamped_last);
-    anchor = cellRootCol(row_cells, anchor);
-    const anchor_class = classifySelectionCell(row_cells[anchor]);
-    if (anchor_class == .empty) return null;
-
-    var start = anchor;
-    while (start > 0) {
-        const prev = start - 1;
-        const prev_root = cellRootCol(row_cells, prev);
-        if (prev_root >= start) break;
-        if (prev_root > clamped_last) break;
-        if (classifySelectionCell(row_cells[prev_root]) != anchor_class) break;
-        start = prev_root;
-    }
-
-    var end = anchor;
-    while (end < clamped_last) {
-        const next = end + 1;
-        const next_root = cellRootCol(row_cells, next);
-        if (next_root <= end) break;
-        if (next_root > clamped_last) break;
-        if (classifySelectionCell(row_cells[next_root]) != anchor_class) break;
-        end = next_root;
-    }
-
-    return .{ .start = start, .end = end };
+fn selectionDragIsActive(
+    self: anytype,
+    input_batch: *const shared_types.input.InputBatch,
+    mouse: shared_types.input.MousePos,
+    hit_cell_w: f32,
+) bool {
+    const drag_select_active = input_batch.mouseDown(.left) and !input_batch.mousePressed(.left);
+    if (!drag_select_active) return false;
+    if (self.selection_drag_active) return true;
+    const origin = self.selection_press_origin orelse return false;
+    const dx = mouse.x - origin.x;
+    const dy = mouse.y - origin.y;
+    const dist2 = dx * dx + dy * dy;
+    const threshold2 = hit_cell_w * hit_cell_w;
+    if (dist2 < threshold2) return false;
+    self.selection_drag_active = true;
+    return true;
 }
 
-const SelectionCellClass = enum {
-    empty,
-    word,
-    space,
-    other,
-};
-
-const SelPoint = struct {
-    row: usize,
-    col: usize,
-};
-
-fn selPointBefore(a: SelPoint, b: SelPoint) bool {
-    if (a.row < b.row) return true;
-    if (a.row > b.row) return false;
-    return a.col < b.col;
-}
-
-fn classifySelectionCell(cell: terminal_types.Cell) SelectionCellClass {
-    if (cell.x != 0 or cell.y != 0) return .empty;
-    if (cell.codepoint == 0 and cell.combining_len == 0) return .space;
-    const cp = cell.codepoint;
-    if (cp <= 0x7F) {
-        const b: u8 = @intCast(cp);
-        if (std.ascii.isAlphanumeric(b) or b == '_') return .word;
-        if (std.ascii.isWhitespace(b)) return .space;
-    } else {
-        // Treat non-ASCII graphemes as word characters by default.
-        return .word;
-    }
-    return .other;
-}
-
-fn cellRootCol(row_cells: []const terminal_types.Cell, col: usize) usize {
-    if (row_cells.len == 0) return 0;
-    const idx = @min(col, row_cells.len - 1);
-    const cell = row_cells[idx];
-    if (cell.x == 0 or cell.y != 0) return idx;
-    const delta = @as(usize, cell.x);
-    if (delta > idx) return 0;
-    return idx - delta;
+fn resetLeftDragState(self: anytype) void {
+    self.scrollbar_drag_active = false;
+    self.scrollbar_grab_offset = 0;
+    self.selection_gesture = .{};
+    self.selection_press_origin = null;
+    self.selection_drag_active = false;
 }

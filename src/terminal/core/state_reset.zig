@@ -1,13 +1,13 @@
 const kitty_mod = @import("../kitty/graphics.zig");
+const input_modes = @import("input_modes.zig");
 
-pub fn resetState(self: anytype) void {
+pub fn resetStateLocked(self: anytype) void {
     self.parser.reset();
     self.saved_charset = .{};
     self.primary.resetState();
     self.alt.resetState();
-    self.input.resetMouse();
     self.current_hyperlink_id = 0;
-    self.app_keypad = false;
+    input_modes.resetInputModesLocked(self);
     self.primary.clear();
     self.alt.clear();
     kitty_mod.clearKittyImages(self);

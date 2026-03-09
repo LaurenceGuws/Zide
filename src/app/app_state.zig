@@ -54,8 +54,6 @@ pub const AppState = struct {
     window_resize_pending: bool,
     window_resize_last_time: f64,
     mouse_debug: bool,
-    terminal_scroll_dragging: bool,
-    terminal_scroll_grab_offset: f32,
     last_mouse_redraw_time: f64,
     last_ctrl_down: bool,
     editor_dragging: bool,

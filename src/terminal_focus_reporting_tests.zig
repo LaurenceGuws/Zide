@@ -1708,8 +1708,8 @@ test "terminal DECSTR soft reset clears mode subset and preserves grid" {
             try std.testing.expect(session.focusReportingEnabled());
             try std.testing.expect(session.bracketedPasteEnabled());
             try std.testing.expect(session.mouseReportingEnabled());
-            try std.testing.expect(session.app_cursor_keys);
-            try std.testing.expect(session.app_keypad);
+            try std.testing.expect(session.appCursorKeysEnabled());
+            try std.testing.expect(session.appKeypadEnabled());
             try std.testing.expect(session.keyModeFlagsValue() != 0);
 
             terminal.debugFeedBytes(session, "\x1b[!p");
@@ -1723,8 +1723,8 @@ test "terminal DECSTR soft reset clears mode subset and preserves grid" {
             try std.testing.expect(!session.focusReportingEnabled());
             try std.testing.expect(!session.bracketedPasteEnabled());
             try std.testing.expect(!session.mouseReportingEnabled());
-            try std.testing.expect(!session.app_cursor_keys);
-            try std.testing.expect(!session.app_keypad);
+            try std.testing.expect(!session.appCursorKeysEnabled());
+            try std.testing.expect(!session.appKeypadEnabled());
             try std.testing.expectEqual(@as(u32, 0), session.keyModeFlagsValue());
 
             // Active-screen soft reset defaults restored.

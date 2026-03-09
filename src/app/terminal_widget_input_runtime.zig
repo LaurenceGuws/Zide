@@ -31,8 +31,6 @@ pub fn handle(
     input_batch: *input_types.InputBatch,
     search_panel_consumed_input: bool,
     allocator: std.mem.Allocator,
-    terminal_scroll_dragging: *bool,
-    terminal_scroll_grab_offset: *f32,
     ctx: *anyopaque,
     hooks: Hooks,
 ) !Result {
@@ -45,8 +43,6 @@ pub fn handle(
         term_width,
         term_height,
         allow_terminal_input,
-        terminal_scroll_dragging,
-        terminal_scroll_grab_offset,
         suppress_terminal_shortcuts,
         input_batch,
     )) {

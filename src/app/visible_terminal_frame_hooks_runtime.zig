@@ -51,8 +51,6 @@ pub fn handle(
     terminal_close_modal_active: bool,
     now: f64,
     allocator: std.mem.Allocator,
-    terminal_scroll_dragging: *bool,
-    terminal_scroll_grab_offset: *f32,
     ctx: *anyopaque,
     hooks: Hooks,
 ) !void {
@@ -62,8 +60,6 @@ pub fn handle(
         terminal_workspace: @TypeOf(terminal_workspace),
         terminals: @TypeOf(terminals),
         allocator: std.mem.Allocator,
-        terminal_scroll_dragging: *bool,
-        terminal_scroll_grab_offset: *f32,
         user_ctx: *anyopaque,
         hooks: Hooks,
     }{
@@ -72,8 +68,6 @@ pub fn handle(
         .terminal_workspace = terminal_workspace,
         .terminals = terminals,
         .allocator = allocator,
-        .terminal_scroll_dragging = terminal_scroll_dragging,
-        .terminal_scroll_grab_offset = terminal_scroll_grab_offset,
         .user_ctx = ctx,
         .hooks = hooks,
     };
@@ -136,8 +130,6 @@ pub fn handle(
                         term_input_batch,
                         frame_search_consumed_input,
                         route.allocator,
-                        route.terminal_scroll_dragging,
-                        route.terminal_scroll_grab_offset,
                         term_now,
                         route.user_ctx,
                         .{

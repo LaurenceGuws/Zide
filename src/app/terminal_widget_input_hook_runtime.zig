@@ -27,8 +27,6 @@ pub fn handle(
     term_input_batch: *input_types.InputBatch,
     frame_search_consumed_input: bool,
     allocator: std.mem.Allocator,
-    terminal_scroll_dragging: *bool,
-    terminal_scroll_grab_offset: *f32,
     term_now: f64,
     ctx: *anyopaque,
     hooks: Hooks,
@@ -45,8 +43,6 @@ pub fn handle(
         term_input_batch,
         frame_search_consumed_input,
         allocator,
-        terminal_scroll_dragging,
-        terminal_scroll_grab_offset,
         ctx,
         .{
             .open_file = hooks.open_file,
