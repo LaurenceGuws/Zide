@@ -17,6 +17,7 @@ fn pickForcedFullDirtyReason(
     active_cols: usize,
     scroll_offset: usize,
     active_scroll_offset: usize,
+    requires_full_damage_for_visible_history_change: bool,
     requires_full_damage_for_clear_generation: bool,
     active_is_alt: bool,
     cache_alt_active: bool,
@@ -30,6 +31,7 @@ fn pickForcedFullDirtyReason(
     if (force_full_damage) return .view_cache_force_full_damage;
     if (rows != active_rows or cols != active_cols) return .view_cache_geometry_change;
     if (scroll_offset != active_scroll_offset) return .view_cache_scroll_offset_change;
+    if (requires_full_damage_for_visible_history_change) return .view_cache_history_generation_change;
     if (requires_full_damage_for_clear_generation) return .view_cache_clear_generation_change;
     if (active_is_alt != cache_alt_active) return .view_cache_alt_state_change;
     if (screen_reverse != cache_screen_reverse) return .view_cache_screen_reverse_change;
@@ -110,6 +112,10 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     const total_lines = history_len + rows;
     const max_offset = if (total_lines > rows) total_lines - rows else 0;
     const clamped_offset = if (scroll_offset > max_offset) max_offset else scroll_offset;
+    const visible_history_generation: u64 = if (self.active == .alt or clamped_offset == 0)
+        0
+    else
+        self.history.view_generation;
     const kitty_generation = kitty_mod.kittyStateConst(self).generation;
     const clear_generation = self.clear_generation.load(.acquire);
     const force_full_damage = self.force_full_damage.swap(false, .acq_rel);
@@ -120,6 +126,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         active_cache.cols == cols and
         active_cache.history_len == history_len and
         active_cache.total_lines == total_lines and
+        active_cache.visible_history_generation == visible_history_generation and
         active_cache.scroll_offset == clamped_offset and
         active_cache.generation == generation and
         active_cache.clear_generation == clear_generation and
@@ -127,6 +134,9 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         active_cache.sync_updates_active == self.sync_updates_active and
         active_cache.screen_reverse == screen_reverse and
         active_cache.kitty_generation == kitty_generation and
+        std.meta.eql(active_cache.cursor, view.cursor) and
+        std.meta.eql(active_cache.cursor_style, view.cursor_style) and
+        active_cache.cursor_visible == view.cursor_visible and
         !force_full_damage and
         view.dirty == .none and
         active_cache.dirty == .none and
@@ -139,6 +149,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         active_cache.cols == cols and
         active_cache.history_len == history_len and
         active_cache.total_lines == total_lines and
+        active_cache.visible_history_generation == visible_history_generation and
         active_cache.scroll_offset == clamped_offset and
         active_cache.clear_generation == clear_generation and
         active_cache.alt_active == (self.active == .alt) and
@@ -172,6 +183,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         cache.cols = 0;
         cache.history_len = history_len;
         cache.total_lines = total_lines;
+        cache.visible_history_generation = visible_history_generation;
         cache.generation = generation;
         cache.scroll_offset = clamped_offset;
         cache.cursor = view.cursor;
@@ -232,6 +244,14 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         total_lines - rows - clamped_offset
     else
         0;
+    const visible_history_changed = visible_history_generation != active_cache.visible_history_generation or
+        (clamped_offset > 0 and (history_len != active_cache.history_len or total_lines != active_cache.total_lines));
+    const can_refine_visible_history_change = visible_history_changed and
+        active_cache.rows == rows and
+        active_cache.cols == cols and
+        active_cache.row_hashes.items.len == rows and
+        active_cache.generation == presented_generation;
+    const requires_full_damage_for_visible_history_change = visible_history_changed and !can_refine_visible_history_change;
     var viewport_shift_rows: i32 = 0;
     if (active_cache.rows == rows) {
         const prev_end_line = if (active_cache.total_lines > active_cache.scroll_offset)
@@ -322,6 +342,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         rows != active_cache.rows or
         cols != active_cache.cols or
         scroll_offset != active_cache.scroll_offset or
+        requires_full_damage_for_visible_history_change or
         requires_full_damage_for_clear_generation or
         (self.active == .alt) != active_cache.alt_active or
         screen_reverse != active_cache.screen_reverse or
@@ -336,14 +357,14 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         }
     }
 
-    if (view.dirty_rows.len == rows and !needs_full_damage) {
+    if (view.dirty_rows.len == rows and !needs_full_damage and !visible_history_changed) {
         std.mem.copyForwards(bool, cache.dirty_rows.items, view.dirty_rows);
     } else {
         for (cache.dirty_rows.items) |*row_dirty| {
             row_dirty.* = true;
         }
     }
-    if (view.dirty_cols_start.len == rows and view.dirty_cols_end.len == rows and !needs_full_damage) {
+    if (view.dirty_cols_start.len == rows and view.dirty_cols_end.len == rows and !needs_full_damage and !visible_history_changed) {
         std.mem.copyForwards(u16, cache.dirty_cols_start.items, view.dirty_cols_start);
         std.mem.copyForwards(u16, cache.dirty_cols_end.items, view.dirty_cols_end);
         if (cols > 0 and view.dirty == .partial) {
@@ -424,6 +445,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     cache.cols = cols;
     cache.history_len = history_len;
     cache.total_lines = total_lines;
+    cache.visible_history_generation = visible_history_generation;
     cache.generation = generation;
     cache.scroll_offset = clamped_offset;
     cache.cursor = view.cursor;
@@ -436,8 +458,15 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
             break;
         }
     }
-    cache.dirty = if (needs_full_damage) .full else view.dirty;
+    cache.dirty = if (needs_full_damage)
+        .full
+    else if (visible_history_changed and view.dirty == .none)
+        .partial
+    else
+        view.dirty;
     cache.damage = if (needs_full_damage)
+        .{ .start_row = 0, .end_row = if (rows > 0) rows - 1 else 0, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
+    else if (visible_history_changed and view.dirty == .none)
         .{ .start_row = 0, .end_row = if (rows > 0) rows - 1 else 0, .start_col = 0, .end_col = if (cols > 0) cols - 1 else 0 }
     else
         view.damage;
@@ -450,6 +479,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
             active_cache.cols,
             scroll_offset,
             active_cache.scroll_offset,
+            requires_full_damage_for_visible_history_change,
             requires_full_damage_for_clear_generation,
             self.active == .alt,
             active_cache.alt_active,
@@ -468,7 +498,7 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
     }
 
     if (!needs_full_damage and
-        view.dirty == .partial and
+        (view.dirty == .partial or visible_history_changed) and
         active_cache.rows == rows and
         active_cache.cols == cols and
         active_cache.row_hashes.items.len == rows and
@@ -532,7 +562,6 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
                 }
             }
         }
-
     }
 
     // Cursor is rendered as a UI overlay in terminal_widget_draw, so cursor visibility
