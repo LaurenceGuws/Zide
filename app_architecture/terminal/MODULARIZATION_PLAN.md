@@ -185,6 +185,7 @@ Progress:
 - Follow-up (2026-03-10): consolidated kitty image lifecycle teardown in `src/terminal/kitty/graphics.zig` so `evict`, `delete`, and image replacement now share explicit helpers for dropping placements, partial upload state, and stored image bytes instead of open-coding those destructive paths in multiple places.
 - Follow-up (2026-03-10): consolidated kitty payload transport/build logic behind an internal `KittyTransport` boundary in `src/terminal/kitty/graphics.zig`, so query/upload paths now share one authoritative implementation for payload load, file/shm transport, inflate, partial accumulation, expected-size checks, and image build.
 - Follow-up (2026-03-10): extracted kitty placement-graph mutation/query/dirty logic behind an internal `KittyPlacementOps` boundary in `src/terminal/kitty/graphics.zig`, so placement lookup, dirty marking, image-placement teardown, and effective cursor-span calculation no longer stay duplicated across store/place/delete paths.
+- Follow-up (2026-03-10): extracted kitty image storage/eviction/clear ownership behind an internal `KittyStorageOps` boundary in `src/terminal/kitty/graphics.zig`, so byte-store replacement, capacity eviction, partial cleanup, and clear-all flows no longer stay interleaved with placement and top-level parser dispatch code.
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.
