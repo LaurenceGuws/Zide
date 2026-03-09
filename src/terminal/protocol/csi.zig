@@ -336,20 +336,17 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                     const mode = p[idx];
                     switch (mode) {
                         1 => {
-                            self.app_cursor_keys = true;
-                            self.updateInputSnapshot();
+                            self.setAppCursorKeys(true);
                         },
                         3 => self.setColumnMode132(true),
                         5 => self.activeScreen().*.setScreenReverse(true),
                         6 => self.activeScreen().*.setOriginMode(true),
                         7 => self.activeScreen().*.setAutowrap(true),
                         8 => {
-                            self.auto_repeat = true;
-                            self.updateInputSnapshot();
+                            self.setAutoRepeat(true);
                         },
                         9 => {
-                            self.input.mouse_mode_x10 = true;
-                            self.updateInputSnapshot();
+                            self.setMouseModeX10(true);
                         },
                         12 => self.activeScreen().*.setCursorBlink(true),
                         45 => self.activeScreen().*.setReverseWrap(true),
@@ -363,8 +360,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         },
                         1049 => self.enterAltScreen(true, true),
                         2004 => {
-                            self.bracketed_paste = true;
-                            self.updateInputSnapshot();
+                            self.setBracketedPaste(true);
                         },
                         2026 => self.setSyncUpdates(true),
                         2027 => {
@@ -375,32 +371,25 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         2031 => self.report_color_scheme_2031 = true,
                         2048 => self.inband_resize_notifications_2048 = true,
                         1004 => {
-                            self.focus_reporting = true;
-                            self.updateInputSnapshot();
+                            self.setFocusReporting(true);
                         },
                         1000 => {
-                            self.input.mouse_mode_x10 = true;
-                            self.updateInputSnapshot();
+                            self.setMouseModeX10(true);
                         },
                         1002 => {
-                            self.input.mouse_mode_button = true;
-                            self.updateInputSnapshot();
+                            self.setMouseModeButton(true);
                         },
                         1003 => {
-                            self.input.mouse_mode_any = true;
-                            self.updateInputSnapshot();
+                            self.setMouseModeAny(true);
                         },
                         1006 => {
-                            self.input.mouse_mode_sgr = true;
-                            self.updateInputSnapshot();
+                            self.setMouseModeSgr(true);
                         },
                         1007 => {
-                            self.mouse_alternate_scroll = true;
-                            self.updateInputSnapshot();
+                            self.setMouseAlternateScroll(true);
                         },
                         1016 => {
-                            self.input.mouse_mode_sgr_pixels_1016 = true;
-                            self.updateInputSnapshot();
+                            self.setMouseModeSgrPixels(true);
                         },
                         5522 => self.kitty_paste_events_5522 = true,
                         else => {},
@@ -429,20 +418,17 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                     const mode = p[idx];
                     switch (mode) {
                         1 => {
-                            self.app_cursor_keys = false;
-                            self.updateInputSnapshot();
+                            self.setAppCursorKeys(false);
                         },
                         3 => self.setColumnMode132(false),
                         5 => self.activeScreen().*.setScreenReverse(false),
                         6 => self.activeScreen().*.setOriginMode(false),
                         7 => self.activeScreen().*.setAutowrap(false),
                         8 => {
-                            self.auto_repeat = false;
-                            self.updateInputSnapshot();
+                            self.setAutoRepeat(false);
                         },
                         9 => {
-                            self.input.mouse_mode_x10 = false;
-                            self.updateInputSnapshot();
+                            self.setMouseModeX10(false);
                         },
                         12 => self.activeScreen().*.setCursorBlink(false),
                         45 => self.activeScreen().*.setReverseWrap(false),
@@ -456,8 +442,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         },
                         1049 => self.exitAltScreen(true),
                         2004 => {
-                            self.bracketed_paste = false;
-                            self.updateInputSnapshot();
+                            self.setBracketedPaste(false);
                         },
                         2026 => self.setSyncUpdates(false),
                         2027 => {
@@ -468,32 +453,25 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         2031 => self.report_color_scheme_2031 = false,
                         2048 => self.inband_resize_notifications_2048 = false,
                         1004 => {
-                            self.focus_reporting = false;
-                            self.updateInputSnapshot();
+                            self.setFocusReporting(false);
                         },
                         1000 => {
-                            self.input.mouse_mode_x10 = false;
-                            self.updateInputSnapshot();
+                            self.setMouseModeX10(false);
                         },
                         1002 => {
-                            self.input.mouse_mode_button = false;
-                            self.updateInputSnapshot();
+                            self.setMouseModeButton(false);
                         },
                         1003 => {
-                            self.input.mouse_mode_any = false;
-                            self.updateInputSnapshot();
+                            self.setMouseModeAny(false);
                         },
                         1006 => {
-                            self.input.mouse_mode_sgr = false;
-                            self.updateInputSnapshot();
+                            self.setMouseModeSgr(false);
                         },
                         1007 => {
-                            self.mouse_alternate_scroll = false;
-                            self.updateInputSnapshot();
+                            self.setMouseAlternateScroll(false);
                         },
                         1016 => {
-                            self.input.mouse_mode_sgr_pixels_1016 = false;
-                            self.updateInputSnapshot();
+                            self.setMouseModeSgrPixels(false);
                         },
                         5522 => self.kitty_paste_events_5522 = false,
                         else => {},
