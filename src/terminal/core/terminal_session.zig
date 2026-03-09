@@ -1066,6 +1066,46 @@ pub const TerminalSession = struct {
         input_modes.keyModeQuery(self);
     }
 
+    pub fn setAppCursorKeys(self: *TerminalSession, enabled: bool) void {
+        input_modes.setAppCursorKeys(self, enabled);
+    }
+
+    pub fn setAutoRepeat(self: *TerminalSession, enabled: bool) void {
+        input_modes.setAutoRepeat(self, enabled);
+    }
+
+    pub fn setBracketedPaste(self: *TerminalSession, enabled: bool) void {
+        input_modes.setBracketedPaste(self, enabled);
+    }
+
+    pub fn setFocusReporting(self: *TerminalSession, enabled: bool) void {
+        input_modes.setFocusReporting(self, enabled);
+    }
+
+    pub fn setMouseAlternateScroll(self: *TerminalSession, enabled: bool) void {
+        input_modes.setMouseAlternateScroll(self, enabled);
+    }
+
+    pub fn setMouseModeX10(self: *TerminalSession, enabled: bool) void {
+        input_modes.setMouseModeX10(self, enabled);
+    }
+
+    pub fn setMouseModeButton(self: *TerminalSession, enabled: bool) void {
+        input_modes.setMouseModeButton(self, enabled);
+    }
+
+    pub fn setMouseModeAny(self: *TerminalSession, enabled: bool) void {
+        input_modes.setMouseModeAny(self, enabled);
+    }
+
+    pub fn setMouseModeSgr(self: *TerminalSession, enabled: bool) void {
+        input_modes.setMouseModeSgr(self, enabled);
+    }
+
+    pub fn setMouseModeSgrPixels(self: *TerminalSession, enabled: bool) void {
+        input_modes.setMouseModeSgrPixels(self, enabled);
+    }
+
     pub fn setCursorStyle(self: *TerminalSession, mode: i32) void {
         self.activeScreen().setCursorStyle(mode);
     }
@@ -1461,7 +1501,6 @@ pub const TerminalSession = struct {
     } {
         return self.activeScreenConst().getDamage();
     }
-
 };
 
 pub const InputSnapshot = struct {

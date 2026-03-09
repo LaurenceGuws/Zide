@@ -157,6 +157,7 @@ Progress:
 - Follow-up (2026-03-09): extracted workspace polling/fairness implementation into `src/terminal/core/workspace_polling.zig` so `workspace.zig` moves closer to tab/session ownership rather than scheduling policy.
 - Follow-up (2026-03-09): extracted terminal frame pacing/latency/generation observation into `src/app/terminal_frame_pacing_runtime.zig` so `frame_render_idle_runtime.zig` acts as a coordinator instead of embedding terminal scheduler policy inline.
 - Follow-up (2026-03-09): grouped terminal frame pacing bookkeeping into `AppState.terminal_frame_pacing` so runtime scheduler state stops leaking across the top-level app state as unrelated scalar fields.
+- Follow-up (2026-03-09): routed common input-mode snapshot updates through explicit `input_modes` setters so CSI mode toggles no longer open-code field mutation plus `updateInputSnapshot()` at each call site.
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.
@@ -216,7 +217,8 @@ ordered by how much they constrain future correctness and simplification work.
   - `src/terminal/protocol/csi.zig`
   - `src/terminal/core/input_modes.zig`
 - The current `input_snapshot` design works, but many protocol/mode branches must
-  remember to call `updateInputSnapshot()`. This is easy to miss and hard to audit.
+  remember to call `updateInputSnapshot()`. The most repetitive CSI toggles now flow
+  through explicit setters, but the design is still easy to drift and hard to audit.
 
 5) Widget input/draw code still carries backend and app policy.
 - Files:

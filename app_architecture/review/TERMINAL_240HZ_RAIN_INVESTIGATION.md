@@ -694,3 +694,19 @@ Reason:
 - Intent:
   - reduce app-state sprawl while the runtime lane is being cleaned up
   - make later extraction of terminal-specific scheduler ownership less invasive
+
+## Input Snapshot Setter Cleanup (2026-03-09)
+
+- Files:
+  - `src/terminal/core/input_modes.zig`
+  - `src/terminal/core/terminal_session.zig`
+  - `src/terminal/protocol/csi.zig`
+- Change:
+  - introduced explicit input-mode setters for app-cursor mode, auto-repeat,
+    bracketed paste, focus reporting, alternate scroll, and mouse-reporting modes
+  - rewired CSI mode toggles to use those setters instead of open-coding field
+    mutation plus `updateInputSnapshot()` at each branch
+- Intent:
+  - reduce the easiest-to-miss `input_snapshot` publication drift points without
+    claiming that the broader snapshot design is solved
+  - prepare the input lane for a later facade/state-object refactor
