@@ -224,6 +224,7 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - when no presented diff base exists for a visible-history change, `view_cache` now attributes that fallback explicitly as `view_cache_history_generation_change` instead of collapsing into an ambiguous force-full path
   - same-generation cursor-style changes are now treated as overlay-facing cache state; config reload no longer forces a full terminal texture invalidate just to publish a new cursor shape/blink mode
   - removed redundant `requestForceFullDamage(...)` usage for default-color changes, ANSI palette setup/remap, and 132-column mode; those paths now rely on screen-model full dirty, visible-history cache diffing, or clear-generation publication instead of a second session-side invalidate flag
+  - removed the remaining conservative `ED 0/1 => force_full_damage` fallback; partial erase-display variants now rely on the screen model’s published dirty ranges directly, and the dead `force_full_ed` investigation bookkeeping was deleted with it
 
 ## Applied Fix Candidate (2026-03-09)
 
