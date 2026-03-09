@@ -197,7 +197,6 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
         for (state.terminals.items) |term| {
             term.primary.cursor_style = cursor_style;
             term.alt.cursor_style = cursor_style;
-            term.requestForceFullDamage("reload terminal cursor style", @src());
             term.updateViewCacheForScroll();
         }
         state.needs_redraw = true;

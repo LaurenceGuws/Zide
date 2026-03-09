@@ -220,6 +220,10 @@ This confirms a practical scheduler race window around `hasData` gating and idle
   - added a regression that simulates repeated scroll publications without an intervening presentation and asserts top-row damage is preserved instead of being refined away
   - latest full-screen rain repro now keeps refinement aligned (`refine_base_gen == presented_gen`) and the user reported the result as the best state so far, with full-screen rain nearly perfect
   - removed temporary `cache_refine`/row-sample probe logging from the hot path and dropped the stale `generation changed + dirty=none => force full redraw` fallback, since the render-cache contract now distinguishes published vs presented generations explicitly
+  - `view_cache` now tracks `visible_history_generation` for scrolled primary-screen views, so visible scrollback/history mutations are diffed against the last presented cache instead of relying on generic `force_full_damage` escape hatches
+  - when no presented diff base exists for a visible-history change, `view_cache` now attributes that fallback explicitly as `view_cache_history_generation_change` instead of collapsing into an ambiguous force-full path
+  - same-generation cursor-style changes are now treated as overlay-facing cache state; config reload no longer forces a full terminal texture invalidate just to publish a new cursor shape/blink mode
+  - removed redundant `requestForceFullDamage(...)` usage for default-color changes, ANSI palette setup/remap, and 132-column mode; those paths now rely on screen-model full dirty, visible-history cache diffing, or clear-generation publication instead of a second session-side invalidate flag
 
 ## Applied Fix Candidate (2026-03-09)
 

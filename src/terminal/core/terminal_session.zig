@@ -547,7 +547,7 @@ pub const TerminalSession = struct {
         self.primary.updateDefaultColors(old_attrs, new_attrs);
         self.alt.updateDefaultColors(old_attrs, new_attrs);
         self.history.updateDefaultColors(old_attrs.fg, old_attrs.bg, new_attrs.fg, new_attrs.bg);
-        self.requestForceFullDamage("default colors changed", @src());
+        self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
     pub fn setAnsiColors(self: *TerminalSession, colors: [16]types.Color) void {
@@ -557,7 +557,6 @@ pub const TerminalSession = struct {
             self.palette_default[i] = colors[i];
             self.palette_current[i] = colors[i];
         }
-        self.requestForceFullDamage("set ANSI palette", @src());
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
@@ -567,7 +566,6 @@ pub const TerminalSession = struct {
         self.primary.updateAnsiColors(old_colors, new_colors);
         self.alt.updateAnsiColors(old_colors, new_colors);
         self.history.updateAnsiColors(old_colors, new_colors);
-        self.requestForceFullDamage("remap ANSI palette", @src());
         self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
@@ -1022,7 +1020,7 @@ pub const TerminalSession = struct {
         self.primary.setCursor(0, 0);
         self.alt.setCursor(0, 0);
         _ = self.clear_generation.fetchAdd(1, .acq_rel);
-        self.requestForceFullDamage("set 132-column mode", @src());
+        self.updateViewCacheNoLock(self.output_generation.load(.acquire), self.history.scrollOffset());
     }
 
     pub fn setCellSize(self: *TerminalSession, cell_width: u16, cell_height: u16) void {
@@ -1931,4 +1929,60 @@ test "setSyncUpdates disable publishes full dirty from screen model" {
     try std.testing.expect(!session.syncUpdatesActive());
     try std.testing.expectEqual(Dirty.full, cache.dirty);
     try std.testing.expectEqual(screen_mod.FullDirtyReason.sync_updates_disabled, cache.full_dirty_reason);
+}
+
+test "visible history changes publish partial cache damage without force-full" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row_a = [_]Cell{ base, base, base, base };
+    var row_b = [_]Cell{ base, base, base, base };
+    for (&row_a, 0..) |*cell, col| cell.codepoint = @as(u32, 'A') + @as(u32, @intCast(col));
+    for (&row_b, 0..) |*cell, col| cell.codepoint = @as(u32, 'E') + @as(u32, @intCast(col));
+
+    session.history.pushRow(&row_a, false, base);
+    session.history.pushRow(&row_b, false, base);
+    session.history.ensureViewCache(session.primary.grid.cols, base);
+    session.history.setScrollOffset(session.primary.grid.rows, 2);
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.notePresentedGeneration(session.renderCache().generation);
+
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+
+    const new_fg = Color{ .r = 0x11, .g = 0x22, .b = 0x33, .a = 0xff };
+    session.history.updateDefaultColors(base.attrs.fg, base.attrs.bg, new_fg, base.attrs.bg);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.partial, cache.dirty);
+    try std.testing.expectEqual(@as(usize, 0), cache.damage.start_row);
+    try std.testing.expect(cache.dirty_rows.items[0]);
+    try std.testing.expectEqual(new_fg, cache.cells.items[0].attrs.fg);
+}
+
+test "cursor style updates publish through cache without texture invalidation" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 4);
+    defer session.deinit();
+
+    _ = session.output_generation.fetchAdd(1, .acq_rel);
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+    session.primary.clearDirty();
+    session.alt.clearDirty();
+    try std.testing.expect(session.clearRenderCacheDirtyIfGeneration(session.output_generation.load(.acquire)));
+
+    session.primary.cursor_style = .{ .shape = .bar, .blink = false };
+    session.updateViewCacheNoLock(session.output_generation.load(.acquire), session.history.scrollOffset());
+
+    const cache = session.renderCache();
+    try std.testing.expectEqual(Dirty.none, cache.dirty);
+    try std.testing.expectEqual(types.CursorStyle{ .shape = .bar, .blink = false }, cache.cursor_style);
 }
