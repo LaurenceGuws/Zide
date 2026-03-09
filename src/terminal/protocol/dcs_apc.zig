@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
+const kitty_mod = @import("../kitty/graphics.zig");
 
 pub const SessionFacade = struct {
     ctx: *anyopaque,
@@ -23,7 +24,7 @@ pub const SessionFacade = struct {
             .parse_kitty_graphics_fn = struct {
                 fn call(ctx: *anyopaque, payload: []const u8) void {
                     const s: SessionPtr = @ptrCast(@alignCast(ctx));
-                    s.parseKittyGraphics(payload);
+                    kitty_mod.parseKittyGraphics(s, payload);
                 }
             }.call,
             .decrqss_reply_into_fn = struct {
@@ -232,7 +233,7 @@ fn handleLegacySyncUpdates(session: *const SessionFacade, payload: []const u8) b
     const raw = std.mem.trim(u8, payload[1 .. payload.len - 1], " ;");
     if (raw.len == 0) return false;
     const mode = std.fmt.parseInt(u8, raw, 10) catch {
-        log.logf(.debug, "legacy sync updates parse failed raw={s}", .{ raw });
+        log.logf(.debug, "legacy sync updates parse failed raw={s}", .{raw});
         return false;
     };
     switch (mode) {
