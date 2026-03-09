@@ -666,6 +666,59 @@ const ModeMutationContext = struct {
     }
 };
 
+const ModeQueryContext = struct {
+    ctx: *anyopaque,
+    mode_snapshot_fn: *const fn (ctx: *anyopaque) ModeSnapshot,
+
+    pub fn from(session: anytype) ModeQueryContext {
+        const SessionPtr = @TypeOf(session);
+        return .{
+            .ctx = @ptrCast(session),
+            .mode_snapshot_fn = struct {
+                fn call(ctx: *anyopaque) ModeSnapshot {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    const screen = s.activeScreen();
+                    return modeSnapshotFromContext(.{
+                        .app_cursor_keys = s.appCursorKeysEnabled(),
+                        .column_mode_132 = s.column_mode_132,
+                        .screen_reverse = screen.screen_reverse,
+                        .origin_mode = screen.origin_mode,
+                        .auto_wrap = screen.auto_wrap,
+                        .auto_repeat = s.autoRepeatEnabled(),
+                        .mouse_mode_x10 = s.mouseModeX10Enabled(),
+                        .cursor_blink = screen.cursor_style.blink,
+                        .cursor_visible = screen.cursor_visible,
+                        .reverse_wrap = screen.reverse_wrap,
+                        .left_right_margin_mode_69 = screen.left_right_margin_mode_69,
+                        .alt_active = s.active == .alt,
+                        .save_cursor_mode_1048 = screen.save_cursor_mode_1048,
+                        .app_keypad = s.appKeypadEnabled(),
+                        .mouse_mode_button = s.mouseModeButtonEnabled(),
+                        .mouse_mode_any = s.mouseModeAnyEnabled(),
+                        .focus_reporting = s.focusReportingEnabled(),
+                        .mouse_mode_sgr = s.mouseModeSgrEnabled(),
+                        .mouse_alternate_scroll = s.mouseAlternateScrollEnabled(),
+                        .mouse_mode_sgr_pixels = s.mouseModeSgrPixelsEnabled(),
+                        .bracketed_paste = s.bracketedPasteEnabled(),
+                        .sync_updates_active = s.sync_updates_active,
+                        .grapheme_cluster_shaping_2027 = s.grapheme_cluster_shaping_2027,
+                        .report_color_scheme_2031 = s.report_color_scheme_2031,
+                        .inband_resize_notifications_2048 = s.inband_resize_notifications_2048,
+                        .kitty_paste_events_5522 = s.kitty_paste_events_5522,
+                        .insert_mode = screen.insert_mode,
+                        .local_echo_mode_12 = screen.local_echo_mode_12,
+                        .newline_mode = screen.newline_mode,
+                    });
+                }
+            }.call,
+        };
+    }
+
+    pub fn snapshot(self: *const ModeQueryContext) ModeSnapshot {
+        return self.mode_snapshot_fn(self.ctx);
+    }
+};
+
 fn csiIntermediatesEq(action: parser_csi.CsiAction, bytes: []const u8) bool {
     if (action.intermediates_len != bytes.len) return false;
     return std.mem.eql(u8, action.intermediates[0..action.intermediates_len], bytes);
@@ -815,6 +868,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
     const screen = self.activeScreen();
     const query = QueryContext.from(self);
     const mode_context = ModeMutationContext.from(self);
+    const mode_query = ModeQueryContext.from(self);
 
     switch (action.final) {
         'A' => { // CUU
@@ -1002,37 +1056,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
             if (!csiIntermediatesEq(action, "$")) return;
             // DECRQM is valid only with exactly one parameter; invalid cardinality is ignored.
             if (param_len != 1) return;
-            const snapshot = modeSnapshotFromContext(.{
-                .app_cursor_keys = self.appCursorKeysEnabled(),
-                .column_mode_132 = self.column_mode_132,
-                .screen_reverse = screen.screen_reverse,
-                .origin_mode = screen.origin_mode,
-                .auto_wrap = screen.auto_wrap,
-                .auto_repeat = self.autoRepeatEnabled(),
-                .mouse_mode_x10 = self.mouseModeX10Enabled(),
-                .cursor_blink = screen.cursor_style.blink,
-                .cursor_visible = screen.cursor_visible,
-                .reverse_wrap = screen.reverse_wrap,
-                .left_right_margin_mode_69 = screen.left_right_margin_mode_69,
-                .alt_active = self.active == .alt,
-                .save_cursor_mode_1048 = screen.save_cursor_mode_1048,
-                .app_keypad = self.appKeypadEnabled(),
-                .mouse_mode_button = self.mouseModeButtonEnabled(),
-                .mouse_mode_any = self.mouseModeAnyEnabled(),
-                .focus_reporting = self.focusReportingEnabled(),
-                .mouse_mode_sgr = self.mouseModeSgrEnabled(),
-                .mouse_alternate_scroll = self.mouseAlternateScrollEnabled(),
-                .mouse_mode_sgr_pixels = self.mouseModeSgrPixelsEnabled(),
-                .bracketed_paste = self.bracketedPasteEnabled(),
-                .sync_updates_active = self.sync_updates_active,
-                .grapheme_cluster_shaping_2027 = self.grapheme_cluster_shaping_2027,
-                .report_color_scheme_2031 = self.report_color_scheme_2031,
-                .inband_resize_notifications_2048 = self.inband_resize_notifications_2048,
-                .kitty_paste_events_5522 = self.kitty_paste_events_5522,
-                .insert_mode = screen.insert_mode,
-                .local_echo_mode_12 = screen.local_echo_mode_12,
-                .newline_mode = screen.newline_mode,
-            });
+            const snapshot = mode_query.snapshot();
             if (self.lockPtyWriter()) |writer_guard| {
                 var writer = writer_guard;
                 defer writer.unlock();
