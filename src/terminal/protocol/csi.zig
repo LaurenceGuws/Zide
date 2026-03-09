@@ -30,7 +30,33 @@ fn effectiveSgrParamCount(action: parser_csi.CsiAction) usize {
     return raw_count;
 }
 
-pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
+pub const SessionFacade = struct {
+    ctx: *anyopaque,
+    handle_csi_fn: *const fn (ctx: *anyopaque, action: parser_csi.CsiAction) void,
+
+    pub fn from(session: anytype) SessionFacade {
+        const SessionPtr = @TypeOf(session);
+        return .{
+            .ctx = @ptrCast(session),
+            .handle_csi_fn = struct {
+                fn call(ctx: *anyopaque, action: parser_csi.CsiAction) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    handleCsiOnSession(s, action);
+                }
+            }.call,
+        };
+    }
+
+    pub fn handleCsi(self: *const SessionFacade, action: parser_csi.CsiAction) void {
+        self.handle_csi_fn(self.ctx, action);
+    }
+};
+
+pub fn handleCsi(session: SessionFacade, action: parser_csi.CsiAction) void {
+    session.handleCsi(action);
+}
+
+fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
     const log = app_logger.logger("terminal.csi");
     const inputpath_log = app_logger.logger("terminal.inputpath");
     const csi_param_count = effectiveCsiParamCount(action);
@@ -221,10 +247,10 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
             const flags: u32 = if (param_len > 0) @intCast(@max(0, p[0])) else 0;
             const mode: u32 = if (param_len > 1) @intCast(@max(0, p[1])) else 1;
             switch (action.leader) {
-                '>' => self.keyModePush(flags),
-                '<' => self.keyModePop(if (param_len > 0) @intCast(@max(1, p[0])) else 1),
-                '=' => self.keyModeModify(flags, mode),
-                '?' => self.keyModeQuery(),
+                '>' => self.keyModePushLocked(flags),
+                '<' => self.keyModePopLocked(if (param_len > 0) @intCast(@max(1, p[0])) else 1),
+                '=' => self.keyModeModifyLocked(flags, mode),
+                '?' => self.keyModeQueryLocked(),
                 else => {},
             }
         },
@@ -346,17 +372,17 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                     const mode = p[idx];
                     switch (mode) {
                         1 => {
-                            self.setAppCursorKeys(true);
+                            self.setAppCursorKeysLocked(true);
                         },
                         3 => self.setColumnMode132Locked(true),
                         5 => self.activeScreen().*.setScreenReverse(true),
                         6 => self.activeScreen().*.setOriginMode(true),
                         7 => self.activeScreen().*.setAutowrap(true),
                         8 => {
-                            self.setAutoRepeat(true);
+                            self.setAutoRepeatLocked(true);
                         },
                         9 => {
-                            self.setMouseModeX10(true);
+                            self.setMouseModeX10Locked(true);
                         },
                         12 => self.activeScreen().*.setCursorBlink(true),
                         45 => self.activeScreen().*.setReverseWrap(true),
@@ -370,7 +396,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         },
                         1049 => self.enterAltScreen(true, true),
                         2004 => {
-                            self.setBracketedPaste(true);
+                            self.setBracketedPasteLocked(true);
                         },
                         2026 => self.setSyncUpdatesLocked(true),
                         2027 => {
@@ -381,25 +407,25 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         2031 => self.report_color_scheme_2031 = true,
                         2048 => self.inband_resize_notifications_2048 = true,
                         1004 => {
-                            self.setFocusReporting(true);
+                            self.setFocusReportingLocked(true);
                         },
                         1000 => {
-                            self.setMouseModeX10(true);
+                            self.setMouseModeX10Locked(true);
                         },
                         1002 => {
-                            self.setMouseModeButton(true);
+                            self.setMouseModeButtonLocked(true);
                         },
                         1003 => {
-                            self.setMouseModeAny(true);
+                            self.setMouseModeAnyLocked(true);
                         },
                         1006 => {
-                            self.setMouseModeSgr(true);
+                            self.setMouseModeSgrLocked(true);
                         },
                         1007 => {
-                            self.setMouseAlternateScroll(true);
+                            self.setMouseAlternateScrollLocked(true);
                         },
                         1016 => {
-                            self.setMouseModeSgrPixels(true);
+                            self.setMouseModeSgrPixelsLocked(true);
                         },
                         5522 => self.kitty_paste_events_5522 = true,
                         else => {},
@@ -428,17 +454,17 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                     const mode = p[idx];
                     switch (mode) {
                         1 => {
-                            self.setAppCursorKeys(false);
+                            self.setAppCursorKeysLocked(false);
                         },
                         3 => self.setColumnMode132Locked(false),
                         5 => self.activeScreen().*.setScreenReverse(false),
                         6 => self.activeScreen().*.setOriginMode(false),
                         7 => self.activeScreen().*.setAutowrap(false),
                         8 => {
-                            self.setAutoRepeat(false);
+                            self.setAutoRepeatLocked(false);
                         },
                         9 => {
-                            self.setMouseModeX10(false);
+                            self.setMouseModeX10Locked(false);
                         },
                         12 => self.activeScreen().*.setCursorBlink(false),
                         45 => self.activeScreen().*.setReverseWrap(false),
@@ -452,7 +478,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         },
                         1049 => self.exitAltScreen(true),
                         2004 => {
-                            self.setBracketedPaste(false);
+                            self.setBracketedPasteLocked(false);
                         },
                         2026 => self.setSyncUpdatesLocked(false),
                         2027 => {
@@ -463,25 +489,25 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
                         2031 => self.report_color_scheme_2031 = false,
                         2048 => self.inband_resize_notifications_2048 = false,
                         1004 => {
-                            self.setFocusReporting(false);
+                            self.setFocusReportingLocked(false);
                         },
                         1000 => {
-                            self.setMouseModeX10(false);
+                            self.setMouseModeX10Locked(false);
                         },
                         1002 => {
-                            self.setMouseModeButton(false);
+                            self.setMouseModeButtonLocked(false);
                         },
                         1003 => {
-                            self.setMouseModeAny(false);
+                            self.setMouseModeAnyLocked(false);
                         },
                         1006 => {
-                            self.setMouseModeSgr(false);
+                            self.setMouseModeSgrLocked(false);
                         },
                         1007 => {
-                            self.setMouseAlternateScroll(false);
+                            self.setMouseAlternateScrollLocked(false);
                         },
                         1016 => {
-                            self.setMouseModeSgrPixels(false);
+                            self.setMouseModeSgrPixelsLocked(false);
                         },
                         5522 => self.kitty_paste_events_5522 = false,
                         else => {},
@@ -582,7 +608,7 @@ fn applyDecstr(self: anytype) void {
     self.alt.setGraphemeClusterShaping2027(false);
     self.inband_resize_notifications_2048 = false;
     self.kitty_paste_events_5522 = false;
-    self.resetInputModes();
+    self.resetInputModesLocked();
     self.column_mode_132 = false;
     self.setSyncUpdatesLocked(false);
 
@@ -597,37 +623,37 @@ fn applyDecstr(self: anytype) void {
 
 fn decrqmPrivateModeState(self: anytype, screen: anytype, mode: i32) DecrpmState {
     return switch (mode) {
-        1 => boolModeState(self.app_cursor_keys),
+        1 => boolModeState(self.appCursorKeysEnabled()),
         3 => boolModeState(self.column_mode_132),
         5 => boolModeState(screen.screen_reverse),
         6 => boolModeState(screen.origin_mode),
         7 => boolModeState(screen.auto_wrap),
-        8 => boolModeState(self.auto_repeat),
-        9 => boolModeState(self.input.mouse_mode_x10),
+        8 => boolModeState(self.autoRepeatEnabled()),
+        9 => boolModeState(self.mouseModeX10Enabled()),
         12 => boolModeState(screen.cursor_style.blink),
         25 => boolModeState(screen.cursor_visible),
         45 => boolModeState(screen.reverse_wrap),
         69 => boolModeState(screen.left_right_margin_mode_69),
         47, 1047, 1049 => boolModeState(self.active == .alt),
         1048 => boolModeState(screen.save_cursor_mode_1048),
-        66 => boolModeState(self.app_keypad),
+        66 => boolModeState(self.appKeypadEnabled()),
         67 => .permanently_reset, // DECBKM (backarrow key mode) not supported
-        1000 => boolModeState(self.input.mouse_mode_x10),
+        1000 => boolModeState(self.mouseModeX10Enabled()),
         1001 => .permanently_reset, // Mouse highlight tracking not supported
-        1002 => boolModeState(self.input.mouse_mode_button),
-        1003 => boolModeState(self.input.mouse_mode_any),
-        1004 => boolModeState(self.focus_reporting),
+        1002 => boolModeState(self.mouseModeButtonEnabled()),
+        1003 => boolModeState(self.mouseModeAnyEnabled()),
+        1004 => boolModeState(self.focusReportingEnabled()),
         1005 => .permanently_reset, // UTF-8 mouse encoding not supported
-        1006 => boolModeState(self.input.mouse_mode_sgr),
-        1007 => boolModeState(self.mouse_alternate_scroll),
+        1006 => boolModeState(self.mouseModeSgrEnabled()),
+        1007 => boolModeState(self.mouseAlternateScrollEnabled()),
         1015 => .permanently_reset, // urxvt mouse encoding not supported
-        1016 => boolModeState(self.input.mouse_mode_sgr_pixels_1016),
+        1016 => boolModeState(self.mouseModeSgrPixelsEnabled()),
         1034 => .permanently_reset, // 8-bit meta mode not supported
         1035 => .permanently_reset, // num lock modifier mode not supported
         1036 => .permanently_reset, // ESC-prefixed meta mode toggle not supported
         1042 => .permanently_reset, // bell action toggle not supported
         1070 => .permanently_reset, // sixel private palette mode not supported
-        2004 => boolModeState(self.bracketed_paste),
+        2004 => boolModeState(self.bracketedPasteEnabled()),
         2026 => boolModeState(self.sync_updates_active),
         2027 => boolModeState(self.grapheme_cluster_shaping_2027),
         2031 => boolModeState(self.report_color_scheme_2031),
