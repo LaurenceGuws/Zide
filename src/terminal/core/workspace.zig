@@ -150,14 +150,13 @@ pub const TerminalWorkspace = struct {
         cwd_out: *std.ArrayList(u8),
     ) !?TabMetadata {
         const session = self.sessionAt(index) orelse return null;
-        const title = try session.copyCurrentTitle(allocator, title_out);
-        const cwd = try session.copyCurrentCwd(allocator, cwd_out);
+        const metadata = try session.copyMetadata(allocator, title_out, cwd_out);
         return .{
             .id = self.tabs.items[index].id,
-            .title = title,
-            .cwd = cwd,
-            .alive = session.isAlive(),
-            .exit_code = session.childExitCode(),
+            .title = metadata.title,
+            .cwd = metadata.cwd,
+            .alive = metadata.alive,
+            .exit_code = metadata.exit_code,
         };
     }
 
