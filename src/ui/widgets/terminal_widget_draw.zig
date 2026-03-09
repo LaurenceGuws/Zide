@@ -29,6 +29,8 @@ const Rgba = terminal_font_mod.Rgba;
 const Renderer = renderer_mod.Renderer;
 const TerminalDisableLigaturesStrategy = renderer_mod.TerminalDisableLigaturesStrategy;
 const RenderCache = render_cache_mod.RenderCache;
+const PresentedRenderCache = terminal_mod.PresentedRenderCache;
+const PresentationFeedback = terminal_mod.PresentationFeedback;
 const kitty_unicode_placeholder: u32 = 0x10EEEE;
 
 var jitter_debug_enabled_cache: ?bool = null;
@@ -44,6 +46,14 @@ pub const FrameLatencyMetrics = struct {
     overlay_ms: f64 = 0.0,
     render_ms: f64 = 0.0,
     draw_ms: f64 = 0.0,
+};
+
+pub const DrawOutcome = PresentationFeedback;
+
+pub const DrawPreparation = struct {
+    draw_start: f64,
+    lock_ms: f64,
+    presented: PresentedRenderCache,
 };
 
 const ViewportTextureShiftPlan = union(enum) {
@@ -204,61 +214,6 @@ fn rowSelectionEnd(cache: *const RenderCache, row_idx: usize) usize {
     return @as(usize, cache.selection_cols_end.items[row_idx]);
 }
 
-fn copyRenderCacheSnapshot(dst: *RenderCache, allocator: std.mem.Allocator, src: *const RenderCache) !void {
-    try dst.cells.resize(allocator, src.cells.items.len);
-    std.mem.copyForwards(Cell, dst.cells.items, src.cells.items);
-
-    try dst.dirty_rows.resize(allocator, src.dirty_rows.items.len);
-    std.mem.copyForwards(bool, dst.dirty_rows.items, src.dirty_rows.items);
-
-    try dst.dirty_cols_start.resize(allocator, src.dirty_cols_start.items.len);
-    std.mem.copyForwards(u16, dst.dirty_cols_start.items, src.dirty_cols_start.items);
-
-    try dst.dirty_cols_end.resize(allocator, src.dirty_cols_end.items.len);
-    std.mem.copyForwards(u16, dst.dirty_cols_end.items, src.dirty_cols_end.items);
-
-    try dst.selection_rows.resize(allocator, src.selection_rows.items.len);
-    std.mem.copyForwards(bool, dst.selection_rows.items, src.selection_rows.items);
-
-    try dst.selection_cols_start.resize(allocator, src.selection_cols_start.items.len);
-    std.mem.copyForwards(u16, dst.selection_cols_start.items, src.selection_cols_start.items);
-
-    try dst.selection_cols_end.resize(allocator, src.selection_cols_end.items.len);
-    std.mem.copyForwards(u16, dst.selection_cols_end.items, src.selection_cols_end.items);
-
-    try dst.row_hashes.resize(allocator, src.row_hashes.items.len);
-    std.mem.copyForwards(u64, dst.row_hashes.items, src.row_hashes.items);
-
-    try dst.kitty_images.resize(allocator, src.kitty_images.items.len);
-    std.mem.copyForwards(render_cache_mod.KittyImage, dst.kitty_images.items, src.kitty_images.items);
-
-    try dst.kitty_placements.resize(allocator, src.kitty_placements.items.len);
-    std.mem.copyForwards(render_cache_mod.KittyPlacement, dst.kitty_placements.items, src.kitty_placements.items);
-
-    dst.rows = src.rows;
-    dst.cols = src.cols;
-    dst.history_len = src.history_len;
-    dst.total_lines = src.total_lines;
-    dst.generation = src.generation;
-    dst.scroll_offset = src.scroll_offset;
-    dst.cursor = src.cursor;
-    dst.cursor_style = src.cursor_style;
-    dst.cursor_visible = src.cursor_visible;
-    dst.has_blink = src.has_blink;
-    dst.dirty = src.dirty;
-    dst.damage = src.damage;
-    dst.alt_active = src.alt_active;
-    dst.selection_active = src.selection_active;
-    dst.sync_updates_active = src.sync_updates_active;
-    dst.screen_reverse = src.screen_reverse;
-    dst.kitty_generation = src.kitty_generation;
-    dst.clear_generation = src.clear_generation;
-    dst.viewport_shift_rows = src.viewport_shift_rows;
-    dst.viewport_shift_exposed_only = src.viewport_shift_exposed_only;
-    dst.full_dirty_reason = src.full_dirty_reason;
-    dst.full_dirty_seq = src.full_dirty_seq;
-}
-
 fn planViewportTextureShift(
     texture_shift_enabled: bool,
     gen_changed: bool,
@@ -391,7 +346,7 @@ fn spansOverlap(start_a: usize, end_a: usize, start_b: usize, end_b: usize) bool
     return start_a <= end_b and start_b <= end_a;
 }
 
-pub fn draw(
+pub fn drawPrepared(
     self: anytype,
     shell: *Shell,
     x: f32,
@@ -399,13 +354,15 @@ pub fn draw(
     width: f32,
     height: f32,
     input: shared_types.input.InputSnapshot,
-) void {
-    const draw_start = app_shell.getTime();
-    var lock_ms: f64 = 0.0;
-    var cache_copy_ms: f64 = 0.0;
+    preparation: DrawPreparation,
+) DrawOutcome {
+    const draw_start = preparation.draw_start;
+    const lock_ms: f64 = preparation.lock_ms;
+    const cache_copy_ms: f64 = preparation.lock_ms;
     var texture_update_ms: f64 = 0.0;
     var overlay_ms: f64 = 0.0;
     var render_phase_start = draw_start;
+    var outcome = DrawOutcome{ .presented = preparation.presented };
     defer {
         const draw_end = app_shell.getTime();
         const draw_ms_total = time_utils.secondsToMs(draw_end - draw_start);
@@ -425,26 +382,10 @@ pub fn draw(
     const cache = &self.draw_cache;
     var alt_exit = false;
     var alt_state_changed = false;
-    const lock_phase_start = app_shell.getTime();
-    self.session.lock();
-    {
-        defer self.session.unlock();
-        if (self.session.view_cache_pending.load(.acquire)) {
-            self.session.updateViewCacheForScrollLocked();
-        }
-        const live_cache = self.session.renderCache();
-        copyRenderCacheSnapshot(cache, self.session.allocator, live_cache) catch |err| {
-            const log = app_logger.logger("terminal.ui.redraw");
-            log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
-            return;
-        };
-        alt_state_changed = self.last_alt_active != cache.alt_active;
-        alt_exit = self.last_alt_active and !cache.alt_active;
-        self.last_alt_active = cache.alt_active;
-    }
+    alt_state_changed = self.last_alt_active != cache.alt_active;
+    alt_exit = self.last_alt_active and !cache.alt_active;
+    self.last_alt_active = cache.alt_active;
     render_phase_start = app_shell.getTime();
-    lock_ms = time_utils.secondsToMs(render_phase_start - lock_phase_start);
-    cache_copy_ms = lock_ms;
 
     const sync_updates = cache.sync_updates_active;
     const screen_reverse = cache.screen_reverse;
@@ -470,7 +411,7 @@ pub fn draw(
             bg_color,
         );
         r.drawTerminalTexture(x, y);
-        return;
+        return outcome;
     }
     const draw_start_time = if (alt_exit) app_shell.getTime() else 0;
     const rows = cache.rows;
@@ -555,7 +496,7 @@ pub fn draw(
         (1.0 - std.math.clamp(dist_from_right / scrollbar_proximity, 0.0, 1.0))
     else
         0.0;
-    const show_scrollbar = !cache.alt_active and !self.session.mouseReportingEnabled() and total_lines > rows;
+    const show_scrollbar = !cache.alt_active and !cache.mouse_reporting_active and total_lines > rows;
     const proximity_t = common.smoothstep01(proximity_raw);
     const hover_target: f32 = if (show_scrollbar)
         (if (self.scrollbar_drag_active) 1.0 else proximity_t)
@@ -1133,7 +1074,6 @@ pub fn draw(
     var updated = false;
     var texture_full_update = false;
     var texture_partial_update = false;
-    var dirty_clear_ok = false;
     var full_reason_recreated = false;
     var full_reason_cell_metrics = false;
     var full_reason_scale = false;
@@ -1241,19 +1181,19 @@ pub fn draw(
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=rows rows={d} err={s}", .{ rows, @errorName(err) });
                     r.endTerminalTexture();
-                    return;
+                    return outcome;
                 };
                 self.partial_draw_cols_start.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=cols_start rows={d} err={s}", .{ rows, @errorName(err) });
                     r.endTerminalTexture();
-                    return;
+                    return outcome;
                 };
                 self.partial_draw_cols_end.resize(self.session.allocator, rows) catch |err| {
                     const log = app_logger.logger("terminal.ui.redraw");
                     log.logf(.warning, "partial row plan resize failed field=cols_end rows={d} err={s}", .{ rows, @errorName(err) });
                     r.endTerminalTexture();
-                    return;
+                    return outcome;
                 };
 
                 for (self.partial_draw_rows.items) |*row_draw| {
@@ -1679,26 +1619,18 @@ pub fn draw(
     }
 
     if (updated or cache.dirty == .none) {
-        dirty_clear_ok = self.session.acknowledgePresentedGeneration(cache.generation);
+        outcome.texture_updated = updated;
     }
     overlay_ms = time_utils.secondsToMs(app_shell.getTime() - overlay_phase_start);
 
     if (alt_exit) {
-        const elapsed_ms = (app_shell.getTime() - draw_start_time) * 1000.0;
-        const exit_time_ms = self.session.alt_exit_time_ms.swap(-1, .acq_rel);
-        const exit_to_draw_ms: f64 = if (exit_time_ms >= 0)
-            @as(f64, @floatFromInt(std.time.milliTimestamp() - exit_time_ms))
-        else
-            -1.0;
-        const log = app_logger.logger("terminal.alt");
-        log.logf(.info, "alt_exit_draw_ms={d:.2} exit_to_draw_ms={d:.2} rows={d} cols={d} history={d} scroll_offset={d}", .{
-            elapsed_ms,
-            exit_to_draw_ms,
-            rows,
-            cols,
-            history_len,
-            scroll_offset,
-        });
+        outcome.alt_exit_info = .{
+            .draw_ms = (app_shell.getTime() - draw_start_time) * 1000.0,
+            .rows = rows,
+            .cols = cols,
+            .history_len = history_len,
+            .scroll_offset = scroll_offset,
+        };
     }
 
     const draw_log = app_logger.logger("terminal.ui.redraw");
@@ -1734,7 +1666,7 @@ pub fn draw(
                 @intFromBool(texture_partial_update),
                 @intFromBool(updated),
                 @intFromBool(sync_updates),
-                @intFromBool(dirty_clear_ok),
+                @intFromBool(outcome.presented != null and (outcome.texture_updated or cache.dirty == .none)),
                 @tagName(cache.dirty),
                 dirty_rows_count,
                 damage_row_span,
@@ -1764,6 +1696,7 @@ pub fn draw(
             );
         }
     }
+    return outcome;
 }
 
 fn drawTextureGlyphCache(ctx: *anyopaque, texture: Texture, src: Rect, dest: Rect, color: Rgba, kind: TextureKind) void {

@@ -56,6 +56,24 @@ const RenderCache = render_cache_mod.RenderCache;
 
 pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
 pub const DebugSnapshot = snapshot_mod.DebugSnapshot;
+pub const PresentedRenderCache = struct {
+    generation: u64,
+    dirty: Dirty,
+};
+
+pub const AltExitPresentationInfo = struct {
+    draw_ms: f64,
+    rows: usize,
+    cols: usize,
+    history_len: usize,
+    scroll_offset: usize,
+};
+
+pub const PresentationFeedback = struct {
+    presented: ?PresentedRenderCache = null,
+    texture_updated: bool = false,
+    alt_exit_info: ?AltExitPresentationInfo = null,
+};
 
 pub fn debugSnapshot(self: *TerminalSession) DebugSnapshot {
     if (!debugAccessAllowed()) @panic("debugSnapshot is test-only");
@@ -1320,6 +1338,44 @@ pub const TerminalSession = struct {
     pub fn renderCache(self: *TerminalSession) *const RenderCache {
         const idx = self.render_cache_index.load(.acquire);
         return &self.render_caches[idx];
+    }
+
+    pub fn copyPublishedRenderCache(self: *TerminalSession, dst: *RenderCache) !PresentedRenderCache {
+        self.lock();
+        defer self.unlock();
+        if (self.view_cache_pending.load(.acquire)) {
+            self.updateViewCacheForScrollLocked();
+        }
+        const cache = self.renderCache();
+        try render_cache_mod.copySnapshot(dst, self.allocator, cache);
+        return .{
+            .generation = cache.generation,
+            .dirty = cache.dirty,
+        };
+    }
+
+    pub fn completePresentationFeedback(self: *TerminalSession, feedback: PresentationFeedback) void {
+        if (feedback.presented) |presented| {
+            if (feedback.texture_updated or presented.dirty == .none) {
+                _ = self.acknowledgePresentedGeneration(presented.generation);
+            }
+        }
+        if (feedback.alt_exit_info) |info| {
+            const exit_time_ms = self.alt_exit_time_ms.swap(-1, .acq_rel);
+            const exit_to_draw_ms: f64 = if (exit_time_ms >= 0)
+                @as(f64, @floatFromInt(std.time.milliTimestamp() - exit_time_ms))
+            else
+                -1.0;
+            const log = app_logger.logger("terminal.alt");
+            log.logf(.info, "alt_exit_draw_ms={d:.2} exit_to_draw_ms={d:.2} rows={d} cols={d} history={d} scroll_offset={d}", .{
+                info.draw_ms,
+                exit_to_draw_ms,
+                info.rows,
+                info.cols,
+                info.history_len,
+                info.scroll_offset,
+            });
+        }
     }
 
     pub fn syncUpdatesActive(self: *const TerminalSession) bool {
