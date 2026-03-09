@@ -57,6 +57,7 @@ const RenderCache = render_cache_mod.RenderCache;
 
 pub const TerminalSnapshot = snapshot_mod.TerminalSnapshot;
 pub const DebugSnapshot = snapshot_mod.DebugSnapshot;
+pub const ScrollbackRange = scrollback_view.ScrollbackRange;
 pub const PresentedRenderCache = struct {
     generation: u64,
     dirty: Dirty,
@@ -1176,6 +1177,16 @@ pub const TerminalSession = struct {
         const row = scrollback_view.scrollbackRow(self, index) orelse return null;
         try out.appendSlice(allocator, row);
         return out.items;
+    }
+
+    pub fn copyScrollbackRange(
+        self: *TerminalSession,
+        allocator: std.mem.Allocator,
+        start_row: usize,
+        max_rows: usize,
+        out: *std.ArrayList(Cell),
+    ) !ScrollbackRange {
+        return scrollback_view.copyScrollbackRange(self, allocator, start_row, max_rows, out);
     }
 
     pub fn selectionPlainTextAlloc(self: *TerminalSession, allocator: std.mem.Allocator) !?[]u8 {
@@ -2558,4 +2569,34 @@ test "scrollback ansi text export is terminal-owned" {
     defer allocator.free(expected);
 
     try std.testing.expectEqualStrings(expected, text);
+}
+
+test "scrollback range export is terminal-owned" {
+    const allocator = std.testing.allocator;
+
+    var session = try TerminalSession.init(allocator, 2, 3);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row0 = [_]Cell{ base, base, base };
+    var row1 = [_]Cell{ base, base, base };
+    row0[0].codepoint = 'A';
+    row0[1].codepoint = 'B';
+    row1[0].codepoint = 'C';
+    row1[1].codepoint = 'D';
+    session.history.pushRow(&row0, false, base);
+    session.history.pushRow(&row1, false, base);
+
+    var cells = std.ArrayList(Cell).empty;
+    defer cells.deinit(allocator);
+    const range = try session.copyScrollbackRange(allocator, 0, 0, &cells);
+
+    try std.testing.expectEqual(@as(usize, 2), range.total_rows);
+    try std.testing.expectEqual(@as(usize, 2), range.row_count);
+    try std.testing.expectEqual(@as(usize, 3), range.cols);
+    try std.testing.expectEqual(@as(usize, 6), cells.items.len);
+    try std.testing.expectEqual(@as(u32, 'A'), cells.items[0].codepoint);
+    try std.testing.expectEqual(@as(u32, 'B'), cells.items[1].codepoint);
+    try std.testing.expectEqual(@as(u32, 'C'), cells.items[3].codepoint);
+    try std.testing.expectEqual(@as(u32, 'D'), cells.items[4].codepoint);
 }
