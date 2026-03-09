@@ -6,6 +6,8 @@
   - terminal architecture plan: `app_architecture/terminal/MODULARIZATION_PLAN.md`
   - damage/dirty notes: `app_architecture/terminal/DAMAGE_TRACKING.md`
   - UI/backend seam tracker: `app_architecture/ui/ui_widget_modularization_todo.yaml`
+- Active execution order now lives in `app_architecture/terminal/MODULARIZATION_PLAN.md` under `Strict Cleanup Queue (2026-03-09)`.
+- Current top-of-queue focus: presentation/publication ownership cleanup, then PTY write contract unification, then session state/publication locking cleanup.
 
 ### Recent Changes (High-Level)
 - The high-refresh rain investigation removed most renderer-side force-full and stale invalidation escape hatches.
@@ -21,6 +23,8 @@
 - Handoff docs remain high-level only; details belong in `app_architecture/*` docs and todo files.
 - This repo intentionally has no CI; do not add CI workflows.
 - Agent owns `./.zide.lua` logging scope during debugging (minimal useful tags; low noise).
+- `main` is the default branch. Feature branches are for larger isolated cuts only, and the agent owns creating, merging, and deleting them.
+- Do not keep dead seams or compatibility wrappers just to avoid a hard cut when the old surface is holding the terminal back.
 
 ### Where to Look
 - Primary architecture review + recent cleanup history: `app_architecture/review/TERMINAL_240HZ_RAIN_INVESTIGATION.md`

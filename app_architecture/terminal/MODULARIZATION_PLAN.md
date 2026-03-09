@@ -253,6 +253,203 @@ ordered by how much they constrain future correctness and simplification work.
 - The module still combines protocol parsing, payload assembly, memory lifecycle,
   placement management, dirty-region derivation, and fallback invalidation behavior.
 
+## Hotspot Refresh (2026-03-09 Evening Review)
+
+This review was done against current `main`, after the rain/render cleanup landed.
+These are the highest-signal remaining smells that still look structurally important.
+
+1) Presentation ack and dirty retirement are still triggered from widget draw.
+- Files:
+  - `src/ui/widgets/terminal_widget_draw.zig`
+  - `src/terminal/core/terminal_session.zig`
+- `TerminalSession.acknowledgePresentedGeneration(...)` improved the seam, but the
+  widget still decides when presentation is acknowledged. Backend dirty retirement is
+  therefore still downstream of UI draw execution instead of being owned by a clearer
+  presentation/publication boundary.
+
+2) PTY write serialization is still inconsistent.
+- Files:
+  - `src/terminal/core/terminal_session.zig`
+  - `src/terminal/core/input_modes.zig`
+  - `src/terminal/protocol/csi.zig`
+- Normal input/reporting paths use `pty_write_mutex`, but several protocol reply/query
+  paths still write directly to PTY. That leaves the terminal with more than one write
+  contract and makes output ordering vulnerable to interleaving.
+
+3) Palette/default-color mutation still has an unlocked path.
+- Files:
+  - `src/terminal/core/terminal_session.zig`
+  - `src/app/terminal_theme_apply.zig`
+  - `src/terminal/protocol/palette.zig`
+- `setDefaultColors(...)` mutates screen/history state and republishes the view cache
+  without taking the session mutex, while it is reachable from both app theme changes
+  and OSC dynamic-color handling. That is still an inconsistent state/publication seam.
+
+4) Workspace/runtime scheduling is cleaner, but frame policy still lives partly inside core.
+- Files:
+  - `src/terminal/core/workspace_polling.zig`
+  - `src/app/terminal_poll_runtime.zig`
+  - `src/app/terminal_frame_pacing_runtime.zig`
+- Poll budgets, active/background fairness, and backlog hints are still partly encoded
+  inside core polling logic rather than being cleanly injected as runtime policy.
+
+5) Protocol/parser contracts remain implicit and stale investigation probes still exist.
+- Files:
+  - `src/terminal/core/parser_hooks.zig`
+  - `src/terminal/parser/parser.zig`
+  - `src/terminal/protocol/csi.zig`
+  - `src/terminal/protocol/osc.zig`
+  - `src/terminal/core/view_cache.zig`
+- These modules still rely on `anytype self` instead of an explicit session/protocol
+  surface, and there are still probe-style logging leftovers in hot paths
+  (`terminal.trace.scope`, `terminal.inputpath`, `terminal.ui.row_fullwidth_origin`).
+
+6) Kitty graphics is still too broad a module even after the incremental damage cleanup.
+- File: `src/terminal/kitty/graphics.zig`
+- The backend now publishes kitty damage much better than before, but the module still
+  combines protocol parsing, payload loading, decode, storage, placement graph updates,
+  dirty-region derivation, and fallback/error policy in one ownership surface.
+
+## Strict Cleanup Queue (2026-03-09)
+
+This is the ordered execution list for terminal cleanup work on `main`.
+The intent is to take these top-to-bottom unless new evidence forces a reorder.
+Statuses are strict:
+- `todo`: not started
+- `in_progress`: active focus
+- `done`: landed and documented
+
+1) Presentation/publication ownership cleanup
+- status: `todo`
+- priority: `P0`
+- scope:
+  - move presented-generation acknowledgement and dirty retirement out of widget draw initiation
+  - define a backend-owned presentation/publication boundary
+  - keep `terminal_widget_draw` as a consumer of published state, not the owner of backend retirement policy
+- primary files:
+  - `src/ui/widgets/terminal_widget_draw.zig`
+  - `src/terminal/core/terminal_session.zig`
+  - `src/terminal/core/view_cache.zig`
+
+2) PTY write contract unification
+- status: `todo`
+- priority: `P0`
+- scope:
+  - make all terminal-originated PTY writes obey one serialization contract
+  - remove direct write paths that bypass `pty_write_mutex`
+  - cover replies, queries, and input/reporting under the same rule
+- primary files:
+  - `src/terminal/core/terminal_session.zig`
+  - `src/terminal/core/input_modes.zig`
+  - `src/terminal/protocol/csi.zig`
+  - other direct PTY reply writers as discovered
+
+3) Session state/publication locking cleanup
+- status: `todo`
+- priority: `P0`
+- scope:
+  - remove unlocked mutation/publication paths such as default-color/theme publication
+  - make model mutation + cache publication follow one locking contract
+  - eliminate mixed locked/unlocked session mutation semantics where they still exist
+- primary files:
+  - `src/terminal/core/terminal_session.zig`
+  - `src/terminal/protocol/palette.zig`
+  - `src/app/terminal_theme_apply.zig`
+
+4) `TerminalSession` surface reduction
+- status: `todo`
+- priority: `P1`
+- scope:
+  - shrink `TerminalSession` toward an orchestrator instead of a universal owner
+  - reduce raw mutable public surface
+  - split or hide APIs that exist only because boundaries are still blurred
+- primary files:
+  - `src/terminal/core/terminal_session.zig`
+  - `src/terminal/core/terminal.zig`
+
+5) Workspace/session boundary tightening
+- status: `todo`
+- priority: `P1`
+- scope:
+  - keep reducing raw `TerminalSession*` escape paths from `TerminalWorkspace`
+  - replace raw app/runtime access with explicit workspace contracts where possible
+  - keep mutable session access narrow and intentional
+- primary files:
+  - `src/terminal/core/workspace.zig`
+  - `src/app/terminal_active_session.zig`
+  - `src/app/new_terminal_runtime.zig`
+  - remaining workspace/session consumers
+
+6) Runtime scheduling ownership cleanup
+- status: `todo`
+- priority: `P1`
+- scope:
+  - push frame-policy and fairness choices to clearer runtime-owned boundaries
+  - reduce baked-in scheduling heuristics inside terminal core polling code
+  - keep workspace focused on tab ownership plus bounded polling contract
+- primary files:
+  - `src/terminal/core/workspace_polling.zig`
+  - `src/app/terminal_poll_runtime.zig`
+  - `src/app/terminal_frame_pacing_runtime.zig`
+
+7) Input publication redesign
+- status: `todo`
+- priority: `P1`
+- scope:
+  - replace manual `updateInputSnapshot()` publication shape with a narrower explicit mode/publication boundary
+  - remove dual-source-of-truth drift between raw fields and atomic snapshot reads
+  - make lock expectations explicit for input-facing state
+- primary files:
+  - `src/terminal/core/terminal_session.zig`
+  - `src/terminal/core/input_modes.zig`
+  - `src/terminal/protocol/csi.zig`
+
+8) Widget input/draw policy reduction
+- status: `todo`
+- priority: `P2`
+- scope:
+  - reduce `terminal_widget_input` and `terminal_widget_draw` to presentation/orchestration only
+  - move backend/app policy out of widget code
+  - keep widget-local state only where it is truly UI-owned
+- primary files:
+  - `src/ui/widgets/terminal_widget_input.zig`
+  - `src/ui/widgets/terminal_widget_draw.zig`
+  - `src/ui/widgets/terminal_widget.zig`
+
+9) Protocol/parser boundary typing cleanup
+- status: `todo`
+- priority: `P2`
+- scope:
+  - replace implicit `anytype self` protocol/session contracts with a narrower explicit facade
+  - reduce hidden ownership and mutation assumptions across parser/protocol code
+  - improve testability of protocol handling in isolation
+- primary files:
+  - `src/terminal/core/parser_hooks.zig`
+  - `src/terminal/parser/parser.zig`
+  - `src/terminal/protocol/csi.zig`
+  - `src/terminal/protocol/osc.zig`
+
+10) Investigation/probe residue cleanup
+- status: `todo`
+- priority: `P2`
+- scope:
+  - remove stale hot-path probe logging that survived the rain investigation
+  - keep only logs that still serve an operational/debugging contract
+- primary files:
+  - `src/terminal/core/parser_hooks.zig`
+  - `src/terminal/core/view_cache.zig`
+  - `src/terminal/protocol/csi.zig`
+
+11) Kitty subsystem split
+- status: `todo`
+- priority: `P2`
+- scope:
+  - split kitty protocol parse, payload IO/decode, placement/state, and dirty publication responsibilities
+  - remove mutation patterns that make delete/update behavior fragile
+  - preserve the incremental dirty-publication work already landed
+- primary files:
+  - `src/terminal/kitty/graphics.zig`
+
 ## Recommended Sequencing (2026-03-09)
 
 These can be parallelized in limited lanes, but not as a fully independent rewrite.
