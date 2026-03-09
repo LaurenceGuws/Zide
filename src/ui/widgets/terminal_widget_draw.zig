@@ -52,6 +52,12 @@ pub const DrawOutcome = struct {
     texture_updated: bool = false,
 };
 
+pub const DrawPreparation = struct {
+    draw_start: f64,
+    lock_ms: f64,
+    presented: PresentedRenderCache,
+};
+
 const ViewportTextureShiftPlan = union(enum) {
     none,
     attempt: usize,
@@ -342,7 +348,7 @@ fn spansOverlap(start_a: usize, end_a: usize, start_b: usize, end_b: usize) bool
     return start_a <= end_b and start_b <= end_a;
 }
 
-pub fn draw(
+pub fn drawPrepared(
     self: anytype,
     shell: *Shell,
     x: f32,
@@ -350,14 +356,15 @@ pub fn draw(
     width: f32,
     height: f32,
     input: shared_types.input.InputSnapshot,
+    preparation: DrawPreparation,
 ) DrawOutcome {
-    const draw_start = app_shell.getTime();
-    var lock_ms: f64 = 0.0;
-    var cache_copy_ms: f64 = 0.0;
+    const draw_start = preparation.draw_start;
+    const lock_ms: f64 = preparation.lock_ms;
+    const cache_copy_ms: f64 = preparation.lock_ms;
     var texture_update_ms: f64 = 0.0;
     var overlay_ms: f64 = 0.0;
     var render_phase_start = draw_start;
-    var outcome = DrawOutcome{};
+    var outcome = DrawOutcome{ .presented = preparation.presented };
     defer {
         const draw_end = app_shell.getTime();
         const draw_ms_total = time_utils.secondsToMs(draw_end - draw_start);
@@ -377,19 +384,10 @@ pub fn draw(
     const cache = &self.draw_cache;
     var alt_exit = false;
     var alt_state_changed = false;
-    const lock_phase_start = app_shell.getTime();
-    const presented = self.session.copyPublishedRenderCache(cache) catch |err| {
-        const log = app_logger.logger("terminal.ui.redraw");
-        log.logf(.warning, "draw snapshot copy failed err={s}", .{@errorName(err)});
-        return outcome;
-    };
-    outcome.presented = presented;
     alt_state_changed = self.last_alt_active != cache.alt_active;
     alt_exit = self.last_alt_active and !cache.alt_active;
     self.last_alt_active = cache.alt_active;
     render_phase_start = app_shell.getTime();
-    lock_ms = time_utils.secondsToMs(render_phase_start - lock_phase_start);
-    cache_copy_ms = lock_ms;
 
     const sync_updates = cache.sync_updates_active;
     const screen_reverse = cache.screen_reverse;
@@ -500,7 +498,7 @@ pub fn draw(
         (1.0 - std.math.clamp(dist_from_right / scrollbar_proximity, 0.0, 1.0))
     else
         0.0;
-    const show_scrollbar = !cache.alt_active and !self.session.mouseReportingEnabled() and total_lines > rows;
+    const show_scrollbar = !cache.alt_active and !cache.mouse_reporting_active and total_lines > rows;
     const proximity_t = common.smoothstep01(proximity_raw);
     const hover_target: f32 = if (show_scrollbar)
         (if (self.scrollbar_drag_active) 1.0 else proximity_t)
