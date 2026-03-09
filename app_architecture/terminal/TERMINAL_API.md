@@ -38,6 +38,41 @@ Notes:
 
 Replay fixtures referenced above live under `fixtures/terminal` and are executed via `zig build test-terminal-replay`.
 
+## Boundary Contract (2026-03-09)
+
+This is the current intended ownership split for the next cleanup phase. It is more
+important than the exact file layout.
+
+| Concern | Owner | Must Not Own |
+| --- | --- | --- |
+| PTY lifecycle, read/write threading, backlog drain policy | terminal runtime/core | widget draw/input policy |
+| VT parser dispatch + protocol semantics | parser/protocol layer | renderer policy, widget state |
+| screen/history/selection state | model layer | frame pacing, GL upload decisions |
+| damage publication -> render cache publication | publication/cache layer | app-level scheduling, widget interaction policy |
+| presented-generation ack / dirty retirement | backend publication boundary | renderer-local heuristics |
+| tab ownership + simple active/background polling surface | workspace | app-global frame timing state |
+| frame sleep, redraw cadence, metrics aggregation | app runtime | terminal model mutation |
+| hover/open/selection gestures, clipboard UX, scrollbar UX | widget layer | terminal core invalidation policy |
+
+### Immediate Cleanup Rules
+
+1. `TerminalSession` should trend toward an orchestrator, not a universal owner.
+2. Widgets should consume published terminal state and emit intents; they should not
+   participate in backend dirty-ack lifecycle.
+3. Protocol modules should mutate terminal state through an explicit facade or narrow
+   contract, not broad implicit `anytype self` assumptions.
+4. Input-mode publication must become harder to forget than the current
+   branch-by-branch `updateInputSnapshot()` pattern.
+5. Scheduler state should be instance-owned, not file-global.
+
+### Current Violations To Reduce
+
+- `TerminalSession` still owns too many domains.
+- `terminal_widget_draw` still clears backend dirty state after upload.
+- `view_cache` still embeds both cache publication and some redraw-policy knowledge.
+- poll/render runtime still carries terminal-global state in helper modules.
+- protocol handlers still rely on implicit `self` capabilities.
+
 ## Workspace API Contract (tabs)
 
 `TerminalWorkspace` lives in `src/terminal/core/workspace.zig` and owns tab/session orchestration above `TerminalSession`.

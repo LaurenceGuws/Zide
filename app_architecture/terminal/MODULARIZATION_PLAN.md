@@ -147,6 +147,8 @@ Progress:
 - Migration step: extracted hyperlink table helpers to `src/terminal/core/hyperlink_table.zig` (no behavior change).
 - Migration step: extracted reset/save/restore helpers to `src/terminal/core/state_reset.zig` (no behavior change).
 - Migration step: extracted scrollback accessors to `src/terminal/core/scrollback_view.zig` (no behavior change).
+- Follow-up (2026-03-09): expanded `app_architecture/terminal/TERMINAL_API.md` with an explicit boundary contract for runtime/protocol/model/publication/widget ownership.
+- Follow-up (2026-03-09): removed the file-global visible-terminal poll input-activity hint; terminal input pressure is now passed explicitly into `poll_visible_terminal_sessions_runtime.handle(...)`.
 
 ## Regression Checklist (keep in sync)
 - OSC coverage: 0/2/7/8/10/11/12/19/52 + XTGETTCAP.
@@ -167,3 +169,102 @@ Progress:
 - Replay harness snapshot format is fixed by the approved outline.
 - Tests + goldens gate all refactors.
 - Extraction-only means no renames, no cleanup, no behavior changes.
+
+## Current Architectural Hotspots (2026-03-09)
+
+These are the large remaining smells after the redraw/rain cleanup work. They are
+ordered by how much they constrain future correctness and simplification work.
+
+1) `TerminalSession` remains a god object.
+- File: `src/terminal/core/terminal_session.zig`
+- It still owns PTY/threading, parser/runtime state, both screens, history, kitty state,
+  render caches, redraw publication state, input snapshot state, and multiple UI-facing APIs.
+- This prevents a clean contract between model, runtime, and presentation.
+
+2) Render publication ownership is still split.
+- Files:
+  - `src/terminal/core/view_cache.zig`
+  - `src/ui/widgets/terminal_widget_draw.zig`
+  - `src/app/frame_render_idle_runtime.zig`
+- `view_cache` is no longer just a cache builder; it also embeds redraw policy
+  heuristics, selection overlay publication, row-hash refinement, viewport-shift
+  publication, and kitty ordering.
+- `terminal_widget_draw` still performs backend-facing lifecycle work such as
+  pending-cache service, presented-generation ack, and dirty clearing.
+
+3) Scheduler ownership is spread across app runtime globals and workspace policy.
+- Files:
+  - `src/app/frame_render_idle_runtime.zig`
+  - `src/app/poll_visible_terminal_sessions_runtime.zig`
+  - `src/terminal/core/workspace.zig`
+- Poll cadence, backlog hints, draw cadence, and active/background fairness are
+  split across multiple modules with file-scope runtime state.
+
+4) Input snapshot publication is manual and drift-prone.
+- Files:
+  - `src/terminal/core/terminal_session.zig`
+  - `src/terminal/protocol/csi.zig`
+  - `src/terminal/core/input_modes.zig`
+- The current `input_snapshot` design works, but many protocol/mode branches must
+  remember to call `updateInputSnapshot()`. This is easy to miss and hard to audit.
+
+5) Widget input/draw code still carries backend and app policy.
+- Files:
+  - `src/ui/widgets/terminal_widget_input.zig`
+  - `src/ui/widgets/terminal_widget_draw.zig`
+  - `src/ui/widgets/terminal_widget.zig`
+- The widget is still larger than a thin presenter: it owns cache copies, hover/open
+  policy, selection behavior, scrollbar policy, kitty upload scheduling, and dirty ack.
+
+6) Protocol layer boundaries are still implicit.
+- Files:
+  - `src/terminal/protocol/csi.zig`
+  - `src/terminal/protocol/osc.zig`
+  - `src/terminal/core/parser_hooks.zig`
+- Protocol modules use `anytype self` and mutate deep session state through implicit
+  contracts rather than a narrow explicit interface.
+
+7) Kitty graphics remains a concentrated risk surface.
+- File: `src/terminal/kitty/graphics.zig`
+- The module still combines protocol parsing, payload assembly, memory lifecycle,
+  placement management, dirty-region derivation, and fallback invalidation behavior.
+
+## Recommended Sequencing (2026-03-09)
+
+These can be parallelized in limited lanes, but not as a fully independent rewrite.
+
+Do first:
+1) Define the new ownership boundaries on paper.
+- Lock down which module owns:
+  - runtime IO/threading
+  - mode/input publication
+  - render publication / presented-generation ack
+  - widget presentation only
+
+Then parallelize in bounded lanes:
+1) Runtime lane:
+- split scheduler/poll ownership out of widget-facing app helpers
+- reduce `TerminalWorkspace` to tab ownership + simple polling surface
+
+2) Publication lane:
+- narrow `view_cache` into cache publication only
+- move dirty-ack / presented-generation lifecycle behind a dedicated publication API
+
+3) UI lane:
+- shrink `TerminalWidget` / `terminal_widget_input` into presentation + intent emission only
+- remove stale duplicate hover/open APIs once the new boundary is stable
+
+After those land:
+1) Input-mode lane:
+- replace manual `updateInputSnapshot()` scatter with explicit mode-state publication
+
+2) Protocol lane:
+- replace `anytype self` mutation style with a narrow protocol facade
+
+3) Kitty lane:
+- split kitty protocol/decode/state/dirty publication once the publication boundary is stable
+
+Unsafe to parallelize immediately:
+- `TerminalSession` decomposition, `view_cache` ownership changes, and widget draw lifecycle
+  changes all touch the same invariants and should not be rewritten independently without
+  a shared contract first.

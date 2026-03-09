@@ -493,3 +493,97 @@ This confirms a practical scheduler race window around `hasData` gating and idle
 - No regressions at 60Hz.
 - Terminal redraw metrics show continuous draw progression during sustained output.
 - No new tearing/blank-row artifacts introduced by any texture update path change.
+
+## Post-Investigation Architectural Findings (2026-03-09)
+
+The rain investigation is no longer the only useful frame for terminal work. The redraw
+path is substantially cleaner now, and the strongest remaining issues are architectural.
+
+### Highest-Risk Structural Hotspots
+
+1. `TerminalSession` is still too large and owns too many domains.
+- File: `src/terminal/core/terminal_session.zig`
+- It still combines PTY/runtime ownership, parser hooks, screen/history state, render
+  publication state, input-mode snapshot state, and UI-facing API surfaces.
+
+2. Redraw/publication ownership is split between backend cache code and widget draw.
+- Files:
+  - `src/terminal/core/view_cache.zig`
+  - `src/ui/widgets/terminal_widget_draw.zig`
+  - `src/app/frame_render_idle_runtime.zig`
+- The backend publishes cache state, but draw still participates in cache service,
+  presented-generation ack, and dirty clearing.
+
+3. Scheduler ownership is spread across app runtime globals and workspace policy.
+- Files:
+  - `src/app/frame_render_idle_runtime.zig`
+  - `src/app/poll_visible_terminal_sessions_runtime.zig`
+  - `src/terminal/core/workspace.zig`
+- This keeps correctness and pacing logic hard to reason about and hard to reuse.
+
+4. Input-mode snapshot publication is manual and scattered.
+- Files:
+  - `src/terminal/core/terminal_session.zig`
+  - `src/terminal/protocol/csi.zig`
+  - `src/terminal/core/input_modes.zig`
+- The current `input_snapshot` helps lock-light UI/input reads, but mode branches must
+  remember to republish it explicitly.
+
+5. UI widget modules still carry backend/app policy.
+- Files:
+  - `src/ui/widgets/terminal_widget.zig`
+  - `src/ui/widgets/terminal_widget_input.zig`
+  - `src/ui/widgets/terminal_widget_draw.zig`
+- The widget is still more than a presenter: it owns scroll/selection behavior, hover/open
+  policy, kitty upload lifecycle, and backend-facing dirty ack.
+
+6. Protocol boundaries are still implicit.
+- Files:
+  - `src/terminal/protocol/csi.zig`
+  - `src/terminal/protocol/osc.zig`
+  - `src/terminal/core/parser_hooks.zig`
+- The `anytype self` pattern keeps extraction easy but leaves locking/publication contracts implicit.
+
+7. Kitty graphics remains a concentrated correctness surface.
+- File: `src/terminal/kitty/graphics.zig`
+- Protocol parsing, payload assembly, state ownership, dirty-region derivation, and
+  conservative fallback invalidation are still tightly coupled.
+
+### Recommended Next Refactor Order
+
+Do not attack the remaining hotspots as one giant parallel rewrite.
+
+Safer order:
+1. Define and document new boundaries first:
+   - runtime IO/scheduler ownership
+   - damage/publication ownership
+   - input-mode publication ownership
+   - widget presentation-only responsibilities
+2. Then run bounded parallel lanes:
+   - runtime/workspace scheduler cleanup
+   - render publication / `view_cache` cleanup
+   - widget shrink / stale duplicate UI path removal
+3. After those land:
+   - input snapshot redesign
+   - protocol facade cleanup
+   - kitty subsystem split
+
+Reason:
+- `TerminalSession` decomposition, `view_cache` cleanup, and widget draw lifecycle still
+  share the same invariants. Parallel work is safe only after the ownership contract is explicit.
+
+## Boundary-Contract Follow-Up (2026-03-09)
+
+- Files:
+  - `app_architecture/terminal/TERMINAL_API.md`
+  - `src/app/poll_visible_terminal_sessions_runtime.zig`
+  - `src/app/visible_terminal_frame_hooks_runtime.zig`
+- Change:
+  - expanded `TERMINAL_API.md` with an explicit ownership/boundary contract for runtime,
+    protocol, model, publication, workspace, app scheduler, and widget responsibilities
+  - removed the file-global `terminal_input_activity_hint` from visible-terminal polling
+  - terminal-relevant input pressure is now threaded explicitly from the visible-terminal
+    frame hook into the poll runtime instead of being stored in a process-global helper var
+- Intent:
+  - start turning the architecture review into enforceable boundaries
+  - reduce scheduler state that lives outside explicit instance/context ownership
