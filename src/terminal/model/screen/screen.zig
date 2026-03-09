@@ -253,7 +253,9 @@ pub const Screen = struct {
     pub fn setScreenReverse(self: *Screen, enabled: bool) void {
         if (self.screen_reverse == enabled) return;
         self.screen_reverse = enabled;
-        self.grid.markDirtyAllWithReason(.screen_reverse_mode_toggle, @src());
+        if (self.grid.rows > 0 and self.grid.cols > 0) {
+            self.grid.markDirtyRange(0, self.grid.rows - 1, 0, self.grid.cols - 1);
+        }
     }
 
     pub fn cellAtOr(self: *const Screen, row: usize, col: usize, default_cell: types.Cell) types.Cell {
@@ -1323,7 +1325,9 @@ pub const Screen = struct {
             if (colorsEqual(cell.attrs.bg, old_attrs.bg)) cell.attrs.bg = new_attrs.bg;
             if (colorsEqual(cell.attrs.underline_color, old_attrs.underline_color)) cell.attrs.underline_color = new_attrs.underline_color;
         }
-        self.grid.markDirtyAllWithReason(.palette_default_changed, @src());
+        if (self.grid.rows > 0 and self.grid.cols > 0) {
+            self.grid.markDirtyRange(0, self.grid.rows - 1, 0, self.grid.cols - 1);
+        }
     }
 
     pub fn updateAnsiColors(self: *Screen, old_colors: [16]types.Color, new_colors: [16]types.Color) void {
@@ -1340,7 +1344,9 @@ pub const Screen = struct {
             cell.attrs.bg = remapAnsiColor(cell.attrs.bg, old_colors, new_colors);
             cell.attrs.underline_color = remapAnsiColor(cell.attrs.underline_color, old_colors, new_colors);
         }
-        self.grid.markDirtyAllWithReason(.palette_ansi_changed, @src());
+        if (self.grid.rows > 0 and self.grid.cols > 0) {
+            self.grid.markDirtyRange(0, self.grid.rows - 1, 0, self.grid.cols - 1);
+        }
     }
 
     fn remapAnsiColor(color: types.Color, old_colors: [16]types.Color, new_colors: [16]types.Color) types.Color {

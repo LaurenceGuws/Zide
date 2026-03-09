@@ -17,15 +17,12 @@ fn pickForcedFullDirtyReason(
     requires_full_damage_for_scroll_offset_change: bool,
     active_is_alt: bool,
     cache_alt_active: bool,
-    screen_reverse: bool,
-    cache_screen_reverse: bool,
     view_dirty: anytype,
     view_reason: FullDirtyReason,
 ) FullDirtyReason {
     if (rows != active_rows or cols != active_cols) return .view_cache_geometry_change;
     if (requires_full_damage_for_scroll_offset_change) return .view_cache_scroll_offset_change;
     if (active_is_alt != cache_alt_active) return .view_cache_alt_state_change;
-    if (screen_reverse != cache_screen_reverse) return .view_cache_screen_reverse_change;
     if (view_dirty == .full) {
         return if (view_reason == .unknown) .view_cache_view_dirty_full else view_reason;
     }
@@ -336,7 +333,6 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
         cols != active_cache.cols or
         requires_full_damage_for_scroll_offset_change or
         (self.active == .alt) != active_cache.alt_active or
-        screen_reverse != active_cache.screen_reverse or
         view.dirty == .full;
     if (needs_full_damage) {
         row = 0;
@@ -495,8 +491,6 @@ pub fn updateViewCacheNoLock(self: anytype, generation: u64, scroll_offset: usiz
             requires_full_damage_for_scroll_offset_change,
             self.active == .alt,
             active_cache.alt_active,
-            screen_reverse,
-            active_cache.screen_reverse,
             view.dirty,
             view.full_dirty_reason,
         );
