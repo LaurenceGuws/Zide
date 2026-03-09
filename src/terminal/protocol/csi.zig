@@ -1,5 +1,6 @@
 const std = @import("std");
 const types = @import("../model/types.zig");
+const screen_mod = @import("../model/screen.zig");
 const parser_csi = @import("../parser/csi.zig");
 const app_logger = @import("../../app_logger.zig");
 
@@ -719,6 +720,148 @@ const ModeQueryContext = struct {
     }
 };
 
+const SimpleCsiContext = struct {
+    ctx: *anyopaque,
+    active_screen_fn: *const fn (ctx: *anyopaque) *screen_mod.Screen,
+    erase_display_fn: *const fn (ctx: *anyopaque, mode: i32) void,
+    erase_line_fn: *const fn (ctx: *anyopaque, mode: i32) void,
+    insert_chars_fn: *const fn (ctx: *anyopaque, count: usize) void,
+    delete_chars_fn: *const fn (ctx: *anyopaque, count: usize) void,
+    erase_chars_fn: *const fn (ctx: *anyopaque, count: usize) void,
+    insert_lines_fn: *const fn (ctx: *anyopaque, count: usize) void,
+    delete_lines_fn: *const fn (ctx: *anyopaque, count: usize) void,
+    scroll_region_up_fn: *const fn (ctx: *anyopaque, count: usize) void,
+    scroll_region_down_fn: *const fn (ctx: *anyopaque, count: usize) void,
+    save_cursor_fn: *const fn (ctx: *anyopaque) void,
+    restore_cursor_fn: *const fn (ctx: *anyopaque) void,
+    set_cursor_style_fn: *const fn (ctx: *anyopaque, mode: i32) void,
+
+    pub fn from(session: anytype) SimpleCsiContext {
+        const SessionPtr = @TypeOf(session);
+        return .{
+            .ctx = @ptrCast(session),
+            .active_screen_fn = struct {
+                fn call(ctx: *anyopaque) *screen_mod.Screen {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    return s.activeScreen();
+                }
+            }.call,
+            .erase_display_fn = struct {
+                fn call(ctx: *anyopaque, mode: i32) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.eraseDisplay(mode);
+                }
+            }.call,
+            .erase_line_fn = struct {
+                fn call(ctx: *anyopaque, mode: i32) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.eraseLine(mode);
+                }
+            }.call,
+            .insert_chars_fn = struct {
+                fn call(ctx: *anyopaque, count: usize) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.insertChars(count);
+                }
+            }.call,
+            .delete_chars_fn = struct {
+                fn call(ctx: *anyopaque, count: usize) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.deleteChars(count);
+                }
+            }.call,
+            .erase_chars_fn = struct {
+                fn call(ctx: *anyopaque, count: usize) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.eraseChars(count);
+                }
+            }.call,
+            .insert_lines_fn = struct {
+                fn call(ctx: *anyopaque, count: usize) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.insertLines(count);
+                }
+            }.call,
+            .delete_lines_fn = struct {
+                fn call(ctx: *anyopaque, count: usize) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.deleteLines(count);
+                }
+            }.call,
+            .scroll_region_up_fn = struct {
+                fn call(ctx: *anyopaque, count: usize) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.scrollRegionUp(count);
+                }
+            }.call,
+            .scroll_region_down_fn = struct {
+                fn call(ctx: *anyopaque, count: usize) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.scrollRegionDown(count);
+                }
+            }.call,
+            .save_cursor_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.saveCursor();
+                }
+            }.call,
+            .restore_cursor_fn = struct {
+                fn call(ctx: *anyopaque) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.restoreCursor();
+                }
+            }.call,
+            .set_cursor_style_fn = struct {
+                fn call(ctx: *anyopaque, mode: i32) void {
+                    const s: SessionPtr = @ptrCast(@alignCast(ctx));
+                    s.setCursorStyle(mode);
+                }
+            }.call,
+        };
+    }
+
+    pub fn activeScreen(self: *const SimpleCsiContext) *screen_mod.Screen {
+        return self.active_screen_fn(self.ctx);
+    }
+    pub fn eraseDisplay(self: *const SimpleCsiContext, mode: i32) void {
+        self.erase_display_fn(self.ctx, mode);
+    }
+    pub fn eraseLine(self: *const SimpleCsiContext, mode: i32) void {
+        self.erase_line_fn(self.ctx, mode);
+    }
+    pub fn insertChars(self: *const SimpleCsiContext, count: usize) void {
+        self.insert_chars_fn(self.ctx, count);
+    }
+    pub fn deleteChars(self: *const SimpleCsiContext, count: usize) void {
+        self.delete_chars_fn(self.ctx, count);
+    }
+    pub fn eraseChars(self: *const SimpleCsiContext, count: usize) void {
+        self.erase_chars_fn(self.ctx, count);
+    }
+    pub fn insertLines(self: *const SimpleCsiContext, count: usize) void {
+        self.insert_lines_fn(self.ctx, count);
+    }
+    pub fn deleteLines(self: *const SimpleCsiContext, count: usize) void {
+        self.delete_lines_fn(self.ctx, count);
+    }
+    pub fn scrollRegionUp(self: *const SimpleCsiContext, count: usize) void {
+        self.scroll_region_up_fn(self.ctx, count);
+    }
+    pub fn scrollRegionDown(self: *const SimpleCsiContext, count: usize) void {
+        self.scroll_region_down_fn(self.ctx, count);
+    }
+    pub fn saveCursor(self: *const SimpleCsiContext) void {
+        self.save_cursor_fn(self.ctx);
+    }
+    pub fn restoreCursor(self: *const SimpleCsiContext) void {
+        self.restore_cursor_fn(self.ctx);
+    }
+    pub fn setCursorStyle(self: *const SimpleCsiContext, mode: i32) void {
+        self.set_cursor_style_fn(self.ctx, mode);
+    }
+};
+
 fn csiIntermediatesEq(action: parser_csi.CsiAction, bytes: []const u8) bool {
     if (action.intermediates_len != bytes.len) return false;
     return std.mem.eql(u8, action.intermediates[0..action.intermediates_len], bytes);
@@ -860,118 +1003,15 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
     );
     const p = action.params;
     const param_len = csi_param_count;
-    const get = struct {
-        fn at(params: [parser_csi.max_params]i32, idx: u8, default: i32) i32 {
-            return if (idx < parser_csi.max_params) params[idx] else default;
-        }
-    }.at;
     const screen = self.activeScreen();
     const query = QueryContext.from(self);
     const mode_context = ModeMutationContext.from(self);
     const mode_query = ModeQueryContext.from(self);
+    const simple = SimpleCsiContext.from(self);
 
     switch (action.final) {
-        'A' => { // CUU
-            const n = @max(1, get(p, 0, 1));
-            const delta: usize = @intCast(n);
-            screen.cursorUp(delta);
-        },
-        'B' => { // CUD
-            const n = @max(1, get(p, 0, 1));
-            const delta: usize = @intCast(n);
-            screen.cursorDown(delta);
-        },
-        'C' => { // CUF
-            const n = @max(1, get(p, 0, 1));
-            const delta: usize = @intCast(n);
-            screen.cursorForward(delta);
-        },
-        'D' => { // CUB
-            const n = @max(1, get(p, 0, 1));
-            const delta: usize = @intCast(n);
-            screen.cursorBack(delta);
-        },
-        'E' => { // CNL
-            const n = @max(1, get(p, 0, 1));
-            const delta: usize = @intCast(n);
-            screen.cursorNextLine(delta);
-        },
-        'F' => { // CPL
-            const n = @max(1, get(p, 0, 1));
-            const delta: usize = @intCast(n);
-            screen.cursorPrevLine(delta);
-        },
-        'G' => { // CHA
-            const col_1 = @max(1, get(p, 0, 1));
-            screen.cursorColAbsolute(col_1);
-        },
-        'I' => { // CHT
-            const n = @max(1, get(p, 0, 1));
-            var i: i32 = 0;
-            while (i < n) : (i += 1) {
-                screen.tab();
-            }
-        },
-        'H', 'f' => { // CUP
-            const row_1 = @max(1, get(p, 0, 1));
-            const col_1 = @max(1, get(p, 1, 1));
-            screen.cursorPosAbsolute(row_1, col_1);
-        },
-        'd' => { // VPA
-            const row_1 = @max(1, get(p, 0, 1));
-            screen.cursorRowAbsolute(row_1);
-        },
-        'J' => { // ED
-            const mode = if (param_len > 0) p[0] else 0;
-            self.eraseDisplay(mode);
-        },
-        'K' => { // EL
-            const mode = if (param_len > 0) p[0] else 0;
-            self.eraseLine(mode);
-        },
-        '@' => { // ICH
-            const n = @max(1, get(p, 0, 1));
-            self.insertChars(@intCast(n));
-        },
-        'P' => { // DCH
-            const n = @max(1, get(p, 0, 1));
-            self.deleteChars(@intCast(n));
-        },
-        'X' => { // ECH
-            const n = @max(1, get(p, 0, 1));
-            self.eraseChars(@intCast(n));
-        },
-        'L' => { // IL
-            const n = @max(1, get(p, 0, 1));
-            self.insertLines(@intCast(n));
-        },
-        'M' => { // DL
-            const n = @max(1, get(p, 0, 1));
-            self.deleteLines(@intCast(n));
-        },
-        'S' => { // SU
-            const n = @max(1, get(p, 0, 1));
-            self.scrollRegionUp(@intCast(n));
-        },
-        'T' => { // SD
-            const n = @max(1, get(p, 0, 1));
-            self.scrollRegionDown(@intCast(n));
-        },
-        'Z' => { // CBT
-            const n = @max(1, get(p, 0, 1));
-            var i: i32 = 0;
-            while (i < n) : (i += 1) {
-                screen.backTab();
-            }
-        },
-        'r' => { // DECSTBM
-            const top_1 = if (param_len > 0 and p[0] > 0) p[0] else 1;
-            const bot_1 = if (param_len > 1 and p[1] > 0) p[1] else @as(i32, @intCast(screen.grid.rows));
-            const top = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(@max(1, top_1) - 1)));
-            const bot = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(@max(1, bot_1) - 1)));
-            if (top < bot) {
-                screen.setScrollRegion(top, bot);
-            }
+        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'I', 'H', 'f', 'd', 'J', 'K', '@', 'P', 'X', 'L', 'M', 'S', 'T', 'Z', 'r' => {
+            handleSimpleCsi(simple, action, param_len, p);
         },
         's' => { // SCP / DECSLRM (when ?69 enabled)
             if (!action.private) {
@@ -987,12 +1027,12 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
                     }
                     return;
                 }
-                self.saveCursor();
+                simple.saveCursor();
             }
         },
         'u' => { // RCP
             if (action.leader == 0 and !action.private) {
-                self.restoreCursor();
+                simple.restoreCursor();
                 return;
             }
             const flags: u32 = if (param_len > 0) @intCast(@max(0, p[0])) else 0;
@@ -1011,7 +1051,7 @@ fn handleCsiOnSession(self: anytype, action: parser_csi.CsiAction) void {
         'q' => { // DECSCUSR
             if (action.leader == 0 and !action.private) {
                 const mode = if (param_len > 0) p[0] else 0;
-                self.setCursorStyle(mode);
+                simple.setCursorStyle(mode);
             }
         },
         'g' => { // TBC
@@ -1088,6 +1128,61 @@ fn applyModeMutation(
     }
     if (action.leader == '?') {
         applyPrivateModeMutation(context, param_len, params, enabled);
+    }
+}
+
+fn handleSimpleCsi(
+    context: SimpleCsiContext,
+    action: parser_csi.CsiAction,
+    param_len: usize,
+    params: [parser_csi.max_params]i32,
+) void {
+    const get = struct {
+        fn at(local_params: [parser_csi.max_params]i32, idx: u8, default: i32) i32 {
+            return if (idx < parser_csi.max_params) local_params[idx] else default;
+        }
+    }.at;
+    const screen = context.activeScreen();
+
+    switch (action.final) {
+        'A' => screen.cursorUp(@intCast(@max(1, get(params, 0, 1)))),
+        'B' => screen.cursorDown(@intCast(@max(1, get(params, 0, 1)))),
+        'C' => screen.cursorForward(@intCast(@max(1, get(params, 0, 1)))),
+        'D' => screen.cursorBack(@intCast(@max(1, get(params, 0, 1)))),
+        'E' => screen.cursorNextLine(@intCast(@max(1, get(params, 0, 1)))),
+        'F' => screen.cursorPrevLine(@intCast(@max(1, get(params, 0, 1)))),
+        'G' => screen.cursorColAbsolute(@max(1, get(params, 0, 1))),
+        'I' => {
+            var i: i32 = 0;
+            const n = @max(1, get(params, 0, 1));
+            while (i < n) : (i += 1) screen.tab();
+        },
+        'H', 'f' => screen.cursorPosAbsolute(@max(1, get(params, 0, 1)), @max(1, get(params, 1, 1))),
+        'd' => screen.cursorRowAbsolute(@max(1, get(params, 0, 1))),
+        'J' => context.eraseDisplay(if (param_len > 0) params[0] else 0),
+        'K' => context.eraseLine(if (param_len > 0) params[0] else 0),
+        '@' => context.insertChars(@intCast(@max(1, get(params, 0, 1)))),
+        'P' => context.deleteChars(@intCast(@max(1, get(params, 0, 1)))),
+        'X' => context.eraseChars(@intCast(@max(1, get(params, 0, 1)))),
+        'L' => context.insertLines(@intCast(@max(1, get(params, 0, 1)))),
+        'M' => context.deleteLines(@intCast(@max(1, get(params, 0, 1)))),
+        'S' => context.scrollRegionUp(@intCast(@max(1, get(params, 0, 1)))),
+        'T' => context.scrollRegionDown(@intCast(@max(1, get(params, 0, 1)))),
+        'Z' => {
+            var i: i32 = 0;
+            const n = @max(1, get(params, 0, 1));
+            while (i < n) : (i += 1) screen.backTab();
+        },
+        'r' => {
+            const top_1 = if (param_len > 0 and params[0] > 0) params[0] else 1;
+            const bot_1 = if (param_len > 1 and params[1] > 0) params[1] else @as(i32, @intCast(screen.grid.rows));
+            const top = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(@max(1, top_1) - 1)));
+            const bot = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(@max(1, bot_1) - 1)));
+            if (top < bot) {
+                screen.setScrollRegion(top, bot);
+            }
+        },
+        else => {},
     }
 }
 
